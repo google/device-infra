@@ -29,6 +29,7 @@ import com.google.devtools.mobileharness.api.model.job.in.Params;
 import com.google.devtools.mobileharness.api.model.proto.Error.ExceptionDetail;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestStatus;
+import com.google.devtools.mobileharness.service.moss.proto.Slg.ResultProto;
 import com.google.devtools.mobileharness.shared.util.error.ErrorModelConverter;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
@@ -77,6 +78,22 @@ public class Result {
   public Result(TouchableTiming timing, Params params) {
     this.timing = timing;
     this.params = params;
+  }
+
+  /**
+   * Creates the result of a job/test by the given {@link ResultProto}. Note: please don't make this
+   * public at any time.
+   */
+  protected Result(TouchableTiming timing, Params params, ResultProto resultProto) {
+    this.timing = timing;
+    this.params = params;
+    synchronized (lock) {
+      this.result = resultProto.getResult();
+      this.cause =
+          resultProto.getCause().equals(ExceptionDetail.getDefaultInstance())
+              ? null
+              : ErrorModelConverter.toCommonExceptionDetail(resultProto.getCause());
+    }
   }
 
   /** Sets the test result to PASS, and cleans up the cause exception if any. */

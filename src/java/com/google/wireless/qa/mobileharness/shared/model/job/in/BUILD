@@ -20,13 +20,22 @@ package(default_applicable_licenses = ["//:license"])
 
 java_library(
     name = "in",
-    srcs = glob(
-        ["*.java"],
-    ),
+    srcs = [
+        "Dimensions.java",
+        "Files.java",
+        "FilesJobSpec.java",
+        "Params.java",
+        "ParamsJobSpec.java",
+        "ScopedSpecs.java",
+        "Specs.java",
+        "SubDeviceSpec.java",
+        "SubDeviceSpecs.java",
+    ],
     visibility = [
         "//:deviceinfra_all_pkg",
     ],
     deps = [
+        "//src/devtools/mobileharness/service/moss/proto:slg_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/job/in",
         "//src/java/com/google/devtools/mobileharness/infra/controller/scheduler/model/job/in:device_requirements",

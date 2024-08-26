@@ -18,6 +18,7 @@ package com.google.wireless.qa.mobileharness.shared.model.job.out;
 
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableMap;
+import com.google.devtools.mobileharness.service.moss.proto.Slg.PropertiesProto;
 import com.google.devtools.mobileharness.shared.util.base.StrUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
@@ -38,6 +39,15 @@ public class Properties {
   /** Creates the output properties segment of a job/test. */
   public Properties(Timing timing) {
     this.timing = timing;
+  }
+
+  /**
+   * Creates the output properties segment of a job/test by the given {@link Timing} and {@link
+   * PropertiesProto}. Note: please don't make this public at any time.
+   */
+  Properties(Timing timing, PropertiesProto propertiesProto) {
+    this.timing = timing;
+    this.properties.putAll(propertiesProto.getPropertiesMap());
   }
 
   /**

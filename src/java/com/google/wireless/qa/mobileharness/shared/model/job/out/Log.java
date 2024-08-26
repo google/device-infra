@@ -21,7 +21,6 @@ import com.google.common.base.Throwables;
 import com.google.common.flogger.FluentLogger;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.errorprone.annotations.CheckReturnValue;
-import com.google.errorprone.annotations.CompileTimeConstant;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.log.LogCollector;
 import com.google.wireless.qa.mobileharness.shared.log.LogCollectorBackend;
@@ -128,7 +127,8 @@ public class Log implements LogCollector<Api> {
 
   /** Appends new logs. Also log with the given logger. */
   @CanIgnoreReturnValue
-  public Log append(@CompileTimeConstant String message, FluentLogger logger) {
+  public Log append(
+      @com.google.errorprone.annotations.CompileTimeConstant String message, FluentLogger logger) {
     append(message);
     logger.atInfo().log("%s", message);
     return this;
@@ -141,7 +141,7 @@ public class Log implements LogCollector<Api> {
    */
   @CanIgnoreReturnValue
   @Deprecated
-  public Log ln(@CompileTimeConstant String message) {
+  public Log ln(@com.google.errorprone.annotations.CompileTimeConstant String message) {
     atInfo().log(message);
     return this;
   }
@@ -154,7 +154,9 @@ public class Log implements LogCollector<Api> {
    */
   @CanIgnoreReturnValue
   @Deprecated
-  public Log ln(@CompileTimeConstant String message, @Nullable FluentLogger logger) {
+  public Log ln(
+      @com.google.errorprone.annotations.CompileTimeConstant String message,
+      @Nullable FluentLogger logger) {
     atInfo().alsoTo(logger).log(message);
     return this;
   }

@@ -75,6 +75,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/sharedpool:__pkg__",
     ],
     deps = [
+        "//src/devtools/mobileharness/service/moss/proto:slg_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
@@ -117,6 +118,7 @@ java_library(
         "//java/com/google/devtools/mobileharness/api/model/job/in:__pkg__",
     ],
     deps = [
+        "//src/devtools/mobileharness/service/moss/proto:slg_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/job/out:touchable_timing",
         "//src/java/com/google/devtools/mobileharness/shared/util/base",

@@ -16,14 +16,18 @@
 
 package com.google.wireless.qa.mobileharness.shared.model.allocation;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.Multimap;
+import com.google.common.collect.SetMultimap;
+import com.google.devtools.mobileharness.service.moss.proto.Slg.AllocationProto;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestLocator;
 import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator;
 import java.util.Collections;
@@ -86,6 +90,41 @@ public class Allocation implements Cloneable {
         new TestLocator(newAllocation.getTest()),
         newAllocation.getAllDevices().stream().map(DeviceLocator::new).collect(Collectors.toList()),
         Collections.nCopies(newAllocation.getAllDevices().size(), ImmutableMultimap.of()));
+  }
+
+  /**
+   * Creates an allocation of the test by the given {@link AllocationProto}. Note: please don't make
+   * this public at any time.
+   */
+  Allocation(AllocationProto allocationProto) {
+    this.test =
+        new TestLocator(
+            com.google.devtools.mobileharness.api.model.job.TestLocator.of(
+                allocationProto.getTestLocator()));
+    this.devices =
+        allocationProto.getDeviceLocatorList().stream()
+            .map(
+                deviceLocator ->
+                    new DeviceLocator(
+                        com.google.devtools.mobileharness.api.model.lab.DeviceLocator.of(
+                            deviceLocator)))
+            .collect(toImmutableList());
+    ImmutableList.Builder<Multimap<String, String>> dimensionsListBuilder =
+        new ImmutableList.Builder<>();
+    allocationProto
+        .getDimensionMultiMapList()
+        .forEach(
+            dimensionMultiMapProto -> {
+              SetMultimap<String, String> dimensionMultiMap = HashMultimap.create();
+              dimensionMultiMapProto
+                  .getDimensionEntryList()
+                  .forEach(
+                      dimensionEntry ->
+                          dimensionMultiMap.putAll(
+                              dimensionEntry.getKey(), dimensionEntry.getValueList()));
+              dimensionsListBuilder.add(ImmutableSetMultimap.copyOf(dimensionMultiMap));
+            });
+    this.dimensionsList = dimensionsListBuilder.build();
   }
 
   /** Returns whether the (multiple) allocated devices need to be combined into a single testbed. */

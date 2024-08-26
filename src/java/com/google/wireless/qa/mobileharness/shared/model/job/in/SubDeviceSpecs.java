@@ -18,6 +18,7 @@ package com.google.wireless.qa.mobileharness.shared.model.job.in;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.devtools.mobileharness.service.moss.proto.Slg.SubDeviceSpecsProto;
 import com.google.errorprone.annotations.InlineMe;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -76,6 +77,31 @@ public class SubDeviceSpecs {
     this.subDeviceSpecsById = new HashMap<>();
     this.subDeviceSpecsIndexById = new HashMap<>();
     this.latestDeviceIdsFromAllocation = new ArrayList<>();
+  }
+
+  /**
+   * Creates the sub-device specs segment of a job by the given timing, params, recovered collection
+   * of {@link SubDeviceSpec}s and the proto implementation {@link SubDeviceSpecsProto} of this
+   * class.
+   */
+  SubDeviceSpecs(
+      Timing timing,
+      Params params,
+      Collection<SubDeviceSpec> subDeviceSpecs,
+      SubDeviceSpecsProto subDeviceSpecsProto) {
+    this.timing = timing;
+    this.params = params;
+    this.subDevices.addAll(subDeviceSpecs);
+    this.sharedDimensionNames.addAll(subDeviceSpecsProto.getSharedDimensionNameList());
+    this.subDeviceSpecsById = new HashMap<>();
+    this.subDeviceSpecsIndexById = new HashMap<>();
+    this.latestDeviceIdsFromAllocation = new ArrayList<>();
+    for (int i = 0; i < subDeviceSpecsProto.getLatestDeviceIdFromAllocationCount(); i++) {
+      String deviceId = subDeviceSpecsProto.getLatestDeviceIdFromAllocation(i);
+      subDeviceSpecsById.put(deviceId, subDevices.get(i));
+      subDeviceSpecsIndexById.put(deviceId, i);
+      latestDeviceIdsFromAllocation.add(deviceId);
+    }
   }
 
   /** Adds a dimensionless subDevice to the spec. */

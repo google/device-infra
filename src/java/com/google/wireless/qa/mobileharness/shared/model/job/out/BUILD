@@ -35,12 +35,14 @@ java_library(
 
 java_library(
     name = "out",
-    srcs = glob(
-        ["*.java"],
-        exclude = [
-            "Timing.java",
-        ],
-    ),
+    srcs = [
+        "Errors.java",
+        "Log.java",
+        "Properties.java",
+        "RemoteFiles.java",
+        "Result.java",
+        "Status.java",
+    ],
     exports = [
         ":timing",
     ],
@@ -48,6 +50,7 @@ java_library(
         ":timing",
         "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
+        "//src/devtools/mobileharness/service/moss/proto:slg_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/job/in",
         "//src/java/com/google/devtools/mobileharness/api/model/job/out",

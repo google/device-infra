@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.api.model.job.in;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.devtools.mobileharness.service.moss.proto.Slg.DimensionsProto;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import java.util.Map;
@@ -34,6 +35,14 @@ public class Dimensions {
 
   /** Creates the dimensions of a job. */
   public Dimensions() {}
+
+  /**
+   * Creates the dimensions of a job by the given {@link DimensionsProto}. Note: please don't make
+   * this public at any time.
+   */
+  Dimensions(DimensionsProto dimensionsProto) {
+    this.dimensions.putAll(dimensionsProto.getDimensionsMap());
+  }
 
   /**
    * Adds the given dimension. If there is another dimension with the same name exists, it will be

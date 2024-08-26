@@ -80,7 +80,7 @@ public class FilesJobSpec implements JobSpecWrapper {
   @SuppressWarnings("unchecked")
   @Override
   public <T extends Message> T getSpec(Class<T> specClass) throws MobileHarnessException {
-    Message.Builder builder = null;
+    Message.Builder builder;
     try {
       builder = JobSpecHelper.getDefaultInstance(specClass).newBuilderForType();
     } catch (IllegalArgumentException e) {

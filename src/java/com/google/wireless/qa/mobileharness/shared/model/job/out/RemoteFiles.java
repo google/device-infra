@@ -16,14 +16,16 @@
 
 package com.google.wireless.qa.mobileharness.shared.model.job.out;
 
-
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.mobileharness.service.moss.proto.Slg.RemoteFilesProto;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.util.Collection;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import javax.annotation.Nullable;
 
 /** The files for a job/test which have been uploaded to a remote file system like CNS. */
 public class RemoteFiles {
@@ -37,11 +39,21 @@ public class RemoteFiles {
   private final Set<String> generatedFiles = ConcurrentHashMap.newKeySet();
 
   /** The root path. */
-  private final Optional<String> rootPath;
+  @Nullable private final String rootPath;
 
   public RemoteFiles(Timing timing, Optional<String> rootPath) {
     this.timing = timing;
-    this.rootPath = rootPath;
+    this.rootPath = rootPath.orElse(null);
+  }
+
+  /**
+   * Creates the remote files class by the given {@link RemoteFilesProto}. Note: please don't make
+   * this public at any time.
+   */
+  RemoteFiles(Timing timing, RemoteFilesProto remoteFilesProto) {
+    this.timing = timing;
+    this.rootPath = Strings.emptyToNull(remoteFilesProto.getRootPath());
+    this.generatedFiles.addAll(remoteFilesProto.getRemoteFilePathList());
   }
 
   /**
@@ -89,6 +101,6 @@ public class RemoteFiles {
 
   /** Gets the root path for remote files. */
   public Optional<String> getRootPath() {
-    return rootPath;
+    return Optional.ofNullable(rootPath);
   }
 }

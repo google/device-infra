@@ -33,19 +33,20 @@ java_library(
     srcs = ["TouchableTiming.java"],
     deps = [
         ":timing",
+        "//src/devtools/mobileharness/service/moss/proto:result_java_proto",
         "@maven//:com_google_guava_guava",
     ],
 )
 
 java_library(
     name = "out",
-    srcs = glob(
-        ["*.java"],
-        exclude = [
-            "Timing.java",
-            "TouchableTiming.java",
-        ],
-    ),
+    srcs = [
+        "Log.java",
+        "Properties.java",
+        "Result.java",
+        "Status.java",
+        "Warnings.java",
+    ],
     exports = [
         ":timing",
         ":touchable_timing",
@@ -55,6 +56,7 @@ java_library(
         "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
         "//src/devtools/mobileharness/api/model/proto:error_java_proto",
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
+        "//src/devtools/mobileharness/service/moss/proto:slg_java_proto",
         "//src/java/com/google/devtools/common/metrics/stability/converter",
         "//src/java/com/google/devtools/common/metrics/stability/model:error_id",
         "//src/java/com/google/devtools/common/metrics/stability/util:error_id_comparator",

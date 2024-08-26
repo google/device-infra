@@ -21,6 +21,7 @@ import com.google.devtools.mobileharness.api.model.error.ErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.out.TouchableTiming;
 import com.google.devtools.mobileharness.api.model.proto.Test;
+import com.google.devtools.mobileharness.service.moss.proto.Slg.ResultProto;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
 import com.google.wireless.qa.mobileharness.shared.proto.Job;
@@ -40,6 +41,14 @@ public class Result {
       super(timing, params);
     }
 
+    /** Creates the api result of a job/test by the given {@link Test.TestResult}. */
+    NewResult(
+        TouchableTiming timing,
+        com.google.devtools.mobileharness.api.model.job.in.Params params,
+        ResultProto resultProto) {
+      super(timing, params, resultProto);
+    }
+
     public void resetToUnknown() {
       setUnknown();
     }
@@ -50,6 +59,14 @@ public class Result {
   /** Creates the result of a job/test. */
   public Result(Timing timing, Params params) {
     newResult = new NewResult(timing.toNewTiming(), params.toNewParams());
+  }
+
+  /**
+   * Creates the api result of a job/test by the given {@link ResultProto}. Note: please don't make
+   * this public at any time.
+   */
+  Result(Timing timing, Params params, ResultProto resultProto) {
+    this.newResult = new NewResult(timing.toNewTiming(), params.toNewParams(), resultProto);
   }
 
   /** Returns the new data model which has the same backend of this object. */

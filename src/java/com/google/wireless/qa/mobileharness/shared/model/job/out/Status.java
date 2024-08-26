@@ -22,7 +22,7 @@ import com.google.wireless.qa.mobileharness.shared.proto.Job.TestStatus;
 
 /** Status of a job/test. */
 public class Status {
-  // TODO: Rename TestStatus proto to Status.
+
   /** Status of this job/test. */
   private volatile TestStatus status = TestStatus.NEW;
 

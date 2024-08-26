@@ -23,7 +23,7 @@ import javax.annotation.Nullable;
 
 /** Status of a job/test. */
 public class Status {
-  // TODO: Rename TestStatus proto to Status.
+
   /** Status of this job/test. */
   private volatile TestStatus status = TestStatus.NEW;
 

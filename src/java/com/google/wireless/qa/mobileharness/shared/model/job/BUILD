@@ -25,7 +25,10 @@ package(
 
 java_library(
     name = "locator",
-    srcs = glob(["*Locator.java"]),
+    srcs = [
+        "JobLocator.java",
+        "TestLocator.java",
+    ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/job:locator",
         "@maven//:com_google_code_findbugs_jsr305",
@@ -35,10 +38,15 @@ java_library(
 
 java_library(
     name = "schedule_unit",
-    srcs = glob(["*ScheduleUnit.java"]) + ["JobSetting.java"],
+    srcs = [
+        "JobScheduleUnit.java",
+        "JobSetting.java",
+        "TestScheduleUnit.java",
+    ],
     deps = [
         ":locator",
         "//src/devtools/mobileharness/api/model/proto:job_java_proto",
+        "//src/devtools/mobileharness/service/moss/proto:slg_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/job/in",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
@@ -63,7 +71,12 @@ java_library(
 
 java_library(
     name = "job",
-    srcs = glob(["*Info*.java"]) + ["JobSetting.java"],
+    srcs = [
+        "JobInfo.java",
+        "JobSetting.java",
+        "TestInfo.java",
+        "TestInfos.java",
+    ],
     visibility = ["//visibility:public"],
     exports = [
         ":locator",
@@ -74,6 +87,7 @@ java_library(
         ":locator",
         ":schedule_unit",
         "//src/devtools/mobileharness/api/model/proto:job_java_proto",
+        "//src/devtools/mobileharness/service/moss/proto:slg_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/job/in",
         "//src/java/com/google/devtools/mobileharness/api/model/job/out",

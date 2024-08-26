@@ -24,6 +24,7 @@ import com.google.common.collect.Lists;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.out.TouchableTiming;
+import com.google.devtools.mobileharness.service.moss.proto.Slg.ParamsProto;
 import com.google.devtools.mobileharness.shared.util.base.StrUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.util.ArrayList;
@@ -53,6 +54,16 @@ public class Params {
   /** Creates the parameters segment. */
   public Params() {
     this.timing = null;
+  }
+
+  /**
+   * Creates the parameters segment by the given {@link TouchableTiming} and {@link ParamsProto}.
+   * When this constructor is invoked, the {@link TouchableTiming} isn't null by the context
+   * usually. Note: please don't make this public at any time.
+   */
+  Params(@Nullable TouchableTiming timing, ParamsProto paramsProto) {
+    this.timing = timing;
+    this.params.putAll(paramsProto.getParamsMap());
   }
 
   private void touch() {
