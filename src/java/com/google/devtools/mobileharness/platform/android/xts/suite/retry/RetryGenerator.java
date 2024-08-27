@@ -20,7 +20,6 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableSet;
-import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteTestFilter;
@@ -44,17 +43,14 @@ public class RetryGenerator {
   /** Generates a {@link SubPlan} that contains the retry modules and tests. */
   public SubPlan generateRetrySubPlan(RetryArgs retryArgs) throws MobileHarnessException {
     Path resultsDir = retryArgs.resultsDir();
-    String retryIndexOrId = "";
     Result previousResult;
     if (retryArgs.previousSessionId().isEmpty()) {
       previousResult =
           previousResultLoader.loadPreviousResult(
               resultsDir, retryArgs.previousSessionIndex().orElseThrow());
-      retryIndexOrId = String.valueOf(retryArgs.previousSessionIndex().orElseThrow());
     } else {
       previousResult =
           previousResultLoader.loadPreviousResult(resultsDir, retryArgs.previousSessionId().get());
-      retryIndexOrId = retryArgs.previousSessionId().get();
     }
 
     Optional<RetryType> retryType = retryArgs.retryType();
@@ -81,18 +77,11 @@ public class RetryGenerator {
                 .map(SuiteTestFilter::create)
                 .collect(toImmutableSet()),
             retryArgs.passedInModules());
-    try {
-      SubPlanHelper.addPassedInFiltersToSubPlan(
-          subPlan,
-          retryArgs.passedInIncludeFilters(),
-          retryArgs.passedInExcludeFilters(),
-          retryArgs.allNonTfModules());
-    } catch (MobileHarnessException e) {
-      throw new MobileHarnessException(
-          InfraErrorId.ATSC_SUBPLAN_INVALID_FILTER_ERROR,
-          "Failed to add passed in filters to the subplan of retry session " + retryIndexOrId,
-          e);
-    }
+    SubPlanHelper.addPassedInFiltersToSubPlan(
+        subPlan,
+        retryArgs.passedInIncludeFilters(),
+        retryArgs.passedInExcludeFilters(),
+        retryArgs.allNonTfModules());
     return subPlan;
   }
 }

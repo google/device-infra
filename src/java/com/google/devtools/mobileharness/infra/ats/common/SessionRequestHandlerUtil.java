@@ -693,6 +693,21 @@ public class SessionRequestHandlerUtil {
                 testPlanFilter.excludeFilters().stream())
             .map(SuiteTestFilter::create)
             .collect(toImmutableList());
+    if (subPlan != null) {
+      ImmutableList<SuiteTestFilter> subplanExcludeFilters =
+          subPlan.getNonTfExcludeFiltersMultimap().entries().stream()
+              .map(
+                  e ->
+                      e.getKey()
+                          + (e.getValue().equals(SubPlan.ALL_TESTS_IN_MODULE)
+                              ? ""
+                              : " " + e.getValue()))
+              .map(SuiteTestFilter::create)
+              .collect(toImmutableList());
+      excludeFilters =
+          Stream.concat(excludeFilters.stream(), subplanExcludeFilters.stream())
+              .collect(toImmutableList());
+    }
 
     Duration jobTimeout =
         sessionRequestInfo.jobTimeout().isZero()
@@ -738,15 +753,6 @@ public class SessionRequestHandlerUtil {
                 excludeFilter ->
                     excludeFilter.matchModule(originalModuleName, moduleAbi, moduleParameter)
                         && excludeFilter.testName().isEmpty())) {
-          continue;
-        }
-        if (subPlan != null
-            && subPlan.getNonTfExcludeFiltersMultimap().keySet().stream()
-                .map(SuiteTestFilter::create)
-                .anyMatch(
-                    excludeFilter ->
-                        excludeFilter.matchModule(
-                            originalModuleName, moduleAbi, moduleParameter))) {
           continue;
         }
         if (sessionRequestInfo.testName().isPresent()) {
@@ -807,6 +813,13 @@ public class SessionRequestHandlerUtil {
               originalMatchedTestCases.stream()
                   .filter(testName -> !excludedTestNames.contains(testName))
                   .collect(toImmutableList()));
+          if (matchedTestCasesBuilder.build().isEmpty()) {
+            logger.atInfo().log(
+                "Test case exclude filters filtered every test cases: %s.\n"
+                    + "No job created for this module: %s.",
+                excludedTestNames, expandedModuleName);
+            continue;
+          }
         }
 
         Optional<JobInfo> jobInfoOpt =

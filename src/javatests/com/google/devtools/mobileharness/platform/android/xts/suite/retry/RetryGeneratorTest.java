@@ -17,14 +17,11 @@
 package com.google.devtools.mobileharness.platform.android.xts.suite.retry;
 
 import static com.google.common.truth.Truth.assertThat;
-import static org.junit.Assert.assertThrows;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
-import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
-import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Test;
@@ -412,39 +409,46 @@ public final class RetryGeneratorTest {
   }
 
   @org.junit.Test
-  public void generateRetrySubPlan_nonTFModuleWithTestCaseInFilter() throws Exception {
+  public void generateRetrySubPlan_excludeNonTfTestCase() throws Exception {
     Path resultsDir = Path.of("/path/to/results_dir");
     String previousSessionId = "session_id";
     when(previousResultLoader.loadPreviousResult(resultsDir, previousSessionId))
         .thenReturn(REPORT_1);
 
     SuiteTestFilter filter = SuiteTestFilter.create("arm64-v8a Module3[Instant] TestClass2#Test1");
-    MobileHarnessException exception1 =
-        assertThrows(
-            MobileHarnessException.class,
-            () ->
-                retryGenerator.generateRetrySubPlan(
-                    RetryArgs.builder()
-                        .setResultsDir(resultsDir)
-                        .setPassedInExcludeFilters(ImmutableSet.of(filter))
-                        .setAllNonTfModules(ImmutableSet.of("Module3"))
-                        .setPreviousSessionId(previousSessionId)
-                        .build()));
-    assertThat(exception1.getErrorId()).isEqualTo(InfraErrorId.ATSC_SUBPLAN_INVALID_FILTER_ERROR);
 
-    SuiteTestFilter filter2 = SuiteTestFilter.create("arm64-v8a Module3 TestClass1#Test1");
-    MobileHarnessException exception2 =
-        assertThrows(
-            MobileHarnessException.class,
-            () ->
-                retryGenerator.generateRetrySubPlan(
-                    RetryArgs.builder()
-                        .setResultsDir(resultsDir)
-                        .setPassedInExcludeFilters(ImmutableSet.of(filter2))
-                        .setAllNonTfModules(ImmutableSet.of("Module3"))
-                        .setPreviousSessionId(previousSessionId)
-                        .build()));
-    assertThat(exception2.getErrorId()).isEqualTo(InfraErrorId.ATSC_SUBPLAN_INVALID_FILTER_ERROR);
+    SubPlan subPlan =
+        retryGenerator.generateRetrySubPlan(
+            RetryArgs.builder()
+                .setResultsDir(resultsDir)
+                .setAllNonTfModules(ImmutableSet.of("Module3"))
+                .setPassedInExcludeFilters(ImmutableSet.of(filter))
+                .setPreviousSessionId(previousSessionId)
+                .build());
+
+    SetMultimap<String, String> subPlanIncludeFiltersMultimap = subPlan.getIncludeFiltersMultimap();
+    SetMultimap<String, String> subPlanExcludeFiltersMultimap = subPlan.getExcludeFiltersMultimap();
+
+    assertThat(Multimaps.asMap(subPlanIncludeFiltersMultimap))
+        .containsExactly(
+            "arm64-v8a Module1",
+            ImmutableSet.of("ALL", "TestClass1#Test2", "TestClass2#Test1", "TestClass2#Test2"),
+            "arm64-v8a Module2",
+            ImmutableSet.of("ALL"),
+            "armeabi-v7a Module1",
+            ImmutableSet.of("ALL"),
+            "armeabi-v7a Module5",
+            ImmutableSet.of("ALL"));
+    assertThat(Multimaps.asMap(subPlanExcludeFiltersMultimap))
+        .containsExactly(
+            "arm64-v8a Module2", ImmutableSet.of("ALL"),
+            "armeabi-v7a Module5", ImmutableSet.of("TestClass1#Test1"));
+
+    assertThat(Multimaps.asMap(subPlan.getNonTfExcludeFiltersMultimap()))
+        .containsExactly("arm64-v8a Module3[Instant]", ImmutableSet.of("TestClass2#Test1"));
+
+    assertThat(Multimaps.asMap(subPlan.getNonTfIncludeFiltersMultimap()))
+        .containsExactly("arm64-v8a Module3", ImmutableSet.of("ALL", "TestClass1#Test2"));
   }
 
   @org.junit.Test

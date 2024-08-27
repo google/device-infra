@@ -1383,4 +1383,85 @@ public final class SessionRequestHandlerUtilTest {
     // The exclude filter in subplan excluded "arm64-v8a HelloWorldTest".
     assertThat(jobInfos.get(0).locator().getName()).endsWith("HelloWorldTest[instant]");
   }
+
+  @Test
+  public void createXtsNonTradefedJobs_subPlanFilterMergeWithCommandFilter() throws Exception {
+    SubPlan subPlan = new SubPlan();
+    subPlan.addNonTfExcludeFilter("module1 test_class1#test1");
+    subPlan.addNonTfIncludeFilter("module1");
+    Configuration config1 =
+        Configuration.newBuilder()
+            .setMetadata(
+                ConfigurationMetadata.newBuilder().setXtsModule("module1").setIsConfigV2(true))
+            .addDevices(Device.newBuilder().setName("AndroidDevice"))
+            .setTest(
+                com.google.devtools.mobileharness.platform.android.xts.config.proto
+                    .ConfigurationProto.Test.newBuilder()
+                    .setClazz("Driver"))
+            .build();
+    Configuration config2 =
+        Configuration.newBuilder()
+            .setMetadata(
+                ConfigurationMetadata.newBuilder().setXtsModule("module2").setIsConfigV2(true))
+            .addDevices(Device.newBuilder().setName("AndroidDevice"))
+            .setTest(
+                com.google.devtools.mobileharness.platform.android.xts.config.proto
+                    .ConfigurationProto.Test.newBuilder()
+                    .setClazz("Driver"))
+            .build();
+    Configuration config3 =
+        Configuration.newBuilder()
+            .setMetadata(
+                ConfigurationMetadata.newBuilder().setXtsModule("module3").setIsConfigV2(true))
+            .addDevices(Device.newBuilder().setName("AndroidDevice"))
+            .setTest(
+                com.google.devtools.mobileharness.platform.android.xts.config.proto
+                    .ConfigurationProto.Test.newBuilder()
+                    .setClazz("Driver"))
+            .build();
+    when(localFileUtil.isDirExist(Path.of(XTS_ROOT_DIR_PATH))).thenReturn(true);
+    when(configurationUtil.getConfigsV2FromDirs(any()))
+        .thenReturn(
+            ImmutableMap.of(
+                "/path/to/config1",
+                config1,
+                "/path/to/config2",
+                config2,
+                "/path/to/config3",
+                config3));
+    when(deviceQuerier.queryDevice(any()))
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder()
+                        .setId("device_id_1")
+                        .addType("AndroidOnlineDevice")
+                        .addDimension(
+                            Dimension.newBuilder().setName("abilist").setValue("arm64-v8a")))
+                .build());
+    sessionRequestHandlerUtil = spy(sessionRequestHandlerUtil);
+    doReturn(testSuiteHelper)
+        .when(sessionRequestHandlerUtil)
+        .getTestSuiteHelper(any(), any(), any());
+    when(testSuiteHelper.loadTests(any()))
+        .thenReturn(ImmutableMap.of("module1", config1, "module2", config2, "module3", config3));
+    when(moblyTestLoader.getTestNamesInModule(Path.of("/path/to/config1"), config1))
+        .thenReturn(ImmutableList.of("test1", "test2", "test3"));
+    SessionRequestInfo sessionRequestInfo =
+        sessionRequestHandlerUtil.addNonTradefedModuleInfo(
+            SessionRequestInfo.builder()
+                .setTestPlan("cts")
+                .setCommandLineArgs("cts")
+                .setXtsType("cts")
+                .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                .setExcludeFilters(ImmutableList.of("module1 test_class2#test2"))
+                .setSubPlanName("subplan3")
+                .build());
+    ImmutableList<JobInfo> jobInfos =
+        sessionRequestHandlerUtil.createXtsNonTradefedJobs(
+            sessionRequestInfo, testPlanFilter, subPlan, ImmutableMap.of());
+
+    assertThat(jobInfos).hasSize(1);
+    assertThat(jobInfos.get(0).params().get("test_case_selector")).isEqualTo("test3");
+  }
 }
