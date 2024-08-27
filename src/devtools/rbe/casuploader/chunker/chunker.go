@@ -80,6 +80,15 @@ func RestoreFile(path string, chunksDir string, chunks []ChunkInfo) error {
 		return fmt.Errorf("error creating directories: %w", err)
 	}
 
+	if len(chunks) == 1 {
+		// Hard link the file if there is only one chunk.
+		chunk := chunks[0]
+		if err := os.Link(filepath.Join(chunksDir, chunk.SHA256), path); err == nil {
+			return nil
+		}
+		// fallthrough as failover for file linking.
+	}
+
 	file, err := os.Create(path)
 	if err != nil {
 		return fmt.Errorf("error creating file: %w", err)
