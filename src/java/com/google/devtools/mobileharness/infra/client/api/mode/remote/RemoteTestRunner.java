@@ -39,6 +39,7 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.api.model.proto.Device.PostTestDeviceOp;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto;
 import com.google.devtools.mobileharness.infra.client.api.mode.remote.util.LabRpcProtoConverter;
+import com.google.devtools.mobileharness.infra.client.api.util.longevity.LongevityTestHelper;
 import com.google.devtools.mobileharness.infra.container.proto.ModeSettingProto.ContainerModePreference;
 import com.google.devtools.mobileharness.infra.container.proto.ModeSettingProto.SandboxModePreference;
 import com.google.devtools.mobileharness.infra.container.proto.SandboxSettingProto.SandboxSetting;
@@ -156,6 +157,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
   private final LocalFileUtil fileUtil;
   private final JobSpecHelper jobSpecHelper;
   private final StubManager stubManager;
+  private final LongevityTestHelper longevityTestHelper = new LongevityTestHelper();
 
   /** Whether the test is actually started in the remote lab. */
   private volatile boolean testKickedOff = false;
@@ -387,6 +389,8 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
       logger.atInfo().log("Test engine is ready");
 
       kickOffTest(testInfo, deviceLocators);
+
+      longevityTestHelper.persistentJobInfoIfNeeded(testInfo.jobInfo());
     }
 
     testKickedOff = true;
@@ -439,6 +443,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
               .build();
       PrepareTestStub prepareTestStub = getPrepareTestStub();
       try {
+        longevityTestHelper.persistentJobInfoIfNeeded(testInfo.jobInfo());
 
         PrepareTestServiceProto.CloseTestResponse response =
             prepareTestStub.closeTest(req, impersonationUser);

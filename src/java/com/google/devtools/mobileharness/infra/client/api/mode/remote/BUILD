@@ -61,6 +61,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/job/in:timeout",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/remote/util:lab_rpc_proto_converter",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/util/longevity",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:abstract_test_runner",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:base_test_runner",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:direct_test_runner",
