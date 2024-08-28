@@ -66,6 +66,12 @@ message DirsProto {
   string remote_file_dir_path = 1;
   // Whether tests of the job have their own sub directories.
   bool has_test_sub_dirs = 2;
+  // The local gen file dir
+  string gen_file_dir = 3;
+  // The local tmp file dir
+  string tmp_file_dir = 4;
+  // The local run file dir
+  string run_file_dir = 5;
 }
 
 // The proto implementation of a JobSetting class.

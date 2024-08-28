@@ -21,6 +21,7 @@ import com.google.devtools.mobileharness.service.moss.proto.Slg.JobSettingProto;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInternalFactory;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobSetting;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.Retry;
+import javax.annotation.Nullable;
 
 /**
  * Utility class to help convert a {@link JobSetting} to a {@link JobSettingProto} in forward and
@@ -35,7 +36,7 @@ final class JobSettingConverter {
    *
    * @param jobDir the job root directory
    */
-  static JobSetting fromProto(String jobDir, JobSettingProto jobSettingProto) {
+  static JobSetting fromProto(@Nullable String jobDir, JobSettingProto jobSettingProto) {
     Dirs dirs = DirsConverter.fromProto(jobDir, jobSettingProto.getDirs());
     return JobInternalFactory.createJobSetting(dirs, jobSettingProto);
   }

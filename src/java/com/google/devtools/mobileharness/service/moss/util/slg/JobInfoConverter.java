@@ -37,6 +37,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.out.Result;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Status;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
 import java.util.stream.Collectors;
+import javax.annotation.Nullable;
 
 /** Utility class to convert a {@link JobInfo} to a {@link JobInfoProto} in forward and backward. */
 public final class JobInfoConverter {
@@ -49,7 +50,7 @@ public final class JobInfoConverter {
    *
    * @param jobDir the job root directory
    */
-  public static JobInfo fromProto(String rootDir, JobInfoProto jobInfoProto) {
+  public static JobInfo fromProto(@Nullable String rootDir, JobInfoProto jobInfoProto) {
     JobScheduleUnitProto jobScheduleUnitProto = jobInfoProto.getJobScheduleUnit();
     JobLocator jobLocator =
         new JobLocator(
@@ -57,7 +58,7 @@ public final class JobInfoConverter {
                 jobScheduleUnitProto.getJobLocator()));
     JobSetting jobSetting =
         JobSettingConverter.fromProto(
-            PathUtil.join(rootDir, "j_" + jobLocator.getId()),
+            rootDir == null ? null : PathUtil.join(rootDir, "j_" + jobLocator.getId()),
             jobScheduleUnitProto.getJobSetting());
     Timing timing = TimingConverter.fromProto(jobScheduleUnitProto.getTiming());
     Params params =

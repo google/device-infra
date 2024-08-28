@@ -16,13 +16,18 @@
 
 package com.google.devtools.mobileharness.service.moss.util.slg;
 
+import com.google.common.flogger.FluentLogger;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.in.Dirs;
 import com.google.devtools.mobileharness.service.moss.proto.Slg.DirsProto;
+import com.google.devtools.mobileharness.shared.util.concurrent.Callables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
+import javax.annotation.Nullable;
 
 /** Utility class to convert a {@link Dirs} to a {@link DirsProto} in forward and backward. */
 final class DirsConverter {
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private DirsConverter() {}
 
@@ -32,10 +37,10 @@ final class DirsConverter {
    *
    * @param jobDir the job root directory
    */
-  static Dirs fromProto(String jobDir, DirsProto dirsProto) {
-    String genFileDir = PathUtil.join(jobDir, "gen");
-    String tmpFileDir = PathUtil.join(jobDir, "tmp");
-    String runFileDir = PathUtil.join(jobDir, "run");
+  static Dirs fromProto(@Nullable String jobDir, DirsProto dirsProto) {
+    String genFileDir = jobDir == null ? dirsProto.getGenFileDir() : PathUtil.join(jobDir, "gen");
+    String tmpFileDir = jobDir == null ? dirsProto.getTmpFileDir() : PathUtil.join(jobDir, "tmp");
+    String runFileDir = jobDir == null ? dirsProto.getRunFileDir() : PathUtil.join(jobDir, "run");
     return new Dirs(
         genFileDir,
         tmpFileDir,
@@ -51,6 +56,31 @@ final class DirsConverter {
   static DirsProto toProto(Dirs dirs) {
     DirsProto.Builder dirsProto = DirsProto.newBuilder().setHasTestSubDirs(dirs.hasTestSubdirs());
     dirs.remoteFileDir().ifPresent(dirsProto::setRemoteFileDirPath);
+    try {
+      Callables.callAll(
+          () -> {
+            if (dirs.hasGenFileDir()) {
+              dirsProto.setGenFileDir(dirs.genFileDir());
+            }
+            return null;
+          },
+          () -> {
+            if (dirs.hasTmpFileDir()) {
+              dirsProto.setTmpFileDir(dirs.tmpFileDir());
+            }
+            return null;
+          },
+          () -> {
+            if (dirs.hasRunFileDir()) {
+              dirsProto.setRunFileDir(dirs.runFileDir());
+            }
+            return null;
+          });
+    } catch (MobileHarnessException e) {
+      logger.atWarning().withCause(e).log("Failed to persist Dirs to DirsProto.");
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
     return dirsProto.build();
   }
 }
