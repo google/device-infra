@@ -25,6 +25,7 @@ java_library(
     name = "converter",
     srcs = glob(["*Converter.java"]),
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/util/longevity:__subpackages__",
     ],
     deps = [
         "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
