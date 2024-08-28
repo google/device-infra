@@ -190,6 +190,7 @@ public class LabServerIntegrationTest {
                             "--enable_device_system_settings_change=false",
                             "--enable_external_master_server=true",
                             "--enable_file_cleaner=false",
+                            "--enable_root_device=false",
                             "--enable_stubby_rpc_server=false",
                             "--external_adb_initializer_template=true",
                             "--grpc_port=" + labServerGrpcPort,

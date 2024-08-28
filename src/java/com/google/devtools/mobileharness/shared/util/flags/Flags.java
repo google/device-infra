@@ -765,6 +765,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableRdh = enableRdhDefault;
 
+  private static final Flag<Boolean> enableRootDeviceDefault = Flag.value(true);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enable_root_device",
+      description = "Whether to root devices. Default is true.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableRootDevice = enableRootDeviceDefault;
+
   private static final Flag<Boolean> enableSimpleSchedulerShuffleDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(

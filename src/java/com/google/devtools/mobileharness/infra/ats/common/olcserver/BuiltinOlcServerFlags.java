@@ -38,6 +38,7 @@ class BuiltinOlcServerFlags {
           "--enable_android_device_ready_check=false",
           "--enable_device_state_change_recover=false",
           "--enable_device_system_settings_change=false",
+          "--enable_root_device=false",
           "--mute_android=false",
           "--olc_server_max_started_running_session_num=30",
           "--set_test_harness_property=false",

@@ -297,6 +297,10 @@ public class AndroidSystemStateUtil {
    * @throws InterruptedException if the thread executing the commands is interrupted
    */
   public boolean becomeRoot(String serial) throws MobileHarnessException, InterruptedException {
+    if (!Flags.instance().enableRootDevice.get()) {
+      logger.atInfo().log("Skip rooting device %s since rooting is disabled.", serial);
+      return false;
+    }
     // After rebooting, the first time running "adb root" command with Galaxy Nexus may return empty
     // output. Retries until we get the expected output.
     String output = null;
