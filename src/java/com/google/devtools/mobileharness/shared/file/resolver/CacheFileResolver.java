@@ -94,11 +94,13 @@ public class CacheFileResolver extends AbstractFileResolver {
     CachedResolveSource cachedResolveSource =
         CachedResolveSource.create(resolveSource.path(), resolveSource.parameters());
     SettableFuture<Optional<ResolveResult>> future = SettableFuture.create();
+    logger.atInfo().log("Existing resolved result cache: %s", resolvedResultsCache);
     // ConcurrentHashMap.putIfAbsent guarantees only one future can be really executed for same
     // ResolveSource.
     ListenableFuture<Optional<ResolveResult>> previousFuture =
         resolvedResultsCache.putIfAbsent(cachedResolveSource, future);
     Object lock = resolvedResultsCache.get(cachedResolveSource);
+    logger.atInfo().log("previousFuture %s, Lock: %s", previousFuture, lock);
     synchronized (lock) {
       if (previousFuture == null) {
         logger.atInfo().log("%s has not been resolved before. Need to resolve.", resolveSource);
