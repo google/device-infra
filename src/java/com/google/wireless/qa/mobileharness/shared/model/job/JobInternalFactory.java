@@ -19,6 +19,7 @@ package com.google.wireless.qa.mobileharness.shared.model.job;
 import com.google.devtools.mobileharness.api.model.job.in.Dirs;
 import com.google.devtools.mobileharness.api.model.proto.Job.JobUser;
 import com.google.devtools.mobileharness.service.moss.proto.Slg.JobSettingProto;
+import com.google.wireless.qa.mobileharness.shared.model.job.in.Files;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.ScopedSpecs;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.SubDeviceSpecs;
@@ -58,6 +59,7 @@ public final class JobInternalFactory {
       JobSetting setting,
       Timing timing,
       Params params,
+      Files files,
       ScopedSpecs scopedSpecs,
       SubDeviceSpecs subDeviceSpecs,
       RemoteFiles remoteGenFiles,
@@ -75,9 +77,9 @@ public final class JobInternalFactory {
         setting,
         timing,
         params,
+        files,
         scopedSpecs,
         subDeviceSpecs,
-        /* localFileUtil= */ null,
         remoteGenFiles,
         remoteRunFiles,
         status,
@@ -97,6 +99,7 @@ public final class JobInternalFactory {
       Timing timing,
       JobInfo jobInfo,
       TestInfo parentTest,
+      Files files,
       RemoteFiles remoteGenFiles,
       Status status,
       Result result,
@@ -108,6 +111,7 @@ public final class JobInternalFactory {
         timing,
         jobInfo,
         parentTest,
+        files,
         remoteGenFiles,
         status,
         result,

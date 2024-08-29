@@ -103,6 +103,17 @@ message PropertiesProto {
   map<string, string> properties = 1;
 }
 
+// The proto implementation of a Files java class.
+message FilesProto {
+  repeated FileProto file = 1;
+}
+
+// The proto implementation of a File.
+message FileProto {
+  string tag = 1;
+  string location = 2;
+}
+
 // The proto implementation of a RemoteFiles java class.
 message RemoteFilesProto {
   // Empty for the case that the root path isn't offered.
@@ -183,6 +194,8 @@ message JobInfoProto {
   mobileharness.shared.spec.JobSpec job_spec = 8;
   // All tests belong to the job.
   repeated TestInfoProto test_info = 9;
+  // The files
+  FilesProto files = 10;
 }
 
 // The proto implementation of a TestScheduleUnit java class.
@@ -218,4 +231,6 @@ message TestInfoProto {
   repeated TestInfoProto sub_test_info = 7;
   // Extra info of the test.
   TestExtraInfo extra_info = 8;
+  // The files
+  FilesProto files = 9;
 }

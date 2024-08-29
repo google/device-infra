@@ -217,9 +217,9 @@ public class JobInfo extends JobScheduleUnit {
       JobSetting setting,
       Timing timing,
       Params params,
+      Files files,
       ScopedSpecs scopedSpecs,
       SubDeviceSpecs subDeviceSpecs,
-      LocalFileUtil localFileUtil,
       RemoteFiles remoteGenFiles,
       RemoteFiles remoteRunFiles,
       Status status,
@@ -229,7 +229,7 @@ public class JobInfo extends JobScheduleUnit {
       Errors errors,
       JobSpec jobSpec) {
     super(locator, jobUser, type, setting, timing, params, scopedSpecs, subDeviceSpecs);
-    this.files = new Files(timing(), localFileUtil == null ? new LocalFileUtil() : localFileUtil);
+    this.files = files;
     this.remoteGenFiles = remoteGenFiles;
     this.remoteRunFiles = remoteRunFiles;
     this.status = status;

@@ -34,10 +34,12 @@ final class JobSettingConverter {
    * Gets a {@link JobSetting} by the given {@link JobSettingProto} and the prefix to help create
    * local directories.
    *
+   * @param resumeFiles whether to resume files
    * @param jobDir the job root directory
    */
-  static JobSetting fromProto(@Nullable String jobDir, JobSettingProto jobSettingProto) {
-    Dirs dirs = DirsConverter.fromProto(jobDir, jobSettingProto.getDirs());
+  static JobSetting fromProto(
+      boolean resumeFiles, @Nullable String jobDir, JobSettingProto jobSettingProto) {
+    Dirs dirs = DirsConverter.fromProto(resumeFiles, jobDir, jobSettingProto.getDirs());
     return JobInternalFactory.createJobSetting(dirs, jobSettingProto);
   }
 

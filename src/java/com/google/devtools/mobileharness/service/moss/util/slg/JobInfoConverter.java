@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.service.moss.util.slg;
 
 import com.google.devtools.mobileharness.api.model.proto.Job.JobUser;
+import com.google.devtools.mobileharness.service.moss.proto.Slg.FilesProto;
 import com.google.devtools.mobileharness.service.moss.proto.Slg.JobInfoProto;
 import com.google.devtools.mobileharness.service.moss.proto.Slg.JobScheduleUnitProto;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
@@ -25,6 +26,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInternalFactory;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobSetting;
+import com.google.wireless.qa.mobileharness.shared.model.job.in.Files;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.JobInInternalFactory;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.ScopedSpecs;
@@ -50,7 +52,8 @@ public final class JobInfoConverter {
    *
    * @param jobDir the job root directory
    */
-  public static JobInfo fromProto(@Nullable String rootDir, JobInfoProto jobInfoProto) {
+  public static JobInfo fromProto(
+      boolean resumeFiles, @Nullable String rootDir, JobInfoProto jobInfoProto) {
     JobScheduleUnitProto jobScheduleUnitProto = jobInfoProto.getJobScheduleUnit();
     JobLocator jobLocator =
         new JobLocator(
@@ -58,11 +61,17 @@ public final class JobInfoConverter {
                 jobScheduleUnitProto.getJobLocator()));
     JobSetting jobSetting =
         JobSettingConverter.fromProto(
+            resumeFiles,
             rootDir == null ? null : PathUtil.join(rootDir, "j_" + jobLocator.getId()),
             jobScheduleUnitProto.getJobSetting());
     Timing timing = TimingConverter.fromProto(jobScheduleUnitProto.getTiming());
     Params params =
         ParamsConverter.fromProto(timing.toNewTiming(), jobScheduleUnitProto.getParams());
+    Files files =
+        FilesConverter.fromProto(
+            timing.toNewTiming(),
+            resumeFiles ? jobInfoProto.getFiles() : FilesProto.getDefaultInstance());
+    ;
     ScopedSpecs scopedSpecs =
         JobInInternalFactory.createScopedSpecs(
             params, timing, jobScheduleUnitProto.getScopedSpecsJsonString());
@@ -92,6 +101,7 @@ public final class JobInfoConverter {
             jobSetting,
             timing,
             params,
+            files,
             scopedSpecs,
             subDeviceSpecs,
             remoteGenFiles,
@@ -109,7 +119,7 @@ public final class JobInfoConverter {
               .map(
                   testInfoProto ->
                       TestInfoConverter.fromProto(
-                          jobInfo, /* parentTestInfo= */ null, testInfoProto))
+                          resumeFiles, jobInfo, /* parentTestInfo= */ null, testInfoProto))
               .collect(Collectors.toList()));
     }
     return jobInfo;
@@ -131,6 +141,7 @@ public final class JobInfoConverter {
             .build();
     return JobInfoProto.newBuilder()
         .setJobScheduleUnit(jobScheduleUnit)
+        .setFiles(FilesConverter.toProto(jobInfo.files()))
         .setRemoteGenFiles(RemoteFilesConverter.toProto(jobInfo.remoteGenFiles()))
         .setRemoteRunFiles(RemoteFilesConverter.toProto(jobInfo.remoteRunFiles()))
         .setStatus(StatusConverter.toProto(jobInfo.status()))

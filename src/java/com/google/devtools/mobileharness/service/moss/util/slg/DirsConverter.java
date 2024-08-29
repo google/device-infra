@@ -35,12 +35,22 @@ final class DirsConverter {
    * Gets a {@link Dirs} by the given {@link DirsProto} and the prefix to help create local
    * directories.
    *
+   * @param resumeFiles whether to resume files
    * @param jobDir the job root directory
    */
-  static Dirs fromProto(@Nullable String jobDir, DirsProto dirsProto) {
-    String genFileDir = jobDir == null ? dirsProto.getGenFileDir() : PathUtil.join(jobDir, "gen");
-    String tmpFileDir = jobDir == null ? dirsProto.getTmpFileDir() : PathUtil.join(jobDir, "tmp");
-    String runFileDir = jobDir == null ? dirsProto.getRunFileDir() : PathUtil.join(jobDir, "run");
+  static Dirs fromProto(boolean resumeFiles, @Nullable String jobDir, DirsProto dirsProto) {
+    String genFileDir;
+    String tmpFileDir;
+    String runFileDir;
+    if (!resumeFiles && jobDir != null) {
+      genFileDir = PathUtil.join(jobDir, "gen");
+      tmpFileDir = PathUtil.join(jobDir, "tmp");
+      runFileDir = PathUtil.join(jobDir, "run");
+    } else {
+      genFileDir = dirsProto.getGenFileDir();
+      tmpFileDir = dirsProto.getTmpFileDir();
+      runFileDir = dirsProto.getRunFileDir();
+    }
     return new Dirs(
         genFileDir,
         tmpFileDir,

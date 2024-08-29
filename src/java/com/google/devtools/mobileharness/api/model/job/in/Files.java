@@ -27,6 +27,8 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.out.TouchableTiming;
+import com.google.devtools.mobileharness.service.moss.proto.Slg.FileProto;
+import com.google.devtools.mobileharness.service.moss.proto.Slg.FilesProto;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.util.ArrayList;
@@ -64,6 +66,19 @@ public class Files {
   public Files(@Nullable TouchableTiming timing, @Nullable LocalFileUtil fileUtil) {
     this.timing = timing;
     this.fileUtil = fileUtil == null ? new LocalFileUtil() : fileUtil;
+  }
+
+  public Files(
+      @Nullable TouchableTiming timing, @Nullable LocalFileUtil fileUtil, FilesProto filesProto) {
+    this(timing, fileUtil);
+    for (FileProto file : filesProto.getFileList()) {
+      try {
+        add(file.getTag(), file.getLocation());
+      } catch (MobileHarnessException e) {
+        logger.atWarning().withCause(e).log(
+            "Failed to add file %s: %s", file.getTag(), file.getLocation());
+      }
+    }
   }
 
   /**

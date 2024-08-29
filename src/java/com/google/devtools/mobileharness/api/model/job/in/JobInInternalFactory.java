@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.api.model.job.in;
 
 import com.google.devtools.mobileharness.api.model.job.out.TouchableTiming;
 import com.google.devtools.mobileharness.service.moss.proto.Slg.DimensionsProto;
+import com.google.devtools.mobileharness.service.moss.proto.Slg.FilesProto;
 import com.google.devtools.mobileharness.service.moss.proto.Slg.ParamsProto;
 
 /**
@@ -38,5 +39,12 @@ public final class JobInInternalFactory {
    */
   public static Params createParams(TouchableTiming touchableTiming, ParamsProto paramsProto) {
     return new Params(touchableTiming, paramsProto);
+  }
+
+  /**
+   * Creates a {@link Files} instance by the given {@link TouchableTiming} and {@link FilesProto}.
+   */
+  public static Files createFiles(TouchableTiming touchableTiming, FilesProto filesProto) {
+    return new Files(touchableTiming, null, filesProto);
   }
 }

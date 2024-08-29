@@ -101,6 +101,7 @@ java_library(
     visibility = [
     ],
     deps = [
+        "//src/devtools/mobileharness/service/moss/proto:slg_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/job/out:touchable_timing",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
@@ -151,6 +152,7 @@ java_library(
     ],
     deps = [
         ":dimensions",
+        ":files",
         ":params",
         "//src/devtools/mobileharness/service/moss/proto:slg_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/job/out:touchable_timing",

@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.service.moss.util.slg;
 
 import com.google.devtools.mobileharness.api.model.proto.Test.TestStatus;
+import com.google.devtools.mobileharness.service.moss.proto.Slg.FilesProto;
 import com.google.devtools.mobileharness.service.moss.proto.Slg.TestExtraInfo;
 import com.google.devtools.mobileharness.service.moss.proto.Slg.TestInfoProto;
 import com.google.devtools.mobileharness.service.moss.proto.Slg.TestScheduleUnitProto;
@@ -25,6 +26,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInternalFactory;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestLocator;
+import com.google.wireless.qa.mobileharness.shared.model.job.in.Files;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Errors;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Log;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
@@ -46,12 +48,16 @@ public final class TestInfoConverter {
    * it belongs to if it's a sub-test, and the {@link TestInfoProto}.
    */
   public static TestInfo fromProto(
-      JobInfo jobInfo, TestInfo parentTestInfo, TestInfoProto testInfoProto) {
+      boolean resumeFiles, JobInfo jobInfo, TestInfo parentTestInfo, TestInfoProto testInfoProto) {
     TestLocator testLocator =
         new TestLocator(
             com.google.devtools.mobileharness.api.model.job.TestLocator.of(
                 testInfoProto.getTestScheduleUnit().getTestLocator()));
     Timing timing = TimingConverter.fromProto(testInfoProto.getTestScheduleUnit().getTiming());
+    Files files =
+        FilesConverter.fromProto(
+            timing.toNewTiming(),
+            resumeFiles ? testInfoProto.getFiles() : FilesProto.getDefaultInstance());
     RemoteFiles remoteGenFiles =
         RemoteFilesConverter.fromProto(timing, testInfoProto.getRemoteGenFiles());
 
@@ -75,6 +81,7 @@ public final class TestInfoConverter {
             timing,
             jobInfo,
             parentTestInfo,
+            files,
             remoteGenFiles,
             status,
             result,
@@ -87,7 +94,7 @@ public final class TestInfoConverter {
           testInfoProto.getSubTestInfoList().stream()
               .map(
                   subTestInfoProto ->
-                      TestInfoConverter.fromProto(jobInfo, testInfo, subTestInfoProto))
+                      TestInfoConverter.fromProto(resumeFiles, jobInfo, testInfo, subTestInfoProto))
               .collect(Collectors.toList()));
     }
     return testInfo;
@@ -100,6 +107,7 @@ public final class TestInfoConverter {
             TestScheduleUnitProto.newBuilder()
                 .setTestLocator(testInfo.locator().toNewTestLocator().toProto())
                 .setTiming(TimingConverter.toProto(testInfo.timing())))
+        .setFiles(FilesConverter.toProto(testInfo.files()))
         .setRemoteGenFiles(RemoteFilesConverter.toProto(testInfo.remoteGenFiles()))
         .setStatus(StatusConverter.toProto(testInfo.status()))
         .setResult(ResultConverter.toProto(testInfo.result()))

@@ -55,6 +55,10 @@ public class Files {
             timing.toNewTiming(), fileUtil);
   }
 
+  public Files(com.google.devtools.mobileharness.api.model.job.in.Files newFiles) {
+    this.newFiles = newFiles;
+  }
+
   /**
    * Adds a input file/dir, marks it with the given tag. If you add the same file/dir with the same
    * tag for more than once, the call leaves it unchanged.

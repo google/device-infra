@@ -93,6 +93,7 @@ public class TestInfo extends TestScheduleUnit implements Cloneable {
       Timing timing,
       JobInfo jobInfo,
       TestInfo parentTest,
+      Files files,
       RemoteFiles remoteGenFiles,
       Status status,
       Result result,
@@ -104,7 +105,7 @@ public class TestInfo extends TestScheduleUnit implements Cloneable {
     this.parentTest = parentTest;
     this.subTests = new TestInfos(jobInfo, this);
     this.fileUtil = new LocalFileUtil();
-    this.files = new Files(timing(), this.fileUtil);
+    this.files = files;
     this.remoteGenFiles = remoteGenFiles;
     this.status = status;
     this.result = result;

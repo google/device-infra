@@ -66,4 +66,13 @@ public final class JobInInternalFactory {
       SubDeviceSpecsProto subDeviceSpecsProto) {
     return new SubDeviceSpecs(timing, params, subDeviceSpecs, subDeviceSpecsProto);
   }
+
+  /**
+   * Creates a {@link Files} instance by the given {@link
+   * com.google.devtools.mobileharness.api.model.job.in.Files}.
+   */
+  public static Files createFiles(
+      com.google.devtools.mobileharness.api.model.job.in.Files newFiles) {
+    return new Files(newFiles);
+  }
 }

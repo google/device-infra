@@ -94,24 +94,29 @@ public class LongevityTestHelper {
 
   /** Resumes JobInfo. */
   public Optional<JobInfo> resumeJobInfo(
-      @Nullable String rootDir, String jobPersistentPath, JobInfo newJobInfo)
+      String jobPersistentPath,
+      boolean resumeFiles,
+      @Nullable String rootDir,
+      @Nullable JobInfo newJobInfo)
       throws MobileHarnessException, InterruptedException {
     Optional<JobInfoProto> jobInfoProto = getPersistentJobInfoProto(jobPersistentPath);
     if (jobInfoProto.isPresent()) {
       try {
-        JobInfo jobInfo = JobInfoConverter.fromProto(rootDir, jobInfoProto.get());
-        jobInfo.files().addAll(newJobInfo.files().getAll());
-        jobInfo
-            .protoSpec()
-            .setProto(
-                getResumedJobSpecWithRawFiles(
-                    jobInfo.protoSpec().getProto(), newJobInfo.protoSpec().getProto()));
-        jobInfo
-            .scopedSpecs()
-            .addAll(
-                getResumedJobSpecWithRawFiles(
-                    jobInfo.scopedSpecs().toJobSpec(JobSpecHelper.getDefaultHelper()),
-                    newJobInfo.scopedSpecs().toJobSpec(JobSpecHelper.getDefaultHelper())));
+        JobInfo jobInfo = JobInfoConverter.fromProto(resumeFiles, rootDir, jobInfoProto.get());
+        if (!resumeFiles && newJobInfo != null) {
+          jobInfo.files().addAll(newJobInfo.files().getAll());
+          jobInfo
+              .protoSpec()
+              .setProto(
+                  getResumedJobSpecWithRawFiles(
+                      jobInfo.protoSpec().getProto(), newJobInfo.protoSpec().getProto()));
+          jobInfo
+              .scopedSpecs()
+              .addAll(
+                  getResumedJobSpecWithRawFiles(
+                      jobInfo.scopedSpecs().toJobSpec(JobSpecHelper.getDefaultHelper()),
+                      newJobInfo.scopedSpecs().toJobSpec(JobSpecHelper.getDefaultHelper())));
+        }
         logger.atInfo().log(
             "Successfully resumed JobInfo:\n%s from %s", jobInfo, jobPersistentPath);
         return Optional.of(jobInfo);
