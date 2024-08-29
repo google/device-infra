@@ -24,9 +24,11 @@ import static java.util.stream.Collectors.joining;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
@@ -77,9 +79,11 @@ public abstract class AbstractFileResolver implements FileResolver {
   @Override
   public final List<Optional<ResolveResult>> resolve(List<ResolveSource> resolveSources)
       throws MobileHarnessException, InterruptedException {
+    ListenableFuture<List<Optional<ResolveResult>>> future = resolveAsync(resolveSources);
     try {
-      return resolveAsync(resolveSources).get(RESOLVE_TIMEOUT_IN_HOUR, HOURS);
+      return future.get(RESOLVE_TIMEOUT_IN_HOUR, HOURS);
     } catch (TimeoutException e) {
+      future.cancel(true);
       throw new MobileHarnessException(
           BasicErrorId.RESOLVE_FILE_TIMEOUT, "Timeout while resolving files", e);
     } catch (ExecutionException e) {
@@ -118,7 +122,23 @@ public abstract class AbstractFileResolver implements FileResolver {
   /** Resolves one file asynchronously. */
   @Override
   public final ListenableFuture<Optional<ResolveResult>> resolveAsync(ResolveSource resolveSource) {
-    return executorService.submit(() -> resolve(resolveSource));
+    ListenableFuture<Optional<ResolveResult>> fileResolveFuture =
+        executorService.submit(() -> resolve(resolveSource));
+    Futures.addCallback(
+        fileResolveFuture,
+        new FutureCallback<Optional<ResolveResult>>() {
+          @Override
+          public void onSuccess(Optional<ResolveResult> result) {
+            logger.atInfo().log("Successfully resolved file %s to %s", resolveSource, result);
+          }
+
+          @Override
+          public void onFailure(Throwable t) {
+            logger.atWarning().withCause(t).log("Failed to resolve file %s", resolveSource);
+          }
+        },
+        MoreExecutors.directExecutor());
+    return fileResolveFuture;
   }
 
   /** Resolves multiple files asynchronously. */
