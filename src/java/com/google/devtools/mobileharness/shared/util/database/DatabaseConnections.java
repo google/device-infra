@@ -37,14 +37,16 @@ public class DatabaseConnections {
   @GuardedBy("lock")
   private String jdbcUrl;
 
-  public void initialize(String jdbcUrl) throws MobileHarnessException {
+  public void initialize(String jdbcUrl, int statementCacheSize) throws MobileHarnessException {
     synchronized (lock) {
       checkState(
           dataSource == null,
           "DatabaseConnections has been initialized, data_source=%s",
           dataSource);
       try {
-        this.dataSource = DataSources.pooledDataSource(DataSources.unpooledDataSource(jdbcUrl));
+        this.dataSource =
+            DataSources.pooledDataSource(
+                DataSources.unpooledDataSource(jdbcUrl), statementCacheSize);
         this.jdbcUrl = jdbcUrl;
       } catch (SQLException e) {
         throw new MobileHarnessException(
