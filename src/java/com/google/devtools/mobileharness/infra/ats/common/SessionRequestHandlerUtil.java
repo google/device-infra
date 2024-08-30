@@ -379,7 +379,7 @@ public class SessionRequestHandlerUtil {
     }
 
     ImmutableSet<String> localTfModules = getAllLocalTradefedModules(sessionRequestInfo);
-    ImmutableSet<String> staticTfModules = getStaticFullTradefedModules();
+    ImmutableSet<String> staticTfModules = getStaticMctsModules();
     ImmutableSet<String> allTfModules =
         Stream.concat(localTfModules.stream(), staticTfModules.stream()).collect(toImmutableSet());
 
