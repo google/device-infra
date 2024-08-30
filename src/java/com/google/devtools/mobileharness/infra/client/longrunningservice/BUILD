@@ -64,6 +64,8 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging/flogger:flogger_formatter",
         "//src/java/com/google/devtools/mobileharness/shared/util/system",
+        "//src/java/com/google/devtools/mobileharness/shared/version",
+        "//src/java/com/google/devtools/mobileharness/shared/version:version_util",
         "//src/java/com/google/wireless/qa/mobileharness/shared:log",
         "//src/java/com/google/wireless/qa/mobileharness/shared/comm/message:test_message_manager",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dir",

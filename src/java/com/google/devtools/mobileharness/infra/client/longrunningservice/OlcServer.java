@@ -46,6 +46,8 @@ import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.logging.flogger.FloggerFormatter;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
+import com.google.devtools.mobileharness.shared.version.Version;
+import com.google.devtools.mobileharness.shared.version.VersionUtil;
 import com.google.inject.Guice;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessLogger;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageManager;
@@ -150,10 +152,16 @@ public class OlcServer {
 
     Runtime.getRuntime().addShutdownHook(new Thread(this::onShutdown));
 
-    // Logs arguments.
+    // Logs arguments and version.
     if (!args.isEmpty()) {
-      logger.atInfo().log("arguments=%s", args);
+      logger.atInfo().log("Args: %s", args);
     }
+    logger.atInfo().log(
+        "Version: lab-%s%s",
+        Version.LAB_VERSION,
+        VersionUtil.getGitHubVersion()
+            .map(version -> String.format(" github-%s", version))
+            .orElse(""));
 
     // Initializes TestMessageManager.
     TestMessageManager.createInstance(clientApi::getTestMessagePoster);
