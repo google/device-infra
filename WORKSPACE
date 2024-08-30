@@ -268,6 +268,7 @@ maven_install(
         "com.google.truth.extensions:truth-proto-extension:1.4.0",
         "com.google.truth.extensions:truth-java8-extension:1.4.0",
         "com.google.truth:truth:1.4.0",
+        "com.mchange:c3p0:0.10.1",
         "commons-io:commons-io:2.15.1",
         "info.picocli:picocli:4.7.5",
         "javax.inject:jsr330-api:0.9",
