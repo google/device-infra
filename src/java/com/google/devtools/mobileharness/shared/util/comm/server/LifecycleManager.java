@@ -91,11 +91,12 @@ public final class LifecycleManager {
       for (LabeledServer labeledServer : managedServers) {
         String label = labeledServer.label();
         try {
-          logger.atInfo().log("Starting server %s.", label);
+          logger.atInfo().log("Starting server, label=[%s]", label);
           labeledServer.server().start();
         } catch (IOException e) {
           managedServers.forEach(server -> server.server().shutdownNow());
-          throw new UncheckedIOException("Failed to start the server " + label, e);
+          throw new UncheckedIOException(
+              String.format("Failed to start the server [%s]", label), e);
         }
       }
       for (LabeledServer labeledServer : managedServers) {
@@ -115,7 +116,7 @@ public final class LifecycleManager {
       checkState(!shutdown, "The servers are already shutdown. Don't call shutdown again!");
       shutdown = true;
       for (LabeledServer labeledServer : managedServers.reverse()) {
-        logger.atInfo().log("Shut down server %s.", labeledServer.label());
+        logger.atInfo().log("Shutting down server [%s]", labeledServer.label());
         labeledServer.server().shutdown();
       }
     }
@@ -128,7 +129,7 @@ public final class LifecycleManager {
   /** Waits for all servers to terminate. */
   public void awaitTermination() throws InterruptedException {
     for (LabeledServer labeledServer : managedServers) {
-      logger.atInfo().log("Start to wait for the termination of %s.", labeledServer.label());
+      logger.atInfo().log("Waiting for the termination of server(label=%s)", labeledServer.label());
       labeledServer.server().awaitTermination();
     }
   }

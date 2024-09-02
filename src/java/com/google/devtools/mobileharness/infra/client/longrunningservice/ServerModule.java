@@ -16,7 +16,6 @@
 
 package com.google.devtools.mobileharness.infra.client.longrunningservice;
 
-import com.google.common.collect.ImmutableSet;
 import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
@@ -26,9 +25,7 @@ import com.google.devtools.mobileharness.infra.client.api.ClientApi;
 import com.google.devtools.mobileharness.infra.client.api.ClientApiModule;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.GrpcServer;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.ServerStartTime;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.WorkerGrpcServer;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.ControllerModule;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogManager.LogRecordsCollector;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecords;
@@ -37,7 +34,6 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.ser
 import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberExceptionLoggingHandler;
 import com.google.devtools.mobileharness.infra.monitoring.CloudPubsubMonitorModule;
 import com.google.devtools.mobileharness.infra.monitoring.MonitorPipelineLauncher;
-import com.google.devtools.mobileharness.shared.util.comm.server.ServerBuilderFactory;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.reflection.ReflectionUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
@@ -46,10 +42,8 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.util.Providers;
-import io.grpc.ServerBuilder;
 import java.time.Clock;
 import java.time.Instant;
-import java.util.List;
 import java.util.concurrent.ExecutorService;
 import javax.inject.Singleton;
 
@@ -67,27 +61,12 @@ class ServerModule extends AbstractModule {
 
   private final Instant serverStartTime;
   private final boolean isAtsMode;
-  private final int grpcPort;
-  private final int workerGrpcPort;
-  private final boolean useAlts;
   private final boolean enableCloudPubsubMonitoring;
-  private final ImmutableSet<String> restrictToAuthUsers;
 
-  ServerModule(
-      boolean isAtsMode,
-      Instant serverStartTime,
-      int grpcPort,
-      int workerGrpcPort,
-      boolean useAlts,
-      boolean enableCloudPubsubMonitoring,
-      List<String> restrictToAuthUsers) {
+  ServerModule(boolean isAtsMode, Instant serverStartTime, boolean enableCloudPubsubMonitoring) {
     this.serverStartTime = serverStartTime;
     this.isAtsMode = isAtsMode;
-    this.grpcPort = grpcPort;
-    this.workerGrpcPort = workerGrpcPort;
-    this.useAlts = useAlts;
     this.enableCloudPubsubMonitoring = enableCloudPubsubMonitoring;
-    this.restrictToAuthUsers = ImmutableSet.copyOf(restrictToAuthUsers);
   }
 
   @Override
@@ -158,22 +137,6 @@ class ServerModule extends AbstractModule {
   @Provides
   LogRecordsCollector<LogRecords> provideLogRecordsCollector() {
     return new DirectlyBuildLogRecordsCollector();
-  }
-
-  @Provides
-  @Singleton
-  @GrpcServer
-  ServerBuilder<?> provideServerBuilder() {
-    return useAlts
-        ? ServerBuilderFactory.createAltsServerBuilder(grpcPort, restrictToAuthUsers)
-        : ServerBuilderFactory.createNettyServerBuilder(grpcPort, /* localhost= */ false);
-  }
-
-  @Provides
-  @Singleton
-  @WorkerGrpcServer
-  ServerBuilder<?> provideWorkerServerBuilder() {
-    return ServerBuilderFactory.createNettyServerBuilder(workerGrpcPort, /* localhost= */ false);
   }
 
   private static class DirectlyBuildLogRecordsCollector implements LogRecordsCollector<LogRecords> {

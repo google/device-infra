@@ -21,6 +21,7 @@ import static com.google.devtools.mobileharness.shared.util.concurrent.Callables
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.eventbus.EventBus;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -28,8 +29,6 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.client.api.Annotations.GlobalInternalEventBus;
 import com.google.devtools.mobileharness.infra.client.api.ClientApi;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.GrpcServer;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.WorkerGrpcServer;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.OlcServerDirs;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogManager;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogRecorder;
@@ -42,6 +41,7 @@ import com.google.devtools.mobileharness.infra.monitoring.MonitorPipelineLaunche
 import com.google.devtools.mobileharness.shared.util.comm.server.ClientAddressServerInterceptor;
 import com.google.devtools.mobileharness.shared.util.comm.server.LifecycleManager;
 import com.google.devtools.mobileharness.shared.util.comm.server.LifecycleManager.LabeledServer;
+import com.google.devtools.mobileharness.shared.util.comm.server.ServerBuilderFactory;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.logging.flogger.FloggerFormatter;
@@ -53,10 +53,8 @@ import com.google.wireless.qa.mobileharness.shared.MobileHarnessLogger;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageManager;
 import com.google.wireless.qa.mobileharness.shared.constant.DirCommon;
 import io.grpc.BindableService;
-import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -84,11 +82,7 @@ public class OlcServer {
                 new ServerModule(
                     Flags.instance().enableAtsMode.getNonNull(),
                     serverStartTime,
-                    Flags.instance().olcServerPort.getNonNull(),
-                    Flags.instance().atsWorkerGrpcPort.getNonNull(),
-                    Flags.instance().useAlts.getNonNull(),
-                    Flags.instance().enableCloudPubsubMonitoring.getNonNull(),
-                    Flags.instance().restrictOlcServiceToUsers.getNonNull()))
+                    Flags.instance().enableCloudPubsubMonitoring.getNonNull()))
             .getInstance(OlcServer.class);
     server.run(Arrays.asList(args));
   }
@@ -102,8 +96,6 @@ public class OlcServer {
   private final EventBus globalInternalEventBus;
   private final LogManager<LogRecords> logManager;
   private final ClientApi clientApi;
-  private final ServerBuilder<?> serverBuilder;
-  private final ServerBuilder<?> workerServerBuilder;
   private final LocalFileUtil localFileUtil;
   private final SystemUtil systemUtil;
 
@@ -118,8 +110,6 @@ public class OlcServer {
       @GlobalInternalEventBus EventBus globalInternalEventBus,
       LogManager<LogRecords> logManager,
       ClientApi clientApi,
-      @GrpcServer ServerBuilder<?> serverBuilder,
-      @WorkerGrpcServer ServerBuilder<?> workerServerBuilder,
       LocalFileUtil localFileUtil,
       SystemUtil systemUtil) {
     this.sessionService = sessionService;
@@ -131,8 +121,6 @@ public class OlcServer {
     this.globalInternalEventBus = globalInternalEventBus;
     this.logManager = logManager;
     this.clientApi = clientApi;
-    this.serverBuilder = serverBuilder;
-    this.workerServerBuilder = workerServerBuilder;
     this.localFileUtil = localFileUtil;
     this.systemUtil = systemUtil;
   }
@@ -150,6 +138,7 @@ public class OlcServer {
         ImmutableList.of(logManager.getLogHandler()),
         /* disableConsoleHandler= */ false);
 
+    // Adds shutdown hook.
     Runtime.getRuntime().addShutdownHook(new Thread(this::onShutdown));
 
     // Logs arguments and version.
@@ -171,30 +160,7 @@ public class OlcServer {
     LogRecorder.getInstance().initialize(logManager);
 
     // Starts RPC servers.
-    List<LabeledServer> managedServers = new ArrayList<>();
-    ImmutableList<BindableService> extraServices =
-        execMode instanceof ServiceProvider
-            ? ((ServiceProvider) execMode).provideServices()
-            : ImmutableList.of();
-    serverBuilder
-        .executor(threadPool)
-        .intercept(new ClientAddressServerInterceptor())
-        .addService(controlService)
-        .addService(sessionService)
-        .addService(versionService);
-    extraServices.forEach(serverBuilder::addService);
-    Server server = serverBuilder.build();
-    managedServers.add(LabeledServer.create(server, "Non-worker"));
-    if (execMode instanceof ServiceProvider) {
-      workerServerBuilder.executor(threadPool).intercept(new ClientAddressServerInterceptor());
-      ((ServiceProvider) execMode)
-          .provideServicesForWorkers()
-          .forEach(workerServerBuilder::addService);
-      managedServers.add(LabeledServer.create(workerServerBuilder.build(), "Worker"));
-    }
-    LifecycleManager manager = new LifecycleManager(threadPool, managedServers);
-    controlService.setLifecycleManager(manager);
-    manager.start();
+    LifecycleManager lifecycleManager = startRpcServers();
 
     // Starts monitoring.
     if (Flags.instance().enableCloudPubsubMonitoring.getNonNull()
@@ -212,15 +178,65 @@ public class OlcServer {
         execMode.getClass().getSimpleName());
 
     // Prints signal.
-    logger.atInfo().log("Servers have started: %s.", SERVER_STARTED_SIGNAL);
+    logger.atInfo().log("Servers have started: %s", SERVER_STARTED_SIGNAL);
     logger.atInfo().log(
         "Process info: pid=%s, memory_info=[%s]",
         ProcessHandle.current().pid(), systemUtil.getMemoryInfo());
 
     // Waits for termination.
-    manager.awaitTermination();
+    lifecycleManager.awaitTermination();
     logger.atInfo().log("Exiting...");
     System.exit(0);
+  }
+
+  private LifecycleManager startRpcServers() {
+    // Creates extra servers.
+    ImmutableList<BindableService> extraServicesForNonWorker;
+    ImmutableList<BindableService> extraServicesForWorker;
+    if (execMode instanceof ServiceProvider) {
+      ServiceProvider serviceProvider = (ServiceProvider) execMode;
+      extraServicesForNonWorker = serviceProvider.provideServices();
+      extraServicesForWorker = serviceProvider.provideServicesForWorkers();
+    } else {
+      extraServicesForNonWorker = ImmutableList.of();
+      extraServicesForWorker = ImmutableList.of();
+    }
+
+    // Creates RPC server for non-worker.
+    ImmutableList.Builder<LabeledServer> servers = ImmutableList.builder();
+    ServerBuilder<?> serverBuilderForNonWorker =
+        Flags.instance().useAlts.getNonNull()
+            ? ServerBuilderFactory.createAltsServerBuilder(
+                Flags.instance().olcServerPort.getNonNull(),
+                ImmutableSet.copyOf(Flags.instance().restrictOlcServiceToUsers.getNonNull()))
+            : ServerBuilderFactory.createNettyServerBuilder(
+                Flags.instance().olcServerPort.getNonNull(), /* localhost= */ false);
+    serverBuilderForNonWorker
+        .executor(threadPool)
+        .intercept(new ClientAddressServerInterceptor())
+        .addService(controlService)
+        .addService(sessionService)
+        .addService(versionService);
+    extraServicesForNonWorker.forEach(serverBuilderForNonWorker::addService);
+    servers.add(LabeledServer.create(serverBuilderForNonWorker.build(), "for-non-worker"));
+
+    // Creates RPC server for worker.
+    if (!extraServicesForWorker.isEmpty()) {
+      ServerBuilder<?> serverBuilderForWorker =
+          ServerBuilderFactory.createNettyServerBuilder(
+                  Flags.instance().atsWorkerGrpcPort.getNonNull(), /* localhost= */ false)
+              .executor(threadPool)
+              .intercept(new ClientAddressServerInterceptor());
+      extraServicesForWorker.forEach(serverBuilderForWorker::addService);
+      servers.add(LabeledServer.create(serverBuilderForWorker.build(), "for-worker"));
+    }
+
+    // Starts RPC servers.
+    LifecycleManager lifecycleManager = new LifecycleManager(threadPool, servers.build());
+    controlService.setLifecycleManager(lifecycleManager);
+    lifecycleManager.start();
+
+    return lifecycleManager;
   }
 
   private class ExecModeInitializer implements Callable<Void> {

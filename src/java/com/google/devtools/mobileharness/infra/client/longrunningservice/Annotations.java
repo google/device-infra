@@ -23,11 +23,6 @@ import javax.inject.Qualifier;
 /** Annotations for OLC server. */
 public class Annotations {
 
-  /** Annotates gRPC server or gRPC server builder. */
-  @Qualifier
-  @Retention(RetentionPolicy.RUNTIME)
-  public @interface GrpcServer {}
-
   /** Start time of the server. */
   @Qualifier
   @Retention(RetentionPolicy.RUNTIME)
@@ -42,11 +37,6 @@ public class Annotations {
   @Qualifier
   @Retention(RetentionPolicy.RUNTIME)
   public @interface SessionTempDir {}
-
-  /** Annotates grRPC server or gRPC server builder for worker services. */
-  @Qualifier
-  @Retention(RetentionPolicy.RUNTIME)
-  public @interface WorkerGrpcServer {}
 
   private Annotations() {}
 }

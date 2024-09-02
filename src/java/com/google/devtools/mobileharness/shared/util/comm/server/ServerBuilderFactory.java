@@ -38,7 +38,7 @@ public class ServerBuilderFactory {
    */
   public static ServerBuilder<?> createAltsServerBuilder(
       int port, Set<String> restrictToAuthUsers) {
-    logger.atInfo().log("Build an ALTS server.");
+    logger.atInfo().log("Build ALTS server, port=%s", port);
     ServerBuilder<?> serverBuilder;
     try {
       Class<?> altsServerBuilderClass = Class.forName("io.grpc.alts.AltsServerBuilder");
@@ -59,7 +59,7 @@ public class ServerBuilderFactory {
    * @param localhost if the address is localhost.
    */
   public static NettyServerBuilder createNettyServerBuilder(int port, boolean localhost) {
-    logger.atInfo().log("Build a Netty server.");
+    logger.atInfo().log("Build Netty server, port=%s", port);
     return localhost
         ? NettyServerBuilder.forAddress(new InetSocketAddress("localhost", port))
         : NettyServerBuilder.forPort(port);
