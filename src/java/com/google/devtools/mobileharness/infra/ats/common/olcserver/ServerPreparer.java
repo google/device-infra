@@ -91,6 +91,11 @@ public class ServerPreparer {
   private static final ImmutableList<String> UNFINISHED_SESSIONS_TABLE_HEADER =
       ImmutableList.of("Session ID", "Name", "Status", "Submitted Time");
 
+  private static final String FORCIBLY_RESTART_SUGGESTION =
+      "if necessary, run \"server restart -f\" command to forcibly restart OLC server (which will"
+          + " also forcibly kill all running jobs submitted from this console and other consoles on"
+          + " the same machine)";
+
   private final String clientComponentName;
   private final String clientId;
   private final CommandExecutor commandExecutor;
@@ -367,17 +372,22 @@ public class ServerPreparer {
         throw MobileHarnessExceptionFactory.create(
             InfraErrorId.ATSC_SERVER_PREPARER_CANNOT_KILL_EXISTING_OLC_SERVER_ERROR,
             String.format(
-                "Existing OLC server (pid=%s) cannot be killed because: \n%s",
-                serverPid, createKillServerFailureReasons(killServerResponse.getFailure())),
+                "Existing OLC server (pid=%s) cannot be killed, reason=[%s], %s",
+                serverPid,
+                createKillServerFailureReasons(killServerResponse.getFailure()),
+                FORCIBLY_RESTART_SUGGESTION),
             /* cause= */ null,
             /* addErrorIdToMessage= */ false,
             /* clearStackTrace= */ true);
       } else {
-        throw new MobileHarnessException(
+        throw MobileHarnessExceptionFactory.create(
             InfraErrorId.ATSC_SERVER_PREPARER_EXISTING_OLC_SERVER_STILL_RUNNING_ERROR,
             String.format(
-                "Existing OLC server (pid=%s) is still running for 10s after it was killed",
-                serverPid));
+                "Existing OLC server (pid=%s) is still running for 10s after it was killed, %s",
+                serverPid, FORCIBLY_RESTART_SUGGESTION),
+            /* cause= */ null,
+            /* addErrorIdToMessage= */ false,
+            /* clearStackTrace= */ true);
       }
     }
   }
@@ -461,8 +471,10 @@ public class ServerPreparer {
         VersionProtoUtil.createGetVersionResponse().toBuilder().clearProcessId().build();
     if (!clientVersion.equals(serverVersion)) {
       logger.atWarning().log(
-          "Using existing OLC server in a different version, "
-              + "version of OLC server: [%s], version of %s: [%s]",
+          "Using existing OLC server in a different version, version of OLC server: [%s], version"
+              + " of %s: [%s]\n"
+              + "If necessary, run \"server restart\" command to restart a new OLC server"
+              + " instance using the same version of the current console",
           shortDebugString(serverVersion), clientComponentName, shortDebugString(clientVersion));
     }
   }
