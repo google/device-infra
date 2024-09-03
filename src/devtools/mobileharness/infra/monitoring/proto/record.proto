@@ -52,6 +52,9 @@ message HostRecord {
 
   // The group of the host, which is configured by users.
   string host_group = 10;
+
+  // The team this host belongs to.
+  string team = 11;
 }
 
 // The record of a device of a certain timestamp.
