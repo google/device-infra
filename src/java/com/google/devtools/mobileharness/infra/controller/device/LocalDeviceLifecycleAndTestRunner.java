@@ -163,7 +163,7 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
       EventBus globalInternalBus,
       DeviceStat stat,
       ExternalDeviceManager externalDeviceManager)
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException {
+      throws MobileHarnessException {
     apiConfig = ApiConfig.getInstance();
 
     DeviceInfoManager.getInstance()
@@ -261,13 +261,13 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
           if (checkNRunTest()) {
             needReboot = true;
           }
-        } catch (com.google.devtools.mobileharness.api.model.error.MobileHarnessException e) {
+        } catch (MobileHarnessException e) {
           // Need to quit the loop when it's draining; Otherwise, just log the warning.
-          if (e.getErrorId() == InfraErrorId.LAB_EXTERNAL_DEVICE_MANAGER_RESERVE_FAIL_WHEN_DRAIN) {
-            throw e;
-          } else {
+          if (e.getErrorId() == InfraErrorId.LAB_EXTERNAL_DEVICE_MANAGER_RESERVE_ERROR) {
             logger.atWarning().withCause(e).log(
                 "Failed to reserve device %s or run test.", device.getDeviceId());
+          } else {
+            throw e;
           }
         } finally {
           device.info().properties().remove(DEVICE_PROPERTY_RESERVATION_ID);
@@ -552,21 +552,20 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
   }
 
   @Override
-  public synchronized void reserve(LocalDeviceTestExecutor test)
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException {
+  public synchronized void reserve(LocalDeviceTestExecutor test) throws MobileHarnessException {
     if (!isReady()) {
-      throw new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+      throw new MobileHarnessException(
           InfraErrorId.DM_RESERVE_NON_READY_DEVICE, "Device is not ready");
     }
     if (!waitIdleInExternalDeviceManager(WAIT_IDLE_IN_EXTERNAL_DEVICE_MANAGER_EXPIRE)) {
-      throw new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+      throw new MobileHarnessException(
           InfraErrorId.DM_RESERVE_NON_DUAL_STACK_READY_DEVICE,
           String.format("Device %s is not idle in the dual stack DM", device.getDeviceId()));
     }
     if (this.test == null) {
       this.test = test;
     } else {
-      throw new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+      throw new MobileHarnessException(
           InfraErrorId.DM_RESERVE_BUSY_DEVICE,
           String.format(
               "Device is not available with test %s, can not add new test %s",
