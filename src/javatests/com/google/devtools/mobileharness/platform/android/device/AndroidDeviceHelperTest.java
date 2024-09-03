@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.platform.android.device;
 
+import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -60,6 +61,30 @@ public final class AndroidDeviceHelperTest {
     when(device.getDeviceId()).thenReturn(DEVICE_ID);
 
     androidDeviceHelper = new AndroidDeviceHelper(androidAdbUtil, androidSystemSettingUtil);
+  }
+
+  @Test
+  public void getPropertyValue_stripAdbDaemonLog() throws Exception {
+    String sdkVersion =
+        String.join(
+            "\n",
+            ImmutableList.of(
+                "* daemon not running; starting now at tcp:5037",
+                "* daemon started successfully",
+                String.valueOf(SDK_VERSION)));
+    String releaseVersion =
+        String.join(
+            "\n",
+            ImmutableList.of(
+                "* daemon not running; starting now at tcp:5037",
+                RELEASE_VERSION,
+                "* daemon started successfully"));
+    mockCommonSetupSteps(sdkVersion, releaseVersion);
+
+    assertThat(androidDeviceHelper.getPropertyValue(DEVICE_ID, AndroidProperty.SDK_VERSION))
+        .isEqualTo(String.valueOf(SDK_VERSION));
+    assertThat(androidDeviceHelper.getPropertyValue(DEVICE_ID, AndroidProperty.RELEASE_VERSION))
+        .isEqualTo(RELEASE_VERSION);
   }
 
   @Test

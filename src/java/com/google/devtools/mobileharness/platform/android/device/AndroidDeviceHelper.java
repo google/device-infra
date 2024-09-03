@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.platform.android.device;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Arrays.stream;
+import static java.util.stream.Collectors.joining;
 
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableSet;
@@ -27,6 +28,7 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdb
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty.DoNotAddToDimension;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty.KeepDimensionValueCase;
+import com.google.devtools.mobileharness.platform.android.shared.constant.Splitters;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
@@ -44,6 +46,9 @@ public class AndroidDeviceHelper {
   public static final String PROPERTY_NAME_CACHED_SCREEN_DENSITY = "cached_screen_density";
 
   public static final String PROPERTY_NAME_CACHED_SDK_VERSION = "cached_sdk_version";
+
+  /** Output of adb command may contain daemon lines before or after the starter line. */
+  private static final String OUTPUT_ADB_DAEMON = "* daemon";
 
   private static final ImmutableSet<AndroidProperty> RETAIN_CAPS_PROPERTIES =
       getAnnotatedAndroidProperties(KeepDimensionValueCase.class);
@@ -168,7 +173,17 @@ public class AndroidDeviceHelper {
   /** Gets property value. */
   public String getPropertyValue(String deviceId, AndroidProperty key)
       throws MobileHarnessException, InterruptedException {
-    return androidAdbUtil.getProperty(deviceId, key);
+    String propertyValue = androidAdbUtil.getProperty(deviceId, key);
+    if (propertyValue.startsWith(OUTPUT_ADB_DAEMON)) {
+      propertyValue =
+          Splitters.LINE_SPLITTER
+              .omitEmptyStrings()
+              .trimResults()
+              .splitToStream(propertyValue)
+              .filter(line -> !line.startsWith(OUTPUT_ADB_DAEMON))
+              .collect(joining("\n"));
+    }
+    return propertyValue;
   }
 
   /** Gets all enum items of {@link AndroidProperty} that are annotated by the given annotation. */
