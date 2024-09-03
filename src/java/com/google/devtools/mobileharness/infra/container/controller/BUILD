@@ -50,6 +50,7 @@ java_library(
     srcs = ["ProxyToDirectTestRunner.java"],
     deps = [
         ":abstract_proxy_test_runner",
+        "//java/com/google/travel/flights/shared/flightdatasource:utils",
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/devtools/mobileharness/infra/container/proto:test_engine_java_proto",
