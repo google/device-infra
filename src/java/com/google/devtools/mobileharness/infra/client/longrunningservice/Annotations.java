@@ -23,6 +23,11 @@ import javax.inject.Qualifier;
 /** Annotations for OLC server. */
 public class Annotations {
 
+  /** ATS database connections. */
+  @Qualifier
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface AtsDatabaseConnections {}
+
   /** Start time of the server. */
   @Qualifier
   @Retention(RetentionPolicy.RUNTIME)

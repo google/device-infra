@@ -20,6 +20,7 @@ import static com.google.devtools.mobileharness.infra.client.longrunningservice.
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.eventbus.EventBus;
@@ -29,6 +30,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.client.api.Annotations.GlobalInternalEventBus;
 import com.google.devtools.mobileharness.infra.client.api.ClientApi;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.AtsDatabaseConnections;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.OlcServerDirs;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogManager;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogRecorder;
@@ -42,6 +44,7 @@ import com.google.devtools.mobileharness.shared.util.comm.server.ClientAddressSe
 import com.google.devtools.mobileharness.shared.util.comm.server.LifecycleManager;
 import com.google.devtools.mobileharness.shared.util.comm.server.LifecycleManager.LabeledServer;
 import com.google.devtools.mobileharness.shared.util.comm.server.ServerBuilderFactory;
+import com.google.devtools.mobileharness.shared.util.database.DatabaseConnections;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.logging.flogger.FloggerFormatter;
@@ -98,6 +101,7 @@ public class OlcServer {
   private final ClientApi clientApi;
   private final LocalFileUtil localFileUtil;
   private final SystemUtil systemUtil;
+  private final DatabaseConnections atsDatabaseConnections;
 
   @Inject
   OlcServer(
@@ -111,7 +115,8 @@ public class OlcServer {
       LogManager<LogRecords> logManager,
       ClientApi clientApi,
       LocalFileUtil localFileUtil,
-      SystemUtil systemUtil) {
+      SystemUtil systemUtil,
+      @AtsDatabaseConnections DatabaseConnections atsDatabaseConnections) {
     this.sessionService = sessionService;
     this.versionService = versionService;
     this.controlService = controlService;
@@ -123,6 +128,7 @@ public class OlcServer {
     this.clientApi = clientApi;
     this.localFileUtil = localFileUtil;
     this.systemUtil = systemUtil;
+    this.atsDatabaseConnections = atsDatabaseConnections;
   }
 
   private void run(List<String> args) throws MobileHarnessException, InterruptedException {
@@ -158,6 +164,12 @@ public class OlcServer {
     // Starts log manager.
     logManager.start();
     LogRecorder.getInstance().initialize(logManager);
+
+    // Connects to database.
+    String atsDatabaseJdbcUrl = Flags.instance().atsDatabaseJdbcUrl.get();
+    if (!Strings.isNullOrEmpty(atsDatabaseJdbcUrl)) {
+      atsDatabaseConnections.initialize(atsDatabaseJdbcUrl, /* statementCacheSize= */ 100);
+    }
 
     // Starts RPC servers.
     LifecycleManager lifecycleManager = startRpcServers();

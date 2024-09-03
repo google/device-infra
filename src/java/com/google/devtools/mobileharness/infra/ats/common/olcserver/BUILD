@@ -34,6 +34,7 @@ olc_server_binary(
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:ats_test_client",
         "@io_grpc_grpc_java//alts",
+        "@maven//:com_mysql_mysql_connector_j",
     ],
 )
 

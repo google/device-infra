@@ -248,6 +248,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> atsConsolePrintAboveInput = atsConsolePrintAboveInputDefault;
 
+  private static final Flag<String> atsDatabaseJdbcUrlDefault = Flag.value(null);
+
+  @com.beust.jcommander.Parameter(
+      names = "--ats_database_jdbc_url",
+      description = "ATS database JDBC URL.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> atsDatabaseJdbcUrl = atsDatabaseJdbcUrlDefault;
+
   private static final Flag<Duration> atsDdaLeaseExpirationTimeDefault =
       DurationFlag.value(Duration.ofMinutes(5L));
 

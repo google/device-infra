@@ -39,6 +39,7 @@ java_library(
         "//src/javatests/com/google/devtools/mobileharness/shared/size:__subpackages__",
     ],
     deps = [
+        ":annotations",
         ":server_module",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:log_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
@@ -59,6 +60,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/server:sever_builder_factory",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:callables",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:more_futures",
+        "//src/java/com/google/devtools/mobileharness/shared/util/database:database_connections",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
@@ -97,6 +99,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/monitoring:cloud_pubsub_monitor_module",
         "//src/java/com/google/devtools/mobileharness/infra/monitoring:monitor_pipeline_launcher",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
+        "//src/java/com/google/devtools/mobileharness/shared/util/database:database_connections",
         "//src/java/com/google/devtools/mobileharness/shared/util/reflection:reflection_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
         "@maven//:com_google_guava_guava",
