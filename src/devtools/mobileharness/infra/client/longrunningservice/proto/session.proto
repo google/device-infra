@@ -224,3 +224,29 @@ message SessionNotification {
   // Required.
   google.protobuf.Any notification = 2;
 }
+
+// The session persistence status to describe which stage this session is in.
+enum SessionPersistenceStatus {
+  SESSION_PERSISTENCE_STATUS_UNSPECIFIED = 0;
+
+  // The session is created in OLC.
+  SESSION_CREATED = 100;
+
+  // Session started event is processed.
+  SESSION_STARTED = 200;
+
+  // Session ended event is processed.
+  SESSION_ENDED = 300;
+}
+
+// The session persisted proto message
+message SessionPersistenceData {
+  // Required.
+  SessionDetail session_detail = 1;
+
+  // Required.
+  SessionPersistenceStatus session_persistence_status = 2;
+
+  // The job id list in this session.
+  repeated string job_id = 3;
+}
