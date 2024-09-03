@@ -61,6 +61,8 @@ public class SubPlan extends AbstractXmlParser {
 
   private String prevSessionXtsTestPlan;
   private String prevSessionDeviceBuildFingerprint;
+  private String prevSessionDeviceBuildFingerprintUnaltered;
+  private String prevSessionDeviceVendorBuildFingerprint;
 
   public SubPlan() {
     includeFiltersMultimap = TreeMultimap.create();
@@ -164,6 +166,28 @@ public class SubPlan extends AbstractXmlParser {
   /** Gets the previous session's device build fingerprint. */
   public Optional<String> getPreviousSessionDeviceBuildFingerprint() {
     return Optional.ofNullable(prevSessionDeviceBuildFingerprint);
+  }
+
+  /** Sets the previous session's unaltered device build fingerprint. */
+  public void setPreviousSessionDeviceBuildFingerprintUnaltered(
+      String prevSessionDeviceBuildFingerprintUnaltered) {
+    this.prevSessionDeviceBuildFingerprintUnaltered = prevSessionDeviceBuildFingerprintUnaltered;
+  }
+
+  /** Gets the previous session's unaltered device build fingerprint. */
+  public Optional<String> getPreviousSessionDeviceBuildFingerprintUnaltered() {
+    return Optional.ofNullable(prevSessionDeviceBuildFingerprintUnaltered);
+  }
+
+  /** Sets the previous session's device vendor build fingerprint. */
+  public void setPreviousSessionDeviceVendorBuildFingerprint(
+      String prevSessionDeviceVendorBuildFingerprint) {
+    this.prevSessionDeviceVendorBuildFingerprint = prevSessionDeviceVendorBuildFingerprint;
+  }
+
+  /** Gets the previous session's device vendor build fingerprint. */
+  public Optional<String> getPreviousSessionDeviceVendorBuildFingerprint() {
+    return Optional.ofNullable(prevSessionDeviceVendorBuildFingerprint);
   }
 
   /** Gets all include filters. */

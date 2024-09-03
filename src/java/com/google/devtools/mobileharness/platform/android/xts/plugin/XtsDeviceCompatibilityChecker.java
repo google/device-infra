@@ -61,11 +61,8 @@ public final class XtsDeviceCompatibilityChecker {
 
   /** Returns true if the job is enabled for the xTS device compatibility checker. */
   public static boolean isEnabled(JobInfo jobInfo) {
-    return
-    // TODO: Enables for TF after retry is not handled by TF.
-    // jobInfo.properties().getBoolean(Job.IS_XTS_TF_JOB).orElse(false)
-    // ||
-    jobInfo.properties().getBoolean(Job.IS_XTS_NON_TF_JOB).orElse(false);
+    return jobInfo.properties().getBoolean(Job.IS_XTS_TF_JOB).orElse(false)
+        || jobInfo.properties().getBoolean(Job.IS_XTS_NON_TF_JOB).orElse(false);
   }
 
   @Subscribe
@@ -83,18 +80,43 @@ public final class XtsDeviceCompatibilityChecker {
       validateDeviceBuildFingerprintMatchPrevSession(
           getAllocatedAndroidDeviceSerials(event),
           testInfo,
-          jobInfo.properties().getOptional(Job.PREV_SESSION_DEVICE_BUILD_FINGERPRINT).orElse(""));
+          jobInfo.properties().getOptional(Job.PREV_SESSION_DEVICE_BUILD_FINGERPRINT).orElse(""),
+          jobInfo
+              .properties()
+              .getOptional(Job.PREV_SESSION_DEVICE_BUILD_FINGERPRINT_UNALTERED)
+              .orElse(""),
+          jobInfo
+              .properties()
+              .getOptional(Job.PREV_SESSION_DEVICE_VENDOR_BUILD_FINGERPRINT)
+              .orElse(""));
     }
   }
 
+  /**
+   * Followed the fingerprint check logic from {@code
+   * com.android.compatibility.common.tradefed.targetprep.BuildFingerPrintPreparer}
+   */
   private void validateDeviceBuildFingerprintMatchPrevSession(
       ImmutableList<String> deviceSerials,
       TestInfo testInfo,
-      String prevSessionDeviceBuildFingerprint)
+      String prevSessionDeviceBuildFingerprint,
+      String prevSessionDeviceBuildFingerprintUnaltered,
+      String prevSessionDeviceVendorBuildFingerprint)
       throws SkipTestException, InterruptedException {
     if (deviceSerials.isEmpty()) {
       return;
     }
+
+    if (prevSessionDeviceBuildFingerprint.isEmpty()) {
+      // Skip checking device build fingerprint if the previous session's build fingerprint is
+      // empty.
+      return;
+    }
+
+    String prevSessionDeviceBuildFingerprintToCompare =
+        prevSessionDeviceBuildFingerprintUnaltered.isEmpty()
+            ? prevSessionDeviceBuildFingerprint
+            : prevSessionDeviceBuildFingerprintUnaltered;
 
     try {
       for (String serial : deviceSerials) {
@@ -102,8 +124,8 @@ public final class XtsDeviceCompatibilityChecker {
             androidAdbUtil
                 .getProperty(serial, ImmutableList.of(DeviceBuildInfo.FINGERPRINT.getPropName()))
                 .trim();
-        if (!prevSessionDeviceBuildFingerprint.isEmpty()
-            && !Ascii.equalsIgnoreCase(deviceBuildFingerprint, prevSessionDeviceBuildFingerprint)) {
+        if (!Ascii.equalsIgnoreCase(
+            deviceBuildFingerprint, prevSessionDeviceBuildFingerprintToCompare)) {
           setSkipCollectingNonTfReports(testInfo.jobInfo());
           throw SkipTestException.create(
               String.format(
@@ -115,6 +137,28 @@ public final class XtsDeviceCompatibilityChecker {
                   testInfo.locator().getName()),
               DesiredTestResult.SKIP,
               AndroidErrorId.XTS_DEVICE_COMPAT_CHECKER_DEVICE_BUILD_NOT_MATCH_RETRY_PREV_SESSION);
+        }
+
+        if (!prevSessionDeviceVendorBuildFingerprint.isEmpty()) {
+          String deviceVendorBuildFingerprint =
+              androidAdbUtil
+                  .getProperty(
+                      serial, ImmutableList.of(DeviceBuildInfo.VENDOR_FINGERPRINT.getPropName()))
+                  .trim();
+          if (!Ascii.equalsIgnoreCase(
+              deviceVendorBuildFingerprint, prevSessionDeviceVendorBuildFingerprint)) {
+            setSkipCollectingNonTfReports(testInfo.jobInfo());
+            throw SkipTestException.create(
+                String.format(
+                    "Device %s vendor build fingerprint [%s] must match the one in the retried"
+                        + " session [%s]. Skipping test [%s]",
+                    serial,
+                    deviceVendorBuildFingerprint,
+                    prevSessionDeviceVendorBuildFingerprint,
+                    testInfo.locator().getName()),
+                DesiredTestResult.SKIP,
+                AndroidErrorId.XTS_DEVICE_COMPAT_CHECKER_DEVICE_BUILD_NOT_MATCH_RETRY_PREV_SESSION);
+          }
         }
       }
     } catch (MobileHarnessException e) {

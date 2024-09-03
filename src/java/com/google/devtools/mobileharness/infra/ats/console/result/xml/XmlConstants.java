@@ -46,6 +46,8 @@ public final class XmlConstants {
   // <Build> element
   public static final String BUILD_TAG = "Build";
   public static final String BUILD_FINGERPRINT_ATTR = "build_fingerprint";
+  public static final String BUILD_FINGERPRINT_UNALTERED_ATTR = "build_fingerprint_unaltered";
+  public static final String BUILD_VENDOR_FINGERPRINT_ATTR = "build_vendor_fingerprint";
   public static final String DEVICE_KERNEL_INFO_ATTR = "device_kernel_info";
   public static final String SYSTEM_IMG_INFO_ATTR = "system_img_info";
   public static final String VENDOR_IMG_INFO_ATTR = "vendor_img_info";

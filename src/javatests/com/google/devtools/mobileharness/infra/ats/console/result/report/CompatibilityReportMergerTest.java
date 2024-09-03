@@ -95,6 +95,8 @@ public final class CompatibilityReportMergerTest {
 
   private static final String DEVICE_BUILD_FINGERPRINT =
       "google/bramble/bramble:UpsideDownCake/UP1A.220722.002/8859461:userdebug/dev-keys";
+  private static final String DEVICE_BUILD_FINGERPRINT_2 =
+      "google/panther/panther:UpsideDownCake/UP1A.220722.003/8859462:userdebug/dev-keys";
 
   @Inject private CompatibilityReportMerger reportMerger;
 
@@ -317,6 +319,64 @@ public final class CompatibilityReportMergerTest {
                 .setModulesTotal(2)
                 .build());
     assertThat(result.getModuleInfoCount()).isEqualTo(2);
+  }
+
+  @Test
+  public void validateReportsWithSameBuildFingerprint_success() throws Exception {
+    ImmutableList<Result> res =
+        ImmutableList.of(
+            Result.newBuilder()
+                .setBuild(
+                    BuildInfo.newBuilder().setBuildFingerprint(DEVICE_BUILD_FINGERPRINT).build())
+                .build(),
+            Result.newBuilder()
+                .setBuild(
+                    BuildInfo.newBuilder()
+                        .setBuildFingerprint(DEVICE_BUILD_FINGERPRINT_2)
+                        .setBuildFingerprintUnaltered(DEVICE_BUILD_FINGERPRINT)
+                        .build())
+                .build());
+
+    assertThat(CompatibilityReportMerger.validateReportsWithSameBuildFingerprint(res)).isTrue();
+  }
+
+  @Test
+  public void validateReportsWithSameBuildFingerprint_notMatch_throwException() throws Exception {
+    ImmutableList<Result> res =
+        ImmutableList.of(
+            Result.newBuilder()
+                .setBuild(
+                    BuildInfo.newBuilder().setBuildFingerprint(DEVICE_BUILD_FINGERPRINT).build())
+                .build(),
+            Result.newBuilder()
+                .setBuild(
+                    BuildInfo.newBuilder().setBuildFingerprint(DEVICE_BUILD_FINGERPRINT_2).build())
+                .build());
+    assertThat(
+            assertThrows(
+                    MobileHarnessException.class,
+                    () -> CompatibilityReportMerger.validateReportsWithSameBuildFingerprint(res))
+                .getErrorId())
+        .isEqualTo(ExtErrorId.REPORT_MERGER_DIFF_DEVICE_BUILD_FINGERPRINT_FOUND);
+
+    ImmutableList<Result> res2 =
+        ImmutableList.of(
+            Result.newBuilder()
+                .setBuild(
+                    BuildInfo.newBuilder().setBuildFingerprint(DEVICE_BUILD_FINGERPRINT).build())
+                .build(),
+            Result.newBuilder()
+                .setBuild(
+                    BuildInfo.newBuilder()
+                        .setBuildFingerprintUnaltered(DEVICE_BUILD_FINGERPRINT_2)
+                        .build())
+                .build());
+    assertThat(
+            assertThrows(
+                    MobileHarnessException.class,
+                    () -> CompatibilityReportMerger.validateReportsWithSameBuildFingerprint(res2))
+                .getErrorId())
+        .isEqualTo(ExtErrorId.REPORT_MERGER_DIFF_DEVICE_BUILD_FINGERPRINT_FOUND);
   }
 
   private Metric createBasicMetric(long value) {

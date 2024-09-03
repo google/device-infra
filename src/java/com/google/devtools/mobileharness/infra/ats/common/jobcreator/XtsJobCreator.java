@@ -143,14 +143,12 @@ public abstract class XtsJobCreator {
         }
         driverParams.put(
             "prev_session_xts_test_plan", runRetryTfSubPlan.get().getPreviousSessionXtsTestPlan());
-        String prevSessionDeviceBuildFingerprint =
-            runRetryTfSubPlan.get().getPreviousSessionDeviceBuildFingerprint().orElse("");
-        extraJobProperties.put(
-            Job.PREV_SESSION_DEVICE_BUILD_FINGERPRINT, prevSessionDeviceBuildFingerprint);
+        injectBuildFingerprint(extraJobProperties, runRetryTfSubPlan.get());
         Path runRetryTfSubPlanXmlFile =
             prepareRunRetryTfSubPlanXmlFile(sessionRequestInfo, runRetryTfSubPlan.get());
         driverParams.put("subplan_xml", runRetryTfSubPlanXmlFile.toAbsolutePath().toString());
-        prevSessionSkipDeviceInfo = prevSessionDeviceBuildFingerprint.isEmpty();
+        prevSessionSkipDeviceInfo =
+            runRetryTfSubPlan.get().getPreviousSessionDeviceBuildFingerprint().orElse("").isEmpty();
       }
     } else if (sessionRequestInfo.subPlanName().isPresent()) {
       Optional<Path> tfSubPlan =
@@ -326,7 +324,7 @@ public abstract class XtsJobCreator {
       return ImmutableList.of();
     }
 
-    Map<XtsPropertyName, String> extraJobProperties = new HashMap<>();
+    ImmutableMap.Builder<XtsPropertyName, String> extraJobProperties = ImmutableMap.builder();
     Optional<SubPlan> subPlanOpt = Optional.empty();
     if (SessionRequestHandlerUtil.isRunRetry(testPlan)) {
       extraJobProperties.put(Job.IS_RUN_RETRY, "true");
@@ -362,9 +360,7 @@ public abstract class XtsJobCreator {
       if (subPlanOpt.isEmpty()) {
         return ImmutableList.of();
       }
-      extraJobProperties.put(
-          Job.PREV_SESSION_DEVICE_BUILD_FINGERPRINT,
-          subPlanOpt.get().getPreviousSessionDeviceBuildFingerprint().orElse(""));
+      injectBuildFingerprint(extraJobProperties, subPlanOpt.get());
     } else if (sessionRequestInfo.subPlanName().isPresent()) {
       subPlanOpt =
           prepareNonTfSubPlan(
@@ -375,7 +371,10 @@ public abstract class XtsJobCreator {
     }
 
     return sessionRequestHandlerUtil.createXtsNonTradefedJobs(
-        sessionRequestInfo, testPlanFilter, subPlanOpt.orElse(null), extraJobProperties);
+        sessionRequestInfo,
+        testPlanFilter,
+        subPlanOpt.orElse(null),
+        extraJobProperties.buildOrThrow());
   }
 
   /** Prepares a sub plan file for a non-tradefed job. */
@@ -391,6 +390,24 @@ public abstract class XtsJobCreator {
       return Optional.empty();
     }
     return Optional.of(subPlan);
+  }
+
+  private void injectBuildFingerprint(
+      ImmutableMap.Builder<XtsPropertyName, String> extraJobPropertiesBuilder,
+      SubPlan runRetrySubPlan) {
+    String prevSessionDeviceBuildFingerprint =
+        runRetrySubPlan.getPreviousSessionDeviceBuildFingerprint().orElse("");
+    extraJobPropertiesBuilder.put(
+        Job.PREV_SESSION_DEVICE_BUILD_FINGERPRINT, prevSessionDeviceBuildFingerprint);
+    String prevSessionDeviceBuildFingerprintUnaltered =
+        runRetrySubPlan.getPreviousSessionDeviceBuildFingerprintUnaltered().orElse("");
+    extraJobPropertiesBuilder.put(
+        Job.PREV_SESSION_DEVICE_BUILD_FINGERPRINT_UNALTERED,
+        prevSessionDeviceBuildFingerprintUnaltered);
+    String prevSessionDeviceVendorBuildFingerprint =
+        runRetrySubPlan.getPreviousSessionDeviceVendorBuildFingerprint().orElse("");
+    extraJobPropertiesBuilder.put(
+        Job.PREV_SESSION_DEVICE_VENDOR_BUILD_FINGERPRINT, prevSessionDeviceVendorBuildFingerprint);
   }
 
   protected static Properties loadTestReportProperties(Path testReportPropertiesFile)

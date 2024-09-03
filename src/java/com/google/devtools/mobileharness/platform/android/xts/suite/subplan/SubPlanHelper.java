@@ -122,6 +122,12 @@ public class SubPlanHelper {
     if (previousResult.hasBuild()) {
       subPlan.setPreviousSessionDeviceBuildFingerprint(
           previousResult.getBuild().getBuildFingerprint());
+      if (!previousResult.getBuild().getBuildFingerprintUnaltered().isEmpty()) {
+        subPlan.setPreviousSessionDeviceBuildFingerprintUnaltered(
+            previousResult.getBuild().getBuildFingerprintUnaltered());
+      }
+      subPlan.setPreviousSessionDeviceVendorBuildFingerprint(
+          previousResult.getBuild().getBuildVendorFingerprint());
     }
     return subPlan;
   }

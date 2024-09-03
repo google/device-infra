@@ -327,8 +327,18 @@ public class CompatibilityReportParser {
     // <Build> is a self-closing tag, update the parent when entering this tag.
     BuildInfo.Builder build = BuildInfo.newBuilder();
     Map<String, String> attributeMap = getAttributeMap(buildInfo);
+
+    // Build fingerprint related attributes.
     if (attributeMap.containsKey(XmlConstants.BUILD_FINGERPRINT_ATTR)) {
       build.setBuildFingerprint(attributeMap.get(XmlConstants.BUILD_FINGERPRINT_ATTR).trim());
+    }
+    if (attributeMap.containsKey(XmlConstants.BUILD_FINGERPRINT_UNALTERED_ATTR)) {
+      build.setBuildFingerprintUnaltered(
+          attributeMap.get(XmlConstants.BUILD_FINGERPRINT_UNALTERED_ATTR).trim());
+    }
+    if (attributeMap.containsKey(XmlConstants.BUILD_VENDOR_FINGERPRINT_ATTR)) {
+      build.setBuildVendorFingerprint(
+          attributeMap.get(XmlConstants.BUILD_VENDOR_FINGERPRINT_ATTR).trim());
     }
 
     ImmutableList<Attribute> buildAttributes =

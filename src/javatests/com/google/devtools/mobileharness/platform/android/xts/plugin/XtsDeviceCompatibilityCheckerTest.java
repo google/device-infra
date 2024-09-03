@@ -95,6 +95,12 @@ public final class XtsDeviceCompatibilityCheckerTest {
   }
 
   @Test
+  public void deviceBuildFingerprintUnset_skipChecking() throws Exception {
+    xtsDeviceCompatibilityChecker.onTestStarted(event);
+    assertThat(properties.getBoolean(Job.SKIP_COLLECTING_NON_TF_REPORTS).orElse(false)).isFalse();
+  }
+
+  @Test
   public void deviceBuildFingerprintNotMatchPrevSession_throwsSkipTestException() throws Exception {
     when(androidAdbUtil.getProperty(
             DEVICE_ID_1, ImmutableList.of(DeviceBuildInfo.FINGERPRINT.getPropName())))
@@ -129,5 +135,89 @@ public final class XtsDeviceCompatibilityCheckerTest {
     xtsDeviceCompatibilityChecker.onTestStarted(event);
 
     assertThat(properties.getBoolean(Job.SKIP_COLLECTING_NON_TF_REPORTS).orElse(false)).isFalse();
+  }
+
+  @Test
+  public void deviceBuildFingerprintUnalteredMatched() throws Exception {
+    when(androidAdbUtil.getProperty(
+            DEVICE_ID_1, ImmutableList.of(DeviceBuildInfo.FINGERPRINT.getPropName())))
+        .thenReturn("build_fingerprint");
+    when(androidAdbUtil.getProperty(
+            DEVICE_ID_2, ImmutableList.of(DeviceBuildInfo.FINGERPRINT.getPropName())))
+        .thenReturn("build_fingerprint");
+    when(androidAdbUtil.getProperty(
+            DEVICE_ID_1, ImmutableList.of(DeviceBuildInfo.VENDOR_FINGERPRINT.getPropName())))
+        .thenReturn("vendor_build_fingerprint");
+    when(androidAdbUtil.getProperty(
+            DEVICE_ID_2, ImmutableList.of(DeviceBuildInfo.VENDOR_FINGERPRINT.getPropName())))
+        .thenReturn("vendor_build_fingerprint");
+    properties.add(Job.IS_RUN_RETRY, "true");
+    properties.add(Job.PREV_SESSION_DEVICE_BUILD_FINGERPRINT, "build_fingerprint_changed");
+    properties.add(Job.PREV_SESSION_DEVICE_BUILD_FINGERPRINT_UNALTERED, "build_fingerprint");
+    properties.add(Job.PREV_SESSION_DEVICE_VENDOR_BUILD_FINGERPRINT, "vendor_build_fingerprint");
+
+    xtsDeviceCompatibilityChecker.onTestStarted(event);
+
+    assertThat(properties.getBoolean(Job.SKIP_COLLECTING_NON_TF_REPORTS).orElse(false)).isFalse();
+  }
+
+  @Test
+  public void deviceVendorBuildFingerprintNotMatched_throwsSkipTestException() throws Exception {
+    when(androidAdbUtil.getProperty(
+            DEVICE_ID_1, ImmutableList.of(DeviceBuildInfo.FINGERPRINT.getPropName())))
+        .thenReturn("build_fingerprint");
+    when(androidAdbUtil.getProperty(
+            DEVICE_ID_2, ImmutableList.of(DeviceBuildInfo.FINGERPRINT.getPropName())))
+        .thenReturn("build_fingerprint");
+    when(androidAdbUtil.getProperty(
+            DEVICE_ID_1, ImmutableList.of(DeviceBuildInfo.VENDOR_FINGERPRINT.getPropName())))
+        .thenReturn("vendor_build_fingerprint");
+    when(androidAdbUtil.getProperty(
+            DEVICE_ID_2, ImmutableList.of(DeviceBuildInfo.VENDOR_FINGERPRINT.getPropName())))
+        .thenReturn("vendor_build_fingerprint");
+    properties.add(Job.IS_RUN_RETRY, "true");
+    properties.add(Job.PREV_SESSION_DEVICE_BUILD_FINGERPRINT, "build_fingerprint_changed");
+    properties.add(Job.PREV_SESSION_DEVICE_BUILD_FINGERPRINT_UNALTERED, "build_fingerprint");
+    properties.add(
+        Job.PREV_SESSION_DEVICE_VENDOR_BUILD_FINGERPRINT, "vendor_build_fingerprint_changed");
+
+    assertThat(
+            assertThrows(
+                    SkipTestException.class,
+                    () -> xtsDeviceCompatibilityChecker.onTestStarted(event))
+                .errorId())
+        .isEqualTo(
+            AndroidErrorId.XTS_DEVICE_COMPAT_CHECKER_DEVICE_BUILD_NOT_MATCH_RETRY_PREV_SESSION);
+    assertThat(properties.getBoolean(Job.SKIP_COLLECTING_NON_TF_REPORTS).orElse(false)).isTrue();
+  }
+
+  @Test
+  public void deviceBuildFingerprintUnalteredNotMatched_throwsSkipTestException() throws Exception {
+    when(androidAdbUtil.getProperty(
+            DEVICE_ID_1, ImmutableList.of(DeviceBuildInfo.FINGERPRINT.getPropName())))
+        .thenReturn("build_fingerprint");
+    when(androidAdbUtil.getProperty(
+            DEVICE_ID_2, ImmutableList.of(DeviceBuildInfo.FINGERPRINT.getPropName())))
+        .thenReturn("build_fingerprint");
+    when(androidAdbUtil.getProperty(
+            DEVICE_ID_1, ImmutableList.of(DeviceBuildInfo.VENDOR_FINGERPRINT.getPropName())))
+        .thenReturn("vendor_build_fingerprint");
+    when(androidAdbUtil.getProperty(
+            DEVICE_ID_2, ImmutableList.of(DeviceBuildInfo.VENDOR_FINGERPRINT.getPropName())))
+        .thenReturn("vendor_build_fingerprint");
+    properties.add(Job.IS_RUN_RETRY, "true");
+    properties.add(Job.PREV_SESSION_DEVICE_BUILD_FINGERPRINT, "build_fingerprint");
+    properties.add(
+        Job.PREV_SESSION_DEVICE_BUILD_FINGERPRINT_UNALTERED, "build_fingerprint_original");
+    properties.add(Job.PREV_SESSION_DEVICE_VENDOR_BUILD_FINGERPRINT, "vendor_build_fingerprint");
+
+    assertThat(
+            assertThrows(
+                    SkipTestException.class,
+                    () -> xtsDeviceCompatibilityChecker.onTestStarted(event))
+                .errorId())
+        .isEqualTo(
+            AndroidErrorId.XTS_DEVICE_COMPAT_CHECKER_DEVICE_BUILD_NOT_MATCH_RETRY_PREV_SESSION);
+    assertThat(properties.getBoolean(Job.SKIP_COLLECTING_NON_TF_REPORTS).orElse(false)).isTrue();
   }
 }

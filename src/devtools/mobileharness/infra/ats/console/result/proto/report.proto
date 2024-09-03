@@ -48,6 +48,8 @@ message Result {
 // Stores info for the <Build> element in the compatibility report.
 message BuildInfo {
   string build_fingerprint = 1;
+  string build_fingerprint_unaltered = 3;
+  string build_vendor_fingerprint = 4;
   // Attributes in the <Build> element.
   repeated Attribute attribute = 2;
 }

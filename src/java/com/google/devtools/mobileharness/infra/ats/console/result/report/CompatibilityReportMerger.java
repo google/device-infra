@@ -421,40 +421,13 @@ public class CompatibilityReportMerger {
   // Ensures all parsed results have same device build fingerprint so the merge will be valid.
   private static boolean validateParsedReportsWithSameBuildFingerprint(
       List<ParseResult> parseResults) throws MobileHarnessException {
-    if (parseResults.isEmpty()) {
-      return false;
-    }
-    Result firstResult =
-        parseResults.stream()
-            .filter(
-                parseResult ->
-                    parseResult.report().get().hasBuild()
-                        && !parseResult.report().get().getBuild().getBuildFingerprint().isEmpty())
-            .map(parseResult -> parseResult.report().get())
-            .findFirst()
-            .orElse(null);
-    if (firstResult == null) {
-      throw new MobileHarnessException(
-          ExtErrorId.REPORT_MERGER_NO_DEVICE_BUILD_FINGERPRINT_FOUND,
-          "Not found any report with info about device build_fingerprint");
-    }
-    String baseBuildFingerprint = firstResult.getBuild().getBuildFingerprint();
-    for (ParseResult parseResult : parseResults) {
-      String reportBuildFingerprint = parseResult.report().get().getBuild().getBuildFingerprint();
-      if (!reportBuildFingerprint.equals(baseBuildFingerprint)) {
-        throw new MobileHarnessException(
-            ExtErrorId.REPORT_MERGER_DIFF_DEVICE_BUILD_FINGERPRINT_FOUND,
-            String.format(
-                "The report generated based on [%s] has device build fingerprint [%s] which doesn't"
-                    + " match build_fingerprint [%s]",
-                parseResult.originalReportFile(), reportBuildFingerprint, baseBuildFingerprint));
-      }
-    }
-    return true;
+    return validateReportsWithSameBuildFingerprint(
+        parseResults.stream().map(pr -> pr.report().get()).collect(toImmutableList()));
   }
 
   // Ensures all reports have same device build fingerprint so the merge will be valid.
-  private static boolean validateReportsWithSameBuildFingerprint(List<Result> reports)
+  @VisibleForTesting
+  static boolean validateReportsWithSameBuildFingerprint(List<Result> reports)
       throws MobileHarnessException {
     if (reports.isEmpty()) {
       return false;
@@ -470,9 +443,9 @@ public class CompatibilityReportMerger {
           ExtErrorId.REPORT_MERGER_NO_DEVICE_BUILD_FINGERPRINT_FOUND,
           "Not found any report with info about device build_fingerprint");
     }
-    String baseBuildFingerprint = firstReport.getBuild().getBuildFingerprint();
+    String baseBuildFingerprint = getBuildFingerprint(firstReport);
     for (Result report : reports) {
-      if (!report.getBuild().getBuildFingerprint().equals(baseBuildFingerprint)) {
+      if (!getBuildFingerprint(report).equals(baseBuildFingerprint)) {
         throw new MobileHarnessException(
             ExtErrorId.REPORT_MERGER_DIFF_DEVICE_BUILD_FINGERPRINT_FOUND,
             String.format(
@@ -482,6 +455,20 @@ public class CompatibilityReportMerger {
       }
     }
     return true;
+  }
+
+  /**
+   * TF tests stores original build_fingerprint to build_fingerprint_unaltered for suites which edit
+   * the original one.
+   */
+  private static String getBuildFingerprint(Result report) {
+    if (report.getBuild().getBuildFingerprint().isEmpty()) {
+      return "";
+    }
+
+    return report.getBuild().getBuildFingerprintUnaltered().isEmpty()
+        ? report.getBuild().getBuildFingerprint()
+        : report.getBuild().getBuildFingerprintUnaltered();
   }
 
   /** Parses multiple XML reports syncly. */
