@@ -25,9 +25,9 @@ import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.console.command.parser.CommandLineParser;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Attribute;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
+import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportParser;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.TestResultProtoUtil;
 import com.google.devtools.mobileharness.infra.ats.console.util.result.ResultListerHelper;
-import com.google.devtools.mobileharness.infra.ats.console.util.result.ResultListerHelper.ResultBundle;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import java.io.File;
@@ -46,11 +46,16 @@ public class PreviousResultLoader {
 
   private final LocalFileUtil localFileUtil;
   private final ResultListerHelper resultListerHelper;
+  private final CompatibilityReportParser compatibilityReportParser;
 
   @Inject
-  PreviousResultLoader(LocalFileUtil localFileUtil, ResultListerHelper resultListerHelper) {
+  PreviousResultLoader(
+      LocalFileUtil localFileUtil,
+      ResultListerHelper resultListerHelper,
+      CompatibilityReportParser compatibilityReportParser) {
     this.localFileUtil = localFileUtil;
     this.resultListerHelper = resultListerHelper;
+    this.compatibilityReportParser = compatibilityReportParser;
   }
 
   /**
@@ -119,10 +124,23 @@ public class PreviousResultLoader {
   /** Try to find the result with the legacy path. */
   private Optional<Result> getPrevLegacySessionTestResult(Path resultsDir, int previousSessionIndex)
       throws MobileHarnessException {
-    ImmutableList<ResultBundle> results =
-        resultListerHelper.listResults(resultsDir.toAbsolutePath().toString());
-    Result result = results.get(previousSessionIndex).result();
-    return Optional.of(injectArgsFromCommandLine(result));
+    ImmutableList<File> results =
+        resultListerHelper.listResultDirsInOrder(resultsDir.toAbsolutePath().toString());
+    List<File> testResultXmlFiles =
+        localFileUtil.listFiles(
+            results.get(previousSessionIndex).getPath(),
+            /* recursively= */ true,
+            p -> p.getName().equals(SuiteCommon.TEST_RESULT_XML_FILE_NAME));
+    if (testResultXmlFiles.size() != 1) {
+      throw new MobileHarnessException(
+          ExtErrorId.PREV_RESULT_LOADER_LOAD_LEGACY_TEST_RESULT_XML_FILE_ERROR,
+          String.format(
+              "Failed to load legacy test result XML file under %s for session %s.",
+              resultsDir.toAbsolutePath(), previousSessionIndex));
+    }
+    Optional<Result> result =
+        compatibilityReportParser.parse(testResultXmlFiles.get(0).toPath(), /* shallow= */ false);
+    return Optional.ofNullable(result.isPresent() ? injectArgsFromCommandLine(result.get()) : null);
   }
 
   /** Injects missing args like modules and filters from command line to the result. */
