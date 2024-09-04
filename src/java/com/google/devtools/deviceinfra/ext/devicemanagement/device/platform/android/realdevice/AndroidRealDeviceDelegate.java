@@ -958,14 +958,17 @@ public abstract class AndroidRealDeviceDelegate {
         return Optional.empty();
       }
     } else if (isTestHarnessRecoveryDevice()) {
+      // add the dimension before checking sdk version to avoid device failing checking the sdk
+      // version is regarded as a recoveried device (i.e., without recovery_status dimension).
+      device.addDimension(Dimension.Name.RECOVERY_STATUS, "dirty");
       if (isQOrAboveBuild(deviceId)) {
         logger.atInfo().log("It'll factory reset device %s via Test Harness Mode.", deviceId);
         AndroidDeviceDelegateHelper.setRebootToStateProperty(device, DeviceState.DEVICE);
-        device.addDimension(Dimension.Name.RECOVERY_STATUS, "dirty");
         return Optional.of(PostTestDeviceOp.REBOOT);
       } else {
         logger.atInfo().log(
             "Factory reset via Test Harness Mode is not supported on device %s.", deviceId);
+        device.removeDimension(Dimension.Name.RECOVERY_STATUS);
         return Optional.empty();
       }
     } else {
