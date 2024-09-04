@@ -927,7 +927,18 @@ public class XtsTradefedTest extends BaseDriver
     Path linkLibDir = XtsDirUtil.getXtsLibDir(tmpXtsWorkDir, xtsType);
     Path linkLib64Dir = XtsDirUtil.getXtsLib64Dir(tmpXtsWorkDir, xtsType);
 
-    createSymlink(linkJdkDir, sourceXtsBundledJdkDir);
+    if (testInfo.properties().has(XtsConstants.XTS_DYNAMIC_DOWNLOAD_PATH_JDK_PROPERTY_KEY)) {
+      createSymlink(
+          linkJdkDir,
+          Path.of(
+              testInfo.getTmpFileDir()
+                  + testInfo
+                      .properties()
+                      .get(XtsConstants.XTS_DYNAMIC_DOWNLOAD_PATH_JDK_PROPERTY_KEY)));
+    } else {
+      createSymlink(linkJdkDir, sourceXtsBundledJdkDir);
+    }
+
     createSymlinksForTestCases(linkTestcasesDir, sourceXtsBundledTestcasesDir);
     createSymlink(linkToolsDir, sourceXtsBundledToolsDir);
     createSymlink(linkLibDir, sourceXtsBundledLibDir);

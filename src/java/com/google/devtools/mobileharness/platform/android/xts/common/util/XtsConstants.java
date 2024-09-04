@@ -46,9 +46,12 @@ public class XtsConstants {
   /** A MH job property key to indicate whether xTS dynamic download is enabled. */
   public static final String IS_XTS_DYNAMIC_DOWNLOAD_ENABLED = "is_xts_dynamic_download_enabled";
 
-  /** A MH test property key of path relative to the test temp dir. */
+  /** MH test property keys of path relative to the test temp dir. */
   public static final String XTS_DYNAMIC_DOWNLOAD_PATH_TEST_PROPERTY_KEY =
       "xts_dynamic_download_path";
+
+  public static final String XTS_DYNAMIC_DOWNLOAD_PATH_JDK_PROPERTY_KEY =
+      "xts_dynamic_download_jdk_path";
 
   private XtsConstants() {}
 }

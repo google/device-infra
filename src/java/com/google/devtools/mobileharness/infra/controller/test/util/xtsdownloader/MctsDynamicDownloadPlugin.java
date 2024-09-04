@@ -71,6 +71,12 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
 
   private static final String TMP_MCTS_TESTCASES_PATH = "/android/xts/mcts/testcases";
 
+  private static final String MCTS_JDK_PATH = "/android/xts/mcts/tool/jdk.zip";
+
+  private static final String TMP_MCTS_TOOL_PATH = "/android/xts/mcts/tool";
+
+  private static final String TMP_MCTS_JDK_PATH = "/android/xts/mcts/tool/jdk";
+
   private static final String MAINLINE_TVP_PKG = "com.google.android.modulemetadata";
 
   private static final String ANDROID_V_CODENAME = "VanillaIceCream";
@@ -189,6 +195,16 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
     logger.atInfo().log("Downloaded MCTS test modules:");
     for (String testModule : allTestModules) {
       logger.atInfo().log("%s", testModule);
+    }
+    // Download the JDK file.
+    String jdkFilePath =
+        downloadPublicUrlFiles("https://dl.google.com/dl" + MCTS_JDK_PATH, MCTS_JDK_PATH);
+    if (jdkFilePath != null) {
+      fileUtil.unzipFile(jdkFilePath, testInfo.getTmpFileDir() + TMP_MCTS_TOOL_PATH);
+      testInfo
+          .properties()
+          .add(XtsConstants.XTS_DYNAMIC_DOWNLOAD_PATH_JDK_PROPERTY_KEY, TMP_MCTS_JDK_PATH);
+      logger.atInfo().log("Downloaded MCTS JDK files");
     }
   }
 
