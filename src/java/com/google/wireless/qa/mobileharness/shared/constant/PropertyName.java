@@ -408,9 +408,9 @@ public interface PropertyName {
 
       /**
        * Store the ';' separated filenames of instrumentation logs (relative to
-       * TestInfo.getGenFileDir) for PASSED test. (not including logs for FAILED test)
+       * TestInfo.getGenFileDir) for Android instrumentation test.
        */
-      ANDROID_INSTRUMENTATION_LOG_FILENAMES_PASSED,
+      ANDROID_INSTRUMENTATION_LOG_FILENAMES,
     }
 
     /** AndroidSetPropDecorator property name constants. */
