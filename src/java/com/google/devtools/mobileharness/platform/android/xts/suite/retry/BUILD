@@ -21,9 +21,10 @@ java_library(
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/jobcreator:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/subplan:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/common:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/ats/common/jobcreator:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/suite:__subpackages__",
     ],
     deps = [
@@ -136,5 +137,19 @@ java_library(
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "retry_stats_helper",
+    srcs = ["RetryStatsHelper.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:__pkg__",
+    ],
+    deps = [
+        "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/common:test_status",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "@maven//:com_google_guava_guava",
     ],
 )

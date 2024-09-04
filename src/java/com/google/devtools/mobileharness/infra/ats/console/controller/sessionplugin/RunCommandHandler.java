@@ -46,6 +46,7 @@ import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsCon
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteResultReporter;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteTestFilter;
+import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryType;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
@@ -56,6 +57,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
@@ -76,6 +78,7 @@ class RunCommandHandler {
   private final SessionInfo sessionInfo;
   private final SuiteResultReporter suiteResultReporter;
   private final XtsJobCreator xtsJobCreator;
+  private final PreviousResultLoader previousResultLoader;
 
   private final Object addingJobLock = new Object();
 
@@ -95,13 +98,15 @@ class RunCommandHandler {
       SessionResultHandlerUtil sessionResultHandlerUtil,
       SessionInfo sessionInfo,
       SuiteResultReporter suiteResultReporter,
-      XtsJobCreator xtsJobCreator) {
+      XtsJobCreator xtsJobCreator,
+      PreviousResultLoader previousResultLoader) {
     this.localFileUtil = localFileUtil;
     this.sessionRequestHandlerUtil = sessionRequestHandlerUtil;
     this.sessionResultHandlerUtil = sessionResultHandlerUtil;
     this.sessionInfo = sessionInfo;
     this.suiteResultReporter = suiteResultReporter;
     this.xtsJobCreator = xtsJobCreator;
+    this.previousResultLoader = previousResultLoader;
   }
 
   void initialize(RunCommand command) throws MobileHarnessException, InterruptedException {
@@ -236,17 +241,17 @@ class RunCommandHandler {
     Path resultDir = null;
     Path logDir = null;
     Result result = null;
+    Path xtsRootDir = Path.of(command.getXtsRootDir());
+    String xtsType = command.getXtsType();
+    Path resultsDir = XtsDirUtil.getXtsResultsDir(xtsRootDir, xtsType);
     try {
       if (!localFileUtil.isDirExist(command.getXtsRootDir())) {
         logger.atInfo().log(
             "xTS root dir [%s] doesn't exist, skip processing result.", command.getXtsRootDir());
         return;
       }
-      Path xtsRootDir = Path.of(command.getXtsRootDir());
-      String xtsType = command.getXtsType();
       String timestampDirName =
           sessionInfo.getSessionProperty(SESSION_PROPERTY_NAME_TIMESTAMP_DIR_NAME).orElseThrow();
-      Path resultsDir = XtsDirUtil.getXtsResultsDir(xtsRootDir, xtsType);
       resultDir = resultsDir.resolve(timestampDirName);
       Path logsDir = XtsDirUtil.getXtsLogsDir(xtsRootDir, xtsType);
       logDir = logsDir.resolve(timestampDirName);
@@ -263,7 +268,32 @@ class RunCommandHandler {
     } finally {
       sessionResultHandlerUtil.cleanUpJobGenDirs(allJobs);
 
-      String xtsTestResultSummary = createXtsTestResultSummary(result, resultDir, logDir);
+      Result previousResult = null;
+      if (SessionRequestHandlerUtil.isRunRetry(sessionRequestInfo.testPlan())) {
+        OptionalInt previousSessionIndex = sessionRequestInfo.retrySessionIndex();
+        if (previousSessionIndex.isPresent()) {
+          previousResult =
+              previousResultLoader.loadPreviousResult(resultsDir, previousSessionIndex.getAsInt());
+        }
+      }
+      String xtsTestResultSummary =
+          createXtsTestResultSummary(result, resultDir, logDir, previousResult);
+      if (localFileUtil.isDirExist(resultDir)) {
+        // Only create the invocation_summary.txt when the result dir has been created by the result
+        // processing.
+        String invocationSummaryFile =
+            resultDir
+                .resolve(XtsConstants.INVOCATION_SUMMARY_FILE_NAME)
+                .toAbsolutePath()
+                .toString();
+        if (localFileUtil.isFileExist(invocationSummaryFile)) {
+          logger.atInfo().log(
+              "Invocation summary file [%s] exists, overriding it.", invocationSummaryFile);
+          localFileUtil.removeFileOrDir(invocationSummaryFile);
+        }
+        localFileUtil.writeToFile(
+            invocationSummaryFile, String.format("TEXT:%s", xtsTestResultSummary));
+      }
       boolean isSessionCompleted = sessionResultHandlerUtil.isSessionCompleted(allJobs);
       String sessionSummary =
           String.format(
@@ -379,10 +409,13 @@ class RunCommandHandler {
   }
 
   private String createXtsTestResultSummary(
-      @Nullable Result result, @Nullable Path resultDir, @Nullable Path logDir) {
+      @Nullable Result result,
+      @Nullable Path resultDir,
+      @Nullable Path logDir,
+      @Nullable Result previousResult) {
     return String.format(
             "%s=========== Result/Log Location ============\n",
-            suiteResultReporter.getSummary(result))
+            suiteResultReporter.getSummary(result, previousResult))
         + (logDir != null && localFileUtil.isDirExist(logDir)
             ? String.format("LOG DIRECTORY               : %s\n", logDir)
             : "")

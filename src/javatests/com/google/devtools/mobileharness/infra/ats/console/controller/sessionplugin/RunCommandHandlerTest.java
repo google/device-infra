@@ -45,6 +45,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.model.S
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteResultReporter;
+import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryType;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
@@ -104,6 +105,7 @@ public final class RunCommandHandlerTest {
   @Bind @Mock private AndroidAdbInternalUtil androidAdbInternalUtil;
   @Bind @Mock private SuiteResultReporter suiteResultReporter;
   @Bind @Mock private XtsJobCreator xtsJobCreator;
+  @Bind @Mock private PreviousResultLoader previousResultLoader;
 
   @Inject private RunCommandHandler runCommandHandler;
   @Inject private SessionRequestHandlerUtil sessionRequestHandlerUtil;
@@ -199,7 +201,8 @@ public final class RunCommandHandlerTest {
                 sessionResultHandlerUtil,
                 sessionInfo,
                 suiteResultReporter,
-                xtsJobCreator));
+                xtsJobCreator,
+                previousResultLoader));
     doNothing().when(sessionResultHandlerUtil).cleanUpJobGenDirs(any());
     when(sessionInfo.getSessionProperty("timestamp_dir_name"))
         .thenReturn(Optional.of(TIMESTAMP_DIR_NAME));

@@ -31,6 +31,8 @@ import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportPr
 import com.google.devtools.mobileharness.infra.ats.console.result.xml.XmlConstants;
 import com.google.devtools.mobileharness.platform.android.xts.common.TestStatus;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.AbiUtil;
+import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryStatsHelper;
+import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryStatsHelper.RetryStatistics;
 import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
 import java.time.Duration;
 import java.time.Instant;
@@ -39,17 +41,26 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.SortedSet;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.annotation.Nullable;
+import javax.inject.Inject;
 
 /** Generates the invocation summary. */
 public class SuiteResultReporter {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
+  private final RetryStatsHelper retryStatsHelper;
+
+  @Inject
+  SuiteResultReporter(RetryStatsHelper retryStatsHelper) {
+    this.retryStatsHelper = retryStatsHelper;
+  }
 
   private static final Comparator<String> MODULE_CHECKER_NAME_COMPARATOR =
       (String m1, String m2) -> {
@@ -64,7 +75,8 @@ public class SuiteResultReporter {
       };
 
   /* Gets an invocation summary for the given result. */
-  public String getSummary(@Nullable Result result) {
+  public String getSummary(@Nullable Result result, @Nullable Result previousResult) {
+    logger.atInfo().log("Getting invocation summary...");
     AtomicInteger totalModules = new AtomicInteger(0);
     AtomicInteger completeModules = new AtomicInteger(0);
     Map<String, String> failedModule = new HashMap<>();
@@ -82,9 +94,24 @@ public class SuiteResultReporter {
     long failedTests = 0L;
     long skippedTests = 0L;
     long assumeFailureTests = 0L;
+    // Retry information
+    long totalRetrySuccess = 0L;
+    Map<String, Long> moduleRetrySuccess = new LinkedHashMap<>();
+    long totalRetryFailure = 0L;
+    Map<String, Long> moduleRetryFailure = new LinkedHashMap<>();
+    Duration totalRetryTime = Duration.ZERO;
+    Map<String, Duration> moduleRetryTime = new LinkedHashMap<>();
 
     if (result != null) {
+      HashMap<String, Module> previousModulesMap = new HashMap<>();
+      if (previousResult != null) {
+        for (Module prevModule : previousResult.getModuleInfoList()) {
+          previousModulesMap.put(getModuleName(prevModule), prevModule);
+        }
+      }
+
       for (Module module : result.getModuleInfoList()) {
+        String moduleName = getModuleName(module);
         if (SuiteCommonUtil.isModuleChecker(module)) {
           moduleCheckers.put(getModuleCheckerName(module), module);
           continue;
@@ -93,7 +120,7 @@ public class SuiteResultReporter {
         if (module.getDone()) {
           completeModules.incrementAndGet();
         } else {
-          failedModule.put(getModuleName(module), module.getReason().getMsg());
+          failedModule.put(moduleName, module.getReason().getMsg());
         }
         totalTests += module.getTotalTests();
         passedTests += module.getPassed();
@@ -114,8 +141,24 @@ public class SuiteResultReporter {
         // Get the module metrics for target preparation
         if (module.hasPrepTimeMillis() && module.hasTeardownTimeMillis()) {
           preparationMap.put(
-              getModuleName(module),
+              moduleName,
               new ModulePrepTimes(module.getPrepTimeMillis(), module.getTeardownTimeMillis()));
+        }
+
+        if (previousResult != null) {
+          Module previousModule = previousModulesMap.get(moduleName);
+          if (previousModule != null) {
+            RetryStatistics retryStatistics =
+                retryStatsHelper.calculateModuleRetryStats(module, previousModule);
+            totalRetrySuccess += retryStatistics.retrySuccess();
+            moduleRetrySuccess.put(moduleName, retryStatistics.retrySuccess());
+            totalRetryFailure += retryStatistics.retryFailure();
+            moduleRetryFailure.put(moduleName, retryStatistics.retryFailure());
+            totalRetryTime = totalRetryTime.plus(retryStatistics.retryTime());
+            moduleRetryTime.put(moduleName, retryStatistics.retryTime());
+          } else {
+            logger.atWarning().log("Not able to find module %s in previous result", moduleName);
+          }
         }
       }
     }
@@ -127,7 +170,14 @@ public class SuiteResultReporter {
       printTopSlowModules(result.getModuleInfoList(), invocationSummary);
       printPreparationMetrics(preparationMap, invocationSummary);
       printModuleCheckersMetric(moduleCheckers, invocationSummary);
-      // TODO: Add PreparationMetrics, ModuleCheckersMetric, ModuleRetriesInformation
+      printModuleRetriesInformation(
+          totalRetrySuccess,
+          moduleRetrySuccess,
+          totalRetryFailure,
+          moduleRetryFailure,
+          totalRetryTime,
+          moduleRetryTime,
+          invocationSummary);
     }
     invocationSummary.append("=============== Summary ===============\n");
     if (result != null) {
@@ -271,6 +321,45 @@ public class SuiteResultReporter {
         String.format(
             "Total module checkers time: %s\n",
             TimeUtils.toReadableDurationString(Duration.ofMillis(totalTime))));
+    invocationSummary.append("====================================================\n");
+  }
+
+  private void printModuleRetriesInformation(
+      long totalRetrySuccess,
+      Map<String, Long> moduleRetrySuccess,
+      long totalRetryFailure,
+      Map<String, Long> moduleRetryFailure,
+      Duration totalRetryTime,
+      Map<String, Duration> moduleRetryTime,
+      StringBuilder invocationSummary) {
+    if (moduleRetrySuccess.isEmpty() || totalRetryTime.isZero()) {
+      return;
+    }
+    invocationSummary.append("============== Modules Retries Information ==============\n");
+    for (String t : moduleRetrySuccess.keySet()) {
+      if (moduleRetryTime.get(t).isZero()) {
+        continue;
+      }
+      invocationSummary.append(
+          String.format(
+              "    %s:\n"
+                  + "        Retry Success (Failed test became Pass)   = %s\n"
+                  + "        Retry Failure (Failed test stayed Failed) = %s\n"
+                  + "        Retry Time                                = %s\n",
+              t,
+              moduleRetrySuccess.get(t),
+              moduleRetryFailure.get(t),
+              TimeUtils.toReadableDurationString(moduleRetryTime.get(t))));
+    }
+    invocationSummary.append("Summary:\n");
+    invocationSummary.append(
+        String.format(
+            "Total Retry Success (Failed test became Pass) = %s\n"
+                + "Total Retry Failure (Failed test stayed Failed) = %s\n"
+                + "Total Retry Time                                = %s\n",
+            totalRetrySuccess,
+            totalRetryFailure,
+            TimeUtils.toReadableDurationString(totalRetryTime)));
     invocationSummary.append("====================================================\n");
   }
 

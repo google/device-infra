@@ -169,8 +169,7 @@ public class SessionResultHandlerUtil {
       Path tmpTradefedTestResultsDir = null;
       try {
         // Prepares the log directory. To avoid creating empty result directory, the result
-        // directory
-        // will be prepared when needed.
+        // directory will be prepared when needed.
         localFileUtil.prepareDir(logDir);
         tmpTradefedTestResultsDir =
             Path.of(localFileUtil.createTempDir(Flags.instance().tmpDirRoot.getNonNull()));

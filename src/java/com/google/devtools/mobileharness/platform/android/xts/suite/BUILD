@@ -160,9 +160,11 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/xml:xml_constants",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common:test_status",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:abi_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:retry_stats_helper",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
     ],
 )

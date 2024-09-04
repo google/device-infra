@@ -41,6 +41,8 @@ public class XtsConstants {
    */
   public static final String TRADEFED_RUNTIME_INFO_FILE_PATH = "tf_runtime_info_file_path";
 
+  public static final String INVOCATION_SUMMARY_FILE_NAME = "invocation_summary.txt";
+
   /** A MH job property key to indicate whether xTS dynamic download is enabled. */
   public static final String IS_XTS_DYNAMIC_DOWNLOAD_ENABLED = "is_xts_dynamic_download_enabled";
 
