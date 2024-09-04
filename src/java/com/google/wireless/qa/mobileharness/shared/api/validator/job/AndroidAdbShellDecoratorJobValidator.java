@@ -37,7 +37,10 @@ public class AndroidAdbShellDecoratorJobValidator
       ImmutableList.of("adb", "shell", "reboot", "uninstall");
   private static final ImmutableList<String> ILLEGAL_MNM_ADDITIONAL_KEYWORDS =
       ImmutableList.of("root");
+  private static final String CACHE_DEVICE_PREFIX = "CACHE_DEVICE:";
 
+  private static final Pattern ILLEGAL_CACHE_DEVICE_COMMAND_REGEX =
+      Pattern.compile("(^|\\s)(" + CACHE_DEVICE_PREFIX + ")(.*)(&)($|\\s)");
   private static final Pattern ILLEGAL_REGEX =
       Pattern.compile("(^|\\s)(" + Joiner.on('|').join(ILLEGAL_KEYWORDS) + ")($|\\s)");
   private static final Pattern ILLEGAL_MNM_ADDITIONAL_REGEX =
@@ -84,6 +87,16 @@ public class AndroidAdbShellDecoratorJobValidator
               "You should not add any of "
                   + ILLEGAL_KEYWORDS
                   + " in your commands when using "
+                  + "AndroidAdbShellDecorator");
+          break;
+        }
+
+        if (ILLEGAL_CACHE_DEVICE_COMMAND_REGEX.matcher(command).find()) {
+          errors.add(
+              "You should not use "
+                  + CACHE_DEVICE_PREFIX
+                  + " and & together in your "
+                  + "commands when using "
                   + "AndroidAdbShellDecorator");
           break;
         }

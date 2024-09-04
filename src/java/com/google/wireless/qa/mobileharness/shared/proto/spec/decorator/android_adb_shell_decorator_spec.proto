@@ -54,7 +54,10 @@ message AndroidAdbShellDecoratorSpec {
           "shell rm /data/cache/myfile', just use 'ls /data,rm /data/cache/"
           "myfile'In the case that you do need use ',' in your command, use "
           "'\\' to escape the ','Example would be like:ls /data,rm "
-          "/data/cache/myfile,am broadcast 'class1\\, class2'"
+          "/data/cache/myfile,am broadcast 'class1\\, class2'. If you want to "
+          "run a command but you don't want the test to be interrupted use "
+          "prefix CACHE_DEVICE followed by : before actual command Example "
+          "would be like CACHE_DEVICE:reboot."
   }];
 
   optional string adb_shell_after_test = 4 [(field_detail) = {
@@ -66,6 +69,9 @@ message AndroidAdbShellDecoratorSpec {
           "asynchronously but killed shortly after test end to avoid polluting "
           "other tests. In the case that you do need use ',' in your command, "
           "use '\\' to escape the ','. Example would be like: ls /data,rm "
-          "/data/cache/myfile,am broadcast 'class1\\, class2'"
+          "/data/cache/myfile,am broadcast 'class1\\, class2'. If you want to "
+          "run a command but you don't want the test to be interrupted use "
+          "prefix CACHE_DEVICE followed by : before actual command Example "
+          "would be like CACHE_DEVICE:reboot."
   }];
 }

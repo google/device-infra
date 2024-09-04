@@ -16,20 +16,27 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.decorator;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.testrunner.device.cache.DeviceCache;
+import com.google.devtools.mobileharness.platform.android.lightning.systemstate.SystemStateManager;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceConnectionState;
+import com.google.devtools.mobileharness.platform.android.systemstate.AndroidSystemStateUtil;
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
 import com.google.devtools.mobileharness.shared.util.error.ErrorModelConverter;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
+import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidAdbShellSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.AndroidAdbShellDecoratorSpec;
+import com.google.wireless.qa.mobileharness.shared.util.DeviceUtil;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -42,7 +49,10 @@ import javax.inject.Inject;
 @DecoratorAnnotation(
     help =
         "For running some ADB shell commands before/after the test is run. "
-            + "Commands that end with & are executed asynchronously.")
+            + "Commands that end with & are executed asynchronously."
+            + "Commands that start with CACHE_DEVICE are executed without "
+            + "interrupting the test due to potential device disconnection "
+            + "caused by the command.")
 public class AndroidAdbShellDecorator extends BaseDecorator
     implements SpecConfigable<AndroidAdbShellDecoratorSpec> {
 
@@ -50,10 +60,27 @@ public class AndroidAdbShellDecorator extends BaseDecorator
 
   private final Adb adb;
 
+  private final AndroidSystemStateUtil systemStateUtil;
+
+  private final SystemStateManager systemStateManager;
+
+  private static final String CACHE_DEVICE_PREFIX = "CACHE_DEVICE:";
+
+  /** Timeout of probing device/emulator readiness. */
+  private static final Duration DEVICE_READY_TIMEOUT = Duration.ofMinutes(5);
+
   @Inject
-  AndroidAdbShellDecorator(Driver decoratedDriver, TestInfo testInfo, Adb adb) {
+  @VisibleForTesting
+  AndroidAdbShellDecorator(
+      Driver decoratedDriver,
+      TestInfo testInfo,
+      Adb adb,
+      AndroidSystemStateUtil systemStateUtil,
+      SystemStateManager systemStateManager) {
     super(decoratedDriver, testInfo);
     this.adb = adb;
+    this.systemStateUtil = systemStateUtil;
+    this.systemStateManager = systemStateManager;
   }
 
   @Override
@@ -127,6 +154,12 @@ public class AndroidAdbShellDecorator extends BaseDecorator
           logger.atInfo().log("Running adb shell command in background: %s", command);
           asyncCommands.add(
               adb.runShellAsync(serial, command, testInfo.timer().remainingTimeJava()));
+        } else if (command.startsWith(CACHE_DEVICE_PREFIX)) {
+          // Remove the prefix
+          command = command.substring(CACHE_DEVICE_PREFIX.length());
+          output =
+              runShellCommandWithCaching(
+                  serial, command, getDevice(), syncCommandTimeout, testInfo, ignoreError);
         } else {
           logger.atInfo().log("Running adb shell command: %s", command);
           output = adb.runShell(serial, command, syncCommandTimeout);
@@ -149,5 +182,61 @@ public class AndroidAdbShellDecorator extends BaseDecorator
       }
     }
     return ImmutableList.copyOf(asyncCommands);
+  }
+
+  private String runShellCommandWithCaching(
+      String serial,
+      String command,
+      Device device,
+      Duration syncCommandTimeout,
+      TestInfo testInfo,
+      boolean ignoreError)
+      throws MobileHarnessException, InterruptedException {
+    String output = null;
+
+    // Caching duration is twice the DEVICE_READY_TIMEOUT as after disconnection of device
+    // waitForState and waitUntilReady each has timeout set to DEVICE_READY_TIMEOUT
+    Duration cacheDuration = DEVICE_READY_TIMEOUT.multipliedBy(2);
+    DeviceCache.getInstance().cache(serial, device.getClass().getSimpleName(), cacheDuration);
+    try {
+      logger.atInfo().log("Running adb shell command: %s", command);
+      output = adb.runShell(serial, command, syncCommandTimeout);
+      waitForDeviceReady(serial, testInfo, ignoreError);
+    } catch (MobileHarnessException e) {
+      if (ignoreError) {
+        testInfo.warnings().addAndLog(e, logger);
+        // Added waitForDeviceReady here, as sometimes command runs successfully but due
+        // to non-zero exit codes from the command it throws an error. To avoid this we
+        // can make ignoreError=true.
+        waitForDeviceReady(serial, testInfo, ignoreError);
+      } else {
+        // This causes the test to fail.
+        throw e;
+      }
+    } finally {
+      DeviceCache.getInstance().invalidateCache(serial);
+    }
+    systemStateManager.becomeRoot(device);
+    return output;
+  }
+
+  private void waitForDeviceReady(String serial, TestInfo testInfo, boolean ignoreError)
+      throws MobileHarnessException, InterruptedException {
+    try {
+      // `adb wait-for-state` exits with error code when using a proxied device. Therefore, we wait
+      // for the device ready by using `systemStateUtil.waitUntilReady` instead.
+      if (!DeviceUtil.isOverTcpDevice(serial)) {
+        systemStateUtil.waitForState(serial, DeviceConnectionState.DEVICE, DEVICE_READY_TIMEOUT);
+      }
+      systemStateUtil.waitUntilReady(serial, DEVICE_READY_TIMEOUT);
+
+    } catch (MobileHarnessException e) {
+      if (ignoreError) {
+        testInfo.warnings().addAndLog(e, logger);
+      } else {
+        // This causes the test to fail.
+        throw e;
+      }
+    }
   }
 }
