@@ -131,8 +131,17 @@ message CommandDetail {
   string request_id = 2;
   string command_line = 3;
   optional CommandState state = 4;
+
+  // Conditionally required.
+  //
+  // Required if state is CANCELED.
   optional CancelReason cancel_reason = 5;
+
+  // Conditionally required.
+  //
+  // Required if state is ERROR or FATAL.
   optional ErrorReason error_reason = 6;
+
   CommandInfo original_command_info = 7;
   optional int64 passed_test_count = 8;
   optional int64 failed_test_count = 9;
@@ -142,6 +151,11 @@ message CommandDetail {
   optional google.protobuf.Timestamp create_time = 13;
   optional google.protobuf.Timestamp update_time = 14;
   optional int64 total_module_count = 15;
+
+  // Conditionally required.
+  //
+  // Required if cancel_reason or error_reason is present.
+  optional string error_message = 16;
 }
 
 enum CommandState {

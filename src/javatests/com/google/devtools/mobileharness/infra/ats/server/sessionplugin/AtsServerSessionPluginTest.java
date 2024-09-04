@@ -347,9 +347,9 @@ public final class AtsServerSessionPluginTest {
                     Any.pack(
                         SessionRequest.newBuilder().setNewMultiCommandRequest(request).build()))
                 .build());
-    assertThrows(
-        MobileHarnessException.class,
-        () -> plugin.onSessionStarting(new SessionStartingEvent(sessionInfo)));
+
+    plugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+
     verify(sessionInfo)
         .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
     RequestDetail requestDetail = unaryOperatorCaptor.getValue().apply(null);

@@ -82,7 +82,7 @@ final class AtsServerSessionPlugin {
       "com.google.devtools.mobileharness.infra.ats.server.sessionplugin.AtsServerSessionPluginModule";
   private static final String SESSION_PLUGIN_LABEL = "AtsServerSessionPlugin";
 
-  private static final XtsTradefedRunCancellation CANCELLATION_PROTO =
+  private static final XtsTradefedRunCancellation CANCELLATION_MESSAGE =
       XtsTradefedRunCancellation.newBuilder()
           .setKillTradefedSignal(2)
           .setCancelReason("User cancelled the test request")
@@ -125,7 +125,7 @@ final class AtsServerSessionPlugin {
 
   @Subscribe
   public void onSessionStarting(SessionStartingEvent event)
-      throws InvalidProtocolBufferException, InterruptedException, MobileHarnessException {
+      throws InvalidProtocolBufferException, InterruptedException {
     request =
         sessionInfo.getSessionPluginExecutionConfig().getConfig().unpack(SessionRequest.class);
     if (request.getRequestCase().equals(RequestCase.NEW_MULTI_COMMAND_REQUEST)) {
@@ -169,14 +169,13 @@ final class AtsServerSessionPlugin {
       if (!requestDetail.getState().equals(RequestState.CANCELED)) {
         startedTestsBeforeCancellation.add(testInfo);
       } else {
-        sendCancellationMessageToStartedTest(testInfo, CANCELLATION_PROTO);
+        sendCancellationMessageToStartedTest(testInfo);
       }
     }
   }
 
   @Subscribe
-  public void onJobEnded(JobEndEvent jobEndEvent)
-      throws InterruptedException, MobileHarnessException {
+  public void onJobEnded(JobEndEvent jobEndEvent) throws InterruptedException {
     JobInfo jobInfo = jobEndEvent.getJob();
 
     // Generate a new commandAttempt for the finished job, and update the command status.
@@ -247,15 +246,14 @@ final class AtsServerSessionPlugin {
         this.startedTestsBeforeCancellation.clear();
       }
       for (TestInfo testInfo : startedTestsBeforeCancellation) {
-        sendCancellationMessageToStartedTest(testInfo, CANCELLATION_PROTO);
+        sendCancellationMessageToStartedTest(testInfo);
       }
     }
   }
 
-  private void sendCancellationMessageToStartedTest(
-      TestInfo testInfo, XtsTradefedRunCancellation cancellationProto) {
+  private void sendCancellationMessageToStartedTest(TestInfo testInfo) {
     try {
-      testMessageUtil.sendProtoMessageToTest(testInfo, cancellationProto);
+      testMessageUtil.sendProtoMessageToTest(testInfo, CANCELLATION_MESSAGE);
       logger.atInfo().log("Sent cancel test message to test [%s]", testInfo.locator().getId());
     } catch (MobileHarnessException e) {
       logger.atWarning().withCause(e).log(
@@ -334,7 +332,7 @@ final class AtsServerSessionPlugin {
             != 0;
   }
 
-  private void createNonTradefedJobs() throws MobileHarnessException, InterruptedException {
+  private void createNonTradefedJobs() throws InterruptedException {
     synchronized (sessionLock) {
       for (CommandInfo commandInfo : requestDetail.getOriginalRequest().getCommandsList()) {
         Optional<CommandDetail> commandDetail =
@@ -382,17 +380,21 @@ final class AtsServerSessionPlugin {
           Long.parseLong(
               testInfo.properties().get(MoblyTestInfoMapHelper.MOBLY_TESTS_FAILED_AND_ERROR)));
     }
-    if (testInfo.timing().getStartTime() != null) {
-      builder.setStartTime(TimeUtils.toProtoTimestamp(testInfo.timing().getStartTime()));
+    Instant testStartTime = testInfo.timing().getStartTime();
+    Instant testEndTime = testInfo.timing().getEndTime();
+    Instant testCreateTime = testInfo.timing().getCreateTime();
+    Instant testModifyTime = testInfo.timing().getModifyTime();
+    if (testStartTime != null) {
+      builder.setStartTime(TimeUtils.toProtoTimestamp(testStartTime));
     }
-    if (testInfo.timing().getEndTime() != null) {
-      builder.setEndTime(TimeUtils.toProtoTimestamp(testInfo.timing().getEndTime()));
+    if (testEndTime != null) {
+      builder.setEndTime(TimeUtils.toProtoTimestamp(testEndTime));
     }
-    if (testInfo.timing().getCreateTime() != null) {
-      builder.setCreateTime(TimeUtils.toProtoTimestamp(testInfo.timing().getCreateTime()));
+    if (testCreateTime != null) {
+      builder.setCreateTime(TimeUtils.toProtoTimestamp(testCreateTime));
     }
-    if (testInfo.timing().getModifyTime() != null) {
-      builder.setUpdateTime(TimeUtils.toProtoTimestamp(testInfo.timing().getModifyTime()));
+    if (testModifyTime != null) {
+      builder.setUpdateTime(TimeUtils.toProtoTimestamp(testModifyTime));
     }
     return builder
         .setTotalTestCount(builder.getPassedTestCount() + builder.getFailedTestCount())
