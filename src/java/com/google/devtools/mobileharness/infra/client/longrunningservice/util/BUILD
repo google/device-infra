@@ -58,3 +58,22 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+java_library(
+    name = "session_persistence_util",
+    srcs = ["SessionPersistenceUtil.java"],
+    deps = [
+        "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_java_proto",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "jdbc_based_session_persistence_util",
+    srcs = ["JdbcBasedSessionPersistenceUtil.java"],
+    deps = [
+        ":session_persistence_util",
+        "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_java_proto",
+        "@maven//:com_google_guava_guava",
+    ],
+)

@@ -32,6 +32,8 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.control
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecords;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.LocalSessionStub;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.LocalSessionStubImpl;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.util.JdbcBasedSessionPersistenceUtil;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.util.SessionPersistenceUtil;
 import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberExceptionLoggingHandler;
 import com.google.devtools.mobileharness.infra.monitoring.CloudPubsubMonitorModule;
 import com.google.devtools.mobileharness.infra.monitoring.MonitorPipelineLauncher;
@@ -95,6 +97,9 @@ class ServerModule extends AbstractModule {
     bind(DatabaseConnections.class)
         .annotatedWith(AtsDatabaseConnections.class)
         .to(DatabaseConnections.class)
+        .in(Singleton.class);
+    bind(SessionPersistenceUtil.class)
+        .to(JdbcBasedSessionPersistenceUtil.class)
         .in(Singleton.class);
   }
 
