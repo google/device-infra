@@ -20,6 +20,7 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidAdbShellSpec;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
@@ -65,49 +66,51 @@ public class AndroidAdbShellDecoratorJobValidator
 
     // Checks the properties.
     for (AndroidAdbShellDecoratorSpec spec : specs) {
-      List<String> commands = new ArrayList<>(2);
+      List<String> groupedCommands = new ArrayList<>(2);
       if (spec.hasAdbShellBeforeTest()) {
-        commands.add(spec.getAdbShellBeforeTest());
+        groupedCommands.add(spec.getAdbShellBeforeTest());
       }
       if (spec.hasAdbShellAfterTest()) {
-        commands.add(spec.getAdbShellAfterTest());
+        groupedCommands.add(spec.getAdbShellAfterTest());
       }
-      if (commands.isEmpty()) {
+      if (groupedCommands.isEmpty()) {
         errors.add(
             String.format(
                 "You should set either %s or %s or both if you want to use "
                     + "AndroidAdbShellDecorator",
                 spec.getAdbShellBeforeTest(), spec.getAdbShellAfterTest()));
       }
-
       boolean isInMnMLab = isInMnMLab(job);
-      for (String command : commands) {
-        if (ILLEGAL_REGEX.matcher(command).find()) {
-          errors.add(
-              "You should not add any of "
-                  + ILLEGAL_KEYWORDS
-                  + " in your commands when using "
-                  + "AndroidAdbShellDecorator");
-          break;
-        }
+      for (String groupedCommand : groupedCommands) {
+        Iterable<String> commands = AndroidAdbShellSpec.parseCommands(groupedCommand);
+        for (String command : commands) {
+          if (ILLEGAL_REGEX.matcher(command).find()) {
+            errors.add(
+                "You should not add any of "
+                    + ILLEGAL_KEYWORDS
+                    + " in your commands when using "
+                    + "AndroidAdbShellDecorator");
+            break;
+          }
 
-        if (ILLEGAL_CACHE_DEVICE_COMMAND_REGEX.matcher(command).find()) {
-          errors.add(
-              "You should not use "
-                  + CACHE_DEVICE_PREFIX
-                  + " and & together in your "
-                  + "commands when using "
-                  + "AndroidAdbShellDecorator");
-          break;
-        }
+          if (ILLEGAL_CACHE_DEVICE_COMMAND_REGEX.matcher(command).find()) {
+            errors.add(
+                "You should not use "
+                    + CACHE_DEVICE_PREFIX
+                    + " and & together in your "
+                    + "commands when using "
+                    + "AndroidAdbShellDecorator");
+            break;
+          }
 
-        if (isInMnMLab && ILLEGAL_MNM_ADDITIONAL_REGEX.matcher(command).find()) {
-          errors.add(
-              "You should not add any of "
-                  + ILLEGAL_MNM_ADDITIONAL_KEYWORDS
-                  + " in your commands when using "
-                  + "AndroidAdbShellDecorator");
-          break;
+          if (isInMnMLab && ILLEGAL_MNM_ADDITIONAL_REGEX.matcher(command).find()) {
+            errors.add(
+                "You should not add any of "
+                    + ILLEGAL_MNM_ADDITIONAL_KEYWORDS
+                    + " in your commands when using "
+                    + "AndroidAdbShellDecorator");
+            break;
+          }
         }
       }
     }
