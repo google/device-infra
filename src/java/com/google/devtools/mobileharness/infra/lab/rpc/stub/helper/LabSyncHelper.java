@@ -16,12 +16,9 @@
 
 package com.google.devtools.mobileharness.infra.lab.rpc.stub.helper;
 
-import static com.google.common.base.StandardSystemProperty.JAVA_VERSION;
-import static com.google.common.base.StandardSystemProperty.OS_NAME;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Ascii;
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
@@ -36,7 +33,6 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatusWithTimestamp;
 import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperties;
-import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperty;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabPort;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabServerFeature;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabServerSetting;
@@ -49,9 +45,6 @@ import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServicePr
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignUpLabRequest;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignUpLabResponse;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.LabSyncStub;
-import com.google.devtools.mobileharness.shared.constant.hostmanagement.HostPropertyConstants.HostPropertyKey;
-import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
-import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.version.Version;
 import com.google.devtools.mobileharness.shared.version.proto.Version.VersionCheckRequest;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
@@ -121,6 +114,8 @@ public class LabSyncHelper {
   /** All optional configurations of the lab server and the devices. */
   private final ApiConfig apiConfig;
 
+  private final HostProperties nonConfigurableHostProperties;
+
   /** For detecting real-time lab hostname. */
   private final NetUtil netUtil;
 
@@ -130,18 +125,23 @@ public class LabSyncHelper {
    * @param labSyncStub the master stub for syncing lab
    * @param labRpcPort RPC port of the Stubby services of this lab server
    * @param labSocketPort socket port for receiving file of this lab server
+   * @param labGrpcPort gRPC port of the Stubby services of this lab server
+   * @param nonConfigurableHostProperties non-configurable host properties of this lab server
    */
   public LabSyncHelper(
-      LabSyncStub labSyncStub, int labRpcPort, int labSocketPort, int labGrpcPort) {
+      LabSyncStub labSyncStub,
+      int labRpcPort,
+      int labSocketPort,
+      int labGrpcPort,
+      HostProperties nonConfigurableHostProperties) {
     this(
         labSyncStub,
         labRpcPort,
         labSocketPort,
         labGrpcPort,
+        nonConfigurableHostProperties,
         ApiConfig.getInstance(),
-        new NetUtil(),
-        new LocalFileUtil(),
-        new CommandExecutor());
+        new NetUtil());
   }
 
   @VisibleForTesting
@@ -150,14 +150,14 @@ public class LabSyncHelper {
       int labRpcPort,
       int labSocketPort,
       int labGrpcPort,
+      HostProperties nonConfigurableHostProperties,
       ApiConfig config,
-      NetUtil netUtil,
-      LocalFileUtil localFileUtil,
-      CommandExecutor commandExecutor) {
+      NetUtil netUtil) {
     this.labSyncStub = labSyncStub;
     this.labRpcPort = labRpcPort;
     this.labSocketPort = labSocketPort;
     this.labGrpcPort = labGrpcPort;
+    this.nonConfigurableHostProperties = nonConfigurableHostProperties;
     this.apiConfig = config;
     this.netUtil = netUtil;
   }
@@ -318,46 +318,9 @@ public class LabSyncHelper {
     }
   }
 
-  public HostProperties getNonConfigurableHostProperties() throws MobileHarnessException {
-    HostProperties.Builder hostProperties = HostProperties.newBuilder();
-
-    netUtil
-        .getLocalHostLocation()
-        .ifPresent(
-            labLocation ->
-                hostProperties.addHostProperty(
-                    HostProperty.newBuilder()
-                        .setKey(Ascii.toLowerCase(HostPropertyKey.LAB_LOCATION.name()))
-                        .setValue(labLocation)
-                        .build()));
-    hostProperties.addHostProperty(
-        HostProperty.newBuilder()
-            .setKey(Ascii.toLowerCase(HostPropertyKey.HOST_OS.name()))
-            .setValue(OS_NAME.value()));
-    hostProperties.addHostProperty(
-        HostProperty.newBuilder()
-            .setKey(Ascii.toLowerCase(HostPropertyKey.JAVA_VERSION.name()))
-            .setValue(JAVA_VERSION.value()));
-    hostProperties.addHostProperty(
-        HostProperty.newBuilder()
-            .setKey(Ascii.toLowerCase(HostPropertyKey.HOST_VERSION.name()))
-            .setValue(Version.LAB_VERSION.toString()));
-    hostProperties.addHostProperty(
-        HostProperty.newBuilder()
-            .setKey(Ascii.toLowerCase(HostPropertyKey.LOCATION_TYPE.name()))
-            .setValue(
-                String.valueOf(Ascii.toLowerCase(netUtil.getLocalHostLocationType().name()))));
-    hostProperties.addHostProperty(
-        HostProperty.newBuilder()
-            .setKey(Ascii.toLowerCase(HostPropertyKey.HOST_OS_VERSION.name()))
-            .setValue(System.getProperty("os.version")));
-
-    return hostProperties.build();
-  }
-
   private LabServerFeature getLabServerFeature() throws MobileHarnessException {
     HostProperties.Builder hostProperties = apiConfig.getHostProperties().toBuilder();
-    hostProperties.addAllHostProperty(getNonConfigurableHostProperties().getHostPropertyList());
+    hostProperties.addAllHostProperty(nonConfigurableHostProperties.getHostPropertyList());
     return LabServerFeature.newBuilder().setHostProperties(hostProperties).build();
   }
 

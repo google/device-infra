@@ -31,6 +31,8 @@ import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperties;
+import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperty;
 import com.google.devtools.mobileharness.infra.controller.device.DeviceIdManager;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceManager;
 import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
@@ -57,6 +59,7 @@ import com.google.devtools.mobileharness.infra.lab.rpc.stub.helper.LabSyncHelper
 import com.google.devtools.mobileharness.infra.master.rpc.stub.JobSyncStub;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.LabSyncStub;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.grpc.LabSyncGrpcStub;
+import com.google.devtools.mobileharness.shared.constant.hostmanagement.HostPropertyConstants.HostPropertyKey;
 import com.google.devtools.mobileharness.shared.labinfo.LabInfoProvider;
 import com.google.devtools.mobileharness.shared.labinfo.LocalLabInfoProvider;
 import com.google.devtools.mobileharness.shared.util.comm.stub.ChannelFactory;
@@ -86,6 +89,7 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.logging.Level;
@@ -150,7 +154,9 @@ public class LabServer {
 
       // Sets public general file directory to BaseDevice.
       BaseDevice.setGenFileDirRoot(DirUtil.getPublicGenDir());
-      initHostLevelDeviceDimensions();
+
+      HostProperties nonConfigurableHostProperties =
+          initHostLevelDeviceDimensionsAndHostProperties();
 
       // TODO: Create FileTransferSocketService.
 
@@ -182,7 +188,8 @@ public class LabServer {
                 labSyncStub,
                 rpcPort,
                 Flags.instance().socketPort.getNonNull(),
-                Flags.instance().grpcPort.getNonNull());
+                Flags.instance().grpcPort.getNonNull(),
+                nonConfigurableHostProperties);
         masterSyncerForDevice = new MasterSyncerForDevice(deviceManager, labSyncHelper);
         globalInternalBus.register(masterSyncerForDevice);
         apiConfig.addObserver(masterSyncerForDevice);
@@ -370,7 +377,11 @@ public class LabServer {
     }
   }
 
-  private void initHostLevelDeviceDimensions() throws MobileHarnessException, InterruptedException {
+  private HostProperties initHostLevelDeviceDimensionsAndHostProperties()
+      throws MobileHarnessException, InterruptedException {
+
+    HostProperties.Builder hostProperties = HostProperties.newBuilder();
+
     // Required dimensions
     // Adds "pool:shared" to lab required dimensions for m&m labs.
     if (DeviceUtil.inSharedLab()) {
@@ -386,33 +397,91 @@ public class LabServer {
           .getSupportedLocalDimensions()
           .add(Name.LAB_SUPPORTS_CONTAINER, Value.TRUE);
     }
+
     LabDimensionManager.getInstance()
         .getSupportedLocalDimensions()
         .add(Ascii.toLowerCase(Name.HOST_NAME.name()), netUtil.getLocalHostName());
-    LabDimensionManager.getInstance()
-        .getSupportedLocalDimensions()
-        .add(Ascii.toLowerCase(Name.HOST_IP.name()), netUtil.getUniqueHostIpOrEmpty().orElse(""));
-    netUtil
-        .getLocalHostLocation()
-        .ifPresent(
-            labLocation ->
-                LabDimensionManager.getInstance()
-                    .getSupportedLocalDimensions()
-                    .add(Ascii.toLowerCase(Name.LAB_LOCATION.name()), labLocation));
+
+    // Host IP
+    Optional<String> hostIp = netUtil.getUniqueHostIpOrEmpty();
+    if (!hostIp.isEmpty()) {
+      LabDimensionManager.getInstance()
+          .getSupportedLocalDimensions()
+          .add(Ascii.toLowerCase(Name.HOST_IP.name()), hostIp.get());
+      hostProperties.addHostProperty(
+          HostProperty.newBuilder()
+              .setKey(HostPropertyKey.HOST_IP.name())
+              .setValue(hostIp.get())
+              .build());
+    }
+
+    // Host OS
+    String osName = systemUtil.getOsName();
     LabDimensionManager.getInstance()
         .getSupportedLocalDimensions()
         .add(Ascii.toLowerCase(Name.HOST_OS.name()), systemUtil.getOsName());
+    hostProperties.addHostProperty(
+        HostProperty.newBuilder()
+            .setKey(Ascii.toLowerCase(HostPropertyKey.HOST_OS.name()))
+            .setValue(osName)
+            .build());
+
+    // Host OS version
+    String osVersion = systemUtil.getOsVersion();
+    LabDimensionManager.getInstance()
+        .getSupportedLocalDimensions()
+        .add(Ascii.toLowerCase(Name.HOST_OS_VERSION.name()), osVersion);
+    hostProperties.addHostProperty(
+        HostProperty.newBuilder()
+            .setKey(Ascii.toLowerCase(HostPropertyKey.HOST_OS_VERSION.name()))
+            .setValue(osVersion)
+            .build());
+
+    // Lab host version
     LabDimensionManager.getInstance()
         .getSupportedLocalDimensions()
         .add(Ascii.toLowerCase(Name.HOST_VERSION.name()), Version.LAB_VERSION.toString());
+    hostProperties.addHostProperty(
+        HostProperty.newBuilder()
+            .setKey(Ascii.toLowerCase(HostPropertyKey.HOST_VERSION.name()))
+            .setValue(Version.LAB_VERSION.toString()));
+
+    // Host location
+    Optional<String> labLocation = netUtil.getLocalHostLocation();
+    if (!labLocation.isEmpty()) {
+      LabDimensionManager.getInstance()
+          .getSupportedLocalDimensions()
+          .add(Ascii.toLowerCase(Name.LAB_LOCATION.name()), labLocation.get());
+      hostProperties.addHostProperty(
+          HostProperty.newBuilder()
+              .setKey(Ascii.toLowerCase(HostPropertyKey.LAB_LOCATION.name()))
+              .setValue(labLocation.get())
+              .build());
+    }
+
+    // Host location type
+    String locationType = netUtil.getLocalHostLocationType().name();
     LabDimensionManager.getInstance()
         .getSupportedLocalDimensions()
-        .add(
-            Ascii.toLowerCase(Name.LOCATION_TYPE.name()),
-            Ascii.toLowerCase(netUtil.getLocalHostLocationType().name()));
-    LabDimensionManager.getInstance()
-        .getSupportedLocalDimensions()
-        .add(Ascii.toLowerCase(Name.HOST_OS_VERSION.name()), systemUtil.getOsVersion());
+        .add(Ascii.toLowerCase(Name.LOCATION_TYPE.name()), Ascii.toLowerCase(locationType));
+    hostProperties.addHostProperty(
+        HostProperty.newBuilder()
+            .setKey(Ascii.toLowerCase(HostPropertyKey.LOCATION_TYPE.name()))
+            .setValue(Ascii.toLowerCase(locationType))
+            .build());
+
+    addExtraHostProperties(hostProperties);
+
+    return hostProperties.build();
+  }
+
+  private void addExtraHostProperties(HostProperties.Builder hostProperties) {
+    // Java version
+    hostProperties.addHostProperty(
+        HostProperty.newBuilder()
+            .setKey(Ascii.toLowerCase(HostPropertyKey.JAVA_VERSION.name()))
+            .setValue(systemUtil.getJavaVersion())
+            .build());
   }
 
   /** Test services created by lab server. */

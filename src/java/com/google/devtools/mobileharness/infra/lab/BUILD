@@ -44,6 +44,7 @@ java_library(
     ],
     deps = [
         ":annotations",
+        "//src/devtools/mobileharness/api/model/proto:lab_java_proto",
         "//src/devtools/mobileharness/shared/trace/proto:span_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device",
@@ -81,6 +82,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/master/rpc/stub:lab_sync",
         "//src/java/com/google/devtools/mobileharness/infra/master/rpc/stub/grpc:job_sync",
         "//src/java/com/google/devtools/mobileharness/infra/master/rpc/stub/grpc:lab_sync",
+        "//src/java/com/google/devtools/mobileharness/shared/constant/hostmanagement:host_property_constants",
         "//src/java/com/google/devtools/mobileharness/shared/file/resolver:abstract_file_resolver",
         "//src/java/com/google/devtools/mobileharness/shared/file/resolver:ats_file_server_file_resolver",
         "//src/java/com/google/devtools/mobileharness/shared/file/resolver:cache_file_resolver",
