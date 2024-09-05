@@ -20,6 +20,7 @@ load("@io_grpc_grpc_java//:java_grpc_library.bzl", "java_grpc_library")
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
+        # "//devtools/mobileharness/project:ava",
         "//:deviceinfra_all_pkg",
         "//wireless/android/pixel/testtools/djar:__subpackages__",
     ],
