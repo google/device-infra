@@ -92,6 +92,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/labinfo:lab_info_service",
         "//src/java/com/google/devtools/mobileharness/shared/labinfo:local_lab_info_provider",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "//src/java/com/google/devtools/mobileharness/shared/util/base",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/filetransfer/cloud/rpc/service:cloud_file_transfer_service_grpc_impl",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/filetransfer/cloud/rpc/service:cloud_file_transfer_service_impl",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:channel_factory",

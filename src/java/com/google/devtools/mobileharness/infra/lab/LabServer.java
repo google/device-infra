@@ -62,6 +62,7 @@ import com.google.devtools.mobileharness.infra.master.rpc.stub.grpc.LabSyncGrpcS
 import com.google.devtools.mobileharness.shared.constant.hostmanagement.HostPropertyConstants.HostPropertyKey;
 import com.google.devtools.mobileharness.shared.labinfo.LabInfoProvider;
 import com.google.devtools.mobileharness.shared.labinfo.LocalLabInfoProvider;
+import com.google.devtools.mobileharness.shared.util.base.StrUtil;
 import com.google.devtools.mobileharness.shared.util.comm.stub.ChannelFactory;
 import com.google.devtools.mobileharness.shared.util.comm.stub.MasterGrpcStubHelper;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -481,6 +482,13 @@ public class LabServer {
         HostProperty.newBuilder()
             .setKey(Ascii.toLowerCase(HostPropertyKey.JAVA_VERSION.name()))
             .setValue(systemUtil.getJavaVersion())
+            .build());
+
+    // Host total memory
+    hostProperties.addHostProperty(
+        HostProperty.newBuilder()
+            .setKey(Ascii.toLowerCase(HostPropertyKey.TOTAL_MEM.name()))
+            .setValue(StrUtil.getHumanReadableSize(systemUtil.getTotalMemory()))
             .build());
   }
 

@@ -39,6 +39,8 @@ public final class HostPropertyConstants {
     LAB_TYPE,
     /** The type of the location of the host. */
     LOCATION_TYPE,
+    /** The total memory of the host. */
+    TOTAL_MEM,
   }
 
   private HostPropertyConstants() {}
