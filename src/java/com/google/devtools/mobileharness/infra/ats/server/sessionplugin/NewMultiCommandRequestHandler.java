@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.infra.ats.server.sessionplugin;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
+import static com.google.devtools.mobileharness.shared.util.error.MoreThrowables.shortDebugString;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toJavaDuration;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -48,7 +49,6 @@ import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.Com
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandInfo;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandInfo.DeviceDimension;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandState;
-import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.ErrorReason;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.NewMultiCommandRequest;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.RequestDetail;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.RequestDetail.RequestState;
@@ -249,7 +249,12 @@ final class NewMultiCommandRequestHandler {
       } catch (MobileHarnessException e) {
         commandDetail.ifPresent(
             builder ->
-                builder.setState(CommandState.ERROR).setErrorReason(ErrorReason.UNKNOWN_REASON));
+                setCommandCanceled(
+                    builder,
+                    CancelReason.INVALID_RESOURCE,
+                    String.format(
+                        "Failed to reformat resource path of job [%s]: %s",
+                        jobInfo.locator().getName(), shortDebugString(e))));
         continue;
       }
       sessionInfo.addJob(jobInfo);
@@ -298,15 +303,20 @@ final class NewMultiCommandRequestHandler {
       sessionRequestInfo = generateSessionRequestInfo(request, commandInfo, sessionInfo);
       sessionRequestInfoCache.put(commandInfo, sessionRequestInfo);
     } catch (MobileHarnessException e) {
+      String errorSummary =
+          String.format(
+              "Failed to generate sessionRequestInfo from commandInfo [%s]",
+              shortDebugString(commandInfo));
       logger.atWarning().withCause(e).log(
-          "Failed to generate sessionRequestInfo from commandInfo: %s. SessionID: %s",
-          shortDebugString(commandInfo), sessionInfo.getSessionId());
-      commandDetailBuilder.setState(CommandState.CANCELED);
-      if (e.getErrorId() == BasicErrorId.LOCAL_MOUNT_ZIP_TO_DIR_ERROR) {
-        commandDetailBuilder.setCancelReason(CancelReason.INVALID_RESOURCE);
-      } else {
-        commandDetailBuilder.setCancelReason(CancelReason.INVALID_REQUEST);
-      }
+          "%s, session_id=%s", errorSummary, sessionInfo.getSessionId());
+      CancelReason cancelReason =
+          e.getErrorId() == BasicErrorId.LOCAL_MOUNT_ZIP_TO_DIR_ERROR
+              ? CancelReason.INVALID_RESOURCE
+              : CancelReason.INVALID_REQUEST;
+      setCommandCanceled(
+          commandDetailBuilder,
+          cancelReason,
+          String.format("%s: %s", errorSummary, shortDebugString(e)));
       return commandDetailBuilder.build();
     }
 
@@ -314,21 +324,26 @@ final class NewMultiCommandRequestHandler {
     try {
       jobInfoList = xtsJobCreator.createXtsTradefedTestJob(sessionRequestInfo);
       if (jobInfoList.isEmpty()) {
-        commandDetailBuilder
-            .setState(CommandState.CANCELED)
-            .setCancelReason(CancelReason.INVALID_REQUEST);
+        setCommandCanceled(
+            commandDetailBuilder, CancelReason.INVALID_REQUEST, "Zero xTS TF job created");
       }
     } catch (MobileHarnessException e) {
-      commandDetailBuilder.setState(CommandState.ERROR).setErrorReason(ErrorReason.UNKNOWN_REASON);
+      setCommandCanceled(
+          commandDetailBuilder,
+          CancelReason.INVALID_REQUEST,
+          "Failed to create xTS TF job: " + shortDebugString(e));
       jobInfoList = ImmutableList.of();
     }
     for (JobInfo jobInfo : jobInfoList) {
       try {
         insertAdditionalTestResource(jobInfo, request);
       } catch (MobileHarnessException e) {
-        commandDetailBuilder
-            .setState(CommandState.ERROR)
-            .setErrorReason(ErrorReason.UNKNOWN_REASON);
+        setCommandCanceled(
+            commandDetailBuilder,
+            CancelReason.INVALID_RESOURCE,
+            String.format(
+                "Failed to insert additional test resource to job [%s]: %s",
+                jobInfo.locator().getName(), shortDebugString(e)));
         continue;
       }
       String commandId = getCommandId(commandInfo, request);
@@ -530,6 +545,7 @@ final class NewMultiCommandRequestHandler {
    * Copies xTS tradefed and non-tradefed generated logs/results into proper locations within the
    * given xts root dir. Also update the request's command states based on the results.
    */
+  @VisibleForTesting
   void handleResultProcessing(SessionInfo sessionInfo, RequestDetail.Builder requestDetail)
       throws InterruptedException {
     URL outputUrl = null;
@@ -666,6 +682,7 @@ final class NewMultiCommandRequestHandler {
   }
 
   // Clean up temporary files and directories in session and jobs.
+  @VisibleForTesting
   void cleanup(SessionInfo sessionInfo) throws InterruptedException {
     try {
       sessionResultHandlerUtil.cleanUpJobGenDirs(sessionInfo.getAllJobs());
@@ -714,6 +731,24 @@ final class NewMultiCommandRequestHandler {
           String.format("Failed to unmount dir %s", mountDirPath),
           e);
     }
+  }
+
+  private static void setCommandCanceled(
+      CommandDetail.Builder commandDetailBuilder, CancelReason reason, String errorMessage) {
+    commandDetailBuilder
+        .setState(CommandState.CANCELED)
+        .setCancelReason(reason)
+        .setErrorMessage(appendErrorMessage(commandDetailBuilder.getErrorMessage(), errorMessage));
+  }
+
+  private static String appendErrorMessage(String existingMessage, String newMessage) {
+    if (existingMessage.isBlank()) {
+      return newMessage;
+    }
+    if (newMessage.isBlank()) {
+      return existingMessage;
+    }
+    return existingMessage + " //--// " + newMessage;
   }
 
   private static int getRandom4Digits() {

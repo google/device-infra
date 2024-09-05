@@ -354,7 +354,7 @@ public final class AtsServerSessionPluginTest {
         .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
     RequestDetail requestDetail = unaryOperatorCaptor.getValue().apply(null);
     assertThat(requestDetail.getId()).isEqualTo("session_id");
-    assertThat(requestDetail.getState()).isEqualTo(RequestState.RUNNING);
+    assertThat(requestDetail.getState()).isEqualTo(RequestState.CANCELED);
     assertThat(requestDetail.getCommandInfosList()).containsExactly(commandInfo);
     assertThat(requestDetail.getCreateTime()).isEqualTo(Timestamps.fromMillis(1000L));
     assertThat(requestDetail.getStartTime()).isEqualTo(Timestamps.fromMillis(2000L));
