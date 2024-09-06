@@ -186,6 +186,11 @@ public final class MctsDynamicDownloadPluginTest {
     mockDownloadPublicUrlFiles(
         "/tmp/android-mcts-rkpd.zip",
         "https://dl\\.google\\.com/dl/android/xts/mcts/30/arm64/android-mcts-rkpd\\.zip");
+    Mockito.doReturn(null)
+        .when(spyMctsDynamicDownloadPlugin)
+        .downloadPublicUrlFiles(
+            "https://dl.google.com/dl/android/xts/mcts/tool/jdk.zip",
+            "/android/xts/mcts/tool/jdk.zip");
   }
 
   @Test
