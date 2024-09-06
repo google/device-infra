@@ -235,7 +235,7 @@ public class GcsFileManager {
     return downloadGcsFileIfNonExisting(gcsFile).localCachePath();
   }
 
-  private CacheInfo getCacheInfo(GcsApiObject gcsFile)
+  public CacheInfo getCacheInfo(GcsApiObject gcsFile)
       throws MobileHarnessException, InterruptedException {
     return downloadGcsFileIfNonExisting(gcsFile);
   }

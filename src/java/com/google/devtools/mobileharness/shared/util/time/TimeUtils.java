@@ -133,5 +133,19 @@ public class TimeUtils {
     return Timestamps.checkValid(timestamp);
   }
 
+  /**
+   * Returns the number of seconds of the given duration as a {@code double}. This method should be
+   * used to accommodate APIs that <b>only</b> accept durations as {@code double} values.
+   *
+   * <p>This conversion may lose precision.
+   *
+   * <p>If you need the number of seconds in this duration as a {@code long} (not a {@code double}),
+   * simply use {@code duration.getSeconds()}.
+   */
+  @SuppressWarnings({"DurationSecondsToDouble", "GoodTime"})
+  public static double toSecondsAsDouble(Duration duration) {
+    return duration.getSeconds() + duration.getNano() / 1e9;
+  }
+
   private TimeUtils() {}
 }

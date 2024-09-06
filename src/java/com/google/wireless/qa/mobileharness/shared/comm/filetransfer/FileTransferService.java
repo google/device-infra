@@ -14,19 +14,12 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.shared.util.file.remote;
+package com.google.wireless.qa.mobileharness.shared.comm.filetransfer;
 
-import com.google.auto.value.AutoValue;
-import java.nio.file.Path;
 
-/** A wrapper class of cache info. */
-@AutoValue
-public abstract class CacheInfo {
-  public abstract Path localCachePath();
+/** Receiver of file transferring. */
+public interface FileTransferService {
 
-  public abstract boolean isCached();
-
-  public static CacheInfo create(Path localCachePath, boolean isCached) {
-    return new AutoValue_CacheInfo(localCachePath, isCached);
-  }
+  /** Shuts down receiver. Must be called to completely shutdown the server. */
+  void shutdown();
 }

@@ -156,6 +156,9 @@ public enum ErrorCode {
   FILE_NOT_FOUND(1200),
   FILE_READ_ERROR(1201),
   FILE_WRITE_ERROR(1203),
+  FILE_MD5_ERROR(1204),
+  FILE_TRANSFER_ERROR(1205),
+  FILE_TRANSFER_TIMEOUT(1206),
   FILE_DELETE_ERROR(1215),
 
   // ***********************************************************************************************

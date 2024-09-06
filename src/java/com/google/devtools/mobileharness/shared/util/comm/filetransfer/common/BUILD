@@ -16,7 +16,8 @@
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
-        "//src/java/com/google/devtools/mobileharness/shared/util/comm/filetransfer/cloud/rpc/service:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/shared:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/shared:__subpackages__",
     ],
 )
 
@@ -30,5 +31,21 @@ java_library(
         "@com_google_protobuf_protobuf_java",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "tagged_file_handler",
+    srcs = ["TaggedFileHandler.java"],
+    visibility = [
+        "//java/com/google/devtools/mobileharness/shared/util/comm/filetransfer/common:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/shared/util/comm/filetransfer:__subpackages__",
+    ],
+    deps = [
+        ":file_handlers",
+        "//src/devtools/mobileharness/shared/util/comm/filetransfer/common/proto:tagged_file_metadata_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/comm/filetransfer",
     ],
 )

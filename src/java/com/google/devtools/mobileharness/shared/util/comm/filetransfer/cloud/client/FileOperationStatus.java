@@ -14,19 +14,28 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.shared.util.file.remote;
+package com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.client;
 
 import com.google.auto.value.AutoValue;
-import java.nio.file.Path;
 
-/** A wrapper class of cache info. */
+/**
+ * A wrapper class of file operation status.
+ *
+ * <p>File operations include uploading and downloading.
+ */
 @AutoValue
-public abstract class CacheInfo {
-  public abstract Path localCachePath();
+public abstract class FileOperationStatus {
+  /** Whether the file operation is finished. */
+  abstract boolean isFinished();
 
-  public abstract boolean isCached();
+  /**
+   * The size of the file in bytes.
+   *
+   * <p>It is only valid when {@link #isFinished()} is true.
+   */
+  abstract long fileSize();
 
-  public static CacheInfo create(Path localCachePath, boolean isCached) {
-    return new AutoValue_CacheInfo(localCachePath, isCached);
+  public static FileOperationStatus create(boolean isFinished, long fileSize) {
+    return new AutoValue_FileOperationStatus(isFinished, fileSize);
   }
 }

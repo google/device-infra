@@ -14,19 +14,18 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.shared.util.file.remote;
+package com.google.devtools.mobileharness.shared.util.comm.filetransfer.common.factory;
 
-import com.google.auto.value.AutoValue;
-import java.nio.file.Path;
+import com.google.common.flogger.FluentLogger;
+import com.google.wireless.qa.mobileharness.shared.comm.filetransfer.FileTransferClient;
 
-/** A wrapper class of cache info. */
-@AutoValue
-public abstract class CacheInfo {
-  public abstract Path localCachePath();
+/**
+ * Factories of {@link FileTransferClient}. It creates different factories according to the
+ * differences of parameters.
+ */
+public final class FileTransferClientFactories {
 
-  public abstract boolean isCached();
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  public static CacheInfo create(Path localCachePath, boolean isCached) {
-    return new AutoValue_CacheInfo(localCachePath, isCached);
-  }
+  private FileTransferClientFactories() {}
 }
