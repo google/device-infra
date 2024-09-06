@@ -28,6 +28,9 @@ public abstract class FlagsString {
   public abstract ImmutableList<String> flags();
 
   public FlagsString addToHead(ImmutableList<String> flags) {
+    if (flags.isEmpty()) {
+      return of(flagsString(), flags());
+    }
     return of(
         String.join(" ", flags) + " " + flagsString(),
         ImmutableList.<String>builderWithExpectedSize(flags().size() + flags.size())
@@ -37,6 +40,9 @@ public abstract class FlagsString {
   }
 
   public FlagsString addToEnd(ImmutableList<String> flags) {
+    if (flags.isEmpty()) {
+      return of(flagsString(), flags());
+    }
     return of(
         flagsString() + " " + String.join(" ", flags),
         ImmutableList.<String>builderWithExpectedSize(flags().size() + flags.size())

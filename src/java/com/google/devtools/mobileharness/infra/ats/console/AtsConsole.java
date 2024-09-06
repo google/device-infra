@@ -91,6 +91,8 @@ public class AtsConsole {
 
   private static final String USE_NEW_OLC_SERVER_ENV_VAR = "USE_NEW_OLC_SERVER";
 
+  private static final String USE_TF_RETRY_ENV_VAR = "USE_TF_RETRY";
+
   public static void main(String[] args) throws IOException, InterruptedException {
     // Gets system properties.
     ImmutableMap<String, String> systemProperties =
@@ -351,12 +353,17 @@ public class AtsConsole {
 
   private static FlagsString preprocessDeviceInfraServiceFlags(FlagsString deviceInfraServiceFlags)
       throws IOException, InterruptedException {
+    ImmutableList.Builder<String> extraFlags = ImmutableList.builder();
     if (Boolean.parseBoolean(System.getenv(USE_NEW_OLC_SERVER_ENV_VAR))) {
       // Generate random flags for a new OLC server
-      return deviceInfraServiceFlags.addToEnd(getRandomServerFlags());
-    } else {
-      return deviceInfraServiceFlags;
+      extraFlags.addAll(getRandomServerFlags());
     }
+    if (System.getenv(USE_TF_RETRY_ENV_VAR) != null) {
+      extraFlags.add(
+          String.format(
+              "--use_tf_retry=%s", Boolean.parseBoolean(System.getenv(USE_TF_RETRY_ENV_VAR))));
+    }
+    return deviceInfraServiceFlags.addToEnd(extraFlags.build());
   }
 
   private static ImmutableList<String> getRandomServerFlags()
