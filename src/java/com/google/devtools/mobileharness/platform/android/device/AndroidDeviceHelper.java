@@ -29,7 +29,6 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidPro
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty.DoNotAddToDimension;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty.KeepDimensionValueCase;
 import com.google.devtools.mobileharness.platform.android.shared.constant.Splitters;
-import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.api.device.BaseDevice;
@@ -58,16 +57,12 @@ public class AndroidDeviceHelper {
 
   private final AndroidAdbUtil androidAdbUtil;
 
-  private final AndroidSystemSettingUtil androidSystemSettingUtil;
-
   public AndroidDeviceHelper() {
-    this(new AndroidAdbUtil(), new AndroidSystemSettingUtil());
+    this(new AndroidAdbUtil());
   }
 
-  public AndroidDeviceHelper(
-      AndroidAdbUtil androidAdbUtil, AndroidSystemSettingUtil androidSystemSettingUtil) {
+  public AndroidDeviceHelper(AndroidAdbUtil androidAdbUtil) {
     this.androidAdbUtil = androidAdbUtil;
-    this.androidSystemSettingUtil = androidSystemSettingUtil;
   }
 
   /**

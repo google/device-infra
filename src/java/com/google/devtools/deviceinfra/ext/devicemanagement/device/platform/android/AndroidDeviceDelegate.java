@@ -108,7 +108,7 @@ public abstract class AndroidDeviceDelegate {
     this.androidSystemSettingUtil = androidSystemSettingUtil;
     this.androidProcessUtil = androidProcessUtil;
     this.deviceId = device.getDeviceId();
-    this.androidDeviceHelper = new AndroidDeviceHelper(androidAdbUtil, androidSystemSettingUtil);
+    this.androidDeviceHelper = new AndroidDeviceHelper(androidAdbUtil);
   }
 
   /** Ensures device is booted up and ready to respond. */

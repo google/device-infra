@@ -479,22 +479,6 @@ public class AndroidSystemSettingUtilTest {
   }
 
   @Test
-  public void getDeviceSdkVersionForPreview() throws Exception {
-    when(adbUtil.getIntProperty(DEVICE_ID, AndroidProperty.SDK_VERSION)).thenReturn(28);
-    when(adbUtil.getProperty(DEVICE_ID, AndroidProperty.PREVIEW_SDK_VERSION)).thenReturn("1");
-
-    assertThat(settingUtil.getDeviceSdkVersion(DEVICE_ID)).isEqualTo(29);
-
-    when(adbUtil.getProperty(DEVICE_ID, AndroidProperty.PREVIEW_SDK_VERSION))
-        .thenThrow(MobileHarnessException.class);
-    assertThat(
-            assertThrows(
-                    MobileHarnessException.class, () -> settingUtil.getDeviceSdkVersion(DEVICE_ID))
-                .getErrorId())
-        .isEqualTo(AndroidErrorId.ANDROID_SYSTEM_SETTING_GET_DEVICE_SDK_ERROR);
-  }
-
-  @Test
   public void getPackageLegacyStorageMode() throws Exception {
     when(adbUtil.cmd(DEVICE_ID, AndroidService.APPOPS, new String[] {"get", TEST_PACKAGE_NAME}))
         .thenReturn(APPOPS_OUTPUT_WITH_LEGACY_STORAGE);

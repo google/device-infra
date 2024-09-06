@@ -25,7 +25,6 @@ import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
-import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.wireless.qa.mobileharness.shared.api.device.BaseDevice;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import org.junit.Before;
@@ -45,7 +44,6 @@ public final class AndroidDeviceHelperTest {
 
   @Mock private BaseDevice device;
   @Mock private AndroidAdbUtil androidAdbUtil;
-  @Mock private AndroidSystemSettingUtil androidSystemSettingUtil;
 
   // For test purposes DEVICE_ID contains both upper case and lower case letters.
   private static final String DEVICE_ID = "363005DC750400ec";
@@ -60,7 +58,7 @@ public final class AndroidDeviceHelperTest {
   public void setUp() throws Exception {
     when(device.getDeviceId()).thenReturn(DEVICE_ID);
 
-    androidDeviceHelper = new AndroidDeviceHelper(androidAdbUtil, androidSystemSettingUtil);
+    androidDeviceHelper = new AndroidDeviceHelper(androidAdbUtil);
   }
 
   @Test

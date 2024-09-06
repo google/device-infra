@@ -1001,13 +1001,7 @@ public class AndroidSystemSettingUtil {
   public int getDeviceSdkVersion(String serial)
       throws MobileHarnessException, InterruptedException {
     try {
-      int baseSdkVersion = adbUtil.getIntProperty(serial, AndroidProperty.SDK_VERSION);
-      String previewSdkVersion = adbUtil.getProperty(serial, AndroidProperty.PREVIEW_SDK_VERSION);
-      if (!previewSdkVersion.isEmpty() && Integer.parseInt(previewSdkVersion) > 0) {
-        return baseSdkVersion + 1;
-      } else {
-        return baseSdkVersion;
-      }
+      return adbUtil.getIntProperty(serial, AndroidProperty.SDK_VERSION);
     } catch (MobileHarnessException e) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_SYSTEM_SETTING_GET_DEVICE_SDK_ERROR,
