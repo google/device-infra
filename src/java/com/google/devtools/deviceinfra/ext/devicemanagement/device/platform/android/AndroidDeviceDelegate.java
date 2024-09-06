@@ -403,6 +403,7 @@ public abstract class AndroidDeviceDelegate {
   public void basicAndroidDeviceConfiguration(boolean isRooted) throws InterruptedException {
     // Checks root.
     device.addDimension(Dimension.Name.ROOTED, String.valueOf(isRooted));
+    device.addDimension(Dimension.Name.OS, Dimension.Value.ANDROID);
 
     // Adds general drivers.
     device.addSupportedDriver("NoOpDriver");

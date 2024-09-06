@@ -54,6 +54,10 @@ public final class Dimension {
     DEVICE,
     /** Class simple name of the {@code Device} class. */
     DEVICE_CLASS_NAME,
+    /** The form of the device. The value can be one of [virtual/physical]. */
+    DEVICE_FORM,
+    /** The OS of the device. The value can be one of [android/ios/testbed]. */
+    OS,
     /** Whether a device supports running test in container mode. */
     DEVICE_SUPPORTS_CONTAINER,
     /** Whether a device is supports running on Moreto. */
@@ -372,6 +376,18 @@ public final class Dimension {
 
     /** Dimension value for default pool_name. */
     public static final String DEFAULT_POOL_NAME = "DEFAULT";
+
+    /** Dimension value for virtual device. */
+    public static final String VIRTUAL = "virtual";
+
+    /** Dimension value for physical device. */
+    public static final String PHYSICAL = "physical";
+
+    /** Dimension value for iOS device. */
+    public static final String IOS = "ios";
+
+    /** Dimension value for Android device. */
+    public static final String ANDROID = "android";
 
     private Value() {}
   }

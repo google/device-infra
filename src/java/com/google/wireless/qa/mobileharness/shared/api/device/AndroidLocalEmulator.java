@@ -78,7 +78,8 @@ public class AndroidLocalEmulator extends AndroidDevice {
   public void setUp() throws MobileHarnessException, InterruptedException {
     super.setUp();
     addSupportedDeviceType(AndroidLocalEmulator.class.getSimpleName());
-    addDimension(DIMENSION_NAME_INTERNET, String.valueOf(true));
+    addDimension(DIMENSION_NAME_INTERNET, Dimension.Value.TRUE);
+    addDimension(Dimension.Name.DEVICE_FORM, Dimension.Value.VIRTUAL);
     updateDimension(
         Ascii.toLowerCase(Dimension.Name.SUPPORTS_GMSCORE.name()), Dimension.Value.TRUE);
     setCommunication(getDeviceId());
@@ -88,7 +89,7 @@ public class AndroidLocalEmulator extends AndroidDevice {
   private void setCommunication(String deviceId) {
     ADB.Builder adb = ADB.newBuilder().setSerial(deviceId);
     if (deviceId.startsWith("localhost:")) {
-      List<String> words = Splitter.onPattern(":").splitToList(deviceId);
+      List<String> words = Splitter.on(':').splitToList(deviceId);
       adb.setTcp(TCP.newBuilder().setIp(words.get(0)).setPort(Integer.parseInt(words.get(1))));
     }
     setCommunicationDimensionAndProperty(
@@ -98,9 +99,7 @@ public class AndroidLocalEmulator extends AndroidDevice {
   }
 
   @Override
-  public void preRunTest(TestInfo testInfo)
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-          InterruptedException {
+  public void preRunTest(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
     // Dismiss lockscreen
     testInfo
         .log()

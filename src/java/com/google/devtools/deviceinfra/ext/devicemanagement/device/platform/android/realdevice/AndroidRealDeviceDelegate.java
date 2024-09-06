@@ -408,6 +408,7 @@ public abstract class AndroidRealDeviceDelegate {
   private void addRealDeviceBasicDimensionsAndProperties() throws InterruptedException {
     addAdbCommunication(deviceId);
     // Adds real device specific dimensions.
+    device.addDimension(Dimension.Name.DEVICE_FORM, Dimension.Value.PHYSICAL);
     try {
       device.addDimension(
           Dimension.Name.NUM_CPUS, String.valueOf(systemSpecUtil.getNumberOfCpus(deviceId)));
