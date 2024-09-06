@@ -62,20 +62,5 @@ public class AndroidDeviceSettingsDecoratorEnvValidator implements EnvValidator 
           AndroidErrorId.ANDROID_DEVICE_SETTINGS_DECORATOR_ENV_VALIDATOR_DEVICE_NOT_SUPPORTED,
           "Only support device with API 22+.");
     }
-
-    boolean isRooted = false;
-    try {
-      isRooted = ((AndroidDevice) device).isRooted();
-    } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
-      throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_DEVICE_SETTINGS_DECORATOR_ENV_VALIDATOR_DEVICE_NOT_SUPPORTED,
-          "Failed to get rooted status.",
-          e);
-    }
-    if (!isRooted) {
-      throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_DEVICE_SETTINGS_DECORATOR_ENV_VALIDATOR_DEVICE_NOT_SUPPORTED,
-          "Only support rooted device.");
-    }
   }
 }

@@ -73,7 +73,10 @@ import javax.inject.Inject;
  * mobileharness.shared.spec.AndroidDeviceSettingsDecoratorSpec}
  */
 @DecoratorAnnotation(
-    help = "For setting device specs. See AndroidDeviceSettingsDecoratorSpec for more details.")
+    help =
+        "For setting device specs. See AndroidDeviceSettingsDecoratorSpec for more details. Note:"
+            + " some settings may not be supported for unrooted devices, please verify before"
+            + " deploying tests to CI.")
 public class AndroidDeviceSettingsDecorator extends BaseDecorator
     implements SpecConfigable<AndroidDeviceSettingsDecoratorSpec> {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();

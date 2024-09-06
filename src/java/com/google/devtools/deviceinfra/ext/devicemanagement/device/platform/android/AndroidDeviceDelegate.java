@@ -419,6 +419,9 @@ public abstract class AndroidDeviceDelegate {
     device.addSupportedDecorator("AndroidAtsDynamicConfigPusherDecorator");
     device.addSupportedDecorator("AndroidCleanAppsDecorator");
     device.addSupportedDecorator("AndroidDeviceFeaturesCheckDecorator");
+    // Advanced device settings. This decorator is only full tested on AndroidRealDevice. Some
+    // settings may not be supported for emulators.
+    device.addSupportedDecorator("AndroidDeviceSettingsDecorator");
     device.addSupportedDecorator("AndroidInstallAppsDecorator");
     device.addSupportedDecorator("AndroidMainlineModulesCheckDecorator");
     device.addSupportedDecorator("AndroidMinSdkVersionCheckDecorator");
@@ -454,10 +457,6 @@ public abstract class AndroidDeviceDelegate {
 
   /** List of decorators/drivers that should be supported by rooted devices. */
   private void rootedAndroidDeviceConfiguration(String deviceId) throws InterruptedException {
-
-    // Advanced device settings. This decorator is only full tested on AndroidRealDevice. Some
-    // settings may not be supported for emulators.
-    device.addSupportedDecorator("AndroidDeviceSettingsDecorator");
 
     // *********************************************************************************************
     // The following features are only enabled in full stack labs or Local Mode.
