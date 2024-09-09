@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.infra.controller.device.external;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.daemon.health.handler.DrainHandler;
 import java.time.Duration;
+import java.util.Optional;
 
 /**
  * The device manager which can operate the devices controlled by non-MH lab server device manager.
@@ -40,6 +41,14 @@ public interface ExternalDeviceManager extends DrainHandler {
 
   /** Gets the device status. */
   DeviceStatus getDeviceStatus(String deviceId, String deviceType);
+
+  /**
+   * Gets the device run target.
+   *
+   * @return the run target for the given device if the device exists and the run target for this
+   *     device exists; empty otherwise.
+   */
+  Optional<String> getRunTarget(String deviceId);
 
   /** Gets whether this external DM manages device life cycle. */
   boolean isManagingDeviceLifeCycle();

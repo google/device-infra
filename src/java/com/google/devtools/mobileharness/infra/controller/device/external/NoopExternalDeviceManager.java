@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.infra.controller.device.external;
 
 import com.google.devtools.mobileharness.infra.controller.device.external.ExternalDeviceManager.DeviceReservation;
 import java.time.Duration;
+import java.util.Optional;
 
 /**
  * A dummy external device manager which can be used when there's no another device manager on the
@@ -44,6 +45,11 @@ public class NoopExternalDeviceManager implements ExternalDeviceManager {
   @Override
   public DeviceStatus getDeviceStatus(String deviceId, String deviceType) {
     return DeviceStatus.IDLE;
+  }
+
+  @Override
+  public Optional<String> getRunTarget(String deviceId) {
+    return Optional.empty();
   }
 
   @Override

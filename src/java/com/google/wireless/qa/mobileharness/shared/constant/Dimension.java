@@ -126,6 +126,8 @@ public final class Dimension {
     RELEASE_VERSION_MAJOR,
     /** If the device is rooted or not. */
     ROOTED,
+    /** The run target of the device. */
+    RUN_TARGET,
     /** Whether to enable taking screenshot from FE. */
     SCREENSHOT_ABLE,
     /** Skip SUW by disabling the app. The value should be the package name of the SUW app. */

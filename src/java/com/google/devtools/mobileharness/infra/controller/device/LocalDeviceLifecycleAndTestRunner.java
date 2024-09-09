@@ -63,6 +63,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 
@@ -727,6 +728,18 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
     }
     logger.atInfo().log("Start periodical check");
     lastCheckDeviceTime = clock.instant();
+
+    // Update device run target.
+    // If the run target is returned from TF and it's not same as the current run_target dimension
+    // value, update with the new value;
+    // If the run target is not returned from TF, clear run_target dimension.
+    Optional<String> runTarget = externalDeviceManager.getRunTarget(device.getDeviceId());
+    if (runTarget.isPresent()) {
+      device.updateDimension(Dimension.Name.RUN_TARGET, runTarget.get());
+    } else {
+      device.updateDimension(Dimension.Name.RUN_TARGET);
+    }
+
     try {
       return device.checkDevice();
     } catch (MobileHarnessException e) {
