@@ -271,9 +271,9 @@ public class LocalFileUtil {
   }
 
   /**
-   * Clear all unopened files or directories directly under the given directory. It contains the
-   * following steps to lists all opened files and formats the output with file names only before
-   * removing unopened files.
+   * Clear all unopened files directly under the given directory with expiration check. It contains
+   * the following steps to lists all opened files and formats the output with file names only
+   * before removing unopened files.
    *
    * <p>1. Use command - "lsof -w -Fn +D <dir>" to list opened files. Normally there will be 3 lines
    * per file.
@@ -290,7 +290,7 @@ public class LocalFileUtil {
    *
    * <p>This method may consume GB memory if passes a high level directory path like root - /.
    */
-  public void clearUnopenedFilesOrDirs(Path dirPath)
+  public void clearUnopenedFiles(Path dirPath, @Nullable Duration expiration)
       throws MobileHarnessException, InterruptedException {
     checkDir(dirPath);
 
@@ -323,19 +323,39 @@ public class LocalFileUtil {
           e);
     }
 
-    List<String> allFilesOrDirs = listFileOrDirPaths(dirPath.toString());
-    for (String fileOrDir : allFilesOrDirs) {
-      if (allOpenedFilesOrDirs.contains(fileOrDir)) {
+    List<Path> allFiles = listFilePaths(dirPath, /* recursively= */ true);
+    ImmutableList.Builder<Path> removedFilesBuilder = ImmutableList.builder();
+    for (Path filePath : allFiles) {
+      if (allOpenedFilesOrDirs.contains(filePath.toString())) {
         // Skip opened files or dirs.
         continue;
       }
+      // Consider a file expired if it remains unchanged for the given duration.
+      if (expiration != null && isFileChanged(filePath, expiration)) {
+        // Skip changed files or dirs.
+        continue;
+      }
       try {
-        removeFileOrDir(fileOrDir);
+        removeFileOrDir(filePath);
+        removedFilesBuilder.add(filePath);
       } catch (MobileHarnessException e) {
         // Catch exception here to avoid breaking the whole process.
-        logger.atWarning().withCause(e).log("Failed to remove unopened file or dir %s.", fileOrDir);
+        logger.atWarning().withCause(e).log("Failed to remove unopened file or dir %s.", filePath);
       }
     }
+    ImmutableList<Path> removedFiles = removedFilesBuilder.build();
+    if (removedFiles.isEmpty()) {
+      logger.atInfo().log("No matched unopened files removed under %s", dirPath);
+    } else {
+      logger.atInfo().log("Removed unopened files: %s", removedFiles);
+    }
+  }
+
+  /** Checks if a file/directory was changed within the given duration. */
+  public boolean isFileChanged(Path path, Duration duration) throws MobileHarnessException {
+    Instant lastModifiedTime = getFileLastModifiedTime(path);
+    Instant now = Instant.now();
+    return lastModifiedTime.plus(duration).isAfter(now);
   }
 
   /**
