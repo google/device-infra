@@ -16,11 +16,16 @@
 
 package com.google.devtools.mobileharness.infra.controller.scheduler;
 
+import static com.google.devtools.mobileharness.shared.util.error.MoreThrowables.shortDebugString;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ContiguousSet;
 import com.google.common.collect.DiscreteDomain;
 import com.google.common.collect.Range;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.model.lab.DeviceScheduleUnit;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobScheduleUnit;
@@ -33,9 +38,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 /** Utility for scheduling multiple devices in a single allocation. */
@@ -45,7 +47,7 @@ public class AdhocTestbedSchedulingUtil {
 
   private static final Duration FIND_SUBDEVICES_TIMEOUT = Duration.ofSeconds(10);
 
-  private final ExecutorService executor =
+  private final ListeningExecutorService executor =
       ThreadPools.createStandardThreadPool("adhoc-testbed-scheduler");
 
   public AdhocTestbedSchedulingUtil() {
@@ -90,14 +92,14 @@ public class AdhocTestbedSchedulingUtil {
     List<DeviceScheduleUnit> devicePoolList = new ArrayList<>(devicePool);
     // Because the number of subdevice specs (S) is less than the number of devices (D), we iterate
     // through the (fewer) permutations of specs (S! < D!). However, because the order of subdevices
-    // in the testbed should be preserved (e.g., a multidevice driver may assume the first device
+    // in the testbed should be preserved (e.g., a multi-device driver may assume the first device
     // has specific dimensions) we permute a list of indices instead of the actual
-    // subDeviceSpecList, and match that permutation against sublists of the device list.
+    // subDeviceSpecList, and match that permutation against sub-lists of the device list.
     ContiguousSet<Integer> specIndices =
         ContiguousSet.create(
             Range.closedOpen(0, subDeviceSpecList.size()), DiscreteDomain.integers());
     // Because this requires iterating through permutations of possibly many specs, set a timeout.
-    final Future<List<DeviceScheduleUnit>> future =
+    final ListenableFuture<List<DeviceScheduleUnit>> future =
         executor.submit(
             () -> {
               Map<Map.Entry<DeviceScheduleUnit, SubDeviceSpec>, Boolean>
@@ -117,7 +119,7 @@ public class AdhocTestbedSchedulingUtil {
                     Map.Entry<DeviceScheduleUnit, SubDeviceSpec> key =
                         Map.entry(
                             devicePoolList.get(current),
-                            subDeviceSpecList.get(permutedSpecIndices.get(i).intValue()));
+                            subDeviceSpecList.get(permutedSpecIndices.get(i)));
                     subDeviceSupportsSpecCache.computeIfAbsent(
                         key, k -> subDeviceSupportsSpec(k.getKey(), k.getValue()));
                     if (subDeviceSupportsSpecCache.get(key)) {
@@ -146,9 +148,10 @@ public class AdhocTestbedSchedulingUtil {
             });
 
     try {
-      return future.get(FIND_SUBDEVICES_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
+      return future.get(FIND_SUBDEVICES_TIMEOUT.toMillis(), MILLISECONDS);
     } catch (TimeoutException e) {
-      logger.atWarning().withCause(e).log("Search for a set of devices timed out");
+      logger.atWarning().log(
+          "Search for a set of devices timed out, exception=[%s]", shortDebugString(e));
     } catch (ExecutionException | CancellationException e) {
       logger.atWarning().withCause(e).log("Error while searching for a set of devices");
     } finally {
@@ -158,8 +161,7 @@ public class AdhocTestbedSchedulingUtil {
   }
 
   /** Checks whether the {@code subDevice} supports the type and dimensions in the {@code spec}. */
-  private static final boolean subDeviceSupportsSpec(
-      DeviceScheduleUnit subDevice, SubDeviceSpec spec) {
+  private static boolean subDeviceSupportsSpec(DeviceScheduleUnit subDevice, SubDeviceSpec spec) {
     return subDevice.types().support(spec.type())
         && subDevice.dimensions().supportAndSatisfied(spec.dimensions().getAll())
         && subDevice.decorators().support(spec.decorators().getAll());
