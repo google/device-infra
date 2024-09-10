@@ -93,11 +93,12 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
           "33", 2022,
           "34", 2023,
           "35", 2024);
+  // For CTS, there's no diff between arm64 and arm.
   private static final ImmutableMap<String, String> DEVICE_ABI_MAP =
       ImmutableMap.of(
-          "armeabi", "arm",
-          "armeabi-v7a", "arm",
-          "armeabi-v7a-hard", "arm",
+          "armeabi", "arm64",
+          "armeabi-v7a", "arm64",
+          "armeabi-v7a-hard", "arm64",
           "arm64-v8a", "arm64",
           "x86", "x86_64",
           "x86_64", "x86_64");
