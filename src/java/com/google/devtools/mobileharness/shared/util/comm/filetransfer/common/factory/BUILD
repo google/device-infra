@@ -40,6 +40,8 @@ java_library(
     deps = [
         ":file_transfer_client_factory",
         ":file_transfer_parameters",
+        "//src/java/com/google/devtools/mobileharness/shared/util/comm/filetransfer/cloud/client:cloud_file_transfer_client",
+        "//src/java/com/google/devtools/mobileharness/shared/util/comm/filetransfer/cloud/rpc/stub:cloud_file_transfer_stub",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "//src/java/com/google/wireless/qa/mobileharness/shared/comm/filetransfer",

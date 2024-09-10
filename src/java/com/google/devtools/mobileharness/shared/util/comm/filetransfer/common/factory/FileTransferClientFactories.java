@@ -17,6 +17,10 @@
 package com.google.devtools.mobileharness.shared.util.comm.filetransfer.common.factory;
 
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.client.CloudFileTransferClient;
+import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.rpc.stub.CloudFileTransferStubInterface;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.comm.filetransfer.FileTransferClient;
 
 /**
@@ -26,6 +30,26 @@ import com.google.wireless.qa.mobileharness.shared.comm.filetransfer.FileTransfe
 public final class FileTransferClientFactories {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
+  static class CloudFileTransferStubFactory implements FileTransferClientFactory {
+    private final CloudFileTransferStubInterface stub;
+
+    CloudFileTransferStubFactory(CloudFileTransferStubInterface stub) {
+      this.stub = stub;
+    }
+
+    @CanIgnoreReturnValue
+    @Override
+    public FileTransferClient create(FileTransferParameters parameters)
+        throws MobileHarnessException, InterruptedException {
+      return new CloudFileTransferClient(stub, parameters);
+    }
+
+    @Override
+    public void shutdown() {
+      stub.shutdown();
+    }
+  }
 
   private FileTransferClientFactories() {}
 }

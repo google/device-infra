@@ -26,10 +26,28 @@ java_library(
     name = "cloud_file_transfer_stub",
     srcs = [
         "CloudFileTransferStubInterface.java",
+        "CloudFileTransferStubUtils.java",
+        "RpcExceptionWrapper.java",
     ],
     deps = [
         "//src/devtools/mobileharness/shared/util/comm/filetransfer/cloud/proto:cloud_file_transfer_java_proto",
+        "//src/java/com/google/devtools/common/metrics/stability/rpc:exception",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "@maven//:com_google_errorprone_error_prone_annotations",
+    ],
+)
+
+java_library(
+    name = "cloud_file_transfer_grpc_stub",
+    srcs = ["CloudFileTransferGrpcStub.java"],
+    deps = [
+        ":cloud_file_transfer_stub",
+        "//src/devtools/mobileharness/shared/util/comm/filetransfer/cloud/proto:cloud_file_transfer_grpc_proto",
+        "//src/devtools/mobileharness/shared/util/comm/filetransfer/cloud/proto:cloud_file_transfer_java_proto",
+        "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc",
+        "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc:stub_util",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "@io_grpc_grpc_java//core",
     ],
 )
