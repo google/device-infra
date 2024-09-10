@@ -50,7 +50,7 @@ import javax.annotation.Nullable;
 import javax.inject.Inject;
 
 /**
- * Simple scheduler. It rotately assigns devices to waiting jobs. So a huge job won't block the
+ * Simple scheduler. It rotationally assigns devices to waiting jobs. So a huge job won't block the
  * latter jobs.
  */
 public class SimpleScheduler extends AbstractScheduler implements Runnable {
@@ -303,10 +303,10 @@ public class SimpleScheduler extends AbstractScheduler implements Runnable {
         testAllocations.remove(testId);
         unallocated = true;
         if (closeTest) {
-          logger.atInfo().log("Unassign and remove test %s", testLocator);
+          logger.atInfo().log("Un-assign and remove test %s", testLocator);
           removeTest(testLocator.jobLocator().id(), testId);
         } else {
-          logger.atInfo().log("Unassign test %s", testLocator);
+          logger.atInfo().log("Un-assign test %s", testLocator);
         }
       } else {
         // Should not reach here.
@@ -482,13 +482,10 @@ public class SimpleScheduler extends AbstractScheduler implements Runnable {
               .filter(device -> device.owners().support(job.jobUser().getRunAs()))
               .collect(Collectors.toList());
       if (!filteredDevices.isEmpty()) {
-        List<DeviceScheduleUnit> deviceList =
+        ImmutableList<DeviceScheduleUnit> deviceList =
             adhocTestbedSchedulingUtil.findSubDevicesSupportingJob(filteredDevices, job);
         // The order matters in the allocated list as it needs to match the spec.
         if (!deviceList.isEmpty()) {
-          if (Flags.instance().enableSimpleSchedulerShuffle.getNonNull()) {
-            Collections.shuffle(deviceList);
-          }
           return allocate(test, deviceList, true);
         }
       }

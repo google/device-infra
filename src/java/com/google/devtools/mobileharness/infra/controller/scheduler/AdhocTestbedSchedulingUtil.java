@@ -22,6 +22,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ContiguousSet;
 import com.google.common.collect.DiscreteDomain;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -73,7 +74,7 @@ public class AdhocTestbedSchedulingUtil {
    *     empty list if there is no subset of devicePool that can support the requirements. The order
    *     of the returned list corresponds to the order of specifications in subDeviceSpec.
    */
-  public List<DeviceScheduleUnit> findSubDevicesSupportingJob(
+  public ImmutableList<DeviceScheduleUnit> findSubDevicesSupportingJob(
       Collection<DeviceScheduleUnit> devicePool, JobScheduleUnit job) throws InterruptedException {
     // Check first if there are even enough devices.
     List<SubDeviceSpec> subDeviceSpecList = job.subDeviceSpecs().getAllSubDevices();
@@ -84,7 +85,7 @@ public class AdhocTestbedSchedulingUtil {
           String.format(
               "Not enough idle devices (%d) of matching type to support subdevice specs: \n%s",
               devicePool.size(), job.subDeviceSpecs()));
-      return new ArrayList<>();
+      return ImmutableList.of();
     }
 
     // Create a device list to structure the spec matching process and an index set to permute in
@@ -99,7 +100,7 @@ public class AdhocTestbedSchedulingUtil {
         ContiguousSet.create(
             Range.closedOpen(0, subDeviceSpecList.size()), DiscreteDomain.integers());
     // Because this requires iterating through permutations of possibly many specs, set a timeout.
-    final ListenableFuture<List<DeviceScheduleUnit>> future =
+    final ListenableFuture<ImmutableList<DeviceScheduleUnit>> future =
         executor.submit(
             () -> {
               Map<Map.Entry<DeviceScheduleUnit, SubDeviceSpec>, Boolean>
@@ -135,16 +136,16 @@ public class AdhocTestbedSchedulingUtil {
                 if (subDeviceIndices.size() != permutedSpecIndices.size()) {
                   continue;
                 }
-                List<DeviceScheduleUnit> subDeviceList = new ArrayList<>();
+                ImmutableList.Builder<DeviceScheduleUnit> subDeviceList = ImmutableList.builder();
                 for (int i = 0; i < subDeviceIndices.size(); i++) {
                   // Find the next permuted index
                   int j = permutedSpecIndices.indexOf(i);
                   // Add the subdevice
                   subDeviceList.add(devicePoolList.get(subDeviceIndices.get(j)));
                 }
-                return subDeviceList;
+                return subDeviceList.build();
               }
-              return new ArrayList<>();
+              return ImmutableList.of();
             });
 
     try {
@@ -157,7 +158,7 @@ public class AdhocTestbedSchedulingUtil {
     } finally {
       future.cancel(true);
     }
-    return new ArrayList<>();
+    return ImmutableList.of();
   }
 
   /** Checks whether the {@code subDevice} supports the type and dimensions in the {@code spec}. */
