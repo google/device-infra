@@ -16,70 +16,41 @@
 
 package com.google.devtools.mobileharness.infra.controller.scheduler;
 
-import static com.google.devtools.mobileharness.shared.util.error.MoreThrowables.shortDebugString;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 
-import com.google.common.collect.Collections2;
-import com.google.common.collect.ContiguousSet;
-import com.google.common.collect.DiscreteDomain;
+import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Range;
+import com.google.common.collect.ImmutableMultimap;
 import com.google.common.flogger.FluentLogger;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.model.lab.DeviceScheduleUnit;
-import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
+import com.google.devtools.mobileharness.shared.util.algorithm.GraphMatching;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobScheduleUnit;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.SubDeviceSpec;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
 
 /** Utility for scheduling multiple devices in a single allocation. */
 public class AdhocTestbedSchedulingUtil {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  private static final Duration FIND_SUBDEVICES_TIMEOUT = Duration.ofSeconds(10);
-
-  private final ListeningExecutorService executor =
-      ThreadPools.createStandardThreadPool("adhoc-testbed-scheduler");
-
-  public AdhocTestbedSchedulingUtil() {
-    Runtime.getRuntime()
-        .addShutdownHook(
-            new Thread(
-                () -> {
-                  try {
-                    executor.shutdownNow();
-                  } catch (Throwable e) {
-                    logger.atWarning().withCause(e).log(
-                        "Failed to shutdown ad hoc testbed scheduling executors");
-                  }
-                }));
-  }
-
   /**
    * Finds a subset of devices that supports given type/dimension specs.
    *
-   * @param devicePool Collection of DeviceScheduleUnits which are currently unallocated..
+   * @param devicePool Collection of DeviceScheduleUnits which are currently unallocated
    * @param job JobScheduleUnit defining the requirements of the job
    * @return a List of DeviceScheduleUnits that support the requirements in subDeviceSpecs, or an
    *     empty list if there is no subset of devicePool that can support the requirements. The order
    *     of the returned list corresponds to the order of specifications in subDeviceSpec.
    */
   public ImmutableList<DeviceScheduleUnit> findSubDevicesSupportingJob(
-      Collection<DeviceScheduleUnit> devicePool, JobScheduleUnit job) throws InterruptedException {
-    // Check first if there are even enough devices.
-    List<SubDeviceSpec> subDeviceSpecList = job.subDeviceSpecs().getAllSubDevices();
-
-    if (devicePool.size() < subDeviceSpecList.size()) {
+      Collection<DeviceScheduleUnit> devicePool, JobScheduleUnit job) {
+    // Checks if there are enough devices.
+    List<SubDeviceSpec> subDeviceSpecs = job.subDeviceSpecs().getAllSubDevices();
+    if (devicePool.size() < subDeviceSpecs.size()) {
       logger.atFine().log(
           "%s",
           String.format(
@@ -88,77 +59,36 @@ public class AdhocTestbedSchedulingUtil {
       return ImmutableList.of();
     }
 
-    // Create a device list to structure the spec matching process and an index set to permute in
-    // order to match subdevice specs to subsets of the unallocated devices list.
-    List<DeviceScheduleUnit> devicePoolList = new ArrayList<>(devicePool);
-    // Because the number of subdevice specs (S) is less than the number of devices (D), we iterate
-    // through the (fewer) permutations of specs (S! < D!). However, because the order of subdevices
-    // in the testbed should be preserved (e.g., a multi-device driver may assume the first device
-    // has specific dimensions) we permute a list of indices instead of the actual
-    // subDeviceSpecList, and match that permutation against sub-lists of the device list.
-    ContiguousSet<Integer> specIndices =
-        ContiguousSet.create(
-            Range.closedOpen(0, subDeviceSpecList.size()), DiscreteDomain.integers());
-    // Because this requires iterating through permutations of possibly many specs, set a timeout.
-    final ListenableFuture<ImmutableList<DeviceScheduleUnit>> future =
-        executor.submit(
-            () -> {
-              Map<Map.Entry<DeviceScheduleUnit, SubDeviceSpec>, Boolean>
-                  subDeviceSupportsSpecCache = new HashMap<>();
-              for (List<Integer> permutedSpecIndices : Collections2.permutations(specIndices)) {
-                // For each permutation of spec indices, slide "current" along the list of devices
-                // and if the "current" device matches the first unmatched spec, add that device
-                // to subDeviceIndices and continue with the next unmatched spec.
-                int current = 0;
-                List<Integer> subDeviceIndices = new ArrayList<>();
-                for (int i = 0; i < permutedSpecIndices.size(); i++) {
-                  // Keep going while number of unmatched specs is not more than the number of
-                  // remaining devices.
-                  while (permutedSpecIndices.size() - i <= devicePoolList.size() - current) {
-                    // Because checking if a device matches a spec is costly and may happen again,
-                    // cache the results.
-                    Map.Entry<DeviceScheduleUnit, SubDeviceSpec> key =
-                        Map.entry(
-                            devicePoolList.get(current),
-                            subDeviceSpecList.get(permutedSpecIndices.get(i)));
-                    subDeviceSupportsSpecCache.computeIfAbsent(
-                        key, k -> subDeviceSupportsSpec(k.getKey(), k.getValue()));
-                    if (subDeviceSupportsSpecCache.get(key)) {
-                      // Found a match! Move onto the next spec and next device.
-                      subDeviceIndices.add(current);
-                      current++;
-                      break;
-                    }
-                    // Device doesn't match, keep going.
-                    current++;
-                  }
-                }
-                if (subDeviceIndices.size() != permutedSpecIndices.size()) {
-                  continue;
-                }
-                ImmutableList.Builder<DeviceScheduleUnit> subDeviceList = ImmutableList.builder();
-                for (int i = 0; i < subDeviceIndices.size(); i++) {
-                  // Find the next permuted index
-                  int j = permutedSpecIndices.indexOf(i);
-                  // Add the subdevice
-                  subDeviceList.add(devicePoolList.get(subDeviceIndices.get(j)));
-                }
-                return subDeviceList.build();
-              }
-              return ImmutableList.of();
-            });
-
-    try {
-      return future.get(FIND_SUBDEVICES_TIMEOUT.toMillis(), MILLISECONDS);
-    } catch (TimeoutException e) {
-      logger.atWarning().log(
-          "Search for a set of devices timed out, exception=[%s]", shortDebugString(e));
-    } catch (ExecutionException | CancellationException e) {
-      logger.atWarning().withCause(e).log("Error while searching for a set of devices");
-    } finally {
-      future.cancel(true);
+    // Shuffles device list.
+    List<DeviceScheduleUnit> devices;
+    if (Flags.instance().enableSimpleSchedulerShuffle.getNonNull()) {
+      devices = new ArrayList<>(devicePool);
+      Collections.shuffle(devices);
+    } else {
+      devices = ImmutableList.copyOf(devicePool);
     }
-    return ImmutableList.of();
+
+    // Calculates supported devices graph.
+    ImmutableMultimap.Builder<SubDeviceSpec, DeviceScheduleUnit> supportedDevices =
+        ImmutableMultimap.builder();
+    for (SubDeviceSpec subDeviceSpec : subDeviceSpecs) {
+      for (DeviceScheduleUnit device : devices) {
+        if (subDeviceSupportsSpec(device, subDeviceSpec)) {
+          supportedDevices.put(subDeviceSpec, device);
+        }
+      }
+    }
+
+    // Calculates maximum cardinality bipartite graph matching.
+    ImmutableBiMap<SubDeviceSpec, DeviceScheduleUnit> matchingResult =
+        GraphMatching.maximumCardinalityBipartiteMatching(supportedDevices.build());
+
+    // Generates allocation.
+    if (matchingResult.size() == subDeviceSpecs.size()) {
+      return subDeviceSpecs.stream().map(matchingResult::get).collect(toImmutableList());
+    } else {
+      return ImmutableList.of();
+    }
   }
 
   /** Checks whether the {@code subDevice} supports the type and dimensions in the {@code spec}. */

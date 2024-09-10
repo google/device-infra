@@ -44,8 +44,8 @@ java_library(
     srcs = ["AdhocTestbedSchedulingUtil.java"],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/lab:schedule_unit",
-        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
-        "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
+        "//src/java/com/google/devtools/mobileharness/shared/util/algorithm:graph_matching",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job:schedule_unit",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in",
