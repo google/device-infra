@@ -53,6 +53,7 @@ import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
+import java.io.File;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -84,6 +85,18 @@ public class SessionResultHandlerUtil {
           "test_result.html",
           "test_result.xml",
           "test_result_failures_suite.html");
+  private static final ImmutableSet<String> NOT_RETRY_FILES =
+      ImmutableSet.of(
+          "checksum.data",
+          "checksum.previous.data",
+          "test_result_failures_suite.html",
+          "test_result.html",
+          XtsConstants.INVOCATION_SUMMARY_FILE_NAME,
+          "checksum-suite.data",
+          "diffs",
+          "proto",
+          "logs");
+
   private static final ImmutableSet<String> EXCLUDED_TF_GEN_RESULT_DIRS =
       ImmutableSet.of("module_reports");
 
@@ -976,5 +989,28 @@ public class SessionResultHandlerUtil {
       }
     }
     return false;
+  }
+
+  /** Copy the previous attempts' result files to current session's result directory */
+  public void copyRetryFiles(String oldDir, String newDir)
+      throws MobileHarnessException, InterruptedException {
+    File[] oldChildren =
+        localFileUtil.listFilesOrDirs(
+            oldDir,
+            oldChild ->
+                !NOT_RETRY_FILES.contains(oldChild.getName())
+                    && !XtsConstants.RESULT_ZIP_FILENAME_PATTERN
+                        .matcher(oldChild.getName())
+                        .matches());
+    for (File oldChild : oldChildren) {
+      File newChild = new File(newDir, oldChild.getName());
+      if (!newChild.exists()) {
+        // If this old file or directory doesn't exist in new dir, simply copy it.
+        logger.atFine().log("Copying %s to new session.", oldChild.getName());
+        localFileUtil.copyFileOrDir(oldChild.getAbsolutePath(), newChild.getAbsolutePath());
+      } else if (newChild.isDirectory() && oldChild.isDirectory()) {
+        copyRetryFiles(oldChild.getAbsolutePath(), newChild.getAbsolutePath());
+      }
+    }
   }
 }

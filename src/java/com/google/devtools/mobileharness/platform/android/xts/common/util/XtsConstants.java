@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.platform.android.xts.common.util;
 
+import java.util.regex.Pattern;
+
 /** Constants for xTS tests. */
 public class XtsConstants {
 
@@ -52,6 +54,9 @@ public class XtsConstants {
 
   public static final String XTS_DYNAMIC_DOWNLOAD_PATH_JDK_PROPERTY_KEY =
       "xts_dynamic_download_jdk_path";
+
+  public static final Pattern RESULT_ZIP_FILENAME_PATTERN =
+      Pattern.compile("^\\d{4}\\.\\d{2}\\.\\d{2}_\\d{2}\\.\\d{2}\\.\\d{2}\\.\\d{3}_\\d{4}\\.zip$");
 
   private XtsConstants() {}
 }

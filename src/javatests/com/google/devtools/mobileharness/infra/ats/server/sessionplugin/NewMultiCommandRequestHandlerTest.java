@@ -682,6 +682,7 @@ public final class NewMultiCommandRequestHandlerTest {
         Result.newBuilder()
             .setSummary(Summary.newBuilder().setPassed(10).setFailed(0).build())
             .build();
+    request = request.toBuilder().setRetryPreviousSessionId("prev_session_id").build();
     RequestDetail.Builder requestDetail = RequestDetail.newBuilder().setOriginalRequest(request);
     mockProcessResult(result);
 
@@ -689,6 +690,11 @@ public final class NewMultiCommandRequestHandlerTest {
 
     String commandId =
         UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
+    Path outputUploadPath = Path.of(outputFileUploadPath);
+    verify(sessionResultHandlerUtil)
+        .copyRetryFiles(
+            eq(outputUploadPath.resolve("prev_session_id").resolve(commandId).toString()),
+            eq(outputUploadPath.resolve("session_id").resolve(commandId).toString()));
 
     // Verify command detail.
     assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);

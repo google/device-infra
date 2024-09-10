@@ -38,6 +38,7 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.proto.Sess
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportCreator;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportMerger;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportParser;
+import com.google.devtools.mobileharness.infra.ats.console.util.result.ResultListerHelper;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.SessionGenDir;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.SessionTempDir;
@@ -106,6 +107,7 @@ public final class RunCommandHandlerTest {
   @Bind @Mock private SuiteResultReporter suiteResultReporter;
   @Bind @Mock private XtsJobCreator xtsJobCreator;
   @Bind @Mock private PreviousResultLoader previousResultLoader;
+  @Bind @Mock private ResultListerHelper resultListerHelper;
 
   @Inject private RunCommandHandler runCommandHandler;
   @Inject private SessionRequestHandlerUtil sessionRequestHandlerUtil;
@@ -202,7 +204,8 @@ public final class RunCommandHandlerTest {
                 sessionInfo,
                 suiteResultReporter,
                 xtsJobCreator,
-                previousResultLoader));
+                previousResultLoader,
+                resultListerHelper));
     doNothing().when(sessionResultHandlerUtil).cleanUpJobGenDirs(any());
     when(sessionInfo.getSessionProperty("timestamp_dir_name"))
         .thenReturn(Optional.of(TIMESTAMP_DIR_NAME));

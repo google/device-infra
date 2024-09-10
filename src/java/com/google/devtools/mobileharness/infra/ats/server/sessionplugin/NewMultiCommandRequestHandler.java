@@ -57,6 +57,7 @@ import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.Tes
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.lab.common.dir.DirUtil;
+import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -101,9 +102,6 @@ final class NewMultiCommandRequestHandler {
 
   private static final DateTimeFormatter TIMESTAMP_DIR_NAME_FORMATTER =
       DateTimeFormatter.ofPattern("uuuu.MM.dd_HH.mm.ss.SSS").withZone(ZoneId.systemDefault());
-
-  private static final Pattern RESULT_ZIP_FILENAME_PATTERN =
-      Pattern.compile("^\\d{4}\\.\\d{2}\\.\\d{2}_\\d{2}\\.\\d{2}\\.\\d{2}\\.\\d{3}_\\d{4}\\.zip$");
 
   private static final Pattern ANDROID_XTS_ZIP_FILENAME_REGEX =
       Pattern.compile("android-[a-z]+\\.zip");
@@ -486,7 +484,7 @@ final class NewMultiCommandRequestHandler {
         }
         logger.atInfo().log("testResourceUrl: %s", testResourceUrl);
         if (testResourceUrl.getProtocol().equals("file")
-            && RESULT_ZIP_FILENAME_PATTERN.matcher(testResource.getName()).matches()) {
+            && XtsConstants.RESULT_ZIP_FILENAME_PATTERN.matcher(testResource.getName()).matches()) {
           Path prevResultZipPath;
           try {
             prevResultZipPath = Path.of(testResourceUrl.getPath());
@@ -613,11 +611,28 @@ final class NewMultiCommandRequestHandler {
             requestDetail.putTestContext(commandId, testContext);
           }
           try {
+            // Remove dedicated result directory and move its files to '/<session_id>/<command_id>/'
+            // level.
             localFileUtil.mergeDir(resultDir, outputDirPath);
           } catch (MobileHarnessException e) {
             logger.atWarning().withCause(e).log(
                 "Failed to move contents of result dir %s to output dir %s",
                 resultDir, outputDirPath);
+          }
+
+          if (requestDetail.getOriginalRequest().hasRetryPreviousSessionId()) {
+            Path prevResultDir =
+                Path.of(outputUrl.getPath())
+                    .resolve(requestDetail.getOriginalRequest().getRetryPreviousSessionId())
+                    .resolve(commandId);
+            try {
+              sessionResultHandlerUtil.copyRetryFiles(
+                  prevResultDir.toString(), outputDirPath.toString());
+            } catch (MobileHarnessException e) {
+              logger.atWarning().withCause(e).log(
+                  "Failed to copy contents of previous result dir %s to current result dir %s",
+                  prevResultDir, resultDir);
+            }
           }
 
           CommandDetail.Builder commandDetailBuilder = commandDetail.toBuilder();

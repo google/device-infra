@@ -40,6 +40,7 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.proto.Sess
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommand;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommandState;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
+import com.google.devtools.mobileharness.infra.ats.console.util.result.ResultListerHelper;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
@@ -51,6 +52,7 @@ import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryT
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
+import java.io.File;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -79,6 +81,7 @@ class RunCommandHandler {
   private final SuiteResultReporter suiteResultReporter;
   private final XtsJobCreator xtsJobCreator;
   private final PreviousResultLoader previousResultLoader;
+  private final ResultListerHelper resultListerHelper;
 
   private final Object addingJobLock = new Object();
 
@@ -99,7 +102,8 @@ class RunCommandHandler {
       SessionInfo sessionInfo,
       SuiteResultReporter suiteResultReporter,
       XtsJobCreator xtsJobCreator,
-      PreviousResultLoader previousResultLoader) {
+      PreviousResultLoader previousResultLoader,
+      ResultListerHelper resultListerHelper) {
     this.localFileUtil = localFileUtil;
     this.sessionRequestHandlerUtil = sessionRequestHandlerUtil;
     this.sessionResultHandlerUtil = sessionResultHandlerUtil;
@@ -107,6 +111,7 @@ class RunCommandHandler {
     this.suiteResultReporter = suiteResultReporter;
     this.xtsJobCreator = xtsJobCreator;
     this.previousResultLoader = previousResultLoader;
+    this.resultListerHelper = resultListerHelper;
   }
 
   void initialize(RunCommand command) throws MobileHarnessException, InterruptedException {
@@ -265,6 +270,24 @@ class RunCommandHandler {
                   allJobs,
                   sessionRequestInfo)
               .orElse(null);
+      // Copy previous attempts' result files.
+      if (sessionRequestInfo.retrySessionIndex().isPresent()
+          && SessionRequestHandlerUtil.isRunRetry(sessionRequestInfo.testPlan())
+          && localFileUtil.isDirExist(resultDir)) {
+        ImmutableList<File> allResultDirs =
+            resultListerHelper.listResultDirsInOrder(resultsDir.toAbsolutePath().toString());
+        if (allResultDirs.size() > sessionRequestInfo.retrySessionIndex().getAsInt()) {
+          Path prevResultDir =
+              allResultDirs.get(sessionRequestInfo.retrySessionIndex().getAsInt()).toPath();
+          try {
+            sessionResultHandlerUtil.copyRetryFiles(prevResultDir.toString(), resultDir.toString());
+          } catch (MobileHarnessException e) {
+            logger.atWarning().withCause(e).log(
+                "Failed to copy contents of previous result dir %s to current result dir %s",
+                prevResultDir, resultDir);
+          }
+        }
+      }
     } finally {
       sessionResultHandlerUtil.cleanUpJobGenDirs(allJobs);
 
