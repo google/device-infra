@@ -17,6 +17,7 @@
 package com.google.wireless.qa.mobileharness.shared.api.driver;
 
 import static com.google.common.base.StandardSystemProperty.JAVA_IO_TMPDIR;
+import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -26,6 +27,7 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.common.metrics.stability.converter.ErrorModelConverter;
@@ -68,6 +70,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Random;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
@@ -357,29 +360,21 @@ public class MoblyGenericTest extends BaseDriver {
   @VisibleForTesting
   boolean runMoblyCommand(TestInfo testInfo, File configFile)
       throws MobileHarnessException, InterruptedException {
+    ImmutableSet.Builder<String> paths = new ImmutableSet.Builder<>();
 
     // Use the adb and fastboot binaries that ship with Mobile Harness.
     Adb adb = new Adb();
-    String adbPathStr = adb.getAdbPath();
-    File adbPath =
-        Ascii.equalsIgnoreCase(adbPathStr, "adb")
-            ? getSdkToolPath("adb").toFile()
-            : new File(adbPathStr);
-    String fastbootPathStr = new Fastboot().getFastbootPath();
-    File fastbootPath =
-        Ascii.equalsIgnoreCase(fastbootPathStr, "fastboot")
-            ? getSdkToolPath("fastboot").toFile()
-            : new File(fastbootPathStr);
-    String path =
-        Joiner.on(':')
-            .join(
-                adbPath.getParent(), // Android platform tools provided by Mobile Harness, including
-                // adb
-                // and aapt.
-                fastbootPath
-                    .getParent(), // Android build tools provided by Mobile Harness, including
-                // fastboot and mke2fs.
-                systemUtil.getEnv("PATH"));
+    getSdkToolDir(adb.getAdbPath(), "adb").ifPresent(paths::add);
+    Fastboot fastboot = new Fastboot();
+    getSdkToolDir(fastboot.getFastbootPath(), "fastboot").ifPresent(paths::add);
+
+    // System PATH
+    String systemPath = systemUtil.getEnv("PATH");
+    if (systemPath != null) {
+      paths.add(systemPath);
+    }
+
+    String path = Joiner.on(':').join(paths.build());
     if (systemUtil.isOnMac()) {
       logger.atSevere().log("ATS 2.0 Mobly driver doesn't support macOS.");
       return false;
@@ -692,18 +687,30 @@ public class MoblyGenericTest extends BaseDriver {
         .collect(toImmutableList());
   }
 
-  private Path getSdkToolPath(String sdkToolName)
+  private Optional<String> getSdkToolDir(String mhSdkToolPath, String sdkToolName)
       throws MobileHarnessException, InterruptedException {
-    CommandResult result = executor.exec(Command.of("which", sdkToolName).successExitCodes(0, 1));
+    File sdkFile;
+    if (isNullOrEmpty(mhSdkToolPath) || Ascii.equalsIgnoreCase(mhSdkToolPath, sdkToolName)) {
+      CommandResult result = executor.exec(Command.of("which", sdkToolName).successExitCodes(0, 1));
 
-    if (result.exitCode() != 0) {
-      String possibleSdkTool = executor.run(Command.of("whereis", sdkToolName));
-      throw new MobileHarnessException(
-          ExtErrorId.MOBLY_SDK_TOOL_NOT_FOUND_ERROR,
-          String.format(
-              "Unable to find the sdk tool \"%s\". Executables found: %s",
-              sdkToolName, possibleSdkTool));
+      if (result.exitCode() != 0) {
+        String possibleSdkTool = executor.run(Command.of("whereis", sdkToolName));
+        getTest()
+            .warnings()
+            .addAndLog(
+                new MobileHarnessException(
+                    ExtErrorId.MOBLY_SDK_TOOL_NOT_FOUND_ERROR,
+                    String.format(
+                        "Unable to find the sdk tool \"%s\". Executables found: %s",
+                        sdkToolName, possibleSdkTool)),
+                logger);
+        return Optional.empty();
+      }
+      sdkFile = new File(result.stdout().trim());
+    } else {
+      sdkFile = new File(mhSdkToolPath);
     }
-    return Path.of(result.stdout().trim());
+
+    return Optional.ofNullable(sdkFile.getParent());
   }
 }
