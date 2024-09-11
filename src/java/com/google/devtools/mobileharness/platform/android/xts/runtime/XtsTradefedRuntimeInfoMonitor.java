@@ -75,6 +75,10 @@ public class XtsTradefedRuntimeInfoMonitor {
     triggerAsyncUpdate();
   }
 
+  public void onInvocationComplete(Object invocationEventHandler, Object invocationContext) {
+    // TODO: Implements the method.
+  }
+
   private void run(Path runtimeInfoFilePath) {
     try {
       while (!Thread.interrupted()) {

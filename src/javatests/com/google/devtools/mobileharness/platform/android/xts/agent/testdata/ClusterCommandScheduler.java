@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.platform.android.xts.agent.testdata;
+package com.android.tradefed.cluster;
 
-import static java.util.Arrays.asList;
+import com.google.devtools.mobileharness.platform.android.xts.agent.testdata.FakeInvocationContext;
 
-import com.android.tradefed.cluster.FakeClusterCommandSchedulerUtil;
-import com.android.tradefed.invoker.TestInvocation;
+public class ClusterCommandScheduler {
 
-public class FakeTradefed {
+  @SuppressWarnings("ClassCanBeStatic")
+  class InvocationEventHandler {
 
-  public static void main(String[] args) throws InterruptedException {
-    FakeInvocationContext context = new FakeInvocationContext(asList(args));
-    new TestInvocation().invoke(context, 0, 0, 0);
-    FakeClusterCommandSchedulerUtil.invocationComplete(context);
+    @SuppressWarnings({"FieldCanBeLocal", "unused"})
+    private String mError;
+
+    public void invocationComplete(FakeInvocationContext metadata, Object devicesStates) {
+      mError = "Fake error message";
+    }
   }
-
-  private FakeTradefed() {}
 }

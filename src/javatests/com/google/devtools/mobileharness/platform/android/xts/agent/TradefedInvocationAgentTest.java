@@ -20,6 +20,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.flogger.FluentLogger;
 import com.google.common.truth.Correspondence;
 import com.google.common.truth.Correspondence.BinaryPredicate;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfo;
@@ -47,6 +48,8 @@ import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
 public class TradefedInvocationAgentTest {
+
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   @Rule public TemporaryFolder tempFolder = new TemporaryFolder();
 
@@ -110,6 +113,7 @@ public class TradefedInvocationAgentTest {
     assertThat(runtimeInfos).comparingElementsUsing(correspondence).contains(ImmutableList.of());
 
     CommandResult commandResult = commandProcess.await();
+    logger.atInfo().log("Command result: %s", commandResult);
     assertThat(commandResult.exitCode()).isEqualTo(0);
   }
 }

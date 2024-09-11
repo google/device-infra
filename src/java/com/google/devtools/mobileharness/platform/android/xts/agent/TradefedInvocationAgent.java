@@ -30,7 +30,10 @@ import java.nio.file.Path;
 import net.bytebuddy.agent.builder.AgentBuilder;
 import net.bytebuddy.asm.Advice;
 
-/** The agent to intercept the {@code TestInvocation} class in Tradefed to get the runtime info. */
+/**
+ * The agent to intercept the {@code TestInvocation} and the {@code
+ * ClusterCommandScheduler.InvocationEventHandler} classes in Tradefed to get the runtime info.
+ */
 public class TradefedInvocationAgent {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -44,25 +47,42 @@ public class TradefedInvocationAgent {
     }
     TradefedInvocationAgentLogger.init();
     logger.atInfo().log("Runtime info file path: %s", runtimeInfoFilePath);
+
     XtsTradefedRuntimeInfoMonitor.getInstance().start(Path.of(runtimeInfoFilePath));
-    interceptTradefedTestInvocation(inst);
+    intercept(
+        inst,
+        "com.android.tradefed.invoker.TestInvocation",
+        "invoke",
+        4,
+        TradefedTestInvocationInvokeMethodInterceptor.class);
+    intercept(
+        inst,
+        "com.android.tradefed.cluster.ClusterCommandScheduler$InvocationEventHandler",
+        "invocationComplete",
+        2,
+        TradefedInvocationEventHandlerInvocationCompleteMethodInterceptor.class);
   }
 
-  private void interceptTradefedTestInvocation(Instrumentation inst) {
+  private static void intercept(
+      Instrumentation inst,
+      String className,
+      String methodName,
+      int argumentsLength,
+      Class<?> interceptorClass) {
     new AgentBuilder.Default()
         .with(toSystemError().withErrorsOnly())
         .disableClassFormatChanges()
         .ignore(none(), not(isBootstrapClassLoader()))
-        .type(named("com.android.tradefed.invoker.TestInvocation"))
+        .type(named(className))
         .transform(
             (builder, typeDescription, classLoader, module, protectionDomain) ->
                 builder.visit(
-                    Advice.to(TradefedTestInvocationInterceptor.class)
-                        .on(named("invoke").and(takesArguments(4)))))
+                    Advice.to(interceptorClass)
+                        .on(named(methodName).and(takesArguments(argumentsLength)))))
         .installOn(inst);
   }
 
-  private static class TradefedTestInvocationInterceptor {
+  private static class TradefedTestInvocationInvokeMethodInterceptor {
 
     @Advice.OnMethodEnter()
     public static void onEnter(
@@ -74,6 +94,17 @@ public class TradefedInvocationAgent {
     @Advice.OnMethodExit()
     public static void onExit(@Advice.This Object testInvocation) {
       XtsTradefedRuntimeInfoMonitor.getInstance().onInvocationExit(testInvocation);
+    }
+  }
+
+  private static class TradefedInvocationEventHandlerInvocationCompleteMethodInterceptor {
+
+    @Advice.OnMethodExit()
+    public static void onExit(
+        @Advice.This Object invocationEventHandler,
+        @Advice.Argument(value = 0) Object invocationContext) {
+      XtsTradefedRuntimeInfoMonitor.getInstance()
+          .onInvocationComplete(invocationEventHandler, invocationContext);
     }
   }
 

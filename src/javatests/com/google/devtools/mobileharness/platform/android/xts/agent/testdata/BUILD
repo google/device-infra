@@ -22,6 +22,8 @@ package(
 java_binary(
     name = "fake_tradefed",
     srcs = [
+        "ClusterCommandScheduler.java",
+        "FakeClusterCommandSchedulerUtil.java",
         "FakeInvocationContext.java",
         "FakeTradefed.java",
         "TestInvocation.java",
