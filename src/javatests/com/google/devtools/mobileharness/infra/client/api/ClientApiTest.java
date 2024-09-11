@@ -47,6 +47,7 @@ import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
+import com.google.wireless.qa.mobileharness.client.api.event.JobStartEvent;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Job;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
@@ -55,6 +56,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
 import java.io.ByteArrayOutputStream;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Handler;
 import java.util.logging.Level;
@@ -118,12 +120,40 @@ public class ClientApiTest {
   @Test
   public void startJob() throws Exception {
     JobInfo jobInfo = createJobInfo(/* sleepTimeSec= */ 5);
+    List<String> jobStartResults = new ArrayList<>();
 
     try (var ignored =
         new ContextScope(
             ImmutableMap.of(
                 InvocationType.OLC_CLIENT, InvocationInfo.sameDisplayId("fake_client_id")))) {
-      clientApi.startJob(jobInfo, new LocalMode());
+      clientApi.startJob(
+          jobInfo,
+          new LocalMode(),
+          ImmutableList.of(
+              new Object() {
+
+                @Subscribe
+                @SuppressWarnings("unused")
+                private void onJobStart(JobStartEvent event) {
+                  jobStartResults.add("1");
+                }
+              },
+              new Object() {
+
+                @Subscribe
+                @SuppressWarnings("unused")
+                private void onJobStart(JobStartEvent event) {
+                  jobStartResults.add("2");
+                }
+              },
+              new Object() {
+
+                @Subscribe
+                @SuppressWarnings("unused")
+                private void onJobStart(JobStartEvent event) {
+                  jobStartResults.add("3");
+                }
+              }));
 
       assertThat(jobInfo.properties().get(Job.EXEC_MODE)).isNotNull();
       assertThat(jobInfo.properties().get(Job.CLIENT_HOSTNAME)).isNotNull();
@@ -152,6 +182,8 @@ public class ClientApiTest {
                   + " confuse users when they debug a failed one")
           .that(logs)
           .doesNotContain("\tat ");
+
+      assertThat(jobStartResults).containsExactly("1", "2", "3").inOrder();
     } catch (
         @SuppressWarnings("InterruptedExceptionSwallowed")
         Throwable e) {
