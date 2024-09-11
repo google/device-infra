@@ -476,7 +476,8 @@ public class LabServer {
     return hostProperties.build();
   }
 
-  private void addExtraHostProperties(HostProperties.Builder hostProperties) {
+  private void addExtraHostProperties(HostProperties.Builder hostProperties)
+      throws InterruptedException {
     // Java version
     hostProperties.addHostProperty(
         HostProperty.newBuilder()
