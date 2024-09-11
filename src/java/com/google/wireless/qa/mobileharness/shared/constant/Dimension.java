@@ -391,6 +391,9 @@ public final class Dimension {
     /** Dimension value for Android device. */
     public static final String ANDROID = "android";
 
+    /** Dimension value for testbed device. */
+    public static final String TESTBED = "testbed";
+
     private Value() {}
   }
 
