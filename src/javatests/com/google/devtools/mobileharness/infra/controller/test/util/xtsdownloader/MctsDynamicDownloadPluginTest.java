@@ -78,7 +78,7 @@ public final class MctsDynamicDownloadPluginTest {
     when(mockTestInfo.properties()).thenReturn(testProperties);
     when(mockAndroidPackageManagerUtil.getAppVersionCode(
             any(), eq("com.google.android.modulemetadata")))
-        .thenReturn(341050004);
+        .thenReturn(351050004);
     when(mockAdbUtil.getProperty(any(), eq(AndroidProperty.ABI))).thenReturn("arm64-v8a");
     when(mockAdbUtil.getProperty(any(), eq(AndroidProperty.SDK_VERSION))).thenReturn("30");
     when(mockAdbUtil.getProperty(any(), eq(AndroidProperty.CODENAME))).thenReturn("fake_codename");
@@ -107,13 +107,13 @@ public final class MctsDynamicDownloadPluginTest {
 
     mockDownloadPublicUrlFiles(
         "/tmp/android-mcts-networking.zip",
-        "https://dl\\.google\\.com/dl/android/xts/mcts/2023-10/arm64/android-mcts-networking\\.zip");
+        "https://dl\\.google\\.com/dl/android/xts/mcts/2024-10/arm64/android-mcts-networking\\.zip");
     mockDownloadPublicUrlFiles(
         "/tmp/android-mcts-conscrypt.zip",
-        "https://dl\\.google\\.com/dl/android/xts/mcts/2023-10/arm64/android-mcts-conscrypt\\.zip");
+        "https://dl\\.google\\.com/dl/android/xts/mcts/2024-10/arm64/android-mcts-conscrypt\\.zip");
     mockDownloadPublicUrlFiles(
         "/tmp/android-mcts-configinfrastructure.zip",
-        "https://dl\\.google\\.com/dl/android/xts/mcts/2023-10/arm64/android-mcts-configinfrastructure\\.zip");
+        "https://dl\\.google\\.com/dl/android/xts/mcts/2024-10/arm64/android-mcts-configinfrastructure\\.zip");
     mockDownloadPublicUrlFiles(
         "/tmp/android-mcts-documentsui.zip",
         "https://dl\\.google\\.com/dl/android/xts/mcts/30/arm64/android-mcts-documentsui\\.zip");

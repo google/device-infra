@@ -151,10 +151,12 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
       // if the TVP version is 310000000, that means all the mainline modules were built
       // from source, rather than prebuilt dropped. 310000000 is just the default value in
       // http://ac/vendor/unbundled_google/modules/ModuleMetadataGoogle/Primary_AndroidManifest.xml
+      // We will only support Android V train for downloading train MCTS, otherwise will download
+      // from aosp.
       String preloadedMainlineVersion =
-          versioncode.equals("310000000")
-              ? aospVersion
-              : getPreloadedMainlineVersion(versioncode, aospVersion);
+          versioncode.startsWith("35")
+              ? getPreloadedMainlineVersion(versioncode, aospVersion)
+              : aospVersion;
       for (String mctsName : mctsNamesOfPreloadedMainlineModules.get(PRELOADED_KEY)) {
         String downloadUrl =
             String.format(
