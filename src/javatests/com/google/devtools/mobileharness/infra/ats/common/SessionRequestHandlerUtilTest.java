@@ -112,6 +112,15 @@ public final class SessionRequestHandlerUtilTest {
 
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
     testPlanFilter = TestPlanParser.TestPlanFilter.create(ImmutableSet.of(), ImmutableSet.of());
+
+    when(deviceQuerier.queryDevice(any()))
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
+                .build());
   }
 
   private void setFlags(boolean enableAtsMode, boolean useTfRetry) {
@@ -133,24 +142,28 @@ public final class SessionRequestHandlerUtilTest {
     Flags.resetToDefault();
   }
 
+  private SessionRequestInfo.Builder defaultSessionRequestInfoBuilder() {
+    return SessionRequestInfo.builder()
+        .setTestPlan("cts")
+        .setCommandLineArgs("cts")
+        .setXtsType("cts")
+        .setXtsRootDir(XTS_ROOT_DIR_PATH);
+  }
+
+  private Configuration.Builder defaultConfigurationBuilder() {
+    return Configuration.newBuilder()
+        .addDevices(Device.newBuilder().setName("AndroidDevice"))
+        .setTest(
+            com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto
+                .Test.newBuilder()
+                .setClazz("Driver"));
+  }
+
   @Test
   public void initializeJobConfig_calculateTimeout() throws Exception {
-    when(deviceQuerier.queryDevice(any()))
-        .thenReturn(
-            DeviceQueryResult.newBuilder()
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
-                .build());
-
     Optional<JobConfig> jobConfigOpt =
         sessionRequestHandlerUtil.initializeJobConfig(
-            SessionRequestInfo.builder()
-                .setTestPlan("cts")
-                .setCommandLineArgs("cts")
-                .setXtsType("cts")
-                .setXtsRootDir(XTS_ROOT_DIR_PATH)
+            defaultSessionRequestInfoBuilder()
                 .setJobTimeout(Duration.ofSeconds(3000L))
                 .setStartTimeout(Duration.ofSeconds(1000L))
                 .build(),
@@ -164,27 +177,12 @@ public final class SessionRequestHandlerUtilTest {
 
   @Test
   public void initializeJobConfig_pickOneDevice() throws Exception {
-    when(deviceQuerier.queryDevice(any()))
-        .thenReturn(
-            DeviceQueryResult.newBuilder()
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
-                .build());
-
     ImmutableMap<String, String> driverParams =
         ImmutableMap.of(
             "xts_type", "cts", "xts_root_dir", XTS_ROOT_DIR_PATH, "xts_test_plan", "cts");
     Optional<JobConfig> jobConfigOpt =
         sessionRequestHandlerUtil.initializeJobConfig(
-            SessionRequestInfo.builder()
-                .setTestPlan("cts")
-                .setCommandLineArgs("cts")
-                .setXtsType("cts")
-                .setXtsRootDir(XTS_ROOT_DIR_PATH)
-                .build(),
-            driverParams);
+            defaultSessionRequestInfoBuilder().build(), driverParams);
 
     assertThat(jobConfigOpt).isPresent();
     assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
@@ -195,7 +193,6 @@ public final class SessionRequestHandlerUtilTest {
                     StringMap.newBuilder().putContent("id", "regex:(device_id_1|device_id_2)"))
                 .build());
 
-    // Asserts the driver
     assertThat(jobConfigOpt.get().getDriver().getName()).isEqualTo("XtsTradefedTest");
     String driverParamsStr = jobConfigOpt.get().getDriver().getParam();
     Map<String, String> driverParamsMap =
@@ -205,24 +202,9 @@ public final class SessionRequestHandlerUtilTest {
 
   @Test
   public void initializeJobConfig_atsServerNoDeviceRequirement_pickOneDevice() throws Exception {
-    when(deviceQuerier.queryDevice(any()))
-        .thenReturn(
-            DeviceQueryResult.newBuilder()
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
-                .build());
-
     Optional<JobConfig> jobConfigOpt =
         sessionRequestHandlerUtil.initializeJobConfig(
-            SessionRequestInfo.builder()
-                .setTestPlan("cts")
-                .setCommandLineArgs("cts")
-                .setIsAtsServerRequest(true)
-                .setXtsType("cts")
-                .setXtsRootDir(XTS_ROOT_DIR_PATH)
-                .build(),
+            defaultSessionRequestInfoBuilder().setIsAtsServerRequest(true).build(),
             ImmutableMap.of());
 
     assertThat(jobConfigOpt).isPresent();
@@ -238,23 +220,10 @@ public final class SessionRequestHandlerUtilTest {
   @Test
   public void initializeJobConfig_atsServerSpecifyOneDevice_createJobWithThatDevice()
       throws Exception {
-    when(deviceQuerier.queryDevice(any()))
-        .thenReturn(
-            DeviceQueryResult.newBuilder()
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
-                .build());
-
     Optional<JobConfig> jobConfigOpt =
         sessionRequestHandlerUtil.initializeJobConfig(
-            SessionRequestInfo.builder()
-                .setTestPlan("cts")
-                .setCommandLineArgs("cts")
+            defaultSessionRequestInfoBuilder()
                 .setIsAtsServerRequest(true)
-                .setXtsType("cts")
-                .setXtsRootDir(XTS_ROOT_DIR_PATH)
                 .setDeviceSerials(ImmutableList.of("device_id_1"))
                 .build(),
             ImmutableMap.of());
@@ -272,26 +241,7 @@ public final class SessionRequestHandlerUtilTest {
   public void initializeJobConfig_atsServerSpecifyNotAvailableDevice_createJobWithThatDevice()
       throws Exception {
     when(deviceQuerier.queryDevice(any())).thenReturn(DeviceQueryResult.getDefaultInstance());
-
-    Optional<JobConfig> jobConfigOpt =
-        sessionRequestHandlerUtil.initializeJobConfig(
-            SessionRequestInfo.builder()
-                .setTestPlan("cts")
-                .setCommandLineArgs("cts")
-                .setIsAtsServerRequest(true)
-                .setXtsType("cts")
-                .setXtsRootDir(XTS_ROOT_DIR_PATH)
-                .setDeviceSerials(ImmutableList.of("device_id_1"))
-                .build(),
-            ImmutableMap.of());
-
-    assertThat(jobConfigOpt).isPresent();
-    assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
-        .containsExactly(
-            SubDeviceSpec.newBuilder()
-                .setType("AndroidDevice")
-                .setDimensions(StringMap.newBuilder().putContent("uuid", "device_id_1"))
-                .build());
+    initializeJobConfig_atsServerSpecifyOneDevice_createJobWithThatDevice();
   }
 
   @Test
@@ -299,22 +249,10 @@ public final class SessionRequestHandlerUtilTest {
     ImmutableMap<String, String> driverParams =
         ImmutableMap.of(
             "xts_type", "cts", "xts_root_dir", XTS_ROOT_DIR_PATH, "xts_test_plan", "cts");
-    when(deviceQuerier.queryDevice(any()))
-        .thenReturn(
-            DeviceQueryResult.newBuilder()
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
-                .build());
 
     Optional<JobConfig> jobConfigOpt =
         sessionRequestHandlerUtil.initializeJobConfig(
-            SessionRequestInfo.builder()
-                .setTestPlan("cts")
-                .setCommandLineArgs("cts")
-                .setXtsType("cts")
-                .setXtsRootDir(XTS_ROOT_DIR_PATH)
+            defaultSessionRequestInfoBuilder()
                 .setDeviceType(SessionRequestHandlerUtil.ANDROID_REAL_DEVICE_TYPE)
                 .build(),
             driverParams);
@@ -328,7 +266,6 @@ public final class SessionRequestHandlerUtilTest {
                     StringMap.newBuilder().putContent("id", "regex:(device_id_1|device_id_2)"))
                 .build());
 
-    // Asserts the driver
     assertThat(jobConfigOpt.get().getDriver().getName()).isEqualTo("XtsTradefedTest");
     String driverParamsStr = jobConfigOpt.get().getDriver().getParam();
     Map<String, String> driverParamsMap =
@@ -338,27 +275,14 @@ public final class SessionRequestHandlerUtilTest {
 
   @Test
   public void initializeJobConfig_excludeDevice() throws Exception {
-    when(deviceQuerier.queryDevice(any()))
-        .thenReturn(
-            DeviceQueryResult.newBuilder()
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
-                .build());
-
     Optional<JobConfig> jobConfigOpt =
         sessionRequestHandlerUtil.initializeJobConfig(
-            SessionRequestInfo.builder()
-                .setTestPlan("cts")
-                .setCommandLineArgs("cts")
-                .setXtsType("cts")
-                .setXtsRootDir(XTS_ROOT_DIR_PATH)
+            defaultSessionRequestInfoBuilder()
                 .setExcludeDeviceSerials(ImmutableList.of("device_id_1"))
                 .build(),
             ImmutableMap.of());
 
-    assertThat(jobConfigOpt).isPresent();
+    // TODO: why this is the same?
     assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
         .containsExactly(
             SubDeviceSpec.newBuilder()
@@ -369,75 +293,39 @@ public final class SessionRequestHandlerUtilTest {
 
   @Test
   public void initializeJobConfig_multiDevice_pick2Devices() throws Exception {
-    when(deviceQuerier.queryDevice(any()))
-        .thenReturn(
-            DeviceQueryResult.newBuilder()
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
-                .build());
-
     Optional<JobConfig> jobConfigOpt =
         sessionRequestHandlerUtil.initializeJobConfig(
-            SessionRequestInfo.builder()
-                .setTestPlan("cts-multidevice")
-                .setCommandLineArgs("cts")
-                .setXtsType("cts")
-                .setXtsRootDir(XTS_ROOT_DIR_PATH)
-                .build(),
+            defaultSessionRequestInfoBuilder().setTestPlan("cts-multidevice").build(),
             ImmutableMap.of());
 
-    assertThat(jobConfigOpt).isPresent();
+    SubDeviceSpec subDeviceSpec =
+        SubDeviceSpec.newBuilder()
+            .setType("AndroidDevice")
+            .setDimensions(
+                StringMap.newBuilder().putContent("id", "regex:(device_id_1|device_id_2)"))
+            .build();
     assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
-        .containsExactly(
-            SubDeviceSpec.newBuilder()
-                .setType("AndroidDevice")
-                .setDimensions(
-                    StringMap.newBuilder().putContent("id", "regex:(device_id_1|device_id_2)"))
-                .build(),
-            SubDeviceSpec.newBuilder()
-                .setType("AndroidDevice")
-                .setDimensions(
-                    StringMap.newBuilder().putContent("id", "regex:(device_id_1|device_id_2)"))
-                .build());
+        .containsExactly(subDeviceSpec, subDeviceSpec);
   }
 
   @Test
   public void initializeJobConfig_multiDevice_pick2Emulators() throws Exception {
-    when(deviceQuerier.queryDevice(any()))
-        .thenReturn(
-            DeviceQueryResult.newBuilder()
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
-                .build());
-
     Optional<JobConfig> jobConfigOpt =
         sessionRequestHandlerUtil.initializeJobConfig(
-            SessionRequestInfo.builder()
+            defaultSessionRequestInfoBuilder()
                 .setTestPlan("cts-multidevice")
-                .setCommandLineArgs("cts")
-                .setXtsType("cts")
-                .setXtsRootDir(XTS_ROOT_DIR_PATH)
                 .setDeviceType(SessionRequestHandlerUtil.ANDROID_LOCAL_EMULATOR_TYPE)
                 .build(),
             ImmutableMap.of());
 
-    assertThat(jobConfigOpt).isPresent();
+    SubDeviceSpec subDeviceSpec =
+        SubDeviceSpec.newBuilder()
+            .setType("AndroidLocalEmulator")
+            .setDimensions(
+                StringMap.newBuilder().putContent("id", "regex:(device_id_1|device_id_2)"))
+            .build();
     assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
-        .containsExactly(
-            SubDeviceSpec.newBuilder()
-                .setType("AndroidLocalEmulator")
-                .setDimensions(
-                    StringMap.newBuilder().putContent("id", "regex:(device_id_1|device_id_2)"))
-                .build(),
-            SubDeviceSpec.newBuilder()
-                .setType("AndroidLocalEmulator")
-                .setDimensions(
-                    StringMap.newBuilder().putContent("id", "regex:(device_id_1|device_id_2)"))
-                .build());
+        .containsExactly(subDeviceSpec, subDeviceSpec);
   }
 
   @Test
@@ -451,12 +339,7 @@ public final class SessionRequestHandlerUtilTest {
 
     Optional<JobConfig> jobConfigOpt =
         sessionRequestHandlerUtil.initializeJobConfig(
-            SessionRequestInfo.builder()
-                .setTestPlan("cts-multi-device")
-                .setCommandLineArgs("cts")
-                .setXtsType("cts")
-                .setXtsRootDir(XTS_ROOT_DIR_PATH)
-                .build(),
+            defaultSessionRequestInfoBuilder().setTestPlan("cts-multi-device").build(),
             ImmutableMap.of());
 
     assertThat(jobConfigOpt).isEmpty();
@@ -464,76 +347,42 @@ public final class SessionRequestHandlerUtilTest {
 
   @Test
   public void initializeJobConfig_shardCount2_pick2Devices() throws Exception {
-    when(deviceQuerier.queryDevice(any()))
-        .thenReturn(
-            DeviceQueryResult.newBuilder()
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
-                .build());
-
     Optional<JobConfig> jobConfigOpt =
         sessionRequestHandlerUtil.initializeJobConfig(
-            SessionRequestInfo.builder()
-                .setTestPlan("cts")
+            defaultSessionRequestInfoBuilder()
                 .setCommandLineArgs("cts --shard-count 2")
-                .setXtsType("cts")
-                .setXtsRootDir(XTS_ROOT_DIR_PATH)
                 .setShardCount(2)
                 .build(),
             ImmutableMap.of());
 
-    assertThat(jobConfigOpt).isPresent();
+    SubDeviceSpec subDeviceSpec =
+        SubDeviceSpec.newBuilder()
+            .setType("AndroidDevice")
+            .setDimensions(
+                StringMap.newBuilder().putContent("id", "regex:(device_id_1|device_id_2)"))
+            .build();
     assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
-        .containsExactly(
-            SubDeviceSpec.newBuilder()
-                .setType("AndroidDevice")
-                .setDimensions(
-                    StringMap.newBuilder().putContent("id", "regex:(device_id_1|device_id_2)"))
-                .build(),
-            SubDeviceSpec.newBuilder()
-                .setType("AndroidDevice")
-                .setDimensions(
-                    StringMap.newBuilder().putContent("id", "regex:(device_id_1|device_id_2)"))
-                .build());
+        .containsExactly(subDeviceSpec, subDeviceSpec);
   }
 
   @Test
   public void initializeJobConfig_shardCount3_only2OnlineDevices_pick2Devices() throws Exception {
-    when(deviceQuerier.queryDevice(any()))
-        .thenReturn(
-            DeviceQueryResult.newBuilder()
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
-                .build());
-
     Optional<JobConfig> jobConfigOpt =
         sessionRequestHandlerUtil.initializeJobConfig(
-            SessionRequestInfo.builder()
-                .setTestPlan("cts")
+            defaultSessionRequestInfoBuilder()
                 .setCommandLineArgs("cts --shard-count 3")
-                .setXtsType("cts")
-                .setXtsRootDir(XTS_ROOT_DIR_PATH)
                 .setShardCount(3)
                 .build(),
             ImmutableMap.of());
 
-    assertThat(jobConfigOpt).isPresent();
+    SubDeviceSpec subDeviceSpec =
+        SubDeviceSpec.newBuilder()
+            .setType("AndroidDevice")
+            .setDimensions(
+                StringMap.newBuilder().putContent("id", "regex:(device_id_1|device_id_2)"))
+            .build();
     assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
-        .containsExactly(
-            SubDeviceSpec.newBuilder()
-                .setType("AndroidDevice")
-                .setDimensions(
-                    StringMap.newBuilder().putContent("id", "regex:(device_id_1|device_id_2)"))
-                .build(),
-            SubDeviceSpec.newBuilder()
-                .setType("AndroidDevice")
-                .setDimensions(
-                    StringMap.newBuilder().putContent("id", "regex:(device_id_1|device_id_2)"))
-                .build());
+        .containsExactly(subDeviceSpec, subDeviceSpec);
   }
 
   @Test
@@ -542,35 +391,16 @@ public final class SessionRequestHandlerUtilTest {
 
     Optional<JobConfig> jobConfigOpt =
         sessionRequestHandlerUtil.initializeJobConfig(
-            SessionRequestInfo.builder()
-                .setTestPlan("cts")
-                .setCommandLineArgs("cts")
-                .setXtsType("cts")
-                .setXtsRootDir(XTS_ROOT_DIR_PATH)
-                .build(),
-            ImmutableMap.of());
+            defaultSessionRequestInfoBuilder().build(), ImmutableMap.of());
 
     assertThat(jobConfigOpt).isEmpty();
   }
 
   @Test
   public void initializeJobConfig_withGivenSerial() throws Exception {
-    when(deviceQuerier.queryDevice(any()))
-        .thenReturn(
-            DeviceQueryResult.newBuilder()
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
-                .build());
-
     Optional<JobConfig> jobConfigOpt =
         sessionRequestHandlerUtil.initializeJobConfig(
-            SessionRequestInfo.builder()
-                .setTestPlan("cts")
-                .setCommandLineArgs("cts")
-                .setXtsType("cts")
-                .setXtsRootDir(XTS_ROOT_DIR_PATH)
+            defaultSessionRequestInfoBuilder()
                 .setEnvVars(ImmutableMap.of("env_key1", "env_value1"))
                 .setDeviceSerials(ImmutableList.of("device_id_1"))
                 .setModuleNames(ImmutableList.of("module1"))
@@ -579,7 +409,6 @@ public final class SessionRequestHandlerUtilTest {
                 .build(),
             ImmutableMap.of());
 
-    assertThat(jobConfigOpt).isPresent();
     assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
         .containsExactly(
             SubDeviceSpec.newBuilder()
@@ -591,62 +420,31 @@ public final class SessionRequestHandlerUtilTest {
   @Test
   public void initializeJobConfig_someGivenSerialsNotExist_pickExistingDevicesOnly()
       throws Exception {
-    when(deviceQuerier.queryDevice(any()))
-        .thenReturn(
-            DeviceQueryResult.newBuilder()
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_3").addType("AndroidOnlineDevice"))
-                .build());
-
     Optional<JobConfig> jobConfigOpt =
         sessionRequestHandlerUtil.initializeJobConfig(
-            SessionRequestInfo.builder()
-                .setTestPlan("cts")
-                .setCommandLineArgs("cts")
-                .setXtsType("cts")
-                .setXtsRootDir(XTS_ROOT_DIR_PATH)
+            defaultSessionRequestInfoBuilder()
                 .setDeviceSerials(
-                    ImmutableList.of("device_id_1", "not_exist_device", "device_id_3"))
+                    ImmutableList.of("device_id_1", "not_exist_device", "device_id_2"))
                 .build(),
             ImmutableMap.of());
 
-    assertThat(jobConfigOpt).isPresent();
+    SubDeviceSpec.Builder subDeviceSpecBuilder =
+        SubDeviceSpec.newBuilder().setType("AndroidDevice");
     assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
         .containsExactly(
-            SubDeviceSpec.newBuilder()
-                .setType("AndroidDevice")
+            subDeviceSpecBuilder
                 .setDimensions(StringMap.newBuilder().putContent("id", "device_id_1"))
                 .build(),
-            SubDeviceSpec.newBuilder()
-                .setType("AndroidDevice")
-                .setDimensions(StringMap.newBuilder().putContent("id", "device_id_3"))
+            subDeviceSpecBuilder
+                .setDimensions(StringMap.newBuilder().putContent("id", "device_id_2"))
                 .build());
   }
 
   @Test
   public void initializeJobConfig_allGivenSerialsNotExist_noJobConfig() throws Exception {
-    when(deviceQuerier.queryDevice(any()))
-        .thenReturn(
-            DeviceQueryResult.newBuilder()
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_3").addType("AndroidOnlineDevice"))
-                .build());
-
     Optional<JobConfig> jobConfigOpt =
         sessionRequestHandlerUtil.initializeJobConfig(
-            SessionRequestInfo.builder()
-                .setTestPlan("cts")
-                .setCommandLineArgs("cts")
-                .setXtsType("cts")
-                .setXtsRootDir(XTS_ROOT_DIR_PATH)
+            defaultSessionRequestInfoBuilder()
                 .setDeviceSerials(ImmutableList.of("device_id_4", "device_id_5"))
                 .build(),
             ImmutableMap.of());
@@ -657,24 +455,14 @@ public final class SessionRequestHandlerUtilTest {
   @Test
   public void getFilteredTradefedModules_testFilters() throws Exception {
     Configuration config1 =
-        Configuration.newBuilder()
+        defaultConfigurationBuilder()
             .setMetadata(
                 ConfigurationMetadata.newBuilder().setXtsModule("module1").setIsConfigV2(false))
-            .addDevices(Device.newBuilder().setName("AndroidDevice"))
-            .setTest(
-                com.google.devtools.mobileharness.platform.android.xts.config.proto
-                    .ConfigurationProto.Test.newBuilder()
-                    .setClazz("Driver"))
             .build();
     Configuration config2 =
-        Configuration.newBuilder()
+        defaultConfigurationBuilder()
             .setMetadata(
                 ConfigurationMetadata.newBuilder().setXtsModule("module2").setIsConfigV2(false))
-            .addDevices(Device.newBuilder().setName("AndroidDevice"))
-            .setTest(
-                com.google.devtools.mobileharness.platform.android.xts.config.proto
-                    .ConfigurationProto.Test.newBuilder()
-                    .setClazz("Driver"))
             .build();
 
     when(localFileUtil.isDirExist(Path.of(XTS_ROOT_DIR_PATH))).thenReturn(true);
@@ -683,31 +471,19 @@ public final class SessionRequestHandlerUtilTest {
 
     assertThat(
             sessionRequestHandlerUtil.getFilteredTradefedModules(
-                SessionRequestInfo.builder()
-                    .setTestPlan("cts")
-                    .setCommandLineArgs("cts")
-                    .setXtsType("cts")
-                    .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                defaultSessionRequestInfoBuilder()
                     .setIncludeFilters(ImmutableList.of("module3 TestClass#TestCase"))
                     .build()))
         .isEmpty();
     assertThat(
             sessionRequestHandlerUtil.getFilteredTradefedModules(
-                SessionRequestInfo.builder()
-                    .setTestPlan("cts")
-                    .setCommandLineArgs("cts")
-                    .setXtsType("cts")
-                    .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                defaultSessionRequestInfoBuilder()
                     .setExcludeFilters(ImmutableList.of("module1", "module2"))
                     .build()))
         .isEmpty();
     assertThat(
             sessionRequestHandlerUtil.getFilteredTradefedModules(
-                SessionRequestInfo.builder()
-                    .setTestPlan("cts")
-                    .setCommandLineArgs("cts")
-                    .setXtsType("cts")
-                    .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                defaultSessionRequestInfoBuilder()
                     .setIncludeFilters(ImmutableList.of("module1"))
                     .setExcludeFilters(ImmutableList.of("module2"))
                     .build()))
@@ -715,33 +491,21 @@ public final class SessionRequestHandlerUtilTest {
 
     assertThat(
             sessionRequestHandlerUtil.getFilteredTradefedModules(
-                SessionRequestInfo.builder()
-                    .setTestPlan("cts")
-                    .setCommandLineArgs("cts")
-                    .setXtsType("cts")
-                    .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                defaultSessionRequestInfoBuilder()
                     .setIncludeFilters(ImmutableList.of("arm64-v8a module1 TestClass#TestCase"))
                     .build()))
         .isPresent();
 
     assertThat(
             sessionRequestHandlerUtil.getFilteredTradefedModules(
-                SessionRequestInfo.builder()
-                    .setTestPlan("cts")
-                    .setCommandLineArgs("cts")
-                    .setXtsType("cts")
-                    .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                defaultSessionRequestInfoBuilder()
                     .setExcludeFilters(ImmutableList.of("module1", "arm64-v8a module2"))
                     .build()))
         .isPresent();
 
     assertThat(
             sessionRequestHandlerUtil.getFilteredTradefedModules(
-                SessionRequestInfo.builder()
-                    .setTestPlan("cts")
-                    .setCommandLineArgs("cts")
-                    .setXtsType("cts")
-                    .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                defaultSessionRequestInfoBuilder()
                     .setIncludeFilters(
                         ImmutableList.of("arm64-v8a module1[instant] TestClass#TestCase"))
                     .build()))
@@ -751,24 +515,14 @@ public final class SessionRequestHandlerUtilTest {
   @Test
   public void createXtsNonTradefedJobs() throws Exception {
     Configuration config1 =
-        Configuration.newBuilder()
+        defaultConfigurationBuilder()
             .setMetadata(
                 ConfigurationMetadata.newBuilder().setXtsModule("module1").setIsConfigV2(true))
-            .addDevices(Device.newBuilder().setName("AndroidDevice"))
-            .setTest(
-                com.google.devtools.mobileharness.platform.android.xts.config.proto
-                    .ConfigurationProto.Test.newBuilder()
-                    .setClazz("Driver"))
             .build();
     Configuration config2 =
-        Configuration.newBuilder()
+        defaultConfigurationBuilder()
             .setMetadata(
                 ConfigurationMetadata.newBuilder().setXtsModule("module2").setIsConfigV2(true))
-            .addDevices(Device.newBuilder().setName("AndroidDevice"))
-            .setTest(
-                com.google.devtools.mobileharness.platform.android.xts.config.proto
-                    .ConfigurationProto.Test.newBuilder()
-                    .setClazz("Driver"))
             .build();
     when(localFileUtil.isDirExist(Path.of(XTS_ROOT_DIR_PATH))).thenReturn(true);
     when(configurationUtil.getConfigsV2FromDirs(any()))
@@ -792,12 +546,7 @@ public final class SessionRequestHandlerUtilTest {
 
     SessionRequestInfo sessionRequestInfo =
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(
-            SessionRequestInfo.builder()
-                .setTestPlan("cts")
-                .setCommandLineArgs("cts")
-                .setXtsType("cts")
-                .setXtsRootDir(XTS_ROOT_DIR_PATH)
-                .build());
+            defaultSessionRequestInfoBuilder().build());
     ImmutableList<JobInfo> jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
             sessionRequestInfo, testPlanFilter, null, ImmutableMap.of());
@@ -809,24 +558,14 @@ public final class SessionRequestHandlerUtilTest {
   @Test
   public void canCreateNonTradefedJobs_noMatchedNonTradefedModules() throws Exception {
     Configuration config1 =
-        Configuration.newBuilder()
+        defaultConfigurationBuilder()
             .setMetadata(
                 ConfigurationMetadata.newBuilder().setXtsModule("module1").setIsConfigV2(true))
-            .addDevices(Device.newBuilder().setName("AndroidDevice"))
-            .setTest(
-                com.google.devtools.mobileharness.platform.android.xts.config.proto
-                    .ConfigurationProto.Test.newBuilder()
-                    .setClazz("Driver"))
             .build();
     Configuration config2 =
-        Configuration.newBuilder()
+        defaultConfigurationBuilder()
             .setMetadata(
                 ConfigurationMetadata.newBuilder().setXtsModule("module2").setIsConfigV2(true))
-            .addDevices(Device.newBuilder().setName("AndroidDevice"))
-            .setTest(
-                com.google.devtools.mobileharness.platform.android.xts.config.proto
-                    .ConfigurationProto.Test.newBuilder()
-                    .setClazz("Driver"))
             .build();
     when(localFileUtil.isDirExist(Path.of(XTS_ROOT_DIR_PATH))).thenReturn(true);
     when(configurationUtil.getConfigsV2FromDirs(any()))
@@ -851,11 +590,7 @@ public final class SessionRequestHandlerUtilTest {
     assertThat(
             sessionRequestHandlerUtil.canCreateNonTradefedJobs(
                 sessionRequestHandlerUtil.addNonTradefedModuleInfo(
-                    SessionRequestInfo.builder()
-                        .setTestPlan("cts")
-                        .setCommandLineArgs("cts")
-                        .setXtsType("cts")
-                        .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                    defaultSessionRequestInfoBuilder()
                         .setModuleNames(ImmutableList.of("TfModule1"))
                         .build())))
         .isFalse();
@@ -864,24 +599,14 @@ public final class SessionRequestHandlerUtilTest {
   @Test
   public void createXtsNonTradefedJobs_partialMatchedNonTradefedModules() throws Exception {
     Configuration config1 =
-        Configuration.newBuilder()
+        defaultConfigurationBuilder()
             .setMetadata(
                 ConfigurationMetadata.newBuilder().setXtsModule("module1").setIsConfigV2(true))
-            .addDevices(Device.newBuilder().setName("AndroidDevice"))
-            .setTest(
-                com.google.devtools.mobileharness.platform.android.xts.config.proto
-                    .ConfigurationProto.Test.newBuilder()
-                    .setClazz("Driver"))
             .build();
     Configuration config2 =
-        Configuration.newBuilder()
+        defaultConfigurationBuilder()
             .setMetadata(
                 ConfigurationMetadata.newBuilder().setXtsModule("module2").setIsConfigV2(true))
-            .addDevices(Device.newBuilder().setName("AndroidDevice"))
-            .setTest(
-                com.google.devtools.mobileharness.platform.android.xts.config.proto
-                    .ConfigurationProto.Test.newBuilder()
-                    .setClazz("Driver"))
             .build();
     when(localFileUtil.isDirExist(Path.of(XTS_ROOT_DIR_PATH))).thenReturn(true);
     when(configurationUtil.getConfigsV2FromDirs(any()))
@@ -905,11 +630,7 @@ public final class SessionRequestHandlerUtilTest {
 
     SessionRequestInfo sessionRequestInfo =
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(
-            SessionRequestInfo.builder()
-                .setTestPlan("cts")
-                .setCommandLineArgs("cts")
-                .setXtsType("cts")
-                .setXtsRootDir(XTS_ROOT_DIR_PATH)
+            defaultSessionRequestInfoBuilder()
                 .setModuleNames(ImmutableList.of("TfModule1", "module2"))
                 .build());
     ImmutableList<JobInfo> jobInfos =
@@ -922,34 +643,19 @@ public final class SessionRequestHandlerUtilTest {
   @Test
   public void createXtsNonTradefedJobs_testFilters() throws Exception {
     Configuration config1 =
-        Configuration.newBuilder()
+        defaultConfigurationBuilder()
             .setMetadata(
                 ConfigurationMetadata.newBuilder().setXtsModule("module1").setIsConfigV2(true))
-            .addDevices(Device.newBuilder().setName("AndroidDevice"))
-            .setTest(
-                com.google.devtools.mobileharness.platform.android.xts.config.proto
-                    .ConfigurationProto.Test.newBuilder()
-                    .setClazz("Driver"))
             .build();
     Configuration config2 =
-        Configuration.newBuilder()
+        defaultConfigurationBuilder()
             .setMetadata(
                 ConfigurationMetadata.newBuilder().setXtsModule("module2").setIsConfigV2(true))
-            .addDevices(Device.newBuilder().setName("AndroidDevice"))
-            .setTest(
-                com.google.devtools.mobileharness.platform.android.xts.config.proto
-                    .ConfigurationProto.Test.newBuilder()
-                    .setClazz("Driver"))
             .build();
     Configuration config3 =
-        Configuration.newBuilder()
+        defaultConfigurationBuilder()
             .setMetadata(
                 ConfigurationMetadata.newBuilder().setXtsModule("module3").setIsConfigV2(true))
-            .addDevices(Device.newBuilder().setName("AndroidDevice"))
-            .setTest(
-                com.google.devtools.mobileharness.platform.android.xts.config.proto
-                    .ConfigurationProto.Test.newBuilder()
-                    .setClazz("Driver"))
             .build();
     when(localFileUtil.isDirExist(Path.of(XTS_ROOT_DIR_PATH))).thenReturn(true);
     when(configurationUtil.getConfigsV2FromDirs(any()))
@@ -981,11 +687,7 @@ public final class SessionRequestHandlerUtilTest {
         .thenReturn(ImmutableList.of("test1", "test2", "test3"));
     SessionRequestInfo sessionRequestInfo =
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(
-            SessionRequestInfo.builder()
-                .setTestPlan("cts")
-                .setCommandLineArgs("cts")
-                .setXtsType("cts")
-                .setXtsRootDir(XTS_ROOT_DIR_PATH)
+            defaultSessionRequestInfoBuilder()
                 .setIncludeFilters(
                     ImmutableList.of(
                         "module1 test_class1#test1",
@@ -1008,14 +710,9 @@ public final class SessionRequestHandlerUtilTest {
   @Test
   public void createXtsNonTradefedJobs_withGivenTest() throws Exception {
     Configuration config1 =
-        Configuration.newBuilder()
+        defaultConfigurationBuilder()
             .setMetadata(
                 ConfigurationMetadata.newBuilder().setXtsModule("module1").setIsConfigV2(true))
-            .addDevices(Device.newBuilder().setName("AndroidDevice"))
-            .setTest(
-                com.google.devtools.mobileharness.platform.android.xts.config.proto
-                    .ConfigurationProto.Test.newBuilder()
-                    .setClazz("Driver"))
             .build();
     when(localFileUtil.isDirExist(Path.of(XTS_ROOT_DIR_PATH))).thenReturn(true);
     when(configurationUtil.getConfigsV2FromDirs(any()))
@@ -1038,13 +735,9 @@ public final class SessionRequestHandlerUtilTest {
 
     SessionRequestInfo sessionRequestInfo =
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(
-            SessionRequestInfo.builder()
-                .setTestPlan("cts")
-                .setCommandLineArgs("cts")
-                .setXtsType("cts")
+            defaultSessionRequestInfoBuilder()
                 .setModuleNames(ImmutableList.of("module1"))
                 .setTestName("testclass#test1")
-                .setXtsRootDir(XTS_ROOT_DIR_PATH)
                 .build());
     ImmutableList<JobInfo> jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
@@ -1052,13 +745,9 @@ public final class SessionRequestHandlerUtilTest {
 
     SessionRequestInfo sessionRequestInfoWithInvalidTestName =
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(
-            SessionRequestInfo.builder()
-                .setTestPlan("cts")
-                .setCommandLineArgs("cts")
-                .setXtsType("cts")
+            defaultSessionRequestInfoBuilder()
                 .setModuleNames(ImmutableList.of("module1"))
                 .setTestName("test1")
-                .setXtsRootDir(XTS_ROOT_DIR_PATH)
                 .build());
     ImmutableList<JobInfo> jobInfosWithInvalidTestName =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
@@ -1072,34 +761,19 @@ public final class SessionRequestHandlerUtilTest {
   @Test
   public void createXtsNonTradefedJobs_retryAtsServerSession_nonTfFailedTests() throws Exception {
     Configuration config1 =
-        Configuration.newBuilder()
+        defaultConfigurationBuilder()
             .setMetadata(
                 ConfigurationMetadata.newBuilder().setXtsModule("module1").setIsConfigV2(true))
-            .addDevices(Device.newBuilder().setName("AndroidDevice"))
-            .setTest(
-                com.google.devtools.mobileharness.platform.android.xts.config.proto
-                    .ConfigurationProto.Test.newBuilder()
-                    .setClazz("Driver"))
             .build();
     Configuration config2 =
-        Configuration.newBuilder()
+        defaultConfigurationBuilder()
             .setMetadata(
                 ConfigurationMetadata.newBuilder().setXtsModule("module2").setIsConfigV2(true))
-            .addDevices(Device.newBuilder().setName("AndroidDevice"))
-            .setTest(
-                com.google.devtools.mobileharness.platform.android.xts.config.proto
-                    .ConfigurationProto.Test.newBuilder()
-                    .setClazz("Driver"))
             .build();
     Configuration config3 =
-        Configuration.newBuilder()
+        defaultConfigurationBuilder()
             .setMetadata(
                 ConfigurationMetadata.newBuilder().setXtsModule("module3").setIsConfigV2(true))
-            .addDevices(Device.newBuilder().setName("AndroidDevice"))
-            .setTest(
-                com.google.devtools.mobileharness.platform.android.xts.config.proto
-                    .ConfigurationProto.Test.newBuilder()
-                    .setClazz("Driver"))
             .build();
     when(localFileUtil.isDirExist(Path.of(XTS_ROOT_DIR_PATH))).thenReturn(true);
     when(configurationUtil.getConfigsV2FromDirs(any()))
@@ -1145,11 +819,9 @@ public final class SessionRequestHandlerUtilTest {
 
     SessionRequestInfo sessionRequestInfo =
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(
-            SessionRequestInfo.builder()
+            defaultSessionRequestInfoBuilder()
                 .setTestPlan("retry")
                 .setCommandLineArgs("retry")
-                .setXtsType("cts")
-                .setXtsRootDir(XTS_ROOT_DIR_PATH)
                 .setRetrySessionId("previous_session_id")
                 .setRetryResultDir("/retry/result/dir")
                 .build());
@@ -1167,34 +839,19 @@ public final class SessionRequestHandlerUtilTest {
   @Test
   public void createXtsNonTradefedJobs_retry_nonTfFailedTests() throws Exception {
     Configuration config1 =
-        Configuration.newBuilder()
+        defaultConfigurationBuilder()
             .setMetadata(
                 ConfigurationMetadata.newBuilder().setXtsModule("module1").setIsConfigV2(true))
-            .addDevices(Device.newBuilder().setName("AndroidDevice"))
-            .setTest(
-                com.google.devtools.mobileharness.platform.android.xts.config.proto
-                    .ConfigurationProto.Test.newBuilder()
-                    .setClazz("Driver"))
             .build();
     Configuration config2 =
-        Configuration.newBuilder()
+        defaultConfigurationBuilder()
             .setMetadata(
                 ConfigurationMetadata.newBuilder().setXtsModule("module2").setIsConfigV2(true))
-            .addDevices(Device.newBuilder().setName("AndroidDevice"))
-            .setTest(
-                com.google.devtools.mobileharness.platform.android.xts.config.proto
-                    .ConfigurationProto.Test.newBuilder()
-                    .setClazz("Driver"))
             .build();
     Configuration config3 =
-        Configuration.newBuilder()
+        defaultConfigurationBuilder()
             .setMetadata(
                 ConfigurationMetadata.newBuilder().setXtsModule("module3").setIsConfigV2(true))
-            .addDevices(Device.newBuilder().setName("AndroidDevice"))
-            .setTest(
-                com.google.devtools.mobileharness.platform.android.xts.config.proto
-                    .ConfigurationProto.Test.newBuilder()
-                    .setClazz("Driver"))
             .build();
     when(localFileUtil.isDirExist(Path.of(XTS_ROOT_DIR_PATH))).thenReturn(true);
     when(configurationUtil.getConfigsV2FromDirs(any()))
@@ -1240,11 +897,9 @@ public final class SessionRequestHandlerUtilTest {
 
     SessionRequestInfo sessionRequestInfo =
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(
-            SessionRequestInfo.builder()
+            defaultSessionRequestInfoBuilder()
                 .setTestPlan("retry")
                 .setCommandLineArgs("retry")
-                .setXtsType("cts")
-                .setXtsRootDir(XTS_ROOT_DIR_PATH)
                 .setRetrySessionIndex(0)
                 .build());
     ImmutableList<JobInfo> jobInfos =
@@ -1267,16 +922,11 @@ public final class SessionRequestHandlerUtilTest {
     subPlan.addNonTfIncludeFilter("armeabi-v7a HelloWorldTest");
 
     Configuration config1 =
-        Configuration.newBuilder()
+        defaultConfigurationBuilder()
             .setMetadata(
                 ConfigurationMetadata.newBuilder()
                     .setXtsModule("HelloWorldTest")
                     .setIsConfigV2(true))
-            .addDevices(Device.newBuilder().setName("AndroidDevice"))
-            .setTest(
-                com.google.devtools.mobileharness.platform.android.xts.config.proto
-                    .ConfigurationProto.Test.newBuilder()
-                    .setClazz("Driver"))
             .build();
     when(configurationUtil.getConfigsV2FromDirs(any()))
         .thenReturn(ImmutableMap.of("/path/to/config1", config1));
@@ -1304,10 +954,8 @@ public final class SessionRequestHandlerUtilTest {
 
     SessionRequestInfo sessionRequestInfo =
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(
-            SessionRequestInfo.builder()
-                .setTestPlan("cts")
+            defaultSessionRequestInfoBuilder()
                 .setCommandLineArgs("cts --subplan subplan1")
-                .setXtsType("cts")
                 .setXtsRootDir(xtsRootDir.getAbsolutePath())
                 .setSubPlanName("subplan1")
                 .build());
@@ -1330,16 +978,11 @@ public final class SessionRequestHandlerUtilTest {
     subPlan.addNonTfExcludeFilter("arm64-v8a HelloWorldTest");
 
     Configuration config1 =
-        Configuration.newBuilder()
+        defaultConfigurationBuilder()
             .setMetadata(
                 ConfigurationMetadata.newBuilder()
                     .setXtsModule("HelloWorldTest")
                     .setIsConfigV2(true))
-            .addDevices(Device.newBuilder().setName("AndroidDevice"))
-            .setTest(
-                com.google.devtools.mobileharness.platform.android.xts.config.proto
-                    .ConfigurationProto.Test.newBuilder()
-                    .setClazz("Driver"))
             .build();
     when(configurationUtil.getConfigsV2FromDirs(any()))
         .thenReturn(ImmutableMap.of("/path/to/config1", config1));
@@ -1367,10 +1010,8 @@ public final class SessionRequestHandlerUtilTest {
 
     SessionRequestInfo sessionRequestInfo =
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(
-            SessionRequestInfo.builder()
-                .setTestPlan("cts")
+            defaultSessionRequestInfoBuilder()
                 .setCommandLineArgs("cts --subplan subplan3")
-                .setXtsType("cts")
                 .setXtsRootDir(xtsRootDir.getAbsolutePath())
                 .setSubPlanName("subplan3")
                 .build());
@@ -1390,34 +1031,19 @@ public final class SessionRequestHandlerUtilTest {
     subPlan.addNonTfExcludeFilter("module1 test_class1#test1");
     subPlan.addNonTfIncludeFilter("module1");
     Configuration config1 =
-        Configuration.newBuilder()
+        defaultConfigurationBuilder()
             .setMetadata(
                 ConfigurationMetadata.newBuilder().setXtsModule("module1").setIsConfigV2(true))
-            .addDevices(Device.newBuilder().setName("AndroidDevice"))
-            .setTest(
-                com.google.devtools.mobileharness.platform.android.xts.config.proto
-                    .ConfigurationProto.Test.newBuilder()
-                    .setClazz("Driver"))
             .build();
     Configuration config2 =
-        Configuration.newBuilder()
+        defaultConfigurationBuilder()
             .setMetadata(
                 ConfigurationMetadata.newBuilder().setXtsModule("module2").setIsConfigV2(true))
-            .addDevices(Device.newBuilder().setName("AndroidDevice"))
-            .setTest(
-                com.google.devtools.mobileharness.platform.android.xts.config.proto
-                    .ConfigurationProto.Test.newBuilder()
-                    .setClazz("Driver"))
             .build();
     Configuration config3 =
-        Configuration.newBuilder()
+        defaultConfigurationBuilder()
             .setMetadata(
                 ConfigurationMetadata.newBuilder().setXtsModule("module3").setIsConfigV2(true))
-            .addDevices(Device.newBuilder().setName("AndroidDevice"))
-            .setTest(
-                com.google.devtools.mobileharness.platform.android.xts.config.proto
-                    .ConfigurationProto.Test.newBuilder()
-                    .setClazz("Driver"))
             .build();
     when(localFileUtil.isDirExist(Path.of(XTS_ROOT_DIR_PATH))).thenReturn(true);
     when(configurationUtil.getConfigsV2FromDirs(any()))
@@ -1449,11 +1075,7 @@ public final class SessionRequestHandlerUtilTest {
         .thenReturn(ImmutableList.of("test1", "test2", "test3"));
     SessionRequestInfo sessionRequestInfo =
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(
-            SessionRequestInfo.builder()
-                .setTestPlan("cts")
-                .setCommandLineArgs("cts")
-                .setXtsType("cts")
-                .setXtsRootDir(XTS_ROOT_DIR_PATH)
+            defaultSessionRequestInfoBuilder()
                 .setExcludeFilters(ImmutableList.of("module1 test_class2#test2"))
                 .setSubPlanName("subplan3")
                 .build());
