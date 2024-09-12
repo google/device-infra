@@ -270,6 +270,11 @@ public class LocalFileUtil {
     return fileOrDir;
   }
 
+  /** Clear all unopened files directly under the given directory without expiration check. */
+  public void clearUnopenedFiles(Path dirPath) throws MobileHarnessException, InterruptedException {
+    clearUnopenedFiles(dirPath, null);
+  }
+
   /**
    * Clear all unopened files directly under the given directory with expiration check. It contains
    * the following steps to lists all opened files and formats the output with file names only
