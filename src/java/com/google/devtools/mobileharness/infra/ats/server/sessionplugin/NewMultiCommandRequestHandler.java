@@ -36,6 +36,7 @@ import com.google.devtools.deviceinfra.shared.util.file.remote.constant.RemoteFi
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.SessionResultHandlerUtil;
@@ -360,14 +361,7 @@ final class NewMultiCommandRequestHandler {
   private void insertAdditionalTestResource(JobInfo jobInfo, NewMultiCommandRequest request)
       throws MobileHarnessException {
     for (TestResource testResource : request.getTestResourcesList()) {
-      URL testResourceUrl;
-      try {
-        testResourceUrl = URI.create(testResource.getUrl()).toURL();
-      } catch (IllegalArgumentException | MalformedURLException e) {
-        logger.atWarning().withCause(e).log(
-            "Failed to parse url from url: %s", testResource.getUrl());
-        continue;
-      }
+      URL testResourceUrl = getTestResourceUrl(testResource);
 
       if (testResourceUrl.getProtocol().equals("file")) {
         if (!ANDROID_XTS_ZIP_FILENAME_REGEX.matcher(testResource.getName()).matches()) {
@@ -414,14 +408,7 @@ final class NewMultiCommandRequestHandler {
     String androidXtsZipPath = "";
     ImmutableList.Builder<TestResource> fileTestResources = ImmutableList.builder();
     for (TestResource testResource : request.getTestResourcesList()) {
-      URL testResourceUrl;
-      try {
-        testResourceUrl = URI.create(testResource.getUrl()).toURL();
-      } catch (IllegalArgumentException | MalformedURLException e) {
-        logger.atWarning().withCause(e).log(
-            "Failed to parse url from url: %s", testResource.getUrl());
-        continue;
-      }
+      URL testResourceUrl = getTestResourceUrl(testResource);
 
       if (testResourceUrl.getProtocol().equals("file")) {
         if (ANDROID_XTS_ZIP_FILENAME_REGEX.matcher(testResource.getName()).matches()) {
@@ -474,14 +461,7 @@ final class NewMultiCommandRequestHandler {
 
     if (request.hasPrevTestContext()) {
       for (TestResource testResource : request.getPrevTestContext().getTestResourceList()) {
-        URL testResourceUrl;
-        try {
-          testResourceUrl = URI.create(testResource.getUrl()).toURL();
-        } catch (IllegalArgumentException | MalformedURLException e) {
-          logger.atWarning().withCause(e).log(
-              "Failed to parse url from url: %s", testResource.getUrl());
-          continue;
-        }
+        URL testResourceUrl = getTestResourceUrl(testResource);
         logger.atInfo().log("testResourceUrl: %s", testResourceUrl);
         if (testResourceUrl.getProtocol().equals("file")
             && XtsConstants.RESULT_ZIP_FILENAME_PATTERN.matcher(testResource.getName()).matches()) {
@@ -712,6 +692,19 @@ final class NewMultiCommandRequestHandler {
         logger.atWarning().withCause(e).log(
             "Failed to unmount xts root directory: %s", mountedXtsRootDir);
       }
+    }
+  }
+
+  private URL getTestResourceUrl(TestResource testResource) throws MobileHarnessException {
+    try {
+      return URI.create(testResource.getUrl()).toURL();
+    } catch (IllegalArgumentException | MalformedURLException e) {
+      throw MobileHarnessExceptionFactory.create(
+          InfraErrorId.ATS_SERVER_INVALID_TEST_RESOURCE,
+          String.format("Failed to parse url from : %s", testResource.getUrl()),
+          e,
+          /* addErrorIdToMessage= */ false,
+          /* clearStackTrace= */ true);
     }
   }
 
