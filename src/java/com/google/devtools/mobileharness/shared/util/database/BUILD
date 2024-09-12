@@ -30,3 +30,13 @@ java_library(
         "@maven//:com_mchange_c3p0",
     ],
 )
+
+java_library(
+    name = "table_lister",
+    srcs = ["TablesLister.java"],
+    deps = [
+        ":database_connections",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "@maven//:com_google_guava_guava",
+    ],
+)

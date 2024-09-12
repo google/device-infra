@@ -25,7 +25,7 @@ import com.google.devtools.mobileharness.infra.client.api.ClientApi;
 import com.google.devtools.mobileharness.infra.client.api.ClientApiModule;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.AtsDatabaseConnections;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.OlcDatabaseConnections;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.ServerStartTime;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.ControllerModule;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogManager.LogRecordsCollector;
@@ -95,7 +95,7 @@ class ServerModule extends AbstractModule {
     bind(Clock.class).toInstance(Clock.systemUTC());
     bind(LocalSessionStub.class).to(LocalSessionStubImpl.class);
     bind(DatabaseConnections.class)
-        .annotatedWith(AtsDatabaseConnections.class)
+        .annotatedWith(OlcDatabaseConnections.class)
         .to(DatabaseConnections.class)
         .in(Singleton.class);
     bind(SessionPersistenceUtil.class)

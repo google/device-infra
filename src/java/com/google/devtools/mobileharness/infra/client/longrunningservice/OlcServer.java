@@ -30,7 +30,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.client.api.Annotations.GlobalInternalEventBus;
 import com.google.devtools.mobileharness.infra.client.api.ClientApi;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.AtsDatabaseConnections;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.OlcDatabaseConnections;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.OlcServerDirs;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogManager;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogRecorder;
@@ -45,6 +45,7 @@ import com.google.devtools.mobileharness.shared.util.comm.server.LifecycleManage
 import com.google.devtools.mobileharness.shared.util.comm.server.LifecycleManager.LabeledServer;
 import com.google.devtools.mobileharness.shared.util.comm.server.ServerBuilderFactory;
 import com.google.devtools.mobileharness.shared.util.database.DatabaseConnections;
+import com.google.devtools.mobileharness.shared.util.database.TablesLister;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.logging.flogger.FloggerFormatter;
@@ -101,7 +102,8 @@ public class OlcServer {
   private final ClientApi clientApi;
   private final LocalFileUtil localFileUtil;
   private final SystemUtil systemUtil;
-  private final DatabaseConnections atsDatabaseConnections;
+  private final DatabaseConnections olcDatabaseConnections;
+  private final TablesLister tablesLister;
 
   @Inject
   OlcServer(
@@ -116,7 +118,8 @@ public class OlcServer {
       ClientApi clientApi,
       LocalFileUtil localFileUtil,
       SystemUtil systemUtil,
-      @AtsDatabaseConnections DatabaseConnections atsDatabaseConnections) {
+      @OlcDatabaseConnections DatabaseConnections olcDatabaseConnections,
+      TablesLister tablesLister) {
     this.sessionService = sessionService;
     this.versionService = versionService;
     this.controlService = controlService;
@@ -128,7 +131,8 @@ public class OlcServer {
     this.clientApi = clientApi;
     this.localFileUtil = localFileUtil;
     this.systemUtil = systemUtil;
-    this.atsDatabaseConnections = atsDatabaseConnections;
+    this.olcDatabaseConnections = olcDatabaseConnections;
+    this.tablesLister = tablesLister;
   }
 
   private void run(List<String> args) throws MobileHarnessException, InterruptedException {
@@ -166,9 +170,13 @@ public class OlcServer {
     LogRecorder.getInstance().initialize(logManager);
 
     // Connects to database.
-    String atsDatabaseJdbcUrl = Flags.instance().atsDatabaseJdbcUrl.get();
-    if (!Strings.isNullOrEmpty(atsDatabaseJdbcUrl)) {
-      atsDatabaseConnections.initialize(atsDatabaseJdbcUrl, /* statementCacheSize= */ 100);
+    String olcDatabaseJdbcUrl = Flags.instance().olcDatabaseJdbcUrl.get();
+    if (!Strings.isNullOrEmpty(olcDatabaseJdbcUrl)) {
+      olcDatabaseConnections.initialize(olcDatabaseJdbcUrl, /* statementCacheSize= */ 100);
+
+      // Prints table names.
+      logger.atInfo().log(
+          "OLC database tables: %s", tablesLister.listTables(olcDatabaseConnections));
     }
 
     // Starts RPC servers.

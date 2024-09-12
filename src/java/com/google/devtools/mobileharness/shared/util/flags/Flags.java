@@ -248,14 +248,6 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> atsConsolePrintAboveInput = atsConsolePrintAboveInputDefault;
 
-  private static final Flag<String> atsDatabaseJdbcUrlDefault = Flag.value(null);
-
-  @com.beust.jcommander.Parameter(
-      names = "--ats_database_jdbc_url",
-      description = "ATS database JDBC URL.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> atsDatabaseJdbcUrl = atsDatabaseJdbcUrlDefault;
-
   private static final Flag<Duration> atsDdaLeaseExpirationTimeDefault =
       DurationFlag.value(Duration.ofMinutes(5L));
 
@@ -1162,6 +1154,14 @@ public class Flags {
               + " to master. Default is false.",
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> noOpLabServer = noOpLabServerDefault;
+
+  private static final Flag<String> olcDatabaseJdbcUrlDefault = Flag.value(null);
+
+  @com.beust.jcommander.Parameter(
+      names = "--olc_database_jdbc_url",
+      description = "OLC database JDBC URL.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> olcDatabaseJdbcUrl = olcDatabaseJdbcUrlDefault;
 
   private static final Flag<Integer> olcServerMaxStartedRunningSessionNumDefault = Flag.value(200);
 
