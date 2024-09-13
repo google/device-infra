@@ -241,6 +241,7 @@ final class AtsServerSessionPlugin {
       synchronized (sessionLock) {
         requestDetail.setState(RequestState.CANCELED);
         requestDetail.setCancelReason(CancelReason.REQUEST_API);
+        requestDetail.setErrorMessage("Received cancel session notification");
         updateSessionPluginOutput();
         startedTestsBeforeCancellation = ImmutableList.copyOf(this.startedTestsBeforeCancellation);
         this.startedTestsBeforeCancellation.clear();

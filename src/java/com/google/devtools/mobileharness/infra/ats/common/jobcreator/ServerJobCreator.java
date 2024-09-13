@@ -17,14 +17,13 @@
 package com.google.devtools.mobileharness.infra.ats.common.jobcreator;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
-import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
-import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.flogger.FluentLogger;
+import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName;
@@ -46,8 +45,6 @@ import javax.inject.Inject;
 
 /** A creator to create XTS jobs for ATS server only. */
 public class ServerJobCreator extends XtsJobCreator {
-
-  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private final PreviousResultLoader previousResultLoader;
 
@@ -92,8 +89,8 @@ public class ServerJobCreator extends XtsJobCreator {
   }
 
   @Override
-  protected Optional<SubPlan> prepareRunRetrySubPlan(
-      SessionRequestInfo sessionRequestInfo, boolean forTf) throws MobileHarnessException {
+  protected SubPlan prepareRunRetrySubPlan(SessionRequestInfo sessionRequestInfo, boolean forTf)
+      throws MobileHarnessException {
     return prepareRunRetrySubPlan(
         sessionRequestInfo.retryResultDir().orElseThrow(),
         sessionRequestInfo.retrySessionId().orElseThrow(),
@@ -105,7 +102,7 @@ public class ServerJobCreator extends XtsJobCreator {
         sessionRequestInfo.moduleNames());
   }
 
-  private Optional<SubPlan> prepareRunRetrySubPlan(
+  private SubPlan prepareRunRetrySubPlan(
       String retryResultDir,
       String previousSessionId,
       @Nullable RetryType retryType,
@@ -139,12 +136,15 @@ public class ServerJobCreator extends XtsJobCreator {
   }
 
   @Override
-  protected boolean prepareTfRetry(
+  protected void prepareTfRetry(
       SessionRequestInfo sessionRequestInfo,
       Map<String, String> driverParams,
-      ImmutableMap.Builder<XtsPropertyName, String> extraJobProperties) {
-    logger.atWarning().with(IMPORTANCE, IMPORTANT).log("ATS server doesn't support TF retry.");
-    return false;
+      ImmutableMap.Builder<XtsPropertyName, String> extraJobProperties)
+      throws MobileHarnessException {
+    throw MobileHarnessExceptionFactory.createUserFacingException(
+        InfraErrorId.ATS_SERVER_USE_TF_RETRY_ERROR,
+        "ATS server doesn't support TF retry.",
+        /* cause= */ null);
   }
 
   @Override

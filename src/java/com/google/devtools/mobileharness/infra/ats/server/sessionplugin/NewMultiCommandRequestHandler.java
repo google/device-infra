@@ -45,11 +45,11 @@ import com.google.devtools.mobileharness.infra.ats.common.jobcreator.XtsJobCreat
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.ShardingMode;
 import com.google.devtools.mobileharness.infra.ats.console.command.parser.CommandLineParser;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
-import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CancelReason;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandDetail;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandInfo;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandInfo.DeviceDimension;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandState;
+import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.ErrorReason;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.NewMultiCommandRequest;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.RequestDetail;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.RequestDetail.RequestState;
@@ -154,30 +154,22 @@ final class NewMultiCommandRequestHandler {
       RequestDetail.Builder requestDetailBuilder)
       throws InterruptedException {
     if (request.getCommandsList().isEmpty()) {
-      requestDetailBuilder
-          .setCancelReason(CancelReason.COMMAND_NOT_AVAILABLE)
-          .setState(RequestState.CANCELED);
+      setRequestError(requestDetailBuilder, ErrorReason.INVALID_REQUEST, "COMMAND_NOT_AVAILABLE");
       return;
     }
     for (CommandInfo commandInfo : request.getCommandsList()) {
       CommandDetail commandDetail = createXtsTradefedTestJob(request, commandInfo, sessionInfo);
-      if (commandDetail.getState() == CommandState.CANCELED) {
-        if (sessionRequestInfoCache.containsKey(commandInfo)
-            && sessionRequestHandlerUtil.canCreateNonTradefedJobs(
-                sessionRequestInfoCache.get(commandInfo))) {
-          logger.atInfo().log(
-              "Skip creating tradefed jobs for this command as this is a non-tradefed only"
-                  + " command. Command: %s",
-              commandInfo.getCommandLine());
-          continue;
-        }
-        requestDetailBuilder
-            .setCancelReason(CancelReason.INVALID_REQUEST)
-            .setState(RequestState.CANCELED)
-            .putCommandDetails("UNKNOWN_" + commandInfo.getCommandLine(), commandDetail);
+      if (commandDetail.getState() == CommandState.ERROR) {
+        setRequestError(
+            requestDetailBuilder,
+            ErrorReason.INVALID_REQUEST,
+            "INVALID_COMMAND_" + commandInfo.getCommandLine());
+        requestDetailBuilder.putCommandDetails(
+            "UNKNOWN_" + commandInfo.getCommandLine(), commandDetail);
         return;
+      } else if (commandDetail.getState() == CommandState.RUNNING) {
+        requestDetailBuilder.putCommandDetails(commandDetail.getId(), commandDetail);
       }
-      requestDetailBuilder.putCommandDetails(commandDetail.getId(), commandDetail);
     }
     requestDetailBuilder.setUpdateTime(Timestamps.fromMillis(clock.millis()));
   }
@@ -188,25 +180,18 @@ final class NewMultiCommandRequestHandler {
       NewMultiCommandRequest request, CommandInfo commandInfo, SessionInfo sessionInfo)
       throws InterruptedException {
     SessionRequestInfo sessionRequestInfo;
-    try {
-      if (sessionRequestInfoCache.containsKey(commandInfo)) {
-        sessionRequestInfo = sessionRequestInfoCache.get(commandInfo);
-      } else {
+    if (sessionRequestInfoCache.containsKey(commandInfo)) {
+      sessionRequestInfo = sessionRequestInfoCache.get(commandInfo);
+    } else {
+      try {
         sessionRequestInfo = generateSessionRequestInfo(request, commandInfo, sessionInfo);
-        sessionRequestInfoCache.put(commandInfo, sessionRequestInfo);
+      } catch (MobileHarnessException e) {
+        logger.atWarning().withCause(e).log(
+            "Failed to generate sessionRequestInfo from commandInfo: %s. SessionID: %s",
+            shortDebugString(commandInfo), sessionInfo.getSessionId());
+        return Optional.empty();
       }
-    } catch (MobileHarnessException e) {
-      logger.atWarning().withCause(e).log(
-          "Failed to generate sessionRequestInfo from commandInfo: %s. SessionID: %s",
-          shortDebugString(commandInfo), sessionInfo.getSessionId());
-      return Optional.empty();
-    }
-
-    if (!sessionRequestHandlerUtil.canCreateNonTradefedJobs(sessionRequestInfo)) {
-      logger.atInfo().log(
-          "No valid module(s) matched, no non-tradefed jobs will run. The command info -> %s",
-          shortDebugString(commandInfo));
-      return Optional.empty();
+      sessionRequestInfoCache.put(commandInfo, sessionRequestInfo);
     }
 
     ImmutableList<JobInfo> jobInfos;
@@ -249,9 +234,9 @@ final class NewMultiCommandRequestHandler {
       } catch (MobileHarnessException e) {
         commandDetail.ifPresent(
             builder ->
-                setCommandCanceled(
+                setCommandError(
                     builder,
-                    CancelReason.INVALID_RESOURCE,
+                    ErrorReason.INVALID_RESOURCE,
                     String.format(
                         "Failed to reformat resource path of job [%s]: %s",
                         jobInfo.locator().getName(), shortDebugString(e))));
@@ -297,6 +282,8 @@ final class NewMultiCommandRequestHandler {
     commandDetailBuilder.setStartTime(Timestamps.fromMillis(clock.millis()));
     commandDetailBuilder.setUpdateTime(Timestamps.fromMillis(clock.millis()));
     commandDetailBuilder.setRequestId(sessionInfo.getSessionId());
+    // Set initial state.
+    commandDetailBuilder.setState(CommandState.UNKNOWN_STATE);
 
     // Validates request and generate a sessionRequestInfo that is needed to create a jobInfo.
     try {
@@ -309,13 +296,14 @@ final class NewMultiCommandRequestHandler {
               shortDebugString(commandInfo));
       logger.atWarning().withCause(e).log(
           "%s, session_id=%s", errorSummary, sessionInfo.getSessionId());
-      CancelReason cancelReason =
+      // TODO : Also check error code of invalid test resource.
+      ErrorReason errorReason =
           e.getErrorId() == BasicErrorId.LOCAL_MOUNT_ZIP_TO_DIR_ERROR
-              ? CancelReason.INVALID_RESOURCE
-              : CancelReason.INVALID_REQUEST;
-      setCommandCanceled(
+              ? ErrorReason.INVALID_RESOURCE
+              : ErrorReason.INVALID_REQUEST;
+      setCommandError(
           commandDetailBuilder,
-          cancelReason,
+          errorReason,
           String.format("%s: %s", errorSummary, shortDebugString(e)));
       return commandDetailBuilder.build();
     }
@@ -324,23 +312,29 @@ final class NewMultiCommandRequestHandler {
     try {
       jobInfoList = xtsJobCreator.createXtsTradefedTestJob(sessionRequestInfo);
       if (jobInfoList.isEmpty()) {
-        setCommandCanceled(
-            commandDetailBuilder, CancelReason.INVALID_REQUEST, "Zero xTS TF job created");
+        setCommandError(
+            commandDetailBuilder,
+            ErrorReason.INVALID_REQUEST,
+            "No valid module(s) matched, no TF jobs will run.");
+        return commandDetailBuilder.build();
       }
     } catch (MobileHarnessException e) {
-      setCommandCanceled(
+      if (XtsJobCreator.isSkippableException(e)) {
+        return commandDetailBuilder.build();
+      }
+      setCommandError(
           commandDetailBuilder,
-          CancelReason.INVALID_REQUEST,
+          ErrorReason.INVALID_REQUEST,
           "Failed to create xTS TF job: " + shortDebugString(e));
-      jobInfoList = ImmutableList.of();
+      return commandDetailBuilder.build();
     }
     for (JobInfo jobInfo : jobInfoList) {
       try {
         insertAdditionalTestResource(jobInfo, request);
       } catch (MobileHarnessException e) {
-        setCommandCanceled(
+        setCommandError(
             commandDetailBuilder,
-            CancelReason.INVALID_RESOURCE,
+            ErrorReason.INVALID_RESOURCE,
             String.format(
                 "Failed to insert additional test resource to job [%s]: %s",
                 jobInfo.locator().getName(), shortDebugString(e)));
@@ -527,6 +521,12 @@ final class NewMultiCommandRequestHandler {
   @VisibleForTesting
   void handleResultProcessing(SessionInfo sessionInfo, RequestDetail.Builder requestDetail)
       throws InterruptedException {
+    handleResultProcessingInternal(sessionInfo, requestDetail);
+    cleanup(sessionInfo);
+  }
+
+  private void handleResultProcessingInternal(
+      SessionInfo sessionInfo, RequestDetail.Builder requestDetail) throws InterruptedException {
     URL outputUrl = null;
     String outputFileUploadUrl =
         requestDetail.getOriginalRequest().getTestEnvironment().getOutputFileUploadUrl();
@@ -535,127 +535,120 @@ final class NewMultiCommandRequestHandler {
       jobIdToJobMap.put(jobInfo.locator().getId(), jobInfo);
     }
     try {
-      outputUrl =
-          URI.create(
-                  requestDetail.getOriginalRequest().getTestEnvironment().getOutputFileUploadUrl())
-              .toURL();
-      // Currently only supports local URL.
-      if (outputUrl.getProtocol().equals("file")) {
-        for (CommandDetail commandDetail : requestDetail.getCommandDetailsMap().values()) {
-          SessionRequestInfo sessionRequestInfo =
-              sessionRequestInfoCache.get(commandDetail.getOriginalCommandInfo());
-          if (sessionRequestInfo == null) {
-            continue;
-          }
-          String commandId = commandDetail.getId();
-          Path outputDirPath =
-              Path.of(outputUrl.getPath()).resolve(sessionInfo.getSessionId()).resolve(commandId);
-          String resultDirectoryName =
-              TIMESTAMP_DIR_NAME_FORMATTER.format(Instant.now()) + "_" + getRandom4Digits();
-          Path resultDir = outputDirPath.resolve(resultDirectoryName);
-          Path logDir = outputDirPath.resolve("logs");
-          Optional<Result> result =
-              sessionResultHandlerUtil.processResult(
-                  resultDir,
-                  logDir,
-                  /* latestResultLink= */ null,
-                  /* latestLogLink= */ null,
-                  commandToJobsMap.get(commandId).stream()
-                      .map(jobIdToJobMap::get)
-                      .collect(toImmutableList()),
-                  sessionRequestInfo);
-          Path resultZip = outputDirPath.resolve(resultDirectoryName + ".zip");
-          if (localFileUtil.isFileExist(resultZip)) {
-            // Make sure the context command line is the original command line, not a retry command.
-            String contextCommandLine = commandDetail.getCommandLine();
-            if (requestDetail.getOriginalRequest().hasPrevTestContext()
-                && !requestDetail
-                    .getOriginalRequest()
-                    .getPrevTestContext()
-                    .getCommandLine()
-                    .isEmpty()) {
-              contextCommandLine =
-                  requestDetail.getOriginalRequest().getPrevTestContext().getCommandLine();
-            }
-            TestContext testContext =
-                TestContext.newBuilder()
-                    .setCommandLine(contextCommandLine)
-                    .putAllEnvVar(
-                        requestDetail.getOriginalRequest().getTestEnvironment().getEnvVarsMap())
-                    .addTestResource(
-                        TestResource.newBuilder()
-                            .setName(resultZip.getFileName().toString())
-                            .setUrl("file://" + resultZip)
-                            .build())
-                    .build();
-            // TODO: filter context files.
-            requestDetail.putTestContext(commandId, testContext);
-          }
-          try {
-            // Remove dedicated result directory and move its files to '/<session_id>/<command_id>/'
-            // level.
-            localFileUtil.mergeDir(resultDir, outputDirPath);
-          } catch (MobileHarnessException e) {
-            logger.atWarning().withCause(e).log(
-                "Failed to move contents of result dir %s to output dir %s",
-                resultDir, outputDirPath);
-          }
-
-          if (requestDetail.getOriginalRequest().hasRetryPreviousSessionId()) {
-            Path prevResultDir =
-                Path.of(outputUrl.getPath())
-                    .resolve(requestDetail.getOriginalRequest().getRetryPreviousSessionId())
-                    .resolve(commandId);
-            try {
-              sessionResultHandlerUtil.copyRetryFiles(
-                  prevResultDir.toString(), outputDirPath.toString());
-            } catch (MobileHarnessException e) {
-              logger.atWarning().withCause(e).log(
-                  "Failed to copy contents of previous result dir %s to current result dir %s",
-                  prevResultDir, resultDir);
-            }
-          }
-
-          CommandDetail.Builder commandDetailBuilder = commandDetail.toBuilder();
-          if (result.isPresent() && result.get().hasSummary()) {
-            commandDetailBuilder
-                .setPassedTestCount(result.get().getSummary().getPassed())
-                .setFailedTestCount(result.get().getSummary().getFailed())
-                .setTotalModuleCount(result.get().getSummary().getModulesTotal());
-            commandDetailBuilder.setTotalTestCount(
-                commandDetailBuilder.getPassedTestCount()
-                    + commandDetailBuilder.getFailedTestCount());
-          }
-          commandDetailBuilder
-              .setState(
-                  hasCommandPassed(commandDetailBuilder.build())
-                      ? CommandState.COMPLETED
-                      : CommandState.ERROR)
-              .setEndTime(Timestamps.fromMillis(clock.millis()))
-              .setUpdateTime(Timestamps.fromMillis(clock.millis()));
-          requestDetail.putCommandDetails(commandId, commandDetailBuilder.build());
-        }
-      } else {
-        logger.atWarning().log(
-            "Skip processing result for unsupported file output upload url: %s",
-            outputFileUploadUrl);
-      }
+      outputUrl = URI.create(outputFileUploadUrl).toURL();
     } catch (IllegalArgumentException | MalformedURLException e) {
-      logger.atWarning().withCause(e).log(
-          "Failed to parse output file upload url: %s, skip processing result.",
-          outputFileUploadUrl);
+      logger.atWarning().withCause(e).log("Unable to create URL from %s", outputFileUploadUrl);
+      setRequestError(
+          requestDetail,
+          ErrorReason.RESULT_PROCESSING_ERROR,
+          "Unable to create URL from " + outputFileUploadUrl);
+      return;
+    }
+
+    if (!outputUrl.getProtocol().equals("file")) {
+      logger.atWarning().log("Unsupported outputurl: %s", outputUrl);
+      // Currently only supports local URL.
+      setRequestError(
+          requestDetail,
+          ErrorReason.RESULT_PROCESSING_ERROR,
+          "Unsupported outputurl: " + outputUrl);
+      return;
+    }
+
+    try {
+      for (CommandDetail commandDetail : requestDetail.getCommandDetailsMap().values()) {
+        SessionRequestInfo sessionRequestInfo =
+            sessionRequestInfoCache.get(commandDetail.getOriginalCommandInfo());
+        if (sessionRequestInfo == null) {
+          continue;
+        }
+        String commandId = commandDetail.getId();
+        Path outputDirPath =
+            Path.of(outputUrl.getPath()).resolve(sessionInfo.getSessionId()).resolve(commandId);
+        String resultDirectoryName =
+            TIMESTAMP_DIR_NAME_FORMATTER.format(Instant.now()) + "_" + getRandom4Digits();
+        Path resultDir = outputDirPath.resolve(resultDirectoryName);
+        Path logDir = outputDirPath.resolve("logs");
+        Optional<Result> result =
+            sessionResultHandlerUtil.processResult(
+                resultDir,
+                logDir,
+                /* latestResultLink= */ null,
+                /* latestLogLink= */ null,
+                commandToJobsMap.get(commandId).stream()
+                    .map(jobIdToJobMap::get)
+                    .collect(toImmutableList()),
+                sessionRequestInfo);
+        Path resultZip = outputDirPath.resolve(resultDirectoryName + ".zip");
+        if (localFileUtil.isFileExist(resultZip)) {
+          // Make sure the context command line is the original command line, not a retry command.
+          String contextCommandLine = commandDetail.getCommandLine();
+          if (requestDetail.getOriginalRequest().hasPrevTestContext()
+              && !requestDetail
+                  .getOriginalRequest()
+                  .getPrevTestContext()
+                  .getCommandLine()
+                  .isEmpty()) {
+            contextCommandLine =
+                requestDetail.getOriginalRequest().getPrevTestContext().getCommandLine();
+          }
+          TestContext testContext =
+              TestContext.newBuilder()
+                  .setCommandLine(contextCommandLine)
+                  .putAllEnvVar(
+                      requestDetail.getOriginalRequest().getTestEnvironment().getEnvVarsMap())
+                  .addTestResource(
+                      TestResource.newBuilder()
+                          .setName(resultZip.getFileName().toString())
+                          .setUrl("file://" + resultZip)
+                          .build())
+                  .build();
+          // TODO: filter context files.
+          requestDetail.putTestContext(commandId, testContext);
+        }
+        // Remove dedicated result directory and move its files to '/<session_id>/<command_id>/'
+        // level.
+        localFileUtil.mergeDir(resultDir, outputDirPath);
+
+        if (requestDetail.getOriginalRequest().hasRetryPreviousSessionId()) {
+          Path prevResultDir =
+              Path.of(outputUrl.getPath())
+                  .resolve(requestDetail.getOriginalRequest().getRetryPreviousSessionId())
+                  .resolve(commandId);
+          sessionResultHandlerUtil.copyRetryFiles(
+              prevResultDir.toString(), outputDirPath.toString());
+        }
+
+        CommandDetail.Builder commandDetailBuilder = commandDetail.toBuilder();
+        if (result.isPresent() && result.get().hasSummary()) {
+          commandDetailBuilder
+              .setPassedTestCount(result.get().getSummary().getPassed())
+              .setFailedTestCount(result.get().getSummary().getFailed())
+              .setTotalModuleCount(result.get().getSummary().getModulesTotal());
+          commandDetailBuilder.setTotalTestCount(
+              commandDetailBuilder.getPassedTestCount()
+                  + commandDetailBuilder.getFailedTestCount());
+        }
+        commandDetailBuilder
+            .setState(
+                hasCommandPassed(commandDetailBuilder.build())
+                    ? CommandState.COMPLETED
+                    : CommandState.ERROR)
+            .setEndTime(Timestamps.fromMillis(clock.millis()))
+            .setUpdateTime(Timestamps.fromMillis(clock.millis()));
+        requestDetail.putCommandDetails(commandId, commandDetailBuilder.build());
+      }
     } catch (MobileHarnessException e) {
       logger.atWarning().withCause(e).log(
-          "Failed to process result for session: %s", sessionInfo.getSessionId());
+          "Failed to process result for session %s", sessionInfo.getSessionId());
+      setRequestError(requestDetail, ErrorReason.RESULT_PROCESSING_ERROR, e.getMessage());
     }
 
     // Record OLC server session logs if no command recorded it due to empty command list or result
     // processing failures.
-    if (outputUrl != null
-        && outputUrl.getProtocol().equals("file")
-        && sessionInfo
-            .getSessionProperty(SessionProperties.PROPERTY_KEY_SERVER_SESSION_LOG_PATH)
-            .isEmpty()) {
+    if (sessionInfo
+        .getSessionProperty(SessionProperties.PROPERTY_KEY_SERVER_SESSION_LOG_PATH)
+        .isEmpty()) {
       logger.atInfo().log(
           "Setting OLC session log in session's directory because no command recorded the OLC log."
               + " Session: %s",
@@ -674,7 +667,6 @@ final class NewMultiCommandRequestHandler {
             "Failed to create server session logs dir for session: %s", sessionInfo.getSessionId());
       }
     }
-    cleanup(sessionInfo);
   }
 
   // Clean up temporary files and directories in session and jobs.
@@ -700,12 +692,10 @@ final class NewMultiCommandRequestHandler {
     try {
       return URI.create(testResource.getUrl()).toURL();
     } catch (IllegalArgumentException | MalformedURLException e) {
-      throw MobileHarnessExceptionFactory.create(
+      throw MobileHarnessExceptionFactory.createUserFacingException(
           InfraErrorId.ATS_SERVER_INVALID_TEST_RESOURCE,
           String.format("Failed to parse url from : %s", testResource.getUrl()),
-          e,
-          /* addErrorIdToMessage= */ false,
-          /* clearStackTrace= */ true);
+          e);
     }
   }
 
@@ -742,12 +732,20 @@ final class NewMultiCommandRequestHandler {
     }
   }
 
-  private static void setCommandCanceled(
-      CommandDetail.Builder commandDetailBuilder, CancelReason reason, String errorMessage) {
+  private static void setCommandError(
+      CommandDetail.Builder commandDetailBuilder, ErrorReason reason, String errorMessage) {
     commandDetailBuilder
-        .setState(CommandState.CANCELED)
-        .setCancelReason(reason)
+        .setState(CommandState.ERROR)
+        .setErrorReason(reason)
         .setErrorMessage(appendErrorMessage(commandDetailBuilder.getErrorMessage(), errorMessage));
+  }
+
+  private static void setRequestError(
+      RequestDetail.Builder requestDetailBuilder, ErrorReason reason, String errorMessage) {
+    requestDetailBuilder
+        .setState(RequestState.ERROR)
+        .setErrorReason(reason)
+        .setErrorMessage(appendErrorMessage(requestDetailBuilder.getErrorMessage(), errorMessage));
   }
 
   private static String appendErrorMessage(String existingMessage, String newMessage) {

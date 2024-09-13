@@ -24,6 +24,7 @@ java_library(
     deps = [
         "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
         "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:device_details",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:device_selection",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:device_selection_options",

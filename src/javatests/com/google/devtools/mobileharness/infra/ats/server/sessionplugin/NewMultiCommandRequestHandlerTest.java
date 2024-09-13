@@ -40,10 +40,10 @@ import com.google.devtools.mobileharness.infra.ats.common.XtsTypeLoader;
 import com.google.devtools.mobileharness.infra.ats.common.jobcreator.XtsJobCreator;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Summary;
-import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CancelReason;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandDetail;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandInfo;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandState;
+import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.ErrorReason;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.NewMultiCommandRequest;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.RequestDetail;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.RequestDetail.RequestState;
@@ -224,8 +224,8 @@ public final class NewMultiCommandRequestHandlerTest {
     RequestDetail.Builder requestDetail = RequestDetail.newBuilder();
     newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo, requestDetail);
     // Verify request detail.
-    assertThat(requestDetail.getCancelReason()).isEqualTo(CancelReason.INVALID_REQUEST);
-    assertThat(requestDetail.getState()).isEqualTo(RequestState.CANCELED);
+    assertThat(requestDetail.getErrorReason()).isEqualTo(ErrorReason.INVALID_REQUEST);
+    assertThat(requestDetail.getState()).isEqualTo(RequestState.ERROR);
 
     // Verify command detail.
     assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
@@ -234,8 +234,8 @@ public final class NewMultiCommandRequestHandlerTest {
             "UNKNOWN_" + commandInfoWithInvalidCommandLine.getCommandLine());
     assertThat(commandDetail.getCommandLine())
         .isEqualTo(commandInfoWithInvalidCommandLine.getCommandLine());
-    assertThat(commandDetail.getState()).isEqualTo(CommandState.CANCELED);
-    assertThat(commandDetail.getCancelReason()).isEqualTo(CancelReason.INVALID_REQUEST);
+    assertThat(commandDetail.getState()).isEqualTo(CommandState.ERROR);
+    assertThat(commandDetail.getErrorReason()).isEqualTo(ErrorReason.INVALID_REQUEST);
   }
 
   @Test
@@ -496,7 +496,7 @@ public final class NewMultiCommandRequestHandlerTest {
   }
 
   @Test
-  public void addTradefedJobs_mountAndroidXtsZipFailed_cancelRequestWithInvalidResourceError()
+  public void addTradefedJobs_mountAndroidXtsZipFailed_errorWithInvalidResourceError()
       throws Exception {
     when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
     MobileHarnessException commandExecutorException = Mockito.mock(CommandException.class);
@@ -505,16 +505,16 @@ public final class NewMultiCommandRequestHandlerTest {
     RequestDetail.Builder requestDetail = RequestDetail.newBuilder();
     newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo, requestDetail);
     // Verify request detail.
-    assertThat(requestDetail.getCancelReason()).isEqualTo(CancelReason.INVALID_REQUEST);
-    assertThat(requestDetail.getState()).isEqualTo(RequestState.CANCELED);
+    assertThat(requestDetail.getErrorReason()).isEqualTo(ErrorReason.INVALID_REQUEST);
+    assertThat(requestDetail.getState()).isEqualTo(RequestState.ERROR);
 
     // Verify command detail.
     assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
     CommandDetail commandDetail =
         requestDetail.getCommandDetailsOrThrow("UNKNOWN_" + commandInfo.getCommandLine());
     assertThat(commandDetail.getCommandLine()).isEqualTo(commandInfo.getCommandLine());
-    assertThat(commandDetail.getState()).isEqualTo(CommandState.CANCELED);
-    assertThat(commandDetail.getCancelReason()).isEqualTo(CancelReason.INVALID_RESOURCE);
+    assertThat(commandDetail.getState()).isEqualTo(CommandState.ERROR);
+    assertThat(commandDetail.getErrorReason()).isEqualTo(ErrorReason.INVALID_RESOURCE);
   }
 
   @Test
@@ -541,16 +541,18 @@ public final class NewMultiCommandRequestHandlerTest {
     newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo, requestDetail);
 
     // Verify request detail.
-    assertThat(requestDetail.getCancelReason()).isEqualTo(CancelReason.INVALID_REQUEST);
-    assertThat(requestDetail.getState()).isEqualTo(RequestState.CANCELED);
+    assertThat(requestDetail.getErrorReason()).isEqualTo(ErrorReason.INVALID_REQUEST);
+    assertThat(requestDetail.getState()).isEqualTo(RequestState.ERROR);
 
     // Verify command detail.
     assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
     CommandDetail commandDetail =
         requestDetail.getCommandDetailsOrThrow("UNKNOWN_" + commandInfo.getCommandLine());
     assertThat(commandDetail.getCommandLine()).isEqualTo(commandInfo.getCommandLine());
-    assertThat(commandDetail.getState()).isEqualTo(CommandState.CANCELED);
-    assertThat(commandDetail.getCancelReason()).isEqualTo(CancelReason.INVALID_REQUEST);
+    assertThat(commandDetail.getState()).isEqualTo(CommandState.ERROR);
+    assertThat(commandDetail.getErrorReason()).isEqualTo(ErrorReason.INVALID_REQUEST);
+    assertThat(commandDetail.getErrorMessage())
+        .contains("Failed to generate sessionRequestInfo from commandInfo");
   }
 
   @Test
@@ -569,8 +571,9 @@ public final class NewMultiCommandRequestHandlerTest {
     newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo, requestDetail);
 
     // Verify request detail.
-    assertThat(requestDetail.getCancelReason()).isEqualTo(CancelReason.COMMAND_NOT_AVAILABLE);
-    assertThat(requestDetail.getState()).isEqualTo(RequestState.CANCELED);
+    assertThat(requestDetail.getErrorReason()).isEqualTo(ErrorReason.INVALID_REQUEST);
+    assertThat(requestDetail.getState()).isEqualTo(RequestState.ERROR);
+    assertThat(requestDetail.getErrorMessage()).contains("COMMAND_NOT_AVAILABLE");
   }
 
   @Test
@@ -659,22 +662,6 @@ public final class NewMultiCommandRequestHandlerTest {
         newMultiCommandRequestHandler.addNonTradefedJobs(request, commandInfo, sessionInfo);
 
     assertThat(commandDetail).isEmpty();
-  }
-
-  @Test
-  public void addNonTradefedJob_cannotCreateNonTradefedJobs_returnEmptyCommandList()
-      throws Exception {
-
-    when(xtsJobCreator.createXtsNonTradefedJobs(any())).thenReturn(ImmutableList.of());
-    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
-    when(sessionRequestHandlerUtil.canCreateNonTradefedJobs(any())).thenReturn(false);
-
-    // Trigger the handler.
-    Optional<CommandDetail> commandDetail =
-        newMultiCommandRequestHandler.addNonTradefedJobs(request, commandInfo, sessionInfo);
-
-    assertThat(commandDetail).isEmpty();
-    verify(xtsJobCreator, never()).createXtsNonTradefedJobs(any());
   }
 
   @Test
@@ -790,7 +777,8 @@ public final class NewMultiCommandRequestHandlerTest {
     when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
     when(sessionInfo.getSessionProperty(SessionProperties.PROPERTY_KEY_SERVER_SESSION_LOG_PATH))
         .thenReturn(Optional.empty());
-    MobileHarnessException mhException = Mockito.mock(MobileHarnessException.class);
+    MobileHarnessException mhException =
+        new MobileHarnessException(BasicErrorId.LOCAL_FILE_IS_DIR, "Failed to find result file");
     doThrow(mhException)
         .when(sessionResultHandlerUtil)
         .processResult(any(), any(), any(), any(), any(), any());

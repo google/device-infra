@@ -170,19 +170,20 @@ enum CommandState {
 
 enum CancelReason {
   UNKNOWN_CANCEL_REASON = 0;
+  REQUEST_API = 1;
+}
+
+enum ErrorReason {
+  UNKNOWN_REASON = 0;
   QUEUE_TIMEOUT = 1;
-  REQUEST_API = 2;
   COMMAND_ALREADY_CANCELED = 3;
   REQUEST_ALREADY_CANCELED = 4;
   COMMAND_NOT_EXECUTABLE = 5;
   INVALID_REQUEST = 6;
   COMMAND_NOT_AVAILABLE = 7;
   INVALID_RESOURCE = 8;
-}
-
-enum ErrorReason {
-  UNKNOWN_REASON = 0;
-  TOO_MANY_LOST_DEVICES = 1;
+  TOO_MANY_LOST_DEVICES = 9;
+  RESULT_PROCESSING_ERROR = 10;
 }
 
 message CommandAttemptDetail {
@@ -243,6 +244,9 @@ message RequestDetail {
 
   // Test context for each command id.
   map<string, TestContext> test_context = 23;
+  optional ErrorReason error_reason = 24;
+  // Required if cancel_reason or error_reason is present.
+  optional string error_message = 25;
 }
 
 message TestContext {

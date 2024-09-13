@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.infra.ats.common.jobcreator;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doCallRealMethod;
@@ -28,6 +29,7 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.SessionHandlerHelper;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil.TradefedJobInfo;
@@ -138,7 +140,7 @@ public final class ServerJobCreatorTest {
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
 
     when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any()))
-        .thenReturn(Optional.of(JobConfig.getDefaultInstance()));
+        .thenReturn(JobConfig.getDefaultInstance());
 
     ImmutableList<TradefedJobInfo> tradefedJobInfoList =
         jobCreator.createXtsTradefedTestJobInfo(
@@ -173,7 +175,7 @@ public final class ServerJobCreatorTest {
             .build();
 
     when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any()))
-        .thenReturn(Optional.of(JobConfig.getDefaultInstance()));
+        .thenReturn(JobConfig.getDefaultInstance());
     when(moduleShardingArgsGenerator.generateShardingArgs(eq(sessionRequestInfo), any()))
         .thenReturn(ImmutableSet.of("arg1", "arg2", "arg3"));
 
@@ -199,7 +201,7 @@ public final class ServerJobCreatorTest {
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
 
     when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any()))
-        .thenReturn(Optional.of(JobConfig.getDefaultInstance()));
+        .thenReturn(JobConfig.getDefaultInstance());
 
     ImmutableList<TradefedJobInfo> tradefedJobInfoList =
         jobCreator.createXtsTradefedTestJobInfo(
@@ -248,7 +250,7 @@ public final class ServerJobCreatorTest {
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
 
     when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any()))
-        .thenReturn(Optional.of(JobConfig.getDefaultInstance()));
+        .thenReturn(JobConfig.getDefaultInstance());
     when(retryGenerator.generateRetrySubPlan(any())).thenReturn(subPlan);
     doCallRealMethod().when(localFileUtil).prepareDir(any(Path.class));
 
@@ -303,7 +305,7 @@ public final class ServerJobCreatorTest {
     when(retryGenerator.generateRetrySubPlan(any())).thenReturn(subPlan);
     doCallRealMethod().when(localFileUtil).prepareDir(any(Path.class));
     when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any()))
-        .thenReturn(Optional.of(JobConfig.getDefaultInstance()));
+        .thenReturn(JobConfig.getDefaultInstance());
 
     ImmutableList<TradefedJobInfo> tradefedJobInfoList =
         jobCreator.createXtsTradefedTestJobInfo(
@@ -361,7 +363,7 @@ public final class ServerJobCreatorTest {
     when(retryGenerator.generateRetrySubPlan(any())).thenReturn(subPlan);
     doCallRealMethod().when(localFileUtil).prepareDir(any(Path.class));
     when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any()))
-        .thenReturn(Optional.of(JobConfig.getDefaultInstance()));
+        .thenReturn(JobConfig.getDefaultInstance());
 
     ImmutableList<TradefedJobInfo> tradefedJobInfoList =
         jobCreator.createXtsTradefedTestJobInfo(
@@ -414,7 +416,7 @@ public final class ServerJobCreatorTest {
     doCallRealMethod().when(localFileUtil).isFileExist(any(Path.class));
     doCallRealMethod().when(localFileUtil).removeFileOrDir(any(Path.class));
     when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any()))
-        .thenReturn(Optional.of(JobConfig.getDefaultInstance()));
+        .thenReturn(JobConfig.getDefaultInstance());
 
     ImmutableList<TradefedJobInfo> tradefedJobInfoList =
         jobCreator.createXtsTradefedTestJobInfo(
@@ -462,7 +464,7 @@ public final class ServerJobCreatorTest {
     doCallRealMethod().when(localFileUtil).isFileExist(any(Path.class));
     doCallRealMethod().when(localFileUtil).removeFileOrDir(any(Path.class));
     when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any()))
-        .thenReturn(Optional.of(JobConfig.getDefaultInstance()));
+        .thenReturn(JobConfig.getDefaultInstance());
 
     ImmutableList<TradefedJobInfo> tradefedJobInfoList =
         jobCreator.createXtsTradefedTestJobInfo(
@@ -490,7 +492,6 @@ public final class ServerJobCreatorTest {
   @Test
   public void createXtsNonTradefedJobs_retryAtsServerSession_nonTfFailedTests() throws Exception {
     SessionRequestInfo sessionRequestInfo =
-        // sessionRequestHandlerUtil.addNonTradefedModuleInfo(
         SessionRequestInfo.builder()
             .setTestPlan("retry")
             .setCommandLineArgs("retry")
@@ -508,8 +509,9 @@ public final class ServerJobCreatorTest {
         .when(sessionRequestHandlerUtil)
         .canCreateNonTradefedJobs(eq(sessionRequestInfo));
 
-    ImmutableList<JobInfo> unused =
-        jobCreator.createXtsNonTradefedJobs(sessionRequestInfo, testPlanFilter);
+    assertThrows(
+        MobileHarnessException.class,
+        () -> jobCreator.createXtsNonTradefedJobs(sessionRequestInfo, testPlanFilter));
 
     ArgumentCaptor<RetryArgs> retryArgsCaptor = ArgumentCaptor.forClass(RetryArgs.class);
     verify(retryGenerator).generateRetrySubPlan(retryArgsCaptor.capture());
@@ -614,8 +616,9 @@ public final class ServerJobCreatorTest {
         .when(sessionRequestHandlerUtil)
         .canCreateNonTradefedJobs(eq(sessionRequestInfo));
 
-    ImmutableList<JobInfo> unused =
-        jobCreator.createXtsNonTradefedJobs(sessionRequestInfo, testPlanFilter);
+    assertThrows(
+        MobileHarnessException.class,
+        () -> jobCreator.createXtsNonTradefedJobs(sessionRequestInfo, testPlanFilter));
 
     verify(sessionRequestHandlerUtil, times(0))
         .createXtsNonTradefedJobs(any(), any(), any(), any());

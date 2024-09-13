@@ -238,8 +238,10 @@ public class SessionRequestHandlerUtil {
             .collect(toImmutableSet());
 
     if (availableDevices.isEmpty()) {
-      logger.atInfo().with(IMPORTANCE, IMPORTANT).log("None of devices match given options.");
-      return ImmutableList.of();
+      throw MobileHarnessExceptionFactory.createUserFacingException(
+          InfraErrorId.OLCS_NO_AVAILABLE_DEVICE,
+          "No available device is found.",
+          /* cause= */ null);
     }
 
     if (passedInDeviceSerials.isEmpty()) {
@@ -295,7 +297,7 @@ public class SessionRequestHandlerUtil {
     return info.deviceType().orElse(ANDROID_DEVICE_TYPE);
   }
 
-  public Optional<JobInfo> createXtsTradefedTestJob(
+  public JobInfo createXtsTradefedTestJob(
       SessionRequestInfo sessionRequestInfo, TradefedJobInfo tradefedJobInfo)
       throws MobileHarnessException, InterruptedException {
     JobInfo jobInfo =
@@ -311,7 +313,7 @@ public class SessionRequestHandlerUtil {
         .extraJobProperties()
         .forEach((key, value) -> jobInfo.properties().add(key, value));
     printCreatedJobInfo(jobInfo, /* isTf= */ true);
-    return Optional.of(jobInfo);
+    return jobInfo;
   }
 
   /** Gets all local tradefed modules which doesn't include the mcts modules. */
@@ -365,17 +367,18 @@ public class SessionRequestHandlerUtil {
    *
    * <p>The list of modules is filtered by include/exclude filters and the given module names.
    *
-   * @return an optional list of filtered tradefed modules. If the list isn't present, it means no
-   *     tradefed modules satisfy the given filters. If the list is present and contains no modules,
-   *     it means all tradefed modules are satisfied by the given filters.
+   * @return a list of filtered tradefed modules if the given modules are not empty. Or an empty
+   *     list if the given modules are empty.
+   * @throws MobileHarnessException if no tradefed modules could satisfy the given filters.
    */
-  public Optional<ImmutableList<String>> getFilteredTradefedModules(
-      SessionRequestInfo sessionRequestInfo) throws MobileHarnessException {
+  public ImmutableList<String> getFilteredTradefedModules(SessionRequestInfo sessionRequestInfo)
+      throws MobileHarnessException {
     Path xtsRootDir = Path.of(sessionRequestInfo.xtsRootDir());
     if (!localFileUtil.isDirExist(xtsRootDir)) {
-      logger.atInfo().log(
-          "xTS root dir [%s] doesn't exist, skip creating tradefed jobs.", xtsRootDir);
-      return Optional.empty();
+      throw MobileHarnessExceptionFactory.createUserFacingException(
+          InfraErrorId.OLCS_INEXISTENT_XTS_ROOT_DIR,
+          String.format("Inexistent xTS root dir: %s", xtsRootDir),
+          /* cause= */ null);
     }
 
     ImmutableSet<String> localTfModules = getAllLocalTradefedModules(sessionRequestInfo);
@@ -412,20 +415,17 @@ public class SessionRequestHandlerUtil {
     ImmutableList<String> filteredModules = filteredModulesBuilder.build();
 
     if (filteredModules.isEmpty()) {
-      logger
-          .atInfo()
-          .with(IMPORTANCE, IMPORTANT)
-          .log(
-              "Skip creating tradefed jobs as none of given modules is for tradefed module: %s",
-              modules);
-      return Optional.empty();
+      throw MobileHarnessExceptionFactory.createUserFacingException(
+          InfraErrorId.XTS_NO_MATCHED_TRADEFED_MODULES,
+          String.format("No matched tradefed modules from the given modules: %s", modules),
+          /* cause= */ null);
     }
 
-    return Optional.of(modules.isEmpty() ? ImmutableList.of() : filteredModules);
+    return modules.isEmpty() ? ImmutableList.of() : filteredModules;
   }
 
   /** Initializes a {@link JobConfig} for a tradefed job. */
-  public Optional<JobConfig> initializeJobConfig(
+  public JobConfig initializeJobConfig(
       SessionRequestInfo sessionRequestInfo, Map<String, String> driverParams)
       throws InterruptedException, MobileHarnessException {
     String testPlan = sessionRequestInfo.testPlan();
@@ -437,11 +437,10 @@ public class SessionRequestHandlerUtil {
     ImmutableList<SubDeviceSpec> subDeviceSpecList =
         getSubDeviceSpecListForTradefed(sessionRequestInfo, max(shardCount, minDeviceCount));
     if (subDeviceSpecList.size() < minDeviceCount) {
-      logger
-          .atInfo()
-          .with(IMPORTANCE, IMPORTANT)
-          .log("Found no enough devices to create the job config.");
-      return Optional.empty();
+      throw MobileHarnessExceptionFactory.createUserFacingException(
+          InfraErrorId.OLCS_NO_ENOUGH_MATCHED_DEVICES,
+          "Found no enough devices to create the job config.",
+          /* cause= */ null);
     }
 
     Duration jobTimeout =
@@ -476,7 +475,7 @@ public class SessionRequestHandlerUtil {
 
     JobConfig jobConfig = jobConfigBuilder.build();
     logger.atInfo().log("XtsTradefedTest job config: %s", shortDebugString(jobConfig));
-    return Optional.of(jobConfigBuilder.build());
+    return jobConfigBuilder.build();
   }
 
   /**
@@ -822,7 +821,7 @@ public class SessionRequestHandlerUtil {
           }
         }
 
-        Optional<JobInfo> jobInfoOpt =
+        JobInfo jobInfo =
             createXtsNonTradefedJob(
                 xtsRootDir,
                 xtsType,
@@ -841,26 +840,23 @@ public class SessionRequestHandlerUtil {
                 startTimeout,
                 isSkipDeviceInfo(sessionRequestInfo, subPlan));
         // TODO: correct the device serial dimension.
-        if (jobInfoOpt.isPresent()) {
-          JobInfo jobInfo = jobInfoOpt.get();
-          if (!androidDeviceSerials.isEmpty()) {
-            String serialDimensionValue =
-                String.format("regex:(%s)", Joiner.on('|').join(androidDeviceSerials));
-            jobInfo
-                .subDeviceSpecs()
-                .getAllSubDevices()
-                .forEach(
-                    subDeviceSpec ->
-                        subDeviceSpec
-                            .deviceRequirement()
-                            .dimensions()
-                            .add("id", serialDimensionValue));
-          }
-          addSessionClientIdToJobInfo(jobInfo, sessionRequestInfo);
-          extraJobProperties.forEach((key, value) -> jobInfo.properties().add(key, value));
-          printCreatedJobInfo(jobInfo, /* isTf= */ false);
-          jobInfos.add(jobInfo);
+        if (!androidDeviceSerials.isEmpty()) {
+          String serialDimensionValue =
+              String.format("regex:(%s)", Joiner.on('|').join(androidDeviceSerials));
+          jobInfo
+              .subDeviceSpecs()
+              .getAllSubDevices()
+              .forEach(
+                  subDeviceSpec ->
+                      subDeviceSpec
+                          .deviceRequirement()
+                          .dimensions()
+                          .add("id", serialDimensionValue));
         }
+        addSessionClientIdToJobInfo(jobInfo, sessionRequestInfo);
+        extraJobProperties.forEach((key, value) -> jobInfo.properties().add(key, value));
+        printCreatedJobInfo(jobInfo, /* isTf= */ false);
+        jobInfos.add(jobInfo);
       }
     }
 
@@ -879,12 +875,10 @@ public class SessionRequestHandlerUtil {
       String fileContent = localFileUtil.readFile(xtsDeviceConfigFile);
       return ProtoTextFormat.parse(fileContent, DeviceConfigurations.class);
     } catch (MobileHarnessException | ParseException e) {
-      throw MobileHarnessExceptionFactory.create(
+      throw MobileHarnessExceptionFactory.createUserFacingException(
           InfraErrorId.XTS_DEVICE_CONFIG_FILE_PARSE_ERROR,
           String.format("Failed to read device config file [%s]", xtsDeviceConfigFile),
-          e,
-          /* addErrorIdToMessage= */ false,
-          /* clearStackTrace= */ true);
+          e);
     }
   }
 
@@ -898,12 +892,8 @@ public class SessionRequestHandlerUtil {
     try {
       return result.buildOrThrow();
     } catch (IllegalArgumentException e) {
-      throw MobileHarnessExceptionFactory.create(
-          InfraErrorId.XTS_DEVICE_CONFIG_FILE_VALIDATE_ERROR,
-          "Invalid device config",
-          e,
-          /* addErrorIdToMessage= */ false,
-          /* clearStackTrace= */ true);
+      throw MobileHarnessExceptionFactory.createUserFacingException(
+          InfraErrorId.XTS_DEVICE_CONFIG_FILE_VALIDATE_ERROR, "Invalid device config", e);
     }
   }
 
@@ -932,7 +922,7 @@ public class SessionRequestHandlerUtil {
     return "";
   }
 
-  private Optional<JobInfo> createXtsNonTradefedJob(
+  private JobInfo createXtsNonTradefedJob(
       Path xtsRootDir,
       String xtsType,
       String testPlan,
@@ -949,19 +939,15 @@ public class SessionRequestHandlerUtil {
       Duration startTimeout,
       boolean skipDeviceInfo)
       throws MobileHarnessException, InterruptedException {
-    Optional<JobInfo> jobInfoOpt =
+    JobInfo jobInfo =
         createBaseXtsNonTradefedJob(
             moduleConfig, expandedModuleName, jobTimeout, testTimeout, startTimeout);
-    if (jobInfoOpt.isEmpty()) {
-      return Optional.empty();
-    }
 
     ImmutableList<File> fileDepDirs =
         ImmutableList.of(
             moduleConfigPath.getParent().toFile(),
             XtsDirUtil.getXtsTestCasesDir(xtsRootDir, xtsType).toFile());
 
-    JobInfo jobInfo = jobInfoOpt.get();
     moduleConfigurationHelper.updateJobInfo(jobInfo, moduleConfig, moduleDeviceConfig, fileDepDirs);
     jobInfo.properties().add(Job.IS_XTS_NON_TF_JOB, "true");
     jobInfo
@@ -992,7 +978,7 @@ public class SessionRequestHandlerUtil {
         .params()
         .add("xts_test_dir", XtsDirUtil.getXtsTestCasesDir(xtsRootDir, xtsType).toString());
     injectCommonParams(jobInfo);
-    return Optional.of(jobInfo);
+    return jobInfo;
   }
 
   /** Injects common params to the job info for both tradefed and non-tradefed jobs. */
@@ -1009,7 +995,7 @@ public class SessionRequestHandlerUtil {
     return Joiner.on(",").withKeyValueSeparator("=").join(xtsSuiteInfoMap);
   }
 
-  private Optional<JobInfo> createBaseXtsNonTradefedJob(
+  private JobInfo createBaseXtsNonTradefedJob(
       Configuration moduleConfig,
       String expandedModuleName,
       Duration jobTimeout,
@@ -1018,24 +1004,23 @@ public class SessionRequestHandlerUtil {
       throws MobileHarnessException, InterruptedException {
     List<Device> moduleDevices = moduleConfig.getDevicesList();
     if (moduleDevices.isEmpty()) {
-      logger
-          .atInfo()
-          .with(IMPORTANCE, IMPORTANT)
-          .log(
+      throw MobileHarnessExceptionFactory.createUserFacingException(
+          InfraErrorId.XTS_NO_DEVICE_SPEC_DEFINED,
+          String.format(
               "Found no devices to create the job config for xts non-tradefed job with module"
                   + " '%s'.",
-              expandedModuleName);
-      return Optional.empty();
+              expandedModuleName),
+          /* cause= */ null);
     }
 
     List<SubDeviceSpec> subDeviceSpecList = new ArrayList<>();
     for (Device device : moduleDevices) {
       if (device.getName().isEmpty()) {
-        logger
-            .atWarning()
-            .with(IMPORTANCE, IMPORTANT)
-            .log("Device name is missing in a <device> in module '%s'", expandedModuleName);
-        return Optional.empty();
+        throw MobileHarnessExceptionFactory.createUserFacingException(
+            InfraErrorId.XTS_ILLEGAL_DEVICE_SPEC,
+            String.format(
+                "Device name is missing in a <device> in module '%s'", expandedModuleName),
+            /* cause= */ null);
       } else {
         subDeviceSpecList.add(SubDeviceSpec.newBuilder().setType(device.getName()).build());
       }
@@ -1070,9 +1055,8 @@ public class SessionRequestHandlerUtil {
         "Non-tradefed job base config for module '%s': %s",
         expandedModuleName, shortDebugString(jobConfig));
 
-    return Optional.of(
-        JobInfoCreator.createJobInfo(
-            jobConfig, ImmutableList.of(), jobGenDir.toString(), jobTmpDir.toString()));
+    return JobInfoCreator.createJobInfo(
+        jobConfig, ImmutableList.of(), jobGenDir.toString(), jobTmpDir.toString());
   }
 
   private Path createJobGenDir(String jobName) {

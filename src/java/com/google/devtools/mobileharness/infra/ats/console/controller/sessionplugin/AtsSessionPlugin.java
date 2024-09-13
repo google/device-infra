@@ -35,6 +35,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName.Job;
+import com.google.devtools.mobileharness.infra.ats.common.jobcreator.XtsJobCreator;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionCancellation;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginConfig.CommandCase;
@@ -61,6 +62,7 @@ import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefe
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfoFileUtil;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfoFileUtil.XtsTradefedRuntimeInfoFileDetail;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil.KillSignal;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -247,13 +249,27 @@ public class AtsSessionPlugin {
               "Command [%s] started, args=[%s]",
               runCommandState.getCommandId(), runCommand.getInitialState().getCommandLineArgs());
       runCommandHandler.initialize(runCommand);
-      ImmutableList<String> tradefedJobIds = runCommandHandler.addTradefedJobs(runCommand);
-      synchronized (runningTradefedJobs) {
-        for (String tradefedJobId : tradefedJobIds) {
-          runningTradefedJobs.putIfAbsent(tradefedJobId, true);
+      ImmutableList<String> tradefedJobIds = null;
+      try {
+        tradefedJobIds = runCommandHandler.addTradefedJobs(runCommand);
+      } catch (MobileHarnessException e) {
+        if (!XtsJobCreator.isSkippableException(e)) {
+          throw e;
         }
+        logger
+            .atInfo()
+            .with(IMPORTANCE, IMPORTANT)
+            .log(
+                "Skip adding tradefed jobs for session [%s] due to skippable exception: [%s].",
+                sessionInfo.getSessionId(), MoreThrowables.shortDebugString(e));
       }
-      if (tradefedJobIds.isEmpty()) {
+      if (tradefedJobIds != null) {
+        synchronized (runningTradefedJobs) {
+          for (String tradefedJobId : tradefedJobIds) {
+            runningTradefedJobs.putIfAbsent(tradefedJobId, true);
+          }
+        }
+      } else {
         logger.atInfo().log(
             "On session [%s] starting, no tradefed job was added, try add non-tradefed jobs if"
                 + " needed.",
@@ -297,7 +313,25 @@ public class AtsSessionPlugin {
       if (runningTradefedJobs.values().stream().noneMatch(running -> running)) {
         logger.atInfo().log(
             "All added tradefed jobs have been done, try add non-tradefed jobs if needed.");
-        runCommandHandler.addNonTradefedJobs(config.getRunCommand());
+        try {
+          runCommandHandler.addNonTradefedJobs(config.getRunCommand());
+        } catch (MobileHarnessException e) {
+          if (!XtsJobCreator.isSkippableException(e)) {
+            logger
+                .atWarning()
+                .with(IMPORTANCE, IMPORTANT)
+                .withCause(e)
+                .log(
+                    "Failed to add non-tradefed jobs for session [%s]", sessionInfo.getSessionId());
+          } else {
+            logger
+                .atInfo()
+                .with(IMPORTANCE, IMPORTANT)
+                .log(
+                    "No non-tradefed jobs were created. Ingored since this session has contained"
+                        + " finished TF jobs.");
+          }
+        }
       }
     }
   }

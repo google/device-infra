@@ -18,8 +18,6 @@ package com.google.devtools.mobileharness.infra.ats.common.jobcreator;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
-import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
-import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
@@ -27,9 +25,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Streams;
-import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
 import com.google.devtools.mobileharness.infra.ats.common.SessionHandlerHelper;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil.TradefedJobInfo;
@@ -63,8 +61,6 @@ import java.util.stream.Stream;
 /** A creator to create XTS tradefed jobs and non tradefed jobs. */
 public abstract class XtsJobCreator {
 
-  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
-
   private final SessionRequestHandlerUtil sessionRequestHandlerUtil;
   private final LocalFileUtil localFileUtil;
   private final TestPlanParser testPlanParser;
@@ -84,6 +80,11 @@ public abstract class XtsJobCreator {
     this.moduleShardingArgsGenerator = moduleShardingArgsGenerator;
   }
 
+  public static boolean isSkippableException(MobileHarnessException e) {
+    return e.getErrorId() == InfraErrorId.XTS_NO_MATCHED_TRADEFED_MODULES
+        || e.getErrorId() == InfraErrorId.XTS_NO_MATCHED_NON_TRADEFED_MODULES;
+  }
+
   /**
    * Creates a tradefed job based on the {@code SessionRequestInfo}.
    *
@@ -91,25 +92,17 @@ public abstract class XtsJobCreator {
    */
   public ImmutableList<JobInfo> createXtsTradefedTestJob(SessionRequestInfo sessionRequestInfo)
       throws MobileHarnessException, InterruptedException {
-    Optional<ImmutableList<String>> tfModules =
+    ImmutableList<String> tfModules =
         sessionRequestHandlerUtil.getFilteredTradefedModules(sessionRequestInfo);
-    if (tfModules.isEmpty()) {
-      return ImmutableList.of();
-    }
 
     ImmutableList<TradefedJobInfo> tradefedJobInfoList =
-        createXtsTradefedTestJobInfo(sessionRequestInfo, tfModules.get());
-    if (tradefedJobInfoList.isEmpty()) {
-      return ImmutableList.of();
-    }
+        createXtsTradefedTestJobInfo(sessionRequestInfo, tfModules);
 
     ImmutableList.Builder<JobInfo> jobInfos = ImmutableList.builder();
     for (TradefedJobInfo tradefedJobInfo : tradefedJobInfoList) {
-      Optional<JobInfo> jobInfo =
+      JobInfo jobInfo =
           sessionRequestHandlerUtil.createXtsTradefedTestJob(sessionRequestInfo, tradefedJobInfo);
-      if (jobInfo.isPresent()) {
-        jobInfos.add(jobInfo.get());
-      }
+      jobInfos.add(jobInfo);
     }
 
     return jobInfos.build();
@@ -132,32 +125,23 @@ public abstract class XtsJobCreator {
     if (SessionRequestHandlerUtil.isRunRetry(testPlan)) {
       extraJobProperties.put(Job.IS_RUN_RETRY, "true");
       if (SessionHandlerHelper.useTfRetry()) {
-        if (!prepareTfRetry(sessionRequestInfo, driverParams, extraJobProperties)) {
-          return ImmutableList.of();
-        }
+        prepareTfRetry(sessionRequestInfo, driverParams, extraJobProperties);
       } else {
-        Optional<SubPlan> runRetryTfSubPlan =
-            prepareRunRetrySubPlan(sessionRequestInfo, /* forTf= */ true);
-        if (runRetryTfSubPlan.isEmpty()) {
-          return ImmutableList.of();
-        }
+        SubPlan runRetryTfSubPlan = prepareRunRetrySubPlan(sessionRequestInfo, /* forTf= */ true);
         driverParams.put(
-            "prev_session_xts_test_plan", runRetryTfSubPlan.get().getPreviousSessionXtsTestPlan());
-        injectBuildFingerprint(extraJobProperties, runRetryTfSubPlan.get());
+            "prev_session_xts_test_plan", runRetryTfSubPlan.getPreviousSessionXtsTestPlan());
+        injectBuildFingerprint(extraJobProperties, runRetryTfSubPlan);
         Path runRetryTfSubPlanXmlFile =
-            prepareRunRetryTfSubPlanXmlFile(sessionRequestInfo, runRetryTfSubPlan.get());
+            prepareRunRetryTfSubPlanXmlFile(sessionRequestInfo, runRetryTfSubPlan);
         driverParams.put("subplan_xml", runRetryTfSubPlanXmlFile.toAbsolutePath().toString());
         prevSessionSkipDeviceInfo =
-            runRetryTfSubPlan.get().getPreviousSessionDeviceBuildFingerprint().orElse("").isEmpty();
+            runRetryTfSubPlan.getPreviousSessionDeviceBuildFingerprint().orElse("").isEmpty();
       }
     } else if (sessionRequestInfo.subPlanName().isPresent()) {
-      Optional<Path> tfSubPlan =
+      Path tfSubPlan =
           prepareTfSubPlan(
               xtsRootDir, sessionRequestInfo.xtsType(), sessionRequestInfo.subPlanName().get());
-      if (tfSubPlan.isEmpty()) {
-        return ImmutableList.of();
-      }
-      driverParams.put("subplan_xml", tfSubPlan.get().toAbsolutePath().toString());
+      driverParams.put("subplan_xml", tfSubPlan.toAbsolutePath().toString());
     }
 
     if (!sessionRequestInfo.envVars().isEmpty()) {
@@ -232,25 +216,29 @@ public abstract class XtsJobCreator {
       runCommandArgsSet = ImmutableSet.of(sessionRequestInfoArgs);
     }
 
+    if (runCommandArgsSet.isEmpty()) {
+      throw MobileHarnessExceptionFactory.createUserFacingException(
+          InfraErrorId.XTS_EMPTY_RUN_COMMAND_ARGS,
+          "Failed to generate run command args to create jobs",
+          /* cause= */ null);
+    }
+
     ImmutableList.Builder<TradefedJobInfo> tradefedJobInfos = ImmutableList.builder();
     for (String runCommandArgs : runCommandArgsSet) {
       Map<String, String> driverParamsCopy = new HashMap<>(driverParams);
       if (!runCommandArgs.isEmpty()) {
         driverParamsCopy.put("run_command_args", runCommandArgs);
       }
-      Optional<JobConfig> jobConfig =
+      JobConfig jobConfig =
           sessionRequestHandlerUtil.initializeJobConfig(sessionRequestInfo, driverParamsCopy);
-      if (jobConfig.isPresent()) {
-        tradefedJobInfos.add(
-            TradefedJobInfo.of(jobConfig.get(), extraJobProperties.buildOrThrow()));
-      }
+      tradefedJobInfos.add(TradefedJobInfo.of(jobConfig, extraJobProperties.buildOrThrow()));
     }
 
     return tradefedJobInfos.build();
   }
 
   /** Prepares a sub plan file for a tradefed job. */
-  private Optional<Path> prepareTfSubPlan(Path xtsRootDir, String xtsType, String subPlanName)
+  private Path prepareTfSubPlan(Path xtsRootDir, String xtsType, String subPlanName)
       throws MobileHarnessException, InterruptedException {
     Path subPlansDir = XtsDirUtil.getXtsSubPlansDir(xtsRootDir, xtsType);
     Path subPlanPath = subPlansDir.resolve(subPlanName + ".xml");
@@ -258,17 +246,16 @@ public abstract class XtsJobCreator {
 
     if (subPlan.getIncludeFiltersMultimap().isEmpty()
         && subPlan.getExcludeFiltersMultimap().isEmpty()) {
-      logger
-          .atInfo()
-          .with(IMPORTANCE, IMPORTANT)
-          .log("No include or exclude filters found for TF modules and tests ");
-      return Optional.empty();
+      throw MobileHarnessExceptionFactory.createUserFacingException(
+          InfraErrorId.OLCS_NO_CORRESPONDING_FILTER_FOUND_IN_SUBPLAN,
+          "No include or exclude filters found for TF modules and tests",
+          /* cause= */ null);
     }
 
     // If the subplan only includes TF modules and tests, use the subplan file directly
     if (subPlan.getNonTfIncludeFiltersMultimap().isEmpty()
         && subPlan.getNonTfExcludeFiltersMultimap().isEmpty()) {
-      return Optional.of(subPlanPath);
+      return subPlanPath;
     }
 
     Path tfOnlySubPlanPath = subPlansDir.resolve(String.format("%s_tf_auto_gen.xml", subPlanName));
@@ -284,7 +271,7 @@ public abstract class XtsJobCreator {
           e);
     }
 
-    return Optional.of(tfOnlySubPlanPath);
+    return tfOnlySubPlanPath;
   }
 
   /**
@@ -307,25 +294,22 @@ public abstract class XtsJobCreator {
       SessionRequestInfo sessionRequestInfo, TestPlanParser.TestPlanFilter testPlanFilter)
       throws MobileHarnessException, InterruptedException {
     if (!sessionRequestHandlerUtil.canCreateNonTradefedJobs(sessionRequestInfo)) {
-      logger
-          .atInfo()
-          .with(IMPORTANCE, IMPORTANT)
-          .log(
-              "Skip creating non-tradefed jobs as none of given modules is for non-tradefed module:"
-                  + " %s",
-              sessionRequestInfo.moduleNames());
-      return ImmutableList.of();
+      throw MobileHarnessExceptionFactory.createUserFacingException(
+          InfraErrorId.XTS_NO_MATCHED_NON_TRADEFED_MODULES,
+          "No matched non-tradefed modules to create jobs",
+          /* cause= */ null);
     }
     String testPlan = sessionRequestInfo.testPlan();
     Path xtsRootDir = Path.of(sessionRequestInfo.xtsRootDir());
     if (!localFileUtil.isDirExist(xtsRootDir)) {
-      logger.atInfo().log(
-          "xTS root dir [%s] doesn't exist, skip creating non-tradefed jobs.", xtsRootDir);
-      return ImmutableList.of();
+      throw MobileHarnessExceptionFactory.createUserFacingException(
+          InfraErrorId.OLCS_INEXISTENT_XTS_ROOT_DIR,
+          String.format("xTS root dir [%s] doesn't exist", xtsRootDir),
+          /* cause= */ null);
     }
 
     ImmutableMap.Builder<XtsPropertyName, String> extraJobProperties = ImmutableMap.builder();
-    Optional<SubPlan> subPlanOpt = Optional.empty();
+    SubPlan subPlan = null;
     if (SessionRequestHandlerUtil.isRunRetry(testPlan)) {
       extraJobProperties.put(Job.IS_RUN_RETRY, "true");
       Optional<Path> testReportPropertiesFile =
@@ -335,13 +319,10 @@ public abstract class XtsJobCreator {
         // If previous session doesn't have Non-TF module, skip the retry.
         if (!Boolean.parseBoolean(
             testReportProperties.getProperty(SuiteCommon.TEST_REPORT_PROPERTY_HAS_NON_TF_MODULE))) {
-          logger
-              .atInfo()
-              .with(IMPORTANCE, IMPORTANT)
-              .log(
-                  "Previous session doesn't have non-tradefed module, skip creating non-tradefed"
-                      + " jobs for the retry.");
-          return ImmutableList.of();
+          throw MobileHarnessExceptionFactory.createUserFacingException(
+              InfraErrorId.XTS_NO_MATCHED_NON_TF_MODULES_TO_RETRY,
+              "Previous session doesn't have non-tradefed module",
+              /* cause= */ null);
         }
         extraJobProperties.put(
             Job.PREV_SESSION_HAS_TF_MODULE,
@@ -356,40 +337,30 @@ public abstract class XtsJobCreator {
                     testReportProperties.getProperty(
                         SuiteCommon.TEST_REPORT_PROPERTY_HAS_NON_TF_MODULE))));
       }
-      subPlanOpt = prepareRunRetrySubPlan(sessionRequestInfo, /* forTf= */ false);
-      if (subPlanOpt.isEmpty()) {
-        return ImmutableList.of();
-      }
-      injectBuildFingerprint(extraJobProperties, subPlanOpt.get());
+      subPlan = prepareRunRetrySubPlan(sessionRequestInfo, /* forTf= */ false);
+      injectBuildFingerprint(extraJobProperties, subPlan);
     } else if (sessionRequestInfo.subPlanName().isPresent()) {
-      subPlanOpt =
+      subPlan =
           prepareNonTfSubPlan(
               xtsRootDir, sessionRequestInfo.xtsType(), sessionRequestInfo.subPlanName().get());
-      if (subPlanOpt.isEmpty()) {
-        return ImmutableList.of();
-      }
     }
 
     return sessionRequestHandlerUtil.createXtsNonTradefedJobs(
-        sessionRequestInfo,
-        testPlanFilter,
-        subPlanOpt.orElse(null),
-        extraJobProperties.buildOrThrow());
+        sessionRequestInfo, testPlanFilter, subPlan, extraJobProperties.buildOrThrow());
   }
 
   /** Prepares a sub plan file for a non-tradefed job. */
-  private Optional<SubPlan> prepareNonTfSubPlan(Path xtsRootDir, String xtsType, String subPlanName)
+  private SubPlan prepareNonTfSubPlan(Path xtsRootDir, String xtsType, String subPlanName)
       throws MobileHarnessException {
     SubPlan subPlan = SessionHandlerHelper.loadSubPlan(xtsRootDir, xtsType, subPlanName);
     if (subPlan.getNonTfIncludeFiltersMultimap().isEmpty()
         && subPlan.getNonTfExcludeFiltersMultimap().isEmpty()) {
-      logger
-          .atInfo()
-          .with(IMPORTANCE, IMPORTANT)
-          .log("No include or exclude filters found for Non-TF modules and tests");
-      return Optional.empty();
+      throw MobileHarnessExceptionFactory.createUserFacingException(
+          InfraErrorId.OLCS_NO_CORRESPONDING_FILTER_FOUND_IN_SUBPLAN,
+          "No include or exclude filters found for non-TF modules and tests",
+          /* cause= */ null);
     }
-    return Optional.of(subPlan);
+    return subPlan;
   }
 
   private void injectBuildFingerprint(
@@ -446,7 +417,7 @@ public abstract class XtsJobCreator {
     return subPlanPath;
   }
 
-  protected Optional<SubPlan> generateRetrySubPlan(
+  protected SubPlan generateRetrySubPlan(
       RetryArgs retryArgs, boolean forTf, String previousSessionIdOrIndex)
       throws MobileHarnessException {
     SubPlan subPlan = retryGenerator.generateRetrySubPlan(retryArgs);
@@ -456,14 +427,16 @@ public abstract class XtsJobCreator {
         || (!forTf
             && subPlan.getNonTfIncludeFiltersMultimap().isEmpty()
             && subPlan.getNonTfExcludeFiltersMultimap().isEmpty())) {
-      logger.atInfo().log(
-          "No include or exclude filters found for %s retry session %s with retry type %s",
-          forTf ? "TF" : "Non-TF",
-          previousSessionIdOrIndex,
-          retryArgs.retryType().isPresent() ? retryArgs.retryType().get() : "UNKNOWN");
-      return Optional.empty();
+      throw MobileHarnessExceptionFactory.createUserFacingException(
+          InfraErrorId.OLCS_NO_FILTER_FOUND_IN_RETRY_SUBPLAN,
+          String.format(
+              "No include or exclude filters found for %s retry session %s with retry type %s",
+              forTf ? "TF" : "Non-TF",
+              previousSessionIdOrIndex,
+              retryArgs.retryType().isPresent() ? retryArgs.retryType().get() : "UNKNOWN"),
+          /* cause= */ null);
     }
-    return Optional.of(subPlan);
+    return subPlan;
   }
 
   protected static ImmutableSet<String> getNonTfModules(
@@ -478,7 +451,7 @@ public abstract class XtsJobCreator {
    *
    * @return true if params/properties are prepared successfully.
    */
-  protected abstract boolean prepareTfRetry(
+  protected abstract void prepareTfRetry(
       SessionRequestInfo sessionRequestInfo,
       Map<String, String> driverParams,
       ImmutableMap.Builder<XtsPropertyName, String> extraJobProperties)
@@ -493,6 +466,6 @@ public abstract class XtsJobCreator {
   protected abstract Path prepareRunRetryTfSubPlanXmlFile(
       SessionRequestInfo sessionRequestInfo, SubPlan subPlan) throws MobileHarnessException;
 
-  protected abstract Optional<SubPlan> prepareRunRetrySubPlan(
+  protected abstract SubPlan prepareRunRetrySubPlan(
       SessionRequestInfo sessionRequestInfo, boolean forTf) throws MobileHarnessException;
 }

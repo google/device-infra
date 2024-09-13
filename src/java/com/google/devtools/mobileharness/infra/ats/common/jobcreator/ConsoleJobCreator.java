@@ -18,15 +18,13 @@ package com.google.devtools.mobileharness.infra.ats.common.jobcreator;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
-import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
-import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName;
@@ -52,8 +50,6 @@ import javax.inject.Inject;
 
 /** A creator to create XTS jobs for XTS console only. */
 public class ConsoleJobCreator extends XtsJobCreator {
-
-  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private final PreviousResultLoader previousResultLoader;
 
@@ -91,8 +87,8 @@ public class ConsoleJobCreator extends XtsJobCreator {
   }
 
   @Override
-  protected Optional<SubPlan> prepareRunRetrySubPlan(
-      SessionRequestInfo sessionRequestInfo, boolean forTf) throws MobileHarnessException {
+  protected SubPlan prepareRunRetrySubPlan(SessionRequestInfo sessionRequestInfo, boolean forTf)
+      throws MobileHarnessException {
     return prepareRunRetrySubPlan(
         Path.of(sessionRequestInfo.xtsRootDir()),
         sessionRequestInfo.xtsType(),
@@ -105,7 +101,7 @@ public class ConsoleJobCreator extends XtsJobCreator {
         sessionRequestInfo.moduleNames());
   }
 
-  private Optional<SubPlan> prepareRunRetrySubPlan(
+  private SubPlan prepareRunRetrySubPlan(
       Path xtsRootDir,
       String xtsType,
       int previousSessionIndex,
@@ -139,7 +135,7 @@ public class ConsoleJobCreator extends XtsJobCreator {
   }
 
   @Override
-  protected boolean prepareTfRetry(
+  protected void prepareTfRetry(
       SessionRequestInfo sessionRequestInfo,
       Map<String, String> driverParams,
       ImmutableMap.Builder<XtsPropertyName, String> extraJobProperties)
@@ -151,13 +147,10 @@ public class ConsoleJobCreator extends XtsJobCreator {
       // If previous session doesn't have TF module, skip running TF retry.
       if (!Boolean.parseBoolean(
           testReportProperties.getProperty(SuiteCommon.TEST_REPORT_PROPERTY_HAS_TF_MODULE))) {
-        logger
-            .atInfo()
-            .with(IMPORTANCE, IMPORTANT)
-            .log(
-                "Previous session doesn't have tradefed module, skip creating tradefed jobs for"
-                    + " the retry.");
-        return false;
+        throw MobileHarnessExceptionFactory.createUserFacingException(
+            InfraErrorId.ATSC_TF_RETRY_WITHOUT_TF_MODULE,
+            "Previous session doesn't have tradefed module",
+            /* cause= */ null);
       }
       extraJobProperties
           .put(
@@ -192,7 +185,6 @@ public class ConsoleJobCreator extends XtsJobCreator {
     if (sessionRequestInfo.retryType().isPresent()) {
       driverParams.put("retry_type", sessionRequestInfo.retryType().get().toString());
     }
-    return true;
   }
 
   private TradefedResultFilesBundle findTfRunRetryFilesBundle(

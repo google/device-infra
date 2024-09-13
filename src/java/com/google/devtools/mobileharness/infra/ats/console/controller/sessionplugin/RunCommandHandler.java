@@ -58,7 +58,6 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.annotation.Nullable;
@@ -158,7 +157,7 @@ class RunCommandHandler {
 
     ImmutableList.Builder<String> tradefedJobIds = ImmutableList.builder();
     ImmutableSet<String> staticMctsModules = sessionRequestHandlerUtil.getStaticMctsModules();
-    Optional<ImmutableList<String>> tfModules =
+    ImmutableList<String> tfModules =
         sessionRequestHandlerUtil.getFilteredTradefedModules(sessionRequestInfo);
     ImmutableList<SuiteTestFilter> includeFilters =
         sessionRequestInfo.includeFilters().stream()
@@ -179,11 +178,7 @@ class RunCommandHandler {
                               .orElseThrow())
                       .toString());
           addEnableXtsDynamicDownloadToJob(
-              jobInfo,
-              command,
-              tfModules.orElse(ImmutableList.of()),
-              staticMctsModules,
-              includeFilters);
+              jobInfo, command, tfModules, staticMctsModules, includeFilters);
 
           if (addJobToSession(jobInfo)) {
             String jobId = jobInfo.locator().getId();
