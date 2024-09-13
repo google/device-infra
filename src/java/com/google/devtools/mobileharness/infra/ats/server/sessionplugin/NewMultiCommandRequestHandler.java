@@ -236,6 +236,7 @@ final class NewMultiCommandRequestHandler {
                   .setCreateTime(Timestamps.fromMillis(clock.millis()))
                   .setStartTime(Timestamps.fromMillis(clock.millis()))
                   .setUpdateTime(Timestamps.fromMillis(clock.millis()))
+                  .setRequestId(sessionInfo.getSessionId())
                   .setId(commandId)
                   .setState(CommandState.RUNNING));
     } else {

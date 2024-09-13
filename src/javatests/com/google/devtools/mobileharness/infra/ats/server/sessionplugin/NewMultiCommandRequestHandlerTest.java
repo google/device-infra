@@ -597,6 +597,7 @@ public final class NewMultiCommandRequestHandlerTest {
     assertThat(commandDetail.getCommandLine()).isEqualTo(commandInfo.getCommandLine());
     assertThat(commandDetail.getId())
         .isEqualTo(UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString());
+    assertThat(commandDetail.getRequestId()).isEqualTo("session_id");
     assertThat(commandDetail.getState()).isEqualTo(CommandState.RUNNING);
     assertThat(commandDetail.getOriginalCommandInfo()).isEqualTo(commandInfo);
 
