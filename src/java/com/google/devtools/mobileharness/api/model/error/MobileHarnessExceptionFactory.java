@@ -31,5 +31,20 @@ public class MobileHarnessExceptionFactory {
         errorId, message, cause, addErrorIdToMessage, clearStackTrace);
   }
 
+  /**
+   * Creates a user facing {@link MobileHarnessException} without stack trace and error id in
+   * message.
+   *
+   * <p>WARNING: This method is exclusively for generating exceptions that display messages to
+   * users. To create exceptions for other purposes, utilize the {@link #create(ErrorId, String,
+   * Throwable, boolean, boolean)} method instead. This ensures that crucial debugging information,
+   * such as the error ID and stack trace, is retained.
+   */
+  public static MobileHarnessException createUserFacingException(
+      ErrorId errorId, String message, @Nullable Throwable cause) {
+    return new MobileHarnessException(
+        errorId, message, cause, /* addErrorIdToMessage= */ false, /* clearStackTrace= */ true);
+  }
+
   private MobileHarnessExceptionFactory() {}
 }
