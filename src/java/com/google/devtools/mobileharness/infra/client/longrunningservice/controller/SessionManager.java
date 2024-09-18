@@ -21,6 +21,7 @@ import static com.google.common.util.concurrent.Futures.addCallback;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
+import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 import static java.lang.Math.min;
 
 import com.google.auto.value.AutoValue;
@@ -44,12 +45,15 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionId;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionNotification;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionOutput;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPersistenceData;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPersistenceStatus;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionStatus;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.SessionFilter;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.SubscribeSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.SubscribeSessionResponse;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.util.SessionPersistenceUtil;
 import com.google.devtools.mobileharness.shared.context.InvocationContext.ContextScope;
 import com.google.devtools.mobileharness.shared.context.InvocationContext.InvocationInfo;
 import com.google.devtools.mobileharness.shared.context.InvocationContext.InvocationType;
@@ -77,6 +81,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.logging.Level;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import java.util.stream.Stream;
@@ -110,6 +115,7 @@ public class SessionManager {
   private final SessionRunner.Factory sessionRunnerFactory;
   private final LocalFileUtil localFileUtil;
   private final ListeningExecutorService threadPool;
+  private final SessionPersistenceUtil sessionDetailPersistenceUtil;
 
   private final Object sessionsLock = new Object();
 
@@ -136,11 +142,13 @@ public class SessionManager {
       SessionDetailCreator sessionDetailCreator,
       SessionRunner.Factory sessionRunnerFactory,
       LocalFileUtil localFileUtil,
-      ListeningExecutorService threadPool) {
+      ListeningExecutorService threadPool,
+      SessionPersistenceUtil sessionDetailPersistenceUtil) {
     this.sessionDetailCreator = sessionDetailCreator;
     this.sessionRunnerFactory = sessionRunnerFactory;
     this.localFileUtil = localFileUtil;
     this.threadPool = threadPool;
+    this.sessionDetailPersistenceUtil = sessionDetailPersistenceUtil;
   }
 
   /**
@@ -152,11 +160,34 @@ public class SessionManager {
   public SessionAddingResult addSession(SessionConfig sessionConfig) throws MobileHarnessException {
     SessionDetail pendingSessionDetail = sessionDetailCreator.create(sessionConfig);
     logger.atInfo().log("Create session: %s", shortDebugString(pendingSessionDetail));
+    sessionDetailPersistenceUtil.persistSession(
+        SessionPersistenceData.newBuilder()
+            .setSessionDetail(pendingSessionDetail)
+            .setSessionPersistenceStatus(SessionPersistenceStatus.SESSION_CREATED)
+            .build());
+    PendingSession pendingSession =
+        addSession(
+            pendingSessionDetail, SessionPersistenceStatus.SESSION_CREATED, ImmutableList.of());
+    synchronized (sessionsLock) {
+      // Tries to start new sessions.
+      startSessions();
+    }
+    return SessionAddingResult.of(pendingSession);
+  }
+
+  @CanIgnoreReturnValue
+  private PendingSession addSession(
+      SessionDetail sessionDetail,
+      SessionPersistenceStatus initialSessionPersistenceStatus,
+      ImmutableList<String> toBeResumedJobIds)
+      throws MobileHarnessException {
     SessionSubscribers subscribers = new SessionSubscribers();
-    subscribers.setSessionDetailSupplier(fieldMask -> pendingSessionDetail);
+    subscribers.setSessionDetailSupplier(fieldMask -> sessionDetail);
     PendingSession pendingSession =
         PendingSession.of(
-            pendingSessionDetail,
+            sessionDetail,
+            initialSessionPersistenceStatus,
+            toBeResumedJobIds,
             SettableFuture.create(),
             subscribers,
             /* cachedSessionNotifications= */ new ArrayList<>());
@@ -167,13 +198,33 @@ public class SessionManager {
           () ->
               String.format(
                   "Session queue is full(%s), failed to add session [%s]",
-                  SESSION_QUEUE_CAPACITY, shortDebugString(pendingSessionDetail)));
-      pendingSessions.put(pendingSessionDetail.getSessionId().getId(), pendingSession);
+                  SESSION_QUEUE_CAPACITY, shortDebugString(sessionDetail)));
+      pendingSessions.put(sessionDetail.getSessionId().getId(), pendingSession);
+    }
+    return pendingSession;
+  }
 
+  /** Resumes all the unfinished sessions. */
+  public void resumeSessions() {
+    sessionDetailPersistenceUtil
+        .getToBeResumedSessions()
+        .forEach(
+            sessionPersistenceData -> {
+              try {
+                addSession(
+                    sessionPersistenceData.getSessionDetail(),
+                    sessionPersistenceData.getSessionPersistenceStatus(),
+                    ImmutableList.copyOf(sessionPersistenceData.getJobIdList()));
+              } catch (MobileHarnessException e) {
+                logger.atWarning().withCause(e).log(
+                    "Failed to resume session [%s]",
+                    sessionPersistenceData.getSessionDetail().getSessionId().getId());
+              }
+            });
+    synchronized (sessionsLock) {
       // Tries to start new sessions.
       startSessions();
     }
-    return SessionAddingResult.of(pendingSession);
   }
 
   /**
@@ -349,7 +400,6 @@ public class SessionManager {
                   pendingSession.sessionDetail(),
                   /* sessionRunnerError= */ null,
                   TextFormat.printer());
-
           // Archives the session.
           archiveSession(finalSessionDetail);
 
@@ -359,6 +409,8 @@ public class SessionManager {
           abortedPendingSessions.add(
               PendingSession.of(
                   finalSessionDetail,
+                  pendingSession.initialSessionPersistenceStatus(),
+                  pendingSession.toBeResumedJobIds(),
                   pendingSession.finalResultFuture(),
                   pendingSession.sessionSubscribers(),
                   pendingSession.cachedSessionNotifications()));
@@ -371,6 +423,7 @@ public class SessionManager {
           logger.atInfo().log("Session to abort is not found, id=[%s]", sessionId);
         }
       }
+      sessionDetailPersistenceUtil.removePersistenceData(sessionId);
     }
 
     // Sets the future out of the lock.
@@ -395,6 +448,8 @@ public class SessionManager {
                             pendingSession.sessionDetail().toBuilder()
                                 .setSessionStatus(SessionStatus.SESSION_RUNNING)
                                 .build(),
+                            pendingSession.initialSessionPersistenceStatus(),
+                            pendingSession.toBeResumedJobIds(),
                             pendingSession.sessionSubscribers().getSessionDetailListener(),
                             ImmutableList.copyOf(pendingSession.cachedSessionNotifications())),
                         pendingSession.finalResultFuture(),
@@ -481,15 +536,26 @@ public class SessionManager {
         } catch (RuntimeException | Error e) {
           logger.atWarning().withCause(e).log("Failed to copy session logs");
         }
-
-        // Cleans up session environment.
-        sessionEnvironment.get().close();
       }
 
       // Archives the session.
       synchronized (sessionsLock) {
         runningSessions.remove(finalSessionDetail.getSessionId().getId());
         archiveSession(finalSessionDetail);
+        logFailure(
+            threadPool.submit(
+                threadRenaming(
+                    () ->
+                        sessionDetailPersistenceUtil.removePersistenceData(
+                            sessionDetail.getSessionId().getId()),
+                    () -> "remove-persistence-data-" + sessionDetail.getSessionId().getId())),
+            Level.WARNING,
+            "Failed to remove persistence data for session %s",
+            sessionDetail.getSessionId().getId());
+        if (sessionEnvironment.isPresent()) {
+          // Cleans up session environment.
+          sessionEnvironment.get().close();
+        }
 
         // Tries to start new sessions if any.
         startSessions();
@@ -704,6 +770,10 @@ public class SessionManager {
   abstract static class PendingSession {
     abstract SessionDetail sessionDetail();
 
+    abstract SessionPersistenceStatus initialSessionPersistenceStatus();
+
+    abstract ImmutableList<String> toBeResumedJobIds();
+
     abstract SettableFuture<SessionDetail> finalResultFuture();
 
     abstract SessionSubscribers sessionSubscribers();
@@ -714,11 +784,18 @@ public class SessionManager {
 
     private static PendingSession of(
         SessionDetail sessionDetail,
+        SessionPersistenceStatus initialSessionPersistenceStatus,
+        ImmutableList<String> toBeResumedJobIds,
         SettableFuture<SessionDetail> finalResultFuture,
         SessionSubscribers sessionSubscribers,
         List<SessionNotification> cachedSessionNotifications) {
       return new AutoValue_SessionManager_PendingSession(
-          sessionDetail, finalResultFuture, sessionSubscribers, cachedSessionNotifications);
+          sessionDetail,
+          initialSessionPersistenceStatus,
+          toBeResumedJobIds,
+          finalResultFuture,
+          sessionSubscribers,
+          cachedSessionNotifications);
     }
   }
 

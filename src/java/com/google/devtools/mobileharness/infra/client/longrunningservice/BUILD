@@ -51,6 +51,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:log_manager",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:log_recorder",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:service_provider",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:session_manager",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/service:control_service",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/service:session_service",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/service:version_service",

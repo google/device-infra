@@ -35,6 +35,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.constan
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogManager;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogRecorder;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.ServiceProvider;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.SessionManager;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecords;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.ControlService;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.SessionService;
@@ -94,6 +95,7 @@ public class OlcServer {
   private final SessionService sessionService;
   private final VersionService versionService;
   private final ControlService controlService;
+  private final SessionManager sessionManager;
   @Nullable private final MonitorPipelineLauncher monitorPipelineLauncher;
   private final ListeningExecutorService threadPool;
   private final ExecMode execMode;
@@ -110,6 +112,7 @@ public class OlcServer {
       SessionService sessionService,
       VersionService versionService,
       ControlService controlService,
+      SessionManager sessionManager,
       @Nullable MonitorPipelineLauncher monitorPipelineLauncher,
       ListeningExecutorService threadPool,
       ExecMode execMode,
@@ -123,6 +126,7 @@ public class OlcServer {
     this.sessionService = sessionService;
     this.versionService = versionService;
     this.controlService = controlService;
+    this.sessionManager = sessionManager;
     this.monitorPipelineLauncher = monitorPipelineLauncher;
     this.threadPool = threadPool;
     this.execMode = execMode;
@@ -196,6 +200,13 @@ public class OlcServer {
         Level.SEVERE,
         "Fatal error while initializing %s exec mode",
         execMode.getClass().getSimpleName());
+
+    // Resumes all the unfinished sessions.
+    logger.atInfo().log("Resuming unfinished sessions.");
+    logFailure(
+        threadPool.submit(threadRenaming(sessionManager::resumeSessions, () -> "resume-sessions")),
+        Level.SEVERE,
+        "Fatal error while resuming unfinished sessions.");
 
     // Prints signal.
     logger.atInfo().log("Servers have started: %s", SERVER_STARTED_SIGNAL);
