@@ -21,8 +21,6 @@ java_library(
     name = "lab_file_notifier",
     srcs = ["LabFileNotifier.java"],
     visibility = [
-        "//java/com/google/devtools/mobileharness/infra/rbeexecutor:__subpackages__",
-        "//javatests/com/google/devtools/mobileharness/infra/rbeexecutor:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/container:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/manager:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
