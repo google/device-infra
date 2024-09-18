@@ -16,18 +16,41 @@
 
 package com.google.devtools.mobileharness.infra.client.longrunningservice.util;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
+import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPersistenceData;
+import java.util.Optional;
+import javax.annotation.Nullable;
 
 /** Util to persist/resume session. */
 public interface SessionPersistenceUtil {
 
   /** Persists the session data. */
-  void persistSession(SessionPersistenceData sessionPersistenceData);
+  void persistSession(SessionPersistenceData sessionPersistenceData) throws MobileHarnessException;
 
   /** Removes the persisted session data. */
-  void removePersistenceData(String sessionId);
+  void removePersistenceData(String sessionId) throws MobileHarnessException;
 
   /** Gets the session list that should be resumed and its persistence data. */
-  ImmutableList<SessionPersistenceData> getToBeResumedSessions();
+  ImmutableList<SessionPersistenceDataOrError> getToBeResumedSessions()
+      throws MobileHarnessException;
+
+  /** Data or error. One and only one is present. */
+  @AutoValue
+  public abstract class SessionPersistenceDataOrError {
+
+    public abstract Optional<SessionPersistenceData> data();
+
+    public abstract Optional<Throwable> error();
+
+    public static SessionPersistenceDataOrError of(
+        @Nullable SessionPersistenceData data, @Nullable Throwable error) {
+      checkArgument((data != null && error == null) || (data == null && error != null));
+      return new AutoValue_SessionPersistenceUtil_SessionPersistenceDataOrError(
+          Optional.ofNullable(data), Optional.ofNullable(error));
+    }
+  }
 }

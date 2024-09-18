@@ -115,7 +115,7 @@ public class SessionManager {
   private final SessionRunner.Factory sessionRunnerFactory;
   private final LocalFileUtil localFileUtil;
   private final ListeningExecutorService threadPool;
-  private final SessionPersistenceUtil sessionDetailPersistenceUtil;
+  private final SessionPersistenceUtil sessionPersistenceUtil;
 
   private final Object sessionsLock = new Object();
 
@@ -143,12 +143,12 @@ public class SessionManager {
       SessionRunner.Factory sessionRunnerFactory,
       LocalFileUtil localFileUtil,
       ListeningExecutorService threadPool,
-      SessionPersistenceUtil sessionDetailPersistenceUtil) {
+      SessionPersistenceUtil sessionPersistenceUtil) {
     this.sessionDetailCreator = sessionDetailCreator;
     this.sessionRunnerFactory = sessionRunnerFactory;
     this.localFileUtil = localFileUtil;
     this.threadPool = threadPool;
-    this.sessionDetailPersistenceUtil = sessionDetailPersistenceUtil;
+    this.sessionPersistenceUtil = sessionPersistenceUtil;
   }
 
   /**
@@ -160,11 +160,16 @@ public class SessionManager {
   public SessionAddingResult addSession(SessionConfig sessionConfig) throws MobileHarnessException {
     SessionDetail pendingSessionDetail = sessionDetailCreator.create(sessionConfig);
     logger.atInfo().log("Create session: %s", shortDebugString(pendingSessionDetail));
-    sessionDetailPersistenceUtil.persistSession(
-        SessionPersistenceData.newBuilder()
-            .setSessionDetail(pendingSessionDetail)
-            .setSessionPersistenceStatus(SessionPersistenceStatus.SESSION_CREATED)
-            .build());
+    try {
+      sessionPersistenceUtil.persistSession(
+          SessionPersistenceData.newBuilder()
+              .setSessionDetail(pendingSessionDetail)
+              .setSessionPersistenceStatus(SessionPersistenceStatus.SESSION_CREATED)
+              .build());
+    } catch (MobileHarnessException e) {
+      logger.atWarning().withCause(e).log(
+          "Failed to persist session [%s]", pendingSessionDetail.getSessionId().getId());
+    }
     PendingSession pendingSession =
         addSession(
             pendingSessionDetail, SessionPersistenceStatus.SESSION_CREATED, ImmutableList.of());
@@ -206,21 +211,37 @@ public class SessionManager {
 
   /** Resumes all the unfinished sessions. */
   public void resumeSessions() {
-    sessionDetailPersistenceUtil
-        .getToBeResumedSessions()
-        .forEach(
-            sessionPersistenceData -> {
-              try {
-                addSession(
-                    sessionPersistenceData.getSessionDetail(),
-                    sessionPersistenceData.getSessionPersistenceStatus(),
-                    ImmutableList.copyOf(sessionPersistenceData.getJobIdList()));
-              } catch (MobileHarnessException e) {
-                logger.atWarning().withCause(e).log(
-                    "Failed to resume session [%s]",
-                    sessionPersistenceData.getSessionDetail().getSessionId().getId());
-              }
-            });
+    try {
+      ImmutableList<SessionPersistenceUtil.SessionPersistenceDataOrError> toBeResumedSessions =
+          sessionPersistenceUtil.getToBeResumedSessions();
+      for (SessionPersistenceUtil.SessionPersistenceDataOrError sessionPersistenceDataOrError :
+          toBeResumedSessions) {
+        if (sessionPersistenceDataOrError.data().isPresent()) {
+          try {
+            addSession(
+                sessionPersistenceDataOrError.data().get().getSessionDetail(),
+                sessionPersistenceDataOrError.data().get().getSessionPersistenceStatus(),
+                ImmutableList.copyOf(sessionPersistenceDataOrError.data().get().getJobIdList()));
+          } catch (MobileHarnessException e) {
+            logger.atWarning().withCause(e).log(
+                "Failed to resume session [%s]",
+                sessionPersistenceDataOrError
+                    .data()
+                    .get()
+                    .getSessionDetail()
+                    .getSessionId()
+                    .getId());
+          }
+        } else if (sessionPersistenceDataOrError.error().isPresent()) {
+          logger.atWarning().withCause(sessionPersistenceDataOrError.error().get()).log(
+              "Failed to resume session [%s]",
+              sessionPersistenceDataOrError.error().get().getMessage());
+        }
+      }
+    } catch (MobileHarnessException e) {
+      logger.atWarning().withCause(e).log("Failed to resume sessions.");
+    }
+
     synchronized (sessionsLock) {
       // Tries to start new sessions.
       startSessions();
@@ -423,7 +444,12 @@ public class SessionManager {
           logger.atInfo().log("Session to abort is not found, id=[%s]", sessionId);
         }
       }
-      sessionDetailPersistenceUtil.removePersistenceData(sessionId);
+      try {
+        sessionPersistenceUtil.removePersistenceData(sessionId);
+      } catch (MobileHarnessException e) {
+        logger.atWarning().withCause(e).log(
+            "Failed to remove persistence data for session %s", sessionId);
+      }
     }
 
     // Sets the future out of the lock.
@@ -545,9 +571,16 @@ public class SessionManager {
         logFailure(
             threadPool.submit(
                 threadRenaming(
-                    () ->
-                        sessionDetailPersistenceUtil.removePersistenceData(
-                            sessionDetail.getSessionId().getId()),
+                    () -> {
+                      try {
+                        sessionPersistenceUtil.removePersistenceData(
+                            sessionDetail.getSessionId().getId());
+                      } catch (MobileHarnessException e) {
+                        logger.atWarning().withCause(e).log(
+                            "Failed to remove persistence data for session %s",
+                            sessionDetail.getSessionId().getId());
+                      }
+                    },
                     () -> "remove-persistence-data-" + sessionDetail.getSessionId().getId())),
             Level.WARNING,
             "Failed to remove persistence data for session %s",

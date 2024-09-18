@@ -33,7 +33,7 @@ public final class JdbcBasedSessionPersistenceUtil implements SessionPersistence
   }
 
   @Override
-  public ImmutableList<SessionPersistenceData> getToBeResumedSessions() {
+  public ImmutableList<SessionPersistenceDataOrError> getToBeResumedSessions() {
     // TODO: Add implementation
     return ImmutableList.of();
   }

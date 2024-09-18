@@ -281,15 +281,20 @@ public class SessionRunner implements Callable<Void> {
   }
 
   private void persistSession(SessionPersistenceStatus sessionPersistenceStatus) {
-    sessionPersistenceUtil.persistSession(
-        SessionPersistenceData.newBuilder()
-            .setSessionDetail(sessionDetailHolder.buildSessionDetail(null))
-            .setSessionPersistenceStatus(sessionPersistenceStatus)
-            .addAllJobId(
-                sessionDetailHolder.getAllJobs().stream()
-                    .map(jobInfo -> jobInfo.locator().getId())
-                    .collect(toImmutableList()))
-            .build());
+    try {
+      sessionPersistenceUtil.persistSession(
+          SessionPersistenceData.newBuilder()
+              .setSessionDetail(sessionDetailHolder.buildSessionDetail(null))
+              .setSessionPersistenceStatus(sessionPersistenceStatus)
+              .addAllJobId(
+                  sessionDetailHolder.getAllJobs().stream()
+                      .map(jobInfo -> jobInfo.locator().getId())
+                      .collect(toImmutableList()))
+              .build());
+    } catch (MobileHarnessException e) {
+      logger.atWarning().withCause(e).log(
+          "Failed to persist session [%s]", sessionDetailHolder.getSessionId());
+    }
   }
 
   private String getJobPersistencePath(String jobId) {
