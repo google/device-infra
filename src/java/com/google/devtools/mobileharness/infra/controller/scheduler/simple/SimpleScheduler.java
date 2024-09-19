@@ -48,6 +48,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import javax.annotation.Nullable;
+import javax.annotation.concurrent.GuardedBy;
 import javax.inject.Inject;
 
 /**
@@ -74,9 +75,11 @@ public class SimpleScheduler extends AbstractScheduler implements Runnable {
   private final Object allocationLock = new Object();
 
   /** {{@link DeviceLocator#universalId()}, {@link Allocation}} mapping. */
+  @GuardedBy("allocationLock")
   private final Map<String, Allocation> deviceAllocations = new HashMap<>();
 
   /** {TestID, Allocation} mapping. */
+  @GuardedBy("allocationLock")
   private final Map<String, Allocation> testAllocations = new HashMap<>();
 
   private final Sleeper sleeper;
@@ -105,14 +108,16 @@ public class SimpleScheduler extends AbstractScheduler implements Runnable {
         for (SimpleJobInfo job : jobs.values()) {
           sleeper.sleep(SCHEDULING_SMALL_INTERVAL);
           for (TestLocator testLocator : job.getTests().values()) {
-            if (!testAllocations.containsKey(testLocator.getId())) {
-              // Found a new test.
-              if (allocate(job.getScheduleUnit(), testLocator)) {
-                hasNewAllocation = true;
+            synchronized (allocationLock) {
+              if (!testAllocations.containsKey(testLocator.getId())) {
+                // Found a new test.
+                if (allocate(job.getScheduleUnit(), testLocator)) {
+                  hasNewAllocation = true;
+                }
+                // No matter successfully allocate devices to the new test or not, skips the
+                // remaining tests and allocates devices for the next job.
+                break;
               }
-              // No matter successfully allocate devices to the new test or not, skips the remaining
-              // tests and allocates devices for the next job.
-              break;
             }
           }
         }
@@ -449,10 +454,12 @@ public class SimpleScheduler extends AbstractScheduler implements Runnable {
   /** Checks whether the device can meet the job requirement. If so, allocates it to the test. */
   private boolean checkAndAllocateSingleDevice(
       JobScheduleUnit job, TestLocator test, DeviceScheduleUnit device, boolean fireEvent) {
-    if (!deviceAllocations.containsKey(device.locator().universalId())
-        && ifDeviceSupports(device, job)) {
-      // Found a suitable and idle device for the new test.
-      return allocate(test, device, fireEvent);
+    synchronized (allocationLock) {
+      if (!deviceAllocations.containsKey(device.locator().universalId())
+          && ifDeviceSupports(device, job)) {
+        // Found a suitable and idle device for the new test.
+        return allocate(test, device, fireEvent);
+      }
     }
     return false;
   }
@@ -467,21 +474,30 @@ public class SimpleScheduler extends AbstractScheduler implements Runnable {
       labInfos = labList;
     }
     for (SimpleLabInfo labInfo : labInfos) {
-      ImmutableList<DeviceScheduleUnit> filteredDevices =
-          labInfo.getDevices().stream()
-              // Filter out already allocated devices
-              .filter(device -> !deviceAllocations.containsKey(device.locator().universalId()))
-              // Filter out devices that don't support any desired types
-              .filter(device -> !Collections.disjoint(device.types().getAll(), types))
-              // Filter out devices that the user does not own
-              .filter(device -> device.owners().support(job.jobUser().getRunAs()))
-              .collect(toImmutableList());
-      if (!filteredDevices.isEmpty()) {
-        ImmutableList<DeviceScheduleUnit> deviceList =
-            adhocTestbedSchedulingUtil.findSubDevicesSupportingJob(filteredDevices, job);
-        // The order matters in the allocated list as it needs to match the spec.
-        if (!deviceList.isEmpty()) {
-          return allocate(test, deviceList, true);
+      synchronized (allocationLock) {
+        ImmutableList<DeviceScheduleUnit> filteredDevices =
+            labInfo.getDevices().stream()
+                // Filter out already allocated devices
+                .filter(
+                    device -> {
+                      // GuardedBy doesn't work with lambda expressions. So we need to use a
+                      // synchronized block to work around it.
+                      synchronized (allocationLock) {
+                        return !deviceAllocations.containsKey(device.locator().universalId());
+                      }
+                    })
+                // Filter out devices that don't support any desired types
+                .filter(device -> !Collections.disjoint(device.types().getAll(), types))
+                // Filter out devices that the user does not own
+                .filter(device -> device.owners().support(job.jobUser().getRunAs()))
+                .collect(toImmutableList());
+        if (!filteredDevices.isEmpty()) {
+          ImmutableList<DeviceScheduleUnit> deviceList =
+              adhocTestbedSchedulingUtil.findSubDevicesSupportingJob(filteredDevices, job);
+          // The order matters in the allocated list as it needs to match the spec.
+          if (!deviceList.isEmpty()) {
+            return allocate(test, deviceList, true);
+          }
         }
       }
     }
