@@ -31,7 +31,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
+import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
 import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName.Job;
@@ -65,6 +67,7 @@ import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil.KillSignal;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Timestamp;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
@@ -72,6 +75,7 @@ import com.google.wireless.qa.mobileharness.client.api.event.JobStartEvent;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageUtil;
 import com.google.wireless.qa.mobileharness.shared.controller.event.TestEndedEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.event.TestStartingEvent;
+import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator;
 import java.io.IOException;
@@ -132,8 +136,15 @@ public class AtsSessionPlugin {
   @GuardedBy("testCancellationLock")
   private XtsTradefedRunCancellation cancellationTestMessage;
 
+  private final Object addingJobLock = new Object();
+
+  @GuardedBy("addingJobLock")
+  private AtsSessionCancellation sessionCancellation;
+
   /** Set in {@link #onSessionStarting}. */
   private volatile AtsSessionPluginConfig config;
+
+  private ImmutableList<JobInfo> nonTradefedJobs = ImmutableList.of();
 
   @Inject
   AtsSessionPlugin(
@@ -249,9 +260,11 @@ public class AtsSessionPlugin {
               "Command [%s] started, args=[%s]",
               runCommandState.getCommandId(), runCommand.getInitialState().getCommandLineArgs());
       runCommandHandler.initialize(runCommand);
-      ImmutableList<String> tradefedJobIds = null;
+
+      // Create tradefed jobs.
+      ImmutableList<JobInfo> tradefedJobs;
       try {
-        tradefedJobIds = runCommandHandler.addTradefedJobs(runCommand);
+        tradefedJobs = runCommandHandler.createTradefedJobs(runCommand);
       } catch (MobileHarnessException e) {
         if (!XtsJobCreator.isSkippableException(e)) {
           throw e;
@@ -260,10 +273,36 @@ public class AtsSessionPlugin {
             .atInfo()
             .with(IMPORTANCE, IMPORTANT)
             .log(
-                "Skip adding tradefed jobs for session [%s] due to skippable exception: [%s].",
+                "Failed to create tradefed jobs for session [%s] due to skippable exception: [%s].",
                 sessionInfo.getSessionId(), MoreThrowables.shortDebugString(e));
+        tradefedJobs = ImmutableList.of();
       }
-      if (tradefedJobIds != null) {
+
+      // Create non-tradefed jobs.
+      try {
+        nonTradefedJobs = runCommandHandler.createNonTradefedJobs(runCommand);
+      } catch (MobileHarnessException e) {
+        if (!XtsJobCreator.isSkippableException(e)) {
+          throw e;
+        }
+        logger
+            .atInfo()
+            .with(IMPORTANCE, IMPORTANT)
+            .log(
+                "Failed to create non-tradefed jobs for session [%s] due to skippable exception:"
+                    + " [%s].",
+                sessionInfo.getSessionId(), MoreThrowables.shortDebugString(e));
+        nonTradefedJobs = ImmutableList.of();
+      }
+      if (tradefedJobs.isEmpty() && nonTradefedJobs.isEmpty()) {
+        throw MobileHarnessExceptionFactory.createUserFacingException(
+            InfraErrorId.XTS_NO_JOB_CREATED_FOR_SESSION,
+            "No jobs created for session " + sessionInfo.getSessionId(),
+            /* cause= */ null);
+      }
+
+      ImmutableList<String> tradefedJobIds = addJobsToSession(tradefedJobs);
+      if (!tradefedJobIds.isEmpty()) {
         synchronized (runningTradefedJobs) {
           for (String tradefedJobId : tradefedJobIds) {
             runningTradefedJobs.putIfAbsent(tradefedJobId, true);
@@ -274,7 +313,7 @@ public class AtsSessionPlugin {
             "On session [%s] starting, no tradefed job was added, try add non-tradefed jobs if"
                 + " needed.",
             sessionInfo.getSessionId());
-        runCommandHandler.addNonTradefedJobs(runCommand);
+        addJobsToSession(nonTradefedJobs);
       }
 
       // Starts TF runtime info updater.
@@ -313,25 +352,7 @@ public class AtsSessionPlugin {
       if (runningTradefedJobs.values().stream().noneMatch(running -> running)) {
         logger.atInfo().log(
             "All added tradefed jobs have been done, try add non-tradefed jobs if needed.");
-        try {
-          runCommandHandler.addNonTradefedJobs(config.getRunCommand());
-        } catch (MobileHarnessException e) {
-          if (!XtsJobCreator.isSkippableException(e)) {
-            logger
-                .atWarning()
-                .with(IMPORTANCE, IMPORTANT)
-                .withCause(e)
-                .log(
-                    "Failed to add non-tradefed jobs for session [%s]", sessionInfo.getSessionId());
-          } else {
-            logger
-                .atInfo()
-                .with(IMPORTANCE, IMPORTANT)
-                .log(
-                    "No non-tradefed jobs were created. Ingored since this session has contained"
-                        + " finished TF jobs.");
-          }
-        }
+        addJobsToSession(nonTradefedJobs);
       }
     }
   }
@@ -496,10 +517,40 @@ public class AtsSessionPlugin {
     }
   }
 
+  /**
+   * Add jobs to the session.
+   *
+   * @return a list of job IDs of the added jobs
+   */
+  @CanIgnoreReturnValue
+  private ImmutableList<String> addJobsToSession(ImmutableList<JobInfo> jobInfoList) {
+    ImmutableList.Builder<String> jobIds = ImmutableList.builder();
+
+    synchronized (addingJobLock) {
+      if (sessionCancellation != null) {
+        logger.atInfo().log(
+            "Skip adding jobs to session due to [%s]", shortDebugString(sessionCancellation));
+        return ImmutableList.of();
+      }
+
+      for (JobInfo jobInfo : jobInfoList) {
+        sessionInfo.addJob(jobInfo);
+        jobIds.add(jobInfo.locator().getId());
+      }
+    }
+    return jobIds.build();
+  }
+
   /** TODO: Support killing jobs here (for non-TF jobs or jobs during allocation). */
   private void onSessionCancellation(AtsSessionCancellation sessionCancellation) {
     // Stops adding new jobs.
-    runCommandHandler.onSessionCancellation(sessionCancellation);
+    logger
+        .atInfo()
+        .with(IMPORTANCE, IMPORTANT)
+        .log("Stop adding new jobs due to [%s]", shortDebugString(sessionCancellation));
+    synchronized (addingJobLock) {
+      this.sessionCancellation = sessionCancellation;
+    }
 
     // Creates test message.
     XtsTradefedRunCancellation cancellationTestMessage =

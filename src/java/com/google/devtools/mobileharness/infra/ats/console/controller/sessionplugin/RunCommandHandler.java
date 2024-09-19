@@ -32,7 +32,6 @@ import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerU
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.SessionResultHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.jobcreator.XtsJobCreator;
-import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionCancellation;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Failure;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Success;
@@ -50,7 +49,6 @@ import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteTestFil
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryType;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
-import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import java.io.File;
 import java.nio.file.Path;
@@ -61,7 +59,6 @@ import java.util.List;
 import java.util.OptionalInt;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.annotation.Nullable;
-import javax.annotation.concurrent.GuardedBy;
 import javax.inject.Inject;
 
 /** Handler for "run" commands. */
@@ -81,11 +78,6 @@ class RunCommandHandler {
   private final XtsJobCreator xtsJobCreator;
   private final PreviousResultLoader previousResultLoader;
   private final ResultListerHelper resultListerHelper;
-
-  private final Object addingJobLock = new Object();
-
-  @GuardedBy("addingJobLock")
-  private AtsSessionCancellation sessionCancellation;
 
   /** Set in {@link #initialize}. */
   private volatile boolean initialized;
@@ -121,17 +113,6 @@ class RunCommandHandler {
     initialized = true;
   }
 
-  /** Stop adding new jobs. */
-  void onSessionCancellation(AtsSessionCancellation sessionCancellation) {
-    logger
-        .atInfo()
-        .with(IMPORTANCE, IMPORTANT)
-        .log("Stop adding new jobs due to [%s]", shortDebugString(sessionCancellation));
-    synchronized (addingJobLock) {
-      this.sessionCancellation = sessionCancellation;
-    }
-  }
-
   private static int getRandom4Digits() {
     return ThreadLocalRandom.current().nextInt(1000, 10000);
   }
@@ -142,10 +123,9 @@ class RunCommandHandler {
    *
    * <p>Jobs added to the session by the plugin will be started by the session job runner later.
    *
-   * @return a list of added tradefed job IDs
+   * @return a list of {@code JobInfo} to be started
    */
-  @CanIgnoreReturnValue
-  ImmutableList<String> addTradefedJobs(RunCommand command)
+  ImmutableList<JobInfo> createTradefedJobs(RunCommand command)
       throws MobileHarnessException, InterruptedException {
     ImmutableList<JobInfo> jobInfoList = xtsJobCreator.createXtsTradefedTestJob(sessionRequestInfo);
     if (jobInfoList.isEmpty()) {
@@ -155,7 +135,6 @@ class RunCommandHandler {
       return ImmutableList.of();
     }
 
-    ImmutableList.Builder<String> tradefedJobIds = ImmutableList.builder();
     ImmutableSet<String> staticMctsModules = sessionRequestHandlerUtil.getStaticMctsModules();
     ImmutableList<String> tfModules =
         sessionRequestHandlerUtil.getFilteredTradefedModules(sessionRequestInfo);
@@ -164,7 +143,6 @@ class RunCommandHandler {
             .map(SuiteTestFilter::create)
             .collect(toImmutableList());
 
-    // Lets the driver write TF output to XTS log dir directly.
     jobInfoList.forEach(
         jobInfo -> {
           jobInfo
@@ -179,25 +157,17 @@ class RunCommandHandler {
                       .toString());
           addEnableXtsDynamicDownloadToJob(
               jobInfo, command, tfModules, staticMctsModules, includeFilters);
-
-          if (addJobToSession(jobInfo)) {
-            String jobId = jobInfo.locator().getId();
-            logger.atInfo().log(
-                "Added tradefed job[%s] to the session %s", jobId, sessionInfo.getSessionId());
-            tradefedJobIds.add(jobId);
-          }
         });
-    return tradefedJobIds.build();
+    return jobInfoList;
   }
 
   /**
    * Creates non-tradefed jobs based on the {@code runCommand} and adds the jobs to the {@code
    * sessionInfo}.
    *
-   * @return a list of added non-tradefed job IDs
+   * @return a list of {@code JobInfo} to be started
    */
-  @CanIgnoreReturnValue
-  ImmutableList<String> addNonTradefedJobs(RunCommand runCommand)
+  ImmutableList<JobInfo> createNonTradefedJobs(RunCommand runCommand)
       throws MobileHarnessException, InterruptedException {
     ImmutableList<JobInfo> jobInfos = xtsJobCreator.createXtsNonTradefedJobs(sessionRequestInfo);
     if (jobInfos.isEmpty()) {
@@ -207,17 +177,7 @@ class RunCommandHandler {
 
       return ImmutableList.of();
     }
-    ImmutableList.Builder<String> nonTradefedJobIds = ImmutableList.builder();
-    jobInfos.forEach(
-        jobInfo -> {
-          if (addJobToSession(jobInfo)) {
-            nonTradefedJobIds.add(jobInfo.locator().getId());
-            logger.atInfo().log(
-                "Added non-tradefed job[%s] to the session %s",
-                jobInfo.locator().getId(), sessionInfo.getSessionId());
-          }
-        });
-    return nonTradefedJobIds.build();
+    return jobInfos;
   }
 
   /**
@@ -335,24 +295,6 @@ class RunCommandHandler {
             return builder.build();
           },
           AtsSessionPluginOutput.class);
-    }
-  }
-
-  /**
-   * Returns true if the job has been added to the session successfully, false if the job was not
-   * added to the session.
-   */
-  private boolean addJobToSession(JobInfo jobInfo) {
-    synchronized (addingJobLock) {
-      if (sessionCancellation == null) {
-        sessionInfo.addJob(jobInfo);
-        return true;
-      } else {
-        logger.atInfo().log(
-            "Skip adding job [%s] to session due to [%s]",
-            jobInfo.locator().getId(), shortDebugString(sessionCancellation));
-        return false;
-      }
     }
   }
 
