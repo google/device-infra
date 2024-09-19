@@ -20,6 +20,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.util.concurrent.Futures.getUnchecked;
 import static com.google.common.util.concurrent.Futures.whenAllComplete;
 import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
+import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugStringWithPrinter;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 
 import com.google.common.collect.ImmutableList;
@@ -172,9 +173,9 @@ public class SessionRunner implements Callable<Void> {
 
     logger.atInfo().log(
         "Session detail:\n%s",
-        sessionDetailHolder
-            .getProtoPrinter()
-            .shortDebugString(sessionDetailHolder.buildSessionDetail(/* fieldMask= */ null)));
+        shortDebugStringWithPrinter(
+            sessionDetailHolder.buildSessionDetail(/* fieldMask= */ null),
+            sessionDetailHolder.getProtoPrinter()));
 
     // Creates OmniLab jobs.
     sessionJobCreator.createAndAddJobs(sessionDetailHolder);

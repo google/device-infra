@@ -21,6 +21,7 @@ import static com.google.common.util.concurrent.Futures.immediateFailedFuture;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.DEBUG;
 import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
+import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugStringWithPrinter;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.partitioningBy;
@@ -140,7 +141,7 @@ public class AtsSessionStub {
         .with(IMPORTANCE, DEBUG)
         .log(
             "Creating session, plugin_config=[%s], request=[%s]",
-            shortDebugString(config), PRINTER.shortDebugString(createSessionRequest));
+            shortDebugString(config), shortDebugStringWithPrinter(createSessionRequest, PRINTER));
     CreateSessionResponse createSessionResponse;
     try {
       createSessionResponse =
@@ -151,13 +152,15 @@ public class AtsSessionStub {
               InfraErrorId.ATSC_SESSION_STUB_CREATE_SESSION_ERROR,
               String.format(
                   "Failed to create session, request=[%s]",
-                  PRINTER.shortDebugString(createSessionRequest)),
+                  shortDebugStringWithPrinter(createSessionRequest, PRINTER)),
               e));
     }
     logger
         .atInfo()
         .with(IMPORTANCE, DEBUG)
-        .log("Session created, response=[%s]", PRINTER.shortDebugString(createSessionResponse));
+        .log(
+            "Session created, response=[%s]",
+            shortDebugStringWithPrinter(createSessionResponse, PRINTER));
     SessionId sessionId = createSessionResponse.getSessionId();
 
     // Asynchronously gets the session result.
@@ -178,7 +181,7 @@ public class AtsSessionStub {
         .with(IMPORTANCE, DEBUG)
         .log(
             "Running session, plugin_config=[%s], request=[%s]",
-            shortDebugString(config), PRINTER.shortDebugString(runSessionRequest));
+            shortDebugString(config), shortDebugStringWithPrinter(runSessionRequest, PRINTER));
     RunSessionResponse runSessionResponse;
     try {
       runSessionResponse = requireNonNull(sessionStubProvider.get()).runSession(runSessionRequest);
@@ -186,13 +189,16 @@ public class AtsSessionStub {
       throw new MobileHarnessException(
           InfraErrorId.ATSC_SESSION_STUB_RUN_SESSION_ERROR,
           String.format(
-              "Failed to run session, request=[%s]", PRINTER.shortDebugString(runSessionRequest)),
+              "Failed to run session, request=[%s]",
+              shortDebugStringWithPrinter(runSessionRequest, PRINTER)),
           e);
     }
     logger
         .atInfo()
         .with(IMPORTANCE, DEBUG)
-        .log("Session finished, response=[%s]", PRINTER.shortDebugString(runSessionResponse));
+        .log(
+            "Session finished, response=[%s]",
+            shortDebugStringWithPrinter(runSessionResponse, PRINTER));
     return getSessionPluginOutputForResult(runSessionResponse.getSessionDetail());
   }
 
@@ -233,7 +239,7 @@ public class AtsSessionStub {
               } catch (MobileHarnessException | RuntimeException e) {
                 logger.atWarning().withCause(e).log(
                     "Failed to get session plugin config/output, session=[%s]",
-                    PRINTER.shortDebugString(sessionDetail));
+                    shortDebugStringWithPrinter(sessionDetail, PRINTER));
                 return Stream.empty();
               }
             })
@@ -388,7 +394,7 @@ public class AtsSessionStub {
       logger
           .atInfo()
           .with(IMPORTANCE, DEBUG)
-          .log("Session result: [%s]", PRINTER.shortDebugString(sessionDetail));
+          .log("Session result: [%s]", shortDebugStringWithPrinter(sessionDetail, PRINTER));
 
       // Gets session plugin output.
       return getSessionPluginOutputForResult(sessionDetail);

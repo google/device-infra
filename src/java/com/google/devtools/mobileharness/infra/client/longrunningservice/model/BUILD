@@ -51,6 +51,7 @@ java_library(
     deps = [
         ":session_info",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_java_proto",
+        "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_text_format",
         "@com_google_protobuf//:protobuf_java",
         "@maven//:com_google_code_findbugs_jsr305",
     ],

@@ -36,13 +36,18 @@ public class ProtoTextFormat {
 
   /** See {@link TextFormat#shortDebugString}. */
   public static String shortDebugString(MessageOrBuilder message) {
-    return shortDebugStringOss(message);
+    return shortDebugStringWithPrinterOss(message, DEBUG_PRINTER);
+  }
+
+  /** See {@link TextFormat#shortDebugString}. */
+  public static String shortDebugStringWithPrinter(MessageOrBuilder message, Printer printer) {
+    return shortDebugStringWithPrinterOss(message, printer);
   }
 
   @SuppressWarnings({"deprecation", "unused"})
-  private static String shortDebugStringOss(MessageOrBuilder message) {
+  private static String shortDebugStringWithPrinterOss(MessageOrBuilder message, Printer printer) {
     // emittingSingleLine() is not open sourced.
-    return DEBUG_PRINTER.shortDebugString(message);
+    return printer.shortDebugString(message);
   }
 
   /**

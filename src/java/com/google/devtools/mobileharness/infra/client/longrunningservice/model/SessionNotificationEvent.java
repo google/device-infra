@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.infra.client.longrunningservice.model;
 
+import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugStringWithPrinter;
+
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionNotification;
 import com.google.protobuf.TextFormat.Printer;
 
@@ -43,6 +45,7 @@ public class SessionNotificationEvent extends SessionEvent {
         "%s%s",
         super.toString(),
         String.format(
-            " with notification [%s]", protoPrinter.shortDebugString(sessionNotification)));
+            " with notification [%s]",
+            shortDebugStringWithPrinter(sessionNotification, protoPrinter)));
   }
 }

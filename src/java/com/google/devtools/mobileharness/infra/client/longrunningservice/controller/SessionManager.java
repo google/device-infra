@@ -20,6 +20,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.util.concurrent.Futures.addCallback;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
+import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugStringWithPrinter;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 import static java.lang.Math.min;
@@ -283,7 +284,8 @@ public class SessionManager {
         sessionDetail != null,
         InfraErrorId.OLCS_GET_SESSION_SESSION_NOT_FOUND,
         () -> String.format("Session not found, id=[%s]", sessionId));
-    logger.atFine().log("Get session: %s", protoPrinter.shortDebugString(sessionDetail));
+    logger.atFine().log(
+        "Get session: %s", shortDebugStringWithPrinter(sessionDetail, protoPrinter));
     return sessionDetail;
   }
 
@@ -387,7 +389,8 @@ public class SessionManager {
       SessionRunner sessionRunner = runningSession.sessionRunner();
       logger.atInfo().log(
           "Notify running session [%s]: [%s]",
-          sessionId, sessionRunner.getProtoPrinter().shortDebugString(sessionNotification));
+          sessionId,
+          shortDebugStringWithPrinter(sessionNotification, sessionRunner.getProtoPrinter()));
       return sessionRunner.notifySession(sessionNotification);
     }
     PendingSession pendingSession = pendingSessions.get(sessionId);
@@ -611,7 +614,7 @@ public class SessionManager {
     logger.atInfo().withCause(sessionRunnerError).log(
         "Session finished, session_id=%s, final_session_detail=[%s]",
         sessionDetailBuilder.getSessionId().getId(),
-        protoPrinter.shortDebugString(sessionDetailBuilder));
+        shortDebugStringWithPrinter(sessionDetailBuilder, protoPrinter));
 
     // Adds the error thrown from the session runner to SessionDetail, if any.
     if (sessionRunnerError != null) {
