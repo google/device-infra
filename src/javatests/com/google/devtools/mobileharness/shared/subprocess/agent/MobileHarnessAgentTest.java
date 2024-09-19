@@ -35,6 +35,7 @@ import com.google.devtools.mobileharness.shared.commandhistory.proto.CommandReco
 import com.google.devtools.mobileharness.shared.commandhistory.proto.CommandRecordProto.LocalCommandRecords;
 import com.google.devtools.mobileharness.shared.commandhistory.renderer.CommandHistoryRenderer;
 import com.google.devtools.mobileharness.shared.subprocess.proto.AgentConfigProto.MobileHarnessAgentConfig;
+import com.google.devtools.mobileharness.shared.util.base.ProtoExtensionRegistry;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandException;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
@@ -42,7 +43,6 @@ import com.google.devtools.mobileharness.shared.util.command.CommandResult;
 import com.google.devtools.mobileharness.shared.util.command.LineCallback;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
-import com.google.protobuf.ExtensionRegistry;
 import com.google.protobuf.TextFormat;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -103,7 +103,8 @@ public class MobileHarnessAgentTest {
 
     LocalCommandRecords commandRecords =
         LocalCommandRecords.parseFrom(
-            Files.readAllBytes(Path.of(commandHistoryFilePath)), ExtensionRegistry.newInstance());
+            Files.readAllBytes(Path.of(commandHistoryFilePath)),
+            ProtoExtensionRegistry.getGeneratedRegistry());
 
     assertWithMessage("Command result: [%s]", commandResult.toStringWithoutTruncation())
         .about(protos())
@@ -178,7 +179,8 @@ public class MobileHarnessAgentTest {
 
     LocalCommandRecords commandRecords =
         LocalCommandRecords.parseFrom(
-            Files.readAllBytes(Path.of(commandHistoryFilePath)), ExtensionRegistry.newInstance());
+            Files.readAllBytes(Path.of(commandHistoryFilePath)),
+            ProtoExtensionRegistry.getGeneratedRegistry());
 
     LocalCommandRecords.Builder expected = LocalCommandRecords.newBuilder();
     for (int i = 0; i < subprocessNum; i++) {

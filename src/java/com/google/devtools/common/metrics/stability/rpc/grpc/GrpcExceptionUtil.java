@@ -24,7 +24,7 @@ import com.google.devtools.common.metrics.stability.model.ErrorId;
 import com.google.devtools.common.metrics.stability.rpc.RpcErrorUtil;
 import com.google.devtools.common.metrics.stability.rpc.proto.RpcErrorPayloadProto.RpcErrorPayload;
 import com.google.devtools.common.metrics.stability.rpc.proto.RpcErrorProto.RpcError;
-import com.google.protobuf.ExtensionRegistry;
+import com.google.devtools.mobileharness.shared.util.base.ProtoExtensionRegistry;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
 import io.grpc.Metadata;
@@ -141,7 +141,9 @@ public class GrpcExceptionUtil {
         } else {
           RpcErrorPayload payloadFromBinary = null;
           try {
-            payloadFromBinary = RpcErrorPayload.parseFrom(bytes, ExtensionRegistry.newInstance());
+            payloadFromBinary =
+                RpcErrorPayload.parseFrom(bytes, ProtoExtensionRegistry.getGeneratedRegistry());
+
           } catch (InvalidProtocolBufferException e) {
             logger.atWarning().withCause(grpcException).log(
                 "Failed to parse payload from StatusRuntimeException trailers: %s", trailers);

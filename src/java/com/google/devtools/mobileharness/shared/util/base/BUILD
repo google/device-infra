@@ -52,6 +52,7 @@ java_library(
     name = "proto_text_format",
     srcs = ["ProtoTextFormat.java"],
     deps = [
+        ":proto_extension_registry",
         "@com_google_protobuf//:protobuf_java",
     ],
 )

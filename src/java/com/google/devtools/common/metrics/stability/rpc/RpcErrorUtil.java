@@ -23,9 +23,9 @@ import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.E
 import com.google.devtools.common.metrics.stability.rpc.proto.RpcErrorProto.CompressedExceptionDetail;
 import com.google.devtools.common.metrics.stability.rpc.proto.RpcErrorProto.CompressedExceptionDetail.CompressionFormat;
 import com.google.devtools.common.metrics.stability.rpc.proto.RpcErrorProto.RpcError;
+import com.google.devtools.mobileharness.shared.util.base.ProtoExtensionRegistry;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.protobuf.ByteString;
-import com.google.protobuf.ExtensionRegistry;
 import java.io.IOException;
 import java.util.Optional;
 import java.util.zip.Deflater;
@@ -50,7 +50,8 @@ public class RpcErrorUtil {
         ByteString compressedData = compressedExceptionDetail.getCompressedData();
         try (InflaterInputStream inputStream = new InflaterInputStream(compressedData.newInput())) {
           return Optional.of(
-              ExceptionDetail.parseFrom(inputStream, ExtensionRegistry.newInstance()));
+              ExceptionDetail.parseFrom(
+                  inputStream, ProtoExtensionRegistry.getGeneratedRegistry()));
         }
       } else {
         throw new IOException(

@@ -520,15 +520,13 @@ public class AtsSessionStub {
         sessionPluginErrorsPartitionedByLabel.get(true).stream()
             .map(
                 atsSessionPluginError ->
-                    MobileHarnessExceptionFactory.create(
+                    MobileHarnessExceptionFactory.createUserFacingException(
                         InfraErrorId.ATSC_SESSION_STUB_ATS_SESSION_PLUGIN_ERROR,
                         String.format(
                             "ATS session error, method=[%s]",
                             atsSessionPluginError.getMethodName()),
                         ErrorModelConverter.toDeserializedException(
-                            atsSessionPluginError.getError()),
-                        /* addErrorIdToMessage= */ false,
-                        /* clearStackTrace= */ true))
+                            atsSessionPluginError.getError())))
             .collect(toImmutableList());
     ImmutableList<MobileHarnessException> otherSessionPluginErrors =
         sessionPluginErrorsPartitionedByLabel.get(false).stream()

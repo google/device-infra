@@ -222,12 +222,10 @@ public class XtsTradefedTest extends BaseDriver
           .resultWithCause()
           .setNonPassing(
               TestResult.ERROR,
-              MobileHarnessExceptionFactory.create(
+              MobileHarnessExceptionFactory.createUserFacingException(
                   AndroidErrorId.XTS_TRADEFED_RUN_COMMAND_ERROR,
                   "xTS command didn't start",
-                  /* cause= */ null,
-                  /* addErrorIdToMessage= */ false,
-                  /* clearStackTrace= */ true));
+                  /* cause= */ null));
       return;
     }
     if (tfExitCode != 0) {
@@ -235,12 +233,10 @@ public class XtsTradefedTest extends BaseDriver
           .resultWithCause()
           .setNonPassing(
               TestResult.ERROR,
-              MobileHarnessExceptionFactory.create(
+              MobileHarnessExceptionFactory.createUserFacingException(
                   AndroidErrorId.XTS_TRADEFED_RUN_COMMAND_ERROR,
                   "Non-zero xTS command exit code: " + tfExitCode,
-                  /* cause= */ null,
-                  /* addErrorIdToMessage= */ false,
-                  /* clearStackTrace= */ true));
+                  /* cause= */ null));
       return;
     }
     testInfo.resultWithCause().setPass();
@@ -526,24 +522,20 @@ public class XtsTradefedTest extends BaseDriver
           .resultWithCause()
           .setNonPassing(
               TestResult.ERROR,
-              MobileHarnessExceptionFactory.create(
+              MobileHarnessExceptionFactory.createUserFacingException(
                   AndroidErrorId.XTS_TRADEFED_RUN_COMMAND_ERROR,
                   "Failed to run the xTS command: " + e.getMessage(),
-                  e,
-                  /* addErrorIdToMessage= */ false,
-                  /* clearStackTrace= */ true));
+                  e));
       return Optional.of(e.result().exitCode());
     } catch (CommandTimeoutException e) {
       testInfo
           .resultWithCause()
           .setNonPassing(
               TestResult.TIMEOUT,
-              MobileHarnessExceptionFactory.create(
+              MobileHarnessExceptionFactory.createUserFacingException(
                   AndroidErrorId.XTS_TRADEFED_RUN_COMMAND_TIMEOUT,
                   "xTS run command timed out.",
-                  e,
-                  /* addErrorIdToMessage= */ false,
-                  /* clearStackTrace= */ true));
+                  e));
       return Optional.of(e.result().exitCode());
     } catch (InterruptedException e) {
       testInfo.log().atWarning().alsoTo(logger).log("xTS Tradefed was interrupted.");
@@ -812,7 +804,7 @@ public class XtsTradefedTest extends BaseDriver
       StringSubstitutor sub = new StringSubstitutor(envVars);
       String config = sub.replace(configTemplate);
 
-      ImmutableList.Builder<String> formattedCommandBuilder = ImmutableList.<String>builder();
+      ImmutableList.Builder<String> formattedCommandBuilder = ImmutableList.builder();
       for (int i = 0; i < xtsCommand.size(); i++) {
         if (i > 0 && FILTER_KEYS.contains(xtsCommand.get(i - 1))) {
           formattedCommandBuilder.add(String.format("&quot;%s&quot;", xtsCommand.get(i)));

@@ -144,15 +144,13 @@ public class TestSuiteHelper {
     }
 
     if (abis.isEmpty()) {
-      throw MobileHarnessExceptionFactory.create(
+      throw MobileHarnessExceptionFactory.createUserFacingException(
           ExtErrorId.TEST_SUITE_NO_ABIS_SUPPORTED,
           String.format(
               "None of the abi supported by this tests suite build ('%s') are supported by the"
                   + " device ('%s').",
               archAbis, deviceAbis),
-          /* cause= */ null,
-          /* addErrorIdToMessage= */ false,
-          /* clearStackTrace= */ true);
+          /* cause= */ null);
     }
     return abis;
   }

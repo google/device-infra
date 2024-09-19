@@ -195,12 +195,10 @@ public class SessionRunner implements Callable<Void> {
       synchronized (startedRunningSessionIds) {
         while (true) {
           if (sessionAborted) {
-            throw MobileHarnessExceptionFactory.create(
+            throw MobileHarnessExceptionFactory.createUserFacingException(
                 InfraErrorId.OLCS_SESSION_ABORTED_WHEN_QUEUEING,
                 "Session aborted when waiting to become started",
-                /* cause= */ null,
-                /* addErrorIdToMessage= */ false,
-                /* clearStackTrace= */ true);
+                /* cause= */ null);
           }
           if (startedRunningSessionIds.size() < maxStartedRunningSessionNum) {
             startedRunningSessionIds.add(sessionId);

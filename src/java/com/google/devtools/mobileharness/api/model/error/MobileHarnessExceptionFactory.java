@@ -39,6 +39,9 @@ public class MobileHarnessExceptionFactory {
    * users. To create exceptions for other purposes, utilize the {@link #create(ErrorId, String,
    * Throwable, boolean, boolean)} method instead. This ensures that crucial debugging information,
    * such as the error ID and stack trace, is retained.
+   *
+   * <p>Equivalent to {@linkplain #create(ErrorId, String, Throwable, boolean, boolean) *
+   * create(errorId, message, cause, false, true)}.
    */
   public static MobileHarnessException createUserFacingException(
       ErrorId errorId, String message, @Nullable Throwable cause) {

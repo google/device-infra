@@ -369,25 +369,21 @@ public class ServerPreparer {
       logger.atInfo().log("Existing OLC server (pid=%s) forcibly killed", serverPid);
     } else {
       if (killServerResponse.getResultCase() == ResultCase.FAILURE) {
-        throw MobileHarnessExceptionFactory.create(
+        throw MobileHarnessExceptionFactory.createUserFacingException(
             InfraErrorId.ATSC_SERVER_PREPARER_CANNOT_KILL_EXISTING_OLC_SERVER_ERROR,
             String.format(
                 "Existing OLC server (pid=%s) cannot be killed, reason=[%s], %s",
                 serverPid,
                 createKillServerFailureReasons(killServerResponse.getFailure()),
                 FORCIBLY_RESTART_SUGGESTION),
-            /* cause= */ null,
-            /* addErrorIdToMessage= */ false,
-            /* clearStackTrace= */ true);
+            /* cause= */ null);
       } else {
-        throw MobileHarnessExceptionFactory.create(
+        throw MobileHarnessExceptionFactory.createUserFacingException(
             InfraErrorId.ATSC_SERVER_PREPARER_EXISTING_OLC_SERVER_STILL_RUNNING_ERROR,
             String.format(
                 "Existing OLC server (pid=%s) is still running for 10s after it was killed, %s",
                 serverPid, FORCIBLY_RESTART_SUGGESTION),
-            /* cause= */ null,
-            /* addErrorIdToMessage= */ false,
-            /* clearStackTrace= */ true);
+            /* cause= */ null);
       }
     }
   }

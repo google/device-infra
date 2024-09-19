@@ -39,6 +39,7 @@ java_library(
         "//src/devtools/mobileharness/shared/commandhistory/proto:command_record_java_proto",
         "//src/devtools/mobileharness/shared/subprocess/proto:agent_config_java_proto",
         "//src/java/com/google/devtools/mobileharness/shared/commandhistory/renderer:command_history_renderer",
+        "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_extension_registry",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/system",

@@ -293,27 +293,23 @@ public class ModuleConfigurationHelper {
       return Optional.empty();
     }
     if (moduleDeviceConfig.getDeviceGroupCount() == 0) {
-      throw MobileHarnessExceptionFactory.create(
+      throw MobileHarnessExceptionFactory.createUserFacingException(
           InfraErrorId.XTS_DEVICE_CONFIG_FILE_VALIDATE_ERROR,
           String.format(
               "Zero device group in module device config [%s]",
               shortDebugString(moduleDeviceConfig)),
-          /* cause= */ null,
-          /* addErrorIdToMessage= */ false,
-          /* clearStackTrace= */ true);
+          /* cause= */ null);
     }
     // Always gets the first group for now.
     DeviceGroup deviceGroup = moduleDeviceConfig.getDeviceGroup(0);
     List<String> deviceIds = deviceGroup.getDeviceIdList();
     if (deviceIds.size() != requiredDeviceCount) {
-      throw MobileHarnessExceptionFactory.create(
+      throw MobileHarnessExceptionFactory.createUserFacingException(
           InfraErrorId.XTS_DEVICE_CONFIG_FILE_VALIDATE_ERROR,
           String.format(
               "Require %s devices but found %s in module device config [%s]",
               requiredDeviceCount, deviceIds.size(), shortDebugString(moduleDeviceConfig)),
-          /* cause= */ null,
-          /* addErrorIdToMessage= */ false,
-          /* clearStackTrace= */ true);
+          /* cause= */ null);
     }
     return Optional.of(deviceGroup);
   }

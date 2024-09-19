@@ -31,8 +31,8 @@ import com.google.devtools.mobileharness.shared.commandhistory.controller.LocalC
 import com.google.devtools.mobileharness.shared.commandhistory.proto.CommandRecordProto.LocalCommandRecords;
 import com.google.devtools.mobileharness.shared.subprocess.listener.ProcessBuilderListener;
 import com.google.devtools.mobileharness.shared.subprocess.proto.AgentConfigProto.MobileHarnessAgentConfig;
+import com.google.devtools.mobileharness.shared.util.base.ProtoExtensionRegistry;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
-import com.google.protobuf.ExtensionRegistry;
 import com.google.protobuf.TextFormat;
 import com.google.protobuf.TextFormat.ParseException;
 import java.lang.instrument.Instrumentation;
@@ -66,7 +66,7 @@ public class MobileHarnessAgent {
     MobileHarnessAgentConfig config =
         TextFormat.parse(
             localFileUtil.readFile(agentConfigFilePath),
-            ExtensionRegistry.newInstance(),
+            ProtoExtensionRegistry.getGeneratedRegistry(),
             MobileHarnessAgentConfig.class);
 
     if (config.getEnableCommandHistory()) {

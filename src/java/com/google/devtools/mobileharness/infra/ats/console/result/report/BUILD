@@ -209,6 +209,7 @@ java_library(
     ],
     deps = [
         "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
+        "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_extension_registry",
         "@com_google_protobuf//:protobuf_java",
     ],
 )

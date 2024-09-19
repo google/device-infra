@@ -17,9 +17,8 @@
 package com.google.devtools.mobileharness.infra.ats.console.result.report;
 
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
+import com.google.devtools.mobileharness.shared.util.base.ProtoExtensionRegistry;
 import com.google.protobuf.CodedInputStream;
-import com.google.protobuf.ExtensionRegistry;
-import com.google.protobuf.InvalidProtocolBufferException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -34,13 +33,13 @@ public class TestResultProtoUtil {
    * @param protoFile The {@link File} containing the report
    * @return a {@link Result} created from the file
    * @throws IOException if failed to read the file
-   * @throws InvalidProtocolBufferException if the file is an invalid proto file
    */
   public static Result readFromFile(File protoFile) throws IOException {
-    Result report = null;
+    Result report;
     try (InputStream stream = new FileInputStream(protoFile)) {
       report =
-          Result.parseFrom(CodedInputStream.newInstance(stream), ExtensionRegistry.newInstance());
+          Result.parseFrom(
+              CodedInputStream.newInstance(stream), ProtoExtensionRegistry.getGeneratedRegistry());
     }
     return report;
   }

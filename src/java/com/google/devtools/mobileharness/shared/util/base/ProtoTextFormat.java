@@ -51,7 +51,7 @@ public class ProtoTextFormat {
    */
   public static <T extends Message> T parse(CharSequence textproto, Class<T> protoClass)
       throws ParseException {
-    return parse(textproto, getDefaultExtensionRegistry(), protoClass);
+    return parse(textproto, ProtoExtensionRegistry.getGeneratedRegistry(), protoClass);
   }
 
   /**
@@ -70,10 +70,6 @@ public class ProtoTextFormat {
     }
     PARSER.merge(textproto, extensionRegistry, builder);
     return (T) builder.build();
-  }
-
-  private static ExtensionRegistry getDefaultExtensionRegistry() {
-    return ExtensionRegistry.newInstance();
   }
 
   private ProtoTextFormat() {}

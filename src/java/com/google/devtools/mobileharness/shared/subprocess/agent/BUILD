@@ -43,6 +43,7 @@ java_binary(
         "//src/java/com/google/devtools/mobileharness/shared/commandhistory/controller:local_command_history_manager",
         "//src/java/com/google/devtools/mobileharness/shared/commandhistory/controller:local_command_history_recorder",
         "//src/java/com/google/devtools/mobileharness/shared/subprocess/listener:process_builder_listener",
+        "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_extension_registry",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@com_google_protobuf//:protobuf_java",
