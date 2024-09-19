@@ -39,8 +39,8 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionNotification;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPersistenceData;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPersistenceStatus;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.util.SessionPersistenceUtil;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.util.VersionProtoUtil;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.util.persistence.SessionPersistenceUtil;
 import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
 import com.google.devtools.mobileharness.shared.util.concurrent.Callables;
 import com.google.devtools.mobileharness.shared.util.event.EventBusBackend.Subscriber;
@@ -227,9 +227,7 @@ public class SessionRunner implements Callable<Void> {
           try {
             Optional<JobInfo> jobInfo =
                 longevityTestHelper.resumeJobInfo(getJobPersistencePath(jobId), true, null, null);
-            if (jobInfo.isPresent()) {
-              sessionDetailHolder.addJob(jobInfo.get());
-            }
+            jobInfo.ifPresent(sessionDetailHolder::addJob);
           } catch (MobileHarnessException e) {
             logger.atWarning().withCause(e).log("Failed to resume job [%s]", jobId);
           }

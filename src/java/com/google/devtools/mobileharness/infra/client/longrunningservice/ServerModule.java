@@ -32,8 +32,9 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.control
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecords;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.LocalSessionStub;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.LocalSessionStubImpl;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.util.JdbcBasedSessionPersistenceUtil;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.util.SessionPersistenceUtil;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.util.persistence.JdbcBasedSessionPersistenceUtil;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.util.persistence.SessionPersistenceUtil;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.util.persistence.SessionPersistenceUtil.NoOpSessionPersistenceUtil;
 import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberExceptionLoggingHandler;
 import com.google.devtools.mobileharness.infra.monitoring.CloudPubsubMonitorModule;
 import com.google.devtools.mobileharness.infra.monitoring.MonitorPipelineLauncher;
@@ -66,11 +67,17 @@ class ServerModule extends AbstractModule {
   private final Instant serverStartTime;
   private final boolean isAtsMode;
   private final boolean enableCloudPubsubMonitoring;
+  private final boolean enableDatabase;
 
-  ServerModule(boolean isAtsMode, Instant serverStartTime, boolean enableCloudPubsubMonitoring) {
+  ServerModule(
+      boolean isAtsMode,
+      Instant serverStartTime,
+      boolean enableCloudPubsubMonitoring,
+      boolean enableDatabase) {
     this.serverStartTime = serverStartTime;
     this.isAtsMode = isAtsMode;
     this.enableCloudPubsubMonitoring = enableCloudPubsubMonitoring;
+    this.enableDatabase = enableDatabase;
   }
 
   @Override
@@ -99,7 +106,10 @@ class ServerModule extends AbstractModule {
         .to(DatabaseConnections.class)
         .in(Singleton.class);
     bind(SessionPersistenceUtil.class)
-        .to(JdbcBasedSessionPersistenceUtil.class)
+        .to(
+            enableDatabase
+                ? JdbcBasedSessionPersistenceUtil.class
+                : NoOpSessionPersistenceUtil.class)
         .in(Singleton.class);
   }
 

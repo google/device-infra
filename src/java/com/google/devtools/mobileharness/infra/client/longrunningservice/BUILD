@@ -20,9 +20,9 @@ java_library(
     srcs = ["Annotations.java"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats:__subpackages__",
-        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
     ],
     deps = [
         "@maven//:javax_inject_jsr330_api",
@@ -97,8 +97,8 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:log_manager",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/service:local_session_stub",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/service:local_session_stub_impl",
-        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/util:jdbc_based_session_persistence_util",
-        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/util:session_persistence_util",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/util/persistence:jdbc_based_session_persistence_util",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/util/persistence:session_persistence_util",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/util:exception_handler",
         "//src/java/com/google/devtools/mobileharness/infra/monitoring:cloud_pubsub_monitor_module",
         "//src/java/com/google/devtools/mobileharness/infra/monitoring:monitor_pipeline_launcher",

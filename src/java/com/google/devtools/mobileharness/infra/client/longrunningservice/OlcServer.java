@@ -87,7 +87,8 @@ public class OlcServer {
                 new ServerModule(
                     Flags.instance().enableAtsMode.getNonNull(),
                     serverStartTime,
-                    Flags.instance().enableCloudPubsubMonitoring.getNonNull()))
+                    Flags.instance().enableCloudPubsubMonitoring.getNonNull(),
+                    enableDatabase()))
             .getInstance(OlcServer.class);
     server.run(Arrays.asList(args));
   }
@@ -174,9 +175,9 @@ public class OlcServer {
     LogRecorder.getInstance().initialize(logManager);
 
     // Connects to database.
-    String olcDatabaseJdbcUrl = Flags.instance().olcDatabaseJdbcUrl.get();
-    if (!Strings.isNullOrEmpty(olcDatabaseJdbcUrl)) {
-      olcDatabaseConnections.initialize(olcDatabaseJdbcUrl, /* statementCacheSize= */ 100);
+    if (enableDatabase()) {
+      olcDatabaseConnections.initialize(
+          Flags.instance().olcDatabaseJdbcUrl.get(), /* statementCacheSize= */ 100);
 
       // Prints table names.
       logger.atInfo().log(
@@ -284,5 +285,9 @@ public class OlcServer {
       logger.atInfo().log("Stopping monitoring service.");
       monitorPipelineLauncher.stop();
     }
+  }
+
+  private static boolean enableDatabase() {
+    return !Strings.isNullOrEmpty(Flags.instance().olcDatabaseJdbcUrl.get());
   }
 }

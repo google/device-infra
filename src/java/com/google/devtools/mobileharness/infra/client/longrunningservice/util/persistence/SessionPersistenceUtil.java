@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.infra.client.longrunningservice.util;
+package com.google.devtools.mobileharness.infra.client.longrunningservice.util.persistence;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
@@ -40,7 +40,7 @@ public interface SessionPersistenceUtil {
 
   /** Data or error. One and only one is present. */
   @AutoValue
-  public abstract class SessionPersistenceDataOrError {
+  abstract class SessionPersistenceDataOrError {
 
     public abstract Optional<SessionPersistenceData> data();
 
@@ -51,6 +51,21 @@ public interface SessionPersistenceUtil {
       checkArgument((data != null && error == null) || (data == null && error != null));
       return new AutoValue_SessionPersistenceUtil_SessionPersistenceDataOrError(
           Optional.ofNullable(data), Optional.ofNullable(error));
+    }
+  }
+
+  /** A no-op implementation. */
+  final class NoOpSessionPersistenceUtil implements SessionPersistenceUtil {
+
+    @Override
+    public void persistSession(SessionPersistenceData sessionPersistenceData) {}
+
+    @Override
+    public void removePersistenceData(String sessionId) {}
+
+    @Override
+    public ImmutableList<SessionPersistenceDataOrError> getToBeResumedSessions() {
+      return ImmutableList.of();
     }
   }
 }

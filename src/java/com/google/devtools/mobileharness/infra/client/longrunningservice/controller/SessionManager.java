@@ -53,7 +53,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.SessionFilter;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.SubscribeSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.SubscribeSessionResponse;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.util.SessionPersistenceUtil;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.util.persistence.SessionPersistenceUtil;
 import com.google.devtools.mobileharness.shared.context.InvocationContext.ContextScope;
 import com.google.devtools.mobileharness.shared.context.InvocationContext.InvocationInfo;
 import com.google.devtools.mobileharness.shared.context.InvocationContext.InvocationType;
@@ -568,6 +568,8 @@ public class SessionManager {
       synchronized (sessionsLock) {
         runningSessions.remove(finalSessionDetail.getSessionId().getId());
         archiveSession(finalSessionDetail);
+
+        // Removes persistence data asynchronously.
         logFailure(
             threadPool.submit(
                 threadRenaming(
@@ -585,10 +587,9 @@ public class SessionManager {
             Level.WARNING,
             "Failed to remove persistence data for session %s",
             sessionDetail.getSessionId().getId());
-        if (sessionEnvironment.isPresent()) {
-          // Cleans up session environment.
-          sessionEnvironment.get().close();
-        }
+
+        // Cleans up session environment.
+        sessionEnvironment.ifPresent(SessionEnvironment::close);
 
         // Tries to start new sessions if any.
         startSessions();

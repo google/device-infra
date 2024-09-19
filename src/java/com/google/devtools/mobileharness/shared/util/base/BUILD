@@ -41,6 +41,14 @@ java_library(
 )
 
 java_library(
+    name = "proto_extension_registry",
+    srcs = ["ProtoExtensionRegistry.java"],
+    deps = [
+        "@com_google_protobuf//:protobuf_java",
+    ],
+)
+
+java_library(
     name = "proto_text_format",
     srcs = ["ProtoTextFormat.java"],
     deps = [
