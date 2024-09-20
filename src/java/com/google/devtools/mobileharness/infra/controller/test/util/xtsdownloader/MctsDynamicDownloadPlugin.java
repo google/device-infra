@@ -157,6 +157,11 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
           versioncode.startsWith("35")
               ? getPreloadedMainlineVersion(versioncode, aospVersion)
               : aospVersion;
+      // Add the MCTS exclude file link url to the front of the list.
+      downloadLinkUrls.add(
+          String.format(
+              "https://dl.google.com/dl/android/xts/mcts/tool/mcts_exclude/%s/%s/mcts-exclude.txt",
+              aospVersion, preloadedMainlineVersion));
       for (String mctsName : mctsNamesOfPreloadedMainlineModules.get(PRELOADED_KEY)) {
         String downloadUrl =
             String.format(
@@ -185,11 +190,33 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
   public void downloadXtsFiles(XtsDynamicDownloadInfo xtsDynamicDownloadInfo, TestInfo testInfo)
       throws MobileHarnessException, InterruptedException {
     Set<String> allTestModules = new HashSet<>();
-    for (String downloadUrl : xtsDynamicDownloadInfo.getDownloadUrlList()) {
+    List<String> downloadUrlList = new ArrayList<>(xtsDynamicDownloadInfo.getDownloadUrlList());
+    Set<String> excludeTestModules = new HashSet<>();
+    // Get the exclude test modules.
+    if (downloadUrlList.get(0).contains("mcts_exclude")) {
+      logger.atInfo().log("Start to download MCTS exclude module list.");
+      String excludeTestModulesUrl = downloadUrlList.get(0);
+      String excludeTestModulesFilePath =
+          downloadPublicUrlFiles(
+              excludeTestModulesUrl, excludeTestModulesUrl.replace("https://dl.google.com/dl", ""));
+      if (excludeTestModulesFilePath != null) {
+        excludeTestModules.addAll(fileUtil.readLineListFromFile(excludeTestModulesFilePath));
+        // Print out all the exclude MCTS test modules
+        logger.atInfo().log("MCTS exclude test modules:");
+        for (String testModule : excludeTestModules) {
+          logger.atInfo().log("%s", testModule);
+        }
+      }
+      downloadUrlList.remove(0);
+    }
+
+    // Download the non-exclude MCTS test cases.
+    for (String downloadUrl : downloadUrlList) {
       logger.atInfo().log("Start to download: %s", downloadUrl);
       String subDirName = downloadUrl.replace("https://dl.google.com/dl", "");
       String filePath = downloadPublicUrlFiles(downloadUrl, subDirName);
-      allTestModules.addAll(unzipDownloadedTestCases(testInfo, filePath, subDirName));
+      allTestModules.addAll(
+          unzipDownloadedTestCases(testInfo, filePath, subDirName, excludeTestModules));
     }
     testInfo
         .properties()
@@ -388,7 +415,7 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
   }
 
   private Set<String> unzipDownloadedTestCases(
-      TestInfo testInfo, String filePath, String subDirName)
+      TestInfo testInfo, String filePath, String subDirName, Set<String> excludeTestModules)
       throws MobileHarnessException, InterruptedException {
     if (filePath == null) {
       return new HashSet<>();
@@ -405,7 +432,8 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
       String desPath = unzipDirPath + "/testcases";
       // Skip moving the files that already existed. For example, CtsDeviceInfo contained in all the
       // android-mcts-<module>.zip.
-      if (!fileUtil.getFileOrDir(desPath + "/" + PathUtil.basename(path)).exists()) {
+      if (!fileUtil.getFileOrDir(desPath + "/" + PathUtil.basename(path)).exists()
+          && !excludeTestModules.contains(PathUtil.basename(path))) {
         fileUtil.moveFileOrDir(path, desPath);
         logger.atInfo().log("Moved test cases from link [%s] to [%s]", path, unzipDirPath);
         testModules.add(PathUtil.basename(path));
