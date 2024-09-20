@@ -36,11 +36,6 @@ java_proto_library(
     deps = [":device_query_proto"],
 )
 
-go_proto_library(
-    name = "device_query_go_proto",
-    deps = [":device_query_proto"],
-)
-
 proto_library(
     name = "lab_query_proto",
     srcs = ["lab_query.proto"],
