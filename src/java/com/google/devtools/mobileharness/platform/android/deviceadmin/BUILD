@@ -19,12 +19,18 @@ java_library(
     name = "device_admin_util",
     srcs = ["DeviceAdminUtil.java"],
     visibility = [
+        "//java/com/google/devtools/mobileharness/platform/android/delegator:__subpackages__",
+        "//javatests/com/google/wireless/qa/mobileharness/shared/api/device:__subpackages__",
+        "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android/realdevice:__subpackages__",
+        "//src/javatests/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android/realdevice:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/deviceadmin:__subpackages__",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/system",
+        "@maven//:com_google_guava_guava",
     ],
 )

@@ -28,6 +28,7 @@ import com.google.devtools.mobileharness.infra.container.sandbox.device.DeviceSa
 import com.google.devtools.mobileharness.infra.container.sandbox.device.NoOpDeviceSandboxController;
 import com.google.devtools.mobileharness.platform.android.app.devicedaemon.DeviceDaemonHelper;
 import com.google.devtools.mobileharness.platform.android.connectivity.AndroidConnectivityUtil;
+import com.google.devtools.mobileharness.platform.android.deviceadmin.DeviceAdminUtil;
 import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstaller;
 import com.google.devtools.mobileharness.platform.android.lightning.systemstate.SystemStateManager;
@@ -90,7 +91,8 @@ public class AndroidRealDeviceDelegateImpl extends AndroidRealDeviceDelegate {
         new SystemStateManager(),
         new DeviceDaemonHelper(),
         new Fastboot(),
-        new LocalFileUtil());
+        new LocalFileUtil(),
+        new DeviceAdminUtil());
   }
 
   @VisibleForTesting
@@ -116,7 +118,8 @@ public class AndroidRealDeviceDelegateImpl extends AndroidRealDeviceDelegate {
       SystemStateManager systemStateManager,
       DeviceDaemonHelper deviceDaemonHelper,
       Fastboot fastboot,
-      LocalFileUtil localFileUtil) {
+      LocalFileUtil localFileUtil,
+      DeviceAdminUtil deviceAdminUtil) {
     super(
         device,
         androidDeviceDelegate,
@@ -139,7 +142,8 @@ public class AndroidRealDeviceDelegateImpl extends AndroidRealDeviceDelegate {
         systemStateManager,
         deviceDaemonHelper,
         fastboot,
-        localFileUtil);
+        localFileUtil,
+        deviceAdminUtil);
     this.androidAdbInternalUtil = androidAdbInternalUtil;
     this.connectivityUtil = connectivityUtil;
     this.noOpDeviceSandboxController = new NoOpDeviceSandboxController(device);

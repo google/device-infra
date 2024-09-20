@@ -241,6 +241,11 @@ public final class Dimension {
     /** The path of writable external storage on the device. */
     WRITABLE_EXTERNAL_STORAGE,
 
+    /** Whether the device requires to lock the device with device admin when setup. */
+    DEVICE_ADMIN_LOCK_REQUIRED,
+    /** Whether the device is locked with the device admin. */
+    DEVICE_ADMIN_LOCKED,
+
     // iOS
     /** Whether the device has blocked the iOS version upgrade successfully. */
     BLOCKED_IOS_VERSION_UPGRADE,

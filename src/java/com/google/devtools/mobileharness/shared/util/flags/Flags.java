@@ -473,6 +473,39 @@ public class Flags {
       converter = Flag.IntegerConverter.class)
   public Flag<Integer> detectDeviceIntervalSec = detectDeviceIntervalSecDefault;
 
+  private static final Flag<String> deviceAdminApkPathDefault = Flag.value("");
+
+  @com.beust.jcommander.Parameter(
+      names = "--device_admin_apk_path",
+      description = "Path to the device admin APK.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> deviceAdminApkPath = deviceAdminApkPathDefault;
+
+  private static final Flag<String> deviceAdminCliPathDefault = Flag.value("");
+
+  @com.beust.jcommander.Parameter(
+      names = "--device_admin_cli_path",
+      description = "Path to the device admin CLI binary.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> deviceAdminCliPath = deviceAdminCliPathDefault;
+
+  private static final Flag<String> deviceAdminKmsKeyDefault = Flag.value("");
+
+  @com.beust.jcommander.Parameter(
+      names = "--device_admin_kms_key",
+      description = "Path to the KMS key for signing device admin messages.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> deviceAdminKmsKey = deviceAdminKmsKeyDefault;
+
+  private static final Flag<String> deviceAdminKmsKeyCredDefault = Flag.value("");
+
+  @com.beust.jcommander.Parameter(
+      names = "--device_admin_kms_key_cred",
+      description =
+          "Path to the credetinal file to access the KMS key specified by --device_admin_kms_key.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> deviceAdminKmsKeyCred = deviceAdminKmsKeyCredDefault;
+
   private static final Flag<Boolean> pingGoogleDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(

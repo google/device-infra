@@ -52,6 +52,7 @@ import com.google.devtools.mobileharness.platform.android.app.devicedaemon.Devic
 import com.google.devtools.mobileharness.platform.android.connectivity.AndroidConnectivityUtil;
 import com.google.devtools.mobileharness.platform.android.connectivity.ConnectToWifiArgs;
 import com.google.devtools.mobileharness.platform.android.device.AndroidDeviceHelper;
+import com.google.devtools.mobileharness.platform.android.deviceadmin.DeviceAdminUtil;
 import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
 import com.google.devtools.mobileharness.platform.android.file.StorageInfo;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstallArgs;
@@ -151,6 +152,8 @@ public abstract class AndroidRealDeviceDelegate {
   private final LocalFileUtil fileUtil;
   private final AndroidDeviceHelper androidDeviceHelper;
 
+  private final DeviceAdminUtil deviceAdminUtil;
+
   protected AndroidRealDeviceDelegate(
       AndroidDevice device,
       AndroidDeviceDelegate androidDeviceDelegate,
@@ -173,7 +176,8 @@ public abstract class AndroidRealDeviceDelegate {
       SystemStateManager systemStateManager,
       DeviceDaemonHelper deviceDaemonHelper,
       Fastboot fastboot,
-      LocalFileUtil fileUtil) {
+      LocalFileUtil fileUtil,
+      DeviceAdminUtil deviceAdminUtil) {
     this.device = device;
     this.androidDeviceDelegate = androidDeviceDelegate;
     this.deviceStat = deviceStat;
@@ -196,6 +200,8 @@ public abstract class AndroidRealDeviceDelegate {
     this.deviceDaemonHelper = deviceDaemonHelper;
     this.fastboot = fastboot;
     this.fileUtil = fileUtil;
+    this.deviceAdminUtil = deviceAdminUtil;
+
     this.deviceId = device.getDeviceId();
     device.setProperty(
         AndroidRealDeviceConstants.PROPERTY_NAME_REBOOT_TO_STATE, DeviceState.DEVICE.name());
@@ -548,6 +554,17 @@ public abstract class AndroidRealDeviceDelegate {
   /** Extra settings for rooted or non-rooted devices for full stack features. */
   private void extraSettingsForFullStackDevice()
       throws MobileHarnessException, InterruptedException {
+    // Locks the device with device admin if the dimension DEVICE_ADMIN_LOCK_REQUIRED is set to
+    // true.
+    // TODO Based on the current behavior, a lock failure will cause the device to fail
+    // to setup and then reboot. Carefully consider whether we should catch and log the exception
+    // and continue the setup process if the lock operation fails.
+    if (device
+        .getDimension(Dimension.Name.DEVICE_ADMIN_LOCK_REQUIRED)
+        .contains(Dimension.Value.TRUE)) {
+      lockWithDeviceAdmin();
+    }
+
     // Disables airplane mode, enables unknown source. Only works with SDK version >= 17.
     Integer sdkVersion = device.getSdkVersion();
     if (Flags.instance().enableDeviceSystemSettingsChange.getNonNull()
@@ -989,6 +1006,13 @@ public abstract class AndroidRealDeviceDelegate {
     DeviceCache.getInstance().invalidateCache(device.info().deviceId().controlId());
 
     prependedRealDeviceAfterTestProcess(testInfo);
+
+    // Unlocking should be done before resetting the device with test harness.
+    // TODO Unlocking failure may cause the device fail to reset with test harness
+    // mode.
+    if (device.getDimension(Dimension.Name.DEVICE_ADMIN_LOCKED).contains(Dimension.Value.TRUE)) {
+      unlockWithDeviceAdmin();
+    }
 
     // Core lab devices won't have "recovery" device dimension.
     if (isRecoveryDevice()) {
@@ -2426,6 +2450,18 @@ public abstract class AndroidRealDeviceDelegate {
       systemStateUtil.waitUntilReady(deviceId);
     }
     return rooted;
+  }
+
+  private void lockWithDeviceAdmin() throws MobileHarnessException, InterruptedException {
+    logger.atInfo().log("Start to setup and lock device %s", deviceId);
+    deviceAdminUtil.setupAndLock(deviceId);
+    device.updateDimension(Dimension.Name.DEVICE_ADMIN_LOCKED, Dimension.Value.TRUE);
+  }
+
+  private void unlockWithDeviceAdmin() throws MobileHarnessException, InterruptedException {
+    logger.atInfo().log("Start to unlock device %s", deviceId);
+    deviceAdminUtil.unlock(deviceId);
+    device.removeDimension(Dimension.Name.DEVICE_ADMIN_LOCKED);
   }
 
   /**

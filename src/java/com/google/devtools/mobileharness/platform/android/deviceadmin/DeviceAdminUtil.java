@@ -16,16 +16,18 @@
 
 package com.google.devtools.mobileharness.platform.android.deviceadmin;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandException;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 
 /** Utility class for controlling Android device admin. */
-public final class DeviceAdminUtil {
+public class DeviceAdminUtil {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private final CommandExecutor commandExecutor;
@@ -40,7 +42,18 @@ public final class DeviceAdminUtil {
   private static final String ACTION_LOCK = "LOCK";
   private static final String ACTION_UNLOCK = "UNLOCK";
 
-  public DeviceAdminUtil(
+  public DeviceAdminUtil() {
+    this(
+        new CommandExecutor(),
+        new SystemUtil(),
+        Flags.instance().deviceAdminCliPath.getNonNull(),
+        Flags.instance().deviceAdminKmsKey.getNonNull(),
+        Flags.instance().deviceAdminKmsKeyCred.getNonNull(),
+        Flags.instance().deviceAdminApkPath.getNonNull());
+  }
+
+  @VisibleForTesting
+  DeviceAdminUtil(
       CommandExecutor commandExecutor,
       SystemUtil systemUtil,
       String deviceAdminCliPath,
