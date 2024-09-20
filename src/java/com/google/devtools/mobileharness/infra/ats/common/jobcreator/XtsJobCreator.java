@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Streams;
+import com.google.devtools.mobileharness.api.model.error.ErrorId;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
@@ -61,6 +62,14 @@ import java.util.stream.Stream;
 /** A creator to create XTS tradefed jobs and non tradefed jobs. */
 public abstract class XtsJobCreator {
 
+  private static final ImmutableSet<ErrorId> SKIPPABLE_ERROR_IDS =
+      ImmutableSet.of(
+          InfraErrorId.ATSC_TF_RETRY_WITHOUT_TF_MODULE,
+          InfraErrorId.OLCS_NO_CORRESPONDING_FILTER_FOUND_IN_SUBPLAN,
+          InfraErrorId.OLCS_NO_FILTER_FOUND_IN_RETRY_SUBPLAN,
+          InfraErrorId.XTS_NO_MATCHED_NON_TRADEFED_MODULES,
+          InfraErrorId.XTS_NO_MATCHED_TRADEFED_MODULES);
+
   private final SessionRequestHandlerUtil sessionRequestHandlerUtil;
   private final LocalFileUtil localFileUtil;
   private final TestPlanParser testPlanParser;
@@ -81,8 +90,7 @@ public abstract class XtsJobCreator {
   }
 
   public static boolean isSkippableException(MobileHarnessException e) {
-    return e.getErrorId() == InfraErrorId.XTS_NO_MATCHED_TRADEFED_MODULES
-        || e.getErrorId() == InfraErrorId.XTS_NO_MATCHED_NON_TRADEFED_MODULES;
+    return SKIPPABLE_ERROR_IDS.contains(e.getErrorId());
   }
 
   /**
