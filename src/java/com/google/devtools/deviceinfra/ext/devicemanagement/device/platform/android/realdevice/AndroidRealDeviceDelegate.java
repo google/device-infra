@@ -65,6 +65,7 @@ import com.google.devtools.mobileharness.platform.android.process.AndroidProcess
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidVersion;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceConnectionState;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceState;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.UsbDeviceLocator;
@@ -256,11 +257,7 @@ public abstract class AndroidRealDeviceDelegate {
         fastboot.wipe(deviceId, /* retryTask= */ null);
         logger.atInfo().log("Wipe device %s.", deviceId);
         // Cache for reboot the device.
-        DeviceCache.getInstance()
-            .cache(
-                deviceId,
-                device.getClass().getSimpleName(),
-                AndroidRealDeviceConstants.WAIT_FOR_REBOOT_TIMEOUT);
+        cacheDevice(deviceId, AndroidRealDeviceConstants.WAIT_FOR_REBOOT_TIMEOUT);
         logger.atInfo().log("Start rebooting the wiped device %s.", deviceId);
 
         fastboot.reboot(deviceId);
@@ -287,7 +284,7 @@ public abstract class AndroidRealDeviceDelegate {
         logger.atWarning().log("%s", e.getMessage());
         throw e;
       } finally {
-        DeviceCache.getInstance().invalidateCache(deviceId);
+        invalidateCacheDevice(deviceId);
       }
       setUpOnlineModeDevice();
     } else {
@@ -374,6 +371,7 @@ public abstract class AndroidRealDeviceDelegate {
 
   private void setUpOnlineModeDevice() throws MobileHarnessException, InterruptedException {
     androidDeviceDelegate.ensureDeviceReady();
+    resetDevice();
     validateDeviceOnceReady(deviceId, device.getClass().getSimpleName());
     androidDeviceDelegate.setUp(isRooted(), extraDimensionsForSetUpDevice());
 
@@ -404,6 +402,52 @@ public abstract class AndroidRealDeviceDelegate {
 
   /** Extra dimensions added to the device in the {@link #setUpOnlineModeDevice()} */
   protected abstract Multimap<Dimension.Name, String> extraDimensionsForSetUpDevice();
+
+  /**
+   * Resets the device if needed.
+   *
+   * <p>It will throw the exception out if it hit any error during the reset process so to restart
+   * the device setup process later.
+   */
+  private void resetDevice() throws MobileHarnessException, InterruptedException {
+    if (!Flags.instance().resetDeviceInAndroidRealDeviceSetup.get()) {
+      return;
+    }
+
+    int sdkVersion = systemSettingUtil.getDeviceSdkVersion(deviceId);
+    if (sdkVersion < AndroidVersion.ANDROID_10.getStartSdkVersion()) {
+      logger.atInfo().log(
+          "Skip resetting device %s because its SDK version %d is lower than Android 10.",
+          deviceId, sdkVersion);
+      return;
+    }
+
+    logger.atInfo().log("Resetting device %s", deviceId);
+    boolean isOverTcpDevice = DeviceUtil.isOverTcpDevice(deviceId);
+    cacheDevice(deviceId, AndroidRealDeviceConstants.WAIT_FOR_REBOOT_TIMEOUT);
+    try {
+      systemStateUtil.factoryResetViaTestHarness(deviceId, Duration.ofSeconds(30));
+      if (isOverTcpDevice) {
+        systemStateUtil.waitForOverTcpDeviceConnection(deviceId, Duration.ofMinutes(5));
+      }
+    } finally {
+      invalidateCacheDevice(deviceId);
+    }
+
+    Duration deviceReadyTimeout = Duration.ofMinutes(5);
+    cacheDevice(deviceId, deviceReadyTimeout.multipliedBy(2));
+    try {
+      // `adb wait-for-device` exits with error code when using a proxied device. Therefore, we wait
+      // for the device ready by using `systemStateUtil.waitUntilReady` instead.
+      if (!DeviceUtil.isOverTcpDevice(deviceId)) {
+        systemStateUtil.waitForState(deviceId, DeviceConnectionState.DEVICE, deviceReadyTimeout);
+      }
+      systemStateUtil.waitUntilReady(deviceId, deviceReadyTimeout);
+    } finally {
+      invalidateCacheDevice(deviceId);
+    }
+    logger.atInfo().log("Device %s reset is done", deviceId);
+  }
 
   /**
    * Adds real device basic dimensions and properties.
@@ -637,12 +681,10 @@ public abstract class AndroidRealDeviceDelegate {
     try {
       logger.atInfo().log("Try to reboot the recovery device %s", deviceId);
       // Cache for reboot the device.
-      DeviceCache.getInstance()
-          .cache(
-              deviceId,
-              device.getClass().getSimpleName(),
-              AndroidRealDeviceConstants.WAIT_FOR_REBOOT_TIMEOUT.plus(
-                  Constants.DEFAULT_ADB_COMMAND_TIMEOUT));
+      cacheDevice(
+          deviceId,
+          AndroidRealDeviceConstants.WAIT_FOR_REBOOT_TIMEOUT.plus(
+              Constants.DEFAULT_ADB_COMMAND_TIMEOUT));
       systemStateUtil.reboot(deviceId);
       systemStateUtil.waitForState(
           deviceId,
@@ -657,7 +699,7 @@ public abstract class AndroidRealDeviceDelegate {
         return;
       }
     } finally {
-      DeviceCache.getInstance().invalidateCache(deviceId);
+      invalidateCacheDevice(deviceId);
     }
 
     // Recovery device is rebooted to normal mode
@@ -1003,7 +1045,7 @@ public abstract class AndroidRealDeviceDelegate {
   public PostTestDeviceOp postRunTest(TestInfo testInfo)
       throws MobileHarnessException, InterruptedException {
     // Removes the device cache after tests finish, otherwise device status may be wrong. b/32101092
-    DeviceCache.getInstance().invalidateCache(device.info().deviceId().controlId());
+    invalidateCacheDevice(device.info().deviceId().controlId());
 
     prependedRealDeviceAfterTestProcess(testInfo);
 
@@ -2476,5 +2518,13 @@ public abstract class AndroidRealDeviceDelegate {
 
   protected boolean getFlagSkipCheckDeviceInternet() {
     return Flags.instance().skipCheckDeviceInternet.getNonNull();
+  }
+
+  private void cacheDevice(String deviceId, Duration expireTime) {
+    DeviceCache.getInstance().cache(deviceId, device.getClass().getSimpleName(), expireTime);
+  }
+
+  private void invalidateCacheDevice(String deviceId) {
+    DeviceCache.getInstance().invalidateCache(deviceId);
   }
 }

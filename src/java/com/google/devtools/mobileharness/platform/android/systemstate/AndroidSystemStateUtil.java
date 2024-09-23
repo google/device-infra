@@ -861,4 +861,41 @@ public class AndroidSystemStateUtil {
     }
     return false;
   }
+
+  /**
+   * Waits for over tcp device connection.
+   *
+   * <p>Need to cache device before using it
+   */
+  public void waitForOverTcpDeviceConnection(String deviceId, Duration timeout)
+      throws MobileHarnessException, InterruptedException {
+    boolean success =
+        AndroidAdbUtil.waitForDeviceReady(
+            UtilArgs.builder().setSerial(deviceId).build(),
+            utilArgs -> {
+              try {
+                logger.atInfo().log("Trying to connect to device %s...", deviceId);
+                adbUtil.connect(utilArgs.serial());
+                logger.atInfo().log("Connected to device %s", deviceId);
+                return true;
+              } catch (MobileHarnessException e) {
+                /* Do nothing. */
+              } catch (InterruptedException e) {
+                logger.atWarning().log(
+                    "Caught interrupted exception when connecting to device %s, interrupt current"
+                        + " thread:%n%s",
+                    utilArgs.serial(), e.getMessage());
+                Thread.currentThread().interrupt();
+              }
+              return false;
+            },
+            WaitArgs.builder()
+                .setCheckReadyInterval(Duration.ofSeconds(1))
+                .setCheckReadyTimeout(timeout)
+                .build());
+    if (!success) {
+      /* Try one more connect which will throw an error with the reason of failure. */
+      adbUtil.connect(deviceId);
+    }
+  }
 }

@@ -1260,6 +1260,17 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> removeJobGenFilesWhenFinished = removeJobGenFilesWhenFinishedDefault;
 
+  private static final Flag<Boolean> resetDeviceInAndroidRealDeviceSetupDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--reset_device_in_android_real_device_setup",
+      description =
+          "If this flag is true, Android real device will be reset first in setup process. Default"
+              + " is false.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> resetDeviceInAndroidRealDeviceSetup =
+      resetDeviceInAndroidRealDeviceSetupDefault;
+
   private static final Flag<String> resDirNameDefault = Flag.value("mh_res_files");
 
   @com.beust.jcommander.Parameter(
