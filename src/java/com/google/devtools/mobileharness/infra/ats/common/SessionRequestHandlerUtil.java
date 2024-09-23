@@ -87,6 +87,7 @@ import java.net.URLEncoder;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -109,6 +110,37 @@ public class SessionRequestHandlerUtil {
   public static final String ANDROID_DEVICE_TYPE = "AndroidDevice";
   private static final Pattern MODULE_PARAMETER_PATTERN =
       Pattern.compile(".*\\[(?<moduleParam>.*)]$");
+
+  /**
+   * The same as
+   * com.google.wireless.qa.mobileharness.shared.api.driver.MoblyGenericTest.TEST_SELECTOR_KEY
+   */
+  public static final String MOBLY_TEST_SELECTOR_KEY = "test_case_selector";
+
+  /**
+   * The same as
+   * com.google.devtools.mobileharness.platform.android.xts.plugin.NonTradefedReportGenerator.PARAM_RUN_CERTIFICATION_TEST_SUITE
+   */
+  public static final String PARAM_RUN_CERTIFICATION_TEST_SUITE = "run_certification_test_suite";
+
+  /**
+   * The same as
+   * com.google.devtools.mobileharness.platform.android.xts.plugin.NonTradefedReportGenerator.PARAM_XTS_SUITE_INFO
+   */
+  public static final String PARAM_XTS_SUITE_INFO = "xts_suite_info";
+
+  /**
+   * The same as
+   * com.google.devtools.deviceinfra.ext.devicemanagement.device.platform.android.realdevice.AndroidRealDeviceConstants.PARAM_CLEAR_GSERVICES_OVERRIDES
+   */
+  public static final String PARAM_CLEAR_GSERVICES_OVERRIDES = "clear_gservices_overrides";
+
+  /**
+   * The same as
+   * com.google.wireless.qa.mobileharness.shared.api.step.android.InstallApkStepConstants.PARAM_CHECK_INSTALLED_GMS_CORE_VERSION
+   */
+  public static final String PARAM_CHECK_INSTALLED_GMS_CORE_VERSION =
+      "check_installed_gms_core_version";
 
   private static final Duration JOB_TEST_TIMEOUT_DIFF = Duration.ofMinutes(1L);
   private static final Duration DEFAULT_TRADEFED_JOB_TIMEOUT = Duration.ofDays(15L);
@@ -207,30 +239,19 @@ public class SessionRequestHandlerUtil {
     ImmutableMap<String, DeviceDetails> allAndroidDevices =
         deviceDetailsRetriever.getAllAndroidDevicesWithNeededDetails(sessionRequestInfo);
     logger.atInfo().log("All android devices: %s", allAndroidDevices.keySet());
-    ImmutableList<String> passedInDeviceSerials = sessionRequestInfo.deviceSerials();
-    DeviceSelectionOptions.Builder deviceSelectionOptionsBuilder =
+
+    DeviceSelectionOptions.Builder optionsBuilder =
         DeviceSelectionOptions.builder()
-            .setSerials(passedInDeviceSerials)
+            .setSerials(sessionRequestInfo.deviceSerials())
             .setExcludeSerials(sessionRequestInfo.excludeDeviceSerials())
             .setProductTypes(sessionRequestInfo.productTypes())
             .setDeviceProperties(sessionRequestInfo.deviceProperties());
-    if (sessionRequestInfo.maxBatteryLevel().isPresent()) {
-      deviceSelectionOptionsBuilder.setMaxBatteryLevel(sessionRequestInfo.maxBatteryLevel().get());
-    }
-    if (sessionRequestInfo.minBatteryLevel().isPresent()) {
-      deviceSelectionOptionsBuilder.setMinBatteryLevel(sessionRequestInfo.minBatteryLevel().get());
-    }
-    if (sessionRequestInfo.maxBatteryTemperature().isPresent()) {
-      deviceSelectionOptionsBuilder.setMaxBatteryTemperature(
-          sessionRequestInfo.maxBatteryTemperature().get());
-    }
-    if (sessionRequestInfo.minSdkLevel().isPresent()) {
-      deviceSelectionOptionsBuilder.setMinSdkLevel(sessionRequestInfo.minSdkLevel().get());
-    }
-    if (sessionRequestInfo.maxSdkLevel().isPresent()) {
-      deviceSelectionOptionsBuilder.setMaxSdkLevel(sessionRequestInfo.maxSdkLevel().get());
-    }
-    DeviceSelectionOptions deviceSelectionOptions = deviceSelectionOptionsBuilder.build();
+    sessionRequestInfo.maxBatteryLevel().ifPresent(optionsBuilder::setMaxBatteryLevel);
+    sessionRequestInfo.minBatteryLevel().ifPresent(optionsBuilder::setMinBatteryLevel);
+    sessionRequestInfo.maxBatteryTemperature().ifPresent(optionsBuilder::setMaxBatteryTemperature);
+    sessionRequestInfo.minSdkLevel().ifPresent(optionsBuilder::setMinSdkLevel);
+    sessionRequestInfo.maxSdkLevel().ifPresent(optionsBuilder::setMaxSdkLevel);
+    DeviceSelectionOptions deviceSelectionOptions = optionsBuilder.build();
 
     ImmutableSet<DeviceDetails> availableDevices =
         allAndroidDevices.values().stream()
@@ -244,7 +265,7 @@ public class SessionRequestHandlerUtil {
           /* cause= */ null);
     }
 
-    if (passedInDeviceSerials.isEmpty()) {
+    if (sessionRequestInfo.deviceSerials().isEmpty()) {
       return pickAndroidOnlineDevices(
           sessionRequestInfo,
           availableDevices.stream().map(DeviceDetails::id).collect(toImmutableSet()),
@@ -271,23 +292,16 @@ public class SessionRequestHandlerUtil {
                 "id",
                 String.format("regex:(%s)", Joiner.on('|').join(allMatchAndroidOnlineDevices)))
             .build();
+    SubDeviceSpec subDeviceSpec =
+        SubDeviceSpec.newBuilder()
+            .setType(getTradefedRequiredDeviceType(sessionRequestInfo))
+            .setDimensions(dimensions)
+            .build();
     if (shardCount <= 1 && !allMatchAndroidOnlineDevices.isEmpty()) {
-      return ImmutableList.of(
-          SubDeviceSpec.newBuilder()
-              .setType(getTradefedRequiredDeviceType(sessionRequestInfo))
-              .setDimensions(dimensions)
-              .build());
+      return ImmutableList.of(subDeviceSpec);
     }
     int numOfNeededDevices = min(allMatchAndroidOnlineDevices.size(), shardCount);
-    ImmutableList.Builder<SubDeviceSpec> deviceSpecList = ImmutableList.builder();
-    for (int i = 0; i < numOfNeededDevices; i++) {
-      deviceSpecList.add(
-          SubDeviceSpec.newBuilder()
-              .setType(getTradefedRequiredDeviceType(sessionRequestInfo))
-              .setDimensions(dimensions)
-              .build());
-    }
-    return deviceSpecList.build();
+    return ImmutableList.copyOf(Collections.nCopies(numOfNeededDevices, subDeviceSpec));
   }
 
   private static String getTradefedRequiredDeviceType(SessionRequestInfo info) {
@@ -334,32 +348,25 @@ public class SessionRequestHandlerUtil {
         .collect(toImmutableSet());
   }
 
-  /** Gets all local tradefed modules including the mcts modules from the static list. */
-  public ImmutableSet<String> getStaticFullTradefedModules() throws MobileHarnessException {
-    String ctsListPath =
-        resUtilProvider
-            .get()
-            .getResourceFile(
-                getClass(),
-                "/devtools/mobileharness/infra/controller/test/util/xtsdownloader/configs/cts_list.txt");
-    return localFileUtil.readLineListFromFile(ctsListPath).stream()
+  private ImmutableSet<String> getStringSetFromResourceFile(String resPathInJar)
+      throws MobileHarnessException {
+    String filePath = resUtilProvider.get().getResourceFile(getClass(), resPathInJar);
+    return localFileUtil.readLineListFromFile(filePath).stream()
         .map(String::trim)
         .filter(line -> !line.isEmpty())
         .collect(toImmutableSet());
   }
 
+  /** Gets all local tradefed modules including the mcts modules from the static list. */
+  public ImmutableSet<String> getStaticFullTradefedModules() throws MobileHarnessException {
+    return getStringSetFromResourceFile(
+        "/devtools/mobileharness/infra/controller/test/util/xtsdownloader/configs/cts_list.txt");
+  }
+
   /** Gets all mcts modules from the static list. */
   public ImmutableSet<String> getStaticMctsModules() throws MobileHarnessException {
-    String ctsListPath =
-        resUtilProvider
-            .get()
-            .getResourceFile(
-                getClass(),
-                "/devtools/mobileharness/infra/controller/test/util/xtsdownloader/configs/mcts_list.txt");
-    return localFileUtil.readLineListFromFile(ctsListPath).stream()
-        .map(String::trim)
-        .filter(line -> !line.isEmpty())
-        .collect(toImmutableSet());
+    return getStringSetFromResourceFile(
+        "/devtools/mobileharness/infra/controller/test/util/xtsdownloader/configs/mcts_list.txt");
   }
 
   /**
@@ -453,9 +460,11 @@ public class SessionRequestHandlerUtil {
             ? DEFAULT_TRADEFED_START_TIMEOUT
             : sessionRequestInfo.startTimeout();
 
-    JobConfig.Builder jobConfigBuilder =
+    String name = "xts-tradefed-test-job";
+    Path jobGenDir = createJobGenDir(name);
+    JobConfig jobConfig =
         JobConfig.newBuilder()
-            .setName("xts-tradefed-test-job")
+            .setName(name)
             .setExecMode("local")
             .setJobTimeoutSec(saturatedCast(jobTimeout.toSeconds()))
             .setTestTimeoutSec(saturatedCast(testTimeout.toSeconds()))
@@ -463,19 +472,16 @@ public class SessionRequestHandlerUtil {
             .setPriority(Priority.HIGH)
             .setTestAttempts(1)
             .setTests(
-                StringList.newBuilder()
-                    .addContent(String.format("xts-tradefed-test-%s", testPlan)));
-    jobConfigBuilder.setDevice(DeviceList.newBuilder().addAllSubDeviceSpec(subDeviceSpecList));
-
-    jobConfigBuilder.setDriver(
-        Driver.newBuilder().setName("XtsTradefedTest").setParam(new Gson().toJson(driverParams)));
-
-    Path jobGenDir = createJobGenDir(jobConfigBuilder.getName());
-    jobConfigBuilder.setGenFileDir(jobGenDir.toString());
-
-    JobConfig jobConfig = jobConfigBuilder.build();
+                StringList.newBuilder().addContent(String.format("xts-tradefed-test-%s", testPlan)))
+            .setDevice(DeviceList.newBuilder().addAllSubDeviceSpec(subDeviceSpecList))
+            .setDriver(
+                Driver.newBuilder()
+                    .setName("XtsTradefedTest")
+                    .setParam(new Gson().toJson(driverParams)))
+            .setGenFileDir(jobGenDir.toString())
+            .build();
     logger.atInfo().log("XtsTradefedTest job config: %s", shortDebugString(jobConfig));
-    return jobConfigBuilder.build();
+    return jobConfig;
   }
 
   /**
@@ -667,13 +673,15 @@ public class SessionRequestHandlerUtil {
         sessionRequestInfo.v2ConfigsMap().entrySet().stream()
             .collect(toImmutableMap(e -> e.getValue().getMetadata().getXtsModule(), Entry::getKey));
 
-    ImmutableList<SuiteTestFilter> includeFilters =
-        Stream.concat(
-                sessionRequestInfo.includeFilters().stream(),
-                testPlanFilter.includeFilters().stream())
-            .map(SuiteTestFilter::create)
-            .collect(toImmutableList());
-    if (subPlan != null) {
+    ImmutableList<SuiteTestFilter> includeFilters;
+    if (subPlan == null) {
+      includeFilters =
+          Stream.concat(
+                  sessionRequestInfo.includeFilters().stream(),
+                  testPlanFilter.includeFilters().stream())
+              .map(SuiteTestFilter::create)
+              .collect(toImmutableList());
+    } else {
       includeFilters =
           subPlan.getNonTfIncludeFiltersMultimap().entries().stream()
               .map(
@@ -686,6 +694,7 @@ public class SessionRequestHandlerUtil {
               .collect(toImmutableList());
       logger.atInfo().log("Include filters for Non-TF retry/subplan run: %s", includeFilters);
     }
+
     ImmutableList<SuiteTestFilter> excludeFilters =
         Stream.concat(
                 sessionRequestInfo.excludeFilters().stream(),
@@ -738,13 +747,13 @@ public class SessionRequestHandlerUtil {
           && !subPlan.getNonTfIncludeFiltersMultimap().containsKey(expandedModuleName)) {
         continue;
       }
-      ImmutableList.Builder<String> matchedTestCasesBuilder = ImmutableList.builder();
       if (givenMatchedNonTfModules.isEmpty()
           || givenMatchedNonTfModules.contains(originalModuleName)) {
         // Gets module abi
         String moduleAbi = getModuleAbi(expandedModuleName).orElse(null);
         // Gets module parameter
         String moduleParameter = getModuleParameter(expandedModuleName).orElse(null);
+        ImmutableList.Builder<String> matchedTestCasesBuilder = ImmutableList.builder();
 
         // Filters the module by include-filter and exclude-filter.
         if (excludeFilters.stream()
@@ -755,7 +764,7 @@ public class SessionRequestHandlerUtil {
           continue;
         }
         if (sessionRequestInfo.testName().isPresent()) {
-          String parsedTestName = parseTestName(sessionRequestInfo.testName().orElse(null));
+          String parsedTestName = parseTestName(sessionRequestInfo.testName().get());
           if (!parsedTestName.isEmpty()) {
             matchedTestCasesBuilder.add(parsedTestName);
           } else {
@@ -778,23 +787,23 @@ public class SessionRequestHandlerUtil {
         }
 
         // Get excluded test names in current module.
+        ImmutableList<String> matchedTestCases = matchedTestCasesBuilder.build();
         ImmutableList<String> excludedTestNames =
             excludeFilters.stream()
                 .filter(
                     excludeFilter ->
                         excludeFilter.matchModule(originalModuleName, moduleAbi, moduleParameter))
                 .filter(excludeFilter -> excludeFilter.testName().isPresent())
-                .map(excludeFilter -> parseTestName(excludeFilter.testName().orElse(null)))
+                .map(excludeFilter -> parseTestName(excludeFilter.testName().get()))
                 .collect(toImmutableList());
         if (!excludedTestNames.isEmpty()) {
-          if (matchedTestCasesBuilder.build().isEmpty()) {
+          if (matchedTestCases.isEmpty()) {
             try {
-              List<String> allTestNamesInModule =
+              matchedTestCases =
                   moblyTestLoader.getTestNamesInModule(
                       Path.of(
                           requireNonNull(moduleNameToConfigFilePathMap.get(originalModuleName))),
                       entry.getValue());
-              matchedTestCasesBuilder.addAll(allTestNamesInModule);
             } catch (MobileHarnessException e) {
               logger
                   .atWarning()
@@ -806,13 +815,11 @@ public class SessionRequestHandlerUtil {
                       originalModuleName);
             }
           }
-          ImmutableList<String> originalMatchedTestCases = matchedTestCasesBuilder.build();
-          matchedTestCasesBuilder = ImmutableList.builder();
-          matchedTestCasesBuilder.addAll(
-              originalMatchedTestCases.stream()
+          matchedTestCases =
+              matchedTestCases.stream()
                   .filter(testName -> !excludedTestNames.contains(testName))
-                  .collect(toImmutableList()));
-          if (matchedTestCasesBuilder.build().isEmpty()) {
+                  .collect(toImmutableList());
+          if (matchedTestCases.isEmpty()) {
             logger.atInfo().log(
                 "Test case exclude filters filtered every test cases: %s.\n"
                     + "No job created for this module: %s.",
@@ -834,7 +841,7 @@ public class SessionRequestHandlerUtil {
                 expandedModuleName,
                 moduleAbi,
                 moduleParameter,
-                matchedTestCasesBuilder.build(),
+                matchedTestCases,
                 jobTimeout,
                 testTimeout,
                 startTimeout,
@@ -961,13 +968,13 @@ public class SessionRequestHandlerUtil {
     }
     jobInfo.properties().add(Job.SKIP_COLLECTING_DEVICE_INFO, Boolean.toString(skipDeviceInfo));
     if (!matchedTestCases.isEmpty()) {
-      jobInfo.params().add("test_case_selector", Joiner.on(" ").join(matchedTestCases));
+      jobInfo.params().add(MOBLY_TEST_SELECTOR_KEY, Joiner.on(" ").join(matchedTestCases));
     }
-    jobInfo.params().add("run_certification_test_suite", "true");
+    jobInfo.params().add(PARAM_RUN_CERTIFICATION_TEST_SUITE, "true");
     jobInfo
         .params()
         .add(
-            "xts_suite_info",
+            PARAM_XTS_SUITE_INFO,
             generateXtsSuiteInfoMap(
                 xtsRootDir.toAbsolutePath().toString(),
                 xtsType,
@@ -984,9 +991,9 @@ public class SessionRequestHandlerUtil {
   /** Injects common params to the job info for both tradefed and non-tradefed jobs. */
   private void injectCommonParams(JobInfo jobInfo) {
     // Skip to clear gservice flag overrides.
-    jobInfo.params().add("clear_gservices_overrides", "false");
+    jobInfo.params().add(PARAM_CLEAR_GSERVICES_OVERRIDES, "false");
     // Skip to check installed gms core version.
-    jobInfo.params().add("check_installed_gms_core_version", "false");
+    jobInfo.params().add(PARAM_CHECK_INSTALLED_GMS_CORE_VERSION, "false");
   }
 
   private String generateXtsSuiteInfoMap(String xtsRootDir, String xtsType, String testPlan) {
@@ -1026,11 +1033,13 @@ public class SessionRequestHandlerUtil {
       }
     }
 
-    JobConfig.Builder jobConfigBuilder =
+    String name =
+        String.format("xts-mobly-aosp-package-job-%s", expandedModuleName.replace(' ', '_'));
+    Path jobGenDir = createJobGenDir(name);
+    Path jobTmpDir = createJobTmpDir(name);
+    JobConfig jobConfig =
         JobConfig.newBuilder()
-            .setName(
-                String.format(
-                    "xts-mobly-aosp-package-job-%s", expandedModuleName.replace(' ', '_')))
+            .setName(name)
             .setExecMode("local")
             .setJobTimeoutSec(saturatedCast(jobTimeout.toSeconds()))
             .setTestTimeoutSec(saturatedCast(testTimeout.toSeconds()))
@@ -1042,15 +1051,11 @@ public class SessionRequestHandlerUtil {
                     .addContent(
                         String.format(
                             "xts-mobly-aosp-package-test-%s",
-                            expandedModuleName.replace(' ', '_'))));
-    jobConfigBuilder.setDevice(DeviceList.newBuilder().addAllSubDeviceSpec(subDeviceSpecList));
-    jobConfigBuilder.setDriver(Driver.newBuilder().setName("MoblyAospPackageTest"));
-
-    Path jobGenDir = createJobGenDir(jobConfigBuilder.getName());
-    Path jobTmpDir = createJobTmpDir(jobConfigBuilder.getName());
-    jobConfigBuilder.setGenFileDir(jobGenDir.toString());
-
-    JobConfig jobConfig = jobConfigBuilder.build();
+                            expandedModuleName.replace(' ', '_'))))
+            .setDevice(DeviceList.newBuilder().addAllSubDeviceSpec(subDeviceSpecList))
+            .setDriver(Driver.newBuilder().setName("MoblyAospPackageTest"))
+            .setGenFileDir(jobGenDir.toString())
+            .build();
     logger.atInfo().log(
         "Non-tradefed job base config for module '%s': %s",
         expandedModuleName, shortDebugString(jobConfig));

@@ -56,7 +56,8 @@ public class MoblyTestLoader {
    * @return a list of test names
    * @throws MobileHarnessException if fails to get test names
    */
-  public List<String> getTestNamesInModule(Path moduleConfigPath, Configuration moduleConfig)
+  public ImmutableList<String> getTestNamesInModule(
+      Path moduleConfigPath, Configuration moduleConfig)
       throws InterruptedException, MobileHarnessException {
     List<Path> filePaths =
         localFileUtil.listFilePaths(
@@ -84,6 +85,6 @@ public class MoblyTestLoader {
               + ". Output: "
               + output);
     }
-    return ImmutableList.copyOf(lines).subList(1, lines.size());
+    return ImmutableList.copyOf(lines.subList(1, lines.size()));
   }
 }
