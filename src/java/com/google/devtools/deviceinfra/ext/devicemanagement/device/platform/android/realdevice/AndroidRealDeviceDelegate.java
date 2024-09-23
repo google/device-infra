@@ -598,14 +598,12 @@ public abstract class AndroidRealDeviceDelegate {
   /** Extra settings for rooted or non-rooted devices for full stack features. */
   private void extraSettingsForFullStackDevice()
       throws MobileHarnessException, InterruptedException {
-    // Locks the device with device admin if the dimension DEVICE_ADMIN_LOCK_REQUIRED is set to
+    // Locks the device with device admin if the flag --device_admin_lock_required is set to
     // true.
     // TODO Based on the current behavior, a lock failure will cause the device to fail
     // to setup and then reboot. Carefully consider whether we should catch and log the exception
     // and continue the setup process if the lock operation fails.
-    if (device
-        .getDimension(Dimension.Name.DEVICE_ADMIN_LOCK_REQUIRED)
-        .contains(Dimension.Value.TRUE)) {
+    if (Flags.instance().deviceAdminLockRequired.getNonNull()) {
       lockWithDeviceAdmin();
     }
 

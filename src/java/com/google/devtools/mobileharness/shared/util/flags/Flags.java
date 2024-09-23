@@ -506,6 +506,16 @@ public class Flags {
       converter = Flag.StringConverter.class)
   public Flag<String> deviceAdminKmsKeyCred = deviceAdminKmsKeyCredDefault;
 
+  private static final Flag<Boolean> deviceAdminLockRequiredDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--device_admin_lock_required",
+      description =
+          "Whether to require the Android real device to be locked by device admin when setup."
+              + " Default is false.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> deviceAdminLockRequired = deviceAdminLockRequiredDefault;
+
   private static final Flag<Boolean> pingGoogleDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(
