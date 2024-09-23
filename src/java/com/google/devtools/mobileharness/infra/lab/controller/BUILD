@@ -42,6 +42,26 @@ java_library(
 )
 
 java_library(
+    name = "file_classifier",
+    srcs = [
+        "FileClassifier.java",
+    ],
+    deps = [
+        ":job_manager",
+        "//src/devtools/mobileharness/infra/lab/proto:file_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/api/model/job/util:add_file_handler",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test/model:test_execution_unit",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/path",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/comm/filetransfer",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job:locator",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "file_publisher",
     srcs = ["FilePublisher.java"],
     deps = [

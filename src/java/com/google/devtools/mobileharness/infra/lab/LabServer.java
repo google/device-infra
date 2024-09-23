@@ -45,6 +45,7 @@ import com.google.devtools.mobileharness.infra.lab.Annotations.RpcPort;
 import com.google.devtools.mobileharness.infra.lab.Annotations.ServViaStubby;
 import com.google.devtools.mobileharness.infra.lab.common.dir.DirUtil;
 import com.google.devtools.mobileharness.infra.lab.controller.DeviceConfigManager;
+import com.google.devtools.mobileharness.infra.lab.controller.FileClassifier;
 import com.google.devtools.mobileharness.infra.lab.controller.JobManager;
 import com.google.devtools.mobileharness.infra.lab.controller.LabDimensionManager;
 import com.google.devtools.mobileharness.infra.lab.controller.LocalFileBasedDeviceConfigManager;
@@ -63,6 +64,10 @@ import com.google.devtools.mobileharness.shared.constant.hostmanagement.HostProp
 import com.google.devtools.mobileharness.shared.labinfo.LabInfoProvider;
 import com.google.devtools.mobileharness.shared.labinfo.LocalLabInfoProvider;
 import com.google.devtools.mobileharness.shared.util.base.StrUtil;
+import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.rpc.service.CloudFileTransferServiceGrpcImpl;
+import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.rpc.service.CloudFileTransferServiceImpl;
+import com.google.devtools.mobileharness.shared.util.comm.filetransfer.common.TaggedFileHandler;
+import com.google.devtools.mobileharness.shared.util.comm.filetransfer.common.proto.TaggedFileMetadataProto.TaggedFileMetadata;
 import com.google.devtools.mobileharness.shared.util.comm.stub.ChannelFactory;
 import com.google.devtools.mobileharness.shared.util.comm.stub.MasterGrpcStubHelper;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -87,6 +92,7 @@ import io.grpc.BindableService;
 import io.grpc.netty.NettyServerBuilder;
 import io.grpc.protobuf.services.ProtoReflectionService;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -244,6 +250,17 @@ public class LabServer {
 
       // gRPC services for local RPC only.
       List<BindableService> localGrpcServices = new ArrayList<>(grpcServices);
+      if (Flags.instance().enableCloudFileTransfer.getNonNull()) {
+        CloudFileTransferServiceImpl cloudFileTransferServiceImpl =
+            new CloudFileTransferServiceImpl(
+                Path.of(DirUtil.getCloudReceivedDir()), Path.of(DirCommon.getPublicDirRoot()));
+        BindableService cloudFileTransferService =
+            new CloudFileTransferServiceGrpcImpl(cloudFileTransferServiceImpl)
+                .addHandler(
+                    TaggedFileMetadata.class,
+                    new TaggedFileHandler(new FileClassifier(jobManager)));
+        localGrpcServices.add(cloudFileTransferService);
+      }
 
       localGrpcServices.add(ProtoReflectionService.newInstance());
       localGrpcServices.add(
