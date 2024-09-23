@@ -288,6 +288,11 @@ public class OlcServer {
   }
 
   private static boolean enableDatabase() {
+    return enableDatabaseOss();
+  }
+
+  @SuppressWarnings("unused")
+  private static boolean enableDatabaseOss() {
     return !Strings.isNullOrEmpty(Flags.instance().olcDatabaseJdbcUrl.get());
   }
 }
