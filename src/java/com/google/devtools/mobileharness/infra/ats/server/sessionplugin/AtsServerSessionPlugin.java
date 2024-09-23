@@ -27,9 +27,8 @@ import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.Ats
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.AtsServerSessionNotification.NotificationCase;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CancelReason;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandAttemptDetail;
-import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandDetail;
-import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandInfo;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandState;
+import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.ErrorReason;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.NewMultiCommandRequest;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.RequestDetail;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.RequestDetail.RequestState;
@@ -67,7 +66,6 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import javax.inject.Inject;
 
 /** Session Plugin to serve test requests coming from ATS server. */
@@ -102,6 +100,11 @@ final class AtsServerSessionPlugin {
 
   @GuardedBy("sessionLock")
   private final List<TestInfo> startedTestsBeforeCancellation = new ArrayList<>();
+
+  // All non-tradefed jobs which will be initiated when the session starts. They will be added to
+  // the session when all tradefed jobs have ended.
+  @GuardedBy("sessionLock")
+  private ImmutableList<JobInfo> nonTradefedJobs = null;
 
   private final SessionInfo sessionInfo;
   private final NewMultiCommandRequestHandler newMultiCommandRequestHandler;
@@ -145,14 +148,45 @@ final class AtsServerSessionPlugin {
           } else {
             requestDetail.setState(RequestState.RUNNING);
           }
-          newMultiCommandRequestHandler.addTradefedJobs(
-              newMultiCommandRequest, sessionInfo, requestDetail);
-          runningTradefedJobCount = sessionInfo.getAllJobs().size();
-          // If no tradefed job was created and the request does not contain any error that cause it
-          // to cancel, create non tradefed jobs directly.
-          if (requestDetail.getCommandDetailsCount() == 0
-              && requestDetail.getState() == RequestState.RUNNING) {
-            createNonTradefedJobs();
+
+          // Create tradefed jobs.
+          ImmutableList<JobInfo> tradefedJobs =
+              newMultiCommandRequestHandler.createTradefedJobs(
+                  newMultiCommandRequest, sessionInfo, requestDetail);
+          if (!requestDetail.getState().equals(RequestState.RUNNING)) {
+            return;
+          }
+
+          // Create non-tradefed jobs.
+          nonTradefedJobs =
+              newMultiCommandRequestHandler.createNonTradefedJobs(
+                  newMultiCommandRequest, sessionInfo, requestDetail);
+          if (!requestDetail.getState().equals(RequestState.RUNNING)) {
+            return;
+          }
+
+          if (tradefedJobs.isEmpty() && nonTradefedJobs.isEmpty()) {
+            requestDetail
+                .setState(RequestState.ERROR)
+                .setErrorReason(ErrorReason.INVALID_REQUEST)
+                .setErrorMessage(
+                    String.format(
+                        "No jobs were created for session： %s ", sessionInfo.getSessionId()));
+            logger.atWarning().log(
+                "Session [%s] interrupted: No tradefed or non-tradefed jobs were created.",
+                sessionInfo.getSessionId());
+            return;
+          }
+
+          // Ensure non-tradefed jobs are added only if no tradefed jobs exist or all tradefed jobs
+          // have ended.
+          if (!tradefedJobs.isEmpty()) {
+            // Add tradefed jobs to session.
+            addJobsToSession(tradefedJobs);
+            runningTradefedJobCount = tradefedJobs.size();
+          } else {
+            // If no tradefed job was added, add non tradefed jobs directly.
+            addJobsToSession(nonTradefedJobs);
           }
         } finally {
           updateSessionPluginOutput();
@@ -196,7 +230,18 @@ final class AtsServerSessionPlugin {
       if (runningTradefedJobCount > 0) {
         return;
       }
-      createNonTradefedJobs();
+
+      // Non-tradefed jobs might be lost in long-running sessions. Re-initialize them to ensure
+      // they are executed.
+      if (nonTradefedJobs == null) {
+        nonTradefedJobs =
+            newMultiCommandRequestHandler.createNonTradefedJobs(
+                requestDetail.getOriginalRequest(), sessionInfo, requestDetail);
+      }
+      if (!nonTradefedJobs.isEmpty()) {
+        addJobsToSession(nonTradefedJobs);
+      }
+      updateSessionPluginOutput();
     }
   }
 
@@ -250,6 +295,12 @@ final class AtsServerSessionPlugin {
         sendCancellationMessageToStartedTest(testInfo);
       }
     }
+  }
+
+  /** Add jobs to the session. */
+  @GuardedBy("sessionLock")
+  private void addJobsToSession(ImmutableList<JobInfo> jobInfoList) {
+    jobInfoList.forEach(sessionInfo::addJob);
   }
 
   private void sendCancellationMessageToStartedTest(TestInfo testInfo) {
@@ -331,18 +382,6 @@ final class AtsServerSessionPlugin {
         && !requestDetail.getCommandDetailsMap().isEmpty()
         && requestDetail.getCommandDetailsMap().values().iterator().next().getTotalModuleCount()
             != 0;
-  }
-
-  private void createNonTradefedJobs() throws InterruptedException {
-    synchronized (sessionLock) {
-      for (CommandInfo commandInfo : requestDetail.getOriginalRequest().getCommandsList()) {
-        Optional<CommandDetail> commandDetail =
-            newMultiCommandRequestHandler.addNonTradefedJobs(
-                requestDetail.getOriginalRequest(), commandInfo, sessionInfo);
-        commandDetail.ifPresent(detail -> requestDetail.putCommandDetails(detail.getId(), detail));
-      }
-      updateSessionPluginOutput();
-    }
   }
 
   private CommandAttemptDetail generateCommandAttemptDetail(JobInfo jobInfo, TestInfo testInfo) {

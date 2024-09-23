@@ -18,7 +18,6 @@ package com.google.devtools.mobileharness.infra.ats.server.sessionplugin;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
-import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
 import static com.google.devtools.mobileharness.shared.util.error.MoreThrowables.shortDebugString;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toJavaDuration;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -29,11 +28,13 @@ import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.SetMultimap;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.io.Files;
 import com.google.devtools.deviceinfra.shared.util.file.remote.constant.RemoteFileType;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
+import com.google.devtools.mobileharness.api.model.error.ErrorId;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
@@ -108,6 +109,10 @@ final class NewMultiCommandRequestHandler {
       Pattern.compile("android-[a-z]+\\.zip");
   @VisibleForTesting static final String XTS_TF_JOB_PROP = "xts-tradefed-job";
 
+  private static final ImmutableSet<ErrorId> INVALID_RESOURCE_ERROR_IDS =
+      ImmutableSet.of(
+          BasicErrorId.LOCAL_MOUNT_ZIP_TO_DIR_ERROR, InfraErrorId.ATS_SERVER_INVALID_TEST_RESOURCE);
+
   private final SessionRequestHandlerUtil sessionRequestHandlerUtil;
   private final SessionResultHandlerUtil sessionResultHandlerUtil;
   private final LocalFileUtil localFileUtil;
@@ -148,66 +153,102 @@ final class NewMultiCommandRequestHandler {
     this.xtsJobCreator = xtsJobCreator;
   }
 
-  void addTradefedJobs(
+  ImmutableList<JobInfo> createTradefedJobs(
       NewMultiCommandRequest request,
       SessionInfo sessionInfo,
       RequestDetail.Builder requestDetailBuilder)
       throws InterruptedException {
     if (request.getCommandsList().isEmpty()) {
       setRequestError(requestDetailBuilder, ErrorReason.INVALID_REQUEST, "COMMAND_NOT_AVAILABLE");
-      return;
+      return ImmutableList.of();
     }
+    ImmutableList.Builder<JobInfo> jobInfoBuilder = ImmutableList.builder();
     for (CommandInfo commandInfo : request.getCommandsList()) {
-      CommandDetail commandDetail = createXtsTradefedTestJob(request, commandInfo, sessionInfo);
-      if (commandDetail.getState() == CommandState.ERROR) {
+      try {
+        ImmutableList<JobInfo> jobInfos =
+            createXtsTradefedTestJob(request, commandInfo, sessionInfo, requestDetailBuilder);
+        jobInfoBuilder.addAll(jobInfos);
+      } catch (MobileHarnessException e) {
+        logger.atWarning().withCause(e).log(
+            "Failed to create tradefed jobs for command [%s]. Interrupt the session [%s].",
+            commandInfo.getCommandLine(), sessionInfo.getSessionId());
+        ErrorReason errorReason =
+            INVALID_RESOURCE_ERROR_IDS.contains(e.getErrorId())
+                ? ErrorReason.INVALID_RESOURCE
+                : ErrorReason.INVALID_REQUEST;
         setRequestError(
             requestDetailBuilder,
-            ErrorReason.INVALID_REQUEST,
-            "INVALID_COMMAND_" + commandInfo.getCommandLine());
-        requestDetailBuilder.putCommandDetails(
-            "UNKNOWN_" + commandInfo.getCommandLine(), commandDetail);
-        return;
-      } else if (commandDetail.getState() == CommandState.RUNNING) {
-        requestDetailBuilder.putCommandDetails(commandDetail.getId(), commandDetail);
+            errorReason,
+            String.format(
+                "INVALID_COMMAND_%s with error: %s",
+                commandInfo.getCommandLine(), shortDebugString(e)));
+        return ImmutableList.of();
       }
     }
     requestDetailBuilder.setUpdateTime(Timestamps.fromMillis(clock.millis()));
+    return jobInfoBuilder.build();
   }
 
-  // Creates non-tradefed jobs if needed. If the command detail of this command hasn't been created
-  // before, create and return one.
-  Optional<CommandDetail> addNonTradefedJobs(
-      NewMultiCommandRequest request, CommandInfo commandInfo, SessionInfo sessionInfo)
+  ImmutableList<JobInfo> createNonTradefedJobs(
+      NewMultiCommandRequest request,
+      SessionInfo sessionInfo,
+      RequestDetail.Builder requestDetailBuilder)
       throws InterruptedException {
+    if (request.getCommandsList().isEmpty()) {
+      setRequestError(requestDetailBuilder, ErrorReason.INVALID_REQUEST, "COMMAND_NOT_AVAILABLE");
+      return ImmutableList.of();
+    }
+
+    ImmutableList.Builder<JobInfo> jobInfoBuilder = ImmutableList.builder();
+    for (CommandInfo commandInfo : request.getCommandsList()) {
+      try {
+        jobInfoBuilder.addAll(
+            createNonTradefedJobs(request, commandInfo, sessionInfo, requestDetailBuilder));
+      } catch (MobileHarnessException e) {
+        logger.atWarning().withCause(e).log(
+            "Failed to create non-tradefed jobs for command [%s]. Interrupt the session [%s].",
+            commandInfo.getCommandLine(), sessionInfo.getSessionId());
+        ErrorReason errorReason =
+            INVALID_RESOURCE_ERROR_IDS.contains(e.getErrorId())
+                ? ErrorReason.INVALID_RESOURCE
+                : ErrorReason.INVALID_REQUEST;
+        setRequestError(
+            requestDetailBuilder,
+            errorReason,
+            String.format(
+                "INVALID_COMMAND_%s with error: %s",
+                commandInfo.getCommandLine(), shortDebugString(e)));
+        return ImmutableList.of();
+      }
+    }
+    return jobInfoBuilder.build();
+  }
+
+  private ImmutableList<JobInfo> createNonTradefedJobs(
+      NewMultiCommandRequest request,
+      CommandInfo commandInfo,
+      SessionInfo sessionInfo,
+      RequestDetail.Builder requestDetailBuilder)
+      throws InterruptedException, MobileHarnessException {
     SessionRequestInfo sessionRequestInfo;
     if (sessionRequestInfoCache.containsKey(commandInfo)) {
       sessionRequestInfo = sessionRequestInfoCache.get(commandInfo);
     } else {
-      try {
-        sessionRequestInfo = generateSessionRequestInfo(request, commandInfo, sessionInfo);
-      } catch (MobileHarnessException e) {
-        logger.atWarning().withCause(e).log(
-            "Failed to generate sessionRequestInfo from commandInfo: %s. SessionID: %s",
-            shortDebugString(commandInfo), sessionInfo.getSessionId());
-        return Optional.empty();
-      }
+      sessionRequestInfo = generateSessionRequestInfo(request, commandInfo, sessionInfo);
       sessionRequestInfoCache.put(commandInfo, sessionRequestInfo);
     }
 
     ImmutableList<JobInfo> jobInfos;
     try {
       jobInfos = xtsJobCreator.createXtsNonTradefedJobs(sessionRequestInfo);
-      if (jobInfos.isEmpty()) {
-        logger.atInfo().log(
-            "No valid module(s) matched, no non-tradefed jobs will run. The command info -> %s",
-            shortDebugString(commandInfo));
-        return Optional.empty();
-      }
     } catch (MobileHarnessException e) {
-      logger.atWarning().withCause(e).log(
-          "Failed to create xTS non-TF jobs. The command info -> %s",
-          shortDebugString(commandInfo));
-      return Optional.empty();
+      if (XtsJobCreator.isSkippableException(e)) {
+        logger.atInfo().log(
+            "Unable to create non-tradefed jobs for command [%s] due to skippable exception: [%s].",
+            commandInfo.getCommandLine(), shortDebugString(e));
+        return ImmutableList.of();
+      }
+      throw e;
     }
 
     Optional<CommandDetail.Builder> commandDetail;
@@ -233,23 +274,19 @@ final class NewMultiCommandRequestHandler {
         reformatResourcePathForNonTradefedJob(jobInfo);
       } catch (MobileHarnessException e) {
         commandDetail.ifPresent(
-            builder ->
-                setCommandError(
-                    builder,
-                    ErrorReason.INVALID_RESOURCE,
-                    String.format(
-                        "Failed to reformat resource path of job [%s]: %s",
-                        jobInfo.locator().getName(), shortDebugString(e))));
-        continue;
+            builder -> {
+              builder.setState(CommandState.ERROR);
+              requestDetailBuilder.putCommandDetails(
+                  "UNKNOWN_" + commandInfo.getCommandLine(), builder.build());
+            });
+        throw e;
       }
-      sessionInfo.addJob(jobInfo);
       commandToJobsMap.put(commandId, jobInfo.locator().getId());
       jobToCommandMap.put(jobInfo.locator().getId(), commandId);
-      logger.atInfo().log(
-          "Added non-tradefed job[%s] to the session %s",
-          jobInfo.locator().getId(), sessionInfo.getSessionId());
     }
-    return commandDetail.map(CommandDetail.Builder::build);
+    commandDetail.ifPresent(
+        builder -> requestDetailBuilder.putCommandDetails(commandId, builder.build()));
+    return jobInfos;
   }
 
   String getCommandIdOfJob(JobInfo jobInfo) {
@@ -271,9 +308,12 @@ final class NewMultiCommandRequestHandler {
     }
   }
 
-  private CommandDetail createXtsTradefedTestJob(
-      NewMultiCommandRequest request, CommandInfo commandInfo, SessionInfo sessionInfo)
-      throws InterruptedException {
+  private ImmutableList<JobInfo> createXtsTradefedTestJob(
+      NewMultiCommandRequest request,
+      CommandInfo commandInfo,
+      SessionInfo sessionInfo,
+      RequestDetail.Builder requestDetailBuilder)
+      throws InterruptedException, MobileHarnessException {
     SessionRequestInfo sessionRequestInfo;
     CommandDetail.Builder commandDetailBuilder = CommandDetail.newBuilder();
     commandDetailBuilder.setCommandLine(commandInfo.getCommandLine());
@@ -290,67 +330,51 @@ final class NewMultiCommandRequestHandler {
       sessionRequestInfo = generateSessionRequestInfo(request, commandInfo, sessionInfo);
       sessionRequestInfoCache.put(commandInfo, sessionRequestInfo);
     } catch (MobileHarnessException e) {
-      String errorSummary =
-          String.format(
-              "Failed to generate sessionRequestInfo from commandInfo [%s]",
-              shortDebugString(commandInfo));
-      logger.atWarning().withCause(e).log(
-          "%s, session_id=%s", errorSummary, sessionInfo.getSessionId());
-      // TODO : Also check error code of invalid test resource.
-      ErrorReason errorReason =
-          e.getErrorId() == BasicErrorId.LOCAL_MOUNT_ZIP_TO_DIR_ERROR
-              ? ErrorReason.INVALID_RESOURCE
-              : ErrorReason.INVALID_REQUEST;
-      setCommandError(
-          commandDetailBuilder,
-          errorReason,
-          String.format("%s: %s", errorSummary, shortDebugString(e)));
-      return commandDetailBuilder.build();
+      commandDetailBuilder.setState(CommandState.ERROR);
+      requestDetailBuilder.putCommandDetails(
+          "UNKNOWN_" + commandInfo.getCommandLine(), commandDetailBuilder.build());
+      throw e;
     }
 
     ImmutableList<JobInfo> jobInfoList;
     try {
       jobInfoList = xtsJobCreator.createXtsTradefedTestJob(sessionRequestInfo);
-      if (jobInfoList.isEmpty()) {
-        setCommandError(
-            commandDetailBuilder,
-            ErrorReason.INVALID_REQUEST,
-            "No valid module(s) matched, no TF jobs will run.");
-        return commandDetailBuilder.build();
-      }
     } catch (MobileHarnessException e) {
       if (XtsJobCreator.isSkippableException(e)) {
-        return commandDetailBuilder.build();
+        logger.atInfo().log(
+            "Unable to create tradefed jobs for command [%s] due to skippable exception: [%s].",
+            commandInfo.getCommandLine(), shortDebugString(e));
+        requestDetailBuilder.putCommandDetails(
+            "UNKNOWN_" + commandInfo.getCommandLine(), commandDetailBuilder.build());
+        return ImmutableList.of();
       }
-      setCommandError(
-          commandDetailBuilder,
-          ErrorReason.INVALID_REQUEST,
-          "Failed to create xTS TF job: " + shortDebugString(e));
-      return commandDetailBuilder.build();
+      commandDetailBuilder.setState(CommandState.ERROR);
+      requestDetailBuilder.putCommandDetails(
+          "UNKNOWN_" + commandInfo.getCommandLine(), commandDetailBuilder.build());
+      throw e;
     }
     for (JobInfo jobInfo : jobInfoList) {
       try {
         insertAdditionalTestResource(jobInfo, request);
       } catch (MobileHarnessException e) {
-        setCommandError(
-            commandDetailBuilder,
-            ErrorReason.INVALID_RESOURCE,
-            String.format(
-                "Failed to insert additional test resource to job [%s]: %s",
-                jobInfo.locator().getName(), shortDebugString(e)));
-        continue;
+        commandDetailBuilder.setState(CommandState.ERROR);
+        requestDetailBuilder.putCommandDetails(
+            "UNKNOWN_" + commandInfo.getCommandLine(), commandDetailBuilder.build());
+        throw e;
       }
       String commandId = getCommandId(commandInfo, request);
       commandDetailBuilder.setId(commandId).setState(CommandState.RUNNING);
       commandToJobsMap.put(commandId, jobInfo.locator().getId());
       jobToCommandMap.put(jobInfo.locator().getId(), commandId);
       jobInfo.properties().add(XTS_TF_JOB_PROP, "true");
-      sessionInfo.addJob(jobInfo);
       logger.atInfo().log(
           "Added job [%s] to the session %s",
           jobInfo.locator().getId(), sessionInfo.getSessionId());
     }
-    return commandDetailBuilder.build();
+
+    CommandDetail commandDetail = commandDetailBuilder.build();
+    requestDetailBuilder.putCommandDetails(commandDetail.getId(), commandDetail);
+    return jobInfoList;
   }
 
   private void insertAdditionalTestResource(JobInfo jobInfo, NewMultiCommandRequest request)
@@ -414,14 +438,12 @@ final class NewMultiCommandRequestHandler {
       }
     }
     if (androidXtsZipPath.isEmpty()) {
-      logger.atInfo().log(
-          "Didn't find android xts zip file in request resources: %s, session ID: %s ",
-          request.getTestResourcesList(), sessionInfo.getSessionId());
-      throw new MobileHarnessException(
+      throw MobileHarnessExceptionFactory.createUserFacingException(
           InfraErrorId.ATS_SERVER_INVALID_REQUEST_ERROR,
           String.format(
               "Didn't find valid android xts zip file in request resources: %s, session ID: %s ",
-              request.getTestResourcesList(), sessionInfo.getSessionId()));
+              request.getTestResourcesList(), sessionInfo.getSessionId()),
+          /* cause= */ null);
     }
     String xtsRootDir =
         PathUtil.join(
@@ -730,14 +752,6 @@ final class NewMultiCommandRequestHandler {
           String.format("Failed to unmount dir %s", mountDirPath),
           e);
     }
-  }
-
-  private static void setCommandError(
-      CommandDetail.Builder commandDetailBuilder, ErrorReason reason, String errorMessage) {
-    commandDetailBuilder
-        .setState(CommandState.ERROR)
-        .setErrorReason(reason)
-        .setErrorMessage(appendErrorMessage(commandDetailBuilder.getErrorMessage(), errorMessage));
   }
 
   private static void setRequestError(

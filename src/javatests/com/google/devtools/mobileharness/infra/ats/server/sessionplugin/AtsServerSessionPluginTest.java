@@ -333,7 +333,7 @@ public final class AtsServerSessionPluginTest {
     RequestDetail requestDetail = unaryOperatorCaptor.getValue().apply(null);
     assertThat(requestDetail.getState()).isEqualTo(RequestState.ERROR);
     // Contains the failed command detail.
-    assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
+    assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(2);
     assertThat(requestDetail.getErrorReason()).isEqualTo(ErrorReason.INVALID_REQUEST);
   }
 
@@ -356,6 +356,37 @@ public final class AtsServerSessionPluginTest {
 
     verify(sessionInfo)
         .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
+    RequestDetail requestDetail = unaryOperatorCaptor.getValue().apply(null);
+    assertThat(requestDetail.getId()).isEqualTo("session_id");
+    assertThat(requestDetail.getState()).isEqualTo(RequestState.ERROR);
+    assertThat(requestDetail.getCommandInfosList()).containsExactly(commandInfo);
+    assertThat(requestDetail.getCreateTime()).isEqualTo(Timestamps.fromMillis(1000L));
+    assertThat(requestDetail.getStartTime()).isEqualTo(Timestamps.fromMillis(2000L));
+    assertThat(requestDetail.getMaxRetryOnTestFailures())
+        .isEqualTo(request.getMaxRetryOnTestFailures());
+  }
+
+  @Test
+  public void onSessionStarting_addNonTfJobsHadException_requestDetailContainBasicInfo()
+      throws Exception {
+    when(clock.millis()).thenReturn(1000L).thenReturn(2000L).thenReturn(3000L);
+    MobileHarnessException mhException =
+        new MobileHarnessException(BasicErrorId.NON_MH_EXCEPTION, "error");
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of());
+    when(xtsJobCreator.createXtsNonTradefedJobs(any())).thenThrow(mhException);
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(
+                        SessionRequest.newBuilder().setNewMultiCommandRequest(request).build()))
+                .build());
+
+    plugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+
+    verify(sessionInfo)
+        .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
+    verify(sessionInfo, never()).addJob(any());
     RequestDetail requestDetail = unaryOperatorCaptor.getValue().apply(null);
     assertThat(requestDetail.getId()).isEqualTo("session_id");
     assertThat(requestDetail.getState()).isEqualTo(RequestState.ERROR);
@@ -576,6 +607,10 @@ public final class AtsServerSessionPluginTest {
     plugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
     verify(sessionInfo).addJob(jobInfo);
     verify(sessionInfo).addJob(jobInfo2);
+    // Verify non-TF jobs are created but not added.
+    verify(xtsJobCreator, times(2)).createXtsNonTradefedJobs(any());
+    verify(sessionInfo, never()).addJob(moblyJobInfo);
+    verify(sessionInfo, never()).addJob(moblyJobInfo2);
 
     Timing timing = new Timing();
     when(jobInfo.timing()).thenReturn(timing);
@@ -587,9 +622,10 @@ public final class AtsServerSessionPluginTest {
     JobType jobType = JobType.newBuilder().setDriver("XtsTradefedTest").build();
     when(jobInfo.type()).thenReturn(jobType);
 
-    // Verify first jobInfo end signal won't trigger non-TF job creation.
+    // Verify first jobInfo end signal won't add non-TF jobs.
     plugin.onJobEnded(new JobEndEvent(jobInfo, null));
-    verify(xtsJobCreator, never()).createXtsNonTradefedJobs(any());
+    verify(sessionInfo, never()).addJob(moblyJobInfo);
+    verify(sessionInfo, never()).addJob(moblyJobInfo2);
 
     when(jobInfo2.timing()).thenReturn(timing);
     when(jobInfo2.status()).thenReturn(new Status(timing).set(TestStatus.DONE));
@@ -1053,7 +1089,7 @@ public final class AtsServerSessionPluginTest {
     RequestDetail requestDetail = unaryOperatorCaptor.getValue().apply(null);
     assertThat(requestDetail.getState()).isEqualTo(RequestState.ERROR);
     // Contains the failed command detail.
-    assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
+    assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(2);
     assertThat(requestDetail.getErrorReason()).isEqualTo(ErrorReason.INVALID_REQUEST);
 
     plugin.onSessionEnded(new SessionEndedEvent(sessionInfo, null));
