@@ -16,6 +16,8 @@
 # Description:
 #   Utility classes for event handling.
 
+load("@rules_java//java:defs.bzl", "java_library")
+
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = ["//:deviceinfra_all_pkg"],

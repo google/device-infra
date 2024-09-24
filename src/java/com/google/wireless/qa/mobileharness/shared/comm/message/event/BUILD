@@ -16,6 +16,8 @@
 # Description:
 #   Events for Mobile Harness test message mechanism.
 
+load("@rules_java//java:defs.bzl", "java_library")
+
 package(
     default_applicable_licenses = ["//:license"],
 )

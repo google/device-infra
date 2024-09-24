@@ -16,6 +16,8 @@
 # Description:
 #   Fake log collector for testing.
 
+load("@rules_java//java:defs.bzl", "java_library")
+
 package(
     default_applicable_licenses = ["//:license"],
     default_testonly = 1,
