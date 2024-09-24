@@ -66,6 +66,7 @@ public enum AndroidProperty {
   @DoNotAddToDimension
   PRODUCT("ro.build.product"),
   PRODUCT_BOARD("ro.product.board", "ro.hardware"),
+  PRODUCT_DEVICE("ro.product.device"),
   REGION("persist.sys.country", "ro.product.locale.region"),
   RELEASE_VERSION("ro.build.version.release"),
   REVISION("ro.revision", "ro.boot.revision", "ro.boot.hardware.revision"),

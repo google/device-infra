@@ -238,6 +238,13 @@ public final class Dimension {
      *     com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty#PRODUCT_BOARD
      */
     PRODUCT_BOARD,
+    /**
+     * The product_device dimension.
+     *
+     * @see
+     *     com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty#PRODUCT_DEVICE
+     */
+    PRODUCT_DEVICE,
     /** The path of writable external storage on the device. */
     WRITABLE_EXTERNAL_STORAGE,
 
