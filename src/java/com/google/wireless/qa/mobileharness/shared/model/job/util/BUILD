@@ -16,6 +16,8 @@
 # Description:
 #   Shared job utility libraries.
 
+load("@rules_java//java:defs.bzl", "java_library")
+
 DEFAULT_VISIBILITY = [
     "//:deviceinfra_all_pkg",
 ]
