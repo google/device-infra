@@ -16,6 +16,8 @@
 # Description:
 #   Execution mode of the Mobile Harness client.
 
+load("@rules_java//java:defs.bzl", "java_library")
+
 java_library(
     name = "mode",
     srcs = ["ExecMode.java"],

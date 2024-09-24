@@ -17,6 +17,8 @@
 #   Device allocator interfaces or utility classes, for allocating Mobile
 #   Harness local/lab devices for executing Mobile Harness tests.
 
+load("@rules_java//java:defs.bzl", "java_library")
+
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [

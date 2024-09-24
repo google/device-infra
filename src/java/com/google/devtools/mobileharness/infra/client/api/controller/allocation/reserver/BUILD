@@ -17,6 +17,8 @@
 #   Device reserver interfaces or utility classes, for reserving Mobile
 #   Harness local/lab devices for executing Mobile Harness tests.
 
+load("@rules_java//java:defs.bzl", "java_library")
+
 DEFAULT_VISIBILITY = [
     "//java/com/google/devtools/mobileharness/infra/client:__subpackages__",
     "//java/com/google/wireless/qa/mobileharness/client/api:__subpackages__",
