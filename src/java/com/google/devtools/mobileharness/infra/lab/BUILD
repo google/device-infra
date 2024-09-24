@@ -13,6 +13,8 @@
 # limitations under the License.
 #
 
+load("@rules_java//java:defs.bzl", "java_binary", "java_library")
+
 # Unified test run services builds
 package(
     default_applicable_licenses = ["//:license"],
