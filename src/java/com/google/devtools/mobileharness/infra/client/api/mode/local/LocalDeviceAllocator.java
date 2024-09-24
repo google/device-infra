@@ -16,6 +16,9 @@
 
 package com.google.devtools.mobileharness.infra.client.api.mode.local;
 
+import static com.google.common.util.concurrent.Futures.getUnchecked;
+import static java.util.Objects.requireNonNull;
+
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -170,8 +173,11 @@ public class LocalDeviceAllocator extends AbstractDeviceAllocator {
   }
 
   @Override
-  public synchronized void tearDown() throws MobileHarnessException, InterruptedException {
-    AbstractScheduler scheduler = getScheduler();
+  public synchronized void tearDown() throws MobileHarnessException {
+    if (!schedulerFuture.isDone()) {
+      return;
+    }
+    AbstractScheduler scheduler = requireNonNull(getUnchecked(schedulerFuture));
     // Closes the job and changes the device back to IDLE.
     scheduler.removeJob(jobInfo.locator().getId(), false);
     scheduler.unregisterEventHandler(allocationEventHandler);

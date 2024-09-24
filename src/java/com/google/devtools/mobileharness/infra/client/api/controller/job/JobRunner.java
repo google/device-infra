@@ -690,9 +690,16 @@ public class JobRunner implements Runnable {
               new MobileHarnessException(
                   InfraErrorId.CLIENT_JR_JOB_EXEC_FATAL_ERROR, "Fatal job error", t));
     } finally {
+      // Tears down device allocator.
+      boolean interrupted = Thread.interrupted();
       if (isDeviceAllocatorSetUp) {
         tearDownAllocator();
       }
+      if (interrupted) {
+        Thread.currentThread().interrupt();
+      }
+
+      // Post-runs job.
       try (MobileHarnessAutoCloseable ignored = getPostRunJobSpan()) {
         postRunJob(jobError, failFastError.orElse(null), isDeviceAllocatorSetUp);
       }
@@ -925,16 +932,6 @@ public class JobRunner implements Runnable {
       deviceAllocator.tearDown();
     } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
       jobInfo.errors().addAndLog(e, logger);
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      jobInfo
-          .errors()
-          .addAndLog(
-              new MobileHarnessException(
-                  InfraErrorId.CLIENT_JR_JOB_TEAR_DOWN_ALLOCATOR_INTERRUPTED,
-                  "Job interrupted when tearing down allocator",
-                  e),
-              logger);
     } catch (Throwable t) {
       // For safety, prints out the unknown error.
       logger.atSevere().withCause(t).log("FATAL job error when tearing down allocator");

@@ -45,7 +45,7 @@ public final class Callables {
    * suppressed exceptions, if any.
    *
    * <p>Before executing each callable, the interrupted status of the current thread will be saved
-   * and cleared.
+   * and cleared. Before this method returns, the status will be recovered.
    *
    * <p>This method can be used for simplifying code of executing multiple cleanup tasks in finally
    * blocks. For example, from
@@ -133,6 +133,96 @@ public final class Callables {
     }
     Throwables.throwIfInstanceOf(error, MobileHarnessException.class);
     Throwables.throwIfInstanceOf(error, InterruptedException.class);
+    Throwables.throwIfUnchecked(error);
+  }
+
+  /**
+   * Executes all {@link Runnable}s in the given list sequentially. All runnables will be executed
+   * regardless of any {@link Throwable}s thrown by previous runnables.
+   *
+   * <p>This method will throw the first exception, and add the following exceptions as its
+   * suppressed exceptions, if any.
+   *
+   * <p>Before executing each runnable, the interrupted status of the current thread will be saved
+   * and cleared. Before this method returns, the status will be recovered.
+   *
+   * <p>This method can be used for simplifying code of executing multiple cleanup tasks in finally
+   * blocks. For example, from
+   *
+   * <pre>{@code
+   * try {
+   *   try {
+   *     try {
+   *       foo();
+   *     } finally {
+   *       cleanupTask1();
+   *     }
+   *   } finally {
+   *     cleanupTask2();
+   *   }
+   * } finally {
+   *   cleanupTask3();
+   * }
+   * }</pre>
+   *
+   * or
+   *
+   * <pre>{@code
+   * try {
+   *   foo();
+   * } finally {
+   *   try {
+   *     cleanupTask1();
+   *   } finally {
+   *     try {
+   *       cleanupTask2();
+   *     } finally {
+   *       cleanupTask3();
+   *     }
+   *   }
+   * }
+   * }</pre>
+   *
+   * to
+   *
+   * <pre>{@code
+   * try {
+   *   foo();
+   * } finally {
+   *   Callables.runAll(this::cleanupTask1, this::cleanupTask2, this::cleanupTask3);
+   * }
+   * }</pre>
+   */
+  public static void runAll(Runnable... runnables) {
+    boolean interrupted = false;
+    List<Throwable> errors = new ArrayList<>();
+
+    // Calls each runnable.
+    for (Runnable runnable : runnables) {
+      interrupted |= Thread.interrupted();
+      try {
+        runnable.run();
+      } catch (RuntimeException | Error e) {
+        errors.add(e);
+      }
+    }
+
+    // Gets the error to throw if any.
+    Throwable error;
+    if (errors.isEmpty()) {
+      error = null;
+    } else {
+      error = errors.get(0);
+      errors.stream().skip(1L).forEach(error::addSuppressed);
+    }
+    if (interrupted) {
+      Thread.currentThread().interrupt();
+    }
+
+    // Throws the error if any.
+    if (error == null) {
+      return;
+    }
     Throwables.throwIfUnchecked(error);
   }
 

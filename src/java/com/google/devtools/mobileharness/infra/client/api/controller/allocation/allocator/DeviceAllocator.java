@@ -61,6 +61,9 @@ public interface DeviceAllocator {
    * been invoked when this method is invoked. It should NOT assume that all {@link
    * #releaseAllocation} will be invoked eventually either. Therefore please remember to do all
    * clean up work which {@link #releaseAllocation} of all allocations should do in this method.
+   *
+   * <p>NOTE: If {@link #setUp()} has not been invoked when this method is invoked, then {@link
+   * #setUp()} should NOT be invoked after this method is invoked.
    */
-  void tearDown() throws MobileHarnessException, InterruptedException;
+  void tearDown() throws MobileHarnessException;
 }

@@ -59,5 +59,5 @@ public abstract class AbstractDeviceAllocator implements DeviceAllocator {
 
   /** Tears down this device allocator and does the clean up. */
   @Override
-  public void tearDown() throws MobileHarnessException, InterruptedException {}
+  public void tearDown() throws MobileHarnessException {}
 }

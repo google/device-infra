@@ -48,7 +48,7 @@ public abstract class AbstractScheduler {
    *
    * @param removeDevices whether to remove the devices from scheduler
    */
-  public abstract void removeJob(String jobId, boolean removeDevices) throws InterruptedException;
+  public abstract void removeJob(String jobId, boolean removeDevices);
 
   /**
    * Adds the given test if not exist.
