@@ -99,6 +99,12 @@ public class AndroidSystemSpecUtil {
   @VisibleForTesting
   static final String ADB_SHELL_QUERY_SIM_INFO = "content query --uri content://telephony/siminfo";
 
+  /** ADB shell command to query modem secure boot status. */
+  @VisibleForTesting
+  static final String ADB_SHELL_SECURE_BOOT_STATUS =
+      "am instrument -w -e request 'at+googsecurebootstatus' -e response wait"
+          + " com.google.mdstest/com.google.mdstest.instrument.ModemATCommandInstrumentation";
+
   /** Pattern to find carrier IDs from queried SIM info. */
   private static final Pattern PATTERN_SIM_INFO_CARRIER_ID =
       Pattern.compile("\\bcarrier_id=(-?\\d+)");
@@ -115,6 +121,12 @@ public class AndroidSystemSpecUtil {
   /** Pattern to find subscription type of a SIM from queried SIM info. */
   private static final Pattern PATTERN_SIM_INFO_SUB_TYPE =
       Pattern.compile("\\bsubscription_type=\\d+");
+
+  /** Pattern to find the Unsolicited Result Code (URC) from an AT command. */
+  private static final Pattern PATTERN_AT_COMMAND_URC = Pattern.compile("\\+(.+)");
+
+  /** Pattern to find the Unsolicited Result Code (URC) number from an AT command. */
+  private static final Pattern PATTERN_AT_COMMAND_NUMBER_URC = Pattern.compile("([0-9]+)");
 
   /** Output signal of getting total memory info. */
   private static final String OUTPUT_TOTAL_MEM_INFO = "MemTotal";

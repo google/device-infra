@@ -315,6 +315,9 @@ public final class Dimension {
     /** A comma-separated string containing information of all available SIM cards on the device. */
     SIM_INFOS,
 
+    /** The modem security boot status. */
+    MODEM_SECURE_BOOT_STATUS,
+
     // Used for Wrangler device properties.
     /** The type of the device. */
     DEVICETYPE,
