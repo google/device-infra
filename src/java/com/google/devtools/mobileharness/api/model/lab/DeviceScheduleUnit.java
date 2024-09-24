@@ -131,4 +131,9 @@ public class DeviceScheduleUnit implements Cloneable {
     dimensions.addAll(proto.getCompositeDimension());
     return this;
   }
+
+  @Override
+  public String toString() {
+    return locator().toString();
+  }
 }
