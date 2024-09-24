@@ -33,9 +33,11 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil.TradefedJobInfo;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
+import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.ShardingMode;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader;
+import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader.TradefedResultFilesBundle;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryArgs;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryGenerator;
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
@@ -374,5 +376,56 @@ public final class ConsoleJobCreatorTest {
     assertThrows(
         MobileHarnessException.class,
         () -> jobCreator.createXtsNonTradefedJobs(sessionRequestInfo, testPlanFilter));
+  }
+
+  @Test
+  public void createXtsTradefedTestJob_tfRetryWithModules() throws Exception {
+    setFlags(/* enableAtsMode= */ true, /* useTfRetry= */ true);
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfo.builder()
+            .setTestPlan("retry")
+            .setCommandLineArgs("retry --retry 0")
+            .setXtsType("cts")
+            .setXtsRootDir(XTS_ROOT_DIR_PATH)
+            .setRetrySessionIndex(0)
+            .setModuleNames(ImmutableList.of("mock_module[instant]"))
+            .build();
+    when(previousResultLoader.getPrevSessionTestReportProperties(any(Path.class), anyInt()))
+        .thenReturn(Optional.empty());
+    Path testResultPath = folder.newFile("test_result.xml").toPath();
+    Path testRecordPath = folder.newFile("test_record.pb").toPath();
+    when(previousResultLoader.getPrevSessionResultFilesBundle(any(Path.class), anyInt()))
+        .thenReturn(
+            Optional.of(
+                TradefedResultFilesBundle.of(testResultPath, ImmutableList.of(testRecordPath))));
+    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any()))
+        .thenReturn(JobConfig.getDefaultInstance());
+
+    @SuppressWarnings("unchecked")
+    ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
+
+    ImmutableList<TradefedJobInfo> tradefedJobInfoList =
+        jobCreator.createXtsTradefedTestJobInfo(
+            sessionRequestInfo, ImmutableList.of("mock_module"));
+
+    assertThat(tradefedJobInfoList).hasSize(1);
+    verify(sessionRequestHandlerUtil)
+        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture());
+    assertThat(driverParamsCaptor.getValue())
+        .containsExactly(
+            "run_command_args",
+            "-m mock_module[instant]",
+            "xts_type",
+            "cts",
+            "xts_root_dir",
+            XTS_ROOT_DIR_PATH,
+            "xts_test_plan",
+            "retry",
+            "prev_session_test_result_xml",
+            testResultPath.toString(),
+            "prev_session_test_record_files",
+            String.format("[\"%s\"]", testRecordPath)); // json format
+    assertThat(tradefedJobInfoList.get(0).extraJobProperties())
+        .containsExactly(Job.IS_RUN_RETRY, "true");
   }
 }

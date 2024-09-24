@@ -185,18 +185,31 @@ public abstract class XtsJobCreator {
       runCommandArgsSet =
           moduleShardingArgsGenerator.generateShardingArgs(sessionRequestInfo, tfModules);
     } else {
+      ImmutableList<String> moduleArgs;
+      if (SessionRequestHandlerUtil.isRunRetry(sessionRequestInfo.testPlan())) {
+        if (SessionHandlerHelper.useTfRetry()) {
+          // For "run retry" command handled by TF, pass the original modules to TF
+          moduleArgs =
+              sessionRequestInfo.moduleNames().stream()
+                  .map(module -> String.format("-m %s", module))
+                  .collect(toImmutableList());
+        } else {
+          // For "run retry" command handled by the console, the given modules have been processed
+          // when generating the subplan above, no need to pass these again to underneath TF
+          moduleArgs = ImmutableList.of();
+        }
+      } else {
+        moduleArgs =
+            tfModules.stream()
+                .map(module -> String.format("-m %s", module))
+                .collect(toImmutableList());
+      }
       ImmutableList<String> extraArgs = sessionRequestInfo.extraArgs();
       String sessionRequestInfoArgs =
           Joiner.on(' ')
               .join(
                   Streams.concat(
-                          // For "run retry" command, the given modules have been processed when
-                          // generating the subplan above, no need to pass these again to underneath
-                          // TF
-                          (!SessionHandlerHelper.useTfRetry()
-                                  && SessionRequestHandlerUtil.isRunRetry(testPlan)
-                              ? Stream.empty()
-                              : tfModules.stream().map(module -> String.format("-m %s", module))),
+                          moduleArgs.stream(),
                           testNameArg.stream(),
                           shardCountArg.stream(),
                           // For "run retry" command, the passed in include filters and exclude

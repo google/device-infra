@@ -393,13 +393,22 @@ public class SessionRequestHandlerUtil {
     ImmutableSet<String> allTfModules =
         Stream.concat(localTfModules.stream(), staticTfModules.stream()).collect(toImmutableSet());
 
-    ImmutableList<String> modules = sessionRequestInfo.moduleNames();
+    // For "run retry" command handled by TF, consider the module filter as include filter.
+    boolean isTfRetryWithModules =
+        SessionRequestHandlerUtil.isRunRetry(sessionRequestInfo.testPlan())
+            && SessionHandlerHelper.useTfRetry()
+            && !sessionRequestInfo.moduleNames().isEmpty();
+
+    ImmutableList<String> modules =
+        isTfRetryWithModules ? ImmutableList.of() : sessionRequestInfo.moduleNames();
     ImmutableSet<String> givenMatchedTfModules =
         modules.isEmpty() ? allTfModules : matchModules(modules, allTfModules);
 
     // Filter modules by include/exclude filters.
     ImmutableList<SuiteTestFilter> includeFilters =
-        sessionRequestInfo.includeFilters().stream()
+        Stream.concat(
+                sessionRequestInfo.includeFilters().stream(),
+                isTfRetryWithModules ? sessionRequestInfo.moduleNames().stream() : Stream.empty())
             .map(SuiteTestFilter::create)
             .collect(toImmutableList());
     ImmutableList<SuiteTestFilter> excludeFilters =
@@ -428,7 +437,7 @@ public class SessionRequestHandlerUtil {
           /* cause= */ null);
     }
 
-    return modules.isEmpty() ? ImmutableList.of() : filteredModules;
+    return sessionRequestInfo.moduleNames().isEmpty() ? ImmutableList.of() : filteredModules;
   }
 
   /** Initializes a {@link JobConfig} for a tradefed job. */

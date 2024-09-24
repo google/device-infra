@@ -31,6 +31,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_handler_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_info",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:shard_constants",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:xts_property_name",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/jobcreator:console_job_creator",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/jobcreator:module_sharding_args_generator",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/jobcreator:server_job_creator",

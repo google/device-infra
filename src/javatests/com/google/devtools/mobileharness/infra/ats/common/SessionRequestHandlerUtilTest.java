@@ -498,6 +498,50 @@ public final class SessionRequestHandlerUtilTest {
                     .build()));
   }
 
+  @Test
+  public void getFilteredTradefedModules_testFilters_tfRetryWithModules() throws Exception {
+    setFlags(/* enableAtsMode= */ true, /* useTfRetry= */ true);
+    Configuration config1 =
+        defaultConfigurationBuilder()
+            .setMetadata(
+                ConfigurationMetadata.newBuilder().setXtsModule("module1").setIsConfigV2(false))
+            .build();
+    Configuration config2 =
+        defaultConfigurationBuilder()
+            .setMetadata(
+                ConfigurationMetadata.newBuilder().setXtsModule("module2").setIsConfigV2(false))
+            .build();
+    when(configurationUtil.getConfigsFromDirs(any()))
+        .thenReturn(ImmutableMap.of("/path/to/config1", config1, "/path/to/config2", config2));
+    when(localFileUtil.isDirExist(Path.of(XTS_ROOT_DIR_PATH))).thenReturn(true);
+
+    assertThat(
+            sessionRequestHandlerUtil.getFilteredTradefedModules(
+                defaultSessionRequestInfoBuilder()
+                    .setTestPlan("retry")
+                    .setRetrySessionIndex(0)
+                    .setModuleNames(ImmutableList.of("module1"))
+                    .build()))
+        .hasSize(1);
+    assertThat(
+            sessionRequestHandlerUtil.getFilteredTradefedModules(
+                defaultSessionRequestInfoBuilder()
+                    .setTestPlan("retry")
+                    .setRetrySessionIndex(0)
+                    .setModuleNames(ImmutableList.of("module2[instant]"))
+                    .build()))
+        .hasSize(1);
+    assertThrows(
+        MobileHarnessException.class,
+        () ->
+            sessionRequestHandlerUtil.getFilteredTradefedModules(
+                defaultSessionRequestInfoBuilder()
+                    .setTestPlan("retry")
+                    .setRetrySessionIndex(0)
+                    .setModuleNames(ImmutableList.of("module"))
+                    .build()));
+  }
+
   /** Common setUp for createXtsNonTradefedJobs... tests */
   private void setUpForCreateXtsNonTradefedJobs() throws Exception {
     Configuration config1 =
