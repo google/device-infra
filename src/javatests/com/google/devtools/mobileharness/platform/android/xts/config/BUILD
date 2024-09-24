@@ -13,6 +13,7 @@
 # limitations under the License.
 #
 
+load("@rules_java//java:defs.bzl", "java_library")
 load("//src/javatests/com/google/devtools/mobileharness/builddefs:junit_test_suites.bzl", "junit_test_suites")
 
 filegroup(

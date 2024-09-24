@@ -13,6 +13,8 @@
 # limitations under the License.
 #
 
+load("@rules_java//java:defs.bzl", "java_test")
+
 java_test(
     name = "MoblyTestLoaderTest",
     size = "small",
