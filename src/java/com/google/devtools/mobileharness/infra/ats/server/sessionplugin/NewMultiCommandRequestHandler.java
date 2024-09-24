@@ -276,8 +276,7 @@ final class NewMultiCommandRequestHandler {
         commandDetail.ifPresent(
             builder -> {
               builder.setState(CommandState.ERROR);
-              requestDetailBuilder.putCommandDetails(
-                  "UNKNOWN_" + commandInfo.getCommandLine(), builder.build());
+              requestDetailBuilder.putCommandDetails(commandId, builder.build());
             });
         throw e;
       }
@@ -322,6 +321,8 @@ final class NewMultiCommandRequestHandler {
     commandDetailBuilder.setStartTime(Timestamps.fromMillis(clock.millis()));
     commandDetailBuilder.setUpdateTime(Timestamps.fromMillis(clock.millis()));
     commandDetailBuilder.setRequestId(sessionInfo.getSessionId());
+    String commandId = getCommandId(commandInfo, request);
+    commandDetailBuilder.setId(commandId);
     // Set initial state.
     commandDetailBuilder.setState(CommandState.UNKNOWN_STATE);
 
@@ -331,8 +332,7 @@ final class NewMultiCommandRequestHandler {
       sessionRequestInfoCache.put(commandInfo, sessionRequestInfo);
     } catch (MobileHarnessException e) {
       commandDetailBuilder.setState(CommandState.ERROR);
-      requestDetailBuilder.putCommandDetails(
-          "UNKNOWN_" + commandInfo.getCommandLine(), commandDetailBuilder.build());
+      requestDetailBuilder.putCommandDetails(commandId, commandDetailBuilder.build());
       throw e;
     }
 
@@ -344,13 +344,11 @@ final class NewMultiCommandRequestHandler {
         logger.atInfo().log(
             "Unable to create tradefed jobs for command [%s] due to skippable exception: [%s].",
             commandInfo.getCommandLine(), shortDebugString(e));
-        requestDetailBuilder.putCommandDetails(
-            "UNKNOWN_" + commandInfo.getCommandLine(), commandDetailBuilder.build());
+        requestDetailBuilder.putCommandDetails(commandId, commandDetailBuilder.build());
         return ImmutableList.of();
       }
       commandDetailBuilder.setState(CommandState.ERROR);
-      requestDetailBuilder.putCommandDetails(
-          "UNKNOWN_" + commandInfo.getCommandLine(), commandDetailBuilder.build());
+      requestDetailBuilder.putCommandDetails(commandId, commandDetailBuilder.build());
       throw e;
     }
     for (JobInfo jobInfo : jobInfoList) {
@@ -358,12 +356,10 @@ final class NewMultiCommandRequestHandler {
         insertAdditionalTestResource(jobInfo, request);
       } catch (MobileHarnessException e) {
         commandDetailBuilder.setState(CommandState.ERROR);
-        requestDetailBuilder.putCommandDetails(
-            "UNKNOWN_" + commandInfo.getCommandLine(), commandDetailBuilder.build());
+        requestDetailBuilder.putCommandDetails(commandId, commandDetailBuilder.build());
         throw e;
       }
-      String commandId = getCommandId(commandInfo, request);
-      commandDetailBuilder.setId(commandId).setState(CommandState.RUNNING);
+      commandDetailBuilder.setState(CommandState.RUNNING);
       commandToJobsMap.put(commandId, jobInfo.locator().getId());
       jobToCommandMap.put(jobInfo.locator().getId(), commandId);
       jobInfo.properties().add(XTS_TF_JOB_PROP, "true");
@@ -664,6 +660,21 @@ final class NewMultiCommandRequestHandler {
       logger.atWarning().withCause(e).log(
           "Failed to process result for session %s", sessionInfo.getSessionId());
       setRequestError(requestDetail, ErrorReason.RESULT_PROCESSING_ERROR, e.getMessage());
+      requestDetail.getCommandDetailsMap().values().stream()
+          .filter(commandDetail -> !isFinalCommandState(commandDetail.getState()))
+          .forEach(
+              commandDetail -> {
+                CommandDetail updatedCommandDetail =
+                    commandDetail.toBuilder()
+                        .setState(CommandState.ERROR)
+                        .setErrorReason(ErrorReason.RESULT_PROCESSING_ERROR)
+                        .setEndTime(Timestamps.fromMillis(clock.millis()))
+                        .setUpdateTime(Timestamps.fromMillis(clock.millis()))
+                        .setErrorMessage(
+                            "Failed to process result for session " + sessionInfo.getSessionId())
+                        .build();
+                requestDetail.putCommandDetails(commandDetail.getId(), updatedCommandDetail);
+              });
     }
 
     // Record OLC server session logs if no command recorded it due to empty command list or result
@@ -774,5 +785,9 @@ final class NewMultiCommandRequestHandler {
 
   private static int getRandom4Digits() {
     return ThreadLocalRandom.current().nextInt(1000, 10000);
+  }
+
+  private boolean isFinalCommandState(CommandState commandState) {
+    return commandState == CommandState.COMPLETED || commandState == CommandState.ERROR;
   }
 }
