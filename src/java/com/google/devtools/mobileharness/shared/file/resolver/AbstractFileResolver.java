@@ -81,7 +81,9 @@ public abstract class AbstractFileResolver implements FileResolver {
       return resolveAsync(resolveSources).get(RESOLVE_TIMEOUT_IN_HOUR, HOURS);
     } catch (TimeoutException e) {
       throw new MobileHarnessException(
-          BasicErrorId.RESOLVE_FILE_TIMEOUT, "Timeout while resolving files", e);
+          BasicErrorId.RESOLVE_FILE_TIMEOUT,
+          String.format("Timeout while resolving file %s", resolveSources),
+          e);
     } catch (ExecutionException e) {
       if (e.getCause() instanceof MobileHarnessException) {
         throw (MobileHarnessException) e.getCause();
