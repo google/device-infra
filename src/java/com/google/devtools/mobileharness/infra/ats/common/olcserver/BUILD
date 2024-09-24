@@ -13,6 +13,7 @@
 # limitations under the License.
 #
 
+load("@rules_java//java:defs.bzl", "java_library")
 load("//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:server.bzl", "olc_server_binary")
 
 package(

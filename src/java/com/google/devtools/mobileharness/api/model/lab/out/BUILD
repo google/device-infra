@@ -13,6 +13,8 @@
 # limitations under the License.
 #
 
+load("@rules_java//java:defs.bzl", "java_library")
+
 # Description:
 #   Output data models for Mobile Harness labs and devices.
 package(

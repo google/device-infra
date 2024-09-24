@@ -13,6 +13,8 @@
 # limitations under the License.
 #
 
+load("@rules_java//java:defs.bzl", "java_binary", "java_library")
+
 DEFAULT_VISIBILITY = [
     "//src/java/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
     "//src/javatests/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
