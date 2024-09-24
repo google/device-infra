@@ -13,6 +13,8 @@
 # limitations under the License.
 #
 
+load("@rules_java//java:defs.bzl", "java_library")
+
 # Description:
 #   RPC stubs wrappers of the Master services.
 package(

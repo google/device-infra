@@ -15,6 +15,8 @@
 
 # Package for Mobile Harness device daemon utils related.
 
+load("@rules_java//java:defs.bzl", "java_library")
+
 java_library(
     name = "device_daemon_apk_info",
     visibility = [
