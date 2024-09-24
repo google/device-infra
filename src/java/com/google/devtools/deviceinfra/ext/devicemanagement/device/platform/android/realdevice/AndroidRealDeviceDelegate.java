@@ -1019,16 +1019,9 @@ public abstract class AndroidRealDeviceDelegate {
       // add the dimension before checking sdk version to avoid device failing checking the sdk
       // version is regarded as a recoveried device (i.e., without recovery_status dimension).
       device.addDimension(Dimension.Name.RECOVERY_STATUS, "dirty");
-      if (isQOrAboveBuild(deviceId)) {
-        logger.atInfo().log("It'll factory reset device %s via Test Harness Mode.", deviceId);
-        AndroidDeviceDelegateHelper.setRebootToStateProperty(device, DeviceState.DEVICE);
-        return Optional.of(PostTestDeviceOp.REBOOT);
-      } else {
-        logger.atInfo().log(
-            "Factory reset via Test Harness Mode is not supported on device %s.", deviceId);
-        device.removeDimension(Dimension.Name.RECOVERY_STATUS);
-        return Optional.empty();
-      }
+      logger.atInfo().log("It'll factory reset device %s via Test Harness Mode.", deviceId);
+      AndroidDeviceDelegateHelper.setRebootToStateProperty(device, DeviceState.DEVICE);
+      return Optional.of(PostTestDeviceOp.REBOOT);
     } else {
       // If fast recovery enabled, reboot the device to recovery and clean all user data even if
       // the system build changed.
@@ -1178,9 +1171,15 @@ public abstract class AndroidRealDeviceDelegate {
           device.getProperty(AndroidRealDeviceConstants.PROPERTY_NAME_REBOOT_TO_STATE))) {
         case DEVICE:
           if (isTestHarnessRecoveryDevice()) {
-            logger.atInfo().log("Factory reset device %s via Test Harness Mode.", deviceId);
-            systemStateUtil.factoryResetViaTestHarness(deviceId, /* waitTime= */ null);
-            device.removeDimension(Dimension.Name.RECOVERY_STATUS);
+            if (isQOrAboveBuild(deviceId)) {
+              logger.atInfo().log("Factory reset device %s via Test Harness Mode.", deviceId);
+              systemStateUtil.factoryResetViaTestHarness(deviceId, /* waitTime= */ null);
+              device.removeDimension(Dimension.Name.RECOVERY_STATUS);
+            } else {
+              logger.atWarning().log(
+                  "Factory reset via Test Harness Mode is not supported on device %s.", deviceId);
+              device.removeDimension(Dimension.Name.RECOVERY_STATUS);
+            }
           } else {
             logger.atInfo().log("Device %s reboot to normal mode", deviceId);
             systemStateUtil.reboot(deviceId);
