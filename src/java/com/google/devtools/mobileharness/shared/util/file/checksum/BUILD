@@ -16,6 +16,8 @@
 # Description:
 #   Module for checksum of file.
 
+load("@rules_java//java:defs.bzl", "java_library")
+
 visibility = [
     "//:deviceinfra_all_pkg",
 ]
