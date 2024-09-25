@@ -762,8 +762,6 @@ public class JobRunner implements Runnable {
   private void resolveJobFiles(JobInfo jobInfo)
       throws MobileHarnessException, InterruptedException {}
 
-  /** Adds the trace related properties to the job. */
-  @VisibleForTesting
   void addTracePropertiesToJob(JobInfo jobInfo) {}
 
   private void printJobDetail() {
