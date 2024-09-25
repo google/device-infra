@@ -18,6 +18,8 @@ package com.google.devtools.mobileharness.infra.ats.common;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil.MOBLY_TEST_SELECTOR_KEY;
+import static com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil.PARAM_XTS_SUITE_INFO;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doCallRealMethod;
@@ -31,11 +33,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser;
+import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser.TestPlanFilter;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfoFactory;
-import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportCreator;
-import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportMerger;
-import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportParser;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.SessionGenDir;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.SessionTempDir;
@@ -62,7 +61,6 @@ import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.SubDeviceSpec
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryResult;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.Dimension;
-import java.io.File;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Map;
@@ -90,9 +88,6 @@ public final class SessionRequestHandlerUtilTest {
   @Bind @Mock private LocalFileUtil localFileUtil;
   @Bind @Mock private ModuleConfigurationHelper moduleConfigurationHelper;
   @Bind @Mock private ConfigurationUtil configurationUtil;
-  @Bind @Mock private CompatibilityReportMerger compatibilityReportMerger;
-  @Bind @Mock private CompatibilityReportParser compatibilityReportParser;
-  @Bind @Mock private CompatibilityReportCreator reportCreator;
   @Bind @Mock private CertificationSuiteInfoFactory certificationSuiteInfoFactory;
   @Mock private TestSuiteHelper testSuiteHelper;
   @Bind @SessionGenDir private Path sessionGenDir;
@@ -102,7 +97,8 @@ public final class SessionRequestHandlerUtilTest {
 
   @Inject private SessionRequestHandlerUtil sessionRequestHandlerUtil;
 
-  private TestPlanParser.TestPlanFilter testPlanFilter;
+  private final TestPlanFilter testPlanFilter =
+      TestPlanFilter.create(ImmutableSet.of(), ImmutableSet.of());
 
   @Before
   public void setUp() throws Exception {
@@ -112,7 +108,6 @@ public final class SessionRequestHandlerUtilTest {
     sessionTempDir = folder.newFolder("session_temp_dir").toPath();
 
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
-    testPlanFilter = TestPlanParser.TestPlanFilter.create(ImmutableSet.of(), ImmutableSet.of());
 
     when(deviceQuerier.queryDevice(any()))
         .thenReturn(
@@ -576,8 +571,7 @@ public final class SessionRequestHandlerUtilTest {
         .thenReturn(ImmutableMap.of("module1", config1, "module2", config2));
 
     when(localFileUtil.isDirExist(Path.of(XTS_ROOT_DIR_PATH))).thenReturn(true);
-    doCallRealMethod().when(localFileUtil).isFileExist(any(Path.class));
-    doCallRealMethod().when(localFileUtil).isDirExist(any(Path.class));
+    when(localFileUtil.isFileExist(any(Path.class))).thenReturn(true);
     when(localFileUtil.readFile(any(Path.class))).thenReturn("");
   }
 
@@ -688,9 +682,10 @@ public final class SessionRequestHandlerUtilTest {
             sessionRequestInfo, testPlanFilter, null, ImmutableMap.of());
 
     assertThat(jobInfos).hasSize(3);
-    assertThat(jobInfos.get(0).params().get("test_case_selector")).isEqualTo("test1 test2 test3");
-    assertThat(jobInfos.get(1).params().get("test_case_selector")).isNull();
-    assertThat(jobInfos.get(2).params().get("test_case_selector")).isEqualTo("test2 test3");
+    assertThat(jobInfos.get(0).params().get(MOBLY_TEST_SELECTOR_KEY))
+        .isEqualTo("test1 test2 test3");
+    assertThat(jobInfos.get(1).params().get(MOBLY_TEST_SELECTOR_KEY)).isNull();
+    assertThat(jobInfos.get(2).params().get(MOBLY_TEST_SELECTOR_KEY)).isEqualTo("test2 test3");
   }
 
   @Test
@@ -709,20 +704,20 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(
             defaultSessionRequestInfoBuilder()
                 .setModuleNames(ImmutableList.of("module1"))
-                .setTestName("testclass#test1")
+                .setTestName("test_class1#test1")
                 .build());
     ImmutableList<JobInfo> jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
             sessionRequestInfo, testPlanFilter, null, ImmutableMap.of());
     assertThat(jobInfos).hasSize(1);
-    assertThat(jobInfos.get(0).params().get("test_case_selector")).isEqualTo("test1");
+    assertThat(jobInfos.get(0).params().get(MOBLY_TEST_SELECTOR_KEY)).isEqualTo("test1");
 
     // Test invalid TestName
     sessionRequestInfo =
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(
             defaultSessionRequestInfoBuilder()
                 .setModuleNames(ImmutableList.of("module1"))
-                .setTestName("test1")
+                .setTestName("test_class1")
                 .build());
     jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
@@ -756,10 +751,10 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
             sessionRequestInfo, testPlanFilter, subPlan, ImmutableMap.of());
     assertThat(jobInfos).hasSize(2);
-    assertThat(jobInfos.get(0).params().get("test_case_selector")).isEqualTo("test1 test2");
-    assertThat(jobInfos.get(0).params().get("xts_suite_info")).contains("suite_plan=cts");
-    assertThat(jobInfos.get(1).params().get("test_case_selector")).isNull();
-    assertThat(jobInfos.get(1).params().get("xts_suite_info")).contains("suite_plan=cts");
+    assertThat(jobInfos.get(0).params().get(MOBLY_TEST_SELECTOR_KEY)).isEqualTo("test1 test2");
+    assertThat(jobInfos.get(0).params().get(PARAM_XTS_SUITE_INFO)).contains("suite_plan=cts");
+    assertThat(jobInfos.get(1).params().get(MOBLY_TEST_SELECTOR_KEY)).isNull();
+    assertThat(jobInfos.get(1).params().get(PARAM_XTS_SUITE_INFO)).contains("suite_plan=cts");
 
     // Same result as above
     sessionRequestInfo =
@@ -773,10 +768,10 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
             sessionRequestInfo, testPlanFilter, subPlan, ImmutableMap.of());
     assertThat(jobInfos).hasSize(2);
-    assertThat(jobInfos.get(0).params().get("test_case_selector")).isEqualTo("test1 test2");
-    assertThat(jobInfos.get(0).params().get("xts_suite_info")).contains("suite_plan=cts");
-    assertThat(jobInfos.get(1).params().get("test_case_selector")).isNull();
-    assertThat(jobInfos.get(1).params().get("xts_suite_info")).contains("suite_plan=cts");
+    assertThat(jobInfos.get(0).params().get(MOBLY_TEST_SELECTOR_KEY)).isEqualTo("test1 test2");
+    assertThat(jobInfos.get(0).params().get(PARAM_XTS_SUITE_INFO)).contains("suite_plan=cts");
+    assertThat(jobInfos.get(1).params().get(MOBLY_TEST_SELECTOR_KEY)).isNull();
+    assertThat(jobInfos.get(1).params().get(PARAM_XTS_SUITE_INFO)).contains("suite_plan=cts");
   }
 
   @Test
@@ -796,7 +791,6 @@ public final class SessionRequestHandlerUtilTest {
             ImmutableMap.of(
                 "arm64-v8a HelloWorldTest", config1, "arm64-v8a HelloWorldTest[instant]", config1));
 
-    File xtsRootDir = folder.newFolder("xts_root_dir");
     SubPlan subPlan = new SubPlan();
     subPlan.addNonTfIncludeFilter("arm64-v8a HelloWorldTest");
     subPlan.addNonTfIncludeFilter("arm64-v8a HelloWorldTest[instant]");
@@ -806,7 +800,6 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(
             defaultSessionRequestInfoBuilder()
                 .setCommandLineArgs("cts --subplan subplan1")
-                .setXtsRootDir(xtsRootDir.getAbsolutePath())
                 .setSubPlanName("subplan1")
                 .build());
     ImmutableList<JobInfo> jobInfos =
@@ -835,7 +828,6 @@ public final class SessionRequestHandlerUtilTest {
             ImmutableMap.of(
                 "arm64-v8a HelloWorldTest", config1, "arm64-v8a HelloWorldTest[instant]", config1));
 
-    File xtsRootDir = folder.newFolder("xts_root_dir");
     SubPlan subPlan = new SubPlan();
     subPlan.addNonTfIncludeFilter("arm64-v8a HelloWorldTest");
     subPlan.addNonTfIncludeFilter("arm64-v8a HelloWorldTest[instant]");
@@ -846,7 +838,6 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(
             defaultSessionRequestInfoBuilder()
                 .setCommandLineArgs("cts --subplan subplan3")
-                .setXtsRootDir(xtsRootDir.getAbsolutePath())
                 .setSubPlanName("subplan3")
                 .build());
     ImmutableList<JobInfo> jobInfos =
@@ -884,6 +875,6 @@ public final class SessionRequestHandlerUtilTest {
             sessionRequestInfo, testPlanFilter, subPlan, ImmutableMap.of());
 
     assertThat(jobInfos).hasSize(1);
-    assertThat(jobInfos.get(0).params().get("test_case_selector")).isEqualTo("test3");
+    assertThat(jobInfos.get(0).params().get(MOBLY_TEST_SELECTOR_KEY)).isEqualTo("test3");
   }
 }
