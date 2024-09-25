@@ -74,6 +74,7 @@ public class AtsGatewaySessionPlugin {
           JobInfoCreator.createJobInfo(
               UUID.randomUUID().toString(),
               /* actualUser= */ "",
+              /* jobAccessAccount= */ "",
               jobConfig,
               /* sessionTmpDir= */ "",
               /* sessionGenDir= */ "");

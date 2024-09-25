@@ -100,8 +100,9 @@ message JobSetting {
 }
 
 message JobUser {
-  string run_as = 1;       // Required
-  string actual_user = 2;  // Required
+  string run_as = 1;              // Required
+  string actual_user = 2;         // Required
+  string job_access_account = 3;  // Optional
 }
 
 message JobFile {

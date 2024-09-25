@@ -33,6 +33,9 @@ public interface PropertyName {
     /** The run as user. */
     RUN_AS,
 
+    /** The job access account. */
+    JOB_ACCESS_ACCOUNT,
+
     /** The changelist number. */
     CL,
 

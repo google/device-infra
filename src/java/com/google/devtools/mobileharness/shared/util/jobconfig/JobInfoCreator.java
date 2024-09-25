@@ -116,6 +116,7 @@ public final class JobInfoCreator {
   public static JobInfo createJobInfo(
       String jobId,
       String actualUser,
+      String jobAccessAccount,
       com.google.devtools.mobileharness.api.gateway.proto.Setting.JobConfig jobConfig,
       String sessionTmpDir,
       String sessionGenDir)
@@ -162,7 +163,11 @@ public final class JobInfoCreator {
               mhJobConfig,
               jobConfigFromTarget.getNonstandardFlagList(),
               jobSetting,
-              JobUser.newBuilder().setRunAs(jobConfig.getUser()).setActualUser(actualUser).build(),
+              JobUser.newBuilder()
+                  .setRunAs(jobConfig.getUser())
+                  .setActualUser(actualUser)
+                  .setJobAccessAccount(jobAccessAccount)
+                  .build(),
               sessionTmpDir,
               jobConfigFromTarget.getGenDirPath(),
               false);
