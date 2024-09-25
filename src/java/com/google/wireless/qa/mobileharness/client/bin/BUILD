@@ -16,6 +16,8 @@
 # Description:
 #   MobileHarness client entry point binaries.
 
+load("@rules_java//java:defs.bzl", "java_library")
+
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = ["//visibility:private"],
