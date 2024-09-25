@@ -13,6 +13,8 @@
 # limitations under the License.
 #
 
+load("@rules_java//java:defs.bzl", "java_library")
+
 java_library(
     name = "nontradefed_report_generator",
     srcs = ["NonTradefedReportGenerator.java"],

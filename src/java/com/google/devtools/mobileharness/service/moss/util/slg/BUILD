@@ -17,6 +17,8 @@
 #   The utilities to be used for the short term solution to support longevity
 #   test in Mobile Harness.
 
+load("@rules_java//java:defs.bzl", "java_library")
+
 package(
     default_applicable_licenses = ["//:license"],
 )
