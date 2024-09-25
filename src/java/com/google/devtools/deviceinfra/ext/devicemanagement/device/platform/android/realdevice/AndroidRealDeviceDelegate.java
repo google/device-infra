@@ -414,6 +414,11 @@ public abstract class AndroidRealDeviceDelegate {
       return;
     }
 
+    // Unlock the device admin policy before actually resetting the device. If the device is locked,
+    // resetting device will be ignored by Android and we don't know if the reset was successful.
+    if (Flags.instance().deviceAdminLockRequired.getNonNull()) {
+      unlockWithDeviceAdmin();
+    }
     int sdkVersion = systemSettingUtil.getDeviceSdkVersion(deviceId);
     if (sdkVersion < AndroidVersion.ANDROID_10.getStartSdkVersion()) {
       logger.atInfo().log(
