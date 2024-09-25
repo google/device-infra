@@ -16,6 +16,8 @@
 # Description:
 #   Job file resolver constants.
 
+load("@rules_java//java:defs.bzl", "java_library")
+
 package_group(
     name = "job_file_resolver_user",
     includes = [
