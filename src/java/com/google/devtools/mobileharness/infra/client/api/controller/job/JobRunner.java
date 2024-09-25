@@ -811,7 +811,6 @@ public class JobRunner implements Runnable {
     Stopwatch stopwatch = Stopwatch.createStarted();
     boolean skipJob = false;
     try {
-      addTracePropertiesToJob(jobInfo);
       // TODO: Not do validation check for ait-triggered test to reduce binary size.
       // Explicitly disable job validation for ACID jobs as we don't want to introduce driver deps
       // in the acid frontend binary.
