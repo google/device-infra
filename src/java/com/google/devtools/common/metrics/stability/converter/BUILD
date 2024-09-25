@@ -13,6 +13,8 @@
 # limitations under the License.
 #
 
+load("@rules_java//java:defs.bzl", "java_library")
+
 DEFAULT_VISIBILITY = [
     #  DO NOT public all libs to user projects.
     "//:deviceinfra_all_pkg",

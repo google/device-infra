@@ -13,6 +13,8 @@
 # limitations under the License.
 #
 
+load("@rules_java//java:defs.bzl", "java_library")
+
 # Device Action Framework
 DEFAULT_VISIBILITY = [
     "//src/java/com/google/devtools/deviceaction:deviceaction_java_pkg",
