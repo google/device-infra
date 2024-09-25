@@ -40,9 +40,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -70,14 +68,10 @@ public class SimpleScheduler extends AbstractScheduler implements Runnable {
   /** {Lab IP, {@link SimpleLabInfo}} mapping. */
   private final ConcurrentHashMap<String, SimpleLabInfo> labs = new ConcurrentHashMap<>();
 
-  /** Synchronization lock for {@link #deviceAllocations} & {@link #testAllocations}. */
+  /** Synchronization lock for {@link #allocations}. */
   private final Object allocationLock = new Object();
 
-  /** {{@link DeviceLocator#universalId()}, {@link Allocation}} mapping. */
-  private final Map<String, Allocation> deviceAllocations = new HashMap<>();
-
-  /** {TestID, Allocation} mapping. */
-  private final Map<String, Allocation> testAllocations = new HashMap<>();
+  private final Allocations allocations = new Allocations();
 
   private final Sleeper sleeper;
   private final ExecutorService threadPool;
@@ -105,7 +99,7 @@ public class SimpleScheduler extends AbstractScheduler implements Runnable {
         for (SimpleJobInfo job : jobs.values()) {
           sleeper.sleep(SCHEDULING_SMALL_INTERVAL);
           for (TestLocator testLocator : job.getTests().values()) {
-            if (!testAllocations.containsKey(testLocator.getId())) {
+            if (!allocations.containsTest(testLocator.getId())) {
               // Found a new test.
               if (allocate(job.getScheduleUnit(), testLocator)) {
                 hasNewAllocation = true;
@@ -151,7 +145,7 @@ public class SimpleScheduler extends AbstractScheduler implements Runnable {
         logger.atInfo().log("Job deleted: %s", jobId);
         for (String testId : job.getTests().keySet()) {
           // No need to close test, because the job is removed.
-          unallocate(testAllocations.get(testId), removeDevices, false);
+          unallocate(allocations.getAllocationByTest(testId), removeDevices, false);
         }
       } else {
         logger.atInfo().log("Job does not exist: %s", jobId);
@@ -186,7 +180,7 @@ public class SimpleScheduler extends AbstractScheduler implements Runnable {
       if (testLocator == null) {
         logger.atWarning().log("%s", String.format("Test %s not found in job %s", testId, jobId));
       } else {
-        Allocation allocation = testAllocations.get(testId);
+        Allocation allocation = allocations.getAllocationByTest(testId);
         if (allocation != null) {
           logger.atSevere().log(
               "%s",
@@ -233,7 +227,7 @@ public class SimpleScheduler extends AbstractScheduler implements Runnable {
         if (device == null) {
           logger.atInfo().log("Skip removing device %s because device not exist", deviceLocator);
         } else {
-          Allocation allocation = deviceAllocations.get(deviceLocator.universalId());
+          Allocation allocation = allocations.getAllocationByDevice(deviceLocator.universalId());
           if (allocation != null) {
             logger.atSevere().log(
                 "%s",
@@ -251,7 +245,7 @@ public class SimpleScheduler extends AbstractScheduler implements Runnable {
   @Override
   public void unallocate(DeviceLocator deviceLocator, boolean removeDevices, boolean closeTest) {
     synchronized (allocationLock) {
-      Allocation allocation = deviceAllocations.get(deviceLocator.universalId());
+      Allocation allocation = allocations.getAllocationByDevice(deviceLocator.universalId());
       if (allocation != null) {
         unallocate(allocation, removeDevices, closeTest);
       } else if (removeDevices) {
@@ -268,56 +262,27 @@ public class SimpleScheduler extends AbstractScheduler implements Runnable {
     }
     // Makes sure we release all devices related to this allocation.
     synchronized (allocationLock) {
-      boolean unallocated = false;
-      ImmutableList<DeviceLocator> deviceLocators = allocation.getAllDevices();
-      for (DeviceLocator deviceLocator : deviceLocators) {
-        String deviceId = deviceLocator.universalId();
-        Allocation deviceAllocation = deviceAllocations.get(deviceId);
-        if (deviceAllocation == null) {
-          logger.atInfo().log(
-              "Skip unallocate device %s because it is already idle", deviceLocator);
-        } else if (deviceAllocation.equals(allocation)) {
-          deviceAllocations.remove(deviceId);
-          unallocated = true;
-          if (removeDevices) {
-            removeDevice(deviceLocator);
-            logger.atInfo().log("Free and remove device %s", deviceLocator);
-          } else {
-            logger.atInfo().log("Free device %s", deviceLocator);
-          }
-        } else {
-          logger.atWarning().log(
-              "%s",
-              String.format(
-                  "Skip unallocate device %s because it is assigned to a different test: %s",
-                  deviceLocator, deviceAllocation));
+      Allocations.RemoveAllocationResult removeAllocationResult =
+          allocations.removeAllocation(allocation);
+      if (removeDevices) {
+        for (DeviceLocator deviceLocator : removeAllocationResult.removedDevices()) {
+          removeDevice(deviceLocator);
+          logger.atInfo().log("Remove device %s", deviceLocator);
         }
       }
-      // Closes the test.
-      com.google.devtools.mobileharness.api.model.job.TestLocator testLocator =
-          allocation.getTest();
-      String testId = testLocator.id();
-      Allocation testAllocation = testAllocations.get(testId);
-      if (testAllocation == null) {
-        logger.atInfo().log("Skip unallocate test because it is new/closed");
-      } else if (testAllocation.equals(allocation)) {
-        testAllocations.remove(testId);
-        unallocated = true;
-        if (closeTest) {
-          logger.atInfo().log("Un-assign and remove test %s", testLocator);
+      if (closeTest) {
+        if (removeAllocationResult.removedTest().isPresent()) {
+          // Closes the test.
+          com.google.devtools.mobileharness.api.model.job.TestLocator testLocator =
+              removeAllocationResult.removedTest().get();
+          String testId = testLocator.id();
+
+          logger.atInfo().log("Remove test %s", testLocator);
           removeTest(testLocator.jobLocator().id(), testId);
-        } else {
-          logger.atInfo().log("Un-assign test %s", testLocator);
         }
-      } else {
-        // Should not reach here.
-        logger.atSevere().log(
-            "%s",
-            String.format(
-                "Inconsistent allocation info with test %s, expect %s, got %s",
-                testLocator, allocation, testAllocation));
       }
-      if (unallocated) {
+      if (removeAllocationResult.removedTest().isPresent()
+          || !removeAllocationResult.removedDevices().isEmpty()) {
         logger.atInfo().log("Allocation %s released", allocation);
       }
     }
@@ -368,13 +333,6 @@ public class SimpleScheduler extends AbstractScheduler implements Runnable {
       if (!job.containsTest(testId)) {
         logger.atInfo().log("Test %s removed. Can not create allocation %s", testId, allocation);
         return false;
-      } else if (testAllocations.containsKey(testId)) {
-        logger.atWarning().log(
-            "%s",
-            String.format(
-                "Test %s has allocation %s. Can not create allocation %s.",
-                testId, testAllocations.get(testId), allocation));
-        return false;
       }
 
       // Double check lab.
@@ -397,19 +355,10 @@ public class SimpleScheduler extends AbstractScheduler implements Runnable {
               "Device %s removed. Can not create allocation %s", deviceLocator, allocation);
           return false;
         }
-        if (deviceAllocations.containsKey(deviceLocator.universalId())) {
-          logger.atWarning().log(
-              "%s",
-              String.format(
-                  "Device %s has allocation %s. Can not create allocation %s.",
-                  deviceLocator, deviceAllocations.get(deviceLocator.universalId()), allocation));
-          return false;
-        }
       }
-      // Creates the allocation.
-      testAllocations.put(testId, allocation);
-      for (DeviceLocator deviceLocator : deviceLocators) {
-        deviceAllocations.put(deviceLocator.universalId(), allocation);
+      boolean added = allocations.addAllocation(allocation);
+      if (!added) {
+        return false;
       }
     }
     logger.atInfo().log("Created allocation %s", allocation);
@@ -449,7 +398,7 @@ public class SimpleScheduler extends AbstractScheduler implements Runnable {
   /** Checks whether the device can meet the job requirement. If so, allocates it to the test. */
   private boolean checkAndAllocateSingleDevice(
       JobScheduleUnit job, TestLocator test, DeviceScheduleUnit device, boolean fireEvent) {
-    if (!deviceAllocations.containsKey(device.locator().universalId())
+    if (!allocations.containsDevice(device.locator().universalId())
         && ifDeviceSupports(device, job)) {
       // Found a suitable and idle device for the new test.
       return allocate(test, device, fireEvent);
@@ -470,7 +419,7 @@ public class SimpleScheduler extends AbstractScheduler implements Runnable {
       ImmutableList<DeviceScheduleUnit> filteredDevices =
           labInfo.getDevices().stream()
               // Filter out already allocated devices
-              .filter(device -> !deviceAllocations.containsKey(device.locator().universalId()))
+              .filter(device -> !allocations.containsDevice(device.locator().universalId()))
               // Filter out devices that don't support any desired types
               .filter(device -> !Collections.disjoint(device.types().getAll(), types))
               // Filter out devices that the user does not own

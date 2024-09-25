@@ -34,6 +34,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/lab:schedule_unit",
         "//src/java/com/google/devtools/mobileharness/infra/controller/scheduler:abstract_scheduler",
         "//src/java/com/google/devtools/mobileharness/infra/controller/scheduler:adhoc_testbed_scheduling_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
