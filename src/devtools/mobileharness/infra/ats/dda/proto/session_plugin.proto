@@ -37,6 +37,13 @@ message AtsDdaSessionPluginConfig {
   // If empty, the timeout will be the default timeout. If present, the timeout
   // will be the minimum of this one and the default one.
   google.protobuf.Duration dda_timeout = 2;
+
+  // Optional.
+  //
+  // Require the client to send a heartbeat notifications at least once every
+  // heartbeat_timeout. If empty, the default timeout specified by
+  // --ats_dda_lease_expiration_time will be used.
+  google.protobuf.Duration heartbeat_timeout = 3;
 }
 
 message AtsDdaSessionPluginOutput {

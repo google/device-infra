@@ -182,7 +182,8 @@ public class AtsDdaIntegrationTest {
             "fake_session",
             ImmutableMap.of(
                 "model", "pixel", "sdk_version", "24", "control_id", "AndroidRealDevice-2"),
-            Duration.ofHours(1L));
+            Duration.ofHours(1L),
+            Optional.empty());
 
     // Gets session info.
     waitUntilDeviceAllocated(sessionId);
@@ -221,7 +222,7 @@ public class AtsDdaIntegrationTest {
   }
 
   @Test
-  public void run_leaseExpired() throws Exception {
+  public void run_emptyHeatbeatTimeout_useLeaseExpirationTimeFromFlag() throws Exception {
     startServers(/* ddaLeaseExpirationTime= */ Duration.ofSeconds(1L));
 
     // Creates session.
@@ -230,7 +231,8 @@ public class AtsDdaIntegrationTest {
             "fake_session",
             ImmutableMap.of(
                 "model", "pixel", "sdk_version", "24", "control_id", "AndroidRealDevice-2"),
-            Duration.ofHours(1L));
+            Duration.ofHours(1L),
+            Optional.empty());
 
     // Gets session info.
     waitUntilDeviceAllocated(sessionId);
@@ -252,6 +254,44 @@ public class AtsDdaIntegrationTest {
   }
 
   @Test
+  public void run_heatbeatTimeoutIsSet() throws Exception {
+    startServers(/* ddaLeaseExpirationTime= */ Duration.ofSeconds(1L));
+
+    // Creates session.
+    String sessionId =
+        atsDdaStub.createSession(
+            "fake_session",
+            ImmutableMap.of(
+                "model", "pixel", "sdk_version", "24", "control_id", "AndroidRealDevice-2"),
+            Duration.ofHours(1L),
+            Optional.of(Duration.ofSeconds(5L)));
+
+    // Gets session info.
+    waitUntilDeviceAllocated(sessionId);
+
+    // Verifies the session status and the allocated device.
+    assertThat(sessionInfo.sessionStatus()).isEqualTo(SessionStatus.SESSION_RUNNING);
+
+    // Verifies the driver started successfully.
+    assertWithMessage("The driver has not started in 15 seconds")
+        .that(driverStarted.await(15L, SECONDS))
+        .isTrue();
+
+    // Verifies the driver lease is not expired before heartbeat timeout.
+    assertWithMessage("The driver lease is expired in 2 seconds. Expect to expire after 5 seconds")
+        .that(driverLeaseExpired.await(3L, SECONDS))
+        .isFalse();
+
+    // Verifies the driver lease is expired.
+    assertWithMessage(
+            "The driver lease is not expired in 10 seconds. Expect to expire after 5 seconds")
+        .that(driverLeaseExpired.await(10L, SECONDS))
+        .isTrue();
+
+    verifyLogs();
+  }
+
+  @Test
   public void run_heartbeatSession() throws Exception {
     startServers(/* ddaLeaseExpirationTime= */ Duration.ofSeconds(2L));
 
@@ -261,7 +301,8 @@ public class AtsDdaIntegrationTest {
             "fake_session",
             ImmutableMap.of(
                 "model", "pixel", "sdk_version", "24", "control_id", "AndroidRealDevice-2"),
-            Duration.ofHours(1L));
+            Duration.ofHours(1L),
+            Optional.empty());
 
     // Gets session info.
     waitUntilDeviceAllocated(sessionId);

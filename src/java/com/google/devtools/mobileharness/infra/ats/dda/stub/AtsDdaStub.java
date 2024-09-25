@@ -104,16 +104,21 @@ public class AtsDdaStub {
   }
 
   public String createSession(
-      String sessionName, ImmutableMap<String, String> dimensions, Duration ddaTimeout)
+      String sessionName,
+      ImmutableMap<String, String> dimensions,
+      Duration ddaTimeout,
+      Optional<Duration> heartbeatTimeout)
       throws GrpcExceptionWithErrorId {
-    AtsDdaSessionPluginConfig pluginConfig =
+    AtsDdaSessionPluginConfig.Builder pluginConfigBuilder =
         AtsDdaSessionPluginConfig.newBuilder()
             .setDeviceRequirement(
                 DeviceRequirement.newBuilder()
                     .setDeviceType("AndroidRealDevice")
                     .putAllDimensions(dimensions))
-            .setDdaTimeout(toProtoDuration(ddaTimeout))
-            .build();
+            .setDdaTimeout(toProtoDuration(ddaTimeout));
+    if (heartbeatTimeout.isPresent()) {
+      pluginConfigBuilder.setHeartbeatTimeout(toProtoDuration(heartbeatTimeout.get()));
+    }
     CreateSessionResponse createSessionResponse =
         sessionStub.createSession(
             CreateSessionRequest.newBuilder()
@@ -132,7 +137,8 @@ public class AtsDdaStub {
                                                 .setPluginClassName(SESSION_PLUGIN_CLASS_NAME))
                                         .setExecutionConfig(
                                             SessionPluginExecutionConfig.newBuilder()
-                                                .setConfig(Any.pack(pluginConfig))))))
+                                                .setConfig(
+                                                    Any.pack(pluginConfigBuilder.build()))))))
                 .build());
     return createSessionResponse.getSessionId().getId();
   }

@@ -138,6 +138,10 @@ public class AtsDdaSessionPlugin {
         finalizeDdaTimeout(config.hasDdaTimeout() ? toJavaDuration(config.getDdaTimeout()) : null);
     Duration testTimeout = ddaTimeout.plusMinutes(1L);
     Duration jobTimeout = testTimeout.plus(START_TIMEOUT);
+    Duration heartbeatTimeout =
+        config.hasHeartbeatTimeout()
+            ? toJavaDuration(config.getHeartbeatTimeout())
+            : Flags.instance().atsDdaLeaseExpirationTime.getNonNull();
 
     DeviceRequirement deviceRequirement = config.getDeviceRequirement();
     // TODO: Adds default decorators here.
@@ -166,11 +170,7 @@ public class AtsDdaSessionPlugin {
             .build();
     jobInfo.dimensions().addAll(deviceRequirement.getDimensionsMap());
     jobInfo.params().add("sleep_time_sec", Long.toString(ddaTimeout.toSeconds()));
-    jobInfo
-        .params()
-        .add(
-            "lease_expiration_time_sec",
-            Long.toString(Flags.instance().atsDdaLeaseExpirationTime.getNonNull().toSeconds()));
+    jobInfo.params().add("lease_expiration_time_sec", Long.toString(heartbeatTimeout.toSeconds()));
     jobInfo.params().add("cache_device_in_driver", Boolean.TRUE.toString());
     jobInfo.tests().add(TEST_NAME);
     return jobInfo;
