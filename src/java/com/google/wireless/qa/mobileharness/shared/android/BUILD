@@ -70,8 +70,7 @@ java_library(
     srcs = [
         "SerialConsole.java",
     ],
-    visibility = [
-    ],
+    visibility = ["//visibility:private"],
 )
 
 java_library(
