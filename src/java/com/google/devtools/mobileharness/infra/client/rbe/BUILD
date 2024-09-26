@@ -13,6 +13,8 @@
 # limitations under the License.
 #
 
+load("@rules_java//java:defs.bzl", "java_binary", "java_library")
+
 # Description:
 #   RBE MH client entry point binary.
 package(default_applicable_licenses = ["//:license"])
