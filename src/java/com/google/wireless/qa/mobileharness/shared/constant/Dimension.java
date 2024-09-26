@@ -318,6 +318,9 @@ public final class Dimension {
     /** The modem security boot status. */
     MODEM_SECURE_BOOT_STATUS,
 
+    /** The active modem count. */
+    ACTIVE_MODEM_COUNT,
+
     // Used for Wrangler device properties.
     /** The type of the device. */
     DEVICETYPE,

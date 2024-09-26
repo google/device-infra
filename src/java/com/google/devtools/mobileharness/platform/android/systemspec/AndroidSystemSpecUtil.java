@@ -105,6 +105,9 @@ public class AndroidSystemSpecUtil {
       "am instrument -w -e request 'at+googsecurebootstatus' -e response wait"
           + " com.google.mdstest/com.google.mdstest.instrument.ModemATCommandInstrumentation";
 
+  /** ADB shell command to get subscription info. */
+  @VisibleForTesting static final String ADB_SHELL_GET_SUBSCRIPTION_INFO = "dumpsys isub";
+
   /** Pattern to find carrier IDs from queried SIM info. */
   private static final Pattern PATTERN_SIM_INFO_CARRIER_ID =
       Pattern.compile("\\bcarrier_id=(-?\\d+)");
@@ -127,6 +130,10 @@ public class AndroidSystemSpecUtil {
 
   /** Pattern to find the Unsolicited Result Code (URC) number from an AT command. */
   private static final Pattern PATTERN_AT_COMMAND_NUMBER_URC = Pattern.compile("([0-9]+)");
+
+  /** Pattern to find the active modem count from queried subscription info. */
+  private static final Pattern PATTERN_ACTIVE_MODEM_COUNT =
+      Pattern.compile("\\bActive modem count=(\\d+)");
 
   /** Output signal of getting total memory info. */
   private static final String OUTPUT_TOTAL_MEM_INFO = "MemTotal";
