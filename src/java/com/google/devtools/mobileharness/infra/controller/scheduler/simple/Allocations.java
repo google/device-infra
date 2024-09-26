@@ -32,7 +32,13 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 import javax.inject.Inject;
 
-/** The allocations in the {@link SimpleScheduler}. */
+/**
+ * The allocations in the {@link SimpleScheduler}.
+ *
+ * @implSpec WARNING: {@link SimpleScheduler} will lock r/w operations on this class but will NOT
+ *     lock read-only operations on this class, so all read-only methods of this class should only
+ *     access at most ONE map in the class, to avoid returning an inconsistent result.
+ */
 @NotThreadSafe
 final class Allocations {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();

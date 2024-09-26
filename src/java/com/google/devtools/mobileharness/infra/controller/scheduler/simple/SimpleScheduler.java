@@ -52,6 +52,9 @@ import javax.inject.Inject;
 /**
  * Simple scheduler. It rotationally assigns devices to waiting jobs. So a huge job won't block the
  * latter jobs.
+ *
+ * @implSpec WARNING: {@link Allocations} is not thread safe, so at least all r/w operations of
+ *     {@link Allocations} should be locked.
  */
 public class SimpleScheduler extends AbstractScheduler implements Runnable {
 
