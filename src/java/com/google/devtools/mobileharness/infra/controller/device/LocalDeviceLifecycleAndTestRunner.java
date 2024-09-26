@@ -63,6 +63,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
@@ -595,6 +596,7 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
     try {
       extendExpireTime(device.getSetupTimeout());
       device.setUp();
+      updateExtraDimensions();
     } catch (MobileHarnessException | InterruptedException e) {
       logger.atWarning().withCause(e).log("Failed to initialize device");
       initialized = false;
@@ -729,16 +731,7 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
     logger.atInfo().log("Start periodical check");
     lastCheckDeviceTime = clock.instant();
 
-    // Update device run target.
-    // If the run target is returned from TF and it's not same as the current run_target dimension
-    // value, update with the new value;
-    // If the run target is not returned from TF, clear run_target dimension.
-    Optional<String> runTarget = externalDeviceManager.getRunTarget(device.getDeviceId());
-    if (runTarget.isPresent()) {
-      device.updateDimension(Dimension.Name.RUN_TARGET, runTarget.get());
-    } else {
-      device.updateDimension(Dimension.Name.RUN_TARGET);
-    }
+    updateExtraDimensions();
 
     try {
       return device.checkDevice();
@@ -747,6 +740,25 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
       throw e;
     } finally {
       logger.atInfo().log("Finish periodical check");
+    }
+  }
+
+  /**
+   * Updates device extra dimensions.
+   *
+   * <p>If values exists, upsert the dimension with the new value; If the value is empty, the
+   * dimension will be removed.
+   */
+  private void updateExtraDimensions() {
+    Map<Dimension.Name, Optional<String>> extraDimensions =
+        externalDeviceManager.getExtraDimensions(device.getDeviceId());
+    for (Map.Entry<Dimension.Name, Optional<String>> entry : extraDimensions.entrySet()) {
+      if (entry.getValue().isPresent()) {
+        device.updateDimension(entry.getKey(), entry.getValue().get());
+      } else {
+        // removes the dimension.
+        device.updateDimension(entry.getKey());
+      }
     }
   }
 

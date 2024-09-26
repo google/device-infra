@@ -18,7 +18,9 @@ package com.google.devtools.mobileharness.infra.controller.device.external;
 
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.daemon.health.handler.DrainHandler;
+import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import java.time.Duration;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -43,12 +45,12 @@ public interface ExternalDeviceManager extends DrainHandler {
   DeviceStatus getDeviceStatus(String deviceId, String deviceType);
 
   /**
-   * Gets the device run target.
+   * Gets the extra dimensions provided by external device manager.
    *
-   * @return the run target for the given device if the device exists and the run target for this
-   *     device exists; empty otherwise.
+   * @return the extra dimensions provided by external device manager. If the value is empty, it
+   *     means the dimension should be removed.
    */
-  Optional<String> getRunTarget(String deviceId);
+  Map<Dimension.Name, Optional<String>> getExtraDimensions(String deviceId);
 
   /** Gets whether this external DM manages device life cycle. */
   boolean isManagingDeviceLifeCycle();

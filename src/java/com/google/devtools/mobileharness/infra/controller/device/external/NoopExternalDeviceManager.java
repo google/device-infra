@@ -16,8 +16,11 @@
 
 package com.google.devtools.mobileharness.infra.controller.device.external;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.infra.controller.device.external.ExternalDeviceManager.DeviceReservation;
+import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import java.time.Duration;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -48,8 +51,8 @@ public class NoopExternalDeviceManager implements ExternalDeviceManager {
   }
 
   @Override
-  public Optional<String> getRunTarget(String deviceId) {
-    return Optional.empty();
+  public Map<Dimension.Name, Optional<String>> getExtraDimensions(String deviceId) {
+    return ImmutableMap.of();
   }
 
   @Override

@@ -35,6 +35,7 @@ java_library(
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/daemon/health/handler:drain_handler",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
     ],
 )
 
@@ -45,5 +46,7 @@ java_library(
     ],
     deps = [
         ":external_device_manager",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
+        "@maven//:com_google_guava_guava",
     ],
 )
