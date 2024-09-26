@@ -13,6 +13,8 @@
 # limitations under the License.
 #
 
+load("@rules_java//java:defs.bzl", "java_library")
+
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
@@ -28,6 +30,21 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "jdbc_allocation_persistence_util",
+    srcs = ["JdbcAllocationPersistenceUtil.java"],
+    deps = [
+        ":allocation_persistence_util",
+        "//src/devtools/mobileharness/service/moss/proto:slg_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/allocation",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/service/moss/util/slg:converter",
+        "//src/java/com/google/devtools/mobileharness/shared/util/database:database_connections",
+        "//src/java/com/google/devtools/mobileharness/shared/util/database:table_util",
         "@maven//:com_google_guava_guava",
     ],
 )

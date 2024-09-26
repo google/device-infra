@@ -54,6 +54,7 @@ public interface AllocationPersistenceUtil {
 
   /** No-op implementation of {@link AllocationPersistenceUtil}. */
   final class NoOpAllocationPersistenceUtil implements AllocationPersistenceUtil {
+
     @Override
     public void removePersistedAllocation(String testId) {}
 
