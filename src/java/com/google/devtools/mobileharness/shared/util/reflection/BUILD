@@ -20,9 +20,7 @@ package(default_applicable_licenses = ["//:license"])
 java_library(
     name = "class_constants",
     srcs = ["ClassConstants.java"],
-    visibility = [
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api:__pkg__",
-    ],
+    visibility = ["//src/java/com/google/wireless/qa/mobileharness/shared/api:__pkg__"],
 )
 
 java_library(
