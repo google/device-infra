@@ -55,6 +55,7 @@ java_library(
     srcs = ["ProtoTextFormat.java"],
     deps = [
         ":proto_extension_registry",
+        ":proto_reflection_util",
         "@com_google_protobuf//:protobuf_java",
     ],
 )
@@ -86,4 +87,13 @@ java_library(
     deps = [
         "@maven//:com_google_guava_guava",
     ],
+)
+
+java_library(
+    name = "proto_reflection_util",
+    srcs = ["ProtoReflectionUtil.java"],
+    visibility = [
+        "//:deviceinfra_all_pkg",
+    ],
+    deps = ["@com_google_protobuf//:protobuf_java"],
 )

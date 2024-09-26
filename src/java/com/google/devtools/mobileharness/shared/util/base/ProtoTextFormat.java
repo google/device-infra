@@ -67,12 +67,7 @@ public class ProtoTextFormat {
   public static <T extends Message> T parse(
       CharSequence textproto, ExtensionRegistry extensionRegistry, Class<T> protoClass)
       throws ParseException {
-    Message.Builder builder;
-    try {
-      builder = (Message.Builder) protoClass.getMethod("newBuilder").invoke(null);
-    } catch (ReflectiveOperationException e) {
-      throw new LinkageError("Failed to call newBuilder() on %s" + protoClass, e);
-    }
+    Message.Builder builder = ProtoReflectionUtil.newInstance(protoClass, Message.Builder.class);
     PARSER.merge(textproto, extensionRegistry, builder);
     return (T) builder.build();
   }

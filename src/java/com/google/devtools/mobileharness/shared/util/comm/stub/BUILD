@@ -75,3 +75,19 @@ java_library(
         "@io_grpc_grpc_java//stub",
     ],
 )
+
+java_library(
+    name = "proxy",
+    srcs = [
+        "BlockingInterfaceInvocationHandler.java",
+        "DirectInvocationHandler.java",
+        "SyncCallMethod.java",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_reflection_util",
+        "@com_google_protobuf//:protobuf_java",
+        "@io_grpc_grpc_java//core",
+        "@maven//:com_google_guava_guava",
+    ],
+)
