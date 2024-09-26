@@ -19,6 +19,7 @@ package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/controller/scheduler/simple:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/controller/scheduler/simple:__subpackages__",
     ],
 )
 

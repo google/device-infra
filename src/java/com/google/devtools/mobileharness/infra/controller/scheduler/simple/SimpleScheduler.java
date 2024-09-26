@@ -27,6 +27,7 @@ import com.google.devtools.mobileharness.api.model.lab.LabLocator;
 import com.google.devtools.mobileharness.api.model.lab.LabScheduleUnit;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AdhocTestbedSchedulingUtil;
+import com.google.devtools.mobileharness.infra.controller.scheduler.simple.persistence.AllocationPersistenceUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
@@ -71,7 +72,7 @@ public class SimpleScheduler extends AbstractScheduler implements Runnable {
   /** Synchronization lock for {@link #allocations}. */
   private final Object allocationLock = new Object();
 
-  private final Allocations allocations = new Allocations();
+  private final Allocations allocations;
 
   private final Sleeper sleeper;
   private final ExecutorService threadPool;
@@ -84,11 +85,15 @@ public class SimpleScheduler extends AbstractScheduler implements Runnable {
   SimpleScheduler(ExecutorService threadPool, Sleeper sleeper) {
     this.threadPool = threadPool;
     this.sleeper = sleeper;
+    // TODO: Inject the real AllocationPersistenceUtil implementation in ATS.
+    this.allocations =
+        new Allocations(new AllocationPersistenceUtil.NoOpAllocationPersistenceUtil());
   }
 
   @Override
   public void start() {
     Future<?> possiblyIgnoredError = threadPool.submit(this);
+    allocations.initialize();
   }
 
   @Override

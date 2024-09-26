@@ -20,13 +20,17 @@ import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.allocation.Allocation;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.TestLocator;
 import com.google.devtools.mobileharness.api.model.lab.DeviceLocator;
+import com.google.devtools.mobileharness.infra.controller.scheduler.simple.persistence.AllocationPersistenceUtil;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
+import javax.inject.Inject;
 
 /** The allocations in the {@link SimpleScheduler}. */
 @NotThreadSafe
@@ -39,16 +43,43 @@ final class Allocations {
   /** {TestID, Allocation} mapping. */
   private final Map<String, Allocation> testAllocations = new ConcurrentHashMap<>();
 
+  private final AllocationPersistenceUtil allocationPersistenceUtil;
+
   @AutoValue
   abstract static class RemoveAllocationResult {
     public static RemoveAllocationResult create(
-        Optional<TestLocator> removedTest, ImmutableList<DeviceLocator> removedDevices) {
-      return new AutoValue_Allocations_RemoveAllocationResult(removedTest, removedDevices);
+        @Nullable TestLocator removedTest, ImmutableList<DeviceLocator> removedDevices) {
+      return new AutoValue_Allocations_RemoveAllocationResult(
+          Optional.ofNullable(removedTest), removedDevices);
     }
 
     abstract Optional<TestLocator> removedTest();
 
     abstract ImmutableList<DeviceLocator> removedDevices();
+  }
+
+  @Inject
+  Allocations(AllocationPersistenceUtil allocationPersistenceUtil) {
+    this.allocationPersistenceUtil = allocationPersistenceUtil;
+  }
+
+  /** Initializes the allocations. */
+  void initialize() {
+    try {
+      ImmutableList<AllocationPersistenceUtil.AllocationOrError> allocationOrErrors =
+          allocationPersistenceUtil.getPersistedAllocations();
+      for (AllocationPersistenceUtil.AllocationOrError allocationOrError : allocationOrErrors) {
+        if (allocationOrError.allocation().isPresent()) {
+          Allocation allocation = allocationOrError.allocation().get();
+          addAllocation(allocation);
+        } else if (allocationOrError.error().isPresent()) {
+          logger.atWarning().withCause(allocationOrError.error().get()).log(
+              "Failed to resume allocation.");
+        }
+      }
+    } catch (MobileHarnessException e) {
+      logger.atWarning().withCause(e).log("Failed to resume allocations");
+    }
   }
 
   /**
@@ -57,6 +88,7 @@ final class Allocations {
    * @return false if the test or the devices already have allocation, Otherwise, add the allocation
    *     and return true.
    */
+  @CanIgnoreReturnValue
   boolean addAllocation(Allocation allocation) {
     Allocation testAllocation = getAllocationByTest(allocation.getTest().id());
     if (testAllocation != null) {
@@ -81,6 +113,11 @@ final class Allocations {
       deviceAllocations.put(deviceLocator.universalId(), allocation);
     }
 
+    try {
+      allocationPersistenceUtil.persistAllocation(allocation);
+    } catch (MobileHarnessException e) {
+      logger.atWarning().withCause(e).log("Failed to persist allocation: %s", allocation);
+    }
     return true;
   }
 
@@ -90,7 +127,7 @@ final class Allocations {
    * @return the removed allocations' owner test and devices.
    */
   RemoveAllocationResult removeAllocation(Allocation allocation) {
-    Optional<TestLocator> removedTest = Optional.empty();
+    TestLocator removedTest = null;
     ImmutableList.Builder<DeviceLocator> removedDevices = ImmutableList.builder();
 
     TestLocator testLocator = allocation.getTest();
@@ -104,7 +141,13 @@ final class Allocations {
     } else {
       logger.atInfo().log("Un-assign test %s", testLocator);
       testAllocations.remove(testLocator.id());
-      removedTest = Optional.of(testLocator);
+      removedTest = testLocator;
+      try {
+        allocationPersistenceUtil.removePersistedAllocation(testLocator.id());
+      } catch (MobileHarnessException e) {
+        logger.atWarning().withCause(e).log(
+            "Failed to remove persisted allocation: %s", allocation);
+      }
     }
 
     for (DeviceLocator deviceLocator : allocation.getAllDevices()) {
