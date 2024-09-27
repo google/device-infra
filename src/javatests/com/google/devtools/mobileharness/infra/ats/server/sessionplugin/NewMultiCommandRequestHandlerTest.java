@@ -235,9 +235,13 @@ public final class NewMultiCommandRequestHandlerTest {
 
     // Verify command detail.
     assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
-    CommandDetail commandDetail =
-        requestDetail.getCommandDetailsOrThrow(
-            "UNKNOWN_" + commandInfoWithInvalidCommandLine.getCommandLine());
+    String commandId = requestDetail.getCommandDetailsMap().keySet().iterator().next();
+    assertThat(commandId)
+        .isEqualTo(
+            UUID.nameUUIDFromBytes(
+                    commandInfoWithInvalidCommandLine.getCommandLine().getBytes(UTF_8))
+                .toString());
+    CommandDetail commandDetail = requestDetail.getCommandDetailsOrThrow(commandId);
     assertThat(commandDetail.getCommandLine())
         .isEqualTo(commandInfoWithInvalidCommandLine.getCommandLine());
     assertThat(commandDetail.getState()).isEqualTo(CommandState.ERROR);
@@ -526,8 +530,10 @@ public final class NewMultiCommandRequestHandlerTest {
 
     // Verify command detail.
     assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
-    CommandDetail commandDetail =
-        requestDetail.getCommandDetailsOrThrow("UNKNOWN_" + commandInfo.getCommandLine());
+    String commandId = requestDetail.getCommandDetailsMap().keySet().iterator().next();
+    assertThat(commandId)
+        .isEqualTo(UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString());
+    CommandDetail commandDetail = requestDetail.getCommandDetailsOrThrow(commandId);
     assertThat(commandDetail.getCommandLine()).isEqualTo(commandInfo.getCommandLine());
     assertThat(commandDetail.getState()).isEqualTo(CommandState.ERROR);
   }
@@ -564,8 +570,10 @@ public final class NewMultiCommandRequestHandlerTest {
 
     // Verify command detail.
     assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
-    CommandDetail commandDetail =
-        requestDetail.getCommandDetailsOrThrow("UNKNOWN_" + commandInfo.getCommandLine());
+    String commandId = requestDetail.getCommandDetailsMap().keySet().iterator().next();
+    assertThat(commandId)
+        .isEqualTo(UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString());
+    CommandDetail commandDetail = requestDetail.getCommandDetailsOrThrow(commandId);
     assertThat(commandDetail.getCommandLine()).isEqualTo(commandInfo.getCommandLine());
     assertThat(commandDetail.getState()).isEqualTo(CommandState.ERROR);
   }
@@ -812,6 +820,8 @@ public final class NewMultiCommandRequestHandlerTest {
         .processResult(any(), any(), any(), any(), any(), any());
     Mockito.doNothing().when(localFileUtil).prepareDir(any(Path.class));
     newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail);
+    assertThat(requestDetail.getCommandDetailsMap().values().iterator().next().getState())
+        .isEqualTo(CommandState.ERROR);
     verify(sessionInfo)
         .putSessionProperty(
             SessionProperties.PROPERTY_KEY_SERVER_SESSION_LOG_PATH,
