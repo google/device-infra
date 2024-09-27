@@ -136,9 +136,9 @@ public class AndroidDeviceHelper {
   }
 
   /**
-   * Returns an ImmutableSet containing either a lower-cased value or if the {@link AndroidProperty}
-   * should be retained (see {@link #RETAIN_CAPS_PROPERTIES}), a set containing at most two Strings:
-   * 1) value unchanged, and 2) a lower-cased value.
+   * Returns an ImmutableSet containing the original value of a property (only if the property is
+   * annotated with {@link KeepDimensionValueCase}), and the lower-cased value of the property
+   * (always), in order.
    */
   public ImmutableSet<String> maybeLowerCaseProperty(AndroidProperty key, String value) {
     ImmutableSet.Builder<String> valuesBuilder = ImmutableSet.builder();
