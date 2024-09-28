@@ -22,10 +22,13 @@ import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.api.model.allocation.Allocation;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.controller.scheduler.simple.persistence.AllocationPersistenceUtil.NoOpAllocationPersistenceUtil;
+import com.google.inject.ImplementedBy;
 import java.util.Optional;
 import javax.annotation.Nullable;
 
 /** Util to persist/resume allocations. */
+@ImplementedBy(NoOpAllocationPersistenceUtil.class)
 public interface AllocationPersistenceUtil {
 
   /** Persists the allocation. */

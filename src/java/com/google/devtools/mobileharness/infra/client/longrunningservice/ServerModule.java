@@ -35,6 +35,10 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.ser
 import com.google.devtools.mobileharness.infra.client.longrunningservice.util.persistence.JdbcBasedSessionPersistenceUtil;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.util.persistence.SessionPersistenceUtil;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.util.persistence.SessionPersistenceUtil.NoOpSessionPersistenceUtil;
+import com.google.devtools.mobileharness.infra.controller.scheduler.simple.persistence.AllocationPersistenceUtil;
+import com.google.devtools.mobileharness.infra.controller.scheduler.simple.persistence.AllocationPersistenceUtil.NoOpAllocationPersistenceUtil;
+import com.google.devtools.mobileharness.infra.controller.scheduler.simple.persistence.Annotations.SchedulerDatabaseConnections;
+import com.google.devtools.mobileharness.infra.controller.scheduler.simple.persistence.JdbcAllocationPersistenceUtil;
 import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberExceptionLoggingHandler;
 import com.google.devtools.mobileharness.infra.monitoring.CloudPubsubMonitorModule;
 import com.google.devtools.mobileharness.infra.monitoring.MonitorPipelineLauncher;
@@ -43,6 +47,7 @@ import com.google.devtools.mobileharness.shared.util.database.DatabaseConnection
 import com.google.devtools.mobileharness.shared.util.reflection.ReflectionUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.AbstractModule;
+import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
@@ -101,16 +106,26 @@ class ServerModule extends AbstractModule {
         .in(Scopes.SINGLETON);
     bind(Clock.class).toInstance(Clock.systemUTC());
     bind(LocalSessionStub.class).to(LocalSessionStubImpl.class);
+
+    // Binds database connections and persistence utils.
     bind(DatabaseConnections.class)
         .annotatedWith(OlcDatabaseConnections.class)
         .to(DatabaseConnections.class)
         .in(Singleton.class);
+    bind(DatabaseConnections.class)
+        .annotatedWith(SchedulerDatabaseConnections.class)
+        .to(new Key<>(OlcDatabaseConnections.class) {});
     bind(SessionPersistenceUtil.class)
         .to(
             enableDatabase
                 ? JdbcBasedSessionPersistenceUtil.class
                 : NoOpSessionPersistenceUtil.class)
         .in(Singleton.class);
+    bind(AllocationPersistenceUtil.class)
+        .to(
+            enableDatabase
+                ? JdbcAllocationPersistenceUtil.class
+                : NoOpAllocationPersistenceUtil.class);
   }
 
   @Provides

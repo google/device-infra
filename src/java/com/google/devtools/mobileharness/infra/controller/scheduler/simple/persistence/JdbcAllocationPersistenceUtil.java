@@ -21,18 +21,22 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.api.model.allocation.Allocation;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.controller.scheduler.simple.persistence.Annotations.SchedulerDatabaseConnections;
 import com.google.devtools.mobileharness.service.moss.proto.Slg.AllocationProto;
 import com.google.devtools.mobileharness.service.moss.util.slg.AllocationConverter;
 import com.google.devtools.mobileharness.shared.util.database.DatabaseConnections;
 import com.google.devtools.mobileharness.shared.util.database.TableUtil.StringBinaryProtoOrError;
 import com.google.devtools.mobileharness.shared.util.database.TableUtil.StringBinaryProtoTable;
+import javax.inject.Inject;
 
 /** JDBC implementation of {@link AllocationPersistenceUtil}. */
 public class JdbcAllocationPersistenceUtil implements AllocationPersistenceUtil {
 
   private final StringBinaryProtoTable<AllocationProto> table;
 
-  public JdbcAllocationPersistenceUtil(DatabaseConnections schedulerDatabaseConnections) {
+  @Inject
+  JdbcAllocationPersistenceUtil(
+      @SchedulerDatabaseConnections DatabaseConnections schedulerDatabaseConnections) {
     this.table =
         new StringBinaryProtoTable<>(
             schedulerDatabaseConnections,

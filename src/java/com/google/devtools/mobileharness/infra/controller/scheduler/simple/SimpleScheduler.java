@@ -17,9 +17,12 @@
 package com.google.devtools.mobileharness.infra.controller.scheduler.simple;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
+import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.model.allocation.Allocation;
 import com.google.devtools.mobileharness.api.model.lab.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.lab.DeviceScheduleUnit;
@@ -44,8 +47,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
+import java.util.logging.Level;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 
@@ -78,24 +80,31 @@ public class SimpleScheduler extends AbstractScheduler implements Runnable {
   private final Allocations allocations;
 
   private final Sleeper sleeper;
-  private final ExecutorService threadPool;
+  private final ListeningExecutorService threadPool;
 
-  public SimpleScheduler(ExecutorService threadPool) {
-    this(threadPool, Sleeper.defaultSleeper());
+  public SimpleScheduler(ListeningExecutorService threadPool) {
+    this(
+        threadPool,
+        Sleeper.defaultSleeper(),
+        new AllocationPersistenceUtil.NoOpAllocationPersistenceUtil());
   }
 
   @Inject
-  SimpleScheduler(ExecutorService threadPool, Sleeper sleeper) {
+  SimpleScheduler(
+      ListeningExecutorService threadPool,
+      Sleeper sleeper,
+      AllocationPersistenceUtil allocationPersistenceUtil) {
     this.threadPool = threadPool;
     this.sleeper = sleeper;
-    // TODO: Inject the real AllocationPersistenceUtil implementation in ATS.
-    this.allocations =
-        new Allocations(new AllocationPersistenceUtil.NoOpAllocationPersistenceUtil());
+    this.allocations = new Allocations(allocationPersistenceUtil);
   }
 
   @Override
   public void start() {
-    Future<?> possiblyIgnoredError = threadPool.submit(this);
+    logFailure(
+        threadPool.submit(threadRenaming(this, () -> "omnilab-scheduler")),
+        Level.SEVERE,
+        "Error occurred in scheduler");
     allocations.initialize();
   }
 
