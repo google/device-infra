@@ -66,7 +66,7 @@ class RunCommandHandler {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  private static final String SESSION_PROPERTY_NAME_TIMESTAMP_DIR_NAME = "timestamp_dir_name";
+  static final String SESSION_PROPERTY_NAME_TIMESTAMP_DIR_NAME = "timestamp_dir_name";
   private static final DateTimeFormatter TIMESTAMP_DIR_NAME_FORMATTER =
       DateTimeFormatter.ofPattern("uuuu.MM.dd_HH.mm.ss.SSS").withZone(ZoneId.systemDefault());
 
@@ -143,22 +143,41 @@ class RunCommandHandler {
             .map(SuiteTestFilter::create)
             .collect(toImmutableList());
 
+    String rootPath =
+        XtsDirUtil.getXtsLogsDir(Path.of(command.getXtsRootDir()), command.getXtsType())
+            .resolve(
+                sessionInfo
+                    .getSessionProperty(SESSION_PROPERTY_NAME_TIMESTAMP_DIR_NAME)
+                    .orElseThrow())
+            .toString();
     jobInfoList.forEach(
         jobInfo -> {
-          jobInfo
-              .params()
-              .add(
-                  "xts_log_root_path",
-                  XtsDirUtil.getXtsLogsDir(Path.of(command.getXtsRootDir()), command.getXtsType())
-                      .resolve(
-                          sessionInfo
-                              .getSessionProperty(SESSION_PROPERTY_NAME_TIMESTAMP_DIR_NAME)
-                              .orElseThrow())
-                      .toString());
+          jobInfo.params().add("xts_log_root_path", rootPath);
           addEnableXtsDynamicDownloadToJob(
               jobInfo, command, tfModules, staticMctsModules, includeFilters);
         });
     return jobInfoList;
+  }
+
+  private static void addEnableXtsDynamicDownloadToJob(
+      JobInfo jobInfo,
+      RunCommand runCommand,
+      ImmutableList<String> tfModules,
+      ImmutableSet<String> staticMctsModules,
+      ImmutableList<SuiteTestFilter> includeFilters) {
+    if (runCommand.getEnableXtsDynamicDownload()) {
+      jobInfo.properties().add(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED, "true");
+    }
+    // Consider independent two cases:
+    // 1. No -m MCTS modules specified, dynamic download is disabled.
+    // 2. No include filtered MCTS modules, dynamic download is disabled.
+    if ((!tfModules.isEmpty() && tfModules.stream().noneMatch(staticMctsModules::contains))
+        || (!includeFilters.isEmpty()
+            && includeFilters.stream()
+                .noneMatch(
+                    filter -> staticMctsModules.stream().anyMatch(filter::matchModuleName)))) {
+      jobInfo.properties().add(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED, "false");
+    }
   }
 
   /**
@@ -197,24 +216,23 @@ class RunCommandHandler {
                 + " based on the session scale.",
             runCommandState.getCommandId());
 
+    if (!localFileUtil.isDirExist(command.getXtsRootDir())) {
+      logger.atInfo().log(
+          "xTS root dir [%s] doesn't exist, skip processing result.", command.getXtsRootDir());
+      return;
+    }
+
     List<JobInfo> allJobs = sessionInfo.getAllJobs();
-    Path resultDir = null;
-    Path logDir = null;
-    Result result = null;
+    String timestampDirName =
+        sessionInfo.getSessionProperty(SESSION_PROPERTY_NAME_TIMESTAMP_DIR_NAME).orElseThrow();
     Path xtsRootDir = Path.of(command.getXtsRootDir());
     String xtsType = command.getXtsType();
     Path resultsDir = XtsDirUtil.getXtsResultsDir(xtsRootDir, xtsType);
+    Path logsDir = XtsDirUtil.getXtsLogsDir(xtsRootDir, xtsType);
+    Path resultDir = resultsDir.resolve(timestampDirName);
+    Path logDir = logsDir.resolve(timestampDirName);
+    Result result = null;
     try {
-      if (!localFileUtil.isDirExist(command.getXtsRootDir())) {
-        logger.atInfo().log(
-            "xTS root dir [%s] doesn't exist, skip processing result.", command.getXtsRootDir());
-        return;
-      }
-      String timestampDirName =
-          sessionInfo.getSessionProperty(SESSION_PROPERTY_NAME_TIMESTAMP_DIR_NAME).orElseThrow();
-      resultDir = resultsDir.resolve(timestampDirName);
-      Path logsDir = XtsDirUtil.getXtsLogsDir(xtsRootDir, xtsType);
-      logDir = logsDir.resolve(timestampDirName);
       result =
           sessionResultHandlerUtil
               .processResult(
@@ -383,30 +401,5 @@ class RunCommandHandler {
             ? String.format("RESULT DIRECTORY            : %s\n", resultDir)
             : "")
         + "=================== End ====================\n";
-  }
-
-  private static void addEnableXtsDynamicDownloadToJob(
-      JobInfo jobInfo,
-      RunCommand runCommand,
-      ImmutableList<String> tfModules,
-      ImmutableSet<String> staticMctsModules,
-      ImmutableList<SuiteTestFilter> includeFilters) {
-    if (runCommand.getEnableXtsDynamicDownload()) {
-      jobInfo.properties().add(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED, "true");
-    }
-    // Consider independent two cases:
-    // 1. No -m MCTS modules specified, dynamic download is disabled.
-    // 2. No include filtered MCTS modules, dynamic download is disabled.
-    if (!tfModules.isEmpty()) {
-      if (tfModules.stream().noneMatch(staticMctsModules::contains)) {
-        jobInfo.properties().add(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED, "false");
-      }
-    }
-    if (!includeFilters.isEmpty()) {
-      if (includeFilters.stream()
-          .noneMatch(filter -> staticMctsModules.stream().anyMatch(filter::matchModuleName))) {
-        jobInfo.properties().add(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED, "false");
-      }
-    }
   }
 }
