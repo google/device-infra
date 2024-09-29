@@ -68,7 +68,8 @@ public abstract class XtsJobCreator {
           InfraErrorId.OLCS_NO_CORRESPONDING_FILTER_FOUND_IN_SUBPLAN,
           InfraErrorId.OLCS_NO_FILTER_FOUND_IN_RETRY_SUBPLAN,
           InfraErrorId.XTS_NO_MATCHED_NON_TRADEFED_MODULES,
-          InfraErrorId.XTS_NO_MATCHED_TRADEFED_MODULES);
+          InfraErrorId.XTS_NO_MATCHED_TRADEFED_MODULES,
+          InfraErrorId.XTS_NO_MATCHED_NON_TF_MODULES_TO_RETRY);
 
   private final SessionRequestHandlerUtil sessionRequestHandlerUtil;
   private final LocalFileUtil localFileUtil;
