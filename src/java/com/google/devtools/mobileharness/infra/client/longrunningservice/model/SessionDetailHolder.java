@@ -91,6 +91,15 @@ public class SessionDetailHolder {
     this.sessionDetailBuilder = sessionDetail.toBuilder();
     this.sessionProperties =
         new HashMap<>(sessionDetail.getSessionConfig().getSessionPropertyMap());
+    sessionDetail
+        .getSessionOutput()
+        .getSessionPluginOutputMap()
+        .forEach(this.sessionPluginOutputs::put);
+    sessionDetail.getSessionOutput().getSessionPropertyMap().forEach(this.sessionProperties::put);
+    sessionDetail
+        .getSessionOutput()
+        .getSessionPluginErrorList()
+        .forEach(this.sessionPluginErrors::add);
     this.sessionDetailListener = sessionDetailListener;
   }
 
