@@ -31,6 +31,7 @@ import com.google.protobuf.Message;
 import com.google.protobuf.TextFormat;
 import com.google.protobuf.TextFormat.ParseException;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
+import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Job;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.JobSpecHelper;
@@ -103,6 +104,8 @@ public class LongevityTestHelper {
     if (jobInfoProto.isPresent()) {
       try {
         JobInfo jobInfo = JobInfoConverter.fromProto(resumeFiles, rootDir, jobInfoProto.get());
+        jobInfo.properties().add(Job._IS_RESUMED_JOB, "true");
+
         if (!resumeFiles && newJobInfo != null) {
           jobInfo.files().addAll(newJobInfo.files().getAll());
           jobInfo
