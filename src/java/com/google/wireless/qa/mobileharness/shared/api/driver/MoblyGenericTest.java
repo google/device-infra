@@ -315,6 +315,14 @@ public class MoblyGenericTest extends BaseDriver {
     } else {
       testParams = testbedConfig.getJSONObject(MoblyConstant.ConfigKey.TEST_PARAMS);
     }
+
+    // Merge MH job params into Mobly's local TestParams. In the event of merge conflict, local
+    // testbed parameter will take precedence.
+    for (Map.Entry<String, String> entry : testInfo.jobInfo().params().getAll().entrySet()) {
+      if (testParams.isNull(entry.getKey())) {
+        testParams.put(entry.getKey(), entry.getValue());
+      }
+    }
     // Dump all files from MH into a key called 'mh_files' in userparams.
     // The test and job file sets are different. jobInfo.files() comes from the build tuple and
     // contains user-added files. testInfo.files() contains only files added specifically to that
