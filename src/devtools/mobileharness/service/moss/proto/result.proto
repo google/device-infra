@@ -87,6 +87,7 @@ message Timeline {
     Job job_type = 1;
     Test test_type = 2;
   }
+
   optional string tag = 3;
   optional int64 start_time_ms = 4;
   optional int64 end_time_ms = 5;
@@ -98,6 +99,7 @@ message TimeDetail {
   optional int64 create_time_ms = 1;
   optional int64 start_time_ms = 2;
   optional int64 modify_time_ms = 3;
+
   // If the start_time is present, duration_time = min(modify_time / end_time) -
   // start_time. Otherwise, duration_time is set to 0.
   optional int64 duration_time_ms = 4;
@@ -113,12 +115,14 @@ message ErrorInfo {
   // It does not contain stack traces.
   optional mobileharness.api.model.ExceptionSummary deprecated_summary = 1
       [deprecated = true];
+
   optional stability.model.ExceptionSummary summary = 9;
 
   // Cause chain.
   // It does not contain stack traces.
   repeated mobileharness.api.model.ExceptionSummary deprecated_cause = 2
       [deprecated = true];
+
   repeated stability.model.ExceptionSummary cause = 10;
 
   // Serialized stack trace which contains the cause & suppressed exception
@@ -190,6 +194,7 @@ message JobSummary {
   optional TimeDetail time_detail = 8;
   repeated mobileharness.shared.ErrorInfo deprecated_error = 9
       [deprecated = true];
+
   optional string log = 10;
   repeated mobileharness.shared.StrPair param = 11;
   repeated mobileharness.shared.StrPair dimension = 12;
