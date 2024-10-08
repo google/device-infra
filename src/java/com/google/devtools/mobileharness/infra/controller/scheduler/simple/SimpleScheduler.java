@@ -175,6 +175,14 @@ public class SimpleScheduler extends AbstractScheduler implements Runnable {
     TestLocator testLocator = test.locator();
     SimpleJobInfo job = checkJob(testLocator.getJobLocator().getId());
     job.addTest(testLocator);
+    // If the test already has allocation(usually because the test allocated one device in the
+    // previous process and it's resumed in the current process), post the allocation event.
+    Allocation allocation = allocations.getAllocationByTest(testLocator.getId());
+    if (allocation != null) {
+      logger.atInfo().log(
+          "Post allocation event of allocation %s when adding test %s", allocation, testLocator);
+      postEvent(new AllocationEvent(allocation));
+    }
     logger.atInfo().log("Added test %s", testLocator);
   }
 
