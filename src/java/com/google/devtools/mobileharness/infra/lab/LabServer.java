@@ -445,7 +445,12 @@ public class LabServer {
             .build());
 
     // Host OS version
-    String osVersion = systemUtil.getOsVersion();
+    String osVersion;
+    if (systemUtil.isOnLinux()) {
+      osVersion = systemUtil.getUbuntuVersion().get();
+    } else {
+      osVersion = systemUtil.getOsVersion();
+    }
     LabDimensionManager.getInstance()
         .getSupportedLocalDimensions()
         .add(Ascii.toLowerCase(Name.HOST_OS_VERSION.name()), osVersion);
