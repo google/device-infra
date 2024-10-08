@@ -200,7 +200,7 @@ public class SingleDeviceReport implements Report {
       if (!overallAssessment.isIdle()) {
         report.append(
             String.format(
-                "No IDLE %s%s. Please extend the timeout settingsx to wait longer.\n",
+                "No IDLE %s%s. Please extend the timeout settings to wait longer.\n",
                 jobType.getDevice(), getDiagnosticCandidateFilterSuffix()));
       }
 
