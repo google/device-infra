@@ -44,6 +44,7 @@ public class DatabaseConnections {
           "DatabaseConnections has been initialized, data_source=%s",
           dataSource);
       try {
+
         this.dataSource =
             DataSources.pooledDataSource(
                 DataSources.unpooledDataSource(jdbcUrl), statementCacheSize);
