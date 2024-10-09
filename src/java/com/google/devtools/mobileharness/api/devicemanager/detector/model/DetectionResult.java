@@ -63,6 +63,7 @@ public abstract class DetectionResult {
     NO_OP,
     OPEN_WRT,
     PIXEL_BUDS,
+    SDV_HYPERVISOR,
     SIMULATOR,
     STATIC_TESTBED,
     TTB,
