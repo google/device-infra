@@ -17,13 +17,17 @@
 package com.google.devtools.mobileharness.shared.util.flags;
 
 import com.beust.jcommander.IStringConverter;
+import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import javax.annotation.Nullable;
 
 /** A flag class providing similar interfaces of com.google.common.flags.Flag. */
 public class Flag<T> {
+  private static final Splitter ENTRY_SPLITTER = Splitter.on(',');
 
   /** Converter for creating boolean flag from JCommander. */
   public static class BooleanConverter implements IStringConverter<Flag<Boolean>> {
@@ -68,12 +72,33 @@ public class Flag<T> {
       if (value.isEmpty()) {
         return value(ImmutableList.of());
       }
-      return value(ImmutableList.copyOf(value.split(",")));
+      return value(ImmutableList.copyOf(ENTRY_SPLITTER.split(value)));
     }
   }
 
   static Flag<List<String>> stringList(String... defaultValues) {
     return value(ImmutableList.copyOf(defaultValues));
+  }
+
+  /** Converter for creating string map flag from JCommander. */
+  public static class StringMapConverter implements IStringConverter<Flag<Map<String, String>>> {
+
+    @Override
+    public Flag<Map<String, String>> convert(String value) {
+      if (value.isEmpty()) {
+        return value(ImmutableMap.of());
+      }
+      ImmutableMap.Builder<String, String> result = ImmutableMap.builder();
+      for (String s : ENTRY_SPLITTER.split(value)) {
+        int index = s.indexOf('=');
+        if (index == -1) {
+          throw new IllegalArgumentException("Invalid map entry syntax " + s);
+        } else {
+          result.put(s.substring(0, index).trim(), s.substring(index + 1).trim());
+        }
+      }
+      return value(result.buildKeepingLast());
+    }
   }
 
   static <T> Flag<T> value(@Nullable T defaultValue) {
