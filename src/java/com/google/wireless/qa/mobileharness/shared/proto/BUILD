@@ -15,6 +15,8 @@
 
 # Mobile Harness shared proto files.
 
+load("//tools/build_defs/go:go_proto_library.bzl", "go_proto_library")
+
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = ["//visibility:public"],
