@@ -20,7 +20,6 @@ import com.google.devtools.common.metrics.stability.rpc.RpcExceptionWithErrorId;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcStubUtil;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceGrpc;
-import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceGrpc.PrepareTestServiceBlockingStub;
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.CloseTestRequest;
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.CloseTestResponse;
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.CreateTestRequest;
@@ -30,15 +29,20 @@ import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.StartTestEngineRequest;
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.StartTestEngineResponse;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.PrepareTestStub;
+import com.google.devtools.mobileharness.shared.util.comm.stub.GrpcDirectTargetConfigures;
 import io.grpc.Channel;
 
 /** gRPC stub of {@code PrepareTestService}. */
 public class PrepareTestGrpcStub implements PrepareTestStub {
 
-  private final PrepareTestServiceBlockingStub stub;
+  private final BlockingInterface stub;
 
   public PrepareTestGrpcStub(Channel channel) {
-    this.stub = PrepareTestServiceGrpc.newBlockingStub(channel);
+    this(newBlockingInterface(channel));
+  }
+
+  public PrepareTestGrpcStub(BlockingInterface stub) {
+    this.stub = stub;
   }
 
   @Override
@@ -82,5 +86,21 @@ public class PrepareTestGrpcStub implements PrepareTestStub {
   @Override
   public void close() {
     // This stub is not responsible for managing lifecycle of the channel.
+  }
+
+  /** Interface for {@link PrepareTestServiceBlockingStub} */
+  public static interface BlockingInterface {
+    CreateTestResponse createTest(CreateTestRequest request);
+
+    GetTestEngineStatusResponse getTestEngineStatus(GetTestEngineStatusRequest request);
+
+    StartTestEngineResponse startTestEngine(StartTestEngineRequest request);
+
+    CloseTestResponse closeTest(CloseTestRequest request);
+  }
+
+  public static BlockingInterface newBlockingInterface(Channel channel) {
+    return GrpcDirectTargetConfigures.newBlockingInterface(
+        PrepareTestServiceGrpc.newBlockingStub(channel), BlockingInterface.class);
   }
 }

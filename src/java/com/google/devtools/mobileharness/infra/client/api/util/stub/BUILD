@@ -15,7 +15,14 @@
 
 load("@rules_java//java:defs.bzl", "java_library")
 
-package(default_applicable_licenses = ["//:license"])
+DEFAULT_VISIBILITY = [
+    "//src/java/com/google/wireless/qa/mobileharness/client/api/util/stub:__pkg__",
+]
+
+package(
+    default_applicable_licenses = ["//:license"],
+    default_visibility = DEFAULT_VISIBILITY,
+)
 
 java_library(
     name = "grpc_stub_manager",
@@ -34,5 +41,50 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/version/rpc/stub",
         "//src/java/com/google/devtools/mobileharness/shared/version/rpc/stub/grpc",
         "@io_grpc_grpc_java//core",
+    ],
+)
+
+java_library(
+    name = "stub_factory",
+    srcs = [
+        "BlockingInterfaceFactory.java",
+        "GrpcDirectTargetFactory.java",
+        "GrpcStubFactory.java",
+        "StubFactory.java",
+    ],
+    deps = [
+        "//src/devtools/mobileharness/infra/lab/proto:prepare_test_service_grpc",
+        "//src/devtools/mobileharness/shared/util/comm/filetransfer/cloud/proto:cloud_file_transfer_grpc_proto",
+        "//src/devtools/mobileharness/shared/util/comm/stub:stub_configuration_java_proto",
+        "//src/devtools/mobileharness/shared/version/proto:version_service_grpc",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/stub:exec_test",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/stub:prepare_test",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/stub/grpc:exec_test_grpc_stub",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/stub/grpc:prepare_test_grpc_stub",
+        "//src/java/com/google/devtools/mobileharness/shared/util/comm/filetransfer/cloud/rpc/stub:cloud_file_transfer_grpc_stub",
+        "//src/java/com/google/devtools/mobileharness/shared/util/comm/filetransfer/cloud/rpc/stub:cloud_file_transfer_stub",
+        "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:stub_configures",
+        "//src/java/com/google/devtools/mobileharness/shared/version/rpc/stub",
+        "//src/java/com/google/devtools/mobileharness/shared/version/rpc/stub/grpc",
+        "//src/java/com/google/wireless/qa/mobileharness/lab/proto:exec_test_serv_grpc",
+        "@maven//:com_google_guava_guava",
+        "@maven//:com_google_inject_guice",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "stub_factory_module",
+    srcs = [
+        "GrpcStubFactoryModule.java",
+        "StubFactoryModule.java",
+    ],
+    deps = [
+        ":stub_factory",
+        "//src/devtools/mobileharness/shared/util/comm/stub:stub_configuration_java_proto",
+        "//src/java/com/google/devtools/mobileharness/shared/constant/environment",
+        "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:stub_configures",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
+        "@maven//:com_google_inject_guice",
     ],
 )

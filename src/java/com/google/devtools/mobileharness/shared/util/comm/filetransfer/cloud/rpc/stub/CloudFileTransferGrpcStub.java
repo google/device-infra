@@ -41,17 +41,21 @@ import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.pro
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.proto.CloudFileTransfer.UploadFileRequest;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.proto.CloudFileTransfer.UploadFileResponse;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.proto.CloudFileTransferServiceGrpc;
-import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.proto.CloudFileTransferServiceGrpc.CloudFileTransferServiceBlockingStub;
+import com.google.devtools.mobileharness.shared.util.comm.stub.GrpcDirectTargetConfigures;
 import io.grpc.Channel;
 import java.time.Duration;
 
 /** gRPC stub of {@code mobileharness.shared.CloudFileTransferService}. */
 public class CloudFileTransferGrpcStub implements CloudFileTransferStubInterface {
 
-  private final CloudFileTransferServiceBlockingStub stub;
+  private final BlockingInterface stub;
 
   public CloudFileTransferGrpcStub(Channel channel) {
-    this.stub = CloudFileTransferServiceGrpc.newBlockingStub(channel);
+    this(newBlockingInterface(channel));
+  }
+
+  public CloudFileTransferGrpcStub(BlockingInterface stub) {
+    this.stub = stub;
   }
 
   @Override
@@ -153,4 +157,29 @@ public class CloudFileTransferGrpcStub implements CloudFileTransferStubInterface
 
   @Override
   public void shutdown() {}
+
+  /** Interface for {@link CloudFileTransferServiceBlockingStub}. */
+  public static interface BlockingInterface {
+    DownloadGcsFileResponse downloadGcsFile(DownloadGcsFileRequest request);
+
+    UploadFileResponse uploadFile(UploadFileRequest request);
+
+    ListFilesResponse listFiles(ListFilesRequest request);
+
+    StartUploadingFileResponse startUploadingFile(StartUploadingFileRequest request);
+
+    StartDownloadingGcsFileResponse startDownloadingGcsFile(StartDownloadingGcsFileRequest request);
+
+    GetProcessStatusResponse getProcessStatus(GetProcessStatusRequest request);
+
+    SaveFileResponse saveFile(SaveFileRequest request);
+
+    GetFileResponse getFile(GetFileRequest request);
+  }
+
+  /** Creates a {@link BlockingInterface} from a {@link Channel}. */
+  public static BlockingInterface newBlockingInterface(Channel channel) {
+    return GrpcDirectTargetConfigures.newBlockingInterface(
+        CloudFileTransferServiceGrpc.newBlockingStub(channel), BlockingInterface.class);
+  }
 }

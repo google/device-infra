@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.shared.version.rpc.stub.grpc;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcStubUtil;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
+import com.google.devtools.mobileharness.shared.util.comm.stub.GrpcDirectTargetConfigures;
 import com.google.devtools.mobileharness.shared.version.proto.VersionServiceGrpc;
 import com.google.devtools.mobileharness.shared.version.proto.VersionServiceProto.GetVersionRequest;
 import com.google.devtools.mobileharness.shared.version.proto.VersionServiceProto.GetVersionResponse;
@@ -28,10 +29,14 @@ import io.grpc.Channel;
 /** GRPC stub for talking to VersionService. */
 public class VersionGrpcStub implements VersionStub {
 
-  private final VersionServiceGrpc.VersionServiceBlockingStub stub;
+  private final BlockingInterface stub;
 
   public VersionGrpcStub(Channel channel) {
-    this.stub = VersionServiceGrpc.newBlockingStub(channel);
+    this(newBlockingInterface(channel));
+  }
+
+  public VersionGrpcStub(BlockingInterface stub) {
+    this.stub = stub;
   }
 
   @Override
@@ -41,5 +46,15 @@ public class VersionGrpcStub implements VersionStub {
         request,
         BasicErrorId.VERSION_STUB_GET_VERSION_ERROR,
         "Failed to get version");
+  }
+
+  /** Interface for {@link VersionServiceBlockingStub}. */
+  public static interface BlockingInterface {
+    GetVersionResponse getVersion(GetVersionRequest request);
+  }
+
+  public static BlockingInterface newBlockingInterface(Channel channel) {
+    return GrpcDirectTargetConfigures.newBlockingInterface(
+        VersionServiceGrpc.newBlockingStub(channel), BlockingInterface.class);
   }
 }

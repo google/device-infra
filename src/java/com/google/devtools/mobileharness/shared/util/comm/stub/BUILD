@@ -91,3 +91,26 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+java_library(
+    name = "stub_configures",
+    srcs = [
+        "Annotations.java",
+        "GrpcDirectTargetConfigures.java",
+        "GrpcDirectTargetConfiguresModule.java",
+    ],
+    visibility = [
+        "//:deviceinfra_all_pkg",
+    ],
+    deps = [
+        ":channel_factory",
+        ":channel_manager",
+        ":proxy",
+        "//src/devtools/mobileharness/shared/util/comm/stub:stub_configuration_java_proto",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
+        "@io_grpc_grpc_java//core",
+        "@maven//:com_google_guava_guava",
+        "@maven//:com_google_inject_guice",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)

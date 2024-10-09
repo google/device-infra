@@ -20,6 +20,7 @@ import com.google.devtools.common.metrics.stability.rpc.RpcExceptionWithErrorId;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcStubUtil;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.ExecTestStub;
+import com.google.devtools.mobileharness.shared.util.comm.stub.GrpcDirectTargetConfigures;
 import com.google.wireless.qa.mobileharness.lab.proto.ExecTestServ.ForwardTestMessageRequest;
 import com.google.wireless.qa.mobileharness.lab.proto.ExecTestServ.ForwardTestMessageResponse;
 import com.google.wireless.qa.mobileharness.lab.proto.ExecTestServ.GetTestDetailRequest;
@@ -37,10 +38,14 @@ import io.grpc.Channel;
 /** gRPC stub of {@code ExecTestService}. */
 public class ExecTestGrpcStub implements ExecTestStub {
 
-  private final ExecTestServiceBlockingStub stub;
+  private final BlockingInterface stub;
 
   public ExecTestGrpcStub(Channel channel) {
-    this.stub = ExecTestServiceGrpc.newBlockingStub(channel);
+    this(newBlockingInterface(channel));
+  }
+
+  public ExecTestGrpcStub(BlockingInterface stub) {
+    this.stub = stub;
   }
 
   @Override
@@ -96,5 +101,23 @@ public class ExecTestGrpcStub implements ExecTestStub {
   @Override
   public void close() {
     // This stub is not responsible for managing lifecycle of the channel.
+  }
+
+  /** Interface for {@link ExecTestServiceBlockingStub} */
+  public static interface BlockingInterface {
+    KickOffTestResponse kickOffTest(KickOffTestRequest request);
+
+    GetTestStatusResponse getTestStatus(GetTestStatusRequest request);
+
+    GetTestDetailResponse getTestDetail(GetTestDetailRequest request);
+
+    ForwardTestMessageResponse forwardTestMessage(ForwardTestMessageRequest request);
+
+    GetTestGenDataResponse getTestGenData(GetTestGenDataRequest request);
+  }
+
+  public static BlockingInterface newBlockingInterface(Channel channel) {
+    return GrpcDirectTargetConfigures.newBlockingInterface(
+        ExecTestServiceGrpc.newBlockingStub(channel), BlockingInterface.class);
   }
 }
