@@ -64,6 +64,7 @@ import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.Dimen
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Map;
+import java.util.Optional;
 import javax.inject.Inject;
 import org.junit.After;
 import org.junit.Before;
@@ -614,6 +615,60 @@ public final class SessionRequestHandlerUtilTest {
             sessionRequestInfo, testPlanFilter, null, ImmutableMap.of());
 
     assertThat(jobInfos).hasSize(1);
+  }
+
+  @Test
+  public void createXtsNonTradefedJobs_withDeviceSerials() throws Exception {
+    setUpForCreateXtsNonTradefedJobs();
+    when(deviceQuerier.queryDevice(any()))
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder().setId("device_id_3").addType("AndroidOnlineDevice"))
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder().setId("device_id_4").addType("AndroidOnlineDevice"))
+                .build());
+    SessionRequestInfo sessionRequestInfo =
+        sessionRequestHandlerUtil.addNonTradefedModuleInfo(
+            defaultSessionRequestInfoBuilder()
+                .setDeviceSerials(ImmutableList.of("device_id_2", "device_id_3"))
+                .build());
+    ImmutableList<JobInfo> jobInfos =
+        sessionRequestHandlerUtil.createXtsNonTradefedJobs(
+            sessionRequestInfo, testPlanFilter, null, ImmutableMap.of());
+
+    assertThat(jobInfos).hasSize(2);
+    assertThat(getJobInfoDeviceDimensionValue(jobInfos.get(0), "id"))
+        .hasValue("regex:(device_id_2|device_id_3)");
+    assertThat(getJobInfoDeviceDimensionValue(jobInfos.get(1), "id"))
+        .hasValue("regex:(device_id_2|device_id_3)");
+
+    sessionRequestInfo =
+        sessionRequestHandlerUtil.addNonTradefedModuleInfo(
+            defaultSessionRequestInfoBuilder()
+                .setExcludeDeviceSerials(ImmutableList.of("device_id_2"))
+                .build());
+    jobInfos =
+        sessionRequestHandlerUtil.createXtsNonTradefedJobs(
+            sessionRequestInfo, testPlanFilter, null, ImmutableMap.of());
+
+    assertThat(jobInfos).hasSize(2);
+    assertThat(getJobInfoDeviceDimensionValue(jobInfos.get(0), "id"))
+        .hasValue("regex:(device_id_1|device_id_3|device_id_4)");
+  }
+
+  private static Optional<String> getJobInfoDeviceDimensionValue(
+      JobInfo jobInfo, String dimensionName) {
+    return jobInfo
+        .subDeviceSpecs()
+        .getSubDevice(0)
+        .deviceRequirement()
+        .dimensions()
+        .get(dimensionName);
   }
 
   /** Special setUp for some createXtsNonTradefedJobs... tests */

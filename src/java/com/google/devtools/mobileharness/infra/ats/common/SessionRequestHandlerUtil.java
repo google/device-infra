@@ -236,6 +236,27 @@ public class SessionRequestHandlerUtil {
       }
     }
 
+    ImmutableSet<DeviceDetails> availableDevices = getAvailableDevices(sessionRequestInfo);
+
+    if (sessionRequestInfo.deviceSerials().isEmpty()) {
+      return pickAndroidOnlineDevices(
+          sessionRequestInfo,
+          availableDevices.stream().map(DeviceDetails::id).collect(toImmutableSet()),
+          shardCount);
+    }
+
+    return availableDevices.stream()
+        .map(
+            deviceDetails ->
+                SubDeviceSpec.newBuilder()
+                    .setType(getTradefedRequiredDeviceType(sessionRequestInfo))
+                    .setDimensions(StringMap.newBuilder().putContent("id", deviceDetails.id()))
+                    .build())
+        .collect(toImmutableList());
+  }
+
+  private ImmutableSet<DeviceDetails> getAvailableDevices(SessionRequestInfo sessionRequestInfo)
+      throws MobileHarnessException, InterruptedException {
     ImmutableMap<String, DeviceDetails> allAndroidDevices =
         deviceDetailsRetriever.getAllAndroidDevicesWithNeededDetails(sessionRequestInfo);
     logger.atInfo().log("All android devices: %s", allAndroidDevices.keySet());
@@ -264,22 +285,7 @@ public class SessionRequestHandlerUtil {
           "No available device is found.",
           /* cause= */ null);
     }
-
-    if (sessionRequestInfo.deviceSerials().isEmpty()) {
-      return pickAndroidOnlineDevices(
-          sessionRequestInfo,
-          availableDevices.stream().map(DeviceDetails::id).collect(toImmutableSet()),
-          shardCount);
-    }
-
-    return availableDevices.stream()
-        .map(
-            deviceDetails ->
-                SubDeviceSpec.newBuilder()
-                    .setType(getTradefedRequiredDeviceType(sessionRequestInfo))
-                    .setDimensions(StringMap.newBuilder().putContent("id", deviceDetails.id()))
-                    .build())
-        .collect(toImmutableList());
+    return availableDevices;
   }
 
   private ImmutableList<SubDeviceSpec> pickAndroidOnlineDevices(
@@ -676,7 +682,19 @@ public class SessionRequestHandlerUtil {
     ImmutableSet<String> givenMatchedNonTfModules = sessionRequestInfo.givenMatchedNonTfModules();
     ImmutableList.Builder<JobInfo> jobInfos = ImmutableList.builder();
 
-    ImmutableList<String> androidDeviceSerials = sessionRequestInfo.deviceSerials();
+    ImmutableSet<String> availableDeviceSerials;
+    if (sessionRequestInfo.isAtsServerRequest() && !sessionRequestInfo.deviceSerials().isEmpty()) {
+      availableDeviceSerials = ImmutableSet.copyOf(sessionRequestInfo.deviceSerials());
+    } else {
+      availableDeviceSerials =
+          getAvailableDevices(sessionRequestInfo).stream()
+              .map(DeviceDetails::id)
+              .collect(toImmutableSet());
+    }
+    final String deviceSerialsDimensionValue =
+        availableDeviceSerials.isEmpty()
+            ? null
+            : String.format("regex:(%s)", Joiner.on('|').join(availableDeviceSerials));
 
     ImmutableMap<String, String> moduleNameToConfigFilePathMap =
         sessionRequestInfo.v2ConfigsMap().entrySet().stream()
@@ -855,10 +873,7 @@ public class SessionRequestHandlerUtil {
                 testTimeout,
                 startTimeout,
                 isSkipDeviceInfo(sessionRequestInfo, subPlan));
-        // TODO: correct the device serial dimension.
-        if (!androidDeviceSerials.isEmpty()) {
-          String serialDimensionValue =
-              String.format("regex:(%s)", Joiner.on('|').join(androidDeviceSerials));
+        if (deviceSerialsDimensionValue != null) {
           jobInfo
               .subDeviceSpecs()
               .getAllSubDevices()
@@ -867,7 +882,7 @@ public class SessionRequestHandlerUtil {
                       subDeviceSpec
                           .deviceRequirement()
                           .dimensions()
-                          .add("id", serialDimensionValue));
+                          .add("id", deviceSerialsDimensionValue));
         }
         addSessionClientIdToJobInfo(jobInfo, sessionRequestInfo);
         extraJobProperties.forEach((key, value) -> jobInfo.properties().add(key, value));
