@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.infra.ats.console.controller.sessionpl
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.spy;
@@ -26,6 +27,7 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.SessionHandlerHelper;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
@@ -35,6 +37,7 @@ import com.google.devtools.mobileharness.infra.ats.common.jobcreator.XtsJobCreat
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.DeviceType;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommand;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommandState;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportCreator;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportMerger;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportParser;
@@ -43,7 +46,6 @@ import com.google.devtools.mobileharness.infra.client.api.controller.device.Devi
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.SessionGenDir;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.SessionTempDir;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
-import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteResultReporter;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader;
@@ -61,7 +63,6 @@ import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
 import java.io.File;
 import java.nio.file.Path;
-import java.util.List;
 import java.util.Optional;
 import javax.inject.Inject;
 import org.junit.Before;
@@ -78,9 +79,12 @@ import org.mockito.junit.MockitoRule;
 public final class RunCommandHandlerTest {
 
   private static final String XTS_ROOT_DIR_NAME = "xts_root_dir";
-  private static final String TIMESTAMP_DIR_NAME = "2023.06.13_06.27.28";
 
-  private static final LocalFileUtil realLocalFileUtil = new LocalFileUtil();
+  private static final String SESSION_PROPERTY_NAME_TIMESTAMP_DIR_NAME = "timestamp_dir_name";
+
+  // Refer to:
+  // com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants.RESULT_ZIP_FILENAME_PATTERN
+  private static final String TIMESTAMP_DIR_NAME = "2023.06.13_06.27.28.789_1234";
 
   // For tradefed job
   private static final Path JOB_1_GEN_DIR =
@@ -93,6 +97,8 @@ public final class RunCommandHandlerTest {
           RunfilesUtil.getRunfilesLocation(
               "javatests/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin/testdata/runcommand/resultprocessing/job-2_gen/"));
 
+  private final LocalFileUtil localFileUtil = new LocalFileUtil();
+
   @Rule public MockitoRule mockito = MockitoJUnit.rule();
   @Rule public TemporaryFolder folder = new TemporaryFolder();
 
@@ -103,13 +109,12 @@ public final class RunCommandHandlerTest {
   @Bind @SessionGenDir private Path sessionGenDir;
   @Bind @SessionTempDir private Path sessionTempDir;
   @Bind @Mock private SessionInfo sessionInfo;
-  @Bind @Mock private AndroidAdbInternalUtil androidAdbInternalUtil;
   @Bind @Mock private SuiteResultReporter suiteResultReporter;
   @Bind @Mock private XtsJobCreator xtsJobCreator;
   @Bind @Mock private PreviousResultLoader previousResultLoader;
   @Bind @Mock private ResultListerHelper resultListerHelper;
 
-  @Inject private RunCommandHandler runCommandHandler;
+  private RunCommandHandler runCommandHandler;
   @Inject private SessionRequestHandlerUtil sessionRequestHandlerUtil;
   @Inject private SessionResultHandlerUtil sessionResultHandlerUtil;
 
@@ -130,9 +135,24 @@ public final class RunCommandHandlerTest {
 
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
 
-    sessionRequestHandlerUtil = spy(sessionRequestHandlerUtil);
+    // Disable sessionResultHandlerUtil.cleanUpJobGenDirs(...), or we will get "Permission denied"
+    // when removing testdata files.
     sessionResultHandlerUtil = spy(sessionResultHandlerUtil);
-    runCommandHandler = spy(runCommandHandler);
+    doNothing().when(sessionResultHandlerUtil).cleanUpJobGenDirs(any());
+
+    when(sessionInfo.getSessionProperty(SESSION_PROPERTY_NAME_TIMESTAMP_DIR_NAME))
+        .thenReturn(Optional.of(TIMESTAMP_DIR_NAME));
+
+    runCommandHandler =
+        new RunCommandHandler(
+            localFileUtil,
+            sessionRequestHandlerUtil,
+            sessionResultHandlerUtil,
+            sessionInfo,
+            suiteResultReporter,
+            xtsJobCreator,
+            previousResultLoader,
+            resultListerHelper);
   }
 
   @Test
@@ -193,30 +213,7 @@ public final class RunCommandHandlerTest {
     assertThat(sessionRequestInfo.maxSdkLevel()).hasValue(35);
   }
 
-  @Test
-  public void handleResultProcessing_copyResultsAndLogsIntoXtsRootDir() throws Exception {
-    runCommandHandler =
-        spy(
-            new RunCommandHandler(
-                new LocalFileUtil(),
-                sessionRequestHandlerUtil,
-                sessionResultHandlerUtil,
-                sessionInfo,
-                suiteResultReporter,
-                xtsJobCreator,
-                previousResultLoader,
-                resultListerHelper));
-    doNothing().when(sessionResultHandlerUtil).cleanUpJobGenDirs(any());
-    when(sessionInfo.getSessionProperty("timestamp_dir_name"))
-        .thenReturn(Optional.of(TIMESTAMP_DIR_NAME));
-
-    File xtsRootDir = folder.newFolder(XTS_ROOT_DIR_NAME);
-    RunCommand command =
-        RunCommand.newBuilder()
-            .setXtsType("cts")
-            .setXtsRootDir(xtsRootDir.getAbsolutePath())
-            .build();
-
+  private static ImmutableList<JobInfo> createJobInfos() throws MobileHarnessException {
     JobInfo tradefedJobInfo =
         JobInfo.newBuilder()
             .setLocator(new JobLocator("job_id", "job_name"))
@@ -259,87 +256,95 @@ public final class RunCommandHandlerTest {
         .add(SessionHandlerHelper.XTS_MODULE_NAME_PROP, "mobly_test_module_name");
     nonTradefedJobInfo.tests().add("2", "test_name");
 
-    when(sessionInfo.getAllJobs())
-        .thenReturn(ImmutableList.of(tradefedJobInfo, nonTradefedJobInfo));
+    return ImmutableList.of(tradefedJobInfo, nonTradefedJobInfo);
+  }
+
+  private ImmutableList<String> listFilePathsForNames(Path dir) throws MobileHarnessException {
+    return localFileUtil.listFilePaths(dir, /* recursively= */ false).stream()
+        .map(f -> f.getFileName().toString())
+        .collect(toImmutableList());
+  }
+
+  @Test
+  public void handleResultProcessing_copyResultsAndLogsIntoXtsRootDir() throws Exception {
+    File xtsRootDir = folder.newFolder(XTS_ROOT_DIR_NAME);
+    // run cts
+    RunCommand command =
+        RunCommand.newBuilder()
+            .setXtsType("cts")
+            .setXtsRootDir(xtsRootDir.getAbsolutePath())
+            .build();
+
+    when(sessionInfo.getAllJobs()).thenReturn(createJobInfos());
     when(sessionResultHandlerUtil.isSessionCompleted(anyList())).thenReturn(true);
 
     runCommandHandler.initialize(command);
     runCommandHandler.handleResultProcessing(command, RunCommandState.getDefaultInstance());
 
-    assertThat(
-            xtsRootDir
-                .toPath()
-                .resolve(String.format("android-cts/results/%s", TIMESTAMP_DIR_NAME))
-                .toFile()
-                .isDirectory())
-        .isTrue();
+    Path resultDir =
+        xtsRootDir.toPath().resolve(String.format("android-cts/results/%s", TIMESTAMP_DIR_NAME));
+    Path logDir =
+        xtsRootDir.toPath().resolve(String.format("android-cts/logs/%s", TIMESTAMP_DIR_NAME));
 
-    // Verifies tradefed test
-    List<Path> newFilesInTradefedResultsDir =
-        realLocalFileUtil.listFilePaths(
-            xtsRootDir
-                .toPath()
-                .resolve(String.format("android-cts/results/%s", TIMESTAMP_DIR_NAME)),
-            /* recursively= */ false);
-    assertThat(newFilesInTradefedResultsDir.stream().map(f -> f.getFileName().toString()))
-        .contains("invocation_summary.txt");
+    assertThat(resultDir.toFile().isDirectory()).isTrue();
 
-    List<Path> newFilesInInvocationDir =
-        realLocalFileUtil.listFilePaths(
-            xtsRootDir
-                .toPath()
-                .resolve(String.format("android-cts/logs/%s/inv_123456", TIMESTAMP_DIR_NAME)),
-            /* recursively= */ false);
-    assertThat(newFilesInInvocationDir.stream().map(f -> f.getFileName().toString()))
+    // Lists tradefed test result/log files
+    assertThat(listFilePathsForNames(resultDir)).contains("invocation_summary.txt");
+    assertThat(listFilePathsForNames(logDir.resolve("inv_123456")))
         .containsExactly("host_adb_log.txt");
-
-    List<Path> newFilesInTradefedLogsDir =
-        realLocalFileUtil.listFilePaths(
-            xtsRootDir
-                .toPath()
-                .resolve(
-                    String.format(
-                        "android-cts/logs/%s/inv_123456/XtsTradefedTest_test_1",
-                        TIMESTAMP_DIR_NAME)),
-            /* recursively= */ false);
-    assertThat(newFilesInTradefedLogsDir.stream().map(f -> f.getFileName().toString()))
+    assertThat(listFilePathsForNames(logDir.resolve("inv_123456/XtsTradefedTest_test_1")))
         .containsExactly("xts_tf_output.log", "command_history.txt");
 
-    // Verifies non-tradefed test
-    List<Path> newFilesInNonTradefedResultsDir =
-        realLocalFileUtil.listFilePaths(
-            xtsRootDir
-                .toPath()
-                .resolve(
-                    String.format(
-                        "android-cts/results/%s/non-tradefed_results/MoblyAospPackageTest_test_2",
-                        TIMESTAMP_DIR_NAME)),
-            /* recursively= */ true);
-    assertThat(newFilesInNonTradefedResultsDir.stream().map(f -> f.getFileName().toString()))
+    // Lists non-tradefed test result/log files
+    assertThat(
+            listFilePathsForNames(
+                resultDir.resolve("non-tradefed_results/MoblyAospPackageTest_test_2")))
         .containsExactly(
             "ats_module_run_result.textproto",
             "device_build_fingerprint.txt",
             "mobly_run_build_attributes.textproto",
             "mobly_run_result_attributes.textproto",
             "test_summary.yaml");
-
-    List<Path> newFilesInNonTradefedLogsDir =
-        realLocalFileUtil.listFilePaths(
-            xtsRootDir
-                .toPath()
-                .resolve(
-                    String.format(
-                        "android-cts/logs/%s/non-tradefed_logs/MoblyAospPackageTest_test_2",
-                        TIMESTAMP_DIR_NAME)),
-            /* recursively= */ true);
-    assertThat(newFilesInNonTradefedLogsDir.stream().map(f -> f.getFileName().toString()))
+    assertThat(
+            listFilePathsForNames(logDir.resolve("non-tradefed_logs/MoblyAospPackageTest_test_2")))
         .containsExactly(
             "ats_module_run_result.textproto",
             "command_history.txt",
             "mobly_command_output.log",
             "device_build_fingerprint.txt",
             "mobly_run_build_attributes.textproto",
-            "mobly_run_result_attributes.textproto",
-            "test_summary.yaml");
+            "mobly_run_result_attributes.textproto");
+    assertThat(
+            listFilePathsForNames(
+                logDir.resolve("non-tradefed_logs/MoblyAospPackageTest_test_2/raw_mobly_logs")))
+        .containsExactly("test_summary.yaml");
+  }
+
+  @Test
+  public void handleResultProcessing_retrySession() throws Exception {
+    File xtsRootDir = folder.newFolder(XTS_ROOT_DIR_NAME);
+    // run retry --retry 0
+    RunCommand command =
+        RunCommand.newBuilder()
+            .setXtsType("cts")
+            .setTestPlan("retry")
+            .setRetrySessionIndex(0)
+            .setXtsRootDir(xtsRootDir.getAbsolutePath())
+            .build();
+
+    when(sessionInfo.getAllJobs()).thenReturn(createJobInfos());
+    when(sessionResultHandlerUtil.isSessionCompleted(anyList())).thenReturn(true);
+
+    Result previousResult = Result.getDefaultInstance();
+    when(previousResultLoader.loadPreviousResult(any(), anyInt())).thenReturn(previousResult);
+    when(resultListerHelper.listResultDirsInOrder(any())).thenReturn(ImmutableList.of());
+
+    runCommandHandler.initialize(command);
+    runCommandHandler.handleResultProcessing(command, RunCommandState.getDefaultInstance());
+
+    Path resultDir =
+        xtsRootDir.toPath().resolve(String.format("android-cts/results/%s", TIMESTAMP_DIR_NAME));
+
+    assertThat(resultDir.toFile().isDirectory()).isTrue();
   }
 }

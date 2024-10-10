@@ -53,6 +53,7 @@ java_proto_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/server:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/server:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/suite:__subpackages__",
