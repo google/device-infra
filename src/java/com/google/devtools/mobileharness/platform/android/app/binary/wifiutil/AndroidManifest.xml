@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-          package="com.google.devtools.mobileharness.platform.android.app.binary.wifiutil">
+            package="com.google.devtools.mobileharness.platform.android.app.binary.wifiutil"
+            android:versionCode="1"
+            android:versionName="1.0.1">
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.INTERNET" />
