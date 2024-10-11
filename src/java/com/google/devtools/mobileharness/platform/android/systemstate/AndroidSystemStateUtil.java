@@ -44,7 +44,6 @@ import com.google.devtools.mobileharness.shared.util.command.LineCallback;
 import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryException;
 import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryStrategy;
 import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryingCallable;
-import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import java.io.File;
@@ -201,8 +200,6 @@ public class AndroidSystemStateUtil {
 
   @VisibleForTesting
   static final String RESET_VIA_TEST_HARNESS_SCREEN_LOCKED_ERROR = "there is a lock screen";
-
-  private static final String RESETTING_DEVICE_PROP = "test_harness.resetting_device";
 
   private static final String OTA_PACKAGE_EXTENSION = "zip";
   private static final RetryStrategy RETRY_STRATEGY =
@@ -393,10 +390,8 @@ public class AndroidSystemStateUtil {
   public void factoryResetViaTestHarness(String serial, @Nullable Duration waitTime)
       throws MobileHarnessException, InterruptedException {
     try {
-      adbUtil.setProperty(serial, RESETTING_DEVICE_PROP, "true");
       String unused = adb.runShellWithRetry(serial, ADB_SHELL_ENABLE_TEST_HARNESS_MODE);
     } catch (MobileHarnessException e) {
-      clearTestHarnessResettingDeviceProp(serial);
       if (e.getMessage().contains(RESET_VIA_TEST_HARNESS_SCREEN_LOCKED_ERROR)) {
         throw new MobileHarnessException(
             AndroidErrorId.ANDROID_SYSTEM_STATE_FACTORY_RESET_VIA_TEST_HARNESS_SCREEN_LOCKED_ERROR,
@@ -416,59 +411,6 @@ public class AndroidSystemStateUtil {
     }
     // Sleep for command propagation.
     sleeper.sleep(waitTime == null ? FACTORY_RESET_WAIT_TIME : waitTime);
-
-    // Sometimes the `waitTime` may not be enough for some devices to propagate the test harness
-    // mode command. In this case, we will check the set property above has been cleared.
-    boolean resetTriggered = waitForTestHarnessResetTriggered(serial);
-    logger.atInfo().log(
-        "Test harness mode reset triggered for device %s: %s", serial, resetTriggered);
-    if (!resetTriggered) {
-      clearTestHarnessResettingDeviceProp(serial);
-    }
-  }
-
-  @VisibleForTesting
-  boolean waitForTestHarnessResetTriggered(String serial) throws InterruptedException {
-    return AndroidAdbUtil.waitForDeviceReady(
-        UtilArgs.builder().setSerial(serial).build(),
-        utilArgs -> {
-          try {
-            return !adbUtil
-                .getProperty(serial, ImmutableList.of(RESETTING_DEVICE_PROP))
-                .equals("true");
-          } catch (MobileHarnessException e) {
-            if (e.getMessage().contains("not found")) {
-              // If device is not found, it means the device is already factory reset.
-              return true;
-            }
-            logger.atInfo().log(
-                "Failed to get property [%s] for device %s:%n%s",
-                RESETTING_DEVICE_PROP, utilArgs.serial(), MoreThrowables.shortDebugString(e));
-            return false;
-          } catch (InterruptedException e) {
-            logger.atInfo().log(
-                "Caught interrupted exception when getting property [%s] from device"
-                    + " %s, interrupt current thread:%n%s",
-                RESETTING_DEVICE_PROP, utilArgs.serial(), MoreThrowables.shortDebugString(e));
-            Thread.currentThread().interrupt();
-          }
-          return false;
-        },
-        WaitArgs.builder()
-            .setCheckReadyInterval(Duration.ofSeconds(5))
-            .setCheckReadyTimeout(Duration.ofMinutes(5))
-            .build());
-  }
-
-  private void clearTestHarnessResettingDeviceProp(String serial) throws InterruptedException {
-    logger.atInfo().log("Clearing property [%s] for device %s", RESETTING_DEVICE_PROP, serial);
-    try {
-      adbUtil.setProperty(serial, RESETTING_DEVICE_PROP, "");
-    } catch (MobileHarnessException e) {
-      logger.atWarning().log(
-          "Failed to clear property [%s] for device %s:%n%s",
-          RESETTING_DEVICE_PROP, serial, MoreThrowables.shortDebugString(e));
-    }
   }
 
   /**
