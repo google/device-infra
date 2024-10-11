@@ -128,9 +128,13 @@ public class LocalDeviceAllocator extends AbstractDeviceAllocator {
         scheduler.unallocate(
             allocation,
             // Device is not active. Also removes it from scheduler.
-            true,
-            // Leaves the test open to wait for allocation with different devices.
-            false);
+            /* removeDevices= */ true,
+            // Closes the test and adds it back to scheduler below to get a new allocation.
+            /* closeTest= */ true);
+        // Note that even if calling unallocate(allocation, true, false) above, it is necessary to
+        // add the test back to scheduler here because the test may be removed from scheduler by
+        // local device manager.
+        scheduler.addTest(test);
         continue;
       }
 
