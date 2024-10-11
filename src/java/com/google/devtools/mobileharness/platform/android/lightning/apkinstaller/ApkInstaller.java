@@ -365,6 +365,15 @@ public class ApkInstaller {
       if (!installArgs.skipGmsCompatCheck().orElse(false)) {
         checkGmsCompatibility(
             device, deviceSdkVersion, apkPath, apkVersionCode, apkVersionName, log);
+      } else {
+        SharedLogUtil.logMsg(
+            logger,
+            log,
+            "Skip GMS compatibility check for apk %s (version:%s, versionName:%s) on device %s.",
+            apkName,
+            apkVersionCode,
+            apkVersionName,
+            deviceId);
       }
       if (clearAppData) {
         SharedLogUtil.logMsg(logger, "Clear GmsCore before installation", log);

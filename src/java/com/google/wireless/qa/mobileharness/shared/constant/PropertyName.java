@@ -613,6 +613,13 @@ public interface PropertyName {
        * belongs to.
        */
       MAIN_PACKAGE_NAME,
+
+      /**
+       * Property name. To tell the installation process whether to skip GmsCore compatibility check
+       * of the given apks. It is the map of the apk file name and the footprinter of the file
+       * content.
+       */
+      GMSCORE_APKS_SKIP_COMPATIBILITY_CHECK,
     }
 
     /** App info property name constants. */

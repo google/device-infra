@@ -44,6 +44,8 @@ import com.google.devtools.mobileharness.platform.android.shared.constant.Packag
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AppOperationMode;
 import com.google.devtools.mobileharness.platform.android.user.AndroidUserUtil;
+import com.google.devtools.mobileharness.shared.util.base.StrUtil;
+import com.google.devtools.mobileharness.shared.util.file.checksum.ChecksumUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.inject.Inject;
@@ -58,6 +60,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.Google3File;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.InstallApkStepSpec;
+import java.io.File;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -103,6 +106,8 @@ public class InstallApkStep implements InstallApkStepConstants {
 
   private final SystemStateManager systemStateManager;
 
+  private final ChecksumUtil checksumUtil;
+
   @Inject
   InstallApkStep(
       Aapt aapt,
@@ -112,7 +117,8 @@ public class InstallApkStep implements InstallApkStepConstants {
       SystemSettingManager systemSettingManager,
       AndroidUserUtil androidUserUtil,
       AndroidSystemSettingUtil systemSettingUtil,
-      SystemStateManager systemStateManager) {
+      SystemStateManager systemStateManager,
+      ChecksumUtil checksumUtil) {
     this.aapt = aapt;
     this.localFileUtil = localFileUtil;
     this.testMessageUtil = testMessageUtil;
@@ -121,6 +127,7 @@ public class InstallApkStep implements InstallApkStepConstants {
     this.androidUserUtil = androidUserUtil;
     this.systemSettingUtil = systemSettingUtil;
     this.systemStateManager = systemStateManager;
+    this.checksumUtil = checksumUtil;
   }
 
   /**
@@ -418,6 +425,9 @@ public class InstallApkStep implements InstallApkStepConstants {
               .setClearAppData(isGms && clearGmsAppData)
               .setGrantPermissions(grantPermissionsOnInstall)
               .setBypassLowTargetSdkBlock(bypassLowTargetSdkBlock);
+      if (isGms && shouldSkipGmsCompatibilityCheck(testInfo, apkPath)) {
+        installArgsBuilder.setSkipGmsCompatCheck(true);
+      }
       dexMetadataPath.ifPresent(installArgsBuilder::setDexMetadataPath);
       boolean forceQueryable =
           deviceSdkVersion >= AndroidVersion.ANDROID_11.getStartSdkVersion()
@@ -706,5 +716,47 @@ public class InstallApkStep implements InstallApkStepConstants {
           e);
     }
     testInfo.log().atInfo().alsoTo(logger).log("device %s is rebooted.", deviceId);
+  }
+
+  private boolean shouldSkipGmsCompatibilityCheck(TestInfo testInfo, String gmscoreApkPath) {
+    Optional<String> gmscoreApksFromLspace =
+        testInfo.properties().getOptional(ApkInfo.GMSCORE_APKS_SKIP_COMPATIBILITY_CHECK);
+    if (gmscoreApksFromLspace.isEmpty()) {
+      testInfo
+          .log()
+          .atInfo()
+          .alsoTo(logger)
+          .log("no apk provided in properties %s", ApkInfo.GMSCORE_APKS_SKIP_COMPATIBILITY_CHECK);
+      return false;
+    }
+    Map<String, String> gmscoreApkNameToFingerprint = StrUtil.toMap(gmscoreApksFromLspace.get());
+    String checkGmscoreApkName = new File(gmscoreApkPath).getName();
+    try {
+      if (gmscoreApkNameToFingerprint.containsKey(checkGmscoreApkName)
+          && checksumUtil
+              .fingerprint(gmscoreApkPath)
+              .equals(gmscoreApkNameToFingerprint.get(checkGmscoreApkName))) {
+        testInfo
+            .log()
+            .atInfo()
+            .alsoTo(logger)
+            .log("Will skip compatibility check for %s", gmscoreApkPath);
+        return true;
+      }
+    } catch (MobileHarnessException e) {
+      testInfo
+          .log()
+          .atWarning()
+          .alsoTo(logger)
+          .withCause(e)
+          .log("Failed to calculate fingerprint for %s.", gmscoreApkPath);
+      return false;
+    }
+    testInfo
+        .log()
+        .atInfo()
+        .alsoTo(logger)
+        .log("no gmscore provided in properties match the given %s", gmscoreApkPath);
+    return false;
   }
 }
