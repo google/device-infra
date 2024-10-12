@@ -20,7 +20,6 @@ load("@io_grpc_grpc_java//:java_grpc_library.bzl", "java_grpc_library")
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
-        "//src/devtools/mobileharness/infra/ats:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/ats:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__subpackages__",
