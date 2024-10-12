@@ -49,6 +49,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.regex.Matcher;
@@ -104,6 +105,9 @@ public class SystemUtil {
           "^\\s*"
               + "(?<user>\\S+)\\s+(?<pid>\\d+)\\s+(?<ppid>\\d+)\\s+(?<pgid>\\d+)\\s+(?<command>.+)"
               + "$");
+
+  /** Pattern of UBUNTU version. */
+  private static final Pattern UBUNTU_VERSION_PATTERN = Pattern.compile("Description:\\s+(.*)");
 
   @VisibleForTesting static final String GUITAR_CHANGELIST_ENV_VAR = "GUITAR_CHANGELIST";
   private static final Pattern CHANGELIST_PATTERN = Pattern.compile("^\\d+$");
@@ -1273,6 +1277,27 @@ public class SystemUtil {
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       return false;
+    }
+  }
+
+  /**
+   * Returns Ubuntu's Version. The CommandExecutor runs command "lsb_release -d" and the output will
+   * be 'Description: ******' (e.g. "Description: Ubuntu 22.04.3 LTS")
+   */
+  public Optional<String> getUbuntuVersion() throws InterruptedException {
+    String output = "";
+    try {
+      output = executor.run(Command.of("lsb_release", "-d"));
+    } catch (MobileHarnessException e) {
+      logger.atWarning().log("Failed to get Ubuntu version: %s", e.getMessage());
+      return Optional.empty();
+    }
+    Matcher matcher = UBUNTU_VERSION_PATTERN.matcher(output);
+    if (matcher.find()) {
+      return Optional.of(matcher.group(1));
+    } else {
+      logger.atWarning().log("Failed to get Ubuntu version. The output is %s", output);
+      return Optional.empty();
     }
   }
 }

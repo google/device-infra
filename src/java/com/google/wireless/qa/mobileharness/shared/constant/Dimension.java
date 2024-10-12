@@ -76,7 +76,7 @@ public final class Dimension {
     HOST_NAME,
     /** OS of the lab server machine. */
     HOST_OS,
-    /** OS version of the lab server machine. */
+    /** OS version of the lab server machine. For Linux, it's the Ubuntu version. */
     HOST_OS_VERSION,
     /** Total memory size of the lab server in GB. */
     HOST_TOTAL_MEM,
