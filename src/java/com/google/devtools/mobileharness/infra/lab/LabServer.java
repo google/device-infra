@@ -172,9 +172,12 @@ public class LabServer {
       DeviceIdManager deviceIdManager = DeviceIdManager.getInstance();
       DeviceConfigManager deviceConfigManager = null;
       if (Flags.instance().enableDeviceConfigManager.getNonNull()) {
-        deviceConfigManager =
-            new LocalFileBasedDeviceConfigManager(
-                deviceManager, deviceIdManager, apiConfig, new ApiConfigFileProcessor());
+        if (!Flags.instance().apiConfigFile.getNonNull().isEmpty()
+            || !Flags.instance().labDeviceConfigFile.getNonNull().isEmpty()) {
+          deviceConfigManager =
+              new LocalFileBasedDeviceConfigManager(
+                  deviceManager, deviceIdManager, apiConfig, new ApiConfigFileProcessor());
+        }
       }
       apiConfig.initialize(
           /* isDefaultPublic= */ true,
