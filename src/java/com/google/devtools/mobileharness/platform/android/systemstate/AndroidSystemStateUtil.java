@@ -123,8 +123,6 @@ public class AndroidSystemStateUtil {
   /** Timeout of probing device/emulator readiness. */
   @VisibleForTesting static final Duration CHECK_READY_TIMEOUT = Duration.ofMinutes(5);
 
-  private static final Duration FACTORY_RESET_WAIT_TIME = Duration.ofSeconds(30);
-
   // Defaults to 10m: assuming USB 2.0 transfer speed, concurrency and some buffer
   private static final Duration MININAL_SIDELOAD_EXECUTION_TIME = Duration.ofMinutes(10);
 
@@ -216,6 +214,8 @@ public class AndroidSystemStateUtil {
   private final AndroidAdbUtil adbUtil;
 
   private final AndroidProcessUtil androidProcessUtil;
+
+  private final Duration factoryResetWaitTime = Flags.instance().androidFactoryResetWaitTime.get();
 
   public AndroidSystemStateUtil() {
     this(
@@ -373,7 +373,7 @@ public class AndroidSystemStateUtil {
           AndroidErrorId.ANDROID_SYSTEM_STATE_FACTORY_RESET_VIA_BROADCAST_ERROR, e.getMessage(), e);
     }
     // Sleep for command propagation.
-    sleeper.sleep(waitTime == null ? FACTORY_RESET_WAIT_TIME : waitTime);
+    sleeper.sleep(waitTime == null ? factoryResetWaitTime : waitTime);
   }
 
   /**
@@ -410,7 +410,7 @@ public class AndroidSystemStateUtil {
           e);
     }
     // Sleep for command propagation.
-    sleeper.sleep(waitTime == null ? FACTORY_RESET_WAIT_TIME : waitTime);
+    sleeper.sleep(waitTime == null ? factoryResetWaitTime : waitTime);
   }
 
   /**

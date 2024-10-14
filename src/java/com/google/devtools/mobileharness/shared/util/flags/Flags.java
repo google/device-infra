@@ -169,6 +169,17 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableDaemon = enableDaemonDefault;
 
+  private static final Flag<Duration> androidFactoryResetWaitTimeDefault =
+      DurationFlag.value(Duration.ofSeconds(30L));
+
+  @com.beust.jcommander.Parameter(
+      names = "--android_factory_reset_wait_time",
+      description =
+          "The wait time for a device to be disconnected after calling factory reset."
+              + " Default is 30 seconds.",
+      converter = DurationFlag.DurationConverter.class)
+  public Flag<Duration> androidFactoryResetWaitTime = androidFactoryResetWaitTimeDefault;
+
   private static final Flag<String> apiConfigFileDefault = Flag.value("");
 
   @com.beust.jcommander.Parameter(

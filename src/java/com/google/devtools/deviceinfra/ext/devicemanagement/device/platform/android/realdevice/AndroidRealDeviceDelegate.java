@@ -431,7 +431,7 @@ public abstract class AndroidRealDeviceDelegate {
     boolean isOverTcpDevice = DeviceUtil.isOverTcpDevice(deviceId);
     cacheDevice(deviceId, AndroidRealDeviceConstants.WAIT_FOR_REBOOT_TIMEOUT);
     try {
-      systemStateUtil.factoryResetViaTestHarness(deviceId, Duration.ofSeconds(30));
+      systemStateUtil.factoryResetViaTestHarness(deviceId, /* waitTime= */ null);
       if (isOverTcpDevice) {
         systemStateUtil.waitForOverTcpDeviceConnection(deviceId, Duration.ofMinutes(5));
       }
