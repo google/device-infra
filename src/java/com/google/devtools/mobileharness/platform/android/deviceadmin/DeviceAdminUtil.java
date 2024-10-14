@@ -112,7 +112,7 @@ public class DeviceAdminUtil {
     } catch (CommandException e) {
       throw new MobileHarnessException(
           AndroidErrorId.DEVICE_ADMIN_UTIL_LOCK_ERROR,
-          "Fail to lock the device with device policies",
+          "Fail to lock the device with device admin",
           e);
     }
   }
@@ -123,13 +123,13 @@ public class DeviceAdminUtil {
    * @param deviceId the serial number of the device
    */
   public void unlock(String deviceId) throws MobileHarnessException, InterruptedException {
-    logger.atInfo().log("Unlocking device %s with device policies", deviceId);
+    logger.atInfo().log("Unlocking device %s with device admin", deviceId);
     try {
       exec(deviceId, ACTION_UNLOCK);
     } catch (CommandException e) {
       throw new MobileHarnessException(
           AndroidErrorId.DEVICE_ADMIN_UTIL_UNLOCK_ERROR,
-          "Fail to unlock the device with device policies",
+          "Fail to unlock the device with device admin",
           e);
     }
   }
