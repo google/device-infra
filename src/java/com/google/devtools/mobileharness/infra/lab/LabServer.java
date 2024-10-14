@@ -169,7 +169,17 @@ public class LabServer {
 
       ApiConfig apiConfig = ApiConfig.getInstance();
       String hostName = netUtil.getLocalHostName();
-      apiConfig.init(/* defaultPublic= */ true, hostName);
+      DeviceIdManager deviceIdManager = DeviceIdManager.getInstance();
+      DeviceConfigManager deviceConfigManager = null;
+      if (Flags.instance().enableDeviceConfigManager.getNonNull()) {
+        deviceConfigManager =
+            new LocalFileBasedDeviceConfigManager(
+                deviceManager, deviceIdManager, apiConfig, new ApiConfigFileProcessor());
+      }
+      apiConfig.initialize(
+          /* isDefaultPublic= */ true,
+          /* isDefaultSynced= */ deviceConfigManager == null,
+          hostName);
 
       // Initializes the master service stub. If master host is set to empty, the lab server
       // will run independently without the master server for debugging.
@@ -224,14 +234,6 @@ public class LabServer {
             mainThreadPool.submit(masterSyncerForJob),
             Level.SEVERE,
             "Master syncer for job fatal error");
-      }
-
-      DeviceIdManager deviceIdManager = DeviceIdManager.getInstance();
-      DeviceConfigManager deviceConfigManager = null;
-      if (Flags.instance().enableDeviceConfigManager.getNonNull()) {
-        deviceConfigManager =
-            new LocalFileBasedDeviceConfigManager(
-                deviceManager, deviceIdManager, apiConfig, new ApiConfigFileProcessor());
       }
       if (deviceConfigManager != null) {
         logFailure(

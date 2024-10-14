@@ -38,7 +38,9 @@ import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceMana
 import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
+import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -53,13 +55,16 @@ public abstract class DeviceConfigManager implements Runnable {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  protected static final Duration CHECK_DEVICE_CONFIG_INTERVAL = Duration.ofSeconds(30L);
+  private static final Duration CHECK_DEVICE_CONFIG_SHORT_INTERVAL = Duration.ofSeconds(2);
+  private static final Duration CHECK_DEVICE_CONFIG_LONG_INTERVAL = Duration.ofSeconds(30);
+  private static final Duration SHORT_INTERVAL_EFFECTIVE_DURATION = Duration.ofSeconds(30);
 
   private final ApiConfig apiConfig;
   private final String hostName;
   private final LocalDeviceManager localDeviceManager;
   private final DeviceIdManager deviceIdManager;
   private final Sleeper sleeper;
+  private final Clock clock;
 
   public DeviceConfigManager(
       LocalDeviceManager localDeviceManager,
@@ -71,10 +76,12 @@ public abstract class DeviceConfigManager implements Runnable {
     this.apiConfig = apiConfig;
     this.hostName = hostName;
     this.sleeper = Sleeper.defaultSleeper();
+    this.clock = Clock.systemUTC();
   }
 
   @Override
   public void run() {
+    Instant shortIntervalEndTime = clock.instant().plus(SHORT_INTERVAL_EFFECTIVE_DURATION);
     while (!Thread.interrupted()) {
       // Only refresh configs when ApiConfigV5 is enabled.
       if (apiConfig != null) {
@@ -98,7 +105,10 @@ public abstract class DeviceConfigManager implements Runnable {
       }
 
       try {
-        sleeper.sleep(CHECK_DEVICE_CONFIG_INTERVAL);
+        sleeper.sleep(
+            clock.instant().isAfter(shortIntervalEndTime)
+                ? CHECK_DEVICE_CONFIG_LONG_INTERVAL
+                : CHECK_DEVICE_CONFIG_SHORT_INTERVAL);
       } catch (InterruptedException e) {
         logger.atSevere().log("Interrupted: %s", e.getMessage());
         Thread.currentThread().interrupt();
@@ -135,47 +145,53 @@ public abstract class DeviceConfigManager implements Runnable {
     if (deviceLocators.isEmpty()) {
       return;
     }
-    List<DeviceConfig> deviceConfigs = loadDeviceConfigs(deviceLocators);
-    // Map from UUID to device config. If one device with UUID doesn't have config in device
-    // config server, it will not be in this map.
-    ImmutableMap<String, DeviceConfig> remoteDeviceUuidToConfigMap =
-        deviceConfigs.stream().collect(toImmutableMap(DeviceConfig::getUuid, identity()));
+    try {
+      List<DeviceConfig> deviceConfigs = loadDeviceConfigs(deviceLocators);
+      // Map from UUID to device config. If one device with UUID doesn't have config in device
+      // config server, it will not be in this map.
+      ImmutableMap<String, DeviceConfig> remoteDeviceUuidToConfigMap =
+          deviceConfigs.stream().collect(toImmutableMap(DeviceConfig::getUuid, identity()));
 
-    // The first element in Pair is Control ID.
-    Map<String, DeviceConfig> deviceConfigsNeedToUpdateToLocal = new HashMap<>();
-    List<DeviceLocatorConfigPair> deviceConfigsNeedToStore = new ArrayList<>();
-    for (Map.Entry<String, String> device : deviceUuidToControlDeviceIdMap.entrySet()) {
-      String deviceUuid = device.getKey();
-      String deviceControlId = device.getValue();
+      // The first element in Pair is Control ID.
+      Map<String, DeviceConfig> deviceConfigsNeedToUpdateToLocal = new HashMap<>();
+      List<DeviceLocatorConfigPair> deviceConfigsNeedToStore = new ArrayList<>();
+      for (Map.Entry<String, String> device : deviceUuidToControlDeviceIdMap.entrySet()) {
+        String deviceUuid = device.getKey();
+        String deviceControlId = device.getValue();
 
-      // If a device config exists in server, prepare to update local device config from
-      // the config in server; If not exists, prepare to update server from local device config.
-      DeviceConfig remoteDeviceConfig = remoteDeviceUuidToConfigMap.get(deviceUuid);
-      if (remoteDeviceConfig != null) {
-        deviceConfigsNeedToUpdateToLocal.put(deviceControlId, remoteDeviceConfig);
-      } else {
-        Optional<DeviceConfig> localDeviceConfig =
-            apiConfig.getDeviceConfigToStore(deviceControlId);
-        if (localDeviceConfig.isPresent() && activeDeviceUuids.contains(deviceUuid)) {
-          deviceConfigsNeedToStore.add(
-              DeviceLocatorConfigPair.newBuilder()
-                  .setDeviceLocator(DeviceLocator.newBuilder().setDeviceUuid(deviceUuid).build())
-                  .setDeviceConfig(localDeviceConfig.get().toBuilder().setUuid(deviceUuid))
-                  .build());
+        // If a device config exists in server, prepare to update local device config from
+        // the config in server; If not exists, prepare to update server from local device config.
+        DeviceConfig remoteDeviceConfig = remoteDeviceUuidToConfigMap.get(deviceUuid);
+        if (remoteDeviceConfig != null) {
+          deviceConfigsNeedToUpdateToLocal.put(deviceControlId, remoteDeviceConfig);
+        } else {
+          Optional<DeviceConfig> localDeviceConfig =
+              apiConfig.getDeviceConfigToStore(deviceControlId);
+          if (localDeviceConfig.isPresent() && activeDeviceUuids.contains(deviceUuid)) {
+            deviceConfigsNeedToStore.add(
+                DeviceLocatorConfigPair.newBuilder()
+                    .setDeviceLocator(DeviceLocator.newBuilder().setDeviceUuid(deviceUuid).build())
+                    .setDeviceConfig(localDeviceConfig.get().toBuilder().setUuid(deviceUuid))
+                    .build());
+          }
         }
       }
-    }
-    if (!deviceConfigsNeedToUpdateToLocal.isEmpty()) {
-      logger.atFine().log(
-          "Update local device configs: %s.",
-          deviceConfigsNeedToUpdateToLocal.entrySet().stream()
-              .map(entry -> String.format("%s: %s", entry.getKey(), entry.getValue()))
-              .collect(joining(", ")));
-      apiConfig.setDeviceConfigs(deviceConfigsNeedToUpdateToLocal);
-      onDeviceConfigUpdatedToLocal();
-    }
-    if (!deviceConfigsNeedToStore.isEmpty()) {
-      storeDeviceConfigs(deviceConfigsNeedToStore);
+      if (!deviceConfigsNeedToUpdateToLocal.isEmpty()) {
+        logger.atInfo().log(
+            "Update local device configs: %s.",
+            deviceConfigsNeedToUpdateToLocal.entrySet().stream()
+                .map(entry -> String.format("%s: %s", entry.getKey(), entry.getValue()))
+                .collect(joining(", ")));
+        apiConfig.setDeviceConfigs(deviceConfigsNeedToUpdateToLocal);
+        onDeviceConfigUpdatedToLocal();
+      }
+      if (!deviceConfigsNeedToStore.isEmpty()) {
+        storeDeviceConfigs(deviceConfigsNeedToStore);
+      }
+    } finally {
+      for (Map.Entry<String, String> device : deviceUuidToControlDeviceIdMap.entrySet()) {
+        apiConfig.setDeviceConfigSynced(device.getValue());
+      }
     }
   }
 

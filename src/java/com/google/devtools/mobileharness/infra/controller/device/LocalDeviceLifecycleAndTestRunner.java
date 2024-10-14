@@ -134,6 +134,8 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
   /** clock for getting the current system time. */
   private final Clock clock;
 
+  private final Sleeper sleeper;
+
   /** Multiple event buses to handle events in different scopes with different handlers. */
   private final EventBus globalInternalBus;
 
@@ -176,6 +178,7 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
     deviceStat = stat;
     deviceStat.onShowUp();
     clock = Clock.systemUTC();
+    sleeper = Sleeper.defaultSleeper();
     extendExpireTime();
     this.globalInternalBus = globalInternalBus;
     this.deviceRebootUtil = new DeviceRebootUtil();
@@ -190,6 +193,7 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
       DeviceStat stat,
       ApiConfig apiConfig,
       Clock clock,
+      Sleeper sleeper,
       Thread runningThread,
       ExternalDeviceManager externalDeviceManager) {
     this.device = device;
@@ -197,6 +201,7 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
     this.deviceStat = stat;
     this.apiConfig = apiConfig;
     this.clock = clock;
+    this.sleeper = sleeper;
     this.runningThread = runningThread;
 
     running = true;
@@ -225,6 +230,13 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
 
       logger.atInfo().log("Started");
 
+      boolean isDeviceConfigSynced =
+          apiConfig.waitUntilDeviceConfigSynced(device.getDeviceId(), Duration.ofMinutes(5));
+      if (isDeviceConfigSynced) {
+        logger.atInfo().log("Device config is synced");
+      } else {
+        logger.atWarning().log("Device config is not synced");
+      }
       // Initializes the device.
       deviceReservation =
           externalDeviceManager.reserveDevice(
@@ -396,7 +408,7 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
         return true;
       }
       try {
-        Sleeper.defaultSleeper().sleep(Duration.ofSeconds(1));
+        sleeper.sleep(Duration.ofSeconds(1));
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
         return false;

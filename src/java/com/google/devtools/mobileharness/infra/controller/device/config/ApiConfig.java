@@ -23,6 +23,7 @@ import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperties;
 import com.google.protobuf.Any;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.proto.Common.StrPair;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Observer;
@@ -35,8 +36,8 @@ public interface ApiConfig {
     return ApiConfigV5.getInstance();
   }
 
-  /** Initialize. */
-  void init(boolean defaultPublic, String hostName);
+  /** Initializes. */
+  void initialize(boolean isDefaultPublic, boolean isDefaultSynced, String hostName);
 
   /** Gets all the monitored device ids. */
   List<String> getMonitoredDeviceUuids();
@@ -88,4 +89,20 @@ public interface ApiConfig {
 
   /** Adds the observer to listen to config change. */
   void addObserver(Observer observer);
+
+  /** Gets whether the device config is synced between local and remote. */
+  boolean isDeviceConfigSynced(String deviceControlId);
+
+  /** Sets the device config has been synced between local and remote. */
+  void setDeviceConfigSynced(String deviceControlId);
+
+  /**
+   * Waits until the device config is synced between local and remote.
+   *
+   * @param deviceControlId the device control id
+   * @param timeout the max wait timeout
+   * @return whether the device config is synced between local and remote
+   */
+  boolean waitUntilDeviceConfigSynced(String deviceControlId, Duration timeout)
+      throws InterruptedException;
 }

@@ -119,7 +119,11 @@ public class LocalMode implements ExecMode {
                   "local-mode-scheduled-thread-pool", /* corePoolSize= */ 1);
           Runtime.getRuntime().addShutdownHook(new Thread(localEnvThreadPool::shutdownNow));
 
-          ApiConfig.getInstance().init(/* defaultPublic= */ true, "");
+          ApiConfig.getInstance()
+              .initialize(
+                  /* isDefaultPublic= */ true,
+                  /* isDefaultSynced= */ !Flags.instance().enableDeviceConfigManager.getNonNull(),
+                  "");
 
           // Subscribes LocalDeviceUpEvent.
           globalInternalBus.register(this);

@@ -36,15 +36,21 @@ import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.protobuf.Any;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.proto.Common.StrPair;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Observable;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
+import javax.annotation.concurrent.GuardedBy;
 
 /** The class which contains the user configured DeviceConfig/LabConfig. */
 public class ApiConfigV5 extends Observable implements ApiConfig {
@@ -61,6 +67,11 @@ public class ApiConfigV5 extends Observable implements ApiConfig {
 
   private volatile boolean isInitialized;
 
+  private final Object deviceConfigIsSyncedLock = new Object();
+
+  @GuardedBy("deviceConfigIsSyncedLock")
+  private final Set<String> deviceConfigIsSyncedDevices = new HashSet<>();
+
   /**
    * Singleton holder for lazy initialization.
    *
@@ -72,7 +83,8 @@ public class ApiConfigV5 extends Observable implements ApiConfig {
     private static final ApiConfigV5 singleton;
 
     static {
-      singleton = new ApiConfigV5(DeviceIdManager.getInstance(), new SystemUtil());
+      singleton =
+          new ApiConfigV5(DeviceIdManager.getInstance(), new SystemUtil(), Clock.systemUTC());
     }
   }
 
@@ -82,6 +94,7 @@ public class ApiConfigV5 extends Observable implements ApiConfig {
 
   private final DeviceIdManager deviceIdManager;
   private final SystemUtil systemUtil;
+  private final Clock clock;
   private LabConfig labConfig = LabConfig.getDefaultInstance();
 
   /** <DeviceControlId, DeviceConfig> map. */
@@ -89,19 +102,26 @@ public class ApiConfigV5 extends Observable implements ApiConfig {
 
   private boolean isDefaultPublic;
 
+  private boolean isDefaultSynced = true;
+
   @VisibleForTesting
-  ApiConfigV5(DeviceIdManager deviceIdManager, SystemUtil systemUtil) {
+  ApiConfigV5(DeviceIdManager deviceIdManager, SystemUtil systemUtil, Clock clock) {
     this.deviceIdManager = deviceIdManager;
     this.systemUtil = systemUtil;
+    this.clock = clock;
   }
 
   @Override
-  public void init(boolean isDefaultPublic, String hostName) {
+  public void initialize(boolean isDefaultPublic, boolean isDefaultSynced, String hostName) {
     if (!isInitialized) {
       synchronized (this) {
         if (!isInitialized) {
+          logger.atInfo().log(
+              "Initialize ApiConfig: isDefaultPublic=%s, isDefaultSynced=%s, hostName=%s",
+              isDefaultPublic, isDefaultSynced, hostName);
           isInitialized = true;
           this.isDefaultPublic = isDefaultPublic;
+          this.isDefaultSynced = isDefaultSynced;
           labConfig =
               hostName.isEmpty()
                   ? LabConfig.getDefaultInstance()
@@ -155,7 +175,6 @@ public class ApiConfigV5 extends Observable implements ApiConfig {
     List<StrPair> deviceExtraDimensions = new ArrayList<>();
     List<String> labels = Flags.instance().extraDeviceLabels.getNonNull();
     if (!labels.isEmpty()) {
-      logger.atInfo().log("Added labels %s to device %s.", labels, deviceControlId);
       labels.forEach(
           label ->
               deviceExtraDimensions.add(
@@ -243,7 +262,7 @@ public class ApiConfigV5 extends Observable implements ApiConfig {
    */
   @Override
   public void setDeviceConfigs(Map<String, DeviceConfig> deviceConfigList) {
-    boolean needWriteConfigFile = false;
+    boolean needNotifyObservers = false;
     for (Entry<String, DeviceConfig> deviceConfig : deviceConfigList.entrySet()) {
       String deviceControlId = deviceConfig.getKey();
       DeviceConfig newDeviceConfig = deviceConfig.getValue();
@@ -252,10 +271,10 @@ public class ApiConfigV5 extends Observable implements ApiConfig {
         logger.atInfo().log(
             "Set device %s's DeviceConfig to %s ", deviceControlId, newDeviceConfig);
         deviceConfigs.put(deviceConfig.getKey(), deviceConfig.getValue());
-        needWriteConfigFile = true;
+        needNotifyObservers = true;
       }
     }
-    if (needWriteConfigFile) {
+    if (needNotifyObservers) {
       setChanged();
       notifyObservers();
     }
@@ -329,6 +348,39 @@ public class ApiConfigV5 extends Observable implements ApiConfig {
   @Override
   public List<String> getMiscDeviceUuids() {
     return labConfig.getMiscDeviceUuidList();
+  }
+
+  @Override
+  public boolean isDeviceConfigSynced(String deviceControlId) {
+    synchronized (deviceConfigIsSyncedLock) {
+      return isDefaultSynced || deviceConfigIsSyncedDevices.contains(deviceControlId);
+    }
+  }
+
+  @Override
+  public void setDeviceConfigSynced(String deviceControlId) {
+    synchronized (deviceConfigIsSyncedLock) {
+      boolean isAdded = deviceConfigIsSyncedDevices.add(deviceControlId);
+      if (isAdded) {
+        logger.atInfo().log("Device %s is synced", deviceControlId);
+        deviceConfigIsSyncedLock.notifyAll();
+      }
+    }
+  }
+
+  @Override
+  public boolean waitUntilDeviceConfigSynced(String deviceControlId, Duration timeout)
+      throws InterruptedException {
+    Instant timeoutInstant = clock.instant().plus(timeout);
+    synchronized (deviceConfigIsSyncedLock) {
+      while (clock.instant().isBefore(timeoutInstant)) {
+        if (isDeviceConfigSynced(deviceControlId)) {
+          return true;
+        }
+        deviceConfigIsSyncedLock.wait(Duration.ofSeconds(1).toMillis());
+      }
+    }
+    return false;
   }
 
   /**
