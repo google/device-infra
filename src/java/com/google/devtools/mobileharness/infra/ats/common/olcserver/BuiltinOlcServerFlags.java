@@ -32,6 +32,7 @@ class BuiltinOlcServerFlags {
           "--android_device_daemon=false",
           "--check_device_interval=1h",
           "--clear_android_device_multi_users=false",
+          "--detect_device_interval_sec=2",
           "--disable_calling=false",
           "--disable_device_reboot=true",
           "--disable_wifi_util_func=true",
