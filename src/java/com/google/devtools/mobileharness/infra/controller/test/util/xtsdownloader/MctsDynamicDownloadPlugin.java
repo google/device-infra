@@ -79,8 +79,6 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
 
   private static final String MAINLINE_TVP_PKG = "com.google.android.modulemetadata";
 
-  private static final String ANDROID_V_CODENAME = "VanillaIceCream";
-
   private static final String PRELOADED_KEY = "preloaded";
 
   private static final String NON_PRELOADED_KEY = "non-preloaded";
@@ -122,6 +120,7 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
   }
 
   @Override
+  @SuppressWarnings("BeforeSnippet")
   public XtsDynamicDownloadInfo parse(TestInfo test, String deviceId)
       throws MobileHarnessException, InterruptedException {
     ImmutableList<String> preloadedMainlineModules = getPreloadedMainlineModules(deviceId);
@@ -134,10 +133,13 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
           String.format(
               "The ABI of device %s is not compatible with the xts dynamic downloader.", deviceId));
     }
-    // Before V release, the SDK level is 34, it will be increased to 35 only after V final release.
+    // Set the aosp version as the build prefix from build alias. For example, if the build alias is
+    // TP1A.220624.003.XX..., the aosp version will be TP1A. If the build alias is not in the right
+    // format then set the aosp version as the SDK version.
+    String buildAlias = adbUtil.getProperty(deviceId, AndroidProperty.BUILD_ALIAS);
     String aospVersion =
-        adbUtil.getProperty(deviceId, AndroidProperty.CODENAME).equals(ANDROID_V_CODENAME)
-            ? "35"
+        buildAlias != null && buildAlias.contains(".")
+            ? buildAlias.substring(0, buildAlias.indexOf("."))
             : adbUtil.getProperty(deviceId, AndroidProperty.SDK_VERSION);
     List<String> downloadLinkUrls = new ArrayList<>();
     // Add the Lorry download link url of MCTS file for preloaded mainline modules. For example:
