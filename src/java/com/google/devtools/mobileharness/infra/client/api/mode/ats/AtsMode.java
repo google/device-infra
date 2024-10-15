@@ -56,6 +56,7 @@ public class AtsMode implements ExecMode, ServiceProvider {
   private final LabInfoService labInfoService;
   private final LabRecordManager labRecordManager;
   private final LabRecordService labRecordService;
+  private final JobSyncService jobSyncService;
   private final DeviceVerifier deviceVerifier = new EmptyDeviceVerifier();
 
   @Inject
@@ -65,13 +66,15 @@ public class AtsMode implements ExecMode, ServiceProvider {
       @AtsModeAbstractScheduler AbstractScheduler scheduler,
       LabInfoService labInfoService,
       LabRecordManager labRecordManager,
-      LabRecordService labRecordService) {
+      LabRecordService labRecordService,
+      JobSyncService jobSyncService) {
     this.remoteDeviceManager = remoteDeviceManager;
     this.deviceQuerier = deviceQuerier;
     this.scheduler = scheduler;
     this.labInfoService = labInfoService;
     this.labRecordManager = labRecordManager;
     this.labRecordService = labRecordService;
+    this.jobSyncService = jobSyncService;
   }
 
   @Override
@@ -105,7 +108,7 @@ public class AtsMode implements ExecMode, ServiceProvider {
 
   @Override
   public ImmutableList<BindableService> provideServices() {
-    return ImmutableList.of(labInfoService, labRecordService);
+    return ImmutableList.of(labInfoService, labRecordService, jobSyncService);
   }
 
   @Override

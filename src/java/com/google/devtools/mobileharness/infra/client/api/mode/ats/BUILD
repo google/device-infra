@@ -47,6 +47,7 @@ java_library(
     srcs = ["AtsMode.java"],
     deps = [
         ":annotations",
+        ":job_sync_service",
         ":lab_record_manager",
         ":lab_record_service",
         ":remote_device_manager",
@@ -82,6 +83,18 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
         "@com_google_protobuf//:protobuf_java",
         "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "job_sync_service",
+    srcs = ["JobSyncService.java"],
+    deps = [
+        "//src/devtools/mobileharness/infra/master/rpc/proto:job_sync_service_java_grpc_proto",
+        "//src/devtools/mobileharness/infra/master/rpc/proto:job_sync_service_java_proto",
+        "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc:service_util",
+        "@io_grpc_grpc_java//stub",
         "@maven//:javax_inject_jsr330_api",
     ],
 )
