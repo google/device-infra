@@ -23,6 +23,11 @@ import javax.inject.Qualifier;
 /** Annotations for OLC server. */
 public class Annotations {
 
+  /** Whether the database is enabled. */
+  @Qualifier
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface EnableDatabase {}
+
   /** OLC database connections. */
   @Qualifier
   @Retention(RetentionPolicy.RUNTIME)

@@ -30,6 +30,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.client.api.Annotations.GlobalInternalEventBus;
 import com.google.devtools.mobileharness.infra.client.api.ClientApi;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.EnableDatabase;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.OlcDatabaseConnections;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.OlcServerDirs;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogManager;
@@ -62,6 +63,7 @@ import io.grpc.ServerBuilder;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.Callable;
 import java.util.logging.Level;
 import javax.annotation.Nullable;
@@ -82,13 +84,14 @@ public class OlcServer {
 
     // Creates and runs the server.
     Instant serverStartTime = Instant.now();
+    boolean enableDatabase = validateDatabase();
     OlcServer server =
         Guice.createInjector(
                 new ServerModule(
                     Flags.instance().enableAtsMode.getNonNull(),
                     serverStartTime,
                     Flags.instance().enableCloudPubsubMonitoring.getNonNull(),
-                    enableDatabase()))
+                    enableDatabase))
             .getInstance(OlcServer.class);
     server.run(Arrays.asList(args));
   }
@@ -105,6 +108,7 @@ public class OlcServer {
   private final ClientApi clientApi;
   private final LocalFileUtil localFileUtil;
   private final SystemUtil systemUtil;
+  private final boolean enableDatabase;
   private final DatabaseConnections olcDatabaseConnections;
   private final TablesLister tablesLister;
 
@@ -122,6 +126,7 @@ public class OlcServer {
       ClientApi clientApi,
       LocalFileUtil localFileUtil,
       SystemUtil systemUtil,
+      @EnableDatabase boolean enableDatabase,
       @OlcDatabaseConnections DatabaseConnections olcDatabaseConnections,
       TablesLister tablesLister) {
     this.sessionService = sessionService;
@@ -136,6 +141,7 @@ public class OlcServer {
     this.clientApi = clientApi;
     this.localFileUtil = localFileUtil;
     this.systemUtil = systemUtil;
+    this.enableDatabase = enableDatabase;
     this.olcDatabaseConnections = olcDatabaseConnections;
     this.tablesLister = tablesLister;
   }
@@ -175,9 +181,13 @@ public class OlcServer {
     LogRecorder.getInstance().initialize(logManager);
 
     // Connects to database.
-    if (enableDatabase()) {
+    if (enableDatabase) {
+      Properties properties = new Properties();
+      Flags.instance().olcDatabaseJdbcProperty.getNonNull().forEach(properties::setProperty);
       olcDatabaseConnections.initialize(
-          Flags.instance().olcDatabaseJdbcUrl.get(), /* statementCacheSize= */ 100);
+          Flags.instance().olcDatabaseJdbcUrl.getNonNull(),
+          properties,
+          /* statementCacheSize= */ 100);
 
       // Prints table names.
       logger.atInfo().log(
@@ -287,12 +297,36 @@ public class OlcServer {
     }
   }
 
-  private static boolean enableDatabase() {
-    return enableDatabaseOss();
+  /** Validates whether the database can be enabled. */
+  private static boolean validateDatabase() {
+    String jdbcUrl = Flags.instance().olcDatabaseJdbcUrl.get();
+    if (Strings.isNullOrEmpty(jdbcUrl)) {
+      return false;
+    }
+    if (jdbcUrl.startsWith("jdbc:mysql:")) {
+      if (!checkClassExist("com.mysql.jdbc.Driver")) {
+        return false;
+      }
+    }
+
+    String socketFactoryClassName =
+        Flags.instance().olcDatabaseJdbcProperty.getNonNull().get("socketFactory");
+    if (!Strings.isNullOrEmpty(socketFactoryClassName)) {
+      if (!checkClassExist(socketFactoryClassName)) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
-  @SuppressWarnings("unused")
-  private static boolean enableDatabaseOss() {
-    return !Strings.isNullOrEmpty(Flags.instance().olcDatabaseJdbcUrl.get());
+  private static boolean checkClassExist(String className) {
+    try {
+      Class.forName(className);
+      return true;
+    } catch (ClassNotFoundException e) {
+      logger.atWarning().withCause(e).log("Failed to load class %s.", className);
+      return false;
+    }
   }
 }

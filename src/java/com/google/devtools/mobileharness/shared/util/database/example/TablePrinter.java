@@ -22,6 +22,7 @@ import com.google.devtools.mobileharness.shared.util.database.DatabaseConnection
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Properties;
 
 /**
  * A binary to print the row count of a table in a MySQL database.
@@ -40,7 +41,7 @@ public class TablePrinter {
     logger.atInfo().log("Table name: [%s]", tableName);
 
     DatabaseConnections databaseConnections = new DatabaseConnections();
-    databaseConnections.initialize(jdbcUrl, /* statementCacheSize= */ 100);
+    databaseConnections.initialize(jdbcUrl, new Properties(), /* statementCacheSize= */ 100);
 
     try (Connection connection = databaseConnections.getConnection();
         ResultSet resultSet =

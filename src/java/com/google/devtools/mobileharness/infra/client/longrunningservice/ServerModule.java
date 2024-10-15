@@ -25,6 +25,7 @@ import com.google.devtools.mobileharness.infra.client.api.ClientApi;
 import com.google.devtools.mobileharness.infra.client.api.ClientApiModule;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.EnableDatabase;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.OlcDatabaseConnections;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.ServerStartTime;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.ControllerModule;
@@ -126,6 +127,7 @@ class ServerModule extends AbstractModule {
             enableDatabase
                 ? JdbcAllocationPersistenceUtil.class
                 : NoOpAllocationPersistenceUtil.class);
+    bind(boolean.class).annotatedWith(EnableDatabase.class).toInstance(enableDatabase);
   }
 
   @Provides

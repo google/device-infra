@@ -19,9 +19,11 @@ package com.google.devtools.mobileharness.shared.util.flags;
 import static java.util.Arrays.stream;
 
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableMap;
 import java.lang.reflect.Modifier;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 
 /**
  * All Device Infra flags.
@@ -1208,6 +1210,15 @@ public class Flags {
               + " to master. Default is false.",
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> noOpLabServer = noOpLabServerDefault;
+
+  private static final Flag<Map<String, String>> olcDatabaseJdbcPropertyDefault =
+      Flag.value(ImmutableMap.of());
+
+  @com.beust.jcommander.Parameter(
+      names = "--olc_database_jdbc_property",
+      description = "OLC database JDBC property.",
+      converter = Flag.StringMapConverter.class)
+  public Flag<Map<String, String>> olcDatabaseJdbcProperty = olcDatabaseJdbcPropertyDefault;
 
   private static final Flag<String> olcDatabaseJdbcUrlDefault = Flag.value(null);
 

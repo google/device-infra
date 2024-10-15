@@ -30,6 +30,7 @@ package(
 olc_server_binary(
     name = "ats_olc_server",
     extra_runtime_deps = [
+        "@maven//:com_mysql_mysql_connector_j",
         "//src/java/com/google/devtools/mobileharness/infra/ats/dda/sessionplugin:ats_dda_session_plugin",
         "//src/java/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:ats_server_session_plugin",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats",
@@ -38,7 +39,6 @@ olc_server_binary(
         "@maven//:com_kohlschutter_junixsocket_junixsocket_common",
         "@maven//:com_kohlschutter_junixsocket_junixsocket_mysql",
         "@maven//:com_kohlschutter_junixsocket_junixsocket_native_common",
-        "@maven//:com_mysql_mysql_connector_j",
     ],
 )
 

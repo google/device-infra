@@ -23,6 +23,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.mchange.v2.c3p0.DataSources;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.Properties;
 import javax.annotation.concurrent.GuardedBy;
 import javax.sql.DataSource;
 
@@ -37,7 +38,8 @@ public class DatabaseConnections {
   @GuardedBy("lock")
   private String jdbcUrl;
 
-  public void initialize(String jdbcUrl, int statementCacheSize) throws MobileHarnessException {
+  public void initialize(String jdbcUrl, Properties properties, int statementCacheSize)
+      throws MobileHarnessException {
     synchronized (lock) {
       checkState(
           dataSource == null,
@@ -46,7 +48,7 @@ public class DatabaseConnections {
       try {
         this.dataSource =
             DataSources.pooledDataSource(
-                DataSources.unpooledDataSource(jdbcUrl), statementCacheSize);
+                DataSources.unpooledDataSource(jdbcUrl, properties), statementCacheSize);
         this.jdbcUrl = jdbcUrl;
       } catch (SQLException e) {
         throw new MobileHarnessException(
