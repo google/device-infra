@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.shared.util.comm.server;
 
 import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
@@ -91,7 +92,13 @@ public final class LifecycleManager {
       for (LabeledServer labeledServer : managedServers) {
         String label = labeledServer.label();
         try {
-          logger.atInfo().log("Starting server, label=[%s]", label);
+          logger.atInfo().log(
+              "Starting RPC server [%s], services=%s",
+              labeledServer,
+              labeledServer.server().getImmutableServices().stream()
+                  .map(service -> service.getServiceDescriptor().getName())
+                  .sorted()
+                  .collect(toImmutableList()));
           labeledServer.server().start();
         } catch (IOException e) {
           managedServers.forEach(server -> server.server().shutdownNow());

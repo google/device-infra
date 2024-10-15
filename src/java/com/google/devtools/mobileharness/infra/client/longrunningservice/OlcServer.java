@@ -222,7 +222,7 @@ public class OlcServer {
   }
 
   private LifecycleManager startRpcServers() {
-    // Creates extra servers.
+    // Creates extra services.
     ImmutableList<BindableService> extraServicesForNonWorker;
     ImmutableList<BindableService> extraServicesForWorker;
     if (execMode instanceof ServiceProvider) {
