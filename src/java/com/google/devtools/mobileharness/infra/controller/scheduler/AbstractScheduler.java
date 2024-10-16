@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.infra.controller.scheduler;
 
+import com.google.auto.value.AutoValue;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.eventbus.EventBus;
 import com.google.devtools.mobileharness.api.model.allocation.Allocation;
 import com.google.devtools.mobileharness.api.model.lab.DeviceLocator;
@@ -23,6 +25,7 @@ import com.google.devtools.mobileharness.api.model.lab.DeviceScheduleUnit;
 import com.google.devtools.mobileharness.api.model.lab.LabScheduleUnit;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobScheduleUnit;
+import com.google.wireless.qa.mobileharness.shared.model.job.TestLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestScheduleUnit;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
 import javax.annotation.Nullable;
@@ -70,6 +73,9 @@ public abstract class AbstractScheduler {
       @Nullable Allocation allocation, boolean removeDevices, boolean closeTest)
       throws InterruptedException;
 
+  /** Returns jobs and allocations. */
+  public abstract JobsAndAllocations getJobsAndAllocations();
+
   /** Registers the handler to receive scheduler events. */
   public void registerEventHandler(Object handler) {
     schedulerInternalBus.register(handler);
@@ -96,5 +102,37 @@ public abstract class AbstractScheduler {
     return isJobTypeSupported
         && device.owners().support(job.jobUser().getRunAs())
         && device.dimensions().supportAndSatisfied(job.dimensions().getAll());
+  }
+
+  /** Jobs and allocations. */
+  @AutoValue
+  public abstract static class JobsAndAllocations {
+
+    /** Key is job ID. */
+    public abstract ImmutableMap<String, JobWithTests> jobsWithTests();
+
+    /** Key is test ID. */
+    public abstract ImmutableMap<String, Allocation> testAllocations();
+
+    public static JobsAndAllocations of(
+        ImmutableMap<String, JobWithTests> jobsWithTests,
+        ImmutableMap<String, Allocation> testAllocations) {
+      return new AutoValue_AbstractScheduler_JobsAndAllocations(jobsWithTests, testAllocations);
+    }
+  }
+
+  /** A job and its test. */
+  @AutoValue
+  public abstract static class JobWithTests {
+
+    public abstract JobScheduleUnit jobScheduleUnit();
+
+    /** Key is test ID. */
+    public abstract ImmutableMap<String, TestLocator> tests();
+
+    public static JobWithTests of(
+        JobScheduleUnit jobScheduleUnit, ImmutableMap<String, TestLocator> tests) {
+      return new AutoValue_AbstractScheduler_JobWithTests(jobScheduleUnit, tests);
+    }
   }
 }

@@ -17,10 +17,12 @@
 package com.google.devtools.mobileharness.infra.controller.scheduler.simple;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.model.allocation.Allocation;
@@ -45,6 +47,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
@@ -310,6 +313,22 @@ public class SimpleScheduler extends AbstractScheduler implements Runnable {
           || !removeAllocationResult.removedDevices().isEmpty()) {
         logger.atInfo().log("Allocation %s released", allocation);
       }
+    }
+  }
+
+  @Override
+  public JobsAndAllocations getJobsAndAllocations() {
+    synchronized (allocationLock) {
+      return JobsAndAllocations.of(
+          jobs.entrySet().stream()
+              .collect(
+                  toImmutableMap(
+                      Entry::getKey,
+                      entry ->
+                          JobWithTests.of(
+                              entry.getValue().getScheduleUnit(),
+                              ImmutableMap.copyOf(entry.getValue().getTests())))),
+          allocations.getTestAllocations());
     }
   }
 

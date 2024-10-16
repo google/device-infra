@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.infra.controller.scheduler.simple;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.allocation.Allocation;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -190,5 +191,10 @@ final class Allocations {
 
   boolean containsDevice(String deviceId) {
     return deviceAllocations.containsKey(deviceId);
+  }
+
+  /** Returns a snapshot of a test ID -> Allocation mapping. */
+  ImmutableMap<String, Allocation> getTestAllocations() {
+    return ImmutableMap.copyOf(testAllocations);
   }
 }
