@@ -366,7 +366,8 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
 
     ImmutableList<DeviceLocator> deviceLocators = allocation.getAllDeviceLocators();
     if (isResumedTest(testInfo)) {
-      throw new UnsupportedOperationException("Resumed test is not supported in OSS");
+      testEngineLocator = LongevityTestHelper.resumeTestEngineLocator(testInfo).orElse(null);
+      testInfo.log().atInfo().alsoTo(logger).log("Skip kickOffTest because it is a resumed job");
     } else {
       if (Flags.instance().enableClientFileTransfer.getNonNull()) {
         sendTestFiles(testInfo);
