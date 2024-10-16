@@ -79,6 +79,14 @@ public final class MctsDynamicDownloadPluginTest {
     when(mockAndroidPackageManagerUtil.getAppVersionCode(
             any(), eq("com.google.android.modulemetadata")))
         .thenReturn(351050004);
+    when(mockAndroidPackageManagerUtil.getAppVersionCode(
+            any(), eq("com.google.android.captiveportallogin")))
+        .thenReturn(351050004);
+    when(mockAndroidPackageManagerUtil.getAppVersionCode(any(), eq("com.google.android.conscrypt")))
+        .thenReturn(351050004);
+    when(mockAndroidPackageManagerUtil.getAppVersionCode(
+            any(), eq("com.google.android.go.configinfrastructure")))
+        .thenReturn(351050004);
     when(mockAdbUtil.getProperty(any(), eq(AndroidProperty.ABI))).thenReturn("arm64-v8a");
     when(mockAdbUtil.getProperty(any(), eq(AndroidProperty.SDK_VERSION))).thenReturn("30");
     when(mockAdbUtil.getProperty(any(), eq(AndroidProperty.CODENAME))).thenReturn("fake_codename");

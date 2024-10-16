@@ -125,7 +125,7 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
       throws MobileHarnessException, InterruptedException {
     ImmutableList<String> preloadedMainlineModules = getPreloadedMainlineModules(deviceId);
     ListMultimap<String, String> mctsNamesOfPreloadedMainlineModules =
-        getMctsNamesOfPreloadedMainlineModules(preloadedMainlineModules);
+        getMctsNamesOfPreloadedMainlineModules(preloadedMainlineModules, deviceId);
     String deviceAbi = DEVICE_ABI_MAP.get(adbUtil.getProperty(deviceId, AndroidProperty.ABI));
     if (deviceAbi == null) {
       throw new MobileHarnessException(
@@ -157,18 +157,20 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
       // from aosp.
       String preloadedMainlineVersion =
           versioncode.startsWith("35")
-              ? getPreloadedMainlineVersion(versioncode, aospVersion)
+              ? getPreloadedMainlineVersion(versioncode, MAINLINE_TVP_PKG)
               : aospVersion;
       // Add the MCTS exclude file link url to the front of the list.
       downloadLinkUrls.add(
           String.format(
               "https://dl.google.com/dl/android/xts/mcts/tool/mcts_exclude/%s/%s/mcts-exclude.txt",
               aospVersion, preloadedMainlineVersion));
-      for (String mctsName : mctsNamesOfPreloadedMainlineModules.get(PRELOADED_KEY)) {
+      for (String mctsNameAndVersioncode : mctsNamesOfPreloadedMainlineModules.get(PRELOADED_KEY)) {
         String downloadUrl =
             String.format(
                 "https://dl.google.com/dl/android/xts/mcts/%s/%s/%s.zip",
-                preloadedMainlineVersion, deviceAbi, mctsName);
+                preloadedMainlineVersion,
+                deviceAbi,
+                mctsNameAndVersioncode.substring(0, mctsNameAndVersioncode.indexOf(":")));
         downloadLinkUrls.add(downloadUrl);
       }
     }
@@ -283,7 +285,8 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
   }
 
   private ListMultimap<String, String> getMctsNamesOfPreloadedMainlineModules(
-      ImmutableList<String> moduleList) throws MobileHarnessException {
+      ImmutableList<String> moduleList, String deviceId)
+      throws MobileHarnessException, InterruptedException {
     String configFilePath =
         resUtil.getResourceFile(
             getClass(),
@@ -303,18 +306,26 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
     // the ones of non-preloaded modules.
     ListMultimap<String, String> mctsNamesOfAllModules = ArrayListMultimap.create();
     Set<String> preloadedModulesMcts = new HashSet<>(); // Track modules added to 'preloaded'
+    Set<String> preloadedModulesMctsAndVersioncode = new HashSet<>();
     Map<String, String> modulePackageToModuleInfoMap =
         moduleInfoMap.getModulePackageToModuleInfoMap();
-    moduleList.forEach(
-        moduleName -> {
-          if (modulePackageToModuleInfoMap.containsKey(moduleName)) {
-            preloadedModulesMcts.add(modulePackageToModuleInfoMap.get(moduleName));
-          }
-          ;
-        });
-    // Put the preloaded modules on the preloaded list.
-    mctsNamesOfAllModules.putAll(PRELOADED_KEY, preloadedModulesMcts);
-    // Put the non-preloaded modules on the non-preloaded list.
+    for (String moduleName : moduleList) {
+      if (modulePackageToModuleInfoMap.containsKey(moduleName)) {
+        String mctsName = modulePackageToModuleInfoMap.get(moduleName);
+        if (preloadedModulesMcts.add(mctsName)) {
+          preloadedModulesMctsAndVersioncode.add(
+              mctsName
+                  + ':'
+                  + getPreloadedMainlineVersion(
+                      Integer.toString(
+                          androidPackageManagerUtil.getAppVersionCode(deviceId, moduleName)),
+                      moduleName));
+        }
+      }
+    }
+    // Put the preloaded modules on the preloaded list with the format: "mctsName:versioncode".
+    mctsNamesOfAllModules.putAll(PRELOADED_KEY, preloadedModulesMctsAndVersioncode);
+    // Put the non-preloaded modules on the non-preloaded list with the format: "mctsName".
     Set<String> nonPreloadMctsList = new HashSet<>();
     nonPreloadMctsList.addAll(modulePackageToModuleInfoMap.values());
     nonPreloadMctsList.removeAll(preloadedModulesMcts);
@@ -322,16 +333,13 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
     return mctsNamesOfAllModules;
   }
 
-  private String getPreloadedMainlineVersion(String versioncode, String aospVersion)
+  private String getPreloadedMainlineVersion(String versioncode, String moduleName)
       throws MobileHarnessException {
     // Get the release time of the preloaded mainline train, the format is YYYY-MM.
     // Note that version codes must always increase to successfully install newer builds. For this
     // reason, the version code "wraps" in January, making the month digits wrap to 13, instead of
     // 01 (for the first month of the year) and so on, if the month is 0 then it's aosp version.
     int month = Integer.parseInt(versioncode, 2, 4, 10);
-    if (month == 0) {
-      return aospVersion;
-    }
     Integer sdkLevelYear = SDK_LEVEL_TO_YEAR.get(versioncode.substring(0, 2));
     if (sdkLevelYear == null) {
       throw new MobileHarnessException(
@@ -340,7 +348,7 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
     }
     int year = sdkLevelYear + month / 12;
     String version = String.format("%d-%02d", year, (month % 12 == 0 ? 12 : month % 12));
-    logger.atInfo().log("Get mainline train version(YYYY-MM): %s", version);
+    logger.atInfo().log("Get %s version(YYYY-MM): %s", moduleName, version);
     return version;
   }
 
