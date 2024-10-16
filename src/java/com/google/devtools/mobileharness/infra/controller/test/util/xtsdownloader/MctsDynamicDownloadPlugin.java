@@ -24,6 +24,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ListMultimap;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
@@ -100,6 +101,9 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
           "arm64-v8a", "arm64",
           "x86", "x86_64",
           "x86_64", "x86_64");
+  // Build prefix of Trunk release build only for Pixel devices.
+  private static final ImmutableSet<String> BUILD_PREFIX_FOR_TRUNK_RELEASE =
+      ImmutableSet.of("AP3A", "AP4A");
   private final AndroidPackageManagerUtil androidPackageManagerUtil;
   private final AndroidAdbUtil adbUtil;
   private final LocalFileUtil fileUtil;
@@ -133,14 +137,19 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
           String.format(
               "The ABI of device %s is not compatible with the xts dynamic downloader.", deviceId));
     }
-    // Set the aosp version as the build prefix from build alias. For example, if the build alias is
-    // TP1A.220624.003.XX..., the aosp version will be TP1A. If the build alias is not in the right
-    // format then set the aosp version as the SDK version.
+    // Set the aosp version as the build prefix from build alias for Pixel devices starting from
+    // Trunk release. For example, if the build alias is AP1A.240624.003.XX..., the aosp version
+    // will be AP3A. If the build alias is not in the right format then set the aosp version as the
+    // SDK version.
     String buildAlias = adbUtil.getProperty(deviceId, AndroidProperty.BUILD_ALIAS);
     String aospVersion =
-        buildAlias != null && buildAlias.contains(".")
+        buildAlias != null
+                && buildAlias.contains(".")
+                && BUILD_PREFIX_FOR_TRUNK_RELEASE.contains(
+                    buildAlias.substring(0, buildAlias.indexOf(".")))
             ? buildAlias.substring(0, buildAlias.indexOf("."))
             : adbUtil.getProperty(deviceId, AndroidProperty.SDK_VERSION);
+
     List<String> downloadLinkUrls = new ArrayList<>();
     // Add the Lorry download link url of MCTS file for preloaded mainline modules. For example:
     // https://dl.google.com/dl/android/xts/mcts/YYYY-MM/arm64/android-mcts-<module_name>.zip
