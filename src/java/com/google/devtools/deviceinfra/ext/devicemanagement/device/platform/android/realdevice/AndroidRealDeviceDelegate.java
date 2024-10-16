@@ -297,6 +297,10 @@ public abstract class AndroidRealDeviceDelegate {
       if (!Strings.isNullOrEmpty(unlocked)) {
         device.updateDimension(Dimension.Name.OEM_UNLOCK, unlocked);
       }
+      String revision = fastboot.getVar(deviceId, FastbootProperty.HW_REVISION);
+      if (!Strings.isNullOrEmpty(revision)) {
+        device.updateDimension(Dimension.Name.REVISION, revision);
+      }
 
       try {
         String serialno = fastboot.getVar(deviceId, FastbootProperty.SERIALNO);
