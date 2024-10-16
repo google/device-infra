@@ -42,11 +42,7 @@ java_library(
 java_library(
     name = "job_dir_factory",
     srcs = ["JobDirFactory.java"],
-    visibility = [
-        "//java/com/google/devtools/mobileharness/infra/rbeexecutor:__subpackages__",
-        "//javatests/com/google/devtools/mobileharness/infra/rbeexecutor:__subpackages__",
-        "//src/java/com/google/devtools/mobileharness/infra/lab/controller:__pkg__",
-    ],
+    visibility = ["//src/java/com/google/devtools/mobileharness/infra/lab/controller:__pkg__"],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/job/in",
