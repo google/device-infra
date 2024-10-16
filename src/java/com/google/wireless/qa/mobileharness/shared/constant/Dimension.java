@@ -251,6 +251,9 @@ public final class Dimension {
     /** Whether the device is locked with the device admin. */
     DEVICE_ADMIN_LOCKED,
 
+    /** The hardware revision of the device. */
+    REVISION,
+
     // iOS
     /** Whether the device has blocked the iOS version upgrade successfully. */
     BLOCKED_IOS_VERSION_UPGRADE,

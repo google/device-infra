@@ -309,6 +309,11 @@ public abstract class AndroidRealDeviceDelegate {
             deviceId, MoreThrowables.shortDebugString(e));
       }
 
+      String hwrevision = fastboot.getVar(deviceId, FastbootProperty.HW_REVISION);
+      if (!Strings.isNullOrEmpty(hwrevision)) {
+        device.updateDimension(Dimension.Name.REVISION, hwrevision);
+      }
+
       addFastbootCommunication(deviceId);
     }
   }
