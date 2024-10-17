@@ -224,6 +224,7 @@ public class AtsConsole {
     }
     logger.atInfo().with(IMPORTANCE, DEBUG).log("ATS console ID: %s", clientId);
     logger.atInfo().with(IMPORTANCE, DEBUG).log("Flags: %s", deviceInfraServiceFlags.flags());
+    logger.atInfo().with(IMPORTANCE, DEBUG).log("Java version: %s", Runtime.version());
 
     // Starts listing test plans.
     CommandCompleterHolder.getInstance().initialize(commandCompleter);
