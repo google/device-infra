@@ -90,7 +90,7 @@ public final class DummyClient {
     ResponseObserver responseObserver = new ResponseObserver();
     StreamObserver<DummyRequest> requestObserver =
         asyncStub.clientStreamingMethod(responseObserver);
-    sendAsyncRequest(requestObserver, requests, null);
+    sendAsyncRequests(requestObserver, requests, null);
     return responseObserver;
   }
 
@@ -98,7 +98,7 @@ public final class DummyClient {
   public ResponseObserver bidiStreamingMethod(Collection<DummyRequest> requests) {
     ResponseObserver responseObserver = new ResponseObserver(requests.size());
     StreamObserver<DummyRequest> requestObserver = asyncStub.bidiStreamingMethod(responseObserver);
-    sendAsyncRequest(requestObserver, requests, responseObserver);
+    sendAsyncRequests(requestObserver, requests, responseObserver);
     return responseObserver;
   }
 
@@ -114,7 +114,7 @@ public final class DummyClient {
         .collect(toImmutableList());
   }
 
-  private void sendAsyncRequest(
+  private void sendAsyncRequests(
       StreamObserver<DummyRequest> requestObserver,
       Collection<DummyRequest> requests,
       @Nullable ResponseObserver responseObserver) {
@@ -129,7 +129,9 @@ public final class DummyClient {
                 Thread.sleep(500);
               } else {
                 toSend--;
-                while (responseObserver.countResponseToWait() > toSend) {
+                // Allow at most 10 attempts to wait for the response to be received.
+                int waitAttempts = 10;
+                while (waitAttempts-- > 0 && responseObserver.countResponseToWait() > toSend) {
                   logger.atInfo().log("Waiting for response to be received.");
                   Thread.sleep(100);
                 }
