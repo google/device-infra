@@ -64,7 +64,7 @@ class LocalDeviceManagerSchedulerSyncer implements Observer {
   }
 
   @Subscribe
-  public void onDeviceChanged(LocalDeviceChangeEvent event) throws InterruptedException {
+  public void onDeviceChanged(LocalDeviceChangeEvent event) {
     String deviceId = event.getDeviceControlId();
     String deviceType = event.getDeviceType();
     LocalDeviceRunner deviceRunner = deviceManager.getLocalDeviceRunner(deviceId, deviceType);
@@ -74,8 +74,10 @@ class LocalDeviceManagerSchedulerSyncer implements Observer {
   }
 
   private void upsertDeviceToScheduler(
-      DeviceStatus deviceStatus, String deviceId, String deviceType, LocalDeviceRunner deviceRunner)
-      throws InterruptedException {
+      DeviceStatus deviceStatus,
+      String deviceId,
+      String deviceType,
+      LocalDeviceRunner deviceRunner) {
     if (deviceStatus == DeviceStatus.IDLE) {
       logger.atInfo().log("Update device %s(%s) to scheduler", deviceId, deviceType);
       scheduler.upsertDevice(toDeviceScheduleUnit(deviceRunner.getDevice()), LOCAL_LAB_UNIT);
@@ -92,7 +94,7 @@ class LocalDeviceManagerSchedulerSyncer implements Observer {
   }
 
   @Subscribe
-  public void onDeviceDown(LocalDeviceDownEvent event) throws InterruptedException {
+  public void onDeviceDown(LocalDeviceDownEvent event) {
     String deviceId = event.getDeviceControlId();
     logger.atInfo().log("Device %s is down, remove it from scheduler", deviceId);
     scheduler.unallocate(DeviceLocator.of(deviceId, LabLocator.LOCALHOST), true, true);

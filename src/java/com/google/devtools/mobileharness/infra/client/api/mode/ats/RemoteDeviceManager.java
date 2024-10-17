@@ -256,8 +256,7 @@ class RemoteDeviceManager implements LabInfoProvider {
 
   private class LabSyncService extends LabSyncServiceGrpc.LabSyncServiceImplBase {
 
-    private SignUpLabResponse doSignUpLab(SignUpLabRequest request)
-        throws MobileHarnessException, InterruptedException {
+    private SignUpLabResponse doSignUpLab(SignUpLabRequest request) throws MobileHarnessException {
       Optional<SocketAddress> labAddress = GrpcContexts.clientAddress();
       logger.atInfo().log(
           "Sign up lab, req=[%s], lab_address=[%s]", shortDebugString(request), labAddress);
@@ -347,8 +346,7 @@ class RemoteDeviceManager implements LabInfoProvider {
           .build();
     }
 
-    private HeartbeatLabResponse doHeartbeatLab(HeartbeatLabRequest request)
-        throws InterruptedException {
+    private HeartbeatLabResponse doHeartbeatLab(HeartbeatLabRequest request) {
       Optional<SocketAddress> labAddress = GrpcContexts.clientAddress();
       logger.atInfo().log(
           "Heartbeat lab, req=[%s], lab_address=[%s]", shortDebugString(request), labAddress);
@@ -398,8 +396,7 @@ class RemoteDeviceManager implements LabInfoProvider {
       return HeartbeatLabResponse.newBuilder().addAllOutdatedDeviceId(outdatedDeviceIds).build();
     }
 
-    private SignOutDeviceResponse doSignOutDevice(SignOutDeviceRequest request)
-        throws InterruptedException {
+    private SignOutDeviceResponse doSignOutDevice(SignOutDeviceRequest request) {
       logger.atInfo().log("Sign out device, req=[%s]", shortDebugString(request));
 
       synchronized (lock) {
@@ -526,7 +523,7 @@ class RemoteDeviceManager implements LabInfoProvider {
   }
 
   @GuardedBy("lock")
-  private void updateScheduler(DeviceData deviceData) throws InterruptedException {
+  private void updateScheduler(DeviceData deviceData) {
     switch (deviceData.statusFromLab) {
       case IDLE:
         // Adds device to scheduler if it is IDLE.
@@ -567,13 +564,8 @@ class RemoteDeviceManager implements LabInfoProvider {
               "Remove device, device=%s, last_update_from_lab=%s",
               deviceKey, deviceData.updateFromLabLocalTimestamp);
 
-          try {
-            scheduler.unallocate(
-                deviceData.dataFromLab.locator(), /* removeDevices= */ true, /* closeTest= */ true);
-          } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IllegalStateException(e);
-          }
+          scheduler.unallocate(
+              deviceData.dataFromLab.locator(), /* removeDevices= */ true, /* closeTest= */ true);
 
           iterator.remove();
           deviceUuids.remove(deviceKey.deviceUuid());
