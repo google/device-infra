@@ -17,9 +17,6 @@
 package com.google.devtools.mobileharness.infra.controller.scheduler.simple;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.errorprone.annotations.CanIgnoreReturnValue;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
-import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobScheduleUnit;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestLocator;
 import java.util.Map;
@@ -47,17 +44,12 @@ class SimpleJobInfo {
   /**
    * Adds the given test to the job.
    *
-   * @throws MobileHarnessException if there is already a test with the same id in this job
+   * @return true if the test is added, or false if the test has already been added
    */
-  @CanIgnoreReturnValue
-  public SimpleJobInfo addTest(TestLocator test) throws MobileHarnessException {
+  public boolean addTest(TestLocator test) {
     String testId = test.getId();
-    if (tests.putIfAbsent(testId, test) != null) {
-      throw new MobileHarnessException(
-          ErrorCode.TEST_DUPLICATED,
-          "Test " + testId + " already exists in job " + jobUnit.locator());
-    }
-    return this;
+    TestLocator finalizedTestLocator = new TestLocator(testId, test.getName(), jobUnit.locator());
+    return tests.putIfAbsent(testId, finalizedTestLocator) == null;
   }
 
   /** Check whether the test exists in this job. */

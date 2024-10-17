@@ -151,7 +151,14 @@ public class LocalDeviceAllocator extends AbstractDeviceAllocator {
   public void extraAllocation(TestInfo testInfo)
       throws MobileHarnessException, InterruptedException {
     AbstractScheduler scheduler = getScheduler();
-    scheduler.addTest(testInfo);
+    if (!scheduler.addTest(testInfo)) {
+      throw new MobileHarnessException(
+          ErrorCode.TEST_DUPLICATED,
+          "Test "
+              + testInfo.locator().getId()
+              + " already exists in job "
+              + jobInfo.locator().getId());
+    }
   }
 
   @Override

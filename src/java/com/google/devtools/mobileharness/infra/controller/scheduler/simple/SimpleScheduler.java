@@ -35,6 +35,7 @@ import com.google.devtools.mobileharness.infra.controller.scheduler.AdhocTestbed
 import com.google.devtools.mobileharness.infra.controller.scheduler.simple.persistence.AllocationPersistenceUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import com.google.wireless.qa.mobileharness.shared.controller.event.AllocationEvent;
@@ -173,11 +174,12 @@ public class SimpleScheduler extends AbstractScheduler implements Runnable {
     }
   }
 
+  @CanIgnoreReturnValue
   @Override
-  public void addTest(TestScheduleUnit test) throws MobileHarnessException {
+  public boolean addTest(TestScheduleUnit test) throws MobileHarnessException {
     TestLocator testLocator = test.locator();
     SimpleJobInfo job = checkJob(testLocator.getJobLocator().getId());
-    job.addTest(testLocator);
+    boolean added = job.addTest(testLocator);
     // If the test already has allocation(usually because the test allocated one device in the
     // previous process and it's resumed in the current process), post the allocation event.
     Allocation allocation = allocations.getAllocationByTest(testLocator.getId());
@@ -187,6 +189,7 @@ public class SimpleScheduler extends AbstractScheduler implements Runnable {
       postEvent(new AllocationEvent(allocation));
     }
     logger.atInfo().log("Added test %s", testLocator);
+    return added;
   }
 
   /**

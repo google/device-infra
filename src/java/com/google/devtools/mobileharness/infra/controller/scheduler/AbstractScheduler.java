@@ -23,6 +23,7 @@ import com.google.devtools.mobileharness.api.model.allocation.Allocation;
 import com.google.devtools.mobileharness.api.model.lab.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.lab.DeviceScheduleUnit;
 import com.google.devtools.mobileharness.api.model.lab.LabScheduleUnit;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobScheduleUnit;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestLocator;
@@ -56,9 +57,12 @@ public abstract class AbstractScheduler {
   /**
    * Adds the given test if not exist.
    *
-   * @throws MobileHarnessException if test already exists, or the belonging job not found
+   * <p>The job name in the test will be ignored.
+   *
+   * @return true if the test is added, false if the test has already been added
    */
-  public abstract void addTest(TestScheduleUnit test) throws MobileHarnessException;
+  @CanIgnoreReturnValue
+  public abstract boolean addTest(TestScheduleUnit test) throws MobileHarnessException;
 
   /** Updates/inserts the device to scheduler. */
   public abstract void upsertDevice(DeviceScheduleUnit device, LabScheduleUnit belongingLab);
@@ -127,7 +131,7 @@ public abstract class AbstractScheduler {
 
     public abstract JobScheduleUnit jobScheduleUnit();
 
-    /** Key is test ID. */
+    /** Key is test ID. Tests waiting for allocation or having an allocation. */
     public abstract ImmutableMap<String, TestLocator> tests();
 
     public static JobWithTests of(
