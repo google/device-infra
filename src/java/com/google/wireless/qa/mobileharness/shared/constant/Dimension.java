@@ -58,6 +58,9 @@ public final class Dimension {
     DEVICE_FORM,
     /** The OS of the device. The value can be one of [android/ios/testbed]. */
     OS,
+    // The priority of the device to get a test scheduled on it. The value is a number between 0 and
+    // 65535. Higher number means higher priority.
+    DEVICE_PRIORITY,
     /** Whether a device supports running test in container mode. */
     DEVICE_SUPPORTS_CONTAINER,
     /** Whether a device is supports running on Moreto. */

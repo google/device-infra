@@ -26,6 +26,7 @@ import com.google.devtools.mobileharness.infra.container.sandbox.device.NoOpDevi
 import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.wireless.qa.mobileharness.shared.api.validator.ValidatorFactory;
+import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import javax.annotation.Nullable;
@@ -70,6 +71,14 @@ public class NoOpDevice extends BaseDevice {
         addDimension("model", "iPhone6");
         addDimension("software_version", "5.0.1");
       }
+    }
+
+    // If environment variable cloud_ate_host_index is set, set the device priority to be the
+    // inverse of the host index.
+    String cloutHostIndex = System.getProperty("cloud_ate_host_index");
+    if (cloutHostIndex != null) {
+      addDimension(
+          Dimension.Name.DEVICE_PRIORITY, String.valueOf(65535 - Integer.parseInt(cloutHostIndex)));
     }
   }
 
