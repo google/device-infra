@@ -31,6 +31,9 @@ java_library(
     ],
     deps = [
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/util/persistence:session_persistence_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/message:field_mask_utils",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "@com_google_protobuf//:protobuf_java",
