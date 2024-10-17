@@ -205,6 +205,9 @@ service JobSyncService {
   rpc OpenJob(OpenJobRequest) returns (OpenJobResponse) {}
 
   // Adds tests to an existing job.
+  //
+  // If the job doesn't exist, throws an exception. If the test already exists,
+  // doesn't throw an exception.
   rpc AddExtraTests(AddExtraTestsRequest) returns (AddExtraTestsResponse) {}
 
   // Gets the allocation info.
