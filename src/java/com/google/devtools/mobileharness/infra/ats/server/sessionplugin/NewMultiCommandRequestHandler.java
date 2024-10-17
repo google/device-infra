@@ -730,17 +730,15 @@ final class NewMultiCommandRequestHandler {
   }
 
   @CanIgnoreReturnValue
-  private String mountZip(String zipFilePath, String mountDirPath)
-      throws MobileHarnessException, InterruptedException {
+  private Optional<String> mountZip(String zipFilePath, String mountDirPath)
+      throws InterruptedException {
     Command command =
         Command.of("fuse-zip", "-r", zipFilePath, mountDirPath).timeout(SLOW_CMD_TIMEOUT);
     try {
-      return commandExecutor.run(command);
+      return Optional.of(commandExecutor.run(command));
     } catch (MobileHarnessException e) {
-      throw new MobileHarnessException(
-          BasicErrorId.LOCAL_MOUNT_ZIP_TO_DIR_ERROR,
-          String.format("Failed to mount zip %s into dir %s", zipFilePath, mountDirPath),
-          e);
+      logger.atWarning().log("Failed to mount zip %s into dir %s", zipFilePath, mountDirPath);
+      return Optional.empty();
     }
   }
 
