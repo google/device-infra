@@ -67,6 +67,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Files;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
+import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryResult;
 import java.nio.file.Path;
@@ -119,7 +120,7 @@ public final class NewMultiCommandRequestHandlerTest {
   @Mock private SessionInfo sessionInfo;
   @Mock private JobInfo jobInfo;
   @Mock private Files files;
-  @Mock private Properties properties;
+  private final Properties properties = new Properties(new Timing());
 
   @Captor private ArgumentCaptor<SessionRequestInfo> sessionRequestInfoCaptor;
 
@@ -262,8 +263,8 @@ public final class NewMultiCommandRequestHandlerTest {
     CommandDetail commandDetail = requestDetail.getCommandDetailsMap().values().iterator().next();
     assertThat(commandDetail.getCommandLine()).isEqualTo(commandInfo.getCommandLine());
     assertThat(commandDetail.getId()).isEqualTo(commandId);
-
-    verify(properties).add("xts-tradefed-job", "true");
+    assertThat(properties.get("xts-tradefed-job")).isEqualTo("true");
+    assertThat(properties.get("xts_command_id")).isEqualTo(commandId);
     verify(xtsJobCreator).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
 
     // Verify sessionRequestInfo has been correctly generated.
@@ -336,8 +337,8 @@ public final class NewMultiCommandRequestHandlerTest {
     CommandDetail commandDetail = requestDetail.getCommandDetailsMap().values().iterator().next();
     assertThat(commandDetail.getCommandLine()).isEqualTo(retryCommandLine);
     assertThat(commandDetail.getId()).isEqualTo(expectedCommandId);
-
-    verify(properties).add("xts-tradefed-job", "true");
+    assertThat(properties.get("xts-tradefed-job")).isEqualTo("true");
+    assertThat(properties.get("xts_command_id")).isEqualTo(expectedCommandId);
     verify(xtsJobCreator).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
 
     // Verify sessionRequestInfo has been correctly generated.
@@ -407,8 +408,8 @@ public final class NewMultiCommandRequestHandlerTest {
     CommandDetail commandDetail = requestDetail.getCommandDetailsMap().values().iterator().next();
     assertThat(commandDetail.getCommandLine()).isEqualTo(commandInfo.getCommandLine());
     assertThat(commandDetail.getId()).isEqualTo(commandId);
-
-    verify(properties).add("xts-tradefed-job", "true");
+    assertThat(properties.get("xts-tradefed-job")).isEqualTo("true");
+    assertThat(properties.get("xts_command_id")).isEqualTo(commandId);
     verify(xtsJobCreator).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
 
     // Verify sessionRequestInfo has been correctly generated.
@@ -475,8 +476,8 @@ public final class NewMultiCommandRequestHandlerTest {
     CommandDetail commandDetail = requestDetail.getCommandDetailsMap().values().iterator().next();
     assertThat(commandDetail.getCommandLine()).isEqualTo(commandInfo.getCommandLine());
     assertThat(commandDetail.getId()).isEqualTo(commandId);
-
-    verify(properties).add("xts-tradefed-job", "true");
+    assertThat(properties.get("xts-tradefed-job")).isEqualTo("true");
+    assertThat(properties.get("xts_command_id")).isEqualTo(commandId);
     verify(xtsJobCreator).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
 
     // Verify sessionRequestInfo has been correctly generated.

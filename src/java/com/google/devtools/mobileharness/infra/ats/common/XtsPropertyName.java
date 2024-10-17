@@ -42,5 +42,7 @@ public interface XtsPropertyName extends PropertyName {
     SKIP_COLLECTING_NON_TF_REPORTS,
 
     SKIP_COLLECTING_DEVICE_INFO,
+
+    XTS_COMMAND_ID,
   }
 }

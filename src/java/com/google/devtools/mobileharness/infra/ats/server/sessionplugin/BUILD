@@ -79,6 +79,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_handler_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_info",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_result_handler_util",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:xts_property_name",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:xts_type_loader",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/jobcreator:xts_job_creator",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/command/parser:command_line_parser",
