@@ -16,16 +16,23 @@
 
 package com.google.devtools.mobileharness.infra.client.longrunningservice.model;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.flogger.FluentLogger;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionDetail;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionOutput;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPersistenceData;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPersistenceStatus;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginError;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginLabel;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginOutput;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.util.persistence.SessionPersistenceUtil;
 import com.google.devtools.mobileharness.shared.util.message.FieldMaskUtils;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.protobuf.Descriptors.FieldDescriptor;
@@ -48,6 +55,7 @@ import javax.annotation.concurrent.GuardedBy;
 
 /** Internal data model for managing states of a running session. */
 public class SessionDetailHolder {
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private final Object sessionDetailLock = new Object();
 
@@ -77,7 +85,11 @@ public class SessionDetailHolder {
   @GuardedBy("sessionDetailLock")
   private final Map<String, SessionPluginOutput> sessionPluginOutputs = new HashMap<>();
 
+  private volatile SessionPersistenceStatus sessionPersistenceStatus;
+
   private final Runnable sessionDetailListener;
+
+  private final SessionPersistenceUtil sessionPersistenceUtil;
 
   private volatile Printer protoPrinter = TextFormat.printer();
 
@@ -86,7 +98,11 @@ public class SessionDetailHolder {
    * SessionOutput#getSessionPropertyMap()} will be copied from {@link
    * SessionConfig#getSessionPropertyMap()}.
    */
-  public SessionDetailHolder(SessionDetail sessionDetail, Runnable sessionDetailListener) {
+  public SessionDetailHolder(
+      SessionDetail sessionDetail,
+      Runnable sessionDetailListener,
+      SessionPersistenceUtil sessionPersistenceUtil,
+      SessionPersistenceStatus initialSessionPersistenceStatus) {
     this.jobs = new ArrayList<>();
     this.sessionDetailBuilder = sessionDetail.toBuilder();
     this.sessionProperties =
@@ -101,6 +117,8 @@ public class SessionDetailHolder {
         .getSessionPluginErrorList()
         .forEach(this.sessionPluginErrors::add);
     this.sessionDetailListener = sessionDetailListener;
+    this.sessionPersistenceUtil = sessionPersistenceUtil;
+    this.sessionPersistenceStatus = initialSessionPersistenceStatus;
   }
 
   public void addJob(JobInfo jobInfo) {
@@ -195,6 +213,7 @@ public class SessionDetailHolder {
     }
     if (!Objects.equals(value, previousValue)) {
       sessionDetailListener.run();
+      persistSession();
     }
     return Optional.ofNullable(previousValue);
   }
@@ -204,6 +223,7 @@ public class SessionDetailHolder {
       sessionPluginErrors.add(sessionPluginError);
     }
     sessionDetailListener.run();
+    persistSession();
   }
 
   public void setSessionPluginOutput(
@@ -221,6 +241,7 @@ public class SessionDetailHolder {
     }
     if (updated.get()) {
       sessionDetailListener.run();
+      persistSession();
     }
   }
 
@@ -237,6 +258,26 @@ public class SessionDetailHolder {
 
   public Printer getProtoPrinter() {
     return protoPrinter;
+  }
+
+  public void setSessionPersistenceStatus(SessionPersistenceStatus sessionPersistenceStatus) {
+    this.sessionPersistenceStatus = sessionPersistenceStatus;
+  }
+
+  public void persistSession() {
+    try {
+      sessionPersistenceUtil.persistSession(
+          SessionPersistenceData.newBuilder()
+              .setSessionDetail(buildSessionDetail(null))
+              .setSessionPersistenceStatus(sessionPersistenceStatus)
+              .addAllJobId(
+                  getAllJobs().stream()
+                      .map(jobInfo -> jobInfo.locator().getId())
+                      .collect(toImmutableList()))
+              .build());
+    } catch (MobileHarnessException e) {
+      logger.atWarning().withCause(e).log("Failed to persist session [%s]", getSessionId());
+    }
   }
 
   /**

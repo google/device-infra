@@ -197,6 +197,8 @@ final class AtsServerSessionPlugin {
 
   @Subscribe
   public void onTestStarting(TestStartingEvent event) {
+    resumeRequestDetailFromSessionPluginOutput();
+
     TestInfo testInfo = event.getTest();
     // Sends cancellation test message if necessary.
     synchronized (sessionLock) {
@@ -210,6 +212,8 @@ final class AtsServerSessionPlugin {
 
   @Subscribe
   public void onJobEnded(JobEndEvent jobEndEvent) throws InterruptedException {
+    resumeRequestDetailFromSessionPluginOutput();
+
     JobInfo jobInfo = jobEndEvent.getJob();
 
     // Generate a new commandAttempt for the finished job, and update the command status.
@@ -247,6 +251,8 @@ final class AtsServerSessionPlugin {
 
   @Subscribe
   public void onSessionEnded(SessionEndedEvent event) throws InterruptedException {
+    resumeRequestDetailFromSessionPluginOutput();
+
     synchronized (sessionLock) {
       try {
         newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail);
@@ -464,6 +470,14 @@ final class AtsServerSessionPlugin {
     synchronized (sessionLock) {
       RequestDetail latestRequestDetail = requestDetail.build();
       sessionInfo.setSessionPluginOutput(empty -> latestRequestDetail, RequestDetail.class);
+    }
+  }
+
+  private void resumeRequestDetailFromSessionPluginOutput() {
+    synchronized (sessionLock) {
+      sessionInfo
+          .getSessionPluginOutput(RequestDetail.class)
+          .ifPresent(detail -> requestDetail.clear().mergeFrom(detail));
     }
   }
 

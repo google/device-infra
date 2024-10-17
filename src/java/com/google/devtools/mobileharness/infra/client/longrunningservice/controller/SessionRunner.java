@@ -38,7 +38,6 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.model.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionDetail;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionNotification;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPersistenceData;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPersistenceStatus;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.util.VersionProtoUtil;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.util.persistence.SessionPersistenceUtil;
@@ -96,7 +95,6 @@ public class SessionRunner implements Callable<Void> {
   private final SessionPluginRunner sessionPluginRunner;
   private final ListeningExecutorService threadPool;
   private final SystemUtil systemUtil;
-  private final SessionPersistenceUtil sessionPersistenceUtil;
   private final LongevityTestHelper longevityTestHelper;
   private final SessionPersistenceStatus initialSessionPersistenceStatus;
   private final ImmutableList<String> toBeResumedJobIds;
@@ -128,7 +126,12 @@ public class SessionRunner implements Callable<Void> {
       SystemUtil systemUtil,
       SessionPersistenceUtil sessionPersistenceUtil,
       LongevityTestHelper longevityTestHelper) {
-    this.sessionDetailHolder = new SessionDetailHolder(sessionDetail, sessionDetailListener);
+    this.sessionDetailHolder =
+        new SessionDetailHolder(
+            sessionDetail,
+            sessionDetailListener,
+            sessionPersistenceUtil,
+            initialSessionPersistenceStatus);
     this.initialSessionPersistenceStatus = initialSessionPersistenceStatus;
     this.toBeResumedJobIds = toBeResumedJobIds;
     this.cachedSessionNotifications = cachedSessionNotifications;
@@ -139,7 +142,6 @@ public class SessionRunner implements Callable<Void> {
     this.sessionPluginRunner = sessionPluginRunner;
     this.threadPool = threadPool;
     this.systemUtil = systemUtil;
-    this.sessionPersistenceUtil = sessionPersistenceUtil;
     this.longevityTestHelper = longevityTestHelper;
   }
 
@@ -212,7 +214,8 @@ public class SessionRunner implements Callable<Void> {
       if (initialSessionPersistenceStatus.compareTo(SessionPersistenceStatus.SESSION_STARTED) < 0) {
         // Calls sessionPlugin.onStarted().
         sessionPluginRunner.onSessionStarted();
-        persistSession(SessionPersistenceStatus.SESSION_STARTED);
+        sessionDetailHolder.setSessionPersistenceStatus(SessionPersistenceStatus.SESSION_STARTED);
+        sessionDetailHolder.persistSession();
         for (JobInfo jobInfo : sessionDetailHolder.getAllJobs()) {
           jobInfo
               .params()
@@ -250,7 +253,9 @@ public class SessionRunner implements Callable<Void> {
                 < 0) {
               // Calls sessionPlugin.onEnded().
               sessionPluginRunner.onSessionEnded(finalSessionError);
-              persistSession(SessionPersistenceStatus.SESSION_ENDED);
+              sessionDetailHolder.setSessionPersistenceStatus(
+                  SessionPersistenceStatus.SESSION_ENDED);
+              sessionDetailHolder.persistSession();
             }
             return null;
           },
@@ -275,23 +280,6 @@ public class SessionRunner implements Callable<Void> {
           });
     }
     return null;
-  }
-
-  private void persistSession(SessionPersistenceStatus sessionPersistenceStatus) {
-    try {
-      sessionPersistenceUtil.persistSession(
-          SessionPersistenceData.newBuilder()
-              .setSessionDetail(sessionDetailHolder.buildSessionDetail(null))
-              .setSessionPersistenceStatus(sessionPersistenceStatus)
-              .addAllJobId(
-                  sessionDetailHolder.getAllJobs().stream()
-                      .map(jobInfo -> jobInfo.locator().getId())
-                      .collect(toImmutableList()))
-              .build());
-    } catch (MobileHarnessException e) {
-      logger.atWarning().withCause(e).log(
-          "Failed to persist session [%s]", sessionDetailHolder.getSessionId());
-    }
   }
 
   private String getJobPersistencePath(String jobId) {
