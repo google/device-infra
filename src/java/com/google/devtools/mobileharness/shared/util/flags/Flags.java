@@ -953,6 +953,17 @@ public class Flags {
       converter = DurationFlag.DurationConverter.class)
   public Flag<Duration> fileTransferLocalCacheTtl = fileTransferLocalCacheTtlDefault;
 
+  private static final Flag<Boolean> forceDeviceRebootAfterTestDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--force_device_reboot_after_test",
+      description =
+          "Whether to force a reboot of the device after each test. It takes higher"
+              + " priority than --disable_device_reboot to decide whether the device should be"
+              + " rebooted. Default value is false.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> forceDeviceRebootAfterTest = forceDeviceRebootAfterTestDefault;
+
   private static final Flag<Integer> gcsUtilThreadsDefault = Flag.value(30);
 
   @com.beust.jcommander.Parameter(
