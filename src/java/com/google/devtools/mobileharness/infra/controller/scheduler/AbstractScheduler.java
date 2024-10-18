@@ -69,13 +69,19 @@ public abstract class AbstractScheduler {
 
   /** Frees the given device. It will release all devices in the same allocation. */
   public abstract void unallocate(
-      DeviceLocator deviceLocator, boolean removeDevices, boolean closeTest)
-      throws InterruptedException;
+      DeviceLocator deviceLocator, boolean removeDevices, boolean closeTest);
+
+  /**
+   * Undoes the allocation by the given test locator.
+   *
+   * <p>Test name and job name will be ignored.
+   */
+  public abstract void unallocate(
+      TestLocator testLocator, boolean removeDevices, boolean closeTest);
 
   /** Undoes the allocation. */
   public abstract void unallocate(
-      @Nullable Allocation allocation, boolean removeDevices, boolean closeTest)
-      throws InterruptedException;
+      @Nullable Allocation allocation, boolean removeDevices, boolean closeTest);
 
   /** Returns jobs and allocations. */
   public abstract JobsAndAllocations getJobsAndAllocations();

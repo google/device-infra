@@ -286,6 +286,19 @@ public class SimpleScheduler extends AbstractScheduler implements Runnable {
   }
 
   @Override
+  public void unallocate(TestLocator testLocator, boolean removeDevices, boolean closeTest) {
+    synchronized (allocationLock) {
+      Allocation allocation = allocations.getAllocationByTest(testLocator.getId());
+      if (allocation != null) {
+        unallocate(allocation, removeDevices, closeTest);
+      } else if (closeTest) {
+        removeTest(
+            /* jobId= */ testLocator.getJobLocator().getId(), /* testId= */ testLocator.getId());
+      }
+    }
+  }
+
+  @Override
   public void unallocate(
       @Nullable Allocation allocation, boolean removeDevices, boolean closeTest) {
     if (allocation == null) {
