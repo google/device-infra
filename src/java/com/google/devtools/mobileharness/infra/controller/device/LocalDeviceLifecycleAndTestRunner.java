@@ -334,26 +334,29 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
                   device.getClass().getSimpleName(),
                   Duration.between(clock.instant(), expireTime))) {
         device.tearDown();
-        if (needReboot
-            && !disableDeviceReboot()
-            && (!externalDeviceManager.isManagingDeviceLifeCycle()
-                || (!initialized && !externalDeviceManager.isManagingDeviceRecovery()))) {
-          // TODO: Leaves the device in an unusable state instead of put it in the reboot
-          // loop when rebooting doesn't help.
-          try {
-            if (device.canReboot()) {
-              // Reboots the device, tries to recovery.
-              logger.atInfo().log("Rebooting device");
-              device.reboot();
-              deviceStat.onReboot();
-              logger.atInfo().log("Rebooted");
-            }
-          } catch (Exception e) {
-            // Catches all exceptions to make sure we will decrease the runnerCount.
-            logger.atWarning().withCause(e).log("Failed to reboot device");
-            if (e instanceof InterruptedException) {
-              Thread.currentThread().interrupt();
-            }
+
+        needReboot =
+            needReboot
+                && !disableDeviceReboot()
+                && (!externalDeviceManager.isManagingDeviceLifeCycle()
+                    || (!initialized && !externalDeviceManager.isManagingDeviceRecovery()));
+
+        // TODO: Leaves the device in an unusable state instead of put it in the reboot
+        // loop when rebooting doesn't help.
+        try {
+          // Always reboot the device if force to do so.
+          if (forceDeviceRebootAfterTest() || (needReboot && device.canReboot())) {
+            // Reboots the device, tries to recovery.
+            logger.atInfo().log("Rebooting device");
+            device.reboot();
+            deviceStat.onReboot();
+            logger.atInfo().log("Rebooted");
+          }
+        } catch (Exception e) {
+          // Catches all exceptions to make sure we will decrease the runnerCount.
+          logger.atWarning().withCause(e).log("Failed to reboot device");
+          if (e instanceof InterruptedException) {
+            Thread.currentThread().interrupt();
           }
         }
       } catch (Exception e) {
@@ -841,5 +844,9 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
 
   private static boolean disableDeviceReboot() {
     return Flags.instance().disableDeviceReboot.getNonNull();
+  }
+
+  private static boolean forceDeviceRebootAfterTest() {
+    return Flags.instance().forceDeviceRebootAfterTest.getNonNull();
   }
 }
