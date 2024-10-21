@@ -24,6 +24,7 @@ java_library(
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/messaging:messaging_subscriber",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_reflection_util",
         "@com_google_protobuf//:protobuf_java",
         "@maven//:com_google_guava_guava",
     ],

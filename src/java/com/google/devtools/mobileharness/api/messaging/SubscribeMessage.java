@@ -31,7 +31,7 @@ import java.lang.annotation.Target;
  *   <li>with any name and any visibility.
  *   <li>annotated by this annotation.
  *   <li>with a single parameter of type {@linkplain MessageEvent MessageEvent&lt;FooRequest&gt;}
- *       where {@code FooRequest} is a Protobuf message type extending {@linkplain
+ *       where {@code FooRequest} is a specific Protobuf message type extending {@linkplain
  *       com.google.protobuf.Message Message}. This allows the message subscriber to receive
  *       messages of type {@code FooRequest}.
  *   <li>whose return type is {@code FooResponse} where {@code FooResponse} is a Protobuf message

@@ -21,6 +21,7 @@ import com.google.auto.value.extension.memoized.Memoized;
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.api.messaging.MessageEvent;
 import com.google.devtools.mobileharness.api.messaging.SubscribeMessage;
+import com.google.devtools.mobileharness.shared.util.base.ProtoReflectionUtil;
 import com.google.protobuf.Message;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
@@ -31,7 +32,7 @@ import java.lang.reflect.WildcardType;
 import java.util.List;
 
 /** Backend of message subscribers. */
-public class MessageSubscriberBackend {
+class MessageSubscriberBackend {
 
   /** Searches all message subscribers in the given object. */
   public static MessageSubscribers searchMessageSubscribers(Object object) {
@@ -106,6 +107,19 @@ public class MessageSubscriberBackend {
       @SuppressWarnings("unchecked")
       Class<? extends Message> messageType = (Class<? extends Message>) typeArgument;
 
+      // Filters methods whose message type is not a specific Protobuf message generated class.
+      if (!ProtoReflectionUtil.isGeneratedClass(messageType)) {
+        invalidMessageSubscribers.add(
+            InvalidMessageSubscriber.of(
+                clazz,
+                method,
+                String.format(
+                    "Message subscriber parameter generic type should be a specific Protobuf"
+                        + " message generated class but is [%s]",
+                    messageType)));
+        continue;
+      }
+
       // Filters methods whose return value type is not a Protobuf message.
       Class<?> returnType = method.getReturnType();
       if (!Message.class.isAssignableFrom(returnType)) {
@@ -145,9 +159,15 @@ public class MessageSubscriberBackend {
      */
     public abstract Method method();
 
+    /** A specific Protobuf message generated class. */
     public abstract Class<? extends Message> messageType();
 
     public abstract Class<? extends Message> resultType();
+
+    @Memoized
+    public Message messageDefaultInstance() {
+      return ProtoReflectionUtil.getDefaultInstance(messageType());
+    }
 
     @Memoized
     @Override

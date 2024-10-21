@@ -54,7 +54,7 @@ public class MessageSubscriberBackendTest {
       return Duration.getDefaultInstance();
     }
 
-    /** A valid message subscriber: receive all messages. */
+    /** A invalid message subscriber: not a specific message. */
     @SubscribeMessage
     private Duration m3(MessageEvent<Message> event) {
       return Duration.getDefaultInstance();
@@ -118,7 +118,7 @@ public class MessageSubscriberBackendTest {
             Correspondence.<MessageSubscriber, String>transforming(
                 subscriber -> requireNonNull(subscriber).method().getName(),
                 "has a method name of"))
-        .containsExactly("m1", "m2", "m3");
+        .containsExactly("m1", "m2");
 
     // m4 ~ m11 are invalid message subscribers.
     assertThat(messageSubscribers.invalidMessageSubscribers())
@@ -126,7 +126,7 @@ public class MessageSubscriberBackendTest {
             Correspondence.<InvalidMessageSubscriber, String>transforming(
                 subscriber -> requireNonNull(subscriber).method().getName(),
                 "has a method name of"))
-        .containsExactly("m4", "m5", "m6", "m7", "m8", "m9", "m10", "m11");
+        .containsExactly("m3", "m4", "m5", "m6", "m7", "m8", "m9", "m10", "m11");
 
     // Verifies message type and result type.
     MessageSubscriber messageSubscriber =
