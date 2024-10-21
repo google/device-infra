@@ -18,6 +18,7 @@ package com.google.wireless.qa.mobileharness.shared.api.device;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
+import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.lab.DeviceInfo;
 import com.google.devtools.mobileharness.api.model.proto.Device.PostTestDeviceOp;
@@ -26,6 +27,7 @@ import com.google.devtools.mobileharness.infra.container.sandbox.device.NoOpDevi
 import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.wireless.qa.mobileharness.shared.api.validator.ValidatorFactory;
+import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import javax.annotation.Nullable;
@@ -39,6 +41,8 @@ import javax.annotation.Nullable;
 public class NoOpDevice extends BaseDevice {
 
   private final DeviceSandboxController sandboxController = new NoOpDeviceSandboxController(this);
+
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   public NoOpDevice(String deviceId) {
     super(deviceId);
@@ -69,6 +73,24 @@ public class NoOpDevice extends BaseDevice {
       } else if (supportedDeviceType.equals("IosRealDevice")) {
         addDimension("model", "iPhone6");
         addDimension("software_version", "5.0.1");
+      }
+    }
+
+    // If environment variable cloud_ate_host_index is set, set the device priority to be the
+    // inverse of the host index.
+    String cloutHostIndex = System.getProperty("cloud_ate_host_index");
+    if (cloutHostIndex != null) {
+      try {
+        int cloudHostIndexValue = Integer.parseInt(cloutHostIndex);
+        int devicePriority = 0;
+        if (cloudHostIndexValue >= 0 && cloudHostIndexValue <= 65535) {
+          devicePriority = 65535 - cloudHostIndexValue;
+        }
+        addDimension(Dimension.Name.DEVICE_PRIORITY, String.valueOf(devicePriority));
+      } catch (NumberFormatException e) {
+        logger.atWarning().withCause(e).log(
+            "Failed to parse cloud_ate_host_index: %s", cloutHostIndex);
+        addDimension(Dimension.Name.DEVICE_PRIORITY, "0");
       }
     }
   }
