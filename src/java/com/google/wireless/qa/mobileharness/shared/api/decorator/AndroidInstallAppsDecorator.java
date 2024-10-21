@@ -18,7 +18,7 @@ package com.google.wireless.qa.mobileharness.shared.api.decorator;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.StepAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
@@ -71,7 +71,9 @@ public class AndroidInstallAppsDecorator extends BaseDecorator
   }
 
   @Override
-  public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  public void run(TestInfo testInfo)
+      throws com.google.wireless.qa.mobileharness.shared.MobileHarnessException,
+          InterruptedException {
     Instant startTime = Instant.now();
     // Installs APKs.
     sendProgressReportMessage(testInfo, "Install apks");
