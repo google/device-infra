@@ -16,14 +16,29 @@
 
 package com.google.devtools.mobileharness.shared.util.base;
 
+import static java.util.Arrays.stream;
+
 import com.google.protobuf.Message;
 import com.google.protobuf.MessageLite;
 import java.lang.reflect.Method;
 
-/** Reflection util for protobuf. */
+/** Reflection util for Protobuf. */
 public final class ProtoReflectionUtil {
 
-  /** Gets the default instance of the given protobuf message class. */
+  /**
+   * Returns true if the given Protobuf class is a specific Protobuf message generated class, false
+   * if it is a base class like {@link Message}.
+   */
+  public static boolean isGeneratedClass(Class<? extends Message> protoClazz) {
+    return Message.class.isAssignableFrom(protoClazz)
+        && stream(protoClazz.getMethods())
+            .anyMatch(
+                method ->
+                    method.getName().equals("getDefaultInstance")
+                        && method.getParameterCount() == 0);
+  }
+
+  /** Gets the default instance of the given Protobuf message class. */
   @SuppressWarnings("unchecked")
   public static <T extends MessageLite> T getDefaultInstance(Class<T> protoClazz) {
     try {
@@ -35,13 +50,13 @@ public final class ProtoReflectionUtil {
   }
 
   /**
-   * Creates a new builder for the given protobuf class.
+   * Creates a new builder for the given Protobuf class.
    *
-   * @param protoClazz the protobuf class
-   * @param builderClazz the builder class of the protobuf class
-   * @return a new builder of the protobuf class
-   * @throws LinkageError if failed to call newBuilder() on the protobuf class.
-   * @throws ClassCastException if the builder class is not the superclass of the protobuf builder
+   * @param protoClazz the Protobuf class
+   * @param builderClazz the builder class of the Protobuf class
+   * @return a new builder of the Protobuf class
+   * @throws LinkageError if failed to call newBuilder() on the Protobuf class.
+   * @throws ClassCastException if the builder class is not the superclass of the Protobuf builder
    *     class.
    */
   public static <B extends Message.Builder> B newInstance(

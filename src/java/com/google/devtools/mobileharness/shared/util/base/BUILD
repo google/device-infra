@@ -95,5 +95,7 @@ java_library(
     visibility = [
         "//:deviceinfra_all_pkg",
     ],
-    deps = ["@com_google_protobuf//:protobuf_java"],
+    deps = [
+        "@com_google_protobuf//:protobuf_java",
+    ],
 )
