@@ -30,6 +30,7 @@ java_library(
         "ArrayUtil.java",
     ],
     deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
     ],
 )
 
