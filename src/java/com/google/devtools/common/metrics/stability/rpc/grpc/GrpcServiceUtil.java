@@ -106,7 +106,14 @@ public class GrpcServiceUtil {
     }
   }
 
-  private static <RequestT, ResponseT> void handleFailure(
+  /**
+   * Pass an exception of a gRPC method implementation to the gRPC framework by creating a {@link
+   * io.grpc.StatusRuntimeException}, serializing the given exception into its metadata, and then
+   * calling {@link StreamObserver#onError(Throwable)} with the new exception.
+   *
+   * @param type a string for logging like "method", "async method", "async method callback"
+   */
+  public static <RequestT, ResponseT> void handleFailure(
       Throwable e,
       StreamObserver<ResponseT> responseObserver,
       String type,
