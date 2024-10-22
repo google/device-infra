@@ -23,6 +23,7 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.ListMultimap;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.out.Warnings;
 import com.google.devtools.mobileharness.api.model.proto.Job.DeviceRequirement;
 import com.google.devtools.mobileharness.api.model.proto.Job.DeviceRequirements;
@@ -34,7 +35,6 @@ import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.shared.util.time.CountDownTimer;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.protobuf.Message;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.ParamAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.job.JobTypeUtil;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Job;
@@ -434,8 +434,7 @@ public class JobInfo extends JobScheduleUnit {
    *     {@link #protoSpec}
    */
   public <T extends Message> T combinedSpec(SpecConfigable<T> configable)
-      throws InterruptedException,
-          com.google.devtools.mobileharness.api.model.error.MobileHarnessException {
+      throws InterruptedException, MobileHarnessException {
     @SuppressWarnings("unchecked")
     Class<T> specClass = (Class<T>) JobSpecHelper.getSpecClass(configable.getClass());
     return combinedSpecOfClass(specClass, null);
@@ -446,8 +445,7 @@ public class JobInfo extends JobScheduleUnit {
    * specific configurations.
    */
   public <T extends Message> T combinedSpec(SpecConfigable<T> configable, @Nullable String deviceId)
-      throws InterruptedException,
-          com.google.devtools.mobileharness.api.model.error.MobileHarnessException {
+      throws InterruptedException, MobileHarnessException {
     @SuppressWarnings("unchecked")
     Class<T> specClass = (Class<T>) JobSpecHelper.getSpecClass(configable.getClass());
     return combinedSpec(specClass, deviceId);
@@ -455,8 +453,7 @@ public class JobInfo extends JobScheduleUnit {
 
   /** Same as {@link #combinedSpec(SpecConfigable, String)} but takes in a class instead. */
   public <T extends Message> T combinedSpec(Class<T> specClass, @Nullable String deviceId)
-      throws InterruptedException,
-          com.google.devtools.mobileharness.api.model.error.MobileHarnessException {
+      throws InterruptedException, MobileHarnessException {
     return combinedSpecOfClass(specClass, subDeviceSpecs().getSubDeviceById(deviceId).orElse(null));
   }
 
@@ -467,8 +464,7 @@ public class JobInfo extends JobScheduleUnit {
    */
   public <T extends Message> List<T> combinedSpecForDevices(
       SpecConfigable<T> configable, Predicate<SubDeviceSpec> deviceFilter)
-      throws InterruptedException,
-          com.google.devtools.mobileharness.api.model.error.MobileHarnessException {
+      throws InterruptedException, MobileHarnessException {
     @SuppressWarnings("unchecked")
     Class<T> specClass = (Class<T>) JobSpecHelper.getSpecClass(configable.getClass());
     List<T> specs = new ArrayList<>();
@@ -482,8 +478,7 @@ public class JobInfo extends JobScheduleUnit {
 
   /** Same as {@link #combinedSpecForDevices} but returns the spec for all devices. */
   public <T extends Message> List<T> combinedSpecForAllDevices(SpecConfigable<T> configable)
-      throws InterruptedException,
-          com.google.devtools.mobileharness.api.model.error.MobileHarnessException {
+      throws InterruptedException, MobileHarnessException {
     return combinedSpecForDevices(configable, subDeviceSpec -> true);
   }
 
@@ -494,13 +489,12 @@ public class JobInfo extends JobScheduleUnit {
    *     {@link #protoSpec}
    */
   public <T extends Message> T combinedSpecOfClass(Class<T> specClass)
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException {
+      throws MobileHarnessException {
     return combinedSpecOfClass(specClass, null);
   }
 
   private <T extends Message> T combinedSpecOfClass(
-      Class<T> specClass, @Nullable SubDeviceSpec subDeviceSpec)
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException {
+      Class<T> specClass, @Nullable SubDeviceSpec subDeviceSpec) throws MobileHarnessException {
     return getUnionJobSpec(subDeviceSpec).getSpec(specClass);
   }
 
@@ -557,14 +551,6 @@ public class JobInfo extends JobScheduleUnit {
     }
     jobFeatureBuilder.setDeviceRequirements(deviceRequirements);
     return jobFeatureBuilder.build();
-  }
-
-  /** Uses {@link TestInfos#add(TestInfo)} instead. */
-  @CanIgnoreReturnValue
-  @Deprecated
-  public JobInfo addTest(TestInfo testInfo) throws MobileHarnessException {
-    tests.add(testInfo);
-    return this;
   }
 
   /** Uses {@link TestInfos#getAll()} instead. */
