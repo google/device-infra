@@ -586,7 +586,12 @@ final class NewMultiCommandRequestHandler {
         SessionRequestInfo sessionRequestInfo =
             sessionRequestInfoCache.get(commandDetail.getOriginalCommandInfo());
         if (sessionRequestInfo == null) {
-          continue;
+          sessionRequestInfo =
+              generateSessionRequestInfo(
+                  requestDetail.getOriginalRequest(),
+                  commandDetail.getOriginalCommandInfo(),
+                  sessionInfo);
+          sessionRequestInfoCache.put(commandDetail.getOriginalCommandInfo(), sessionRequestInfo);
         }
         String commandId = commandDetail.getId();
         Path outputDirPath =
@@ -737,10 +742,17 @@ final class NewMultiCommandRequestHandler {
     try {
       return commandExecutor.run(command);
     } catch (MobileHarnessException e) {
-      throw new MobileHarnessException(
-          BasicErrorId.LOCAL_MOUNT_ZIP_TO_DIR_ERROR,
-          String.format("Failed to mount zip %s into dir %s", zipFilePath, mountDirPath),
-          e);
+      if (e.getMessage().contains("mountpoint is not empty")) {
+        logger.atInfo().log(
+            "Mount point is not empty. It's usually caused by session is resumed and is"
+                + " acceptable.");
+        return "";
+      } else {
+        throw new MobileHarnessException(
+            BasicErrorId.LOCAL_MOUNT_ZIP_TO_DIR_ERROR,
+            String.format("Failed to mount zip %s into dir %s", zipFilePath, mountDirPath),
+            e);
+      }
     }
   }
 

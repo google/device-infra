@@ -513,6 +513,7 @@ public final class NewMultiCommandRequestHandlerTest {
       throws Exception {
     when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
     MobileHarnessException commandExecutorException = Mockito.mock(CommandException.class);
+    when(commandExecutorException.getMessage()).thenReturn("");
     when(commandExecutor.run(any())).thenThrow(commandExecutorException);
 
     RequestDetail.Builder requestDetail = RequestDetail.newBuilder();
