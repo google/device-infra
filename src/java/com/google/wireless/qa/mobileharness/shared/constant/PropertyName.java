@@ -129,7 +129,12 @@ public interface PropertyName {
     /** Whether the test runs in MH container mode. Value type is boolean. */
     CONTAINER_MODE,
 
-    /** Only available in Remote Mode. This is the duration the device is occupied for this test. */
+    /**
+     * Only available in Remote Mode. This is the duration the device is occupied for this test.
+     * NOTE: DO NOT depend on this property in MOSS to calculate the device usage duration because
+     * in most cases MOSS data is updated before this property is set. See b/374686395 for more
+     * details.
+     */
     DEVICE_USAGE_DURATION_MS,
 
     /** The comma separated string of device ids to indicate devices order in the this test. */
