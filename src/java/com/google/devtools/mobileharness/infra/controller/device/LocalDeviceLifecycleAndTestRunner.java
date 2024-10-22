@@ -706,7 +706,7 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
                 getDevice(), deviceStat, apiConfig, testExecutionResult);
         postTestExecutionEndedEvent(
             test.getTestRunner().getAllocation(), testExecutionResult.testResult(), needReboot);
-        if (needReboot && !disableDeviceReboot()) {
+        if (forceDeviceRebootAfterTest() || (needReboot && !disableDeviceReboot())) {
           // If the device needs to reboot based on the test results, the runner needs to be
           // cancelled.  This will only set a flag that marks this runner as cancelled.  Calling
           // code that checks isAlive() and isCancelled() would then interrupt our thread.
