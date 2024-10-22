@@ -33,6 +33,7 @@ import com.google.common.io.Files;
 import com.google.devtools.common.metrics.stability.converter.ErrorModelConverter;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.ErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.platform.android.event.util.AppInstallEventUtil;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstallArgs;
@@ -49,11 +50,9 @@ import com.google.devtools.mobileharness.shared.util.file.checksum.ChecksumUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.inject.Inject;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.android.Aapt;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageUtil;
-import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.ApkInfo;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AppInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -247,7 +246,7 @@ public class InstallApkStep implements InstallApkStepConstants {
     if (allPackages.containsKey(PackageConstants.PACKAGE_NAME_GMS)) {
       Set<String> apkPaths = allPackages.get(PackageConstants.PACKAGE_NAME_GMS);
       if (apkPaths.size() > 1) {
-        throw new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+        throw new MobileHarnessException(
             AndroidErrorId.ANDROID_INSTALL_APK_STEP_INSTALL_NOT_SUPPORTED,
             "GMS Core is not supported as a split APK.");
       }
@@ -329,7 +328,7 @@ public class InstallApkStep implements InstallApkStepConstants {
               .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue));
     } catch (IllegalArgumentException e) {
       // IllegalArgumentException is thrown when there is duplicated key.
-      throw new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+      throw new MobileHarnessException(
           AndroidErrorId.ANDROID_INSTALL_APK_STEP_INSTALL_NOT_SUPPORTED,
           String.format(
               "The packages %s contain multiple apks with the same package name."
@@ -568,32 +567,18 @@ public class InstallApkStep implements InstallApkStepConstants {
   @CanIgnoreReturnValue
   public boolean isInstallFailure(MobileHarnessException e, TestInfo testInfo) {
     boolean isInstallationFailure = false;
-    if (e instanceof com.google.devtools.mobileharness.api.model.error.MobileHarnessException) {
-      ErrorId errorId =
-          ((com.google.devtools.mobileharness.api.model.error.MobileHarnessException) e)
-              .getErrorId();
-      if (errorId == AndroidErrorId.ANDROID_APK_INSTALLER_GMS_INCOMPATIBLE
-          || errorId == AndroidErrorId.ANDROID_APK_INSTALLER_INVALID_GMS_VERSION
-          || errorId == AndroidErrorId.ANDROID_APK_INSTALLER_DEVICE_SDK_TOO_LOW
-          || errorId == AndroidErrorId.ANDROID_APK_INSTALLER_APPLY_MULTI_PACKAGE_INSTALL_TO_GMS
-          || errorId == AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_ABI_INCOMPATIBLE
-          || errorId == AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_MISSING_SHARED_LIBRARY
-          || errorId == AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_UPDATE_INCOMPATIBLE
-          || errorId == AndroidErrorId.ANDROID_PKG_MNGR_UTIL_SDK_VERSION_NOT_SUPPORT
-          || errorId == AndroidErrorId.ANDROID_PKG_MNGR_UTIL_PARTIAL_INSTALL_NOT_ALLOWED_ERROR
-          || errorId == AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_VERSION_DOWNGRADE) {
-        isInstallationFailure = true;
-      }
-    } else {
-      ErrorCode errorCode = e.getErrorCodeEnum();
-      if (errorCode == ErrorCode.INSTALLATION_ABI_INCOMPATIBLE
-          || errorCode == ErrorCode.INSTALLATION_DEVICE_TOO_OLD
-          || errorCode == ErrorCode.INSTALLATION_GMS_DOWNGRADE
-          || errorCode == ErrorCode.INSTALLATION_GMS_INCOMPATIBLE
-          || errorCode == ErrorCode.INSTALLATION_UPDATE_INCOMPATIBLE
-          || errorCode == ErrorCode.INSTALLATION_MISSING_SHARED_LIBRARY) {
-        isInstallationFailure = true;
-      }
+    ErrorId errorId = e.getErrorId();
+    if (errorId == AndroidErrorId.ANDROID_APK_INSTALLER_GMS_INCOMPATIBLE
+        || errorId == AndroidErrorId.ANDROID_APK_INSTALLER_INVALID_GMS_VERSION
+        || errorId == AndroidErrorId.ANDROID_APK_INSTALLER_DEVICE_SDK_TOO_LOW
+        || errorId == AndroidErrorId.ANDROID_APK_INSTALLER_APPLY_MULTI_PACKAGE_INSTALL_TO_GMS
+        || errorId == AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_ABI_INCOMPATIBLE
+        || errorId == AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_MISSING_SHARED_LIBRARY
+        || errorId == AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_UPDATE_INCOMPATIBLE
+        || errorId == AndroidErrorId.ANDROID_PKG_MNGR_UTIL_SDK_VERSION_NOT_SUPPORT
+        || errorId == AndroidErrorId.ANDROID_PKG_MNGR_UTIL_PARTIAL_INSTALL_NOT_ALLOWED_ERROR
+        || errorId == AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_VERSION_DOWNGRADE) {
+      isInstallationFailure = true;
     }
 
     if (isInstallationFailure) {
