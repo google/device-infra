@@ -127,6 +127,8 @@ public final class Dimension {
      * example, if release_version is "6.0.1", then release_version_major is "6.0".
      */
     RELEASE_VERSION_MAJOR,
+    /** The revision of the device. */
+    REVISION,
     /** If the device is rooted or not. */
     ROOTED,
     /** The run target of the device. */
