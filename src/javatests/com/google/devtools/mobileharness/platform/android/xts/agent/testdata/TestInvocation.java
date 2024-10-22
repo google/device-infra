@@ -25,8 +25,10 @@ public class TestInvocation {
   @SuppressWarnings("unused")
   public void invoke(FakeInvocationContext context, int param2, int param3, int param4)
       throws InterruptedException {
+    // Briefly sleeps to make sure the monitoring agent will be reading (and writing to file) the
+    // "init" status to avoid flaky tests.
+    Thread.sleep(1_000L);
     status = "running";
-    Thread.sleep(6_000L);
     status = "finished";
   }
 

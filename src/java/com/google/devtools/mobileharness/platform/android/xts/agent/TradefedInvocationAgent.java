@@ -92,8 +92,10 @@ public class TradefedInvocationAgent {
     }
 
     @Advice.OnMethodExit()
-    public static void onExit(@Advice.This Object testInvocation) {
-      XtsTradefedRuntimeInfoMonitor.getInstance().onInvocationExit(testInvocation);
+    public static void onExit(
+        @Advice.This Object testInvocation, @Advice.Argument(value = 0) Object invocationContext) {
+      XtsTradefedRuntimeInfoMonitor.getInstance()
+          .onInvocationExit(testInvocation, invocationContext);
     }
   }
 

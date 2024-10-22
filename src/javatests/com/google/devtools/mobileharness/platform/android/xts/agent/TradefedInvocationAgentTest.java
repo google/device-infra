@@ -22,7 +22,6 @@ import static com.google.common.truth.Truth.assertThat;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.truth.Correspondence;
-import com.google.common.truth.Correspondence.BinaryPredicate;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfo;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfo.TradefedInvocation;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfoFileUtil;
@@ -88,8 +87,7 @@ public class TradefedInvocationAgentTest {
     List<XtsTradefedRuntimeInfo> runtimeInfos = new ArrayList<>();
     Instant lastModifiedTime = null;
     while (commandProcess.isAlive()) {
-      Sleeper.defaultSleeper().sleep(Duration.ofSeconds(1L));
-
+      Sleeper.defaultSleeper().sleep(Duration.ofMillis(200L));
       Optional<XtsTradefedRuntimeInfoFileDetail> fileDetail =
           xtsTradefedRuntimeInfoFileUtil.readInfo(runtimeInfoFilePath, lastModifiedTime);
       if (fileDetail.isPresent()) {
@@ -98,19 +96,42 @@ public class TradefedInvocationAgentTest {
       }
     }
 
-    Correspondence<XtsTradefedRuntimeInfo, List<List<String>>> correspondence =
-        Correspondence.from(
-            (BinaryPredicate<XtsTradefedRuntimeInfo, List<List<String>>>)
-                (actual, expected) ->
-                    actual.invocations().stream()
-                        .map(TradefedInvocation::deviceIds)
-                        .collect(toImmutableList())
-                        .equals(expected),
-            "has invocations containing devices that");
     assertThat(runtimeInfos)
-        .comparingElementsUsing(correspondence)
-        .contains(ImmutableList.of(ImmutableList.of("device1", "device2")));
-    assertThat(runtimeInfos).comparingElementsUsing(correspondence).contains(ImmutableList.of());
+        .comparingElementsUsing(
+            Correspondence.transforming(
+                (XtsTradefedRuntimeInfo runtimeInfo) ->
+                    runtimeInfo.invocations().stream()
+                        .map(TradefedInvocation::deviceIds)
+                        .collect(toImmutableList()),
+                "has invocations containing device IDs of"))
+        .containsExactly(
+            ImmutableList.of(ImmutableList.of("device1", "device2")),
+            ImmutableList.of(),
+            ImmutableList.of(ImmutableList.of("device1", "device2")))
+        .inOrder();
+
+    assertThat(runtimeInfos)
+        .comparingElementsUsing(
+            Correspondence.transforming(
+                (XtsTradefedRuntimeInfo runtimeInfo) ->
+                    runtimeInfo.invocations().stream()
+                        .map(TradefedInvocation::status)
+                        .collect(toImmutableList()),
+                "has invocations containing statuses of"))
+        .containsExactly(ImmutableList.of("init"), ImmutableList.of(), ImmutableList.of(""))
+        .inOrder();
+
+    assertThat(runtimeInfos)
+        .comparingElementsUsing(
+            Correspondence.transforming(
+                (XtsTradefedRuntimeInfo runtimeInfo) ->
+                    runtimeInfo.invocations().stream()
+                        .map(TradefedInvocation::errorMessage)
+                        .collect(toImmutableList()),
+                "has invocations containing error messages of"))
+        .containsExactly(
+            ImmutableList.of(""), ImmutableList.of(), ImmutableList.of("Fake error message"))
+        .inOrder();
 
     CommandResult commandResult = commandProcess.await();
     logger.atInfo().log("Command result: %s", commandResult);

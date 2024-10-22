@@ -32,29 +32,33 @@ public final class XtsTradefedRuntimeInfoTest {
   public void xtsTradefedRuntimeInfo_convertString() {
     ImmutableList<TradefedInvocation> invocations =
         ImmutableList.of(
-            new TradefedInvocation(ImmutableList.of("left", "123", "abc"), "failed"),
-            new TradefedInvocation(ImmutableList.of("right", "11"), "passed"),
-            new TradefedInvocation(ImmutableList.of("top"), ""),
-            new TradefedInvocation(ImmutableList.of(), "passed"));
+            new TradefedInvocation(ImmutableList.of("left", "123", "abc"), "failed", ""),
+            new TradefedInvocation(ImmutableList.of("right", "11"), "passed", ""),
+            new TradefedInvocation(ImmutableList.of("top"), "", ""),
+            new TradefedInvocation(ImmutableList.of(), "passed", ""),
+            new TradefedInvocation(ImmutableList.of("bottom"), "failed", "example error message"));
     XtsTradefedRuntimeInfo info =
         new XtsTradefedRuntimeInfo(invocations, Instant.ofEpochMilli(1234567890L));
-    XtsTradefedRuntimeInfo intoWithoutInvocations =
+    XtsTradefedRuntimeInfo infoWithoutInvocations =
         new XtsTradefedRuntimeInfo(ImmutableList.of(), Instant.ofEpochMilli(1234567890L));
 
     assertThat(XtsTradefedRuntimeInfo.decodeFromString(info.encodeToString())).isEqualTo(info);
-    assertThat(XtsTradefedRuntimeInfo.decodeFromString(intoWithoutInvocations.encodeToString()))
-        .isEqualTo(intoWithoutInvocations);
+    assertThat(XtsTradefedRuntimeInfo.decodeFromString(infoWithoutInvocations.encodeToString()))
+        .isEqualTo(infoWithoutInvocations);
   }
 
   @Test
   public void tradefedInvocation_convertString() {
     TradefedInvocation invocation =
-        new TradefedInvocation(ImmutableList.of("left", "123", "abc"), "failed");
+        new TradefedInvocation(ImmutableList.of("left", "123", "abc"), "failed", "");
     TradefedInvocation invocationWithoutStatus =
-        new TradefedInvocation(ImmutableList.of("left", "123", "abc", "efg"), "");
+        new TradefedInvocation(ImmutableList.of("left", "123", "abc", "efg"), "", "");
     TradefedInvocation invocationWithoutDevices =
-        new TradefedInvocation(ImmutableList.of(), "failed");
-    TradefedInvocation emptyInvocation = new TradefedInvocation(ImmutableList.of(), "");
+        new TradefedInvocation(ImmutableList.of(), "failed", "");
+    TradefedInvocation invocationWithErrorMessage =
+        new TradefedInvocation(
+            ImmutableList.of("left", "123", "abc"), "failed", "example error message");
+    TradefedInvocation emptyInvocation = new TradefedInvocation(ImmutableList.of(), "", "");
 
     assertThat(TradefedInvocation.decodeFromString(invocation.encodeToString()))
         .isEqualTo(invocation);
@@ -62,6 +66,8 @@ public final class XtsTradefedRuntimeInfoTest {
         .isEqualTo(invocationWithoutStatus);
     assertThat(TradefedInvocation.decodeFromString(invocationWithoutDevices.encodeToString()))
         .isEqualTo(invocationWithoutDevices);
+    assertThat(TradefedInvocation.decodeFromString(invocationWithErrorMessage.encodeToString()))
+        .isEqualTo(invocationWithErrorMessage);
     assertThat(TradefedInvocation.decodeFromString(emptyInvocation.encodeToString()))
         .isEqualTo(emptyInvocation);
   }

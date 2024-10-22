@@ -21,10 +21,16 @@ import java.util.List;
 @SuppressWarnings("JdkImmutableCollections")
 public class FakeInvocationContext {
 
+  private final String invocationId;
   private final List<String> serials;
 
-  public FakeInvocationContext(List<String> serials) {
+  public FakeInvocationContext(String invocationId, List<String> serials) {
+    this.invocationId = invocationId;
     this.serials = List.copyOf(serials);
+  }
+
+  public String getInvocationId() {
+    return invocationId;
   }
 
   public List<String> getSerials() {

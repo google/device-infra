@@ -110,7 +110,7 @@ public class XtsTradefedRuntimeInfo {
   public static class TradefedInvocation {
 
     private static final TradefedInvocation DEFAULT_INSTANCE =
-        new TradefedInvocation(new ArrayList<>(), "");
+        new TradefedInvocation(new ArrayList<>(), /* status= */ "", /* errorMessage= */ "");
 
     public static TradefedInvocation getDefaultInstance() {
       return DEFAULT_INSTANCE;
@@ -120,22 +120,25 @@ public class XtsTradefedRuntimeInfo {
     public static TradefedInvocation decodeFromString(String string) {
       List<String> parts = split(string, TOKEN_SEPARATOR);
       String status = decodeFromBase64(parts.get(0));
+      String errorMessage = decodeFromBase64(parts.get(1));
       List<String> deviceIds = new ArrayList<>();
-      for (int i = 1; i < parts.size(); i++) {
+      for (int i = 2; i < parts.size(); i++) {
         if (!parts.get(i).isEmpty()) {
           deviceIds.add(parts.get(i));
         }
       }
 
-      return new TradefedInvocation(deviceIds, status);
+      return new TradefedInvocation(deviceIds, status, errorMessage);
     }
 
     private final List<String> deviceIds;
     private final String status;
+    private final String errorMessage;
 
-    public TradefedInvocation(List<String> deviceIds, String status) {
+    public TradefedInvocation(List<String> deviceIds, String status, String errorMessage) {
       this.deviceIds = new ArrayList<>(deviceIds);
       this.status = status;
+      this.errorMessage = errorMessage;
     }
 
     public List<String> deviceIds() {
@@ -146,9 +149,14 @@ public class XtsTradefedRuntimeInfo {
       return status;
     }
 
+    public String errorMessage() {
+      return errorMessage;
+    }
+
     /** Returns a string that can be parsed by {@link #decodeFromString(String)}. */
     public String encodeToString() {
       return encodeToBase64(status())
+          .concat(TOKEN_SEPARATOR + encodeToBase64(errorMessage()))
           .concat(TOKEN_SEPARATOR + String.join(TOKEN_SEPARATOR, deviceIds()));
     }
 
@@ -161,23 +169,28 @@ public class XtsTradefedRuntimeInfo {
         return false;
       }
       TradefedInvocation that = (TradefedInvocation) o;
-      return Objects.equals(deviceIds, that.deviceIds) && Objects.equals(status, that.status);
+      return Objects.equals(deviceIds, that.deviceIds)
+          && Objects.equals(status, that.status)
+          && Objects.equals(errorMessage, that.errorMessage);
     }
 
     @Override
     public int hashCode() {
-      return Objects.hash(deviceIds, status);
+      return Objects.hash(deviceIds, status, errorMessage);
     }
 
     @Override
     public String toString() {
-      return "TradefedInvocation{deviceIds=" + deviceIds + ", status='" + status + "'}";
+      return String.format(
+          "TradefedInvocation{deviceIds=%s, status='%s', errorMessage='%s'}",
+          deviceIds, status, errorMessage);
     }
   }
 
   @SuppressWarnings("ArraysAsListWithZeroOrOneArgument")
   private static List<String> split(String string, String separator) {
-    String[] result = string.split(separator);
+    // Setting limit to -1 to not discard the trailing empty string.
+    String[] result = string.split(separator, /* limit= */ -1);
     return result.length == 0 ? asList("") : asList(result);
   }
 

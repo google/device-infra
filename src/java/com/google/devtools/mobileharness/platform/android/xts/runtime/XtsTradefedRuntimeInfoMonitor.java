@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.platform.android.xts.runtime;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfo.TradefedInvocation;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
@@ -26,6 +27,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 
 /** Monitor in TF process to monitor runtime info. */
@@ -62,21 +64,27 @@ public class XtsTradefedRuntimeInfoMonitor {
 
   public void onInvocationEnter(Object testInvocation, Object invocationContext) {
     synchronized (runningInvocations) {
-      runningInvocations.computeIfAbsent(
-          testInvocation, invocation -> new Invocation(invocation, invocationContext));
+      runningInvocations.putIfAbsent(
+          Invocation.getInvocationId(invocationContext),
+          new Invocation(testInvocation, invocationContext, /* invocationEventHandler= */ null));
     }
     triggerAsyncUpdate();
   }
 
-  public void onInvocationExit(Object testInvocation) {
+  public void onInvocationExit(Object testInvocation, Object invocationContext) {
     synchronized (runningInvocations) {
-      runningInvocations.remove(testInvocation);
+      runningInvocations.remove(Invocation.getInvocationId(invocationContext));
     }
     triggerAsyncUpdate();
   }
 
   public void onInvocationComplete(Object invocationEventHandler, Object invocationContext) {
-    // TODO: Implements the method.
+    synchronized (runningInvocations) {
+      runningInvocations.putIfAbsent(
+          Invocation.getInvocationId(invocationContext),
+          new Invocation(/* testInvocation= */ null, invocationContext, invocationEventHandler));
+    }
+    triggerAsyncUpdate();
   }
 
   private void run(Path runtimeInfoFilePath) {
@@ -144,17 +152,22 @@ public class XtsTradefedRuntimeInfoMonitor {
   private static class Invocation {
 
     /** {@code com.android.tradefed.invoker.ITestInvocation}. */
-    private final Object testInvocation;
+    @Nullable private final Object testInvocation;
 
     /** {@code com.android.tradefed.invoker.IInvocationContext}. */
     private final Object invocationContext;
 
+    /** {@code com.android.tradefed.cluster.ClusterCommandScheduler.InvocationEventHandler}. */
+    @Nullable private final Object invocationEventHandler;
+
     /** TradefedInvocation generated from last {@link #update()}. */
     private volatile TradefedInvocation previousInvocation;
 
-    private Invocation(Object testInvocation, Object invocationContext) {
+    private Invocation(
+        Object testInvocation, Object invocationContext, Object invocationEventHandler) {
       this.testInvocation = testInvocation;
       this.invocationContext = invocationContext;
+      this.invocationEventHandler = invocationEventHandler;
       this.previousInvocation = TradefedInvocation.getDefaultInstance();
     }
 
@@ -165,19 +178,34 @@ public class XtsTradefedRuntimeInfoMonitor {
     private boolean needUpdate() {
       TradefedInvocation previousInvocation = this.previousInvocation;
       return !previousInvocation.status().equals(getInvocationStatus())
-          || !previousInvocation.deviceIds().equals(getDeviceIds());
+          || !previousInvocation.deviceIds().equals(getDeviceIds())
+          || !previousInvocation.errorMessage().equals(getErrorMessage());
     }
 
     /** Updates and returns a new {@link #previousInvocation}. */
     private TradefedInvocation update() {
       TradefedInvocation newInvocation =
-          new TradefedInvocation(getDeviceIds(), getInvocationStatus());
+          new TradefedInvocation(getDeviceIds(), getInvocationStatus(), getErrorMessage());
       previousInvocation = newInvocation;
       return newInvocation;
     }
 
     private String getInvocationStatus() {
-      return testInvocation.toString();
+      return testInvocation != null ? testInvocation.toString() : "";
+    }
+
+    private String getErrorMessage() {
+      if (invocationEventHandler == null) {
+        return "";
+      }
+
+      try {
+        Field errorMessageField = invocationEventHandler.getClass().getDeclaredField("mError");
+        errorMessageField.setAccessible(true);
+        return (String) errorMessageField.get(invocationEventHandler);
+      } catch (ReflectiveOperationException e) {
+        throw new LinkageError("Failed to read the mError field of InvocationEventHandler", e);
+      }
     }
 
     @SuppressWarnings("unchecked")
@@ -187,6 +215,15 @@ public class XtsTradefedRuntimeInfoMonitor {
             invocationContext.getClass().getMethod("getSerials").invoke(invocationContext);
       } catch (ReflectiveOperationException e) {
         throw new LinkageError("Failed to call IInvocationContext.getSerials()", e);
+      }
+    }
+
+    private static String getInvocationId(Object invocationContext) {
+      try {
+        return (String)
+            invocationContext.getClass().getMethod("getInvocationId").invoke(invocationContext);
+      } catch (ReflectiveOperationException e) {
+        throw new LinkageError("Failed to call IInvocationContext.getInvocationId()", e);
       }
     }
   }
