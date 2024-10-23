@@ -25,6 +25,7 @@ import com.google.devtools.mobileharness.shared.util.command.CommandException;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
+import java.util.UUID;
 
 /** Utility class for controlling Android device admin. */
 public class DeviceAdminUtil {
@@ -163,7 +164,11 @@ public class DeviceAdminUtil {
     if (action.equals(ACTION_INSTALL)) {
       command = command.argsAppended("--admin_app_path=" + adminAppPath);
     }
-    logger.atInfo().log("Device admin util is running command %s on %s", command, deviceId);
-    commandExecutor.run(command);
+    String commandId = UUID.randomUUID().toString();
+    logger.atInfo().log(
+        "Device admin util is running command [CID=%s] on %s: %s", commandId, deviceId, command);
+    String output = commandExecutor.run(command);
+    logger.atInfo().log(
+        "Device admin command output [CID=%s, DEVICE=%s]: %s", commandId, deviceId, output);
   }
 }

@@ -431,10 +431,10 @@ public abstract class AndroidRealDeviceDelegate {
       return;
     }
 
-    logger.atInfo().log("Resetting device %s", deviceId);
     boolean isOverTcpDevice = DeviceUtil.isOverTcpDevice(deviceId);
     cacheDevice(deviceId, AndroidRealDeviceConstants.WAIT_FOR_REBOOT_TIMEOUT);
     try {
+      logger.atInfo().log("Start to factory reset device %s via test harness", deviceId);
       systemStateUtil.factoryResetViaTestHarness(deviceId, /* waitTime= */ null);
       if (isOverTcpDevice) {
         systemStateUtil.waitForOverTcpDeviceConnection(deviceId, Duration.ofMinutes(5));
