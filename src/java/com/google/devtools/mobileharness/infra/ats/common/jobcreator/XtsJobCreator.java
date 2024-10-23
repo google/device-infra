@@ -233,6 +233,7 @@ public abstract class XtsJobCreator {
                           reportSystemCheckersArg.stream(),
                           skipDeviceInfoArg.stream(),
                           extraArgs.stream()
+                              .map(arg -> arg.replace("\"", "\\\""))
                               .map(arg -> arg.contains(" ") ? String.format("\"%s\"", arg) : arg))
                       .collect(toImmutableList()));
       runCommandArgsSet = ImmutableSet.of(sessionRequestInfoArgs);
