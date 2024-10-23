@@ -809,7 +809,7 @@ public class XtsTradefedTest extends BaseDriver
         if (i > 0 && FILTER_KEYS.contains(xtsCommand.get(i - 1))) {
           formattedCommandBuilder.add(String.format("&quot;%s&quot;", xtsCommand.get(i)));
         } else {
-          formattedCommandBuilder.add(xtsCommand.get(i));
+          formattedCommandBuilder.add(xtsCommand.get(i).replace("\"", "&quot;"));
         }
       }
 
