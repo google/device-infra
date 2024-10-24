@@ -274,6 +274,11 @@ final class AtsServerSessionPlugin {
         } catch (MobileHarnessException e) {
           logger.atWarning().withCause(e).log("Failed to trigger retry session.");
         }
+      } else if (requestDetail.getState().equals(RequestState.ERROR)
+          && requestDetail.getErrorReason().equals(ErrorReason.UNKNOWN_REASON)) {
+        requestDetail.setErrorReason(ErrorReason.RESULT_PROCESSING_ERROR);
+        requestDetail.setErrorMessage("Failed to process test results.");
+        updateSessionPluginOutput();
       }
     }
   }
