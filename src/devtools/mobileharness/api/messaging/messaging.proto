@@ -1,0 +1,135 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package mobileharness.api.messaging;
+
+import "google/protobuf/any.proto";
+import "google/protobuf/timestamp.proto";
+import "src/devtools/common/metrics/stability/model/proto/exception.proto";
+
+option java_package = "com.google.devtools.mobileharness.api.messaging.proto";
+option java_outer_classname = "MessagingProto";
+
+// A message send action.
+message MessageSend {
+  // Required.
+  google.protobuf.Any message = 1;
+
+  // Required.
+  MessageSendDestination destination = 2;
+
+  // Required.
+  MessageSendSettings settings = 3;
+}
+
+// Destination to which a message will be send.
+message MessageSendDestination {
+  // TODO: Adds destination.
+}
+
+// Settings of a message send action.
+message MessageSendSettings {
+  // TODO: Adds settings.
+}
+
+// Receptions of a message.
+message MessageReceptions {
+  repeated MessageReception receptions = 1;
+}
+
+// Message receiving start/end of a message subscriber.
+message MessageReception {
+  // Required.
+  MessageSubscriberInfo subscriber_info = 1;
+
+  oneof type {
+    MessageReceivingStart receiving_start = 2;
+
+    MessageReceivingEnd receiving_end = 3;
+  }
+}
+
+// Information of a message subscriber.
+message MessageSubscriberInfo {
+  // Required.
+  string class_name = 1;
+
+  // Required.
+  string method_name = 2;
+
+  // Required.
+  string message_class_name = 3;
+
+  // Required.
+  string result_class_name = 4;
+
+  // Required.
+  int32 object_identity_hash_code = 5;
+}
+
+// Start of a message receiving action of a message subscriber.
+message MessageReceivingStart {
+  // Required.
+  MessageReceivingTimingInfo receiving_timing_info = 1;
+}
+
+// End of a message receiving action of a message subscriber.
+message MessageReceivingEnd {
+  // Required.
+  MessageReceivingTimingInfo receiving_timing_info = 1;
+
+  oneof type {
+    MessageReceivingResult success = 2;
+
+    MessageReceivingError failure = 3;
+  }
+}
+
+// Timing information of a message receiving action.
+message MessageReceivingTimingInfo {
+  // Required.
+  google.protobuf.Timestamp subscriber_receiving_start_time = 1;
+
+  // Conditionally required.
+  //
+  // Required in MessageReceivingEnd.
+  optional google.protobuf.Timestamp subscriber_receiving_end_time = 2;
+}
+
+// Message receiving result of a message subscriber.
+message MessageReceivingResult {
+  // Required.
+  google.protobuf.Any subscriber_receiving_result = 1;
+}
+
+// Message receiving error of a message subscriber.
+message MessageReceivingError {
+  oneof type {
+    // Exception thrown from the message subscriber method invocation.
+    Exception subscriber_method_invocation_error = 1;
+
+    // Exception thrown from other phases of message receiving, e.g., message
+    // unpacking.
+    Exception message_receiving_error = 2;
+  }
+}
+
+// A Java exception.
+message Exception {
+  stability.model.ExceptionDetail exception = 1;
+}

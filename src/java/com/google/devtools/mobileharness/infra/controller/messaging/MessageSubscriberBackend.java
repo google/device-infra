@@ -16,23 +16,49 @@
 
 package com.google.devtools.mobileharness.infra.controller.messaging;
 
+import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
+import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugStringWithPrinter;
+
 import com.google.auto.value.AutoValue;
 import com.google.auto.value.extension.memoized.Memoized;
 import com.google.common.collect.ImmutableList;
+import com.google.common.flogger.FluentLogger;
+import com.google.devtools.common.metrics.stability.converter.ErrorModelConverter;
 import com.google.devtools.mobileharness.api.messaging.MessageEvent;
 import com.google.devtools.mobileharness.api.messaging.SubscribeMessage;
+import com.google.devtools.mobileharness.api.messaging.proto.MessagingProto;
+import com.google.devtools.mobileharness.api.messaging.proto.MessagingProto.MessageReceivingEnd;
+import com.google.devtools.mobileharness.api.messaging.proto.MessagingProto.MessageReceivingError;
+import com.google.devtools.mobileharness.api.messaging.proto.MessagingProto.MessageReceivingResult;
+import com.google.devtools.mobileharness.api.messaging.proto.MessagingProto.MessageReceivingStart;
+import com.google.devtools.mobileharness.api.messaging.proto.MessagingProto.MessageReceivingTimingInfo;
+import com.google.devtools.mobileharness.api.messaging.proto.MessagingProto.MessageReception;
+import com.google.devtools.mobileharness.api.messaging.proto.MessagingProto.MessageReceptions;
+import com.google.devtools.mobileharness.api.messaging.proto.MessagingProto.MessageSend;
+import com.google.devtools.mobileharness.api.messaging.proto.MessagingProto.MessageSubscriberInfo;
 import com.google.devtools.mobileharness.shared.util.base.ProtoReflectionUtil;
+import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
+import com.google.protobuf.Any;
+import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
+import com.google.protobuf.TextFormat;
+import com.google.protobuf.TypeRegistry;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
 import java.lang.reflect.WildcardType;
+import java.time.Instant;
 import java.util.List;
+import java.util.function.Consumer;
+import javax.annotation.Nullable;
 
 /** Backend of message subscribers. */
 class MessageSubscriberBackend {
+
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   /** Searches all message subscribers in the given object. */
   public static MessageSubscribers searchMessageSubscribers(Object object) {
@@ -170,15 +196,125 @@ class MessageSubscriberBackend {
     }
 
     @Memoized
+    public MessageSubscriberInfo messageSubscriberInfo() {
+      return MessageSubscriberInfo.newBuilder()
+          .setClassName(clazz().getName())
+          .setMethodName(method().getName())
+          .setMessageClassName(messageType().getName())
+          .setResultClassName(resultType().getName())
+          .setObjectIdentityHashCode(System.identityHashCode(obj()))
+          .build();
+    }
+
+    @Memoized
     @Override
     public String toString() {
       return String.format(
           "%s#%s(MessageEvent<%s>):%s@%s",
           clazz().getName(),
           method().getName(),
-          messageType().getSimpleName(),
-          resultType().getSimpleName(),
+          messageType().getName(),
+          resultType().getName(),
           System.identityHashCode(obj()));
+    }
+
+    /** Whether the message subscriber can receive the given message. */
+    public boolean canReceiveMessage(MessageSend messageSend) {
+      return messageSend.getMessage().is(messageType());
+    }
+
+    /** {@link #canReceiveMessage} must be called before calling this method. */
+    public void receiveMessage(
+        MessageSend messageSend, Consumer<MessageReceptions> messageReceptionsHandler) {
+      Instant receivingStartTime = Instant.now();
+
+      // Generates MessageReceivingStart.
+      messageReceptionsHandler.accept(
+          MessageReceptions.newBuilder()
+              .addReceptions(
+                  MessageReception.newBuilder()
+                      .setSubscriberInfo(messageSubscriberInfo())
+                      .setReceivingStart(
+                          MessageReceivingStart.newBuilder()
+                              .setReceivingTimingInfo(
+                                  createReceivingTimingInfo(
+                                      receivingStartTime, /* receivingEndTime= */ null))))
+              .build());
+
+      Message result;
+      try {
+        // Unpacks message.
+        Message message = messageSend.getMessage().unpack(messageType());
+
+        // Creates MessageEvent.
+        MessageEventImpl messageEvent = MessageEventImpl.of(message);
+
+        // Invokes message subscriber.
+        logger.atInfo().log(
+            "Message subscriber [%s] starts to receive message [%s]",
+            this, shortDebugString(message));
+        result = (Message) method().invoke(obj(), messageEvent);
+        logger.atInfo().log(
+            "Message subscriber [%s] finishes receiving message [%s] with result [%s]",
+            this, shortDebugString(message), shortDebugString(result));
+      } catch (InvalidProtocolBufferException
+          | IllegalAccessException
+          | InvocationTargetException
+          | RuntimeException
+          | Error e) {
+        Instant receivingEndTime = Instant.now();
+
+        // Logs error.
+        logger.atInfo().withCause(e).log(
+            "Error when message subscriber [%s] receives message [%s]",
+            this,
+            shortDebugStringWithPrinter(
+                messageSend,
+                TextFormat.printer()
+                    .usingTypeRegistry(
+                        TypeRegistry.newBuilder()
+                            .add(messageDefaultInstance().getDescriptorForType())
+                            .build())));
+
+        // Creates MessageReceivingError.
+        MessageReceivingError.Builder messageReceivingError = MessageReceivingError.newBuilder();
+        if (e instanceof InvocationTargetException) {
+          messageReceivingError.setSubscriberMethodInvocationError(toProto(e.getCause()));
+        } else {
+          messageReceivingError.setMessageReceivingError(toProto(e));
+        }
+
+        // Generates MessageReceivingEnd with MessageReceivingError.
+        messageReceptionsHandler.accept(
+            MessageReceptions.newBuilder()
+                .addReceptions(
+                    MessageReception.newBuilder()
+                        .setSubscriberInfo(messageSubscriberInfo())
+                        .setReceivingEnd(
+                            MessageReceivingEnd.newBuilder()
+                                .setReceivingTimingInfo(
+                                    createReceivingTimingInfo(receivingStartTime, receivingEndTime))
+                                .setFailure(messageReceivingError)))
+                .build());
+        return;
+      }
+
+      Instant receivingEndTime = Instant.now();
+
+      // Generates MessageReceivingEnd with MessageReceivingResult.
+      messageReceptionsHandler.accept(
+          MessageReceptions.newBuilder()
+              .addReceptions(
+                  MessageReception.newBuilder()
+                      .setSubscriberInfo(messageSubscriberInfo())
+                      .setReceivingEnd(
+                          MessageReceivingEnd.newBuilder()
+                              .setReceivingTimingInfo(
+                                  createReceivingTimingInfo(receivingStartTime, receivingEndTime))
+                              .setSuccess(
+                                  MessageReceivingResult.newBuilder()
+                                      .setSubscriberReceivingResult(Any.pack(result)))))
+              .build());
     }
 
     public static MessageSubscriber of(
@@ -217,6 +353,15 @@ class MessageSubscriberBackend {
 
     public abstract ImmutableList<InvalidMessageSubscriber> invalidMessageSubscribers();
 
+    public void receiveMessage(
+        MessageSend messageSend, Consumer<MessageReceptions> messageReceptionsHandler) {
+      for (MessageSubscriber messageSubscriber : messageSubscribers()) {
+        if (messageSubscriber.canReceiveMessage(messageSend)) {
+          messageSubscriber.receiveMessage(messageSend, messageReceptionsHandler);
+        }
+      }
+    }
+
     public static MessageSubscribers of(
         Object obj,
         List<MessageSubscriber> messageSubscribers,
@@ -226,6 +371,23 @@ class MessageSubscriberBackend {
           ImmutableList.copyOf(messageSubscribers),
           ImmutableList.copyOf(invalidMessageSubscribers));
     }
+  }
+
+  private static MessageReceivingTimingInfo createReceivingTimingInfo(
+      Instant receivingStartTime, @Nullable Instant receivingEndTime) {
+    MessageReceivingTimingInfo.Builder result =
+        MessageReceivingTimingInfo.newBuilder()
+            .setSubscriberReceivingStartTime(TimeUtils.toProtoTimestamp(receivingStartTime));
+    if (receivingEndTime != null) {
+      result.setSubscriberReceivingEndTime(TimeUtils.toProtoTimestamp(receivingEndTime));
+    }
+    return result.build();
+  }
+
+  private static MessagingProto.Exception toProto(Throwable throwable) {
+    return MessagingProto.Exception.newBuilder()
+        .setException(ErrorModelConverter.toExceptionDetail(throwable))
+        .build();
   }
 
   private MessageSubscriberBackend() {}
