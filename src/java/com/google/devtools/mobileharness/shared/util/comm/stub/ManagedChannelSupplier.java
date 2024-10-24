@@ -16,25 +16,21 @@
 
 package com.google.devtools.mobileharness.shared.util.comm.stub;
 
-import com.google.devtools.mobileharness.shared.util.comm.stub.Annotations.ChannelExecutor;
-import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
-import com.google.inject.AbstractModule;
-import com.google.inject.Provides;
+import io.grpc.ManagedChannel;
 import java.util.concurrent.Executor;
-import javax.inject.Singleton;
+import java.util.function.Function;
 
-/** Guice module for {@link GrpcDirectTargetConfigures}. */
-public final class GrpcDirectTargetConfiguresModule extends AbstractModule {
+/** Lazy creator of {@link ManagedChannel} for a given gRPC target. */
+public final class ManagedChannelSupplier implements Function<String, ManagedChannel> {
 
-  @Override
-  protected void configure() {
-    bind(GrpcDirectTargetConfigures.class);
+  private final Executor executor;
+
+  public ManagedChannelSupplier(Executor executor) {
+    this.executor = executor;
   }
 
-  @Provides
-  @Singleton
-  @ChannelExecutor
-  Executor provideChannelExecutor() {
-    return ThreadPools.createStandardThreadPool("grpc-channel-executor");
+  @Override
+  public ManagedChannel apply(String grpcTarget) {
+    return ChannelFactory.createChannel(grpcTarget, executor);
   }
 }

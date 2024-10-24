@@ -22,7 +22,10 @@ package(
 
 java_library(
     name = "channel_factory",
-    srcs = ["ChannelFactory.java"],
+    srcs = [
+        "ChannelFactory.java",
+        "ManagedChannelSupplier.java",
+    ],
     deps = [
         "@io_grpc_grpc_java//core",
         "@io_grpc_grpc_java//netty",

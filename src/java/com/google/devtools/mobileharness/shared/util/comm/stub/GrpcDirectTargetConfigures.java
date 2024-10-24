@@ -25,27 +25,25 @@ import io.grpc.Channel;
 import io.grpc.ManagedChannel;
 import java.util.concurrent.Executor;
 import java.util.function.Function;
-import java.util.function.Supplier;
 import javax.inject.Inject;
 
 /** Util to create direct blocking interface of gRPC stubs. */
 public final class GrpcDirectTargetConfigures {
 
   private final ChannelManager channelManager;
-  private final Function<String, Supplier<ManagedChannel>> channelSupplierMap;
+  private final Function<String, ? extends ManagedChannel> managedChannelSupplier;
 
   @Inject
-  GrpcDirectTargetConfigures(
-      ChannelManager channelManager, @ChannelExecutor Executor channelExecutor) {
-    this(channelManager, new ChannelSupplierMap(channelExecutor));
+  GrpcDirectTargetConfigures(@ChannelExecutor Executor channelExecutor) {
+    this(ChannelManager.getInstance(), new ManagedChannelSupplier(channelExecutor));
   }
 
   @VisibleForTesting
   GrpcDirectTargetConfigures(
       ChannelManager channelManager,
-      Function<String, Supplier<ManagedChannel>> channelSupplierMap) {
+      Function<String, ? extends ManagedChannel> managedChannelSupplier) {
     this.channelManager = channelManager;
-    this.channelSupplierMap = channelSupplierMap;
+    this.managedChannelSupplier = managedChannelSupplier;
   }
 
   /**
@@ -92,35 +90,8 @@ public final class GrpcDirectTargetConfigures {
 
   private <T> T createStub(ServerSpec serverSpec, Function<Channel, T> stubCreator) {
     return channelManager.createStub(
-        serverSpec.getTarget(), channelSupplierMap.apply(serverSpec.getTarget()), stubCreator);
-  }
-
-  private static class ChannelSupplierMap implements Function<String, Supplier<ManagedChannel>> {
-    private final Executor channelExecutor;
-
-    ChannelSupplierMap(Executor channelExecutor) {
-      this.channelExecutor = channelExecutor;
-    }
-
-    @Override
-    public Supplier<ManagedChannel> apply(String grpcTarget) {
-      return new ManagedChannelSupplier(channelExecutor, grpcTarget);
-    }
-  }
-
-  private static class ManagedChannelSupplier implements Supplier<ManagedChannel> {
-
-    private final Executor channelExecutor;
-    private final String grpcTarget;
-
-    private ManagedChannelSupplier(Executor channelExecutor, String grpcTarget) {
-      this.channelExecutor = channelExecutor;
-      this.grpcTarget = grpcTarget;
-    }
-
-    @Override
-    public ManagedChannel get() {
-      return ChannelFactory.createChannel(grpcTarget, channelExecutor);
-    }
+        serverSpec.getTarget(),
+        () -> managedChannelSupplier.apply(serverSpec.getTarget()),
+        stubCreator);
   }
 }
