@@ -166,17 +166,34 @@ public final class AtsServerSessionPluginTest {
     Flags.parse(new String[] {String.format("--public_dir=%s", publicDir)});
     Instant baseTime = Instant.ofEpochMilli(1000);
     timing = new Timing(baseTime);
+    timing.start(baseTime.plusMillis(1));
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
     when(sessionInfo.getSessionId()).thenReturn("session_id");
     when(jobInfo.locator()).thenReturn(new JobLocator("job_id", "job_name"));
     properties = new Properties(timing);
     when(jobInfo.properties()).thenReturn(properties);
+    when(jobInfo.type()).thenReturn(JobType.newBuilder().setDriver("XtsTradefedTest").build());
+    when(jobInfo.status()).thenReturn(new Status(timing).set(TestStatus.RUNNING));
+    when(jobInfo.result())
+        .thenReturn(new Result(timing, new Params(timing)).set(TestResult.UNKNOWN));
     when(jobInfo2.locator()).thenReturn(new JobLocator("job_id2", "job_name2"));
     when(jobInfo2.properties()).thenReturn(properties);
+    when(jobInfo2.type()).thenReturn(JobType.newBuilder().setDriver("XtsTradefedTest").build());
+    when(jobInfo2.status()).thenReturn(new Status(timing).set(TestStatus.RUNNING));
+    when(jobInfo2.result())
+        .thenReturn(new Result(timing, new Params(timing)).set(TestResult.UNKNOWN));
     when(moblyJobInfo.locator()).thenReturn(new JobLocator("mobly_job_id", "mobly_job_name"));
     when(moblyJobInfo.properties()).thenReturn(properties);
+    when(moblyJobInfo.type()).thenReturn(JobType.newBuilder().setDriver("MoblyTest").build());
+    when(moblyJobInfo.status()).thenReturn(new Status(timing).set(TestStatus.RUNNING));
+    when(moblyJobInfo.result())
+        .thenReturn(new Result(timing, new Params(timing)).set(TestResult.UNKNOWN));
     when(moblyJobInfo2.locator()).thenReturn(new JobLocator("mobly_job_id2", "mobly_job_name2"));
     when(moblyJobInfo2.properties()).thenReturn(properties);
+    when(moblyJobInfo2.type()).thenReturn(JobType.newBuilder().setDriver("MoblyTest").build());
+    when(moblyJobInfo2.status()).thenReturn(new Status(timing).set(TestStatus.RUNNING));
+    when(moblyJobInfo2.result())
+        .thenReturn(new Result(timing, new Params(timing)).set(TestResult.UNKNOWN));
     when(xtsJobCreator.createXtsTradefedTestJob(any()))
         .thenReturn(ImmutableList.of(jobInfo))
         .thenReturn(ImmutableList.of(jobInfo2));
@@ -258,7 +275,6 @@ public final class AtsServerSessionPluginTest {
     when(jobInfo2.tests()).thenReturn(testInfos);
 
     when(testInfo.timing()).thenReturn(timing);
-    timing.start(baseTime.plusMillis(1));
     var unused = timing.end(baseTime.plusMillis(2));
     when(testInfo.status()).thenReturn(new Status(timing).set(TestStatus.DONE));
     Result result = new Result(timing, new Params(timing)).set(TestResult.PASS);
@@ -538,7 +554,7 @@ public final class AtsServerSessionPluginTest {
 
     // Verify added non tradefed jobs.
     verify(sessionInfo, never()).addJob(moblyJobInfo);
-    verify(sessionInfo, times(3))
+    verify(sessionInfo, times(4))
         .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
     RequestDetail requestDetail = unaryOperatorCaptor.getValue().apply(null);
     assertThat(requestDetail.getState()).isEqualTo(RequestState.CANCELED);
@@ -594,7 +610,7 @@ public final class AtsServerSessionPluginTest {
   }
 
   @Test
-  public void onJobEnded_mulitpleTradefedJobsEnded_lastOneTriggerNonTradefedJob() throws Exception {
+  public void onJobEnded_multipleTradefedJobsEnded_lastOneTriggerNonTradefedJob() throws Exception {
     request = request.toBuilder().addCommands(commandInfo).build();
     when(sessionInfo.getSessionPluginExecutionConfig())
         .thenReturn(
@@ -666,7 +682,7 @@ public final class AtsServerSessionPluginTest {
 
     // Verify that plugin didn't create any new job.
     verify(sessionInfo).addJob(jobInfo);
-    verify(sessionInfo, times(2))
+    verify(sessionInfo, times(3))
         .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
     RequestDetail requestDetail = Iterables.getLast(unaryOperatorCaptor.getAllValues()).apply(null);
     assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
