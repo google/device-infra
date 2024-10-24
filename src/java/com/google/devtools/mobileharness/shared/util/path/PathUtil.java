@@ -34,6 +34,17 @@ public final class PathUtil {
   private static final Pattern NON_SLASH_SUFFIX_PATTERN = Pattern.compile("(.*[^/])/+$");
 
   /**
+   * Determines if a path is absolute or not by testing for the presence of "/" at the front of the
+   * string.
+   *
+   * @param path The path to test
+   * @return true if the path starts with DELIMITER, false otherwise.
+   */
+  public static boolean isAbsolute(String path) {
+    return !path.isEmpty() && path.charAt(0) == '/';
+  }
+
+  /**
    * Gets the final component from a path. Trailing slashes are removed.
    *
    * <p>Examples:

@@ -66,6 +66,19 @@ public class PathUtilTest extends TestCase {
     }
   }
 
+  public void testIsAbsolute() throws Exception {
+    assertTrue(PathUtil.isAbsolute("/foo"));
+    assertTrue(PathUtil.isAbsolute("/"));
+    assertFalse(PathUtil.isAbsolute("foo"));
+    assertFalse(PathUtil.isAbsolute(""));
+
+    try {
+      PathUtil.isAbsolute(null);
+      fail();
+    } catch (NullPointerException expected) {
+    }
+  }
+
   public void testBasename() throws Exception {
     assertEquals("", PathUtil.basename(""));
     assertEquals("", PathUtil.basename("/"));
