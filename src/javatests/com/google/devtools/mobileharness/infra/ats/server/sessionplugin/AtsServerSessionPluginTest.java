@@ -960,10 +960,11 @@ public final class AtsServerSessionPluginTest {
     // Verify didn't run retry as retry is not allowed.
     verify(localSessionStub, never()).createSession(any());
 
-    // sessionInfo.setSessionPluginOutput() is called 4 times. First time in
+    // sessionInfo.setSessionPluginOutput() is called 5 times. First time in
     // OnSessionStarting() after creating tradefed jobs. Second and third times in OnJobEnded()
-    // after job ended signal trigger session output update. Fourth time in OnSessionEnded().
-    verify(sessionInfo, times(4))
+    // after job ended signal trigger session output update. Fourth time and fifth time in
+    // OnSessionEnded() after handing the session result and after setting error message.
+    verify(sessionInfo, times(5))
         .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
     RequestDetail requestDetail = Iterables.getLast(unaryOperatorCaptor.getAllValues()).apply(null);
     assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
