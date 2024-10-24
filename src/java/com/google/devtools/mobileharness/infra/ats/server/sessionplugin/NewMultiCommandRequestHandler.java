@@ -90,12 +90,10 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Pattern;
-import javax.annotation.concurrent.NotThreadSafe;
 import javax.inject.Inject;
 import org.xmlpull.v1.XmlPullParserException;
 
 /** Handler for ATS server's create test jobs request. */
-@NotThreadSafe
 final class NewMultiCommandRequestHandler {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
@@ -225,13 +223,10 @@ final class NewMultiCommandRequestHandler {
       SessionInfo sessionInfo,
       RequestDetail.Builder requestDetailBuilder)
       throws InterruptedException, MobileHarnessException {
-    SessionRequestInfo sessionRequestInfo;
-    if (sessionRequestInfoCache.containsKey(commandInfo)) {
-      sessionRequestInfo = sessionRequestInfoCache.get(commandInfo);
-    } else {
-      sessionRequestInfo = generateSessionRequestInfo(request, commandInfo, sessionInfo);
-      sessionRequestInfoCache.put(commandInfo, sessionRequestInfo);
-    }
+    SessionRequestInfo sessionRequestInfo =
+        getSessionRequestInfo(request, commandInfo, sessionInfo);
+    sessionRequestInfo = sessionRequestHandlerUtil.addNonTradefedModuleInfo(sessionRequestInfo);
+
     SetMultimap<String, String> commandToJobsMap = getCommandToJobsMap(sessionInfo);
 
     ImmutableList<JobInfo> jobInfos;
@@ -331,8 +326,7 @@ final class NewMultiCommandRequestHandler {
 
     // Validates request and generate a sessionRequestInfo that is needed to create a jobInfo.
     try {
-      sessionRequestInfo = generateSessionRequestInfo(request, commandInfo, sessionInfo);
-      sessionRequestInfoCache.put(commandInfo, sessionRequestInfo);
+      sessionRequestInfo = getSessionRequestInfo(request, commandInfo, sessionInfo);
     } catch (MobileHarnessException e) {
       commandDetailBuilder.setState(CommandState.ERROR);
       requestDetailBuilder.putCommandDetails(
@@ -415,6 +409,31 @@ final class NewMultiCommandRequestHandler {
     return PathUtil.join(
         RemoteFileType.ATS_FILE_SERVER.prefix(),
         PathUtil.makeRelative(Flags.instance().atsStoragePath.getNonNull(), path));
+  }
+
+  @SuppressWarnings("ThrowSpecificExceptions")
+  private SessionRequestInfo getSessionRequestInfo(
+      NewMultiCommandRequest request, CommandInfo commandInfo, SessionInfo sessionInfo)
+      throws MobileHarnessException, InterruptedException {
+    try {
+      return sessionRequestInfoCache.computeIfAbsent(
+          commandInfo,
+          key -> {
+            try {
+              return generateSessionRequestInfo(request, key, sessionInfo);
+            } catch (MobileHarnessException | InterruptedException e) {
+              throw new RuntimeException(e);
+            }
+          });
+    } catch (RuntimeException e) {
+      if (e.getCause() instanceof MobileHarnessException) {
+        throw (MobileHarnessException) e.getCause();
+      } else if (e.getCause() instanceof InterruptedException) {
+        throw (InterruptedException) e.getCause();
+      } else {
+        throw e;
+      }
+    }
   }
 
   private SessionRequestInfo generateSessionRequestInfo(
@@ -536,7 +555,7 @@ final class NewMultiCommandRequestHandler {
         sessionInfo.getSessionId(), localFileUtil.readFile(commandPath));
     sessionRequestInfoBuilder.setTestPlanFile(
         replacePathForRemoteRunner(commandPath.toAbsolutePath().toString()));
-    return sessionRequestHandlerUtil.addNonTradefedModuleInfo(sessionRequestInfoBuilder.build());
+    return sessionRequestInfoBuilder.build();
   }
 
   /**
@@ -584,15 +603,10 @@ final class NewMultiCommandRequestHandler {
     try {
       for (CommandDetail commandDetail : requestDetail.getCommandDetailsMap().values()) {
         SessionRequestInfo sessionRequestInfo =
-            sessionRequestInfoCache.get(commandDetail.getOriginalCommandInfo());
-        if (sessionRequestInfo == null) {
-          sessionRequestInfo =
-              generateSessionRequestInfo(
-                  requestDetail.getOriginalRequest(),
-                  commandDetail.getOriginalCommandInfo(),
-                  sessionInfo);
-          sessionRequestInfoCache.put(commandDetail.getOriginalCommandInfo(), sessionRequestInfo);
-        }
+            getSessionRequestInfo(
+                requestDetail.getOriginalRequest(),
+                commandDetail.getOriginalCommandInfo(),
+                sessionInfo);
         String commandId = commandDetail.getId();
         Path outputDirPath =
             Path.of(outputUrl.getPath()).resolve(sessionInfo.getSessionId()).resolve(commandId);
@@ -712,6 +726,7 @@ final class NewMultiCommandRequestHandler {
     if (!mountedXtsRootDir.isEmpty()) {
       try {
         unmountZip(mountedXtsRootDir);
+        mountedXtsRootDir = "";
       } catch (MobileHarnessException e) {
         logger.atWarning().withCause(e).log(
             "Failed to unmount xts root directory: %s", mountedXtsRootDir);
