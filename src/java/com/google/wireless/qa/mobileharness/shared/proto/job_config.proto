@@ -94,8 +94,9 @@ message JobConfig {
 
   message DeviceList {
     repeated SubDeviceSpec sub_device_spec = 1;
-    // A list of dimensions that must have a common value for all devices.
-    repeated string shared_dimension_name = 2 [deprecated = true];
+
+    // Deprecated fields. DO NOT use.
+    reserved 2;
   }
 
   // Required device in test.

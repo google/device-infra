@@ -37,7 +37,6 @@ message JobConfig {
   repeated mobileharness.shared.StrPair file = 6;
   repeated string test = 7;
   optional mobileharness.shared.Timeout timeout = 8;
-  optional mobileharness.shared.Retry deprecated_retry = 9 [deprecated = true];
   optional mobileharness.api.model.Retry retry = 16;
   optional mobileharness.api.model.Repeat repeat = 17;
   repeated mobileharness.client.JobConfig.SubDeviceSpec sub_device_spec = 18;
@@ -51,6 +50,8 @@ message JobConfig {
   optional JobConfigFromTarget job_config_from_target = 13;
   optional string master_spec = 14;
   optional mobileharness.shared.Priority priority = 15 [default = DEFAULT];
+
+  reserved 9, 10;
 }
 
 // MH's JobConfig from test target.
