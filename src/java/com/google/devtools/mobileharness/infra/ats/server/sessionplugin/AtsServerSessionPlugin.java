@@ -62,6 +62,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Result;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Status;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
+import com.google.wireless.qa.mobileharness.shared.proto.Job.TestStatus;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -94,9 +95,6 @@ final class AtsServerSessionPlugin {
   // The source of truth for this session's request states.
   @GuardedBy("sessionLock")
   private final RequestDetail.Builder requestDetail = RequestDetail.newBuilder();
-
-  @GuardedBy("sessionLock")
-  private int runningTradefedJobCount = 0;
 
   @GuardedBy("sessionLock")
   private final List<TestInfo> startedTestsBeforeCancellation = new ArrayList<>();
@@ -183,7 +181,6 @@ final class AtsServerSessionPlugin {
           if (!tradefedJobs.isEmpty()) {
             // Add tradefed jobs to session.
             addJobsToSession(tradefedJobs);
-            runningTradefedJobCount = tradefedJobs.size();
           } else {
             // If no tradefed job was added, add non tradefed jobs directly.
             addJobsToSession(nonTradefedJobs);
@@ -221,31 +218,49 @@ final class AtsServerSessionPlugin {
 
     // If all tradefed jobs have ended, create non tradefed jobs.
     synchronized (sessionLock) {
-      if (requestDetail.getState() == RequestState.CANCELED) {
-        return;
-      }
-      // If a non-tradefed tests ended, that means all non-tradefed tests had already been created
-      // and no need to create more.
-      if (!jobInfo.type().getDriver().equals(TRADEFED_DRIVER_NAME)) {
-        return;
-      }
-      runningTradefedJobCount -= 1;
-      // Skip if there are still TF jobs running.
-      if (runningTradefedJobCount > 0) {
-        return;
-      }
+      try {
+        if (requestDetail.getState() == RequestState.CANCELED) {
+          return;
+        }
+        // If a non-tradefed tests ended, that means all non-tradefed tests had already been created
+        // and no need to create more.
+        if (!jobInfo.type().getDriver().equals(TRADEFED_DRIVER_NAME)) {
+          return;
+        }
 
-      // Non-tradefed jobs might be lost in long-running sessions. Re-initialize them to ensure
-      // they are executed.
-      if (nonTradefedJobs == null) {
-        nonTradefedJobs =
-            newMultiCommandRequestHandler.createNonTradefedJobs(
-                requestDetail.getOriginalRequest(), sessionInfo, requestDetail);
+        boolean sessionHasUnfinishedTradefedJob =
+            sessionInfo.getAllJobs().stream()
+                .anyMatch(
+                    job ->
+                        job.type().getDriver().equals(TRADEFED_DRIVER_NAME)
+                            && !job.status().get().equals(TestStatus.DONE));
+        if (sessionHasUnfinishedTradefedJob) {
+          // If there are still running tradefed jobs, wait and not add non-tradefed jobs.
+          return;
+        }
+
+        boolean sessionHasNonTradefedJobs =
+            sessionInfo.getAllJobs().stream()
+                .anyMatch(job -> !job.type().getDriver().equals(TRADEFED_DRIVER_NAME));
+        if (sessionHasNonTradefedJobs) {
+          // If there are non-tradefed jobs, that means all non-tradefed tests had already been
+          // added. So no need to add again. This can happen when two jobs end at the same time.
+          return;
+        }
+
+        // Non-tradefed jobs might be lost in the resumed sessions. Re-initialize them to ensure
+        // they are executed.
+        if (nonTradefedJobs == null) {
+          nonTradefedJobs =
+              newMultiCommandRequestHandler.createNonTradefedJobs(
+                  requestDetail.getOriginalRequest(), sessionInfo, requestDetail);
+        }
+        if (!nonTradefedJobs.isEmpty()) {
+          addJobsToSession(nonTradefedJobs);
+        }
+      } finally {
+        updateSessionPluginOutput();
       }
-      if (!nonTradefedJobs.isEmpty()) {
-        addJobsToSession(nonTradefedJobs);
-      }
-      updateSessionPluginOutput();
     }
   }
 
