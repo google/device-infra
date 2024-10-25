@@ -1,0 +1,90 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package mobileharness.service.labconsole.labdata;
+
+option java_package = "com.google.devtools.mobileharness.service.labconsole.labdata";
+option java_multiple_files = true;
+
+// Composite condition which supports nested AND, OR, and NOT clauses. If the
+// whole compositecondition is empty, it is considered true.
+message CompositeCondition {
+  // Nested AND clause.
+  message AndClause {
+    // The list of conditions to be ANDed together. If the list is empty, the
+    // clause is considered true.
+    repeated CompositeCondition condition = 1;
+  }
+  // Nested OR clause.
+  message OrClause {
+    // The list of conditions to be ORed together. If the list is empty, the
+    // clause is considered false.
+    repeated CompositeCondition condition = 1;
+  }
+  // Nested NOT clause. It represents the negation of the given filter.
+  message NotClause {
+    // The condition to be NOTed. If this field is an empty
+    // `CompositeCondition`, the clause is considered false.
+    CompositeCondition condition = 1;
+  }
+
+  // The specific clause of the composite condition.
+  oneof clause {
+    // AND clause.
+    AndClause and_clause = 1;
+    // OR clause.
+    OrClause or_clause = 2;
+    // NOT clause.
+    NotClause not_clause = 3;
+    // A single filter entry.
+    BasicCondition basic_condition = 4;
+  }
+}
+
+// BasicCondition is a single condition which can be either a host filter entry
+// or a device filter entry.
+message BasicCondition {
+  oneof condition {
+    // A host filter entry.
+    HostFilterEntry host_filter_entry = 1;
+    // A device filter entry.
+    DeviceFilterEntry device_filter_entry = 2;
+  }
+}
+
+// TODO: Complete the filter entry definition.
+message DeviceFilterEntry {}
+
+// DeviceFilter is a recursive structure to represent a filter for devices.
+// It supports nested AND, OR, and NOT clauses, as well as a single filter
+// entry.
+// All the `BasicCondition` in the `DeviceFilter` should be `DeviceFilterEntry`.
+message DeviceFilter {
+  CompositeCondition condition = 1;
+}
+
+// TODO: Complete the filter entry definition.
+message HostFilterEntry {}
+
+// HostFilter is a recursive structure to represent a filter for hosts.
+// It supports nested AND, OR, and NOT clauses, as well as a single filter
+// entry.
+// All the `BasicCondition` in the `HostFilter` should be `HostFilterEntry`.
+message HostFilter {
+  CompositeCondition condition = 1;
+}
