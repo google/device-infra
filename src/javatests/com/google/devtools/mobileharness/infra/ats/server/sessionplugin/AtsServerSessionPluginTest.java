@@ -1071,7 +1071,7 @@ public final class AtsServerSessionPluginTest {
     JobType jobType = JobType.newBuilder().setDriver("XtsTradefedTest").build();
     when(jobInfo.type()).thenReturn(jobType);
     plugin.onJobEnded(new JobEndEvent(jobInfo, null));
-    IllegalStateException exception = Mockito.mock(IllegalStateException.class);
+    IllegalStateException exception = new IllegalStateException("test");
     doThrow(exception)
         .when(sessionResultHandlerUtil)
         .processResult(any(), any(), any(), any(), any(), any());

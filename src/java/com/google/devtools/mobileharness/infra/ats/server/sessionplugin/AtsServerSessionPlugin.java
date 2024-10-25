@@ -20,6 +20,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -27,6 +28,7 @@ import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.Ats
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.AtsServerSessionNotification.NotificationCase;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CancelReason;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandAttemptDetail;
+import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandDetail;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandState;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.ErrorReason;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.NewMultiCommandRequest;
@@ -34,6 +36,8 @@ import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.Req
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.RequestDetail.RequestState;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.SessionRequest;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.SessionRequest.RequestCase;
+import com.google.devtools.mobileharness.infra.ats.server.sessionplugin.NewMultiCommandRequestHandler.CreateJobsResult;
+import com.google.devtools.mobileharness.infra.ats.server.sessionplugin.NewMultiCommandRequestHandler.HandleResultProcessingResult;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionEndedEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionNotificationEvent;
@@ -147,19 +151,31 @@ final class AtsServerSessionPlugin {
             requestDetail.setState(RequestState.RUNNING);
           }
 
-          // Create tradefed jobs.
-          ImmutableList<JobInfo> tradefedJobs =
-              newMultiCommandRequestHandler.createTradefedJobs(
-                  newMultiCommandRequest, sessionInfo, requestDetail);
-          if (!requestDetail.getState().equals(RequestState.RUNNING)) {
+          CreateJobsResult createTradefedJobsResult =
+              newMultiCommandRequestHandler.createTradefedJobs(newMultiCommandRequest, sessionInfo);
+          ImmutableList<JobInfo> tradefedJobs = createTradefedJobsResult.jobInfos();
+          requestDetail.setState(createTradefedJobsResult.state());
+          createTradefedJobsResult.errorReason().ifPresent(requestDetail::setErrorReason);
+          createTradefedJobsResult
+              .errorMessage()
+              .ifPresent(errorMessage -> appendErrorMessage(requestDetail, errorMessage));
+          createTradefedJobsResult.commandDetails().forEach(requestDetail::putCommandDetails);
+          if (!createTradefedJobsResult.state().equals(RequestState.RUNNING)) {
             return;
           }
 
           // Create non-tradefed jobs.
-          nonTradefedJobs =
+          CreateJobsResult createNonTradefedJobsResult =
               newMultiCommandRequestHandler.createNonTradefedJobs(
-                  newMultiCommandRequest, sessionInfo, requestDetail);
-          if (!requestDetail.getState().equals(RequestState.RUNNING)) {
+                  newMultiCommandRequest, sessionInfo);
+          requestDetail.setState(createNonTradefedJobsResult.state());
+          nonTradefedJobs = createNonTradefedJobsResult.jobInfos();
+          createNonTradefedJobsResult.errorReason().ifPresent(requestDetail::setErrorReason);
+          createNonTradefedJobsResult
+              .errorMessage()
+              .ifPresent(errorMessage -> appendErrorMessage(requestDetail, errorMessage));
+          createNonTradefedJobsResult.commandDetails().forEach(requestDetail::putCommandDetails);
+          if (!createNonTradefedJobsResult.state().equals(RequestState.RUNNING)) {
             return;
           }
 
@@ -175,6 +191,8 @@ final class AtsServerSessionPlugin {
                 sessionInfo.getSessionId());
             return;
           }
+
+          requestDetail.setUpdateTime(Timestamps.fromMillis(clock.millis()));
 
           // Ensure non-tradefed jobs are added only if no tradefed jobs exist or all tradefed jobs
           // have ended.
@@ -251,9 +269,10 @@ final class AtsServerSessionPlugin {
         // Non-tradefed jobs might be lost in the resumed sessions. Re-initialize them to ensure
         // they are executed.
         if (nonTradefedJobs == null) {
-          nonTradefedJobs =
+          CreateJobsResult createNonTradefedJobsResult =
               newMultiCommandRequestHandler.createNonTradefedJobs(
-                  requestDetail.getOriginalRequest(), sessionInfo, requestDetail);
+                  requestDetail.getOriginalRequest(), sessionInfo);
+          nonTradefedJobs = createNonTradefedJobsResult.jobInfos();
         }
         if (!nonTradefedJobs.isEmpty()) {
           addJobsToSession(nonTradefedJobs);
@@ -270,16 +289,35 @@ final class AtsServerSessionPlugin {
 
     synchronized (sessionLock) {
       try {
-        newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail);
-      } finally {
+        HandleResultProcessingResult handleResultProcessingResult =
+            newMultiCommandRequestHandler.handleResultProcessing(
+                sessionInfo,
+                requestDetail.getOriginalRequest(),
+                requestDetail.getCommandDetailsMap().values());
         // Set final state if not in terminal state.
-        if (requestDetail.getState().equals(RequestState.RUNNING)
-            || requestDetail.getState().equals(RequestState.UNKNOWN)) {
+        if (handleResultProcessingResult.state().equals(RequestState.RUNNING)
+            || handleResultProcessingResult.state().equals(RequestState.UNKNOWN)) {
           requestDetail.setState(
-              hasSessionPassed(requestDetail.build())
+              hasSessionPassed(handleResultProcessingResult.commandDetails())
                   ? RequestState.COMPLETED
                   : RequestState.ERROR);
+        } else {
+          requestDetail.setState(handleResultProcessingResult.state());
         }
+        handleResultProcessingResult.errorReason().ifPresent(requestDetail::setErrorReason);
+        handleResultProcessingResult
+            .errorMessage()
+            .ifPresent(errorMessage -> appendErrorMessage(requestDetail, errorMessage));
+        requestDetail
+            .putAllCommandDetails(handleResultProcessingResult.commandDetails())
+            .putAllTestContext(handleResultProcessingResult.testContexts());
+      } catch (Throwable e) {
+        requestDetail
+            .setState(RequestState.ERROR)
+            .setErrorReason(ErrorReason.RESULT_PROCESSING_ERROR)
+            .setErrorMessage(e.getMessage());
+        throw e;
+      } finally {
         updateSessionPluginOutput();
       }
 
@@ -501,9 +539,9 @@ final class AtsServerSessionPlugin {
     }
   }
 
-  private boolean hasSessionPassed(RequestDetail requestDetail) {
-    return !requestDetail.getCommandDetailsMap().isEmpty()
-        && requestDetail.getCommandDetailsMap().values().stream()
+  private boolean hasSessionPassed(ImmutableMap<String, CommandDetail> commandDetailsMap) {
+    return !commandDetailsMap.isEmpty()
+        && commandDetailsMap.values().stream()
             .allMatch(commandDetail -> commandDetail.getState() == CommandState.COMPLETED);
   }
 
@@ -525,5 +563,19 @@ final class AtsServerSessionPlugin {
         return CommandState.CANCELED;
     }
     return CommandState.UNKNOWN_STATE;
+  }
+
+  private static void appendErrorMessage(RequestDetail.Builder requestDetail, String newMessage) {
+    requestDetail.setErrorMessage(appendErrorMessage(requestDetail.getErrorMessage(), newMessage));
+  }
+
+  private static String appendErrorMessage(String existingMessage, String newMessage) {
+    if (existingMessage.isBlank()) {
+      return newMessage;
+    }
+    if (newMessage.isBlank()) {
+      return existingMessage;
+    }
+    return existingMessage + " //--// " + newMessage;
   }
 }

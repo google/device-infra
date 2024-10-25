@@ -23,6 +23,7 @@ import static com.google.devtools.mobileharness.shared.util.error.MoreThrowables
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toJavaDuration;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
+import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableCollection;
@@ -54,7 +55,6 @@ import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.Com
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandState;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.ErrorReason;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.NewMultiCommandRequest;
-import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.RequestDetail;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.RequestDetail.RequestState;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestContext;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestResource;
@@ -83,6 +83,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -91,6 +92,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Pattern;
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 import org.xmlpull.v1.XmlPullParserException;
 
@@ -147,20 +149,22 @@ final class NewMultiCommandRequestHandler {
     this.xtsJobCreator = xtsJobCreator;
   }
 
-  ImmutableList<JobInfo> createTradefedJobs(
-      NewMultiCommandRequest request,
-      SessionInfo sessionInfo,
-      RequestDetail.Builder requestDetailBuilder)
+  CreateJobsResult createTradefedJobs(NewMultiCommandRequest request, SessionInfo sessionInfo)
       throws InterruptedException {
     if (request.getCommandsList().isEmpty()) {
-      setRequestError(requestDetailBuilder, ErrorReason.INVALID_REQUEST, "COMMAND_NOT_AVAILABLE");
-      return ImmutableList.of();
+      return CreateJobsResult.of(
+          RequestState.ERROR,
+          ErrorReason.INVALID_REQUEST,
+          "COMMAND_NOT_AVAILABLE",
+          ImmutableMap.of(),
+          ImmutableList.of());
     }
     ImmutableList.Builder<JobInfo> jobInfoBuilder = ImmutableList.builder();
+    ImmutableMap.Builder<String, CommandDetail> commandDetailsBuilder = ImmutableMap.builder();
     for (CommandInfo commandInfo : request.getCommandsList()) {
       try {
         ImmutableList<JobInfo> jobInfos =
-            createXtsTradefedTestJob(request, commandInfo, sessionInfo, requestDetailBuilder);
+            createXtsTradefedTestJob(request, commandInfo, sessionInfo, commandDetailsBuilder);
         jobInfoBuilder.addAll(jobInfos);
       } catch (MobileHarnessException e) {
         logger.atWarning().withCause(e).log(
@@ -170,34 +174,41 @@ final class NewMultiCommandRequestHandler {
             INVALID_RESOURCE_ERROR_IDS.contains(e.getErrorId())
                 ? ErrorReason.INVALID_RESOURCE
                 : ErrorReason.INVALID_REQUEST;
-        setRequestError(
-            requestDetailBuilder,
+        return CreateJobsResult.of(
+            RequestState.ERROR,
             errorReason,
             String.format(
                 "INVALID_COMMAND_%s with error: %s",
-                commandInfo.getCommandLine(), shortDebugString(e)));
-        return ImmutableList.of();
+                commandInfo.getCommandLine(), shortDebugString(e)),
+            commandDetailsBuilder.buildKeepingLast(),
+            jobInfoBuilder.build());
       }
     }
-    requestDetailBuilder.setUpdateTime(Timestamps.fromMillis(clock.millis()));
-    return jobInfoBuilder.build();
+    return CreateJobsResult.of(
+        RequestState.RUNNING,
+        null,
+        null,
+        commandDetailsBuilder.buildKeepingLast(),
+        jobInfoBuilder.build());
   }
 
-  ImmutableList<JobInfo> createNonTradefedJobs(
-      NewMultiCommandRequest request,
-      SessionInfo sessionInfo,
-      RequestDetail.Builder requestDetailBuilder)
+  CreateJobsResult createNonTradefedJobs(NewMultiCommandRequest request, SessionInfo sessionInfo)
       throws InterruptedException {
     if (request.getCommandsList().isEmpty()) {
-      setRequestError(requestDetailBuilder, ErrorReason.INVALID_REQUEST, "COMMAND_NOT_AVAILABLE");
-      return ImmutableList.of();
+      return CreateJobsResult.of(
+          RequestState.ERROR,
+          ErrorReason.INVALID_REQUEST,
+          "COMMAND_NOT_AVAILABLE",
+          ImmutableMap.of(),
+          ImmutableList.of());
     }
 
     ImmutableList.Builder<JobInfo> jobInfoBuilder = ImmutableList.builder();
+    ImmutableMap.Builder<String, CommandDetail> commandDetailsBuilder = ImmutableMap.builder();
     for (CommandInfo commandInfo : request.getCommandsList()) {
       try {
         jobInfoBuilder.addAll(
-            createNonTradefedJobs(request, commandInfo, sessionInfo, requestDetailBuilder));
+            createNonTradefedJobs(request, commandInfo, sessionInfo, commandDetailsBuilder));
       } catch (MobileHarnessException e) {
         logger.atWarning().withCause(e).log(
             "Failed to create non-tradefed jobs for command [%s]. Interrupt the session [%s].",
@@ -206,23 +217,29 @@ final class NewMultiCommandRequestHandler {
             INVALID_RESOURCE_ERROR_IDS.contains(e.getErrorId())
                 ? ErrorReason.INVALID_RESOURCE
                 : ErrorReason.INVALID_REQUEST;
-        setRequestError(
-            requestDetailBuilder,
+        return CreateJobsResult.of(
+            RequestState.ERROR,
             errorReason,
             String.format(
                 "INVALID_COMMAND_%s with error: %s",
-                commandInfo.getCommandLine(), shortDebugString(e)));
-        return ImmutableList.of();
+                commandInfo.getCommandLine(), shortDebugString(e)),
+            commandDetailsBuilder.buildKeepingLast(),
+            jobInfoBuilder.build());
       }
     }
-    return jobInfoBuilder.build();
+    return CreateJobsResult.of(
+        RequestState.RUNNING,
+        null,
+        null,
+        commandDetailsBuilder.buildKeepingLast(),
+        jobInfoBuilder.build());
   }
 
   private ImmutableList<JobInfo> createNonTradefedJobs(
       NewMultiCommandRequest request,
       CommandInfo commandInfo,
       SessionInfo sessionInfo,
-      RequestDetail.Builder requestDetailBuilder)
+      ImmutableMap.Builder<String, CommandDetail> commandDetailsBuilder)
       throws InterruptedException, MobileHarnessException {
     SessionRequestInfo sessionRequestInfo =
         getSessionRequestInfo(request, commandInfo, sessionInfo);
@@ -268,15 +285,13 @@ final class NewMultiCommandRequestHandler {
         commandDetail.ifPresent(
             builder -> {
               builder.setState(CommandState.ERROR);
-              requestDetailBuilder.putCommandDetails(
-                  "UNKNOWN_" + commandInfo.getCommandLine(), builder.build());
+              commandDetailsBuilder.put("UNKNOWN_" + commandInfo.getCommandLine(), builder.build());
             });
         throw e;
       }
       jobInfo.properties().add(XtsPropertyName.Job.XTS_COMMAND_ID, commandId);
     }
-    commandDetail.ifPresent(
-        builder -> requestDetailBuilder.putCommandDetails(commandId, builder.build()));
+    commandDetail.ifPresent(builder -> commandDetailsBuilder.put(commandId, builder.build()));
     return jobInfos;
   }
 
@@ -312,7 +327,7 @@ final class NewMultiCommandRequestHandler {
       NewMultiCommandRequest request,
       CommandInfo commandInfo,
       SessionInfo sessionInfo,
-      RequestDetail.Builder requestDetailBuilder)
+      ImmutableMap.Builder<String, CommandDetail> commandDetailsBuilder)
       throws InterruptedException, MobileHarnessException {
     SessionRequestInfo sessionRequestInfo;
     CommandDetail.Builder commandDetailBuilder = CommandDetail.newBuilder();
@@ -330,7 +345,7 @@ final class NewMultiCommandRequestHandler {
       sessionRequestInfo = getSessionRequestInfo(request, commandInfo, sessionInfo);
     } catch (MobileHarnessException e) {
       commandDetailBuilder.setState(CommandState.ERROR);
-      requestDetailBuilder.putCommandDetails(
+      commandDetailsBuilder.put(
           "UNKNOWN_" + commandInfo.getCommandLine(), commandDetailBuilder.build());
       throw e;
     }
@@ -343,12 +358,12 @@ final class NewMultiCommandRequestHandler {
         logger.atInfo().log(
             "Unable to create tradefed jobs for command [%s] due to skippable exception: [%s].",
             commandInfo.getCommandLine(), shortDebugString(e));
-        requestDetailBuilder.putCommandDetails(
+        commandDetailsBuilder.put(
             "UNKNOWN_" + commandInfo.getCommandLine(), commandDetailBuilder.build());
         return ImmutableList.of();
       }
       commandDetailBuilder.setState(CommandState.ERROR);
-      requestDetailBuilder.putCommandDetails(
+      commandDetailsBuilder.put(
           "UNKNOWN_" + commandInfo.getCommandLine(), commandDetailBuilder.build());
       throw e;
     }
@@ -357,7 +372,7 @@ final class NewMultiCommandRequestHandler {
         insertAdditionalTestResource(jobInfo, request);
       } catch (MobileHarnessException e) {
         commandDetailBuilder.setState(CommandState.ERROR);
-        requestDetailBuilder.putCommandDetails(
+        commandDetailsBuilder.put(
             "UNKNOWN_" + commandInfo.getCommandLine(), commandDetailBuilder.build());
         throw e;
       }
@@ -371,7 +386,7 @@ final class NewMultiCommandRequestHandler {
     }
 
     CommandDetail commandDetail = commandDetailBuilder.build();
-    requestDetailBuilder.putCommandDetails(commandDetail.getId(), commandDetail);
+    commandDetailsBuilder.put(commandDetail.getId(), commandDetail);
     return jobInfoList;
   }
 
@@ -564,17 +579,24 @@ final class NewMultiCommandRequestHandler {
    * given xts root dir. Also update the request's command states based on the results.
    */
   @VisibleForTesting
-  void handleResultProcessing(SessionInfo sessionInfo, RequestDetail.Builder requestDetail)
+  HandleResultProcessingResult handleResultProcessing(
+      SessionInfo sessionInfo,
+      NewMultiCommandRequest request,
+      Collection<CommandDetail> commandDetails)
       throws InterruptedException {
-    handleResultProcessingInternal(sessionInfo, requestDetail);
+    HandleResultProcessingResult result =
+        handleResultProcessingInternal(sessionInfo, request, commandDetails);
     cleanup(sessionInfo);
+    return result;
   }
 
-  private void handleResultProcessingInternal(
-      SessionInfo sessionInfo, RequestDetail.Builder requestDetail) throws InterruptedException {
+  private HandleResultProcessingResult handleResultProcessingInternal(
+      SessionInfo sessionInfo,
+      NewMultiCommandRequest request,
+      Collection<CommandDetail> commandDetails)
+      throws InterruptedException {
     URL outputUrl = null;
-    String outputFileUploadUrl =
-        requestDetail.getOriginalRequest().getTestEnvironment().getOutputFileUploadUrl();
+    String outputFileUploadUrl = request.getTestEnvironment().getOutputFileUploadUrl();
     Map<String, JobInfo> jobIdToJobMap = new HashMap<>();
     for (JobInfo jobInfo : sessionInfo.getAllJobs()) {
       jobIdToJobMap.put(jobInfo.locator().getId(), jobInfo);
@@ -584,40 +606,40 @@ final class NewMultiCommandRequestHandler {
       outputUrl = URI.create(outputFileUploadUrl).toURL();
     } catch (IllegalArgumentException | MalformedURLException e) {
       logger.atWarning().withCause(e).log("Unable to create URL from %s", outputFileUploadUrl);
-      setRequestError(
-          requestDetail,
+      return HandleResultProcessingResult.of(
+          RequestState.ERROR,
           ErrorReason.RESULT_PROCESSING_ERROR,
-          "Unable to create URL from " + outputFileUploadUrl);
-      return;
+          "Unable to create URL from " + outputFileUploadUrl,
+          ImmutableMap.of(),
+          ImmutableMap.of());
     }
 
     if (!outputUrl.getProtocol().equals("file")) {
       logger.atWarning().log("Unsupported outputurl: %s", outputUrl);
       // Currently only supports local URL.
-      setRequestError(
-          requestDetail,
+      return HandleResultProcessingResult.of(
+          RequestState.ERROR,
           ErrorReason.RESULT_PROCESSING_ERROR,
-          "Unsupported outputurl: " + outputUrl);
-      return;
+          "Unsupported outputurl: " + outputUrl,
+          ImmutableMap.of(),
+          ImmutableMap.of());
     }
 
-    for (CommandDetail commandDetail : requestDetail.getCommandDetailsMap().values()) {
+    ImmutableMap.Builder<String, TestContext> testContextMap = ImmutableMap.builder();
+    ImmutableMap.Builder<String, CommandDetail> commandDetailMap = ImmutableMap.builder();
+    for (CommandDetail commandDetail : commandDetails) {
       CommandDetail.Builder commandDetailBuilder = commandDetail.toBuilder();
       String commandId = commandDetail.getId();
-      SessionRequestInfo sessionRequestInfo = null;
       try {
-        sessionRequestInfo =
-            getSessionRequestInfo(
-                requestDetail.getOriginalRequest(),
-                commandDetail.getOriginalCommandInfo(),
-                sessionInfo);
+        SessionRequestInfo sessionRequestInfo =
+            getSessionRequestInfo(request, commandDetail.getOriginalCommandInfo(), sessionInfo);
         Path outputDirPath =
             Path.of(outputUrl.getPath()).resolve(sessionInfo.getSessionId()).resolve(commandId);
         String resultDirectoryName =
             TIMESTAMP_DIR_NAME_FORMATTER.format(Instant.now()) + "_" + getRandom4Digits();
         Path resultDir = outputDirPath.resolve(resultDirectoryName);
         Path logDir = outputDirPath.resolve("logs");
-        Optional<Result> result =
+        Optional<Result> processResult =
             sessionResultHandlerUtil.processResult(
                 resultDir,
                 logDir,
@@ -627,11 +649,11 @@ final class NewMultiCommandRequestHandler {
                     .map(jobIdToJobMap::get)
                     .collect(toImmutableList()),
                 sessionRequestInfo);
-        if (result.isPresent() && result.get().hasSummary()) {
+        if (processResult.isPresent() && processResult.get().hasSummary()) {
           commandDetailBuilder
-              .setPassedTestCount(result.get().getSummary().getPassed())
-              .setFailedTestCount(result.get().getSummary().getFailed())
-              .setTotalModuleCount(result.get().getSummary().getModulesTotal())
+              .setPassedTestCount(processResult.get().getSummary().getPassed())
+              .setFailedTestCount(processResult.get().getSummary().getFailed())
+              .setTotalModuleCount(processResult.get().getSummary().getModulesTotal())
               .setTotalTestCount(
                   commandDetailBuilder.getPassedTestCount()
                       + commandDetailBuilder.getFailedTestCount());
@@ -640,20 +662,14 @@ final class NewMultiCommandRequestHandler {
         if (localFileUtil.isFileExist(resultZip)) {
           // Make sure the context command line is the original command line, not a retry command.
           String contextCommandLine = commandDetail.getCommandLine();
-          if (requestDetail.getOriginalRequest().hasPrevTestContext()
-              && !requestDetail
-                  .getOriginalRequest()
-                  .getPrevTestContext()
-                  .getCommandLine()
-                  .isEmpty()) {
-            contextCommandLine =
-                requestDetail.getOriginalRequest().getPrevTestContext().getCommandLine();
+          if (request.hasPrevTestContext()
+              && !request.getPrevTestContext().getCommandLine().isEmpty()) {
+            contextCommandLine = request.getPrevTestContext().getCommandLine();
           }
           TestContext testContext =
               TestContext.newBuilder()
                   .setCommandLine(contextCommandLine)
-                  .putAllEnvVar(
-                      requestDetail.getOriginalRequest().getTestEnvironment().getEnvVarsMap())
+                  .putAllEnvVar(request.getTestEnvironment().getEnvVarsMap())
                   .addTestResource(
                       TestResource.newBuilder()
                           .setName(resultZip.getFileName().toString())
@@ -661,16 +677,16 @@ final class NewMultiCommandRequestHandler {
                           .build())
                   .build();
           // TODO: filter context files.
-          requestDetail.putTestContext(commandId, testContext);
+          testContextMap.put(commandId, testContext);
         }
         // Remove dedicated result directory and move its files to '/<session_id>/<command_id>/'
         // level.
         localFileUtil.mergeDir(resultDir, outputDirPath);
 
-        if (requestDetail.getOriginalRequest().hasRetryPreviousSessionId()) {
+        if (request.hasRetryPreviousSessionId()) {
           Path prevResultDir =
               Path.of(outputUrl.getPath())
-                  .resolve(requestDetail.getOriginalRequest().getRetryPreviousSessionId())
+                  .resolve(request.getRetryPreviousSessionId())
                   .resolve(commandId);
           sessionResultHandlerUtil.copyRetryFiles(
               prevResultDir.toString(), outputDirPath.toString());
@@ -696,7 +712,7 @@ final class NewMultiCommandRequestHandler {
       commandDetailBuilder
           .setEndTime(Timestamps.fromMillis(clock.millis()))
           .setUpdateTime(Timestamps.fromMillis(clock.millis()));
-      requestDetail.putCommandDetails(commandId, commandDetailBuilder.build());
+      commandDetailMap.put(commandId, commandDetailBuilder.build());
     }
 
     // Record OLC server session logs if no command recorded it due to empty command list or result
@@ -722,6 +738,12 @@ final class NewMultiCommandRequestHandler {
             "Failed to create server session logs dir for session: %s", sessionInfo.getSessionId());
       }
     }
+    return HandleResultProcessingResult.of(
+        RequestState.RUNNING,
+        /* errorReason= */ null,
+        /* errorMessage= */ null,
+        commandDetailMap.buildKeepingLast(),
+        testContextMap.buildKeepingLast());
   }
 
   // Clean up temporary files and directories in session and jobs.
@@ -795,14 +817,6 @@ final class NewMultiCommandRequestHandler {
     }
   }
 
-  private static void setRequestError(
-      RequestDetail.Builder requestDetailBuilder, ErrorReason reason, String errorMessage) {
-    requestDetailBuilder
-        .setState(RequestState.ERROR)
-        .setErrorReason(reason)
-        .setErrorMessage(appendErrorMessage(requestDetailBuilder.getErrorMessage(), errorMessage));
-  }
-
   /**
    * Set command error and log the stack trace.
    *
@@ -822,17 +836,61 @@ final class NewMultiCommandRequestHandler {
         .setErrorMessage(errorMessage);
   }
 
-  private static String appendErrorMessage(String existingMessage, String newMessage) {
-    if (existingMessage.isBlank()) {
-      return newMessage;
-    }
-    if (newMessage.isBlank()) {
-      return existingMessage;
-    }
-    return existingMessage + " //--// " + newMessage;
-  }
-
   private static int getRandom4Digits() {
     return ThreadLocalRandom.current().nextInt(1000, 10000);
+  }
+
+  @AutoValue
+  public abstract static class CreateJobsResult {
+    private static CreateJobsResult of(
+        RequestState state,
+        @Nullable ErrorReason errorReason,
+        @Nullable String errorMessage,
+        ImmutableMap<String, CommandDetail> commandDetails,
+        ImmutableList<JobInfo> jobInfos) {
+      return new AutoValue_NewMultiCommandRequestHandler_CreateJobsResult(
+          state,
+          Optional.ofNullable(errorReason),
+          Optional.ofNullable(errorMessage),
+          commandDetails,
+          jobInfos);
+    }
+
+    public abstract RequestState state();
+
+    public abstract Optional<ErrorReason> errorReason();
+
+    public abstract Optional<String> errorMessage();
+
+    public abstract ImmutableMap<String, CommandDetail> commandDetails();
+
+    public abstract ImmutableList<JobInfo> jobInfos();
+  }
+
+  @AutoValue
+  public abstract static class HandleResultProcessingResult {
+    private static HandleResultProcessingResult of(
+        RequestState state,
+        @Nullable ErrorReason errorReason,
+        @Nullable String errorMessage,
+        ImmutableMap<String, CommandDetail> commandDetails,
+        ImmutableMap<String, TestContext> testContexts) {
+      return new AutoValue_NewMultiCommandRequestHandler_HandleResultProcessingResult(
+          state,
+          Optional.ofNullable(errorReason),
+          Optional.ofNullable(errorMessage),
+          commandDetails,
+          testContexts);
+    }
+
+    public abstract RequestState state();
+
+    public abstract Optional<ErrorReason> errorReason();
+
+    public abstract Optional<String> errorMessage();
+
+    public abstract ImmutableMap<String, CommandDetail> commandDetails();
+
+    public abstract ImmutableMap<String, TestContext> testContexts();
   }
 }

@@ -46,11 +46,12 @@ import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.Com
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandState;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.ErrorReason;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.NewMultiCommandRequest;
-import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.RequestDetail;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.RequestDetail.RequestState;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestContext;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestEnvironment;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestResource;
+import com.google.devtools.mobileharness.infra.ats.server.sessionplugin.NewMultiCommandRequestHandler.CreateJobsResult;
+import com.google.devtools.mobileharness.infra.ats.server.sessionplugin.NewMultiCommandRequestHandler.HandleResultProcessingResult;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
@@ -223,22 +224,22 @@ public final class NewMultiCommandRequestHandlerTest {
     when(clock.millis()).thenReturn(1000L).thenReturn(2000L).thenReturn(3000L);
     when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
-    RequestDetail.Builder requestDetail = RequestDetail.newBuilder();
 
-    ImmutableList<JobInfo> jobInfos =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo, requestDetail);
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
 
-    assertThat(jobInfos).isEmpty();
+    assertThat(createJobsResult.jobInfos()).isEmpty();
 
     // Verify request detail.
-    assertThat(requestDetail.getErrorReason()).isEqualTo(ErrorReason.INVALID_REQUEST);
-    assertThat(requestDetail.getState()).isEqualTo(RequestState.ERROR);
+    assertThat(createJobsResult.errorReason().get()).isEqualTo(ErrorReason.INVALID_REQUEST);
+    assertThat(createJobsResult.state()).isEqualTo(RequestState.ERROR);
 
     // Verify command detail.
-    assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
+    assertThat(createJobsResult.commandDetails()).hasSize(1);
     CommandDetail commandDetail =
-        requestDetail.getCommandDetailsOrThrow(
-            "UNKNOWN_" + commandInfoWithInvalidCommandLine.getCommandLine());
+        createJobsResult
+            .commandDetails()
+            .get("UNKNOWN_" + commandInfoWithInvalidCommandLine.getCommandLine());
     assertThat(commandDetail.getCommandLine())
         .isEqualTo(commandInfoWithInvalidCommandLine.getCommandLine());
     assertThat(commandDetail.getState()).isEqualTo(CommandState.ERROR);
@@ -251,16 +252,15 @@ public final class NewMultiCommandRequestHandlerTest {
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
 
     // Trigger the handler.
-    RequestDetail.Builder requestDetail = RequestDetail.newBuilder();
-    ImmutableList<JobInfo> jobInfos =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo, requestDetail);
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
 
-    assertThat(jobInfos).containsExactly(jobInfo);
-    assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
-    String commandId = requestDetail.getCommandDetailsMap().keySet().iterator().next();
+    assertThat(createJobsResult.jobInfos()).containsExactly(jobInfo);
+    assertThat(createJobsResult.commandDetails()).hasSize(1);
+    String commandId = createJobsResult.commandDetails().keySet().iterator().next();
     assertThat(commandId)
         .isEqualTo(UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString());
-    CommandDetail commandDetail = requestDetail.getCommandDetailsMap().values().iterator().next();
+    CommandDetail commandDetail = createJobsResult.commandDetails().values().iterator().next();
     assertThat(commandDetail.getCommandLine()).isEqualTo(commandInfo.getCommandLine());
     assertThat(commandDetail.getId()).isEqualTo(commandId);
     assertThat(properties.get("xts-tradefed-job")).isEqualTo("true");
@@ -325,16 +325,15 @@ public final class NewMultiCommandRequestHandlerTest {
             .build();
 
     // Trigger the handler.
-    RequestDetail.Builder requestDetail = RequestDetail.newBuilder();
-    ImmutableList<JobInfo> jobInfos =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo, requestDetail);
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
 
-    assertThat(jobInfos).containsExactly(jobInfo);
+    assertThat(createJobsResult.jobInfos()).containsExactly(jobInfo);
 
-    assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
-    assertThat(requestDetail.getCommandDetailsMap().keySet().iterator().next())
+    assertThat(createJobsResult.commandDetails()).hasSize(1);
+    assertThat(createJobsResult.commandDetails().keySet().iterator().next())
         .isEqualTo(expectedCommandId);
-    CommandDetail commandDetail = requestDetail.getCommandDetailsMap().values().iterator().next();
+    CommandDetail commandDetail = createJobsResult.commandDetails().values().iterator().next();
     assertThat(commandDetail.getCommandLine()).isEqualTo(retryCommandLine);
     assertThat(commandDetail.getId()).isEqualTo(expectedCommandId);
     assertThat(properties.get("xts-tradefed-job")).isEqualTo("true");
@@ -395,17 +394,16 @@ public final class NewMultiCommandRequestHandlerTest {
             .build();
 
     // Trigger the handler.
-    RequestDetail.Builder requestDetail = RequestDetail.newBuilder();
-    ImmutableList<JobInfo> jobInfos =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo, requestDetail);
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
 
-    assertThat(jobInfos).containsExactly(jobInfo);
+    assertThat(createJobsResult.jobInfos()).containsExactly(jobInfo);
 
-    assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
-    String commandId = requestDetail.getCommandDetailsMap().keySet().iterator().next();
+    assertThat(createJobsResult.commandDetails()).hasSize(1);
+    String commandId = createJobsResult.commandDetails().keySet().iterator().next();
     assertThat(commandId)
         .isEqualTo(UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString());
-    CommandDetail commandDetail = requestDetail.getCommandDetailsMap().values().iterator().next();
+    CommandDetail commandDetail = createJobsResult.commandDetails().values().iterator().next();
     assertThat(commandDetail.getCommandLine()).isEqualTo(commandInfo.getCommandLine());
     assertThat(commandDetail.getId()).isEqualTo(commandId);
     assertThat(properties.get("xts-tradefed-job")).isEqualTo("true");
@@ -464,16 +462,15 @@ public final class NewMultiCommandRequestHandlerTest {
             .build();
 
     // Trigger the handler.
-    RequestDetail.Builder requestDetail = RequestDetail.newBuilder();
-    ImmutableList<JobInfo> jobInfos =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo, requestDetail);
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
 
-    assertThat(jobInfos).containsExactly(jobInfo);
+    assertThat(createJobsResult.jobInfos()).containsExactly(jobInfo);
 
-    assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
-    String commandId = requestDetail.getCommandDetailsMap().keySet().iterator().next();
+    assertThat(createJobsResult.commandDetails()).hasSize(1);
+    String commandId = createJobsResult.commandDetails().keySet().iterator().next();
     assertThat(commandId).isEqualTo(expectedCommandId);
-    CommandDetail commandDetail = requestDetail.getCommandDetailsMap().values().iterator().next();
+    CommandDetail commandDetail = createJobsResult.commandDetails().values().iterator().next();
     assertThat(commandDetail.getCommandLine()).isEqualTo(commandInfo.getCommandLine());
     assertThat(commandDetail.getId()).isEqualTo(commandId);
     assertThat(properties.get("xts-tradefed-job")).isEqualTo("true");
@@ -516,20 +513,19 @@ public final class NewMultiCommandRequestHandlerTest {
     when(commandExecutorException.getMessage()).thenReturn("");
     when(commandExecutor.run(any())).thenThrow(commandExecutorException);
 
-    RequestDetail.Builder requestDetail = RequestDetail.newBuilder();
-    ImmutableList<JobInfo> jobInfos =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo, requestDetail);
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
 
-    assertThat(jobInfos).isEmpty();
+    assertThat(createJobsResult.jobInfos()).isEmpty();
 
     // Verify request detail.
-    assertThat(requestDetail.getErrorReason()).isEqualTo(ErrorReason.INVALID_RESOURCE);
-    assertThat(requestDetail.getState()).isEqualTo(RequestState.ERROR);
+    assertThat(createJobsResult.errorReason().get()).isEqualTo(ErrorReason.INVALID_RESOURCE);
+    assertThat(createJobsResult.state()).isEqualTo(RequestState.ERROR);
 
     // Verify command detail.
-    assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
+    assertThat(createJobsResult.commandDetails()).hasSize(1);
     CommandDetail commandDetail =
-        requestDetail.getCommandDetailsOrThrow("UNKNOWN_" + commandInfo.getCommandLine());
+        createJobsResult.commandDetails().get("UNKNOWN_" + commandInfo.getCommandLine());
     assertThat(commandDetail.getCommandLine()).isEqualTo(commandInfo.getCommandLine());
     assertThat(commandDetail.getState()).isEqualTo(CommandState.ERROR);
   }
@@ -554,20 +550,19 @@ public final class NewMultiCommandRequestHandlerTest {
                 TestResource.newBuilder().setUrl(ANDROID_XTS_ZIP).setName("INVALID_NAME").build())
             .build();
 
-    RequestDetail.Builder requestDetail = RequestDetail.newBuilder().setOriginalRequest(request);
-    ImmutableList<JobInfo> jobInfos =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo, requestDetail);
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
 
-    assertThat(jobInfos).isEmpty();
+    assertThat(createJobsResult.jobInfos()).isEmpty();
 
     // Verify request detail.
-    assertThat(requestDetail.getErrorReason()).isEqualTo(ErrorReason.INVALID_REQUEST);
-    assertThat(requestDetail.getState()).isEqualTo(RequestState.ERROR);
+    assertThat(createJobsResult.errorReason().get()).isEqualTo(ErrorReason.INVALID_REQUEST);
+    assertThat(createJobsResult.state()).isEqualTo(RequestState.ERROR);
 
     // Verify command detail.
-    assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
+    assertThat(createJobsResult.commandDetails()).hasSize(1);
     CommandDetail commandDetail =
-        requestDetail.getCommandDetailsOrThrow("UNKNOWN_" + commandInfo.getCommandLine());
+        createJobsResult.commandDetails().get("UNKNOWN_" + commandInfo.getCommandLine());
     assertThat(commandDetail.getCommandLine()).isEqualTo(commandInfo.getCommandLine());
     assertThat(commandDetail.getState()).isEqualTo(CommandState.ERROR);
   }
@@ -584,22 +579,19 @@ public final class NewMultiCommandRequestHandlerTest {
                     .build())
             .build();
 
-    RequestDetail.Builder requestDetail = RequestDetail.newBuilder();
-    ImmutableList<JobInfo> jobInfos =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo, requestDetail);
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
 
-    assertThat(jobInfos).isEmpty();
+    assertThat(createJobsResult.jobInfos()).isEmpty();
 
     // Verify request detail.
-    assertThat(requestDetail.getErrorReason()).isEqualTo(ErrorReason.INVALID_REQUEST);
-    assertThat(requestDetail.getState()).isEqualTo(RequestState.ERROR);
-    assertThat(requestDetail.getErrorMessage()).contains("COMMAND_NOT_AVAILABLE");
+    assertThat(createJobsResult.errorReason().get()).isEqualTo(ErrorReason.INVALID_REQUEST);
+    assertThat(createJobsResult.state()).isEqualTo(RequestState.ERROR);
+    assertThat(createJobsResult.errorMessage().get()).contains("COMMAND_NOT_AVAILABLE");
   }
 
   @Test
   public void createNonTradefedJobs_success() throws Exception {
-    RequestDetail.Builder requestDetail = RequestDetail.newBuilder().setState(RequestState.RUNNING);
-
     when(xtsJobCreator.createXtsNonTradefedJobs(any())).thenReturn(ImmutableList.of(jobInfo));
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
     when(files.getAll())
@@ -612,14 +604,14 @@ public final class NewMultiCommandRequestHandlerTest {
                 "tag2",
                 "/data/tmp/mock.json"));
     // Trigger the handler.
-    ImmutableList<JobInfo> jobInfos =
-        newMultiCommandRequestHandler.createNonTradefedJobs(request, sessionInfo, requestDetail);
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createNonTradefedJobs(request, sessionInfo);
 
-    assertThat(jobInfos).containsExactly(jobInfo);
+    assertThat(createJobsResult.jobInfos()).containsExactly(jobInfo);
 
-    assertThat(requestDetail.getState()).isEqualTo(RequestState.RUNNING);
-    assertThat(requestDetail.getCommandDetailsMap().values()).hasSize(1);
-    CommandDetail commandDetail = requestDetail.getCommandDetailsMap().values().iterator().next();
+    assertThat(createJobsResult.state()).isEqualTo(RequestState.RUNNING);
+    assertThat(createJobsResult.commandDetails()).hasSize(1);
+    CommandDetail commandDetail = createJobsResult.commandDetails().values().iterator().next();
 
     assertThat(commandDetail.getCommandLine()).isEqualTo(commandInfo.getCommandLine());
     assertThat(commandDetail.getId())
@@ -645,8 +637,6 @@ public final class NewMultiCommandRequestHandlerTest {
 
   @Test
   public void createNonTradefedJobs_invalidRequest_returnEmptyCommandList() throws Exception {
-    RequestDetail.Builder requestDetail = RequestDetail.newBuilder().setState(RequestState.RUNNING);
-
     when(xtsJobCreator.createXtsNonTradefedJobs(any())).thenReturn(ImmutableList.of(jobInfo));
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
     when(sessionInfo.getSessionId()).thenReturn("SESSION_ID");
@@ -669,17 +659,16 @@ public final class NewMultiCommandRequestHandlerTest {
             .build();
 
     // Trigger the handler.
-    ImmutableList<JobInfo> jobInfos =
-        newMultiCommandRequestHandler.createNonTradefedJobs(request, sessionInfo, requestDetail);
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createNonTradefedJobs(request, sessionInfo);
 
-    assertThat(jobInfos).isEmpty();
-    assertThat(requestDetail.getState()).isEqualTo(RequestState.ERROR);
-    assertThat(requestDetail.getErrorReason()).isEqualTo(ErrorReason.INVALID_REQUEST);
+    assertThat(createJobsResult.jobInfos()).isEmpty();
+    assertThat(createJobsResult.state()).isEqualTo(RequestState.ERROR);
+    assertThat(createJobsResult.errorReason().get()).isEqualTo(ErrorReason.INVALID_REQUEST);
   }
 
   @Test
   public void createNonTradefedJobs_skippableException_returnEmptyCommandList() throws Exception {
-    RequestDetail.Builder requestDetail = RequestDetail.newBuilder().setState(RequestState.RUNNING);
 
     when(xtsJobCreator.createXtsNonTradefedJobs(any()))
         .thenThrow(
@@ -687,11 +676,11 @@ public final class NewMultiCommandRequestHandlerTest {
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
 
     // Trigger the handler.
-    ImmutableList<JobInfo> jobInfos =
-        newMultiCommandRequestHandler.createNonTradefedJobs(request, sessionInfo, requestDetail);
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createNonTradefedJobs(request, sessionInfo);
 
-    assertThat(requestDetail.getState()).isEqualTo(RequestState.RUNNING);
-    assertThat(jobInfos).isEmpty();
+    assertThat(createJobsResult.state()).isEqualTo(RequestState.RUNNING);
+    assertThat(createJobsResult.jobInfos()).isEmpty();
   }
 
   @Test
@@ -701,10 +690,10 @@ public final class NewMultiCommandRequestHandlerTest {
             .setSummary(Summary.newBuilder().setPassed(10).setFailed(0).build())
             .build();
     request = request.toBuilder().setRetryPreviousSessionId("prev_session_id").build();
-    RequestDetail.Builder requestDetail = RequestDetail.newBuilder().setOriginalRequest(request);
     mockProcessResult(result);
 
-    createJobAndHandleResultProcessing(requestDetail);
+    HandleResultProcessingResult handleResultProcessingResult =
+        createJobAndHandleResultProcessing(request);
 
     String commandId =
         UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
@@ -715,14 +704,15 @@ public final class NewMultiCommandRequestHandlerTest {
             eq(outputUploadPath.resolve("session_id").resolve(commandId).toString()));
 
     // Verify command detail.
-    assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
-    CommandDetail commandDetail = requestDetail.getCommandDetailsMap().values().iterator().next();
+    assertThat(handleResultProcessingResult.commandDetails()).hasSize(1);
+    CommandDetail commandDetail =
+        handleResultProcessingResult.commandDetails().values().iterator().next();
     assertThat(commandDetail.getPassedTestCount()).isEqualTo(10);
     assertThat(commandDetail.getFailedTestCount()).isEqualTo(0);
     assertThat(commandDetail.getTotalTestCount()).isEqualTo(10);
     assertThat(commandDetail.getId()).isEqualTo(commandId);
     assertThat(commandDetail.getState()).isEqualTo(CommandState.COMPLETED);
-    assertThat(requestDetail.getTestContextCount()).isEqualTo(1);
+    assertThat(handleResultProcessingResult.testContexts()).hasSize(1);
   }
 
   @Test
@@ -731,13 +721,14 @@ public final class NewMultiCommandRequestHandlerTest {
         Result.newBuilder()
             .setSummary(Summary.newBuilder().setPassed(5).setFailed(5).build())
             .build();
-    RequestDetail.Builder requestDetail = RequestDetail.newBuilder().setOriginalRequest(request);
 
     mockProcessResult(result);
-    createJobAndHandleResultProcessing(requestDetail);
+    HandleResultProcessingResult handleResultProcessingResult =
+        createJobAndHandleResultProcessing(request);
 
-    assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
-    CommandDetail commandDetail = requestDetail.getCommandDetailsMap().values().iterator().next();
+    assertThat(handleResultProcessingResult.commandDetails()).hasSize(1);
+    CommandDetail commandDetail =
+        handleResultProcessingResult.commandDetails().values().iterator().next();
     assertThat(commandDetail.getPassedTestCount()).isEqualTo(5);
     assertThat(commandDetail.getFailedTestCount()).isEqualTo(5);
     assertThat(commandDetail.getTotalTestCount()).isEqualTo(10);
@@ -751,13 +742,14 @@ public final class NewMultiCommandRequestHandlerTest {
   public void handleResultProcessing_zeroTotalTest_treatAsFailure() throws Exception {
     Result.Builder resultBuilder =
         Result.newBuilder().setSummary(Summary.newBuilder().setPassed(0).setFailed(0).build());
-    RequestDetail.Builder requestDetail = RequestDetail.newBuilder().setOriginalRequest(request);
 
     mockProcessResult(resultBuilder.build());
-    createJobAndHandleResultProcessing(requestDetail);
+    HandleResultProcessingResult handleResultProcessingResult =
+        createJobAndHandleResultProcessing(request);
 
-    assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
-    CommandDetail commandDetail = requestDetail.getCommandDetailsMap().values().iterator().next();
+    assertThat(handleResultProcessingResult.commandDetails()).hasSize(1);
+    CommandDetail commandDetail =
+        handleResultProcessingResult.commandDetails().values().iterator().next();
     assertThat(commandDetail.getPassedTestCount()).isEqualTo(0);
     assertThat(commandDetail.getFailedTestCount()).isEqualTo(0);
     assertThat(commandDetail.getTotalTestCount()).isEqualTo(0);
@@ -781,13 +773,17 @@ public final class NewMultiCommandRequestHandlerTest {
                     .setOutputFileUploadUrl(malformedOutputFileUploadUrl)
                     .build())
             .build();
-    RequestDetail.Builder requestDetail = RequestDetail.newBuilder().setOriginalRequest(request);
-    var unused =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo, requestDetail);
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
 
     when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
     when(files.getAll()).thenReturn(ImmutableMultimap.of());
-    newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail);
+    HandleResultProcessingResult handleResultProcessingResult =
+        newMultiCommandRequestHandler.handleResultProcessing(
+            sessionInfo, request, createJobsResult.commandDetails().values());
+    assertThat(handleResultProcessingResult.state()).isEqualTo(RequestState.ERROR);
+    assertThat(handleResultProcessingResult.errorReason().get())
+        .isEqualTo(ErrorReason.RESULT_PROCESSING_ERROR);
     verify(sessionResultHandlerUtil, never())
         .processResult(any(), any(), any(), any(), any(), any());
     verifyUnmountRootDir(DirUtil.getPublicGenDir() + "/session_session_id/file");
@@ -800,9 +796,8 @@ public final class NewMultiCommandRequestHandlerTest {
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
 
     // Add TF job.
-    RequestDetail.Builder requestDetail = RequestDetail.newBuilder().setOriginalRequest(request);
-    var unused =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo, requestDetail);
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
 
     when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
     when(sessionInfo.getSessionProperty(SessionProperties.PROPERTY_KEY_SERVER_SESSION_LOG_PATH))
@@ -813,7 +808,9 @@ public final class NewMultiCommandRequestHandlerTest {
         .when(sessionResultHandlerUtil)
         .processResult(any(), any(), any(), any(), any(), any());
     Mockito.doNothing().when(localFileUtil).prepareDir(any(Path.class));
-    newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail);
+    var unused =
+        newMultiCommandRequestHandler.handleResultProcessing(
+            sessionInfo, request, createJobsResult.commandDetails().values());
     verify(sessionInfo)
         .putSessionProperty(
             SessionProperties.PROPERTY_KEY_SERVER_SESSION_LOG_PATH,
@@ -837,12 +834,13 @@ public final class NewMultiCommandRequestHandlerTest {
                     .setOutputFileUploadUrl(malformedOutputFileUploadUrl)
                     .build())
             .build();
-    RequestDetail.Builder requestDetail = RequestDetail.newBuilder().setOriginalRequest(request);
-    var unused =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo, requestDetail);
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
 
     when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
-    newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail);
+    var unused =
+        newMultiCommandRequestHandler.handleResultProcessing(
+            sessionInfo, request, createJobsResult.commandDetails().values());
     verify(sessionResultHandlerUtil, never())
         .processResult(any(), any(), any(), any(), any(), any());
     verifyUnmountRootDir(DirUtil.getPublicGenDir() + "/session_session_id/file");
@@ -855,9 +853,7 @@ public final class NewMultiCommandRequestHandlerTest {
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
 
     // Trigger the handler.
-    RequestDetail.Builder requestDetail = RequestDetail.newBuilder();
-    var unused =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo, requestDetail);
+    var unused = newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
 
     // Verify that handler has mounted the zip file.
     String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
@@ -881,9 +877,7 @@ public final class NewMultiCommandRequestHandlerTest {
     when(commandExecutor.run(mountCommand)).thenReturn("COMMAND_OUTPUT");
 
     // Create a tradefed job so that the xts zip file can be mounted.
-    RequestDetail.Builder requestDetail = RequestDetail.newBuilder();
-    var unused =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo, requestDetail);
+    var unused = newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
 
     // Throw exception when running unmount command.
     Command unmountCommand =
@@ -903,9 +897,7 @@ public final class NewMultiCommandRequestHandlerTest {
     when(commandExecutor.run(mountCommand)).thenReturn("COMMAND_OUTPUT");
 
     // Create a tradefed job so that the xts zip file can be mounted.
-    RequestDetail.Builder requestDetail = RequestDetail.newBuilder();
-    var unused =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo, requestDetail);
+    var unused = newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
 
     // Throw exception when running unmount command.
 
@@ -937,19 +929,21 @@ public final class NewMultiCommandRequestHandlerTest {
         .processResult(any(), any(), any(), any(), eq(ImmutableList.of(jobInfo)), any());
   }
 
-  private void createJobAndHandleResultProcessing(RequestDetail.Builder requestDetail)
-      throws Exception {
+  private HandleResultProcessingResult createJobAndHandleResultProcessing(
+      NewMultiCommandRequest request) throws Exception {
     when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
 
     // Add TF job.
-    ImmutableList<JobInfo> jobInfos =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo, requestDetail);
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
 
-    assertThat(jobInfos).containsExactly(jobInfo);
+    assertThat(createJobsResult.jobInfos()).containsExactly(jobInfo);
 
     when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
-    newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail);
+    HandleResultProcessingResult handleResultProcessingResult =
+        newMultiCommandRequestHandler.handleResultProcessing(
+            sessionInfo, request, createJobsResult.commandDetails().values());
 
     String commandId =
         UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
@@ -975,7 +969,7 @@ public final class NewMultiCommandRequestHandlerTest {
             .format(Instant.now());
     assertThat(path1).startsWith(outputPath + "/" + fileNamePrefix);
     // Verify test context.
-    TestContext testContext = requestDetail.getTestContextMap().get(commandId);
+    TestContext testContext = handleResultProcessingResult.testContexts().get(commandId);
     assertThat(testContext.getCommandLine()).isEqualTo(commandInfo.getCommandLine());
     assertThat(testContext.getTestResourceCount()).isEqualTo(1);
     TestResource testResource = testContext.getTestResource(0);
@@ -983,5 +977,6 @@ public final class NewMultiCommandRequestHandlerTest {
     assertThat(testResource.getName()).endsWith(".zip");
     assertThat(testResource.getUrl())
         .startsWith("file://" + outputPath + "/" + testResource.getName());
+    return handleResultProcessingResult;
   }
 }
