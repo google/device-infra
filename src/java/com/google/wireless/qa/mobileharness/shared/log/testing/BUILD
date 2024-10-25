@@ -23,6 +23,7 @@ package(
     default_testonly = 1,
     default_visibility = [
         "//java/com/google/wireless/qa/mobileharness/shared/log/testing:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/lightning/fileoperator:__subpackages__",
         "//src/javatests/com/google/wireless/qa/mobileharness/shared/log:__subpackages__",
     ],
 )
