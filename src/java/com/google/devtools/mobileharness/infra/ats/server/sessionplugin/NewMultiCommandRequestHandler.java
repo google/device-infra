@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.ats.server.sessionplugin;
 
+import static com.google.common.base.Throwables.getStackTraceAsString;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.devtools.mobileharness.shared.util.error.MoreThrowables.shortDebugString;
@@ -600,14 +601,16 @@ final class NewMultiCommandRequestHandler {
       return;
     }
 
-    try {
-      for (CommandDetail commandDetail : requestDetail.getCommandDetailsMap().values()) {
-        SessionRequestInfo sessionRequestInfo =
+    for (CommandDetail commandDetail : requestDetail.getCommandDetailsMap().values()) {
+      CommandDetail.Builder commandDetailBuilder = commandDetail.toBuilder();
+      String commandId = commandDetail.getId();
+      SessionRequestInfo sessionRequestInfo = null;
+      try {
+        sessionRequestInfo =
             getSessionRequestInfo(
                 requestDetail.getOriginalRequest(),
                 commandDetail.getOriginalCommandInfo(),
                 sessionInfo);
-        String commandId = commandDetail.getId();
         Path outputDirPath =
             Path.of(outputUrl.getPath()).resolve(sessionInfo.getSessionId()).resolve(commandId);
         String resultDirectoryName =
@@ -624,6 +627,15 @@ final class NewMultiCommandRequestHandler {
                     .map(jobIdToJobMap::get)
                     .collect(toImmutableList()),
                 sessionRequestInfo);
+        if (result.isPresent() && result.get().hasSummary()) {
+          commandDetailBuilder
+              .setPassedTestCount(result.get().getSummary().getPassed())
+              .setFailedTestCount(result.get().getSummary().getFailed())
+              .setTotalModuleCount(result.get().getSummary().getModulesTotal())
+              .setTotalTestCount(
+                  commandDetailBuilder.getPassedTestCount()
+                      + commandDetailBuilder.getFailedTestCount());
+        }
         Path resultZip = outputDirPath.resolve(resultDirectoryName + ".zip");
         if (localFileUtil.isFileExist(resultZip)) {
           // Make sure the context command line is the original command line, not a retry command.
@@ -663,30 +675,28 @@ final class NewMultiCommandRequestHandler {
           sessionResultHandlerUtil.copyRetryFiles(
               prevResultDir.toString(), outputDirPath.toString());
         }
-
-        CommandDetail.Builder commandDetailBuilder = commandDetail.toBuilder();
-        if (result.isPresent() && result.get().hasSummary()) {
-          commandDetailBuilder
-              .setPassedTestCount(result.get().getSummary().getPassed())
-              .setFailedTestCount(result.get().getSummary().getFailed())
-              .setTotalModuleCount(result.get().getSummary().getModulesTotal());
-          commandDetailBuilder.setTotalTestCount(
-              commandDetailBuilder.getPassedTestCount()
-                  + commandDetailBuilder.getFailedTestCount());
-        }
-        commandDetailBuilder
-            .setState(
-                hasCommandPassed(commandDetailBuilder.build())
-                    ? CommandState.COMPLETED
-                    : CommandState.ERROR)
-            .setEndTime(Timestamps.fromMillis(clock.millis()))
-            .setUpdateTime(Timestamps.fromMillis(clock.millis()));
-        requestDetail.putCommandDetails(commandId, commandDetailBuilder.build());
+      } catch (MobileHarnessException e) {
+        logger.atWarning().withCause(e).log(
+            "Failed to process result for session %s", sessionInfo.getSessionId());
+        setCommandError(commandDetailBuilder, ErrorReason.RESULT_PROCESSING_ERROR, e);
       }
-    } catch (MobileHarnessException e) {
-      logger.atWarning().withCause(e).log(
-          "Failed to process result for session %s", sessionInfo.getSessionId());
-      setRequestError(requestDetail, ErrorReason.RESULT_PROCESSING_ERROR, e.getMessage());
+
+      if (commandDetailBuilder.getState() == CommandState.UNKNOWN_STATE
+          || commandDetailBuilder.getState() == CommandState.RUNNING) {
+        if (hasCommandPassed(commandDetailBuilder.build())) {
+          commandDetailBuilder.setState(CommandState.COMPLETED);
+        } else {
+          setCommandError(
+              commandDetailBuilder,
+              ErrorReason.RESULT_PROCESSING_ERROR,
+              "No valid test cases found in the result.");
+        }
+        // TODO: Collect state and error message from TF agent if exists.
+      }
+      commandDetailBuilder
+          .setEndTime(Timestamps.fromMillis(clock.millis()))
+          .setUpdateTime(Timestamps.fromMillis(clock.millis()));
+      requestDetail.putCommandDetails(commandId, commandDetailBuilder.build());
     }
 
     // Record OLC server session logs if no command recorded it due to empty command list or result
@@ -791,6 +801,25 @@ final class NewMultiCommandRequestHandler {
         .setState(RequestState.ERROR)
         .setErrorReason(reason)
         .setErrorMessage(appendErrorMessage(requestDetailBuilder.getErrorMessage(), errorMessage));
+  }
+
+  /**
+   * Set command error and log the stack trace.
+   *
+   * <p>Command error on ATS UI could show the stack trace properly. Ideally, setCommandError should
+   * be called at most one time for each command.
+   */
+  private static void setCommandError(
+      CommandDetail.Builder commandDetailBuilder, ErrorReason reason, Exception e) {
+    setCommandError(commandDetailBuilder, reason, getStackTraceAsString(e));
+  }
+
+  private static void setCommandError(
+      CommandDetail.Builder commandDetailBuilder, ErrorReason reason, String errorMessage) {
+    commandDetailBuilder
+        .setState(CommandState.ERROR)
+        .setErrorReason(reason)
+        .setErrorMessage(errorMessage);
   }
 
   private static String appendErrorMessage(String existingMessage, String newMessage) {
