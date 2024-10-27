@@ -45,7 +45,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/remote:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/client/rbe:__pkg__",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:__pkg__",
-        "//src/javatests/com/google/devtools/mobileharness/shared/context:__pkg__",
     ],
     deps = [
         ":invocation_context",
