@@ -51,14 +51,22 @@ public final class XtsCommandUtil {
 
   /** The logic should be consistent with cts-tradefed shell. */
   public static Path getJavaBinary(String xtsType, Path xtsRootDir) {
-    Path xtsJavaBinary = XtsDirUtil.getXtsJdkDir(xtsRootDir, xtsType).resolve("bin/java");
-    if (SYSTEM_UTIL.isOnLinux()
-        && SYSTEM_UTIL.isX8664()
-        && LOCAL_FILE_UTIL.isFileExist(xtsJavaBinary)) {
-      return xtsJavaBinary;
+    if (useXtsJavaBinary(xtsType, xtsRootDir)) {
+      return XtsDirUtil.getXtsJavaBinary(xtsRootDir, xtsType);
     } else {
       return Path.of(SYSTEM_UTIL.getJavaBin());
     }
+  }
+
+  /**
+   * Whether to use Java binary from xTS root dir rather than from system.
+   *
+   * <p>The logic should be consistent with cts-tradefed shell.
+   */
+  public static boolean useXtsJavaBinary(String xtsType, Path xtsRootDir) {
+    return SYSTEM_UTIL.isOnLinux()
+        && SYSTEM_UTIL.isX8664()
+        && LOCAL_FILE_UTIL.isFileExist(XtsDirUtil.getXtsJavaBinary(xtsRootDir, xtsType));
   }
 
   private XtsCommandUtil() {}

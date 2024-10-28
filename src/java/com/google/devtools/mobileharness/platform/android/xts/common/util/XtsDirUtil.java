@@ -38,6 +38,11 @@ public class XtsDirUtil {
     return xtsRootDir.resolve(String.format("android-%s/jdk", toLowerCase(xtsType)));
   }
 
+  /** Gets the Java binary path for the given {@code xtsType}. */
+  public static Path getXtsJavaBinary(Path xtsRootDir, String xtsType) {
+    return getXtsJdkDir(xtsRootDir, xtsType).resolve("bin/java");
+  }
+
   /** Gets the lib directory for the given {@code xtsType}. */
   public static Path getXtsLibDir(Path xtsRootDir, String xtsType) {
     return xtsRootDir.resolve(String.format("android-%s/lib", toLowerCase(xtsType)));
