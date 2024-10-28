@@ -52,7 +52,6 @@ import java.lang.reflect.TypeVariable;
 import java.lang.reflect.WildcardType;
 import java.time.Instant;
 import java.util.List;
-import java.util.function.Consumer;
 import javax.annotation.Nullable;
 
 /** Backend of message subscribers. */
@@ -219,17 +218,21 @@ class MessageSubscriberBackend {
     }
 
     /** Whether the message subscriber can receive the given message. */
-    public boolean canReceiveMessage(MessageSend messageSend) {
+    boolean canReceiveMessage(MessageSend messageSend) {
       return messageSend.getMessage().is(messageType());
     }
 
-    /** {@link #canReceiveMessage} must be called before calling this method. */
-    public void receiveMessage(
-        MessageSend messageSend, Consumer<MessageReceptions> messageReceptionsHandler) {
+    /**
+     * Receives a message synchronously.
+     *
+     * <p>{@link #canReceiveMessage} must be called before calling this method.
+     */
+    void receiveMessage(MessageSend messageSend, MessageReceptionsHandler messageReceptionsHandler)
+        throws InterruptedException {
       Instant receivingStartTime = Instant.now();
 
       // Generates MessageReceivingStart.
-      messageReceptionsHandler.accept(
+      messageReceptionsHandler.handleMessageReceptions(
           MessageReceptions.newBuilder()
               .addReceptions(
                   MessageReception.newBuilder()
@@ -263,9 +266,10 @@ class MessageSubscriberBackend {
           | RuntimeException
           | Error e) {
         Instant receivingEndTime = Instant.now();
+        Throwable error = e instanceof InvocationTargetException ? e.getCause() : e;
 
         // Logs error.
-        logger.atInfo().withCause(e).log(
+        logger.atInfo().withCause(error).log(
             "Error when message subscriber [%s] receives message [%s]",
             this,
             shortDebugStringWithPrinter(
@@ -279,13 +283,13 @@ class MessageSubscriberBackend {
         // Creates MessageReceivingError.
         MessageReceivingError.Builder messageReceivingError = MessageReceivingError.newBuilder();
         if (e instanceof InvocationTargetException) {
-          messageReceivingError.setSubscriberMethodInvocationError(toProto(e.getCause()));
+          messageReceivingError.setSubscriberMethodInvocationError(toProto(error));
         } else {
-          messageReceivingError.setMessageReceivingError(toProto(e));
+          messageReceivingError.setMessageReceivingError(toProto(error));
         }
 
         // Generates MessageReceivingEnd with MessageReceivingError.
-        messageReceptionsHandler.accept(
+        messageReceptionsHandler.handleMessageReceptions(
             MessageReceptions.newBuilder()
                 .addReceptions(
                     MessageReception.newBuilder()
@@ -302,7 +306,7 @@ class MessageSubscriberBackend {
       Instant receivingEndTime = Instant.now();
 
       // Generates MessageReceivingEnd with MessageReceivingResult.
-      messageReceptionsHandler.accept(
+      messageReceptionsHandler.handleMessageReceptions(
           MessageReceptions.newBuilder()
               .addReceptions(
                   MessageReception.newBuilder()
@@ -353,8 +357,9 @@ class MessageSubscriberBackend {
 
     public abstract ImmutableList<InvalidMessageSubscriber> invalidMessageSubscribers();
 
-    public void receiveMessage(
-        MessageSend messageSend, Consumer<MessageReceptions> messageReceptionsHandler) {
+    /** Lets all subscribers which can receive a message receive the message sequentially. */
+    void receiveMessage(MessageSend messageSend, MessageReceptionsHandler messageReceptionsHandler)
+        throws InterruptedException {
       for (MessageSubscriber messageSubscriber : messageSubscribers()) {
         if (messageSubscriber.canReceiveMessage(messageSend)) {
           messageSubscriber.receiveMessage(messageSend, messageReceptionsHandler);

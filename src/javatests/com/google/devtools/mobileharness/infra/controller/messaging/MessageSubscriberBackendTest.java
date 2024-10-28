@@ -26,8 +26,6 @@ import static org.mockito.Mockito.verify;
 import com.google.common.truth.Correspondence;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.ExceptionDetail;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.ExceptionSummary;
-import com.google.devtools.mobileharness.api.messaging.MessageEvent;
-import com.google.devtools.mobileharness.api.messaging.SubscribeMessage;
 import com.google.devtools.mobileharness.api.messaging.proto.MessagingProto;
 import com.google.devtools.mobileharness.api.messaging.proto.MessagingProto.MessageReceivingEnd;
 import com.google.devtools.mobileharness.api.messaging.proto.MessagingProto.MessageReceivingError;
@@ -44,9 +42,7 @@ import com.google.devtools.mobileharness.infra.controller.messaging.MessageSubsc
 import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
 import com.google.protobuf.Any;
 import com.google.protobuf.Duration;
-import com.google.protobuf.Message;
 import com.google.protobuf.Timestamp;
-import java.util.function.Consumer;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -62,84 +58,7 @@ public class MessageSubscriberBackendTest {
 
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
 
-  @SuppressWarnings("unused")
-  private static class Foo {
-
-    /** Not a message subscriber: not annotated with @SubscribeMessage. */
-    private Duration m0(MessageEvent<Duration> event) {
-      return Duration.getDefaultInstance();
-    }
-
-    /** A valid message subscriber. */
-    @SubscribeMessage
-    private Duration m1(MessageEvent<Duration> event) {
-      return add(event.getMessage(), java.time.Duration.ofSeconds(1L));
-    }
-
-    /** A valid message subscriber: static method. */
-    @SubscribeMessage
-    private static Duration m2(MessageEvent<Duration> event) {
-      throw new IllegalArgumentException("Error message");
-    }
-
-    /** A invalid message subscriber: not a specific message. */
-    @SubscribeMessage
-    private Duration m3(MessageEvent<Message> event) {
-      return Duration.getDefaultInstance();
-    }
-
-    /** An invalid message subscriber: zero parameter. */
-    @SubscribeMessage
-    private Duration m4() {
-      return Duration.getDefaultInstance();
-    }
-
-    /** An invalid message subscriber: two parameters. */
-    @SubscribeMessage
-    private Duration m5(MessageEvent<Duration> event, String string) {
-      return Duration.getDefaultInstance();
-    }
-
-    /** An invalid message subscriber: wrong parameter type. */
-    @SubscribeMessage
-    private Duration m6(String string) {
-      return Duration.getDefaultInstance();
-    }
-
-    /** An invalid message subscriber: no generic type. */
-    @SubscribeMessage
-    private Duration m7(@SuppressWarnings("rawtypes") MessageEvent event) {
-      return Duration.getDefaultInstance();
-    }
-
-    /** An invalid message subscriber: generic type variable. */
-    @SubscribeMessage
-    private <T extends Duration> Duration m8(MessageEvent<T> event) {
-      return Duration.getDefaultInstance();
-    }
-
-    /** An invalid message subscriber: wildcard type. */
-    @SubscribeMessage
-    private Duration m9(MessageEvent<? extends Duration> event) {
-      return Duration.getDefaultInstance();
-    }
-
-    /** An invalid message subscriber: wrong return type. */
-    @SubscribeMessage
-    private void m10(MessageEvent<Message> event) {}
-
-    /** An invalid message subscriber: wrong return type. */
-    @SubscribeMessage
-    private String m11(MessageEvent<Message> event) {
-      return "";
-    }
-  }
-
-  private static Duration add(Duration duration, java.time.Duration delta) {
-    return TimeUtils.toProtoDuration(TimeUtils.toJavaDuration(duration).plus(delta));
-  }
-
-  @Mock private Consumer<MessageReceptions> messageReceptionsHandler;
+  @Mock private MessageReceptionsHandler messageReceptionsHandler;
 
   @Captor private ArgumentCaptor<MessageReceptions> messageReceptionsCaptor;
 
@@ -175,7 +94,7 @@ public class MessageSubscriberBackendTest {
   }
 
   @Test
-  public void receiveMessage() {
+  public void receiveMessage() throws Exception {
     MessageSubscribers messageSubscribers =
         MessageSubscriberBackend.searchMessageSubscribers(new Foo());
 
@@ -183,7 +102,8 @@ public class MessageSubscriberBackendTest {
     messageSubscribers.receiveMessage(
         MessageSend.newBuilder().setMessage(Any.pack(Timestamp.getDefaultInstance())).build(),
         messageReceptionsHandler);
-    verify(messageReceptionsHandler, never()).accept(messageReceptionsCaptor.capture());
+    verify(messageReceptionsHandler, never())
+        .handleMessageReceptions(messageReceptionsCaptor.capture());
 
     // Sends a message with 2 subscribers.
     messageSubscribers.receiveMessage(
@@ -191,7 +111,8 @@ public class MessageSubscriberBackendTest {
             .setMessage(Any.pack(TimeUtils.toProtoDuration(java.time.Duration.ofSeconds(123L))))
             .build(),
         messageReceptionsHandler);
-    verify(messageReceptionsHandler, atLeastOnce()).accept(messageReceptionsCaptor.capture());
+    verify(messageReceptionsHandler, atLeastOnce())
+        .handleMessageReceptions(messageReceptionsCaptor.capture());
 
     assertThat(messageReceptionsCaptor.getAllValues())
         .comparingExpectedFieldsOnly()

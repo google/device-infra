@@ -13,6 +13,8 @@
 # limitations under the License.
 #
 
+load("@io_grpc_grpc_java//:java_grpc_library.bzl", "java_grpc_library")
+
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
@@ -33,4 +35,23 @@ proto_library(
 java_proto_library(
     name = "messaging_java_proto",
     deps = [":messaging_proto"],
+)
+
+proto_library(
+    name = "messaging_service_proto",
+    srcs = ["messaging_service.proto"],
+    deps = [
+        ":messaging_proto",
+    ],
+)
+
+java_proto_library(
+    name = "messaging_service_java_proto",
+    deps = [":messaging_service_proto"],
+)
+
+java_grpc_library(
+    name = "messaging_service_java_grpc",
+    srcs = [":messaging_service_proto"],
+    deps = [":messaging_service_java_proto"],
 )

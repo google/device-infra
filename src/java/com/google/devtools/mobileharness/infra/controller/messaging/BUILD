@@ -29,11 +29,51 @@ java_library(
 )
 
 java_library(
+    name = "message_receptions_handler",
+    srcs = ["MessageReceptionsHandler.java"],
+    visibility = [
+        "//src/javatests/com/google/devtools/mobileharness/infra/controller/messaging:__subpackages__",
+    ],
+    deps = ["//src/devtools/mobileharness/api/messaging:messaging_java_proto"],
+)
+
+java_library(
+    name = "message_sender",
+    srcs = ["MessageSender.java"],
+    visibility = [
+        "//src/javatests/com/google/devtools/mobileharness/infra/controller/messaging:__subpackages__",
+    ],
+    deps = [
+        ":message_receptions_handler",
+        ":message_subscriber_backend",
+        "//src/devtools/mobileharness/api/messaging:messaging_java_proto",
+        "//src/java/com/google/devtools/mobileharness/shared/constant/closeable",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "message_sender_finder",
+    srcs = ["MessageSenderFinder.java"],
+    visibility = [
+        "//src/javatests/com/google/devtools/mobileharness/infra/controller/messaging:__subpackages__",
+    ],
+    deps = [
+        ":message_sender",
+        "//src/devtools/mobileharness/api/messaging:messaging_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+    ],
+)
+
+java_library(
     name = "message_subscriber_backend",
     srcs = ["MessageSubscriberBackend.java"],
-    visibility = ["//src/javatests/com/google/devtools/mobileharness/infra/controller/messaging:__pkg__"],
+    visibility = [
+        "//src/javatests/com/google/devtools/mobileharness/infra/controller/messaging:__subpackages__",
+    ],
     deps = [
         ":message_event_impl",
+        ":message_receptions_handler",
         "//src/devtools/mobileharness/api/messaging:messaging_java_proto",
         "//src/java/com/google/devtools/common/metrics/stability/converter",
         "//src/java/com/google/devtools/mobileharness/api/messaging:messaging_subscriber",
@@ -46,5 +86,40 @@ java_library(
         "@com_google_protobuf_protobuf_java",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "messaging_manager",
+    srcs = ["MessagingManager.java"],
+    visibility = [
+        "//src/javatests/com/google/devtools/mobileharness/infra/controller/messaging:__subpackages__",
+    ],
+    deps = [
+        ":message_sender",
+        ":message_sender_finder",
+        "//src/devtools/mobileharness/api/messaging:messaging_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_text_format",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:callables",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:more_futures",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "messaging_service",
+    srcs = ["MessagingService.java"],
+    deps = [
+        ":messaging_manager",
+        "//src/devtools/mobileharness/api/messaging:messaging_java_proto",
+        "//src/devtools/mobileharness/api/messaging:messaging_service_java_grpc",
+        "//src/devtools/mobileharness/api/messaging:messaging_service_java_proto",
+        "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc:service_util",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "@io_grpc_grpc_java//stub",
+        "@maven//:javax_inject_jsr330_api",
     ],
 )
