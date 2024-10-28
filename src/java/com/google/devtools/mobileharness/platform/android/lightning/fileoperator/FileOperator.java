@@ -28,7 +28,6 @@ import com.google.devtools.mobileharness.platform.android.lightning.shared.Share
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.devtools.mobileharness.shared.util.file.checksum.ChecksumUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
-import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
@@ -158,8 +157,6 @@ public class FileOperator {
 
   /**
    * Pushes the file or directory from host machine to device with caching files capability.
-   *
-   * <p>It doesn't cache files by default, enable flag {@link #cachePushedFiles} if needed.
    *
    * <p>NOTICE: If the destination is in a temp dir like /data/local/tmp, it'll skip caching.
    * Because contents within this directory may be deleted by the OS, and it won't notify us.
@@ -393,8 +390,7 @@ public class FileOperator {
   }
 
   private static boolean isCacheFilesEnabled(String desPathOnDevice) {
-    return Flags.instance().cachePushedFiles.getNonNull()
-        && !isDesPathOnDeviceUnderTmpDirs(desPathOnDevice);
+    return !isDesPathOnDeviceUnderTmpDirs(desPathOnDevice);
   }
 
   private static boolean isDesPathOnDeviceUnderTmpDirs(String desPathOnDevice) {

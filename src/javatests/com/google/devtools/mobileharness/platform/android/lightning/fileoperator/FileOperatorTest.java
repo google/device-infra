@@ -34,11 +34,9 @@ import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.devtools.mobileharness.shared.util.file.checksum.ChecksumUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
-import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.log.testing.FakeLogCollector;
 import java.time.Duration;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -71,16 +69,10 @@ public final class FileOperatorTest {
 
   @Before
   public void setUp() {
-    Flags.parse(new String[] {"--cache_pushed_files=false"});
     testLog = new FakeLogCollector();
     fileOperator =
         new FileOperator(checksumUtil, localFileUtil, androidFileUtil, systemSettingUtil);
     when(device.getDeviceId()).thenReturn(DEVICE_ID);
-  }
-
-  @After
-  public void tearDown() {
-    Flags.resetToDefault();
   }
 
   @Test
@@ -228,7 +220,6 @@ public final class FileOperatorTest {
 
   @Test
   public void pushFileOrDirTimeout_md5NotEqual_success() throws Exception {
-    Flags.parse(new String[] {"--cache_pushed_files=true"});
     int sdkVersion = 28;
     String md5 = "1234567890";
     String srcPathOnHost = "file_path_and_name_on_host";
@@ -263,7 +254,6 @@ public final class FileOperatorTest {
 
   @Test
   public void pushFileOrDir_md5NotEqual_success() throws Exception {
-    Flags.parse(new String[] {"--cache_pushed_files=true"});
     int sdkVersion = 28;
     String md5 = "1234567890";
     String srcPathOnHost = "file_path_and_name_on_host";
@@ -298,7 +288,6 @@ public final class FileOperatorTest {
 
   @Test
   public void pushFileOrDir_removePropertyIfFailedToPush_rethrowException() throws Exception {
-    Flags.parse(new String[] {"--cache_pushed_files=true"});
     int sdkVersion = 28;
     String md5 = "1234567890";
     String srcPathOnHost = "file_path_and_name_on_host";
@@ -341,7 +330,6 @@ public final class FileOperatorTest {
 
   @Test
   public void pushFileOrDir_md5Equal_skipped() throws Exception {
-    Flags.parse(new String[] {"--cache_pushed_files=true"});
     int sdkVersion = 28;
     String md5 = "1234567890";
     String srcPathOnHost = "file_path_and_name_on_host";
@@ -371,7 +359,6 @@ public final class FileOperatorTest {
 
   @Test
   public void pushFileOrDir_failedToGetDesFinalPathOnDevice_throwException() throws Exception {
-    Flags.parse(new String[] {"--cache_pushed_files=true"});
     int sdkVersion = 28;
     String srcPathOnHost = "file_path_and_name_on_host";
     String desPathOnDevice = "/sdcard/tmp/";
@@ -443,7 +430,6 @@ public final class FileOperatorTest {
 
   @Test
   public void pushFileOrDir_desPathUnderTmpDir_skipCache() throws Exception {
-    Flags.parse(new String[] {"--cache_pushed_files=true"});
     int sdkVersion = 28;
     String srcPathOnHost = "file_path_and_name_on_host";
     String desPathOnDevice = "/data/local/tmp/";
@@ -472,57 +458,7 @@ public final class FileOperatorTest {
   }
 
   @Test
-  public void pushFileOrDir_flagCachePushedFilesIsFalse_skipCache() throws Exception {
-    int sdkVersion = 28;
-    String srcPathOnHost = "file_path_and_name_on_host";
-    String desPathOnDevice = "/sdcard/tmp/";
-
-    when(systemSettingUtil.getDeviceSdkVersion(DEVICE_ID)).thenReturn(sdkVersion);
-    when(localFileUtil.isFileOrDirExist(srcPathOnHost)).thenReturn(true);
-    when(androidFileUtil.push(
-            DEVICE_ID, sdkVersion, srcPathOnHost, desPathOnDevice, /* pushTimeout= */ null))
-        .thenReturn("log");
-
-    fileOperator.pushFileOrDir(
-        device,
-        FilePushArgs.builder()
-            .setSrcPathOnHost(srcPathOnHost)
-            .setDesPathOnDevice(desPathOnDevice)
-            .build(),
-        testLog);
-
-    verify(androidFileUtil, never())
-        .getPushedFileOrDirFinalDestinationPathOnDevice(
-            DEVICE_ID, sdkVersion, srcPathOnHost, desPathOnDevice);
-    verify(checksumUtil, never()).fingerprint(srcPathOnHost);
-    verify(device, never()).setProperty(anyString(), anyString());
-    verify(androidFileUtil)
-        .push(DEVICE_ID, sdkVersion, srcPathOnHost, desPathOnDevice, /* pushTimeout= */ null);
-  }
-
-  @Test
-  public void pushFileOrDir_desPathOnDeviceNotExist_createDirAndPush() throws Exception {
-    String srcPathOnHost = "file_path_and_name_on_host";
-    String desPathOnDevice = "/des_path/";
-    int sdkVersion = 28;
-    when(systemSettingUtil.getDeviceSdkVersion(DEVICE_ID)).thenReturn(sdkVersion);
-    when(localFileUtil.isFileOrDirExist(srcPathOnHost)).thenReturn(true);
-    when(androidFileUtil.isDirExist(DEVICE_ID, sdkVersion, "/des_path")).thenReturn(false);
-    fileOperator.pushFileOrDir(
-        device,
-        FilePushArgs.builder()
-            .setSrcPathOnHost(srcPathOnHost)
-            .setDesPathOnDevice(desPathOnDevice)
-            .setPrepareDesDirWhenSrcIsFile(true)
-            .build(),
-        testLog);
-    verify(androidFileUtil)
-        .push(DEVICE_ID, sdkVersion, srcPathOnHost, desPathOnDevice, /* pushTimeout= */ null);
-  }
-
-  @Test
   public void removeFileOrDir_fileOrDirNotExist() throws Exception {
-    Flags.parse(new String[] {"--cache_pushed_files=true"});
     String fileOrDirPath = "/sdcard/test_dir/test_file";
     when(androidFileUtil.isFileOrDirExisted(DEVICE_ID, fileOrDirPath)).thenReturn(false);
 
@@ -533,7 +469,6 @@ public final class FileOperatorTest {
 
   @Test
   public void removeFileOrDir() throws Exception {
-    Flags.parse(new String[] {"--cache_pushed_files=true"});
     String fileOrDirPath = "/sdcard/test_dir1/test_dir2/test_file";
     when(androidFileUtil.isFileOrDirExisted(DEVICE_ID, fileOrDirPath)).thenReturn(true);
     when(device.info().properties()).thenReturn(properties);
@@ -563,7 +498,6 @@ public final class FileOperatorTest {
 
   @Test
   public void removeFileOrDir_hasSubFilesOrDirs() throws Exception {
-    Flags.parse(new String[] {"--cache_pushed_files=true"});
     String fileOrDirPath = "/sdcard/test_dir1/test_dir2";
     when(androidFileUtil.isFileOrDirExisted(DEVICE_ID, fileOrDirPath)).thenReturn(true);
     when(device.info().properties()).thenReturn(properties);

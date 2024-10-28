@@ -312,16 +312,6 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> cacheInstalledApks = cacheInstalledApksDefault;
 
-  private static final Flag<Boolean> cachePushedFilesDefault = Flag.value(true);
-
-  @com.beust.jcommander.Parameter(
-      names = "--cache_pushed_files",
-      description =
-          "Cache pushed dirs/files with their MD5 in device property to avoid pushing again."
-              + "Disabled by default.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> cachePushedFiles = cachePushedFilesDefault;
-
   private static final Flag<Duration> checkDeviceIntervalDefault =
       DurationFlag.value(Duration.ofMinutes(5L));
 
