@@ -71,6 +71,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 import javax.inject.Inject;
 
 /** Session Plugin to serve test requests coming from ATS server. */
@@ -105,8 +106,7 @@ final class AtsServerSessionPlugin {
 
   // All non-tradefed jobs which will be initiated when the session starts. They will be added to
   // the session when all tradefed jobs have ended.
-  @GuardedBy("sessionLock")
-  private ImmutableList<JobInfo> nonTradefedJobs = null;
+  private AtomicReference<ImmutableList<JobInfo>> nonTradefedJobsCache = new AtomicReference<>();
 
   private final SessionInfo sessionInfo;
   private final NewMultiCommandRequestHandler newMultiCommandRequestHandler;
@@ -169,7 +169,9 @@ final class AtsServerSessionPlugin {
               newMultiCommandRequestHandler.createNonTradefedJobs(
                   newMultiCommandRequest, sessionInfo);
           requestDetail.setState(createNonTradefedJobsResult.state());
-          nonTradefedJobs = createNonTradefedJobsResult.jobInfos();
+
+          ImmutableList<JobInfo> nonTradefedJobs = createNonTradefedJobsResult.jobInfos();
+          nonTradefedJobsCache.set(nonTradefedJobs);
           createNonTradefedJobsResult.errorReason().ifPresent(requestDetail::setErrorReason);
           createNonTradefedJobsResult
               .errorMessage()
@@ -266,13 +268,27 @@ final class AtsServerSessionPlugin {
           return;
         }
 
+        NewMultiCommandRequest request = requestDetail.getOriginalRequest();
         // Non-tradefed jobs might be lost in the resumed sessions. Re-initialize them to ensure
         // they are executed.
-        if (nonTradefedJobs == null) {
-          CreateJobsResult createNonTradefedJobsResult =
-              newMultiCommandRequestHandler.createNonTradefedJobs(
-                  requestDetail.getOriginalRequest(), sessionInfo);
-          nonTradefedJobs = createNonTradefedJobsResult.jobInfos();
+        ImmutableList<JobInfo> nonTradefedJobs =
+            nonTradefedJobsCache.updateAndGet(
+                oldJobs -> {
+                  try {
+                    if (oldJobs == null) {
+                      return newMultiCommandRequestHandler
+                          .createNonTradefedJobs(request, sessionInfo)
+                          .jobInfos();
+                    } else {
+                      return oldJobs;
+                    }
+                  } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return ImmutableList.of();
+                  }
+                });
+        if (Thread.currentThread().isInterrupted()) {
+          throw new InterruptedException();
         }
         if (!nonTradefedJobs.isEmpty()) {
           addJobsToSession(nonTradefedJobs);
