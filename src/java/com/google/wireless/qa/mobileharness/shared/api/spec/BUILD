@@ -40,14 +40,6 @@ java_library(
 )
 
 java_library(
-    name = "android_file_pusher_spec",
-    srcs = ["AndroidFilePusherSpec.java"],
-    deps = [
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
-    ],
-)
-
-java_library(
     name = "android_real_device_spec",
     srcs = ["AndroidRealDeviceSpec.java"],
     deps = [
