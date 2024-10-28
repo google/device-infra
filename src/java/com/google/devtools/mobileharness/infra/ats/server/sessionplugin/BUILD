@@ -41,6 +41,7 @@ java_library(
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_service_java_proto",
         "//src/devtools/mobileharness/platform/android/xts/proto:test_message_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:xts_property_name",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_event",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_info",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:with_proto",

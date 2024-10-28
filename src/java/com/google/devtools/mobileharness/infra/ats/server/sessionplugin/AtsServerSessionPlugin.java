@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.AtsServerSessionNotification;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.AtsServerSessionNotification.NotificationCase;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CancelReason;
@@ -36,6 +37,7 @@ import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.Req
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.RequestDetail.RequestState;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.SessionRequest;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.SessionRequest.RequestCase;
+import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestContext;
 import com.google.devtools.mobileharness.infra.ats.server.sessionplugin.NewMultiCommandRequestHandler.CreateJobsResult;
 import com.google.devtools.mobileharness.infra.ats.server.sessionplugin.NewMultiCommandRequestHandler.HandleResultProcessingResult;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionEndedEvent;
@@ -46,6 +48,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.model.W
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginConfigs;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginExecutionConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginLabel;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginLoadingConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.CreateSessionRequest;
@@ -71,6 +74,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import javax.inject.Inject;
 
 /** Session Plugin to serve test requests coming from ATS server. */
@@ -198,10 +202,10 @@ final class AtsServerSessionPlugin {
           // have ended.
           if (!tradefedJobs.isEmpty()) {
             // Add tradefed jobs to session.
-            addJobsToSession(tradefedJobs);
+            tradefedJobs.forEach(sessionInfo::addJob);
           } else {
             // If no tradefed job was added, add non tradefed jobs directly.
-            addJobsToSession(nonTradefedJobs);
+            nonTradefedJobs.forEach(sessionInfo::addJob);
           }
         } finally {
           updateSessionPluginOutput();
@@ -232,7 +236,10 @@ final class AtsServerSessionPlugin {
     JobInfo jobInfo = jobEndEvent.getJob();
 
     // Generate a new commandAttempt for the finished job, and update the command status.
-    updateCommandDetail(jobInfo);
+    synchronized (sessionLock) {
+      updateCommandDetail(jobInfo, requestDetail, sessionInfo.getSessionId());
+      updateSessionPluginOutput();
+    }
 
     // If all tradefed jobs have ended, create non tradefed jobs.
     synchronized (sessionLock) {
@@ -275,7 +282,7 @@ final class AtsServerSessionPlugin {
           nonTradefedJobs = createNonTradefedJobsResult.jobInfos();
         }
         if (!nonTradefedJobs.isEmpty()) {
-          addJobsToSession(nonTradefedJobs);
+          nonTradefedJobs.forEach(sessionInfo::addJob);
         }
       } finally {
         updateSessionPluginOutput();
@@ -321,9 +328,22 @@ final class AtsServerSessionPlugin {
         updateSessionPluginOutput();
       }
 
-      if (canRetrySession(requestDetail.build())) {
+      if (canRetrySession(
+          requestDetail.getState(),
+          requestDetail.getMaxRetryOnTestFailures(),
+          requestDetail.getCommandDetailsMap())) {
         try {
-          retrySession();
+          CreateSessionRequest retrySessionRequest =
+              createRetrySession(
+                  requestDetail.getTestContextMap(),
+                  requestDetail.getOriginalRequest(),
+                  sessionInfo.getSessionId(),
+                  requestDetail.getMaxRetryOnTestFailures(),
+                  sessionInfo.getSessionPluginExecutionConfig());
+          String nextAttemptSessionId =
+              localSessionStub.createSession(retrySessionRequest).getSessionId().getId();
+          requestDetail.setNextAttemptSessionId(nextAttemptSessionId);
+          updateSessionPluginOutput();
         } catch (MobileHarnessException e) {
           logger.atWarning().withCause(e).log("Failed to trigger retry session.");
         }
@@ -361,10 +381,19 @@ final class AtsServerSessionPlugin {
     }
   }
 
-  /** Add jobs to the session. */
-  @GuardedBy("sessionLock")
-  private void addJobsToSession(ImmutableList<JobInfo> jobInfoList) {
-    jobInfoList.forEach(sessionInfo::addJob);
+  private void updateSessionPluginOutput() {
+    synchronized (sessionLock) {
+      RequestDetail latestRequestDetail = requestDetail.build();
+      sessionInfo.setSessionPluginOutput(empty -> latestRequestDetail, RequestDetail.class);
+    }
+  }
+
+  private void resumeRequestDetailFromSessionPluginOutput() {
+    synchronized (sessionLock) {
+      sessionInfo
+          .getSessionPluginOutput(RequestDetail.class)
+          .ifPresent(detail -> requestDetail.clear().mergeFrom(detail));
+    }
   }
 
   private void sendCancellationMessageToStartedTest(TestInfo testInfo) {
@@ -377,44 +406,43 @@ final class AtsServerSessionPlugin {
     }
   }
 
-  @GuardedBy("sessionLock")
-  private void retrySession() throws MobileHarnessException {
-    NewMultiCommandRequest.Builder retryRequestBuilder =
-        requestDetail.getOriginalRequest().toBuilder();
-    if (requestDetail.getTestContextMap().isEmpty()) {
+  private static CreateSessionRequest createRetrySession(
+      Map<String, TestContext> testContexts,
+      NewMultiCommandRequest request,
+      String sessionId,
+      long maxRetryOnTestFailures,
+      SessionPluginExecutionConfig sessionPluginExecutionConfig) {
+    NewMultiCommandRequest.Builder retryRequestBuilder = request.toBuilder();
+    if (testContexts.isEmpty()) {
       // No test context, retry like a new request.
       retryRequestBuilder.clearPrevTestContext();
       // Use original command line if exists, in case current request is a retry. Otherwise reuse
       // current request's command line.
-      if (requestDetail.getOriginalRequest().hasPrevTestContext()
-          && !requestDetail.getOriginalRequest().getPrevTestContext().getCommandLine().isEmpty()) {
-        String retryCommandLine =
-            requestDetail.getOriginalRequest().getPrevTestContext().getCommandLine();
+      if (request.hasPrevTestContext()
+          && !request.getPrevTestContext().getCommandLine().isEmpty()) {
+        String retryCommandLine = request.getPrevTestContext().getCommandLine();
         retryRequestBuilder
             .clearCommands()
             .addCommands(
-                requestDetail.getOriginalRequest().getCommandsList().get(0).toBuilder()
+                request.getCommandsList().get(0).toBuilder()
                     .setCommandLine(retryCommandLine)
                     .build());
       }
     } else {
       // Has test context, retry with previous test result as context.
       retryRequestBuilder
-          .setPrevTestContext(requestDetail.getTestContextMap().values().iterator().next())
+          .setPrevTestContext(testContexts.values().iterator().next())
           .clearCommands();
-      String retryCommandLine =
-          requestDetail.getOriginalRequest().getTestEnvironment().getRetryCommandLine();
+      String retryCommandLine = request.getTestEnvironment().getRetryCommandLine();
       retryRequestBuilder.addCommands(
-          requestDetail.getOriginalRequest().getCommandsList().get(0).toBuilder()
-              .setCommandLine(retryCommandLine)
-              .build());
+          request.getCommandsList().get(0).toBuilder().setCommandLine(retryCommandLine).build());
     }
-    retryRequestBuilder.setRetryPreviousSessionId(sessionInfo.getSessionId());
-    retryRequestBuilder.setMaxRetryOnTestFailures(requestDetail.getMaxRetryOnTestFailures() - 1);
+    retryRequestBuilder.setRetryPreviousSessionId(sessionId);
+    retryRequestBuilder.setMaxRetryOnTestFailures(maxRetryOnTestFailures - 1);
     SessionPluginConfig retryConfig =
         SessionPluginConfig.newBuilder()
             .setExecutionConfig(
-                sessionInfo.getSessionPluginExecutionConfig().toBuilder()
+                sessionPluginExecutionConfig.toBuilder()
                     .setConfig(
                         Any.pack(
                             SessionRequest.newBuilder()
@@ -426,43 +454,39 @@ final class AtsServerSessionPlugin {
                     .setPluginModuleClassName(SESSION_MODULE_CLASS_NAME))
             .setExplicitLabel(SessionPluginLabel.newBuilder().setLabel(SESSION_PLUGIN_LABEL))
             .build();
-    CreateSessionRequest createSessionRequest =
-        CreateSessionRequest.newBuilder()
-            .setSessionConfig(
-                SessionConfig.newBuilder()
-                    .setSessionPluginConfigs(
-                        SessionPluginConfigs.newBuilder().addSessionPluginConfig(retryConfig)))
-            .build();
-    String nextAttemptSessionId =
-        localSessionStub.createSession(createSessionRequest).getSessionId().getId();
-    requestDetail.setNextAttemptSessionId(nextAttemptSessionId);
-    updateSessionPluginOutput();
+    return CreateSessionRequest.newBuilder()
+        .setSessionConfig(
+            SessionConfig.newBuilder()
+                .setSessionPluginConfigs(
+                    SessionPluginConfigs.newBuilder().addSessionPluginConfig(retryConfig)))
+        .build();
   }
 
   // TODO: create more concrete retry strategy.
-  private boolean canRetrySession(RequestDetail requestDetail) {
-    return requestDetail.getState().equals(RequestState.ERROR)
-        && requestDetail.getMaxRetryOnTestFailures() > 0
-        && !requestDetail.getCommandDetailsMap().isEmpty()
-        && requestDetail.getCommandDetailsMap().values().iterator().next().getTotalModuleCount()
-            != 0;
+  private static boolean canRetrySession(
+      RequestState requestState,
+      long maxRetryOnTestFailures,
+      Map<String, CommandDetail> commandDetails) {
+    return requestState.equals(RequestState.ERROR)
+        && maxRetryOnTestFailures > 0
+        && !commandDetails.isEmpty()
+        && commandDetails.values().iterator().next().getTotalModuleCount() != 0;
   }
 
-  private CommandAttemptDetail generateCommandAttemptDetail(JobInfo jobInfo, TestInfo testInfo) {
+  private static CommandAttemptDetail generateCommandAttemptDetail(
+      JobInfo jobInfo, TestInfo testInfo, String sessionId) {
     CommandAttemptDetail.Builder builder =
         CommandAttemptDetail.newBuilder()
             .setId(testInfo.locator().getId())
-            .setRequestId(sessionInfo.getSessionId())
-            .setCommandId(newMultiCommandRequestHandler.getCommandIdOfJob(jobInfo));
+            .setRequestId(sessionId)
+            .setCommandId(getCommandIdOfJob(jobInfo));
     // ATS server requests use device UUIDs to schedule tests.
     ImmutableList<String> deviceUuids =
         jobInfo.subDeviceSpecs().getAllSubDevices().stream()
             .filter(subDeviceSpec -> subDeviceSpec.dimensions().get("uuid") != null)
             .map(subDeviceSpec -> subDeviceSpec.dimensions().get("uuid"))
             .collect(toImmutableList());
-    if (!deviceUuids.isEmpty()) {
-      builder.addAllDeviceSerials(deviceUuids);
-    }
+    builder.addAllDeviceSerials(deviceUuids);
 
     // Tradefed test result.
     if (testInfo.properties().has(XtsConstants.TRADEFED_TESTS_PASSED)) {
@@ -506,46 +530,29 @@ final class AtsServerSessionPlugin {
         .build();
   }
 
-  private void updateCommandDetail(JobInfo jobInfo) {
-    synchronized (sessionLock) {
-      if (!requestDetail.containsCommandDetails(
-          newMultiCommandRequestHandler.getCommandIdOfJob(jobInfo))) {
-        logger.atWarning().log(
-            "Tradefed job %s not found in requestDetail", jobInfo.locator().getId());
-        return;
-      }
-      // Add a command attempt
-      CommandAttemptDetail commandAttemptDetail =
-          generateCommandAttemptDetail(
-              jobInfo, jobInfo.tests().getAll().values().iterator().next());
-      requestDetail.addCommandAttemptDetails(commandAttemptDetail);
-      requestDetail.setUpdateTime(TimeUtils.toProtoTimestamp(Instant.now()));
-      updateSessionPluginOutput();
+  private static void updateCommandDetail(
+      JobInfo jobInfo, RequestDetail.Builder requestDetail, String sessionId) {
+    if (!requestDetail.containsCommandDetails(getCommandIdOfJob(jobInfo))) {
+      logger.atWarning().log(
+          "Tradefed job %s not found in requestDetail", jobInfo.locator().getId());
+      return;
     }
+    // Add a command attempt
+    CommandAttemptDetail commandAttemptDetail =
+        generateCommandAttemptDetail(
+            jobInfo, jobInfo.tests().getAll().values().iterator().next(), sessionId);
+    requestDetail
+        .addCommandAttemptDetails(commandAttemptDetail)
+        .setUpdateTime(TimeUtils.toProtoTimestamp(Instant.now()));
   }
 
-  private void updateSessionPluginOutput() {
-    synchronized (sessionLock) {
-      RequestDetail latestRequestDetail = requestDetail.build();
-      sessionInfo.setSessionPluginOutput(empty -> latestRequestDetail, RequestDetail.class);
-    }
-  }
-
-  private void resumeRequestDetailFromSessionPluginOutput() {
-    synchronized (sessionLock) {
-      sessionInfo
-          .getSessionPluginOutput(RequestDetail.class)
-          .ifPresent(detail -> requestDetail.clear().mergeFrom(detail));
-    }
-  }
-
-  private boolean hasSessionPassed(ImmutableMap<String, CommandDetail> commandDetailsMap) {
+  private static boolean hasSessionPassed(ImmutableMap<String, CommandDetail> commandDetailsMap) {
     return !commandDetailsMap.isEmpty()
         && commandDetailsMap.values().stream()
             .allMatch(commandDetail -> commandDetail.getState() == CommandState.COMPLETED);
   }
 
-  private CommandState convertStatusAndResultToCommandState(Status status, Result result) {
+  private static CommandState convertStatusAndResultToCommandState(Status status, Result result) {
     switch (status.get()) {
       case NEW:
         return CommandState.UNKNOWN_STATE;
@@ -577,5 +584,9 @@ final class AtsServerSessionPlugin {
       return existingMessage;
     }
     return existingMessage + " //--// " + newMessage;
+  }
+
+  private static String getCommandIdOfJob(JobInfo jobInfo) {
+    return jobInfo.properties().getOptional(XtsPropertyName.Job.XTS_COMMAND_ID).orElse("");
   }
 }

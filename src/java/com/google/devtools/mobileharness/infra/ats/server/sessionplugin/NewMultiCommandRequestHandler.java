@@ -307,10 +307,6 @@ final class NewMultiCommandRequestHandler {
     return commandToJobsMap;
   }
 
-  String getCommandIdOfJob(JobInfo jobInfo) {
-    return jobInfo.properties().getOptional(XtsPropertyName.Job.XTS_COMMAND_ID).orElse("");
-  }
-
   private void reformatResourcePathForNonTradefedJob(JobInfo jobInfo)
       throws MobileHarnessException {
     ImmutableMultimap<String, String> resources = jobInfo.files().getAll();
