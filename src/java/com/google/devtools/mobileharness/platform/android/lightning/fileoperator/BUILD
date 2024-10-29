@@ -23,6 +23,7 @@ java_library(
         "FilePushArgs.java",
     ],
     visibility = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/lightning/fileoperator:__subpackages__",
     ],
     deps = [
