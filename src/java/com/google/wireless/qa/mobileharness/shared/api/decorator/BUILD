@@ -39,6 +39,7 @@ java_library(
     srcs = ["AsyncTimerDecorator.java"],
     deps = [
         ":base_decorator",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",

@@ -18,7 +18,7 @@ package com.google.wireless.qa.mobileharness.shared.api.decorator;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.flogger.FluentLogger;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.util.Timer;
@@ -34,7 +34,8 @@ public abstract class AsyncTimerDecorator extends BaseDecorator {
 
   @Override
   public final void run(final TestInfo testInfo)
-      throws MobileHarnessException, InterruptedException {
+      throws com.google.wireless.qa.mobileharness.shared.MobileHarnessException,
+          InterruptedException {
     logger.atInfo().log("Started");
     onStart(testInfo);
     final Timer timer =
