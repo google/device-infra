@@ -69,8 +69,7 @@ import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestStatus;
 import java.time.Clock;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Collection;
 import javax.inject.Inject;
 
 /** Session Plugin to serve test requests coming from ATS server. */
@@ -99,9 +98,6 @@ final class AtsServerSessionPlugin {
   // The source of truth for this session's request states.
   @GuardedBy("sessionLock")
   private final RequestDetail.Builder requestDetail = RequestDetail.newBuilder();
-
-  @GuardedBy("sessionLock")
-  private final List<TestInfo> startedTestsBeforeCancellation = new ArrayList<>();
 
   // All non-tradefed jobs which will be initiated when the session starts. They will be added to
   // the session when all tradefed jobs have ended.
@@ -215,13 +211,15 @@ final class AtsServerSessionPlugin {
     resumeRequestDetailFromSessionPluginOutput();
 
     TestInfo testInfo = event.getTest();
+    boolean shouldSendCancellationMessage = false;
     // Sends cancellation test message if necessary.
     synchronized (sessionLock) {
-      if (!requestDetail.getState().equals(RequestState.CANCELED)) {
-        startedTestsBeforeCancellation.add(testInfo);
-      } else {
-        sendCancellationMessageToStartedTest(testInfo);
+      if (requestDetail.getState().equals(RequestState.CANCELED)) {
+        shouldSendCancellationMessage = true;
       }
+    }
+    if (shouldSendCancellationMessage) {
+      sendCancellationMessageToStartedTest(testInfo);
     }
   }
 
@@ -345,15 +343,19 @@ final class AtsServerSessionPlugin {
 
     // TODO: Support killing jobs here (for non-TF jobs or jobs during allocation).
     if (notification.getNotificationCase() == NotificationCase.CANCEL_SESSION) {
-      // send end signal to all jobs.
+      // send end signal to all running tests.
       ImmutableList<TestInfo> startedTestsBeforeCancellation;
       synchronized (sessionLock) {
         requestDetail.setState(RequestState.CANCELED);
         requestDetail.setCancelReason(CancelReason.REQUEST_API);
         requestDetail.setErrorMessage("Received cancel session notification");
         updateSessionPluginOutput();
-        startedTestsBeforeCancellation = ImmutableList.copyOf(this.startedTestsBeforeCancellation);
-        this.startedTestsBeforeCancellation.clear();
+        startedTestsBeforeCancellation =
+            event.sessionInfo().getAllJobs().stream()
+                .map(jobInfo -> jobInfo.tests().getAll().values())
+                .flatMap(Collection::stream)
+                .filter(testInfo -> testInfo.status().get().equals(TestStatus.RUNNING))
+                .collect(toImmutableList());
       }
       for (TestInfo testInfo : startedTestsBeforeCancellation) {
         sendCancellationMessageToStartedTest(testInfo);

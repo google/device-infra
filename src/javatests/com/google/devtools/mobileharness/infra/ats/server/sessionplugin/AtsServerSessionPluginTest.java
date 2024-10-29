@@ -528,8 +528,11 @@ public final class AtsServerSessionPluginTest {
                     Any.pack(
                         SessionRequest.newBuilder().setNewMultiCommandRequest(request).build()))
                 .build());
+
     plugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+
     verify(sessionInfo).addJob(jobInfo);
+
     Timing timing = new Timing();
     when(jobInfo.timing()).thenReturn(timing);
     timing.start();
@@ -539,6 +542,8 @@ public final class AtsServerSessionPluginTest {
     when(jobInfo.result()).thenReturn(result);
     JobType jobType = JobType.newBuilder().setDriver("XtsTradefedTest").build();
     when(jobInfo.type()).thenReturn(jobType);
+    when(testInfo.status()).thenReturn(new Status(timing).set(TestStatus.RUNNING));
+
     AtsServerSessionNotification notification =
         AtsServerSessionNotification.newBuilder()
             .setCancelSession(CancelSession.getDefaultInstance())
@@ -549,7 +554,9 @@ public final class AtsServerSessionPluginTest {
             sessionInfo,
             SessionNotification.newBuilder().setNotification(Any.pack(notification)).build(),
             TextFormat.printer()));
+
     verify(testMessageUtil).sendProtoMessageToTest(eq(testInfo), any());
+
     plugin.onJobEnded(new JobEndEvent(jobInfo, null));
 
     // Verify added non tradefed jobs.
