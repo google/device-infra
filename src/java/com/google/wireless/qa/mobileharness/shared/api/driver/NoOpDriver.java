@@ -27,15 +27,14 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Test;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.CompositeDeviceUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DriverAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.TestAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.comm.message.event.TestMessageEvent;
-import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
@@ -84,8 +83,7 @@ public class NoOpDriver extends BaseDriver implements SpecConfigable<NoOpDriverS
   private ListenableFuture<?> leaseExpirationFuture;
 
   private volatile Test.TestResult testResultFromMessage;
-  private volatile com.google.devtools.mobileharness.api.model.error.MobileHarnessException
-      testResultCauseFromMessage;
+  private volatile MobileHarnessException testResultCauseFromMessage;
 
   @VisibleForTesting
   @Inject
@@ -239,7 +237,7 @@ public class NoOpDriver extends BaseDriver implements SpecConfigable<NoOpDriverS
         try {
           testResultFromMessage = Test.TestResult.valueOf(resultString.toUpperCase(Locale.ROOT));
           testResultCauseFromMessage =
-              new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+              new MobileHarnessException(
                   ExtErrorId.NO_OP_DRIVER_NON_PASSING_RESULT_SET_BY_MESSAGE,
                   "NoOpDriver non-passing result set by test message");
         } catch (IllegalArgumentException e) {
@@ -247,7 +245,7 @@ public class NoOpDriver extends BaseDriver implements SpecConfigable<NoOpDriverS
               .errors()
               .addAndLog(
                   new MobileHarnessException(
-                      ErrorCode.ILLEGAL_ARGUMENT,
+                      ExtErrorId.NO_OP_DRIVER_TEST_MESSAGE_ILLEGAL_ARGUMENT,
                       "Failed to set result to [" + resultString + "]",
                       e),
                   logger);
@@ -257,7 +255,7 @@ public class NoOpDriver extends BaseDriver implements SpecConfigable<NoOpDriverS
             .errors()
             .addAndLog(
                 new MobileHarnessException(
-                    ErrorCode.TEST_MESSAGE_ERROR,
+                    ExtErrorId.NO_OP_DRIVER_TEST_MESSAGE_ERROR,
                     "Unrecognized NoOpDriver test message: " + message),
                 logger);
       }
