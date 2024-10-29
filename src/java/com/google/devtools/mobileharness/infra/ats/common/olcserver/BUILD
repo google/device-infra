@@ -103,6 +103,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:version_stub",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/util:version_proto_util",
         "//src/java/com/google/devtools/mobileharness/shared/constant:log_record_importance",
+        "//src/java/com/google/devtools/mobileharness/shared/constant/closeable",
         "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_text_format",
         "//src/java/com/google/devtools/mobileharness/shared/util/base:table_formatter",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",

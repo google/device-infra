@@ -49,6 +49,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.V
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.ControlStub;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.VersionStub;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.util.VersionProtoUtil;
+import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
 import com.google.devtools.mobileharness.shared.util.base.TableFormatter;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
@@ -62,6 +63,9 @@ import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
 import io.grpc.Status.Code;
+import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.nio.channels.FileLock;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
@@ -177,113 +181,131 @@ public class ServerPreparer {
     }
   }
 
+  /**
+   * Connects to an existing OLC server or creates a new one.
+   *
+   * @implNote the method will use a file lock to ensure that at most one invocation can happen on
+   *     the machine at any given time (if no error occurs when acquiring the lock)
+   */
   public void prepareOlcServer() throws MobileHarnessException, InterruptedException {
     synchronized (prepareServerLock) {
       boolean firstPreparation = !hasPrepared;
       hasPrepared = true;
 
-      // Tries to get server version.
-      GetVersionResponse version = tryConnectToOlcServer().orElse(null);
-      if (version != null) {
-        if (firstPreparation) {
-          logger.atInfo().log(
-              "Connected to existing OLC server, version=[%s]", shortDebugString(version));
-        }
+      // Acquires file lock.
+      Optional<NonThrowingAutoCloseable> fileUnlocker = lockFile("/tmp/olc_server_startup.lck");
+      try {
 
-        if (needKillExistingServer(firstPreparation)) {
-          killExistingServer(/* forcibly= */ false);
-        } else {
+        // Tries to get server version.
+        GetVersionResponse version = tryConnectToOlcServer().orElse(null);
+        if (version != null) {
           if (firstPreparation) {
-            logger.atInfo().log("Using existing OLC server");
-            checkAndPrintServerVersionWarning(version);
+            logger.atInfo().log(
+                "Connected to existing OLC server, version=[%s]", shortDebugString(version));
           }
-          return;
+
+          if (needKillExistingServer(firstPreparation)) {
+            killExistingServer(/* forcibly= */ false);
+          } else {
+            if (firstPreparation) {
+              logger.atInfo().log("Using existing OLC server");
+              checkAndPrintServerVersionWarning(version);
+            }
+            return;
+          }
         }
-      }
 
-      // Starts a new server.
-      logger.atInfo().log("Starting new OLC server...");
-      String serverBinaryPath = requireNonNull(serverBinary.get()).toString();
-      localFileUtil.checkFile(serverBinaryPath);
-      FlagsString serverFlags = deviceInfraServiceFlags.addToHead(BuiltinOlcServerFlags.get());
-      ImmutableList<String> serverNativeArguments =
-          ImmutableList.of(
-              "-Xmx" + Flags.instance().atsConsoleOlcServerXmx.getNonNull(),
-              "-XX:+HeapDumpOnOutOfMemoryError");
-      logger
-          .atInfo()
-          .with(IMPORTANCE, DEBUG)
-          .log(
-              "OLC server flags: %s, native arguments: %s",
-              serverFlags.flags(), serverNativeArguments);
-
-      // Creates the command to start the server.
-      String serverOutputPath = Flags.instance().atsConsoleOlcServerOutputPath.getNonNull();
-      ImmutableList.Builder<String> startOlcServerCommandBuilder = ImmutableList.builder();
-      startOlcServerCommandBuilder.add(NOHUP_COMMAND);
-      startOlcServerCommandBuilder.addAll(
-          JavaCommandCreator.of(
-                  /* useStandardInvocationForm= */ true,
-                  wrapPath(requireNonNull(javaPath.get()).toString()))
-              .createJavaCommand(
-                  wrapPath(serverBinaryPath),
-                  // Treats all flags as one argument to keep escape chars.
-                  ImmutableList.of(serverFlags.flagsString()),
-                  serverNativeArguments));
-      startOlcServerCommandBuilder.add(">" + serverOutputPath).add("2>&1").add("&");
-
-      // Starts the server process.
-      CommandProcess serverProcess;
-      StringBuilderLineCallback serverOutputLineCallback = new StringBuilderLineCallback();
-      Command serverCommand =
-          Command.of(
-                  ImmutableList.of(
-                      SH_COMMAND, "-c", Joiner.on(" ").join(startOlcServerCommandBuilder.build())))
-              .timeout(ChronoUnit.YEARS.getDuration())
-              .redirectStderr(false)
-              .onStdout(serverOutputLineCallback)
-              .onStderr(serverOutputLineCallback)
-              .needStdoutInResult(false)
-              .needStderrInResult(false);
-      try {
-        serverProcess = commandExecutor.start(serverCommand);
-      } catch (CommandStartException e) {
-        throw new MobileHarnessException(
-            InfraErrorId.ATSC_SERVER_PREPARER_START_OLC_SERVER_ERROR,
-            "Failed to start OLC server",
-            e);
-      }
-
-      try {
-        // Waits until the server starts.
+        // Starts a new server.
+        logger.atInfo().log("Starting new OLC server...");
+        String serverBinaryPath = requireNonNull(serverBinary.get()).toString();
+        localFileUtil.checkFile(serverBinaryPath);
+        FlagsString serverFlags = deviceInfraServiceFlags.addToHead(BuiltinOlcServerFlags.get());
+        ImmutableList<String> serverNativeArguments =
+            ImmutableList.of(
+                "-Xmx" + Flags.instance().atsConsoleOlcServerXmx.getNonNull(),
+                "-XX:+HeapDumpOnOutOfMemoryError");
         logger
             .atInfo()
             .with(IMPORTANCE, DEBUG)
-            .log("Wait until OLC server starts, command=[%s]", serverProcess.command());
-        GetVersionResponse serverVersion = connectWithRetry();
+            .log(
+                "OLC server flags: %s, native arguments: %s",
+                serverFlags.flags(), serverNativeArguments);
 
-        // The server starts successfully.
-        logger.atInfo().log(
-            "OLC server started, port=%s, pid=%s",
-            Flags.instance().olcServerPort.getNonNull(), serverVersion.getProcessId());
-      } catch (MobileHarnessException | InterruptedException | RuntimeException | Error e) {
-        // Kills the wrapper process.
-        if (serverProcess.isAlive()) {
-          logger.atInfo().log("Killing OLC server");
-          serverProcess.kill();
+        // Creates the command to start the server.
+        String serverOutputPath = Flags.instance().atsConsoleOlcServerOutputPath.getNonNull();
+        ImmutableList.Builder<String> startOlcServerCommandBuilder = ImmutableList.builder();
+        startOlcServerCommandBuilder.add(NOHUP_COMMAND);
+        startOlcServerCommandBuilder.addAll(
+            JavaCommandCreator.of(
+                    /* useStandardInvocationForm= */ true,
+                    wrapPath(requireNonNull(javaPath.get()).toString()))
+                .createJavaCommand(
+                    wrapPath(serverBinaryPath),
+                    // Treats all flags as one argument to keep escape chars.
+                    ImmutableList.of(serverFlags.flagsString()),
+                    serverNativeArguments));
+        startOlcServerCommandBuilder.add(">" + serverOutputPath).add("2>&1").add("&");
+
+        // Starts the server process.
+        CommandProcess serverProcess;
+        StringBuilderLineCallback serverOutputLineCallback = new StringBuilderLineCallback();
+        Command serverCommand =
+            Command.of(
+                    ImmutableList.of(
+                        SH_COMMAND,
+                        "-c",
+                        Joiner.on(" ").join(startOlcServerCommandBuilder.build())))
+                .timeout(ChronoUnit.YEARS.getDuration())
+                .redirectStderr(false)
+                .onStdout(serverOutputLineCallback)
+                .onStderr(serverOutputLineCallback)
+                .needStdoutInResult(false)
+                .needStderrInResult(false);
+        try {
+          serverProcess = commandExecutor.start(serverCommand);
+        } catch (CommandStartException e) {
+          throw new MobileHarnessException(
+              InfraErrorId.ATSC_SERVER_PREPARER_START_OLC_SERVER_ERROR,
+              "Failed to start OLC server",
+              e);
         }
 
         try {
-          printServerStartingFailureInfo(serverCommand, serverOutputPath, serverOutputLineCallback);
-        } catch (MobileHarnessException | RuntimeException | Error e2) {
-          logger.atWarning().withCause(e2).log(
-              "Failed to print server starting log from the log file.");
-        } catch (InterruptedException e2) {
-          Thread.currentThread().interrupt();
+          // Waits until the server starts.
+          logger
+              .atInfo()
+              .with(IMPORTANCE, DEBUG)
+              .log("Wait until OLC server starts, command=[%s]", serverProcess.command());
+          GetVersionResponse serverVersion = connectWithRetry();
+
+          // The server starts successfully.
+          logger.atInfo().log(
+              "OLC server started, port=%s, pid=%s",
+              Flags.instance().olcServerPort.getNonNull(), serverVersion.getProcessId());
+        } catch (MobileHarnessException | InterruptedException | RuntimeException | Error e) {
+          // Kills the wrapper process.
+          if (serverProcess.isAlive()) {
+            logger.atInfo().log("Killing OLC server");
+            serverProcess.kill();
+          }
+
+          try {
+            printServerStartingFailureInfo(
+                serverCommand, serverOutputPath, serverOutputLineCallback);
+          } catch (MobileHarnessException | RuntimeException | Error e2) {
+            logger.atWarning().withCause(e2).log(
+                "Failed to print server starting log from the log file.");
+          } catch (InterruptedException e2) {
+            Thread.currentThread().interrupt();
+          }
+          throw e;
+        } finally {
+          serverProcess.stopReadingOutput();
         }
-        throw e;
+
       } finally {
-        serverProcess.stopReadingOutput();
+        // Releases file lock if any.
+        fileUnlocker.ifPresent(NonThrowingAutoCloseable::close);
       }
     }
   }
@@ -478,6 +500,48 @@ public class ServerPreparer {
   /** Wraps a path in a command just in case that it contains special characters. */
   private static String wrapPath(String path) {
     return "'" + path + "'";
+  }
+
+  /**
+   * Locks the given file exclusively.
+   *
+   * @return a closeable to unlock the file, or empty if an error occurs when acquiring the lock
+   *     (not including waiting for the lock)
+   */
+  private Optional<NonThrowingAutoCloseable> lockFile(String filePath) {
+    RandomAccessFile file = null;
+    try {
+      // Opens file.
+      file = new RandomAccessFile(filePath, "rw");
+      RandomAccessFile finalFile = file;
+      localFileUtil.grantFileOrDirFullAccess(filePath);
+
+      // Locks file.
+      logger.atInfo().with(IMPORTANCE, DEBUG).log("Locking file [%s]", filePath);
+      @SuppressWarnings({"resource", "unused"})
+      FileLock lock = file.getChannel().lock();
+      logger.atInfo().with(IMPORTANCE, DEBUG).log("Locked file [%s]", filePath);
+
+      return Optional.of(
+          () -> {
+            closeFile(finalFile, filePath);
+            logger.atInfo().with(IMPORTANCE, DEBUG).log("Released file lock [%s]", filePath);
+          });
+    } catch (MobileHarnessException | IOException e) {
+      logger.atWarning().withCause(e).log("Failed to lock file [%s]", filePath);
+      if (file != null) {
+        closeFile(file, filePath);
+      }
+      return Optional.empty();
+    }
+  }
+
+  private static void closeFile(RandomAccessFile file, String filePath) {
+    try {
+      file.close();
+    } catch (IOException e) {
+      logger.atWarning().withCause(e).log("Failed to close file [%s]", filePath);
+    }
   }
 
   private static class StringBuilderLineCallback implements LineCallback {
