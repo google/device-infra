@@ -40,6 +40,12 @@ java_library(
 )
 
 java_library(
+    name = "android_build_spec_key",
+    srcs = ["AndroidBuildSpecKey.java"],
+    visibility = ["//:deviceinfra_all_pkg"],
+)
+
+java_library(
     name = "android_packages",
     srcs = [
         "AndroidPackages.java",
