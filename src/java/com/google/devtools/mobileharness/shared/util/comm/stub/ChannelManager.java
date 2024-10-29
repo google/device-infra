@@ -77,7 +77,7 @@ public class ChannelManager {
   }
 
   @VisibleForTesting
-  ChannelManager(
+  public ChannelManager(
       Duration channelExpirationTime,
       ListeningExecutorService threadPool,
       ListeningScheduledExecutorService scheduledThreadPool) {

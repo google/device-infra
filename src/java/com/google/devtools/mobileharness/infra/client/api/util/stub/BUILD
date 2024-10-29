@@ -15,13 +15,12 @@
 
 load("@rules_java//java:defs.bzl", "java_library")
 
-DEFAULT_VISIBILITY = [
-    "//src/java/com/google/wireless/qa/mobileharness/client/api/util/stub:__pkg__",
-]
-
 package(
     default_applicable_licenses = ["//:license"],
-    default_visibility = DEFAULT_VISIBILITY,
+    default_visibility = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/comm/relay:__subpackages__",
+        "//src/java/com/google/wireless/qa/mobileharness/client/api/util/stub:__pkg__",
+    ],
 )
 
 java_library(
@@ -86,5 +85,17 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:stub_configures",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "@maven//:com_google_inject_guice",
+    ],
+)
+
+java_library(
+    name = "stub_utils",
+    srcs = ["StubUtils.java"],
+    deps = [
+        "//src/devtools/mobileharness/api/model/proto:lab_java_proto",
+        "//src/devtools/mobileharness/infra/container/proto:test_engine_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab:locator",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/remote:lab_server_locator",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
     ],
 )

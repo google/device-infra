@@ -16,6 +16,8 @@
 
 package com.google.wireless.qa.mobileharness.client.api.util.stub;
 
+import static com.google.devtools.mobileharness.infra.client.api.util.stub.StubUtils.getLabServerGrpcTarget;
+import static com.google.devtools.mobileharness.infra.client.api.util.stub.StubUtils.getTestEngineGrpcTarget;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.devtools.mobileharness.infra.client.api.mode.remote.LabServerLocator;
@@ -24,7 +26,6 @@ import com.google.devtools.mobileharness.infra.container.proto.TestEngine.TestEn
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.ExecTestStub;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.PrepareTestStub;
 import com.google.devtools.mobileharness.shared.constant.environment.MobileHarnessServerEnvironment;
-import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.version.rpc.stub.VersionStub;
 
 /** Shared master and lab server service stubs. */
@@ -76,51 +77,5 @@ public class StubManager {
   public VersionStub getLabVersionStub(
       LabServerLocator labServerLocator, MobileHarnessServerEnvironment mhEnvironment) {
     return grpcStubManager.getVersionStub(getLabServerGrpcTarget(labServerLocator));
-  }
-
-  private static String getTestEngineGrpcTarget(
-      LabServerLocator labServerLocator, TestEngineLocator testEngineLocator) {
-    if (Flags.instance().connectToLabServerUsingIp.getNonNull()) {
-      if (Flags.instance().connectToLabServerUsingMasterDetectedIp.getNonNull()
-          && labServerLocator.masterDetectedIp().isPresent()) {
-        return getGrpcTargetByIp(
-            labServerLocator.masterDetectedIp().get(),
-            testEngineLocator.getGrpcLocator().getGrpcPort());
-      } else {
-        return getGrpcTargetByIp(
-            testEngineLocator.getGrpcLocator().getHostIp(),
-            testEngineLocator.getGrpcLocator().getGrpcPort());
-      }
-    } else {
-      return getGrpcTargetByHostName(
-          testEngineLocator.getGrpcLocator().getHostName(),
-          testEngineLocator.getGrpcLocator().getGrpcPort());
-    }
-  }
-
-  private static String getLabServerGrpcTarget(LabServerLocator labServerLocator) {
-    if (Flags.instance().connectToLabServerUsingIp.getNonNull()) {
-      if (Flags.instance().connectToLabServerUsingMasterDetectedIp.getNonNull()
-          && labServerLocator.masterDetectedIp().isPresent()) {
-        return getGrpcTargetByIp(
-            labServerLocator.masterDetectedIp().get(), labServerLocator.grpcPort());
-      } else {
-        return getGrpcTargetByIp(labServerLocator.ip(), labServerLocator.grpcPort());
-      }
-    } else {
-      return getGrpcTargetByHostName(labServerLocator.hostName(), labServerLocator.grpcPort());
-    }
-  }
-
-  private static String getGrpcTargetByIp(String ip, int grpcPort) {
-    return String.format(
-        "%s:%s",
-        Flags.instance().reverseTunnelingLabServer.getNonNull() ? "localhost" : ip, grpcPort);
-  }
-
-  private static String getGrpcTargetByHostName(String hostName, int grpcPort) {
-    return String.format(
-        "dns:///%s:%s",
-        Flags.instance().reverseTunnelingLabServer.getNonNull() ? "localhost" : hostName, grpcPort);
   }
 }

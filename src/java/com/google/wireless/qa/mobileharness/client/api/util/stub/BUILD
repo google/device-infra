@@ -25,6 +25,7 @@ java_library(
         "//src/devtools/mobileharness/infra/container/proto:test_engine_java_proto",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/remote:lab_server_locator",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/util/stub:grpc_stub_manager",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/util/stub:stub_utils",
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/stub:exec_test",
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/stub:prepare_test",
         "//src/java/com/google/devtools/mobileharness/shared/constant/environment",
