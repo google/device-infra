@@ -59,6 +59,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 
 /** Built in lab plugin for MCTS test suites dynamic downloading. */
@@ -83,6 +84,13 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
   private static final String PRELOADED_KEY = "preloaded";
 
   private static final String NON_PRELOADED_KEY = "non-preloaded";
+
+  // Only consider the Module released in Android V+ , the month digits (3,4 index) should not be 00
+  // or 99.
+  private static final Pattern VERSIONCODE_PATTERN =
+      Pattern.compile("(3[5-9]|[4-9][0-9])(?!(00|99))\\d{7}");
+
+  private static final String MAINLINE_AOSP_VERSION_KEY = "AOSP";
 
   private static final ImmutableMap<String, Integer> SDK_LEVEL_TO_YEAR =
       ImmutableMap.of(
@@ -165,7 +173,7 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
       // We will only support Android V train for downloading train MCTS, otherwise will download
       // from aosp.
       String preloadedMainlineVersion =
-          versioncode.startsWith("35")
+          VERSIONCODE_PATTERN.matcher(versioncode).matches()
               ? getPreloadedMainlineVersion(versioncode, MAINLINE_TVP_PKG)
               : aospVersion;
       // Add the MCTS exclude file link url to the front of the list.
@@ -174,10 +182,14 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
               "https://dl.google.com/dl/android/xts/mcts/tool/mcts_exclude/%s/%s/mcts-exclude.txt",
               aospVersion, preloadedMainlineVersion));
       for (String mctsNameAndVersioncode : mctsNamesOfPreloadedMainlineModules.get(PRELOADED_KEY)) {
+        String moduleVersioncode =
+            mctsNameAndVersioncode.substring(mctsNameAndVersioncode.indexOf(":") + 1);
         String downloadUrl =
             String.format(
                 "https://dl.google.com/dl/android/xts/mcts/%s/%s/%s.zip",
-                preloadedMainlineVersion,
+                moduleVersioncode.equals(MAINLINE_AOSP_VERSION_KEY)
+                    ? aospVersion
+                    : moduleVersioncode,
                 deviceAbi,
                 mctsNameAndVersioncode.substring(0, mctsNameAndVersioncode.indexOf(":")));
         downloadLinkUrls.add(downloadUrl);
@@ -322,13 +334,14 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
       if (modulePackageToModuleInfoMap.containsKey(moduleName)) {
         String mctsName = modulePackageToModuleInfoMap.get(moduleName);
         if (preloadedModulesMcts.add(mctsName)) {
-          preloadedModulesMctsAndVersioncode.add(
-              mctsName
-                  + ':'
-                  + getPreloadedMainlineVersion(
-                      Integer.toString(
-                          androidPackageManagerUtil.getAppVersionCode(deviceId, moduleName)),
-                      moduleName));
+          String moduleVersion =
+              Integer.toString(androidPackageManagerUtil.getAppVersionCode(deviceId, moduleName));
+          // Only parse the module versioncode released start from Android V (35+).
+          String moduleVersioncode =
+              VERSIONCODE_PATTERN.matcher(moduleVersion).matches()
+                  ? getPreloadedMainlineVersion(moduleVersion, moduleName)
+                  : MAINLINE_AOSP_VERSION_KEY;
+          preloadedModulesMctsAndVersioncode.add(mctsName + ':' + moduleVersioncode);
         }
       }
     }

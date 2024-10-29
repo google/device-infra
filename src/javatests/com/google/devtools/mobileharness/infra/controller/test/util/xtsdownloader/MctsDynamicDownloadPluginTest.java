@@ -83,10 +83,13 @@ public final class MctsDynamicDownloadPluginTest {
             any(), eq("com.google.android.captiveportallogin")))
         .thenReturn(351050004);
     when(mockAndroidPackageManagerUtil.getAppVersionCode(any(), eq("com.google.android.conscrypt")))
-        .thenReturn(351050004);
+        .thenReturn(350050004);
     when(mockAndroidPackageManagerUtil.getAppVersionCode(
             any(), eq("com.google.android.go.configinfrastructure")))
-        .thenReturn(351050004);
+        .thenReturn(341050004);
+    when(mockAndroidPackageManagerUtil.getAppVersionCode(
+            any(), eq("com.google.android.documentsui")))
+        .thenReturn(359999999);
     when(mockAdbUtil.getProperty(any(), eq(AndroidProperty.ABI))).thenReturn("arm64-v8a");
     when(mockAdbUtil.getProperty(any(), eq(AndroidProperty.SDK_VERSION))).thenReturn("30");
     when(mockAdbUtil.getProperty(any(), eq(AndroidProperty.CODENAME))).thenReturn("fake_codename");
@@ -106,6 +109,10 @@ public final class MctsDynamicDownloadPluginTest {
                     .setName("conscrypt")
                     .build(),
                 ModuleInfo.builder()
+                    .setPackageName("com.google.android.documentsui")
+                    .setName("documentsui")
+                    .build(),
+                ModuleInfo.builder()
                     .setPackageName("com.google.android.go.configinfrastructure")
                     .setName("configinfrastructure")
                     .build()));
@@ -118,10 +125,10 @@ public final class MctsDynamicDownloadPluginTest {
         "https://dl\\.google\\.com/dl/android/xts/mcts/2024-10/arm64/android-mcts-networking\\.zip");
     mockDownloadPublicUrlFiles(
         "/tmp/android-mcts-conscrypt.zip",
-        "https://dl\\.google\\.com/dl/android/xts/mcts/2024-10/arm64/android-mcts-conscrypt\\.zip");
+        "https://dl\\.google\\.com/dl/android/xts/mcts/30/arm64/android-mcts-conscrypt\\.zip");
     mockDownloadPublicUrlFiles(
         "/tmp/android-mcts-configinfrastructure.zip",
-        "https://dl\\.google\\.com/dl/android/xts/mcts/2024-10/arm64/android-mcts-configinfrastructure\\.zip");
+        "https://dl\\.google\\.com/dl/android/xts/mcts/30/arm64/android-mcts-configinfrastructure\\.zip");
     mockDownloadPublicUrlFiles(
         "/tmp/android-mcts-documentsui.zip",
         "https://dl\\.google\\.com/dl/android/xts/mcts/30/arm64/android-mcts-documentsui\\.zip");
