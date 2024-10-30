@@ -80,6 +80,17 @@ java_library(
 )
 
 java_library(
+    name = "android_native_bin_job_validator",
+    srcs = ["AndroidNativeBinJobValidator.java"],
+    deps = [
+        ":job_validator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:android_native_bin_spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+    ],
+)
+
+java_library(
     name = "android_switch_user_decorator_job_validator",
     srcs = ["AndroidSwitchUserDecoratorJobValidator.java"],
     deps = [

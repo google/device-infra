@@ -69,6 +69,14 @@ java_library(
 )
 
 java_library(
+    name = "android_native_bin_env_validator",
+    srcs = ["AndroidNativeBinEnvValidator.java"],
+    deps = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/env:android_device_version_env_validator",
+    ],
+)
+
+java_library(
     name = "android_switch_user_decorator_env_validator",
     srcs = ["AndroidSwitchUserDecoratorEnvValidator.java"],
     deps = [

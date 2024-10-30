@@ -40,6 +40,18 @@ java_library(
 ################################################################################
 
 java_library(
+    name = "android_native_bin_lister",
+    srcs = ["AndroidNativeBinLister.java"],
+    deps = [
+        ":lister",
+        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:android_native_bin",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "no_op_driver_lister",
     srcs = ["NoOpDriverLister.java"],
     deps = [
