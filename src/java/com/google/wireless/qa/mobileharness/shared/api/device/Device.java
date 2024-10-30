@@ -499,4 +499,10 @@ public interface Device {
     // By default, device does not supports container-mode tests.
     return false;
   }
+
+  /** Returns whether this device is a real device. */
+  default boolean isRealDevice() {
+    // By default, device is a real device needs to be monitored.
+    return true;
+  }
 }

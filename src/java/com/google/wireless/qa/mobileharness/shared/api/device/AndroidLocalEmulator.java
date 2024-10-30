@@ -141,4 +141,9 @@ public class AndroidLocalEmulator extends AndroidDevice {
     //  We suppose all emulators are rooted.
     return true;
   }
+
+  @Override
+  public boolean isRealDevice() {
+    return false;
+  }
 }
