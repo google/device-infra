@@ -74,3 +74,18 @@ java_library(
         "@maven//:javax_inject_jsr330_api",
     ],
 )
+
+java_library(
+    name = "xts_server_environment_preparer",
+    srcs = ["XtsServerEnvironmentPreparer.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:server_environment_preparer",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console:console_info",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/command:command_helper",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_command_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)

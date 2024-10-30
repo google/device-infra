@@ -87,11 +87,21 @@ java_library(
 )
 
 java_library(
+    name = "server_environment_preparer",
+    srcs = ["ServerEnvironmentPreparer.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+    ],
+)
+
+java_library(
     name = "server_preparer",
     srcs = ["ServerPreparer.java"],
     deps = [
         ":annotations",
         ":builtin_olc_server_flags",
+        ":server_environment_preparer",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:control_service_java_proto",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:version_service_java_proto",
         "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc",

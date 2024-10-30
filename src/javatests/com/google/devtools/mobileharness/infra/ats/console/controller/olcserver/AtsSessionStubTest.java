@@ -30,9 +30,11 @@ import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.infra.ats.common.FlagsString;
-import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.OlcServerJavaPath;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerStub;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.OlcServerModule;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerEnvironmentPreparer;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerEnvironmentPreparer.NoOpServerEnvironmentPreparer;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerEnvironmentPreparer.ServerEnvironment;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleOutput;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionCancellation;
@@ -73,7 +75,7 @@ public class AtsSessionStubTest {
   @Bind private ListeningScheduledExecutorService scheduledThreadPool;
   @Bind private Sleeper sleeper;
   @Bind private FlagsString deviceInfraServiceFlags;
-  @Bind @OlcServerJavaPath private Path javaPath;
+  @Bind private ServerEnvironmentPreparer serverEnvironmentPreparer;
 
   @Bind
   @ConsoleOutput(ConsoleOutput.Type.OUT_STREAM)
@@ -114,8 +116,6 @@ public class AtsSessionStubTest {
     deviceInfraServiceFlags = FlagsString.of(String.join(" ", flagList), flagList);
     Flags.parse(deviceInfraServiceFlags.flags().toArray(new String[0]));
 
-    javaPath = Path.of(systemUtil.getJavaBin());
-
     sleeper = Sleeper.defaultSleeper();
     threadPool = ThreadPools.createStandardThreadPool("main-thread");
     scheduledThreadPool =
@@ -124,15 +124,17 @@ public class AtsSessionStubTest {
     outPrintStream = System.out;
     errPrintStream = System.err;
 
-    Path serverBinary =
-        Path.of(
-            RunfilesUtil.getRunfilesLocation(
-                "java/com/google/devtools/mobileharness/infra/ats/common/"
-                    + "olcserver/ats_olc_server_local_mode_deploy.jar"));
+    serverEnvironmentPreparer =
+        new NoOpServerEnvironmentPreparer(
+            ServerEnvironment.of(
+                Path.of(
+                    RunfilesUtil.getRunfilesLocation(
+                        "java/com/google/devtools/mobileharness/infra/ats/common/"
+                            + "olcserver/ats_olc_server_local_mode_deploy.jar")),
+                Path.of(systemUtil.getJavaBin())));
 
     Guice.createInjector(
-            new OlcServerModule(
-                () -> serverBinary, deviceInfraServiceFlags, "ATS console", "fake_client_id"),
+            new OlcServerModule(deviceInfraServiceFlags, "ATS console", "fake_client_id"),
             BoundFieldModule.of(this))
         .injectMembers(this);
   }

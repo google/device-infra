@@ -72,7 +72,7 @@ public class AtsLocalRunner {
     Injector injector =
         Guice.createInjector(
             new AtsLocalRunnerModule(
-                AtsLocalRunner::getOlcServerBinary,
+                getOlcServerBinary(),
                 deviceInfraServiceFlags,
                 "ats-local-runner-" + UUID.randomUUID()));
     AtsLocalRunner atsLocalRunner = injector.getInstance(AtsLocalRunner.class);

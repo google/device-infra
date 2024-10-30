@@ -114,9 +114,6 @@ public final class CommandLineParser {
                 /* consoleLineReader= */ null,
                 System.out,
                 System.err,
-                () -> {
-                  throw new IllegalStateException("olcServerBinary should not be needed");
-                },
                 runCommandParseResult,
                 /* parseCommandOnly= */ true));
   }

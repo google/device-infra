@@ -107,6 +107,8 @@ public class ListCommandTest {
     // Sets flags.
     ImmutableMap<String, String> flagMap =
         ImmutableMap.of(
+            "ats_console_olc_server_path",
+            olcServerBinary.toString(),
             "olc_server_port",
             Integer.toString(olcServerPort),
             "public_dir",
@@ -143,7 +145,6 @@ public class ListCommandTest {
                 lineReader,
                 consoleOutPrintStream,
                 consoleErrPrintStream,
-                () -> olcServerBinary,
                 future -> {},
                 /* parseCommandOnly= */ false));
     injector.injectMembers(this);

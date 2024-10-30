@@ -21,7 +21,6 @@ import com.google.devtools.mobileharness.infra.ats.common.FlagsString;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ClientComponentName;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ClientId;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.DeviceInfraServiceFlags;
-import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerBinary;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerChannel;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerStub;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.ControlStub;
@@ -32,32 +31,20 @@ import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import io.grpc.ManagedChannel;
-import java.nio.file.Path;
-import javax.inject.Provider;
 import javax.inject.Singleton;
 
 /** Module for ATS console /local runner that connect to ATS OLC server. */
 public class OlcServerModule extends AbstractModule {
 
-  private final Provider<Path> serverBinary;
   private final FlagsString deviceInfraServiceFlags;
   private final String clientComponentName;
   private final String clientId;
 
   public OlcServerModule(
-      Provider<Path> serverBinary,
-      FlagsString deviceInfraServiceFlags,
-      String clientComponentName,
-      String clientId) {
-    this.serverBinary = serverBinary;
+      FlagsString deviceInfraServiceFlags, String clientComponentName, String clientId) {
     this.deviceInfraServiceFlags = deviceInfraServiceFlags;
     this.clientComponentName = clientComponentName;
     this.clientId = clientId;
-  }
-
-  @Override
-  protected void configure() {
-    bind(Path.class).annotatedWith(ServerBinary.class).toProvider(serverBinary);
   }
 
   @Provides

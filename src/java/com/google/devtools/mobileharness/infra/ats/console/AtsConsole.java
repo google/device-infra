@@ -65,7 +65,6 @@ import com.google.inject.Injector;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessLogger;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
@@ -120,7 +119,6 @@ public class AtsConsole {
                 lineReader,
                 System.out,
                 System.err,
-                AtsConsole::getOlcServerBinary,
                 resultFuture -> {},
                 /* parseCommandOnly= */ false));
 
@@ -325,10 +323,6 @@ public class AtsConsole {
       consoleUtil.printlnStderr("\nReceived EOF.");
     }
     return Optional.empty();
-  }
-
-  private static Path getOlcServerBinary() {
-    return Path.of(Flags.instance().atsConsoleOlcServerPath.getNonNull());
   }
 
   private static LineReader createLineReader() throws IOException {

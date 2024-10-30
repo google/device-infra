@@ -34,6 +34,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:flags_string",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:annotations",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:module",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:server_environment_preparer",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:server_preparer",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:annotations",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/olcserver:ats_session_stub",

@@ -19,25 +19,26 @@ package com.google.devtools.mobileharness.infra.ats.local;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.mobileharness.infra.ats.common.FlagsString;
-import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.OlcServerJavaPath;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.OlcServerModule;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerEnvironmentPreparer;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerEnvironmentPreparer.NoOpServerEnvironmentPreparer;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerEnvironmentPreparer.ServerEnvironment;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.AbstractModule;
-import com.google.inject.Provider;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import java.nio.file.Path;
 
 /** Guice Module for ATS local runner. */
 public final class AtsLocalRunnerModule extends AbstractModule {
-  private final Provider<Path> olcServerBinary;
+  private final Path olcServerBinary;
   private final FlagsString deviceInfraServiceFlags;
   private final String runnerId;
 
   public AtsLocalRunnerModule(
-      Provider<Path> olcServerBinary, FlagsString deviceInfraServiceFlags, String runnerId) {
+      Path olcServerBinary, FlagsString deviceInfraServiceFlags, String runnerId) {
     this.olcServerBinary = olcServerBinary;
     this.deviceInfraServiceFlags = deviceInfraServiceFlags;
     this.runnerId = runnerId;
@@ -45,16 +46,14 @@ public final class AtsLocalRunnerModule extends AbstractModule {
 
   @Override
   protected void configure() {
-    install(
-        new OlcServerModule(
-            olcServerBinary, deviceInfraServiceFlags, "ATS local runner", runnerId));
+    install(new OlcServerModule(deviceInfraServiceFlags, "ATS local runner", runnerId));
   }
 
   @Provides
   @Singleton
-  @OlcServerJavaPath
-  Path provideJavaPath(SystemUtil systemUtil) {
-    return Path.of(systemUtil.getJavaBin());
+  ServerEnvironmentPreparer provideServerEnvironmentPreparer(SystemUtil systemUtil) {
+    return new NoOpServerEnvironmentPreparer(
+        ServerEnvironment.of(olcServerBinary, Path.of(systemUtil.getJavaBin())));
   }
 
   @Provides

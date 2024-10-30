@@ -68,7 +68,6 @@ public final class AtsConsoleTest {
 
   private FlagsString deviceInfraServiceFlags;
   private ImmutableMap<String, String> systemProperties;
-  private Path olcServerBinary;
 
   @Inject private AtsConsole atsConsole;
 
@@ -83,10 +82,18 @@ public final class AtsConsoleTest {
     String versionFilePath = PathUtil.join(xtsRootDirPath, "android-cts/tools/version.txt");
     localFileUtil.writeToFile(versionFilePath, "fake_version");
 
+    Path olcServerBinary =
+        Path.of(
+            RunfilesUtil.getRunfilesLocation(
+                "java/com/google/devtools/mobileharness/infra/ats/common/"
+                    + "olcserver/ats_olc_server_local_mode_deploy.jar"));
+
     systemProperties = ImmutableMap.of("XTS_ROOT", xtsRootDirPath);
 
     ImmutableMap<String, String> flagMap =
         ImmutableMap.of(
+            "ats_console_olc_server_path",
+            olcServerBinary.toString(),
             "detect_adb_device",
             "false",
             "external_adb_initializer_template",
@@ -106,12 +113,6 @@ public final class AtsConsoleTest {
     deviceInfraServiceFlags = FlagsString.of(String.join(" ", flagList), flagList);
     Flags.parse(deviceInfraServiceFlags.flags().toArray(new String[0]));
 
-    olcServerBinary =
-        Path.of(
-            RunfilesUtil.getRunfilesLocation(
-                "java/com/google/devtools/mobileharness/infra/ats/common/"
-                    + "olcserver/ats_olc_server_local_mode_deploy.jar"));
-
     ByteArrayOutputStream consoleOutOutputStream = new ByteArrayOutputStream();
     consoleOutPrintStream = new PrintStream(consoleOutOutputStream, false, UTF_8);
 
@@ -130,7 +131,6 @@ public final class AtsConsoleTest {
                 lineReader,
                 consoleOutPrintStream,
                 consoleErrPrintStream,
-                () -> olcServerBinary,
                 future -> {},
                 /* parseCommandOnly= */ false));
     injector.injectMembers(this);
@@ -154,7 +154,6 @@ public final class AtsConsoleTest {
                 lineReader,
                 consoleOutPrintStream,
                 consoleErrPrintStream,
-                () -> olcServerBinary,
                 future -> {},
                 /* parseCommandOnly= */ false));
     injector.injectMembers(this);

@@ -36,9 +36,8 @@ import com.google.devtools.mobileharness.infra.ats.common.FlagsString;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ClientComponentName;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ClientId;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.DeviceInfraServiceFlags;
-import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.OlcServerJavaPath;
-import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerBinary;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerStub;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerEnvironmentPreparer.ServerEnvironment;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.OlcServerDirs;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.HeartbeatRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerRequest;
@@ -84,6 +83,8 @@ public class ServerPreparer {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
+  private static final String LOCK_FILE_PATH = "/tmp/olc_server_startup.lck";
+
   private static final String SH_COMMAND = "sh";
   private static final String NOHUP_COMMAND = "nohup";
 
@@ -108,8 +109,7 @@ public class ServerPreparer {
   private final LocalFileUtil localFileUtil;
   private final Provider<ControlStub> controlStub;
   private final Provider<VersionStub> versionStub;
-  private final Provider<Path> serverBinary;
-  private final Provider<Path> javaPath;
+  private final ServerEnvironmentPreparer serverEnvironmentPreparer;
   private final FlagsString deviceInfraServiceFlags;
   private final ListeningScheduledExecutorService scheduledThreadPool;
 
@@ -128,8 +128,7 @@ public class ServerPreparer {
       LocalFileUtil localFileUtil,
       @ServerStub(ServerStub.Type.CONTROL_SERVICE) Provider<ControlStub> controlStub,
       @ServerStub(ServerStub.Type.VERSION_SERVICE) Provider<VersionStub> versionStub,
-      @ServerBinary Provider<Path> serverBinary,
-      @OlcServerJavaPath Provider<Path> javaPath,
+      ServerEnvironmentPreparer serverEnvironmentPreparer,
       @DeviceInfraServiceFlags FlagsString deviceInfraServiceFlags,
       ListeningScheduledExecutorService scheduledThreadPool) {
     this.clientComponentName = clientComponentName;
@@ -140,8 +139,7 @@ public class ServerPreparer {
     this.localFileUtil = localFileUtil;
     this.controlStub = controlStub;
     this.versionStub = versionStub;
-    this.serverBinary = serverBinary;
-    this.javaPath = javaPath;
+    this.serverEnvironmentPreparer = serverEnvironmentPreparer;
     this.deviceInfraServiceFlags = deviceInfraServiceFlags;
     this.scheduledThreadPool = scheduledThreadPool;
   }
@@ -193,7 +191,7 @@ public class ServerPreparer {
       hasPrepared = true;
 
       // Acquires file lock.
-      Optional<NonThrowingAutoCloseable> fileUnlocker = lockFile("/tmp/olc_server_startup.lck");
+      Optional<NonThrowingAutoCloseable> fileUnlocker = lockFile();
       try {
 
         // Tries to get server version.
@@ -217,8 +215,11 @@ public class ServerPreparer {
 
         // Starts a new server.
         logger.atInfo().log("Starting new OLC server...");
-        String serverBinaryPath = requireNonNull(serverBinary.get()).toString();
-        localFileUtil.checkFile(serverBinaryPath);
+
+        // Prepares server environment.
+        ServerEnvironment serverEnvironment = serverEnvironmentPreparer.prepareServerEnvironment();
+
+        // Creates arguments.
         FlagsString serverFlags = deviceInfraServiceFlags.addToHead(BuiltinOlcServerFlags.get());
         ImmutableList<String> serverNativeArguments =
             ImmutableList.of(
@@ -238,9 +239,9 @@ public class ServerPreparer {
         startOlcServerCommandBuilder.addAll(
             JavaCommandCreator.of(
                     /* useStandardInvocationForm= */ true,
-                    wrapPath(requireNonNull(javaPath.get()).toString()))
+                    wrapPath(serverEnvironment.javaBinary().toString()))
                 .createJavaCommand(
-                    wrapPath(serverBinaryPath),
+                    wrapPath(serverEnvironment.serverBinary().toString()),
                     // Treats all flags as one argument to keep escape chars.
                     ImmutableList.of(serverFlags.flagsString()),
                     serverNativeArguments));
@@ -269,8 +270,8 @@ public class ServerPreparer {
               "Failed to start OLC server",
               e);
         }
-
         try {
+
           // Waits until the server starts.
           logger
               .atInfo()
@@ -508,39 +509,39 @@ public class ServerPreparer {
    * @return a closeable to unlock the file, or empty if an error occurs when acquiring the lock
    *     (not including waiting for the lock)
    */
-  private Optional<NonThrowingAutoCloseable> lockFile(String filePath) {
+  private Optional<NonThrowingAutoCloseable> lockFile() {
     RandomAccessFile file = null;
     try {
       // Opens file.
-      file = new RandomAccessFile(filePath, "rw");
+      file = new RandomAccessFile(LOCK_FILE_PATH, "rw");
       RandomAccessFile finalFile = file;
-      localFileUtil.grantFileOrDirFullAccess(filePath);
+      localFileUtil.grantFileOrDirFullAccess(LOCK_FILE_PATH);
 
       // Locks file.
-      logger.atInfo().with(IMPORTANCE, DEBUG).log("Locking file [%s]", filePath);
+      logger.atInfo().with(IMPORTANCE, DEBUG).log("Locking file [%s]", LOCK_FILE_PATH);
       @SuppressWarnings({"resource", "unused"})
       FileLock lock = file.getChannel().lock();
-      logger.atInfo().with(IMPORTANCE, DEBUG).log("Locked file [%s]", filePath);
+      logger.atInfo().with(IMPORTANCE, DEBUG).log("Locked file [%s]", LOCK_FILE_PATH);
 
       return Optional.of(
           () -> {
-            closeFile(finalFile, filePath);
-            logger.atInfo().with(IMPORTANCE, DEBUG).log("Released file lock [%s]", filePath);
+            closeFile(finalFile);
+            logger.atInfo().with(IMPORTANCE, DEBUG).log("Released file lock [%s]", LOCK_FILE_PATH);
           });
     } catch (MobileHarnessException | IOException e) {
-      logger.atWarning().withCause(e).log("Failed to lock file [%s]", filePath);
+      logger.atWarning().withCause(e).log("Failed to lock file [%s]", LOCK_FILE_PATH);
       if (file != null) {
-        closeFile(file, filePath);
+        closeFile(file);
       }
       return Optional.empty();
     }
   }
 
-  private static void closeFile(RandomAccessFile file, String filePath) {
+  private static void closeFile(RandomAccessFile file) {
     try {
       file.close();
     } catch (IOException e) {
-      logger.atWarning().withCause(e).log("Failed to close file [%s]", filePath);
+      logger.atWarning().withCause(e).log("Failed to close file [%s]", LOCK_FILE_PATH);
     }
   }
 

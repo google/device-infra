@@ -25,29 +25,26 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.mobileharness.infra.ats.common.FlagsString;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
-import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.OlcServerJavaPath;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.OlcServerModule;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerEnvironmentPreparer;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleLineReader;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleOutput;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.MainArgs;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ParseCommandOnly;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.RunCommandParsingResultFuture;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.SystemProperties;
+import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.XtsServerEnvironmentPreparer;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportModule;
-import com.google.devtools.mobileharness.infra.ats.console.util.command.CommandHelper;
-import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsCommandUtil;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import java.io.PrintStream;
 import java.io.PrintWriter;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 import javax.annotation.Nullable;
-import javax.inject.Provider;
 import javax.inject.Singleton;
 import org.jline.reader.LineReader;
 
@@ -62,7 +59,6 @@ public class AtsConsoleModule extends AbstractModule {
   @Nullable private final LineReader consoleLineReader;
   private final PrintStream consoleOutputOut;
   private final PrintStream consoleOutputErr;
-  private final Provider<Path> olcServerBinary;
   private final Consumer<ListenableFuture<SessionRequestInfo.Builder>> resultFuture;
   private final boolean parseCommandOnly;
 
@@ -74,7 +70,6 @@ public class AtsConsoleModule extends AbstractModule {
       @Nullable LineReader consoleLineReader,
       PrintStream consoleOutputOut,
       PrintStream consoleOutputErr,
-      Provider<Path> olcServerBinary,
       Consumer<ListenableFuture<SessionRequestInfo.Builder>> resultFuture,
       boolean parseCommandOnly) {
     this.consoleId = consoleId;
@@ -84,15 +79,17 @@ public class AtsConsoleModule extends AbstractModule {
     this.consoleLineReader = consoleLineReader;
     this.consoleOutputOut = consoleOutputOut;
     this.consoleOutputErr = consoleOutputErr;
-    this.olcServerBinary = olcServerBinary;
     this.resultFuture = resultFuture;
     this.parseCommandOnly = parseCommandOnly;
   }
 
   @Override
   protected void configure() {
-    install(
-        new OlcServerModule(olcServerBinary, deviceInfraServiceFlags, "ATS console", consoleId));
+    bind(ServerEnvironmentPreparer.class)
+        .to(XtsServerEnvironmentPreparer.class)
+        .in(Singleton.class);
+
+    install(new OlcServerModule(deviceInfraServiceFlags, "ATS console", consoleId));
     install(new CompatibilityReportModule());
   }
 
@@ -100,14 +97,6 @@ public class AtsConsoleModule extends AbstractModule {
   @MainArgs
   ImmutableList<String> provideMainArgs() {
     return mainArgs;
-  }
-
-  @Provides
-  @Singleton
-  @OlcServerJavaPath
-  Path provideJavaPath(ConsoleInfo consoleInfo, CommandHelper commandHelper) {
-    return XtsCommandUtil.getJavaBinary(
-        commandHelper.getXtsType(), consoleInfo.getXtsRootDirectoryNonEmpty());
   }
 
   @Provides

@@ -23,7 +23,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.OlcServerJavaPath;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerEnvironmentPreparer.ServerEnvironment;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleLineReader;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.SystemProperties;
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
@@ -60,8 +60,6 @@ public final class RunCommandTest {
   @Bind @SystemProperties
   private static final ImmutableMap<String, String> SYSTEM_PROPERTIES = ImmutableMap.of();
 
-  @Bind @OlcServerJavaPath private static final Path JAVA_PATH = Path.of("/fake_java_path");
-
   @Mock @Bind private LocalFileUtil localFileUtil;
   @Mock @Bind @Nullable @ConsoleLineReader private LineReader lineReader;
   @Mock @Bind private CommandExecutor commandExecutor;
@@ -79,7 +77,11 @@ public final class RunCommandTest {
     runCommand =
         new GuiceFactory(
                 Guice.createInjector(
-                    BoundFieldModule.of(this), new ConsoleCommandTestModule(consoleInfo)))
+                    BoundFieldModule.of(this),
+                    new ConsoleCommandTestModule(
+                        consoleInfo,
+                        ServerEnvironment.of(
+                            Path.of("/fake_server_binary"), Path.of("/fake_java_binary")))))
             .create(RunCommand.class);
     commandLine =
         new CommandLine(runCommand)

@@ -23,6 +23,9 @@ import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.mobileharness.infra.ats.common.FlagsString;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.OlcServerModule;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerEnvironmentPreparer;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerEnvironmentPreparer.NoOpServerEnvironmentPreparer;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerEnvironmentPreparer.ServerEnvironment;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ParseCommandOnly;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.RunCommandParsingResultFuture;
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
@@ -31,27 +34,32 @@ import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
-import java.nio.file.Path;
+import com.google.inject.Singleton;
 import java.util.function.Consumer;
 
 /** Console command module for testing. */
 public class ConsoleCommandTestModule extends AbstractModule {
 
   private final ConsoleInfo consoleInfo;
+  private final ServerEnvironment serverEnvironment;
 
-  ConsoleCommandTestModule(ConsoleInfo consoleInfo) {
+  ConsoleCommandTestModule(ConsoleInfo consoleInfo, ServerEnvironment serverEnvironment) {
     this.consoleInfo = consoleInfo;
+    this.serverEnvironment = serverEnvironment;
   }
 
   @Override
   protected void configure() {
     install(
         new OlcServerModule(
-            () -> Path.of(""),
-            FlagsString.of("", ImmutableList.of()),
-            "ATS console",
-            "fake_client_id"));
+            FlagsString.of("", ImmutableList.of()), "ATS console", "fake_client_id"));
     install(new CompatibilityReportModule());
+  }
+
+  @Provides
+  @Singleton
+  ServerEnvironmentPreparer provideServerEnvironmentPreparer() {
+    return new NoOpServerEnvironmentPreparer(serverEnvironment);
   }
 
   @Provides

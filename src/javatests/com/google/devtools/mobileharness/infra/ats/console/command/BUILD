@@ -32,7 +32,7 @@ java_library(
     deps = [
         ":console_command_test_module",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:flags_string",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:annotations",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:server_environment_preparer",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:annotations",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:ats_console_lib",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:ats_console_module",
@@ -69,6 +69,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:flags_string",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_info",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:module",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:server_environment_preparer",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:annotations",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:console_info",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_module",
