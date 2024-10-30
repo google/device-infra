@@ -214,7 +214,6 @@ CtsNetTestCasesMaxTargetSdk31
 CtsNetTestCasesMaxTargetSdk33
 CtsOnDevicePersonalizationConfigTests
 CtsOnDevicePersonalizationE2ETests
-CtsOsTestCases
 CtsPackageWatchdogTestCases
 CtsPdfModuleTestCases
 CtsPerfettoTestCases
