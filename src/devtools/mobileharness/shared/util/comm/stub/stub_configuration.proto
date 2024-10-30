@@ -18,6 +18,8 @@ syntax = "proto3";
 
 package mobileharness.shared.util.comm.stub;
 
+import "src/devtools/mobileharness/shared/util/comm/relay/proto/destination.proto";
+
 option java_package = "com.google.devtools.mobileharness.shared.util.comm.stub";
 option java_outer_classname = "StubConfigurationProto";
 
@@ -30,6 +32,9 @@ message ServerSpec {
 // Direct target without any proxy.
 message DirectTarget {
   ServerSpec server_spec = 1;
+  // The transport has to be gRPC to use the relay destination.
+  optional mobileharness.shared.util.comm.relay.Destination relay_destination =
+      2;
 }
 
 enum Transport {

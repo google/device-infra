@@ -24,6 +24,7 @@ proto_library(
     name = "stub_configuration_proto",
     srcs = ["stub_configuration.proto"],
     deps = [
+        "//src/devtools/mobileharness/shared/util/comm/relay/proto:destination_proto",
     ],
 )
 

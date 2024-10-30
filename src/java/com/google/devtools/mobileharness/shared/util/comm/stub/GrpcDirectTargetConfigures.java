@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.shared.util.comm.stub;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.reflect.Reflection;
+import com.google.devtools.mobileharness.shared.util.comm.relay.client.ClientCreator;
 import com.google.devtools.mobileharness.shared.util.comm.stub.Annotations.ChannelExecutor;
 import com.google.devtools.mobileharness.shared.util.comm.stub.StubConfigurationProto.ServerSpec;
 import com.google.devtools.mobileharness.shared.util.comm.stub.StubConfigurationProto.StubConfiguration;
@@ -66,6 +67,13 @@ public final class GrpcDirectTargetConfigures {
    */
   public <I> I createStubInterface(
       Function<Channel, I> stubCreator, StubConfiguration stubConfiguration) {
+    if (stubConfiguration.getDirectTarget().hasRelayDestination()) {
+      stubCreator =
+          stubCreator.compose(
+              c ->
+                  ClientCreator.createChannel(
+                      c, stubConfiguration.getDirectTarget().getRelayDestination()));
+    }
     return createStub(stubConfiguration.getDirectTarget().getServerSpec(), stubCreator);
   }
 

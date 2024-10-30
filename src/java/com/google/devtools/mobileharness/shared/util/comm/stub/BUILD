@@ -110,6 +110,7 @@ java_library(
         ":channel_manager",
         ":proxy",
         "//src/devtools/mobileharness/shared/util/comm/stub:stub_configuration_java_proto",
+        "//src/java/com/google/devtools/mobileharness/shared/util/comm/relay/client",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
         "@io_grpc_grpc_java//core",
         "@maven//:com_google_guava_guava",
