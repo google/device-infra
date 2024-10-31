@@ -25,7 +25,7 @@ package(
 java_library(
     name = "flogger_redefiner",
     srcs = ["FloggerRedefiner.java"],
-    visibility = ["//src/java/com/google/devtools/mobileharness/shared/util/logging/flogger:__pkg__"],
+    visibility = ["//visibility:private"],
     deps = ["@maven//:net_bytebuddy_byte_buddy"],
 )
 
