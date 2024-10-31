@@ -299,7 +299,7 @@ public abstract class AndroidRealDeviceDelegate {
       }
       String revision = fastboot.getVar(deviceId, FastbootProperty.HW_REVISION);
       if (!Strings.isNullOrEmpty(revision)) {
-        device.updateDimension(Dimension.Name.REVISION, revision);
+        device.updateDimension(Dimension.Name.REVISION, Ascii.toLowerCase(revision));
       }
 
       try {
