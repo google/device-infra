@@ -19,6 +19,8 @@ package com.google.devtools.mobileharness.infra.ats.server.sessionplugin;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
 
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.eventbus.Subscribe;
@@ -35,6 +37,7 @@ import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.Err
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.NewMultiCommandRequest;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.RequestDetail;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.RequestDetail.RequestState;
+import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.RequestDetailOrBuilder;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.SessionRequest;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.SessionRequest.RequestCase;
 import com.google.devtools.mobileharness.infra.ats.server.sessionplugin.NewMultiCommandRequestHandler.CreateJobsResult;
@@ -93,16 +96,17 @@ final class AtsServerSessionPlugin {
 
   private final Object sessionLock = new Object();
 
-  // The source of truth for this session's request states.
-  @GuardedBy("sessionLock")
-  private final RequestDetail.Builder requestDetail = RequestDetail.newBuilder();
+  private final Supplier<RequestDetail.Builder> requestDetailSupplier =
+      Suppliers.memoize(this::resumeRequestDetailFromSessionPluginOutput);
 
   // All non-tradefed jobs which will be initiated when the session starts. They will be added to
   // the session when all tradefed jobs have ended.
   @GuardedBy("sessionLock")
   private ImmutableList<JobInfo> nonTradefedJobs = null;
 
+  @GuardedBy("sessionLock")
   private final SessionInfo sessionInfo;
+
   private final NewMultiCommandRequestHandler newMultiCommandRequestHandler;
   private final LocalSessionStub localSessionStub;
   private final Clock clock;
@@ -126,6 +130,7 @@ final class AtsServerSessionPlugin {
   public void onSessionStarting(SessionStartingEvent event)
       throws InvalidProtocolBufferException, InterruptedException {
     synchronized (sessionLock) {
+      RequestDetail.Builder requestDetail = requestDetailSupplier.get();
       SessionRequest request =
           sessionInfo.getSessionPluginExecutionConfig().getConfig().unpack(SessionRequest.class);
       if (request.getRequestCase().equals(RequestCase.NEW_MULTI_COMMAND_REQUEST)) {
@@ -192,13 +197,13 @@ final class AtsServerSessionPlugin {
           // have ended.
           if (!tradefedJobs.isEmpty()) {
             // Add tradefed jobs to session.
-            addJobsToSession(tradefedJobs);
+            tradefedJobs.forEach(sessionInfo::addJob);
           } else {
             // If no tradefed job was added, add non tradefed jobs directly.
-            addJobsToSession(nonTradefedJobs);
+            nonTradefedJobs.forEach(sessionInfo::addJob);
           }
         } finally {
-          updateSessionPluginOutput();
+          updateSessionPluginOutput(requestDetail);
         }
       }
     }
@@ -208,8 +213,8 @@ final class AtsServerSessionPlugin {
   public void onTestStarting(TestStartingEvent event) {
     // Sends cancellation test message if necessary.
     synchronized (sessionLock) {
+      RequestDetail.Builder requestDetail = requestDetailSupplier.get();
       try {
-        resumeRequestDetailFromSessionPluginOutput();
 
         TestInfo testInfo = event.getTest();
         boolean shouldSendCancellationMessage = false;
@@ -221,7 +226,7 @@ final class AtsServerSessionPlugin {
           sendCancellationMessageToStartedTest(testInfo);
         }
       } finally {
-        updateSessionPluginOutput();
+        updateSessionPluginOutput(requestDetail);
       }
     }
   }
@@ -229,18 +234,31 @@ final class AtsServerSessionPlugin {
   @Subscribe
   public void onJobEnded(JobEndEvent jobEndEvent) throws InterruptedException {
     synchronized (sessionLock) {
-      resumeRequestDetailFromSessionPluginOutput();
+      RequestDetail.Builder requestDetail = requestDetailSupplier.get();
 
       JobInfo jobInfo = jobEndEvent.getJob();
-
-      // Generate a new commandAttempt for the finished job, and update the command status.
-      updateCommandDetail(jobInfo);
-
       // If all tradefed jobs have ended, create non tradefed jobs.
       try {
+        // Generate a new commandAttempt for the finished job, and update the command status.
+        if (requestDetail.containsCommandDetails(getCommandIdOfJob(jobInfo))) {
+          // Add a command attempt
+          CommandAttemptDetail commandAttemptDetail =
+              generateCommandAttemptDetail(
+                  jobInfo,
+                  jobInfo.tests().getAll().values().iterator().next(),
+                  sessionInfo.getSessionId());
+          requestDetail
+              .addCommandAttemptDetails(commandAttemptDetail)
+              .setUpdateTime(TimeUtils.toProtoTimestamp(Instant.now()));
+        } else {
+          logger.atWarning().log(
+              "Tradefed job %s not found in requestDetail", jobInfo.locator().getId());
+        }
+
         if (requestDetail.getState() == RequestState.CANCELED) {
           return;
         }
+
         // If a non-tradefed tests ended, that means all non-tradefed tests had already been created
         // and no need to create more.
         if (!jobInfo.type().getDriver().equals(TRADEFED_DRIVER_NAME)) {
@@ -276,10 +294,10 @@ final class AtsServerSessionPlugin {
           nonTradefedJobs = createNonTradefedJobsResult.jobInfos();
         }
         if (!nonTradefedJobs.isEmpty()) {
-          addJobsToSession(nonTradefedJobs);
+          nonTradefedJobs.forEach(sessionInfo::addJob);
         }
       } finally {
-        updateSessionPluginOutput();
+        updateSessionPluginOutput(requestDetail);
       }
     }
   }
@@ -287,7 +305,8 @@ final class AtsServerSessionPlugin {
   @Subscribe
   public void onSessionEnded(SessionEndedEvent event) throws InterruptedException {
     synchronized (sessionLock) {
-      resumeRequestDetailFromSessionPluginOutput();
+      RequestDetail.Builder requestDetail = requestDetailSupplier.get();
+
       try {
         HandleResultProcessingResult handleResultProcessingResult =
             newMultiCommandRequestHandler.handleResultProcessing(
@@ -312,9 +331,10 @@ final class AtsServerSessionPlugin {
             .putAllCommandDetails(handleResultProcessingResult.commandDetails())
             .putAllTestContext(handleResultProcessingResult.testContexts());
 
-        if (canRetrySession(requestDetail.build())) {
+        if (canRetrySession(requestDetail)) {
           try {
-            retrySession();
+            String nextAttemptSessionId = retrySession(requestDetail);
+            requestDetail.setNextAttemptSessionId(nextAttemptSessionId);
           } catch (MobileHarnessException e) {
             logger.atWarning().withCause(e).log("Failed to trigger retry session.");
           }
@@ -330,7 +350,7 @@ final class AtsServerSessionPlugin {
             .setErrorMessage(e.getMessage());
         throw e;
       } finally {
-        updateSessionPluginOutput();
+        updateSessionPluginOutput(requestDetail);
       }
     }
   }
@@ -339,7 +359,8 @@ final class AtsServerSessionPlugin {
   public void onSessionNotification(SessionNotificationEvent event)
       throws InvalidProtocolBufferException {
     synchronized (sessionLock) {
-      resumeRequestDetailFromSessionPluginOutput();
+      RequestDetail.Builder requestDetail = requestDetailSupplier.get();
+
       try {
         AtsServerSessionNotification notification =
             event
@@ -365,15 +386,9 @@ final class AtsServerSessionPlugin {
           }
         }
       } finally {
-        updateSessionPluginOutput();
+        updateSessionPluginOutput(requestDetail);
       }
     }
-  }
-
-  /** Add jobs to the session. */
-  @GuardedBy("sessionLock")
-  private void addJobsToSession(ImmutableList<JobInfo> jobInfoList) {
-    jobInfoList.forEach(sessionInfo::addJob);
   }
 
   private void sendCancellationMessageToStartedTest(TestInfo testInfo) {
@@ -387,22 +402,21 @@ final class AtsServerSessionPlugin {
   }
 
   @GuardedBy("sessionLock")
-  private void retrySession() throws MobileHarnessException {
-    NewMultiCommandRequest.Builder retryRequestBuilder =
-        requestDetail.getOriginalRequest().toBuilder();
+  private String retrySession(RequestDetailOrBuilder requestDetail) throws MobileHarnessException {
+    NewMultiCommandRequest originalRequest = requestDetail.getOriginalRequest();
+    NewMultiCommandRequest.Builder retryRequestBuilder = originalRequest.toBuilder();
     if (requestDetail.getTestContextMap().isEmpty()) {
       // No test context, retry like a new request.
       retryRequestBuilder.clearPrevTestContext();
       // Use original command line if exists, in case current request is a retry. Otherwise reuse
       // current request's command line.
-      if (requestDetail.getOriginalRequest().hasPrevTestContext()
-          && !requestDetail.getOriginalRequest().getPrevTestContext().getCommandLine().isEmpty()) {
-        String retryCommandLine =
-            requestDetail.getOriginalRequest().getPrevTestContext().getCommandLine();
+      if (originalRequest.hasPrevTestContext()
+          && !originalRequest.getPrevTestContext().getCommandLine().isEmpty()) {
+        String retryCommandLine = originalRequest.getPrevTestContext().getCommandLine();
         retryRequestBuilder
             .clearCommands()
             .addCommands(
-                requestDetail.getOriginalRequest().getCommandsList().get(0).toBuilder()
+                originalRequest.getCommandsList().get(0).toBuilder()
                     .setCommandLine(retryCommandLine)
                     .build());
       }
@@ -411,10 +425,9 @@ final class AtsServerSessionPlugin {
       retryRequestBuilder
           .setPrevTestContext(requestDetail.getTestContextMap().values().iterator().next())
           .clearCommands();
-      String retryCommandLine =
-          requestDetail.getOriginalRequest().getTestEnvironment().getRetryCommandLine();
+      String retryCommandLine = originalRequest.getTestEnvironment().getRetryCommandLine();
       retryRequestBuilder.addCommands(
-          requestDetail.getOriginalRequest().getCommandsList().get(0).toBuilder()
+          originalRequest.getCommandsList().get(0).toBuilder()
               .setCommandLine(retryCommandLine)
               .build());
     }
@@ -444,11 +457,11 @@ final class AtsServerSessionPlugin {
             .build();
     String nextAttemptSessionId =
         localSessionStub.createSession(createSessionRequest).getSessionId().getId();
-    requestDetail.setNextAttemptSessionId(nextAttemptSessionId);
+    return nextAttemptSessionId;
   }
 
   // TODO: create more concrete retry strategy.
-  private static boolean canRetrySession(RequestDetail requestDetail) {
+  private static boolean canRetrySession(RequestDetailOrBuilder requestDetail) {
     return requestDetail.getState().equals(RequestState.ERROR)
         && requestDetail.getMaxRetryOnTestFailures() > 0
         && !requestDetail.getCommandDetailsMap().isEmpty()
@@ -516,33 +529,21 @@ final class AtsServerSessionPlugin {
   }
 
   @GuardedBy("sessionLock")
-  private void updateCommandDetail(JobInfo jobInfo) {
-    if (!requestDetail.containsCommandDetails(getCommandIdOfJob(jobInfo))) {
-      logger.atWarning().log(
-          "Tradefed job %s not found in requestDetail", jobInfo.locator().getId());
-      return;
-    }
-    // Add a command attempt
-    CommandAttemptDetail commandAttemptDetail =
-        generateCommandAttemptDetail(
-            jobInfo,
-            jobInfo.tests().getAll().values().iterator().next(),
-            sessionInfo.getSessionId());
-    requestDetail.addCommandAttemptDetails(commandAttemptDetail);
-    requestDetail.setUpdateTime(TimeUtils.toProtoTimestamp(Instant.now()));
-  }
-
-  @GuardedBy("sessionLock")
-  private void updateSessionPluginOutput() {
+  private void updateSessionPluginOutput(RequestDetail.Builder requestDetail) {
     RequestDetail latestRequestDetail = requestDetail.build();
     sessionInfo.setSessionPluginOutput(empty -> latestRequestDetail, RequestDetail.class);
   }
 
-  @GuardedBy("sessionLock")
-  private void resumeRequestDetailFromSessionPluginOutput() {
-    sessionInfo
-        .getSessionPluginOutput(RequestDetail.class)
-        .ifPresent(detail -> requestDetail.clear().mergeFrom(detail));
+  private RequestDetail.Builder resumeRequestDetailFromSessionPluginOutput() {
+    // No need to use sessionLock here because the caller already holds the lock.
+    // It's added only to work around
+    synchronized (sessionLock) {
+      RequestDetail.Builder requestDetailBuilder = RequestDetail.newBuilder();
+      sessionInfo
+          .getSessionPluginOutput(RequestDetail.class)
+          .ifPresent(requestDetailBuilder::mergeFrom);
+      return requestDetailBuilder;
+    }
   }
 
   private static boolean hasSessionPassed(ImmutableMap<String, CommandDetail> commandDetailsMap) {
