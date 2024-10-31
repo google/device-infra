@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.AtsServerSessionNotification;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.AtsServerSessionNotification.NotificationCase;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CancelReason;
@@ -90,9 +91,6 @@ final class AtsServerSessionPlugin {
           .setCancelReason("User cancelled the test request")
           .build();
 
-  /** Set in {@link #onSessionStarting}. */
-  private volatile SessionRequest request;
-
   private final Object sessionLock = new Object();
 
   // The source of truth for this session's request states.
@@ -127,7 +125,7 @@ final class AtsServerSessionPlugin {
   @Subscribe
   public void onSessionStarting(SessionStartingEvent event)
       throws InvalidProtocolBufferException, InterruptedException {
-    request =
+    SessionRequest request =
         sessionInfo.getSessionPluginExecutionConfig().getConfig().unpack(SessionRequest.class);
     if (request.getRequestCase().equals(RequestCase.NEW_MULTI_COMMAND_REQUEST)) {
       synchronized (sessionLock) {
@@ -455,7 +453,7 @@ final class AtsServerSessionPlugin {
         CommandAttemptDetail.newBuilder()
             .setId(testInfo.locator().getId())
             .setRequestId(sessionInfo.getSessionId())
-            .setCommandId(newMultiCommandRequestHandler.getCommandIdOfJob(jobInfo));
+            .setCommandId(getCommandIdOfJob(jobInfo));
     // ATS server requests use device UUIDs to schedule tests.
     ImmutableList<String> deviceUuids =
         jobInfo.subDeviceSpecs().getAllSubDevices().stream()
@@ -510,8 +508,7 @@ final class AtsServerSessionPlugin {
 
   private void updateCommandDetail(JobInfo jobInfo) {
     synchronized (sessionLock) {
-      if (!requestDetail.containsCommandDetails(
-          newMultiCommandRequestHandler.getCommandIdOfJob(jobInfo))) {
+      if (!requestDetail.containsCommandDetails(getCommandIdOfJob(jobInfo))) {
         logger.atWarning().log(
             "Tradefed job %s not found in requestDetail", jobInfo.locator().getId());
         return;
@@ -541,13 +538,13 @@ final class AtsServerSessionPlugin {
     }
   }
 
-  private boolean hasSessionPassed(ImmutableMap<String, CommandDetail> commandDetailsMap) {
+  private static boolean hasSessionPassed(ImmutableMap<String, CommandDetail> commandDetailsMap) {
     return !commandDetailsMap.isEmpty()
         && commandDetailsMap.values().stream()
             .allMatch(commandDetail -> commandDetail.getState() == CommandState.COMPLETED);
   }
 
-  private CommandState convertStatusAndResultToCommandState(Status status, Result result) {
+  private static CommandState convertStatusAndResultToCommandState(Status status, Result result) {
     switch (status.get()) {
       case NEW:
         return CommandState.UNKNOWN_STATE;
@@ -565,6 +562,10 @@ final class AtsServerSessionPlugin {
         return CommandState.CANCELED;
     }
     return CommandState.UNKNOWN_STATE;
+  }
+
+  private static String getCommandIdOfJob(JobInfo jobInfo) {
+    return jobInfo.properties().getOptional(XtsPropertyName.Job.XTS_COMMAND_ID).orElse("");
   }
 
   private static void appendErrorMessage(RequestDetail.Builder requestDetail, String newMessage) {
