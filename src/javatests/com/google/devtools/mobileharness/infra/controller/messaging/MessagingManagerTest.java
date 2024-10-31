@@ -100,9 +100,9 @@ public class MessagingManagerTest {
         .comparingExpectedFieldsOnly()
         .containsAtLeast(
             MessageReception.newBuilder()
-                .setSubscriberInfo(MessageSubscriberInfo.newBuilder().setMethodName("m1"))
                 .setReceivingEnd(
                     MessageReceivingEnd.newBuilder()
+                        .setSubscriberInfo(MessageSubscriberInfo.newBuilder().setMethodName("m1"))
                         .setReceivingTimingInfo(MessageReceivingTimingInfo.getDefaultInstance())
                         .setSuccess(
                             MessageReceivingResult.newBuilder()
@@ -110,9 +110,9 @@ public class MessagingManagerTest {
                                     Any.pack(TimeUtils.toProtoDuration(Duration.ofSeconds(124L))))))
                 .build(),
             MessageReception.newBuilder()
-                .setSubscriberInfo(MessageSubscriberInfo.newBuilder().setMethodName("m2"))
                 .setReceivingEnd(
                     MessageReceivingEnd.newBuilder()
+                        .setSubscriberInfo(MessageSubscriberInfo.newBuilder().setMethodName("m2"))
                         .setReceivingTimingInfo(MessageReceivingTimingInfo.getDefaultInstance())
                         .setFailure(
                             MessageReceivingError.newBuilder()

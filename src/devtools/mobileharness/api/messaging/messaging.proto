@@ -54,13 +54,34 @@ message MessageReceptions {
 
 // Message receiving start/end of a message subscriber.
 message MessageReception {
+  oneof type {
+    MessageReceivingStart receiving_start = 1;
+
+    MessageReceivingEnd receiving_end = 2;
+  }
+}
+
+// Start of a message receiving action of a message subscriber.
+message MessageReceivingStart {
   // Required.
   MessageSubscriberInfo subscriber_info = 1;
 
-  oneof type {
-    MessageReceivingStart receiving_start = 2;
+  // Required.
+  MessageReceivingTimingInfo receiving_timing_info = 2;
+}
 
-    MessageReceivingEnd receiving_end = 3;
+// End of a message receiving action of a message subscriber.
+message MessageReceivingEnd {
+  // Required.
+  MessageSubscriberInfo subscriber_info = 1;
+
+  // Required.
+  MessageReceivingTimingInfo receiving_timing_info = 2;
+
+  oneof type {
+    MessageReceivingResult success = 3;
+
+    MessageReceivingError failure = 4;
   }
 }
 
@@ -80,24 +101,6 @@ message MessageSubscriberInfo {
 
   // Required.
   int32 object_identity_hash_code = 5;
-}
-
-// Start of a message receiving action of a message subscriber.
-message MessageReceivingStart {
-  // Required.
-  MessageReceivingTimingInfo receiving_timing_info = 1;
-}
-
-// End of a message receiving action of a message subscriber.
-message MessageReceivingEnd {
-  // Required.
-  MessageReceivingTimingInfo receiving_timing_info = 1;
-
-  oneof type {
-    MessageReceivingResult success = 2;
-
-    MessageReceivingError failure = 3;
-  }
 }
 
 // Timing information of a message receiving action.

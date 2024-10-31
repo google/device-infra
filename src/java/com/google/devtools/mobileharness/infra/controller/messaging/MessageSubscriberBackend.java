@@ -236,9 +236,9 @@ class MessageSubscriberBackend {
           MessageReceptions.newBuilder()
               .addReceptions(
                   MessageReception.newBuilder()
-                      .setSubscriberInfo(messageSubscriberInfo())
                       .setReceivingStart(
                           MessageReceivingStart.newBuilder()
+                              .setSubscriberInfo(messageSubscriberInfo())
                               .setReceivingTimingInfo(
                                   createReceivingTimingInfo(
                                       receivingStartTime, /* receivingEndTime= */ null))))
@@ -293,9 +293,9 @@ class MessageSubscriberBackend {
             MessageReceptions.newBuilder()
                 .addReceptions(
                     MessageReception.newBuilder()
-                        .setSubscriberInfo(messageSubscriberInfo())
                         .setReceivingEnd(
                             MessageReceivingEnd.newBuilder()
+                                .setSubscriberInfo(messageSubscriberInfo())
                                 .setReceivingTimingInfo(
                                     createReceivingTimingInfo(receivingStartTime, receivingEndTime))
                                 .setFailure(messageReceivingError)))
@@ -310,9 +310,9 @@ class MessageSubscriberBackend {
           MessageReceptions.newBuilder()
               .addReceptions(
                   MessageReception.newBuilder()
-                      .setSubscriberInfo(messageSubscriberInfo())
                       .setReceivingEnd(
                           MessageReceivingEnd.newBuilder()
+                              .setSubscriberInfo(messageSubscriberInfo())
                               .setReceivingTimingInfo(
                                   createReceivingTimingInfo(receivingStartTime, receivingEndTime))
                               .setSuccess(

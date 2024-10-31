@@ -120,18 +120,20 @@ public class MessageSubscriberBackendTest {
             MessageReceptions.newBuilder()
                 .addReceptions(
                     MessageReception.newBuilder()
-                        .setSubscriberInfo(MessageSubscriberInfo.newBuilder().setMethodName("m1"))
                         .setReceivingStart(
                             MessageReceivingStart.newBuilder()
+                                .setSubscriberInfo(
+                                    MessageSubscriberInfo.newBuilder().setMethodName("m1"))
                                 .setReceivingTimingInfo(
                                     MessageReceivingTimingInfo.getDefaultInstance())))
                 .build(),
             MessageReceptions.newBuilder()
                 .addReceptions(
                     MessageReception.newBuilder()
-                        .setSubscriberInfo(MessageSubscriberInfo.newBuilder().setMethodName("m1"))
                         .setReceivingEnd(
                             MessageReceivingEnd.newBuilder()
+                                .setSubscriberInfo(
+                                    MessageSubscriberInfo.newBuilder().setMethodName("m1"))
                                 .setReceivingTimingInfo(
                                     MessageReceivingTimingInfo.getDefaultInstance())
                                 .setSuccess(
@@ -144,18 +146,20 @@ public class MessageSubscriberBackendTest {
             MessageReceptions.newBuilder()
                 .addReceptions(
                     MessageReception.newBuilder()
-                        .setSubscriberInfo(MessageSubscriberInfo.newBuilder().setMethodName("m2"))
                         .setReceivingStart(
                             MessageReceivingStart.newBuilder()
+                                .setSubscriberInfo(
+                                    MessageSubscriberInfo.newBuilder().setMethodName("m2"))
                                 .setReceivingTimingInfo(
                                     MessageReceivingTimingInfo.getDefaultInstance())))
                 .build(),
             MessageReceptions.newBuilder()
                 .addReceptions(
                     MessageReception.newBuilder()
-                        .setSubscriberInfo(MessageSubscriberInfo.newBuilder().setMethodName("m2"))
                         .setReceivingEnd(
                             MessageReceivingEnd.newBuilder()
+                                .setSubscriberInfo(
+                                    MessageSubscriberInfo.newBuilder().setMethodName("m2"))
                                 .setReceivingTimingInfo(
                                     MessageReceivingTimingInfo.getDefaultInstance())
                                 .setFailure(
