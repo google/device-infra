@@ -97,6 +97,7 @@ public class ListCommandTest {
     int olcServerPort = PortProber.pickUnusedPort();
     publicDirPath = tmpFolder.newFolder("public_dir").toString();
     tmpDirPath = tmpFolder.newFolder("tmp_dir").toString();
+    String xtsResourceDirPath = tmpFolder.newFolder("xts_resource_dir").toString();
     xtsRootDirPath = tmpFolder.newFolder("xts_root_dir").toString();
     Path olcServerBinary =
         Path.of(
@@ -120,7 +121,9 @@ public class ListCommandTest {
             "simplified_log_format",
             "true",
             "tmp_dir_root",
-            tmpDirPath);
+            tmpDirPath,
+            "xts_res_dir_root",
+            xtsResourceDirPath);
     ImmutableList<String> flagList =
         flagMap.entrySet().stream()
             .map(e -> String.format("--%s=%s", e.getKey(), e.getValue()))

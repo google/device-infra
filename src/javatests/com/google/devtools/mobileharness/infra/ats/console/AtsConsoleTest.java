@@ -78,6 +78,7 @@ public final class AtsConsoleTest {
     int olcServerPort = PortProber.pickUnusedPort();
     String publicDirPath = tmpFolder.newFolder("public_dir").toString();
     String tmpDirPath = tmpFolder.newFolder("tmp_dir").toString();
+    String xtsResourceDirPath = tmpFolder.newFolder("xts_resource_dir").toString();
     String xtsRootDirPath = tmpFolder.newFolder("xts_root_dir").toString();
     String versionFilePath = PathUtil.join(xtsRootDirPath, "android-cts/tools/version.txt");
     localFileUtil.writeToFile(versionFilePath, "fake_version");
@@ -105,7 +106,9 @@ public final class AtsConsoleTest {
             "simplified_log_format",
             "true",
             "tmp_dir_root",
-            tmpDirPath);
+            tmpDirPath,
+            "xts_res_dir_root",
+            xtsResourceDirPath);
     ImmutableList<String> flagList =
         flagMap.entrySet().stream()
             .map(e -> String.format("--%s=%s", e.getKey(), e.getValue()))

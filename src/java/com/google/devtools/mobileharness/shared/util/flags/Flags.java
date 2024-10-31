@@ -216,6 +216,18 @@ public class Flags {
       converter = Flag.IntegerConverter.class)
   public Flag<Integer> atsConsoleMinLogRecordImportance = atsConsoleMinLogRecordImportanceDefault;
 
+  private static final Flag<Boolean> atsConsoleOlcServerCopyServerResourceDefault =
+      Flag.value(true);
+
+  @com.beust.jcommander.Parameter(
+      names = "--ats_console_olc_server_copy_server_resource",
+      description =
+          "Whether to copy OLC binary and JDK to xTS resource dir before ATS console starts OLC."
+              + " Default is true.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> atsConsoleOlcServerCopyServerResource =
+      atsConsoleOlcServerCopyServerResourceDefault;
+
   private static final Flag<Integer> atsConsoleOlcServerMinLogRecordImportanceDefault =
       Flag.value(150);
 
