@@ -40,7 +40,6 @@ java_library(
     name = "logs",
     srcs = ["OlcServerLogs.java"],
     visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/dda/stub:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice:__pkg__",
