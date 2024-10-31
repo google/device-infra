@@ -125,10 +125,10 @@ final class AtsServerSessionPlugin {
   @Subscribe
   public void onSessionStarting(SessionStartingEvent event)
       throws InvalidProtocolBufferException, InterruptedException {
-    SessionRequest request =
-        sessionInfo.getSessionPluginExecutionConfig().getConfig().unpack(SessionRequest.class);
-    if (request.getRequestCase().equals(RequestCase.NEW_MULTI_COMMAND_REQUEST)) {
-      synchronized (sessionLock) {
+    synchronized (sessionLock) {
+      SessionRequest request =
+          sessionInfo.getSessionPluginExecutionConfig().getConfig().unpack(SessionRequest.class);
+      if (request.getRequestCase().equals(RequestCase.NEW_MULTI_COMMAND_REQUEST)) {
         NewMultiCommandRequest newMultiCommandRequest = request.getNewMultiCommandRequest();
         requestDetail
             .setCreateTime(Timestamps.fromMillis(clock.millis()))
@@ -206,32 +206,37 @@ final class AtsServerSessionPlugin {
 
   @Subscribe
   public void onTestStarting(TestStartingEvent event) {
-    resumeRequestDetailFromSessionPluginOutput();
-
-    TestInfo testInfo = event.getTest();
-    boolean shouldSendCancellationMessage = false;
     // Sends cancellation test message if necessary.
     synchronized (sessionLock) {
-      if (requestDetail.getState().equals(RequestState.CANCELED)) {
-        shouldSendCancellationMessage = true;
+      try {
+        resumeRequestDetailFromSessionPluginOutput();
+
+        TestInfo testInfo = event.getTest();
+        boolean shouldSendCancellationMessage = false;
+        if (requestDetail.getState().equals(RequestState.CANCELED)) {
+          shouldSendCancellationMessage = true;
+        }
+
+        if (shouldSendCancellationMessage) {
+          sendCancellationMessageToStartedTest(testInfo);
+        }
+      } finally {
+        updateSessionPluginOutput();
       }
-    }
-    if (shouldSendCancellationMessage) {
-      sendCancellationMessageToStartedTest(testInfo);
     }
   }
 
   @Subscribe
   public void onJobEnded(JobEndEvent jobEndEvent) throws InterruptedException {
-    resumeRequestDetailFromSessionPluginOutput();
-
-    JobInfo jobInfo = jobEndEvent.getJob();
-
-    // Generate a new commandAttempt for the finished job, and update the command status.
-    updateCommandDetail(jobInfo);
-
-    // If all tradefed jobs have ended, create non tradefed jobs.
     synchronized (sessionLock) {
+      resumeRequestDetailFromSessionPluginOutput();
+
+      JobInfo jobInfo = jobEndEvent.getJob();
+
+      // Generate a new commandAttempt for the finished job, and update the command status.
+      updateCommandDetail(jobInfo);
+
+      // If all tradefed jobs have ended, create non tradefed jobs.
       try {
         if (requestDetail.getState() == RequestState.CANCELED) {
           return;
@@ -281,9 +286,8 @@ final class AtsServerSessionPlugin {
 
   @Subscribe
   public void onSessionEnded(SessionEndedEvent event) throws InterruptedException {
-    resumeRequestDetailFromSessionPluginOutput();
-
     synchronized (sessionLock) {
+      resumeRequestDetailFromSessionPluginOutput();
       try {
         HandleResultProcessingResult handleResultProcessingResult =
             newMultiCommandRequestHandler.handleResultProcessing(
@@ -307,6 +311,18 @@ final class AtsServerSessionPlugin {
         requestDetail
             .putAllCommandDetails(handleResultProcessingResult.commandDetails())
             .putAllTestContext(handleResultProcessingResult.testContexts());
+
+        if (canRetrySession(requestDetail.build())) {
+          try {
+            retrySession();
+          } catch (MobileHarnessException e) {
+            logger.atWarning().withCause(e).log("Failed to trigger retry session.");
+          }
+        } else if (requestDetail.getState().equals(RequestState.ERROR)
+            && requestDetail.getErrorReason().equals(ErrorReason.UNKNOWN_REASON)) {
+          requestDetail.setErrorReason(ErrorReason.RESULT_PROCESSING_ERROR);
+          requestDetail.setErrorMessage("Failed to process test results.");
+        }
       } catch (Throwable e) {
         requestDetail
             .setState(RequestState.ERROR)
@@ -316,47 +332,40 @@ final class AtsServerSessionPlugin {
       } finally {
         updateSessionPluginOutput();
       }
-
-      if (canRetrySession(requestDetail.build())) {
-        try {
-          retrySession();
-        } catch (MobileHarnessException e) {
-          logger.atWarning().withCause(e).log("Failed to trigger retry session.");
-        }
-      } else if (requestDetail.getState().equals(RequestState.ERROR)
-          && requestDetail.getErrorReason().equals(ErrorReason.UNKNOWN_REASON)) {
-        requestDetail.setErrorReason(ErrorReason.RESULT_PROCESSING_ERROR);
-        requestDetail.setErrorMessage("Failed to process test results.");
-        updateSessionPluginOutput();
-      }
     }
   }
 
   @Subscribe
   public void onSessionNotification(SessionNotificationEvent event)
       throws InvalidProtocolBufferException {
-    AtsServerSessionNotification notification =
-        event.sessionNotification().getNotification().unpack(AtsServerSessionNotification.class);
-    logger.atInfo().log("Received notification: %s", shortDebugString(notification));
+    synchronized (sessionLock) {
+      resumeRequestDetailFromSessionPluginOutput();
+      try {
+        AtsServerSessionNotification notification =
+            event
+                .sessionNotification()
+                .getNotification()
+                .unpack(AtsServerSessionNotification.class);
+        logger.atInfo().log("Received notification: %s", shortDebugString(notification));
 
-    // TODO: Support killing jobs here (for non-TF jobs or jobs during allocation).
-    if (notification.getNotificationCase() == NotificationCase.CANCEL_SESSION) {
-      // send end signal to all running tests.
-      ImmutableList<TestInfo> startedTestsBeforeCancellation;
-      synchronized (sessionLock) {
-        requestDetail.setState(RequestState.CANCELED);
-        requestDetail.setCancelReason(CancelReason.REQUEST_API);
-        requestDetail.setErrorMessage("Received cancel session notification");
+        // TODO: Support killing jobs here (for non-TF jobs or jobs during allocation).
+        if (notification.getNotificationCase() == NotificationCase.CANCEL_SESSION) {
+          // send end signal to all running tests.
+          requestDetail.setState(RequestState.CANCELED);
+          requestDetail.setCancelReason(CancelReason.REQUEST_API);
+          requestDetail.setErrorMessage("Received cancel session notification");
+          ImmutableList<TestInfo> startedTestsBeforeCancellation =
+              event.sessionInfo().getAllJobs().stream()
+                  .map(jobInfo -> jobInfo.tests().getAll().values())
+                  .flatMap(Collection::stream)
+                  .filter(testInfo -> testInfo.status().get().equals(TestStatus.RUNNING))
+                  .collect(toImmutableList());
+          for (TestInfo testInfo : startedTestsBeforeCancellation) {
+            sendCancellationMessageToStartedTest(testInfo);
+          }
+        }
+      } finally {
         updateSessionPluginOutput();
-        startedTestsBeforeCancellation =
-            event.sessionInfo().getAllJobs().stream()
-                .map(jobInfo -> jobInfo.tests().getAll().values())
-                .flatMap(Collection::stream)
-                .filter(testInfo -> testInfo.status().get().equals(TestStatus.RUNNING))
-                .collect(toImmutableList());
-      }
-      for (TestInfo testInfo : startedTestsBeforeCancellation) {
-        sendCancellationMessageToStartedTest(testInfo);
       }
     }
   }
@@ -436,11 +445,10 @@ final class AtsServerSessionPlugin {
     String nextAttemptSessionId =
         localSessionStub.createSession(createSessionRequest).getSessionId().getId();
     requestDetail.setNextAttemptSessionId(nextAttemptSessionId);
-    updateSessionPluginOutput();
   }
 
   // TODO: create more concrete retry strategy.
-  private boolean canRetrySession(RequestDetail requestDetail) {
+  private static boolean canRetrySession(RequestDetail requestDetail) {
     return requestDetail.getState().equals(RequestState.ERROR)
         && requestDetail.getMaxRetryOnTestFailures() > 0
         && !requestDetail.getCommandDetailsMap().isEmpty()
@@ -448,11 +456,12 @@ final class AtsServerSessionPlugin {
             != 0;
   }
 
-  private CommandAttemptDetail generateCommandAttemptDetail(JobInfo jobInfo, TestInfo testInfo) {
+  private static CommandAttemptDetail generateCommandAttemptDetail(
+      JobInfo jobInfo, TestInfo testInfo, String sessionId) {
     CommandAttemptDetail.Builder builder =
         CommandAttemptDetail.newBuilder()
             .setId(testInfo.locator().getId())
-            .setRequestId(sessionInfo.getSessionId())
+            .setRequestId(sessionId)
             .setCommandId(getCommandIdOfJob(jobInfo));
     // ATS server requests use device UUIDs to schedule tests.
     ImmutableList<String> deviceUuids =
@@ -506,36 +515,34 @@ final class AtsServerSessionPlugin {
         .build();
   }
 
+  @GuardedBy("sessionLock")
   private void updateCommandDetail(JobInfo jobInfo) {
-    synchronized (sessionLock) {
-      if (!requestDetail.containsCommandDetails(getCommandIdOfJob(jobInfo))) {
-        logger.atWarning().log(
-            "Tradefed job %s not found in requestDetail", jobInfo.locator().getId());
-        return;
-      }
-      // Add a command attempt
-      CommandAttemptDetail commandAttemptDetail =
-          generateCommandAttemptDetail(
-              jobInfo, jobInfo.tests().getAll().values().iterator().next());
-      requestDetail.addCommandAttemptDetails(commandAttemptDetail);
-      requestDetail.setUpdateTime(TimeUtils.toProtoTimestamp(Instant.now()));
-      updateSessionPluginOutput();
+    if (!requestDetail.containsCommandDetails(getCommandIdOfJob(jobInfo))) {
+      logger.atWarning().log(
+          "Tradefed job %s not found in requestDetail", jobInfo.locator().getId());
+      return;
     }
+    // Add a command attempt
+    CommandAttemptDetail commandAttemptDetail =
+        generateCommandAttemptDetail(
+            jobInfo,
+            jobInfo.tests().getAll().values().iterator().next(),
+            sessionInfo.getSessionId());
+    requestDetail.addCommandAttemptDetails(commandAttemptDetail);
+    requestDetail.setUpdateTime(TimeUtils.toProtoTimestamp(Instant.now()));
   }
 
+  @GuardedBy("sessionLock")
   private void updateSessionPluginOutput() {
-    synchronized (sessionLock) {
-      RequestDetail latestRequestDetail = requestDetail.build();
-      sessionInfo.setSessionPluginOutput(empty -> latestRequestDetail, RequestDetail.class);
-    }
+    RequestDetail latestRequestDetail = requestDetail.build();
+    sessionInfo.setSessionPluginOutput(empty -> latestRequestDetail, RequestDetail.class);
   }
 
+  @GuardedBy("sessionLock")
   private void resumeRequestDetailFromSessionPluginOutput() {
-    synchronized (sessionLock) {
-      sessionInfo
-          .getSessionPluginOutput(RequestDetail.class)
-          .ifPresent(detail -> requestDetail.clear().mergeFrom(detail));
-    }
+    sessionInfo
+        .getSessionPluginOutput(RequestDetail.class)
+        .ifPresent(detail -> requestDetail.clear().mergeFrom(detail));
   }
 
   private static boolean hasSessionPassed(ImmutableMap<String, CommandDetail> commandDetailsMap) {

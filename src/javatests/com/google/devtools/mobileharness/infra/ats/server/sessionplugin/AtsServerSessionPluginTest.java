@@ -472,9 +472,8 @@ public final class AtsServerSessionPluginTest {
 
     // Verify added non tradefed jobs.
     verify(sessionInfo).addJob(moblyJobInfo);
-    // Set 3 times when: session is started, commandDetail is updated, and try to create non TF
-    // jobs.
-    verify(sessionInfo, times(3))
+    // Set 2 times when: session is started and job is ended.
+    verify(sessionInfo, times(2))
         .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
     RequestDetail requestDetail = Iterables.getLast(unaryOperatorCaptor.getAllValues()).apply(null);
     assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
@@ -588,8 +587,8 @@ public final class AtsServerSessionPluginTest {
 
     plugin.onJobEnded(new JobEndEvent(jobInfo, null));
 
-    // Set 3 times when: session is started, commandDetail is updated, and try create non TF jobs.
-    verify(sessionInfo, times(3))
+    // Set 2 times when: session is started and job is ended.
+    verify(sessionInfo, times(2))
         .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
     RequestDetail requestDetail = Iterables.getLast(unaryOperatorCaptor.getAllValues()).apply(null);
     String commandId =
@@ -689,7 +688,7 @@ public final class AtsServerSessionPluginTest {
 
     // Verify that plugin didn't create any new job.
     verify(sessionInfo).addJob(jobInfo);
-    verify(sessionInfo, times(3))
+    verify(sessionInfo, times(2))
         .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
     RequestDetail requestDetail = Iterables.getLast(unaryOperatorCaptor.getAllValues()).apply(null);
     assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
@@ -758,10 +757,10 @@ public final class AtsServerSessionPluginTest {
     assertThat(newMultiCommandRequest.getRetryPreviousSessionId()).isEqualTo("session_id");
     assertThat(newMultiCommandRequest.getCommandsList()).containsExactly(commandInfo);
 
-    // sessionInfo.setSessionPluginOutput() is called 5 times. First time in
-    // OnSessionStarting() after creating tradefed jobs. Second and third times in OnJobEnded()
-    // after job ended signal trigger session output update. 4th and 5th time in OnSessionEnded().
-    verify(sessionInfo, times(5))
+    // sessionInfo.setSessionPluginOutput() is called 3 times. First time in
+    // OnSessionStarting() after creating tradefed jobs. Second time in OnJobEnded()
+    // after job ended signal trigger session output update. 3th time in OnSessionEnded().
+    verify(sessionInfo, times(3))
         .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
     RequestDetail requestDetail = Iterables.getLast(unaryOperatorCaptor.getAllValues()).apply(null);
     assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
@@ -838,10 +837,10 @@ public final class AtsServerSessionPluginTest {
     assertThat(newMultiCommandRequest.getCommands(0).getDeviceDimensionsList())
         .containsExactlyElementsIn(request.getCommands(0).getDeviceDimensionsList());
 
-    // sessionInfo.setSessionPluginOutput() is called 5 times. First time in
-    // OnSessionStarting() after creating tradefed jobs. Second and third times in OnJobEnded()
-    // after job ended signal trigger session output update. 4th and 5th time in OnSessionEnded().
-    verify(sessionInfo, times(5))
+    // sessionInfo.setSessionPluginOutput() is called 3 times. First time in
+    // OnSessionStarting() after creating tradefed jobs. Second time in OnJobEnded()
+    // after job ended signal trigger session output update. 3th time in OnSessionEnded().
+    verify(sessionInfo, times(3))
         .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
     RequestDetail requestDetail = Iterables.getLast(unaryOperatorCaptor.getAllValues()).apply(null);
     assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
@@ -922,10 +921,10 @@ public final class AtsServerSessionPluginTest {
     assertThat(newMultiCommandRequest.getCommandsList().get(0).getCommandLine())
         .isEqualTo(originalCommandLine);
 
-    // sessionInfo.setSessionPluginOutput() is called 5 times. First time in
-    // OnSessionStarting() after creating tradefed jobs. Second and third times in OnJobEnded()
-    // after job ended signal trigger session output update. 4th and 5th time in OnSessionEnded().
-    verify(sessionInfo, times(5))
+    // sessionInfo.setSessionPluginOutput() is called 3 times. First time in
+    // OnSessionStarting() after creating tradefed jobs. Second time in OnJobEnded()
+    // after job ended signal trigger session output update. 3th time in OnSessionEnded().
+    verify(sessionInfo, times(3))
         .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
     RequestDetail requestDetail = Iterables.getLast(unaryOperatorCaptor.getAllValues()).apply(null);
     assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
@@ -983,11 +982,11 @@ public final class AtsServerSessionPluginTest {
     // Verify didn't run retry as retry is not allowed.
     verify(localSessionStub, never()).createSession(any());
 
-    // sessionInfo.setSessionPluginOutput() is called 5 times. First time in
-    // OnSessionStarting() after creating tradefed jobs. Second and third times in OnJobEnded()
-    // after job ended signal trigger session output update. Fourth time and fifth time in
+    // sessionInfo.setSessionPluginOutput() is called 3 times. First time in
+    // OnSessionStarting() after creating tradefed jobs. Second times in OnJobEnded()
+    // after job ended signal trigger session output update. 3th time in
     // OnSessionEnded() after handing the session result and after setting error message.
-    verify(sessionInfo, times(5))
+    verify(sessionInfo, times(3))
         .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
     RequestDetail requestDetail = Iterables.getLast(unaryOperatorCaptor.getAllValues()).apply(null);
     assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
@@ -1037,10 +1036,10 @@ public final class AtsServerSessionPluginTest {
     plugin.onSessionEnded(new SessionEndedEvent(sessionInfo, null));
     verify(localSessionStub, never()).createSession(any());
 
-    // sessionInfo.setSessionPluginOutput() is called 4 times. First time in
-    // OnSessionStarting() after creating tradefed jobs. Second and third times in OnJobEnded()
-    // after job ended signal trigger session output update. Fourth time in OnSessionEnded().
-    verify(sessionInfo, times(4))
+    // sessionInfo.setSessionPluginOutput() is called 3 times. First time in
+    // OnSessionStarting() after creating tradefed jobs. Second time in OnJobEnded()
+    // after job ended signal trigger session output update. 3th time in OnSessionEnded().
+    verify(sessionInfo, times(3))
         .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
     RequestDetail requestDetail = Iterables.getLast(unaryOperatorCaptor.getAllValues()).apply(null);
     assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
@@ -1085,10 +1084,10 @@ public final class AtsServerSessionPluginTest {
     assertThrows(
         IllegalStateException.class,
         () -> plugin.onSessionEnded(new SessionEndedEvent(sessionInfo, null)));
-    // sessionInfo.setSessionPluginOutput() is called 4 times. First time in
-    // OnSessionStarting() after creating tradefed jobs. Second and third times in OnJobEnded()
-    // after job ended signal trigger session output update. 4th time in OnSessionEnded().
-    verify(sessionInfo, times(4))
+    // sessionInfo.setSessionPluginOutput() is called 3 times. First time in
+    // OnSessionStarting() after creating tradefed jobs. Second time in OnJobEnded()
+    // after job ended signal trigger session output update. 3th time in OnSessionEnded().
+    verify(sessionInfo, times(3))
         .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
     assertThat(Iterables.getLast(unaryOperatorCaptor.getAllValues()).apply(null).getState())
         .isEqualTo(RequestState.ERROR);
