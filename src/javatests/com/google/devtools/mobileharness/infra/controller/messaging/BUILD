@@ -23,11 +23,16 @@ package(
 
 java_library(
     name = "messaging",
-    srcs = glob(["*.java"]),
+    srcs = glob(
+        ["*.java"],
+        exclude = [
+            "Foo.java",
+        ],
+    ),
     deps = [
+        ":foo",
         "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
         "//src/devtools/mobileharness/api/messaging:messaging_java_proto",
-        "//src/java/com/google/devtools/mobileharness/api/messaging:messaging_subscriber",
         "//src/java/com/google/devtools/mobileharness/infra/controller/messaging:message_receptions_handler",
         "//src/java/com/google/devtools/mobileharness/infra/controller/messaging:message_sender",
         "//src/java/com/google/devtools/mobileharness/infra/controller/messaging:message_sender_finder",
@@ -35,7 +40,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/messaging:messaging_manager",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
-        "@com_google_protobuf//:protobuf_java",
         "@com_google_protobuf_protobuf_java",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_extensions_guice_testlib",
@@ -44,6 +48,17 @@ java_library(
         "@maven//:javax_inject_jsr330_api",
         "@maven//:junit_junit",
         "@maven//:org_mockito_mockito_core",
+    ],
+)
+
+java_library(
+    name = "foo",
+    srcs = ["Foo.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/messaging:messaging_subscriber",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
+        "@com_google_protobuf//:protobuf_java",
+        "@com_google_protobuf_protobuf_java",
     ],
 )
 

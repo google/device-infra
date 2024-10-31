@@ -21,10 +21,8 @@ import com.google.devtools.mobileharness.api.messaging.SubscribeMessage;
 import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
 import com.google.protobuf.Duration;
 import com.google.protobuf.Message;
-import org.junit.Ignore;
 
 @SuppressWarnings("unused")
-@Ignore("not test class")
 class Foo {
 
   /** Not a message subscriber: not annotated with @SubscribeMessage. */
