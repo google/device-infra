@@ -64,6 +64,7 @@ import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
 import io.grpc.Status.Code;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -218,6 +219,10 @@ public class ServerPreparer {
 
         // Prepares server environment.
         ServerEnvironment serverEnvironment = serverEnvironmentPreparer.prepareServerEnvironment();
+        logger
+            .atInfo()
+            .with(IMPORTANCE, DEBUG)
+            .log("OLC server environment: %s", serverEnvironment);
 
         // Creates arguments.
         FlagsString serverFlags = deviceInfraServiceFlags.addToHead(BuiltinOlcServerFlags.get());
@@ -519,8 +524,12 @@ public class ServerPreparer {
 
       // Locks file.
       logger.atInfo().with(IMPORTANCE, DEBUG).log("Locking file [%s]", LOCK_FILE_PATH);
-      @SuppressWarnings({"resource", "unused"})
-      FileLock lock = file.getChannel().lock();
+      FileChannel channel = file.getChannel();
+      FileLock lock = channel.tryLock();
+      if (lock == null) {
+        logger.atInfo().log("Acquiring file lock [%s]...", LOCK_FILE_PATH);
+        channel.lock();
+      }
       logger.atInfo().with(IMPORTANCE, DEBUG).log("Locked file [%s]", LOCK_FILE_PATH);
 
       return Optional.of(
