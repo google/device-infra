@@ -58,6 +58,9 @@ message HostRecord {
 
   // The version of the GRTE installed on the host, Linux only.
   string grte_version = 12;
+
+  // The Java Version of the host.
+  string java_version = 13;
 }
 
 // The record of a device of a certain timestamp.
