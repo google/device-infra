@@ -21,54 +21,30 @@ public interface PropertyName {
 
   /** Mobile Harness job property name constants. */
   enum Job implements PropertyName {
-    /** Name of the job property that contains the first test allocation time in seconds. */
-    FIRST_TEST_ALLOCATION_TIME_SEC,
-
-    /** The pre-run job time in milliseconds. */
-    PRE_RUN_JOB_TIME_MS,
-
     /** The actual user LDAP rather than run_as. */
     ACTUAL_USER,
 
-    /** The run as user. */
-    RUN_AS,
-
-    /** The job access account. */
-    JOB_ACCESS_ACCOUNT,
-
-    /** The changelist number. */
-    CL,
+    /** The job allocation fails after start_timeout is reached. */
+    ALLOCATION_FAIL_AFTER_START_TIMEOUT,
 
     /** The build id. */
     BUILD_ID,
 
-    /** Execution mode (lower case of ExecModeUtil.getModeName()). */
-    EXEC_MODE,
-
-    /** Session id. */
-    SESSION_ID,
-
-    /** Sponge link of test. */
-    SPONGE_LINK_OF_TEST,
-
-    CLIENT_VERSION,
+    /** The changelist number. */
+    CL,
 
     CLIENT_HOSTNAME,
 
     /** Client type. Examples: moscar_native_executor, mobile_test_bin. */
     CLIENT_TYPE,
 
-    /** The MHFE link for the job. */
-    JOB_LINK_IN_MHFE,
+    CLIENT_VERSION,
 
-    // The streamz label for the job. */
-    STREAMZ_LABEL,
+    /** Execution mode (lower case of ExecModeUtil.getModeName()). */
+    EXEC_MODE,
 
-    /** The trace id for the job. */
-    TRACE_ID,
-
-    /** The job allocation fails after start_timeout is reached. */
-    ALLOCATION_FAIL_AFTER_START_TIMEOUT,
+    /** Name of the job property that contains the first test allocation time in seconds. */
+    FIRST_TEST_ALLOCATION_TIME_SEC,
 
     /**
      * True indicates that another associated job of this job has an allocation, so the start
@@ -76,20 +52,50 @@ public interface PropertyName {
      */
     HAS_ASSOCIATED_ALLOCATION,
 
-    /** Whether it is a resumed job from a previous interrupted one // */
-    _IS_RESUMED_JOB,
-
     /** Whether the job is resumable. */
     IS_RESUMABLE,
 
-    /** The parameters to be recorded from mobile_test macro to the job creation. */
-    _PARAM_STATS,
+    /** The job access account. */
+    JOB_ACCESS_ACCOUNT,
+
+    /** The MHFE link for the job. */
+    JOB_LINK_IN_MHFE,
+
+    /** The master spec. */
+    MASTER_SPEC,
+
+    /** The pre-run job time in milliseconds. */
+    PRE_RUN_JOB_TIME_MS,
+
+    /** The run as user. */
+    RUN_AS,
+
+    /** Session id. */
+    SESSION_ID,
+
+    /** Sponge link of test. */
+    SPONGE_LINK_OF_TEST,
+
+    // The streamz label for the job. */
+    STREAMZ_LABEL,
+
+    /** The trace id for the job. */
+    TRACE_ID,
 
     /** Whether upload runfiles to CNS. */
     UPLOAD_RUNFILES,
 
-    /** The master spec. */
-    MASTER_SPEC
+    /** The root path of the uploaded runfiles. */
+    UPLOAD_RUNFILES_ROOT_PATH,
+
+    /** The root path of the uploaded genfiles. */
+    UPLOAD_GENFILES_ROOT_PATH,
+
+    /** Whether it is a resumed job from a previous interrupted one */
+    _IS_RESUMED_JOB,
+
+    /** The parameters to be recorded from mobile_test macro to the job creation. */
+    _PARAM_STATS,
   }
 
   /** Mobile Harness test property name constants. */
@@ -129,6 +135,12 @@ public interface PropertyName {
     /** Whether the test runs in MH container mode. Value type is boolean. */
     CONTAINER_MODE,
 
+    /** The epoch time when the test execution is completed and the device is released. */
+    DEVICE_DONE_EPOCH_MS,
+
+    /** The comma separated string of device ids to indicate devices order in the this test. */
+    DEVICE_ID_LIST,
+
     /**
      * Only available in Remote Mode. This is the duration the device is occupied for this test.
      * NOTE: DO NOT depend on this property in MOSS to calculate the device usage duration because
@@ -137,11 +149,11 @@ public interface PropertyName {
      */
     DEVICE_USAGE_DURATION_MS,
 
-    /** The comma separated string of device ids to indicate devices order in the this test. */
-    DEVICE_ID_LIST,
-
     /** The id of the device which runs the test. */
     DIMENSION_ID,
+
+    /** Execution mode (lower case of ExecModeUtil.getModeName()). */
+    EXEC_MODE,
 
     /** The test id who initiates this test. */
     FOREGOING_TEST_ID,
@@ -177,10 +189,34 @@ public interface PropertyName {
     LAB_TEST_GEN_FILE_DIR,
 
     /**
+     * Present to indicate that device preRunTest and postRunTest will be forcibly disabled for the
+     * {@code com.google.devtools.mobileharness.infra.controller.test.local.LocalTestFlow}.
+     */
+    LOCAL_TEST_DISABLE_DEVICE_PRE_RUN_POST_RUN,
+
+    /**
      * The name of the test property which indicates that the current test is non-passing, but will
      * trigger a retry and get pass. Values of this test property: true or null.
      */
     NONPASSING_BEFORE_RETRY_PASS,
+
+    /**
+     * Present to indicate that preRunTest of NoOpDevice has been called.
+     *
+     * <p>ONLY used in {@code
+     * com.google.devtools.deviceinfra.host.utrs.controller.testrunner.backend
+     * .UtrsHtrApiIntegrationTest}.
+     */
+    NO_OP_DEVICE_PRE_RUN_TEST_CALLED,
+
+    /**
+     * Present to indicate that postRunTest of NoOpDevice has been called.
+     *
+     * <p>ONLY used in {@code
+     * com.google.devtools.deviceinfra.host.utrs.controller.testrunner.backend
+     * .UtrsHtrApiIntegrationTest}.
+     */
+    NO_OP_DEVICE_POST_RUN_TEST_CALLED,
 
     /**
      * The name of the test property which indicates that one of the Oxygen devices we leased is
@@ -269,35 +305,14 @@ public interface PropertyName {
      */
     VOLATILE_TEST_INFO_AFTER_TEST_ENDS,
 
-    /**
-     * Present to indicate that device preRunTest and postRunTest will be forcibly disabled for the
-     * {@code com.google.devtools.mobileharness.infra.controller.test.local.LocalTestFlow}.
-     */
-    LOCAL_TEST_DISABLE_DEVICE_PRE_RUN_POST_RUN,
+    /** The root path of the uploaded test gen files. */
+    UPLOAD_GENFILES_ROOT_PATH,
 
     /**
-     * Present to indicate that preRunTest of NoOpDevice has been called.
-     *
-     * <p>ONLY used in {@code
-     * com.google.devtools.deviceinfra.host.utrs.controller.testrunner.backend
-     * .UtrsHtrApiIntegrationTest}.
+     * Count of drain timeout retry attempts in this job shown in sponge starting with '_' so sponge
+     * can make it invisible http://b/169158354.
      */
-    NO_OP_DEVICE_PRE_RUN_TEST_CALLED,
-
-    /**
-     * Present to indicate that postRunTest of NoOpDevice has been called.
-     *
-     * <p>ONLY used in {@code
-     * com.google.devtools.deviceinfra.host.utrs.controller.testrunner.backend
-     * .UtrsHtrApiIntegrationTest}.
-     */
-    NO_OP_DEVICE_POST_RUN_TEST_CALLED,
-
-    /** The epoch time when the test execution is completed and the device is released. */
-    DEVICE_DONE_EPOCH_MS,
-
-    /** Execution mode (lower case of ExecModeUtil.getModeName()). */
-    EXEC_MODE,
+    _DRAIN_TIMEOUT_RETRY_ATTEMPTS,
 
     /**
      * id of MH HaTS survey shown in sponge starting with '_' so sponge can make it invisible
@@ -315,13 +330,7 @@ public interface PropertyName {
     _IS_RUN_IN_DM,
 
     /** Locator of test engine stub. */
-    _TEST_ENGINE_LOCATOR,
-
-    /**
-     * Count of drain timeout retry attempts in this job shown in sponge starting with '_' so sponge
-     * can make it invisible http://b/169158354.
-     */
-    _DRAIN_TIMEOUT_RETRY_ATTEMPTS;
+    _TEST_ENGINE_LOCATOR;
 
     /**
      * Name prefix of the test property that contains the decorator run time in milliseconds.
