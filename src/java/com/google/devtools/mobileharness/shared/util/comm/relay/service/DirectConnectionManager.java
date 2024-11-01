@@ -40,7 +40,7 @@ public final class DirectConnectionManager implements ConnectionManager {
   }
 
   @VisibleForTesting
-  DirectConnectionManager(
+  public DirectConnectionManager(
       ChannelManager channelManager,
       Function<String, ? extends ManagedChannel> managedChannelSupplier) {
     this.channelManager = channelManager;
