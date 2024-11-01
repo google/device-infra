@@ -63,7 +63,6 @@ java_library(
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/common/jobcreator:__pkg__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
     ],
     deps = [
         ":module_sharding_args_generator",
@@ -96,7 +95,6 @@ java_library(
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/common/jobcreator:__pkg__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__",
     ],
     deps = [
         ":module_sharding_args_generator",
