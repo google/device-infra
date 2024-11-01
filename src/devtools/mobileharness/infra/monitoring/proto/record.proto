@@ -55,6 +55,9 @@ message HostRecord {
 
   // The team this host belongs to.
   string team = 11;
+
+  // The version of the GRTE installed on the host, Linux only.
+  string grte_version = 12;
 }
 
 // The record of a device of a certain timestamp.
