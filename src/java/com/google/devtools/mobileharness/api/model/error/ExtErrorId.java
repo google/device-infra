@@ -107,7 +107,7 @@ public enum ExtErrorId implements ErrorId {
   TESTBED_DEVICE_DECORATOR_NOT_COMPATIBLE_ERROR(84_512, ErrorType.CUSTOMER_ISSUE),
   TESTBED_DEVICE_DECORATOR_SETUP_ERROR(84_513, ErrorType.CUSTOMER_ISSUE),
 
-  // xTS Utils: 86_901 ~ 88_900
+  /** xTS Utils: 86_901 ~ 88_900 */
   // CompatibilityReportParser: 86_901 ~ 86_950
   REPORT_PARSER_READ_XML_FILE_ERROR(86_901, ErrorType.INFRA_ISSUE),
   REPORT_PARSER_XML_EVENT_READER_ERROR(86_902, ErrorType.INFRA_ISSUE),
@@ -167,6 +167,7 @@ public enum ExtErrorId implements ErrorId {
   // SubPlanCreator: 87_441 ~ 87_450
   SUBPLAN_CREATOR_SUBPLAN_FILE_ALREADY_EXISTED(87_441, ErrorType.CUSTOMER_ISSUE),
 
+  /** End of xTS Utils error ids. */
   EXT_PLACE_HOLDER_TO_BE_RENAMED(100_000, ErrorType.UNDETERMINED);
 
   public static final int MIN_CODE = InfraErrorId.MAX_CODE + 1;
