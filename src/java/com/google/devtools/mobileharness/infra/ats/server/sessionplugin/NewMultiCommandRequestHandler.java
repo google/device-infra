@@ -694,6 +694,9 @@ final class NewMultiCommandRequestHandler {
           || commandDetailBuilder.getState() == CommandState.RUNNING) {
         if (hasCommandPassed(commandDetailBuilder.build())) {
           commandDetailBuilder.setState(CommandState.COMPLETED);
+        } else if (hasCommandFailed(commandDetailBuilder.build())) {
+          // TODO this should set to COMPLETED state to conform to ATS 1.0 behavior.
+          commandDetailBuilder.setState(CommandState.ERROR);
         } else {
           setCommandError(
               commandDetailBuilder,
@@ -772,6 +775,10 @@ final class NewMultiCommandRequestHandler {
 
   private boolean hasCommandPassed(CommandDetail commandDetail) {
     return commandDetail.getTotalTestCount() > 0 && commandDetail.getFailedTestCount() == 0;
+  }
+
+  private boolean hasCommandFailed(CommandDetail commandDetail) {
+    return commandDetail.getTotalTestCount() > 0 && commandDetail.getFailedTestCount() != 0;
   }
 
   @CanIgnoreReturnValue
