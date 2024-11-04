@@ -120,7 +120,7 @@ public class MessageSubscriberBackendTest {
             MessageReceptions.newBuilder()
                 .addReceptions(
                     MessageReception.newBuilder()
-                        .setReceivingStart(
+                        .setSubscriberReceivingStart(
                             MessageReceivingStart.newBuilder()
                                 .setSubscriberInfo(
                                     MessageSubscriberInfo.newBuilder().setMethodName("m1"))
@@ -130,7 +130,7 @@ public class MessageSubscriberBackendTest {
             MessageReceptions.newBuilder()
                 .addReceptions(
                     MessageReception.newBuilder()
-                        .setReceivingEnd(
+                        .setSubscriberReceivingEnd(
                             MessageReceivingEnd.newBuilder()
                                 .setSubscriberInfo(
                                     MessageSubscriberInfo.newBuilder().setMethodName("m1"))
@@ -146,7 +146,7 @@ public class MessageSubscriberBackendTest {
             MessageReceptions.newBuilder()
                 .addReceptions(
                     MessageReception.newBuilder()
-                        .setReceivingStart(
+                        .setSubscriberReceivingStart(
                             MessageReceivingStart.newBuilder()
                                 .setSubscriberInfo(
                                     MessageSubscriberInfo.newBuilder().setMethodName("m2"))
@@ -156,7 +156,7 @@ public class MessageSubscriberBackendTest {
             MessageReceptions.newBuilder()
                 .addReceptions(
                     MessageReception.newBuilder()
-                        .setReceivingEnd(
+                        .setSubscriberReceivingEnd(
                             MessageReceivingEnd.newBuilder()
                                 .setSubscriberInfo(
                                     MessageSubscriberInfo.newBuilder().setMethodName("m2"))
@@ -171,6 +171,7 @@ public class MessageSubscriberBackendTest {
                                                         .setSummary(
                                                             ExceptionSummary.newBuilder()
                                                                 .setMessage("Error message")))))))
-                .build());
+                .build())
+        .inOrder();
   }
 }

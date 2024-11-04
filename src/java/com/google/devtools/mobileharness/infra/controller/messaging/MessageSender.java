@@ -20,6 +20,10 @@ import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.SettableFuture;
+import com.google.devtools.mobileharness.api.messaging.proto.MessagingProto.ComponentMessageReceivingEnd;
+import com.google.devtools.mobileharness.api.messaging.proto.MessagingProto.GlobalMessageReceivingEnd;
+import com.google.devtools.mobileharness.api.messaging.proto.MessagingProto.MessageReception;
+import com.google.devtools.mobileharness.api.messaging.proto.MessagingProto.MessageReceptions;
 import com.google.devtools.mobileharness.api.messaging.proto.MessagingProto.MessageSend;
 import com.google.devtools.mobileharness.infra.controller.messaging.MessageSubscriberBackend.MessageSubscribers;
 import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
@@ -56,6 +60,18 @@ class MessageSender implements NonThrowingAutoCloseable {
     for (MessageSubscribers subscribers : localSubscribers) {
       subscribers.receiveMessage(messageSend, messageReceptionsHandler);
     }
+
+    // Generates ComponentMessageReceivingEnd and GlobalMessageReceivingEnd.
+    messageReceptionsHandler.handleMessageReceptions(
+        MessageReceptions.newBuilder()
+            .addReceptions(
+                MessageReception.newBuilder()
+                    .setComponentMessageReceivingEnd(
+                        ComponentMessageReceivingEnd.getDefaultInstance()))
+            .addReceptions(
+                MessageReception.newBuilder()
+                    .setGlobalMessageReceivingEnd(GlobalMessageReceivingEnd.getDefaultInstance()))
+            .build());
   }
 
   public void initializeLocalSubscribers(ImmutableList<MessageSubscribers> localSubscribers) {

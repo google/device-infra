@@ -51,6 +51,8 @@ import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
 import java.lang.reflect.WildcardType;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import javax.annotation.Nullable;
 
@@ -59,10 +61,14 @@ class MessageSubscriberBackend {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
+  private static final Comparator<MessageSubscriber> SUBSCRIBER_COMPARATOR =
+      Comparator.<MessageSubscriber, String>comparing(subscriber -> subscriber.method().getName())
+          .thenComparing(subscriber -> subscriber.messageType().getName());
+
   /** Searches all message subscribers in the given object. */
   public static MessageSubscribers searchMessageSubscribers(Object object) {
     Class<?> clazz = object.getClass();
-    ImmutableList.Builder<MessageSubscriber> messageSubscribers = ImmutableList.builder();
+    List<MessageSubscriber> messageSubscribers = new ArrayList<>();
     ImmutableList.Builder<InvalidMessageSubscriber> invalidMessageSubscribers =
         ImmutableList.builder();
 
@@ -166,8 +172,11 @@ class MessageSubscriberBackend {
       messageSubscribers.add(MessageSubscriber.of(object, clazz, method, messageType, resultType));
     }
 
+    // Sorts message subscribers.
     return MessageSubscribers.of(
-        object, messageSubscribers.build(), invalidMessageSubscribers.build());
+        object,
+        ImmutableList.sortedCopyOf(SUBSCRIBER_COMPARATOR, messageSubscribers),
+        invalidMessageSubscribers.build());
   }
 
   /** A message subscriber. */
@@ -236,7 +245,7 @@ class MessageSubscriberBackend {
           MessageReceptions.newBuilder()
               .addReceptions(
                   MessageReception.newBuilder()
-                      .setReceivingStart(
+                      .setSubscriberReceivingStart(
                           MessageReceivingStart.newBuilder()
                               .setSubscriberInfo(messageSubscriberInfo())
                               .setReceivingTimingInfo(
@@ -293,7 +302,7 @@ class MessageSubscriberBackend {
             MessageReceptions.newBuilder()
                 .addReceptions(
                     MessageReception.newBuilder()
-                        .setReceivingEnd(
+                        .setSubscriberReceivingEnd(
                             MessageReceivingEnd.newBuilder()
                                 .setSubscriberInfo(messageSubscriberInfo())
                                 .setReceivingTimingInfo(
@@ -310,7 +319,7 @@ class MessageSubscriberBackend {
           MessageReceptions.newBuilder()
               .addReceptions(
                   MessageReception.newBuilder()
-                      .setReceivingEnd(
+                      .setSubscriberReceivingEnd(
                           MessageReceivingEnd.newBuilder()
                               .setSubscriberInfo(messageSubscriberInfo())
                               .setReceivingTimingInfo(
@@ -357,7 +366,7 @@ class MessageSubscriberBackend {
 
     public abstract ImmutableList<InvalidMessageSubscriber> invalidMessageSubscribers();
 
-    /** Lets all subscribers which can receive a message receive the message sequentially. */
+    /** Lets all subscribers which can receive a message receive the message synchronously. */
     void receiveMessage(MessageSend messageSend, MessageReceptionsHandler messageReceptionsHandler)
         throws InterruptedException {
       for (MessageSubscriber messageSubscriber : messageSubscribers()) {

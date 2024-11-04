@@ -52,14 +52,26 @@ message MessageReceptions {
   repeated MessageReception receptions = 1;
 }
 
-// Message receiving start/end of a message subscriber.
+// Receptions of a message.
 message MessageReception {
   oneof type {
-    MessageReceivingStart receiving_start = 1;
+    MessageReceivingStart subscriber_receiving_start = 1;
 
-    MessageReceivingEnd receiving_end = 2;
+    MessageReceivingEnd subscriber_receiving_end = 2;
+
+    ComponentMessageReceivingEnd component_message_receiving_end = 3;
+
+    GlobalMessageReceivingEnd global_message_receiving_end = 4;
   }
 }
+
+// Indicates that all message subscribers in a component have finished receiving
+// a message.
+message ComponentMessageReceivingEnd {}
+
+// Indicates that all message subscribers in all components have finished
+// receiving a message.
+message GlobalMessageReceivingEnd {}
 
 // Start of a message receiving action of a message subscriber.
 message MessageReceivingStart {

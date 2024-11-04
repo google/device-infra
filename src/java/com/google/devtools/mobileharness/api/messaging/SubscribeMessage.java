@@ -48,6 +48,9 @@ import java.lang.annotation.Target;
  *   return FooResponse.getDefaultInstance();
  * }
  * }</pre>
+ *
+ * <p>Message subscribers in one object will receive one message in the order of method name and
+ * message type Java class name.
  */
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)

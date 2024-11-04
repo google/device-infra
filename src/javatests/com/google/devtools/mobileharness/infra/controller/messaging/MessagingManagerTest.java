@@ -29,6 +29,8 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.ExceptionDetail;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.ExceptionSummary;
 import com.google.devtools.mobileharness.api.messaging.proto.MessagingProto;
+import com.google.devtools.mobileharness.api.messaging.proto.MessagingProto.ComponentMessageReceivingEnd;
+import com.google.devtools.mobileharness.api.messaging.proto.MessagingProto.GlobalMessageReceivingEnd;
 import com.google.devtools.mobileharness.api.messaging.proto.MessagingProto.MessageReceivingEnd;
 import com.google.devtools.mobileharness.api.messaging.proto.MessagingProto.MessageReceivingError;
 import com.google.devtools.mobileharness.api.messaging.proto.MessagingProto.MessageReceivingResult;
@@ -100,7 +102,7 @@ public class MessagingManagerTest {
         .comparingExpectedFieldsOnly()
         .containsAtLeast(
             MessageReception.newBuilder()
-                .setReceivingEnd(
+                .setSubscriberReceivingEnd(
                     MessageReceivingEnd.newBuilder()
                         .setSubscriberInfo(MessageSubscriberInfo.newBuilder().setMethodName("m1"))
                         .setReceivingTimingInfo(MessageReceivingTimingInfo.getDefaultInstance())
@@ -110,7 +112,7 @@ public class MessagingManagerTest {
                                     Any.pack(TimeUtils.toProtoDuration(Duration.ofSeconds(124L))))))
                 .build(),
             MessageReception.newBuilder()
-                .setReceivingEnd(
+                .setSubscriberReceivingEnd(
                     MessageReceivingEnd.newBuilder()
                         .setSubscriberInfo(MessageSubscriberInfo.newBuilder().setMethodName("m2"))
                         .setReceivingTimingInfo(MessageReceivingTimingInfo.getDefaultInstance())
@@ -123,6 +125,13 @@ public class MessagingManagerTest {
                                                 .setSummary(
                                                     ExceptionSummary.newBuilder()
                                                         .setMessage("Error message"))))))
-                .build());
+                .build(),
+            MessageReception.newBuilder()
+                .setComponentMessageReceivingEnd(ComponentMessageReceivingEnd.getDefaultInstance())
+                .build(),
+            MessageReception.newBuilder()
+                .setGlobalMessageReceivingEnd(GlobalMessageReceivingEnd.getDefaultInstance())
+                .build())
+        .inOrder();
   }
 }
