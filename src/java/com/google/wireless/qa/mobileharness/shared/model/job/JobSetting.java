@@ -407,7 +407,7 @@ public class JobSetting {
     return newDirs;
   }
 
-  private static String getDefaultTmpDir() {
+  private static String getDefaultTmpDir() throws MobileHarnessException {
     // https://bazel.build/reference/test-encyclopedia#test-interaction-filesystem
     return System.getenv("TEST_TMPDIR");
   }
