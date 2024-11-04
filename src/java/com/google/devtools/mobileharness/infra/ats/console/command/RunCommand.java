@@ -478,6 +478,9 @@ public final class RunCommand implements Callable<Integer> {
       sessionRequestBuilder.setRetryType(
           RetryType.valueOf(Ascii.toUpperCase(this.retryType.name())));
     }
+    if (isSkipDeviceInfo().isPresent()) {
+      sessionRequestBuilder.setSkipDeviceInfo(isSkipDeviceInfo().get());
+    }
     return sessionRequestBuilder.setExtraArgs(extraArgs);
   }
 
@@ -817,6 +820,10 @@ public final class RunCommand implements Callable<Integer> {
     // should parse given plan and its child plans to see if the option "skip-device-info" is set to
     // true explicitly.
     if (skipDeviceInfo == null && Objects.equals(config, "cts-dev")) {
+      return Optional.of(true);
+    }
+    // TODO Temporary solution to unblock app compat test post processing.
+    if (skipDeviceInfo == null && Objects.equals(config, "csuite-app-crawl")) {
       return Optional.of(true);
     }
     return Optional.ofNullable(skipDeviceInfo);

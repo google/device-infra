@@ -181,6 +181,14 @@ public abstract class XtsJobCreator {
               String.format("--skip-device-info %s", sessionRequestInfo.skipDeviceInfo().get()));
     }
 
+    // TODO Temporary solution to unblock app compat test post processing. This command
+    // does not recognize skipDeviceInfoArg flag, so remove from command args list.
+    // SessionRequestInfo still need this flag so that the result processing can ignore build
+    // fingerprint check.
+    if (testPlan.equals("csuite-app-crawl")) {
+      skipDeviceInfoArg = Optional.empty();
+    }
+
     ImmutableSet<String> runCommandArgsSet;
     if (SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo)) {
       runCommandArgsSet =
