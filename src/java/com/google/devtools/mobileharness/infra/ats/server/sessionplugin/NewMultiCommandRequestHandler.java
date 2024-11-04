@@ -285,7 +285,7 @@ final class NewMultiCommandRequestHandler {
         commandDetail.ifPresent(
             builder -> {
               builder.setState(CommandState.ERROR);
-              commandDetailsBuilder.put("UNKNOWN_" + commandInfo.getCommandLine(), builder.build());
+              commandDetailsBuilder.put(commandId, builder.build());
             });
         throw e;
       }
@@ -333,6 +333,8 @@ final class NewMultiCommandRequestHandler {
     commandDetailBuilder.setStartTime(Timestamps.fromMillis(clock.millis()));
     commandDetailBuilder.setUpdateTime(Timestamps.fromMillis(clock.millis()));
     commandDetailBuilder.setRequestId(sessionInfo.getSessionId());
+    String commandId = getCommandId(commandInfo, request);
+    commandDetailBuilder.setId(commandId);
     // Set initial state.
     commandDetailBuilder.setState(CommandState.UNKNOWN_STATE);
 
@@ -341,8 +343,7 @@ final class NewMultiCommandRequestHandler {
       sessionRequestInfo = getSessionRequestInfo(request, commandInfo, sessionInfo);
     } catch (MobileHarnessException e) {
       commandDetailBuilder.setState(CommandState.ERROR);
-      commandDetailsBuilder.put(
-          "UNKNOWN_" + commandInfo.getCommandLine(), commandDetailBuilder.build());
+      commandDetailsBuilder.put(commandId, commandDetailBuilder.build());
       throw e;
     }
 
@@ -354,13 +355,11 @@ final class NewMultiCommandRequestHandler {
         logger.atInfo().log(
             "Unable to create tradefed jobs for command [%s] due to skippable exception: [%s].",
             commandInfo.getCommandLine(), shortDebugString(e));
-        commandDetailsBuilder.put(
-            "UNKNOWN_" + commandInfo.getCommandLine(), commandDetailBuilder.build());
+        commandDetailsBuilder.put(commandId, commandDetailBuilder.build());
         return ImmutableList.of();
       }
       commandDetailBuilder.setState(CommandState.ERROR);
-      commandDetailsBuilder.put(
-          "UNKNOWN_" + commandInfo.getCommandLine(), commandDetailBuilder.build());
+      commandDetailsBuilder.put(commandId, commandDetailBuilder.build());
       throw e;
     }
     for (JobInfo jobInfo : jobInfoList) {
@@ -368,12 +367,10 @@ final class NewMultiCommandRequestHandler {
         insertAdditionalTestResource(jobInfo, request);
       } catch (MobileHarnessException e) {
         commandDetailBuilder.setState(CommandState.ERROR);
-        commandDetailsBuilder.put(
-            "UNKNOWN_" + commandInfo.getCommandLine(), commandDetailBuilder.build());
+        commandDetailsBuilder.put(commandId, commandDetailBuilder.build());
         throw e;
       }
-      String commandId = getCommandId(commandInfo, request);
-      commandDetailBuilder.setId(commandId).setState(CommandState.RUNNING);
+      commandDetailBuilder.setState(CommandState.RUNNING);
       jobInfo.properties().add(XtsPropertyName.Job.XTS_COMMAND_ID, commandId);
       jobInfo.properties().add(XTS_TF_JOB_PROP, "true");
       logger.atInfo().log(

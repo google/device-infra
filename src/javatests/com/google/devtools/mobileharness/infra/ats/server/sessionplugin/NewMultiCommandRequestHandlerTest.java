@@ -236,10 +236,10 @@ public final class NewMultiCommandRequestHandlerTest {
 
     // Verify command detail.
     assertThat(createJobsResult.commandDetails()).hasSize(1);
-    CommandDetail commandDetail =
-        createJobsResult
-            .commandDetails()
-            .get("UNKNOWN_" + commandInfoWithInvalidCommandLine.getCommandLine());
+    String commandId =
+        UUID.nameUUIDFromBytes(commandInfoWithInvalidCommandLine.getCommandLine().getBytes(UTF_8))
+            .toString();
+    CommandDetail commandDetail = createJobsResult.commandDetails().get(commandId);
     assertThat(commandDetail.getCommandLine())
         .isEqualTo(commandInfoWithInvalidCommandLine.getCommandLine());
     assertThat(commandDetail.getState()).isEqualTo(CommandState.ERROR);
@@ -524,8 +524,10 @@ public final class NewMultiCommandRequestHandlerTest {
 
     // Verify command detail.
     assertThat(createJobsResult.commandDetails()).hasSize(1);
-    CommandDetail commandDetail =
-        createJobsResult.commandDetails().get("UNKNOWN_" + commandInfo.getCommandLine());
+
+    String commandId =
+        UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
+    CommandDetail commandDetail = createJobsResult.commandDetails().get(commandId);
     assertThat(commandDetail.getCommandLine()).isEqualTo(commandInfo.getCommandLine());
     assertThat(commandDetail.getState()).isEqualTo(CommandState.ERROR);
   }
@@ -562,7 +564,9 @@ public final class NewMultiCommandRequestHandlerTest {
     // Verify command detail.
     assertThat(createJobsResult.commandDetails()).hasSize(1);
     CommandDetail commandDetail =
-        createJobsResult.commandDetails().get("UNKNOWN_" + commandInfo.getCommandLine());
+        createJobsResult
+            .commandDetails()
+            .get(UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString());
     assertThat(commandDetail.getCommandLine()).isEqualTo(commandInfo.getCommandLine());
     assertThat(commandDetail.getState()).isEqualTo(CommandState.ERROR);
   }

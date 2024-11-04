@@ -349,8 +349,10 @@ public final class AtsServerSessionPluginTest {
     RequestDetail requestDetail = unaryOperatorCaptor.getValue().apply(null);
     assertThat(requestDetail.getState()).isEqualTo(RequestState.ERROR);
     // Contains the failed command detail.
-    assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(2);
+    assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
     assertThat(requestDetail.getErrorReason()).isEqualTo(ErrorReason.INVALID_REQUEST);
+    assertThat(requestDetail.getErrorMessage())
+        .isEqualTo("No jobs were created for session： session_id ");
   }
 
   @Test
@@ -1094,7 +1096,7 @@ public final class AtsServerSessionPluginTest {
   }
 
   @Test
-  public void onSessionEnded_requestWasCancelled_keepCancelStateAndNoRetry() throws Exception {
+  public void onSessionEnded_invalidRequest_noRetry() throws Exception {
     // Intentionally make it fail to create any tradefed test and fail non tradefed test check.
     when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of());
     when(xtsJobCreator.createXtsNonTradefedJobs(any())).thenReturn(ImmutableList.of());
@@ -1112,7 +1114,7 @@ public final class AtsServerSessionPluginTest {
     RequestDetail requestDetail = unaryOperatorCaptor.getValue().apply(null);
     assertThat(requestDetail.getState()).isEqualTo(RequestState.ERROR);
     // Contains the failed command detail.
-    assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(2);
+    assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
     assertThat(requestDetail.getErrorReason()).isEqualTo(ErrorReason.INVALID_REQUEST);
 
     plugin.onSessionEnded(new SessionEndedEvent(sessionInfo, null));
