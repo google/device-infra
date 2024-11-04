@@ -31,6 +31,7 @@ proto_library(
         ":android_adb_shell_decorator_spec_proto",
         ":android_device_features_check_decorator_spec_proto",
         ":android_device_setting_decorator_spec_proto",
+        ":android_file_puller_decorator_spec_proto",
         ":android_mainline_modules_check_decorator_spec_proto",
         ":android_min_sdk_version_check_decorator_spec_proto",
         ":android_switch_user_decorator_spec_proto",
@@ -152,6 +153,17 @@ cc_proto_library(
 java_proto_library(
     name = "android_device_setting_decorator_spec_java_proto",
     deps = [":android_device_setting_decorator_spec_proto"],
+)
+
+proto_library(
+    name = "android_file_puller_decorator_spec_proto",
+    srcs = ["decorator/android_file_puller_decorator_spec.proto"],
+    deps = [":base_spec_proto"],
+)
+
+java_proto_library(
+    name = "android_file_puller_decorator_spec_java_proto",
+    deps = [":android_file_puller_decorator_spec_proto"],
 )
 
 proto_library(

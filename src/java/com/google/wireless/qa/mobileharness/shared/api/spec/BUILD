@@ -40,6 +40,15 @@ java_library(
 )
 
 java_library(
+    name = "android_file_puller_spec",
+    srcs = ["AndroidFilePullerSpec.java"],
+    deps = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation:basic_annotation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:android_file_puller_decorator_spec_java_proto",
+    ],
+)
+
+java_library(
     name = "android_file_pusher_spec",
     srcs = ["AndroidFilePusherSpec.java"],
     deps = [
