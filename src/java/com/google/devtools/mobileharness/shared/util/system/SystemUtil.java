@@ -360,7 +360,7 @@ public class SystemUtil {
       } else if (isOnMac()) {
         javaBin = "java";
       } else if (isOnLinux()) {
-        javaBin = "/usr/local/buildtools/java/jdk/bin/java";
+        javaBin = "/usr/local/buildtools/java/jdk21/bin/java";
       }
     }
     return javaBin;
