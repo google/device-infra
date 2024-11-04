@@ -111,7 +111,7 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
           "x86_64", "x86_64");
   // Build prefix of Trunk release build only for Pixel devices.
   private static final ImmutableSet<String> BUILD_PREFIX_FOR_TRUNK_RELEASE =
-      ImmutableSet.of("AP3A", "AP4A", "AH1A");
+      ImmutableSet.of("AP3A", "AP4A", "AH1A", "BP1A");
   private final AndroidPackageManagerUtil androidPackageManagerUtil;
   private final AndroidAdbUtil adbUtil;
   private final LocalFileUtil fileUtil;
