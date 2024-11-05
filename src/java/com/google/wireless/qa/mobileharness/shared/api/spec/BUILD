@@ -57,6 +57,14 @@ java_library(
 )
 
 java_library(
+    name = "android_logcat_spec",
+    srcs = ["AndroidLogCatSpec.java"],
+    deps = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+    ],
+)
+
+java_library(
     name = "android_native_bin_spec",
     srcs = ["AndroidNativeBinSpec.java"],
     deps = [

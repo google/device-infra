@@ -247,6 +247,34 @@ java_library(
 )
 
 java_library(
+    name = "android_logcat_decorator",
+    srcs = ["AndroidLogCatDecorator.java"],
+    deps = [
+        ":base_decorator",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/platform/android/lightning/systemstate",
+        "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:enums",
+        "//src/java/com/google/devtools/mobileharness/platform/android/systemsetting:system_setting_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/base",
+        "//src/java/com/google/devtools/mobileharness/shared/util/command",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/path",
+        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:android_logcat_spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/util:device",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "android_mainline_modules_check_decorator",
     srcs = ["AndroidMainlineModulesCheckDecorator.java"],
     deps = [

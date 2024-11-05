@@ -21,6 +21,7 @@ java_library(
         "AndroidDecoratorValidatorUtil.java",
     ],
     visibility = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator:__subpackages__",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/shared/util/base",
