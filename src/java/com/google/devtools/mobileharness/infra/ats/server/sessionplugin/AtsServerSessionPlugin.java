@@ -74,6 +74,7 @@ import com.google.wireless.qa.mobileharness.shared.proto.Job.TestStatus;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Collection;
+import java.util.Map;
 import javax.inject.Inject;
 
 /** Session Plugin to serve test requests coming from ATS server. */
@@ -339,7 +340,8 @@ final class AtsServerSessionPlugin {
             logger.atWarning().withCause(e).log("Failed to trigger retry session.");
           }
         } else if (requestDetail.getState().equals(RequestState.ERROR)
-            && requestDetail.getErrorReason().equals(ErrorReason.UNKNOWN_REASON)) {
+            && requestDetail.getErrorReason().equals(ErrorReason.UNKNOWN_REASON)
+            && !hasSessionFailed(requestDetail)) {
           requestDetail.setErrorReason(ErrorReason.RESULT_PROCESSING_ERROR);
           requestDetail.setErrorMessage("Failed to process test results.");
         }
@@ -462,11 +464,7 @@ final class AtsServerSessionPlugin {
 
   // TODO: create more concrete retry strategy.
   private static boolean canRetrySession(RequestDetailOrBuilder requestDetail) {
-    return requestDetail.getState().equals(RequestState.ERROR)
-        && requestDetail.getMaxRetryOnTestFailures() > 0
-        && !requestDetail.getCommandDetailsMap().isEmpty()
-        && requestDetail.getCommandDetailsMap().values().iterator().next().getTotalModuleCount()
-            != 0;
+    return requestDetail.getMaxRetryOnTestFailures() > 0 && hasSessionFailed(requestDetail);
   }
 
   private static CommandAttemptDetail generateCommandAttemptDetail(
@@ -550,6 +548,17 @@ final class AtsServerSessionPlugin {
     return !commandDetailsMap.isEmpty()
         && commandDetailsMap.values().stream()
             .allMatch(commandDetail -> commandDetail.getState() == CommandState.COMPLETED);
+  }
+
+  private static boolean hasSessionFailed(RequestDetailOrBuilder requestDetail) {
+    Map<String, CommandDetail> commandDetailsMap = requestDetail.getCommandDetailsMap();
+    // TODO: Failed command should be COMPLETED state after the bug is fixed.
+    return !commandDetailsMap.isEmpty()
+        && commandDetailsMap.values().stream()
+            .allMatch(
+                commandDetail ->
+                    commandDetail.getState() == CommandState.ERROR
+                        && commandDetail.getFailedTestCount() > 0);
   }
 
   private static CommandState convertStatusAndResultToCommandState(Status status, Result result) {
