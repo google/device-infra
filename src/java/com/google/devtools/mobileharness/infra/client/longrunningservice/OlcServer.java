@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.infra.client.longrunningservice;
 import static com.google.devtools.mobileharness.infra.client.longrunningservice.constant.OlcServerLogs.SERVER_STARTED_SIGNAL;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
+import static java.util.concurrent.TimeUnit.MINUTES;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
@@ -26,6 +27,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.eventbus.EventBus;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.client.api.Annotations.GlobalInternalEventBus;
 import com.google.devtools.mobileharness.infra.client.api.ClientApi;
@@ -78,6 +80,8 @@ public class OlcServer {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
+  private static final int DUMP_MEMORY_INFO_DELAY_MINUTES = 15;
+
   public static void main(String[] args) throws MobileHarnessException, InterruptedException {
     // Parses flags.
     Flags.parse(args);
@@ -102,6 +106,7 @@ public class OlcServer {
   private final SessionManager sessionManager;
   @Nullable private final MonitorPipelineLauncher monitorPipelineLauncher;
   private final ListeningExecutorService threadPool;
+  private final ListeningScheduledExecutorService scheduledThreadPool;
   private final ExecMode execMode;
   private final EventBus globalInternalEventBus;
   private final LogManager<LogRecords> logManager;
@@ -120,6 +125,7 @@ public class OlcServer {
       SessionManager sessionManager,
       @Nullable MonitorPipelineLauncher monitorPipelineLauncher,
       ListeningExecutorService threadPool,
+      ListeningScheduledExecutorService scheduledThreadPool,
       ExecMode execMode,
       @GlobalInternalEventBus EventBus globalInternalEventBus,
       LogManager<LogRecords> logManager,
@@ -135,6 +141,7 @@ public class OlcServer {
     this.sessionManager = sessionManager;
     this.monitorPipelineLauncher = monitorPipelineLauncher;
     this.threadPool = threadPool;
+    this.scheduledThreadPool = scheduledThreadPool;
     this.execMode = execMode;
     this.globalInternalEventBus = globalInternalEventBus;
     this.logManager = logManager;
@@ -224,6 +231,18 @@ public class OlcServer {
     logger.atInfo().log(
         "Process info: pid=%s, memory_info=[%s]",
         ProcessHandle.current().pid(), systemUtil.getMemoryInfo());
+
+    // Periodically prints memory usage info.
+    logFailure(
+        scheduledThreadPool.scheduleWithFixedDelay(
+            threadRenaming(
+                () -> logger.atInfo().log("OLC server memory info: %s", systemUtil.getMemoryInfo()),
+                () -> "memory-info-dumper"),
+            DUMP_MEMORY_INFO_DELAY_MINUTES,
+            DUMP_MEMORY_INFO_DELAY_MINUTES,
+            MINUTES),
+        Level.SEVERE,
+        "Fatal error while dumping memory info.");
 
     // Waits for termination.
     lifecycleManager.awaitTermination();
