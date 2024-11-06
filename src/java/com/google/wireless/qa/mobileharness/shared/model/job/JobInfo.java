@@ -20,7 +20,6 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Joiner.MapJoiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Suppliers;
-import com.google.common.collect.ListMultimap;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -551,12 +550,6 @@ public class JobInfo extends JobScheduleUnit {
     }
     jobFeatureBuilder.setDeviceRequirements(deviceRequirements);
     return jobFeatureBuilder.build();
-  }
-
-  /** Uses {@link TestInfos#getAll()} instead. */
-  @Deprecated
-  public ListMultimap<String, TestInfo> getAllTests() {
-    return tests.getAll();
   }
 
   @Override
