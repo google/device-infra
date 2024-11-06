@@ -121,6 +121,7 @@ java_library(
     name = "device_info_manager",
     srcs = ["DeviceInfoManager.java"],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/api/devicemanager/dispatcher:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
     ],
     deps = [
@@ -204,6 +205,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/testrunner/device/cache:device_cache_manager",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device/config",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device/external:external_device_manager",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device/faileddevice:failed_device_table",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device/util:device_reboot_util",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/event",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/model:test_execution_result",

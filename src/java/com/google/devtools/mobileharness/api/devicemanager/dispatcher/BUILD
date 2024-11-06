@@ -92,6 +92,20 @@ java_library(
 )
 
 java_library(
+    name = "failed_device",
+    srcs = ["FailedDeviceDispatcher.java"],
+    deps = [
+        ":cacheable",
+        "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector/model",
+        "//src/java/com/google/devtools/mobileharness/api/devicemanager/dispatcher/model",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab:device_id_descriptor",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab:device_info",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device:device_info_manager",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+    ],
+)
+
+java_library(
     name = "no_op_device",
     srcs = ["NoOpDeviceDispatcher.java"],
     deps = [

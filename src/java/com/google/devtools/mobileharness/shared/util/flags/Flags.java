@@ -1177,6 +1177,16 @@ public class Flags {
       converter = DurationFlag.DurationConverter.class)
   public Flag<Duration> extraAdbCommandTimeout = extraAdbCommandTimeoutDefault;
 
+  private static final Flag<Integer> maxInitFailuresBeforeFailDefault = Flag.value(3);
+
+  @com.beust.jcommander.Parameter(
+      names = "--mh_dm_max_init_failures_before_fail",
+      description =
+          "After how many INIT failures do we consider the device to be a FailedDevice. The default"
+              + "value is 3 times.",
+      converter = Flag.IntegerConverter.class)
+  public Flag<Integer> maxInitFailuresBeforeFail = maxInitFailuresBeforeFailDefault;
+
   private static final Flag<String> mhProxySpecDefault = Flag.value("");
 
   @com.beust.jcommander.Parameter(

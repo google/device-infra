@@ -191,6 +191,22 @@ java_library(
 )
 
 java_library(
+    name = "failed_device",
+    srcs = ["FailedDevice.java"],
+    deps = [
+        ":base_device",
+        "//src/devtools/mobileharness/api/model/proto:device_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device/config",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device/faileddevice:failed_device_table",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator:validator_factory",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "no_op_device",
     srcs = ["NoOpDevice.java"],
     deps = [

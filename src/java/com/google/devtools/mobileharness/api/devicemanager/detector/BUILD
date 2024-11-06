@@ -54,6 +54,19 @@ java_library(
 )
 
 java_library(
+    name = "failed_device",
+    srcs = ["FailedDeviceDetector.java"],
+    deps = [
+        ":base",
+        "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector/model",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device/faileddevice:failed_device_table",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "no_op",
     srcs = ["NoOpDeviceDetector.java"],
     runtime_deps = [
