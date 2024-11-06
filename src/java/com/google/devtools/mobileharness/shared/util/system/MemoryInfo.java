@@ -30,6 +30,8 @@ public abstract class MemoryInfo {
 
   public abstract long jvmMaxMemory();
 
+  public abstract long heapUsedMemory();
+
   public abstract long freeMemory();
 
   public abstract long totalMemory();
@@ -48,10 +50,11 @@ public abstract class MemoryInfo {
   @Memoized
   public String toString() {
     return String.format(
-        "jvm_used=%s, jvm_total=%s, jvm_max=%s, free=%s, used=%s, total=%s",
+        "jvm_used=%s, jvm_total=%s, jvm_max=%s, heap_used=%s, free=%s, used=%s," + " total=%s",
         StrUtil.getHumanReadableSize(jvmUsedMemory()),
         StrUtil.getHumanReadableSize(jvmTotalMemory()),
         StrUtil.getHumanReadableSize(jvmMaxMemory()),
+        StrUtil.getHumanReadableSize(heapUsedMemory()),
         StrUtil.getHumanReadableSize(freeMemory()),
         StrUtil.getHumanReadableSize(usedMemory()),
         StrUtil.getHumanReadableSize(totalMemory()));
@@ -61,9 +64,10 @@ public abstract class MemoryInfo {
       long jvmFreeMemory,
       long jvmTotalMemory,
       long jvmMaxMemory,
+      long heapUsedMemory,
       long freeMemory,
       long totalMemory) {
     return new AutoValue_MemoryInfo(
-        jvmFreeMemory, jvmTotalMemory, jvmMaxMemory, freeMemory, totalMemory);
+        jvmFreeMemory, jvmTotalMemory, jvmMaxMemory, heapUsedMemory, freeMemory, totalMemory);
   }
 }

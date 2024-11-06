@@ -1215,6 +1215,7 @@ public class SystemUtil {
         /* jvmFreeMemory= */ runtime.freeMemory(),
         /* jvmTotalMemory= */ runtime.totalMemory(),
         /* jvmMaxMemory= */ runtime.maxMemory(),
+        /* heapUsedMemory= */ ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getUsed(),
         /* freeMemory= */ getFreeMemory(),
         /* totalMemory= */ getTotalMemory());
   }
