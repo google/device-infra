@@ -87,3 +87,8 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
     ],
 )
+
+java_library(
+    name = "split_method_spec",
+    srcs = ["SplitMethodSpec.java"],
+)
