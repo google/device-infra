@@ -20,20 +20,14 @@ package(
 )
 
 java_library(
-    name = "xml_parser",
-    srcs = [
-        "LineParser.java",
-        "XmlTreeAttributeParser.java",
-    ],
+    name = "apk_analyzer",
+    srcs = ["ApkAnalyzer.java"],
     visibility = [
-        "//src/java/com/google/devtools/mobileharness/platform/android/lightning/apkfile:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/platform/android/parser:__subpackages__",
     ],
     deps = [
-        "//src/java/com/google/devtools/mobileharness/platform/android/shared/constant:splitters",
-        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
-        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "@maven//:com_google_errorprone_error_prone_annotations",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/platform/android/parser:xml_parser",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/android:aapt",
         "@maven//:com_google_guava_guava",
     ],
 )
