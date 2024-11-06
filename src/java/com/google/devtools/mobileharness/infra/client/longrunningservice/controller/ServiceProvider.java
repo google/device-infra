@@ -27,4 +27,7 @@ public interface ServiceProvider {
 
   /** Provides services for worker clients. */
   ImmutableList<BindableService> provideServicesForWorkers();
+
+  /** Services can be provided directly or by the workers depending on the request metadata. */
+  ImmutableList<BindableService> provideDualModeServices();
 }

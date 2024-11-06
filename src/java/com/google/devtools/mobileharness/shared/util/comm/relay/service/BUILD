@@ -54,3 +54,25 @@ java_library(
         "@maven//:com_google_code_findbugs_jsr305",
     ],
 )
+
+java_library(
+    name = "server_utils",
+    srcs = [
+        "NoOpServerUtils.java",
+        "ServerUtils.java",
+    ],
+    deps = [
+        "@io_grpc_grpc_java//core",
+    ],
+)
+
+java_library(
+    name = "server_utils_impl",
+    srcs = ["ServerUtilsImpl.java"],
+    deps = [
+        ":connection_manager",
+        ":relay_service",
+        ":server_utils",
+        "@io_grpc_grpc_java//core",
+    ],
+)

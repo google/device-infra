@@ -43,6 +43,8 @@ import com.google.devtools.mobileharness.infra.controller.scheduler.simple.persi
 import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberExceptionLoggingHandler;
 import com.google.devtools.mobileharness.infra.monitoring.CloudPubsubMonitorModule;
 import com.google.devtools.mobileharness.infra.monitoring.MonitorPipelineLauncher;
+import com.google.devtools.mobileharness.shared.util.comm.relay.service.NoOpServerUtils;
+import com.google.devtools.mobileharness.shared.util.comm.relay.service.ServerUtils;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.database.DatabaseConnections;
 import com.google.devtools.mobileharness.shared.util.reflection.ReflectionUtil;
@@ -69,21 +71,26 @@ class ServerModule extends AbstractModule {
       "com.google.devtools.mobileharness.infra.client.api.mode.ats.AtsMode";
   private static final String ATS_MODE_MODULE_CLASS_NAME =
       "com.google.devtools.mobileharness.infra.client.api.mode.ats.AtsModeModule";
+  private static final String SERVER_UTILS_IMPL_CLASS_NAME =
+      "com.google.devtools.mobileharness.shared.util.comm.relay.service.ServerUtilsImpl";
 
   private final Instant serverStartTime;
   private final boolean isAtsMode;
   private final boolean enableCloudPubsubMonitoring;
   private final boolean enableDatabase;
+  private final boolean enableGrpcRelay;
 
   ServerModule(
       boolean isAtsMode,
       Instant serverStartTime,
       boolean enableCloudPubsubMonitoring,
-      boolean enableDatabase) {
+      boolean enableDatabase,
+      boolean enableGrpcRelay) {
     this.serverStartTime = serverStartTime;
     this.isAtsMode = isAtsMode;
     this.enableCloudPubsubMonitoring = enableCloudPubsubMonitoring;
     this.enableDatabase = enableDatabase;
+    this.enableGrpcRelay = enableGrpcRelay;
   }
 
   @Override
@@ -128,6 +135,7 @@ class ServerModule extends AbstractModule {
                 ? JdbcAllocationPersistenceUtil.class
                 : NoOpAllocationPersistenceUtil.class);
     bind(boolean.class).annotatedWith(EnableDatabase.class).toInstance(enableDatabase);
+    bind(ServerUtils.class).to(loadServerUtils(enableGrpcRelay)).in(Singleton.class);
   }
 
   @Provides
@@ -203,6 +211,22 @@ class ServerModule extends AbstractModule {
           className, ExecMode.class, ServerModule.class.getClassLoader());
     } catch (MobileHarnessException | ClassNotFoundException e) {
       throw new IllegalStateException(e);
+    }
+  }
+
+  private static Class<? extends ServerUtils> loadServerUtils(boolean enableGrpcRelay) {
+    if (enableGrpcRelay) {
+      try {
+        return REFLECTION_UTIL.loadClass(
+            SERVER_UTILS_IMPL_CLASS_NAME, ServerUtils.class, ServerModule.class.getClassLoader());
+      } catch (MobileHarnessException | ClassNotFoundException e) {
+        throw new IllegalStateException(
+            "Please add the runtime dependency for"
+                + " com.google.devtools.mobileharness.shared.util.comm.relay.service.ServerUtilsImpl",
+            e);
+      }
+    } else {
+      return NoOpServerUtils.class;
     }
   }
 }

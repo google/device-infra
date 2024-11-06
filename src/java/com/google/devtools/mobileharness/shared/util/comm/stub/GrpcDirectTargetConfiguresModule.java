@@ -16,11 +16,7 @@
 
 package com.google.devtools.mobileharness.shared.util.comm.stub;
 
-import com.google.devtools.mobileharness.shared.util.comm.stub.Annotations.ChannelExecutor;
-import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.inject.AbstractModule;
-import com.google.inject.Provides;
-import java.util.concurrent.Executor;
 import javax.inject.Singleton;
 
 /** Guice module for {@link GrpcDirectTargetConfigures}. */
@@ -28,13 +24,6 @@ public final class GrpcDirectTargetConfiguresModule extends AbstractModule {
 
   @Override
   protected void configure() {
-    bind(GrpcDirectTargetConfigures.class);
-  }
-
-  @Provides
-  @Singleton
-  @ChannelExecutor
-  Executor provideChannelExecutor() {
-    return ThreadPools.createStandardThreadPool("grpc-channel-executor");
+    bind(GrpcDirectTargetConfigures.class).in(Singleton.class);
   }
 }

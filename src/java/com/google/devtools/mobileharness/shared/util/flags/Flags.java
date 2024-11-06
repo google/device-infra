@@ -827,6 +827,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableGrpcLabServer = enableGrpcLabServerDefault;
 
+  private static final Flag<Boolean> enableGrpcRelayDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enable_grpc_relay",
+      description = "Whether to enable gRPC relay. Default is false.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableGrpcRelay = enableGrpcRelayDefault;
+
   private static final Flag<Boolean> enableMasterSyncerDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(

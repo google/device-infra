@@ -23,7 +23,6 @@ import com.google.devtools.mobileharness.shared.util.comm.stub.ChannelManager;
 import com.google.devtools.mobileharness.shared.util.comm.stub.ManagedChannelSupplier;
 import io.grpc.Channel;
 import io.grpc.ManagedChannel;
-import java.util.concurrent.Executor;
 import java.util.function.Function;
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -32,11 +31,15 @@ import javax.annotation.concurrent.ThreadSafe;
 @ThreadSafe
 public final class DirectConnectionManager implements ConnectionManager {
 
+  private static final DirectConnectionManager INSTANCE =
+      new DirectConnectionManager(
+          ChannelManager.getInstance(), ManagedChannelSupplier.getInstance());
+
   private final ChannelManager channelManager;
   private final Function<String, ? extends ManagedChannel> managedChannelSupplier;
 
-  DirectConnectionManager(Executor channelExecutor) {
-    this(ChannelManager.getInstance(), new ManagedChannelSupplier(channelExecutor));
+  public static DirectConnectionManager getInstance() {
+    return INSTANCE;
   }
 
   @VisibleForTesting

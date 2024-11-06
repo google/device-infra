@@ -485,6 +485,7 @@ public class OlcServerIntegrationTest {
                             "--enable_client_file_transfer=false",
                             "--enable_device_state_change_recover=false",
                             "--enable_device_system_settings_change=false",
+                            "--enable_grpc_relay=" + enableAtsMode,
                             "--enable_grpc_lab_server=true",
                             "--enable_simple_scheduler_shuffle=" + enableSchedulerShuffle,
                             "--external_adb_initializer_template=true",

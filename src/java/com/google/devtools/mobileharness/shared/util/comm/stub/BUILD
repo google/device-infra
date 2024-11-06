@@ -27,6 +27,7 @@ java_library(
         "ManagedChannelSupplier.java",
     ],
     deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
         "@io_grpc_grpc_java//core",
         "@io_grpc_grpc_java//netty",
     ],
@@ -98,7 +99,6 @@ java_library(
 java_library(
     name = "stub_configures",
     srcs = [
-        "Annotations.java",
         "GrpcDirectTargetConfigures.java",
         "GrpcDirectTargetConfiguresModule.java",
     ],
@@ -111,7 +111,6 @@ java_library(
         ":proxy",
         "//src/devtools/mobileharness/shared/util/comm/stub:stub_configuration_java_proto",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/relay/client",
-        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
         "@io_grpc_grpc_java//core",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",

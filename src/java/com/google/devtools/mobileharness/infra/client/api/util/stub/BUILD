@@ -36,7 +36,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/stub/grpc:prepare_test_grpc_stub",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:channel_factory",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:channel_manager",
-        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
         "//src/java/com/google/devtools/mobileharness/shared/version/rpc/stub",
         "//src/java/com/google/devtools/mobileharness/shared/version/rpc/stub/grpc",
         "@io_grpc_grpc_java//core",

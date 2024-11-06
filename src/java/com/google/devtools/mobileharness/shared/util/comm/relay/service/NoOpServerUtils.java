@@ -14,19 +14,18 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.shared.util.comm.stub;
+package com.google.devtools.mobileharness.shared.util.comm.relay.service;
 
-import com.google.inject.BindingAnnotation;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
+import io.grpc.BindableService;
+import io.grpc.ServerBuilder;
+import java.util.Collection;
 
-/** Annotations for guice bindings. */
-public final class Annotations {
+/** No-op implementation of {@link ServerUtils}. */
+public final class NoOpServerUtils implements ServerUtils {
 
-  /** Annotation for channel executor. */
-  @BindingAnnotation
-  @Retention(RetentionPolicy.RUNTIME)
-  public @interface ChannelExecutor {}
-
-  private Annotations() {}
+  @Override
+  public ServerBuilder<?> enableGrpcRelay(
+      ServerBuilder<?> serverBuilder, Collection<BindableService> dualModeServices) {
+    throw new UnsupportedOperationException("This is a no-op implementation of ServerUtils.");
+  }
 }

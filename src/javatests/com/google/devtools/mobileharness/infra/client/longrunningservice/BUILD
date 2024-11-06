@@ -83,6 +83,7 @@ olc_server_binary(
     extra_runtime_deps = [
         ":session_plugin_for_testing",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats",
+        "//src/java/com/google/devtools/mobileharness/shared/util/comm/relay/service:server_utils_impl",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:no_op_test_client",
     ],
 )

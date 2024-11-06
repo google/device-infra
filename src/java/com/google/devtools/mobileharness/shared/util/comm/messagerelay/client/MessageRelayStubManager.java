@@ -18,53 +18,39 @@ package com.google.devtools.mobileharness.infra.client.api.util.stub;
 
 import com.google.devtools.mobileharness.shared.util.comm.messagerelay.proto.MessageRelayServiceGrpc;
 import com.google.devtools.mobileharness.shared.util.comm.messagerelay.proto.MessageRelayServiceGrpc.MessageRelayServiceStub;
-import com.google.devtools.mobileharness.shared.util.comm.stub.ChannelFactory;
 import com.google.devtools.mobileharness.shared.util.comm.stub.ChannelManager;
-import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
+import com.google.devtools.mobileharness.shared.util.comm.stub.ManagedChannelSupplier;
 import io.grpc.Channel;
 import io.grpc.ManagedChannel;
-import java.util.concurrent.Executor;
-import java.util.function.Supplier;
+import java.util.function.Function;
 
 /** Stub manager for Message Relay client to create and cache stubs. */
 public class MessageRelayStubManager {
 
   private static final MessageRelayStubManager INSTANCE =
       new MessageRelayStubManager(
-          ChannelManager.getInstance(),
-          ThreadPools.createStandardThreadPool("message-relay-channel-executor"));
+          ChannelManager.getInstance(), ManagedChannelSupplier.getInstance());
 
   public static MessageRelayStubManager getInstance() {
     return INSTANCE;
   }
 
   private final ChannelManager channelManager;
-  private final Executor channelExecutor;
+  private final Function<String, ? extends ManagedChannel> managedChannelSupplier;
 
-  private MessageRelayStubManager(ChannelManager channelManager, Executor channelExecutor) {
+  private MessageRelayStubManager(
+      ChannelManager channelManager,
+      Function<String, ? extends ManagedChannel> managedChannelSupplier) {
     this.channelManager = channelManager;
-    this.channelExecutor = channelExecutor;
+    this.managedChannelSupplier = managedChannelSupplier;
   }
 
   public MessageRelayServiceStub getStub(String target) {
-    return channelManager.createStub(target, new ManagedChannelSupplier(target), this::createStub);
+    return channelManager.createStub(
+        target, () -> managedChannelSupplier.apply(target), this::createStub);
   }
 
   private MessageRelayServiceStub createStub(Channel channel) {
     return MessageRelayServiceGrpc.newStub(channel);
-  }
-
-  private class ManagedChannelSupplier implements Supplier<ManagedChannel> {
-
-    private final String grpcTarget;
-
-    private ManagedChannelSupplier(String grpcTarget) {
-      this.grpcTarget = grpcTarget;
-    }
-
-    @Override
-    public ManagedChannel get() {
-      return ChannelFactory.createChannel(grpcTarget, channelExecutor);
-    }
   }
 }

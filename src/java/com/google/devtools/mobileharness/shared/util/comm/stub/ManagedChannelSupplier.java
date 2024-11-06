@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.shared.util.comm.stub;
 
+import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import io.grpc.ManagedChannel;
 import java.util.concurrent.Executor;
 import java.util.function.Function;
@@ -23,10 +24,20 @@ import java.util.function.Function;
 /** Lazy creator of {@link ManagedChannel} for a given gRPC target. */
 public final class ManagedChannelSupplier implements Function<String, ManagedChannel> {
 
+  private static class SingletonHolder {
+    private static final ManagedChannelSupplier INSTANCE =
+        new ManagedChannelSupplier(
+            ThreadPools.createStandardThreadPool("managed-grpc-channel-executor"));
+  }
+
   private final Executor executor;
 
-  public ManagedChannelSupplier(Executor executor) {
+  private ManagedChannelSupplier(Executor executor) {
     this.executor = executor;
+  }
+
+  public static ManagedChannelSupplier getInstance() {
+    return SingletonHolder.INSTANCE;
   }
 
   @Override

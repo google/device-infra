@@ -19,12 +19,10 @@ package com.google.devtools.mobileharness.shared.util.comm.stub;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.reflect.Reflection;
 import com.google.devtools.mobileharness.shared.util.comm.relay.client.ClientCreator;
-import com.google.devtools.mobileharness.shared.util.comm.stub.Annotations.ChannelExecutor;
 import com.google.devtools.mobileharness.shared.util.comm.stub.StubConfigurationProto.ServerSpec;
 import com.google.devtools.mobileharness.shared.util.comm.stub.StubConfigurationProto.StubConfiguration;
 import io.grpc.Channel;
 import io.grpc.ManagedChannel;
-import java.util.concurrent.Executor;
 import java.util.function.Function;
 import javax.inject.Inject;
 
@@ -35,8 +33,8 @@ public final class GrpcDirectTargetConfigures {
   private final Function<String, ? extends ManagedChannel> managedChannelSupplier;
 
   @Inject
-  GrpcDirectTargetConfigures(@ChannelExecutor Executor channelExecutor) {
-    this(ChannelManager.getInstance(), new ManagedChannelSupplier(channelExecutor));
+  GrpcDirectTargetConfigures() {
+    this(ChannelManager.getInstance(), ManagedChannelSupplier.getInstance());
   }
 
   @VisibleForTesting

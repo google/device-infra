@@ -20,61 +20,45 @@ import com.google.devtools.mobileharness.infra.lab.rpc.stub.ExecTestStub;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.PrepareTestStub;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.grpc.ExecTestGrpcStub;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.grpc.PrepareTestGrpcStub;
-import com.google.devtools.mobileharness.shared.util.comm.stub.ChannelFactory;
 import com.google.devtools.mobileharness.shared.util.comm.stub.ChannelManager;
-import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
+import com.google.devtools.mobileharness.shared.util.comm.stub.ManagedChannelSupplier;
 import com.google.devtools.mobileharness.shared.version.rpc.stub.VersionStub;
 import com.google.devtools.mobileharness.shared.version.rpc.stub.grpc.VersionGrpcStub;
 import io.grpc.ManagedChannel;
-import java.util.concurrent.Executor;
-import java.util.function.Supplier;
+import java.util.function.Function;
 
 /** gRPC stub manager for creating stubs and caching {@link ManagedChannel}s automatically. */
 public class GrpcStubManager {
 
   private static final GrpcStubManager INSTANCE =
-      new GrpcStubManager(
-          ChannelManager.getInstance(),
-          ThreadPools.createStandardThreadPool("grpc-channel-executor"));
+      new GrpcStubManager(ChannelManager.getInstance(), ManagedChannelSupplier.getInstance());
 
   public static GrpcStubManager getInstance() {
     return INSTANCE;
   }
 
   private final ChannelManager channelManager;
-  private final Executor channelExecutor;
+  private final Function<String, ? extends ManagedChannel> managedChannelSupplier;
 
-  private GrpcStubManager(ChannelManager channelManager, Executor channelExecutor) {
+  private GrpcStubManager(
+      ChannelManager channelManager,
+      Function<String, ? extends ManagedChannel> managedChannelSupplier) {
     this.channelManager = channelManager;
-    this.channelExecutor = channelExecutor;
+    this.managedChannelSupplier = managedChannelSupplier;
   }
 
   public VersionStub getVersionStub(String grpcTarget) {
     return channelManager.createStub(
-        grpcTarget, new ManagedChannelSupplier(grpcTarget), VersionGrpcStub::new);
+        grpcTarget, () -> managedChannelSupplier.apply(grpcTarget), VersionGrpcStub::new);
   }
 
   public PrepareTestStub getPrepareTestStub(String grpcTarget) {
     return channelManager.createStub(
-        grpcTarget, new ManagedChannelSupplier(grpcTarget), PrepareTestGrpcStub::new);
+        grpcTarget, () -> managedChannelSupplier.apply(grpcTarget), PrepareTestGrpcStub::new);
   }
 
   public ExecTestStub getExecTestGrpcStub(String grpcTarget) {
     return channelManager.createStub(
-        grpcTarget, new ManagedChannelSupplier(grpcTarget), ExecTestGrpcStub::new);
-  }
-
-  private class ManagedChannelSupplier implements Supplier<ManagedChannel> {
-
-    private final String grpcTarget;
-
-    private ManagedChannelSupplier(String grpcTarget) {
-      this.grpcTarget = grpcTarget;
-    }
-
-    @Override
-    public ManagedChannel get() {
-      return ChannelFactory.createChannel(grpcTarget, channelExecutor);
-    }
+        grpcTarget, () -> managedChannelSupplier.apply(grpcTarget), ExecTestGrpcStub::new);
   }
 }

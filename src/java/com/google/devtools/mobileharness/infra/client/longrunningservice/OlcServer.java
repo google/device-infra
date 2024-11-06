@@ -44,6 +44,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.ser
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.SessionService;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.VersionService;
 import com.google.devtools.mobileharness.infra.monitoring.MonitorPipelineLauncher;
+import com.google.devtools.mobileharness.shared.util.comm.relay.service.ServerUtils;
 import com.google.devtools.mobileharness.shared.util.comm.server.ClientAddressServerInterceptor;
 import com.google.devtools.mobileharness.shared.util.comm.server.LifecycleManager;
 import com.google.devtools.mobileharness.shared.util.comm.server.LifecycleManager.LabeledServer;
@@ -63,6 +64,7 @@ import com.google.wireless.qa.mobileharness.shared.constant.DirCommon;
 import io.grpc.BindableService;
 import io.grpc.ServerBuilder;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
@@ -95,7 +97,8 @@ public class OlcServer {
                     Flags.instance().enableAtsMode.getNonNull(),
                     serverStartTime,
                     Flags.instance().enableCloudPubsubMonitoring.getNonNull(),
-                    enableDatabase))
+                    enableDatabase,
+                    Flags.instance().enableGrpcRelay.getNonNull()))
             .getInstance(OlcServer.class);
     server.run(Arrays.asList(args));
   }
@@ -116,6 +119,7 @@ public class OlcServer {
   private final boolean enableDatabase;
   private final DatabaseConnections olcDatabaseConnections;
   private final TablesLister tablesLister;
+  private final ServerUtils serverUtils;
 
   @Inject
   OlcServer(
@@ -134,7 +138,8 @@ public class OlcServer {
       SystemUtil systemUtil,
       @EnableDatabase boolean enableDatabase,
       @OlcDatabaseConnections DatabaseConnections olcDatabaseConnections,
-      TablesLister tablesLister) {
+      TablesLister tablesLister,
+      ServerUtils serverUtils) {
     this.sessionService = sessionService;
     this.versionService = versionService;
     this.controlService = controlService;
@@ -151,6 +156,7 @@ public class OlcServer {
     this.enableDatabase = enableDatabase;
     this.olcDatabaseConnections = olcDatabaseConnections;
     this.tablesLister = tablesLister;
+    this.serverUtils = serverUtils;
   }
 
   private void run(List<String> args) throws MobileHarnessException, InterruptedException {
@@ -254,10 +260,12 @@ public class OlcServer {
     // Creates extra services.
     ImmutableList<BindableService> extraServicesForNonWorker;
     ImmutableList<BindableService> extraServicesForWorker;
+    List<BindableService> dualModeServices = new ArrayList<>();
     if (execMode instanceof ServiceProvider) {
       ServiceProvider serviceProvider = (ServiceProvider) execMode;
       extraServicesForNonWorker = serviceProvider.provideServices();
       extraServicesForWorker = serviceProvider.provideServicesForWorkers();
+      dualModeServices.addAll(serviceProvider.provideDualModeServices());
     } else {
       extraServicesForNonWorker = ImmutableList.of();
       extraServicesForWorker = ImmutableList.of();
@@ -276,9 +284,15 @@ public class OlcServer {
         .executor(threadPool)
         .intercept(new ClientAddressServerInterceptor())
         .addService(controlService)
-        .addService(sessionService)
-        .addService(versionService);
+        .addService(sessionService);
+    dualModeServices.add(versionService);
     extraServicesForNonWorker.forEach(serverBuilderForNonWorker::addService);
+    if (Flags.instance().enableGrpcRelay.getNonNull()) {
+      serverBuilderForNonWorker =
+          serverUtils.enableGrpcRelay(serverBuilderForNonWorker, dualModeServices);
+    } else {
+      dualModeServices.forEach(serverBuilderForNonWorker::addService);
+    }
     servers.add(LabeledServer.create(serverBuilderForNonWorker.build(), "for-non-worker"));
 
     // Creates RPC server for worker.
