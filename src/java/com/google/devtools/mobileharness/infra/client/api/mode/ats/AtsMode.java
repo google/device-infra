@@ -79,10 +79,10 @@ public class AtsMode implements ExecMode, ServiceProvider {
 
   @Override
   public void initialize(EventBus globalInternalBus) {
-    // Starts remote device manager and scheduler.
     remoteDeviceManager.start();
     scheduler.start();
     labRecordManager.start();
+    jobSyncService.start();
   }
 
   @Override

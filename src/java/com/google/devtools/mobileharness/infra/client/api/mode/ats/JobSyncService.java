@@ -20,7 +20,10 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
+import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
+import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 
+import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -28,6 +31,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Sets.SetView;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcServiceUtil;
 import com.google.devtools.mobileharness.api.model.lab.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.proto.Job;
@@ -73,9 +77,14 @@ import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.Priority;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.Timeout;
 import io.grpc.stub.StreamObserver;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -84,15 +93,49 @@ class JobSyncService extends JobSyncServiceGrpc.JobSyncServiceImplBase {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
+  private static final Duration MIN_JOB_EXPIRATION_TIME = Duration.ofMinutes(5L);
+  private static final Duration JOB_CLEANUP_INTERVAL = Duration.ofMinutes(5L);
+
   private final AbstractScheduler scheduler;
   private final ServiceSideVersionChecker versionChecker;
+  private final ListeningScheduledExecutorService scheduledThreadPool;
+
+  /** Key is job ID. */
+  private final Map<String, JobExpirationInfo> jobExpirationInfos = new ConcurrentHashMap<>();
 
   @Inject
   JobSyncService(
       @AtsModeAbstractScheduler AbstractScheduler scheduler,
-      @JobSyncServiceVersionChecker ServiceSideVersionChecker versionChecker) {
+      @JobSyncServiceVersionChecker ServiceSideVersionChecker versionChecker,
+      ListeningScheduledExecutorService scheduledThreadPool) {
     this.scheduler = scheduler;
     this.versionChecker = versionChecker;
+    this.scheduledThreadPool = scheduledThreadPool;
+  }
+
+  void start() {
+    // Starts job cleaner.
+    logFailure(
+        scheduledThreadPool.scheduleWithFixedDelay(
+            threadRenaming(this::cleanUpJobs, () -> "job-sync-service-job-cleaner"),
+            JOB_CLEANUP_INTERVAL,
+            JOB_CLEANUP_INTERVAL),
+        Level.WARNING,
+        "Error when cleaning up jobs");
+  }
+
+  void cleanUpJobs() {
+    Iterator<Entry<String, JobExpirationInfo>> iterator = jobExpirationInfos.entrySet().iterator();
+    while (iterator.hasNext()) {
+      Entry<String, JobExpirationInfo> job = iterator.next();
+      if (job.getValue().isExpired()) {
+        logger.atInfo().log(
+            "Job [%s] is expired, remove it from scheduler, expiration_info=[%s]",
+            job.getKey(), job.getValue());
+        scheduler.removeJob(job.getKey(), /* removeDevices= */ false);
+        iterator.remove();
+      }
+    }
   }
 
   @Override
@@ -106,7 +149,6 @@ class JobSyncService extends JobSyncServiceGrpc.JobSyncServiceImplBase {
   }
 
   private OpenJobResponse doOpenJob(OpenJobRequest request) throws MobileHarnessException {
-    // TODO: Implements client heartbeat and keep_alive_timeout_ms.
     logger.atInfo().log("OpenJobRequest: %s", shortDebugString(request));
 
     versionChecker.checkStub(request.getVersionCheckRequest());
@@ -158,6 +200,10 @@ class JobSyncService extends JobSyncServiceGrpc.JobSyncServiceImplBase {
             .collect(toImmutableList());
 
     // Adds job and tests to scheduler if they don't exist.
+    jobExpirationInfos.putIfAbsent(
+        jobLocator.getId(),
+        JobExpirationInfo.create(
+            createJobExpirationTime(Duration.ofMillis(request.getKeepAliveTimeoutMs()))));
     scheduler.addJob(jobScheduleUnit);
     for (TestScheduleUnit testScheduleUnit : testScheduleUnits) {
       scheduler.addTest(testScheduleUnit);
@@ -205,6 +251,17 @@ class JobSyncService extends JobSyncServiceGrpc.JobSyncServiceImplBase {
     }
   }
 
+  private static Duration createJobExpirationTime(Duration clientJobExpirationTime) {
+    if (clientJobExpirationTime.compareTo(MIN_JOB_EXPIRATION_TIME) < 0) {
+      logger.atInfo().log(
+          "Client side job expiration time is less than %s, use %s instead",
+          MIN_JOB_EXPIRATION_TIME, MIN_JOB_EXPIRATION_TIME);
+      return MIN_JOB_EXPIRATION_TIME;
+    } else {
+      return clientJobExpirationTime;
+    }
+  }
+
   @Override
   public void addExtraTests(
       AddExtraTestsRequest request, StreamObserver<AddExtraTestsResponse> responseObserver) {
@@ -219,6 +276,7 @@ class JobSyncService extends JobSyncServiceGrpc.JobSyncServiceImplBase {
   private AddExtraTestsResponse doAddExtraTests(AddExtraTestsRequest request)
       throws MobileHarnessException {
     logger.atInfo().log("AddExtraTestsRequest: %s", shortDebugString(request));
+    heartbeatJob(request.getJobId());
 
     // Job name will be ignored by addTest().
     JobLocator jobLocator = new JobLocator(request.getJobId(), /* name= */ "");
@@ -246,6 +304,8 @@ class JobSyncService extends JobSyncServiceGrpc.JobSyncServiceImplBase {
   }
 
   private GetAllocationsResponse doGetAllocations(GetAllocationsRequest request) {
+    heartbeatJob(request.getJobId());
+
     // Queries a snapshot from scheduler.
     JobsAndAllocations jobsAndAllocations = scheduler.getJobsAndAllocations();
 
@@ -295,6 +355,7 @@ class JobSyncService extends JobSyncServiceGrpc.JobSyncServiceImplBase {
 
   private CloseTestResponse doCloseTest(CloseTestRequest request) {
     logger.atInfo().log("CloseTestRequest: %s", shortDebugString(request));
+    heartbeatJob(request.getJobId());
 
     // Test name and job name will be ignored.
     scheduler.unallocate(
@@ -322,6 +383,8 @@ class JobSyncService extends JobSyncServiceGrpc.JobSyncServiceImplBase {
     logger.atInfo().log("CloseJobRequest: %s", shortDebugString(request));
 
     scheduler.removeJob(request.getJobId(), /* removeDevices= */ false);
+    jobExpirationInfos.remove(request.getJobId());
+
     return CloseJobResponse.getDefaultInstance();
   }
 
@@ -374,5 +437,30 @@ class JobSyncService extends JobSyncServiceGrpc.JobSyncServiceImplBase {
   private KillJobResponse doKillJob(KillJobRequest request) {
     // TODO: Implements it.
     throw new UnsupportedOperationException();
+  }
+
+  private void heartbeatJob(String jobId) {
+    jobExpirationInfos.computeIfPresent(
+        jobId, (id, jobExpirationInfo) -> jobExpirationInfo.heartbeat());
+  }
+
+  @AutoValue
+  abstract static class JobExpirationInfo {
+
+    abstract Duration expirationTime();
+
+    abstract Instant lastHeartbeatTimestamp();
+
+    private static JobExpirationInfo create(Duration expirationTime) {
+      return new AutoValue_JobSyncService_JobExpirationInfo(expirationTime, Instant.now());
+    }
+
+    private JobExpirationInfo heartbeat() {
+      return new AutoValue_JobSyncService_JobExpirationInfo(expirationTime(), Instant.now());
+    }
+
+    private boolean isExpired() {
+      return lastHeartbeatTimestamp().plus(expirationTime()).isBefore(Instant.now());
+    }
   }
 }
