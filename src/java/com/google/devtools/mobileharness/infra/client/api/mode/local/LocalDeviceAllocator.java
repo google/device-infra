@@ -72,7 +72,10 @@ public class LocalDeviceAllocator extends AbstractDeviceAllocator {
     super.setUp();
     AbstractScheduler scheduler = getScheduler();
     scheduler.registerEventHandler(allocationEventHandler);
-    scheduler.addJob(jobInfo);
+    if (!scheduler.addJob(jobInfo)) {
+      throw new MobileHarnessException(
+          ErrorCode.JOB_DUPLICATED, "Job " + jobInfo.locator().getId() + " already exist");
+    }
     for (TestInfo test : jobInfo.tests().getAll().values()) {
       scheduler.addTest(test);
     }

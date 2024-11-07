@@ -19,9 +19,12 @@ package com.google.devtools.mobileharness.infra.client.api.mode.ats;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.api.mode.ats.Annotations.AtsModeAbstractScheduler;
 import com.google.devtools.mobileharness.infra.client.api.mode.ats.Annotations.AtsModeDeviceQuerier;
+import com.google.devtools.mobileharness.infra.client.api.mode.ats.Annotations.JobSyncServiceVersionChecker;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler;
 import com.google.devtools.mobileharness.infra.controller.scheduler.simple.SimpleScheduler;
 import com.google.devtools.mobileharness.shared.labinfo.LabInfoProvider;
+import com.google.devtools.mobileharness.shared.version.Version;
+import com.google.devtools.mobileharness.shared.version.checker.ServiceSideVersionChecker;
 import com.google.inject.AbstractModule;
 import javax.inject.Singleton;
 
@@ -36,5 +39,9 @@ public class AtsModeModule extends AbstractModule {
         .annotatedWith(AtsModeAbstractScheduler.class)
         .to(SimpleScheduler.class)
         .in(Singleton.class);
+    bind(ServiceSideVersionChecker.class)
+        .annotatedWith(JobSyncServiceVersionChecker.class)
+        .toInstance(
+            new ServiceSideVersionChecker(Version.MASTER_V5_VERSION, Version.MIN_CLIENT_VERSION));
   }
 }

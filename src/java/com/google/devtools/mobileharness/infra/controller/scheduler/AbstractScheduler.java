@@ -40,11 +40,12 @@ public abstract class AbstractScheduler {
   public abstract void start();
 
   /**
-   * Adds the given job if not exist.
+   * Adds the given job if it doesn't exist.
    *
-   * @throws MobileHarnessException if job already exists
+   * @return true if the job is added, false if the job has already been added
    */
-  public abstract void addJob(JobScheduleUnit job) throws MobileHarnessException;
+  @CanIgnoreReturnValue
+  public abstract boolean addJob(JobScheduleUnit job);
 
   /**
    * Removes the job and all belonging tests, and releases the devices. Not effect if job doesn't

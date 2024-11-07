@@ -145,16 +145,18 @@ public class SimpleScheduler extends AbstractScheduler implements Runnable {
     }
   }
 
+  @CanIgnoreReturnValue
   @Override
-  public void addJob(JobScheduleUnit jobUnit) throws MobileHarnessException {
+  public boolean addJob(JobScheduleUnit jobUnit) {
     JobLocator jobLocator = jobUnit.locator();
     SimpleJobInfo job = new SimpleJobInfo(jobUnit);
     SimpleJobInfo exJob = jobs.putIfAbsent(jobLocator.getId(), job);
     if (exJob == null) {
       logger.atInfo().log("Added job %s", jobLocator);
+      return true;
     } else {
-      throw new MobileHarnessException(
-          ErrorCode.JOB_DUPLICATED, "Job " + jobLocator.getId() + " already exist");
+      logger.atInfo().log("Job %s has been added", jobLocator);
+      return false;
     }
   }
 
@@ -188,7 +190,11 @@ public class SimpleScheduler extends AbstractScheduler implements Runnable {
           "Post allocation event of allocation %s when adding test %s", allocation, testLocator);
       postEvent(new AllocationEvent(allocation));
     }
-    logger.atInfo().log("Added test %s", testLocator);
+    if (added) {
+      logger.atInfo().log("Added test %s", testLocator);
+    } else {
+      logger.atInfo().log("Test %s has been added", testLocator);
+    }
     return added;
   }
 

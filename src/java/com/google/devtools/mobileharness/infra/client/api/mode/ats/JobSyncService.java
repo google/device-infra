@@ -16,19 +16,28 @@
 
 package com.google.devtools.mobileharness.infra.client.api.mode.ats;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Sets.SetView;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcServiceUtil;
 import com.google.devtools.mobileharness.api.model.lab.DeviceLocator;
+import com.google.devtools.mobileharness.api.model.proto.Job;
+import com.google.devtools.mobileharness.api.model.proto.Job.DeviceAllocationPriority;
+import com.google.devtools.mobileharness.api.model.proto.Job.DeviceRequirement;
+import com.google.devtools.mobileharness.api.model.proto.Job.DeviceRequirements;
+import com.google.devtools.mobileharness.api.model.proto.Job.JobFeature;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestIdName;
 import com.google.devtools.mobileharness.infra.client.api.mode.ats.Annotations.AtsModeAbstractScheduler;
+import com.google.devtools.mobileharness.infra.client.api.mode.ats.Annotations.JobSyncServiceVersionChecker;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler.JobWithTests;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler.JobsAndAllocations;
@@ -50,11 +59,21 @@ import com.google.devtools.mobileharness.infra.master.rpc.proto.JobSyncServicePr
 import com.google.devtools.mobileharness.infra.master.rpc.proto.JobSyncServiceProto.OpenJobResponse;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.JobSyncServiceProto.UpsertDeviceTempRequiredDimensionsRequest;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.JobSyncServiceProto.UpsertDeviceTempRequiredDimensionsResponse;
+import com.google.devtools.mobileharness.shared.version.Version;
+import com.google.devtools.mobileharness.shared.version.checker.ServiceSideVersionChecker;
+import com.google.devtools.mobileharness.shared.version.proto.Version.VersionCheckResponse;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
+import com.google.wireless.qa.mobileharness.shared.model.job.JobScheduleUnit;
+import com.google.wireless.qa.mobileharness.shared.model.job.JobSetting;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestScheduleUnit;
+import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
+import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
+import com.google.wireless.qa.mobileharness.shared.proto.Job.Priority;
+import com.google.wireless.qa.mobileharness.shared.proto.Job.Timeout;
 import io.grpc.stub.StreamObserver;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import javax.inject.Inject;
@@ -66,10 +85,14 @@ class JobSyncService extends JobSyncServiceGrpc.JobSyncServiceImplBase {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private final AbstractScheduler scheduler;
+  private final ServiceSideVersionChecker versionChecker;
 
   @Inject
-  JobSyncService(@AtsModeAbstractScheduler AbstractScheduler scheduler) {
+  JobSyncService(
+      @AtsModeAbstractScheduler AbstractScheduler scheduler,
+      @JobSyncServiceVersionChecker ServiceSideVersionChecker versionChecker) {
     this.scheduler = scheduler;
+    this.versionChecker = versionChecker;
   }
 
   @Override
@@ -82,10 +105,104 @@ class JobSyncService extends JobSyncServiceGrpc.JobSyncServiceImplBase {
         JobSyncServiceGrpc.getOpenJobMethod());
   }
 
-  private OpenJobResponse doOpenJob(OpenJobRequest request) {
+  private OpenJobResponse doOpenJob(OpenJobRequest request) throws MobileHarnessException {
+    // TODO: Implements client heartbeat and keep_alive_timeout_ms.
     logger.atInfo().log("OpenJobRequest: %s", shortDebugString(request));
-    // TODO: Implements it.
-    throw new UnsupportedOperationException();
+
+    versionChecker.checkStub(request.getVersionCheckRequest());
+
+    // Creates JobScheduleUnit
+    JobFeature jobFeature = request.getFeature();
+    DeviceRequirements deviceRequirements = jobFeature.getDeviceRequirements();
+    checkArgument(deviceRequirements.getDeviceRequirementCount() > 0);
+    DeviceRequirement primaryDeviceRequirement = deviceRequirements.getDeviceRequirement(0);
+    Map<String, String> primaryDeviceDimensions = primaryDeviceRequirement.getDimensionsMap();
+    Timing masterTiming = new Timing();
+    JobLocator jobLocator = new JobLocator(request.getId(), request.getName());
+    JobScheduleUnit jobScheduleUnit =
+        new JobScheduleUnit(
+            jobLocator,
+            jobFeature.getUser(),
+            JobType.newBuilder()
+                .setDevice(primaryDeviceRequirement.getDeviceType())
+                .setDriver(jobFeature.getDriver())
+                .addAllDecorator(Lists.reverse(primaryDeviceRequirement.getDecoratorList()))
+                .build(),
+            createJobSetting(request.getSetting(), jobFeature.getDeviceAllocationPriority()),
+            masterTiming);
+    jobScheduleUnit.params().addAll(request.getParamMap());
+    jobScheduleUnit.dimensions().addAll(primaryDeviceDimensions);
+    jobScheduleUnit.subDeviceSpecs().getSubDevice(0).dimensions().addAll(primaryDeviceDimensions);
+    deviceRequirements.getDeviceRequirementList().stream()
+        .skip(1L)
+        .forEach(
+            secondaryDeviceRequirement ->
+                jobScheduleUnit
+                    .subDeviceSpecs()
+                    .addSubDevice(
+                        secondaryDeviceRequirement.getDeviceType(),
+                        secondaryDeviceRequirement.getDimensionsMap(),
+                        secondaryDeviceRequirement.getDecoratorList()));
+    jobScheduleUnit
+        .subDeviceSpecs()
+        .addSharedDimensionNames(deviceRequirements.getSharedDimensionList());
+
+    // Creates TestScheduleUnit.
+    ImmutableList<TestScheduleUnit> testScheduleUnits =
+        request.getTestList().stream()
+            .map(
+                testIdName ->
+                    new TestScheduleUnit(
+                        new TestLocator(testIdName.getId(), testIdName.getName(), jobLocator),
+                        masterTiming))
+            .collect(toImmutableList());
+
+    // Adds job and tests to scheduler if they don't exist.
+    scheduler.addJob(jobScheduleUnit);
+    for (TestScheduleUnit testScheduleUnit : testScheduleUnits) {
+      scheduler.addTest(testScheduleUnit);
+    }
+
+    return OpenJobResponse.newBuilder()
+        .setVersionCheckResponse(
+            VersionCheckResponse.newBuilder()
+                .setServiceVersion(Version.MASTER_V5_VERSION.toString()))
+        .build();
+  }
+
+  private static JobSetting createJobSetting(
+      Job.JobSetting jobSetting, DeviceAllocationPriority deviceAllocationPriority) {
+    return JobSetting.newBuilder()
+        .setTimeout(createJobTimeout(jobSetting.getTimeout()))
+        .setRetry(jobSetting.getRetry())
+        .setPriority(createPriority(jobSetting.getPriority(), deviceAllocationPriority))
+        .build();
+  }
+
+  private static Timeout createJobTimeout(Job.Timeout jobTimeout) {
+    Timeout.Builder result = Timeout.newBuilder();
+    if (jobTimeout.getJobTimeoutMs() != 0L) {
+      result.setJobTimeoutMs(jobTimeout.getJobTimeoutMs());
+    }
+    if (jobTimeout.getTestTimeoutMs() != 0L) {
+      result.setTestTimeoutMs(jobTimeout.getTestTimeoutMs());
+    }
+    if (jobTimeout.getStartTimeoutMs() != 0L) {
+      result.setStartTimeoutMs(jobTimeout.getStartTimeoutMs());
+    }
+    return result.build();
+  }
+
+  private static Priority createPriority(
+      Job.Priority jobPriority, DeviceAllocationPriority deviceAllocationPriority) {
+    switch (deviceAllocationPriority) {
+      case DEVICE_ALLOCATION_PRIORITY_INTERACTIVE:
+        return Priority.MAX;
+      case DEVICE_ALLOCATION_PRIORITY_LOW:
+        return Priority.LOW;
+      default:
+        return Priority.forNumber(jobPriority.getNumber());
+    }
   }
 
   @Override

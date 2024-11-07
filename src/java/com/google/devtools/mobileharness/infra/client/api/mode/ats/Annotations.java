@@ -40,5 +40,11 @@ final class Annotations {
   @Retention(RUNTIME)
   @interface AtsModeAbstractScheduler {}
 
+  /** Annotation for JobSyncService ServiceSideVersionChecker. */
+  @Qualifier
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  @interface JobSyncServiceVersionChecker {}
+
   private Annotations() {}
 }
