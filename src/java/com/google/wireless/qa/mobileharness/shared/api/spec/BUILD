@@ -57,6 +57,15 @@ java_library(
 )
 
 java_library(
+    name = "android_instrumentation_driver_spec",
+    srcs = ["AndroidInstrumentationDriverSpec.java"],
+    deps = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "android_logcat_spec",
     srcs = ["AndroidLogCatSpec.java"],
     deps = [
