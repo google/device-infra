@@ -24,6 +24,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -44,6 +45,8 @@ import java.util.logging.Level;
  * which devices should be FailedDevcies.
  */
 public class FailedDeviceTable {
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
   // ENTRY_EXPIRATION_TIME defines the period beyond which previous init failures are forgotten.
   static final Duration ENTRY_EXPIRATION_TIME = Duration.ofMinutes(10);
   // TIME_TO_STAY_FAILED defines how long a device stays as a FailedDevice.
@@ -169,6 +172,8 @@ public class FailedDeviceTable {
       } else {
         failedDevices.put(controlId, FailedDeviceEntryInfo.of(Clock.systemUTC().instant(), 1));
       }
+      logger.atInfo().log(
+          "Updated device %s in Failed Device Table: %s", controlId, failedDevices.get(controlId));
       if (cleanUpTaskFuture != null) {
         return;
       }

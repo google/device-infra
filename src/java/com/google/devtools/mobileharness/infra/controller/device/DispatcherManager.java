@@ -86,7 +86,7 @@ public final class DispatcherManager {
   }
 
   /**
-   * Registes the dispatcher to the topological graph.
+   * Registers the dispatcher to the topological graph.
    *
    * @return {@code true} if the graph was modified as a result of this call
    */

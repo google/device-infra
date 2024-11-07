@@ -16,10 +16,12 @@
 
 package com.google.devtools.mobileharness.infra.controller.device.bootstrap;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.api.devicemanager.detector.BaseAdbDetector;
 import com.google.devtools.mobileharness.api.devicemanager.detector.Detector;
+import com.google.devtools.mobileharness.api.devicemanager.detector.FailedDeviceDetector;
 import com.google.devtools.mobileharness.api.devicemanager.detector.NoOpDeviceDetector;
 import com.google.devtools.mobileharness.api.devicemanager.dispatcher.AndroidLocalEmulatorDispatcher;
 import com.google.devtools.mobileharness.api.devicemanager.dispatcher.AndroidRealDeviceDispatcher;
@@ -43,7 +45,11 @@ final class AllDetectorsAndDispatchers {
   }
 
   public static ImmutableList<Detector> detectorCandidatesForLabServerOss() {
-    return detectorCandidatesForLocalModeInternalOssAndLabServerOss();
+    ImmutableList.Builder<Detector> detectorCandidates = ImmutableList.builder();
+    return detectorCandidates
+        .addAll(detectorCandidatesForLocalModeInternalOssAndLabServerOss())
+        .add(new FailedDeviceDetector())
+        .build();
   }
 
   private static ImmutableList<Detector>
@@ -74,8 +80,10 @@ final class AllDetectorsAndDispatchers {
 
   public static void addDispatchersForLabServerOss(DispatcherManager dispatcherManager) {
     addDispatchersForAll(dispatcherManager);
-
     addDispatchersForLocalModeLabServerOss(dispatcherManager);
+
+    // Adds the failed device dispatcher.
+    addDispatchersAsDependencyOfAll(dispatcherManager, ImmutableList.of("FailedDeviceDispatcher"));
   }
 
   private static void addDispatchersForAll(DispatcherManager dispatcherManager) {
@@ -96,6 +104,27 @@ final class AllDetectorsAndDispatchers {
       dispatcherManager.addDependency(
           AndroidRealDeviceDispatcher.class.getSimpleName(),
           AndroidLocalEmulatorDispatcher.class.getSimpleName());
+    }
+  }
+
+  /** Adds the dispatchers to be dependencies of all existing dispatchers. */
+  private static void addDispatchersAsDependencyOfAll(
+      DispatcherManager dispatcherManager, ImmutableList<String> dispatcherNames) {
+
+    ImmutableList<Class<? extends Dispatcher>> dispatcherClasses =
+        dispatcherNames.stream()
+            .map(AllDetectorsAndDispatchers::loadDispatcherClass)
+            .collect(toImmutableList());
+    for (Class<? extends Dispatcher> dispatcherClass : dispatcherClasses) {
+      dispatcherManager
+          .getAllDispatchersInOrder()
+          .forEach(
+              existingDispatcher ->
+                  dispatcherManager.addDependency(
+                      existingDispatcher.getSimpleName(), dispatcherClass.getSimpleName()));
+    }
+    for (Class<? extends Dispatcher> dispatcherClass : dispatcherClasses) {
+      dispatcherManager.add(dispatcherClass);
     }
   }
 

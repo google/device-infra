@@ -51,6 +51,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_switch_user_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_local_emulator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_real_device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:failed_device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:mobly_aosp_package_test",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:xts_tradefed_test",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/module:xts_tradefed_test_module",

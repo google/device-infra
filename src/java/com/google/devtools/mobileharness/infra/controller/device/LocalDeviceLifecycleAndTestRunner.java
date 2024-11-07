@@ -41,6 +41,7 @@ import com.google.devtools.mobileharness.api.testrunner.device.cache.DeviceCache
 import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
 import com.google.devtools.mobileharness.infra.controller.device.external.ExternalDeviceManager;
 import com.google.devtools.mobileharness.infra.controller.device.external.ExternalDeviceManager.DeviceReservation;
+import com.google.devtools.mobileharness.infra.controller.device.faileddevice.FailedDeviceTable;
 import com.google.devtools.mobileharness.infra.controller.device.util.DeviceRebootUtil;
 import com.google.devtools.mobileharness.infra.controller.test.event.TestExecutionEndedEvent;
 import com.google.devtools.mobileharness.infra.controller.test.model.TestExecutionResult;
@@ -57,6 +58,7 @@ import com.google.wireless.qa.mobileharness.shared.controller.event.LocalDeviceE
 import com.google.wireless.qa.mobileharness.shared.controller.stat.DeviceStat;
 import com.google.wireless.qa.mobileharness.shared.proto.Common.StrPair;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
+import com.google.wireless.qa.mobileharness.shared.util.DeviceUtil;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -616,6 +618,10 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
       logger.atWarning().withCause(e).log("Failed to initialize device");
       initialized = false;
       postDeviceErrorEvent(e);
+      if (DeviceUtil.isFailedDeviceCreationEnabled()
+          && !externalDeviceManager.isManagingDeviceRecovery()) {
+        transformToFailedDevice();
+      }
       throw e;
     }
     initialized = true;
@@ -640,6 +646,13 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
         Joiner.on("\n").join(device.getDriverTypes()),
         Joiner.on("\n").join(device.getDecoratorTypes()));
     extendExpireTime();
+  }
+
+  /** Turn this device into a FailedDevice waiting for recovery job. */
+  void transformToFailedDevice() {
+    // After adding the device id to the FailedDeviceTable, this runner will be soon killed by the
+    // manager and be replaced by another runner with a new FailedDevice.
+    FailedDeviceTable.getInstance().add(device.getDeviceControlId());
   }
 
   @Override

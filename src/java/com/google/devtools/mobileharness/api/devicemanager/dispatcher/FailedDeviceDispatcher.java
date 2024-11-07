@@ -41,7 +41,7 @@ public class FailedDeviceDispatcher extends CacheableDispatcher {
    *     device that matches the following condition: 'in detection_results, for this control_id,
    *     there are a [control_id, FAILED] item AND a [control_id, ANOTHER_TYPE] item where
    *     ANOTHER_TYPE is a detection result type not in {FAILED, MONITOR, NO_OP}'.
-   * @param detectionResults {@link DetectionResults} from all the detectiors in this iteration.
+   * @param detectionResults {@link DetectionResults} from all the detectors in this iteration.
    * @param dispatchResults {@link DispatchResults} from all dispatchers that have executed before.
    */
   @Override
