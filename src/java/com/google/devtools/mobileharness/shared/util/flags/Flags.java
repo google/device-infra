@@ -1299,6 +1299,14 @@ public class Flags {
       converter = Flag.IntegerConverter.class)
   public Flag<Integer> olcServerPort = olcServerPortDefault;
 
+  private static final Flag<String> perfettoScriptPathDefault = Flag.value("");
+
+  @com.beust.jcommander.Parameter(
+      names = "--perfetto_script_path",
+      description = "File path for the perfetto script used by the Perfetto decorator.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> perfettoScriptPath = perfettoScriptPathDefault;
+
   private static final Flag<Boolean> printLabStatsDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(
