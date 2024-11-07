@@ -218,6 +218,12 @@ public interface PropertyName {
      */
     NO_OP_DEVICE_POST_RUN_TEST_CALLED,
 
+    /** The time it takes to fetch the artifact from the Android Build. */
+    OXYGEN_CF_FETCH_ARTIFACT_TIME_MS,
+
+    /** The time it takes to launch the CVD. */
+    OXYGEN_CF_LAUNCH_CVD_TIME_MS,
+
     /**
      * The name of the test property which indicates that one of the Oxygen devices we leased is
      * prewarmed.
@@ -292,6 +298,9 @@ public interface PropertyName {
     /** The MHFE link for the test. */
     TEST_LINK_IN_MHFE,
 
+    /** The root path of the uploaded test gen files. */
+    UPLOAD_GENFILES_ROOT_PATH,
+
     /**
      * The current UTP mode. Values are: {@linkplain
      * java/com/google/devtools/mobileharness/infra/controller/test/local/utp/common/UtpMode.java}.
@@ -304,9 +313,6 @@ public interface PropertyName {
      * Value type is boolean, by default is false.
      */
     VOLATILE_TEST_INFO_AFTER_TEST_ENDS,
-
-    /** The root path of the uploaded test gen files. */
-    UPLOAD_GENFILES_ROOT_PATH,
 
     /**
      * Count of drain timeout retry attempts in this job shown in sponge starting with '_' so sponge
