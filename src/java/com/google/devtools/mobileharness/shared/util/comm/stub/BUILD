@@ -85,7 +85,7 @@ java_library(
     srcs = [
         "BlockingInterfaceInvocationHandler.java",
         "DirectInvocationHandler.java",
-        "SyncCallMethod.java",
+        "RpcCall.java",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",

@@ -34,12 +34,12 @@ public abstract class BlockingInterfaceInvocationHandler implements InvocationHa
    * @throws StatusRuntimeException if the rpc call failed.
    */
   protected abstract <RespT extends GeneratedMessage> RespT syncInvoke(
-      SyncCallMethod<? extends GeneratedMessage, RespT> syncCallMethod);
+      RpcCall<? extends GeneratedMessage, RespT> rpcCall);
 
   @Override
   public Object invoke(Object proxy, Method method, Object[] args) throws Exception {
     checkArgument(args.length == 1, "Only one argument is allowed");
-    return syncInvoke(SyncCallMethod.parse(method, /* reqIndex= */ 0, args[0]));
+    return syncInvoke(RpcCall.parseSyncCall(method, /* reqIndex= */ 0, args[0]));
   }
 
   /** Creates a {@link StatusRuntimeException} with the given code, message and cause. */
