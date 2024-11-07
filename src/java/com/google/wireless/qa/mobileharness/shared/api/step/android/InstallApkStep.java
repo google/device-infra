@@ -289,7 +289,8 @@ public class InstallApkStep implements InstallApkStepConstants {
         .jobInfo()
         .params()
         .getBool(
-            InstallApkStepConstants.PARAM_CHECK_INSTALLED_GMS_CORE_VERSION, true /* default */)) {
+            InstallApkStepConstants.PARAM_CHECK_INSTALLED_GMS_CORE_VERSION,
+            /* defaultValue= */ true)) {
       // Gets Gms version if it is not in build apks.
       apkInstaller.checkInstalledAppVersion(
           testInfo, deviceId, PackageConstants.PACKAGE_NAME_GMS, null);
@@ -367,7 +368,7 @@ public class InstallApkStep implements InstallApkStepConstants {
       }
     }
     if (!matchedDexMetadataFiles.equals(dexMetadataFiles)) {
-      throw new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+      throw new MobileHarnessException(
           AndroidErrorId.ANDROID_INSTALL_APK_STEP_DEX_METADATA_WITHOUT_APK,
           String.format(
               "Dex metadata files %s did not match any installed apks. Each dex metadata file must"
@@ -396,8 +397,7 @@ public class InstallApkStep implements InstallApkStepConstants {
       boolean bypassLowTargetSdkBlock,
       Optional<Duration> installTimeout,
       Optional<Duration> sleepAfterInstallGms)
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-          InterruptedException {
+      throws MobileHarnessException, InterruptedException {
     String deviceId = device.getDeviceId();
     try {
       if (broadcastInstallMessage) {
@@ -673,7 +673,7 @@ public class InstallApkStep implements InstallApkStepConstants {
       return filePaths.stream()
           .collect(toImmutableMap(InstallApkStep::getFileNameForDexMetadataMatching, f -> f));
     } catch (IllegalArgumentException e) {
-      throw new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+      throw new MobileHarnessException(
           AndroidErrorId.ANDROID_INSTALL_APK_STEP_DEX_METADATA_CONFLICT,
           String.format("Multiple dex metadata files with the same name: %s", filePaths),
           e);
@@ -695,7 +695,7 @@ public class InstallApkStep implements InstallApkStepConstants {
     try {
       systemStateManager.reboot(device, testInfo.log(), null);
     } catch (MobileHarnessException e) {
-      throw new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+      throw new MobileHarnessException(
           AndroidErrorId.ANDROID_INSTALL_APK_STEP_REBOOT_ERROR,
           "Exception during reboot: " + e.getMessage(),
           e);
@@ -743,5 +743,12 @@ public class InstallApkStep implements InstallApkStepConstants {
         .alsoTo(logger)
         .log("no gmscore provided in properties match the given %s", gmscoreApkPath);
     return false;
+  }
+
+  public void uninstallPackages(Device device, TestInfo testInfo, List<String> packages)
+      throws InterruptedException {
+    for (String packageName : packages) {
+      apkInstaller.uninstallApk(device, packageName, /* logFailures= */ true, testInfo.log());
+    }
   }
 }

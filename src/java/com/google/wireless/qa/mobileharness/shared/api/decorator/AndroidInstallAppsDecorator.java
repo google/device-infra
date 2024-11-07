@@ -30,6 +30,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfiga
 import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.InstallApkStepSpec;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import javax.inject.Inject;
 
 /** Decorator for installing apks on Android real devices/emulators. */
@@ -77,9 +78,11 @@ public class AndroidInstallAppsDecorator extends BaseDecorator
     Instant startTime = Instant.now();
     // Installs APKs.
     sendProgressReportMessage(testInfo, "Install apks");
+    List<String> packagesOfInstalledApks;
+    InstallApkStepSpec spec;
     try {
-      InstallApkStepSpec spec = testInfo.jobInfo().combinedSpec(this, getDevice().getDeviceId());
-      installApkStep.installBuildApks(getDevice(), testInfo, spec);
+      spec = testInfo.jobInfo().combinedSpec(this, getDevice().getDeviceId());
+      packagesOfInstalledApks = installApkStep.installBuildApks(getDevice(), testInfo, spec);
     } catch (MobileHarnessException e) {
       // Proper TestResult will be set by isInstallFailure.
       installApkStep.isInstallFailure(e, testInfo);
@@ -95,7 +98,11 @@ public class AndroidInstallAppsDecorator extends BaseDecorator
             PropertyName.Test.PREFIX_DECORATOR_RUN_TIME_MS + getClass().getSimpleName(),
             Long.toString(runTimeMs));
 
-    getDecorated().run(testInfo);
+    try {
+      getDecorated().run(testInfo);
+    } finally {
+      postRun(spec, testInfo, packagesOfInstalledApks);
+    }
   }
 
   /** Sends the progress report message. */
@@ -114,6 +121,19 @@ public class AndroidInstallAppsDecorator extends BaseDecorator
               progress));
     } catch (MobileHarnessException e) {
       testInfo.errors().addAndLog(e, logger);
+    }
+  }
+
+  private void postRun(
+      InstallApkStepSpec spec, TestInfo testInfo, List<String> packagesOfInstalledApks)
+      throws InterruptedException {
+    if (spec.getCleanUpInstalledApks()) {
+      testInfo
+          .log()
+          .atInfo()
+          .alsoTo(logger)
+          .log("Uninstalling installed apks: %s", packagesOfInstalledApks);
+      installApkStep.uninstallPackages(getDevice(), testInfo, packagesOfInstalledApks);
     }
   }
 }

@@ -24,14 +24,17 @@ option java_package = "com.google.wireless.qa.mobileharness.shared.proto.spec.de
 option java_multiple_files = true;
 
 // Specs for {@link InstallApkStep}.
-// Next tag: 15
+// Next tag: 16
 message InstallApkStepSpec {
   extend DecoratorSpec {
     optional InstallApkStepSpec ext = 241344121;
   }
 
   repeated Google3File build_apk = 1 [(file_detail) = {
-    help: "The build APKs. Typically it is the app under test. If you have packaged your test code with your app under test APK, you can ignore this parameter. If there are other APK dependencies list them here."
+    help: "The build APKs. Typically it is the app under test. If you have "
+          "packaged your test code with your app under test APK, you can "
+          "ignore this parameter. If there are other APK dependencies list "
+          "them here."
   }];
 
   repeated Google3File extra_apk = 2 [(file_detail) = {
@@ -63,14 +66,16 @@ message InstallApkStepSpec {
   optional bool broadcast_install_message = 7 [
     default = false,
     (field_detail) = {
-      help: "Whether to broadcast message when starting and finishing installing the app. Defaults to false."
+      help: "Whether to broadcast message when starting and finishing "
+            "installing the app. Defaults to false."
     }
   ];
 
   optional bool clear_gms_app_data = 8 [
     default = false,
     (field_detail) = {
-      help: "Whether to clear GMS app data before and after installation. Defaults to false."
+      help: "Whether to clear GMS app data before and after installation. "
+            "Defaults to false."
     }
   ];
 
@@ -86,13 +91,15 @@ message InstallApkStepSpec {
   }];
 
   repeated Google3File dex_metadata = 11 [(file_detail) = {
-    help: "Dex metadata files to install with the apks. Each Dex metadata file must match by name with one of the apks being installed."
+    help: "Dex metadata files to install with the apks. Each Dex metadata file "
+          "must match by name with one of the apks being installed."
   }];
 
   optional bool skip_gms_download = 12 [
     default = false,
     (field_detail) = {
-      help: "Skip downloading GMSCore. Used for skipping gmscore update for an individual device in a testbed. Default value is false."
+      help: "Skip downloading GMSCore. Used for skipping gmscore update for an "
+            "individual device in a testbed. Default value is false."
     }
   ];
 
@@ -106,7 +113,17 @@ message InstallApkStepSpec {
   optional bool bypass_low_target_sdk_block = 14 [
     default = false,
     (field_detail) = {
-      help: "Whether to bypass low target sdk check, only works on the device with sdk >= 34. Default is false."
+      help: "Whether to bypass low target sdk check, only works on the device "
+            "with sdk >= 34. Default is false."
+    }
+  ];
+
+  optional bool clean_up_installed_apks = 15 [
+    default = false,
+    (field_detail) = {
+      help: "Whether apks installed should be uninstalled after test. Note "
+            "that it does not verify if the apks are successfully removed. "
+            "Default is false."
     }
   ];
 }
