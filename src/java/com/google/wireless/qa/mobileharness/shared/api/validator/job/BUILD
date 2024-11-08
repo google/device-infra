@@ -119,6 +119,17 @@ java_library(
 )
 
 java_library(
+    name = "android_perfetto_decorator_job_validator",
+    srcs = ["AndroidPerfettoDecoratorJobValidator.java"],
+    deps = [
+        ":job_validator",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/step/android:perfetto_step",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+    ],
+)
+
+java_library(
     name = "android_switch_user_decorator_job_validator",
     srcs = ["AndroidSwitchUserDecoratorJobValidator.java"],
     deps = [
