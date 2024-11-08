@@ -158,7 +158,9 @@ public class CompatibilityReportMerger {
       return Optional.empty();
     }
 
-    if (usableReports.size() == 1) {
+    if (usableReports.isEmpty()) {
+      return Optional.empty();
+    } else if (usableReports.size() == 1) {
       // No need to merge
       return Optional.of(usableReports.get(0));
     }
