@@ -149,7 +149,7 @@ public class TestInfo extends TestScheduleUnit implements Cloneable {
                         PathUtil.join(
                             remoteFileDir,
                             "j_" + jobInfo.locator().getId(),
-                            "t_" + locator().getId())));
+                            "test_" + locator().getId())));
     errors = new Errors(log, timing());
     properties = new Properties(timing());
     result = new Result(timing(), jobInfo.params());
