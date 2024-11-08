@@ -63,6 +63,7 @@ public class MobileHarnessExceptions {
    * @throws Error if the throwable is actually an {@link Error}
    */
   @SuppressWarnings("TypeParameterUnusedInFormals")
+  @CanIgnoreReturnValue
   public static <T> T rethrow(@Nullable Throwable throwable, ErrorId defaultError)
       throws MobileHarnessException, InterruptedException {
     if (throwable != null) {

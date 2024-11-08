@@ -20,17 +20,17 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
+import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.Stage;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.CommonLibraryModule;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.Decorator;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
-import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.util.ReflectionUtil;
 import java.lang.reflect.Constructor;
@@ -71,7 +71,7 @@ public class DriverFactory {
         return driverConstructor.get().newInstance(device, testInfo);
       } catch (ReflectiveOperationException e) {
         throw new MobileHarnessException(
-            ErrorCode.REFLECTION_INSTANTIATION_ERROR,
+            BasicErrorId.REFLECTION_INSTANTIATION_ERROR,
             String.format(
                 "Failed to create driver %s, maybe forget to add driver module to runtime_deps"
                     + " of lab or local-mode client? Please refer to the javadoc of Driver.",
@@ -167,7 +167,7 @@ public class DriverFactory {
         return decoratorConstructor.get().newInstance(decoratedDriver, testInfo);
       } catch (ReflectiveOperationException e) {
         throw new MobileHarnessException(
-            ErrorCode.REFLECTION_INSTANTIATION_ERROR,
+            BasicErrorId.REFLECTION_INSTANTIATION_ERROR,
             String.format(
                 "Failed to create decorator %s, maybe forget to add decorator module to"
                     + " runtime_deps of lab or local-mode client? Please refer to the javadoc of"
@@ -265,7 +265,7 @@ public class DriverFactory {
       return injector.getInstance(clazz);
     } catch (RuntimeException e) {
       throw new MobileHarnessException(
-          ErrorCode.REFLECTION_INSTANTIATION_ERROR,
+          BasicErrorId.REFLECTION_INSTANTIATION_ERROR,
           String.format("Reflection error when creating %s", clazz),
           e);
     }
