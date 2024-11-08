@@ -60,6 +60,7 @@ java_library(
         "RunPerfettoArgs.java",
     ],
     visibility = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/step/android:__subpackages__",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
