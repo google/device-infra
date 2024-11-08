@@ -63,6 +63,7 @@ import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageManag
 import com.google.wireless.qa.mobileharness.shared.constant.ExitCode;
 import com.google.wireless.qa.mobileharness.shared.util.DeviceUtil;
 import com.google.wireless.qa.mobileharness.shared.util.NetUtil;
+import java.time.Clock;
 
 /** Guice module for {@link LabServer}. */
 @SuppressWarnings("AvoidObjectArrays")
@@ -138,13 +139,20 @@ public class LabServerModule extends AbstractModule {
 
   @Provides
   @Singleton
+  Clock provideClock() {
+    return Clock.systemUTC();
+  }
+
+  @Provides
+  @Singleton
   FileResolver provideFileResolver(
-      ListeningExecutorService threadPool, LocalFileUtil localFileUtil) {
+      ListeningExecutorService threadPool, LocalFileUtil localFileUtil, Clock clock) {
     // LocalFileResolver.
     AbstractFileResolver localFileResolver = new LocalFileResolver(threadPool, localFileUtil);
 
     // CacheFileResolver.
-    AbstractFileResolver cacheFileResolver = new CacheFileResolver(threadPool, localFileUtil);
+    AbstractFileResolver cacheFileResolver =
+        new CacheFileResolver(threadPool, localFileUtil, clock);
     localFileResolver.setSuccessor(cacheFileResolver);
 
     // AtsFileServerFileResolver.
