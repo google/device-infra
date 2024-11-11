@@ -1987,6 +1987,27 @@ public class LocalFileUtil {
     }
   }
 
+  /** Extracts the tar.gz file to the target dir. */
+  public void extractTarGz(Path tarGzPath, Path targetDirPath)
+      throws MobileHarnessException, InterruptedException {
+    extractTarGz(tarGzPath.toString(), targetDirPath.toString());
+  }
+
+  /** Extracts the tar.gz file to the target dir. */
+  public void extractTarGz(String tarGzPath, String targetDirPath)
+      throws MobileHarnessException, InterruptedException {
+    try {
+      Command command =
+          Command.of(String.format("tar -zxvf %s -C %s", tarGzPath, targetDirPath).split(" "));
+      cmdExecutor.exec(command);
+    } catch (CommandException e) {
+      throw new MobileHarnessException(
+          BasicErrorId.LOCAL_FILE_TAR_EXTRACT_ERROR,
+          String.format("Failed to extract file %s to directory %s", tarGzPath, targetDirPath),
+          e);
+    }
+  }
+
   /**
    * Unzips the file to the target dir. If the target dir does not exist, will create it.
    *
