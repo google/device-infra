@@ -313,16 +313,17 @@ public final class Dimension {
     // Riemann's custom dimensions.
     /** A comma-separated string containing the carrier ID of each SIM on the device. */
     CARRIER_IDS,
-
     /** The radio version (i.e., the baseband version) of the device. */
     RADIO_VERSION,
-
     /** A comma-separated string containing information of all available SIM cards on the device. */
     SIM_INFOS,
-
+    /**
+     * A json format string containing signal strength information of all active SIM cards on the
+     * device.
+     */
+    SIGNAL_STRENGTHS_IN_JSON,
     /** The modem security boot status. */
     MODEM_SECURE_BOOT_STATUS,
-
     /** The active modem count. */
     ACTIVE_MODEM_COUNT,
 
