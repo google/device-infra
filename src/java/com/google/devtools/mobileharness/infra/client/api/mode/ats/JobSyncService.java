@@ -24,6 +24,7 @@ import static com.google.devtools.mobileharness.shared.util.concurrent.Callables
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 
 import com.google.auto.value.AutoValue;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -77,6 +78,7 @@ import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.Priority;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.Timeout;
 import io.grpc.stub.StreamObserver;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Iterator;
@@ -99,6 +101,7 @@ class JobSyncService extends JobSyncServiceGrpc.JobSyncServiceImplBase {
   private final AbstractScheduler scheduler;
   private final ServiceSideVersionChecker versionChecker;
   private final ListeningScheduledExecutorService scheduledThreadPool;
+  private final Clock clock;
 
   /** Key is job ID. */
   private final Map<String, JobExpirationInfo> jobExpirationInfos = new ConcurrentHashMap<>();
@@ -107,10 +110,12 @@ class JobSyncService extends JobSyncServiceGrpc.JobSyncServiceImplBase {
   JobSyncService(
       @AtsModeAbstractScheduler AbstractScheduler scheduler,
       @JobSyncServiceVersionChecker ServiceSideVersionChecker versionChecker,
-      ListeningScheduledExecutorService scheduledThreadPool) {
+      ListeningScheduledExecutorService scheduledThreadPool,
+      Clock clock) {
     this.scheduler = scheduler;
     this.versionChecker = versionChecker;
     this.scheduledThreadPool = scheduledThreadPool;
+    this.clock = clock;
   }
 
   void start() {
@@ -125,10 +130,11 @@ class JobSyncService extends JobSyncServiceGrpc.JobSyncServiceImplBase {
   }
 
   void cleanUpJobs() {
+    Instant now = clock.instant();
     Iterator<Entry<String, JobExpirationInfo>> iterator = jobExpirationInfos.entrySet().iterator();
     while (iterator.hasNext()) {
       Entry<String, JobExpirationInfo> job = iterator.next();
-      if (job.getValue().isExpired()) {
+      if (job.getValue().isExpired(now)) {
         logger.atInfo().log(
             "Job [%s] is expired, remove it from scheduler, expiration_info=[%s]",
             job.getKey(), job.getValue());
@@ -148,7 +154,8 @@ class JobSyncService extends JobSyncServiceGrpc.JobSyncServiceImplBase {
         JobSyncServiceGrpc.getOpenJobMethod());
   }
 
-  private OpenJobResponse doOpenJob(OpenJobRequest request) throws MobileHarnessException {
+  @VisibleForTesting
+  OpenJobResponse doOpenJob(OpenJobRequest request) throws MobileHarnessException {
     logger.atInfo().log("OpenJobRequest: %s", shortDebugString(request));
 
     versionChecker.checkStub(request.getVersionCheckRequest());
@@ -156,10 +163,13 @@ class JobSyncService extends JobSyncServiceGrpc.JobSyncServiceImplBase {
     // Creates JobScheduleUnit
     JobFeature jobFeature = request.getFeature();
     DeviceRequirements deviceRequirements = jobFeature.getDeviceRequirements();
-    checkArgument(deviceRequirements.getDeviceRequirementCount() > 0);
+    checkArgument(
+        deviceRequirements.getDeviceRequirementCount() > 0,
+        "OpenJobRequest.feature.device_requirements should contain at least one"
+            + " device_requirement");
     DeviceRequirement primaryDeviceRequirement = deviceRequirements.getDeviceRequirement(0);
     Map<String, String> primaryDeviceDimensions = primaryDeviceRequirement.getDimensionsMap();
-    Timing masterTiming = new Timing();
+    Timing masterTiming = new Timing(clock);
     JobLocator jobLocator = new JobLocator(request.getId(), request.getName());
     JobScheduleUnit jobScheduleUnit =
         new JobScheduleUnit(
@@ -203,7 +213,8 @@ class JobSyncService extends JobSyncServiceGrpc.JobSyncServiceImplBase {
     jobExpirationInfos.putIfAbsent(
         jobLocator.getId(),
         JobExpirationInfo.create(
-            createJobExpirationTime(Duration.ofMillis(request.getKeepAliveTimeoutMs()))));
+            createJobExpirationTime(Duration.ofMillis(request.getKeepAliveTimeoutMs())),
+            clock.instant()));
     scheduler.addJob(jobScheduleUnit);
     for (TestScheduleUnit testScheduleUnit : testScheduleUnits) {
       scheduler.addTest(testScheduleUnit);
@@ -441,7 +452,7 @@ class JobSyncService extends JobSyncServiceGrpc.JobSyncServiceImplBase {
 
   private void heartbeatJob(String jobId) {
     jobExpirationInfos.computeIfPresent(
-        jobId, (id, jobExpirationInfo) -> jobExpirationInfo.heartbeat());
+        jobId, (id, jobExpirationInfo) -> jobExpirationInfo.heartbeat(clock.instant()));
   }
 
   @AutoValue
@@ -451,16 +462,16 @@ class JobSyncService extends JobSyncServiceGrpc.JobSyncServiceImplBase {
 
     abstract Instant lastHeartbeatTimestamp();
 
-    private static JobExpirationInfo create(Duration expirationTime) {
-      return new AutoValue_JobSyncService_JobExpirationInfo(expirationTime, Instant.now());
+    private static JobExpirationInfo create(Duration expirationTime, Instant now) {
+      return new AutoValue_JobSyncService_JobExpirationInfo(expirationTime, now);
     }
 
-    private JobExpirationInfo heartbeat() {
-      return new AutoValue_JobSyncService_JobExpirationInfo(expirationTime(), Instant.now());
+    private JobExpirationInfo heartbeat(Instant now) {
+      return new AutoValue_JobSyncService_JobExpirationInfo(expirationTime(), now);
     }
 
-    private boolean isExpired() {
-      return lastHeartbeatTimestamp().plus(expirationTime()).isBefore(Instant.now());
+    private boolean isExpired(Instant now) {
+      return lastHeartbeatTimestamp().plus(expirationTime()).isBefore(now);
     }
   }
 }

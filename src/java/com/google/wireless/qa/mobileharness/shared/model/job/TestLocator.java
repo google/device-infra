@@ -17,6 +17,7 @@
 package com.google.wireless.qa.mobileharness.shared.model.job;
 
 import com.google.common.base.Preconditions;
+import java.util.Objects;
 import javax.annotation.Nullable;
 
 /** Locator of a test. */
@@ -60,6 +61,25 @@ public class TestLocator {
   @Override
   public String toString() {
     return String.format("%s@%s", id, jobLocator);
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (!(o instanceof TestLocator)) {
+      return false;
+    }
+    TestLocator that = (TestLocator) o;
+    return Objects.equals(id, that.id)
+        && Objects.equals(name, that.name)
+        && Objects.equals(jobLocator, that.jobLocator);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(id, name, jobLocator);
   }
 
   public com.google.devtools.mobileharness.api.model.job.TestLocator toNewTestLocator() {

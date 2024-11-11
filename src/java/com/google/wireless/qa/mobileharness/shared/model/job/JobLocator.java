@@ -17,6 +17,7 @@
 package com.google.wireless.qa.mobileharness.shared.model.job;
 
 import com.google.common.base.Preconditions;
+import java.util.Objects;
 import java.util.UUID;
 
 /** Locator of a job. */
@@ -61,6 +62,23 @@ public class JobLocator {
   @Override
   public String toString() {
     return id;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (!(o instanceof JobLocator)) {
+      return false;
+    }
+    JobLocator that = (JobLocator) o;
+    return Objects.equals(id, that.id) && Objects.equals(name, that.name);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(id, name);
   }
 
   public com.google.devtools.mobileharness.api.model.job.JobLocator toNewJobLocator() {
