@@ -1339,6 +1339,10 @@ public abstract class AndroidRealDeviceDelegate {
         return setupTimeoutForRecoveryAndFastbootDevice.get();
       }
     }
+    if (Flags.instance().resetDeviceInAndroidRealDeviceSetup.getNonNull()) {
+      return BaseDeviceHelper.getBaseDeviceSetupTimeout()
+          .plus(AndroidRealDeviceConstants.DEVICE_RESET_IN_SETUP_TIMEOUT_SHIFT);
+    }
     // Add a timeout shift to make sure setup timeout is bigger than command timeout.
     // Check b/36156147 for more information.
     return BaseDeviceHelper.getBaseDeviceSetupTimeout()

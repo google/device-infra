@@ -58,6 +58,9 @@ public class AndroidRealDeviceConstants {
   /** The timeout shift added to default device setup. */
   public static final Duration DEVICE_SETUP_TIMEOUT_SHIFT = Duration.ofSeconds(30);
 
+  /** The timeout shift added to device setup phase if reset device in setup. */
+  public static final Duration DEVICE_RESET_IN_SETUP_TIMEOUT_SHIFT = Duration.ofMinutes(10);
+
   /** Device property name for headless system user. */
   public static final String DEVICE_PROP_NAME_HEADLESS_USER = "ro.fw.mu.headless_system_user";
 
