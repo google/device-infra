@@ -337,6 +337,24 @@ java_library(
 )
 
 java_library(
+    name = "android_perfetto_decorator",
+    srcs = ["AndroidPerfettoDecorator.java"],
+    deps = [
+        ":base_decorator",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/command",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
+        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/step/android:perfetto_step",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
     name = "android_switch_user_decorator",
     srcs = ["AndroidSwitchUserDecorator.java"],
     deps = [
