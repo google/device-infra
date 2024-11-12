@@ -41,4 +41,5 @@ message DeviceData {
   string version = 4;
   string hardware = 5;
   string build_type = 6;
+  repeated string device_type = 7;
 }

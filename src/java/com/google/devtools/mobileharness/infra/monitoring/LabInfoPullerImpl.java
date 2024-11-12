@@ -73,20 +73,19 @@ public final class LabInfoPullerImpl implements DataPuller<MonitorEntry> {
         DeviceData.Builder deviceData =
             DeviceData.newBuilder()
                 .setId(deviceInfo.getDeviceLocator().getId())
-                .setStatus(deviceInfo.getDeviceStatus().toString());
+                .setStatus(deviceInfo.getDeviceStatus().toString())
+                .addAllDeviceType(deviceInfo.getDeviceFeature().getTypeList());
 
         getDimension(dimensionList, "model").ifPresent(deviceData::setModel);
-
         Stream.of(
                 getDimension(dimensionList, "sdk_version"),
                 getDimension(dimensionList, "software_version"))
             .flatMap(Optional::stream)
             .findFirst()
             .ifPresent(deviceData::setVersion);
-
         getDimension(dimensionList, "hardware").ifPresent(deviceData::setHardware);
-
         getDimension(dimensionList, "build_type").ifPresent(deviceData::setBuildType);
+
         monitorEntry.addDeviceData(deviceData.build());
       }
       builder.add(monitorEntry.build());
