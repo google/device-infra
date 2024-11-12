@@ -559,6 +559,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> pingGoogle = pingGoogleDefault;
 
+  private static final Flag<String> dexdumpPathDefault = Flag.value("");
+
+  @com.beust.jcommander.Parameter(
+      names = "--dexdump",
+      description = "File path of the dexdump tool",
+      converter = Flag.StringConverter.class)
+  public Flag<String> dexdumpPath = dexdumpPathDefault;
+
   private static final Flag<Boolean> disableCallingDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(
