@@ -116,4 +116,7 @@ message DeviceRecord {
 
   // The label dimension of the device.
   repeated string label = 16;
+
+  // The team this device belongs to.
+  string team = 17;
 }
