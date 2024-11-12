@@ -92,7 +92,8 @@ message DeviceInfo {
   // Device id.
   string id = 1;
   // Device status.
-  // com.google.devtools.mobileharness.api.model.proto.DeviceStatus.name().toLowerCase().
+  // String converted from mobileharness.api.model.DeviceStatus. Note it may be
+  // in upper or lower case.
   string status = 2;
   // The list of device owners.
   repeated string owner = 3;
