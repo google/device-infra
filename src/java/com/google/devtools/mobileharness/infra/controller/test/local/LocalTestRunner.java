@@ -261,7 +261,9 @@ public class LocalTestRunner extends BaseTestRunner<LocalTestRunner> {
     }
 
     @Override
-    public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+    public void run(TestInfo testInfo)
+        throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
+            InterruptedException {
       testInfo
           .log()
           .atInfo()
@@ -418,7 +420,9 @@ public class LocalTestRunner extends BaseTestRunner<LocalTestRunner> {
     }
 
     @Override
-    public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+    public void run(TestInfo testInfo)
+        throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
+            InterruptedException {
       try {
         if (postLocalDecoratorPreForwardEvent()) {
           testInfo

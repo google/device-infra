@@ -70,7 +70,7 @@ public class AndroidFilePusherDecorator extends BaseDecorator implements Android
   @VisibleForTesting
   AndroidFilePusherDecorator(
       Driver decoratedDriver,
-      com.google.wireless.qa.mobileharness.shared.model.job.TestInfo testInfo,
+      TestInfo testInfo,
       AndroidFileUtil androidFileUtil,
       FileOperator fileOperator,
       SystemSettingManager systemSettingManager,
@@ -83,9 +83,7 @@ public class AndroidFilePusherDecorator extends BaseDecorator implements Android
   }
 
   @Override
-  public void run(TestInfo testInfo)
-      throws com.google.wireless.qa.mobileharness.shared.MobileHarnessException,
-          InterruptedException {
+  public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
     String deviceId = getDevice().getDeviceId();
     JobInfo jobInfo = testInfo.jobInfo();
     Map<String, String> files =

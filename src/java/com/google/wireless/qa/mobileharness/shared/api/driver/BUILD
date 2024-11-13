@@ -41,7 +41,7 @@ java_library(
     name = "driver",
     srcs = ["Driver.java"],
     deps = [
-        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
     ],

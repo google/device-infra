@@ -49,7 +49,6 @@ import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryingCa
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
-import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.AndroidDeviceSettingsDecoratorSpec;
@@ -145,7 +144,7 @@ public class AndroidDeviceSettingsDecorator extends BaseDecorator
       ImmutableList.of("beast", "atom", "deadpool");
 
   /** Timeout for waiting for CPU folders and files to be created after reboot. */
-  private static final long WAIT_FOR_CPU_FILES_TIMEOUT_SEC = Duration.ofMinutes(2).getSeconds();
+  private static final long WAIT_FOR_CPU_FILES_TIMEOUT_SEC = Duration.ofMinutes(2).toSeconds();
 
   /** Duration of waiting for reboot. */
   private static final Duration WAIT_FOR_REBOOT = Duration.ofMinutes(3);
@@ -1588,9 +1587,7 @@ public class AndroidDeviceSettingsDecorator extends BaseDecorator
   }
 
   @Override
-  public void run(TestInfo testInfo)
-      throws com.google.wireless.qa.mobileharness.shared.MobileHarnessException,
-          InterruptedException {
+  public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
     if (!"AndroidRealDevice".equals(getDevice().getClass().getSimpleName())) {
       testInfo
           .log()
@@ -1610,8 +1607,6 @@ public class AndroidDeviceSettingsDecorator extends BaseDecorator
 
     maybeDisableVerity(spec, testInfo);
 
-    MobileHarnessException.checkNotNull(
-        spec, ErrorCode.ILLEGAL_STATE, "settings spec cannot be null");
     if (spec.hasForceReboot() && spec.getForceReboot() == Reboot.BEFORE_SETTING) {
       checkCanReboot(testInfo, "Force to reboot before setting.");
       rebootDevice(testInfo);

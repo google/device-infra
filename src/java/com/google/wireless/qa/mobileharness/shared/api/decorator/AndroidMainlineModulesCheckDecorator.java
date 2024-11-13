@@ -23,7 +23,6 @@ import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.platform.android.packagemanager.AndroidPackageManagerUtil;
 import com.google.devtools.mobileharness.platform.android.packagemanager.PackageInfo;
 import com.google.devtools.mobileharness.platform.android.shared.autovalue.UtilArgs;
-import com.google.devtools.mobileharness.shared.util.error.ErrorModelConverter;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
@@ -84,11 +83,7 @@ public class AndroidMainlineModulesCheckDecorator extends BaseDecorator
       testInfo.getRootTest().resultWithCause().setNonPassing(TestResult.SKIP, error);
       throw error;
     } else {
-      try {
-        getDecorated().run(testInfo);
-      } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
-        throw ErrorModelConverter.upgradeMobileHarnessException(e);
-      }
+      getDecorated().run(testInfo);
     }
   }
 

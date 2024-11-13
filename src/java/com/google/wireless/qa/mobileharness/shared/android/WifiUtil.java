@@ -18,9 +18,10 @@ package com.google.wireless.qa.mobileharness.shared.android;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptions;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
-import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import javax.annotation.Nullable;
 
 /** Util methods for using WIFI APIs to interact with Android devices. */
@@ -94,23 +95,21 @@ public class WifiUtil {
 
   /** Get WifiUtil.apk path. */
   public String getWifiUtilApkPath() throws MobileHarnessException {
-    return MobileHarnessException.checkNotNull(
-        wifiApkPath, ErrorCode.FILE_NOT_FOUND, "WifiUtil.apk file not found");
+    return MobileHarnessExceptions.checkNotNull(
+        wifiApkPath, AndroidErrorId.ANDROID_WIFI_UTIL_APK_NOT_FOUND, "WifiUtil.apk file not found");
   }
 
   /** Get WifiUtil.apk package name. */
   public String getWifiUtilApkPackageName() throws MobileHarnessException {
-    MobileHarnessException.checkNotNull(
-        wifiApkPath, ErrorCode.FILE_NOT_FOUND, "WifiUtil.apk file not found");
-
+    MobileHarnessExceptions.checkNotNull(
+        wifiApkPath, AndroidErrorId.ANDROID_WIFI_UTIL_APK_NOT_FOUND, "WifiUtil.apk file not found");
     return apkPackageName;
   }
 
   /** Get WifiUtil.apk version code. */
   public int getWifiUtilApkVersionCode() throws MobileHarnessException {
-    MobileHarnessException.checkNotNull(
-        wifiApkPath, ErrorCode.FILE_NOT_FOUND, "WifiUtil.apk file not found");
-
+    MobileHarnessExceptions.checkNotNull(
+        wifiApkPath, AndroidErrorId.ANDROID_WIFI_UTIL_APK_NOT_FOUND, "WifiUtil.apk file not found");
     return apkVersionCode;
   }
 }

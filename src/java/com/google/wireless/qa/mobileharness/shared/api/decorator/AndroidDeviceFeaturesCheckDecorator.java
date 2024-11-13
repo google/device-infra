@@ -24,7 +24,6 @@ import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.platform.android.systemspec.AndroidSystemSpecUtil;
-import com.google.devtools.mobileharness.shared.util.error.ErrorModelConverter;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -78,11 +77,7 @@ public class AndroidDeviceFeaturesCheckDecorator extends BaseDecorator
 
     if (nonexistentRequiredFeatures.isEmpty() && existentForbiddenFeatures.isEmpty()) {
       // The check passes.
-      try {
-        getDecorated().run(testInfo);
-      } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
-        throw ErrorModelConverter.upgradeMobileHarnessException(e);
-      }
+      getDecorated().run(testInfo);
     } else {
       // The check fails.
       MobileHarnessException error =

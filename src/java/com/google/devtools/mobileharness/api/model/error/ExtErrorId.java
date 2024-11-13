@@ -113,6 +113,9 @@ public enum ExtErrorId implements ErrorId {
   // MoblyDecoratorAdapter: 84_551 - 84_560
   MOBLY_DECORATOR_ADAPTER_DECORATOR_SPEC_ERROR(84_551, ErrorType.CUSTOMER_ISSUE),
 
+  // TestbedDecoratorAdapter: 84_561 - 84_570
+  TESTBED_DECORATOR_ADAPTER_DECORATOR_DEVICE_NOT_FOUND(84_561, ErrorType.CUSTOMER_ISSUE),
+
   /** xTS Utils: 86_901 ~ 88_900 */
   // CompatibilityReportParser: 86_901 ~ 86_950
   REPORT_PARSER_READ_XML_FILE_ERROR(86_901, ErrorType.INFRA_ISSUE),

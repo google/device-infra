@@ -72,9 +72,7 @@ public class AndroidInstallAppsDecorator extends BaseDecorator
   }
 
   @Override
-  public void run(TestInfo testInfo)
-      throws com.google.wireless.qa.mobileharness.shared.MobileHarnessException,
-          InterruptedException {
+  public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
     Instant startTime = Instant.now();
     // Installs APKs.
     sendProgressReportMessage(testInfo, "Install apks");

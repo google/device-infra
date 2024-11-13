@@ -122,9 +122,7 @@ public class AndroidLogCatDecorator extends BaseDecorator implements AndroidLogC
   }
 
   @Override
-  public void run(final TestInfo testInfo)
-      throws com.google.wireless.qa.mobileharness.shared.MobileHarnessException,
-          InterruptedException {
+  public void run(final TestInfo testInfo) throws MobileHarnessException, InterruptedException {
     String deviceId = getDevice().getDeviceId();
     JobInfo jobInfo = testInfo.jobInfo();
     String logcatSinceTime = null;
@@ -256,8 +254,7 @@ public class AndroidLogCatDecorator extends BaseDecorator implements AndroidLogC
   /** Runs logcat after the test is finished. Will block the current thread when dumping. */
   private void syncRun(
       final TestInfo testInfo, String filterSpecs, String options, @Nullable String logFilePath)
-      throws com.google.wireless.qa.mobileharness.shared.MobileHarnessException,
-          InterruptedException {
+      throws MobileHarnessException, InterruptedException {
     try {
       getDecorated().run(testInfo);
     } finally {
@@ -371,8 +368,7 @@ public class AndroidLogCatDecorator extends BaseDecorator implements AndroidLogC
       String filterSpecs,
       String options,
       @Nullable String logFilePath)
-      throws com.google.wireless.qa.mobileharness.shared.MobileHarnessException,
-          InterruptedException {
+      throws MobileHarnessException, InterruptedException {
     String deviceId = getDevice().getDeviceId();
 
     CommandProcess commandProcess = null;

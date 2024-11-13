@@ -34,8 +34,7 @@ public abstract class AsyncTimerDecorator extends BaseDecorator {
 
   @Override
   public final void run(final TestInfo testInfo)
-      throws com.google.wireless.qa.mobileharness.shared.MobileHarnessException,
-          InterruptedException {
+      throws MobileHarnessException, InterruptedException {
     logger.atInfo().log("Started");
     onStart(testInfo);
     final Timer timer =

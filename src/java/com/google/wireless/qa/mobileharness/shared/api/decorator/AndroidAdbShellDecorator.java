@@ -28,7 +28,6 @@ import com.google.devtools.mobileharness.platform.android.lightning.systemstate.
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceConnectionState;
 import com.google.devtools.mobileharness.platform.android.systemstate.AndroidSystemStateUtil;
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
-import com.google.devtools.mobileharness.shared.util.error.ErrorModelConverter;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
@@ -111,8 +110,6 @@ public class AndroidAdbShellDecorator extends BaseDecorator
       try {
         // Runs the actual test.
         getDecorated().run(testInfo);
-      } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
-        throw ErrorModelConverter.upgradeMobileHarnessException(e);
       } finally {
         // After test.
         Iterable<String> commandsAfterTest =

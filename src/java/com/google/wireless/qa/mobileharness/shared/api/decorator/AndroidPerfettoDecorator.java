@@ -102,9 +102,7 @@ public class AndroidPerfettoDecorator extends BaseDecorator {
   }
 
   @Override
-  public void run(final TestInfo testInfo)
-      throws com.google.wireless.qa.mobileharness.shared.MobileHarnessException,
-          InterruptedException {
+  public void run(final TestInfo testInfo) throws MobileHarnessException, InterruptedException {
     String deviceId = getDevice().getDeviceId();
     JobInfo jobInfo = testInfo.jobInfo();
 
@@ -119,8 +117,7 @@ public class AndroidPerfettoDecorator extends BaseDecorator {
   }
 
   private void runAfterTest(final TestInfo testInfo, File outputFile, String deviceId)
-      throws com.google.wireless.qa.mobileharness.shared.MobileHarnessException,
-          InterruptedException {
+      throws MobileHarnessException, InterruptedException {
     try {
       getDecorated().run(testInfo);
     } finally {
@@ -153,8 +150,7 @@ public class AndroidPerfettoDecorator extends BaseDecorator {
   }
 
   private void runBeforeTest(final TestInfo testInfo, File outputFile, String deviceId)
-      throws com.google.wireless.qa.mobileharness.shared.MobileHarnessException,
-          InterruptedException {
+      throws MobileHarnessException, InterruptedException {
     // Run perfetto async, with a timeout equal to the test's remaining time (before timeout).
     // This is not how long perfetto is intended to run, however. Instead, perfetto is stopped
     // via "\n" on stdin (which is a new perfetto feature).

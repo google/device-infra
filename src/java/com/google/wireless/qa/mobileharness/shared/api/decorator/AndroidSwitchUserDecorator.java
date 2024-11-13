@@ -100,9 +100,7 @@ public class AndroidSwitchUserDecorator extends BaseDecorator
   }
 
   @Override
-  public void run(TestInfo testInfo)
-      throws com.google.wireless.qa.mobileharness.shared.MobileHarnessException,
-          InterruptedException {
+  public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
     String deviceId = getDevice().getDeviceId();
     AndroidSwitchUserDecoratorSpec spec = testInfo.jobInfo().combinedSpec(this, deviceId);
     int sdkVersion = systemSettingUtil.getDeviceSdkVersion(deviceId);

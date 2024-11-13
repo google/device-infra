@@ -20,7 +20,6 @@ import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
-import com.google.devtools.mobileharness.shared.util.error.ErrorModelConverter;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -64,10 +63,6 @@ public class AndroidMinSdkVersionCheckDecorator extends BaseDecorator
       throw error;
     }
 
-    try {
-      getDecorated().run(testInfo);
-    } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
-      throw ErrorModelConverter.upgradeMobileHarnessException(e);
-    }
+    getDecorated().run(testInfo);
   }
 }

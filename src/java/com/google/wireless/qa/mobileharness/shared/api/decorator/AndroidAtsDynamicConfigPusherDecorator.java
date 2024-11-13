@@ -28,7 +28,6 @@ import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.devtools.mobileharness.platform.android.xts.config.DynamicConfig;
 import com.google.devtools.mobileharness.platform.android.xts.config.DynamicConfigHandler;
-import com.google.devtools.mobileharness.shared.util.error.ErrorModelConverter;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.gson.JsonSyntaxException;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
@@ -114,8 +113,6 @@ public class AndroidAtsDynamicConfigPusherDecorator extends BaseDecorator
     // TODO: Add host target support and config read support.
     try {
       getDecorated().run(testInfo);
-    } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
-      throw ErrorModelConverter.upgradeMobileHarnessException(e);
     } finally {
       if (deviceFilePushedPath != null && spec.getCleanup()) {
         try {

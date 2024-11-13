@@ -29,12 +29,12 @@ import com.google.devtools.common.metrics.stability.converter.ErrorModelConverte
 import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.controller.test.local.annotation.DoNotSubscribeTestEvent;
 import com.google.devtools.mobileharness.shared.util.concurrent.ConcurrencyUtil;
 import com.google.devtools.mobileharness.shared.util.concurrent.ConcurrencyUtil.SubTask;
 import com.google.devtools.mobileharness.shared.util.logging.MobileHarnessLogTag;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.ClassUtil;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.BaseDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.Decorator;
@@ -228,7 +228,7 @@ public class AdhocTestbedDriver extends BaseDriver {
           .resultWithCause()
           .setNonPassing(
               TestResult.ERROR,
-              new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+              new MobileHarnessException(
                   ExtErrorId.MOBLY_TESTBED_ADHOC_DRIVER_END_WITH_UNKNOWN_RESULT,
                   "Set root test result to ERROR because adhoc testbed driver ends with UNKNOWN"
                       + " test result. Maybe the primary driver has not been triggered."));
@@ -304,8 +304,7 @@ public class AdhocTestbedDriver extends BaseDriver {
   }
 
   private void runSubDriver(TestInfo testInfo, Driver driver)
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-          InterruptedException {
+      throws MobileHarnessException, InterruptedException {
     try {
       testInfo
           .log()
@@ -319,8 +318,8 @@ public class AdhocTestbedDriver extends BaseDriver {
           .alsoTo(logger)
           .log("Sub driver of device [%s] finished", driver.getDevice().getDeviceId());
     } catch (MobileHarnessException e) {
-      com.google.devtools.mobileharness.api.model.error.MobileHarnessException newException =
-          new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+      MobileHarnessException newException =
+          new MobileHarnessException(
               InfraErrorId.TR_FAILED_TO_RUN_SUB_DRIVER_IN_ADHOC_TESTBED_TEST,
               String.format(
                   "Failed to run driver of device [%s]", driver.getDevice().getDeviceId()),
