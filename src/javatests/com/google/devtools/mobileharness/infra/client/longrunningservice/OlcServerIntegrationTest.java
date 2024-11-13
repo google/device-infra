@@ -33,6 +33,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.common.truth.Correspondence;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
+import com.google.devtools.mobileharness.api.model.proto.Lab.LabLocator;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
@@ -70,6 +71,10 @@ import com.google.devtools.mobileharness.infra.master.rpc.stub.grpc.LabInfoGrpcS
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 import com.google.devtools.mobileharness.shared.util.base.CountDownSet;
+import com.google.devtools.mobileharness.shared.util.comm.relay.client.ClientCreator;
+import com.google.devtools.mobileharness.shared.util.comm.relay.proto.DestinationProto;
+import com.google.devtools.mobileharness.shared.util.comm.relay.proto.DestinationProto.Destination;
+import com.google.devtools.mobileharness.shared.util.comm.relay.proto.DestinationProto.ServiceLocator;
 import com.google.devtools.mobileharness.shared.util.comm.stub.ChannelFactory;
 import com.google.devtools.mobileharness.shared.util.comm.stub.MasterGrpcStubHelper;
 import com.google.devtools.mobileharness.shared.util.command.Command;
@@ -82,10 +87,14 @@ import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.shared.version.Version;
+import com.google.devtools.mobileharness.shared.version.proto.VersionServiceProto;
+import com.google.devtools.mobileharness.shared.version.proto.VersionServiceProto.GetVersionRequest;
+import com.google.devtools.mobileharness.shared.version.rpc.stub.grpc.VersionGrpcStub;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import com.google.protobuf.Any;
+import io.grpc.Channel;
 import io.grpc.ManagedChannel;
 import io.grpc.stub.StreamObserver;
 import java.io.IOException;
@@ -449,6 +458,46 @@ public class OlcServerIntegrationTest {
             KillServerResponse.newBuilder().setSuccess(Success.getDefaultInstance()).build());
     Sleeper.defaultSleeper().sleep(Duration.ofSeconds(6L));
     assertThat(olcServerProcess.isAlive()).isFalse();
+  }
+
+  @Test
+  public void grpcRelay() throws Exception {
+    startServers(/* enableAtsMode= */ true, /* enableSchedulerShuffle= */ true);
+
+    // Gets LabLocator.
+    GetLabInfoResponse getLabInfoResponse =
+        labInfoGrpcStub.getLabInfo(GetLabInfoRequest.getDefaultInstance());
+    LabLocator labLocator =
+        getLabInfoResponse
+            .getLabQueryResult()
+            .getLabView()
+            .getLabDataList()
+            .get(0)
+            .getLabInfo()
+            .getLabLocator();
+
+    // Creates relay channel.
+    Channel relayChannel =
+        ClientCreator.createChannel(
+            olcServerChannel,
+            Destination.newBuilder()
+                .setServiceLocator(
+                    ServiceLocator.newBuilder()
+                        .setLabLocator(
+                            DestinationProto.LabLocator.newBuilder().setLabLocator(labLocator)))
+                .build());
+    VersionGrpcStub versionStub = new VersionGrpcStub(relayChannel);
+
+    // Gets lab server version.
+    VersionServiceProto.GetVersionResponse getVersionResponse =
+        versionStub.getVersion(GetVersionRequest.getDefaultInstance());
+
+    assertThat(getVersionResponse)
+        .comparingExpectedFieldsOnly()
+        .isEqualTo(
+            VersionServiceProto.GetVersionResponse.newBuilder()
+                .setVersion(Version.LAB_VERSION.toString())
+                .build());
   }
 
   private void startServers(boolean enableAtsMode, boolean enableSchedulerShuffle)
