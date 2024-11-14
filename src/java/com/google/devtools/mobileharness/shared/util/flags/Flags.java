@@ -1593,11 +1593,11 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> useAlts = useAltsDefault;
 
-  private static final Flag<Boolean> useTfRetryDefault = Flag.value(true);
+  private static final Flag<Boolean> useTfRetryDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(
       names = "--use_tf_retry",
-      description = "Delegate retry to TF. The default is true.",
+      description = "Delegate retry to TF. The default is false.",
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> useTfRetry = useTfRetryDefault;
 
