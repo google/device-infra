@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.ExecTestStub;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.PrepareTestStub;
+import com.google.devtools.mobileharness.infra.master.rpc.stub.JobSyncStub;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.rpc.stub.CloudFileTransferStubInterface;
 import com.google.devtools.mobileharness.shared.util.comm.stub.StubConfigurationProto.StubConfiguration;
 import com.google.devtools.mobileharness.shared.version.rpc.stub.VersionStub;
@@ -34,6 +35,8 @@ public interface StubFactory {
   PrepareTestStub createPrepareTestStub(StubConfiguration stubConfiguration);
 
   VersionStub createVersionStub(StubConfiguration stubConfiguration);
+
+  JobSyncStub createJobSyncStub(StubConfiguration stubConfiguration);
 
   /** Util to create an exception for unsupported stub configuration. */
   static IllegalArgumentException createUnsupportedConfigurationException(

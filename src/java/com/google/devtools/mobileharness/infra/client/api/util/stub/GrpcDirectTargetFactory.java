@@ -18,14 +18,16 @@ package com.google.devtools.mobileharness.infra.client.api.util.stub;
 
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.grpc.ExecTestGrpcStub;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.grpc.PrepareTestGrpcStub;
+import com.google.devtools.mobileharness.infra.master.rpc.stub.grpc.JobSyncGrpcStub;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.rpc.stub.CloudFileTransferGrpcStub;
 import com.google.devtools.mobileharness.shared.util.comm.stub.GrpcDirectTargetConfigures;
 import com.google.devtools.mobileharness.shared.util.comm.stub.StubConfigurationProto.StubConfiguration;
 import com.google.devtools.mobileharness.shared.version.rpc.stub.grpc.VersionGrpcStub;
 import javax.inject.Inject;
 
-/** Creates blocking interfaces for direct targets. */
-final class GrpcDirectTargetFactory implements BlockingInterfaceFactory {
+/** Creates interfaces for direct targets. */
+final class GrpcDirectTargetFactory
+    implements BlockingInterfaceFactory, GrpcFutureInterfaceFactory {
 
   private final GrpcDirectTargetConfigures directTargetConfigures;
 
@@ -60,5 +62,19 @@ final class GrpcDirectTargetFactory implements BlockingInterfaceFactory {
       StubConfiguration stubConfiguration) {
     return directTargetConfigures.createStubInterface(
         VersionGrpcStub::newBlockingInterface, stubConfiguration);
+  }
+
+  @Override
+  public JobSyncGrpcStub.BlockingInterface createJobSyncBlockingInterface(
+      StubConfiguration stubConfiguration) {
+    return directTargetConfigures.createStubInterface(
+        JobSyncGrpcStub::newBlockingInterface, stubConfiguration);
+  }
+
+  @Override
+  public JobSyncGrpcStub.FutureInterface createJobSyncFutureInterface(
+      StubConfiguration stubConfiguration) {
+    return directTargetConfigures.createStubInterface(
+        JobSyncGrpcStub::newFutureInterface, stubConfiguration);
   }
 }

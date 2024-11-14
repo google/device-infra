@@ -22,6 +22,10 @@ import com.google.devtools.mobileharness.infra.lab.rpc.stub.ExecTestStub;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.PrepareTestStub;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.grpc.ExecTestGrpcStub;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.grpc.PrepareTestGrpcStub;
+import com.google.devtools.mobileharness.infra.master.rpc.stub.JobSyncStub;
+import com.google.devtools.mobileharness.infra.master.rpc.stub.grpc.JobSyncGrpcStub;
+import com.google.devtools.mobileharness.shared.constant.closeable.NoOpAutoCloseable;
+import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.rpc.stub.CloudFileTransferGrpcStub;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.rpc.stub.CloudFileTransferStubInterface;
 import com.google.devtools.mobileharness.shared.util.comm.stub.StubConfigurationProto.StubConfiguration;
@@ -36,11 +40,18 @@ import javax.inject.Inject;
 /** Factory to create gRPC stubs. */
 final class GrpcStubFactory implements StubFactory {
 
+  private static final NonThrowingAutoCloseable NO_OP_AUTO_CLOSEABLE_INSTANCE =
+      new NoOpAutoCloseable();
+
   private final Map<TargetConfigurationCase, BlockingInterfaceFactory> factoryMap;
+  private final Map<TargetConfigurationCase, GrpcFutureInterfaceFactory> futureFactoryMap;
 
   @Inject
-  GrpcStubFactory(Map<TargetConfigurationCase, BlockingInterfaceFactory> factoryMap) {
+  GrpcStubFactory(
+      Map<TargetConfigurationCase, BlockingInterfaceFactory> factoryMap,
+      Map<TargetConfigurationCase, GrpcFutureInterfaceFactory> futureFactoryMap) {
     this.factoryMap = factoryMap;
+    this.futureFactoryMap = futureFactoryMap;
   }
 
   @Override
@@ -72,11 +83,29 @@ final class GrpcStubFactory implements StubFactory {
             .createVersionBlockingInterface(stubConfiguration));
   }
 
+  @Override
+  public JobSyncStub createJobSyncStub(StubConfiguration stubConfiguration) {
+    return new JobSyncGrpcStub(
+        NO_OP_AUTO_CLOSEABLE_INSTANCE,
+        getBlockingInterfaceFactory(stubConfiguration)
+            .createJobSyncBlockingInterface(stubConfiguration),
+        getFutureInterfaceFactory(stubConfiguration)
+            .createJobSyncFutureInterface(stubConfiguration));
+  }
+
   private BlockingInterfaceFactory getBlockingInterfaceFactory(
       StubConfiguration stubConfiguration) {
     checkArgument(
         stubConfiguration.getTransport() == Transport.GRPC, "Only grpc transport is supported.");
     return Optional.ofNullable(factoryMap.get(stubConfiguration.getTargetConfigurationCase()))
+        .orElseThrow(() -> StubFactory.createUnsupportedConfigurationException(stubConfiguration));
+  }
+
+  private GrpcFutureInterfaceFactory getFutureInterfaceFactory(
+      StubConfiguration stubConfiguration) {
+    checkArgument(
+        stubConfiguration.getTransport() == Transport.GRPC, "Only grpc transport is supported.");
+    return Optional.ofNullable(futureFactoryMap.get(stubConfiguration.getTargetConfigurationCase()))
         .orElseThrow(() -> StubFactory.createUnsupportedConfigurationException(stubConfiguration));
   }
 }

@@ -66,6 +66,7 @@ java_library(
     runtime_deps = [
     ],
     deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/constant/closeable",
         "@io_grpc_grpc_java//core",
         "@io_grpc_grpc_java//stub",
         "@maven//:com_google_guava_guava",
@@ -83,16 +84,23 @@ java_library(
 java_library(
     name = "proxy",
     srcs = [
+        "Annotations.java",
         "BlockingInterfaceInvocationHandler.java",
         "DirectInvocationHandler.java",
+        "FutureExecutorModule.java",
+        "GrpcFutureInterfaceInvocationHandler.java",
+        "GrpcStatusUtils.java",
+        "MessageTransformer.java",
         "RpcCall.java",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_reflection_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
         "@com_google_protobuf//:protobuf_java",
         "@io_grpc_grpc_java//core",
         "@maven//:com_google_guava_guava",
+        "@maven//:com_google_inject_guice",
     ],
 )
 

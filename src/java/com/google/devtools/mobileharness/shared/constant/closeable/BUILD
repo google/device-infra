@@ -27,7 +27,10 @@ package(
 
 java_library(
     name = "closeable",
-    srcs = ["NonThrowingAutoCloseable.java"],
+    srcs = [
+        "NoOpAutoCloseable.java",
+        "NonThrowingAutoCloseable.java",
+    ],
 )
 
 java_library(

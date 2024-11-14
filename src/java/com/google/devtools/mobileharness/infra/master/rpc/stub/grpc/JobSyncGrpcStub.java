@@ -38,26 +38,34 @@ import com.google.devtools.mobileharness.infra.master.rpc.proto.JobSyncServicePr
 import com.google.devtools.mobileharness.infra.master.rpc.proto.JobSyncServiceProto.UpsertDeviceTempRequiredDimensionsRequest;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.JobSyncServiceProto.UpsertDeviceTempRequiredDimensionsResponse;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.JobSyncStub;
+import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
+import com.google.devtools.mobileharness.shared.util.comm.stub.GrpcDirectTargetConfigures;
 import com.google.devtools.mobileharness.shared.util.comm.stub.MasterGrpcStubHelper;
-import io.grpc.ClientInterceptors;
+import io.grpc.Channel;
 import javax.inject.Inject;
 
 /** GRPC stub class for talking to Master JobSyncService via OnePlatform API. */
 public class JobSyncGrpcStub implements JobSyncStub {
 
-  private final MasterGrpcStubHelper helper;
-  private final JobSyncServiceGrpc.JobSyncServiceBlockingStub jobSyncGrpcBlockingStub;
-  private final JobSyncServiceGrpc.JobSyncServiceFutureStub jobSyncGrpcFutureStub;
+  private final NonThrowingAutoCloseable closeable;
+  private final BlockingInterface jobSyncGrpcBlockingStub;
+  private final FutureInterface jobSyncGrpcFutureStub;
 
   @Inject
   public JobSyncGrpcStub(MasterGrpcStubHelper helper) {
-    this.helper = helper;
-    this.jobSyncGrpcBlockingStub =
-        JobSyncServiceGrpc.newBlockingStub(
-            ClientInterceptors.intercept(helper.getChannel(), helper.getInterceptors()));
-    this.jobSyncGrpcFutureStub =
-        JobSyncServiceGrpc.newFutureStub(
-            ClientInterceptors.intercept(helper.getChannel(), helper.getInterceptors()));
+    this(
+        helper,
+        newBlockingInterface(helper.getChannelWithInterceptors()),
+        newFutureInterface(helper.getChannelWithInterceptors()));
+  }
+
+  public JobSyncGrpcStub(
+      NonThrowingAutoCloseable closeable,
+      BlockingInterface blockingStub,
+      FutureInterface futureStub) {
+    this.closeable = closeable;
+    this.jobSyncGrpcBlockingStub = blockingStub;
+    this.jobSyncGrpcFutureStub = futureStub;
   }
 
   @Override
@@ -136,6 +144,74 @@ public class JobSyncGrpcStub implements JobSyncStub {
 
   @Override
   public void close() {
-    helper.closeChannel();
+    closeable.close();
+  }
+
+  /**
+   * Blocking interface for JobSyncService.
+   *
+   * <p>It has the same methods as JobSyncServiceGrpc.JobSyncServiceBlockingStub.
+   */
+  public static interface BlockingInterface {
+
+    OpenJobResponse openJob(OpenJobRequest request);
+
+    AddExtraTestsResponse addExtraTests(AddExtraTestsRequest request);
+
+    GetAllocationsResponse getAllocations(GetAllocationsRequest request);
+
+    CloseTestResponse closeTest(CloseTestRequest request);
+
+    CloseJobResponse closeJob(CloseJobRequest request);
+
+    CheckJobsResponse checkJobs(CheckJobsRequest request);
+
+    UpsertDeviceTempRequiredDimensionsResponse upsertDeviceTempRequiredDimensions(
+        UpsertDeviceTempRequiredDimensionsRequest request);
+
+    KillJobResponse killJob(KillJobRequest request);
+  }
+
+  public static BlockingInterface newBlockingInterface(
+      JobSyncServiceGrpc.JobSyncServiceBlockingStub blockingStub) {
+    return GrpcDirectTargetConfigures.newBlockingInterface(blockingStub, BlockingInterface.class);
+  }
+
+  public static BlockingInterface newBlockingInterface(Channel channel) {
+    return newBlockingInterface(JobSyncServiceGrpc.newBlockingStub(channel));
+  }
+
+  /**
+   * Future interface for JobSyncService.
+   *
+   * <p>It has the same methods as JobSyncServiceGrpc.JobSyncServiceFutureStub.
+   */
+  public static interface FutureInterface {
+
+    ListenableFuture<OpenJobResponse> openJob(OpenJobRequest request);
+
+    ListenableFuture<AddExtraTestsResponse> addExtraTests(AddExtraTestsRequest request);
+
+    ListenableFuture<GetAllocationsResponse> getAllocations(GetAllocationsRequest request);
+
+    ListenableFuture<CloseTestResponse> closeTest(CloseTestRequest request);
+
+    ListenableFuture<CloseJobResponse> closeJob(CloseJobRequest request);
+
+    ListenableFuture<CheckJobsResponse> checkJobs(CheckJobsRequest request);
+
+    ListenableFuture<UpsertDeviceTempRequiredDimensionsResponse> upsertDeviceTempRequiredDimensions(
+        UpsertDeviceTempRequiredDimensionsRequest request);
+
+    ListenableFuture<KillJobResponse> killJob(KillJobRequest request);
+  }
+
+  public static FutureInterface newFutureInterface(
+      JobSyncServiceGrpc.JobSyncServiceFutureStub futureStub) {
+    return GrpcDirectTargetConfigures.newBlockingInterface(futureStub, FutureInterface.class);
+  }
+
+  public static FutureInterface newFutureInterface(Channel channel) {
+    return newFutureInterface(JobSyncServiceGrpc.newFutureStub(channel));
   }
 }

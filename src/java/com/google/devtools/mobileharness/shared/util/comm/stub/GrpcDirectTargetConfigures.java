@@ -48,9 +48,9 @@ public final class GrpcDirectTargetConfigures {
   /**
    * Creates a grpc stub.
    *
-   * <p>The grpc service should have a blocking stub interface that has the same API as the
-   * generated blocking stub. For example, the FooServiceGrpcStub has a method newBlockingInterface
-   * that creates a FooServiceGrpcStub.BlockingInterface from a channel.
+   * <p>The grpc service should have a blocking/future stub interface that has the same API as the
+   * generated blocking/future stub. For example, the FooServiceGrpcStub has a method
+   * newBlockingInterface that creates a FooServiceGrpcStub.BlockingInterface from a channel.
    *
    * <p>Usage:
    *
@@ -76,7 +76,7 @@ public final class GrpcDirectTargetConfigures {
   }
 
   /**
-   * Creates a blocking interface for the given stub.
+   * Creates a blocking/future interface for the given stub.
    *
    * <p>Usage:
    *

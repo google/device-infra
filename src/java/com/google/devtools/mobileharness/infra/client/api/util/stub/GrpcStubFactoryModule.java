@@ -31,8 +31,14 @@ final class GrpcStubFactoryModule extends AbstractModule {
     MapBinder<TargetConfigurationCase, BlockingInterfaceFactory> factoryMapBinder =
         MapBinder.newMapBinder(
             binder(), TargetConfigurationCase.class, BlockingInterfaceFactory.class);
+    MapBinder<TargetConfigurationCase, GrpcFutureInterfaceFactory> futureFactoryMapBinder =
+        MapBinder.newMapBinder(
+            binder(), TargetConfigurationCase.class, GrpcFutureInterfaceFactory.class);
     install(new GrpcDirectTargetConfiguresModule());
     factoryMapBinder
+        .addBinding(TargetConfigurationCase.DIRECT_TARGET)
+        .to(GrpcDirectTargetFactory.class);
+    futureFactoryMapBinder
         .addBinding(TargetConfigurationCase.DIRECT_TARGET)
         .to(GrpcDirectTargetFactory.class);
   }

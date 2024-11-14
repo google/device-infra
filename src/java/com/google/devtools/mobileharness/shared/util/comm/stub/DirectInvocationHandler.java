@@ -16,7 +16,9 @@
 
 package com.google.devtools.mobileharness.shared.util.comm.stub;
 
+import io.grpc.StatusRuntimeException;
 import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 /**
@@ -52,6 +54,10 @@ public final class DirectInvocationHandler<T> implements InvocationHandler {
       Method stubMethod = stub.getClass().getMethod(method.getName(), method.getParameterTypes());
       return stubMethod.invoke(stub, args);
     } catch (ReflectiveOperationException e) {
+      if (e instanceof InvocationTargetException
+          && e.getCause() instanceof StatusRuntimeException) {
+        throw (StatusRuntimeException) e.getCause();
+      }
       throw new IllegalArgumentException(
           String.format(
               "Invalid method %s for the class %s", method.getName(), stub.getClass().getName()),

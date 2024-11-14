@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.infra.client.api.util.stub;
 
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.grpc.ExecTestGrpcStub;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.grpc.PrepareTestGrpcStub;
+import com.google.devtools.mobileharness.infra.master.rpc.stub.grpc.JobSyncGrpcStub;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.rpc.stub.CloudFileTransferGrpcStub;
 import com.google.devtools.mobileharness.shared.util.comm.stub.StubConfigurationProto.StubConfiguration;
 import com.google.devtools.mobileharness.shared.version.rpc.stub.grpc.VersionGrpcStub;
@@ -34,5 +35,8 @@ interface BlockingInterfaceFactory {
       StubConfiguration stubConfiguration);
 
   VersionGrpcStub.BlockingInterface createVersionBlockingInterface(
+      StubConfiguration stubConfiguration);
+
+  JobSyncGrpcStub.BlockingInterface createJobSyncBlockingInterface(
       StubConfiguration stubConfiguration);
 }

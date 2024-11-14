@@ -17,54 +17,58 @@
 package com.google.devtools.mobileharness.shared.util.comm.stub;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.util.concurrent.Futures.immediateFailedFuture;
+import static com.google.common.util.concurrent.Futures.transform;
 import static com.google.devtools.mobileharness.shared.util.comm.stub.GrpcStatusUtils.createStatusRuntimeException;
 
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.protobuf.GeneratedMessage;
 import com.google.protobuf.InvalidProtocolBufferException;
 import io.grpc.Status.Code;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
 
-/** Invocation handler for grpc blocking stub interface. */
-public abstract class BlockingInterfaceInvocationHandler<
+/** Invocation handler for gRPC future interface. */
+public abstract class GrpcFutureInterfaceInvocationHandler<
         ProxyReqT extends GeneratedMessage, ProxyRespT extends GeneratedMessage>
     implements InvocationHandler {
 
   protected final MessageTransformer<ProxyReqT, ProxyRespT> messageTransformer;
+  protected final Executor executor;
 
-  protected BlockingInterfaceInvocationHandler(
-      MessageTransformer<ProxyReqT, ProxyRespT> messageTransformer) {
+  protected GrpcFutureInterfaceInvocationHandler(
+      MessageTransformer<ProxyReqT, ProxyRespT> messageTransformer, Executor executor) {
     this.messageTransformer = messageTransformer;
+    this.executor = executor;
   }
 
-  /**
-   * Invokes the sync rpc call.
-   *
-   * @throws StatusRuntimeException if the rpc call failed.
-   */
-  protected abstract ProxyRespT syncInvoke(ProxyReqT request);
+  protected abstract ListenableFuture<ProxyRespT> futureInvoke(ProxyReqT request);
 
   @Override
   public Object invoke(Object proxy, Method method, Object[] args) {
     checkArgument(args.length == 1, "Only one argument is allowed");
-    final var rpcCall = RpcCall.parseSyncCall(method, /* reqIndex= */ 0, args[0]);
-    ProxyReqT request = getRequest(rpcCall);
+    final var rpcCall = RpcCall.parseFutureCall(method, /* reqIndex= */ 0, args[0]);
+    ProxyReqT request;
     try {
-      return messageTransformer.transformResponse(syncInvoke(request), rpcCall);
+      request = messageTransformer.transformRequest(rpcCall);
     } catch (InvalidProtocolBufferException e) {
-      throw createStatusRuntimeException(Code.DATA_LOSS, "Failed to parse the response.", e);
+      return immediateFailedFuture(
+          createStatusRuntimeException(Code.DATA_LOSS, "Failed to parse the request.", e));
     } catch (ExecutionException e) {
-      throw createStatusRuntimeException(Code.INTERNAL, "Failed to retrieve cache.", e);
+      return immediateFailedFuture(
+          createStatusRuntimeException(Code.INTERNAL, "Failed to retrieve cache.", e));
     }
+    return transform(futureInvoke(request), resp -> transformResponse(resp, rpcCall), executor);
   }
 
-  private ProxyReqT getRequest(
-      RpcCall<? extends GeneratedMessage, ? extends GeneratedMessage> rpcCall) {
+  private <RespT extends GeneratedMessage> RespT transformResponse(
+      ProxyRespT response, RpcCall<? extends GeneratedMessage, RespT> rpcCall) {
     try {
-      return messageTransformer.transformRequest(rpcCall);
+      return messageTransformer.transformResponse(response, rpcCall);
     } catch (InvalidProtocolBufferException e) {
-      throw createStatusRuntimeException(Code.DATA_LOSS, "Failed to parse the request.", e);
+      throw createStatusRuntimeException(Code.DATA_LOSS, "Failed to parse the response.", e);
     } catch (ExecutionException e) {
       throw createStatusRuntimeException(Code.INTERNAL, "Failed to retrieve cache.", e);
     }

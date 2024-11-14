@@ -19,11 +19,14 @@ package com.google.devtools.mobileharness.shared.util.comm.stub;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.collect.ImmutableList;
+import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
+import io.grpc.Channel;
 import io.grpc.ClientInterceptor;
+import io.grpc.ClientInterceptors;
 import io.grpc.ManagedChannel;
 
 /** A helper class to manage gRPC channel and an interceptor list. */
-public class MasterGrpcStubHelper {
+public class MasterGrpcStubHelper implements NonThrowingAutoCloseable {
 
   private final ManagedChannel channel;
   private final ImmutableList<ClientInterceptor> interceptors;
@@ -46,7 +49,16 @@ public class MasterGrpcStubHelper {
     return interceptors;
   }
 
+  public Channel getChannelWithInterceptors() {
+    return ClientInterceptors.intercept(getChannel(), getInterceptors());
+  }
+
   public void closeChannel() {
     channel.shutdown();
+  }
+
+  @Override
+  public void close() {
+    closeChannel();
   }
 }
