@@ -24,5 +24,7 @@ proto_library(
 
 java_proto_library(
     name = "test_args_pb_java_proto",
+    visibility = [
+    ],
     deps = [":test_args_pb"],
 )
