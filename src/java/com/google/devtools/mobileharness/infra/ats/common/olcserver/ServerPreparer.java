@@ -61,6 +61,7 @@ import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
+import com.google.devtools.mobileharness.shared.version.Version;
 import io.grpc.Status.Code;
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -101,6 +102,8 @@ public class ServerPreparer {
       "if necessary, run \"server restart -f\" command to forcibly restart OLC server (which will"
           + " also forcibly kill all running jobs submitted from this console and other consoles on"
           + " the same machine)";
+
+  private static final Version MIN_CLIENT_VERSION = new Version(0, 0, 0);
 
   private final String clientComponentName;
   private final String clientId;
@@ -203,7 +206,7 @@ public class ServerPreparer {
                 "Connected to existing OLC server, version=[%s]", shortDebugString(version));
           }
 
-          if (needKillExistingServer(firstPreparation)) {
+          if (needKillExistingServer(firstPreparation, version)) {
             killExistingServer(/* forcibly= */ false);
           } else {
             if (firstPreparation) {
@@ -447,15 +450,28 @@ public class ServerPreparer {
    * Whether the preparer needs to "kill an existing OLC server (if any) and restart a new one" when
    * preparing server, or just reuse the existing server (if any).
    */
-  private static boolean needKillExistingServer(boolean firstPreparation) {
+  private static boolean needKillExistingServer(
+      boolean firstPreparation, GetVersionResponse getVersionResponse)
+      throws MobileHarnessException {
     // Checks flag.
-    if (firstPreparation && Flags.instance().atsConsoleAlwaysRestartOlcServer.getNonNull()) {
-      logger.atInfo().log(
-          "Need to kill existing OLC server because --ats_console_always_restart_olc_server=true");
-      return true;
+    if (firstPreparation) {
+      if (Flags.instance().atsConsoleAlwaysRestartOlcServer.getNonNull()) {
+        logger.atInfo().log(
+            "Need to kill existing OLC server because"
+                + " --ats_console_always_restart_olc_server=true");
+        return true;
+      }
+      String clientVersion = getVersionResponse.getClientVersion();
+      Version version = clientVersion.isEmpty() ? new Version(0, 0, 0) : new Version(clientVersion);
+      if (version.compareTo(MIN_CLIENT_VERSION) < 0) {
+        logger.atInfo().log(
+            "Need to kill existing OLC server because the current OLC client version %s is older"
+                + " than the minimum version %s",
+            clientVersion, MIN_CLIENT_VERSION);
+        return true;
+      }
     }
 
-    // Always reuse the existing server no matter what its version is.
     return false;
   }
 

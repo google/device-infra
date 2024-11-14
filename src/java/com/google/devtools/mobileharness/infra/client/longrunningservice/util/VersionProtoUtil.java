@@ -26,7 +26,9 @@ public class VersionProtoUtil {
   /** Creates a {@link GetVersionResponse} based on the current environment. */
   public static GetVersionResponse createGetVersionResponse() {
     GetVersionResponse.Builder result =
-        GetVersionResponse.newBuilder().setLabVersion(Version.LAB_VERSION.toString());
+        GetVersionResponse.newBuilder()
+            .setLabVersion(Version.LAB_VERSION.toString())
+            .setClientVersion(Version.CLIENT_VERSION.toString());
     VersionUtil.getGitHubVersion().ifPresent(result::setGithubVersion);
     return result.setProcessId(ProcessHandle.current().pid()).build();
   }

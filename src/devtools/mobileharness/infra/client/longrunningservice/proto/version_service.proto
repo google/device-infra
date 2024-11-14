@@ -43,4 +43,9 @@ message GetVersionResponse {
   //
   // The process ID of the running server.
   int64 process_id = 3;
+
+  // Required.
+  //
+  // Version.CLIENT_VERSION.toString().
+  string client_version = 4;
 }
