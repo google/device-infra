@@ -2,7 +2,6 @@ workspace(name = "com_google_deviceinfra")
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
-
 # GoogleTest/GoogleMock framework. Used by most unit-tests.
 http_archive(
     name = "com_google_googletest",
@@ -15,10 +14,10 @@ http_archive(
 # Java rules
 http_archive(
     name = "rules_java",
+    sha256 = "4da3761f6855ad916568e2bfe86213ba6d2637f56b8360538a7fb6125abf6518",
     urls = [
         "https://github.com/bazelbuild/rules_java/releases/download/7.5.0/rules_java-7.5.0.tar.gz",
     ],
-    sha256 = "4da3761f6855ad916568e2bfe86213ba6d2637f56b8360538a7fb6125abf6518",
 )
 
 # License rules.
@@ -241,6 +240,7 @@ maven_install(
     artifacts = [
         "androidx.annotation:annotation:1.2.0",
         "androidx.core:core:1.6.0",
+        "androidx.test.services:storage:1.4.0",
         "com.beust:jcommander:1.82",
         "com.google.api-client:google-api-client:1.35.2",
         "com.google.apis:google-api-services-storage:v1-rev20211201-1.32.1",

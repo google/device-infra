@@ -23,6 +23,7 @@ java_library(
     name = "apk_analyzer",
     srcs = ["ApkAnalyzer.java"],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/platform/android/instrumentation:__subpackages__",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",

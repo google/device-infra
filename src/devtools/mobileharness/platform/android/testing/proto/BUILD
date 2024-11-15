@@ -25,6 +25,7 @@ proto_library(
 java_proto_library(
     name = "test_args_pb_java_proto",
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/platform/android/instrumentation:__subpackages__",
     ],
     deps = [":test_args_pb"],
 )
