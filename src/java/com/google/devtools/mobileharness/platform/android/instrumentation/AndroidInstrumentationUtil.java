@@ -52,6 +52,7 @@ import com.google.wireless.qa.mobileharness.shared.android.Aapt;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidInstrumentationDriverSpec;
 import com.google.wireless.qa.mobileharness.shared.api.spec.EntryDelimiterSpec;
+import com.google.wireless.qa.mobileharness.shared.api.spec.SplitMethodSpec;
 import com.google.wireless.qa.mobileharness.shared.constant.DirCommon;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidInstrumentation;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -1082,6 +1083,25 @@ public class AndroidInstrumentationUtil {
                 logger);
       }
     }
+  }
+
+  /**
+   * Checks if need to show raw results for the "am instrument" command call.
+   *
+   * @param testInfo The target {@code testInfo} of this test
+   */
+  public boolean showRawResultsIfNeeded(TestInfo testInfo)
+      throws MobileHarnessException, InterruptedException {
+    boolean showRawResults = false;
+    if (testInfo.jobInfo().params().isTrue(AndroidInstrumentationDriverSpec.PARAM_SPLIT_METHODS)) {
+      testInfo
+          .properties()
+          .add(
+              SplitMethodSpec.PROPERTY_METHOD_DELIMITER,
+              AndroidInstrumentationDriverSpec.METHODS_DELIMITER);
+      showRawResults = true;
+    }
+    return showRawResults;
   }
 
   /** Check the external storage path is not null. */
