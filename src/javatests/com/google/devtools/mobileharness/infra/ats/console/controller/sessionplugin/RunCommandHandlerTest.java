@@ -168,6 +168,7 @@ public final class RunCommandHandlerTest {
             .setHtmlInZip(true)
             .addAllIncludeFilter(ImmutableList.of("filter_1", "filter_2"))
             .addAllExcludeFilter(ImmutableList.of("exclude_filter_1", "exclude_filter_2"))
+            .addAllModuleArg(ImmutableList.of("module:arg_1:value_1", "module:arg_2:value_2"))
             .addAllExtraArg(ImmutableList.of("arg1", "arg2"))
             .setTestName("test_name")
             .setShardCount(10)
@@ -197,6 +198,8 @@ public final class RunCommandHandlerTest {
     assertThat(sessionRequestInfo.includeFilters()).containsExactly("filter_1", "filter_2");
     assertThat(sessionRequestInfo.excludeFilters())
         .containsExactly("exclude_filter_1", "exclude_filter_2");
+    assertThat(sessionRequestInfo.moduleArgs())
+        .containsExactly("module:arg_1:value_1", "module:arg_2:value_2");
     assertThat(sessionRequestInfo.extraArgs()).containsExactly("arg1", "arg2");
     assertThat(sessionRequestInfo.testName()).hasValue("test_name");
     assertThat(sessionRequestInfo.shardCount()).hasValue(10);

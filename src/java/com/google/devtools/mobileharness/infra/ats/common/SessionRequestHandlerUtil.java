@@ -34,9 +34,13 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
+import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ListMultimap;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -59,6 +63,7 @@ import com.google.devtools.mobileharness.platform.android.xts.config.proto.Confi
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Device;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.DeviceConfigurationProto.DeviceConfigurations;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.DeviceConfigurationProto.ModuleDeviceConfiguration;
+import com.google.devtools.mobileharness.platform.android.xts.suite.ModuleArg;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteTestFilter;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper.DeviceInfo;
@@ -87,7 +92,9 @@ import java.net.URLEncoder;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -761,6 +768,13 @@ public class SessionRequestHandlerUtil {
     DeviceConfigurations xtsDeviceConfig = readXtsDeviceConfigFile(xtsDeviceConfigFile);
     ImmutableMap<String, ModuleDeviceConfiguration> moduleDeviceConfigurations =
         groupXtsDeviceConfig(xtsDeviceConfig);
+    ImmutableListMultimap.Builder<String, ModuleArg> moduleArgMapBuilder =
+        ImmutableListMultimap.builder();
+    for (String moduleArgStr : sessionRequestInfo.moduleArgs()) {
+      ModuleArg moduleArg = ModuleArg.create(moduleArgStr);
+      moduleArgMapBuilder.put(moduleArg.moduleName(), moduleArg);
+    }
+    ImmutableListMultimap<String, ModuleArg> moduleArgMap = moduleArgMapBuilder.build();
 
     for (Entry<String, Configuration> entry :
         sessionRequestInfo.expandedModules().entrySet().stream()
@@ -769,7 +783,7 @@ public class SessionRequestHandlerUtil {
       String originalModuleName = entry.getValue().getMetadata().getXtsModule();
       String expandedModuleName = entry.getKey();
       // If it has a subplan(either from the retry command or the subplan command), do a early check
-      // for whether the module should be ran
+      // for whether the module should be run
       if (subPlan != null
           && !subPlan.getNonTfIncludeFiltersMultimap().containsKey(expandedModuleName)) {
         continue;
@@ -865,9 +879,11 @@ public class SessionRequestHandlerUtil {
                 entry.getValue(),
                 moduleDeviceConfigurations.getOrDefault(
                     originalModuleName, /* defaultValue= */ null),
+                originalModuleName,
                 expandedModuleName,
                 moduleAbi,
                 moduleParameter,
+                moduleArgMap,
                 matchedTestCases,
                 jobTimeout,
                 testTimeout,
@@ -961,9 +977,11 @@ public class SessionRequestHandlerUtil {
       Path moduleConfigPath,
       Configuration moduleConfig,
       @Nullable ModuleDeviceConfiguration moduleDeviceConfig,
+      String originalModuleName,
       String expandedModuleName,
       @Nullable String moduleAbi,
       @Nullable String moduleParameter,
+      ImmutableMultimap<String, ModuleArg> moduleArgMap,
       ImmutableList<String> matchedTestCases,
       Duration jobTimeout,
       Duration testTimeout,
@@ -980,6 +998,30 @@ public class SessionRequestHandlerUtil {
             XtsDirUtil.getXtsTestCasesDir(xtsRootDir, xtsType).toFile());
 
     moduleConfigurationHelper.updateJobInfo(jobInfo, moduleConfig, moduleDeviceConfig, fileDepDirs);
+
+    // Add job params and files from module args. Support module name with abi and parameter.
+    Map<String, String> params = new HashMap<>();
+    ListMultimap<String, String> files = ArrayListMultimap.create();
+    getModuleArgs(originalModuleName, moduleArgMap, params, files);
+    if (!isNullOrEmpty(moduleParameter)) {
+      getModuleArgs(
+          String.format("%s[%s]", originalModuleName, moduleParameter),
+          moduleArgMap,
+          params,
+          files);
+    }
+    if (!isNullOrEmpty(moduleAbi)) {
+      getModuleArgs(
+          String.format("%s %s", moduleAbi, originalModuleName), moduleArgMap, params, files);
+    }
+    if (!isNullOrEmpty(moduleAbi) && !isNullOrEmpty(moduleParameter)) {
+      getModuleArgs(expandedModuleName, moduleArgMap, params, files);
+    }
+    jobInfo.params().addAll(params);
+    for (Entry<String, Collection<String>> file : files.asMap().entrySet()) {
+      jobInfo.files().replaceAll(file.getKey(), file.getValue());
+    }
+
     jobInfo.properties().add(Job.IS_XTS_NON_TF_JOB, "true");
     jobInfo
         .properties()
@@ -1198,5 +1240,19 @@ public class SessionRequestHandlerUtil {
         || (isRunRetry(sessionRequestInfo.testPlan())
             && subPlan != null
             && subPlan.getPreviousSessionDeviceBuildFingerprint().orElse("").isEmpty());
+  }
+
+  private static void getModuleArgs(
+      String moduleIdentifier,
+      ImmutableMultimap<String, ModuleArg> moduleArgMap,
+      Map<String, String> params,
+      ListMultimap<String, String> files) {
+    for (ModuleArg moduleArg : moduleArgMap.get(moduleIdentifier)) {
+      if (moduleArg.isFile()) {
+        files.put(moduleArg.argName(), moduleArg.argValue());
+      } else {
+        params.put(moduleArg.argName(), moduleArg.argValue());
+      }
+    }
   }
 }

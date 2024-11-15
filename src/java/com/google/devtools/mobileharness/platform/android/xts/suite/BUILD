@@ -102,6 +102,21 @@ java_library(
 )
 
 java_library(
+    name = "module_arg",
+    srcs = ["ModuleArg.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/command:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/suite:__pkg__",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/api/model/error:exception_factory",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+    ],
+)
+
+java_library(
     name = "suite_common",
     srcs = ["SuiteCommon.java"],
     visibility = [

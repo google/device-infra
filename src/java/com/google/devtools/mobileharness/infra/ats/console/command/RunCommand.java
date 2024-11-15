@@ -52,6 +52,7 @@ import com.google.devtools.mobileharness.infra.ats.console.util.subplan.SubPlanL
 import com.google.devtools.mobileharness.platform.android.shared.constant.Splitters;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsCommandUtil;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
+import com.google.devtools.mobileharness.platform.android.xts.suite.ModuleArg;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryType;
 import com.google.devtools.mobileharness.shared.util.command.CommandException;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
@@ -284,6 +285,12 @@ public final class RunCommand implements Callable<Integer> {
       description = "Show the help all message.")
   private boolean showHelpAll;
 
+  @Option(
+      names = {"--module-arg", "--compatibility:module-arg"},
+      paramLabel = "\"<module_name>:<arg_name>:[<arg_key>:=]<arg_value>\"",
+      description = "Arguments to pass to a module.")
+  private List<String> moduleCmdArgs;
+
   @Parameters(index = "1..*", hidden = true)
   private List<String> extraRunCmdArgs;
 
@@ -472,6 +479,8 @@ public final class RunCommand implements Callable<Integer> {
     if (!this.getTest().isEmpty()) {
       sessionRequestBuilder.setTestName(this.getTest());
     }
+    ImmutableList<String> moduleArgs =
+        moduleCmdArgs != null ? ImmutableList.copyOf(moduleCmdArgs) : ImmutableList.of();
     ImmutableList<String> extraArgs =
         extraRunCmdArgs != null ? ImmutableList.copyOf(extraRunCmdArgs) : ImmutableList.of();
     if (this.retryType != null) {
@@ -481,7 +490,7 @@ public final class RunCommand implements Callable<Integer> {
     if (isSkipDeviceInfo().isPresent()) {
       sessionRequestBuilder.setSkipDeviceInfo(isSkipDeviceInfo().get());
     }
-    return sessionRequestBuilder.setExtraArgs(extraArgs);
+    return sessionRequestBuilder.setModuleArgs(moduleArgs).setExtraArgs(extraArgs);
   }
 
   @VisibleForTesting
@@ -525,6 +534,19 @@ public final class RunCommand implements Callable<Integer> {
       throw new ParameterException(
           spec.commandLine(),
           Ansi.AUTO.string(String.format("Subplan [%s] doesn't exist.\n", subPlanName)));
+    }
+    if (moduleCmdArgs != null && !moduleCmdArgs.isEmpty()) {
+      for (String moduleArg : moduleCmdArgs) {
+        if (!ModuleArg.isValid(moduleArg)) {
+          throw new ParameterException(
+              spec.commandLine(),
+              Ansi.AUTO.string(
+                  String.format(
+                      "Invalid module arguments provided. Unprocessed arguments: %s\n"
+                          + "Expected format: <module_name>:<arg_name>:[<arg_key>:=]<arg_value>.\n",
+                      moduleArg)));
+        }
+      }
     }
     validateRunCommandExtraArgs();
   }
@@ -659,6 +681,8 @@ public final class RunCommand implements Callable<Integer> {
             ? ImmutableList.of()
             : ImmutableList.copyOf(this.excludeFilters);
 
+    ImmutableList<String> moduleArgs =
+        moduleCmdArgs != null ? ImmutableList.copyOf(moduleCmdArgs) : ImmutableList.of();
     ImmutableList<String> extraArgs =
         extraRunCmdArgs != null ? ImmutableList.copyOf(extraRunCmdArgs) : ImmutableList.of();
 
@@ -685,7 +709,11 @@ public final class RunCommand implements Callable<Integer> {
       runCommand.setPythonPkgIndexUrl(consoleInfo.getPythonPackageIndexUrl().get());
     }
 
-    runCommand.setTestPlan(config).addAllModuleName(modules).addAllExtraArg(extraArgs);
+    runCommand
+        .setTestPlan(config)
+        .addAllModuleName(modules)
+        .addAllModuleArg(moduleArgs)
+        .addAllExtraArg(extraArgs);
     if (!test.isEmpty()) {
       runCommand.setTestName(test);
     }

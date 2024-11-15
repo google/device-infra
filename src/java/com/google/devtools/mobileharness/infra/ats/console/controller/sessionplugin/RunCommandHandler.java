@@ -318,6 +318,7 @@ class RunCommandHandler {
             .setReportSystemCheckers(runCommand.getReportSystemCheckers())
             .setIncludeFilters(runCommand.getIncludeFilterList())
             .setExcludeFilters(runCommand.getExcludeFilterList())
+            .setModuleArgs(runCommand.getModuleArgList())
             .setExtraArgs(runCommand.getExtraArgList());
     if (runCommand.hasSkipDeviceInfo()) {
       builder.setSkipDeviceInfo(runCommand.getSkipDeviceInfo());

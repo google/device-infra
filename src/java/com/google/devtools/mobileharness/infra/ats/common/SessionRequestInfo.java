@@ -79,6 +79,8 @@ public abstract class SessionRequestInfo {
   /** Must be set if retrySessionId is set. This is for ATS Server retry. */
   public abstract Optional<String> retryResultDir();
 
+  public abstract ImmutableList<String> moduleArgs();
+
   public abstract ImmutableList<String> extraArgs();
 
   public abstract String xtsType();
@@ -141,6 +143,7 @@ public abstract class SessionRequestInfo {
         .setDeviceProperties(ImmutableMap.of())
         .setIncludeFilters(ImmutableList.of())
         .setExcludeFilters(ImmutableList.of())
+        .setModuleArgs(ImmutableList.of())
         .setExtraArgs(ImmutableList.of())
         .setGivenMatchedNonTfModules(ImmutableSet.of())
         .setV2ConfigsMap(ImmutableMap.of())
@@ -193,6 +196,8 @@ public abstract class SessionRequestInfo {
     public abstract Builder setRetryType(RetryType retryType);
 
     public abstract Builder setRetryResultDir(String retryResultDir);
+
+    public abstract Builder setModuleArgs(List<String> moduleArgs);
 
     public abstract Builder setExtraArgs(List<String> extraArgs);
 

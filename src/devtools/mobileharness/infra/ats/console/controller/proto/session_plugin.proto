@@ -151,6 +151,9 @@ message RunCommand {
 
   // Optional. Whether device info collection should be skipped.
   optional bool skip_device_info = 28;
+
+  // Optional.
+  repeated string module_arg = 29;
 }
 
 message RunCommandState {

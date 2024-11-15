@@ -139,6 +139,17 @@ public final class RunCommandTest {
   }
 
   @Test
+  public void validateCommandParameters_invalidModuleArgs() {
+    commandLine.parseArgs("cts", "--module-arg", "arg");
+
+    assertThat(assertThrows(ParameterException.class, () -> runCommand.validateCommandParameters()))
+        .hasMessageThat()
+        .contains(
+            "Invalid module arguments provided. Unprocessed arguments: arg\nExpected format:"
+                + " <module_name>:<arg_name>:[<arg_key>:=]<arg_value>.\n");
+  }
+
+  @Test
   public void parseArgs_propertyIsNotKeyValuePair() {
     assertThat(
             assertThrows(

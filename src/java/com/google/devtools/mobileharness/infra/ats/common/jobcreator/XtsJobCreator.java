@@ -194,31 +194,30 @@ public abstract class XtsJobCreator {
       runCommandArgsSet =
           moduleShardingArgsGenerator.generateShardingArgs(sessionRequestInfo, tfModules);
     } else {
-      ImmutableList<String> moduleArgs;
+      ImmutableList<String> moduleFilters;
       if (SessionRequestHandlerUtil.isRunRetry(sessionRequestInfo.testPlan())) {
         if (SessionHandlerHelper.useTfRetry()) {
           // For "run retry" command handled by TF, pass the original modules to TF
-          moduleArgs =
+          moduleFilters =
               sessionRequestInfo.moduleNames().stream()
                   .map(module -> String.format("-m %s", module))
                   .collect(toImmutableList());
         } else {
           // For "run retry" command handled by the console, the given modules have been processed
           // when generating the subplan above, no need to pass these again to underneath TF
-          moduleArgs = ImmutableList.of();
+          moduleFilters = ImmutableList.of();
         }
       } else {
-        moduleArgs =
+        moduleFilters =
             tfModules.stream()
                 .map(module -> String.format("-m %s", module))
                 .collect(toImmutableList());
       }
-      ImmutableList<String> extraArgs = sessionRequestInfo.extraArgs();
       String sessionRequestInfoArgs =
           Joiner.on(' ')
               .join(
                   Streams.concat(
-                          moduleArgs.stream(),
+                          moduleFilters.stream(),
                           testNameArg.stream(),
                           shardCountArg.stream(),
                           // For "run retry" command, the passed in include filters and exclude
@@ -240,7 +239,10 @@ public abstract class XtsJobCreator {
                                           String.format("--exclude-filter \"%s\"", excludeFilter)),
                           reportSystemCheckersArg.stream(),
                           skipDeviceInfoArg.stream(),
-                          extraArgs.stream()
+                          sessionRequestInfo.moduleArgs().stream()
+                              .map(arg -> arg.replace("\"", "\\\""))
+                              .map(arg -> String.format("--module-arg \"%s\"", arg)),
+                          sessionRequestInfo.extraArgs().stream()
                               .map(arg -> arg.replace("\"", "\\\""))
                               .map(arg -> arg.contains(" ") ? String.format("\"%s\"", arg) : arg))
                       .collect(toImmutableList()));
@@ -477,11 +479,7 @@ public abstract class XtsJobCreator {
         .collect(toImmutableSet());
   }
 
-  /**
-   * Prepares retry parameters/properties for Tradefed.
-   *
-   * @return true if params/properties are prepared successfully.
-   */
+  /** Prepares retry parameters/properties for Tradefed. */
   protected abstract void prepareTfRetry(
       SessionRequestInfo sessionRequestInfo,
       Map<String, String> driverParams,

@@ -569,7 +569,7 @@ public final class SessionRequestHandlerUtilTest {
         .when(sessionRequestHandlerUtil)
         .getTestSuiteHelper(any(), any(), any());
     when(testSuiteHelper.loadTests(any()))
-        .thenReturn(ImmutableMap.of("module1", config1, "module2", config2));
+        .thenReturn(ImmutableMap.of("arm64-v8a module1", config1, "arm64-v8a module2", config2));
 
     when(localFileUtil.isDirExist(Path.of(XTS_ROOT_DIR_PATH))).thenReturn(true);
     when(localFileUtil.isFileExist(any(Path.class))).thenReturn(true);
@@ -931,5 +931,30 @@ public final class SessionRequestHandlerUtilTest {
 
     assertThat(jobInfos).hasSize(1);
     assertThat(jobInfos.get(0).params().get(MOBLY_TEST_SELECTOR_KEY)).isEqualTo("test3");
+  }
+
+  @Test
+  public void createXtsNonTradefedJobs_withModuleArgs() throws Exception {
+    setUpForCreateXtsNonTradefedJobs();
+    String file1 = folder.newFile().getAbsolutePath();
+    String file2 = folder.newFile().getAbsolutePath();
+    SessionRequestInfo sessionRequestInfo =
+        sessionRequestHandlerUtil.addNonTradefedModuleInfo(
+            defaultSessionRequestInfoBuilder()
+                .setModuleArgs(
+                    ImmutableList.of(
+                        "module1:option:value",
+                        "module1:config:file:=" + file1,
+                        "arm64-v8a module1:config:file:=" + file2))
+                .build());
+    ImmutableList<JobInfo> jobInfos =
+        sessionRequestHandlerUtil.createXtsNonTradefedJobs(
+            sessionRequestInfo, testPlanFilter, null, ImmutableMap.of());
+
+    assertThat(jobInfos).hasSize(2);
+    assertThat(jobInfos.get(0).params().get("option")).isEqualTo("value");
+    assertThat(jobInfos.get(1).params().get("option")).isNull();
+    assertThat(jobInfos.get(0).files().get("config")).containsExactly(file1, file2);
+    assertThat(jobInfos.get(1).files().get("config")).isEmpty();
   }
 }
