@@ -86,7 +86,7 @@ public class AtsFileServerFileResolver extends AbstractFileResolver {
             createCommandExecutor()
                 .run(
                     Command.of("curl", "-o", destination, "-fL", httpSourcePath)
-                        .timeout(Duration.ofMinutes(60)));
+                        .timeout(Duration.ofHours(2)));
         logger.atInfo().log(
             "Output of ats file server downloader for downloading file %s: %s",
             httpSourcePath, output);
