@@ -1,0 +1,65 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto2";
+
+package mobileharness.shared.spec;
+
+import "src/java/com/google/wireless/qa/mobileharness/shared/proto/spec/base_spec.proto";
+
+option java_package = "com.google.wireless.qa.mobileharness.shared.proto.spec.decorator";
+option java_multiple_files = true;
+
+// Specs for {@link AndroidDesktopOtaUpdateDecorator}
+// Next tag: 5
+message AndroidDesktopOtaUpdateDecoratorSpec {
+  extend DecoratorSpec {
+    optional AndroidDesktopOtaUpdateDecoratorSpec ext = 1009;
+  }
+
+  optional bool wipe_user_data = 1 [
+    default = true,
+    (field_detail) = {
+      help: "If true user data will be wiped after OTA update,"
+            "otherwise it will be retained. Default  is true."
+    }
+  ];
+
+  optional string ota_tools = 2 [(file_detail) = {
+    is_required: true,
+    help: "The otatools.zip file containing the update_device script."
+          "Example: "
+          "'ota_tools': ['android-build::branch=git_main-al-dev,"
+          "target=brya-trunk_staging-userdebug, file=otatools.zip,"
+          "build_id=LATEST']"
+  }];
+
+  optional string ota_package = 3 [(file_detail) = {
+    is_required: true,
+    help: "The ota package file."
+          "Example: "
+          "'ota_package': ['android-build::branch=git_main-al-dev,"
+          "target=brya-trunk_staging-userdebug, file=*-ota-*.zip,"
+          "build_id=LATEST']"
+  }];
+
+  optional bool force_ota_update = 4 [
+    default = false,
+    (field_detail) = {
+      help: "If true, force OTA update even if the device is already up to date."
+    }
+  ];
+}
