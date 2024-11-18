@@ -29,3 +29,13 @@ java_proto_library(
     ],
     deps = [":test_args_pb"],
 )
+
+proto_library(
+    name = "test_info_pb",
+    srcs = ["test_info.proto"],
+)
+
+java_proto_library(
+    name = "test_info_pb_java_proto",
+    deps = [":test_info_pb"],
+)
