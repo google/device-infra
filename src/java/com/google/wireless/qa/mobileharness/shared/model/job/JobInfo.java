@@ -270,9 +270,7 @@ public class JobInfo extends JobScheduleUnit {
             timing(),
             setting()
                 .getRemoteFileDir()
-                .map(
-                    remoteFileDir ->
-                        PathUtil.join(remoteFileDir, "j_" + locator().getId(), "genfiles")));
+                .map(remoteFileDir -> PathUtil.join(remoteFileDir, "j_" + locator().getId())));
     remoteRunFiles =
         new RemoteFiles(
             timing(),
