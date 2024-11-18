@@ -78,6 +78,9 @@ java_proto_library(
 proto_library(
     name = "lab_proto",
     srcs = ["lab.proto"],
+    deps = [
+        ":universe_proto",
+    ],
 )
 
 java_proto_library(
@@ -90,6 +93,9 @@ py_proto_library(
     srcs = [
         "lab.proto",
     ],
+    deps = [
+        ":universe_py_proto",
+    ],
 )
 
 proto_library(
@@ -101,4 +107,21 @@ proto_library(
 java_proto_library(
     name = "test_java_proto",
     deps = [":test_proto"],
+)
+
+proto_library(
+    name = "universe_proto",
+    srcs = ["universe.proto"],
+)
+
+java_proto_library(
+    name = "universe_java_proto",
+    deps = [":universe_proto"],
+)
+
+py_proto_library(
+    name = "universe_py_proto",
+    srcs = [
+        "universe.proto",
+    ],
 )
