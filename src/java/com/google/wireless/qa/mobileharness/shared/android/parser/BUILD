@@ -21,6 +21,7 @@ java_library(
         "AndroidInstrumentationParser.java",
     ],
     visibility = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__subpackages__",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",

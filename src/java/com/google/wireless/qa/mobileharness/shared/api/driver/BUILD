@@ -70,6 +70,44 @@ java_library(
 ################################################################################
 
 java_library(
+    name = "android_instrumentation",
+    srcs = ["AndroidInstrumentation.java"],
+    deps = [
+        ":base_driver",
+        "//src/devtools/mobileharness/api/model/proto:test_java_proto",
+        "//src/devtools/mobileharness/platform/android/testing/proto:test_info_pb_java_proto",
+        "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/platform/android/event/util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/instrumentation:android_instrumentation_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/lightning/apkinstaller",
+        "//src/java/com/google/devtools/mobileharness/platform/android/lightning/systemsetting",
+        "//src/java/com/google/devtools/mobileharness/platform/android/packagemanager:android_package_manager_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/base",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/path",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/android:aapt",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/android/parser:android_instrumentation_parser",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:android_instrumentation_driver_spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:entry_delimiter_spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/step/android:install_apk_step",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/comm/message",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:android_instrumentation_spec_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/util:device",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
     name = "android_native_bin",
     srcs = ["AndroidNativeBin.java"],
     deps = [
