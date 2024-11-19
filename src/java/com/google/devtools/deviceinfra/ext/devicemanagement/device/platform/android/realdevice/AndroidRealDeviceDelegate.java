@@ -246,7 +246,7 @@ public abstract class AndroidRealDeviceDelegate {
       throws MobileHarnessException, InterruptedException;
 
   /** Extra things for device set up in the {@link #setUp()} */
-  protected abstract void extrasInSetUp() throws InterruptedException;
+  protected abstract void extrasInSetUp() throws MobileHarnessException, InterruptedException;
 
   private void setUpFastbootModeDevice() throws MobileHarnessException, InterruptedException {
     logger.atInfo().log("Setting up fastboot mode device for device %s", deviceId);
