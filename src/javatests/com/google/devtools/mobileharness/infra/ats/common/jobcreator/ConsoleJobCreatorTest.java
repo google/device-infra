@@ -119,6 +119,7 @@ public final class ConsoleJobCreatorTest {
             .setCommandLineArgs("cts")
             .setXtsType("cts")
             .setXtsRootDir(XTS_ROOT_DIR_PATH)
+            .setModuleNames(ImmutableList.of("mock_module"))
             .build();
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
 

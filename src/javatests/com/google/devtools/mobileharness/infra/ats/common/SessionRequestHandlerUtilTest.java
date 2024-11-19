@@ -447,21 +447,21 @@ public final class SessionRequestHandlerUtilTest {
                     .setIncludeFilters(ImmutableList.of("module1"))
                     .setExcludeFilters(ImmutableList.of("module2"))
                     .build()))
-        .isEmpty();
+        .containsExactly("module1");
 
     assertThat(
             sessionRequestHandlerUtil.getFilteredTradefedModules(
                 defaultSessionRequestInfoBuilder()
                     .setIncludeFilters(ImmutableList.of("arm64-v8a module1 TestClass#TestCase"))
                     .build()))
-        .isEmpty();
+        .containsExactly("module1");
 
     assertThat(
             sessionRequestHandlerUtil.getFilteredTradefedModules(
                 defaultSessionRequestInfoBuilder()
                     .setExcludeFilters(ImmutableList.of("module1", "arm64-v8a module2"))
                     .build()))
-        .isEmpty();
+        .containsExactly("module2");
 
     assertThat(
             sessionRequestHandlerUtil.getFilteredTradefedModules(
@@ -469,7 +469,7 @@ public final class SessionRequestHandlerUtilTest {
                     .setIncludeFilters(
                         ImmutableList.of("arm64-v8a module1[instant] TestClass#TestCase"))
                     .build()))
-        .isEmpty();
+        .containsExactly("module1");
 
     assertThat(
             sessionRequestHandlerUtil.getFilteredTradefedModules(

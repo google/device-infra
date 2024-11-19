@@ -209,9 +209,11 @@ public abstract class XtsJobCreator {
         }
       } else {
         moduleFilters =
-            tfModules.stream()
-                .map(module -> String.format("-m %s", module))
-                .collect(toImmutableList());
+            sessionRequestInfo.moduleNames().isEmpty()
+                ? ImmutableList.of()
+                : tfModules.stream()
+                    .map(module -> String.format("-m %s", module))
+                    .collect(toImmutableList());
       }
       String sessionRequestInfoArgs =
           Joiner.on(' ')

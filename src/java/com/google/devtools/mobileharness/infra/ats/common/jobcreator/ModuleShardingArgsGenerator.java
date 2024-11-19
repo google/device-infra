@@ -24,13 +24,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Streams;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.ShardConstants;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteTestFilter;
 import java.util.HashMap;
 import java.util.stream.Stream;
-import javax.inject.Inject;
 
 /** A generator to generate sharding args for the sharding mode - {@code ShardingMode.MODULE}. */
 class ModuleShardingArgsGenerator {
@@ -41,24 +39,11 @@ class ModuleShardingArgsGenerator {
   // Shard number for a single large module
   @VisibleForTesting static final int LARGE_MODULE_SHARDS = 5;
 
-  private final SessionRequestHandlerUtil sessionRequestHandlerUtil;
-
-  @Inject
-  ModuleShardingArgsGenerator(SessionRequestHandlerUtil sessionRequestHandlerUtil) {
-    this.sessionRequestHandlerUtil = sessionRequestHandlerUtil;
-  }
-
   @VisibleForTesting
   ImmutableSet<String> generateShardingArgs(
       SessionRequestInfo sessionRequestInfo, ImmutableList<String> tfModules)
       throws MobileHarnessException {
-    ImmutableSet<String> targetModules =
-        tfModules.isEmpty()
-            ? ImmutableSet.<String>builder()
-                .addAll(sessionRequestHandlerUtil.getAllLocalTradefedModules(sessionRequestInfo))
-                .addAll(sessionRequestHandlerUtil.getStaticMctsModules())
-                .build()
-            : ImmutableSet.copyOf(tfModules);
+    ImmutableSet<String> targetModules = ImmutableSet.copyOf(tfModules);
 
     ImmutableList<SuiteTestFilter> originalIncludeFilters =
         sessionRequestInfo.includeFilters().stream()

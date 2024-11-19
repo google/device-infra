@@ -136,6 +136,7 @@ public final class ServerJobCreatorTest {
             .setXtsType("cts")
             .setXtsRootDir(XTS_ROOT_DIR_PATH)
             .setAndroidXtsZip(ANDROID_XTS_ZIP_PATH)
+            .setModuleNames(ImmutableList.of("mock_module"))
             .build();
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
 
@@ -197,6 +198,7 @@ public final class ServerJobCreatorTest {
             .setXtsRootDir(XTS_ROOT_DIR_PATH)
             .setAndroidXtsZip(ANDROID_XTS_ZIP_PATH)
             .setTestPlanFile("ats-file-server::/path/to/test_plan")
+            .setModuleNames(ImmutableList.of("mock_module"))
             .build();
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
 
@@ -410,6 +412,7 @@ public final class ServerJobCreatorTest {
             .setXtsRootDir(xtsRootDir.getAbsolutePath())
             .setAndroidXtsZip(xtsZipPath.getAbsolutePath())
             .setSubPlanName("subplan1")
+            .setModuleNames(ImmutableList.of("mock_module"))
             .build();
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
 
@@ -458,6 +461,7 @@ public final class ServerJobCreatorTest {
             .setXtsRootDir(xtsRootDir.getAbsolutePath())
             .setAndroidXtsZip(xtsZipPath.getAbsolutePath())
             .setSubPlanName("subplan2")
+            .setModuleNames(ImmutableList.of("mock_module"))
             .build();
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
 

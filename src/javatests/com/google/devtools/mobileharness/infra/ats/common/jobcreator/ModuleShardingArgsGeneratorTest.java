@@ -51,7 +51,7 @@ public final class ModuleShardingArgsGeneratorTest {
 
   @Before
   public void setup() throws Exception {
-    moduleShardingArgsGenerator = new ModuleShardingArgsGenerator(sessionRequestHandlerUtil);
+    moduleShardingArgsGenerator = new ModuleShardingArgsGenerator();
   }
 
   @Test
@@ -137,6 +137,7 @@ public final class ModuleShardingArgsGeneratorTest {
     assertThat(nonShardingArgs).contains("-m mock_module");
   }
 
+  @SuppressWarnings("DirectInvocationOnMock")
   @Test
   public void generateShardingArgs_withAllModules() throws Exception {
     ImmutableSet.Builder<String> allLocalModulesBuilder = ImmutableSet.builder();
@@ -158,8 +159,14 @@ public final class ModuleShardingArgsGeneratorTest {
     when(sessionRequestHandlerUtil.getAllLocalTradefedModules(eq(sessionRequestInfo)))
         .thenReturn(allLocalModulesBuilder.build());
 
+    ImmutableList<String> targetModules =
+        ImmutableList.<String>builder()
+            .addAll(sessionRequestHandlerUtil.getAllLocalTradefedModules(sessionRequestInfo))
+            .addAll(sessionRequestHandlerUtil.getStaticMctsModules())
+            .build();
+
     ImmutableSet<String> shardingArgs =
-        moduleShardingArgsGenerator.generateShardingArgs(sessionRequestInfo, ImmutableList.of());
+        moduleShardingArgsGenerator.generateShardingArgs(sessionRequestInfo, targetModules);
 
     assertThat(shardingArgs).hasSize(SHARD_MODULE_SHARDS + LARGE_MODULE_SHARDS + 2);
     for (int index = 0; index < SHARD_MODULE_SHARDS; index++) {

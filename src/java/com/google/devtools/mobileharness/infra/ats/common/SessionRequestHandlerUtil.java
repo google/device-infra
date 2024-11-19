@@ -387,8 +387,7 @@ public class SessionRequestHandlerUtil {
    *
    * <p>The list of modules is filtered by include/exclude filters and the given module names.
    *
-   * @return a list of filtered tradefed modules if the given modules are not empty. Or an empty
-   *     list if the given modules are empty.
+   * @return a list of filtered tradefed modules.
    * @throws MobileHarnessException if no tradefed modules could satisfy the given filters.
    */
   public ImmutableList<String> getFilteredTradefedModules(SessionRequestInfo sessionRequestInfo)
@@ -450,7 +449,7 @@ public class SessionRequestHandlerUtil {
           /* cause= */ null);
     }
 
-    return sessionRequestInfo.moduleNames().isEmpty() ? ImmutableList.of() : filteredModules;
+    return filteredModules;
   }
 
   /** Initializes a {@link JobConfig} for a tradefed job. */
