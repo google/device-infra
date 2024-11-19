@@ -50,7 +50,7 @@ public class CacheFileResolver extends AbstractFileResolver {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private static final Duration SUCCEED_CACHE_EXPIRATION_TIME = Duration.ofHours(3);
-  private static final Duration FAIL_CACHE_EXPIRATION_TIME = Duration.ofMinutes(30);
+  private static final Duration FAIL_CACHE_EXPIRATION_TIME = Duration.ofMinutes(3);
 
   /** The files and parameters to be resolved. */
   @AutoValue

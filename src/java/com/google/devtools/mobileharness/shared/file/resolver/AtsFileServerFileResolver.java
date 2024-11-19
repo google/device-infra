@@ -51,6 +51,8 @@ public class AtsFileServerFileResolver extends AbstractFileResolver {
   public static final String PARAM_RESOLVE_ATS_FILE_SERVER_FILES_IN_LAB =
       "resolve_ats_file_server_files_in_lab";
 
+  private static final int MAX_DOWNLOAD_ATTEMPTS = 3;
+
   private final LocalFileUtil localFileUtil;
 
   public AtsFileServerFileResolver(
@@ -80,35 +82,54 @@ public class AtsFileServerFileResolver extends AbstractFileResolver {
               PathUtil.join("file", UrlEscapers.urlFragmentEscaper().escape(sourcePath)));
       try {
         httpSourcePath = new URI(httpSourcePath).normalize().toString();
-        String destination = PathUtil.join(resolveSource.targetDir(), sourcePath);
-        localFileUtil.prepareParentDir(destination);
-        String output =
-            createCommandExecutor()
-                .run(
-                    Command.of("curl", "-o", destination, "-fL", httpSourcePath)
-                        .timeout(Duration.ofHours(2)));
-        logger.atInfo().log(
-            "Output of ats file server downloader for downloading file %s: %s",
-            httpSourcePath, output);
-        return ResolveResult.create(
-            ImmutableList.of(destination), ImmutableMap.of(), resolveSource);
       } catch (URISyntaxException e) {
         throw new MobileHarnessException(
             BasicErrorId.HTTP_INVALID_FILE_PATH_ERROR,
             String.format("Invalid file path %s in ats file server.", httpSourcePath),
             e);
-      } catch (CommandException e) {
-        if (e instanceof CommandFailureException) {
-          CommandResult result = ((CommandFailureException) e).result();
-          logger.atWarning().log(
-              "Logs of failed ats file downloader: STDOUT: %s\nSTDERR: %s",
-              result.stdout(), result.stderr());
-        }
-        throw new MobileHarnessException(
-            BasicErrorId.ATS_FILE_SERVER_RESOLVE_FILE_ERROR,
-            String.format("Failed to download file %s from ats file server.", httpSourcePath),
-            e);
       }
+      String destination = PathUtil.join(resolveSource.targetDir(), sourcePath);
+      localFileUtil.prepareParentDir(destination);
+      for (int i = 0; i < MAX_DOWNLOAD_ATTEMPTS; i++) {
+        try {
+          downloadFile(destination, httpSourcePath);
+          break;
+        } catch (MobileHarnessException e) {
+          if (i < MAX_DOWNLOAD_ATTEMPTS - 1) {
+            logger.atWarning().log(
+                "Failed to download file %s from ats file server. Retrying...", httpSourcePath);
+            continue;
+          }
+          throw e;
+        }
+      }
+      return ResolveResult.create(ImmutableList.of(destination), ImmutableMap.of(), resolveSource);
+    }
+  }
+
+  private void downloadFile(String destination, String httpSourcePath)
+      throws InterruptedException, MobileHarnessException {
+    try {
+      String output =
+          createCommandExecutor()
+              .run(
+                  Command.of("curl", "-C", "-", "-o", destination, "-fL", httpSourcePath)
+                      .timeout(Duration.ofHours(2)));
+      logger.atInfo().log(
+          "Output of ats file server downloader for downloading file %s: %s",
+          httpSourcePath, output);
+      return;
+    } catch (CommandException e) {
+      if (e instanceof CommandFailureException) {
+        CommandResult result = ((CommandFailureException) e).result();
+        logger.atWarning().log(
+            "Logs of failed ats file downloader: STDOUT: %s\nSTDERR: %s",
+            result.stdout(), result.stderr());
+      }
+      throw new MobileHarnessException(
+          BasicErrorId.ATS_FILE_SERVER_RESOLVE_FILE_ERROR,
+          String.format("Failed to download file %s from ats file server.", httpSourcePath),
+          e);
     }
   }
 
