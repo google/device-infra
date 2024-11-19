@@ -102,8 +102,8 @@ message DeviceRecord {
   // The run target of the device, e.g. "flame-debug". ANDROID only.
   string run_target = 11;
 
-  // Whether the device has internet access.
-  bool internet = 12;
+  // The internet access of the device, e.g. "true", "false", "" if not set.
+  string internet = 12;
 
   // The provisioned_by dimension of the device, IOS only.
   repeated string provisioned_by = 13;
