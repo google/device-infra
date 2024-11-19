@@ -23,23 +23,26 @@ import "google/protobuf/timestamp.proto";
 option java_package = "com.google.devtools.mobileharness.infra.monitoring.proto";
 option java_outer_classname = "MonitorEntryProto";
 
-message MonitorEntry {
+message MonitoredRecord {
+  // The timestamp when this monitored record is created.
   google.protobuf.Timestamp timestamp = 1;
-  HostData host_data = 2;
-  repeated DeviceData device_data = 3;
+
+  // The host entry that describes the host information.
+  MonitoredEntry host_entry = 2;
+
+  // The device entry that describes the connected device information.
+  repeated MonitoredEntry device_entry = 3;
 }
 
-message HostData {
-  string host_name = 1;
-  string host_ip = 2;
+message MonitoredEntry {
+  // The string map that helps identify the monitored record
+  map<string, string> identifier = 1;
+
+  // The attributes that describe this monitored record.
+  repeated Attribute attribute = 2;
 }
 
-message DeviceData {
-  string id = 1;
-  string status = 2;
-  string model = 3;
-  string version = 4;
-  string hardware = 5;
-  string build_type = 6;
-  repeated string device_type = 7;
+message Attribute {
+  string name = 1;
+  string value = 2;
 }
