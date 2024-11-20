@@ -66,3 +66,13 @@ java_library(
         "@maven//:javax_inject_jsr330_api",
     ],
 )
+
+filegroup(
+    name = "test_allocations_sql",
+    srcs = [
+        "test_allocations.sql",
+    ],
+    visibility = [
+        "//third_party/py/multitest_transport:__pkg__",
+    ],
+)
