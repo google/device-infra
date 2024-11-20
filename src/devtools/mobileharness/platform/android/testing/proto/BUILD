@@ -39,6 +39,7 @@ java_proto_library(
     name = "test_info_pb_java_proto",
     visibility = [
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__subpackages__",
+        "//src/javatests/com/google/wireless/qa/mobileharness/shared/api/driver:__subpackages__",
     ],
     deps = [":test_info_pb"],
 )
