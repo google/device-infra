@@ -32,18 +32,21 @@ public class TestInfoMocker {
    * <p>In detail, this method is equivalent to
    *
    * <pre>{@code
-   * JobInfo jobInfo = spy(<a real JobInfo with default settings and a mocked LocalFileUtil>);
+   * JobInfo jobInfo = <a real JobInfo with default settings and a mocked LocalFileUtil>;
    * TestInfo testInfo = spy(jobInfo.tests().add(<default test settings>));
    * return testInfo;
    * }</pre>
    */
   public static TestInfo mockTestInfo() {
-    JobInfo jobInfo = JobInfoMocker.mockJobInfo();
+    JobInfo jobInfo = JobInfoMocker.createJobInfo();
+    TestInfo testInfo;
     try {
-      return spy(jobInfo.tests().add(FAKE_TEST_ID, FAKE_TEST_NAME));
+      testInfo = spy(jobInfo.tests().add(FAKE_TEST_ID, FAKE_TEST_NAME));
     } catch (MobileHarnessException e) {
       throw new AssertionError(e);
     }
+    testInfo.timing().start();
+    return testInfo;
   }
 
   private TestInfoMocker() {}

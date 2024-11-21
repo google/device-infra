@@ -16,13 +16,16 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.driver;
 
+import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -30,13 +33,11 @@ import static org.mockito.Mockito.when;
 import androidx.test.services.storage.TestStorageConstants;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.flags.testing.SetFlags;
-import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.api.model.job.out.Warnings;
+import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
 import com.google.devtools.mobileharness.platform.android.instrumentation.AndroidInstrumentationSetting;
 import com.google.devtools.mobileharness.platform.android.instrumentation.AndroidInstrumentationUtil;
@@ -46,7 +47,6 @@ import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstaller;
 import com.google.devtools.mobileharness.platform.android.lightning.systemsetting.SystemSettingManager;
 import com.google.devtools.mobileharness.platform.android.packagemanager.AndroidPackageManagerUtil;
-import com.google.devtools.mobileharness.shared.util.base.StrUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.shared.util.time.CountDownTimer;
@@ -63,14 +63,8 @@ import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobSetting;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
+import com.google.wireless.qa.mobileharness.shared.model.job.TestInfoMocker;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestLocator;
-import com.google.wireless.qa.mobileharness.shared.model.job.in.Files;
-import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
-import com.google.wireless.qa.mobileharness.shared.model.job.out.Errors;
-import com.google.wireless.qa.mobileharness.shared.model.job.out.Log;
-import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
-import com.google.wireless.qa.mobileharness.shared.model.job.out.Result;
-import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -87,7 +81,6 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
-/** Tests for {@link AndroidInstrumentation}. */
 @RunWith(JUnit4.class)
 public class AndroidInstrumentationTest {
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
@@ -102,28 +95,8 @@ public class AndroidInstrumentationTest {
   @Mock private LocalFileUtil fileUtil;
   @Mock private TestMessageUtil testMessageUtil;
   @Bind @Mock private Sleeper sleeper;
-  @Mock private TestInfo testInfo;
-  // The below serves as the return value of testInfo.log()
-  Log log;
-  // The below is to mock testInfo.properties()
-  @Mock private Properties testProperties;
-  // The below is to mock testInfo.locator()
-  @Mock private TestLocator testLocator;
-  // The below is to mock testInfo.errors()
-  @Mock private Errors testErrors;
-  @Mock private Warnings testWarnings;
-  // The below is to mock testInfo.result();
-  @Mock private Result testResults;
-  @Mock private com.google.devtools.mobileharness.api.model.job.out.Result newTestResult;
-  // The below is to mock testInfo.timer();
-  @Mock private CountDownTimer testTimer;
-  @Mock private JobInfo jobInfo;
-  // The below is to mock jobInfo.params()
-  @Mock private Params jobParams;
-  // The below is to mock jobInfo.files()
-  @Mock private Files jobFiles;
-  // The below is to mock jobInfo.setting()
-  @Mock private JobSetting jobSetting;
+  private final TestInfo testInfo = TestInfoMocker.mockTestInfo();
+  private final JobInfo jobInfo = spy(testInfo.jobInfo());
 
   @Mock private InstallApkStep installApkStep;
 
@@ -153,7 +126,6 @@ public class AndroidInstrumentationTest {
   private static final String DEVICE_ID = "device_id";
   private static final int DEFAULT_SDK_VERSION = 28;
   private static final String EXTERNAL_STORAGE = "/mnt/sdcard";
-  private static final String TEST_ID = "test_id";
   private static final Duration TEST_TIMEOUT = Duration.ofSeconds(30);
 
   private AndroidInstrumentation driver;
@@ -179,13 +151,8 @@ public class AndroidInstrumentationTest {
 
   @Test
   public void simpleRun_pass() throws Exception {
-    mockRunTestBasicSteps(TEST_NAME, ImmutableSet.of(), OPTIONS, false, false);
-    when(jobParams.getBool(AndroidInstrumentationDriverSpec.PARAM_PREFIX_ANDROID_TEST, false))
-        .thenReturn(true);
-    when(testProperties.add(
-            AndroidInstrumentationDriverSpec.PROPERTY_OPTIONS,
-            StrUtil.DEFAULT_MAP_JOINER.join(OPTION_MAP)))
-        .thenReturn(null);
+    mockRunTestBasicSteps(TEST_NAME, OPTIONS, false, false);
+    jobInfo.params().add(AndroidInstrumentationDriverSpec.PARAM_PREFIX_ANDROID_TEST, "true");
     String instrumentationLog =
         "com.google.codelab.mobileharness.android.hellomobileharness"
             + ".HelloMobileHarnessTest:.......\n\nTime: 31.281\n\nOK (7 tests)";
@@ -204,7 +171,7 @@ public class AndroidInstrumentationTest {
 
     driver.run(testInfo);
 
-    verify(newTestResult).setPass();
+    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
     verify(fileUtil)
         .writeToFile(
             PathUtil.join(GEN_FILE_DIR_PATH, DEFAULT_INSTRUMENTATION_LOG_FILE_NAME),
@@ -216,13 +183,8 @@ public class AndroidInstrumentationTest {
 
   @Test
   public void run_installationFailSetResultFail() throws Exception {
-    mockRunTestBasicSteps(TEST_NAME, ImmutableSet.of(), OPTIONS, false, false);
-    when(jobParams.getBool(AndroidInstrumentationDriverSpec.PARAM_PREFIX_ANDROID_TEST, false))
-        .thenReturn(true);
-    when(testProperties.add(
-            AndroidInstrumentationDriverSpec.PROPERTY_OPTIONS,
-            StrUtil.DEFAULT_MAP_JOINER.join(OPTION_MAP)))
-        .thenReturn(null);
+    mockRunTestBasicSteps(TEST_NAME, OPTIONS, false, false);
+    jobInfo.params().add(AndroidInstrumentationDriverSpec.PARAM_PREFIX_ANDROID_TEST, "true");
 
     MobileHarnessException fakeException =
         new MobileHarnessException(AndroidErrorId.ANDROID_FASTBOOT_UNKNOWN_SLOT, "test123");
@@ -235,12 +197,7 @@ public class AndroidInstrumentationTest {
 
   @Test
   public void run_fail() throws Exception {
-    mockRunTestBasicSteps(TEST_NAME, ImmutableSet.of(), OPTIONS, false, false);
-    when(testProperties.add(
-            AndroidInstrumentationDriverSpec.PROPERTY_OPTIONS,
-            StrUtil.DEFAULT_MAP_JOINER.join(OPTION_MAP)))
-        .thenReturn(null);
-    when(testErrors.add(any(MobileHarnessException.class))).thenReturn(testErrors);
+    mockRunTestBasicSteps(TEST_NAME, OPTIONS, false, false);
     String instrumentationLog =
         " com.google.android.ads.GADSignalsTest:\nFAILURES!!!\nTests run: 1,  Failures: 1";
     AndroidInstrumentationSetting setting =
@@ -258,10 +215,7 @@ public class AndroidInstrumentationTest {
 
     driver.run(testInfo);
 
-    verify(newTestResult)
-        .setNonPassing(
-            eq(com.google.devtools.mobileharness.api.model.proto.Test.TestResult.FAIL),
-            any(MobileHarnessException.class));
+    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.FAIL);
     verify(fileUtil)
         .writeToFile(
             PathUtil.join(GEN_FILE_DIR_PATH, DEFAULT_INSTRUMENTATION_LOG_FILE_NAME),
@@ -270,13 +224,8 @@ public class AndroidInstrumentationTest {
 
   @Test
   public void run_noIsolatedStorage() throws Exception {
-    mockRunTestBasicSteps(TEST_NAME, ImmutableSet.of(), OPTIONS, false, true);
-    when(jobParams.getBool(AndroidInstrumentationDriverSpec.PARAM_PREFIX_ANDROID_TEST, false))
-        .thenReturn(true);
-    when(testProperties.add(
-            AndroidInstrumentationDriverSpec.PROPERTY_OPTIONS,
-            StrUtil.DEFAULT_MAP_JOINER.join(OPTION_MAP)))
-        .thenReturn(null);
+    mockRunTestBasicSteps(TEST_NAME, OPTIONS, false, true);
+    jobInfo.params().add(AndroidInstrumentationDriverSpec.PARAM_PREFIX_ANDROID_TEST, "true");
     String instrumentationLog =
         "com.google.codelab.mobileharness.android.hellomobileharness"
             + ".HelloMobileHarnessTest:.......\n\nTime: 31.281\n\nOK (7 tests)";
@@ -295,7 +244,7 @@ public class AndroidInstrumentationTest {
 
     driver.run(testInfo);
 
-    verify(newTestResult).setPass();
+    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
     verify(fileUtil)
         .writeToFile(
             PathUtil.join(GEN_FILE_DIR_PATH, DEFAULT_INSTRUMENTATION_LOG_FILE_NAME),
@@ -304,13 +253,8 @@ public class AndroidInstrumentationTest {
 
   @Test
   public void run_showRawData_pass() throws Exception {
-    mockRunTestBasicSteps(
-        TEST_PACKAGE + "." + TEST_CLASS_NAME, ImmutableSet.<String>of(), OPTIONS, true, false);
+    mockRunTestBasicSteps(TEST_PACKAGE + "." + TEST_CLASS_NAME, OPTIONS, true, false);
     when(androidInstrumentationUtil.showRawResultsIfNeeded(testInfo)).thenReturn(true);
-    when(testProperties.add(
-            AndroidInstrumentationDriverSpec.PROPERTY_OPTIONS,
-            StrUtil.DEFAULT_MAP_JOINER.join(OPTION_MAP)))
-        .thenReturn(null);
     String instrumentationLog =
         "INSTRUMENTATION_STATUS: numtests=1\n"
             + "INSTRUMENTATION_STATUS: stream=.\n"
@@ -336,7 +280,7 @@ public class AndroidInstrumentationTest {
 
     driver.run(testInfo);
 
-    verify(newTestResult).setPass();
+    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
     verify(fileUtil)
         .writeToFile(
             PathUtil.join(GEN_FILE_DIR_PATH, DEFAULT_INSTRUMENTATION_LOG_FILE_NAME),
@@ -345,12 +289,8 @@ public class AndroidInstrumentationTest {
 
   @Test
   public void run_instrumentReturnCodeError_fail() throws Exception {
-    mockRunTestBasicSteps(TEST_NAME, ImmutableSet.of(), OPTIONS, false, false);
-    when(testProperties.add(
-            AndroidInstrumentationDriverSpec.PROPERTY_OPTIONS,
-            StrUtil.DEFAULT_MAP_JOINER.join(OPTION_MAP)))
-        .thenReturn(null);
-    when(testErrors.add(any(MobileHarnessException.class))).thenReturn(testErrors);
+    mockRunTestBasicSteps(TEST_NAME, OPTIONS, false, false);
+
     String instrumentationLog =
         "INSTRUMENTATION_STATUS: class=com.google.Foo\n"
             + "INSTRUMENTATION_STATUS: current=1\n"
@@ -377,10 +317,7 @@ public class AndroidInstrumentationTest {
 
     driver.run(testInfo);
 
-    verify(newTestResult)
-        .setNonPassing(
-            eq(com.google.devtools.mobileharness.api.model.proto.Test.TestResult.FAIL),
-            any(MobileHarnessException.class));
+    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.FAIL);
     verify(fileUtil)
         .writeToFile(
             PathUtil.join(GEN_FILE_DIR_PATH, DEFAULT_INSTRUMENTATION_LOG_FILE_NAME),
@@ -389,12 +326,7 @@ public class AndroidInstrumentationTest {
 
   @Test
   public void run_instrumentStatusError_fail() throws Exception {
-    mockRunTestBasicSteps(TEST_NAME, ImmutableSet.of(), OPTIONS, false, false);
-    when(testProperties.add(
-            AndroidInstrumentationDriverSpec.PROPERTY_OPTIONS,
-            StrUtil.DEFAULT_MAP_JOINER.join(OPTION_MAP)))
-        .thenReturn(null);
-    when(testErrors.add(any(MobileHarnessException.class))).thenReturn(testErrors);
+    mockRunTestBasicSteps(TEST_NAME, OPTIONS, false, false);
     String instrumentationLog =
         "INSTRUMENTATION_STATUS: id=ActivityManagerService\n"
             + "INSTRUMENTATION_STATUS: Error=Permission Denial: starting instrumentation "
@@ -434,10 +366,7 @@ public class AndroidInstrumentationTest {
 
     driver.run(testInfo);
 
-    verify(newTestResult)
-        .setNonPassing(
-            eq(com.google.devtools.mobileharness.api.model.proto.Test.TestResult.ERROR),
-            any(MobileHarnessException.class));
+    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.ERROR);
     verify(fileUtil)
         .writeToFile(
             PathUtil.join(GEN_FILE_DIR_PATH, DEFAULT_INSTRUMENTATION_LOG_FILE_NAME),
@@ -446,15 +375,9 @@ public class AndroidInstrumentationTest {
 
   @Test
   public void runBroadcastInstallMessage() throws Exception {
-    mockRunTestBasicSteps(TEST_NAME, ImmutableSet.of(), OPTIONS, false, false);
-    when(jobParams.getBool(AndroidInstrumentationDriverSpec.PARAM_BROADCAST_INSTALL_MESSAGE, false))
-        .thenReturn(true);
-    when(jobParams.getBool(AndroidInstrumentationDriverSpec.PARAM_PREFIX_ANDROID_TEST, false))
-        .thenReturn(true);
-    when(testProperties.add(
-            AndroidInstrumentationDriverSpec.PROPERTY_OPTIONS,
-            StrUtil.DEFAULT_MAP_JOINER.join(OPTION_MAP)))
-        .thenReturn(null);
+    mockRunTestBasicSteps(TEST_NAME, OPTIONS, false, false);
+    jobInfo.params().add(AndroidInstrumentationDriverSpec.PARAM_BROADCAST_INSTALL_MESSAGE, "true");
+    jobInfo.params().add(AndroidInstrumentationDriverSpec.PARAM_PREFIX_ANDROID_TEST, "true");
     String instrumentationLog =
         "com.google.codelab.mobileharness.android.hellomobileharness"
             + ".HelloMobileHarnessTest:.......\n\nTime: 31.281\n\nOK (7 tests)";
@@ -473,18 +396,15 @@ public class AndroidInstrumentationTest {
 
     driver.run(testInfo);
 
-    verify(newTestResult).setPass();
+    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
     // 2 times for each of test apk, basic services apk, test services apk
-    verify(testMessageUtil, times(6)).sendMessageToTest(eq(TEST_ID), ArgumentMatchers.anyMap());
+    verify(testMessageUtil, times(6))
+        .sendMessageToTest(eq(TestInfoMocker.FAKE_TEST_ID), ArgumentMatchers.anyMap());
   }
 
   @Test
   public void runError() throws Exception {
-    mockRunTestBasicSteps(TEST_NAME, ImmutableSet.of(), OPTIONS, false, false);
-    when(testProperties.add(
-            AndroidInstrumentationDriverSpec.PROPERTY_OPTIONS,
-            StrUtil.DEFAULT_MAP_JOINER.join(OPTION_MAP)))
-        .thenReturn(null);
+    mockRunTestBasicSteps(TEST_NAME, OPTIONS, false, false);
     String instrumentationLog = "Other error message";
     AndroidInstrumentationSetting setting =
         mockInstrumentSetting(
@@ -498,15 +418,10 @@ public class AndroidInstrumentationTest {
     when(androidInstrumentationUtil.instrument(
             DEVICE_ID, DEFAULT_SDK_VERSION, setting, TEST_TIMEOUT))
         .thenReturn(instrumentationLog);
-    when(testErrors.addAndLog(any(MobileHarnessException.class), any(FluentLogger.class)))
-        .thenReturn(testErrors);
 
     driver.run(testInfo);
 
-    verify(newTestResult)
-        .setNonPassing(
-            eq(com.google.devtools.mobileharness.api.model.proto.Test.TestResult.ERROR),
-            any(MobileHarnessException.class));
+    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.ERROR);
     verify(fileUtil)
         .writeToFile(
             PathUtil.join(GEN_FILE_DIR_PATH, DEFAULT_INSTRUMENTATION_LOG_FILE_NAME),
@@ -515,11 +430,7 @@ public class AndroidInstrumentationTest {
 
   @Test
   public void runTimeout() throws Exception {
-    mockRunTestBasicSteps(TEST_NAME, ImmutableSet.of(), OPTIONS, false, false);
-    when(testProperties.add(
-            AndroidInstrumentationDriverSpec.PROPERTY_OPTIONS,
-            StrUtil.DEFAULT_MAP_JOINER.join(OPTION_MAP)))
-        .thenReturn(null);
+    mockRunTestBasicSteps(TEST_NAME, OPTIONS, false, false);
     MobileHarnessException exception =
         new MobileHarnessException(
             AndroidErrorId.ANDROID_INSTRUMENTATION_COMMAND_EXEC_TIMEOUT, "timeout");
@@ -537,19 +448,12 @@ public class AndroidInstrumentationTest {
         .thenThrow(exception);
 
     assertThrows(MobileHarnessException.class, () -> driver.run(testInfo));
-    verify(newTestResult)
-        .setNonPassing(
-            eq(com.google.devtools.mobileharness.api.model.proto.Test.TestResult.TIMEOUT),
-            any(MobileHarnessException.class));
+    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.TIMEOUT);
   }
 
   @Test
   public void runWithDefaultRunner() throws Exception {
-    mockRunTestBasicSteps(TEST_NAME, ImmutableSet.<String>of(), OPTIONS, false, false);
-    when(testProperties.add(
-            AndroidInstrumentationDriverSpec.PROPERTY_OPTIONS,
-            StrUtil.DEFAULT_MAP_JOINER.join(OPTION_MAP)))
-        .thenReturn(null);
+    mockRunTestBasicSteps(TEST_NAME, OPTIONS, false, false);
     String instrumentationLog = "OK (1 test)";
     AndroidInstrumentationSetting setting =
         mockInstrumentSetting(
@@ -566,7 +470,7 @@ public class AndroidInstrumentationTest {
 
     driver.run(testInfo);
 
-    verify(newTestResult).setPass();
+    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
     verify(fileUtil)
         .writeToFile(
             PathUtil.join(GEN_FILE_DIR_PATH, DEFAULT_INSTRUMENTATION_LOG_FILE_NAME),
@@ -575,18 +479,9 @@ public class AndroidInstrumentationTest {
 
   @Test
   public void runAllMediumTests() throws Exception {
-    mockRunTestBasicSteps(
-        AndroidInstrumentationDriverSpec.TEST_NAME_MEDIUM,
-        ImmutableSet.of(),
-        OPTIONS,
-        false,
-        false);
+    mockRunTestBasicSteps(AndroidInstrumentationDriverSpec.TEST_NAME_MEDIUM, OPTIONS, false, false);
     HashMap<String, String> optionMap2 = new HashMap<>(OPTION_MAP);
     optionMap2.put("size", AndroidInstrumentationDriverSpec.TEST_NAME_MEDIUM);
-    when(testProperties.add(
-            AndroidInstrumentationDriverSpec.PROPERTY_OPTIONS,
-            StrUtil.DEFAULT_MAP_JOINER.join(optionMap2)))
-        .thenReturn(null);
     String instrumentationLog = "OK (1 test)";
     AndroidInstrumentationSetting setting =
         mockInstrumentSetting(
@@ -603,7 +498,7 @@ public class AndroidInstrumentationTest {
 
     driver.run(testInfo);
 
-    verify(newTestResult).setPass();
+    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
     verify(fileUtil)
         .writeToFile(
             PathUtil.join(GEN_FILE_DIR_PATH, DEFAULT_INSTRUMENTATION_LOG_FILE_NAME),
@@ -612,12 +507,8 @@ public class AndroidInstrumentationTest {
 
   @Test
   public void optionMapWithCommaRunPass() throws Exception {
-    mockRunTestBasicSteps(TEST_NAME, ImmutableSet.of(), "key3=value\\,3", false, false);
+    mockRunTestBasicSteps(TEST_NAME, "key3=value\\,3", false, false);
     ImmutableMap<String, String> optionMap2 = ImmutableMap.of("key3", "value,3");
-    when(testProperties.add(
-            AndroidInstrumentationDriverSpec.PROPERTY_OPTIONS,
-            StrUtil.DEFAULT_MAP_JOINER.join(optionMap2)))
-        .thenReturn(null);
     String instrumentationLog = "OK (1 test)";
     AndroidInstrumentationSetting setting =
         mockInstrumentSetting(
@@ -634,7 +525,7 @@ public class AndroidInstrumentationTest {
 
     driver.run(testInfo);
 
-    verify(newTestResult).setPass();
+    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
     verify(fileUtil)
         .writeToFile(
             PathUtil.join(GEN_FILE_DIR_PATH, DEFAULT_INSTRUMENTATION_LOG_FILE_NAME),
@@ -642,53 +533,35 @@ public class AndroidInstrumentationTest {
   }
 
   private void mockRunTestBasicSteps(
-      String testName,
-      ImmutableSet<String> testData,
-      String options,
-      boolean parseResultToMethod,
-      boolean noIsolatedStorage)
+      String testName, String options, boolean parseResultToMethod, boolean noIsolatedStorage)
       throws Exception {
     when(installApkStep.installBuildApks(device, testInfo))
         .thenReturn(Arrays.asList(BUILD_PACKAGES));
 
     when(device.getDeviceId()).thenReturn(DEVICE_ID);
-    when(testLocator.getId()).thenReturn(TEST_ID);
+    TestLocator testLocator = spy(testInfo.locator());
+    when(testInfo.locator()).thenReturn(testLocator);
     when(testLocator.getName()).thenReturn(testName);
+    CountDownTimer testTimer = spy(testInfo.timer());
     when(testInfo.timer()).thenReturn(testTimer);
     when(testTimer.remainingTimeJava()).thenReturn(TEST_TIMEOUT);
-    when(testInfo.properties()).thenReturn(testProperties);
-    when(testInfo.jobInfo()).thenReturn(jobInfo);
-    when(jobInfo.params()).thenReturn(jobParams);
-    when(jobInfo.files()).thenReturn(jobFiles);
     when(androidInstrumentationUtil.getBuildApks(any()))
         .thenReturn(ImmutableList.copyOf(BUILD_PACKAGES));
-    when(testInfo.locator()).thenReturn(testLocator);
-    log = new Log(new Timing());
-    when(testInfo.log()).thenReturn(log);
-    when(testInfo.errors()).thenReturn(testErrors);
-    when(testInfo.warnings()).thenReturn(testWarnings);
-    when(testInfo.result()).thenReturn(testResults);
-    when(testInfo.resultWithCause()).thenReturn(newTestResult);
-    when(jobParams.get(InstallApkStep.PARAM_INSTALL_APK_TIMEOUT_SEC)).thenReturn(null);
-    when(jobParams.get(AndroidInstrumentationDriverSpec.PARAM_INSTRUMENT_TIMEOUT_SEC))
-        .thenReturn(null);
-    when(jobParams.isTrue(AndroidInstrumentationDriverSpec.PARAM_SPLIT_METHODS))
-        .thenReturn(parseResultToMethod);
-    when(jobParams.isTrue(
-            AndroidInstrumentationDriverSpec.PARAM_DISABLE_ISOLATED_STORAGE_FOR_INSTRUMENTATION))
-        .thenReturn(noIsolatedStorage);
-    when(testProperties.add(AndroidInstrumentationDriverSpec.PROPERTY_PACKAGE, TEST_PACKAGE))
-        .thenReturn(null);
-    when(testProperties.add(AndroidInstrumentationDriverSpec.PROPERTY_RUNNER, RUNNER))
-        .thenReturn(null);
+    jobInfo
+        .params()
+        .add(
+            AndroidInstrumentationDriverSpec.PARAM_SPLIT_METHODS,
+            Boolean.toString(parseResultToMethod));
+    jobInfo
+        .params()
+        .add(
+            AndroidInstrumentationDriverSpec.PARAM_DISABLE_ISOLATED_STORAGE_FOR_INSTRUMENTATION,
+            Boolean.toString(noIsolatedStorage));
 
-    when(jobFiles.get(AndroidInstrumentationDriverSpec.TAG_TEST_APK))
-        .thenReturn(ImmutableSet.of(TEST_APK_PATH));
-    when(jobParams.get(AndroidInstrumentationDriverSpec.PARAM_OPTIONS)).thenReturn(options);
-    when(jobParams.get(AndroidInstrumentationDriverSpec.PARAM_OPTIONS + "_0")).thenReturn(null);
-    when(jobFiles.get(AndroidInstrumentationDriverSpec.TAG_TEST_DATA)).thenReturn(testData);
-    when(jobParams.get(AndroidInstrumentationDriverSpec.PARAM_TEST_ARGS)).thenReturn(null);
-    when(jobInfo.setting()).thenReturn(jobSetting);
+    jobInfo.files().add(AndroidInstrumentationDriverSpec.TAG_TEST_APK, TEST_APK_PATH);
+    jobInfo.params().add(AndroidInstrumentationDriverSpec.PARAM_OPTIONS, options);
+    JobSetting jobSetting = spy(jobInfo.setting());
+    doReturn(jobSetting).when(jobInfo).setting();
     when(jobSetting.getGenFileDir()).thenReturn(JOB_GEN_FILE_DIR_PATH);
     when(testInfo.getTmpFileDir()).thenReturn(TMP_FILE_DIR_PATH);
     String hostArgFilePath =
@@ -696,7 +569,7 @@ public class AndroidInstrumentationTest {
     when(fileUtil.writeToFile(eq(hostArgFilePath), (byte[]) any())).thenReturn(123L);
 
     when(androidInstrumentationUtil.getTestSpecificTestArgs(testInfo)).thenReturn(new HashMap<>());
-    when(jobParams.isTrue(AndroidInstrumentationDriverSpec.PARAM_ASYNC)).thenReturn(false);
+    jobInfo.params().add(AndroidInstrumentationDriverSpec.PARAM_ASYNC, "false");
 
     when(aapt.getApkPackageName(TEST_APK_PATH)).thenReturn(TEST_PACKAGE);
     when(androidInstrumentationUtil.cleanTestStorageOnDevice(
@@ -708,13 +581,14 @@ public class AndroidInstrumentationTest {
 
     // Installs apks.
     when(apkInstaller.installApkIfNotExist(
-            device,
-            ApkInstallArgs.builder()
-                .setApkPath(TEST_APK_PATH)
-                .setGrantPermissions(true)
-                .setSkipDowngrade(false)
-                .build(),
-            log))
+            eq(device),
+            eq(
+                ApkInstallArgs.builder()
+                    .setApkPath(TEST_APK_PATH)
+                    .setGrantPermissions(true)
+                    .setSkipDowngrade(false)
+                    .build()),
+            any()))
         .thenReturn("test_package_name");
 
     doAnswer(
@@ -734,10 +608,6 @@ public class AndroidInstrumentationTest {
         .when(androidInstrumentationUtil)
         .prepareServicesApks(any(), any(), anyInt(), any(), any());
 
-    when(jobParams.getBool(
-            AndroidInstrumentationDriverSpec.PARAM_DISABLE_ISOLATED_STORAGE_FOR_APK, true))
-        .thenReturn(true);
-
     when(androidInstrumentationUtil.getTestRunnerClassName(
             any(), any(), any(), any(), anyBoolean()))
         .thenReturn(RUNNER);
@@ -747,14 +617,16 @@ public class AndroidInstrumentationTest {
   public void extraOptions() throws Exception {
     final String hubPortKey = "hub_port";
     final String hubPort = "50008";
-    mockRunTestBasicSteps(TEST_NAME, ImmutableSet.<String>of(), OPTIONS, false, false);
-    when(jobParams.get(AndroidInstrumentationDriverSpec.PARAM_TEST_ARGS))
-        .thenReturn("test_arg1=value1, test_arg2=a=b");
-    when(jobParams.getBool(AndroidInstrumentationDriverSpec.PARAM_PREFIX_ANDROID_TEST, false))
-        .thenReturn(true);
-    when(testProperties.get(
-            PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_EXTRA_OPTIONS))
-        .thenReturn(hubPortKey + "=" + hubPort);
+    mockRunTestBasicSteps(TEST_NAME, OPTIONS, false, false);
+    jobInfo
+        .params()
+        .add(AndroidInstrumentationDriverSpec.PARAM_TEST_ARGS, "test_arg1=value1, test_arg2=a=b");
+    jobInfo.params().add(AndroidInstrumentationDriverSpec.PARAM_PREFIX_ANDROID_TEST, "true");
+    testInfo
+        .properties()
+        .add(
+            PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_EXTRA_OPTIONS,
+            hubPortKey + "=" + hubPort);
     HashMap<String, String> optionMap2 = new HashMap<>(OPTION_MAP);
     optionMap2.put(hubPortKey, hubPort);
     AndroidInstrumentationSetting setting =

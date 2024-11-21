@@ -37,13 +37,19 @@ public final class JobInfoMocker {
    * and a mocked LocalFileUtil>)}".
    */
   public static JobInfo mockJobInfo() {
-    return spy(
+    return spy(createJobInfo());
+  }
+
+  static JobInfo createJobInfo() {
+    JobInfo jobInfo =
         JobInfo.newBuilder()
             .setLocator(new JobLocator(FAKE_JOB_ID, FAKE_JOB_NAME))
             .setType(
                 JobType.newBuilder().setDriver(FAKE_JOB_DRIVER).setDevice(FAKE_JOB_DEVICE).build())
             .setFileUtil(mock(LocalFileUtil.class))
-            .build());
+            .build();
+    jobInfo.timing().start();
+    return jobInfo;
   }
 
   private JobInfoMocker() {}
