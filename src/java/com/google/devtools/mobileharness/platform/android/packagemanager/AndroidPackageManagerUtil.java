@@ -724,6 +724,40 @@ public class AndroidPackageManagerUtil {
   }
 
   /**
+   * Gets the signature of the application. If the application is not installed, it will return
+   * empty string.
+   *
+   * @param packageName package name of the application, e.g., com.google.android.gms.
+   */
+  public String getAppSignature(String serial, String packageName)
+      throws MobileHarnessException, InterruptedException {
+    String output = "";
+    try {
+      output = adbUtil.dumpSys(serial, DumpSysType.PACKAGE, packageName);
+    } catch (MobileHarnessException e) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_DUMPSYS_ERROR, e.getMessage(), e);
+    }
+    // b/377681285#comment16, version:0 means a bad result, so we need to exclude it.
+    Matcher matcher =
+        Pattern.compile(
+                "signatures=PackageSignatures\\{[a-z0-9]+ version:[1-9]\\d*,"
+                    + " signatures:\\[(?<signature>[a-z0-9]+)\\], past signatures:\\[[a-z0-9:,"
+                    + " ]+\\]\\}")
+            .matcher(output);
+    boolean foundSignature = matcher.find();
+    if (foundSignature) {
+      return matcher.group("signature");
+    } else {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_GET_APK_SIGNATURE_ERROR,
+          String.format(
+              "Cannot find signature in the output of `adb shell dumpsys package %s`",
+              packageName));
+    }
+  }
+
+  /**
    * Gets installed path of apk package {@code apkPackageName} for user USER_SYSTEM in device whose
    * serial is {@code serial}.
    *

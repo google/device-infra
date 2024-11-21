@@ -89,6 +89,8 @@ public final class Dimension {
     INTERNET,
     /** The health of GCS. */
     GCS_FAILURE,
+    /** The signature of GMS Core. */
+    GMSCORE_SIGNATURE,
     /** The lab location of the device. */
     LAB_LOCATION,
     /** The location type of the device. */

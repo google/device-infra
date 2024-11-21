@@ -69,6 +69,7 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidVer
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceConnectionState;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceState;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.UsbDeviceLocator;
+import com.google.devtools.mobileharness.platform.android.shared.constant.PackageConstants;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.devtools.mobileharness.platform.android.systemsetting.PostSettingDeviceOp;
 import com.google.devtools.mobileharness.platform.android.systemspec.AndroidSystemSpecUtil;
@@ -829,6 +830,7 @@ public abstract class AndroidRealDeviceDelegate {
             | checkLaunchers()
             | checkIccids()
             | checkHingeAngle()
+            | checkGmscoreSignature()
             | extraChecksForOnlineModeDevice();
     checkSuwAppDisabled();
     if (!Flags.instance().skipNetwork.getNonNull()) {
@@ -1931,6 +1933,22 @@ public abstract class AndroidRealDeviceDelegate {
     }
 
     return device.updateDimension(Dimension.Name.ICCIDS, iccids);
+  }
+
+  /** */
+  private boolean checkGmscoreSignature() throws InterruptedException {
+    String gmscoreSignature = "";
+    logger.atInfo().log("Fetching device %s's GMS Core signature...", deviceId);
+    try {
+      gmscoreSignature =
+          androidPkgManagerUtil.getAppSignature(deviceId, PackageConstants.PACKAGE_NAME_GMS);
+      logger.atInfo().log("GMS Core signature on device %s: %s", deviceId, gmscoreSignature);
+    } catch (MobileHarnessException e) {
+      logger.atWarning().log(
+          "Failed to fetch device %s's GMS Core signature: %s",
+          deviceId, MoreThrowables.shortDebugString(e));
+    }
+    return device.updateDimension(Dimension.Name.GMSCORE_SIGNATURE, gmscoreSignature);
   }
 
   /** Returns whether the device is a foldable device. */
