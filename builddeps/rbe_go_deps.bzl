@@ -981,6 +981,12 @@ def rbe_go_deps():
         version = "v0.24.0",
     )
     go_repository(
+        name = "org_chromium_go_luci",
+        importpath = "go.chromium.org/luci",
+        sum = "h1:zWQw+M3FP3u1f1kc5bsvfm781mnEiRek3Jb3gC+eYdM=",
+        version = "v0.0.0-20241204121246-ca1514f04295",
+    )
+    go_repository(
         name = "org_golang_google_api",
         importpath = "google.golang.org/api",
         sum = "h1:q4GJq+cAdMAC7XP7njvQ4tvohGLiSlytuL4BQxbIZ+o=",
