@@ -30,6 +30,7 @@ java_library(
     name = "formatter",
     srcs = ["MobileHarnessLogFormatter.java"],
     visibility = [
+        "//javatests/com/google/devtools/mobileharness/infra/controller/test/local:__pkg__",
         "//src/java/com/google/devtools/mobileharness/shared/logging:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/api:__pkg__",
