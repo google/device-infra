@@ -181,6 +181,11 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
           String.format(
               "https://dl.google.com/dl/android/xts/mcts/tool/mcts_exclude/%s/%s/mcts-exclude.txt",
               aospVersion, preloadedMainlineVersion));
+      // Add the full MCTS list file link url to the second position of the list.
+      downloadLinkUrls.add(
+          String.format(
+              "https://dl.google.com/dl/android/xts/mcts/%s/%s/mcts_test_list.txt",
+              preloadedMainlineVersion, deviceAbi));
       for (String mctsNameAndVersioncode : mctsNamesOfPreloadedMainlineModules.get(PRELOADED_KEY)) {
         String moduleVersioncode =
             mctsNameAndVersioncode.substring(mctsNameAndVersioncode.indexOf(":") + 1);
@@ -214,8 +219,37 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
   @Override
   public void downloadXtsFiles(XtsDynamicDownloadInfo xtsDynamicDownloadInfo, TestInfo testInfo)
       throws MobileHarnessException, InterruptedException {
-    Set<String> allTestModules = new HashSet<>();
     List<String> downloadUrlList = new ArrayList<>(xtsDynamicDownloadInfo.getDownloadUrlList());
+    // Download the MCTS full test list.
+    if (downloadUrlList.get(1).contains("mcts_test_list")) {
+      logger.atInfo().log("Start to download MCTS full test list.");
+      String mctsFullTestListUrl = downloadUrlList.get(1);
+      String mctsFullTestListFilePath =
+          downloadPublicUrlFiles(
+              mctsFullTestListUrl, mctsFullTestListUrl.replace("https://dl.google.com/dl", ""));
+      if (mctsFullTestListFilePath != null) {
+        testInfo
+            .properties()
+            .add(
+                XtsConstants.XTS_DYNAMIC_DOWNLOAD_PATH_TEST_LIST_PROPERTY_KEY,
+                mctsFullTestListFilePath);
+      }
+      downloadUrlList.remove(1);
+    }
+
+    // If the job type is static, skip downloading the MCTS files.
+    if (testInfo
+        .jobInfo()
+        .properties()
+        .getOptional(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME)
+        .orElse("")
+        .equals(XtsConstants.STATIC_XTS_JOB_NAME)) {
+      return;
+    }
+
+    // Download the MCTS files for dynamic download mcts job.
+    logger.atInfo().log("Start to download files for dynamic download MCTS job...");
+    Set<String> allTestModules = new HashSet<>();
     Set<String> excludeTestModules = new HashSet<>();
     // Get the exclude test modules.
     if (downloadUrlList.get(0).contains("mcts_exclude")) {
@@ -389,10 +423,6 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
         URL url = uri.toURL();
         connection = url.openConnection();
         long urlLastModified = connection.getLastModified();
-        if (urlLastModified == 0) {
-          logger.atInfo().log("Url %s not exist.", downloadUrl);
-          return null;
-        }
         // check the file exists and the last modified time.
         if (fileUtil.isFileExist(filePath)) {
           long fileLastModified = fileUtil.getFileLastModifiedTime(filePath).toEpochMilli();
@@ -405,6 +435,9 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
                 "File %s is out of date or broken, need to download again.", filePath);
             fileUtil.removeFileOrDir(filePath);
           }
+        } else if (urlLastModified == 0) {
+          logger.atInfo().log("Url %s not exist.", downloadUrl);
+          return null;
         } else {
           logger.atInfo().log("File %s does not exist, needs to download the file.", filePath);
         }

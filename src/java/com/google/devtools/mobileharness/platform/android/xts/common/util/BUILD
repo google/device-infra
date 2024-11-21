@@ -53,6 +53,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/util/xtsdownloader:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/controller/test/util/xtsdownloader:__subpackages__",
     ],
 )
 

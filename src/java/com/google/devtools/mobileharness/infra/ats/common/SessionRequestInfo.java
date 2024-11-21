@@ -134,6 +134,8 @@ public abstract class SessionRequestInfo {
 
   public abstract Optional<Boolean> skipDeviceInfo();
 
+  public abstract Optional<Boolean> isXtsDynamicDownloadEnabled();
+
   public static Builder builder() {
     return new AutoValue_SessionRequestInfo.Builder()
         .setModuleNames(ImmutableList.of())
@@ -253,6 +255,8 @@ public abstract class SessionRequestInfo {
     public abstract Builder setShardingMode(ShardingMode shardingMode);
 
     public abstract Builder setSkipDeviceInfo(boolean skipDeviceInfo);
+
+    public abstract Builder setIsXtsDynamicDownloadEnabled(boolean isXtsDynamicDownloadEnabled);
 
     protected abstract SessionRequestInfo autoBuild();
 

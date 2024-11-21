@@ -48,9 +48,22 @@ public class XtsConstants {
   /** A MH job property key to indicate whether xTS dynamic download is enabled. */
   public static final String IS_XTS_DYNAMIC_DOWNLOAD_ENABLED = "is_xts_dynamic_download_enabled";
 
+  /** The job type of dynamic download xTS jobs. */
+  public static final String XTS_DYNAMIC_DOWNLOAD_JOB_NAME = "xts_dynamic_download_job_name";
+
+  /** The job name of dynamic download xTS job. */
+  public static final String DYNAMIC_MCTS_JOB_NAME = "MCTS";
+
+  /** The job name of static xTS job. */
+  public static final String STATIC_XTS_JOB_NAME = "STATIC_XTS";
+
   /** MH test property keys of path relative to the test temp dir. */
   public static final String XTS_DYNAMIC_DOWNLOAD_PATH_TEST_PROPERTY_KEY =
       "xts_dynamic_download_path";
+
+  /** MH test property keys of path relative to the test temp dir. */
+  public static final String XTS_DYNAMIC_DOWNLOAD_PATH_TEST_LIST_PROPERTY_KEY =
+      "xts_dynamic_download_test_list_path";
 
   public static final String XTS_DYNAMIC_DOWNLOAD_PATH_JDK_PROPERTY_KEY =
       "xts_dynamic_download_jdk_path";

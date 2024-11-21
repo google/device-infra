@@ -18,6 +18,7 @@ package com.google.wireless.qa.mobileharness.shared.api.driver;
 
 import static com.google.common.base.StandardSystemProperty.JAVA_IO_TMPDIR;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
@@ -93,6 +94,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -132,12 +134,23 @@ public class XtsTradefedTest extends BaseDriver
           "--compatibility:include-filter",
           "--compatibility:exclude-filter");
 
+  private static final ImmutableSet<String> DYNAMIC_JOB_TEST_DEPENDENCIES =
+      ImmutableSet.of("CtsPreconditions");
+
+  // Will remove these cases from MCTS.
+  private static final ImmutableSet<String> STATIC_JOB_TEST_DEPENDENCIES =
+      ImmutableSet.of(
+          "cts-dalvik-host-test-runner", "net-tests-utils-host-common", "CtsBackupHostTestCases");
+
   private static final String TF_PATH_KEY = "TF_PATH";
 
   private static final Duration KILL_TF_AFTER_FINISH_TIME = Duration.ofMinutes(5L);
 
   private static final String TF_AGENT_RESOURCE_PATH =
       "/com/google/devtools/mobileharness/platform/android/xts/agent/tradefed_invocation_agent_deploy.jar";
+
+  private static final String STATIC_MCTS_LIST_FILE_PATH =
+      "/devtools/mobileharness/infra/controller/test/util/xtsdownloader/configs/mcts_list.txt";
 
   private final CommandExecutor cmdExecutor;
   private final LocalFileUtil localFileUtil;
@@ -919,6 +932,7 @@ public class XtsTradefedTest extends BaseDriver
     Path linkLibDir = XtsDirUtil.getXtsLibDir(tmpXtsWorkDir, xtsType);
     Path linkLib64Dir = XtsDirUtil.getXtsLib64Dir(tmpXtsWorkDir, xtsType);
 
+    // Create symlinks for the downloaded JDK only for the dynamic download jobs.
     if (testInfo.properties().has(XtsConstants.XTS_DYNAMIC_DOWNLOAD_PATH_JDK_PROPERTY_KEY)) {
       createSymlink(
           linkJdkDir,
@@ -931,21 +945,69 @@ public class XtsTradefedTest extends BaseDriver
       createSymlink(linkJdkDir, sourceXtsBundledJdkDir);
     }
 
-    createSymlinksForTestCases(linkTestcasesDir, sourceXtsBundledTestcasesDir);
+    // Create symlinks for the test cases.
+    // For dynamic download jobs, create symlinks to the dynamic downloaded test cases.
+    // For non dynamic download jobs, create symlinks to the original static test cases.
+    if (isXtsDynamicDownloaderEnabled(testInfo)) {
+      Set<String> xtsDynamicDownloadTestList = new HashSet<>();
+      String testListProperty =
+          testInfo.properties().get(XtsConstants.XTS_DYNAMIC_DOWNLOAD_PATH_TEST_LIST_PROPERTY_KEY);
+      if (testListProperty != null) {
+        xtsDynamicDownloadTestList.addAll(getStringSetFromResourceFile(testListProperty));
+        // Save the test list file to the test gen file dir and further in xts/logs.
+        localFileUtil.copyFileOrDir(testListProperty, testInfo.getGenFileDir());
+      } else {
+        xtsDynamicDownloadTestList.addAll(
+            getStringSetFromResourceFile(getStaticMctsListFilePath()));
+      }
+
+      if (testInfo
+          .jobInfo()
+          .properties()
+          .getOptional(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME)
+          .orElse("")
+          .equals(XtsConstants.DYNAMIC_MCTS_JOB_NAME)) {
+        if (testInfo.properties().has(XtsConstants.XTS_DYNAMIC_DOWNLOAD_PATH_TEST_PROPERTY_KEY)) {
+          // Integrates the dynamic downloaded test cases with the temp XTS workspace.
+          createSymlinksForDynamicDownloadTestCases(
+              linkTestcasesDir,
+              Path.of(
+                  testInfo.getTmpFileDir()
+                      + testInfo
+                          .properties()
+                          .get(XtsConstants.XTS_DYNAMIC_DOWNLOAD_PATH_TEST_PROPERTY_KEY)),
+              /* isDynamicDownload= */ true,
+              xtsDynamicDownloadTestList);
+          // Also include the test dependencies for dynamic download test cases.
+          createSymlinksForDynamicDownloadTestCases(
+              linkTestcasesDir,
+              sourceXtsBundledTestcasesDir,
+              /* isDynamicDownload= */ true,
+              DYNAMIC_JOB_TEST_DEPENDENCIES);
+        }
+      }
+
+      if (testInfo
+          .jobInfo()
+          .properties()
+          .getOptional(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME)
+          .orElse("")
+          .equals(XtsConstants.STATIC_XTS_JOB_NAME)) {
+        // Integrates the static test cases with the temp XTS workspace.
+        createSymlinksForDynamicDownloadTestCases(
+            linkTestcasesDir,
+            sourceXtsBundledTestcasesDir,
+            /* isDynamicDownload= */ false,
+            xtsDynamicDownloadTestList);
+      }
+    } else {
+      createSymlinksForTestCases(linkTestcasesDir, sourceXtsBundledTestcasesDir);
+    }
+
+    // Create symlinks for the tools and libs.
     createSymlink(linkToolsDir, sourceXtsBundledToolsDir);
     createSymlink(linkLibDir, sourceXtsBundledLibDir);
     createSymlink(linkLib64Dir, sourceXtsBundledLib64Dir);
-
-    if (testInfo.properties().has(XtsConstants.XTS_DYNAMIC_DOWNLOAD_PATH_TEST_PROPERTY_KEY)) {
-      // Integrates the dynamic downloaded test cases with the temp XTS workspace.
-      createSymlinksForTestCases(
-          linkTestcasesDir,
-          Path.of(
-              testInfo.getTmpFileDir()
-                  + testInfo
-                      .properties()
-                      .get(XtsConstants.XTS_DYNAMIC_DOWNLOAD_PATH_TEST_PROPERTY_KEY)));
-    }
 
     if (useTfRunRetry(spec)) {
       // When using TF "run retry", TF looks for the corresponding previous result dir per given
@@ -1022,6 +1084,57 @@ public class XtsTradefedTest extends BaseDriver
         "Finished integrating the test cases [%s] with the temp XTS workspace [%s].", target, link);
   }
 
+  private void createSymlinksForDynamicDownloadTestCases(
+      Path link, Path target, boolean isDynamicDownload, Set<String> dynamicDownloadTestList)
+      throws MobileHarnessException {
+    try {
+      localFileUtil.checkFileOrDir(target);
+    } catch (MobileHarnessException e) {
+      // File does not exist, no need to integrate.
+      logger.atWarning().log("%s does not exist.", target);
+      return;
+    }
+
+    // Create symlink to the immediate subfiles and subdirectories of the xts test cases.
+    // For dynamic download jobs, only create symlinks for the test cases in the test list.
+    // For non dynamic download jobs, create symlinks for the test cases not in the test list.
+    List<String> subTestCases = localFileUtil.listFileOrDirPaths(target.toString());
+    for (String subTestCase : subTestCases) {
+      Path subTestCasePath = Path.of(subTestCase);
+      String subTestCaseName = subTestCasePath.getFileName().toString();
+      boolean shouldCreateSymlink =
+          isDynamicDownload
+              ? dynamicDownloadTestList.contains(subTestCaseName)
+              : !dynamicDownloadTestList.contains(subTestCaseName)
+                  || STATIC_JOB_TEST_DEPENDENCIES.contains(subTestCaseName);
+
+      if (shouldCreateSymlink) {
+        Path tmpXtsTestcasePath = link.resolve(subTestCasePath.getFileName().toString());
+        createSymlink(tmpXtsTestcasePath, subTestCasePath);
+      }
+    }
+
+    logger.atInfo().log(
+        "Finished integrating the test cases [%s] with the temp XTS workspace [%s].", target, link);
+  }
+
+  /** Returns {@code true} if xts dynamic downloader is enabled. */
+  private static boolean isXtsDynamicDownloaderEnabled(TestInfo testInfo) {
+    return testInfo
+        .jobInfo()
+        .properties()
+        .getBoolean(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED)
+        .orElse(false);
+  }
+
+  private ImmutableSet<String> getStringSetFromResourceFile(String filePath)
+      throws MobileHarnessException {
+    return localFileUtil.readLineListFromFile(filePath).stream()
+        .map(String::trim)
+        .filter(line -> !line.isEmpty())
+        .collect(toImmutableSet());
+  }
+
   private static boolean isRunRetryWithSubPlan(XtsTradefedTestDriverSpec spec) {
     return spec.getXtsTestPlan().equals("retry") && !spec.getSubplanXml().isEmpty();
   }
@@ -1046,5 +1159,9 @@ public class XtsTradefedTest extends BaseDriver
 
   private String getTradefedAgentFilePath() throws MobileHarnessException {
     return resUtil.getResourceFile(getClass(), TF_AGENT_RESOURCE_PATH);
+  }
+
+  private String getStaticMctsListFilePath() throws MobileHarnessException {
+    return resUtil.getResourceFile(getClass(), STATIC_MCTS_LIST_FILE_PATH);
   }
 }

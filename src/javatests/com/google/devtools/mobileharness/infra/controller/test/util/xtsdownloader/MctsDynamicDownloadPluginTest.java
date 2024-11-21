@@ -32,6 +32,7 @@ import com.google.devtools.mobileharness.platform.android.packagemanager.Android
 import com.google.devtools.mobileharness.platform.android.packagemanager.ModuleInfo;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
+import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.wireless.qa.mobileharness.shared.controller.event.LocalTestStartingEvent;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -63,11 +64,13 @@ public final class MctsDynamicDownloadPluginTest {
   @Mock private AndroidAdbUtil mockAdbUtil;
   @Mock private AndroidPackageManagerUtil mockAndroidPackageManagerUtil;
   @Mock private Properties testProperties;
+  @Mock private Properties jobProperties;
   @Mock private DeviceLocator mockDeviceLocator;
 
   private MctsDynamicDownloadPlugin spyMctsDynamicDownloadPlugin;
   private final LocalFileUtil localFileUtil = new LocalFileUtil();
 
+  @SuppressWarnings("DirectInvocationOnMock")
   @Before
   public void setUp() throws MobileHarnessException, InterruptedException {
     when(mockEvent.getTest()).thenReturn(mockTestInfo);
@@ -76,6 +79,9 @@ public final class MctsDynamicDownloadPluginTest {
     when(mockTestInfo.jobInfo()).thenReturn(mockJobInfo);
     when(mockTestInfo.getTmpFileDir()).thenReturn("/tmp");
     when(mockTestInfo.properties()).thenReturn(testProperties);
+    when(mockTestInfo.jobInfo().properties()).thenReturn(jobProperties);
+    when(jobProperties.get(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME))
+        .thenReturn(XtsConstants.DYNAMIC_MCTS_JOB_NAME);
     when(mockAndroidPackageManagerUtil.getAppVersionCode(
             any(), eq("com.google.android.modulemetadata")))
         .thenReturn(351050004);
@@ -211,6 +217,11 @@ public final class MctsDynamicDownloadPluginTest {
         .downloadPublicUrlFiles(
             "https://dl.google.com/dl/android/xts/mcts/tool/mcts_exclude/30/2024-10/mcts-exclude.txt",
             "/android/xts/mcts/tool/mcts_exclude/30/2024-10/mcts-exclude.txt");
+    Mockito.doReturn(null)
+        .when(spyMctsDynamicDownloadPlugin)
+        .downloadPublicUrlFiles(
+            "https://dl.google.com/dl/android/xts/mcts/2024-10/arm64/mcts_test_list.txt",
+            "/android/xts/mcts/2024-10/arm64/mcts_test_list.txt");
   }
 
   @Test

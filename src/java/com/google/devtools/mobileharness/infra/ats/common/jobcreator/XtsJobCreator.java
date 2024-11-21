@@ -36,6 +36,7 @@ import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName;
 import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser;
+import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
@@ -54,9 +55,11 @@ import java.io.OutputStream;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.Set;
 import java.util.stream.Stream;
 
 /** A creator to create XTS tradefed jobs and non tradefed jobs. */
@@ -101,6 +104,7 @@ public abstract class XtsJobCreator {
    */
   public ImmutableList<JobInfo> createXtsTradefedTestJob(SessionRequestInfo sessionRequestInfo)
       throws MobileHarnessException, InterruptedException {
+    ImmutableSet<String> staticMctsModules = sessionRequestHandlerUtil.getStaticMctsModules();
     ImmutableList<String> tfModules =
         sessionRequestHandlerUtil.getFilteredTradefedModules(sessionRequestInfo);
 
@@ -108,10 +112,24 @@ public abstract class XtsJobCreator {
         createXtsTradefedTestJobInfo(sessionRequestInfo, tfModules);
 
     ImmutableList.Builder<JobInfo> jobInfos = ImmutableList.builder();
+    // We can add more types of dynamic modules lists here. Currently we only support MCTS cases.
+    // If we add more types of dynamic modules lists, we need to update here to be sth like:
+    // totalDynamicModuleVariables.put(staticNctsModules, XtsConstants.DYNAMIC_NCTS_JOB);
+
+    Map<String, ImmutableSet<String>> totalDynamicModuleVariables = new HashMap<>();
+    totalDynamicModuleVariables.put(XtsConstants.DYNAMIC_MCTS_JOB_NAME, staticMctsModules);
+
     for (TradefedJobInfo tradefedJobInfo : tradefedJobInfoList) {
-      JobInfo jobInfo =
-          sessionRequestHandlerUtil.createXtsTradefedTestJob(sessionRequestInfo, tradefedJobInfo);
-      jobInfos.add(jobInfo);
+      // TODO: Need to check if the job is for module sharding, if so then disable
+      // dynamic download.
+      createDynamicDownloadJobs(
+          jobInfos, tradefedJobInfo, totalDynamicModuleVariables, sessionRequestInfo, tfModules);
+      // Only if none of the dynamic jobs are created, we'll create only one xTS job.
+      if (jobInfos.build().isEmpty()) {
+        jobInfos.add(
+            sessionRequestHandlerUtil.createXtsTradefedTestJob(
+                sessionRequestInfo, tradefedJobInfo));
+      }
     }
 
     return jobInfos.build();
@@ -414,6 +432,50 @@ public abstract class XtsJobCreator {
         runRetrySubPlan.getPreviousSessionDeviceVendorBuildFingerprint().orElse("");
     extraJobPropertiesBuilder.put(
         Job.PREV_SESSION_DEVICE_VENDOR_BUILD_FINGERPRINT, prevSessionDeviceVendorBuildFingerprint);
+  }
+
+  private void createDynamicDownloadJobs(
+      ImmutableList.Builder<JobInfo> jobInfos,
+      TradefedJobInfo tradefedJobInfo,
+      Map<String, ImmutableSet<String>> totalDynamicModuleVariables,
+      SessionRequestInfo sessionRequestInfo,
+      ImmutableList<String> tfModules)
+      throws MobileHarnessException, InterruptedException {
+    if (sessionRequestInfo.isXtsDynamicDownloadEnabled().orElse(false)) {
+      // Consider below independent cases, for MCTS as an example:
+      // 1. No -m and no --include-filter MCTS modules specified, dynamic download is disabled.
+      // 2. Some of the MCTS modules are specified, create a dynamic download job and a static job.
+      // 3. All of the MCTS modules are specified, create only one dynamic download job.
+      Set<String> totalDynamicModules = new HashSet<>();
+      for (Map.Entry<String, ImmutableSet<String>> entry : totalDynamicModuleVariables.entrySet()) {
+        ImmutableSet<String> dynamicModuleList = entry.getValue();
+        totalDynamicModules.addAll(dynamicModuleList);
+        String jobName = entry.getKey();
+        if (tfModules.stream().anyMatch(dynamicModuleList::contains)) {
+          // If tfModules match any of the dynamic modules, create a dynamic download job.
+          jobInfos.add(createDynamicJobInfo(sessionRequestInfo, tradefedJobInfo, jobName));
+        }
+      }
+      // If all of the tfModules match the dynamic modules, then we create only one xts dynamic job
+      // or we also need to create a xts static job.
+      if (!tfModules.stream().allMatch(totalDynamicModules::contains)
+          && !jobInfos.build().isEmpty()) {
+        jobInfos.add(
+            createDynamicJobInfo(
+                sessionRequestInfo, tradefedJobInfo, XtsConstants.STATIC_XTS_JOB_NAME));
+      }
+    }
+  }
+
+  private JobInfo createDynamicJobInfo(
+      SessionRequestInfo sessionRequestInfo, TradefedJobInfo tradefedJobInfo, String jobName)
+      throws MobileHarnessException, InterruptedException {
+    JobInfo dynamicDownloadJobInfo =
+        sessionRequestHandlerUtil.createXtsTradefedTestJob(sessionRequestInfo, tradefedJobInfo);
+
+    dynamicDownloadJobInfo.properties().add(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED, "true");
+    dynamicDownloadJobInfo.properties().add(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME, jobName);
+    return dynamicDownloadJobInfo;
   }
 
   protected static Properties loadTestReportProperties(Path testReportPropertiesFile)
