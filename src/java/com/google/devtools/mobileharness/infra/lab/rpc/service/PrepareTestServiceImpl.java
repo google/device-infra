@@ -90,6 +90,7 @@ import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
+import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.shared.version.Version;
 import com.google.devtools.mobileharness.shared.version.checker.ServiceSideVersionChecker;
 import com.google.devtools.mobileharness.shared.version.proto.Version.VersionCheckResponse;
@@ -116,6 +117,8 @@ public class PrepareTestServiceImpl {
 
   private static final String SATELLITE_LAB_TEST_ENGINE_RESOURCE_PATH =
       "/com/google/devtools/mobileharness/infra/container/testengine/SatelliteLabTestEngine_deploy.jar";
+
+  private static final Duration WAIT_DEVICE_READY_TIMEOUT = Duration.ofSeconds(20L);
 
   private final LocalDeviceRunnerProvider deviceRunnerProvider;
   private final JobManager jobManager;
@@ -177,7 +180,7 @@ public class PrepareTestServiceImpl {
         versionChecker.checkStub(req.getVersionCheckRequest());
 
     // Gets LocalDeviceRunner.
-    List<LocalDeviceTestRunner> deviceRunners = getDeviceRunners(req.getDeviceIdList());
+    List<LocalDeviceTestRunner> deviceRunners = getDeviceRunnersUntilReady(req.getDeviceIdList());
 
     // Checks the job feature.
     checkJobFeature(req.getJob().getJobFeature(), deviceRunners);
@@ -411,6 +414,30 @@ public class PrepareTestServiceImpl {
     Timing testTiming = new Timing(Instant.ofEpochMilli(test.getTestCreateTimeMs()));
     testTiming.start(Instant.ofEpochMilli(test.getTestStartTimeMs()));
     return new TestExecutionUnit(testLocator, testTiming, job);
+  }
+
+  private List<LocalDeviceTestRunner> getDeviceRunnersUntilReady(List<String> deviceIds)
+      throws MobileHarnessException, InterruptedException {
+    // Waits for the device to be ready, since the device maybe INIT in LabServer.
+    Clock clock = Clock.systemUTC();
+    Instant expireTime = clock.instant().plus(WAIT_DEVICE_READY_TIMEOUT);
+    Sleeper sleeper = Sleeper.defaultSleeper();
+    int attempts = 0;
+    while (true) {
+      try {
+        return getDeviceRunners(deviceIds);
+      } catch (MobileHarnessException e) {
+        if (clock.instant().isAfter(expireTime)
+            || (e.getErrorId() != InfraErrorId.LAB_RPC_PREPARE_TEST_DEVICE_NOT_ALIVE
+                && e.getErrorId() != InfraErrorId.LAB_RPC_PREPARE_TEST_DEVICE_NOT_FOUND)) {
+          throw e;
+        }
+        logger.atWarning().log(
+            "%d failed attempts to get device runners of %s, try again later",
+            ++attempts, deviceIds);
+        sleeper.sleep(Duration.ofSeconds(1));
+      }
+    }
   }
 
   private List<LocalDeviceTestRunner> getDeviceRunners(List<String> deviceIds)
