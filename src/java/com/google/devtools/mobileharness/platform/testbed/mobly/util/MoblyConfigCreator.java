@@ -16,7 +16,6 @@
 
 package com.google.devtools.mobileharness.platform.testbed.mobly.util;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableCollection;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -31,6 +30,8 @@ import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.device.SimpleCompositeDevice;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import javax.annotation.Nullable;
@@ -38,11 +39,17 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONTokener;
+import org.yaml.snakeyaml.DumperOptions;
+import org.yaml.snakeyaml.LoaderOptions;
+import org.yaml.snakeyaml.Yaml;
+import org.yaml.snakeyaml.constructor.SafeConstructor;
+import org.yaml.snakeyaml.representer.Representer;
+import org.yaml.snakeyaml.resolver.Resolver;
 
 /** Provides a utility to generate a Mobly test config for supported device types. */
 public class MoblyConfigCreator {
 
-  // TODO: Update config generation to not rely on passing aroundsomething besides
+  // TODO: Update config generation to not rely on passing around something besides
   // org.json types.
 
   /** Prefix to attach to device ids for configs generated from non-{@link TestbedDevice}. */
@@ -110,10 +117,35 @@ public class MoblyConfigCreator {
       JSONObject subDeviceConfig =
           createSubDeviceConfig(subDevice.getKey().deviceId(), type, subDevice.getValue());
       // Concatenate onto the main config
-      concatMoblyConfig(moblyLocalConfig, subDeviceConfig);
+      concatMoblyConfig(moblyLocalConfig, subDeviceConfig, /* overwriteOriginal= */ false);
     }
 
     return moblyLocalConfig;
+  }
+
+  /**
+   * Parses a Mobly YAML config file into a JSONObject.
+   *
+   * <p>The YAML config file is expected to contain a list of testbed configs. If the YAML config
+   * does not contain testbeds, an empty JSONObject is returned. Otherwise, the first testbed config
+   * found is returned.
+   */
+  public static JSONObject getMoblyConfigFromYaml(String yamlContent) {
+    Yaml yaml =
+        new Yaml(
+            new SafeConstructor(new LoaderOptions()),
+            new Representer(new DumperOptions()),
+            new DumperOptions(),
+            new LoaderOptions(),
+            new Resolver());
+    Map<String, List<Map<String, Object>>> yamlConfig = yaml.load(yamlContent);
+    // Return empty config if the YAML config does not contain testbeds.
+    if (!yamlConfig.containsKey(MoblyConstant.ConfigKey.TESTBEDS)
+        || yamlConfig.get(MoblyConstant.ConfigKey.TESTBEDS).isEmpty()) {
+      return new JSONObject();
+    }
+    // Return the first testbed config found
+    return new JSONObject(yamlConfig.get(MoblyConstant.ConfigKey.TESTBEDS).get(0));
   }
 
   /**
@@ -237,7 +269,7 @@ public class MoblyConfigCreator {
    *       concatenates controller entries. It is possible after concatenation that a controller
    *       list contains a mix of JSON types. This can result in a possibly invalid format for
    *       downstream consumer of the config.
-   *   <li>existing test parameters are not overwritten,
+   *   <li>existing test parameters are not overwritten, unless overwriteOriginal is set to true,
    *   <li>new test parameters are added,
    *   <li>any entries besides controllers and test params (e.g., MH Dimensions) are ignored.
    * </ol>
@@ -246,9 +278,10 @@ public class MoblyConfigCreator {
    *     MoblyConfigUtil#readTestbedModelConfigs()})
    * @param addedConfig JSON config of a second testbed instance (see {@link
    *     MoblyConfigUtil#readTestbedModelConfigs()})
+   * @param overwriteOriginal if true, overwrite original test params and controller configs
    */
-  @VisibleForTesting
-  static void concatMoblyConfig(JSONObject originalConfig, JSONObject addedConfig)
+  public static void concatMoblyConfig(
+      JSONObject originalConfig, JSONObject addedConfig, boolean overwriteOriginal)
       throws JSONException {
     // Concatenate the test params
     JSONObject testParams = (JSONObject) originalConfig.opt(MoblyConstant.ConfigKey.TEST_PARAMS);
@@ -263,8 +296,8 @@ public class MoblyConfigCreator {
       Iterator<?> paramKeys = addedTestParams.keys();
       while (paramKeys.hasNext()) {
         String key = (String) paramKeys.next();
-        // If the key doesn't exist, add it.
-        if (!testParams.has(key)) {
+        // If the key doesn't exist, or overwriteOriginal is set to true, add/update it.
+        if (!testParams.has(key) || overwriteOriginal) {
           testParams.put(key, addedTestParams.get(key));
         }
       }
@@ -285,8 +318,8 @@ public class MoblyConfigCreator {
       Iterator<?> controllerKeys = addedControllers.keys();
       while (controllerKeys.hasNext()) {
         String key = (String) controllerKeys.next();
-        // If the key doesn't exist, add it.
-        if (!controllers.has(key)) {
+        // If the key doesn't exist, or overwriteOriginal is set to true, add/update it.
+        if (!controllers.has(key) || overwriteOriginal) {
           controllers.put(key, addedControllers.get(key));
         } else {
           if (controllers.get(key) instanceof JSONArray

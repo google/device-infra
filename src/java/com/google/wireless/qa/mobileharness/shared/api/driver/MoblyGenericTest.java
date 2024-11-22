@@ -93,6 +93,9 @@ public class MoblyGenericTest extends BaseDriver {
   @FileAnnotation(required = true, help = "The .par file of your Mobly testcases.")
   public static final String FILE_TEST_LIB_PAR = "test_lib_par";
 
+  @FileAnnotation(required = false, help = "A custom Mobly YAML config file")
+  public static final String FILE_MOBLY_CONFIG = "mobly_config";
+
   private static final String RAW_MOBLY_LOG_DIR = "raw_mobly_logs";
 
   /** Name of file that catches stdout & stderr output of Mobly process. */
@@ -240,11 +243,10 @@ public class MoblyGenericTest extends BaseDriver {
       throws MobileHarnessException, InterruptedException {
     JSONObject moblyJson = generateMoblyConfig(testInfo, getDevice());
     testbedName = getTestbedName(moblyJson);
-    return prepareMoblyConfig(testInfo, moblyJson, localFileUtil);
+    return prepareMoblyConfig(testInfo, moblyJson);
   }
 
-  public static File prepareMoblyConfig(
-      TestInfo testInfo, JSONObject moblyJson, LocalFileUtil localFileUtil)
+  public File prepareMoblyConfig(TestInfo testInfo, JSONObject moblyJson)
       throws MobileHarnessException {
     File configFile = new File(testInfo.getGenFileDir(), MoblyConstant.TestGenOutput.CONFIG_FILE);
     LoaderOptions loaderConfig = new LoaderOptions();
@@ -289,7 +291,7 @@ public class MoblyGenericTest extends BaseDriver {
     }
   }
 
-  public static JSONObject generateMoblyConfig(TestInfo testInfo, Device device)
+  public JSONObject generateMoblyConfig(TestInfo testInfo, Device device)
       throws MobileHarnessException, InterruptedException {
     try {
       return generateMoblyConfigHelper(testInfo, device);
@@ -299,7 +301,7 @@ public class MoblyGenericTest extends BaseDriver {
     }
   }
 
-  private static JSONObject generateMoblyConfigHelper(TestInfo testInfo, Device device)
+  private JSONObject generateMoblyConfigHelper(TestInfo testInfo, Device device)
       throws MobileHarnessException, InterruptedException, JSONException {
     JSONObject config = new JSONObject();
     // Set Framework params (logdir).
@@ -308,6 +310,17 @@ public class MoblyGenericTest extends BaseDriver {
     moblyParams.put("LogPath", logDir);
     config.put(MoblyConstant.ConfigKey.MOBLY_PARAMS, moblyParams);
     JSONObject testbedConfig = MoblyConfigCreator.getLocalMoblyConfig(device);
+
+    // Overwrite the testbed config with the user-provided custom Mobly config, if it exists.
+    if (testInfo.jobInfo().files().isTagNotEmpty(FILE_MOBLY_CONFIG)) {
+      JSONObject customMoblyConfig =
+          MoblyConfigCreator.getMoblyConfigFromYaml(
+              localFileUtil.readFile(testInfo.jobInfo().files().getSingle(FILE_MOBLY_CONFIG)));
+      MoblyConfigCreator.concatMoblyConfig(
+          testbedConfig, customMoblyConfig, /* overwriteOriginal= */ true);
+      logger.atInfo().log("Config after loading custom Mobly YAML: %s", config);
+    }
+
     JSONObject testParams;
     if (testbedConfig.isNull(MoblyConstant.ConfigKey.TEST_PARAMS)) {
       testParams = new JSONObject();

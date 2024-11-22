@@ -100,10 +100,9 @@ public class MoblyAospPackageTest extends MoblyGenericTest {
   @Override
   protected File prepareMoblyConfig(TestInfo testInfo)
       throws MobileHarnessException, InterruptedException {
-    JSONObject moblyJson =
-        convertMoblyConfig(MoblyGenericTest.generateMoblyConfig(testInfo, getDevice()));
+    JSONObject moblyJson = convertMoblyConfig(generateMoblyConfig(testInfo, getDevice()));
     testbedName = MoblyGenericTest.getTestbedName(moblyJson);
-    return prepareMoblyConfig(testInfo, moblyJson, localFileUtil);
+    return prepareMoblyConfig(testInfo, moblyJson);
   }
 
   /** Generates the test execution command. */

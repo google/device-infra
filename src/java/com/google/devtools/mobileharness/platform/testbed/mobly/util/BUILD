@@ -66,6 +66,7 @@ java_library(
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
         "@maven//:org_json_json",
+        "@maven//:org_yaml_snakeyaml",
     ],
 )
 
