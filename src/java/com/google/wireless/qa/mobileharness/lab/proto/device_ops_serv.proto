@@ -58,6 +58,7 @@ message GetDeviceDebugInfoRequest {
     NDM_VERSION = 6;
     USB_DEVICE_DETECTOR = 7;
     IP_LINK_SHOW = 8;
+    ARP_SHOW = 9;
   }
   repeated GetDeviceDebugInfoCommand command = 1;
 }
