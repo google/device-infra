@@ -132,6 +132,8 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/allocation",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/testrunner/event/test:client_test_events",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/messaging:message_sender",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/messaging:message_subscriber_backend",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/exception",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/model:test_execution_result",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/util:exception_handler",

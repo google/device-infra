@@ -41,6 +41,7 @@ java_library(
     name = "message_sender",
     srcs = ["MessageSender.java"],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/controller/messaging:__subpackages__",
     ],
     deps = [
@@ -69,6 +70,7 @@ java_library(
     name = "message_subscriber_backend",
     srcs = ["MessageSubscriberBackend.java"],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/controller/messaging:__subpackages__",
     ],
     deps = [

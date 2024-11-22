@@ -34,6 +34,10 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.model.proto.Device.PostTestDeviceOp;
 import com.google.devtools.mobileharness.api.model.proto.Test;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto;
+import com.google.devtools.mobileharness.infra.controller.messaging.MessageSender;
+import com.google.devtools.mobileharness.infra.controller.messaging.MessageSubscriberBackend;
+import com.google.devtools.mobileharness.infra.controller.messaging.MessageSubscriberBackend.InvalidMessageSubscriber;
+import com.google.devtools.mobileharness.infra.controller.messaging.MessageSubscriberBackend.MessageSubscribers;
 import com.google.devtools.mobileharness.infra.controller.test.PluginLoadingResult.PluginItem;
 import com.google.devtools.mobileharness.infra.controller.test.TestContext.WithTestContext;
 import com.google.devtools.mobileharness.infra.controller.test.exception.TestRunnerLauncherConnectedException;
@@ -117,6 +121,9 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
   /** The test message poster of the test. */
   private final CacheableTestMessagePoster testMessagePoster;
 
+  /** Message sender for messages that are sent to the test. */
+  private final MessageSender messageSender = new MessageSender();
+
   /** Set by {@link #updateDeviceStatus}. */
   private volatile ImmutableList<DeviceFeature> deviceFeatures;
 
@@ -131,6 +138,9 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
    * loaded in the pre_run_test phase.
    */
   protected final ImmutableList<PluginItem<?>> initialPluginItems;
+
+  private final ImmutableList.Builder<MessageSubscribers> messageSubscribers =
+      ImmutableList.builder();
 
   protected BaseTestRunner(
       TestRunnerLauncher<? super T> launcher,
@@ -223,8 +233,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
   public final void postKill(boolean timeout, int killCount) {
     if (timeout) {
       testInfo
-          .result()
-          .toNewResult()
+          .resultWithCause()
           .setNonPassing(
               Test.TestResult.TIMEOUT,
               new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
@@ -255,7 +264,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
       // it here. Also see b/19134904.
       test.status().set(TestStatus.DONE);
       if (test.result().get() == TestResult.UNKNOWN) {
-        test.result().toNewResult().setNonPassing(Test.TestResult.ERROR, error);
+        test.resultWithCause().setNonPassing(Test.TestResult.ERROR, error);
         test.log().atWarning().alsoTo(logger).log("%s", error.getMessage());
       }
     }
@@ -321,8 +330,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
       if (testInfo.jobInfo().timer().isExpired()) {
         // Job is timeout and test thread pool is shutdown.
         testInfo
-            .result()
-            .toNewResult()
+            .resultWithCause()
             .setNonPassing(
                 Test.TestResult.TIMEOUT,
                 new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
@@ -332,8 +340,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
       } else if (testInfo.timer().isExpired()) {
         // Job is timeout and test thread pool is shutdown.
         testInfo
-            .result()
-            .toNewResult()
+            .resultWithCause()
             .setNonPassing(
                 Test.TestResult.TIMEOUT,
                 new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
@@ -343,8 +350,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
       } else if (SystemUtil.isProcessShuttingDown()) {
         // The process is shutting down.
         testInfo
-            .result()
-            .toNewResult()
+            .resultWithCause()
             .setNonPassing(
                 Test.TestResult.ERROR,
                 new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
@@ -383,7 +389,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
                   "Test interrupted because it's manually killed by user.",
                   e);
         }
-        testInfo.result().toNewResult().setNonPassing(Test.TestResult.ERROR, cause);
+        testInfo.resultWithCause().setNonPassing(Test.TestResult.ERROR, cause);
         testException = e;
       }
       testInfo
@@ -396,8 +402,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
       // Marks this to {@link TestResult#ERROR} in case the driver has already changed the
       // {@link TestResult}.
       testInfo
-          .result()
-          .toNewResult()
+          .resultWithCause()
           .setNonPassing(
               Result.upgradeTestResult(ResultUtil.getResultByException(e)),
               ErrorModelConverter.upgradeMobileHarnessException(e));
@@ -411,8 +416,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
       // Marks this to {@link TestResult#ERROR} in case the driver has already changed the
       // {@link TestResult}.
       testInfo
-          .result()
-          .toNewResult()
+          .resultWithCause()
           .setNonPassing(
               Test.TestResult.ERROR,
               new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
@@ -441,8 +445,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
         if (testInfo.result().get() == TestResult.UNKNOWN) {
           String errMsg = "Test result not found when test finished normally. Mark as ERROR.";
           testInfo
-              .result()
-              .toNewResult()
+              .resultWithCause()
               .setNonPassing(
                   Test.TestResult.ERROR,
                   new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
@@ -624,6 +627,26 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
                 null));
 
     preRunTest(isTestSkipped, testInfo, allocation, newDeviceInfos, deviceFeatures);
+
+    // All subscribers have been registered now.
+    ImmutableList<MessageSubscribers> messageSubscribers = this.messageSubscribers.build();
+    testInfo
+        .log()
+        .atInfo()
+        .alsoTo(logger)
+        .log("Local test message subscribers: %s", messageSubscribers);
+    ImmutableList<InvalidMessageSubscriber> invalidMessageSubscribers =
+        messageSubscribers.stream()
+            .flatMap(subscribers -> subscribers.invalidMessageSubscribers().stream())
+            .collect(toImmutableList());
+    if (!invalidMessageSubscribers.isEmpty()) {
+      testInfo
+          .warnings()
+          .add(
+              InfraErrorId.TR_INVALID_TEST_MESSAGE_SUBSCRIBERS,
+              String.format("Invalid test message subscribers: %s", invalidMessageSubscribers));
+    }
+    messageSender.initializeLocalSubscribers(messageSubscribers);
     testMessagePoster.asyncDisableAndHandleCache();
 
     testInfo.log().atInfo().alsoTo(logger).log("Post TestStartedEvent to test %s", testLocator);
@@ -789,6 +812,14 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
   @Override
   public final void registerTestEventSubscriber(Object subscriber, EventScope scope) {
     scopedEventBus.inScope(scope).register(subscriber);
+
+    if (scope == EventScope.TEST_MESSAGE) {
+      MessageSubscribers messageSubscribers =
+          MessageSubscriberBackend.searchMessageSubscribers(subscriber);
+      if (messageSubscribers.hasMessageSubscribers()) {
+        this.messageSubscribers.add(messageSubscribers);
+      }
+    }
   }
 
   @Override

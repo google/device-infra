@@ -30,7 +30,8 @@ import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAu
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 
-class MessageSender implements NonThrowingAutoCloseable {
+/** Message sender for sending messages of OmniLab messaging system. */
+public class MessageSender implements NonThrowingAutoCloseable {
 
   private final SettableFuture<ImmutableList<MessageSubscribers>> localSubscribers =
       SettableFuture.create();

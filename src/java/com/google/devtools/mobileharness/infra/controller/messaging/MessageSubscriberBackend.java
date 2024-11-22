@@ -57,7 +57,7 @@ import java.util.List;
 import javax.annotation.Nullable;
 
 /** Backend of message subscribers. */
-class MessageSubscriberBackend {
+public class MessageSubscriberBackend {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -374,6 +374,25 @@ class MessageSubscriberBackend {
           messageSubscriber.receiveMessage(messageSend, messageReceptionsHandler);
         }
       }
+    }
+
+    /** Returns whether there is at least one valid/invalid message subscriber. */
+    @Memoized
+    public boolean hasMessageSubscribers() {
+      return !messageSubscribers().isEmpty() || !invalidMessageSubscribers().isEmpty();
+    }
+
+    @Memoized
+    @Override
+    public String toString() {
+      return String.format(
+          "message_subscribers{subscribers=%s%s, obj={class=[%s], identity_hash_code=[%s]}}",
+          messageSubscribers(),
+          invalidMessageSubscribers().isEmpty()
+              ? ""
+              : String.format(", invalid_subscribers=%s", invalidMessageSubscribers()),
+          obj().getClass().getName(),
+          System.identityHashCode(obj()));
     }
 
     public static MessageSubscribers of(
