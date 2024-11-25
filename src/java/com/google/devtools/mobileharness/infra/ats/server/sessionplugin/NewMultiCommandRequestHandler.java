@@ -506,6 +506,8 @@ final class NewMultiCommandRequestHandler {
         ImmutableMap.copyOf(request.getTestEnvironment().getEnvVarsMap()));
     sessionRequestInfoBuilder.setRemoteRunnerFilePathPrefix(
         RemoteFileType.ATS_FILE_SERVER.prefix());
+    sessionRequestInfoBuilder.setIsXtsDynamicDownloadEnabled(
+        commandInfo.getEnableXtsDynamicDownload());
 
     if (request.hasPrevTestContext()) {
       for (TestResource testResource : request.getPrevTestContext().getTestResourceList()) {

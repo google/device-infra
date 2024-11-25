@@ -63,6 +63,7 @@ message CommandInfo {
     string value = 2;
   }
   optional mobileharness.infra.ats.common.ShardingMode sharding_mode = 6;
+  optional bool enable_xts_dynamic_download = 7;
 }
 
 message TestResource {
