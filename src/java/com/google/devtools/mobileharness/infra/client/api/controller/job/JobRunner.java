@@ -1176,6 +1176,23 @@ public class JobRunner implements Runnable {
       // Don't override the existing result, like TIMEOUT.
       return;
     }
+    if (jobInfo.properties().getBoolean(PropertyName.Job.MANUALLY_APORTED).orElse(false)) {
+      MobileHarnessException e =
+          new MobileHarnessException(
+              InfraErrorId.CLIENT_JR_JOB_EXEC_INTERRUPTED, "Job is manually aborted.");
+      jobInfo
+          .resultWithCause()
+          .setNonPassing(
+              com.google.devtools.mobileharness.api.model.proto.Test.TestResult.ERROR, e);
+      jobInfo.tests().getAll().values().stream()
+          .filter(testInfo -> testInfo.status().get() != TestStatus.DONE)
+          .forEach(
+              testInfo -> {
+                testInfo.status().set(TestStatus.DONE);
+                testInfo.resultWithCause().setNonPassing(Test.TestResult.FAIL, e);
+              });
+      return;
+    }
     boolean hasErrorTests = false;
     boolean hasInfraErrorTests = false;
     boolean hasFailTests = false;
