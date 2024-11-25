@@ -120,12 +120,17 @@ public abstract class XtsJobCreator {
     totalDynamicModuleVariables.put(XtsConstants.DYNAMIC_MCTS_JOB_NAME, staticMctsModules);
 
     for (TradefedJobInfo tradefedJobInfo : tradefedJobInfoList) {
-      // TODO: Need to check if the job is for module sharding, if so then disable
-      // dynamic download.
-      createDynamicDownloadJobs(
-          jobInfos, tradefedJobInfo, totalDynamicModuleVariables, sessionRequestInfo, tfModules);
-      // Only if none of the dynamic jobs are created, we'll create only one xTS job.
-      if (jobInfos.build().isEmpty()) {
+      // TODO Temporary disable dynamic download if the job is for module sharding.
+      if (!SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo)) {
+        createDynamicDownloadJobs(
+            jobInfos, tradefedJobInfo, totalDynamicModuleVariables, sessionRequestInfo, tfModules);
+        // Only if none of the dynamic jobs are created, we'll create only one xTS job.
+        if (jobInfos.build().isEmpty()) {
+          jobInfos.add(
+              sessionRequestHandlerUtil.createXtsTradefedTestJob(
+                  sessionRequestInfo, tradefedJobInfo));
+        }
+      } else {
         jobInfos.add(
             sessionRequestHandlerUtil.createXtsTradefedTestJob(
                 sessionRequestInfo, tradefedJobInfo));
