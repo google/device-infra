@@ -303,7 +303,9 @@ public class LocalFileUtil {
     // Command "lsof+D path" could easily return 1 if there are files under this directory
     // which aren't opened by any process.
     Command command =
-        Command.of("lsof", "-w", "-Fn", "+D", dirPath.toString()).successExitCodes(0, 1);
+        Command.of("lsof", "-w", "-Fn", "+D", dirPath.toString())
+            .timeout(Duration.ofSeconds(30))
+            .successExitCodes(0, 1);
 
     ImmutableSet.Builder<String> allOpenedFilesOrDirsBuilder = ImmutableSet.builder();
     try {
