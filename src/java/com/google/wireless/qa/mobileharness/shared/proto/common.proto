@@ -18,6 +18,9 @@ syntax = "proto2";
 
 package mobileharness.shared;
 
+import "src/devtools/common/metrics/stability/model/proto/error_type.proto";
+import "src/devtools/common/metrics/stability/model/proto/namespace.proto";
+
 option java_package = "com.google.wireless.qa.mobileharness.shared.proto";
 
 // Status of the transferring process of a file.
@@ -42,4 +45,6 @@ message ErrorInfo {
   optional string message = 2;  // required.
   optional string stack_trace = 3;
   optional string name = 4;
+  optional stability.model.ErrorType type = 5;
+  optional stability.model.Namespace namespace = 6;
 }

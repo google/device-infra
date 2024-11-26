@@ -74,9 +74,7 @@ public class Errors {
     }
   }
 
-  /**
-   * @return the new data model which has the same backend of this object.
-   */
+  /** Returns the new data model which has the same backend of this object. */
   @Beta
   public Warnings toWarnings() {
     synchronized (lock) {
@@ -315,11 +313,14 @@ public class Errors {
     if (!summary.getMessage().isEmpty()) {
       errorInfo.setMessage(summary.getMessage());
     }
-    errorInfo.setStackTrace(
-        legacyErrorInfoStackTrace == null
-            ? ErrorModelConverter.getCompleteStackTrace(detail)
-            : legacyErrorInfoStackTrace);
-    return errorInfo.build();
+    return errorInfo
+        .setType(summary.getErrorId().getType())
+        .setNamespace(summary.getErrorId().getNamespace())
+        .setStackTrace(
+            legacyErrorInfoStackTrace == null
+                ? ErrorModelConverter.getCompleteStackTrace(detail)
+                : legacyErrorInfoStackTrace)
+        .build();
   }
 
   @VisibleForTesting
@@ -331,8 +332,11 @@ public class Errors {
                     ErrorIdProto.ErrorId.newBuilder()
                         .setCode(legacyErrorInfo.getCode())
                         .setName(legacyErrorInfo.getName())
-                        .setType(ErrorType.UNCLASSIFIED)
-                        .setNamespace(Namespace.MH))
+                        .setType(legacyErrorInfo.getType())
+                        .setNamespace(
+                            legacyErrorInfo.hasNamespace()
+                                ? legacyErrorInfo.getNamespace()
+                                : Namespace.MH))
                 .setMessage(legacyErrorInfo.getMessage()))
         .build();
   }

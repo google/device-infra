@@ -38,6 +38,7 @@ exports_files([
 proto_library(
     name = "common_proto",
     srcs = ["common.proto"],
+    deps = ["//src/devtools/common/metrics/stability/model/proto:error_proto"],
 )
 
 java_proto_library(
