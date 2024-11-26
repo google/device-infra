@@ -27,7 +27,9 @@ java_library(
         "//src/javatests/com/google/devtools/mobileharness/infra/monitoring:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/shared/labinfo:__pkg__",
     ],
-    deps = ["//src/devtools/mobileharness/api/query/proto:lab_query_java_proto"],
+    deps = [
+        "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
+    ],
 )
 
 java_library(

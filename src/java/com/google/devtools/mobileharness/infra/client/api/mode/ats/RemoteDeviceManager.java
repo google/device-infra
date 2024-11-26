@@ -46,13 +46,15 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabServerFeature;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabServerSetting;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabStatus;
+import com.google.devtools.mobileharness.api.query.proto.FilterProto.DeviceFilter;
+import com.google.devtools.mobileharness.api.query.proto.FilterProto.DeviceFilter.DeviceMatchCondition;
+import com.google.devtools.mobileharness.api.query.proto.FilterProto.LabFilter;
+import com.google.devtools.mobileharness.api.query.proto.FilterProto.LabFilter.LabMatchCondition;
+import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringMatchCondition;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceList;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
-import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery;
-import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Filter.DeviceFilter.DeviceMatchCondition;
-import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Filter.LabFilter.LabMatchCondition;
-import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Filter.StringMatchCondition;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Filter;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
 import com.google.devtools.mobileharness.infra.client.api.mode.ats.Annotations.AtsModeAbstractScheduler;
@@ -182,7 +184,7 @@ class RemoteDeviceManager implements LabInfoProvider {
   }
 
   @Override
-  public LabQueryResult.LabView getLabInfos(LabQuery.Filter filter) {
+  public LabQueryResult.LabView getLabInfos(Filter filter) {
     ImmutableMap<LabKey, LabQueryProto.LabData.Builder> filteredLabs;
     Instant timestamp = Instant.now();
     synchronized (lock) {
@@ -849,7 +851,7 @@ class RemoteDeviceManager implements LabInfoProvider {
 
     private final ImmutableList<Predicate<LabData>> labMatchers;
 
-    private LabPredicate(LabQuery.Filter.LabFilter labFilter) {
+    private LabPredicate(LabFilter labFilter) {
       this.labMatchers = createLabMatchers(labFilter);
     }
 
@@ -858,8 +860,7 @@ class RemoteDeviceManager implements LabInfoProvider {
       return labMatchers.stream().allMatch(labMatcher -> labMatcher.test(entry.getValue()));
     }
 
-    private static ImmutableList<Predicate<LabData>> createLabMatchers(
-        LabQuery.Filter.LabFilter labFilter) {
+    private static ImmutableList<Predicate<LabData>> createLabMatchers(LabFilter labFilter) {
       return labFilter.getLabMatchConditionList().stream()
           .map(LabPredicate::createLabMatcher)
           .collect(toImmutableList());
@@ -883,7 +884,7 @@ class RemoteDeviceManager implements LabInfoProvider {
 
     private final ImmutableList<Predicate<DeviceData>> deviceMatchers;
 
-    private DevicePredicate(LabQuery.Filter.DeviceFilter deviceFilter) {
+    private DevicePredicate(DeviceFilter deviceFilter) {
       this.deviceMatchers = createDeviceMatchers(deviceFilter);
     }
 
@@ -893,7 +894,7 @@ class RemoteDeviceManager implements LabInfoProvider {
     }
 
     private static ImmutableList<Predicate<DeviceData>> createDeviceMatchers(
-        LabQuery.Filter.DeviceFilter deviceFilter) {
+        DeviceFilter deviceFilter) {
       return deviceFilter.getDeviceMatchConditionList().stream()
           .map(DevicePredicate::createDeviceMatcher)
           .collect(toImmutableList());

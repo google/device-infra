@@ -165,6 +165,7 @@ java_library(
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/api/model/proto:lab_java_proto",
         "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
+        "//src/devtools/mobileharness/api/query/proto:filter_java_proto",
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
         "//src/devtools/mobileharness/infra/master/rpc/proto:lab_sync_service_java_grpc_proto",
         "//src/devtools/mobileharness/infra/master/rpc/proto:lab_sync_service_java_proto",

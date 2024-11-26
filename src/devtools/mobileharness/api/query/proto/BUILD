@@ -37,9 +37,30 @@ java_proto_library(
 )
 
 proto_library(
+    name = "filter_proto",
+    srcs = ["filter.proto"],
+)
+
+java_proto_library(
+    name = "filter_java_proto",
+    deps = [":filter_proto"],
+)
+
+py_proto_library(
+    name = "filter_py_proto",
+    srcs = [
+        "filter.proto",
+    ],
+    deps = [
+        "@com_github_protocolbuffers_protobuf//:well_known_types_py_pb2",
+    ],
+)
+
+proto_library(
     name = "lab_query_proto",
     srcs = ["lab_query.proto"],
     deps = [
+        ":filter_proto",
         "//src/devtools/mobileharness/api/model/proto:device_proto",
         "//src/devtools/mobileharness/api/model/proto:lab_proto",
         "@com_google_protobuf//:timestamp_proto",
@@ -57,6 +78,7 @@ py_proto_library(
         "lab_query.proto",
     ],
     deps = [
+        ":filter_py_proto",
         "//src/devtools/mobileharness/api/model/proto:device_py_pb2",
         "//src/devtools/mobileharness/api/model/proto:lab_py_proto",
         "@com_github_protocolbuffers_protobuf//:well_known_types_py_pb2",
@@ -85,6 +107,7 @@ py_proto_library(
         "lab_record.proto",
     ],
     deps = [
+        ":filter_py_proto",
         ":lab_query_py_proto",
         "//src/devtools/mobileharness/api/model/proto:device_py_pb2",
         "//src/devtools/mobileharness/api/model/proto:lab_py_proto",
