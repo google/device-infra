@@ -73,21 +73,23 @@ public final class MultiDeviceDiagnostician implements AllocationDiagnostician {
       throws MobileHarnessException, InterruptedException {
     DeviceQueryFilter filter = deviceFilter.getFilter(job);
     List<LabQueryResult> labResults = deviceQuerier.queryDevicesByLab(filter);
-    LabReport report = new LabReport(job);
+
+    LabReport report;
+    boolean isFirstRound;
+    if (lastReport != null) {
+      report = lastReport;
+      isFirstRound = false;
+    } else {
+      report = new LabReport(job);
+      isFirstRound = true;
+    }
     for (LabQueryResult labResult : labResults) {
       if (labResult.devices().size() < job.subDeviceSpecs().getSubDeviceCount()) {
         continue;
       }
-      report.addLabAssessment(assessor.assess(job, labResult));
+      report.addLabAssessment(assessor.assess(job, labResult), isFirstRound);
     }
 
-    // If the current report indicates there should be a match but an earlier
-    // report said there was not, the match must have become available after the job was done
-    // waiting. The previous report should be returned to reflect what was happening when the job
-    // was actually waiting.
-    if (lastReport != null && report.hasPerfectMatch() && !lastReport.hasPerfectMatch()) {
-      return lastReport;
-    }
     lastReport = report;
     return report;
   }

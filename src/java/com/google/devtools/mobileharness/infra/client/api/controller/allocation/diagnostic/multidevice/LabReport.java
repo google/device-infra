@@ -46,26 +46,45 @@ public final class LabReport implements Report {
 
   private final JobScheduleUnit job;
   private final PriorityQueue<LabAssessment> assessments;
+  private final Map<String, LabAssessment> hostToAssessments;
 
   public LabReport(JobScheduleUnit job) {
     this.job = job;
     this.assessments = new PriorityQueue<>((lab1, lab2) -> lab1.getScore() - lab2.getScore());
+    this.hostToAssessments = new HashMap<>();
   }
 
-  /**
-   * @see {@link Report#hasPerfectMatch()}
-   */
   @Override
   public boolean hasPerfectMatch() {
     return assessments.stream().anyMatch(LabAssessment::hasMaxScore);
   }
 
-  /** Adds a {@link LabAssessment} to this Report to be included in the readable diagnosis. */
+  /**
+   * Adds a {@link LabAssessment} to this Report to be included in the readable diagnosis.
+   *
+   * <p>If the it's the first round check, adds the {@link LabAssessment} to the priority queue.
+   *
+   * <p>If it's not the first round, Replace the existing {@link LabAssessment} for the same host if
+   * it has a higher score than the existing {@link LabAssessment}.
+   */
   @CanIgnoreReturnValue
-  LabReport addLabAssessment(LabAssessment labAssessment) {
-    assessments.add(labAssessment);
-    if (assessments.size() > MAX_LABS) {
-      assessments.poll();
+  LabReport addLabAssessment(LabAssessment labAssessment, boolean isFirstRound) {
+    String hostname = labAssessment.getHostname();
+    if (isFirstRound) {
+      assessments.add(labAssessment);
+      hostToAssessments.put(hostname, labAssessment);
+      if (assessments.size() > MAX_LABS) {
+        LabAssessment removedLabAssessment = assessments.poll();
+        hostToAssessments.remove(removedLabAssessment.getHostname());
+      }
+    } else {
+      LabAssessment existingLabAssessment = hostToAssessments.get(hostname);
+      if (existingLabAssessment != null) {
+        if (labAssessment.getScore() < existingLabAssessment.getScore()) {
+          assessments.remove(existingLabAssessment);
+          assessments.add(labAssessment);
+        }
+      }
     }
     return this;
   }
