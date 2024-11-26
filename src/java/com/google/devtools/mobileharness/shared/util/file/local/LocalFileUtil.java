@@ -29,6 +29,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.shared.util.file.remote.constant.RemoteFileType;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
@@ -299,34 +300,31 @@ public class LocalFileUtil {
       throws MobileHarnessException, InterruptedException {
     checkDir(dirPath);
 
-    String listOpenedFiles = String.format("lsof -w -Fn +D %s", dirPath);
-    String removeUnrelatedLines = "sed '/^[^n]/d'";
-    String removeLeadingN = "sed 's/^n//'";
-    String sortAndRemoveDuplicateLines = "sort -u";
     // Command "lsof+D path" could easily return 1 if there are files under this directory
     // which aren't opened by any process.
     Command command =
-        Command.of(
-                "/bin/sh",
-                "-c",
-                String.join(
-                    " | ",
-                    listOpenedFiles,
-                    removeUnrelatedLines,
-                    removeLeadingN,
-                    sortAndRemoveDuplicateLines))
-            .successExitCodes(0, 1);
+        Command.of("lsof", "-w", "-Fn", "+D", dirPath.toString()).successExitCodes(0, 1);
 
-    String allOpenedFilesOrDirs;
+    ImmutableSet.Builder<String> allOpenedFilesOrDirsBuilder = ImmutableSet.builder();
     try {
-      allOpenedFilesOrDirs = cmdExecutor.exec(command).stdout();
-      logger.atInfo().log("Opened files or dirs: %s", allOpenedFilesOrDirs);
+      String cmdOutput = cmdExecutor.exec(command).stdout();
+      Iterable<String> allOpenedFilesOrDirsArray = Splitter.on("\n").split(cmdOutput);
+      for (String line : allOpenedFilesOrDirsArray) {
+        // Lines of file names start with n.
+        if (line.startsWith("n")) {
+          // Remove the leading n.
+          allOpenedFilesOrDirsBuilder.add(line.substring(1));
+        }
+      }
     } catch (CommandException e) {
       throw new MobileHarnessException(
           BasicErrorId.SYSTEM_LIST_OPEN_FILES_ERROR,
           String.format("Failed to list open files or directories under %s", dirPath),
           e);
     }
+
+    ImmutableSet<String> allOpenedFilesOrDirs = allOpenedFilesOrDirsBuilder.build();
+    logger.atInfo().log("Opened files or dirs: %s", allOpenedFilesOrDirs);
 
     List<Path> allFiles = listFilePaths(dirPath, /* recursively= */ true);
     ImmutableList.Builder<Path> removedFilesBuilder = ImmutableList.builder();
