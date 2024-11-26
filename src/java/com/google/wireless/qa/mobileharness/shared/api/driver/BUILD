@@ -218,6 +218,7 @@ java_library(
     name = "xts_tradefed_test",
     srcs = ["XtsTradefedTest.java"],
     resources = [
+        "//src/devtools/mobileharness/infra/controller/test/util/xtsdownloader/configs:mcts_list",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/agent:tradefed_invocation_agent_deploy.jar",
     ],
     deps = [
