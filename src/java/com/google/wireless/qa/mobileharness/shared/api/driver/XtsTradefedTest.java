@@ -950,6 +950,8 @@ public class XtsTradefedTest extends BaseDriver
     // For non dynamic download jobs, create symlinks to the original static test cases.
     if (isXtsDynamicDownloaderEnabled(testInfo)) {
       Set<String> xtsDynamicDownloadTestList = new HashSet<>();
+      Set<String> missingTestList = new HashSet<>();
+      missingTestList.addAll(DYNAMIC_JOB_TEST_DEPENDENCIES);
       String testListProperty =
           testInfo.properties().get(XtsConstants.XTS_DYNAMIC_DOWNLOAD_PATH_TEST_LIST_PROPERTY_KEY);
       if (testListProperty != null) {
@@ -969,21 +971,25 @@ public class XtsTradefedTest extends BaseDriver
           .equals(XtsConstants.DYNAMIC_MCTS_JOB_NAME)) {
         if (testInfo.properties().has(XtsConstants.XTS_DYNAMIC_DOWNLOAD_PATH_TEST_PROPERTY_KEY)) {
           // Integrates the dynamic downloaded test cases with the temp XTS workspace.
-          createSymlinksForDynamicDownloadTestCases(
-              linkTestcasesDir,
-              Path.of(
-                  testInfo.getTmpFileDir()
-                      + testInfo
-                          .properties()
-                          .get(XtsConstants.XTS_DYNAMIC_DOWNLOAD_PATH_TEST_PROPERTY_KEY)),
-              /* isDynamicDownload= */ true,
-              xtsDynamicDownloadTestList);
+          missingTestList.addAll(
+              createSymlinksForDynamicDownloadTestCases(
+                  linkTestcasesDir,
+                  Path.of(
+                      testInfo.getTmpFileDir()
+                          + testInfo
+                              .properties()
+                              .get(XtsConstants.XTS_DYNAMIC_DOWNLOAD_PATH_TEST_PROPERTY_KEY)),
+                  /* isDynamicDownload= */ true,
+                  xtsDynamicDownloadTestList));
           // Also include the test dependencies for dynamic download test cases.
-          createSymlinksForDynamicDownloadTestCases(
-              linkTestcasesDir,
-              sourceXtsBundledTestcasesDir,
-              /* isDynamicDownload= */ true,
-              DYNAMIC_JOB_TEST_DEPENDENCIES);
+          var unused =
+              createSymlinksForDynamicDownloadTestCases(
+                  linkTestcasesDir,
+                  sourceXtsBundledTestcasesDir,
+                  /* isDynamicDownload= */ true,
+                  missingTestList);
+        } else {
+          createSymlinksForTestCases(linkTestcasesDir, sourceXtsBundledTestcasesDir);
         }
       }
 
@@ -994,11 +1000,12 @@ public class XtsTradefedTest extends BaseDriver
           .orElse("")
           .equals(XtsConstants.STATIC_XTS_JOB_NAME)) {
         // Integrates the static test cases with the temp XTS workspace.
-        createSymlinksForDynamicDownloadTestCases(
-            linkTestcasesDir,
-            sourceXtsBundledTestcasesDir,
-            /* isDynamicDownload= */ false,
-            xtsDynamicDownloadTestList);
+        var unused =
+            createSymlinksForDynamicDownloadTestCases(
+                linkTestcasesDir,
+                sourceXtsBundledTestcasesDir,
+                /* isDynamicDownload= */ false,
+                xtsDynamicDownloadTestList);
       }
     } else {
       createSymlinksForTestCases(linkTestcasesDir, sourceXtsBundledTestcasesDir);
@@ -1084,7 +1091,8 @@ public class XtsTradefedTest extends BaseDriver
         "Finished integrating the test cases [%s] with the temp XTS workspace [%s].", target, link);
   }
 
-  private void createSymlinksForDynamicDownloadTestCases(
+  @CanIgnoreReturnValue
+  private Set<String> createSymlinksForDynamicDownloadTestCases(
       Path link, Path target, boolean isDynamicDownload, Set<String> dynamicDownloadTestList)
       throws MobileHarnessException {
     try {
@@ -1092,7 +1100,7 @@ public class XtsTradefedTest extends BaseDriver
     } catch (MobileHarnessException e) {
       // File does not exist, no need to integrate.
       logger.atWarning().log("%s does not exist.", target);
-      return;
+      return dynamicDownloadTestList;
     }
 
     // Create symlink to the immediate subfiles and subdirectories of the xts test cases.
@@ -1116,6 +1124,11 @@ public class XtsTradefedTest extends BaseDriver
 
     logger.atInfo().log(
         "Finished integrating the test cases [%s] with the temp XTS workspace [%s].", target, link);
+
+    // Return the test cases that missing in the dynamic download folder but contains in the test
+    // list.
+    dynamicDownloadTestList.removeAll(subTestCases);
+    return dynamicDownloadTestList;
   }
 
   /** Returns {@code true} if xts dynamic downloader is enabled. */
