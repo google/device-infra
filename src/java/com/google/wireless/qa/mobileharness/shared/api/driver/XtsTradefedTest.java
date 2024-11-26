@@ -140,7 +140,10 @@ public class XtsTradefedTest extends BaseDriver
   // Will remove these cases from MCTS.
   private static final ImmutableSet<String> STATIC_JOB_TEST_DEPENDENCIES =
       ImmutableSet.of(
-          "cts-dalvik-host-test-runner", "net-tests-utils-host-common", "CtsBackupHostTestCases");
+          "cts-dalvik-host-test-runner",
+          "net-tests-utils-host-common",
+          "CtsBackupHostTestCases",
+          "compatibility-host-provider-preconditions");
 
   private static final String TF_PATH_KEY = "TF_PATH";
 
