@@ -22,9 +22,6 @@ import static java.lang.reflect.Modifier.isAbstract;
 import static java.util.Arrays.stream;
 import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.joining;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -33,7 +30,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.reflect.ClassPath;
 import com.google.common.reflect.ClassPath.ClassInfo;
-import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.inject.Guice;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.ConstraintsForTesting;
@@ -41,14 +37,11 @@ import com.google.wireless.qa.mobileharness.shared.api.decorator.Decorator;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.driver.DriverFactory;
-import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
-import com.google.wireless.qa.mobileharness.shared.model.job.TestLocator;
+import com.google.wireless.qa.mobileharness.shared.model.job.TestInfoMocker;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Files;
-import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.DriverDecoratorSpecMapper;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.JobSpecHelper;
-import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -81,12 +74,8 @@ public class InstantiationTest {
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
   @Rule public final TemporaryFolder tmpFolder = new TemporaryFolder();
 
-  @Mock private TestInfo testInfo;
-  @Mock private TestLocator testLocator;
-  @Mock private JobInfo jobInfo;
-  @Mock private Params jobParams;
-  @Mock private Files jobFiles;
-  @Mock private Files testFiles;
+  private final TestInfo testInfo = TestInfoMocker.mockTestInfo();
+
   @Mock private Driver decoratedDriver;
 
   private Device device;
@@ -103,15 +92,8 @@ public class InstantiationTest {
 
   @Before
   public void setUp() throws Exception {
-    when(testInfo.jobInfo()).thenReturn(jobInfo);
-    when(testInfo.locator()).thenReturn(testLocator);
     when(testInfo.getTmpFileDir())
         .thenReturn(tmpFolder.newFolder("test_tmp_file_dir").getAbsolutePath());
-    when(testInfo.files()).thenReturn(testFiles);
-    when(testLocator.getId()).thenReturn("fake_test_id");
-    when(jobInfo.params()).thenReturn(jobParams);
-    when(jobInfo.files()).thenReturn(jobFiles);
-    when(jobInfo.type()).thenReturn(JobType.getDefaultInstance());
     when(decoratedDriver.getTest()).thenReturn(testInfo);
 
     Guice.createInjector().injectMembers(this);
@@ -183,7 +165,7 @@ public class InstantiationTest {
    *     instantiation test for the driver/decorator
    */
   private boolean mockDataModel(Class<? extends Driver> driverClass)
-      throws MobileHarnessException, IOException, NoSuchMethodException {
+      throws MobileHarnessException, NoSuchMethodException {
     ConstraintsForTesting constraints =
         stream(driverClass.getDeclaredConstructors())
             .map(constructor -> constructor.getAnnotation(ConstraintsForTesting.class))
@@ -199,8 +181,7 @@ public class InstantiationTest {
     when(decoratedDriver.getDevice()).thenReturn(device);
 
     for (String jobFileTag : constraints.jobFileTags()) {
-      when(jobFiles.isTagNotEmpty(jobFileTag)).thenReturn(true);
-      doReturn(tmpFolder.newFile().getAbsolutePath()).when(jobFiles).getSingle(jobFileTag);
+      testInfo.jobInfo().files().add(jobFileTag, "fake_value");
     }
 
     if (!constraints.enableInstantiationTest()) {
@@ -211,10 +192,10 @@ public class InstantiationTest {
   }
 
   private void cleanupMockedDataModel() throws MobileHarnessException {
-    when(jobFiles.isTagNotEmpty(anyString())).thenReturn(false);
-    doThrow(new MobileHarnessException(BasicErrorId.JOB_OR_TEST_FILE_NOT_FOUND, "No such file"))
-        .when(jobFiles)
-        .getSingle(anyString());
+    Files jobFiles = testInfo.jobInfo().files();
+    for (String jobFileTag : jobFiles.getAll().keySet()) {
+      jobFiles.replaceAll(jobFileTag, ImmutableList.of());
+    }
   }
 
   /**
