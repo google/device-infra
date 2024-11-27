@@ -28,6 +28,10 @@ import com.google.devtools.mobileharness.api.model.proto.Job.DeviceRequirement;
 import com.google.devtools.mobileharness.api.model.proto.Job.DeviceRequirements;
 import com.google.devtools.mobileharness.api.model.proto.Job.JobFeature;
 import com.google.devtools.mobileharness.api.model.proto.Job.JobUser;
+import com.google.devtools.mobileharness.infra.client.api.proto.ServerLocatorProto.AccessProxy;
+import com.google.devtools.mobileharness.infra.client.api.proto.ServerLocatorProto.CloudServerLocator;
+import com.google.devtools.mobileharness.infra.client.api.proto.ServerLocatorProto.GrpcServerLocator;
+import com.google.devtools.mobileharness.infra.client.api.proto.ServerLocatorProto.ServerLocator;
 import com.google.devtools.mobileharness.infra.controller.test.model.JobExecutionUnit;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
@@ -61,6 +65,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import javax.annotation.Nullable;
@@ -168,6 +173,25 @@ public class JobInfo extends JobScheduleUnit {
               + " if the job is triggered via gateway. This param is only for PMW temperally usage,"
               + " and will be removed in early 2024.")
   public static final String PARAM_SKIP_UPLOAD_UNDECLARED_OUTPUT = "skip_upload_undeclared_output";
+
+  @ParamAnnotation(
+      required = false,
+      help = "If this flag is true, the job will use gRPC router to connect to cloud servers.")
+  public static final String PARAM_USE_GRPC_ROUTER = "use_grpc_router";
+
+  @ParamAnnotation(
+      required = false,
+      help =
+          "The controller endpoint of master server for gRPC router. This param is only used when"
+              + " use_grpc_router is true.")
+  public static final String PARAM_MASTER_CLOUD_ENDPOINT = "master_cloud_endpoint";
+
+  @ParamAnnotation(
+      required = false,
+      help =
+          "The local grpc target of master server. This param is only used when use_grpc_router is"
+              + " false.")
+  public static final String PARAM_MASTER_LOCAL_GRPC_TARGET = "master_local_grpc_target";
 
   /** Input files of the job. */
   private final Files files;
@@ -524,6 +548,30 @@ public class JobInfo extends JobScheduleUnit {
   /** All tests of this job. */
   public TestInfos tests() {
     return tests;
+  }
+
+  /** Gets possible controller server locator from params. */
+  public Optional<ServerLocator> getControllerServerLocator() {
+    if (params().getBool(PARAM_USE_GRPC_ROUTER, false)) {
+      return params()
+          .getOptional(PARAM_MASTER_CLOUD_ENDPOINT)
+          .map(
+              s ->
+                  ServerLocator.newBuilder()
+                      .setCloudServerLocator(
+                          CloudServerLocator.newBuilder().setCloudEndpoint(s).build())
+                      .setAccessProxy(AccessProxy.GRPC_ROUTER)
+                      .build());
+    } else {
+      return params()
+          .getOptional(PARAM_MASTER_LOCAL_GRPC_TARGET)
+          .map(
+              s ->
+                  ServerLocator.newBuilder()
+                      .setGrpcServerLocator(
+                          GrpcServerLocator.newBuilder().setServerGrpcTarget(s).build())
+                      .build());
+    }
   }
 
   /**
