@@ -674,9 +674,12 @@ final class NewMultiCommandRequestHandler {
           // TODO: filter context files.
           testContextMap.put(commandId, testContext);
         }
-        // Remove dedicated result directory and move its files to '/<session_id>/<command_id>/'
-        // level.
-        localFileUtil.mergeDir(resultDir, outputDirPath);
+
+        if (localFileUtil.isDirExist(resultDir)) {
+          // Remove dedicated result directory and move its files to '/<session_id>/<command_id>/'
+          // level.
+          localFileUtil.mergeDir(resultDir, outputDirPath);
+        }
 
         if (request.hasRetryPreviousSessionId()) {
           Path prevResultDir =
