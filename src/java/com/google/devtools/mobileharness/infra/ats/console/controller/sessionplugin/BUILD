@@ -150,7 +150,7 @@ java_library(
 java_library(
     name = "list_modules_command_handler",
     srcs = ["ListModulesCommandHandler.java"],
-    visibility = ["//visibility:private"],
+    visibility = ["//src/javatests/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__"],
     deps = [
         "//src/devtools/mobileharness/infra/ats/console/controller/proto:session_plugin_java_proto",
         "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",

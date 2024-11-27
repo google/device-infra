@@ -45,6 +45,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:xts_property_name",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/jobcreator:xts_job_creator",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:list_devices_command_handler",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:list_modules_command_handler",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:run_command_handler",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_creator",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_merger",

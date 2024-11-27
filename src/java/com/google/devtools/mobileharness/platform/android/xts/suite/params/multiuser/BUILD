@@ -39,3 +39,9 @@ java_library(
     srcs = ["RunOnWorkProfileParameterHandler.java"],
     deps = ["//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/params:module_parameter_handler_interface"],
 )
+
+java_library(
+    name = "run_on_private_profile_parameter_handler",
+    srcs = ["RunOnPrivateProfileParameterHandler.java"],
+    deps = ["//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/params:module_parameter_handler_interface"],
+)

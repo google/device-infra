@@ -48,6 +48,7 @@ java_library(
         ":secondary_user_on_default_display_handler",
         ":secondary_user_on_secondary_display_handler",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/params/multiuser:run_on_clone_profile_parameter_handler",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/params/multiuser:run_on_private_profile_parameter_handler",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/params/multiuser:run_on_secondary_user_parameter_handler",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/params/multiuser:run_on_work_profile_parameter_handler",
         "@maven//:com_google_guava_guava",

@@ -28,6 +28,7 @@ import static com.google.devtools.mobileharness.platform.android.xts.suite.param
 import static com.google.devtools.mobileharness.platform.android.xts.suite.params.ModuleParameters.NOT_SECONDARY_USER_ON_SECONDARY_DISPLAY;
 import static com.google.devtools.mobileharness.platform.android.xts.suite.params.ModuleParameters.NO_FOLDABLE_STATES;
 import static com.google.devtools.mobileharness.platform.android.xts.suite.params.ModuleParameters.RUN_ON_CLONE_PROFILE;
+import static com.google.devtools.mobileharness.platform.android.xts.suite.params.ModuleParameters.RUN_ON_PRIVATE_PROFILE;
 import static com.google.devtools.mobileharness.platform.android.xts.suite.params.ModuleParameters.RUN_ON_SDK_SANDBOX;
 import static com.google.devtools.mobileharness.platform.android.xts.suite.params.ModuleParameters.RUN_ON_SECONDARY_USER;
 import static com.google.devtools.mobileharness.platform.android.xts.suite.params.ModuleParameters.RUN_ON_WORK_PROFILE;
@@ -38,6 +39,7 @@ import static com.google.devtools.mobileharness.platform.android.xts.suite.param
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.platform.android.xts.suite.params.multiuser.RunOnCloneProfileParameterHandler;
+import com.google.devtools.mobileharness.platform.android.xts.suite.params.multiuser.RunOnPrivateProfileParameterHandler;
 import com.google.devtools.mobileharness.platform.android.xts.suite.params.multiuser.RunOnSecondaryUserParameterHandler;
 import com.google.devtools.mobileharness.platform.android.xts.suite.params.multiuser.RunOnWorkProfileParameterHandler;
 import java.util.LinkedHashMap;
@@ -49,23 +51,38 @@ public final class ModuleParametersHelper {
 
   private static final ImmutableMap<ModuleParameters, IModuleParameterHandler> HANDLER_MAP =
       ImmutableMap.of(
-          INSTANT_APP, new InstantAppHandler(),
-          NOT_INSTANT_APP, new NegativeHandler(),
+          INSTANT_APP,
+          new InstantAppHandler(),
+          NOT_INSTANT_APP,
+          new NegativeHandler(),
           // line separator
-          MULTI_ABI, new NegativeHandler(),
-          NOT_MULTI_ABI, new NotMultiAbiHandler(),
+          MULTI_ABI,
+          new NegativeHandler(),
+          NOT_MULTI_ABI,
+          new NotMultiAbiHandler(),
           // line separator
-          RUN_ON_WORK_PROFILE, new RunOnWorkProfileParameterHandler(),
-          RUN_ON_SECONDARY_USER, new RunOnSecondaryUserParameterHandler(),
+          RUN_ON_WORK_PROFILE,
+          new RunOnWorkProfileParameterHandler(),
+          RUN_ON_SECONDARY_USER,
+          new RunOnSecondaryUserParameterHandler(),
           // line separator
-          NO_FOLDABLE_STATES, new NegativeHandler(),
-          ALL_FOLDABLE_STATES, new FoldableExpandingHandler(),
-          RUN_ON_CLONE_PROFILE, new RunOnCloneProfileParameterHandler());
+          NO_FOLDABLE_STATES,
+          new NegativeHandler(),
+          ALL_FOLDABLE_STATES,
+          new FoldableExpandingHandler(),
+          RUN_ON_CLONE_PROFILE,
+          new RunOnCloneProfileParameterHandler(),
+          RUN_ON_PRIVATE_PROFILE,
+          new RunOnPrivateProfileParameterHandler());
 
   private static final ImmutableMap<ModuleParameters, ImmutableSet<ModuleParameters>> GROUP_MAP =
       ImmutableMap.of(
           MULTIUSER,
-          ImmutableSet.of(RUN_ON_CLONE_PROFILE, RUN_ON_SECONDARY_USER, RUN_ON_WORK_PROFILE));
+          ImmutableSet.of(
+              RUN_ON_CLONE_PROFILE,
+              RUN_ON_SECONDARY_USER,
+              RUN_ON_WORK_PROFILE,
+              RUN_ON_PRIVATE_PROFILE));
 
   /**
    * Optional parameters are params that will not automatically be created when the module
