@@ -88,10 +88,6 @@ public final class JobTypeUtil {
    * @throws MobileHarnessException if type format is error, or device/driver is not given
    */
   public static JobType parseJobConfig(JobConfig jobConfig) throws MobileHarnessException {
-    if (jobConfig.hasType()) {
-      return parseString(jobConfig.getType());
-    }
-
     JobType.Builder builder = JobType.newBuilder();
     if (jobConfig.getDevice().getSubDeviceSpecCount() > 0) {
       builder.setDevice(getDeviceTypeName(jobConfig.getDevice()));

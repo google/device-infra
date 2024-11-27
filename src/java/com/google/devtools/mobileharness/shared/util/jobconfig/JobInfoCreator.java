@@ -18,7 +18,6 @@ package com.google.devtools.mobileharness.shared.util.jobconfig;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
-import static java.util.stream.Collectors.joining;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
@@ -36,7 +35,6 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptions;
 import com.google.devtools.mobileharness.api.model.proto.Job.JobUser;
 import com.google.devtools.mobileharness.api.proto.Device.DeviceSpec;
-import com.google.devtools.mobileharness.shared.util.base.StrUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.shared.util.sharedpool.SharedPoolJobUtil;
@@ -561,34 +559,7 @@ public final class JobInfoCreator {
     // for the deprecated type field first because device may have been populated while rewriting
     // the job config json to accommodate moving the dimensions proto field into part of
     // SubDeviceSpecs.
-    if (!jobConfig.getType().isEmpty()) {
-      try {
-        type = JobTypeUtil.parseString(jobConfig.getType());
-      } catch (MobileHarnessException e) {
-        throw new MobileHarnessException(
-            BasicErrorId.JOB_CONFIG_INVALID_JOB_TYPE_ERROR, "Failed to parse job type", e);
-      }
-      // TODO: Remove this block together with JobType.type.
-      logger.atWarning().log(
-          "%s",
-          StrUtil.addFrame(
-              String.format(
-                  "mobile_test.type is deprecated. \n"
-                      + "Please replace\n"
-                      + "    type = \"%s\", \n"
-                      + "With \n"
-                      + "    device = \"%s\"\n"
-                      + "    driver = \"%s\"\n"
-                      + "    decorators = [\n"
-                      + "        %s,\n"
-                      + "    ]\n",
-                  jobConfig.getType(),
-                  type.getDevice(),
-                  type.getDriver(),
-                  Lists.reverse(type.getDecoratorList()).stream()
-                      .map(decorator -> String.format("\"%s\"", decorator))
-                      .collect(joining(",\n        ")))));
-    } else if (jobConfig.hasDevice() || jobConfig.hasDriver()) {
+    if (jobConfig.hasDevice() || jobConfig.hasDriver()) {
       logger.atInfo().log("Job type is empty, use the first sub device to set job type");
       JobType.Builder typeBuilder = JobType.newBuilder();
       typeBuilder.setDevice(JobTypeUtil.getDeviceTypeName(jobConfig.getDevice()));

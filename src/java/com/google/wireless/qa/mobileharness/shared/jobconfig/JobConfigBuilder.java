@@ -18,7 +18,6 @@ package com.google.wireless.qa.mobileharness.shared.jobconfig;
 
 import com.google.api.client.util.Strings;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.shared.util.base.StrUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -36,9 +35,7 @@ import com.google.protobuf.ProtocolMessageEnum;
 import com.google.protobuf.TextFormat;
 import com.google.protobuf.TextFormat.ParseException;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
-import com.google.wireless.qa.mobileharness.shared.api.job.JobTypeUtil;
 import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
-import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.FileConfigList;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.StringList;
@@ -123,8 +120,6 @@ public final class JobConfigBuilder {
   public static JobConfigBuilder fromJson(String json) throws MobileHarnessException {
     try {
       JsonObject configJson = JsonParser.parseString(json).getAsJsonObject();
-      JsonElement typeObject = configJson.get("type");
-      boolean typeSpecified = typeObject != null && !typeObject.isJsonNull();
       JsonElement deviceObject = configJson.get("device");
       // Dimensions, decorators, and scoped specs are all moved into deviceObject, only if the
       // deviceObject is a String (and hence not an adhoc testbed definition).
@@ -167,35 +162,6 @@ public final class JobConfigBuilder {
               ErrorCode.JOB_CONFIG_ERROR,
               "JobConfig mixing decorator specification syntaxes is not allowed:" + json);
         }
-      } else if (typeSpecified) {
-        /**
-         * If device is null/missing, address the type & dimensions args usage in the following way:
-         * 1) The dimensions field should be removed. 2) The decorators field should be removed. 3)
-         * Determine the device type based on the type string. 4) Create a Decorators list based on
-         * the type string. 4) Convert the string, previously removed dimensions map, and decorators
-         * list to a new-style SubDeviceSpec tuple.
-         */
-        JobType jobType = JobTypeUtil.parseString(typeObject.getAsString());
-        String deviceType = jobType.getDevice();
-        // Reverse the type decorator list order to convert it to to a subdevice decorator list.
-        // This is necessary because `type="D4+D3+D2+D1"` is equivalent to
-        // `decorators = [D1, D2, D3, D4]`.
-        // the invocation order of both way is:
-        // MH {
-        //   D1 {
-        //     D2 {
-        //       D3 {
-        //          D4;
-        //       }
-        //    }
-        // }
-        ImmutableList<String> decorators =
-            ImmutableList.copyOf(jobType.getDecoratorList()).reverse();
-        for (String decorator : decorators) {
-          decoratorsArray.add(decorator);
-        }
-        configJson.add("device", createDeviceList(deviceType, dimensionsObject, decoratorsArray));
-        json = configJson.toString();
       } else if (deviceObject == null && driverSpecified) {
         if (hasDimensions(dimensionsObject)) {
           throw new MobileHarnessException(
@@ -209,7 +175,7 @@ public final class JobConfigBuilder {
       logger.atInfo().log("The json config was re-written as %s", json);
 
       return new JobConfigBuilder(JobConfigGsonHolder.getGson().fromJson(json, JobConfig.class))
-          .updateParamStats(typeSpecified, subDeviceSpecsSpecified);
+          .updateParamStats(subDeviceSpecsSpecified);
     } catch (JsonParseException | IllegalStateException e) {
       throw new MobileHarnessException(
           ErrorCode.JOB_CONFIG_ERROR,
@@ -233,13 +199,9 @@ public final class JobConfigBuilder {
    * new sub_device_specs style are used.
    */
   @CanIgnoreReturnValue
-  private JobConfigBuilder updateParamStats(
-      boolean typeSpecified, boolean subDeviceSpecsSpecified) {
+  private JobConfigBuilder updateParamStats(boolean subDeviceSpecsSpecified) {
     JobConfig.Builder configBuilder = getProtoBuilder();
     StringMap.Builder paramStatsBuilder = configBuilder.getParamStats().toBuilder();
-    if (typeSpecified) {
-      paramStatsBuilder.putContent("type", "");
-    }
     if (subDeviceSpecsSpecified) {
       paramStatsBuilder.putContent("sub_device_specs", "");
     }
