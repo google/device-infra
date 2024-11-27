@@ -90,7 +90,6 @@ java_library(
         ":locator",
         ":schedule_unit",
         "//src/devtools/mobileharness/api/model/proto:job_java_proto",
-        "//src/devtools/mobileharness/infra/client/api/proto:service_locator_java_proto",
         "//src/devtools/mobileharness/service/moss/proto:slg_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/job/in",

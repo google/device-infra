@@ -28,7 +28,6 @@ import com.google.devtools.mobileharness.api.model.proto.Job.DeviceRequirement;
 import com.google.devtools.mobileharness.api.model.proto.Job.DeviceRequirements;
 import com.google.devtools.mobileharness.api.model.proto.Job.JobFeature;
 import com.google.devtools.mobileharness.api.model.proto.Job.JobUser;
-import com.google.devtools.mobileharness.infra.client.api.proto.ServiceLocatorProto.AtsServiceLocator;
 import com.google.devtools.mobileharness.infra.controller.test.model.JobExecutionUnit;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
@@ -62,7 +61,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import javax.annotation.Nullable;
@@ -170,19 +168,6 @@ public class JobInfo extends JobScheduleUnit {
               + " if the job is triggered via gateway. This param is only for PMW temperally usage,"
               + " and will be removed in early 2024.")
   public static final String PARAM_SKIP_UPLOAD_UNDECLARED_OUTPUT = "skip_upload_undeclared_output";
-
-  @ParamAnnotation(
-      required = false,
-      help = "If this flag is true, the job will use gRPC router to connect to ATS controller.")
-  public static final String PARAM_USE_GRPC_ROUTER = "use_grpc_router";
-
-  @ParamAnnotation(
-      required = false,
-      help =
-          "The ATS controller endpoint. If use gRPC router, this is the controller endpoint id for"
-              + " the gRPC router. If not use gRPC router, this is the direct endpoint of the"
-              + " controller service.")
-  public static final String PARAM_ATS_CONTROLLER_ENDPOINT = "ats_controller_endpoint";
 
   /** Input files of the job. */
   private final Files files;
@@ -539,18 +524,6 @@ public class JobInfo extends JobScheduleUnit {
   /** All tests of this job. */
   public TestInfos tests() {
     return tests;
-  }
-
-  /** Gets possible ATS service locator from params. */
-  public Optional<AtsServiceLocator> getAtsServiceLocator() {
-    return params()
-        .getOptional(PARAM_ATS_CONTROLLER_ENDPOINT)
-        .map(
-            s ->
-                AtsServiceLocator.newBuilder()
-                    .setUseGrpcRouter(params().getBool(PARAM_USE_GRPC_ROUTER, false))
-                    .setControllerEndpoint(s)
-                    .build());
   }
 
   /**
