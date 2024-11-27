@@ -546,16 +546,7 @@ public class SessionResultHandlerUtil {
    */
   private void copyTradefedTestLogFiles(TestInfo tradefedTestInfo, Path logRootDir)
       throws MobileHarnessException, InterruptedException {
-    Path invocationDir;
-    if (tradefedTestInfo.properties().has(XtsConstants.TRADEFED_INVOCATION_DIR_NAME)) {
-      invocationDir =
-          logRootDir.resolve(
-              tradefedTestInfo.properties().get(XtsConstants.TRADEFED_INVOCATION_DIR_NAME));
-    } else {
-      invocationDir =
-          localFileUtil.createTempDir(logRootDir, XtsConstants.TRADEFED_INVOCATION_DIR_NAME_PREFIX);
-      localFileUtil.setFilePermission(invocationDir, "rwxr-xr-x");
-    }
+    Path invocationDir = prepareTradefedInvocationDir(tradefedTestInfo, logRootDir);
     Path testLogDir = prepareLogOrResultDirForTest(tradefedTestInfo, invocationDir);
 
     ImmutableList<Path> genFiles = getGenFilesFromTest(tradefedTestInfo);
@@ -842,6 +833,22 @@ public class SessionResultHandlerUtil {
     } else {
       return Optional.empty();
     }
+  }
+
+  private Path prepareTradefedInvocationDir(TestInfo tradefedTestInfo, Path logRootDir) {
+    Path invocationDir;
+    if (tradefedTestInfo.properties().has(XtsConstants.TRADEFED_INVOCATION_DIR_NAME)) {
+      invocationDir =
+          logRootDir.resolve(
+              tradefedTestInfo.properties().get(XtsConstants.TRADEFED_INVOCATION_DIR_NAME));
+    } else {
+      invocationDir =
+          logRootDir.resolve(
+              XtsConstants.TRADEFED_INVOCATION_DIR_NAME_PREFIX
+                  + tradefedTestInfo.locator().getId());
+    }
+
+    return invocationDir;
   }
 
   private Path prepareLogOrResultDirForTest(TestInfo test, Path parentDir)
