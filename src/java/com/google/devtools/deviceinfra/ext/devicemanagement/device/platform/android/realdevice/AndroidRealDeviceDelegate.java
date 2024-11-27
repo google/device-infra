@@ -302,6 +302,14 @@ public abstract class AndroidRealDeviceDelegate {
       if (!Strings.isNullOrEmpty(revision)) {
         device.updateDimension(Dimension.Name.REVISION, Ascii.toLowerCase(revision));
       }
+      String secureBoot = fastboot.getVar(deviceId, FastbootProperty.SECURE_BOOT);
+      if (!Strings.isNullOrEmpty(secureBoot)) {
+        device.updateDimension(Dimension.Name.SECURE_BOOT, Ascii.toLowerCase(secureBoot));
+      }
+      String devkeyAllow = fastboot.getVar(deviceId, FastbootProperty.DEVKEY_ALLOW);
+      if (!Strings.isNullOrEmpty(devkeyAllow)) {
+        device.updateDimension(Dimension.Name.DEVKEY_ALLOW, Ascii.toLowerCase(devkeyAllow));
+      }
 
       try {
         String serialno = fastboot.getVar(deviceId, FastbootProperty.SERIALNO);

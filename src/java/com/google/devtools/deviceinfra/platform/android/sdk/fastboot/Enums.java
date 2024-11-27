@@ -48,13 +48,15 @@ public final class Enums {
 
   /** Android device properties in fastboot mode. */
   public enum FastbootProperty {
-    PRODUCT,
-    UNLOCKED,
-    HARDWARE,
     CURRENT_SLOT,
-    IS_USERSPACE,
-    SERIALNO,
+    DEVKEY_ALLOW,
+    HARDWARE,
     HW_REVISION,
+    IS_USERSPACE,
+    PRODUCT,
+    SECURE_BOOT,
+    SERIALNO,
+    UNLOCKED
   }
 
   /**

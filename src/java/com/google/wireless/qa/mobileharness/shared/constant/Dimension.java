@@ -67,6 +67,11 @@ public final class Dimension {
     DEVICE_SUPPORTS_MORETO,
     /** Whether a device supports running test in sandbox mode. */
     DEVICE_SUPPORTS_SANDBOX,
+    /**
+     * Whether the device is allowed to boot with dev-key signed bootloader. Applicable to P25
+     * devices only.
+     */
+    DEVKEY_ALLOW,
     /** The disk type. The value can be one of [SSD, HDD, UNKNOWN]. */
     DISK_TYPE,
     /** The id of the device. */
@@ -137,6 +142,8 @@ public final class Dimension {
     RUN_TARGET,
     /** Whether to enable taking screenshot from FE. */
     SCREENSHOT_ABLE,
+    /** The device secure boot status (LifeCycleState, LCS). */
+    SECURE_BOOT,
     /** Skip SUW by disabling the app. The value should be the package name of the SUW app. */
     SKIP_SUW_APP,
     /** Whether a lab/device supports running tests on ad hoc testbeds. */

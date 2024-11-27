@@ -49,6 +49,7 @@ public enum AndroidProperty {
   CHARACTERISTICS("ro.build.characteristics"),
   CODENAME("ro.build.version.codename"),
   DEVICE("ro.product.vendor.device", "ro.vendor.product.device", "ro.product.device"),
+  DEVKEY_ALLOW("ro.boot.devkey-allow"),
   @DoNotAddToDimension
   DISABLE_CALL("ro.telephony.disable-call"),
   @DoNotAddToDimension
@@ -72,6 +73,7 @@ public enum AndroidProperty {
   REVISION("ro.revision", "ro.boot.revision", "ro.boot.hardware.revision"),
   SCREEN_DENSITY("qemu.sf.lcd_density", "ro.sf.lcd_density"),
   SDK_VERSION("ro.build.version.sdk"),
+  SECURE_BOOT("ro.boot.secure_boot"),
   @KeepDimensionValueCase
   SERIAL("ro.serialno"),
   SIGN("ro.build.tags"),
