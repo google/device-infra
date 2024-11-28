@@ -95,6 +95,19 @@ java_library(
 )
 
 java_library(
+    name = "android_hd_video_decorator_job_validator",
+    srcs = ["AndroidHdVideoDecoratorJobValidator.java"],
+    deps = [
+        ":job_validator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_hd_video_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
+        "@maven//:com_google_errorprone_error_prone_annotations",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "android_logcat_decorator_job_validator",
     srcs = ["AndroidLogCatDecoratorJobValidator.java"],
     deps = [

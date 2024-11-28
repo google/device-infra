@@ -69,6 +69,15 @@ java_library(
 )
 
 java_library(
+    name = "android_hd_video_decorator_env_validator",
+    srcs = ["AndroidHdVideoDecoratorEnvValidator.java"],
+    deps = [
+        ":android_device_version_env_validator",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "android_native_bin_env_validator",
     srcs = ["AndroidNativeBinEnvValidator.java"],
     deps = [
