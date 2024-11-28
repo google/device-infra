@@ -22,6 +22,7 @@ import static com.google.common.truth.Truth.assertThat;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.truth.Correspondence;
+import com.google.devtools.mobileharness.platform.android.xts.agent.testdata.FakeTradefed;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfo;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfo.TradefedInvocation;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfoFileUtil;
@@ -136,5 +137,37 @@ public class TradefedInvocationAgentTest {
     CommandResult commandResult = commandProcess.await();
     logger.atInfo().log("Command result: %s", commandResult);
     assertThat(commandResult.exitCode()).isEqualTo(0);
+  }
+
+  @Test
+  public void testInvocationThrowsException() throws Exception {
+    Path runtimeInfoFilePath = tempFolder.newFolder().toPath().resolve("runtime_info_file.txt");
+
+    CommandProcess commandProcess =
+        commandExecutor.start(
+            Command.of(
+                    systemUtil
+                        .getJavaCommandCreator()
+                        .createJavaCommand(
+                            FAKE_TRADEFED_PATH,
+                            // Specifying the special device ID to trigger an invocation exception:
+                            ImmutableList.of(
+                                FakeTradefed.DEVICE_ID_TO_TRIGGER_INVOCATION_EXCEPTION),
+                            ImmutableList.of(
+                                String.format(
+                                    "-javaagent:%s=%s", AGENT_PATH, runtimeInfoFilePath))))
+                .redirectStderr(false)
+                .showFullResultInException(true));
+
+    CommandResult commandResult = commandProcess.await();
+    assertThat(commandResult.exitCode()).isEqualTo(0);
+    Optional<XtsTradefedRuntimeInfoFileDetail> fileDetail =
+        xtsTradefedRuntimeInfoFileUtil.readInfo(runtimeInfoFilePath, /* lastModifiedTime= */ null);
+    List<TradefedInvocation> invocations = fileDetail.get().runtimeInfo().invocations();
+    assertThat(invocations).hasSize(1);
+    assertThat(invocations.get(0).deviceIds())
+        .containsExactly(FakeTradefed.DEVICE_ID_TO_TRIGGER_INVOCATION_EXCEPTION);
+    assertThat(invocations.get(0).errorMessage())
+        .contains(FakeTradefed.INVOCATION_EXCEPTION_MESSAGE);
   }
 }

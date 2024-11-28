@@ -19,6 +19,8 @@ package com.google.devtools.mobileharness.platform.android.xts.runtime;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfo.TradefedInvocation;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.lang.reflect.Field;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -66,23 +68,41 @@ public class XtsTradefedRuntimeInfoMonitor {
     synchronized (runningInvocations) {
       runningInvocations.putIfAbsent(
           Invocation.getInvocationId(invocationContext),
-          new Invocation(testInvocation, invocationContext, /* invocationEventHandler= */ null));
+          new Invocation(
+              testInvocation,
+              invocationContext,
+              /* invocationEventHandler= */ null,
+              /* exception= */ null));
     }
     triggerAsyncUpdate();
   }
 
-  public void onInvocationExit(Object testInvocation, Object invocationContext) {
+  public void onInvocationExit(
+      Object testInvocation, Object invocationContext, Throwable exception) {
     synchronized (runningInvocations) {
-      runningInvocations.remove(Invocation.getInvocationId(invocationContext));
+      if (exception != null) {
+        runningInvocations.put(
+            Invocation.getInvocationId(invocationContext),
+            new Invocation(
+                testInvocation, invocationContext, /* invocationEventHandler= */ null, exception));
+      } else {
+        runningInvocations.remove(Invocation.getInvocationId(invocationContext));
+      }
     }
     triggerAsyncUpdate();
   }
 
-  public void onInvocationComplete(Object invocationEventHandler, Object invocationContext) {
+  public void onInvocationComplete(
+      Object invocationEventHandler, Object invocationContext, Throwable exception) {
     synchronized (runningInvocations) {
-      runningInvocations.putIfAbsent(
-          Invocation.getInvocationId(invocationContext),
-          new Invocation(/* testInvocation= */ null, invocationContext, invocationEventHandler));
+      Invocation invocation =
+          new Invocation(
+              /* testInvocation= */ null, invocationContext, invocationEventHandler, exception);
+      // Only add to the running invocations map if there is an error message (to be saved to the
+      // file).
+      if (!invocation.getErrorMessage().isEmpty()) {
+        runningInvocations.putIfAbsent(Invocation.getInvocationId(invocationContext), invocation);
+      }
     }
     triggerAsyncUpdate();
   }
@@ -160,14 +180,20 @@ public class XtsTradefedRuntimeInfoMonitor {
     /** {@code com.android.tradefed.cluster.ClusterCommandScheduler.InvocationEventHandler}. */
     @Nullable private final Object invocationEventHandler;
 
+    @Nullable private final Throwable exception;
+
     /** TradefedInvocation generated from last {@link #update()}. */
     private volatile TradefedInvocation previousInvocation;
 
     private Invocation(
-        Object testInvocation, Object invocationContext, Object invocationEventHandler) {
+        Object testInvocation,
+        Object invocationContext,
+        Object invocationEventHandler,
+        Throwable exception) {
       this.testInvocation = testInvocation;
       this.invocationContext = invocationContext;
       this.invocationEventHandler = invocationEventHandler;
+      this.exception = exception;
       this.previousInvocation = TradefedInvocation.getDefaultInstance();
     }
 
@@ -194,17 +220,23 @@ public class XtsTradefedRuntimeInfoMonitor {
       return testInvocation != null ? testInvocation.toString() : "";
     }
 
+    /**
+     * The error message comes from either the {@code mError} field of {@code
+     * InvocationEventHandler} or the Throwable exception thrown by the monitored methods.
+     */
     private String getErrorMessage() {
-      if (invocationEventHandler == null) {
+      if (invocationEventHandler != null) {
+        try {
+          Field errorMessageField = invocationEventHandler.getClass().getDeclaredField("mError");
+          errorMessageField.setAccessible(true);
+          return (String) errorMessageField.get(invocationEventHandler);
+        } catch (ReflectiveOperationException e) {
+          throw new LinkageError("Failed to read the mError field of InvocationEventHandler", e);
+        }
+      } else if (exception != null) {
+        return printThrowable(exception);
+      } else {
         return "";
-      }
-
-      try {
-        Field errorMessageField = invocationEventHandler.getClass().getDeclaredField("mError");
-        errorMessageField.setAccessible(true);
-        return (String) errorMessageField.get(invocationEventHandler);
-      } catch (ReflectiveOperationException e) {
-        throw new LinkageError("Failed to read the mError field of InvocationEventHandler", e);
       }
     }
 
@@ -225,6 +257,12 @@ public class XtsTradefedRuntimeInfoMonitor {
       } catch (ReflectiveOperationException e) {
         throw new LinkageError("Failed to call IInvocationContext.getInvocationId()", e);
       }
+    }
+
+    private static String printThrowable(Throwable e) {
+      StringWriter stringWriter = new StringWriter();
+      e.printStackTrace(new PrintWriter(stringWriter));
+      return stringWriter.toString();
     }
   }
 }

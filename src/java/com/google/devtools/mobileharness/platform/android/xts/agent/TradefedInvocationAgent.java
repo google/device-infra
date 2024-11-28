@@ -91,22 +91,25 @@ public class TradefedInvocationAgent {
           .onInvocationEnter(testInvocation, invocationContext);
     }
 
-    @Advice.OnMethodExit()
+    @Advice.OnMethodExit(onThrowable = Throwable.class)
     public static void onExit(
-        @Advice.This Object testInvocation, @Advice.Argument(value = 0) Object invocationContext) {
+        @Advice.This Object testInvocation,
+        @Advice.Argument(value = 0) Object invocationContext,
+        @Advice.Thrown Throwable exception) {
       XtsTradefedRuntimeInfoMonitor.getInstance()
-          .onInvocationExit(testInvocation, invocationContext);
+          .onInvocationExit(testInvocation, invocationContext, exception);
     }
   }
 
   private static class TradefedInvocationEventHandlerInvocationCompleteMethodInterceptor {
 
-    @Advice.OnMethodExit()
+    @Advice.OnMethodExit(onThrowable = Throwable.class)
     public static void onExit(
         @Advice.This Object invocationEventHandler,
-        @Advice.Argument(value = 0) Object invocationContext) {
+        @Advice.Argument(value = 0) Object invocationContext,
+        @Advice.Thrown Throwable exception) {
       XtsTradefedRuntimeInfoMonitor.getInstance()
-          .onInvocationComplete(invocationEventHandler, invocationContext);
+          .onInvocationComplete(invocationEventHandler, invocationContext, exception);
     }
   }
 

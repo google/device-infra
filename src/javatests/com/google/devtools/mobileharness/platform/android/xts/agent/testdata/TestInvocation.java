@@ -16,6 +16,9 @@
 
 package com.android.tradefed.invoker;
 
+import static com.google.devtools.mobileharness.platform.android.xts.agent.testdata.FakeTradefed.DEVICE_ID_TO_TRIGGER_INVOCATION_EXCEPTION;
+import static com.google.devtools.mobileharness.platform.android.xts.agent.testdata.FakeTradefed.INVOCATION_EXCEPTION_MESSAGE;
+
 import com.google.devtools.mobileharness.platform.android.xts.agent.testdata.FakeInvocationContext;
 
 public class TestInvocation {
@@ -25,6 +28,10 @@ public class TestInvocation {
   @SuppressWarnings("unused")
   public void invoke(FakeInvocationContext context, int param2, int param3, int param4)
       throws InterruptedException {
+    if (context.getSerials().contains(DEVICE_ID_TO_TRIGGER_INVOCATION_EXCEPTION)) {
+      throw new RuntimeException(INVOCATION_EXCEPTION_MESSAGE);
+    }
+
     // Briefly sleeps to make sure the monitoring agent will be reading (and writing to file) the
     // "init" status to avoid flaky tests.
     Thread.sleep(1_000L);
