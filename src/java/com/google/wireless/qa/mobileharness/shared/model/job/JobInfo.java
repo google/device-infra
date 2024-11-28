@@ -28,10 +28,6 @@ import com.google.devtools.mobileharness.api.model.proto.Job.DeviceRequirement;
 import com.google.devtools.mobileharness.api.model.proto.Job.DeviceRequirements;
 import com.google.devtools.mobileharness.api.model.proto.Job.JobFeature;
 import com.google.devtools.mobileharness.api.model.proto.Job.JobUser;
-import com.google.devtools.mobileharness.infra.client.api.proto.ServerLocatorProto.AccessProxy;
-import com.google.devtools.mobileharness.infra.client.api.proto.ServerLocatorProto.CloudServerLocator;
-import com.google.devtools.mobileharness.infra.client.api.proto.ServerLocatorProto.GrpcServerLocator;
-import com.google.devtools.mobileharness.infra.client.api.proto.ServerLocatorProto.ServerLocator;
 import com.google.devtools.mobileharness.infra.controller.test.model.JobExecutionUnit;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
@@ -65,7 +61,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import javax.annotation.Nullable;
@@ -548,30 +543,6 @@ public class JobInfo extends JobScheduleUnit {
   /** All tests of this job. */
   public TestInfos tests() {
     return tests;
-  }
-
-  /** Gets possible controller server locator from params. */
-  public Optional<ServerLocator> getControllerServerLocator() {
-    if (params().getBool(PARAM_USE_GRPC_ROUTER, false)) {
-      return params()
-          .getOptional(PARAM_MASTER_CLOUD_ENDPOINT)
-          .map(
-              s ->
-                  ServerLocator.newBuilder()
-                      .setCloudServerLocator(
-                          CloudServerLocator.newBuilder().setCloudEndpoint(s).build())
-                      .setAccessProxy(AccessProxy.GRPC_ROUTER)
-                      .build());
-    } else {
-      return params()
-          .getOptional(PARAM_MASTER_LOCAL_GRPC_TARGET)
-          .map(
-              s ->
-                  ServerLocator.newBuilder()
-                      .setGrpcServerLocator(
-                          GrpcServerLocator.newBuilder().setServerGrpcTarget(s).build())
-                      .build());
-    }
   }
 
   /**

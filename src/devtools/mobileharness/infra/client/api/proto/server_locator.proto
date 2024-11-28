@@ -23,25 +23,13 @@ option java_outer_classname = "ServerLocatorProto";
 
 // Represents the locator of a server.
 message ServerLocator {
-  reserved 1;
-  oneof locator {
-    GrpcServerLocator grpc_server_locator = 2;
-    CloudServerLocator cloud_server_locator = 3;
-  }
-  AccessProxy access_proxy = 10;
+  reserved 1, 2;
+  GrpcServerLocator grpc_server_locator = 3;
 }
 
+// Represents the locator of a gRPC server.
 message GrpcServerLocator {
-  string server_grpc_target = 1;
-}
-
-// Represents a locator on Google Cloud.
-message CloudServerLocator {
-  string cloud_endpoint = 2;
-}
-
-// Proxy to access the server.
-enum AccessProxy {
-  ACCESS_PROXY_NONE = 0;
-  GRPC_ROUTER = 1;
+  string ip = 1;
+  string hostname = 2;
+  int32 port = 10;
 }
