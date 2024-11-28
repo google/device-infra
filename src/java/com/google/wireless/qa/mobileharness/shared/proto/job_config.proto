@@ -60,14 +60,6 @@ message JobConfig {
   // The job name.
   optional string name = 1;
 
-  // The required device type, driver and decorators.
-  // It's deprecated. use device, driver and decorators instead.
-  // Format: "XxxDevice+XxxDriver+XxxDecorator+YyyDecorator" in which the
-  // decorators are in decorating order and in reversed executing order, which
-  // means the preRun() of a decorator in the front will be executed AFTER
-  // preRun() of other decorators.
-  optional string type = 21 [deprecated = true];
-
   message Driver {
     // Driver name.
     optional string name = 1;
@@ -191,7 +183,7 @@ message JobConfig {
   }
 
   // Deprecated fields. DO NOT use.
-  reserved 2 to 15, 17, 18, 19, 22, 32, 37, 40;
+  reserved 2 to 15, 17, 18, 19, 21, 22, 32, 37, 40;
 }
 
 // A group of JobConfig.
