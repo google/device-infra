@@ -99,6 +99,15 @@ java_library(
 )
 
 java_library(
+    name = "google_account_decorator_spec",
+    srcs = ["GoogleAccountDecoratorSpec.java"],
+    deps = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "mobly_aosp_package_test_spec",
     srcs = ["MoblyAospPackageTestSpec.java"],
     deps = [
