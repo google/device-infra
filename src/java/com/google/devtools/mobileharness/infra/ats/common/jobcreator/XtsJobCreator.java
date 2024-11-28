@@ -64,7 +64,6 @@ import java.util.stream.Stream;
 
 /** A creator to create XTS tradefed jobs and non tradefed jobs. */
 public abstract class XtsJobCreator {
-
   private static final ImmutableSet<ErrorId> SKIPPABLE_ERROR_IDS =
       ImmutableSet.of(
           InfraErrorId.ATSC_TF_RETRY_WITHOUT_TF_MODULE,
@@ -268,6 +267,7 @@ public abstract class XtsJobCreator {
                               .map(arg -> arg.replace("\"", "\\\""))
                               .map(arg -> String.format("--module-arg \"%s\"", arg)),
                           sessionRequestInfo.extraArgs().stream()
+                              .map(arg -> arg.replace("\\", "\\\\"))
                               .map(arg -> arg.replace("\"", "\\\""))
                               .map(arg -> arg.contains(" ") ? String.format("\"%s\"", arg) : arg))
                       .collect(toImmutableList()));
