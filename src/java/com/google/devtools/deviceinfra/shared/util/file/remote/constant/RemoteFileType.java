@@ -24,7 +24,11 @@ package com.google.devtools.deviceinfra.shared.util.file.remote.constant;
  */
 public enum RemoteFileType {
   // The files in ATS file server.
-  ATS_FILE_SERVER("ats-file-server::");
+  ATS_FILE_SERVER("ats-file-server::"),
+  // Google Cloud Storage Uri
+  // E.g.,
+  // gs://bucket/path@google_cloud_project
+  GCS("gs://");
 
   private final String prefix;
 
