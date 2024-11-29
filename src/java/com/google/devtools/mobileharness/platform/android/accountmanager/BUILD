@@ -18,9 +18,6 @@ load("@rules_java//java:defs.bzl", "java_library")
 
 package(
     default_applicable_licenses = ["//:license"],
-    default_visibility = [
-        "//:deviceinfra_all_pkg",
-    ],
 )
 
 java_library(
@@ -29,8 +26,6 @@ java_library(
         "AndroidAccountSetting.java",
     ],
     visibility = [
-        "//:deviceinfra_all_pkg",
-        "//java/com/google/devtools/mobileharness/platform/android/accountmanager:__subpackages__",
     ],
     exports = [
         ":enums",
@@ -48,8 +43,6 @@ java_library(
         "AndroidGoogleAccountType.java",
     ],
     visibility = [
-        "//:deviceinfra_all_pkg",
-        "//java/com/google/devtools/mobileharness/platform/android/accountmanager:__subpackages__",
     ],
 )
 
@@ -57,6 +50,5 @@ android_library(
     name = "android_google_account_type",
     srcs = ["AndroidGoogleAccountType.java"],
     visibility = [
-        "//java/com/google/devtools/mobileharness/platform/android/accountmanager:__subpackages__",
     ],
 )
