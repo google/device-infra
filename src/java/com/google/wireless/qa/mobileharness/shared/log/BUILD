@@ -74,5 +74,8 @@ java_library(
 java_library(
     name = "info_log_importance_scope",
     srcs = ["InfoLogImportanceScope.java"],
-    deps = ["//src/java/com/google/devtools/mobileharness/shared/constant/closeable"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/constant/closeable",
+        "//src/java/com/google/devtools/mobileharness/shared/util/base:stack_set",
+    ],
 )

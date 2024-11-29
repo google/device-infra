@@ -17,6 +17,7 @@
 package com.google.wireless.qa.mobileharness.shared.log;
 
 import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
+import com.google.devtools.mobileharness.shared.util.base.StackSet;
 
 /**
  * Logs from TestInfo/JobInfo log() in a thread after this scope is constructed and before it is
@@ -25,18 +26,19 @@ import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAu
  */
 public class InfoLogImportanceScope implements NonThrowingAutoCloseable {
 
-  private static final ThreadLocal<Boolean> SCOPE = ThreadLocal.withInitial(() -> false);
+  private static final ThreadLocal<StackSet<InfoLogImportanceScope>> scopes =
+      ThreadLocal.withInitial(StackSet::new);
 
   public InfoLogImportanceScope() {
-    SCOPE.set(true);
+    scopes.get().add(this);
   }
 
   @Override
   public void close() {
-    SCOPE.set(false);
+    scopes.get().removeUntilLast(this);
   }
 
   static boolean inScope() {
-    return SCOPE.get();
+    return scopes.get().getLast() != null;
   }
 }
