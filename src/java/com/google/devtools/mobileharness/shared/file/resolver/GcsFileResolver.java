@@ -76,7 +76,7 @@ public class GcsFileResolver extends AbstractFileResolver {
     GcsUtil gcsUtil = createGcsUtil(project, bucket, credentialFile);
 
     logger.atInfo().log("Downloading GCS file %s to %s", fileOrDirPath, localPath);
-    gcsUtil.copyFileToLocalIfNotExist(gcsPath, Path.of(localPath));
+    gcsUtil.copyFileOrDirectoryToLocal(gcsPath, Path.of(localPath));
 
     return ResolveResult.create(ImmutableList.of(localPath), ImmutableMap.of(), resolveSource);
   }
