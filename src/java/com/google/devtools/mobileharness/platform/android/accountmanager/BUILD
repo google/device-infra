@@ -29,6 +29,7 @@ java_library(
         "AndroidAccountSetting.java",
     ],
     visibility = [
+        "//:deviceinfra_all_pkg",
         "//java/com/google/devtools/mobileharness/platform/android/accountmanager:__subpackages__",
     ],
     exports = [
@@ -47,6 +48,7 @@ java_library(
         "AndroidGoogleAccountType.java",
     ],
     visibility = [
+        "//:deviceinfra_all_pkg",
         "//java/com/google/devtools/mobileharness/platform/android/accountmanager:__subpackages__",
     ],
 )

@@ -16,11 +16,11 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.decorator;
 
+import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
-import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Result;
@@ -54,13 +54,14 @@ public class NoOpDecorator extends BaseDecorator implements SpecConfigable<NoOpD
           testInfo.result().set(Job.TestResult.PASS);
         } else {
           testInfo
-              .errors()
+              .warnings()
               .addAndLog(
-                  ErrorCode.TEST_FAILED,
-                  String.format(
-                      "NoOpDecorator expected result [%s] before postRun() but got [%s],"
-                          + " set result to FAIL",
-                      expectedResult, currentResult));
+                  new MobileHarnessException(
+                      ExtErrorId.NO_OP_DECORATOR_TEST_FAILURE,
+                      String.format(
+                          "NoOpDecorator expected result [%s] before postRun() but got [%s],"
+                              + " set result to FAIL",
+                          expectedResult, currentResult)));
           testInfo.result().set(Job.TestResult.FAIL);
         }
       }

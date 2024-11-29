@@ -491,7 +491,11 @@ public class JobRunner implements Runnable {
               if (!testLocator.jobLocator().id().equals(jobInfo.locator().getId())) {
                 String error = "Receive allocation which doesn't belong to this job: " + allocation;
                 logger.atSevere().log("%s", error);
-                jobInfo.errors().addAndLog(ErrorCode.JOB_EXEC_ERROR, error);
+                jobInfo
+                    .warnings()
+                    .addAndLog(
+                        new MobileHarnessException(
+                            InfraErrorId.CLIENT_JR_ALLOC_RESULT_TEST_NOT_IN_JOB, error));
                 continue;
               }
 
@@ -500,19 +504,24 @@ public class JobRunner implements Runnable {
               if (testInfo == null) {
                 String error = "Test of the allocation not found: " + allocation;
                 logger.atSevere().log("%s", error);
-                jobInfo.errors().addAndLog(ErrorCode.JOB_EXEC_ERROR, error);
+                jobInfo
+                    .warnings()
+                    .addAndLog(
+                        new MobileHarnessException(
+                            InfraErrorId.CLIENT_JR_ALLOC_RESULT_TEST_NOT_FOUND, error));
                 continue;
               }
 
               // Doesn't need to start the test if the test of the allocation is already running.
               if (testManager.isTestRunning(allocation)) {
                 jobInfo
-                    .errors()
+                    .warnings()
                     .addAndLog(
-                        ErrorCode.JOB_EXEC_ERROR,
-                        "Ignore allocation "
-                            + allocation
-                            + " because the test is already running on the device",
+                        new MobileHarnessException(
+                            InfraErrorId.CLIENT_JR_ALLOC_RESULT_TEST_ALREADY_ALLOCATED,
+                            "Ignore allocation "
+                                + allocation
+                                + " because the test is already running on the device"),
                         logger);
               } else {
                 // Copy the allocation stats to test properties.
@@ -528,7 +537,7 @@ public class JobRunner implements Runnable {
                     .add(
                         PropertyName.Test.ALLOCATION_TIME_MS,
                         Long.toString(allocationTime.toMillis()));
-                String allocationTimeSec = String.valueOf(allocationTime.getSeconds());
+                String allocationTimeSec = String.valueOf(allocationTime.toSeconds());
                 testInfo.properties().add(PropertyName.Test.ALLOCATION_TIME_SEC, allocationTimeSec);
                 jobInfo.log().atInfo().alsoTo(logger).log("Device allocation finished");
 
@@ -675,7 +684,7 @@ public class JobRunner implements Runnable {
       jobError = e;
       Thread.currentThread().interrupt();
       jobInfo
-          .errors()
+          .warnings()
           .addAndLog(
               new MobileHarnessException(
                   InfraErrorId.CLIENT_JR_JOB_EXEC_INTERRUPTED, "Job interrupted", e),
@@ -685,7 +694,7 @@ public class JobRunner implements Runnable {
       jobError = t;
       logger.atSevere().withCause(t).log("FATAL JOB ERROR");
       jobInfo
-          .errors()
+          .warnings()
           .addAndLog(
               new MobileHarnessException(
                   InfraErrorId.CLIENT_JR_JOB_EXEC_FATAL_ERROR, "Fatal job error", t));
@@ -934,7 +943,7 @@ public class JobRunner implements Runnable {
       // For safety, prints out the unknown error.
       logger.atSevere().withCause(t).log("FATAL job error when tearing down allocator");
       jobInfo
-          .errors()
+          .warnings()
           .addAndLog(
               new MobileHarnessException(
                   InfraErrorId.CLIENT_JR_JOB_TEAR_DOWN_ALLOCATOR_FATAL_ERROR,
@@ -959,7 +968,7 @@ public class JobRunner implements Runnable {
         boolean terminated = threadPool.awaitTermination(TERMINATE_TEST_TIMEOUT);
         if (!terminated) {
           jobInfo
-              .errors()
+              .warnings()
               .addAndLog(
                   new MobileHarnessException(
                       InfraErrorId.CLIENT_JR_JOB_SHUT_DOWN_THRAD_POOL_INTERRUPTED,
@@ -975,7 +984,7 @@ public class JobRunner implements Runnable {
         String errorMessage = "Failed to shutdown test thread pool";
         logger.atWarning().withCause(e).log("%s", errorMessage);
         jobInfo
-            .errors()
+            .warnings()
             .addAndLog(
                 new MobileHarnessException(
                     InfraErrorId.CLIENT_JR_JOB_SHUT_DOWN_THREAD_POOL_FATAL_ERROR, errorMessage, e));
@@ -991,7 +1000,7 @@ public class JobRunner implements Runnable {
         String errorMessage = "Failed to finalize job";
         logger.atWarning().withCause(e).log("%s", errorMessage);
         jobInfo
-            .errors()
+            .warnings()
             .addAndLog(
                 new MobileHarnessException(
                     InfraErrorId.CLIENT_JR_JOB_FINALIZE_RESULT_FATAL_ERROR, errorMessage, e));
@@ -1042,7 +1051,7 @@ public class JobRunner implements Runnable {
         String errorMessage = "Failed to post JobEndEvent";
         logger.atWarning().withCause(e).log("%s", errorMessage);
         jobInfo
-            .errors()
+            .warnings()
             .addAndLog(
                 new MobileHarnessException(
                     InfraErrorId.CLIENT_JR_JOB_END_EVENT_POST_FATAL_ERROR,
@@ -1068,7 +1077,7 @@ public class JobRunner implements Runnable {
       // For safety, prints out the unknown error.
       logger.atSevere().withCause(e).log("FATAL ERROR");
       jobInfo
-          .errors()
+          .warnings()
           .addAndLog(
               new MobileHarnessException(
                   InfraErrorId.CLIENT_JR_JOB_TEAR_DOWN_FATAL_ERROR,
@@ -1088,7 +1097,7 @@ public class JobRunner implements Runnable {
     } catch (Exception e) {
       logger.atWarning().withCause(e).log("Failed to remove %s-file dir %s", dirType, path);
       jobInfo
-          .errors()
+          .warnings()
           .addAndLog(
               new MobileHarnessException(
                   InfraErrorId.CLIENT_JR_JOB_CLEAN_UP_DIR_ERROR,
@@ -1212,8 +1221,7 @@ public class JobRunner implements Runnable {
                 cause = diagnosticReport.get().getResult().cause();
               }
               testInfo
-                  .errors()
-                  .toWarnings()
+                  .warnings()
                   .addAndLog(errorId, jobInfo.locator().getId() + ": " + errMsg, logger);
               hasAllocErrorTests = !hasAllocFailTests;
               testInfo
@@ -1249,10 +1257,7 @@ public class JobRunner implements Runnable {
         case SUSPENDED:
           ErrorId errorId = InfraErrorId.CLIENT_JR_MNM_ALLOC_DEVICE_EXCEEDS_CEILING;
           String errMsg = "Test is suspended for quota issues. ";
-          testInfo
-              .errors()
-              .toWarnings()
-              .addAndLog(errorId, jobInfo.locator().getId() + ": " + errMsg, logger);
+          testInfo.warnings().addAndLog(errorId, jobInfo.locator().getId() + ": " + errMsg, logger);
           testInfo
               .result()
               .toNewResult()
@@ -1512,7 +1517,7 @@ public class JobRunner implements Runnable {
       }
     } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
       jobInfo
-          .errors()
+          .warnings()
           .addAndLog(
               new MobileHarnessException(
                   InfraErrorId.CLIENT_JR_ALLOC_DIAGNOSTIC_ERROR,
@@ -1562,17 +1567,18 @@ public class JobRunner implements Runnable {
       SkipResultWithCause skipResultWithCause = SkipInformationHandler.getJobResult(skipInfos);
       if (postRunJob) {
         jobInfo
-            .errors()
+            .warnings()
             .addAndLog(
-                ErrorCode.PLUGIN_ERROR,
-                String.format(
-                    "Plugins want to skip job and set job result but it is ignored "
-                        + "because the job has run. The job result will NOT be changed as "
-                        + "the desired job result in the exceptions. SkipJobException only "
-                        + "works in JobStartEvent. If you just want to change job result"
-                        + ", please call jobInfo.result().set() directly in your plugin. "
-                        + " Detail: %s",
-                    skipResultWithCause.report()),
+                new MobileHarnessException(
+                    InfraErrorId.TR_PLUGIN_INVALID_SKIP_EXCEPTION_ERROR,
+                    String.format(
+                        "Plugins want to skip job and set job result but it is ignored "
+                            + "because the job has run. The job result will NOT be changed as "
+                            + "the desired job result in the exceptions. SkipJobException only "
+                            + "works in JobStartEvent. If you just want to change job result"
+                            + ", please call jobInfo.result().set() directly in your plugin. "
+                            + " Detail: %s",
+                        skipResultWithCause.report())),
                 logger);
       } else {
         jobInfo.log().atInfo().alsoTo(logger).log("%s", skipResultWithCause.report());

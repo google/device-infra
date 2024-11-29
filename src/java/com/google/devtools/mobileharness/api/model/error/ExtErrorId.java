@@ -177,6 +177,10 @@ public enum ExtErrorId implements ErrorId {
   SUBPLAN_CREATOR_SUBPLAN_FILE_ALREADY_EXISTED(87_441, ErrorType.CUSTOMER_ISSUE),
 
   /** End of xTS Utils error ids. */
+
+  // NoOpDecorator: 91_051 ~ 91_060
+  NO_OP_DECORATOR_TEST_FAILURE(91_051, ErrorType.CUSTOMER_ISSUE),
+
   EXT_PLACE_HOLDER_TO_BE_RENAMED(100_000, ErrorType.UNDETERMINED);
 
   public static final int MIN_CODE = InfraErrorId.MAX_CODE + 1;

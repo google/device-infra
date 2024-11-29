@@ -65,7 +65,6 @@ import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.driver.DriverFactory;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
-import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
 import com.google.wireless.qa.mobileharness.shared.controller.event.LocalTestEndedEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.event.LocalTestEndingEvent;
@@ -333,7 +332,11 @@ public class LocalTestFlow {
           .atWarning()
           .alsoTo(logger)
           .log("FATAL ERROR: %s", Throwables.getStackTraceAsString(e));
-      testInfo.errors().add(ErrorCode.TEST_POST_RUN_ERROR, e);
+      testInfo
+          .warnings()
+          .add(
+              new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+                  InfraErrorId.TR_POST_RUN_GENERIC_ERROR, "Post run test failed", e));
     }
 
     updateTestPropertyWithDeviceDimensions(testInfo, devices);

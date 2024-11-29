@@ -763,7 +763,11 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
           .atInfo()
           .alsoTo(logger)
           .log("FATAL ERROR: %s", Throwables.getStackTraceAsString(e));
-      testInfo.errors().add(ErrorCode.TEST_POST_RUN_ERROR, e);
+      testInfo
+          .warnings()
+          .add(
+              new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+                  InfraErrorId.TR_POST_RUN_GENERIC_ERROR, "Post-test operations failed", e));
     } finally {
       testInfo.log().atInfo().alsoTo(logger).log("Post TestEndedEvent to test %s", testLocator);
       // Event handlers in JAR_PLUGIN:
@@ -1025,19 +1029,20 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
     SkipResultWithCause skipResultWithCause = SkipInformationHandler.getTestResult(skipInfos);
     if (afterDriverExecution) {
       testInfo
-          .errors()
+          .warnings()
           .addAndLog(
-              ErrorCode.PLUGIN_ERROR,
-              String.format(
-                  "Plugins want to skip test and set test result but it is ignored because the"
-                      + " driver has ended. The test result will NOT be changed as the desired"
-                      + " test result in the exceptions. SkipTestException only works in"
-                      + " TestStartingEvent/TestStartedEvent/LocalDriverStartingEvent/"
-                      + "LocalDecoratorPreForwardEvent. If you just want to change test result"
-                      + ", please call testInfo.resultWithCause().set() directly in your"
-                      + " plugin. "
-                      + "Detail: %s",
-                  skipResultWithCause.report()),
+              new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+                  InfraErrorId.TR_PLUGIN_INVALID_SKIP_EXCEPTION_ERROR,
+                  String.format(
+                      "Plugins want to skip test and set test result but it is ignored because the"
+                          + " driver has ended. The test result will NOT be changed as the desired"
+                          + " test result in the exceptions. SkipTestException only works in"
+                          + " TestStartingEvent/TestStartedEvent/LocalDriverStartingEvent/"
+                          + "LocalDecoratorPreForwardEvent. If you just want to change test result"
+                          + ", please call testInfo.resultWithCause().set() directly in your"
+                          + " plugin. "
+                          + "Detail: %s",
+                      skipResultWithCause.report())),
               logger);
       return false;
     }

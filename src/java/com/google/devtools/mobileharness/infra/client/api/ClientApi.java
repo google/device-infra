@@ -44,7 +44,6 @@ import com.google.devtools.mobileharness.shared.util.comm.messaging.poster.TestM
 import com.google.devtools.mobileharness.shared.util.network.NetworkUtil;
 import com.google.devtools.mobileharness.shared.version.Version;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
-import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Job;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import java.util.ArrayList;
@@ -152,7 +151,11 @@ public class ClientApi {
       throw new MobileHarnessException(
           InfraErrorId.CLIENT_API_START_JOB_ERROR, "Failed to start job", e);
     } catch (Throwable e) {
-      jobInfo.errors().add(ErrorCode.JOB_CONFIG_ERROR, e);
+      jobInfo
+          .warnings()
+          .add(
+              new MobileHarnessException(
+                  InfraErrorId.CLIENT_API_START_JOB_ERROR, "Failed to start job", e));
       throw e;
     }
   }

@@ -94,12 +94,13 @@ public class LocalDeviceAllocator extends AbstractDeviceAllocator {
 
       if (test == null) {
         jobInfo
-            .errors()
+            .warnings()
             .addAndLog(
-                ErrorCode.DEVICE_ALLOCATOR_ERROR,
-                String.format(
-                    "Unknown test %s of job %s in the allocation.",
-                    allocation.getTest().id(), jobInfo.locator().getId()),
+                new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+                    InfraErrorId.CLIENT_LOCAL_MODE_TEST_NOT_FOUND,
+                    String.format(
+                        "Unknown test %s of job %s in the allocation.",
+                        allocation.getTest().id(), jobInfo.locator().getId())),
                 logger);
         scheduler.unallocate(
             allocation,
@@ -110,10 +111,11 @@ public class LocalDeviceAllocator extends AbstractDeviceAllocator {
         continue;
       } else if (test.status().get() != TestStatus.NEW) {
         jobInfo
-            .errors()
+            .warnings()
             .addAndLog(
-                ErrorCode.DEVICE_ALLOCATOR_ERROR,
-                "Unexpected allocation to test with status " + test.status().get(),
+                new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+                    InfraErrorId.CLIENT_LOCAL_MODE_TEST_NOT_NEW,
+                    "Unexpected allocation to test with status " + test.status().get()),
                 logger);
         scheduler.unallocate(
             allocation,
@@ -127,7 +129,12 @@ public class LocalDeviceAllocator extends AbstractDeviceAllocator {
       String deviceSerial = allocation.getDevice().id();
       Optional<String> verificationError = deviceVerifier.verifyDeviceForAllocation(deviceSerial);
       if (verificationError.isPresent()) {
-        jobInfo.errors().addAndLog(ErrorCode.DEVICE_NOT_READY, verificationError.get(), logger);
+        jobInfo
+            .warnings()
+            .addAndLog(
+                new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+                    InfraErrorId.CLIENT_LOCAL_MODE_DEVICE_NOT_READY, verificationError.get()),
+                logger);
         scheduler.unallocate(
             allocation,
             // Device is not active. Also removes it from scheduler.
