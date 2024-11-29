@@ -667,6 +667,15 @@ public enum AndroidErrorId implements ErrorId {
   // Android WifiUtil: 175_851 ~ 175_900
   ANDROID_WIFI_UTIL_APK_NOT_FOUND(175_851, ErrorType.INFRA_ISSUE),
 
+  // Legacy Android ADB error: 176_101 ~ 176_150
+  LEGACY_ANDROID_ADB_ERROR(176_101, ErrorType.UNDETERMINED),
+
+  // Fake OTA error: 176_151 ~ 176_160
+  ANDROID_FAKE_OTA_ERROR(176_151, ErrorType.UNDETERMINED),
+
+  // UI operator executor : 176_161 ~ 176_170
+  ANDROID_UI_OPERATOR_EECUTOR_ERROR(176_161, ErrorType.UNDETERMINED),
+
   ANDROID_ERROR_ID_PLACE_HOLDER_TO_BE_RENAMED(200_000, ErrorType.UNDETERMINED);
 
   public static final int MIN_CODE = ExtErrorId.MAX_CODE + 1;
