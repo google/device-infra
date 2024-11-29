@@ -496,7 +496,7 @@ public class AndroidInstrumentation extends BaseDriver
         logFilenames.append(instrumentLogFileName).append(";");
       } catch (MobileHarnessException e) {
         testInfo
-            .errors()
+            .warnings()
             .addAndLog(
                 new MobileHarnessException(
                     AndroidErrorId.ANDROID_INSTRUMENTATION_WRITE_FILE_ERROR, e.getMessage()),
@@ -584,7 +584,7 @@ public class AndroidInstrumentation extends BaseDriver
           } catch (MobileHarnessException e) {
             // Only log the failure after the main test finished.
             testInfo
-                .errors()
+                .warnings()
                 .addAndLog(
                     new MobileHarnessException(
                         AndroidErrorId.ANDROID_INSTRUMENTATION_ADB_COMMAND_ERROR,
@@ -791,7 +791,7 @@ public class AndroidInstrumentation extends BaseDriver
           AppInstallEventUtil.createFinishMessage(getDevice().getDimensions(), packageName));
     } catch (MobileHarnessException e) {
       testInfo
-          .errors()
+          .warnings()
           .addAndLog(
               new MobileHarnessException(
                   AndroidErrorId.ANDROID_INSTRUMENTATION_CREATE_MESSAGE_ERROR, e.getMessage()),
@@ -812,7 +812,7 @@ public class AndroidInstrumentation extends BaseDriver
           AppInstallEventUtil.createStartMessage(getDevice().getDimensions(), packageName));
     } catch (MobileHarnessException e) {
       testInfo
-          .errors()
+          .warnings()
           .addAndLog(
               new MobileHarnessException(
                   AndroidErrorId.ANDROID_INSTRUMENTATION_CREATE_MESSAGE_ERROR, e.getMessage()),
@@ -830,7 +830,7 @@ public class AndroidInstrumentation extends BaseDriver
         externalStoragePath,
         testInfo.getTmpFileDir(),
         testInfo.log(),
-        testInfo.errors(),
+        testInfo.warnings(),
         /* forceAdbPush= */ false);
   }
 

@@ -50,7 +50,7 @@ public abstract class AsyncTimerDecorator extends BaseDecorator {
             try {
               runTimerTask(testInfo);
             } catch (MobileHarnessException e) {
-              testInfo.errors().addAndLog(e, logger);
+              testInfo.warnings().addAndLog(e, logger);
             } catch (InterruptedException e) {
               timer.cancel();
               Thread.currentThread().interrupt();

@@ -429,6 +429,7 @@ public class JobInfo extends JobScheduleUnit {
    *
    * <p>Warnings that occur during execution.
    */
+  @Deprecated
   public Errors errors() {
     return errors;
   }

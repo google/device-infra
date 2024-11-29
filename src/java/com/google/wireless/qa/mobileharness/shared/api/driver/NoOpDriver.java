@@ -242,7 +242,7 @@ public class NoOpDriver extends BaseDriver implements SpecConfigable<NoOpDriverS
                   "NoOpDriver non-passing result set by test message");
         } catch (IllegalArgumentException e) {
           testInfo
-              .errors()
+              .warnings()
               .addAndLog(
                   new MobileHarnessException(
                       ExtErrorId.NO_OP_DRIVER_TEST_MESSAGE_ILLEGAL_ARGUMENT,
@@ -252,7 +252,7 @@ public class NoOpDriver extends BaseDriver implements SpecConfigable<NoOpDriverS
         }
       } else {
         testInfo
-            .errors()
+            .warnings()
             .addAndLog(
                 new MobileHarnessException(
                     ExtErrorId.NO_OP_DRIVER_TEST_MESSAGE_ERROR,

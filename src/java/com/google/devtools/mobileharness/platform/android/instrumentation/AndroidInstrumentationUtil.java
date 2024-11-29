@@ -28,6 +28,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.job.out.Warnings;
 import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
 import com.google.devtools.mobileharness.platform.android.lightning.apkfile.ApkAnalyzer;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstallArgs;
@@ -57,7 +58,6 @@ import com.google.wireless.qa.mobileharness.shared.constant.DirCommon;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidInstrumentation;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
-import com.google.wireless.qa.mobileharness.shared.model.job.out.Errors;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Log;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.AndroidInstrumentationSpec;
 import java.io.File;
@@ -714,14 +714,14 @@ public class AndroidInstrumentationUtil {
       @Nullable String deviceExternalStoragePath,
       String hostTmpFileDir,
       Log log,
-      Errors errors,
+      Warnings warnings,
       boolean forceAdbPush)
       throws MobileHarnessException, InterruptedException {
     // An empty line to separate the log.
     log.append("\n");
     if (deviceExternalStoragePath == null) {
       if (!testArgs.isEmpty()) {
-        errors.addAndLog(
+        warnings.addAndLog(
             new MobileHarnessException(
                 AndroidErrorId.ANDROID_INSTRUMENTATION_TEST_ARGS_NOT_SET,
                 "Test arg not set because no writable external storage"),
@@ -747,7 +747,7 @@ public class AndroidInstrumentationUtil {
         log.atInfo()
             .alsoTo(logger)
             .log("Push test args file to device (forceAdbPush: %s)", forceAdbPush);
-        int sdkVersion = getDeviceSdkVersion(errors, serial);
+        int sdkVersion = getDeviceSdkVersion(warnings, serial);
 
         // Multi user special case, try to use "adb push" to push "test_args.dat" file to device
         // instead of using "content write", see AndroidFileUtil#getExternalStoragePath.
@@ -812,7 +812,7 @@ public class AndroidInstrumentationUtil {
       return;
     }
 
-    int deviceSdkVersion = getDeviceSdkVersion(testInfo.errors(), deviceId);
+    int deviceSdkVersion = getDeviceSdkVersion(testInfo.warnings(), deviceId);
     if (deviceSdkVersion == 0) {
       return;
     }
@@ -869,7 +869,7 @@ public class AndroidInstrumentationUtil {
       // Leaves the tmp dir alone, MH framework will clean it up after the test.
     } catch (MobileHarnessException e) {
       testInfo
-          .errors()
+          .warnings()
           .addAndLog(
               new MobileHarnessException(
                   AndroidErrorId.ANDROID_INSTRUMENTATION_PROCESS_TEST_OUTPUT_ERROR,
@@ -898,7 +898,7 @@ public class AndroidInstrumentationUtil {
       return;
     }
 
-    int deviceSdkVersion = getDeviceSdkVersion(testInfo.errors(), deviceId);
+    int deviceSdkVersion = getDeviceSdkVersion(testInfo.warnings(), deviceId);
     if (deviceSdkVersion == 0) {
       return;
     }
@@ -953,7 +953,7 @@ public class AndroidInstrumentationUtil {
         }
       } catch (IOException | ClassNotFoundException e) {
         testInfo
-            .errors()
+            .warnings()
             .addAndLog(
                 new MobileHarnessException(
                     AndroidErrorId.ANDROID_INSTRUMENTATION_PROCESS_TEST_PROPERTY_ERROR,
@@ -1024,7 +1024,7 @@ public class AndroidInstrumentationUtil {
       return;
     }
 
-    int deviceSdkVersion = getDeviceSdkVersion(testInfo.errors(), deviceId);
+    int deviceSdkVersion = getDeviceSdkVersion(testInfo.warnings(), deviceId);
     if (deviceSdkVersion == 0) {
       return;
     }
@@ -1035,7 +1035,7 @@ public class AndroidInstrumentationUtil {
         int lastIndex = testDataPathOnHost.lastIndexOf("/google3/");
         if (lastIndex < 0) {
           testInfo
-              .errors()
+              .warnings()
               .addAndLog(
                   new MobileHarnessException(
                       AndroidErrorId.ANDROID_INSTRUMENTATION_INVALID_TEST_DATA,
@@ -1076,7 +1076,7 @@ public class AndroidInstrumentationUtil {
         }
       } catch (MobileHarnessException e) {
         testInfo
-            .errors()
+            .warnings()
             .addAndLog(
                 new MobileHarnessException(
                     AndroidErrorId.ANDROID_INSTRUMENTATION_PUSH_TEST_DATA_ERROR, e.getMessage(), e),
@@ -1108,7 +1108,7 @@ public class AndroidInstrumentationUtil {
   private static boolean isNullExternalStoragePath(TestInfo testInfo, String externalStoragePath) {
     if (externalStoragePath == null) {
       testInfo
-          .errors()
+          .warnings()
           .addAndLog(
               new MobileHarnessException(
                   AndroidErrorId.ANDROID_INSTRUMENTATION_EXTERNAL_STORAGE_NOT_FOUND,
@@ -1288,12 +1288,12 @@ public class AndroidInstrumentationUtil {
   }
 
   /** Return actual sdk version or 0 if failed to read. */
-  private int getDeviceSdkVersion(Errors errors, String deviceId) throws InterruptedException {
+  private int getDeviceSdkVersion(Warnings warnings, String deviceId) throws InterruptedException {
     int deviceSdkVersion = 0;
     try {
       deviceSdkVersion = settingUtil.getDeviceSdkVersion(deviceId);
     } catch (MobileHarnessException e) {
-      errors.addAndLog(
+      warnings.addAndLog(
           new MobileHarnessException(
               AndroidErrorId.ANDROID_INSTRUMENTATION_GET_SDK_VERSION_ERROR,
               String.format("Failed to read device sdk version from device %s", deviceId)),
@@ -1383,7 +1383,7 @@ public class AndroidInstrumentationUtil {
       return true;
     } catch (MobileHarnessException e) {
       testInfo
-          .errors()
+          .warnings()
           .addAndLog(
               new MobileHarnessException(
                   AndroidErrorId.ANDROID_INSTRUMENTATION_PULL_FILE_ERROR,

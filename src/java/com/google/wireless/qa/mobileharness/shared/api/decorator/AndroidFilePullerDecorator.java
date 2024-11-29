@@ -121,7 +121,7 @@ public class AndroidFilePullerDecorator extends BaseDecorator
             MobileHarnessException exception =
                 new MobileHarnessException(
                     AndroidErrorId.ANDROID_FILE_PULLER_DECORATOR_OUTPUT_FILE_NOT_FOUND, noPathLog);
-            testInfo.errors().addAndLog(exception, logger);
+            testInfo.warnings().addAndLog(exception, logger);
             testInfo.resultWithCause().setNonPassing(Test.TestResult.FAIL, exception);
           }
           continue;
@@ -138,7 +138,7 @@ public class AndroidFilePullerDecorator extends BaseDecorator
                   "Failed to pull file/dir from device directory [" + path + "]",
                   e);
           // Log the error message when failed to pull files.
-          testInfo.errors().addAndLog(exception, logger);
+          testInfo.warnings().addAndLog(exception, logger);
           if (!spec.getIgnorePullingExistFilesError()) {
             testInfo.resultWithCause().setNonPassing(Test.TestResult.FAIL, exception);
             break;

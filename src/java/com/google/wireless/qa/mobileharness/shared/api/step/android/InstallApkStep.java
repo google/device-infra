@@ -602,7 +602,7 @@ public class InstallApkStep implements InstallApkStepConstants {
       }
       testInfo.properties().add(propertyName, totalSize + " B");
     } catch (MobileHarnessException e) {
-      testInfo.errors().addAndLog(e, logger);
+      testInfo.warnings().addAndLog(e, logger);
       testInfo.log().append("\n");
     }
   }

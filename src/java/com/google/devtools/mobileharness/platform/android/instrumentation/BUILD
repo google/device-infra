@@ -34,6 +34,7 @@ java_library(
         "//src/devtools/mobileharness/platform/android/testing/proto:test_args_pb_java_proto",
         "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/api/model/job/out",
         "//src/java/com/google/devtools/mobileharness/platform/android/file:android_file_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/lightning/apkfile:apk_analyzer",
         "//src/java/com/google/devtools/mobileharness/platform/android/lightning/apkinstaller",

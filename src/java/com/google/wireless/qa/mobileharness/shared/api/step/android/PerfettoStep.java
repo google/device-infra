@@ -283,7 +283,7 @@ public class PerfettoStep {
       perfettoProcess.await(DEFAULT_PERFETTO_SHUTDOWN_DURATION);
     } catch (TimeoutException e) {
       testInfo
-          .errors()
+          .warnings()
           .addAndLog(
               new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
                   AndroidErrorId.ANDROID_PERFETTO_DECORATOR_ASYNC_EXCEED_TIMEOUT_LIMIT,

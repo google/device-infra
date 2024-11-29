@@ -886,7 +886,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
       resp = execTestStub.getTestGenData(builder.build(), impersonationUser);
     } catch (RpcExceptionWithErrorId e) {
       testInfo
-          .errors()
+          .warnings()
           .addAndLog(
               new MobileHarnessException(
                   InfraErrorId.CLIENT_REMOTE_MODE_TEST_GET_GEN_DATA_ERROR,

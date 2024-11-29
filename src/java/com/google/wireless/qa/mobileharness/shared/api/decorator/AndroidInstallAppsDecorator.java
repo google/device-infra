@@ -118,7 +118,7 @@ public class AndroidInstallAppsDecorator extends BaseDecorator
               "progress",
               progress));
     } catch (MobileHarnessException e) {
-      testInfo.errors().addAndLog(e, logger);
+      testInfo.warnings().addAndLog(e, logger);
     }
   }
 

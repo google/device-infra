@@ -293,6 +293,7 @@ public class TestInfo extends TestScheduleUnit implements Cloneable {
    *
    * <p>Warnings that occur during execution.
    */
+  @Deprecated
   public Errors errors() {
     return errors;
   }

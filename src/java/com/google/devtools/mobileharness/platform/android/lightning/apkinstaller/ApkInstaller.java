@@ -207,7 +207,7 @@ public class ApkInstaller {
             String.valueOf(androidPackageManagerUtil.getAppVersionCode(deviceId, packageName));
         versionName = androidPackageManagerUtil.getAppVersionName(deviceId, packageName);
       } catch (MobileHarnessException e) {
-        testInfo.errors().addAndLog(e, logger);
+        testInfo.warnings().addAndLog(e, logger);
         return Optional.empty();
       }
       testInfo.properties().add(versionCodePropertyName, versionCode);

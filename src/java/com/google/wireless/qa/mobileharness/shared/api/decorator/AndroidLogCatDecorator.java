@@ -289,7 +289,7 @@ public class AndroidLogCatDecorator extends BaseDecorator implements AndroidLogC
     try {
       isDeviceOnline = isDeviceOnline(deviceId);
     } catch (MobileHarnessException e) {
-      testInfo.errors().addAndLog(e, logger);
+      testInfo.warnings().addAndLog(e, logger);
       return;
     }
 
@@ -297,7 +297,7 @@ public class AndroidLogCatDecorator extends BaseDecorator implements AndroidLogC
       // Only invokes the logcat command when the device is detected, otherwise the command will
       // wait for the device.
       testInfo
-          .errors()
+          .warnings()
           .addAndLog(
               new MobileHarnessException(
                   AndroidErrorId.ANDROID_LOGCAT_DECORATOR_DEVICE_NOT_FOUND,
@@ -313,7 +313,7 @@ public class AndroidLogCatDecorator extends BaseDecorator implements AndroidLogC
       rawLog = adbUtil.logCat(deviceId, options, filterSpecs);
     } catch (MobileHarnessException e) {
       testInfo
-          .errors()
+          .warnings()
           .addAndLog(
               new MobileHarnessException(
                   AndroidErrorId.ANDROID_LOGCAT_DECORATOR_LOGCAT_EXEC_ERROR,
@@ -339,7 +339,7 @@ public class AndroidLogCatDecorator extends BaseDecorator implements AndroidLogC
             .log("Device %s logcat saved to %s", deviceId, logFilePath);
       } catch (MobileHarnessException writeToFileException) {
         testInfo
-            .errors()
+            .warnings()
             .addAndLog(
                 new MobileHarnessException(
                     AndroidErrorId.ANDROID_LOGCAT_DECORATOR_SAVE_LOG_FILE_TO_HOST_ERROR,
@@ -410,7 +410,7 @@ public class AndroidLogCatDecorator extends BaseDecorator implements AndroidLogC
                       finalLogFileWriter.write(line + lineSeparator);
                     } catch (IOException e) {
                       testInfo
-                          .errors()
+                          .warnings()
                           .addAndLog(
                               new MobileHarnessException(
                                   AndroidErrorId.ANDROID_LOGCAT_DECORATOR_FILE_WRITER_WRITE_ERROR,
@@ -449,7 +449,7 @@ public class AndroidLogCatDecorator extends BaseDecorator implements AndroidLogC
           logFileWriter.close();
         } catch (IOException e) {
           testInfo
-              .errors()
+              .warnings()
               .addAndLog(
                   new MobileHarnessException(
                       AndroidErrorId.ANDROID_LOGCAT_DECORATOR_CLOSE_FILE_WRITER_ERROR,

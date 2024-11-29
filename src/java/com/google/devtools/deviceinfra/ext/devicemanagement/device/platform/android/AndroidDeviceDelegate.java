@@ -280,7 +280,7 @@ public abstract class AndroidDeviceDelegate {
       androidAdbUtil.clearLog(deviceId);
     } catch (MobileHarnessException e) {
       testInfo
-          .errors()
+          .warnings()
           .addAndLog(
               new MobileHarnessException(
                   AndroidErrorId.ANDROID_DEVICE_DELEGATE_TEST_PREP_ERROR, e.getMessage(), e),
