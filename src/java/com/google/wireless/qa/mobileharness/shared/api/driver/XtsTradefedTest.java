@@ -985,6 +985,7 @@ public class XtsTradefedTest extends BaseDriver
                   /* isDynamicDownload= */ true,
                   xtsDynamicDownloadTestList));
           // Also include the test dependencies for dynamic download test cases.
+          logger.atInfo().log("Missing dynamic download test list: %s", missingTestList);
           var unused =
               createSymlinksForDynamicDownloadTestCases(
                   linkTestcasesDir,
@@ -1110,9 +1111,11 @@ public class XtsTradefedTest extends BaseDriver
     // For dynamic download jobs, only create symlinks for the test cases in the test list.
     // For non dynamic download jobs, create symlinks for the test cases not in the test list.
     List<String> subTestCases = localFileUtil.listFileOrDirPaths(target.toString());
+    Set<String> missingTestList = new HashSet<>();
     for (String subTestCase : subTestCases) {
       Path subTestCasePath = Path.of(subTestCase);
       String subTestCaseName = subTestCasePath.getFileName().toString();
+      missingTestList.add(subTestCaseName);
       boolean shouldCreateSymlink =
           isDynamicDownload
               ? dynamicDownloadTestList.contains(subTestCaseName)
@@ -1130,7 +1133,9 @@ public class XtsTradefedTest extends BaseDriver
 
     // Return the test cases that missing in the dynamic download folder but contains in the test
     // list.
-    dynamicDownloadTestList.removeAll(subTestCases);
+    if (missingTestList != null) {
+      dynamicDownloadTestList.removeAll(missingTestList);
+    }
     return dynamicDownloadTestList;
   }
 
