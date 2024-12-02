@@ -757,6 +757,7 @@ public final class AtsServerSessionPluginTest {
     NewMultiCommandRequest newMultiCommandRequest = sessionRequest.getNewMultiCommandRequest();
     assertThat(newMultiCommandRequest.getMaxRetryOnTestFailures()).isEqualTo(0);
     assertThat(newMultiCommandRequest.getRetryPreviousSessionId()).isEqualTo("session_id");
+    assertThat(newMultiCommandRequest.getAllPreviousSessionIdsList()).containsExactly("session_id");
     assertThat(newMultiCommandRequest.getCommandsList()).containsExactly(commandInfo);
 
     // sessionInfo.setSessionPluginOutput() is called 3 times. First time in
@@ -833,6 +834,7 @@ public final class AtsServerSessionPluginTest {
     NewMultiCommandRequest newMultiCommandRequest = sessionRequest.getNewMultiCommandRequest();
     assertThat(newMultiCommandRequest.getMaxRetryOnTestFailures()).isEqualTo(0);
     assertThat(newMultiCommandRequest.getRetryPreviousSessionId()).isEqualTo("session_id");
+    assertThat(newMultiCommandRequest.getAllPreviousSessionIdsList()).containsExactly("session_id");
     assertThat(newMultiCommandRequest.getCommandsCount()).isEqualTo(1);
     assertThat(newMultiCommandRequest.getCommandsList().get(0).getCommandLine())
         .isEqualTo(request.getTestEnvironment().getRetryCommandLine());
@@ -920,6 +922,7 @@ public final class AtsServerSessionPluginTest {
     NewMultiCommandRequest newMultiCommandRequest = sessionRequest.getNewMultiCommandRequest();
     assertThat(newMultiCommandRequest.getMaxRetryOnTestFailures()).isEqualTo(0);
     assertThat(newMultiCommandRequest.getRetryPreviousSessionId()).isEqualTo("session_id");
+    assertThat(newMultiCommandRequest.getAllPreviousSessionIdsList()).containsExactly("session_id");
     assertThat(newMultiCommandRequest.getCommandsList().get(0).getCommandLine())
         .isEqualTo(originalCommandLine);
 

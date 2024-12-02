@@ -46,6 +46,7 @@ message NewMultiCommandRequest {
   optional string retry_previous_session_id = 8;
   optional string retry_type = 9;
   optional TestContext prev_test_context = 10;
+  repeated string all_previous_session_ids = 11;
 }
 
 // Command information of a test request.
@@ -187,6 +188,7 @@ enum ErrorReason {
   RESULT_PROCESSING_ERROR = 6;
 }
 
+// TODO: No longer useful. Remove this proto.
 message CommandAttemptDetail {
   string id = 1;
   string request_id = 2;
@@ -232,7 +234,10 @@ message RequestDetail {
   optional google.protobuf.Timestamp update_time = 12;
   optional string api_module_version = 13;
   map<string, CommandDetail> command_details = 14;
-  repeated CommandAttemptDetail command_attempt_details = 15;
+
+  // TODO: Will be removed. Don't use this field.
+  repeated CommandAttemptDetail command_attempt_details = 15
+      [deprecated = true];
 
   optional string cluster = 16;
   optional string run_target = 17;

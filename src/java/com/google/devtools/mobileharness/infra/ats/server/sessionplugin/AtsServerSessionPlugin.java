@@ -434,6 +434,7 @@ final class AtsServerSessionPlugin {
               .build());
     }
     retryRequestBuilder.setRetryPreviousSessionId(sessionInfo.getSessionId());
+    retryRequestBuilder.addAllPreviousSessionIds(sessionInfo.getSessionId());
     retryRequestBuilder.setMaxRetryOnTestFailures(requestDetail.getMaxRetryOnTestFailures() - 1);
     SessionPluginConfig retryConfig =
         SessionPluginConfig.newBuilder()
