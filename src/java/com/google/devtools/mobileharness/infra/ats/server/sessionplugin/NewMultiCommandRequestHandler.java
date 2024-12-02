@@ -16,9 +16,11 @@
 
 package com.google.devtools.mobileharness.infra.ats.server.sessionplugin;
 
+import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.base.Throwables.getStackTraceAsString;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static com.google.common.collect.Iterables.getLast;
 import static com.google.devtools.mobileharness.shared.util.error.MoreThrowables.shortDebugString;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toJavaDuration;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -44,6 +46,7 @@ import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerU
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.SessionResultHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName;
+import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.infra.ats.common.XtsTypeLoader;
 import com.google.devtools.mobileharness.infra.ats.common.jobcreator.XtsJobCreator;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.ShardingMode;
@@ -62,6 +65,8 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.constan
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.lab.common.dir.DirUtil;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
+import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfoFileUtil;
+import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfoFileUtil.XtsTradefedRuntimeInfoFileDetail;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -70,6 +75,7 @@ import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.protobuf.util.Timestamps;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
+import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -118,6 +124,7 @@ final class NewMultiCommandRequestHandler {
   private final SessionRequestHandlerUtil sessionRequestHandlerUtil;
   private final SessionResultHandlerUtil sessionResultHandlerUtil;
   private final LocalFileUtil localFileUtil;
+  private final XtsTradefedRuntimeInfoFileUtil xtsTradefedRuntimeInfoFileUtil;
   private final CommandExecutor commandExecutor;
   private final Clock clock;
   private final XtsTypeLoader xtsTypeLoader;
@@ -136,6 +143,7 @@ final class NewMultiCommandRequestHandler {
       SessionRequestHandlerUtil sessionRequestHandlerUtil,
       SessionResultHandlerUtil sessionResultHandlerUtil,
       LocalFileUtil localFileUtil,
+      XtsTradefedRuntimeInfoFileUtil xtsTradefedRuntimeInfoFileUtil,
       CommandExecutor commandExecutor,
       Clock clock,
       XtsTypeLoader xtsTypeLoader,
@@ -143,6 +151,7 @@ final class NewMultiCommandRequestHandler {
     this.sessionRequestHandlerUtil = sessionRequestHandlerUtil;
     this.sessionResultHandlerUtil = sessionResultHandlerUtil;
     this.localFileUtil = localFileUtil;
+    this.xtsTradefedRuntimeInfoFileUtil = xtsTradefedRuntimeInfoFileUtil;
     this.commandExecutor = commandExecutor;
     this.clock = clock;
     this.xtsTypeLoader = xtsTypeLoader;
@@ -625,24 +634,26 @@ final class NewMultiCommandRequestHandler {
     for (CommandDetail commandDetail : commandDetails) {
       CommandDetail.Builder commandDetailBuilder = commandDetail.toBuilder();
       String commandId = commandDetail.getId();
+      Path outputDirPath =
+          Path.of(outputUrl.getPath()).resolve(sessionInfo.getSessionId()).resolve(commandId);
+      String resultDirectoryName =
+          TIMESTAMP_DIR_NAME_FORMATTER.format(Instant.now()) + "_" + getRandom4Digits();
+      Path resultDir = outputDirPath.resolve(resultDirectoryName);
+      Path logDir = outputDirPath.resolve("logs");
+      ImmutableList<JobInfo> jobs =
+          commandToJobsMap.get(commandId).stream()
+              .map(jobIdToJobMap::get)
+              .collect(toImmutableList());
       try {
         SessionRequestInfo sessionRequestInfo =
             getSessionRequestInfo(request, commandDetail.getOriginalCommandInfo(), sessionInfo);
-        Path outputDirPath =
-            Path.of(outputUrl.getPath()).resolve(sessionInfo.getSessionId()).resolve(commandId);
-        String resultDirectoryName =
-            TIMESTAMP_DIR_NAME_FORMATTER.format(Instant.now()) + "_" + getRandom4Digits();
-        Path resultDir = outputDirPath.resolve(resultDirectoryName);
-        Path logDir = outputDirPath.resolve("logs");
         Optional<Result> processResult =
             sessionResultHandlerUtil.processResult(
                 resultDir,
                 logDir,
                 /* latestResultLink= */ null,
                 /* latestLogLink= */ null,
-                commandToJobsMap.get(commandId).stream()
-                    .map(jobIdToJobMap::get)
-                    .collect(toImmutableList()),
+                jobs,
                 sessionRequestInfo);
         if (processResult.isPresent() && processResult.get().hasSummary()) {
           long failedModuleCount =
@@ -711,7 +722,7 @@ final class NewMultiCommandRequestHandler {
               ErrorReason.RESULT_PROCESSING_ERROR,
               "No valid test cases found in the result.");
         }
-        // TODO: Collect state and error message from TF agent if exists.
+        checkTradefedInvocationError(commandDetailBuilder, jobs, logDir);
       }
       commandDetailBuilder
           .setEndTime(Timestamps.fromMillis(clock.millis()))
@@ -768,6 +779,67 @@ final class NewMultiCommandRequestHandler {
             "Failed to unmount xts root directory: %s", mountedXtsRootDir);
       }
     }
+  }
+
+  /**
+   * Reads the Tradefed runtime info file and checks for the Tradefed invocation error message, and
+   * set it in the command detail proto if present.
+   */
+  private void checkTradefedInvocationError(
+      CommandDetail.Builder commandDetailBuilder, ImmutableList<JobInfo> jobs, Path logDir) {
+    ImmutableList<TestInfo> tradefedTestInfos =
+        jobs.stream()
+            .filter(jobInfo -> jobInfo.properties().getBoolean(Job.IS_XTS_TF_JOB).orElse(false))
+            .flatMap(jobInfo -> jobInfo.tests().getAll().values().stream())
+            .collect(toImmutableList());
+
+    tradefedTestInfos.forEach(
+        tradefedTestInfo -> {
+          Path testLogDir;
+          try {
+            testLogDir =
+                sessionResultHandlerUtil.getTradefedInvocationLogDir(tradefedTestInfo, logDir);
+          } catch (MobileHarnessException e) {
+            logger.atWarning().withCause(e).log(
+                "Failed to get Tradefed invocation log dir for test %s",
+                tradefedTestInfo.locator().getId());
+            return;
+          }
+
+          Path runtimeInfoFilePath =
+              testLogDir.resolve(XtsConstants.TRADEFED_RUNTIME_INFO_FILE_NAME);
+          if (!localFileUtil.isFileExist(runtimeInfoFilePath)) {
+            return;
+          }
+
+          Optional<XtsTradefedRuntimeInfoFileDetail> fileDetailOptional;
+          try {
+            fileDetailOptional =
+                xtsTradefedRuntimeInfoFileUtil.readInfo(
+                    runtimeInfoFilePath, /* lastModifiedTime= */ null);
+          } catch (IOException | RuntimeException | Error e) {
+            logger.atWarning().withCause(e).log(
+                "Failed to read Tradefed runtime info of test %s from file %s",
+                tradefedTestInfo.locator().getId(), runtimeInfoFilePath);
+            return;
+          }
+
+          if (fileDetailOptional.isEmpty()) {
+            return;
+          }
+
+          String errorMessage =
+              getLast(fileDetailOptional.get().runtimeInfo().invocations()).errorMessage();
+
+          if (!isNullOrEmpty(errorMessage)) {
+            setCommandError(
+                commandDetailBuilder,
+                ErrorReason.TRADEFED_INVOCATION_ERROR,
+                commandDetailBuilder.getErrorMessage().isEmpty()
+                    ? errorMessage
+                    : commandDetailBuilder.getErrorMessage() + "\n" + errorMessage);
+          }
+        });
   }
 
   private URL getTestResourceUrl(TestResource testResource) throws MobileHarnessException {

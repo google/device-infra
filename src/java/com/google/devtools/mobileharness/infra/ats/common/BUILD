@@ -228,6 +228,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/plugin:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/common/jobcreator:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/plugin:__pkg__",
     ],
     deps = ["//src/java/com/google/wireless/qa/mobileharness/shared/constant:property"],

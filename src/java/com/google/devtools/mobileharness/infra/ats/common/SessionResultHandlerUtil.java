@@ -835,6 +835,12 @@ public class SessionResultHandlerUtil {
     }
   }
 
+  public Path getTradefedInvocationLogDir(TestInfo tradefedTestInfo, Path logRootDir)
+      throws MobileHarnessException {
+    Path invocationDir = prepareTradefedInvocationDir(tradefedTestInfo, logRootDir);
+    return prepareLogOrResultDirForTest(tradefedTestInfo, invocationDir);
+  }
+
   private Path prepareTradefedInvocationDir(TestInfo tradefedTestInfo, Path logRootDir) {
     Path invocationDir;
     if (tradefedTestInfo.properties().has(XtsConstants.TRADEFED_INVOCATION_DIR_NAME)) {

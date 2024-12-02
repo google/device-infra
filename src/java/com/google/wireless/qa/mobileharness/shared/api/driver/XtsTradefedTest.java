@@ -357,7 +357,8 @@ public class XtsTradefedTest extends BaseDriver
         getEnvironmentToTradefedConsole(tmpXtsRootDir, xtsType, spec);
 
     // Create runtime info file path.
-    Path runtimeInfoFilePath = Path.of(testInfo.getGenFileDir()).resolve("tf_runtime_info");
+    Path runtimeInfoFilePath =
+        Path.of(testInfo.getGenFileDir()).resolve(XtsConstants.TRADEFED_RUNTIME_INFO_FILE_NAME);
     testInfo
         .properties()
         .add(XtsConstants.TRADEFED_RUNTIME_INFO_FILE_PATH, runtimeInfoFilePath.toString());

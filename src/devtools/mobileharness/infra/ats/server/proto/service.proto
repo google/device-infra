@@ -188,6 +188,7 @@ enum ErrorReason {
   INVALID_RESOURCE = 4;
   TOO_MANY_LOST_DEVICES = 5;
   RESULT_PROCESSING_ERROR = 6;
+  TRADEFED_INVOCATION_ERROR = 7;
 }
 
 // TODO: No longer useful. Remove this proto.

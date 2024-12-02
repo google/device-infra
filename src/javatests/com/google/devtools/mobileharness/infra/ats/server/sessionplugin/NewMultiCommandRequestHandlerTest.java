@@ -22,12 +22,14 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
@@ -37,6 +39,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.SessionResultHandlerUtil;
+import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.infra.ats.common.XtsTypeLoader;
 import com.google.devtools.mobileharness.infra.ats.common.jobcreator.XtsJobCreator;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
@@ -57,6 +60,11 @@ import com.google.devtools.mobileharness.infra.client.api.controller.device.Devi
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.lab.common.dir.DirUtil;
+import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
+import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfo;
+import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfo.TradefedInvocation;
+import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfoFileUtil;
+import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfoFileUtil.XtsTradefedRuntimeInfoFileDetail;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandException;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
@@ -67,6 +75,8 @@ import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
+import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
+import com.google.wireless.qa.mobileharness.shared.model.job.TestInfos;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Files;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
@@ -102,6 +112,9 @@ public final class NewMultiCommandRequestHandlerTest {
   private static final String DEFAULT_COMMAND_LINE =
       "cts-plan --module module1 --test test1 --logcat-on-failure --shard-count 2"
           + " --parallel-setup true --parallel-setup-timeout 0";
+  private static final String DEVICE_ID_1 = "device_id_1";
+  private static final String DEVICE_ID_2 = "device_id_2";
+  private static final Path TRADEFED_INVOCATION_LOG_DIR = Path.of("/tradefed_invocation_log_dir");
 
   private CommandInfo commandInfo = CommandInfo.getDefaultInstance();
   private NewMultiCommandRequest request = NewMultiCommandRequest.getDefaultInstance();
@@ -118,10 +131,13 @@ public final class NewMultiCommandRequestHandlerTest {
   @Bind @Mock private Clock clock;
   @Bind @Mock private XtsTypeLoader xtsTypeLoader;
   @Bind @Spy private LocalFileUtil localFileUtil = new LocalFileUtil();
+  @Bind @Mock private XtsTradefedRuntimeInfoFileUtil xtsTradefedRuntimeInfoFileUtil;
 
   @Mock private SessionInfo sessionInfo;
   @Mock private JobInfo jobInfo;
   @Mock private Files files;
+  @Mock private TestInfo testInfo;
+  @Mock private TestInfos testInfos;
   private final Properties properties = new Properties(new Timing());
 
   @Captor private ArgumentCaptor<SessionRequestInfo> sessionRequestInfoCaptor;
@@ -134,18 +150,21 @@ public final class NewMultiCommandRequestHandlerTest {
     Flags.parse(new String[] {String.format("--public_dir=%s", publicDir)});
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
     when(sessionInfo.getSessionId()).thenReturn("session_id");
+    properties.add(Job.IS_XTS_TF_JOB, "true");
     when(jobInfo.locator()).thenReturn(new JobLocator("job_id", "job_name"));
     when(jobInfo.properties()).thenReturn(properties);
     when(jobInfo.files()).thenReturn(files);
+    when(jobInfo.tests()).thenReturn(testInfos);
+    when(testInfos.getAll()).thenReturn(ImmutableListMultimap.of("test_id", testInfo));
     when(sessionRequestHandlerUtil.addNonTradefedModuleInfo(any()))
         .thenAnswer(invocation -> invocation.getArgument(0));
     when(deviceQuerier.queryDevice(any()))
         .thenReturn(
             DeviceQueryResult.newBuilder()
                 .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
+                    DeviceInfo.newBuilder().setId(DEVICE_ID_1).addType("AndroidOnlineDevice"))
                 .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
+                    DeviceInfo.newBuilder().setId(DEVICE_ID_2).addType("AndroidOnlineDevice"))
                 .build());
     String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
     when(xtsTypeLoader.getXtsType(eq(xtsRootDir), any())).thenReturn("cts");
@@ -156,12 +175,12 @@ public final class NewMultiCommandRequestHandlerTest {
             .addDeviceDimensions(
                 CommandInfo.DeviceDimension.newBuilder()
                     .setName("device_serial")
-                    .setValue("device_id_1")
+                    .setValue(DEVICE_ID_1)
                     .build())
             .addDeviceDimensions(
                 CommandInfo.DeviceDimension.newBuilder()
                     .setName("device_serial")
-                    .setValue("device_id_2")
+                    .setValue(DEVICE_ID_2)
                     .build())
             .build();
     outputFileUploadPath = tmpFolder.newFolder("output_file_upload_path").getAbsolutePath();
@@ -196,6 +215,12 @@ public final class NewMultiCommandRequestHandlerTest {
     when(clock.millis()).thenReturn(1000L);
     when(sessionInfo.getSessionProperty(SessionProperties.PROPERTY_KEY_SERVER_SESSION_LOG_PATH))
         .thenReturn(Optional.of("/path/to/server_session_log.txt"));
+    when(sessionResultHandlerUtil.getTradefedInvocationLogDir(any(), any()))
+        .thenReturn(TRADEFED_INVOCATION_LOG_DIR);
+    doReturn(false)
+        .when(localFileUtil)
+        .isFileExist(
+            eq(TRADEFED_INVOCATION_LOG_DIR.resolve(XtsConstants.TRADEFED_RUNTIME_INFO_FILE_NAME)));
   }
 
   @After
@@ -212,12 +237,12 @@ public final class NewMultiCommandRequestHandlerTest {
             .addDeviceDimensions(
                 CommandInfo.DeviceDimension.newBuilder()
                     .setName("device_serial")
-                    .setValue("device_id_1")
+                    .setValue(DEVICE_ID_1)
                     .build())
             .addDeviceDimensions(
                 CommandInfo.DeviceDimension.newBuilder()
                     .setName("device_serial")
-                    .setValue("device_id_2")
+                    .setValue(DEVICE_ID_2)
                     .build())
             .build();
     request =
@@ -281,7 +306,7 @@ public final class NewMultiCommandRequestHandlerTest {
     assertThat(sessionRequestInfo.androidXtsZip()).hasValue("ats-file-server::" + zipFile);
     assertThat(sessionRequestInfo.startTimeout()).isEqualTo(Duration.ofSeconds(1000));
     assertThat(sessionRequestInfo.jobTimeout()).isEqualTo(Duration.ofSeconds(2000));
-    assertThat(sessionRequestInfo.deviceSerials()).containsExactly("device_id_1", "device_id_2");
+    assertThat(sessionRequestInfo.deviceSerials()).containsExactly(DEVICE_ID_1, DEVICE_ID_2);
     assertThat(sessionRequestInfo.shardCount()).hasValue(2);
     assertThat(sessionRequestInfo.envVars()).containsExactly("env_key1", "env_value1");
     assertThat(sessionRequestInfo.testPlanFile()).hasValue("ats-file-server::" + testPlanFile);
@@ -300,9 +325,7 @@ public final class NewMultiCommandRequestHandlerTest {
     when(clock.millis()).thenReturn(1000L).thenReturn(2000L).thenReturn(3000L);
     when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
-    Mockito.doReturn(Path.of("/path/to/previous_result.pb"))
-        .when(localFileUtil)
-        .checkFile(any(Path.class));
+    doReturn(Path.of("/path/to/previous_result.pb")).when(localFileUtil).checkFile(any(Path.class));
     String expectedCommandId =
         UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
     String retryCommandLine = "retry --retry 1";
@@ -351,7 +374,7 @@ public final class NewMultiCommandRequestHandlerTest {
     assertThat(sessionRequestInfo.androidXtsZip()).hasValue("ats-file-server::" + zipFile);
     assertThat(sessionRequestInfo.startTimeout()).isEqualTo(Duration.ofSeconds(1000));
     assertThat(sessionRequestInfo.jobTimeout()).isEqualTo(Duration.ofSeconds(2000));
-    assertThat(sessionRequestInfo.deviceSerials()).containsExactly("device_id_1", "device_id_2");
+    assertThat(sessionRequestInfo.deviceSerials()).containsExactly(DEVICE_ID_1, DEVICE_ID_2);
     assertThat(sessionRequestInfo.envVars()).containsExactly("env_key1", "env_value1");
     assertThat(sessionRequestInfo.retrySessionId()).hasValue("retry_previous_session_id");
     String retryResultDir =
@@ -423,7 +446,7 @@ public final class NewMultiCommandRequestHandlerTest {
     assertThat(sessionRequestInfo.androidXtsZip()).hasValue("ats-file-server::" + zipFile);
     assertThat(sessionRequestInfo.startTimeout()).isEqualTo(Duration.ofSeconds(1000));
     assertThat(sessionRequestInfo.jobTimeout()).isEqualTo(Duration.ofSeconds(2000));
-    assertThat(sessionRequestInfo.deviceSerials()).containsExactly("device_id_1", "device_id_2");
+    assertThat(sessionRequestInfo.deviceSerials()).containsExactly(DEVICE_ID_1, DEVICE_ID_2);
     assertThat(sessionRequestInfo.shardCount()).hasValue(2);
     assertThat(sessionRequestInfo.envVars()).containsExactly("env_key1", "env_value1");
     assertThat(sessionRequestInfo.retrySessionId()).isEmpty();
@@ -443,9 +466,7 @@ public final class NewMultiCommandRequestHandlerTest {
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
     String expectedCommandId =
         UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
-    Mockito.doReturn(Path.of("/path/to/previous_result.pb"))
-        .when(localFileUtil)
-        .checkFile(any(Path.class));
+    doReturn(Path.of("/path/to/previous_result.pb")).when(localFileUtil).checkFile(any(Path.class));
     request =
         request.toBuilder()
             .setPrevTestContext(
@@ -490,7 +511,7 @@ public final class NewMultiCommandRequestHandlerTest {
     assertThat(sessionRequestInfo.androidXtsZip()).hasValue("ats-file-server::" + zipFile);
     assertThat(sessionRequestInfo.startTimeout()).isEqualTo(Duration.ofSeconds(1000));
     assertThat(sessionRequestInfo.jobTimeout()).isEqualTo(Duration.ofSeconds(2000));
-    assertThat(sessionRequestInfo.deviceSerials()).containsExactly("device_id_1", "device_id_2");
+    assertThat(sessionRequestInfo.deviceSerials()).containsExactly(DEVICE_ID_1, DEVICE_ID_2);
     assertThat(sessionRequestInfo.shardCount()).hasValue(2);
     assertThat(sessionRequestInfo.envVars()).containsExactly("env_key1", "env_value1");
     assertThat(sessionRequestInfo.retrySessionId()).hasValue("retry_previous_session_id");
@@ -542,7 +563,7 @@ public final class NewMultiCommandRequestHandlerTest {
             .addDeviceDimensions(
                 CommandInfo.DeviceDimension.newBuilder()
                     .setName("device_serial")
-                    .setValue("device_id_1")
+                    .setValue(DEVICE_ID_1)
                     .build())
             .build();
     NewMultiCommandRequest request =
@@ -652,7 +673,7 @@ public final class NewMultiCommandRequestHandlerTest {
             .addDeviceDimensions(
                 CommandInfo.DeviceDimension.newBuilder()
                     .setName("device_serial")
-                    .setValue("device_id_1")
+                    .setValue(DEVICE_ID_1)
                     .build())
             .build();
     NewMultiCommandRequest request =
@@ -854,6 +875,50 @@ public final class NewMultiCommandRequestHandlerTest {
         .processResult(any(), any(), any(), any(), any(), any());
     verifyUnmountRootDir(DirUtil.getPublicGenDir() + "/session_session_id/file");
     verify(sessionResultHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
+  }
+
+  @Test
+  public void handleResultProcessing_tradefedError_failWithErrorMessage() throws Exception {
+    Result result =
+        Result.newBuilder()
+            .setSummary(Summary.newBuilder().setPassed(9).setFailed(1).build())
+            .build();
+    mockProcessResult(result);
+
+    doReturn(true)
+        .when(localFileUtil)
+        .isFileExist(
+            eq(TRADEFED_INVOCATION_LOG_DIR.resolve(XtsConstants.TRADEFED_RUNTIME_INFO_FILE_NAME)));
+    // Mock the content of the tradefed invocation runtime info log file.
+    String tradefedInvocationErrorMessage = "example error message";
+    when(xtsTradefedRuntimeInfoFileUtil.readInfo(any(), any()))
+        .thenReturn(
+            Optional.of(
+                new XtsTradefedRuntimeInfoFileDetail(
+                    new XtsTradefedRuntimeInfo(
+                        ImmutableList.of(
+                            new TradefedInvocation(
+                                ImmutableList.of(DEVICE_ID_1, DEVICE_ID_2),
+                                "failed",
+                                tradefedInvocationErrorMessage)),
+                        /* timestamp= */ Instant.now()),
+                    /* lastModifiedTime= */ Instant.now())));
+
+    HandleResultProcessingResult handleResultProcessingResult =
+        createJobAndHandleResultProcessing(request);
+
+    assertThat(handleResultProcessingResult.commandDetails()).hasSize(1);
+    CommandDetail commandDetail =
+        handleResultProcessingResult.commandDetails().values().iterator().next();
+    assertThat(commandDetail.getPassedTestCount()).isEqualTo(9);
+    assertThat(commandDetail.getFailedTestCount()).isEqualTo(1);
+    assertThat(commandDetail.getTotalTestCount()).isEqualTo(10);
+    String commandId =
+        UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
+    assertThat(commandDetail.getId()).isEqualTo(commandId);
+    assertThat(commandDetail.getState()).isEqualTo(CommandState.ERROR);
+    assertThat(commandDetail.getErrorReason()).isEqualTo(ErrorReason.TRADEFED_INVOCATION_ERROR);
+    assertThat(commandDetail.getErrorMessage()).isEqualTo(tradefedInvocationErrorMessage);
   }
 
   @Test
