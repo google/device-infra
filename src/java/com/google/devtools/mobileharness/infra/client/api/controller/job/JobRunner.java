@@ -666,13 +666,13 @@ public class JobRunner implements Runnable {
       }
     } catch (JobCancelledException e) {
       // Job is killed by user from FE. It only happens in remote mode.
-      jobInfo.resultWithCause().setNonPassing(Test.TestResult.FAIL, e);
+      jobInfo.resultWithCause().setNonPassing(Test.TestResult.ERROR, e);
       jobInfo.tests().getAll().values().stream()
           .filter(testInfo -> testInfo.status().get() != TestStatus.DONE)
           .forEach(
               testInfo -> {
                 testInfo.status().set(TestStatus.DONE);
-                testInfo.resultWithCause().setNonPassing(Test.TestResult.FAIL, e);
+                testInfo.resultWithCause().setNonPassing(Test.TestResult.ERROR, e);
               });
     } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
       if (jobInfo.params().getBool(JobInfo.PARAM_IGNORE_NOT_ASSIGNED_TESTS, false)
