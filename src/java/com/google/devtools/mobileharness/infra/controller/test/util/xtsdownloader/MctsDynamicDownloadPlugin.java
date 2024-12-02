@@ -90,6 +90,10 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
   private static final Pattern VERSIONCODE_PATTERN =
       Pattern.compile("(3[5-9]|[4-9][0-9])(?!(00|99))\\d{7}");
 
+  // Add the versioncode from
+  // android/platform/superproject/main/+/main:build/release/flag_declarations/RELEASE_DEFAULT_UPDATABLE_MODULE_VERSION.textproto
+  private static final ImmutableSet<String> AOSP_VERSIONCODE_LIST = ImmutableSet.of("352090000");
+
   private static final String MAINLINE_AOSP_VERSION_KEY = "AOSP";
 
   private static final ImmutableMap<String, Integer> SDK_LEVEL_TO_YEAR =
@@ -174,6 +178,7 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
       // from aosp.
       String preloadedMainlineVersion =
           VERSIONCODE_PATTERN.matcher(versioncode).matches()
+                  && !AOSP_VERSIONCODE_LIST.contains(versioncode)
               ? getPreloadedMainlineVersion(versioncode, MAINLINE_TVP_PKG)
               : aospVersion;
       // Add the MCTS exclude file link url to the front of the list.
@@ -373,6 +378,7 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
           // Only parse the module versioncode released start from Android V (35+).
           String moduleVersioncode =
               VERSIONCODE_PATTERN.matcher(moduleVersion).matches()
+                      && !AOSP_VERSIONCODE_LIST.contains(moduleVersion)
                   ? getPreloadedMainlineVersion(moduleVersion, moduleName)
                   : MAINLINE_AOSP_VERSION_KEY;
           preloadedModulesMctsAndVersioncode.add(mctsName + ':' + moduleVersioncode);
