@@ -208,6 +208,11 @@ public class XtsTradefedTest extends BaseDriver
   @Override
   public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
     XtsTradefedTestDriverSpec spec = testInfo.jobInfo().combinedSpec(this);
+    // TODO: Remove this logging after debugging.
+    logger.atInfo().log("spec: %s", spec);
+    logger.atInfo().log("params: %s", testInfo.jobInfo().params());
+    logger.atInfo().log("proto spec: %s", testInfo.jobInfo().protoSpec());
+
     String xtsType = spec.getXtsType();
 
     CompositeDeviceUtil.cacheTestbed(testInfo, getDevice());
@@ -703,7 +708,8 @@ public class XtsTradefedTest extends BaseDriver
       }
     }
     throw new MobileHarnessException(
-        AndroidErrorId.XTS_TRADEFED_GET_XTS_ROOT_DIR_ERROR, "Failed to get the xts root dir.");
+        AndroidErrorId.XTS_TRADEFED_GET_XTS_ROOT_DIR_ERROR,
+        "Failed to get the xts root dir. Full spec: " + shortDebugString(spec));
   }
 
   private ImmutableMap<String, String> getEnvironmentToTradefedConsole(
