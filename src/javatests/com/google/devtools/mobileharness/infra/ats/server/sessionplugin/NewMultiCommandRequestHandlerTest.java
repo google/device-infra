@@ -39,6 +39,7 @@ import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.SessionResultHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.XtsTypeLoader;
 import com.google.devtools.mobileharness.infra.ats.common.jobcreator.XtsJobCreator;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Summary;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandDetail;
@@ -692,6 +693,7 @@ public final class NewMultiCommandRequestHandlerTest {
     Result result =
         Result.newBuilder()
             .setSummary(Summary.newBuilder().setPassed(10).setFailed(0).build())
+            .addModuleInfo(Module.newBuilder().setName("module1").setFailedTests(0).build())
             .build();
     request = request.toBuilder().setRetryPreviousSessionId("prev_session_id").build();
     mockProcessResult(result);
@@ -714,6 +716,7 @@ public final class NewMultiCommandRequestHandlerTest {
     assertThat(commandDetail.getPassedTestCount()).isEqualTo(10);
     assertThat(commandDetail.getFailedTestCount()).isEqualTo(0);
     assertThat(commandDetail.getTotalTestCount()).isEqualTo(10);
+    assertThat(commandDetail.getFailedModuleCount()).isEqualTo(0);
     assertThat(commandDetail.getId()).isEqualTo(commandId);
     assertThat(commandDetail.getState()).isEqualTo(CommandState.COMPLETED);
     assertThat(handleResultProcessingResult.testContexts()).hasSize(1);
@@ -724,6 +727,7 @@ public final class NewMultiCommandRequestHandlerTest {
     Result result =
         Result.newBuilder()
             .setSummary(Summary.newBuilder().setPassed(5).setFailed(5).build())
+            .addModuleInfo(Module.newBuilder().setName("module1").setFailedTests(5).build())
             .build();
 
     mockProcessResult(result);
@@ -736,14 +740,15 @@ public final class NewMultiCommandRequestHandlerTest {
     assertThat(commandDetail.getPassedTestCount()).isEqualTo(5);
     assertThat(commandDetail.getFailedTestCount()).isEqualTo(5);
     assertThat(commandDetail.getTotalTestCount()).isEqualTo(10);
+    assertThat(commandDetail.getFailedModuleCount()).isEqualTo(1);
     String commandId =
         UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
     assertThat(commandDetail.getId()).isEqualTo(commandId);
-    assertThat(commandDetail.getState()).isEqualTo(CommandState.ERROR);
+    assertThat(commandDetail.getState()).isEqualTo(CommandState.COMPLETED);
   }
 
   @Test
-  public void handleResultProcessing_zeroTotalTest_treatAsFailure() throws Exception {
+  public void handleResultProcessing_zeroTotalTest_treatAsError() throws Exception {
     Result.Builder resultBuilder =
         Result.newBuilder().setSummary(Summary.newBuilder().setPassed(0).setFailed(0).build());
 

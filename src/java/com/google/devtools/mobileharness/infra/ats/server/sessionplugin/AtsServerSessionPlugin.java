@@ -74,7 +74,6 @@ import com.google.wireless.qa.mobileharness.shared.proto.Job.TestStatus;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Collection;
-import java.util.Map;
 import javax.inject.Inject;
 
 /** Session Plugin to serve test requests coming from ATS server. */
@@ -318,7 +317,7 @@ final class AtsServerSessionPlugin {
         if (handleResultProcessingResult.state().equals(RequestState.RUNNING)
             || handleResultProcessingResult.state().equals(RequestState.UNKNOWN)) {
           requestDetail.setState(
-              hasSessionPassed(handleResultProcessingResult.commandDetails())
+              hasSessionCompleted(handleResultProcessingResult.commandDetails())
                   ? RequestState.COMPLETED
                   : RequestState.ERROR);
         } else {
@@ -341,7 +340,7 @@ final class AtsServerSessionPlugin {
           }
         } else if (requestDetail.getState().equals(RequestState.ERROR)
             && requestDetail.getErrorReason().equals(ErrorReason.UNKNOWN_REASON)
-            && !hasSessionFailed(requestDetail)) {
+            && !hasSessionCompletedWithFailure(requestDetail)) {
           requestDetail.setErrorReason(ErrorReason.RESULT_PROCESSING_ERROR);
           requestDetail.setErrorMessage("Failed to process test results.");
         }
@@ -465,7 +464,8 @@ final class AtsServerSessionPlugin {
 
   // TODO: create more concrete retry strategy.
   private static boolean canRetrySession(RequestDetailOrBuilder requestDetail) {
-    return requestDetail.getMaxRetryOnTestFailures() > 0 && hasSessionFailed(requestDetail);
+    return requestDetail.getMaxRetryOnTestFailures() > 0
+        && hasSessionCompletedWithFailure(requestDetail);
   }
 
   private static CommandAttemptDetail generateCommandAttemptDetail(
@@ -545,21 +545,20 @@ final class AtsServerSessionPlugin {
     }
   }
 
-  private static boolean hasSessionPassed(ImmutableMap<String, CommandDetail> commandDetailsMap) {
+  private static boolean hasSessionCompleted(
+      ImmutableMap<String, CommandDetail> commandDetailsMap) {
     return !commandDetailsMap.isEmpty()
         && commandDetailsMap.values().stream()
             .allMatch(commandDetail -> commandDetail.getState() == CommandState.COMPLETED);
   }
 
-  private static boolean hasSessionFailed(RequestDetailOrBuilder requestDetail) {
-    Map<String, CommandDetail> commandDetailsMap = requestDetail.getCommandDetailsMap();
-    // TODO: Failed command should be COMPLETED state after the bug is fixed.
+  private static boolean hasSessionCompletedWithFailure(RequestDetailOrBuilder requestDetail) {
+    ImmutableMap<String, CommandDetail> commandDetailsMap =
+        ImmutableMap.copyOf(requestDetail.getCommandDetailsMap());
     return !commandDetailsMap.isEmpty()
+        && hasSessionCompleted(commandDetailsMap)
         && commandDetailsMap.values().stream()
-            .allMatch(
-                commandDetail ->
-                    commandDetail.getState() == CommandState.ERROR
-                        && commandDetail.getFailedTestCount() > 0);
+            .anyMatch(commandDetail -> commandDetail.getFailedTestCount() > 0);
   }
 
   private static CommandState convertStatusAndResultToCommandState(Status status, Result result) {

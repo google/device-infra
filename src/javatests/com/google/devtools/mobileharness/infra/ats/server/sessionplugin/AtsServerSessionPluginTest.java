@@ -772,8 +772,8 @@ public final class AtsServerSessionPluginTest {
     assertThat(requestDetail.getCommandDetailsMap().keySet().iterator().next())
         .isEqualTo(commandId);
     CommandDetail commandDetail = requestDetail.getCommandDetailsMap().values().iterator().next();
-    assertThat(commandDetail.getState()).isEqualTo(CommandState.ERROR);
-    assertThat(requestDetail.getState()).isEqualTo(RequestState.ERROR);
+    assertThat(commandDetail.getState()).isEqualTo(CommandState.COMPLETED);
+    assertThat(requestDetail.getState()).isEqualTo(RequestState.COMPLETED);
   }
 
   @Test
@@ -853,8 +853,8 @@ public final class AtsServerSessionPluginTest {
     assertThat(requestDetail.getCommandDetailsMap().keySet().iterator().next())
         .isEqualTo(commandId);
     CommandDetail commandDetail = requestDetail.getCommandDetailsMap().values().iterator().next();
-    assertThat(commandDetail.getState()).isEqualTo(CommandState.ERROR);
-    assertThat(requestDetail.getState()).isEqualTo(RequestState.ERROR);
+    assertThat(commandDetail.getState()).isEqualTo(CommandState.COMPLETED);
+    assertThat(requestDetail.getState()).isEqualTo(RequestState.COMPLETED);
     assertThat(requestDetail.getTestContextMap().get(commandId))
         .isEqualTo(newMultiCommandRequest.getPrevTestContext());
   }
@@ -937,8 +937,8 @@ public final class AtsServerSessionPluginTest {
     assertThat(requestDetail.getCommandDetailsMap().keySet().iterator().next())
         .isEqualTo(commandId);
     CommandDetail commandDetail = requestDetail.getCommandDetailsMap().values().iterator().next();
-    assertThat(commandDetail.getState()).isEqualTo(CommandState.ERROR);
-    assertThat(requestDetail.getState()).isEqualTo(RequestState.ERROR);
+    assertThat(commandDetail.getState()).isEqualTo(CommandState.COMPLETED);
+    assertThat(requestDetail.getState()).isEqualTo(RequestState.COMPLETED);
   }
 
   @Test
@@ -1000,8 +1000,8 @@ public final class AtsServerSessionPluginTest {
     assertThat(requestDetail.getCommandDetailsMap().keySet().iterator().next())
         .isEqualTo(commandId);
     CommandDetail commandDetail = requestDetail.getCommandDetailsMap().values().iterator().next();
-    assertThat(commandDetail.getState()).isEqualTo(CommandState.ERROR);
-    assertThat(requestDetail.getState()).isEqualTo(RequestState.ERROR);
+    assertThat(commandDetail.getState()).isEqualTo(CommandState.COMPLETED);
+    assertThat(requestDetail.getState()).isEqualTo(RequestState.COMPLETED);
   }
 
   @Test
@@ -1055,6 +1055,59 @@ public final class AtsServerSessionPluginTest {
     CommandDetail commandDetail = requestDetail.getCommandDetailsMap().values().iterator().next();
     assertThat(commandDetail.getState()).isEqualTo(CommandState.COMPLETED);
     assertThat(requestDetail.getState()).isEqualTo(RequestState.COMPLETED);
+  }
+
+  @Test
+  public void onSessionEnded_sessionZeroTotalTests_noRetry() throws Exception {
+    when(xtsJobCreator.createXtsNonTradefedJobs(any())).thenReturn(ImmutableList.of());
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(
+                        SessionRequest.newBuilder().setNewMultiCommandRequest(request).build()))
+                .build());
+    plugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+    verify(sessionInfo).addJob(jobInfo);
+    Timing timing = new Timing();
+    when(jobInfo.timing()).thenReturn(timing);
+    timing.start();
+    var unused = timing.end();
+
+    when(testInfo.status()).thenReturn(new Status(timing).set(TestStatus.DONE));
+    Result result = new Result(timing, new Params(timing)).set(TestResult.FAIL);
+    when(testInfo.result()).thenReturn(result);
+
+    when(jobInfo.result()).thenReturn(result);
+    JobType jobType = JobType.newBuilder().setDriver("XtsTradefedTest").build();
+    when(jobInfo.type()).thenReturn(jobType);
+    plugin.onJobEnded(new JobEndEvent(jobInfo, null));
+
+    com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result.Builder
+        resultBuilder =
+            com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result
+                .newBuilder()
+                .setSummary(Summary.newBuilder().setPassed(0).setFailed(0).build());
+    when(sessionResultHandlerUtil.processResult(
+            any(), any(), any(), any(), eq(ImmutableList.of(jobInfo)), any()))
+        .thenReturn(Optional.of(resultBuilder.build()));
+    plugin.onSessionEnded(new SessionEndedEvent(sessionInfo, null));
+    verify(localSessionStub, never()).createSession(any());
+
+    // sessionInfo.setSessionPluginOutput() is called 3 times. First time in
+    // OnSessionStarting() after creating tradefed jobs. Second time in OnJobEnded()
+    // after job ended signal trigger session output update. 3th time in OnSessionEnded().
+    verify(sessionInfo, times(3))
+        .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
+    RequestDetail requestDetail = Iterables.getLast(unaryOperatorCaptor.getAllValues()).apply(null);
+    assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
+    String commandId =
+        UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
+    assertThat(requestDetail.getCommandDetailsMap().keySet().iterator().next())
+        .isEqualTo(commandId);
+    CommandDetail commandDetail = requestDetail.getCommandDetailsMap().values().iterator().next();
+    assertThat(commandDetail.getState()).isEqualTo(CommandState.ERROR);
+    assertThat(requestDetail.getState()).isEqualTo(RequestState.ERROR);
   }
 
   @Test

@@ -645,10 +645,15 @@ final class NewMultiCommandRequestHandler {
                     .collect(toImmutableList()),
                 sessionRequestInfo);
         if (processResult.isPresent() && processResult.get().hasSummary()) {
+          long failedModuleCount =
+              processResult.get().getModuleInfoList().stream()
+                  .filter(module -> module.getFailedTests() > 0)
+                  .count();
           commandDetailBuilder
               .setPassedTestCount(processResult.get().getSummary().getPassed())
               .setFailedTestCount(processResult.get().getSummary().getFailed())
               .setTotalModuleCount(processResult.get().getSummary().getModulesTotal())
+              .setFailedModuleCount(failedModuleCount)
               .setTotalTestCount(
                   commandDetailBuilder.getPassedTestCount()
                       + commandDetailBuilder.getFailedTestCount());
@@ -697,11 +702,9 @@ final class NewMultiCommandRequestHandler {
 
       if (commandDetailBuilder.getState() == CommandState.UNKNOWN_STATE
           || commandDetailBuilder.getState() == CommandState.RUNNING) {
-        if (hasCommandPassed(commandDetailBuilder.build())) {
+        if (hasCommandPassed(commandDetailBuilder.build())
+            || hasCommandFailed(commandDetailBuilder.build())) {
           commandDetailBuilder.setState(CommandState.COMPLETED);
-        } else if (hasCommandFailed(commandDetailBuilder.build())) {
-          // TODO this should set to COMPLETED state to conform to ATS 1.0 behavior.
-          commandDetailBuilder.setState(CommandState.ERROR);
         } else {
           setCommandError(
               commandDetailBuilder,
