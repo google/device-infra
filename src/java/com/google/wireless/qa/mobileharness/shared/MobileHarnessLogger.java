@@ -23,6 +23,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.shared.constant.LogRecordImportance;
+import com.google.devtools.mobileharness.shared.constant.LogRecordImportance.LogImportanceScope;
 import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
@@ -131,6 +133,18 @@ public class MobileHarnessLogger {
 
       // Sets formatter/filter/level.
       configureHandler(handler);
+
+      if (!disableConsoleHandler && handler instanceof ConsoleHandler) {
+        int loggerConsoleHandlerMinLogRecordImportance =
+            Flags.instance().loggerConsoleHandlerMinLogRecordImportance.getNonNull();
+        addFilter(
+            handler,
+            record ->
+                LogRecordImportance.getLogRecordImportance(
+                            record, LogImportanceScope.getCurrentScope())
+                        .value()
+                    >= loggerConsoleHandlerMinLogRecordImportance);
+      }
     }
   }
 

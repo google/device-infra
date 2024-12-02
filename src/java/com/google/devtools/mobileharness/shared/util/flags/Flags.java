@@ -1105,6 +1105,18 @@ public class Flags {
       converter = DurationFlag.DurationConverter.class)
   public Flag<Duration> logUploadDelay = logUploadDelayDefault;
 
+  private static final Flag<Integer> loggerConsoleHandlerMinLogRecordImportanceDefault =
+      Flag.value(100);
+
+  @com.beust.jcommander.Parameter(
+      names = "--logger_console_handler_min_log_record_importance",
+      description =
+          "Minimum console log record importance shown in System.err. Check LogRecordImportance for"
+              + " importance of log records. Default is 100.",
+      converter = Flag.IntegerConverter.class)
+  public Flag<Integer> loggerConsoleHandlerMinLogRecordImportance =
+      loggerConsoleHandlerMinLogRecordImportanceDefault;
+
   private static final Flag<Long> lowerLimitOfJvmMaxMemoryAllowForAllocationDiagnosticDefault =
       Flag.value(512L * 1024 * 1024);
 
