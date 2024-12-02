@@ -117,6 +117,10 @@ final class NewMultiCommandRequestHandler {
       Pattern.compile("android-[a-z]+\\.zip");
   @VisibleForTesting static final String XTS_TF_JOB_PROP = "xts-tradefed-job";
 
+  @VisibleForTesting
+  static final String REQUEST_ERROR_MESSAGE_FOR_TRADEFED_INVOCATION_ERROR =
+      "Tradefed invocation had an error.";
+
   private static final ImmutableSet<ErrorId> INVALID_RESOURCE_ERROR_IDS =
       ImmutableSet.of(
           BasicErrorId.LOCAL_MOUNT_ZIP_TO_DIR_ERROR, InfraErrorId.ATS_SERVER_INVALID_TEST_RESOURCE);
@@ -629,8 +633,8 @@ final class NewMultiCommandRequestHandler {
           ImmutableMap.of());
     }
 
-    ImmutableMap.Builder<String, TestContext> testContextMap = ImmutableMap.builder();
-    ImmutableMap.Builder<String, CommandDetail> commandDetailMap = ImmutableMap.builder();
+    ImmutableMap.Builder<String, TestContext> testContextMapBuilder = ImmutableMap.builder();
+    ImmutableMap.Builder<String, CommandDetail> commandDetailMapBuilder = ImmutableMap.builder();
     for (CommandDetail commandDetail : commandDetails) {
       CommandDetail.Builder commandDetailBuilder = commandDetail.toBuilder();
       String commandId = commandDetail.getId();
@@ -688,7 +692,7 @@ final class NewMultiCommandRequestHandler {
                           .build())
                   .build();
           // TODO: filter context files.
-          testContextMap.put(commandId, testContext);
+          testContextMapBuilder.put(commandId, testContext);
         }
 
         if (localFileUtil.isDirExist(resultDir)) {
@@ -727,7 +731,7 @@ final class NewMultiCommandRequestHandler {
       commandDetailBuilder
           .setEndTime(Timestamps.fromMillis(clock.millis()))
           .setUpdateTime(Timestamps.fromMillis(clock.millis()));
-      commandDetailMap.put(commandId, commandDetailBuilder.build());
+      commandDetailMapBuilder.put(commandId, commandDetailBuilder.build());
     }
 
     // Record OLC server session logs if no command recorded it due to empty command list or result
@@ -753,12 +757,34 @@ final class NewMultiCommandRequestHandler {
             "Failed to create server session logs dir for session: %s", sessionInfo.getSessionId());
       }
     }
+
+    // Determine the error reason and error message for the request level, based on error reason and
+    // error message from commands.
+    ImmutableMap<String, CommandDetail> commandDetailsMap =
+        commandDetailMapBuilder.buildKeepingLast();
+    ErrorReason errorReason;
+    String errorMessage;
+    Optional<CommandDetail> commandDetailWithError =
+        commandDetailsMap.values().stream()
+            .filter(commandDetail -> commandDetail.getState() == CommandState.ERROR)
+            .findFirst();
+    if (commandDetailWithError.isPresent()) {
+      errorReason = commandDetailWithError.get().getErrorReason();
+      errorMessage =
+          errorReason == ErrorReason.TRADEFED_INVOCATION_ERROR
+              ? REQUEST_ERROR_MESSAGE_FOR_TRADEFED_INVOCATION_ERROR
+              : commandDetailWithError.get().getErrorMessage();
+    } else {
+      errorReason = null;
+      errorMessage = null;
+    }
+
     return HandleResultProcessingResult.of(
         RequestState.RUNNING,
-        /* errorReason= */ null,
-        /* errorMessage= */ null,
-        commandDetailMap.buildKeepingLast(),
-        testContextMap.buildKeepingLast());
+        errorReason,
+        errorMessage,
+        commandDetailMapBuilder.buildKeepingLast(),
+        testContextMapBuilder.buildKeepingLast());
   }
 
   // Clean up temporary files and directories in session and jobs.

@@ -919,6 +919,11 @@ public final class NewMultiCommandRequestHandlerTest {
     assertThat(commandDetail.getState()).isEqualTo(CommandState.ERROR);
     assertThat(commandDetail.getErrorReason()).isEqualTo(ErrorReason.TRADEFED_INVOCATION_ERROR);
     assertThat(commandDetail.getErrorMessage()).isEqualTo(tradefedInvocationErrorMessage);
+    assertThat(handleResultProcessingResult.errorReason())
+        .hasValue(ErrorReason.TRADEFED_INVOCATION_ERROR);
+    assertThat(handleResultProcessingResult.errorMessage())
+        .hasValue(
+            NewMultiCommandRequestHandler.REQUEST_ERROR_MESSAGE_FOR_TRADEFED_INVOCATION_ERROR);
   }
 
   @Test
