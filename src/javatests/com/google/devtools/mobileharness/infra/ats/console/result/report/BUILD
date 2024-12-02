@@ -75,7 +75,6 @@ java_library(
 
 junit_test_suites(
     name = "tests",
-    jvm_flags = ["-Dcom.google.testing.junit.runner.shouldInstallTestSecurityManager=false"],
     sizes = [
         "small",
         "medium",
