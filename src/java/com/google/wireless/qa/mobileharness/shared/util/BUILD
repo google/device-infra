@@ -109,3 +109,18 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/reflection:reflection_util",
     ],
 )
+
+java_library(
+    name = "google_account_decorator_util",
+    srcs = ["GoogleAccountDecoratorUtil.java"],
+    visibility = [
+    ],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:google_account_decorator_spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@maven//:com_google_guava_guava",
+    ],
+)
