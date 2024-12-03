@@ -52,7 +52,7 @@ func (fu *FileUploader) DoUpload() (digest.Digest, error) {
 	} else {
 		// Upload as a dir with the file in it.
 		path := filepath.Join(targetDir, filepath.Base(fu.path))
-		if err := os.Link(fu.path, path); err != nil {
+		if err := os.Symlink(fu.path, path); err != nil {
 			return digest.Digest{}, err
 		}
 	}
