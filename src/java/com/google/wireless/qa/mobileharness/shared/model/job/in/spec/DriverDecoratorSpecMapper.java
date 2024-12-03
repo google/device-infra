@@ -56,6 +56,7 @@ public final class DriverDecoratorSpecMapper {
      * Initialize the map with driver-spec pairs.
      * =============================================================================================
      */
+    builder.put("AndroidInstrumentation", "AndroidInstrumentationSpec");
     builder.put("NoOpDriver", "NoOpDriverSpec");
     builder.put("XtsTradefedTest", "XtsTradefedTestDriverSpec");
 
@@ -69,6 +70,7 @@ public final class DriverDecoratorSpecMapper {
         "AndroidAtsDynamicConfigPusherDecorator", "AndroidAtsDynamicConfigPusherDecoratorSpec");
     builder.put("AndroidDeviceFeaturesCheckDecorator", "AndroidDeviceFeaturesCheckDecoratorSpec");
     builder.put("AndroidDeviceSettingsDecorator", "AndroidDeviceSettingsDecoratorSpec");
+    builder.put("AndroidFilePullerDecorator", "AndroidFilePullerDecoratorSpec");
     builder.put("AndroidInstallAppsDecorator", "InstallApkStepSpec");
     builder.put("AndroidMainlineModulesCheckDecorator", "AndroidMainlineModulesCheckDecoratorSpec");
     builder.put("AndroidMinSdkVersionCheckDecorator", "AndroidMinSdkVersionCheckDecoratorSpec");
