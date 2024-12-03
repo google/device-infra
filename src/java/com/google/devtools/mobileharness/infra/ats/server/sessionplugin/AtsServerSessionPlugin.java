@@ -348,7 +348,7 @@ final class AtsServerSessionPlugin {
         requestDetail
             .setState(RequestState.ERROR)
             .setErrorReason(ErrorReason.RESULT_PROCESSING_ERROR)
-            .setErrorMessage(e.getMessage());
+            .setErrorMessage(e.getMessage() == null ? "Empty error message" : e.getMessage());
         throw e;
       } finally {
         updateSessionPluginOutput(requestDetail);
