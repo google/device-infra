@@ -72,6 +72,7 @@ public final class DriverDecoratorSpecMapper {
     builder.put("AndroidInstallAppsDecorator", "InstallApkStepSpec");
     builder.put("AndroidMainlineModulesCheckDecorator", "AndroidMainlineModulesCheckDecoratorSpec");
     builder.put("AndroidMinSdkVersionCheckDecorator", "AndroidMinSdkVersionCheckDecoratorSpec");
+    builder.put("AndroidSwitchLanguageDecorator", "AndroidSwitchLanguageDecoratorSpec");
     builder.put("AndroidSwitchUserDecorator", "AndroidSwitchUserDecoratorSpec");
     builder.put("NoOpDecorator", "NoOpDecoratorSpec");
 
