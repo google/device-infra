@@ -16,17 +16,26 @@
 
 package com.google.devtools.mobileharness.infra.controller.test.manager;
 
+import com.google.devtools.mobileharness.api.messaging.proto.MessagingProto.MessageSend;
+import com.google.devtools.mobileharness.infra.controller.messaging.MessageSender;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunner;
 import com.google.devtools.mobileharness.shared.util.comm.messaging.poster.TestMessagePoster;
 import java.util.Optional;
 
-/** Utilities for getting {@link TestMessagePoster} from {@link TestManager}. */
-public class TestMessagePosterUtil {
+/** Utilities for getting modules of {@link DirectTestRunner} from {@link TestManager}. */
+public class DirectTestRunnerUtil {
 
   public static Optional<TestMessagePoster> getPosterFromDirectTestManager(
       TestManager<DirectTestRunner> directTestManager, String testId) {
     return directTestManager.getTestRunner(testId).map(DirectTestRunner::getTestMessagePoster);
   }
 
-  private TestMessagePosterUtil() {}
+  public static Optional<MessageSender> getMessageSenderFromDirectTestManager(
+      TestManager<DirectTestRunner> directTestManager, MessageSend messageSend) {
+    return directTestManager
+        .getTestRunner(messageSend.getDestination().getTest().getRootTestId())
+        .map(DirectTestRunner::getMessageSender);
+  }
+
+  private DirectTestRunnerUtil() {}
 }

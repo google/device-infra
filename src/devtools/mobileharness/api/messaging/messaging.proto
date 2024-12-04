@@ -33,13 +33,21 @@ message MessageSend {
   // Required.
   MessageSendDestination destination = 2;
 
-  // Required.
+  // Optional.
   MessageSendSettings settings = 3;
 }
 
 // Destination to which a message will be send.
 message MessageSendDestination {
-  // TODO: Adds destination.
+  // A running Mobile Harness top-level test.
+  message Test {
+    // Root test ID of the top-level test.
+    string root_test_id = 1;
+  }
+
+  oneof type {
+    Test test = 1;
+  }
 }
 
 // Settings of a message send action.

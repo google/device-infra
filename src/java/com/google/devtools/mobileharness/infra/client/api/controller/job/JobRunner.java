@@ -34,6 +34,7 @@ import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;
+import com.google.devtools.mobileharness.api.messaging.proto.MessagingProto.MessageSend;
 import com.google.devtools.mobileharness.api.model.allocation.Allocation;
 import com.google.devtools.mobileharness.api.model.error.ErrorId;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
@@ -55,12 +56,13 @@ import com.google.devtools.mobileharness.infra.client.api.controller.device.Devi
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
 import com.google.devtools.mobileharness.infra.client.api.mode.remote.JobCancelledException;
 import com.google.devtools.mobileharness.infra.client.api.util.result.ClientAllocErrorUtil;
+import com.google.devtools.mobileharness.infra.controller.messaging.MessageSender;
 import com.google.devtools.mobileharness.infra.controller.plugin.CommonSetupModule;
 import com.google.devtools.mobileharness.infra.controller.plugin.PluginCreator;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunner;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunnerSetting;
+import com.google.devtools.mobileharness.infra.controller.test.manager.DirectTestRunnerUtil;
 import com.google.devtools.mobileharness.infra.controller.test.manager.TestManager;
-import com.google.devtools.mobileharness.infra.controller.test.manager.TestMessagePosterUtil;
 import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberExceptionLoggingHandler;
 import com.google.devtools.mobileharness.shared.constant.closeable.MobileHarnessAutoCloseable;
 import com.google.devtools.mobileharness.shared.util.comm.messaging.poster.TestMessagePoster;
@@ -732,9 +734,14 @@ public class JobRunner implements Runnable {
         : jobStartDeviceAllocationTime;
   }
 
-  /** Gets the test message poster by the test id. */
-  public Optional<TestMessagePoster> getTestMessagePoster(String testId) {
-    return TestMessagePosterUtil.getPosterFromDirectTestManager(testManager, testId);
+  /** Gets the test message poster by the test id for messaging system v1. */
+  Optional<TestMessagePoster> getTestMessagePoster(String testId) {
+    return DirectTestRunnerUtil.getPosterFromDirectTestManager(testManager, testId);
+  }
+
+  /** Gets a message sender for messaging system v2. */
+  Optional<MessageSender> getMessageSender(MessageSend messageSend) {
+    return DirectTestRunnerUtil.getMessageSenderFromDirectTestManager(testManager, messageSend);
   }
 
   DeviceAllocator getDeviceAllocator() {

@@ -22,10 +22,10 @@ import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutur
 
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.devtools.mobileharness.api.messaging.MessageDestinationNotFoundException;
 import com.google.devtools.mobileharness.api.messaging.proto.MessagingProto;
 import com.google.devtools.mobileharness.api.messaging.proto.MessagingProto.MessageReceptions;
 import com.google.devtools.mobileharness.api.messaging.proto.MessagingProto.MessageSend;
-import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -37,7 +37,8 @@ import java.util.function.Consumer;
 import java.util.logging.Level;
 import javax.inject.Inject;
 
-class MessagingManager {
+/** Messaging manager for sending messages. */
+public class MessagingManager {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -54,12 +55,11 @@ class MessagingManager {
    * Sends a message asynchronously.
    *
    * @implSpec local message receiving and receptions handling will be in different threads
-   * @throws MobileHarnessException if the message cannot be sent, for example, the destination
-   *     cannot be found
+   * @throws MessageDestinationNotFoundException if the message destination cannot be found
    */
   public void sendMessage(
       MessageSend messageSend, Consumer<MessageReceptions> messageReceptionsHandler)
-      throws MobileHarnessException {
+      throws MessageDestinationNotFoundException {
     // Finds message sender.
     MessageSender messageSender = messageSenderFinder.findMessageSender(messageSend);
 

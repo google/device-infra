@@ -40,16 +40,16 @@ import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecModeUtil;
 import com.google.devtools.mobileharness.infra.client.api.plugin.JobReporter;
 import com.google.devtools.mobileharness.infra.client.api.util.lister.TestLister;
-import com.google.devtools.mobileharness.shared.util.comm.messaging.poster.TestMessagePoster;
+import com.google.devtools.mobileharness.infra.controller.messaging.MessagingManagerHolder;
 import com.google.devtools.mobileharness.shared.util.network.NetworkUtil;
 import com.google.devtools.mobileharness.shared.version.Version;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageManager;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Job;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
 import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.stream.Stream;
@@ -195,9 +195,22 @@ public class ClientApi {
     return jobManager.isJobDone(jobId);
   }
 
-  /** Gets the test message poster by the test id. */
-  public Optional<TestMessagePoster> getTestMessagePoster(String testId) {
-    return jobManager.getTestMessagePoster(testId);
+  /**
+   * Registers this instance as the only client API singleton of the current process.
+   *
+   * <p>Do not call this method if this instance is not the only client API instance (e.g., in
+   * Gateway).
+   *
+   * <p>Call this method to enable {@code MessagingUtil} and {@code TestMessageUtil} and they will
+   * search destinations in this instance.
+   */
+  public void initializeSingleton() {
+    TestMessageManager.createInstance(jobManager::getTestMessagePoster);
+    MessagingManagerHolder.initialize(jobManager);
+  }
+
+  JobManager getJobManager() {
+    return jobManager;
   }
 
   private void addCommonJobProperties(JobInfo jobInfo, ExecMode execMode) {

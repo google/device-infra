@@ -831,6 +831,11 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
     return testMessagePoster;
   }
 
+  @Override
+  public final MessageSender getMessageSender() {
+    return messageSender;
+  }
+
   /** Creates test events. */
   protected Object createTestEvent(
       Class<?> eventType,

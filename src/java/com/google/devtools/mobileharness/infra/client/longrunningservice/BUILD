@@ -74,7 +74,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/version",
         "//src/java/com/google/devtools/mobileharness/shared/version:version_util",
         "//src/java/com/google/wireless/qa/mobileharness/shared:log",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/comm/message:test_message_manager",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dir",
         "@io_grpc_grpc_java//core",
         "@maven//:com_google_code_findbugs_jsr305",

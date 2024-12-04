@@ -59,7 +59,6 @@ import com.google.devtools.mobileharness.shared.version.Version;
 import com.google.devtools.mobileharness.shared.version.VersionUtil;
 import com.google.inject.Guice;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessLogger;
-import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageManager;
 import com.google.wireless.qa.mobileharness.shared.constant.DirCommon;
 import io.grpc.BindableService;
 import io.grpc.ServerBuilder;
@@ -186,8 +185,8 @@ public class OlcServer {
             .map(version -> String.format(" github-%s", version))
             .orElse(""));
 
-    // Initializes TestMessageManager.
-    TestMessageManager.createInstance(clientApi::getTestMessagePoster);
+    // Initializes ClientApi.
+    clientApi.initializeSingleton();
 
     // Starts log manager.
     logManager.start();

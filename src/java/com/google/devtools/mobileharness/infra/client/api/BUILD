@@ -34,13 +34,14 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode:util",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/plugin:job_reporter",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/util/lister",
-        "//src/java/com/google/devtools/mobileharness/shared/util/comm/messaging/poster",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/messaging:messaging_manager_holder",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:callables",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:more_futures",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/network",
         "//src/java/com/google/devtools/mobileharness/shared/version",
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/comm/message:test_message_manager",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "@maven//:com_google_code_findbugs_jsr305",
@@ -77,5 +78,18 @@ java_library(
     ],
     deps = [
         "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "client_api_helper",
+    srcs = ["ClientApiHelper.java"],
+    # Do NOT add visibility here.
+    visibility = [
+        "//java/com/google/wireless/qa/mobileharness/client/api:__pkg__",
+    ],
+    deps = [
+        ":api",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/job",
     ],
 )

@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.infra.controller.test;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
+import com.google.devtools.mobileharness.infra.controller.messaging.MessageSender;
 import com.google.devtools.mobileharness.shared.util.comm.messaging.poster.TestMessagePoster;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.util.List;
@@ -62,8 +63,11 @@ public interface DirectTestRunner extends TestRunner {
   /** Gets the detail of the current test. */
   TestInfo getTestInfo();
 
-  /** Gets the test message poster of the test. */
+  /** Gets the test message poster of the test for messaging system v1. */
   TestMessagePoster getTestMessagePoster();
+
+  /** Gets the message sender of the test for messaging system v2. */
+  MessageSender getMessageSender();
 
   /**
    * Gets the plugin loading result of the test.

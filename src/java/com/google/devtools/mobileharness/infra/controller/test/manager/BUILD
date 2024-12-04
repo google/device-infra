@@ -48,27 +48,33 @@ java_library(
 )
 
 java_library(
-    name = "test_message_poster_util",
-    srcs = ["TestMessagePosterUtil.java"],
+    name = "direct_test_runner_util",
+    srcs = ["DirectTestRunnerUtil.java"],
     visibility = ["//src/java/com/google/devtools/mobileharness/infra/client/api/controller/job:__pkg__"],
     deps = [
         ":manager",
+        "//src/devtools/mobileharness/api/messaging:messaging_java_proto",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/messaging:message_sender",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:direct_test_runner",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/messaging/poster",
     ],
 )
 
 java_library(
-    name = "lab_test_message_poster_util",
-    srcs = ["LabTestMessagePosterUtil.java"],
+    name = "lab_direct_test_runner_util",
+    srcs = ["LabDirectTestRunnerUtil.java"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
     ],
     deps = [
         ":manager",
+        "//src/devtools/mobileharness/api/messaging:messaging_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/messaging:exception",
         "//src/java/com/google/devtools/mobileharness/infra/container/controller:proxy_test_runner",
         "//src/java/com/google/devtools/mobileharness/infra/container/controller:proxy_to_direct_test_runner",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/messaging:message_sender",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:direct_test_runner",
+        "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_text_format",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/messaging/poster",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
     ],
@@ -89,6 +95,7 @@ java_library(
         ":exception",
     ],
     deps = [
+        ":manager",
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/job/in",
@@ -96,7 +103,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/container/controller:proxy_to_direct_test_runner",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:abstract_test_runner",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:direct_test_runner",
-        "//src/java/com/google/devtools/mobileharness/infra/controller/test/manager",
         "//src/java/com/google/devtools/mobileharness/infra/lab/controller:lab_direct_test_runner_holder",
         "//src/java/com/google/devtools/mobileharness/infra/lab/controller/util:lab_file_notifier",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",

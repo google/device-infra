@@ -33,6 +33,7 @@ java_library(
     deps = [
         ":test_runner",
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/messaging:message_sender",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/messaging/poster",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",

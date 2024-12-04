@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.client.api.controller.job;
 
+import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 
 import com.google.auto.value.AutoValue;
@@ -26,12 +27,16 @@ import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.devtools.mobileharness.api.messaging.MessageDestinationNotFoundException;
+import com.google.devtools.mobileharness.api.messaging.proto.MessagingProto.MessageSend;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.DeviceAllocator;
 import com.google.devtools.mobileharness.infra.client.api.controller.job.JobRunner.EventScope;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
 import com.google.devtools.mobileharness.infra.client.api.plugin.TestRetryHandler;
+import com.google.devtools.mobileharness.infra.controller.messaging.MessageSender;
+import com.google.devtools.mobileharness.infra.controller.messaging.MessageSenderFinder;
 import com.google.devtools.mobileharness.infra.controller.test.event.TestExecutionEndedEvent;
 import com.google.devtools.mobileharness.shared.util.comm.messaging.poster.TestMessagePoster;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
@@ -51,7 +56,7 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 
 /** Job manager which manages all the running jobs. It can start and kill a job. */
-public class JobManager implements Runnable {
+public class JobManager implements Runnable, MessageSenderFinder {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -267,6 +272,33 @@ public class JobManager implements Runnable {
           .filter(Optional::isPresent)
           .findFirst()
           .orElse(Optional.empty());
+    }
+  }
+
+  /** Gets a message sender. */
+  public Optional<MessageSender> getMessageSender(MessageSend messageSend) {
+    synchronized (jobRunners) {
+      return jobRunners.values().stream()
+          .map(runnerFuture -> runnerFuture.jobRunner().getMessageSender(messageSend))
+          .filter(Optional::isPresent)
+          .findFirst()
+          .orElse(Optional.empty());
+    }
+  }
+
+  @Override
+  public MessageSender findMessageSender(MessageSend messageSend)
+      throws MessageDestinationNotFoundException {
+    synchronized (jobRunners) {
+      Optional<MessageSender> messageSender = getMessageSender(messageSend);
+      if (messageSender.isPresent()) {
+        return messageSender.get();
+      } else {
+        throw new MessageDestinationNotFoundException(
+            String.format(
+                "Message destination is not found, message_send=[%s], current_jobs=%s",
+                shortDebugString(messageSend), jobRunners.keySet()));
+      }
     }
   }
 

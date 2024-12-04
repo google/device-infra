@@ -30,7 +30,8 @@ import com.google.devtools.mobileharness.infra.controller.device.bootstrap.Detec
 import com.google.devtools.mobileharness.infra.controller.device.bootstrap.DetectorsAndDispatchers;
 import com.google.devtools.mobileharness.infra.controller.device.external.ExternalDeviceManager;
 import com.google.devtools.mobileharness.infra.controller.device.external.NoopExternalDeviceManager;
-import com.google.devtools.mobileharness.infra.controller.test.manager.LabTestMessagePosterUtil;
+import com.google.devtools.mobileharness.infra.controller.messaging.MessagingManagerHolder;
+import com.google.devtools.mobileharness.infra.controller.test.manager.LabDirectTestRunnerUtil;
 import com.google.devtools.mobileharness.infra.controller.test.manager.ProxyTestManager;
 import com.google.devtools.mobileharness.infra.controller.test.manager.TestManager;
 import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberExceptionLoggingHandler;
@@ -203,11 +204,10 @@ public class LabServerModule extends AbstractModule {
       ExecTestServiceImpl.ExecTestServiceImplFactory factory,
       ProxyTestManager testManager,
       ListeningExecutorService mainThreadPool) {
-    // TestMessageManager is created for ExecTestServiceImpl to consume. It's a singleton that
-    // requires testManager to be injected, hence it's initialization when ExecTestServiceImpl
-    // object is provided.
     TestMessageManager.createInstance(
-        testId -> LabTestMessagePosterUtil.getPosterFromProxyTestManager(testManager, testId));
+        testId -> LabDirectTestRunnerUtil.getTestMessagePoster(testManager, testId));
+    MessagingManagerHolder.initialize(
+        messageSend -> LabDirectTestRunnerUtil.getMessageSender(testManager, messageSend));
     return factory.create(mainThreadPool);
   }
 }

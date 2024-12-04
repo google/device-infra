@@ -41,7 +41,13 @@ java_library(
     name = "message_sender",
     srcs = ["MessageSender.java"],
     visibility = [
+        "//java/com/google/devtools/mobileharness/infra/container/testengine/controller:__pkg__",
+        "//java/com/google/wireless/qa/mobileharness/client/api:__pkg__",
+        "//javatests/com/google/devtools/mobileharness/infra/controller/test:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/job:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test/manager:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/controller/messaging:__subpackages__",
     ],
     deps = [
@@ -57,12 +63,16 @@ java_library(
     name = "message_sender_finder",
     srcs = ["MessageSenderFinder.java"],
     visibility = [
+        "//java/com/google/devtools/mobileharness/infra/container/testengine/controller:__pkg__",
+        "//java/com/google/wireless/qa/mobileharness/client/api:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/job:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/controller/messaging:__subpackages__",
     ],
     deps = [
         ":message_sender",
         "//src/devtools/mobileharness/api/messaging:messaging_java_proto",
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/api/messaging:exception",
     ],
 )
 
@@ -95,19 +105,37 @@ java_library(
     name = "messaging_manager",
     srcs = ["MessagingManager.java"],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/controller/messaging:__subpackages__",
     ],
     deps = [
         ":message_sender",
         ":message_sender_finder",
         "//src/devtools/mobileharness/api/messaging:messaging_java_proto",
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/api/messaging:exception",
         "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_text_format",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:callables",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:more_futures",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "messaging_manager_holder",
+    srcs = ["MessagingManagerHolder.java"],
+    visibility = [
+        "//java/com/google/devtools/mobileharness/infra/container/testengine:__pkg__",
+        "//java/com/google/devtools/mobileharness/service/gateway/modules:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/lab:__pkg__",
+    ],
+    deps = [
+        ":message_sender_finder",
+        ":messaging_manager",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
+        "@maven//:com_google_guava_guava",
     ],
 )
 

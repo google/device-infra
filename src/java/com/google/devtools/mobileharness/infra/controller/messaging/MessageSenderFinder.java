@@ -16,15 +16,17 @@
 
 package com.google.devtools.mobileharness.infra.controller.messaging;
 
+import com.google.devtools.mobileharness.api.messaging.MessageDestinationNotFoundException;
 import com.google.devtools.mobileharness.api.messaging.proto.MessagingProto.MessageSend;
-import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 
-interface MessageSenderFinder {
+/** Finder for finding a {@link MessageSender} of a given message. */
+public interface MessageSenderFinder {
 
   /**
    * Finds a message sender to send the given message.
    *
-   * @throws MobileHarnessException if the message sender cannot be found
+   * @throws MessageDestinationNotFoundException if the message sender cannot be found
    */
-  MessageSender findMessageSender(MessageSend messageSend) throws MobileHarnessException;
+  MessageSender findMessageSender(MessageSend messageSend)
+      throws MessageDestinationNotFoundException;
 }

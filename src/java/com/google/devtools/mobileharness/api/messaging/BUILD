@@ -23,6 +23,14 @@ package(
 )
 
 java_library(
+    name = "exception",
+    srcs = [
+        "MessageDestinationNotFoundException.java",
+    ],
+    deps = ["//src/java/com/google/devtools/mobileharness/api/model/error"],
+)
+
+java_library(
     name = "messaging_subscriber",
     srcs = [
         "MessageEvent.java",
