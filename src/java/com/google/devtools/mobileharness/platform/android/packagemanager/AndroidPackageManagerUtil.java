@@ -240,6 +240,10 @@ public class AndroidPackageManagerUtil {
   private static final Pattern MODULEINFO_REGEX =
       Pattern.compile("ModuleInfo\\{[0-9a-fA-F]+ (?<name>.*)\\} packageName: (?<pkgName>.*)");
 
+  private static final Pattern VERSIONCODE_REGEX = Pattern.compile(" versionCode=(\\d+)");
+
+  private static final Pattern VERSIONCODE_REGEX_BACKUP = Pattern.compile("Version: (\\d+)");
+
   /** Android SDK ADB command line tools executor. */
   private final Adb adb;
 
@@ -671,9 +675,12 @@ public class AndroidPackageManagerUtil {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_PKG_MNGR_UTIL_DUMPSYS_ERROR, e.getMessage(), e);
     }
-    Matcher matcher = Pattern.compile(" versionCode=(\\d+)").matcher(output);
-    if (matcher.find() && !output.contains(OUTPUT_EXCEPTION)) {
-      String code = matcher.group(1);
+    Matcher matcher = VERSIONCODE_REGEX.matcher(output);
+    Matcher matcherForBackup = VERSIONCODE_REGEX_BACKUP.matcher(output);
+    boolean foundVersionCode = matcher.find();
+    boolean foundVersionCodeByBackup = matcherForBackup.find();
+    if ((foundVersionCode || foundVersionCodeByBackup) && !output.contains(OUTPUT_EXCEPTION)) {
+      String code = foundVersionCode ? matcher.group(1) : matcherForBackup.group(1);
       try {
         return Integer.parseInt(code);
       } catch (NumberFormatException e) {
