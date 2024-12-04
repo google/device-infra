@@ -110,10 +110,11 @@ public class AtsFileServerFileResolver extends AbstractFileResolver {
   private void downloadFile(String destination, String httpSourcePath)
       throws InterruptedException, MobileHarnessException {
     try {
+      // TODO: Add download resume back.
       String output =
           createCommandExecutor()
               .run(
-                  Command.of("curl", "-C", "-", "-o", destination, "-fL", httpSourcePath)
+                  Command.of("curl", "-o", destination, "-fL", httpSourcePath)
                       .timeout(Duration.ofHours(2)));
       logger.atInfo().log(
           "Output of ats file server downloader for downloading file %s: %s",
