@@ -16,9 +16,13 @@
 load("@rules_android_sdk//android:rules.bzl", "android_library")
 load("@rules_java//java:defs.bzl", "java_library")
 
+DEFAULT_VISIBILITY = [
+    "//:deviceinfra_all_pkg",
+]
+
 package(
     default_applicable_licenses = ["//:license"],
-    default_visibility = ["//:deviceinfra_all_pkg"],
+    default_visibility = DEFAULT_VISIBILITY,
 )
 
 java_library(
@@ -37,6 +41,8 @@ java_library(
     srcs = [
         "AccountCredentialType.java",
         "AndroidGoogleAccountType.java",
+    ],
+    visibility = DEFAULT_VISIBILITY + [
     ],
 )
 
