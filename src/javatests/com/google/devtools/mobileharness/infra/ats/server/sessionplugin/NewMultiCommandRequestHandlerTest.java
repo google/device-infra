@@ -217,10 +217,19 @@ public final class NewMultiCommandRequestHandlerTest {
         .thenReturn(Optional.of("/path/to/server_session_log.txt"));
     when(sessionResultHandlerUtil.getTradefedInvocationLogDir(any(), any()))
         .thenReturn(TRADEFED_INVOCATION_LOG_DIR);
-    doReturn(false)
+    doReturn(true)
         .when(localFileUtil)
         .isFileExist(
             eq(TRADEFED_INVOCATION_LOG_DIR.resolve(XtsConstants.TRADEFED_RUNTIME_INFO_FILE_NAME)));
+    // Mock the content of the tradefed invocation runtime info log file.
+    // The list of tradefed invocations will only be non-empty if there was any invocation error.
+    when(xtsTradefedRuntimeInfoFileUtil.readInfo(any(), any()))
+        .thenReturn(
+            Optional.of(
+                new XtsTradefedRuntimeInfoFileDetail(
+                    new XtsTradefedRuntimeInfo(
+                        /* invocations= */ ImmutableList.of(), /* timestamp= */ Instant.now()),
+                    /* lastModifiedTime= */ Instant.now())));
   }
 
   @After
@@ -885,10 +894,6 @@ public final class NewMultiCommandRequestHandlerTest {
             .build();
     mockProcessResult(result);
 
-    doReturn(true)
-        .when(localFileUtil)
-        .isFileExist(
-            eq(TRADEFED_INVOCATION_LOG_DIR.resolve(XtsConstants.TRADEFED_RUNTIME_INFO_FILE_NAME)));
     // Mock the content of the tradefed invocation runtime info log file.
     String tradefedInvocationErrorMessage = "example error message";
     when(xtsTradefedRuntimeInfoFileUtil.readInfo(any(), any()))

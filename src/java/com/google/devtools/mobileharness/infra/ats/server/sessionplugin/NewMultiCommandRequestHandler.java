@@ -850,7 +850,8 @@ final class NewMultiCommandRequestHandler {
             return;
           }
 
-          if (fileDetailOptional.isEmpty()) {
+          if (fileDetailOptional.isEmpty()
+              || fileDetailOptional.get().runtimeInfo().invocations().isEmpty()) {
             return;
           }
 
