@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.controller.messaging;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
@@ -60,6 +61,9 @@ public class MessagingManager {
   public void sendMessage(
       MessageSend messageSend, Consumer<MessageReceptions> messageReceptionsHandler)
       throws MessageDestinationNotFoundException {
+    checkNotNull(messageSend);
+    checkNotNull(messageReceptionsHandler);
+
     // Finds message sender.
     MessageSender messageSender = messageSenderFinder.findMessageSender(messageSend);
 

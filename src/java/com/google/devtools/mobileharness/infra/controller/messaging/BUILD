@@ -67,6 +67,7 @@ java_library(
         "//java/com/google/wireless/qa/mobileharness/client/api:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/client/api:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/job:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client/api:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/controller/messaging:__subpackages__",
     ],
     deps = [
@@ -106,6 +107,7 @@ java_library(
     srcs = ["MessagingManager.java"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client/api:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/controller/messaging:__subpackages__",
     ],
     deps = [
@@ -128,6 +130,7 @@ java_library(
     visibility = [
         "//java/com/google/devtools/mobileharness/infra/container/testengine:__pkg__",
         "//java/com/google/devtools/mobileharness/service/gateway/modules:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/api/messaging:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/client/api:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/lab:__pkg__",
     ],
