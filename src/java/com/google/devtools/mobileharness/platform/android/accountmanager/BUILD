@@ -18,17 +18,13 @@ load("@rules_java//java:defs.bzl", "java_library")
 
 package(
     default_applicable_licenses = ["//:license"],
+    default_visibility = ["//:deviceinfra_all_pkg"],
 )
 
 java_library(
     name = "android_account_setting",
     srcs = [
         "AndroidAccountSetting.java",
-    ],
-    visibility = [
-    ],
-    exports = [
-        ":enums",
     ],
     deps = [
         ":enums",
@@ -41,8 +37,6 @@ java_library(
     srcs = [
         "AccountCredentialType.java",
         "AndroidGoogleAccountType.java",
-    ],
-    visibility = [
     ],
 )
 
