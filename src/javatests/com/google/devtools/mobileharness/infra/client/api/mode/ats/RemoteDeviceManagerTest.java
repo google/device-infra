@@ -35,13 +35,24 @@ import com.google.devtools.mobileharness.api.model.proto.Lab.LabStatus;
 import com.google.devtools.mobileharness.api.model.proto.Lab.PortType;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.DeviceFilter;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.DeviceFilter.DeviceMatchCondition;
+import com.google.devtools.mobileharness.api.query.proto.FilterProto.DeviceFilter.DeviceMatchCondition.DecoratorMatchCondition;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.DeviceFilter.DeviceMatchCondition.DeviceUuidMatchCondition;
+import com.google.devtools.mobileharness.api.query.proto.FilterProto.DeviceFilter.DeviceMatchCondition.DimensionMatchCondition;
+import com.google.devtools.mobileharness.api.query.proto.FilterProto.DeviceFilter.DeviceMatchCondition.DriverMatchCondition;
+import com.google.devtools.mobileharness.api.query.proto.FilterProto.DeviceFilter.DeviceMatchCondition.OwnerMatchCondition;
+import com.google.devtools.mobileharness.api.query.proto.FilterProto.DeviceFilter.DeviceMatchCondition.StatusMatchCondition;
+import com.google.devtools.mobileharness.api.query.proto.FilterProto.DeviceFilter.DeviceMatchCondition.TypeMatchCondition;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.LabFilter;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.LabFilter.LabMatchCondition;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.LabFilter.LabMatchCondition.LabHostNameMatchCondition;
+import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringListMatchCondition;
+import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringListMatchCondition.AnyMatch;
+import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringListMatchCondition.NoneMatch;
+import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringListMatchCondition.SubsetMatch;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringMatchCondition;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringMatchCondition.Include;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringMatchCondition.MatchesRegex;
+import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringMultimapMatchCondition;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceList;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
@@ -101,6 +112,7 @@ public class RemoteDeviceManagerTest {
                   .setFeature(
                       DeviceFeature.newBuilder()
                           .addOwner("fake_owner")
+                          .addType("AndroidRealDevice")
                           .addType("NoOpDevice")
                           .addDriver("NoOpDriver")
                           .addDecorator("NoOpDecorator")
@@ -150,6 +162,7 @@ public class RemoteDeviceManagerTest {
           .setDeviceFeature(
               DeviceFeature.newBuilder()
                   .addOwner("fake_owner")
+                  .addType("AndroidRealDevice")
                   .addType("NoOpDevice")
                   .addDriver("NoOpDriver")
                   .addDecorator("NoOpDecorator")
@@ -248,9 +261,10 @@ public class RemoteDeviceManagerTest {
   }
 
   @Test
-  public void getLabInfo_withDeviceFilter() throws Exception {
+  public void getLabInfo_withDeviceFilter_withDeviceUuidMatchCondition() throws Exception {
     labSyncGrpcStub.signUpLab(SIGN_UP_LAB_REQUEST);
 
+    // Test StringMatchCondition with MatchesRegex.
     LabView labInfo =
         remoteDeviceManager.getLabInfos(
             Filter.newBuilder()
@@ -292,6 +306,209 @@ public class RemoteDeviceManagerTest {
         .clearDeviceInfo()
         .clearDeviceTotalCount();
     assertThat(labInfo).isEqualTo(labViewBuilder.build());
+  }
+
+  @Test
+  public void getLabInfo_withDeviceFilter_withStatusMatchCondition() throws Exception {
+    labSyncGrpcStub.signUpLab(SIGN_UP_LAB_REQUEST);
+
+    // Test StringMatchCondition with Include.
+    LabView labInfo =
+        remoteDeviceManager.getLabInfos(
+            Filter.newBuilder()
+                .setDeviceFilter(
+                    DeviceFilter.newBuilder()
+                        .addDeviceMatchCondition(
+                            DeviceMatchCondition.newBuilder()
+                                .setStatusMatchCondition(
+                                    StatusMatchCondition.newBuilder()
+                                        .setCondition(
+                                            StringMatchCondition.newBuilder()
+                                                .setInclude(
+                                                    Include.newBuilder().addExpected("idle"))))))
+                .build());
+    assertThat(labInfo).isEqualTo(LAB_VIEW);
+  }
+
+  @Test
+  public void getLabInfo_withDeviceFilter_withTypeMatchCondition() throws Exception {
+    labSyncGrpcStub.signUpLab(SIGN_UP_LAB_REQUEST);
+
+    // Test AnyMatch with Include.
+    LabView labInfo =
+        remoteDeviceManager.getLabInfos(
+            Filter.newBuilder()
+                .setDeviceFilter(
+                    DeviceFilter.newBuilder()
+                        .addDeviceMatchCondition(
+                            DeviceMatchCondition.newBuilder()
+                                .setTypeMatchCondition(
+                                    TypeMatchCondition.newBuilder()
+                                        .setCondition(
+                                            StringListMatchCondition.newBuilder()
+                                                .setAnyMatch(
+                                                    AnyMatch.newBuilder()
+                                                        .setCondition(
+                                                            StringMatchCondition.newBuilder()
+                                                                .setInclude(
+                                                                    Include.newBuilder()
+                                                                        .addExpected(
+                                                                            "noopDevice"))))))))
+                .build());
+    assertThat(labInfo).isEqualTo(LAB_VIEW);
+
+    // Test SubsetMatch.
+    labInfo =
+        remoteDeviceManager.getLabInfos(
+            Filter.newBuilder()
+                .setDeviceFilter(
+                    DeviceFilter.newBuilder()
+                        .addDeviceMatchCondition(
+                            DeviceMatchCondition.newBuilder()
+                                .setTypeMatchCondition(
+                                    TypeMatchCondition.newBuilder()
+                                        .setCondition(
+                                            StringListMatchCondition.newBuilder()
+                                                .setSubsetMatch(
+                                                    SubsetMatch.newBuilder()
+                                                        .addExpected("noopDevice")
+                                                        .addExpected("AndroidRealDevice"))))))
+                .build());
+    assertThat(labInfo).isEqualTo(LAB_VIEW);
+
+    // Test SubsetMatch.
+    labInfo =
+        remoteDeviceManager.getLabInfos(
+            Filter.newBuilder()
+                .setDeviceFilter(
+                    DeviceFilter.newBuilder()
+                        .addDeviceMatchCondition(
+                            DeviceMatchCondition.newBuilder()
+                                .setTypeMatchCondition(
+                                    TypeMatchCondition.newBuilder()
+                                        .setCondition(
+                                            StringListMatchCondition.newBuilder()
+                                                .setSubsetMatch(
+                                                    SubsetMatch.newBuilder()
+                                                        .addExpected("AndroidRealDevice"))))))
+                .build());
+    assertThat(labInfo).isEqualTo(LAB_VIEW);
+  }
+
+  @Test
+  public void getLabInfo_withDeviceFilter_withOwnerMatchCondition() throws Exception {
+    labSyncGrpcStub.signUpLab(SIGN_UP_LAB_REQUEST);
+
+    // Test AnyMatch with MatchesRegex.
+    LabView labInfo =
+        remoteDeviceManager.getLabInfos(
+            Filter.newBuilder()
+                .setDeviceFilter(
+                    DeviceFilter.newBuilder()
+                        .addDeviceMatchCondition(
+                            DeviceMatchCondition.newBuilder()
+                                .setOwnerMatchCondition(
+                                    OwnerMatchCondition.newBuilder()
+                                        .setCondition(
+                                            StringListMatchCondition.newBuilder()
+                                                .setAnyMatch(
+                                                    AnyMatch.newBuilder()
+                                                        .setCondition(
+                                                            StringMatchCondition.newBuilder()
+                                                                .setMatchesRegex(
+                                                                    MatchesRegex.newBuilder()
+                                                                        .setRegex("fake_.*"))))))))
+                .build());
+
+    assertThat(labInfo).isEqualTo(LAB_VIEW);
+  }
+
+  @Test
+  public void getLabInfo_withDeviceFilter_withDriverMatchCondition() throws Exception {
+    labSyncGrpcStub.signUpLab(SIGN_UP_LAB_REQUEST);
+
+    // Test NoneMatch with Include.
+    LabView labInfo =
+        remoteDeviceManager.getLabInfos(
+            Filter.newBuilder()
+                .setDeviceFilter(
+                    DeviceFilter.newBuilder()
+                        .addDeviceMatchCondition(
+                            DeviceMatchCondition.newBuilder()
+                                .setDriverMatchCondition(
+                                    DriverMatchCondition.newBuilder()
+                                        .setCondition(
+                                            StringListMatchCondition.newBuilder()
+                                                .setNoneMatch(
+                                                    NoneMatch.newBuilder()
+                                                        .setCondition(
+                                                            StringMatchCondition.newBuilder()
+                                                                .setInclude(
+                                                                    Include.newBuilder()
+                                                                        .addExpected("none"))))))))
+                .build());
+
+    assertThat(labInfo).isEqualTo(LAB_VIEW);
+  }
+
+  @Test
+  public void getLabInfo_withDeviceFilter_withDecoratorMatchCondition() throws Exception {
+    labSyncGrpcStub.signUpLab(SIGN_UP_LAB_REQUEST);
+
+    // Test NoneMatch with MatchesRegex.
+    LabView labInfo =
+        remoteDeviceManager.getLabInfos(
+            Filter.newBuilder()
+                .setDeviceFilter(
+                    DeviceFilter.newBuilder()
+                        .addDeviceMatchCondition(
+                            DeviceMatchCondition.newBuilder()
+                                .setDecoratorMatchCondition(
+                                    DecoratorMatchCondition.newBuilder()
+                                        .setCondition(
+                                            StringListMatchCondition.newBuilder()
+                                                .setNoneMatch(
+                                                    NoneMatch.newBuilder()
+                                                        .setCondition(
+                                                            StringMatchCondition.newBuilder()
+                                                                .setMatchesRegex(
+                                                                    MatchesRegex.newBuilder()
+                                                                        .setRegex("fake_.*"))))))))
+                .build());
+
+    assertThat(labInfo).isEqualTo(LAB_VIEW);
+  }
+
+  @Test
+  public void getLabInfo_withDeviceFilter_withDimensionMatchCondition() throws Exception {
+    labSyncGrpcStub.signUpLab(SIGN_UP_LAB_REQUEST);
+
+    LabView labInfo =
+        remoteDeviceManager.getLabInfos(
+            Filter.newBuilder()
+                .setDeviceFilter(
+                    DeviceFilter.newBuilder()
+                        .addDeviceMatchCondition(
+                            DeviceMatchCondition.newBuilder()
+                                .setDimensionMatchCondition(
+                                    DimensionMatchCondition.newBuilder()
+                                        .setCondition(
+                                            StringMultimapMatchCondition.newBuilder()
+                                                .setKey("FAKE_DIMENSION_NAME")
+                                                .setValueCondition(
+                                                    StringListMatchCondition.newBuilder()
+                                                        .setAnyMatch(
+                                                            AnyMatch.newBuilder()
+                                                                .setCondition(
+                                                                    StringMatchCondition
+                                                                        .newBuilder()
+                                                                        .setInclude(
+                                                                            Include.newBuilder()
+                                                                                .addExpected(
+                                                                                    "FAKE_DIMENSION_VALUE")))))))))
+                .build());
+
+    assertThat(labInfo).isEqualTo(LAB_VIEW);
   }
 
   @Test

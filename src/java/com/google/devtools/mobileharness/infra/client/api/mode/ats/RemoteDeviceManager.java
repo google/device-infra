@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.infra.client.api.mode.ats;
 import static com.google.common.base.Ascii.toLowerCase;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
@@ -30,6 +31,7 @@ import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ListMultimap;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -50,7 +52,9 @@ import com.google.devtools.mobileharness.api.query.proto.FilterProto.DeviceFilte
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.DeviceFilter.DeviceMatchCondition;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.LabFilter;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.LabFilter.LabMatchCondition;
+import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringListMatchCondition;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringMatchCondition;
+import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringMultimapMatchCondition;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceList;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
@@ -907,6 +911,37 @@ class RemoteDeviceManager implements LabInfoProvider {
           return createStringMatcher(
               deviceMatchCondition.getDeviceUuidMatchCondition().getCondition(),
               deviceData -> deviceData.deviceKey.deviceUuid());
+        case STATUS_MATCH_CONDITION:
+          return createStringMatcher(
+              deviceMatchCondition.getStatusMatchCondition().getCondition(),
+              deviceData -> deviceData.statusFromLab.name());
+        case TYPE_MATCH_CONDITION:
+          return createStringListMatcher(
+              deviceMatchCondition.getTypeMatchCondition().getCondition(),
+              deviceData -> deviceData.dataFromLab.types().getAll());
+        case OWNER_MATCH_CONDITION:
+          return createStringListMatcher(
+              deviceMatchCondition.getOwnerMatchCondition().getCondition(),
+              deviceData -> ImmutableSet.copyOf(deviceData.dataFromLab.owners().getAll()));
+        case DRIVER_MATCH_CONDITION:
+          return createStringListMatcher(
+              deviceMatchCondition.getDriverMatchCondition().getCondition(),
+              deviceData -> deviceData.dataFromLab.drivers().getAll());
+        case DECORATOR_MATCH_CONDITION:
+          return createStringListMatcher(
+              deviceMatchCondition.getDecoratorMatchCondition().getCondition(),
+              deviceData -> deviceData.dataFromLab.decorators().getAll());
+        case DIMENSION_MATCH_CONDITION:
+          return createStringMultiMapMatcher(
+              deviceMatchCondition.getDimensionMatchCondition().getCondition(),
+              deviceData -> {
+                ListMultimap<String, String> supportedDimensions =
+                    deviceData.dataFromLab.dimensions().supported().getAll();
+                ListMultimap<String, String> requiredDimensions =
+                    deviceData.dataFromLab.dimensions().required().getAll();
+                supportedDimensions.putAll(requiredDimensions);
+                return supportedDimensions;
+              });
         case CONDITION_NOT_SET:
           break;
       }
@@ -940,6 +975,173 @@ class RemoteDeviceManager implements LabInfoProvider {
       logger.atWarning().log(
           "Invalid StringMatchCondition [%s], cause=[%s]",
           shortDebugString(condition), shortDebugString(e));
+      return entity -> false;
+    }
+  }
+
+  /**
+   * Creates a {@link Predicate} to match a string list field of an entity based on the given {@link
+   * StringListMatchCondition}.
+   *
+   * <p>For all conditions, If the expected list is empty, the condition will always match.
+   *
+   * <p>For AnyMatch and NoneMatch, if Include is set, it is case-insensitive. If MatchesRegex is
+   * set, it is case-sensitive. For SubsetMatch, it is case-insensitive.
+   *
+   * <p>E.g. condition { any_match { condition { include { expected: "a" expected: "b" } } } } will
+   * match {"a"}, {"a", "c"}, {"A", "b"}, and {"B"}.
+   *
+   * <p>E.g. condition { any_match { condition { matches_regex { regex: "a.*" } } } will match
+   * {"a"}, {"a", "c"} but not match {"A"}.
+   *
+   * <p>E.g. condition { none_match { condition { include { expected: "a" expected: "b" } } } } will
+   * not match {"a"}, {"a", "c"}, {"A", "b"}, and {"B"}.
+   *
+   * <p>E.g. condition { none_match { condition { matches_regex { regex: "a.*" } } } will not match
+   * {"a"}, {"a", "c"} but will match {"A"}.
+   *
+   * <p>E.g. condition { subset_match { expected: "a" expected: "b" } } will match {"a", "b"} and
+   * {"A", "B", "c"} but not match {"a", "c"}.
+   */
+  private static <T> Predicate<T> createStringListMatcher(
+      StringListMatchCondition condition, Function<T, ImmutableSet<String>> stringListExtractor) {
+    try {
+      switch (condition.getConditionCase()) {
+        case ANY_MATCH:
+          return createStringListMatcherForAnyMatch(
+              condition.getAnyMatch().getCondition(), stringListExtractor);
+        case NONE_MATCH:
+          return createStringListMatcherForNoneMatch(
+              condition.getNoneMatch().getCondition(), stringListExtractor);
+        case SUBSET_MATCH:
+          ImmutableSet<String> expectedValues =
+              ImmutableSet.copyOf(
+                  condition.getSubsetMatch().getExpectedList().stream()
+                      .map(Ascii::toLowerCase)
+                      .collect(toImmutableList()));
+          return entity ->
+              expectedValues.stream()
+                  .allMatch(
+                      value ->
+                          stringListExtractor.apply(entity).stream()
+                              .map(Ascii::toLowerCase)
+                              .collect(toImmutableSet())
+                              .contains(value));
+        case CONDITION_NOT_SET:
+          break;
+      }
+      return entity -> true;
+    } catch (RuntimeException e) {
+      logger.atWarning().log(
+          "Invalid StringListMatchCondition [%s], cause=[%s]", condition, shortDebugString(e));
+      return entity -> false;
+    }
+  }
+
+  /**
+   * Creates a {@link Predicate} to match a string list field of an entity based on the given {@link
+   * StringMatchCondition}.
+   *
+   * <p>For AnyMatch, if Include is set, it is case-insensitive. If MatchesRegex is set, it is
+   * case-sensitive.
+   *
+   * <p>E.g. condition { any_match { condition { include { expected: "a" expected: "b" } } } } will
+   * match {"a"}, {"a", "c"}, {"A", "b"}, and {"B"}.
+   *
+   * <p>E.g. condition { any_match { condition { matches_regex { regex: "a.*" } } } will match
+   * {"a"}, {"a", "c"} but not match {"A"}.
+   */
+  private static <T> Predicate<T> createStringListMatcherForAnyMatch(
+      StringMatchCondition condition, Function<T, ImmutableSet<String>> stringListExtractor) {
+    switch (condition.getConditionCase()) {
+      case INCLUDE:
+        ImmutableSet<String> expectedValues =
+            ImmutableSet.copyOf(
+                condition.getInclude().getExpectedList().stream()
+                    .map(Ascii::toLowerCase)
+                    .collect(toImmutableList()));
+        return entity ->
+            stringListExtractor.apply(entity).stream()
+                .anyMatch(value -> expectedValues.contains(toLowerCase(value)));
+      case MATCHES_REGEX:
+        Pattern pattern = Pattern.compile(condition.getMatchesRegex().getRegex());
+        return entity ->
+            stringListExtractor.apply(entity).stream()
+                .anyMatch(value -> pattern.matcher(value).matches());
+      case CONDITION_NOT_SET:
+        break;
+    }
+    return entity -> true;
+  }
+
+  /**
+   * Creates a {@link Predicate} to match a string list field of an entity based on the given {@link
+   * StringMatchCondition}.
+   *
+   * <p>For NoneMatch, if Include is set, it is case-insensitive. If MatchesRegex is set, it is
+   * case-sensitive.
+   *
+   * <p>E.g. condition { none_match { condition { include { expected: "a" expected: "b" } } } } will
+   * not match {"a"}, {"a", "c"}, {"A", "b"}, and {"B"}.
+   *
+   * <p>E.g. condition { none_match { condition { matches_regex { regex: "a.*" } } } will not match
+   * {"a"}, {"a", "c"} but will match {"A"}.
+   */
+  private static <T> Predicate<T> createStringListMatcherForNoneMatch(
+      StringMatchCondition condition, Function<T, ImmutableSet<String>> stringListExtractor) {
+    switch (condition.getConditionCase()) {
+      case INCLUDE:
+        ImmutableSet<String> expectedValues =
+            ImmutableSet.copyOf(
+                condition.getInclude().getExpectedList().stream()
+                    .map(Ascii::toLowerCase)
+                    .collect(toImmutableList()));
+        return entity ->
+            stringListExtractor.apply(entity).stream()
+                .noneMatch(value -> expectedValues.contains(toLowerCase(value)));
+      case MATCHES_REGEX:
+        Pattern pattern = Pattern.compile(condition.getMatchesRegex().getRegex());
+        return entity ->
+            stringListExtractor.apply(entity).stream()
+                .noneMatch(value -> pattern.matcher(value).matches());
+      case CONDITION_NOT_SET:
+        break;
+    }
+    return entity -> true;
+  }
+
+  /**
+   * Creates a {@link Predicate} to match a string map field of an entity based on the given {@link
+   * StringMultimapMatchCondition}.
+   *
+   * <p>E.g. condition { key: "pool" value_condition { any_match { condition { include { expected:
+   * "shared" expected: "private" } } } } } will match {"pool": "shared"}, {"pool": "private"},
+   * {"pool": "shared", "label": "test"}.
+   *
+   * <p>E.g. condition { key: "pool" value_condition { none_match { condition { include { expected:
+   * "shared" expected: "private" } } } } } will not match {"pool": "shared"}, {"pool": "private"},
+   * {"pool": "shared", "label": "test"}.
+   *
+   * <p>E.g. condition { key: "pool" value_condition { subset_match { expected: "shared" expected:
+   * "private" } } } will match {"pool": "shared", "pool": "private"} but not match {"pool":
+   * "shared"}
+   */
+  private static <T> Predicate<T> createStringMultiMapMatcher(
+      StringMultimapMatchCondition condition,
+      Function<T, ListMultimap<String, String>> stringMapExtractor) {
+    try {
+      return entity ->
+          stringMapExtractor.apply(entity).entries().stream()
+              .anyMatch(
+                  entry ->
+                      Ascii.equalsIgnoreCase(entry.getKey(), condition.getKey())
+                          && createStringListMatcher(
+                                  condition.getValueCondition(),
+                                  value -> ImmutableSet.of(entry.getValue()))
+                              .test(entry.getValue()));
+    } catch (RuntimeException e) {
+      logger.atWarning().log(
+          "Invalid StringMultimapMatchCondition [%s], cause=[%s]", condition, shortDebugString(e));
       return entity -> false;
     }
   }

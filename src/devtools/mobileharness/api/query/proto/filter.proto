@@ -54,13 +54,57 @@ message DeviceFilter {
       StringMatchCondition condition = 1;
     }
 
+    // Condition to match the dimension of a device.
+    message StatusMatchCondition {
+      StringMatchCondition condition = 1;
+    }
+
+    // Condition to match the dimension of a device.
+    message TypeMatchCondition {
+      StringListMatchCondition condition = 1;
+    }
+
+    // Condition to match the owner of a device.
+    message OwnerMatchCondition {
+      StringListMatchCondition condition = 1;
+    }
+
+    // Condition to match the driver of a device.
+    message DriverMatchCondition {
+      StringListMatchCondition condition = 1;
+    }
+
+    // Condition to match the decorator of a device.
+    message DecoratorMatchCondition {
+      StringListMatchCondition condition = 1;
+    }
+
+    // Condition to match the dimension of a device.
+    message DimensionMatchCondition {
+      StringMultimapMatchCondition condition = 1;
+    }
+
     // An unset or unrecognized condition will always match.
     oneof condition {
       DeviceUuidMatchCondition device_uuid_match_condition = 1;
+      StatusMatchCondition status_match_condition = 2;
+      TypeMatchCondition type_match_condition = 3;
+      OwnerMatchCondition owner_match_condition = 4;
+      DriverMatchCondition driver_match_condition = 5;
+      DecoratorMatchCondition decorator_match_condition = 6;
+      DimensionMatchCondition dimension_match_condition = 7;
     }
   }
 
   repeated DeviceMatchCondition device_match_condition = 2;
+}
+
+// Condition to match a string multi-map attribute.
+message StringMultimapMatchCondition {
+  // The key (case-insensitive). Need exact value, e.g. "pool".
+  string key = 1;
+  // The value list.
+  StringListMatchCondition value_condition = 2;
 }
 
 // Condition to match a string attribute.
@@ -82,5 +126,36 @@ message StringMatchCondition {
   oneof condition {
     Include include = 1;
     MatchesRegex matches_regex = 2;
+  }
+}
+
+// Conditions to match string list attribute。
+message StringListMatchCondition {
+  // A string list matches this condition if it contains at least one string
+  // that matches the given condition.
+  message AnyMatch {
+    StringMatchCondition condition = 1;
+  }
+
+  // A string list matches this condition if it contains no string that matches
+  // the given condition.
+  message NoneMatch {
+    StringMatchCondition condition = 1;
+  }
+
+  // A string list matches this condition if it contains all the given strings
+  // (case-insensitive) as the given list. Don't support regex.
+  //
+  // If the expected list is empty, the condition will always match. The
+  // expected list will be converted to a set, so allow duplicate values.
+  message SubsetMatch {
+    repeated string expected = 1;
+  }
+
+  // An unset or unrecognized condition will always match.
+  oneof condition {
+    AnyMatch any_match = 1;
+    NoneMatch none_match = 2;
+    SubsetMatch subset_match = 3;
   }
 }
