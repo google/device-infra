@@ -16,8 +16,10 @@
 
 package com.google.devtools.mobileharness.infra.client.api.mode;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.client.api.proto.ServerLocatorProto.ServerLocator;
 import com.google.wireless.qa.mobileharness.shared.util.ReflectionUtil;
 
 /**
@@ -43,14 +45,67 @@ public final class ExecModeUtil {
    * to create instance in alternative package, example
    * com.google.wireless.qa.mobileharness.client.api.mode.xxx.yyy.XxxYyyMode.
    *
+   * <p>Please use #createRemoteModeInstance if creating {@code RemoteMode}.
+   *
    * @throws MobileHarnessException if {@code ExecMode} instance cannot be created.
    */
   public static ExecMode createInstance(String modeName) throws MobileHarnessException {
+    Class<? extends ExecMode> execModeClass = getExecModeClass(modeName);
+    return ReflectionUtil.newInstance(execModeClass);
+  }
+
+  /**
+   * Creates {@code ExecMode} instance according to the exec mode name and a {@code ServerLocator}.
+   * Supposes exec mode name is XXX_YYY, and the class definition is
+   * com.google.devtools.mobileharness.infra.client.api.mode.xxx.yyy.XxxYyyMode. If failed to create
+   * {@code ExecMode} instance due to {@code BasicErrorId.REFLECTION_CLASS_NOT_FOUND} , will attempt
+   * to create instance in alternative package, example
+   * com.google.wireless.qa.mobileharness.client.api.mode.xxx.yyy.XxxYyyMode.
+   *
+   * @throws MobileHarnessException if {@code ExecMode} instance cannot be created.
+   */
+  public static ExecMode createRemoteModeInstance(String modeName, ServerLocator masterLocator)
+      throws MobileHarnessException {
+    Class<? extends ExecMode> execModeClass = getExecModeClass(modeName);
+    return ReflectionUtil.newInstance(execModeClass, ServerLocator.class, masterLocator);
+  }
+
+  /**
+   * Gets the name of the exec mode. Supposes the exec mode class is XxxYyyMode, the mode name
+   * should be XXX_YYY.
+   */
+  public static String getModeName(ExecMode execMode) {
+    StringBuilder modeName = new StringBuilder();
+    String className = execMode.getClass().getSimpleName();
+    if (className.endsWith(EXEC_MODE_CLASS_SUFFIX)) {
+      // Removes the suffix.
+      className = className.substring(0, className.length() - EXEC_MODE_CLASS_SUFFIX.length());
+    }
+
+    // Converts XxxYyy to XXX_YYY.
+    for (int i = 0; i < className.length(); i++) {
+      char ch = className.charAt(i);
+      if (Character.isUpperCase(ch)) {
+        if (modeName.length() > 0) {
+          modeName.append('_');
+        }
+        modeName.append(ch);
+      } else {
+        modeName.append(Character.toUpperCase(ch));
+      }
+    }
+    return modeName.toString();
+  }
+
+  @VisibleForTesting
+  public static Class<? extends ExecMode> getExecModeClass(String modeName)
+      throws MobileHarnessException {
     StringBuilder packageName = new StringBuilder(EXEC_MODE_PACKAGE_NAME_PRIMARY);
     StringBuilder alternativePackageName = new StringBuilder(EXEC_MODE_PACKAGE_NAME_SECONDARY);
     StringBuilder className = new StringBuilder();
     boolean newPackage = true;
-    for (char ch : modeName.toCharArray()) {
+    for (int i = 0; i < modeName.length(); i++) {
+      char ch = modeName.charAt(i);
       if (ch == '_') {
         newPackage = true;
         continue;
@@ -67,48 +122,17 @@ public final class ExecModeUtil {
       alternativePackageName.append(Character.toLowerCase(ch));
     }
     className.append(EXEC_MODE_CLASS_SUFFIX);
-
-    Class<? extends ExecMode> execModeClass;
     try {
       // Uses reflection to create class.
-      execModeClass =
-          ReflectionUtil.getClass(className.toString(), ExecMode.class, packageName.toString());
+      return ReflectionUtil.getClass(className.toString(), ExecMode.class, packageName.toString());
     } catch (MobileHarnessException e) {
       if (e.getErrorId().equals(BasicErrorId.REFLECTION_CLASS_NOT_FOUND)) {
-        execModeClass =
-            ReflectionUtil.getClass(
-                className.toString(), ExecMode.class, alternativePackageName.toString());
+        return ReflectionUtil.getClass(
+            className.toString(), ExecMode.class, alternativePackageName.toString());
       } else {
         throw e;
       }
     }
-    return ReflectionUtil.newInstance(execModeClass);
-  }
-
-  /**
-   * Gets the name of the exec mode. Supposes the exec mode class is XxxYyyMode, the mode name
-   * should be XXX_YYY.
-   */
-  public static String getModeName(ExecMode execMode) {
-    StringBuilder modeName = new StringBuilder();
-    String className = execMode.getClass().getSimpleName();
-    if (className.endsWith(EXEC_MODE_CLASS_SUFFIX)) {
-      // Removes the suffix.
-      className = className.substring(0, className.length() - EXEC_MODE_CLASS_SUFFIX.length());
-    }
-
-    // Converts XxxYyy to XXX_YYY.
-    for (char ch : className.toCharArray()) {
-      if (Character.isUpperCase(ch)) {
-        if (modeName.length() > 0) {
-          modeName.append('_');
-        }
-        modeName.append(ch);
-      } else {
-        modeName.append(Character.toUpperCase(ch));
-      }
-    }
-    return modeName.toString();
   }
 
   private ExecModeUtil() {}

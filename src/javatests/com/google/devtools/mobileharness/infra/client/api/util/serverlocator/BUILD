@@ -22,11 +22,11 @@ package(
 )
 
 java_library(
-    name = "proto",
+    name = "util",
     srcs = glob(["*.java"]),
     deps = [
         "//src/devtools/mobileharness/infra/client/api/proto:server_locator_java_proto",
-        "//src/java/com/google/devtools/mobileharness/infra/client/api/proto",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/util/serverlocator:util",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "//src/javatests/com/google/wireless/qa/mobileharness/shared/model/job:job_info_mocker",
@@ -39,5 +39,5 @@ junit_test_suites(
     sizes = [
         "small",
     ],
-    deps = [":proto"],
+    deps = [":util"],
 )

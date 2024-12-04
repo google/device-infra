@@ -23,12 +23,14 @@ package(
 )
 
 java_library(
-    name = "proto",
+    name = "util",
     srcs = [
-        "ServerLocatorProtos.java",
+        "ServerLocatorUtil.java",
     ],
     deps = [
         "//src/devtools/mobileharness/infra/client/api/proto:server_locator_java_proto",
+        "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_text_format",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "@maven//:com_google_guava_guava",
     ],

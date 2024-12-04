@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.infra.client.api.proto;
+package com.google.devtools.mobileharness.infra.client.api.util.serverlocator;
 
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.devtools.mobileharness.infra.client.api.proto.ServerLocatorProtos.getMasterServerLocator;
-import static com.google.devtools.mobileharness.infra.client.api.proto.ServerLocatorProtos.parseGrpcServerLocator;
+import static com.google.devtools.mobileharness.infra.client.api.util.serverlocator.ServerLocatorUtil.getMasterServerLocator;
+import static com.google.devtools.mobileharness.infra.client.api.util.serverlocator.ServerLocatorUtil.parseGrpcServerLocator;
+import static com.google.devtools.mobileharness.infra.client.api.util.serverlocator.ServerLocatorUtil.parseServerLocator;
 import static com.google.wireless.qa.mobileharness.shared.model.job.JobInfoMocker.mockJobInfo;
 import static org.junit.Assert.assertThrows;
 
@@ -30,7 +31,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
-public final class ServerLocatorProtosTest {
+public final class ServerLocatorUtilTest {
 
   @Test
   public void getMasterServerLocator_empty() {
@@ -63,5 +64,15 @@ public final class ServerLocatorProtosTest {
   @Test
   public void parseGrpcServerLocator_throwsException() {
     assertThrows(IllegalStateException.class, () -> parseGrpcServerLocator("localhost"));
+  }
+
+  @Test
+  public void parseServerLocator_success() {
+    assertThat(parseServerLocator("grpc:127.0.0.1:9876"))
+        .isEqualTo(
+            ServerLocator.newBuilder()
+                .setGrpcServerLocator(
+                    GrpcServerLocator.newBuilder().setIp("127.0.0.1").setPort(9876))
+                .build());
   }
 }

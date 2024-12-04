@@ -42,7 +42,9 @@ java_library(
     ],
     deps = [
         ":mode",
+        "//src/devtools/mobileharness/infra/client/api/proto:server_locator_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/wireless/qa/mobileharness/shared/util:reflection",
+        "@maven//:com_google_guava_guava",
     ],
 )
