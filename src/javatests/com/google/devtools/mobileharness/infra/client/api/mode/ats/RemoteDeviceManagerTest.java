@@ -27,6 +27,8 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
+import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperties;
+import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperty;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabLocator;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabPort;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabServerFeature;
@@ -45,9 +47,11 @@ import com.google.devtools.mobileharness.api.query.proto.FilterProto.DeviceFilte
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.LabFilter;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.LabFilter.LabMatchCondition;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.LabFilter.LabMatchCondition.LabHostNameMatchCondition;
+import com.google.devtools.mobileharness.api.query.proto.FilterProto.LabFilter.LabMatchCondition.PropertyMatchCondition;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringListMatchCondition;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringListMatchCondition.AnyMatch;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringListMatchCondition.NoneMatch;
+import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringListMatchCondition.SizeMatch;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringListMatchCondition.SubsetMatch;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringMatchCondition;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringMatchCondition.Include;
@@ -104,6 +108,14 @@ public class RemoteDeviceManagerTest {
           .setLabServerSetting(
               LabServerSetting.newBuilder()
                   .addPort(LabPort.newBuilder().setType(PortType.LAB_SERVER_HTTP).setNum(1234)))
+          .setLabServerFeature(
+              LabServerFeature.newBuilder()
+                  .setHostProperties(
+                      HostProperties.newBuilder()
+                          .addHostProperty(
+                              HostProperty.newBuilder()
+                                  .setKey("fake_property_key")
+                                  .setValue("fake_property_value"))))
           .addDevice(
               Device.newBuilder()
                   .setControlId("fake_control_id")
@@ -144,7 +156,14 @@ public class RemoteDeviceManagerTest {
           .setLabServerSetting(
               LabServerSetting.newBuilder()
                   .addPort(LabPort.newBuilder().setType(PortType.LAB_SERVER_HTTP).setNum(1234)))
-          .setLabServerFeature(LabServerFeature.getDefaultInstance())
+          .setLabServerFeature(
+              LabServerFeature.newBuilder()
+                  .setHostProperties(
+                      HostProperties.newBuilder()
+                          .addHostProperty(
+                              HostProperty.newBuilder()
+                                  .setKey("fake_property_key")
+                                  .setValue("fake_property_value"))))
           .build();
 
   private static final DeviceInfo DEVICE_INFO =
@@ -219,7 +238,7 @@ public class RemoteDeviceManagerTest {
   }
 
   @Test
-  public void getLabInfo_withLabFilter() throws Exception {
+  public void getLabInfo_withLabFilter_withLabHostNameMatchCondition() throws Exception {
     labSyncGrpcStub.signUpLab(SIGN_UP_LAB_REQUEST);
 
     LabView labInfo =
@@ -258,6 +277,75 @@ public class RemoteDeviceManagerTest {
                 .build());
 
     assertThat(labInfo).isEqualTo(LAB_VIEW.toBuilder().clearLabData().clearLabTotalCount().build());
+  }
+
+  @Test
+  public void getLabInfo_withLabFilter_withPropertyMatchCondition() throws Exception {
+    labSyncGrpcStub.signUpLab(SIGN_UP_LAB_REQUEST);
+
+    LabView labInfo =
+        remoteDeviceManager.getLabInfos(
+            Filter.newBuilder()
+                .setLabFilter(
+                    LabFilter.newBuilder()
+                        .addLabMatchCondition(
+                            LabMatchCondition.newBuilder()
+                                .setPropertyMatchCondition(
+                                    PropertyMatchCondition.newBuilder()
+                                        .setCondition(
+                                            StringMultimapMatchCondition.newBuilder()
+                                                .setKey("fake_property_key")
+                                                .setValueCondition(
+                                                    StringListMatchCondition.newBuilder()
+                                                        .setAnyMatch(
+                                                            AnyMatch.newBuilder()
+                                                                .setCondition(
+                                                                    StringMatchCondition
+                                                                        .newBuilder()
+                                                                        .setInclude(
+                                                                            Include.newBuilder()
+                                                                                .addExpected(
+                                                                                    "fake_property_value")))))))))
+                .build());
+
+    assertThat(labInfo).isEqualTo(LAB_VIEW);
+
+    // Test StringMultimapMatchCondition with key only.
+    labInfo =
+        remoteDeviceManager.getLabInfos(
+            Filter.newBuilder()
+                .setLabFilter(
+                    LabFilter.newBuilder()
+                        .addLabMatchCondition(
+                            LabMatchCondition.newBuilder()
+                                .setPropertyMatchCondition(
+                                    PropertyMatchCondition.newBuilder()
+                                        .setCondition(
+                                            StringMultimapMatchCondition.newBuilder()
+                                                .setKey("fake_property_key")))))
+                .build());
+    // The lab is not filtered out because the value condition is not set.
+    assertThat(labInfo).isEqualTo(LAB_VIEW.toBuilder().clearLabData().clearLabTotalCount().build());
+
+    // Test StringMultimapMatchCondition with key and value condition with SizeMatch.
+    labInfo =
+        remoteDeviceManager.getLabInfos(
+            Filter.newBuilder()
+                .setLabFilter(
+                    LabFilter.newBuilder()
+                        .addLabMatchCondition(
+                            LabMatchCondition.newBuilder()
+                                .setPropertyMatchCondition(
+                                    PropertyMatchCondition.newBuilder()
+                                        .setCondition(
+                                            StringMultimapMatchCondition.newBuilder()
+                                                .setKey("fake_property_key")
+                                                .setValueCondition(
+                                                    StringListMatchCondition.newBuilder()
+                                                        .setSizeMatch(
+                                                            SizeMatch.newBuilder().setSize(1)))))))
+                .build());
+    assertThat(labInfo).isEqualTo(LAB_VIEW);
   }
 
   @Test
@@ -476,6 +564,22 @@ public class RemoteDeviceManagerTest {
                                                                         .setRegex("fake_.*"))))))))
                 .build());
 
+    assertThat(labInfo).isEqualTo(LAB_VIEW);
+
+    // Test SizeMatch with MatchesRegex.
+    labInfo =
+        remoteDeviceManager.getLabInfos(
+            Filter.newBuilder()
+                .setDeviceFilter(
+                    DeviceFilter.newBuilder()
+                        .addDeviceMatchCondition(
+                            DeviceMatchCondition.newBuilder()
+                                .setDecoratorMatchCondition(
+                                    DecoratorMatchCondition.newBuilder()
+                                        .setCondition(
+                                            StringListMatchCondition.newBuilder()
+                                                .setSizeMatch(SizeMatch.newBuilder().setSize(1))))))
+                .build());
     assertThat(labInfo).isEqualTo(LAB_VIEW);
   }
 
