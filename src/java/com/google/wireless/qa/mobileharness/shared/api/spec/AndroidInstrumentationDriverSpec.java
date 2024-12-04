@@ -97,6 +97,14 @@ public interface AndroidInstrumentationDriverSpec {
               + "No effect if large than test timeout setting.")
   String PARAM_INSTRUMENT_TIMEOUT_SEC = "instrument_timeout_sec";
 
+  @ParamAnnotation(
+      required = false,
+      help =
+          "Whether to skip instrumentation code parsing. By default, this is false. Use it"
+              + " carefully to make sure you have plugins later to set the test result,  otherwise"
+              + " the test will fail due to no result provided at the end.")
+  String PARAM_IGNORE_INSTRUMENT_OUTPUT = "ignore_instrument_output";
+
   /**
    * adb shell command before each repeat, within each option map. The parameter name should be
    * followed by the option map index.

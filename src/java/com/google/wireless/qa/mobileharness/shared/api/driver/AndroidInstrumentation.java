@@ -504,63 +504,72 @@ public class AndroidInstrumentation extends BaseDriver
       }
 
       // Checks the result.
-      StringBuilder errorMsg = new StringBuilder();
-      AndroidInstrumentationParser parser = new AndroidInstrumentationParser();
-      TestResult result = parser.parseOutput(output, errorMsg, mhException);
-      switch (result) {
-        case PASS:
-          hasPass = true;
-          break;
-        case FAIL:
-          hasFail = true;
-          failResultCause =
-              new MobileHarnessException(
-                  AndroidErrorId.ANDROID_INSTRUMENTATION_TEST_FAILED,
-                  "Instrumentation failures: "
-                      + errorMsg
-                      + "\nThis usually indicates validation errors of the test app, or "
-                      + "bugs of the app under test. You should be able to reproduce it with "
-                      + "\"adb shell am instrument ...\" with your local devices, without "
-                      + "Mobile Harness.",
-                  mhException);
-          break;
-        case ERROR:
-          hasError = true;
-          errorResultCause =
-              new MobileHarnessException(
-                  AndroidErrorId.ANDROID_INSTRUMENTATION_TEST_ERROR,
-                  "Instrumentation start/finish unexpectedly: " + errorMsg,
-                  mhException);
-          break;
-        case INFRA_ERROR:
-          hasInfraError = true;
-          infraErrorResultCause =
-              new MobileHarnessException(
-                  AndroidErrorId.ANDROID_INSTRUMENTATION_TEST_INFRA_ERROR,
-                  "Instrumentation start/finish unexpectedly: " + errorMsg,
-                  mhException);
-          break;
-        case TIMEOUT:
-          MobileHarnessException timeoutCause =
-              new MobileHarnessException(
-                  AndroidErrorId.ANDROID_INSTRUMENTATION_TEST_TIMEOUT,
-                  String.format(
-                      "Instrumentation timeout [please try to increase test_timeout_sec"
-                          + ", or instrument_timeout_sec if it has been set.]:%n%s",
-                      errorMsg),
-                  mhException);
+      boolean ignoreInstrumentOutput =
           testInfo
-              .resultWithCause()
-              .setNonPassing(
-                  com.google.devtools.mobileharness.api.model.proto.Test.TestResult.TIMEOUT,
-                  timeoutCause);
-          throw timeoutCause;
-        default:
-          testInfo.result().set(TestResult.ERROR);
-          throw new MobileHarnessException(
-              AndroidErrorId.ANDROID_INSTRUMENTATION_TEST_RESULT_NOT_FOUND,
-              "Unexpected Test Result Found",
-              mhException);
+              .jobInfo()
+              .params()
+              .getBool(AndroidInstrumentationDriverSpec.PARAM_IGNORE_INSTRUMENT_OUTPUT, false);
+      TestResult result = null;
+
+      if (!ignoreInstrumentOutput) {
+        StringBuilder errorMsg = new StringBuilder();
+        AndroidInstrumentationParser parser = new AndroidInstrumentationParser();
+        result = parser.parseOutput(output, errorMsg, mhException);
+        switch (result) {
+          case PASS:
+            hasPass = true;
+            break;
+          case FAIL:
+            hasFail = true;
+            failResultCause =
+                new MobileHarnessException(
+                    AndroidErrorId.ANDROID_INSTRUMENTATION_TEST_FAILED,
+                    "Instrumentation failures: "
+                        + errorMsg
+                        + "\nThis usually indicates validation errors of the test app, or "
+                        + "bugs of the app under test. You should be able to reproduce it with "
+                        + "\"adb shell am instrument ...\" with your local devices, without "
+                        + "Mobile Harness.",
+                    mhException);
+            break;
+          case ERROR:
+            hasError = true;
+            errorResultCause =
+                new MobileHarnessException(
+                    AndroidErrorId.ANDROID_INSTRUMENTATION_TEST_ERROR,
+                    "Instrumentation start/finish unexpectedly: " + errorMsg,
+                    mhException);
+            break;
+          case INFRA_ERROR:
+            hasInfraError = true;
+            infraErrorResultCause =
+                new MobileHarnessException(
+                    AndroidErrorId.ANDROID_INSTRUMENTATION_TEST_INFRA_ERROR,
+                    "Instrumentation start/finish unexpectedly: " + errorMsg,
+                    mhException);
+            break;
+          case TIMEOUT:
+            MobileHarnessException timeoutCause =
+                new MobileHarnessException(
+                    AndroidErrorId.ANDROID_INSTRUMENTATION_TEST_TIMEOUT,
+                    String.format(
+                        "Instrumentation timeout [please try to increase test_timeout_sec"
+                            + ", or instrument_timeout_sec if it has been set.]:%n%s",
+                        errorMsg),
+                    mhException);
+            testInfo
+                .resultWithCause()
+                .setNonPassing(
+                    com.google.devtools.mobileharness.api.model.proto.Test.TestResult.TIMEOUT,
+                    timeoutCause);
+            throw timeoutCause;
+          default:
+            testInfo.result().set(TestResult.ERROR);
+            throw new MobileHarnessException(
+                AndroidErrorId.ANDROID_INSTRUMENTATION_TEST_RESULT_NOT_FOUND,
+                "Unexpected Test Result Found",
+                mhException);
+        }
       }
 
       // Extra adb shell commands or clean up after instrument.
@@ -597,8 +606,10 @@ public class AndroidInstrumentation extends BaseDriver
       }
       if (hasSequentialOptionMaps) {
         // Set result property.
-        properties.add(
-            AndroidInstrumentationDriverSpec.PROPERTY_RESULT + "_" + optionMapIdx, result.name());
+        if (result != null) {
+          properties.add(
+              AndroidInstrumentationDriverSpec.PROPERTY_RESULT + "_" + optionMapIdx, result.name());
+        }
         try {
           // Cleanup.
           if (iterClearBuild) {
