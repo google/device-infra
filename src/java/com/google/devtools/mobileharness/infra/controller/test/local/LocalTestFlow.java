@@ -48,6 +48,7 @@ import com.google.devtools.mobileharness.infra.controller.test.PluginLoadingResu
 import com.google.devtools.mobileharness.infra.controller.test.local.utp.controller.TestFlowConverter;
 import com.google.devtools.mobileharness.infra.controller.test.util.TestCommandHistorySaver;
 import com.google.devtools.mobileharness.infra.controller.test.util.atsfileserveruploader.AtsFileServerUploaderPlugin;
+import com.google.devtools.mobileharness.infra.controller.test.util.testlogcollector.TestLogCollectorPlugin;
 import com.google.devtools.mobileharness.infra.controller.test.util.xtsdownloader.MctsDynamicDownloadPlugin;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.plugin.NonTradefedReportGenerator;
@@ -142,6 +143,12 @@ public class LocalTestFlow {
     if (isXtsDynamicDownloaderEnabled(testInfo)) {
       builtinPluginsBuilder.add(
           PluginItem.create(new MctsDynamicDownloadPlugin(), EventScope.INTERNAL_PLUGIN));
+    }
+    // This should be registered before AtsFileServerUploaderPlugin to make sure collected logs
+    // are uploaded to the client.
+    if (isTestLogCollectorEnabled()) {
+      builtinPluginsBuilder.add(
+          PluginItem.create(new TestLogCollectorPlugin(), EventScope.CLASS_INTERNAL));
     }
     if (isAtsFileServerUploaderEnabled()) {
       builtinPluginsBuilder.add(
@@ -746,5 +753,9 @@ public class LocalTestFlow {
 
   private static boolean isAtsFileServerUploaderEnabled() {
     return Flags.instance().enableAtsFileServerUploader.getNonNull();
+  }
+
+  private static boolean isTestLogCollectorEnabled() {
+    return Flags.instance().enableTestLogCollector.getNonNull();
   }
 }

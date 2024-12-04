@@ -901,6 +901,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableStubbyRpcServer = enableStubbyRpcServerDefault;
 
+  private static final Flag<Boolean> enableTestLogCollectorDefault = Flag.value(true);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enable_test_log_collector",
+      description = "Whether to enable test log collector. Default is true.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableTestLogCollector = enableTestLogCollectorDefault;
+
   private static final Flag<Boolean> enableTraceSpanProcessorDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(
