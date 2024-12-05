@@ -198,6 +198,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> asOnBorg = asOnBorgDefault;
 
+  private static final Flag<Boolean> asUseGrpcDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--as_use_grpc",
+      description = "Override the actual runtime system as using GRPC for debugging.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> asUseGrpc = asUseGrpcDefault;
+
   private static final Flag<Boolean> atsConsoleAlwaysRestartOlcServerDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(
