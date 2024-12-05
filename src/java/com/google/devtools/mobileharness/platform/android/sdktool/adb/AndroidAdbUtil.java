@@ -381,6 +381,18 @@ public class AndroidAdbUtil {
     return content(utilArgs, contentArgs, DEFAULT_COMMAND_TIMEOUT);
   }
 
+  /** Function for restart adb server. This is only for virtual device managed by Mobile Harness. */
+  public void restartAdbServer() throws MobileHarnessException, InterruptedException {
+    try {
+      androidAdbInternalUtil.killAdbServer();
+      // Start the ADB server if it is not already running
+      var unused = androidAdbInternalUtil.listDevices(Duration.ofSeconds(10));
+    } catch (MobileHarnessException e) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_ADB_UTIL_CMD_ERROR, e.getMessage(), e);
+    }
+  }
+
   /**
    * Function for "adb shell content". By default without --user specified, command run as {@code
    * USER_SYSTEM}. See Android source code for content command:
