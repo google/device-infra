@@ -859,12 +859,20 @@ final class NewMultiCommandRequestHandler {
               getLast(fileDetailOptional.get().runtimeInfo().invocations()).errorMessage();
 
           if (!isNullOrEmpty(errorMessage)) {
-            setCommandError(
-                commandDetailBuilder,
-                ErrorReason.TRADEFED_INVOCATION_ERROR,
-                commandDetailBuilder.getErrorMessage().isEmpty()
-                    ? errorMessage
-                    : commandDetailBuilder.getErrorMessage() + "\n" + errorMessage);
+            CommandState originalState = commandDetailBuilder.getState();
+            if (originalState == CommandState.COMPLETED) {
+              commandDetailBuilder.setErrorMessage(
+                  commandDetailBuilder.getErrorMessage().isEmpty()
+                      ? errorMessage
+                      : commandDetailBuilder.getErrorMessage() + "\n" + errorMessage);
+            } else {
+              setCommandError(
+                  commandDetailBuilder,
+                  ErrorReason.TRADEFED_INVOCATION_ERROR,
+                  commandDetailBuilder.getErrorMessage().isEmpty()
+                      ? errorMessage
+                      : commandDetailBuilder.getErrorMessage() + "\n" + errorMessage);
+            }
           }
         });
   }

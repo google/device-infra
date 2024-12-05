@@ -921,9 +921,50 @@ public final class NewMultiCommandRequestHandlerTest {
     String commandId =
         UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
     assertThat(commandDetail.getId()).isEqualTo(commandId);
+    assertThat(commandDetail.getState()).isEqualTo(CommandState.COMPLETED);
+    assertThat(commandDetail.getErrorMessage()).isEqualTo(tradefedInvocationErrorMessage);
+  }
+
+  @Test
+  public void handleResultProcessing_tradefedError_errorStateWithErrorMessage() throws Exception {
+    Result result =
+        Result.newBuilder()
+            .setSummary(Summary.newBuilder().setPassed(0).setFailed(0).build())
+            .build();
+    mockProcessResult(result);
+
+    // Mock the content of the tradefed invocation runtime info log file.
+    String noValidTestCaseErrorMessage = "No valid test cases found in the result.";
+    String tradefedInvocationErrorMessage = "example error message";
+    when(xtsTradefedRuntimeInfoFileUtil.readInfo(any(), any()))
+        .thenReturn(
+            Optional.of(
+                new XtsTradefedRuntimeInfoFileDetail(
+                    new XtsTradefedRuntimeInfo(
+                        ImmutableList.of(
+                            new TradefedInvocation(
+                                ImmutableList.of(DEVICE_ID_1, DEVICE_ID_2),
+                                "failed",
+                                tradefedInvocationErrorMessage)),
+                        /* timestamp= */ Instant.now()),
+                    /* lastModifiedTime= */ Instant.now())));
+
+    HandleResultProcessingResult handleResultProcessingResult =
+        createJobAndHandleResultProcessing(request);
+
+    assertThat(handleResultProcessingResult.commandDetails()).hasSize(1);
+    CommandDetail commandDetail =
+        handleResultProcessingResult.commandDetails().values().iterator().next();
+    assertThat(commandDetail.getPassedTestCount()).isEqualTo(0);
+    assertThat(commandDetail.getFailedTestCount()).isEqualTo(0);
+    assertThat(commandDetail.getTotalTestCount()).isEqualTo(0);
+    String commandId =
+        UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
+    assertThat(commandDetail.getId()).isEqualTo(commandId);
     assertThat(commandDetail.getState()).isEqualTo(CommandState.ERROR);
     assertThat(commandDetail.getErrorReason()).isEqualTo(ErrorReason.TRADEFED_INVOCATION_ERROR);
-    assertThat(commandDetail.getErrorMessage()).isEqualTo(tradefedInvocationErrorMessage);
+    assertThat(commandDetail.getErrorMessage())
+        .isEqualTo(noValidTestCaseErrorMessage + "\n" + tradefedInvocationErrorMessage);
     assertThat(handleResultProcessingResult.errorReason())
         .hasValue(ErrorReason.TRADEFED_INVOCATION_ERROR);
     assertThat(handleResultProcessingResult.errorMessage())
