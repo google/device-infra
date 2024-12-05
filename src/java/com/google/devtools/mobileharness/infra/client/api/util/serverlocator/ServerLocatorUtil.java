@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.infra.client.api.util.serverlocator;
 
+import static com.google.common.net.HostAndPort.fromHost;
+import static com.google.common.net.HostAndPort.fromParts;
 import static com.google.common.net.InetAddresses.forString;
 import static com.google.common.net.InetAddresses.isInetAddress;
 import static com.google.common.net.InetAddresses.toAddrString;
@@ -25,6 +27,10 @@ import com.google.common.flogger.FluentLogger;
 import com.google.common.net.HostAndPort;
 import com.google.devtools.mobileharness.infra.client.api.proto.ServerLocatorProto.GrpcServerLocator;
 import com.google.devtools.mobileharness.infra.client.api.proto.ServerLocatorProto.ServerLocator;
+import com.google.devtools.mobileharness.shared.util.comm.stub.StubConfigurationProto.DirectTarget;
+import com.google.devtools.mobileharness.shared.util.comm.stub.StubConfigurationProto.ServerSpec;
+import com.google.devtools.mobileharness.shared.util.comm.stub.StubConfigurationProto.StubConfiguration;
+import com.google.devtools.mobileharness.shared.util.comm.stub.StubConfigurationProto.Transport;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import java.util.Optional;
 
@@ -33,6 +39,8 @@ public final class ServerLocatorUtil {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
   private static final String GRPC_PREFIX = "grpc:";
+  // Default scheme for grpc name resolver.
+  private static final String DNS_PREFIX = "dns:///";
 
   /**
    * Gets the master server locator from the job info.
@@ -92,14 +100,47 @@ public final class ServerLocatorUtil {
   @VisibleForTesting
   static GrpcServerLocator parseGrpcServerLocator(String grpcServerTarget) {
     HostAndPort hostAndPort = HostAndPort.fromString(grpcServerTarget);
-    GrpcServerLocator.Builder builder =
-        GrpcServerLocator.newBuilder().setPort(hostAndPort.getPort());
+    GrpcServerLocator.Builder builder = GrpcServerLocator.newBuilder();
+    if (hostAndPort.hasPort()) {
+      builder.setPort(hostAndPort.getPort());
+    }
     if (isInetAddress(hostAndPort.getHost())) {
       builder.setIp(toAddrString(forString(hostAndPort.getHost())));
     } else {
       builder.setHostname(hostAndPort.getHost());
     }
     return builder.build();
+  }
+
+  /**
+   * Converts a {@link GrpcServerLocator} to a grpc target.
+   *
+   * <p>The grpc target will be resolved by {@link io.grpc.NameResolver}.
+   */
+  public static String toGrpcTarget(GrpcServerLocator grpcServerLocator) {
+    String scheme = !grpcServerLocator.getIp().isEmpty() ? "" : DNS_PREFIX;
+    String host =
+        !grpcServerLocator.getIp().isEmpty()
+            ? grpcServerLocator.getIp()
+            : grpcServerLocator.getHostname();
+    return grpcServerLocator.getPort() != 0
+        ? scheme + fromParts(host, grpcServerLocator.getPort())
+        : scheme + fromHost(host);
+  }
+
+  /**
+   * Creates a {@link StubConfiguration} for a grpc server locator.
+   *
+   * <p>The grpc target in server spec will be resolved by {@link io.grpc.NameResolver}.
+   */
+  public static StubConfiguration createGrpcDirectStubConfiguration(
+      GrpcServerLocator grpcServerLocator) {
+    return StubConfiguration.newBuilder()
+        .setTransport(Transport.GRPC)
+        .setDirectTarget(
+            DirectTarget.newBuilder()
+                .setServerSpec(ServerSpec.newBuilder().setTarget(toGrpcTarget(grpcServerLocator))))
+        .build();
   }
 
   private ServerLocatorUtil() {}

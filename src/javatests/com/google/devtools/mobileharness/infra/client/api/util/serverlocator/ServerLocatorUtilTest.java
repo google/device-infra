@@ -20,8 +20,8 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.devtools.mobileharness.infra.client.api.util.serverlocator.ServerLocatorUtil.getMasterServerLocator;
 import static com.google.devtools.mobileharness.infra.client.api.util.serverlocator.ServerLocatorUtil.parseGrpcServerLocator;
 import static com.google.devtools.mobileharness.infra.client.api.util.serverlocator.ServerLocatorUtil.parseServerLocator;
+import static com.google.devtools.mobileharness.infra.client.api.util.serverlocator.ServerLocatorUtil.toGrpcTarget;
 import static com.google.wireless.qa.mobileharness.shared.model.job.JobInfoMocker.mockJobInfo;
-import static org.junit.Assert.assertThrows;
 
 import com.google.devtools.mobileharness.infra.client.api.proto.ServerLocatorProto.GrpcServerLocator;
 import com.google.devtools.mobileharness.infra.client.api.proto.ServerLocatorProto.ServerLocator;
@@ -59,11 +59,10 @@ public final class ServerLocatorUtilTest {
         .isEqualTo(GrpcServerLocator.newBuilder().setIp("127.0.0.1").setPort(9877).build());
     assertThat(parseGrpcServerLocator("[2001:db8::1]:80"))
         .isEqualTo(GrpcServerLocator.newBuilder().setIp("2001:db8::1").setPort(80).build());
-  }
-
-  @Test
-  public void parseGrpcServerLocator_throwsException() {
-    assertThrows(IllegalStateException.class, () -> parseGrpcServerLocator("localhost"));
+    assertThat(parseGrpcServerLocator("foo-pa.googleapis.com"))
+        .isEqualTo(GrpcServerLocator.newBuilder().setHostname("foo-pa.googleapis.com").build());
+    assertThat(parseGrpcServerLocator("foo.bar.com:443"))
+        .isEqualTo(GrpcServerLocator.newBuilder().setHostname("foo.bar.com").setPort(443).build());
   }
 
   @Test
@@ -74,5 +73,22 @@ public final class ServerLocatorUtilTest {
                 .setGrpcServerLocator(
                     GrpcServerLocator.newBuilder().setIp("127.0.0.1").setPort(9876))
                 .build());
+  }
+
+  @Test
+  public void toGrpcTarget_success() {
+    assertThat(toGrpcTarget(parseGrpcServerLocator("localhost:9876")))
+        .isEqualTo("dns:///localhost:9876");
+    assertThat(toGrpcTarget(parseGrpcServerLocator("localhost"))).isEqualTo("dns:///localhost");
+    assertThat(toGrpcTarget(parseGrpcServerLocator("foo-pa.googleapis.com")))
+        .isEqualTo("dns:///foo-pa.googleapis.com");
+    assertThat(toGrpcTarget(parseGrpcServerLocator("foo.bar.com"))).isEqualTo("dns:///foo.bar.com");
+    assertThat(toGrpcTarget(parseGrpcServerLocator("foo.bar.com:443")))
+        .isEqualTo("dns:///foo.bar.com:443");
+    assertThat(toGrpcTarget(parseGrpcServerLocator("198.51.100.123:50051")))
+        .isEqualTo("198.51.100.123:50051");
+    assertThat(toGrpcTarget(parseGrpcServerLocator("198.51.100.123"))).isEqualTo("198.51.100.123");
+    assertThat(toGrpcTarget(parseGrpcServerLocator("[2001:db8::1]:80")))
+        .isEqualTo("[2001:db8::1]:80");
   }
 }
