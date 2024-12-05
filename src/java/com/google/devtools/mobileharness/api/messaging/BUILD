@@ -38,6 +38,19 @@ java_library(
     ],
     deps = [
         "@com_google_protobuf//:protobuf_java",
+        "@maven//:com_google_errorprone_error_prone_annotations",
+    ],
+)
+
+java_library(
+    name = "messaging_util",
+    srcs = [
+        "MessagingUtil.java",
+    ],
+    deps = [
+        ":exception",
+        "//src/devtools/mobileharness/api/messaging:messaging_java_proto",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/messaging:messaging_manager_holder",
     ],
 )
 
