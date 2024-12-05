@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.infra.client.api.mode.ats;
 
 import static com.google.common.base.Ascii.toLowerCase;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableListMultimap.toImmutableListMultimap;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
@@ -45,6 +46,7 @@ import com.google.devtools.mobileharness.api.model.lab.DeviceScheduleUnit;
 import com.google.devtools.mobileharness.api.model.lab.LabLocator;
 import com.google.devtools.mobileharness.api.model.lab.LabScheduleUnit;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
+import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperty;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabServerFeature;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabServerSetting;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabStatus;
@@ -53,6 +55,7 @@ import com.google.devtools.mobileharness.api.query.proto.FilterProto.DeviceFilte
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.LabFilter;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.LabFilter.LabMatchCondition;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringListMatchCondition;
+import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringListMatchCondition.SizeMatch;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringMatchCondition;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringMultimapMatchCondition;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto;
@@ -876,6 +879,13 @@ class RemoteDeviceManager implements LabInfoProvider {
           return createStringMatcher(
               labMatchCondition.getLabHostNameMatchCondition().getCondition(),
               labData -> labData.labLocator.hostName());
+        case PROPERTY_MATCH_CONDITION:
+          return createStringMultimapMatcher(
+              labMatchCondition.getPropertyMatchCondition().getCondition(),
+              labData ->
+                  labData.labServerFeature.getHostProperties().getHostPropertyList().stream()
+                      .collect(
+                          toImmutableListMultimap(HostProperty::getKey, HostProperty::getValue)));
         case CONDITION_NOT_SET:
           break;
       }
@@ -932,7 +942,7 @@ class RemoteDeviceManager implements LabInfoProvider {
               deviceMatchCondition.getDecoratorMatchCondition().getCondition(),
               deviceData -> deviceData.dataFromLab.decorators().getAll());
         case DIMENSION_MATCH_CONDITION:
-          return createStringMultiMapMatcher(
+          return createStringMultimapMatcher(
               deviceMatchCondition.getDimensionMatchCondition().getCondition(),
               deviceData -> {
                 ListMultimap<String, String> supportedDimensions =
@@ -1002,6 +1012,8 @@ class RemoteDeviceManager implements LabInfoProvider {
    *
    * <p>E.g. condition { subset_match { expected: "a" expected: "b" } } will match {"a", "b"} and
    * {"A", "B", "c"} but not match {"a", "c"}.
+   *
+   * <p>E.g. condition { size_match { length: 2 } } will match {"a", "b"} but not match {"a"}.
    */
   private static <T> Predicate<T> createStringListMatcher(
       StringListMatchCondition condition, Function<T, ImmutableSet<String>> stringListExtractor) {
@@ -1027,6 +1039,8 @@ class RemoteDeviceManager implements LabInfoProvider {
                               .map(Ascii::toLowerCase)
                               .collect(toImmutableSet())
                               .contains(value));
+        case SIZE_MATCH:
+          return createStringListMatcherForSizeMatch(condition.getSizeMatch(), stringListExtractor);
         case CONDITION_NOT_SET:
           break;
       }
@@ -1111,8 +1125,42 @@ class RemoteDeviceManager implements LabInfoProvider {
   }
 
   /**
+   * Creates a {@link Predicate} to match a string list field of an entity based on the given {@link
+   * SizeMatch}.
+   *
+   * <p>E.g. condition { size_match { size: 2 } } will match {"a", "b"} but not match {"a"}.
+   *
+   * <p>E.g. condition { size_match { min_size: 2 } } will match {"a", "b"} and {"a", "b", "c"}
+   *
+   * <p>E.g. condition { size_match { max_size: 2 } } will match {"a", "b"} and {"a"}
+   */
+  private static <T> Predicate<T> createStringListMatcherForSizeMatch(
+      SizeMatch condition, Function<T, ImmutableSet<String>> stringListExtractor) {
+    switch (condition.getConditionCase()) {
+      case SIZE:
+        return entity -> stringListExtractor.apply(entity).size() == condition.getSize();
+      case MIN_SIZE:
+        return entity -> stringListExtractor.apply(entity).size() >= condition.getMinSize();
+      case MAX_SIZE:
+        return entity -> stringListExtractor.apply(entity).size() <= condition.getMaxSize();
+      case CONDITION_NOT_SET:
+        break;
+    }
+    return entity -> true;
+  }
+
+  /**
    * Creates a {@link Predicate} to match a string map field of an entity based on the given {@link
    * StringMultimapMatchCondition}.
+   *
+   * <p>If the key is not set or the value condition is not set, the match condition is invalid and
+   * will not match any entity.
+   *
+   * <p>If the value condition is set, the condition will match if the key is present and the value
+   * matches the value condition.
+   *
+   * <p>E.g. condition { key: "pool" } will not match {"pool": "shared"}, {"pool": ""}, {"pool":
+   * "shared", "label": "test"}.
    *
    * <p>E.g. condition { key: "pool" value_condition { any_match { condition { include { expected:
    * "shared" expected: "private" } } } } } will match {"pool": "shared"}, {"pool": "private"},
@@ -1126,9 +1174,12 @@ class RemoteDeviceManager implements LabInfoProvider {
    * "private" } } } will match {"pool": "shared", "pool": "private"} but not match {"pool":
    * "shared"}
    */
-  private static <T> Predicate<T> createStringMultiMapMatcher(
+  private static <T> Predicate<T> createStringMultimapMatcher(
       StringMultimapMatchCondition condition,
       Function<T, ListMultimap<String, String>> stringMapExtractor) {
+    if (condition.getKey().isEmpty() || !condition.hasValueCondition()) {
+      return entity -> false;
+    }
     try {
       return entity ->
           stringMapExtractor.apply(entity).entries().stream()
