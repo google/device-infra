@@ -26,6 +26,30 @@ package(
 )
 
 java_library(
+    name = "android_account_manager_util",
+    srcs = [
+        "AndroidAccountManagerUtil.java",
+    ],
+    visibility = [
+    ],
+    deps = [
+        ":android_account_setting",
+        ":enums",
+        "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:enums",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent/retry",
+        "//src/java/com/google/devtools/mobileharness/shared/util/email:email_validation_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/shell",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "android_account_setting",
     srcs = [
         "AndroidAccountSetting.java",
