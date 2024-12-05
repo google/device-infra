@@ -31,7 +31,6 @@ import com.google.devtools.mobileharness.shared.util.file.remote.GcsUtil.GcsApiO
 import com.google.devtools.mobileharness.shared.util.file.remote.GcsUtil.GcsParams;
 import com.google.devtools.mobileharness.shared.util.file.remote.GcsUtil.GcsParams.Scope;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
-import com.google.errorprone.annotations.InlineMe;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
@@ -197,38 +196,6 @@ public class GcsFileManager {
     return localFile;
   }
 
-  /**
-   * Mounts {@code gcsFile} to {@code localFile}. {@code localFile} must not exist. The mounted file
-   * is readable/executable, but not writable.
-   *
-   * @return {@code localFile}
-   * @deprecated Replaced in favor of method using GcsApiObject
-   */
-  @InlineMe(
-      replacement = "this.mountGcsFile(GcsApiObject.create(gcsFilePath), localFile)",
-      imports = "com.google.devtools.mobileharness.shared.util.file.remote.GcsUtil.GcsApiObject")
-  @CanIgnoreReturnValue
-  @Deprecated
-  public final Path mountGcsFile(Path gcsFilePath, Path localFile)
-      throws MobileHarnessException, InterruptedException {
-    return mountGcsFile(GcsApiObject.create(gcsFilePath), localFile);
-  }
-
-  /**
-   * Gets cache files of {@code gcsFile}.
-   *
-   * @deprecated Replaced in favor of method using GcsApiObject
-   */
-  @InlineMe(
-      replacement = "this.getGcsFileCache(GcsApiObject.create(gcsFilePath))",
-      imports = "com.google.devtools.mobileharness.shared.util.file.remote.GcsUtil.GcsApiObject")
-  @CanIgnoreReturnValue
-  @Deprecated
-  public final Path getGcsFileCache(Path gcsFilePath)
-      throws MobileHarnessException, InterruptedException {
-    return getGcsFileCache(GcsApiObject.create(gcsFilePath));
-  }
-
   @CanIgnoreReturnValue
   public Path getGcsFileCache(GcsApiObject gcsFile)
       throws MobileHarnessException, InterruptedException {
@@ -243,22 +210,6 @@ public class GcsFileManager {
   /** Gets name of GCS bucket which is connected to. */
   public String getBucketName() {
     return gcsUtil.getBucketName();
-  }
-
-  /**
-   * Copies {@code gcsFile} to {@code localFile}. {@code localFile} must not exist.
-   *
-   * @return {@code localFile}
-   * @deprecated Replaced in favor of method using GcsApiObject
-   */
-  @CanIgnoreReturnValue
-  @InlineMe(
-      replacement = "this.copyGcsFile(GcsApiObject.create(gcsFilePath), localFile)",
-      imports = "com.google.devtools.mobileharness.shared.util.file.remote.GcsUtil.GcsApiObject")
-  @Deprecated
-  public final Path copyGcsFile(Path gcsFilePath, Path localFile)
-      throws MobileHarnessException, InterruptedException {
-    return copyGcsFile(GcsApiObject.create(gcsFilePath), localFile);
   }
 
   @CanIgnoreReturnValue
@@ -581,21 +532,6 @@ public class GcsFileManager {
    */
   public List<String> listFiles(String gcsFileDir) throws MobileHarnessException {
     return gcsUtil.listFiles(gcsFileDir);
-  }
-
-  /**
-   * Gets cache information of {@code gcsFile}.
-   *
-   * @return {@code pair<local_cached_path, has_already_cached>}
-   * @deprecated Replaced in favor of method using GcsApiObject
-   */
-  @InlineMe(
-      replacement = "this.fileExist(GcsApiObject.create(gcsFilePath))",
-      imports = "com.google.devtools.mobileharness.shared.util.file.remote.GcsUtil.GcsApiObject")
-  @Deprecated
-  public final boolean fileExist(Path gcsFilePath)
-      throws MobileHarnessException, InterruptedException {
-    return fileExist(GcsApiObject.create(gcsFilePath));
   }
 
   /** Returns whether the path {@code gcsFile} exists. */
