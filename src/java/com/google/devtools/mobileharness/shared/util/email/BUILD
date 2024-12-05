@@ -23,6 +23,7 @@ java_library(
     name = "email_validation_util",
     srcs = ["EmailValidationUtil.java"],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/platform/android/accountmanager:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/shared/util/email:__pkg__",
     ],
     deps = [
