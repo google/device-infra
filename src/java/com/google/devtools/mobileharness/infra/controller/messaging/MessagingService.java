@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.infra.controller.messaging;
 
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcServiceUtil;
+import com.google.devtools.mobileharness.api.messaging.proto.MessagingProto.MessageReception.TypeCase;
 import com.google.devtools.mobileharness.api.messaging.proto.MessagingProto.MessageReceptions;
 import com.google.devtools.mobileharness.api.messaging.proto.MessagingServiceGrpc;
 import com.google.devtools.mobileharness.api.messaging.proto.MessagingServiceProto.SendMessageRequest;
@@ -64,6 +65,13 @@ class MessagingService extends MessagingServiceGrpc.MessagingServiceImplBase {
     public void accept(MessageReceptions messageReceptions) {
       responseObserver.onNext(
           SendMessageResponse.newBuilder().setMessageReceptions(messageReceptions).build());
+
+      // If the receptions contain GlobalMessageReceivingEnd, calls onCompleted().
+      if (messageReceptions.getReceptionsList().stream()
+          .anyMatch(
+              reception -> reception.getTypeCase() == TypeCase.GLOBAL_MESSAGE_RECEIVING_END)) {
+        responseObserver.onCompleted();
+      }
     }
   }
 }
