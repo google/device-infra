@@ -19,7 +19,6 @@ package com.google.devtools.mobileharness.infra.client.longrunningservice;
 import static com.google.devtools.mobileharness.infra.client.longrunningservice.constant.OlcServerLogs.SERVER_STARTED_SIGNAL;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
-import static java.util.concurrent.TimeUnit.MINUTES;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
@@ -62,6 +61,7 @@ import com.google.wireless.qa.mobileharness.shared.MobileHarnessLogger;
 import com.google.wireless.qa.mobileharness.shared.constant.DirCommon;
 import io.grpc.BindableService;
 import io.grpc.ServerBuilder;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -81,7 +81,7 @@ public class OlcServer {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  private static final int DUMP_MEMORY_INFO_DELAY_MINUTES = 15;
+  private static final Duration DUMP_MEMORY_INFO_INTERVAL = Duration.ofMinutes(5L);
 
   public static void main(String[] args) throws MobileHarnessException, InterruptedException {
     // Parses flags.
@@ -243,9 +243,8 @@ public class OlcServer {
             threadRenaming(
                 () -> logger.atInfo().log("OLC server memory info: %s", systemUtil.getMemoryInfo()),
                 () -> "memory-info-dumper"),
-            DUMP_MEMORY_INFO_DELAY_MINUTES,
-            DUMP_MEMORY_INFO_DELAY_MINUTES,
-            MINUTES),
+            DUMP_MEMORY_INFO_INTERVAL,
+            DUMP_MEMORY_INFO_INTERVAL),
         Level.SEVERE,
         "Fatal error while dumping memory info.");
 
