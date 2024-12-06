@@ -34,6 +34,7 @@ import com.google.devtools.mobileharness.infra.ats.common.SessionHandlerHelper;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil.TradefedJobInfo;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
+import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.ShardingMode;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader;
@@ -160,7 +161,8 @@ public final class ServerJobCreatorTest {
             ANDROID_XTS_ZIP_PATH,
             "xts_test_plan",
             "cts");
-    assertThat(tradefedJobInfoList.get(0).extraJobProperties()).isEmpty();
+    assertThat(tradefedJobInfoList.get(0).extraJobProperties())
+        .containsExactly(Job.XTS_TEST_PLAN, "cts");
   }
 
   @Test
@@ -224,7 +226,8 @@ public final class ServerJobCreatorTest {
             "cts",
             "xts_test_plan_file",
             "ats-file-server::/path/to/test_plan");
-    assertThat(tradefedJobInfoList.get(0).extraJobProperties()).isEmpty();
+    assertThat(tradefedJobInfoList.get(0).extraJobProperties())
+        .containsExactly(Job.XTS_TEST_PLAN, "cts");
   }
 
   @SuppressWarnings("unchecked")

@@ -143,7 +143,8 @@ public final class ConsoleJobCreatorTest {
             XTS_ROOT_DIR_PATH,
             "xts_test_plan",
             "cts");
-    assertThat(tradefedJobInfoList.get(0).extraJobProperties()).isEmpty();
+    assertThat(tradefedJobInfoList.get(0).extraJobProperties())
+        .containsExactly(Job.XTS_TEST_PLAN, "cts");
   }
 
   @Test
@@ -207,7 +208,8 @@ public final class ConsoleJobCreatorTest {
             "{\"env_key1\":\"env_value1\"}",
             "run_command_args",
             "-m module1 --shard-count 2 --logcat-on-failure");
-    assertThat(tradefedJobInfoList.get(0).extraJobProperties()).isEmpty();
+    assertThat(tradefedJobInfoList.get(0).extraJobProperties())
+        .containsExactly(Job.XTS_TEST_PLAN, "cts");
   }
 
   @SuppressWarnings("unchecked")
@@ -248,7 +250,8 @@ public final class ConsoleJobCreatorTest {
             "{\"env_key1\":\"env_value1\"}",
             "run_command_args",
             "-m module1 -t test1 --shard-count 2 --logcat-on-failure");
-    assertThat(tradefedJobInfoList.get(0).extraJobProperties()).isEmpty();
+    assertThat(tradefedJobInfoList.get(0).extraJobProperties())
+        .containsExactly(Job.XTS_TEST_PLAN, "cts");
   }
 
   @SuppressWarnings("unchecked")
@@ -427,6 +430,6 @@ public final class ConsoleJobCreatorTest {
             "prev_session_test_record_files",
             String.format("[\"%s\"]", testRecordPath)); // json format
     assertThat(tradefedJobInfoList.get(0).extraJobProperties())
-        .containsExactly(Job.IS_RUN_RETRY, "true");
+        .containsEntry(Job.IS_RUN_RETRY, "true");
   }
 }

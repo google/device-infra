@@ -119,8 +119,10 @@ public abstract class XtsJobCreator {
     totalDynamicModuleVariables.put(XtsConstants.DYNAMIC_MCTS_JOB_NAME, staticMctsModules);
 
     for (TradefedJobInfo tradefedJobInfo : tradefedJobInfoList) {
+      // Only enable dynamic download for CTS test plan currently.
       // TODO Temporary disable dynamic download if the job is for module sharding.
-      if (!SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo)) {
+      if (!SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo)
+          && isCtsTestPlan(tradefedJobInfo.extraJobProperties())) {
         createDynamicDownloadJobs(
             jobInfos, tradefedJobInfo, totalDynamicModuleVariables, sessionRequestInfo, tfModules);
         // Only if none of the dynamic jobs are created, we'll create only one xTS job.
@@ -152,6 +154,7 @@ public abstract class XtsJobCreator {
     Map<String, String> driverParams = new HashMap<>();
     driverParams.put("xts_type", xtsType);
     driverParams.put("xts_test_plan", testPlan);
+    extraJobProperties.put(Job.XTS_TEST_PLAN, testPlan);
     boolean prevSessionSkipDeviceInfo = false;
     if (SessionRequestHandlerUtil.isRunRetry(testPlan)) {
       extraJobProperties.put(Job.IS_RUN_RETRY, "true");
@@ -159,8 +162,9 @@ public abstract class XtsJobCreator {
         prepareTfRetry(sessionRequestInfo, driverParams, extraJobProperties);
       } else {
         SubPlan runRetryTfSubPlan = prepareRunRetrySubPlan(sessionRequestInfo, /* forTf= */ true);
-        driverParams.put(
-            "prev_session_xts_test_plan", runRetryTfSubPlan.getPreviousSessionXtsTestPlan());
+        String prevSessionXtsTestPlan = runRetryTfSubPlan.getPreviousSessionXtsTestPlan();
+        driverParams.put("prev_session_xts_test_plan", prevSessionXtsTestPlan);
+        extraJobProperties.put(Job.PREV_SESSION_XTS_TEST_PLAN, prevSessionXtsTestPlan);
         injectBuildFingerprint(extraJobProperties, runRetryTfSubPlan);
         Path runRetryTfSubPlanXmlFile =
             prepareRunRetryTfSubPlanXmlFile(sessionRequestInfo, runRetryTfSubPlan);
@@ -481,6 +485,15 @@ public abstract class XtsJobCreator {
     dynamicDownloadJobInfo.properties().add(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED, "true");
     dynamicDownloadJobInfo.properties().add(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME, jobName);
     return dynamicDownloadJobInfo;
+  }
+
+  private boolean isCtsTestPlan(ImmutableMap<XtsPropertyName, String> extraJobProperties) {
+    if (extraJobProperties.getOrDefault(Job.IS_RUN_RETRY, "").equals("true")) {
+      // check the previous session test plan
+      return extraJobProperties.getOrDefault(Job.PREV_SESSION_XTS_TEST_PLAN, "").equals("cts");
+    } else {
+      return extraJobProperties.getOrDefault(Job.XTS_TEST_PLAN, "").equals("cts");
+    }
   }
 
   protected static Properties loadTestReportProperties(Path testReportPropertiesFile)
