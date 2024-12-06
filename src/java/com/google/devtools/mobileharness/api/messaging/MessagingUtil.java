@@ -19,6 +19,8 @@ package com.google.devtools.mobileharness.api.messaging;
 import com.google.devtools.mobileharness.api.messaging.proto.MessagingProto.MessageReceptions;
 import com.google.devtools.mobileharness.api.messaging.proto.MessagingProto.MessageSend;
 import com.google.devtools.mobileharness.infra.controller.messaging.MessagingManagerHolder;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import java.util.OptionalInt;
 import java.util.function.Consumer;
 
 /** Utility for sending messages using the OmniLab messaging system. */
@@ -55,5 +57,18 @@ public class MessagingUtil {
       MessageSend messageSend, Consumer<MessageReceptions> messageReceptionsHandler)
       throws MessageDestinationNotFoundException {
     MessagingManagerHolder.getMessagingManager().sendMessage(messageSend, messageReceptionsHandler);
+  }
+
+  /**
+   * Returns the port of a local gRPC server containing {@linkplain
+   * com.google.devtools.mobileharness.api.messaging.proto.MessagingServiceProto MessagingService}
+   * started by the current process if any, which can be used by sub-processes.
+   */
+  public OptionalInt getLocalMessagingServerPort() {
+    if (Flags.instance().enableMessagingService.getNonNull()) {
+      return OptionalInt.of(Flags.instance().grpcPort.getNonNull());
+    } else {
+      return OptionalInt.empty();
+    }
   }
 }
