@@ -32,10 +32,11 @@ public class MessagingManagerHolder {
     initialize(
         new MessagingManager(
             checkNotNull(messageSenderFinder),
-            ThreadPools.createStandardThreadPool("messaging-manager-thread-pool")));
+            ThreadPools.createStandardThreadPool("default-messaging-manager-thread-pool")));
   }
 
-  private static void initialize(MessagingManager messagingManager) {
+  /** This method needs to be called once and only once in a process to enable messaging utils. */
+  public static void initialize(MessagingManager messagingManager) {
     checkState(
         MessagingManagerHolder.messagingManager.compareAndSet(
             /* expectedValue= */ null, checkNotNull(messagingManager)),
