@@ -97,6 +97,13 @@ public class TradefedInvocationAgentTest {
       }
     }
 
+    // runtimeInfos should contain three elements:
+    // 1. The first is the initial invocation record when tradefed is running.
+    // 2. The second is when tradefed completes, so it's an empty XtsTradefedRuntimeInfo with no
+    // running invocations.
+    // 3. The third is when the agent checks for the tradefed invocation error, and saves the
+    // invocation record with error message (and isRunning=false).
+
     assertThat(runtimeInfos)
         .comparingElementsUsing(
             Correspondence.transforming(
@@ -134,6 +141,18 @@ public class TradefedInvocationAgentTest {
             ImmutableList.of(""), ImmutableList.of(), ImmutableList.of("Fake error message"))
         .inOrder();
 
+    assertThat(runtimeInfos)
+        .comparingElementsUsing(
+            Correspondence.transforming(
+                (XtsTradefedRuntimeInfo runtimeInfo) ->
+                    runtimeInfo.invocations().stream()
+                        .map(TradefedInvocation::isRunning)
+                        .map(isRunning -> Boolean.toString(isRunning))
+                        .collect(toImmutableList()),
+                "has invocations containing isRunning values of"))
+        .containsExactly(ImmutableList.of("true"), ImmutableList.of(), ImmutableList.of("false"))
+        .inOrder();
+
     CommandResult commandResult = commandProcess.await();
     logger.atInfo().log("Command result: %s", commandResult);
     assertThat(commandResult.exitCode()).isEqualTo(0);
@@ -169,5 +188,6 @@ public class TradefedInvocationAgentTest {
         .containsExactly(FakeTradefed.DEVICE_ID_TO_TRIGGER_INVOCATION_EXCEPTION);
     assertThat(invocations.get(0).errorMessage())
         .contains(FakeTradefed.INVOCATION_EXCEPTION_MESSAGE);
+    assertThat(invocations.get(0).isRunning()).isFalse();
   }
 }

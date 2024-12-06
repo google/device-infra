@@ -61,9 +61,8 @@ public class XtsTradefedRuntimeInfo {
   }
 
   /**
-   * Invocations.
-   *
-   * <p>Empty indicates that the invocation information is unknown.
+   * A list of currently running invocations (isRunning=true) or invocations with errors
+   * (isRunning=false). Completed invocations are not included.
    */
   public List<TradefedInvocation> invocations() {
     return invocations;
@@ -110,7 +109,11 @@ public class XtsTradefedRuntimeInfo {
   public static class TradefedInvocation {
 
     private static final TradefedInvocation DEFAULT_INSTANCE =
-        new TradefedInvocation(new ArrayList<>(), /* status= */ "", /* errorMessage= */ "");
+        new TradefedInvocation(
+            /* isRunning= */ false,
+            /* deviceIds= */ new ArrayList<>(),
+            /* status= */ "",
+            /* errorMessage= */ "");
 
     public static TradefedInvocation getDefaultInstance() {
       return DEFAULT_INSTANCE;
@@ -120,25 +123,34 @@ public class XtsTradefedRuntimeInfo {
     public static TradefedInvocation decodeFromString(String string) {
       List<String> parts = split(string, TOKEN_SEPARATOR);
       String status = decodeFromBase64(parts.get(0));
-      String errorMessage = decodeFromBase64(parts.get(1));
+      boolean isRunning = Boolean.parseBoolean(parts.get(1));
+      String errorMessage = decodeFromBase64(parts.get(2));
       List<String> deviceIds = new ArrayList<>();
-      for (int i = 2; i < parts.size(); i++) {
+      for (int i = 3; i < parts.size(); i++) {
         if (!parts.get(i).isEmpty()) {
           deviceIds.add(parts.get(i));
         }
       }
 
-      return new TradefedInvocation(deviceIds, status, errorMessage);
+      return new TradefedInvocation(isRunning, deviceIds, status, errorMessage);
     }
 
+    // Indicates whether it's a currently running invocation.
+    private final boolean isRunning;
     private final List<String> deviceIds;
     private final String status;
     private final String errorMessage;
 
-    public TradefedInvocation(List<String> deviceIds, String status, String errorMessage) {
+    public TradefedInvocation(
+        boolean isRunning, List<String> deviceIds, String status, String errorMessage) {
+      this.isRunning = isRunning;
       this.deviceIds = new ArrayList<>(deviceIds);
       this.status = status;
       this.errorMessage = errorMessage;
+    }
+
+    public boolean isRunning() {
+      return isRunning;
     }
 
     public List<String> deviceIds() {
@@ -156,6 +168,7 @@ public class XtsTradefedRuntimeInfo {
     /** Returns a string that can be parsed by {@link #decodeFromString(String)}. */
     public String encodeToString() {
       return encodeToBase64(status())
+          .concat(TOKEN_SEPARATOR + isRunning())
           .concat(TOKEN_SEPARATOR + encodeToBase64(errorMessage()))
           .concat(TOKEN_SEPARATOR + String.join(TOKEN_SEPARATOR, deviceIds()));
     }
@@ -169,21 +182,22 @@ public class XtsTradefedRuntimeInfo {
         return false;
       }
       TradefedInvocation that = (TradefedInvocation) o;
-      return Objects.equals(deviceIds, that.deviceIds)
+      return isRunning == that.isRunning
+          && Objects.equals(deviceIds, that.deviceIds)
           && Objects.equals(status, that.status)
           && Objects.equals(errorMessage, that.errorMessage);
     }
 
     @Override
     public int hashCode() {
-      return Objects.hash(deviceIds, status, errorMessage);
+      return Objects.hash(isRunning, deviceIds, status, errorMessage);
     }
 
     @Override
     public String toString() {
       return String.format(
-          "TradefedInvocation{deviceIds=%s, status='%s', errorMessage='%s'}",
-          deviceIds, status, errorMessage);
+          "TradefedInvocation{isRunning='%s', deviceIds=%s, status='%s', errorMessage='%s'}",
+          isRunning, deviceIds, status, errorMessage);
     }
   }
 

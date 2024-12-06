@@ -61,6 +61,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.model.W
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.message.proto.TestMessageProto.XtsTradefedRunCancellation;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfo;
+import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfo.TradefedInvocation;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfoFileUtil;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfoFileUtil.XtsTradefedRuntimeInfoFileDetail;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
@@ -683,6 +684,7 @@ public class AtsSessionPlugin {
           .clearInvocation()
           .addAllInvocation(
               runtimeInfo.invocations().stream()
+                  .filter(TradefedInvocation::isRunning)
                   .map(
                       invocation ->
                           initialFirstInvocation.toBuilder()

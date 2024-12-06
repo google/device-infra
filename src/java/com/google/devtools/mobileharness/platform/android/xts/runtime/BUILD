@@ -37,6 +37,7 @@ java_library(
     srcs = ["XtsTradefedRuntimeInfo.java"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/agent:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/runtime:__pkg__",

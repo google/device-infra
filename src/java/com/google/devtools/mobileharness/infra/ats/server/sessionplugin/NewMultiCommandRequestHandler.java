@@ -20,10 +20,10 @@ import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.base.Throwables.getStackTraceAsString;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
-import static com.google.common.collect.Iterables.getLast;
 import static com.google.devtools.mobileharness.shared.util.error.MoreThrowables.shortDebugString;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toJavaDuration;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.function.Predicate.not;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
@@ -65,6 +65,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.constan
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.lab.common.dir.DirUtil;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
+import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfo.TradefedInvocation;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfoFileUtil;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfoFileUtil.XtsTradefedRuntimeInfoFileDetail;
 import com.google.devtools.mobileharness.shared.util.command.Command;
@@ -850,28 +851,27 @@ final class NewMultiCommandRequestHandler {
             return;
           }
 
-          if (fileDetailOptional.isEmpty()
-              || fileDetailOptional.get().runtimeInfo().invocations().isEmpty()) {
+          if (fileDetailOptional.isEmpty()) {
             return;
           }
 
-          String errorMessage =
-              getLast(fileDetailOptional.get().runtimeInfo().invocations()).errorMessage();
+          ImmutableList<TradefedInvocation> invocationsWithError =
+              fileDetailOptional.get().runtimeInfo().invocations().stream()
+                  .filter(not(TradefedInvocation::isRunning))
+                  .filter(invocation -> !isNullOrEmpty(invocation.errorMessage()))
+                  .collect(toImmutableList());
 
-          if (!isNullOrEmpty(errorMessage)) {
-            CommandState originalState = commandDetailBuilder.getState();
-            if (originalState == CommandState.COMPLETED) {
-              commandDetailBuilder.setErrorMessage(
-                  commandDetailBuilder.getErrorMessage().isEmpty()
-                      ? errorMessage
-                      : commandDetailBuilder.getErrorMessage() + "\n" + errorMessage);
-            } else {
-              setCommandError(
-                  commandDetailBuilder,
-                  ErrorReason.TRADEFED_INVOCATION_ERROR,
-                  commandDetailBuilder.getErrorMessage().isEmpty()
-                      ? errorMessage
-                      : commandDetailBuilder.getErrorMessage() + "\n" + errorMessage);
+          if (!invocationsWithError.isEmpty()) {
+            String errorMessage = invocationsWithError.get(0).errorMessage();
+            String newErrorMessage =
+                commandDetailBuilder.getErrorMessage().isEmpty()
+                    ? errorMessage
+                    : commandDetailBuilder.getErrorMessage() + "\n" + errorMessage;
+            commandDetailBuilder.setErrorMessage(newErrorMessage);
+            if (commandDetailBuilder.getState() != CommandState.COMPLETED) {
+              commandDetailBuilder
+                  .setState(CommandState.ERROR)
+                  .setErrorReason(ErrorReason.TRADEFED_INVOCATION_ERROR);
             }
           }
         });

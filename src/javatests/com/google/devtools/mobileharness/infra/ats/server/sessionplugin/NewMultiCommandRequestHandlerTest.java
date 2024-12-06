@@ -903,6 +903,7 @@ public final class NewMultiCommandRequestHandlerTest {
                     new XtsTradefedRuntimeInfo(
                         ImmutableList.of(
                             new TradefedInvocation(
+                                /* isRunning= */ false,
                                 ImmutableList.of(DEVICE_ID_1, DEVICE_ID_2),
                                 "failed",
                                 tradefedInvocationErrorMessage)),
@@ -943,6 +944,7 @@ public final class NewMultiCommandRequestHandlerTest {
                     new XtsTradefedRuntimeInfo(
                         ImmutableList.of(
                             new TradefedInvocation(
+                                /* isRunning= */ false,
                                 ImmutableList.of(DEVICE_ID_1, DEVICE_ID_2),
                                 "failed",
                                 tradefedInvocationErrorMessage)),

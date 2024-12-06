@@ -69,6 +69,7 @@ public class XtsTradefedRuntimeInfoMonitor {
       runningInvocations.putIfAbsent(
           Invocation.getInvocationId(invocationContext),
           new Invocation(
+              /* isRunning= */ true,
               testInvocation,
               invocationContext,
               /* invocationEventHandler= */ null,
@@ -84,7 +85,11 @@ public class XtsTradefedRuntimeInfoMonitor {
         runningInvocations.put(
             Invocation.getInvocationId(invocationContext),
             new Invocation(
-                testInvocation, invocationContext, /* invocationEventHandler= */ null, exception));
+                /* isRunning= */ false,
+                testInvocation,
+                invocationContext,
+                /* invocationEventHandler= */ null,
+                exception));
       } else {
         runningInvocations.remove(Invocation.getInvocationId(invocationContext));
       }
@@ -97,7 +102,11 @@ public class XtsTradefedRuntimeInfoMonitor {
     synchronized (runningInvocations) {
       Invocation invocation =
           new Invocation(
-              /* testInvocation= */ null, invocationContext, invocationEventHandler, exception);
+              /* isRunning= */ false,
+              /* testInvocation= */ null,
+              invocationContext,
+              invocationEventHandler,
+              exception);
       // Only add to the running invocations map if there is an error message (to be saved to the
       // file).
       if (!invocation.getErrorMessage().isEmpty()) {
@@ -171,6 +180,8 @@ public class XtsTradefedRuntimeInfoMonitor {
 
   private static class Invocation {
 
+    private final boolean isRunning;
+
     /** {@code com.android.tradefed.invoker.ITestInvocation}. */
     @Nullable private final Object testInvocation;
 
@@ -186,10 +197,12 @@ public class XtsTradefedRuntimeInfoMonitor {
     private volatile TradefedInvocation previousInvocation;
 
     private Invocation(
+        boolean isRunning,
         Object testInvocation,
         Object invocationContext,
         Object invocationEventHandler,
         Throwable exception) {
+      this.isRunning = isRunning;
       this.testInvocation = testInvocation;
       this.invocationContext = invocationContext;
       this.invocationEventHandler = invocationEventHandler;
@@ -203,7 +216,8 @@ public class XtsTradefedRuntimeInfoMonitor {
      */
     private boolean needUpdate() {
       TradefedInvocation previousInvocation = this.previousInvocation;
-      return !previousInvocation.status().equals(getInvocationStatus())
+      return previousInvocation.isRunning() != isRunning
+          || !previousInvocation.status().equals(getInvocationStatus())
           || !previousInvocation.deviceIds().equals(getDeviceIds())
           || !previousInvocation.errorMessage().equals(getErrorMessage());
     }
@@ -211,7 +225,8 @@ public class XtsTradefedRuntimeInfoMonitor {
     /** Updates and returns a new {@link #previousInvocation}. */
     private TradefedInvocation update() {
       TradefedInvocation newInvocation =
-          new TradefedInvocation(getDeviceIds(), getInvocationStatus(), getErrorMessage());
+          new TradefedInvocation(
+              isRunning, getDeviceIds(), getInvocationStatus(), getErrorMessage());
       previousInvocation = newInvocation;
       return newInvocation;
     }
