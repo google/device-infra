@@ -50,5 +50,6 @@ java_library(
         ":exception",
         "//src/devtools/mobileharness/api/messaging:messaging_java_proto",
         "//src/java/com/google/devtools/mobileharness/infra/controller/messaging:messaging_manager_holder",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
     ],
 )
