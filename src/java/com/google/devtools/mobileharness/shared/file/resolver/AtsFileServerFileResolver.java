@@ -33,6 +33,7 @@ import com.google.devtools.mobileharness.shared.util.command.CommandResult;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
+import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.ParamAnnotation;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -51,14 +52,25 @@ public class AtsFileServerFileResolver extends AbstractFileResolver {
   public static final String PARAM_RESOLVE_ATS_FILE_SERVER_FILES_IN_LAB =
       "resolve_ats_file_server_files_in_lab";
 
+  static final int DOWNLOAD_RETRY_INTERVAL_SEC = 30;
   private static final int MAX_DOWNLOAD_ATTEMPTS = 3;
 
   private final LocalFileUtil localFileUtil;
+  private final Sleeper sleeper;
 
   public AtsFileServerFileResolver(
       @Nullable ListeningExecutorService executorService, LocalFileUtil localFileUtil) {
+    this(executorService, localFileUtil, Sleeper.defaultSleeper());
+  }
+
+  @VisibleForTesting
+  AtsFileServerFileResolver(
+      @Nullable ListeningExecutorService executorService,
+      LocalFileUtil localFileUtil,
+      Sleeper sleeper) {
     super(executorService);
     this.localFileUtil = localFileUtil;
+    this.sleeper = sleeper;
   }
 
   @Override
@@ -98,6 +110,7 @@ public class AtsFileServerFileResolver extends AbstractFileResolver {
           if (i < MAX_DOWNLOAD_ATTEMPTS - 1) {
             logger.atWarning().log(
                 "Failed to download file %s from ats file server. Retrying...", httpSourcePath);
+            sleeper.sleep(Duration.ofSeconds(DOWNLOAD_RETRY_INTERVAL_SEC));
             continue;
           }
           throw e;
@@ -110,11 +123,10 @@ public class AtsFileServerFileResolver extends AbstractFileResolver {
   private void downloadFile(String destination, String httpSourcePath)
       throws InterruptedException, MobileHarnessException {
     try {
-      // TODO: Add download resume back.
       String output =
           createCommandExecutor()
               .run(
-                  Command.of("curl", "-o", destination, "-fL", httpSourcePath)
+                  Command.of("curl", "-C", "-", "-o", destination, "-fL", httpSourcePath)
                       .timeout(Duration.ofHours(2)));
       logger.atInfo().log(
           "Output of ats file server downloader for downloading file %s: %s",
