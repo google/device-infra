@@ -1013,6 +1013,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> forceDeviceRebootAfterTest = forceDeviceRebootAfterTestDefault;
 
+  private static final Flag<Boolean> forceToUseGrpcDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--force_to_use_grpc",
+      description = "Force to use GRPC for debugging.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> forceToUseGrpc = forceToUseGrpcDefault;
+
   private static final Flag<Integer> gcsUtilThreadsDefault = Flag.value(30);
 
   @com.beust.jcommander.Parameter(

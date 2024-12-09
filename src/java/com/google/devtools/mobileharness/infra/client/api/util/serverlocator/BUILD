@@ -29,6 +29,7 @@ java_library(
     ],
     deps = [
         "//src/devtools/mobileharness/infra/client/api/proto:server_locator_java_proto",
+        "//src/devtools/mobileharness/shared/util/comm/stub:stub_configuration_java_proto",
         "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_text_format",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",

@@ -22,14 +22,20 @@ import static com.google.devtools.mobileharness.infra.client.api.util.stub.StubU
 import com.google.common.annotations.VisibleForTesting;
 import com.google.devtools.mobileharness.infra.client.api.mode.remote.LabServerLocator;
 import com.google.devtools.mobileharness.infra.client.api.util.stub.GrpcStubManager;
+import com.google.devtools.mobileharness.infra.client.api.util.stub.StubFactory;
+import com.google.devtools.mobileharness.infra.client.api.util.stub.StubFactoryModule;
 import com.google.devtools.mobileharness.infra.container.proto.TestEngine.TestEngineLocator;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.ExecTestStub;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.PrepareTestStub;
 import com.google.devtools.mobileharness.shared.constant.environment.MobileHarnessServerEnvironment;
 import com.google.devtools.mobileharness.shared.version.rpc.stub.VersionStub;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
 
 /** Shared master and lab server service stubs. */
 public class StubManager {
+
+  private final StubFactory stubFactory;
 
   private final GrpcStubManager grpcStubManager;
 
@@ -49,6 +55,9 @@ public class StubManager {
   @VisibleForTesting
   StubManager(GrpcStubManager grpcStubManager) {
     this.grpcStubManager = grpcStubManager;
+
+    Injector injector = Guice.createInjector(new StubFactoryModule());
+    stubFactory = injector.getInstance(StubFactory.class);
   }
 
   public ExecTestStub getTestEngineExecTestStub(
