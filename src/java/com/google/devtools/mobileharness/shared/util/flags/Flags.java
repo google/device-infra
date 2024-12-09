@@ -163,6 +163,40 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> alwaysUseOssDetectorAndDispatcher = alwaysUseOssDetectorAndDispatcherDefault;
 
+  private static final Flag<String> androidAccountManagerApkPathDefault = Flag.value("");
+
+  @com.beust.jcommander.Parameter(
+      names = "--android_account_manager_apk_path",
+      description = "File path for the Android account manager apk.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> androidAccountManagerApkPath = androidAccountManagerApkPathDefault;
+
+  private static final Flag<String> androidAccountManagerSignedApkPathDefault = Flag.value("");
+
+  @com.beust.jcommander.Parameter(
+      names = "--android_account_manager_signed_apk_path",
+      description = "File path for the Android account manager signed apk.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> androidAccountManagerSignedApkPath =
+      androidAccountManagerSignedApkPathDefault;
+
+  private static final Flag<String> androidAuthTestSupportApkPathDefault = Flag.value("");
+
+  @com.beust.jcommander.Parameter(
+      names = "--android_auth_test_support_apk_path",
+      description = "File path for the Android auth test support apk.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> androidAuthTestSupportApkPath = androidAuthTestSupportApkPathDefault;
+
+  private static final Flag<String> androidAuthTestSupportSignedApkPathDefault = Flag.value("");
+
+  @com.beust.jcommander.Parameter(
+      names = "--android_auth_test_support_signed_apk_path",
+      description = "File path for the Android auth test support signed apk.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> androidAuthTestSupportSignedApkPath =
+      androidAuthTestSupportSignedApkPathDefault;
+
   private static final Flag<Boolean> enableDaemonDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(
