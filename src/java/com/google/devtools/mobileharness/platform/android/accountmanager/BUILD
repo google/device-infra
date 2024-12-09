@@ -31,6 +31,7 @@ java_library(
         "AndroidAccountManagerUtil.java",
     ],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/platform/android/lightning/accountmanager:__subpackages__",
     ],
     deps = [
         ":android_account_setting",
