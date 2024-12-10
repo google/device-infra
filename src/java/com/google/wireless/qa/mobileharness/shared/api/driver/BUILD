@@ -269,3 +269,28 @@ java_library(
         "@maven//:org_apache_commons_commons_text",
     ],
 )
+
+################################################################################
+# Android Robo Test
+################################################################################
+java_library(
+    name = "android_robo_test",
+    srcs = ["AndroidRoboTest.java"],
+    resources = [
+        # UTP Driver
+        # UTP Launcher and Main
+        # UTP Device Provider
+    ],
+    deps = [
+        ":base_driver",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local:res_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@maven//:com_google_inject_guice",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+################################################################################
