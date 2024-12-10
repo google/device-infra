@@ -885,6 +885,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableMasterSyncer = enableMasterSyncerDefault;
 
+  private static final Flag<Boolean> enableMessagingServiceDefault = Flag.value(true);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enable_messaging_service",
+      description = "Whether to enable OmniLab messaging service. Default is true.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableMessagingService = enableMessagingServiceDefault;
+
   private static final Flag<Boolean> enableRdhDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(

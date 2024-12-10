@@ -38,6 +38,7 @@ import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceMana
 import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
 import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfigFileProcessor;
 import com.google.devtools.mobileharness.infra.controller.device.external.ExternalDeviceManager;
+import com.google.devtools.mobileharness.infra.controller.messaging.MessagingService;
 import com.google.devtools.mobileharness.infra.controller.test.manager.ProxyTestManager;
 import com.google.devtools.mobileharness.infra.lab.Annotations.DebugThreadPool;
 import com.google.devtools.mobileharness.infra.lab.Annotations.GlobalEventBus;
@@ -118,6 +119,7 @@ public class LabServer {
   private final LocalDeviceManager deviceManager;
   private final PrepareTestServiceImpl prepareTestService;
   private final ExecTestServiceImpl execTestService;
+  private final MessagingService messagingService;
   private final ExternalDeviceManager externalDeviceManager;
   private final EventBus globalInternalBus;
   private final ListeningExecutorService mainThreadPool;
@@ -134,6 +136,7 @@ public class LabServer {
       LocalDeviceManager deviceManager,
       PrepareTestServiceImpl prepareTestService,
       ExecTestServiceImpl execTestService,
+      MessagingService messagingService,
       ExternalDeviceManager externalDeviceManager,
       @GlobalEventBus EventBus globalInternalBus,
       ListeningExecutorService mainThreadPool,
@@ -147,6 +150,7 @@ public class LabServer {
     this.deviceManager = deviceManager;
     this.prepareTestService = prepareTestService;
     this.execTestService = execTestService;
+    this.messagingService = messagingService;
     this.externalDeviceManager = externalDeviceManager;
     this.globalInternalBus = globalInternalBus;
     this.mainThreadPool = mainThreadPool;
@@ -278,6 +282,10 @@ public class LabServer {
                     }
                   })
               .getInstance(com.google.devtools.mobileharness.shared.labinfo.LabInfoService.class));
+
+      if (Flags.instance().enableMessagingService.getNonNull()) {
+        localGrpcServices.add(messagingService);
+      }
 
       // Starts gRPC server for local requests only.
       NettyServerBuilder localGrpcServerBuilder =

@@ -28,7 +28,7 @@ import java.util.function.Consumer;
 import javax.inject.Inject;
 
 /** Implementation of {@link MessagingServiceGrpc}. */
-class MessagingService extends MessagingServiceGrpc.MessagingServiceImplBase {
+public class MessagingService extends MessagingServiceGrpc.MessagingServiceImplBase {
 
   private final MessagingManager messagingManager;
 

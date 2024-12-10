@@ -30,6 +30,8 @@ import com.google.devtools.mobileharness.infra.controller.device.bootstrap.Detec
 import com.google.devtools.mobileharness.infra.controller.device.bootstrap.DetectorsAndDispatchers;
 import com.google.devtools.mobileharness.infra.controller.device.external.ExternalDeviceManager;
 import com.google.devtools.mobileharness.infra.controller.device.external.NoopExternalDeviceManager;
+import com.google.devtools.mobileharness.infra.controller.messaging.MessageSenderFinder;
+import com.google.devtools.mobileharness.infra.controller.messaging.MessagingManager;
 import com.google.devtools.mobileharness.infra.controller.messaging.MessagingManagerHolder;
 import com.google.devtools.mobileharness.infra.controller.test.manager.LabDirectTestRunnerUtil;
 import com.google.devtools.mobileharness.infra.controller.test.manager.ProxyTestManager;
@@ -200,14 +202,20 @@ public class LabServerModule extends AbstractModule {
 
   @Provides
   @Singleton
+  MessageSenderFinder provideMessageSenderFinder(ProxyTestManager testManager) {
+    return messageSend -> LabDirectTestRunnerUtil.getMessageSender(testManager, messageSend);
+  }
+
+  @Provides
+  @Singleton
   ExecTestServiceImpl provideExecTestService(
       ExecTestServiceImpl.ExecTestServiceImplFactory factory,
       ProxyTestManager testManager,
+      MessagingManager messagingManager,
       ListeningExecutorService mainThreadPool) {
     TestMessageManager.createInstance(
         testId -> LabDirectTestRunnerUtil.getTestMessagePoster(testManager, testId));
-    MessagingManagerHolder.initialize(
-        messageSend -> LabDirectTestRunnerUtil.getMessageSender(testManager, messageSend));
+    MessagingManagerHolder.initialize(messagingManager);
     return factory.create(mainThreadPool);
   }
 }
