@@ -110,6 +110,7 @@ public class JobScheduleUnit implements Cloneable {
       Params params,
       ScopedSpecs scopedSpecs,
       SubDeviceSpecs subDeviceSpecs) {
+
     this.locator = locator;
     this.jobUser = jobUser;
     this.type = type;
