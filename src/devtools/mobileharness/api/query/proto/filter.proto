@@ -33,9 +33,15 @@ message LabFilter {
       StringMatchCondition condition = 1;
     }
 
+    // Condition to match the property of a lab.
+    message PropertyMatchCondition {
+      StringMultimapMatchCondition condition = 1;
+    }
+
     // An unset or unrecognized condition will always match.
     oneof condition {
       LabHostNameMatchCondition lab_host_name_match_condition = 1;
+      PropertyMatchCondition property_match_condition = 2;
     }
   }
 
@@ -101,9 +107,9 @@ message DeviceFilter {
 
 // Condition to match a string multi-map attribute.
 message StringMultimapMatchCondition {
-  // The key (case-insensitive). Need exact value, e.g. "pool".
+  // Required. The key (case-insensitive). Need exact value, e.g. "pool".
   string key = 1;
-  // The value list.
+  // Required. The value list.
   StringListMatchCondition value_condition = 2;
 }
 
@@ -152,10 +158,31 @@ message StringListMatchCondition {
     repeated string expected = 1;
   }
 
+  // A string list matches this condition if it matches the given IntegerMatch
+  // condition.
+  message IntegerMatch {
+    // The string list matches this condition if it has the given size.
+    message Equal {
+      int32 size = 1;
+    }
+
+    // The string list matches this condition if it has at least the given
+    // length.
+    message GreaterThan {
+      int32 min_size = 1;
+    }
+
+    oneof condition {
+      Equal equal = 1;
+      GreaterThan greater_than = 2;
+    }
+  }
+
   // An unset or unrecognized condition will always match.
   oneof condition {
     AnyMatch any_match = 1;
     NoneMatch none_match = 2;
     SubsetMatch subset_match = 3;
+    IntegerMatch integer_match = 4;
   }
 }
