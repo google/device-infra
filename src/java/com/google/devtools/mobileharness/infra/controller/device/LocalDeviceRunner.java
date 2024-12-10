@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.infra.controller.device;
 
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatusWithTimestamp;
+import java.time.Instant;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /** Runner for test and device lifecycle on device. */
@@ -56,4 +57,7 @@ public abstract class LocalDeviceRunner implements Runnable, LocalDeviceTestRunn
 
   /** Updates the device status and billing statistic. */
   public abstract void updateStatusStat();
+
+  /** Sets the end time of the current allocation. */
+  public abstract void setAllocationEndTime(Instant instant);
 }
