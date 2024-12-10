@@ -124,6 +124,9 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
   /** Whether the current thread is tearing down. */
   private volatile boolean tearingDown = false;
 
+  /** The end time for the latest allocation, or null if the device is not allocated. */
+  private volatile Instant allocationEndTime = null;
+
   /** The running test on this device. */
   @Nullable private volatile LocalDeviceTestExecutor test = null;
 
@@ -388,7 +391,7 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
 
   @Override
   public boolean isAvailable() {
-    return isReady() && test == null && !isPrepping();
+    return isReady() && test == null && !isPrepping() && !isAllocated();
   }
 
   /** If the device is IDLE in external device manager, it's of course available in external DM. */
@@ -756,6 +759,11 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
         .isBefore(lastCheckDeviceTime)) {
       return false;
     }
+    if (isAllocated()) {
+      // The device is allocated but no test is assigned. It may be being used remotely. Checking
+      // the device may interrupt the remote usage.
+      return false;
+    }
     logger.atInfo().log("Start periodical check");
     lastCheckDeviceTime = clock.instant();
 
@@ -788,6 +796,15 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
         device.updateDimension(entry.getKey());
       }
     }
+  }
+
+  @Override
+  public void setAllocationEndTime(Instant allocationEndTime) {
+    this.allocationEndTime = allocationEndTime;
+  }
+
+  private boolean isAllocated() {
+    return allocationEndTime != null && allocationEndTime.isBefore(clock.instant());
   }
 
   /** Posts {@link LocalDeviceChangeEvent} to signal the device status/dimension change. */
