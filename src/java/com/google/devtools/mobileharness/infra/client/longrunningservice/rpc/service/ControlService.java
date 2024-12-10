@@ -130,6 +130,7 @@ public class ControlService extends ControlServiceGrpc.ControlServiceImplBase {
   }
 
   private KillServerResponse doKillServer(KillServerRequest request) {
+    logger.atInfo().log("KillServerRequest: [%s]", shortDebugString(request));
     KillServerResponse.Builder responseBuilder =
         KillServerResponse.newBuilder().setServerPid(ProcessHandle.current().pid());
 
