@@ -29,3 +29,16 @@ java_proto_library(
     name = "server_locator_java_proto",
     deps = [":server_locator_proto"],
 )
+
+proto_library(
+    name = "server_federation_proto",
+    srcs = ["server_federation.proto"],
+    deps = [
+        ":server_locator_proto",
+    ],
+)
+
+java_proto_library(
+    name = "server_federation_java_proto",
+    deps = [":server_federation_proto"],
+)
