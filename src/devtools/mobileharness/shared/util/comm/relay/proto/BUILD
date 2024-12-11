@@ -25,6 +25,7 @@ proto_library(
     srcs = ["destination.proto"],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:lab_proto",
+        "//src/devtools/mobileharness/infra/container/proto:test_engine_proto",
     ],
 )
 

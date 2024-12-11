@@ -16,15 +16,19 @@
 
 package com.google.devtools.mobileharness.shared.util.comm.relay;
 
+import static com.google.devtools.mobileharness.infra.client.api.util.stub.StubUtils.getLabServerGrpcTarget;
+import static com.google.devtools.mobileharness.infra.client.api.util.stub.StubUtils.getTestEngineGrpcTarget;
 import static io.grpc.Metadata.BINARY_HEADER_SUFFIX;
 
 import com.google.devtools.mobileharness.api.model.proto.Lab;
-import com.google.devtools.mobileharness.infra.client.api.util.stub.StubUtils;
+import com.google.devtools.mobileharness.infra.client.api.mode.remote.LabServerLocator;
+import com.google.devtools.mobileharness.infra.container.proto.TestEngine;
 import com.google.devtools.mobileharness.shared.util.base.ProtoExtensionRegistry;
 import com.google.devtools.mobileharness.shared.util.comm.relay.proto.DestinationProto.Destination;
 import com.google.devtools.mobileharness.shared.util.comm.relay.proto.DestinationProto.DirectLocator;
 import com.google.devtools.mobileharness.shared.util.comm.relay.proto.DestinationProto.LabLocator;
 import com.google.devtools.mobileharness.shared.util.comm.relay.proto.DestinationProto.ServiceLocator;
+import com.google.devtools.mobileharness.shared.util.comm.relay.proto.DestinationProto.TestEngineLocator;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.protobuf.InvalidProtocolBufferException;
 import io.grpc.Metadata;
@@ -73,8 +77,10 @@ public final class DestinationUtils {
       case DIRECT_LOCATOR:
         return destination.getServiceLocator().getDirectLocator().getGrpcTarget();
       case LAB_LOCATOR:
-        return StubUtils.getLabServerGrpcTarget(
+        return getLabServerGrpcTarget(
             destination.getServiceLocator().getLabLocator().getLabLocator());
+      case TEST_ENGINE_LOCATOR:
+        return getTestEngineGrpcTarget(destination.getServiceLocator().getTestEngineLocator());
       default:
         throw new IllegalArgumentException(
             String.format("Unsupported locator type in the destination: %s", destination));
@@ -94,6 +100,19 @@ public final class DestinationUtils {
         .setServiceLocator(
             ServiceLocator.newBuilder()
                 .setLabLocator(LabLocator.newBuilder().setLabLocator(labLocator)))
+        .build();
+  }
+
+  public static Destination createDestination(
+      LabServerLocator labServerLocator, TestEngine.TestEngineLocator testEngineLocator) {
+    TestEngineLocator.Builder testEngineLocatorBuilder =
+        TestEngineLocator.newBuilder().setTestEngineLocator(testEngineLocator);
+    if (labServerLocator.masterDetectedIp().isPresent()) {
+      testEngineLocatorBuilder.setMasterDetectedIp(labServerLocator.masterDetectedIp().get());
+    }
+    return Destination.newBuilder()
+        .setServiceLocator(
+            ServiceLocator.newBuilder().setTestEngineLocator(testEngineLocatorBuilder))
         .build();
   }
 

@@ -19,6 +19,7 @@ syntax = "proto3";
 package mobileharness.shared.util.comm.relay;
 
 import "src/devtools/mobileharness/api/model/proto/lab.proto";
+import "src/devtools/mobileharness/infra/container/proto/test_engine.proto";
 
 option java_package = "com.google.devtools.mobileharness.shared.util.comm.relay.proto";
 option java_outer_classname = "DestinationProto";
@@ -31,6 +32,7 @@ message ServiceLocator {
   oneof locator {
     LabLocator lab_locator = 1;
     DirectLocator direct_locator = 2;
+    TestEngineLocator test_engine_locator = 3;
   }
 }
 
@@ -40,4 +42,9 @@ message LabLocator {
 
 message DirectLocator {
   string grpc_target = 1;
+}
+
+message TestEngineLocator {
+  mobileharness.infra.container.TestEngineLocator test_engine_locator = 1;
+  optional string master_detected_ip = 2;
 }

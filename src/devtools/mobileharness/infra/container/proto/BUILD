@@ -55,6 +55,7 @@ proto_library(
     srcs = ["test_engine.proto"],
     visibility = [
         "//src/devtools/mobileharness/infra/lab/proto:__pkg__",
+        "//src/devtools/mobileharness/shared/util/comm/relay/proto:__pkg__",
     ],
     deps = [
     ],

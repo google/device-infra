@@ -28,7 +28,9 @@ java_library(
     ],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:lab_java_proto",
+        "//src/devtools/mobileharness/infra/container/proto:test_engine_java_proto",
         "//src/devtools/mobileharness/shared/util/comm/relay/proto:destination_java_proto",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/remote:lab_server_locator",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/util/stub:stub_utils",
         "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_extension_registry",
         "@com_google_protobuf//:protobuf_java",
