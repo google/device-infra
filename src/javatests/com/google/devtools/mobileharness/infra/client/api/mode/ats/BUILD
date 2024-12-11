@@ -59,7 +59,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
         "//src/java/com/google/devtools/mobileharness/shared/version",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job:schedule_unit",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job:job_schedule_unit",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "@com_google_protobuf_protobuf_java",

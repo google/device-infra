@@ -36,7 +36,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/sharedpool:shared_pool_util",
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job:schedule_unit",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job:job_schedule_unit",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
     ],

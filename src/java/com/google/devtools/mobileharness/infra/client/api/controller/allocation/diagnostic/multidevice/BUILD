@@ -39,7 +39,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job:schedule_unit",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job:job_schedule_unit",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/lab",
         "@maven//:com_google_code_gson_gson",

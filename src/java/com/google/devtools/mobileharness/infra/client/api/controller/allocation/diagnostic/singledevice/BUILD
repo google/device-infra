@@ -41,7 +41,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job:schedule_unit",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job:job_schedule_unit",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/lab",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",

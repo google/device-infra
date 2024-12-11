@@ -39,25 +39,41 @@ java_library(
 )
 
 java_library(
-    name = "schedule_unit",
-    srcs = [
-        "JobScheduleUnit.java",
-        "JobSetting.java",
-        "TestScheduleUnit.java",
-    ],
+    name = "job_schedule_unit",
+    srcs = ["JobScheduleUnit.java"],
     deps = [
+        ":job_setting",
         ":locator",
+        "//src/devtools/mobileharness/api/model/proto:job_java_proto",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/out:timing",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "job_setting",
+    srcs = ["JobSetting.java"],
+    deps = [
         "//src/devtools/mobileharness/api/model/proto:job_java_proto",
         "//src/devtools/mobileharness/service/moss/proto:slg_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/job/in",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/out:timing",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
         "@maven//:com_google_errorprone_error_prone_annotations",
-        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "test_schedule_unit",
+    srcs = ["TestScheduleUnit.java"],
+    deps = [
+        ":locator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/out:timing",
     ],
 )
 
@@ -87,8 +103,9 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/out",
     ],
     deps = [
+        ":job_schedule_unit",
         ":locator",
-        ":schedule_unit",
+        ":test_schedule_unit",
         "//src/devtools/mobileharness/api/model/proto:job_java_proto",
         "//src/devtools/mobileharness/service/moss/proto:slg_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
