@@ -90,26 +90,32 @@ java_library(
 
 java_library(
     name = "job",
-    srcs = [
-        "JobInfo.java",
-        "JobSetting.java",
-        "TestInfo.java",
-        "TestInfos.java",
-    ],
+    deprecation = "This target has been split. Depend on the sub-targets instead.",
     visibility = ["//visibility:public"],
     exports = [
+        ":job_info_cluster",
+        ":job_setting",
         ":locator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/out",
     ],
+)
+
+java_library(
+    name = "job_info_cluster",
+    srcs = [
+        "JobInfo.java",
+        "TestInfo.java",
+        "TestInfos.java",
+    ],
+    visibility = ["//visibility:public"],
     deps = [
         ":job_schedule_unit",
+        ":job_setting",
         ":locator",
         ":test_schedule_unit",
         "//src/devtools/mobileharness/api/model/proto:job_java_proto",
-        "//src/devtools/mobileharness/service/moss/proto:slg_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/devtools/mobileharness/api/model/job/in",
         "//src/java/com/google/devtools/mobileharness/api/model/job/out",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/model:test_execution_unit",
         "//src/java/com/google/devtools/mobileharness/shared/util/dir:test_dir",
