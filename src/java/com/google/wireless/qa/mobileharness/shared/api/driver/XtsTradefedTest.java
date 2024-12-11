@@ -149,6 +149,8 @@ public class XtsTradefedTest extends BaseDriver
 
   private static final Duration KILL_TF_AFTER_FINISH_TIME = Duration.ofMinutes(5L);
 
+  private static final Duration ANDROID_XTS_ZIP_UNCOMPRESS_TIMEOUT = Duration.ofMinutes(15L);
+
   private static final String TF_AGENT_RESOURCE_PATH =
       "/com/google/devtools/mobileharness/platform/android/xts/agent/tradefed_invocation_agent_deploy.jar";
 
@@ -698,13 +700,17 @@ public class XtsTradefedTest extends BaseDriver
                 testInfo.getTmpFileDir(), androidXtsZip.toString().replace('.', '_') + "_unzipped");
         localFileUtil.prepareDir(unzippedPath);
         // TODO: cache the unzip result to reduce lab disk usage.
-        localFileUtil.unzipFile(androidXtsZip.toString(), unzippedPath);
+        localFileUtil.unzipFile(
+            androidXtsZip.toString(), unzippedPath, ANDROID_XTS_ZIP_UNCOMPRESS_TIMEOUT);
         return Path.of(unzippedPath);
       } catch (MobileHarnessException | InterruptedException e) {
         if (e instanceof InterruptedException) {
           Thread.currentThread().interrupt();
         }
-        logger.atWarning().withCause(e).log("Failed to unzip %s", androidXtsZip);
+        throw new MobileHarnessException(
+            AndroidErrorId.XTS_TRADEFED_GET_XTS_ROOT_DIR_ERROR,
+            "Failed to unzip " + androidXtsZip,
+            e);
       }
     }
     throw new MobileHarnessException(
