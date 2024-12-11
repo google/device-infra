@@ -1125,6 +1125,10 @@ class RemoteDeviceManager implements LabInfoProvider {
    * <p>E.g. condition { key: "pool" value_condition { subset_match { expected: "shared" expected:
    * "private" } } } will match {"pool": "shared", "pool": "private"} but not match {"pool":
    * "shared"}
+   *
+   * <p>E.g. condition { key: "pool" value_condition { any_match { condition { matches_regex {
+   * regex: ".*" } } } } } will match {"pool": "shared"}, {"pool": "private"}, {"pool": "shared",
+   * "label": "test"} but not match {"pool": "shared", "label": "test"}.
    */
   private static <T> Predicate<T> createStringMultiMapMatcher(
       StringMultimapMatchCondition condition,
