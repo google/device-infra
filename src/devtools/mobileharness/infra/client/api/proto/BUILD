@@ -29,3 +29,22 @@ java_proto_library(
     name = "server_locator_java_proto",
     deps = [":server_locator_proto"],
 )
+
+proto_library(
+    name = "resource_federation_proto",
+    srcs = ["resource_federation.proto"],
+    deps = [
+        ":server_locator_proto",
+    ],
+)
+
+java_proto_library(
+    name = "resource_federation_java_proto",
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/client/api:__subpackages__",
+        "//src/java/com/google/wireless/qa/mobileharness/client/api:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client/api:__subpackages__",
+        "//src/javatests/com/google/wireless/qa/mobileharness/client/api:__subpackages__",
+    ],
+    deps = [":resource_federation_proto"],
+)
