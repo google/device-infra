@@ -290,9 +290,10 @@ public class LocalFileUtil {
    *
    * <p>1.3 A line of file name with leading n like - n/foo/bar/filename
    *
-   * <p>2. Use sed command to keep lines of filenames and remove the leading n.
+   * <p>2. Use command - "ps xao command" to list all running commands with file under the given
+   * directory.
    *
-   * <p>3. Use sort command to sort and remove duplicate lines.
+   * <p>3. Clear all unopened files under the given directory.
    *
    * <p>This method may consume GB memory if passes a high level directory path like root - /.
    */
@@ -300,16 +301,16 @@ public class LocalFileUtil {
       throws MobileHarnessException, InterruptedException {
     checkDir(dirPath);
 
+    // Collect all opened files or dirs under the given directory.
     // Command "lsof+D path" could easily return 1 if there are files under this directory
     // which aren't opened by any process.
-    Command command =
+    Command openFilesCommand =
         Command.of("lsof", "-w", "-Fn", "+D", dirPath.toString())
             .timeout(Duration.ofSeconds(30))
             .successExitCodes(0, 1);
-
     ImmutableSet.Builder<String> allOpenedFilesOrDirsBuilder = ImmutableSet.builder();
     try {
-      String cmdOutput = cmdExecutor.exec(command).stdout();
+      String cmdOutput = cmdExecutor.exec(openFilesCommand).stdout();
       Iterable<String> allOpenedFilesOrDirsArray = Splitter.on("\n").split(cmdOutput);
       for (String line : allOpenedFilesOrDirsArray) {
         // Lines of file names start with n.
@@ -324,15 +325,40 @@ public class LocalFileUtil {
           String.format("Failed to list open files or directories under %s", dirPath),
           e);
     }
-
     ImmutableSet<String> allOpenedFilesOrDirs = allOpenedFilesOrDirsBuilder.build();
     logger.atInfo().log("Opened files or dirs: %s", allOpenedFilesOrDirs);
+
+    // Collect all running commands with files under the given directory.
+    Command listRunningCommand = Command.of("ps", "xao", "command").timeout(Duration.ofSeconds(30));
+    String runningCommands = "";
+    try {
+      String commandOutput = cmdExecutor.exec(listRunningCommand).stdout();
+      ImmutableList.Builder<String> runningCommandsBuilder = ImmutableList.builder();
+      Iterable<String> runningCommandsArray = Splitter.on("\n").split(commandOutput);
+      for (String line : runningCommandsArray) {
+        if (line.contains(dirPath.toString())) {
+          runningCommandsBuilder.add(line);
+        }
+      }
+      runningCommands = runningCommandsBuilder.build().toString();
+      logger.atInfo().log("Running Commands: %s with file under dir: %s", runningCommands, dirPath);
+    } catch (CommandException e) {
+      throw new MobileHarnessException(
+          BasicErrorId.SYSTEM_LIST_PROCESSES_ERROR,
+          String.format("Failed to list processes used files under %s", dirPath),
+          e);
+    }
 
     List<Path> allFiles = listFilePaths(dirPath, /* recursively= */ true);
     ImmutableList.Builder<Path> removedFilesBuilder = ImmutableList.builder();
     for (Path filePath : allFiles) {
       if (allOpenedFilesOrDirs.contains(filePath.toString())) {
         // Skip opened files or dirs.
+        logger.atInfo().log("Skip opened file or dir: %s", filePath);
+        continue;
+      }
+      if (runningCommands.contains(filePath.toString())) {
+        logger.atInfo().log("Skip file or dir listed in running commands: %s", filePath);
         continue;
       }
       // Consider a file expired if it remains unchanged for the given duration.
