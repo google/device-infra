@@ -300,6 +300,10 @@ public class Errors {
     return errorId;
   }
 
+  public static ErrorInfo toLegacyErrorInfo(ExceptionProto.ExceptionDetail detail) {
+    return toLegacyErrorInfo(detail, null);
+  }
+
   private static ErrorInfo toLegacyErrorInfo(
       ExceptionProto.ExceptionDetail detail, @Nullable String legacyErrorInfoStackTrace) {
     ExceptionProto.ExceptionSummary summary = detail.getSummary();

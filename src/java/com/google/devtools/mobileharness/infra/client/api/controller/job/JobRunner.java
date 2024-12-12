@@ -65,6 +65,7 @@ import com.google.devtools.mobileharness.infra.controller.test.manager.DirectTes
 import com.google.devtools.mobileharness.infra.controller.test.manager.TestManager;
 import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberExceptionLoggingHandler;
 import com.google.devtools.mobileharness.shared.constant.closeable.MobileHarnessAutoCloseable;
+import com.google.devtools.mobileharness.shared.model.error.UnknownErrorId;
 import com.google.devtools.mobileharness.shared.util.comm.messaging.poster.TestMessagePoster;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.error.ErrorModelConverter;
@@ -674,13 +675,22 @@ public class JobRunner implements Runnable {
                 testInfo.status().set(TestStatus.DONE);
                 testInfo.resultWithCause().setNonPassing(Test.TestResult.FAIL, e);
               });
+    } catch (MobileHarnessException e) {
+      jobError = e;
+      jobInfo.warnings().addAndLog(e, logger);
     } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
       if (jobInfo.params().getBool(JobInfo.PARAM_IGNORE_NOT_ASSIGNED_TESTS, false)
           && e.getErrorCode() == ErrorCode.DEVICE_NOT_FOUND.code()) {
         jobInfo.log().atInfo().alsoTo(logger).log("Ignoring: %s", e);
       } else {
         jobError = e;
-        jobInfo.errors().addAndLog(e, logger);
+        jobInfo
+            .warnings()
+            .addAndLog(
+                UnknownErrorId.of(e.getErrorCodeEnum(), e.getErrorType()),
+                e.getMessage(),
+                e.getCause(),
+                logger);
       }
     } catch (InterruptedException e) {
       jobError = e;
@@ -944,8 +954,16 @@ public class JobRunner implements Runnable {
     logger.atFine().log("Tear down allocator");
     try {
       deviceAllocator.tearDown();
+    } catch (MobileHarnessException e) {
+      jobInfo.warnings().addAndLog(e, logger);
     } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
-      jobInfo.errors().addAndLog(e, logger);
+      jobInfo
+          .warnings()
+          .addAndLog(
+              UnknownErrorId.of(e.getErrorCodeEnum(), e.getErrorType()),
+              e.getMessage(),
+              e.getCause(),
+              logger);
     } catch (Throwable t) {
       // For safety, prints out the unknown error.
       logger.atSevere().withCause(t).log("FATAL job error when tearing down allocator");
@@ -1001,8 +1019,8 @@ public class JobRunner implements Runnable {
       logger.atInfo().log("Finalize job");
       try {
         finalizeJobResult(failFastError, isDeviceAllocatorSetUp, false, jobError);
-      } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
-        jobInfo.errors().addAndLog(e, logger);
+      } catch (MobileHarnessException e) {
+        jobInfo.warnings().addAndLog(e, logger);
       } catch (Throwable e) {
         String errorMessage = "Failed to finalize job";
         logger.atWarning().withCause(e).log("%s", errorMessage);

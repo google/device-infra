@@ -60,6 +60,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/manager:direct_test_runner_util",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/util:exception_handler",
         "//src/java/com/google/devtools/mobileharness/shared/constant/closeable:mobile_harness_auto_closeable",
+        "//src/java/com/google/devtools/mobileharness/shared/model/error:unknown_error",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_text_format",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/messaging/poster",
