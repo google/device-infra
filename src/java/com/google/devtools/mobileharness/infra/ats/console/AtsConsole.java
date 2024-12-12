@@ -367,6 +367,7 @@ public class AtsConsole {
     return ImmutableList.of(
         String.format("--olc_server_port=%d", olcPort),
         String.format("--public_dir=/tmp/xts_console/server_%d", olcPort),
-        String.format("--tmp_dir_root=/tmp/xts_console/server_%d", olcPort));
+        String.format("--tmp_dir_root=/tmp/xts_console/server_%d", olcPort),
+        "--ats_console_olc_server_copy_server_resource=false");
   }
 }
