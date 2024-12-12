@@ -20,6 +20,7 @@ import com.google.auto.value.AutoValue;
 import com.google.auto.value.extension.memoized.Memoized;
 import com.google.devtools.mobileharness.api.model.job.TestLocator;
 import com.google.devtools.mobileharness.api.model.lab.LabLocator;
+import com.google.devtools.mobileharness.api.model.proto.Lab;
 import com.google.devtools.mobileharness.api.model.proto.Lab.PortType;
 import java.util.Optional;
 
@@ -84,6 +85,10 @@ public abstract class LabServerLocator {
 
   public int grpcPort() {
     return labLocator().ports().getNonNull(PortType.LAB_SERVER_GRPC);
+  }
+
+  public Lab.LabLocator labLocatorProto() {
+    return labLocator().toProto();
   }
 
   private static String getPerTestLabServerCloudRpcShardName(String labHostName, String testId) {

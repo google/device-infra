@@ -21,12 +21,16 @@ import static com.google.common.net.HostAndPort.fromParts;
 import static com.google.common.net.InetAddresses.forString;
 import static com.google.common.net.InetAddresses.isInetAddress;
 import static com.google.common.net.InetAddresses.toAddrString;
+import static com.google.devtools.mobileharness.shared.util.comm.relay.DestinationUtils.createDestination;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.net.HostAndPort;
+import com.google.devtools.mobileharness.infra.client.api.mode.remote.LabServerLocator;
 import com.google.devtools.mobileharness.infra.client.api.proto.ServerLocatorProto.GrpcServerLocator;
 import com.google.devtools.mobileharness.infra.client.api.proto.ServerLocatorProto.ServerLocator;
+import com.google.devtools.mobileharness.infra.container.proto.TestEngine.TestEngineLocator;
+import com.google.devtools.mobileharness.shared.util.comm.relay.proto.DestinationProto.Destination;
 import com.google.devtools.mobileharness.shared.util.comm.stub.StubConfigurationProto.DirectTarget;
 import com.google.devtools.mobileharness.shared.util.comm.stub.StubConfigurationProto.ServerSpec;
 import com.google.devtools.mobileharness.shared.util.comm.stub.StubConfigurationProto.StubConfiguration;
@@ -140,6 +144,43 @@ public final class ServerLocatorUtil {
         .setDirectTarget(
             DirectTarget.newBuilder()
                 .setServerSpec(ServerSpec.newBuilder().setTarget(toGrpcTarget(grpcServerLocator))))
+        .build();
+  }
+
+  /**
+   * Creates a {@link StubConfiguration} for a grpc server locator with the relay destination from a
+   * lab server locator.
+   *
+   * <p>The grpc target in server spec will be resolved by {@link io.grpc.NameResolver}.
+   */
+  public static StubConfiguration createGrpcDirectStubConfiguration(
+      GrpcServerLocator grpcServerLocator, LabServerLocator labServerLocator) {
+    return createGrpcDirectStubConfiguration(
+        grpcServerLocator, createDestination(labServerLocator.labLocatorProto()));
+  }
+
+  /**
+   * Creates a {@link StubConfiguration} for a grpc server locator with the relay destination from a
+   * lab server locator and a test engine locator.
+   *
+   * <p>The grpc target in server spec will be resolved by {@link io.grpc.NameResolver}.
+   */
+  public static StubConfiguration createGrpcDirectStubConfiguration(
+      GrpcServerLocator grpcServerLocator,
+      LabServerLocator labServerLocator,
+      TestEngineLocator testEngineLocator) {
+    return createGrpcDirectStubConfiguration(
+        grpcServerLocator, createDestination(labServerLocator, testEngineLocator));
+  }
+
+  private static StubConfiguration createGrpcDirectStubConfiguration(
+      GrpcServerLocator grpcServerLocator, Destination destination) {
+    return StubConfiguration.newBuilder()
+        .setTransport(Transport.GRPC)
+        .setDirectTarget(
+            DirectTarget.newBuilder()
+                .setServerSpec(ServerSpec.newBuilder().setTarget(toGrpcTarget(grpcServerLocator)))
+                .setRelayDestination(destination))
         .build();
   }
 
