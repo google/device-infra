@@ -16,7 +16,6 @@
 
 package com.google.devtools.mobileharness.service.moss.util.slg;
 
-import com.google.common.collect.ImmutableList;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.ExceptionDetail;
 import com.google.devtools.mobileharness.api.model.job.out.TouchableTiming;
 import com.google.wireless.qa.mobileharness.shared.log.LogCollector;
@@ -38,10 +37,5 @@ final class ErrorsConverter {
     return JobOutInternalFactory.createErrors(
         com.google.devtools.mobileharness.api.model.job.out.JobOutInternalFactory.createWarnings(
             log, timing, exceptionDetails));
-  }
-
-  /** Gets a list of {@link ExceptionDetail}s by the given {@link Errors}. */
-  static ImmutableList<ExceptionDetail> toProto(Errors errors) {
-    return errors.toWarnings().getAll();
   }
 }

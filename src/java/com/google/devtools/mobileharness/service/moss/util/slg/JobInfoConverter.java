@@ -147,7 +147,7 @@ public final class JobInfoConverter {
         .setStatus(StatusConverter.toProto(jobInfo.status()))
         .setResult(ResultConverter.toProto(jobInfo.result()))
         .setProperties(PropertiesConverter.toProto(jobInfo.properties()))
-        .addAllError(ErrorsConverter.toProto(jobInfo.errors()))
+        .addAllError(jobInfo.warnings().getAll())
         .setJobSpec(jobInfo.protoSpec().getProto())
         .addAllTestInfo(
             jobInfo.tests().getAll().values().stream()

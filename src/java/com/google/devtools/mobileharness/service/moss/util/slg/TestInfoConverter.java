@@ -112,7 +112,7 @@ public final class TestInfoConverter {
         .setStatus(StatusConverter.toProto(testInfo.status()))
         .setResult(ResultConverter.toProto(testInfo.result()))
         .setProperties(PropertiesConverter.toProto(testInfo.properties()))
-        .addAllError(ErrorsConverter.toProto(testInfo.errors()))
+        .addAllError(testInfo.warnings().getAll())
         .addAllSubTestInfo(
             testInfo.subTests().getAll().values().stream()
                 .map(TestInfoConverter::toProto)
