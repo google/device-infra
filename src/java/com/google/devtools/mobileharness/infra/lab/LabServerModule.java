@@ -53,6 +53,7 @@ import com.google.devtools.mobileharness.shared.file.resolver.AbstractFileResolv
 import com.google.devtools.mobileharness.shared.file.resolver.AtsFileServerFileResolver;
 import com.google.devtools.mobileharness.shared.file.resolver.CacheFileResolver;
 import com.google.devtools.mobileharness.shared.file.resolver.FileResolver;
+import com.google.devtools.mobileharness.shared.file.resolver.GcsFileResolver;
 import com.google.devtools.mobileharness.shared.file.resolver.LocalFileResolver;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
@@ -162,6 +163,10 @@ public class LabServerModule extends AbstractModule {
     AbstractFileResolver atsFileServerFileResolver =
         new AtsFileServerFileResolver(threadPool, localFileUtil);
     cacheFileResolver.setSuccessor(atsFileServerFileResolver);
+
+    // GcsFileResolver.
+    AbstractFileResolver gcsFileResolver = new GcsFileResolver(threadPool);
+    atsFileServerFileResolver.setSuccessor(gcsFileResolver);
 
     return localFileResolver;
   }

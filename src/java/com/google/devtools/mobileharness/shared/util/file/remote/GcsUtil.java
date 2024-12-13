@@ -327,6 +327,52 @@ public class GcsUtil {
   }
 
   /**
+   * Copies the file or directory to local.
+   *
+   * @param gcsFileOrDir the file or directory to copy
+   * @param localFileOrDir the local file or directory to copy to
+   * @throws MobileHarnessException if failed to copy
+   * @throws InterruptedException if interrupted
+   */
+  public void copyFileOrDirectoryToLocal(String gcsFileOrDir, Path localFileOrDir)
+      throws MobileHarnessException, InterruptedException {
+    Path gcsPath = GcsUri.parseUri(gcsFileOrDir).objectPath();
+    if (isFile(gcsFileOrDir)) {
+      copyFileToLocal(gcsPath, localFileOrDir);
+    } else {
+      copyDirectoryToLocal(gcsPath, localFileOrDir);
+    }
+  }
+
+  /** Returns true if the file is a file, false if it is a directory or not exist. */
+  private boolean isFile(String fileOrDirPath) throws MobileHarnessException {
+    List<String> files = listFiles(fileOrDirPath);
+    return files.size() == 1 && files.get(0).equals(fileOrDirPath);
+  }
+
+  /**
+   * Copies the directory to local.
+   *
+   * @param gcsDirectory the directory to copy
+   * @param localDirectory the local directory to copy to
+   * @throws MobileHarnessException if failed to copy
+   * @throws InterruptedException if interrupted
+   */
+  private void copyDirectoryToLocal(Path gcsDirectory, Path localDirectory)
+      throws MobileHarnessException, InterruptedException {
+    logger.atInfo().log("Copying directory from %s to %s", gcsDirectory, localDirectory);
+    localFileUtil.prepareDir(localDirectory);
+    localFileUtil.grantFileOrDirFullAccess(localDirectory);
+    List<String> files = listFiles(gcsDirectory + "/");
+    for (String file : files) {
+      if (!file.endsWith("/")) { // Skip directories
+        copyFileToLocal(
+            Path.of(file), localDirectory.resolve(gcsDirectory.relativize(Path.of(file))));
+      }
+    }
+  }
+
+  /**
    * Copy file from GCS to local, replace destination file with atomic move. Save md5hash as file
    * attribute.
    *
@@ -672,7 +718,25 @@ public class GcsUtil {
    * @param delimiter name of the objects' delimiter
    */
   public List<String> listFiles(String prefix, String delimiter) throws MobileHarnessException {
+    return listFiles(prefix, delimiter, false);
+  }
+
+  /**
+   * Return the objects names beginning with this prefix in directory-like mode. Items will contain
+   * only objects whose names, aside from the prefix, do not contain delimiter. Objects whose names,
+   * aside from the prefix, contain delimiter will have their name, truncated after the delimiter,
+   * returned in prefixes. Duplicate prefixes are omitted.
+   *
+   * @param prefix name of the objects' prefix
+   * @param delimiter name of the objects' delimiter
+   * @param recursively whether to recursively list files
+   */
+  public List<String> listFiles(String prefix, String delimiter, boolean recursively)
+      throws MobileHarnessException {
     List<String> files = new ArrayList<>();
+    logger.atInfo().log(
+        "List files wihh prefix(%s), delimiter(%s), recursively(%s)",
+        prefix, delimiter, recursively);
     try {
       Storage.Objects.List listObjects = client.objects().list(storageParams.bucketName);
       if (!Strings.isNullOrEmpty(prefix)) {
@@ -684,9 +748,15 @@ public class GcsUtil {
       Objects objects;
       do {
         objects = listObjects.execute();
-        List<String> dirs = objects.getPrefixes();
-        if (dirs != null) {
-          files.addAll(dirs);
+        List<String> prefixes = objects.getPrefixes();
+        if (prefixes != null) {
+          for (String subPrefix : prefixes) {
+            if (recursively) {
+              files.addAll(listFiles(subPrefix, delimiter, recursively));
+            } else {
+              files.add(subPrefix);
+            }
+          }
         }
         List<StorageObject> items = objects.getItems();
         if (items != null) {
