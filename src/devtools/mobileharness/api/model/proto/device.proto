@@ -26,10 +26,20 @@ option java_outer_classname = "Device";
 
 // Status of a device during its life cycle.
 enum DeviceStatus {
+  // The device isn't ready to run tests since it's still initializing because
+  // it is just rebooted or reconnected.
   INIT = 0;
+  // The device is ready to run tests it supports.
   IDLE = 1;
+  // The device is running one test currently.
   BUSY = 2;
+  // The device is tearing down because it is disconnected or it is going to
+  // reboot, in this status means the device isn't alive.
   DYING = 3;
+  // The device has been initialized and is idle now, but not ready to run tests
+  // due to some reasons, such as battery low(needs to recharge its battery
+  // otherwise the new tests may turn off the device and requires manual
+  // recovery for it).
   PREPPING = 4;
   // Used in Master only: just finished a test and is not ready for a new one.
   DIRTY = 5;

@@ -24,15 +24,20 @@ option java_outer_classname = "UniverseProto";
 // Universe represents a logically isolated environment within the OmniLab
 // ecosystem.
 message Universe {
+  // A Google internal lab.
   message GoogleInternalLab {}
 
+  // An ATS lab.
   message AtsLab {
+    // The controller id of the ATS lab.
     string ats_controller_id = 1;
   }
 
   // If not set, the lab will be considered as a Google internal lab.
   oneof universe {
+    // A Google internal lab.
     GoogleInternalLab google_internal_lab = 1;
+    // An ATS lab.
     AtsLab ats_lab = 2;
   }
 }

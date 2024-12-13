@@ -44,6 +44,8 @@ message LabLocator {
   string host_name = 2;  // Required.
   // TODO: Remove this field as it is not in use now.
   repeated LabPort port = 3;  // Lab port information.
+
+  // Optional. The IP address of lab server detected by master.
   optional string master_detected_ip = 4;
 
   // Optional. The universe which the lab server belongs to.
