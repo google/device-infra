@@ -252,11 +252,46 @@ public class AndroidInstrumentationTest {
   }
 
   @Test
-  public void run_ignoreInstrumentationOutput() throws Exception {
+  public void run_useAndroidInstrumentationParser_noFilePathOnDevice_fail() throws Exception {
     mockRunTestBasicSteps(TEST_NAME, OPTIONS, false, false);
-    jobInfo.params().add(AndroidInstrumentationDriverSpec.PARAM_IGNORE_INSTRUMENT_OUTPUT, "true");
-    String instrumentationLog = "INSTRUMENTATION_CODE: -1\n";
+    jobInfo
+        .params()
+        .add(AndroidInstrumentationDriverSpec.PARAM_USE_ANDROIDINSTRUMENTATION_PARSER, "false");
 
+    MobileHarnessException exception =
+        new MobileHarnessException(
+            AndroidErrorId.ANDROID_INSTRUMENTATION_GTEST_XML_FILE_ON_DEVICE_NOT_SET,
+            "missing file path");
+    AndroidInstrumentationSetting setting =
+        mockInstrumentSetting(
+            TEST_NAME,
+            OPTION_MAP,
+            /* async= */ false,
+            /* showRawResults= */ false,
+            /* prefixAndroidTest= */ true,
+            /* noIsolatedStorage= */ true,
+            /* useTestStorageService= */ true);
+    when(androidInstrumentationUtil.instrument(
+            DEVICE_ID, DEFAULT_SDK_VERSION, setting, TEST_TIMEOUT))
+        .thenThrow(exception);
+
+    assertThrows(MobileHarnessException.class, () -> driver.run(testInfo));
+    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.UNKNOWN);
+  }
+
+  @Test
+  public void run_useAndroidInstrumentationParser_pass() throws Exception {
+    mockRunTestBasicSteps(TEST_NAME, OPTIONS, false, false);
+    String instrumentationLog = "INSTRUMENTATION_CODE: -1\n";
+    String gtestXmlFile = "/sdcard/googletest/test_output.xml";
+
+    jobInfo
+        .params()
+        .add(AndroidInstrumentationDriverSpec.PARAM_USE_ANDROIDINSTRUMENTATION_PARSER, "false");
+
+    jobInfo
+        .params()
+        .add(AndroidInstrumentationDriverSpec.PARAM_GTEST_XML_FILE_ON_DEVICE, gtestXmlFile);
     AndroidInstrumentationSetting setting =
         mockInstrumentSetting(
             TEST_NAME,
@@ -269,10 +304,12 @@ public class AndroidInstrumentationTest {
     when(androidInstrumentationUtil.instrument(
             DEVICE_ID, DEFAULT_SDK_VERSION, setting, TEST_TIMEOUT))
         .thenReturn(instrumentationLog);
+    when(androidInstrumentationUtil.getGtestResult(
+            eq(DEVICE_ID), eq(testInfo), eq(gtestXmlFile), any(), any(), any()))
+        .thenReturn(com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult.PASS);
 
     driver.run(testInfo);
-
-    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.UNKNOWN);
+    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
   }
 
   @Test
