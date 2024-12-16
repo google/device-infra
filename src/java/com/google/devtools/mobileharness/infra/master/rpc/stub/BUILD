@@ -48,6 +48,7 @@ java_library(
         "//src/devtools/mobileharness/infra/master/rpc/proto:device_allocation_service_java_proto",
         "//src/java/com/google/devtools/common/metrics/stability/rpc:exception",
         "@maven//:com_google_errorprone_error_prone_annotations",
+        "@maven//:com_google_guava_guava",
     ],
 )
 

@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.master.rpc.stub;
 
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.common.metrics.stability.rpc.RpcExceptionWithErrorId;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.DeviceAllocationServiceProto.AllocationRequest;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.DeviceAllocationServiceProto.AllocationResponse;
@@ -27,7 +28,7 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
 /** RPC stub for talking to Master DeviceAllocationService. */
 public interface DeviceAllocationStub extends AutoCloseable {
   /** Allocates devices. */
-  AllocationResponse allocate(AllocationRequest request) throws RpcExceptionWithErrorId;
+  ListenableFuture<AllocationResponse> allocate(AllocationRequest request);
 
   /** Deallocates devices. */
   @CanIgnoreReturnValue
