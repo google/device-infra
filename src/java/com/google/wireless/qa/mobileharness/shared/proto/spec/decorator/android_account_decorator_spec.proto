@@ -1,0 +1,110 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto2";
+
+package mobileharness.shared.spec;
+
+import "src/java/com/google/wireless/qa/mobileharness/shared/proto/spec/base_spec.proto";
+
+option java_package = "com.google.wireless.qa.mobileharness.shared.proto.spec.decorator";
+option java_multiple_files = true;
+
+// Specs for {@link AndroidAccountDecorator}
+// Next tag:
+message AndroidAccountDecoratorSpec {
+  extend DecoratorSpec {
+    optional AndroidAccountDecoratorSpec ext = 313860729;
+  }
+
+  optional string email = 1 [
+    deprecated = true,
+    (field_detail) = {
+      help: "Deprecated, use emails instead. Email address of a Google "
+            "accounts to set on the device."
+    }
+  ];
+
+  optional string password = 2 [
+    deprecated = true,
+    (field_detail) = {
+      help: "Deprecated, use passwords instead. Password of the given Google "
+            "accounts."
+    }
+  ];
+
+  optional string emails = 3 [(field_detail) = {
+    help: "Comma separated email addresses of the Google accounts to set on "
+          "the device."
+  }];
+
+  optional string passwords = 4 [(field_detail) = {
+    help: "Comma separated passwords of given accounts in the order of given "
+          "accounts in emails param. \n[NOTE: Avoid comma in password because "
+          "this param is comma separated.]"
+  }];
+
+  optional string account_credential_type = 5 [
+    deprecated = true,
+    (field_detail) = {
+      help: "Deprecated, use account_credential_types instead. The type of "
+            "credential. By default it is password."
+    }
+  ];
+
+  optional string account_credential_types = 6 [(field_detail) = {
+    help: "Comma separated credential type of given accounts in the order of "
+          "given accounts in emails param. By default it is password."
+  }];
+
+  optional string account_type = 7 [
+    deprecated = true,
+    (field_detail) = {
+      help: "Deprecated, use account_types instead. The type of account. By "
+            "default it is com.google."
+    }
+  ];
+
+  optional string account_types = 8 [(field_detail) = {
+    help: "Comma separated type of given accounts in the order of given "
+          "accounts in emails param. By default it is com.google."
+  }];
+
+  optional bool account_sync = 9 [(field_detail) = {
+    help: "Enable auto sync of the Google account. By default it is disabled"
+  }];
+
+  optional bool force_remove_account = 10 [(field_detail) = {
+    help: "Force re-login the given account even when the account already "
+          "exists in device and remove other accounts. False by default."
+  }];
+
+  optional bool remove_account_after_test = 11 [(field_detail) = {
+    help: "Remove the given account after running the test. True by default "
+          "for satellite lab; Always true and unchangable for shared lab."
+  }];
+
+  optional bool ignore_login_error = 12 [(field_detail) = {
+    help: "Whether to ignore Google account login error. False by default."
+  }];
+
+  optional bool force_install_signed_apks = 13 [(field_detail) = {
+    help: "Whether to force install the signed version of account helper apks."
+          "False by default."
+          "Suggest not to set this field so it is depends on the device build."
+          "Use it on your own risk."
+  }];
+}

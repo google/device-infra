@@ -100,6 +100,19 @@ java_proto_library(
 ################################################################################
 
 proto_library(
+    name = "android_account_decorator_spec_proto",
+    srcs = ["decorator/android_account_decorator_spec.proto"],
+    deps = [
+        ":base_spec_proto",
+    ],
+)
+
+java_proto_library(
+    name = "android_account_decorator_spec_java_proto",
+    deps = [":android_account_decorator_spec_proto"],
+)
+
+proto_library(
     name = "android_adb_shell_decorator_spec_proto",
     srcs = ["decorator/android_adb_shell_decorator_spec.proto"],
     deps = [":base_spec_proto"],

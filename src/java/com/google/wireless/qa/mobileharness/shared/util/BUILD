@@ -114,6 +114,7 @@ java_library(
     name = "google_account_decorator_util",
     srcs = ["GoogleAccountDecoratorUtil.java"],
     visibility = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:__subpackages__",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",

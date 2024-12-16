@@ -40,6 +40,19 @@ java_library(
 ################################################################################
 
 java_library(
+    name = "android_account_decorator_job_validator",
+    srcs = ["AndroidAccountDecoratorJobValidator.java"],
+    deps = [
+        ":job_validator",
+        "//src/java/com/google/devtools/mobileharness/platform/android/accountmanager:enums",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:google_account_decorator_spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "android_adb_shell_decorator_job_validator",
     srcs = ["AndroidAdbShellDecoratorJobValidator.java"],
     deps = [
