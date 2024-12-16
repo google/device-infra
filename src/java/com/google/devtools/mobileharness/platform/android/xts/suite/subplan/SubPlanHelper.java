@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.platform.android.xts.suite.subplan;
 import com.google.common.base.Ascii;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Attribute;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
@@ -32,6 +33,8 @@ import java.util.Set;
 
 /** SubPlan helper class. */
 public class SubPlanHelper {
+
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   /**
    * Creates a subplan per given previous result.
@@ -67,8 +70,35 @@ public class SubPlanHelper {
                 "%s %s %s", module.getAbi(), module.getName(), previousResult.getTestFilter()),
             isNonTfModule);
       }
+      // If the previous result has include/exclude filters, for example the previous run was
+      // running with given subplan file, whose include/exclude filters are stored in the
+      // previous result.
+      if (!prevResultIncludeFilters.isEmpty()) {
+        prevResultIncludeFilters.stream()
+            .filter(
+                filter ->
+                    filter.matchModule(
+                        module.getName(), module.getAbi(), /* moduleParameter= */ null))
+            .forEach(
+                prevResultIncludeFilter ->
+                    addIncludeFilter(
+                        subPlan, prevResultIncludeFilter.filterString(), isNonTfModule));
+      }
+      if (!prevResultExcludeFilters.isEmpty()) {
+        prevResultExcludeFilters.stream()
+            .filter(
+                filter ->
+                    filter.matchModule(
+                        module.getName(), module.getAbi(), /* moduleParameter= */ null))
+            .forEach(
+                prevResultExcludeFilter ->
+                    addExcludeFilter(
+                        subPlan, prevResultExcludeFilter.filterString(), isNonTfModule));
+      }
       if (RetryResultHelper.shouldRunModule(module, types, addSubPlanCmd, passedInModules)) {
         if (types.contains("not_executed") && !module.getDone()) {
+          logger.atInfo().log(
+              "Module [%s %s] was not done in previous run", module.getAbi(), module.getName());
           // Exclude tests that should not be run
           for (TestCase testCase : module.getTestCaseList()) {
             for (Test test : testCase.getTestList()) {

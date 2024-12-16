@@ -84,6 +84,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/xml:xml_constants",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:suite_test_filter",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:retry_result_helper",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_guava_guava",
     ],
 )

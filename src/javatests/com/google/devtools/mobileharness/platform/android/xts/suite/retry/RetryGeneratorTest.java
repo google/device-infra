@@ -159,6 +159,19 @@ public final class RetryGeneratorTest {
           .addModuleInfo(MODULE_5_V7A)
           .build();
 
+  private static final Result REPORT_3 =
+      Result.newBuilder()
+          .addModuleInfo(MODULE_1_V8A)
+          .addModuleInfo(MODULE_1_V7A)
+          .addModuleInfo(MODULE_2_V8A)
+          .addModuleInfo(NON_TF_MODULE_3_V8A)
+          .addModuleInfo(MODULE_5_V7A)
+          .addIncludeFilter("armeabi-v7a Module5 TestClass3#Test1")
+          .addIncludeFilter("armeabi-v7a Module5 TestClass1#Test1")
+          .addExcludeFilter("armeabi-v7a Module5 TestClass4#Test1")
+          .addExcludeFilter("armeabi-v7a FakeModule FakeTestClass#Test1")
+          .build();
+
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
 
   @Bind @Mock private PreviousResultLoader previousResultLoader;
@@ -237,6 +250,43 @@ public final class RetryGeneratorTest {
         .containsExactly(
             "arm64-v8a Module2", ImmutableSet.of("ALL"),
             "armeabi-v7a Module5", ImmutableSet.of("TestClass1#Test1"));
+
+    assertThat(Multimaps.asMap(subPlan.getNonTfIncludeFiltersMultimap()))
+        .containsExactly("arm64-v8a Module3", ImmutableSet.of("ALL", "TestClass1#Test2"));
+  }
+
+  @org.junit.Test
+  public void generateRetrySubPlan_defaultRetryType_previousResultRanWithSubPlanAndModuleNotDone()
+      throws Exception {
+    Path resultsDir = Path.of("/path/to/results_dir");
+    int previousSessionIndex = 0;
+    when(previousResultLoader.loadPreviousResult(resultsDir, previousSessionIndex))
+        .thenReturn(REPORT_3);
+
+    SubPlan subPlan =
+        retryGenerator.generateRetrySubPlan(
+            RetryArgs.builder()
+                .setResultsDir(resultsDir)
+                .setPreviousSessionIndex(previousSessionIndex)
+                .build());
+
+    SetMultimap<String, String> subPlanIncludeFiltersMultimap = subPlan.getIncludeFiltersMultimap();
+    SetMultimap<String, String> subPlanExcludeFiltersMultimap = subPlan.getExcludeFiltersMultimap();
+
+    assertThat(Multimaps.asMap(subPlanIncludeFiltersMultimap))
+        .containsExactly(
+            "arm64-v8a Module1",
+            ImmutableSet.of("ALL", "TestClass1#Test2", "TestClass2#Test1", "TestClass2#Test2"),
+            "arm64-v8a Module2",
+            ImmutableSet.of("ALL"),
+            "armeabi-v7a Module1",
+            ImmutableSet.of("ALL"),
+            "armeabi-v7a Module5",
+            ImmutableSet.of("ALL", "TestClass3#Test1", "TestClass1#Test1"));
+    assertThat(Multimaps.asMap(subPlanExcludeFiltersMultimap))
+        .containsExactly(
+            "arm64-v8a Module2", ImmutableSet.of("ALL"),
+            "armeabi-v7a Module5", ImmutableSet.of("TestClass1#Test1", "TestClass4#Test1"));
 
     assertThat(Multimaps.asMap(subPlan.getNonTfIncludeFiltersMultimap()))
         .containsExactly("arm64-v8a Module3", ImmutableSet.of("ALL", "TestClass1#Test2"));
