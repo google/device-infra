@@ -103,7 +103,8 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
           "32", 2022,
           "33", 2022,
           "34", 2023,
-          "35", 2024);
+          "35", 2024,
+          "36", 2025);
   // For CTS, there's no diff between arm64 and arm.
   private static final ImmutableMap<String, String> DEVICE_ABI_MAP =
       ImmutableMap.of(
