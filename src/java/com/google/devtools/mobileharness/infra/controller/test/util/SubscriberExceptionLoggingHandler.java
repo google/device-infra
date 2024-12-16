@@ -26,6 +26,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.api.testrunner.plugin.SkipJobException;
 import com.google.devtools.mobileharness.api.testrunner.plugin.SkipTestException;
+import com.google.devtools.mobileharness.shared.model.error.UnknownErrorId;
 import com.google.devtools.mobileharness.shared.util.event.EventBus;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEvent;
 import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
@@ -220,11 +221,15 @@ public class SubscriberExceptionLoggingHandler
                     .getErrorCode()
                 != ErrorCode.UNKNOWN.code()) {
           // Uses the error code in MobileHarnessException.
+          com.google.wireless.qa.mobileharness.shared.MobileHarnessException e =
+              (com.google.wireless.qa.mobileharness.shared.MobileHarnessException)
+                  context.exception();
           testInfo
-              .errors()
+              .warnings()
               .add(
-                  (com.google.wireless.qa.mobileharness.shared.MobileHarnessException)
-                      context.exception());
+                  UnknownErrorId.of(e.getErrorCodeEnum(), e.getErrorType()),
+                  e.getMessage(),
+                  e.getCause());
         } else {
           testInfo
               .warnings()
@@ -255,11 +260,15 @@ public class SubscriberExceptionLoggingHandler
                     .getErrorCode()
                 != ErrorCode.UNKNOWN.code()) {
           // Uses the error code in MobileHarnessException.
+          com.google.wireless.qa.mobileharness.shared.MobileHarnessException e =
+              (com.google.wireless.qa.mobileharness.shared.MobileHarnessException)
+                  context.exception();
           jobInfo
-              .errors()
+              .warnings()
               .add(
-                  (com.google.wireless.qa.mobileharness.shared.MobileHarnessException)
-                      context.exception());
+                  UnknownErrorId.of(e.getErrorCodeEnum(), e.getErrorType()),
+                  e.getMessage(),
+                  e.getCause());
         } else {
           jobInfo
               .warnings()

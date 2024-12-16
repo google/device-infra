@@ -75,6 +75,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/testrunner/event/test:base",
         "//src/java/com/google/devtools/mobileharness/api/testrunner/plugin:exception",
+        "//src/java/com/google/devtools/mobileharness/shared/model/error:unknown_error",
         "//src/java/com/google/devtools/mobileharness/shared/util/event:event_bus",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/client/api/event:job",
