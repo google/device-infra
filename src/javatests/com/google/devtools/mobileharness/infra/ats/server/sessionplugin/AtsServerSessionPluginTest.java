@@ -43,7 +43,6 @@ import com.google.devtools.mobileharness.infra.ats.common.jobcreator.XtsJobCreat
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Summary;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.AtsServerSessionNotification;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CancelSession;
-import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandAttemptDetail;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandDetail;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandInfo;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandState;
@@ -71,7 +70,6 @@ import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsCon
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
-import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
@@ -566,55 +564,6 @@ public final class AtsServerSessionPluginTest {
         .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
     RequestDetail requestDetail = unaryOperatorCaptor.getValue().apply(null);
     assertThat(requestDetail.getState()).isEqualTo(RequestState.CANCELED);
-  }
-
-  @Test
-  public void onJobEnded_tradefedJobEnded_addCommandAttemptDetailsAndCommandDetail()
-      throws Exception {
-    when(sessionInfo.getSessionPluginExecutionConfig())
-        .thenReturn(
-            SessionPluginExecutionConfig.newBuilder()
-                .setConfig(
-                    Any.pack(
-                        SessionRequest.newBuilder().setNewMultiCommandRequest(request).build()))
-                .build());
-    plugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
-    verify(sessionInfo).addJob(jobInfo);
-    when(jobInfo.timing()).thenReturn(timing);
-    when(jobInfo.status()).thenReturn(new Status(timing).set(TestStatus.DONE));
-    Result result = new Result(timing, new Params(timing)).set(TestResult.PASS);
-    when(jobInfo.result()).thenReturn(result);
-    JobType jobType = JobType.newBuilder().setDriver("XtsTradefedTest").build();
-    when(jobInfo.type()).thenReturn(jobType);
-
-    plugin.onJobEnded(new JobEndEvent(jobInfo, null));
-
-    // Set 2 times when: session is started and job is ended.
-    verify(sessionInfo, times(2))
-        .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
-    RequestDetail requestDetail = Iterables.getLast(unaryOperatorCaptor.getAllValues()).apply(null);
-    String commandId =
-        UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
-    assertThat(requestDetail.getCommandAttemptDetailsCount()).isEqualTo(1);
-    CommandAttemptDetail commandAttemptDetail = requestDetail.getCommandAttemptDetails(0);
-    assertThat(commandAttemptDetail.getId()).isEqualTo("test_id");
-    assertThat(commandAttemptDetail.getRequestId()).isEqualTo("session_id");
-    assertThat(commandAttemptDetail.getCommandId()).isEqualTo(commandId);
-    assertThat(commandAttemptDetail.getDeviceSerialsList())
-        .containsExactly("device_id_1", "device_id_2");
-    assertThat(commandAttemptDetail.getState()).isEqualTo(CommandState.COMPLETED);
-    assertThat(commandAttemptDetail.getStartTime()).isEqualTo(Timestamps.fromMillis(1001));
-    assertThat(commandAttemptDetail.getEndTime()).isEqualTo(Timestamps.fromMillis(1002));
-    assertThat(commandAttemptDetail.getCreateTime()).isEqualTo(Timestamps.fromMillis(1000));
-    assertThat(commandAttemptDetail.getUpdateTime())
-        .isEqualTo(TimeUtils.toProtoTimestamp(timing.getModifyTime()));
-    assertThat(commandAttemptDetail.getPassedTestCount()).isEqualTo(10);
-    assertThat(commandAttemptDetail.getFailedTestCount()).isEqualTo(10);
-    assertThat(commandAttemptDetail.getTotalTestCount()).isEqualTo(20);
-
-    CommandDetail commandDetail = requestDetail.getCommandDetailsMap().get(commandId);
-    assertThat(commandDetail.getOriginalCommandInfo()).isEqualTo(commandInfo);
-    assertThat(commandDetail.getState()).isEqualTo(CommandState.RUNNING);
   }
 
   @Test

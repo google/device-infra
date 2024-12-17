@@ -26,11 +26,9 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.AtsServerSessionNotification;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.AtsServerSessionNotification.NotificationCase;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CancelReason;
-import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandAttemptDetail;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandDetail;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandState;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.ErrorReason;
@@ -54,10 +52,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginLoadingConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.CreateSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.LocalSessionStub;
-import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.message.proto.TestMessageProto.XtsTradefedRunCancellation;
-import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyTestInfoMapHelper;
-import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.protobuf.Any;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -67,12 +62,8 @@ import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageUtil;
 import com.google.wireless.qa.mobileharness.shared.controller.event.TestStartingEvent;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
-import com.google.wireless.qa.mobileharness.shared.model.job.out.Result;
-import com.google.wireless.qa.mobileharness.shared.model.job.out.Status;
-import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestStatus;
 import java.time.Clock;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -266,22 +257,6 @@ final class AtsServerSessionPlugin {
         if (!tradefedJobs.isEmpty()) {
           sessionInfo.addJob(tradefedJobs.remove(0));
         }
-        // Generate a new commandAttempt for the finished job, and update the command status.
-        if (requestDetail.containsCommandDetails(getCommandIdOfJob(jobInfo))) {
-          // Add a command attempt
-          CommandAttemptDetail commandAttemptDetail =
-              generateCommandAttemptDetail(
-                  jobInfo,
-                  jobInfo.tests().getAll().values().iterator().next(),
-                  sessionInfo.getSessionId());
-          requestDetail
-              .addCommandAttemptDetails(commandAttemptDetail)
-              .setUpdateTime(TimeUtils.toProtoTimestamp(Instant.now()));
-        } else {
-          logger.atWarning().log(
-              "Tradefed job %s not found in requestDetail", jobInfo.locator().getId());
-        }
-
         if (requestDetail.getState() == RequestState.CANCELED) {
           return;
         }
@@ -495,65 +470,6 @@ final class AtsServerSessionPlugin {
         && hasSessionCompletedWithFailure(requestDetail);
   }
 
-  private static CommandAttemptDetail generateCommandAttemptDetail(
-      JobInfo jobInfo, TestInfo testInfo, String sessionId) {
-    CommandAttemptDetail.Builder builder =
-        CommandAttemptDetail.newBuilder()
-            .setId(testInfo.locator().getId())
-            .setRequestId(sessionId)
-            .setCommandId(getCommandIdOfJob(jobInfo));
-    // ATS server requests use device UUIDs to schedule tests.
-    ImmutableList<String> deviceUuids =
-        jobInfo.subDeviceSpecs().getAllSubDevices().stream()
-            .filter(subDeviceSpec -> subDeviceSpec.dimensions().get("uuid") != null)
-            .map(subDeviceSpec -> subDeviceSpec.dimensions().get("uuid"))
-            .collect(toImmutableList());
-    if (!deviceUuids.isEmpty()) {
-      builder.addAllDeviceSerials(deviceUuids);
-    }
-
-    // Tradefed test result.
-    if (testInfo.properties().has(XtsConstants.TRADEFED_TESTS_PASSED)) {
-      builder.setPassedTestCount(
-          Long.parseLong(testInfo.properties().get(XtsConstants.TRADEFED_TESTS_PASSED)));
-    }
-    if (testInfo.properties().has(XtsConstants.TRADEFED_TESTS_FAILED)) {
-      builder.setFailedTestCount(
-          Long.parseLong(testInfo.properties().get(XtsConstants.TRADEFED_TESTS_FAILED)));
-    }
-
-    // Non-tradefed test result.
-    if (testInfo.properties().has(MoblyTestInfoMapHelper.MOBLY_TESTS_PASSED)) {
-      builder.setPassedTestCount(
-          Long.parseLong(testInfo.properties().get(MoblyTestInfoMapHelper.MOBLY_TESTS_PASSED)));
-    }
-    if (testInfo.properties().has(MoblyTestInfoMapHelper.MOBLY_TESTS_FAILED_AND_ERROR)) {
-      builder.setFailedTestCount(
-          Long.parseLong(
-              testInfo.properties().get(MoblyTestInfoMapHelper.MOBLY_TESTS_FAILED_AND_ERROR)));
-    }
-    Instant testStartTime = testInfo.timing().getStartTime();
-    Instant testEndTime = testInfo.timing().getEndTime();
-    Instant testCreateTime = testInfo.timing().getCreateTime();
-    Instant testModifyTime = testInfo.timing().getModifyTime();
-    if (testStartTime != null) {
-      builder.setStartTime(TimeUtils.toProtoTimestamp(testStartTime));
-    }
-    if (testEndTime != null) {
-      builder.setEndTime(TimeUtils.toProtoTimestamp(testEndTime));
-    }
-    if (testCreateTime != null) {
-      builder.setCreateTime(TimeUtils.toProtoTimestamp(testCreateTime));
-    }
-    if (testModifyTime != null) {
-      builder.setUpdateTime(TimeUtils.toProtoTimestamp(testModifyTime));
-    }
-    return builder
-        .setTotalTestCount(builder.getPassedTestCount() + builder.getFailedTestCount())
-        .setState(convertStatusAndResultToCommandState(testInfo.status(), testInfo.result()))
-        .build();
-  }
-
   @GuardedBy("sessionLock")
   private void updateSessionPluginOutput(RequestDetail.Builder requestDetail) {
     RequestDetail latestRequestDetail = requestDetail.build();
@@ -586,30 +502,6 @@ final class AtsServerSessionPlugin {
         && hasSessionCompleted(commandDetailsMap)
         && commandDetailsMap.values().stream()
             .anyMatch(commandDetail -> commandDetail.getFailedTestCount() > 0);
-  }
-
-  private static CommandState convertStatusAndResultToCommandState(Status status, Result result) {
-    switch (status.get()) {
-      case NEW:
-        return CommandState.UNKNOWN_STATE;
-      case ASSIGNED:
-        return CommandState.QUEUED;
-      case RUNNING:
-        return CommandState.RUNNING;
-      case DONE:
-        if (result.get().equals(TestResult.PASS)) {
-          return CommandState.COMPLETED;
-        } else {
-          return CommandState.ERROR;
-        }
-      case SUSPENDED:
-        return CommandState.CANCELED;
-    }
-    return CommandState.UNKNOWN_STATE;
-  }
-
-  private static String getCommandIdOfJob(JobInfo jobInfo) {
-    return jobInfo.properties().getOptional(XtsPropertyName.Job.XTS_COMMAND_ID).orElse("");
   }
 
   private static void appendErrorMessage(RequestDetail.Builder requestDetail, String newMessage) {
