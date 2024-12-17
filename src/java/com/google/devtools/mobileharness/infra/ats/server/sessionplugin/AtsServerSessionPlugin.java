@@ -73,7 +73,9 @@ import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestStatus;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import javax.inject.Inject;
 
 /** Session Plugin to serve test requests coming from ATS server. */
@@ -103,6 +105,10 @@ final class AtsServerSessionPlugin {
   // the session when all tradefed jobs have ended.
   @GuardedBy("sessionLock")
   private ImmutableList<JobInfo> nonTradefedJobs = null;
+
+  @SuppressWarnings("PreferredInterfaceType")
+  @GuardedBy("sessionLock")
+  private List<JobInfo> tradefedJobs = null;
 
   @GuardedBy("sessionLock")
   private final SessionInfo sessionInfo;
@@ -152,7 +158,7 @@ final class AtsServerSessionPlugin {
 
           CreateJobsResult createTradefedJobsResult =
               newMultiCommandRequestHandler.createTradefedJobs(newMultiCommandRequest, sessionInfo);
-          ImmutableList<JobInfo> tradefedJobs = createTradefedJobsResult.jobInfos();
+          tradefedJobs = new ArrayList<>(createTradefedJobsResult.jobInfos());
           requestDetail.setState(createTradefedJobsResult.state());
           createTradefedJobsResult.errorReason().ifPresent(requestDetail::setErrorReason);
           createTradefedJobsResult
@@ -196,8 +202,9 @@ final class AtsServerSessionPlugin {
           // Ensure non-tradefed jobs are added only if no tradefed jobs exist or all tradefed jobs
           // have ended.
           if (!tradefedJobs.isEmpty()) {
-            // Add tradefed jobs to session.
-            tradefedJobs.forEach(sessionInfo::addJob);
+            // Add one tradefed job to session, if we have multiple TF jobs execute serially. The
+            // following jobs will be added when the previous job hits onJobEnded.
+            sessionInfo.addJob(tradefedJobs.remove(0));
           } else {
             // If no tradefed job was added, add non tradefed jobs directly.
             nonTradefedJobs.forEach(sessionInfo::addJob);
@@ -239,6 +246,26 @@ final class AtsServerSessionPlugin {
       JobInfo jobInfo = jobEndEvent.getJob();
       // If all tradefed jobs have ended, create non tradefed jobs.
       try {
+        // Tradefed jobs might be lost in the resumed sessions. Re-initialize them to ensure
+        // they are executed and also remove the jobs that are already added to the session.
+        if (tradefedJobs == null) {
+          CreateJobsResult createTradefedJobsResult =
+              newMultiCommandRequestHandler.createTradefedJobs(
+                  requestDetail.getOriginalRequest(), sessionInfo);
+          tradefedJobs = createTradefedJobsResult.jobInfos();
+          List<JobInfo> triggeredTradefedJobs = sessionInfo.getAllJobs();
+          tradefedJobs.removeIf(
+              job ->
+                  triggeredTradefedJobs.stream()
+                      .anyMatch(
+                          triggeredJob ->
+                              job.locator().getName().equals(triggeredJob.locator().getName())));
+        }
+        // if we have multiple TF jobs execute serially, we need to only add the job one by one
+        // after the previous job is ended.
+        if (!tradefedJobs.isEmpty()) {
+          sessionInfo.addJob(tradefedJobs.remove(0));
+        }
         // Generate a new commandAttempt for the finished job, and update the command status.
         if (requestDetail.containsCommandDetails(getCommandIdOfJob(jobInfo))) {
           // Add a command attempt

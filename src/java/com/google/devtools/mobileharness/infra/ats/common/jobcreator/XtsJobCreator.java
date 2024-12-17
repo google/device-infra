@@ -479,8 +479,14 @@ public abstract class XtsJobCreator {
   private JobInfo createDynamicJobInfo(
       SessionRequestInfo sessionRequestInfo, TradefedJobInfo tradefedJobInfo, String jobName)
       throws MobileHarnessException, InterruptedException {
+    String updatedJobName = tradefedJobInfo.jobConfig().getName() + "_" + jobName;
+    TradefedJobInfo updatedTradefedJobInfo =
+        TradefedJobInfo.of(
+            tradefedJobInfo.jobConfig().toBuilder().setName(updatedJobName).build(),
+            tradefedJobInfo.extraJobProperties());
     JobInfo dynamicDownloadJobInfo =
-        sessionRequestHandlerUtil.createXtsTradefedTestJob(sessionRequestInfo, tradefedJobInfo);
+        sessionRequestHandlerUtil.createXtsTradefedTestJob(
+            sessionRequestInfo, updatedTradefedJobInfo);
 
     dynamicDownloadJobInfo.properties().add(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED, "true");
     dynamicDownloadJobInfo.properties().add(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME, jobName);

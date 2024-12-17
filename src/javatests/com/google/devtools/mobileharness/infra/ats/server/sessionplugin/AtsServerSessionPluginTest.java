@@ -630,7 +630,6 @@ public final class AtsServerSessionPluginTest {
     when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo, jobInfo2));
     plugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
     verify(sessionInfo).addJob(jobInfo);
-    verify(sessionInfo).addJob(jobInfo2);
     // Verify non-TF jobs are created but not added.
     verify(xtsJobCreator, times(2)).createXtsNonTradefedJobs(any());
     verify(sessionInfo, never()).addJob(moblyJobInfo);
@@ -648,6 +647,7 @@ public final class AtsServerSessionPluginTest {
 
     // Verify first jobInfo end signal won't add non-TF jobs.
     plugin.onJobEnded(new JobEndEvent(jobInfo, null));
+    verify(sessionInfo).addJob(jobInfo2);
     verify(sessionInfo, never()).addJob(moblyJobInfo);
     verify(sessionInfo, never()).addJob(moblyJobInfo2);
 
