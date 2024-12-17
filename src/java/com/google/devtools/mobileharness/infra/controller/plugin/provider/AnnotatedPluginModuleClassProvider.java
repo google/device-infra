@@ -17,9 +17,9 @@
 package com.google.devtools.mobileharness.infra.controller.plugin.provider;
 
 import com.google.common.collect.ImmutableSet;
+import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.inject.Module;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
-import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import com.google.wireless.qa.mobileharness.shared.controller.plugin.Plugin.PluginType;
 import com.google.wireless.qa.mobileharness.shared.controller.plugin.PluginModule;
 import com.google.wireless.qa.mobileharness.shared.log.LogCollector;
@@ -67,7 +67,9 @@ public class AnnotatedPluginModuleClassProvider implements PluginModuleClassProv
           .collect(Collectors.toSet());
     } catch (ClassCastException e) {
       throw new MobileHarnessException(
-          ErrorCode.PLUGIN_ERROR, "Found class that is not a module marked with PluginModule.", e);
+          BasicErrorId.PLUGIN_LOADER_FAILED_TO_CREATE_PLUGIN_MODULE_INSTANCE,
+          "Found class that is not a module marked with PluginModule.",
+          e);
     }
   }
 }

@@ -82,7 +82,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:tag",
         "//src/java/com/google/devtools/mobileharness/shared/util/message:str_pair",
-        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:base",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",

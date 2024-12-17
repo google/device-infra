@@ -17,8 +17,8 @@
 package com.google.devtools.mobileharness.infra.controller.plugin.provider;
 
 import com.google.common.collect.ImmutableList;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
-import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
+import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
@@ -46,7 +46,8 @@ public class NamedPluginClassProvider implements PluginClassProvider {
       try {
         pluginClasses.add(classLoader.loadClass(className));
       } catch (ClassNotFoundException e) {
-        throw new MobileHarnessException(ErrorCode.PLUGIN_ERROR, "Error loading class.", e);
+        throw new MobileHarnessException(
+            BasicErrorId.PLUGIN_LOADER_FAILED_TO_CREATE_PLUGIN_INSTANCE, "Error loading class.", e);
       }
     }
 

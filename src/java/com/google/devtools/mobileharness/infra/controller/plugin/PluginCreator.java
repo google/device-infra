@@ -24,6 +24,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.controller.plugin.loader.PluginInstantiator;
 import com.google.devtools.mobileharness.infra.controller.plugin.provider.AnnotatedPluginClassProvider;
 import com.google.devtools.mobileharness.infra.controller.plugin.provider.AnnotatedPluginModuleClassProvider;
@@ -36,10 +37,7 @@ import com.google.devtools.mobileharness.infra.controller.plugin.provider.RetryP
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.inject.Module;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
-import com.google.wireless.qa.mobileharness.shared.controller.plugin.Plugin;
 import com.google.wireless.qa.mobileharness.shared.controller.plugin.Plugin.PluginType;
-import com.google.wireless.qa.mobileharness.shared.controller.plugin.PluginModule;
 import com.google.wireless.qa.mobileharness.shared.log.LogCollector;
 import java.io.Closeable;
 import java.io.File;
@@ -193,7 +191,7 @@ public class PluginCreator implements AutoCloseable {
         try {
           jarUrls.add(uri.toURL());
         } catch (MalformedURLException e) {
-          throw new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+          throw new MobileHarnessException(
               BasicErrorId.PLUGIN_LOADER_FAILED_TO_GET_JAR_URL,
               String.format("Failed to get URL of JAR [%s]", uri),
               e);
@@ -232,7 +230,7 @@ public class PluginCreator implements AutoCloseable {
           try {
             reflections = jarEntry.reflection.get();
           } catch (InterruptedException | ExecutionException e) {
-            throw new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+            throw new MobileHarnessException(
                 BasicErrorId.PLUGIN_LOADER_FAILED_TO_GET_JAR_URL,
                 String.format("Error reflecting plugin module jar [%s]", jarUrl),
                 e);
@@ -284,7 +282,7 @@ public class PluginCreator implements AutoCloseable {
           try {
             reflections = jarEntry.reflection.get();
           } catch (InterruptedException | ExecutionException e) {
-            throw new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+            throw new MobileHarnessException(
                 BasicErrorId.PLUGIN_LOADER_FAILED_TO_GET_JAR_URL,
                 String.format("Error reflecting plugin jar [%s]", jarUrl),
                 e);
@@ -338,7 +336,7 @@ public class PluginCreator implements AutoCloseable {
           plugins.add(
               PluginInstantiator.instantiatePlugin(pluginClass, moduleClasses, systemModules));
           logger.atInfo().log("Loaded plugin: %s", pluginClass.getName());
-        } catch (com.google.devtools.mobileharness.api.model.error.MobileHarnessException e) {
+        } catch (MobileHarnessException e) {
           close();
           throw e;
         }

@@ -36,6 +36,7 @@ import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.model.proto.Device.PostTestDeviceOp;
@@ -59,7 +60,6 @@ import com.google.devtools.mobileharness.shared.util.concurrent.ConcurrencyUtil.
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.logging.MobileHarnessLogTag;
 import com.google.devtools.mobileharness.shared.util.message.StrPairUtil;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.ClassUtil;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.Decorator;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
@@ -332,7 +332,7 @@ public class LocalTestFlow {
       // we also need to reboot the device.
       postTestDeviceOp = PostTestDeviceOp.REBOOT;
     } catch (MobileHarnessException e) {
-      testInfo.errors().addAndLog(e, logger);
+      testInfo.warnings().addAndLog(e, logger);
     } catch (Throwable e) {
       testInfo
           .log()
@@ -342,7 +342,7 @@ public class LocalTestFlow {
       testInfo
           .warnings()
           .add(
-              new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+              new MobileHarnessException(
                   InfraErrorId.TR_POST_RUN_GENERIC_ERROR, "Post run test failed", e));
     }
 
@@ -494,8 +494,7 @@ public class LocalTestFlow {
   }
 
   private void runDevicePreRunTest(TestInfo testInfo, List<Device> devices)
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-          InterruptedException {
+      throws MobileHarnessException, InterruptedException {
     testInfo
         .log()
         .atInfo()
@@ -526,8 +525,7 @@ public class LocalTestFlow {
   }
 
   private void runDevicePreRunTest(TestInfo testInfo, Device device)
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-          InterruptedException {
+      throws MobileHarnessException, InterruptedException {
     try {
       testInfo
           .log()
@@ -541,7 +539,7 @@ public class LocalTestFlow {
           .alsoTo(logger)
           .log("Pre-run test of device [%s] finished", device.getDeviceId());
     } catch (MobileHarnessException e) {
-      throw new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+      throw new MobileHarnessException(
           InfraErrorId.TR_FAILED_TO_RUN_DEVICE_PRE_RUN_TEST_IN_LOCAL_TEST_FLOW,
           String.format("Failed to run pre-run test of device [%s]", device.getDeviceId()),
           e);
@@ -549,8 +547,7 @@ public class LocalTestFlow {
   }
 
   private PostTestDeviceOp runDevicePostRunTest(TestInfo testInfo, List<Device> devices)
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-          InterruptedException {
+      throws MobileHarnessException, InterruptedException {
     testInfo
         .log()
         .atInfo()
@@ -579,8 +576,7 @@ public class LocalTestFlow {
   }
 
   private PostTestDeviceOp runDevicePostRunTest(TestInfo testInfo, Device device)
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-          InterruptedException {
+      throws MobileHarnessException, InterruptedException {
     try {
       testInfo
           .log()
@@ -594,8 +590,8 @@ public class LocalTestFlow {
           .alsoTo(logger)
           .log("Post-run test of device [%s] finished, result=%s", device.getDeviceId(), result);
       return result;
-    } catch (com.google.devtools.mobileharness.api.model.error.MobileHarnessException e) {
-      throw new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+    } catch (MobileHarnessException e) {
+      throw new MobileHarnessException(
           InfraErrorId.TR_FAILED_TO_RUN_DEVICE_POST_RUN_TEST_IN_LOCAL_TEST_FLOW,
           String.format("Failed to run post-run test of device [%s]", device.getDeviceId()),
           e);

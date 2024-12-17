@@ -16,8 +16,8 @@
 
 package com.google.devtools.mobileharness.infra.controller.plugin.provider;
 
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.inject.Module;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
