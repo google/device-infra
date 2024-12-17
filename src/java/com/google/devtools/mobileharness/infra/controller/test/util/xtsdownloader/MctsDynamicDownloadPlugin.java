@@ -88,7 +88,7 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
   // Only consider the Module released in Android V+ , the month digits (3,4 index) should not be 00
   // or 99.
   private static final Pattern VERSIONCODE_PATTERN =
-      Pattern.compile("(3[5-9]|[4-9][0-9])(?!(00|99))\\d{7}");
+      Pattern.compile("(3[5-9]|[4-9][0-9])(?!(00|99))\\d{2}(?!99999)\\d{5}");
 
   // Add the versioncode from
   // android/platform/superproject/main/+/main:build/release/flag_declarations/RELEASE_DEFAULT_UPDATABLE_MODULE_VERSION.textproto
