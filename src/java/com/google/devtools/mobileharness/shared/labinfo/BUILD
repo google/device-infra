@@ -42,7 +42,7 @@ java_library(
     ],
     deps = [
         ":lab_info_provider",
-        "//src/devtools/mobileharness/api/model/proto:device_java_proto",
+        ":lab_query_utils",
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
         "//src/devtools/mobileharness/shared/labinfo/proto:lab_info_service_java_grpc_proto",
         "//src/devtools/mobileharness/shared/labinfo/proto:lab_info_service_java_proto",
@@ -50,7 +50,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_text_format",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
         "@io_grpc_grpc_java//stub",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
@@ -68,6 +67,20 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/device",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:device_status_info",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "lab_query_utils",
+    srcs = ["LabQueryUtils.java"],
+    visibility = ["//:deviceinfra_all_pkg"],
+    deps = [
+        ":lab_info_provider",
+        "//src/devtools/mobileharness/api/model/proto:device_java_proto",
+        "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
         "@maven//:com_google_guava_guava",
     ],
 )
