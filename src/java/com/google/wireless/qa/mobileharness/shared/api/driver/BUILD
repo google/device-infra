@@ -281,6 +281,7 @@ java_library(
         # UTP Launcher and Main
         # UTP Device Provider
     ],
+    tags = ["avoid_dep"],
     deps = [
         ":base_driver",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
