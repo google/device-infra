@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.infra.client.longrunningservice;
 
 import static com.google.devtools.mobileharness.infra.client.longrunningservice.constant.OlcServerLogs.SERVER_STARTED_SIGNAL;
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.DEBUG;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 
@@ -53,6 +54,7 @@ import com.google.devtools.mobileharness.shared.util.database.TablesLister;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.logging.flogger.FloggerFormatter;
+import com.google.devtools.mobileharness.shared.util.system.SystemInfoPrinter;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.version.Version;
 import com.google.devtools.mobileharness.shared.version.VersionUtil;
@@ -115,6 +117,7 @@ public class OlcServer {
   private final ClientApi clientApi;
   private final LocalFileUtil localFileUtil;
   private final SystemUtil systemUtil;
+  private final SystemInfoPrinter systemInfoPrinter;
   private final boolean enableDatabase;
   private final DatabaseConnections olcDatabaseConnections;
   private final TablesLister tablesLister;
@@ -135,6 +138,7 @@ public class OlcServer {
       ClientApi clientApi,
       LocalFileUtil localFileUtil,
       SystemUtil systemUtil,
+      SystemInfoPrinter systemInfoPrinter,
       @EnableDatabase boolean enableDatabase,
       @OlcDatabaseConnections DatabaseConnections olcDatabaseConnections,
       TablesLister tablesLister,
@@ -152,6 +156,7 @@ public class OlcServer {
     this.clientApi = clientApi;
     this.localFileUtil = localFileUtil;
     this.systemUtil = systemUtil;
+    this.systemInfoPrinter = systemInfoPrinter;
     this.enableDatabase = enableDatabase;
     this.olcDatabaseConnections = olcDatabaseConnections;
     this.tablesLister = tablesLister;
@@ -184,6 +189,7 @@ public class OlcServer {
         VersionUtil.getGitHubVersion()
             .map(version -> String.format(" github-%s", version))
             .orElse(""));
+    systemInfoPrinter.printSystemInfo(DEBUG);
 
     // Initializes ClientApi.
     clientApi.initializeSingleton();

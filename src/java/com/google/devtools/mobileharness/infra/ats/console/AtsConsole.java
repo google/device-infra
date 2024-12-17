@@ -59,6 +59,7 @@ import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.logging.flogger.FloggerFormatter;
 import com.google.devtools.mobileharness.shared.util.port.PortProber;
 import com.google.devtools.mobileharness.shared.util.shell.ShellUtils.TokenizationException;
+import com.google.devtools.mobileharness.shared.util.system.SystemInfoPrinter;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -159,6 +160,7 @@ public class AtsConsole {
   private final ConsoleInfo consoleInfo;
   private final ServerPreparer serverPreparer;
   private final ServerLogPrinter serverLogPrinter;
+  private final SystemInfoPrinter systemInfoPrinter;
   private final VersionMessageUtil versionMessageUtil;
   private final CommandCompleter commandCompleter;
   private final CommandPreprocessor commandPreprocessor;
@@ -181,6 +183,7 @@ public class AtsConsole {
       ConsoleInfo consoleInfo,
       ServerPreparer serverPreparer,
       ServerLogPrinter serverLogPrinter,
+      SystemInfoPrinter systemInfoPrinter,
       VersionMessageUtil versionMessageUtil,
       CommandCompleter commandCompleter,
       CommandPreprocessor commandPreprocessor,
@@ -197,6 +200,7 @@ public class AtsConsole {
     this.consoleInfo = consoleInfo;
     this.serverPreparer = serverPreparer;
     this.serverLogPrinter = serverLogPrinter;
+    this.systemInfoPrinter = systemInfoPrinter;
     this.versionMessageUtil = versionMessageUtil;
     this.commandCompleter = commandCompleter;
     this.commandPreprocessor = commandPreprocessor;
@@ -222,7 +226,7 @@ public class AtsConsole {
     }
     logger.atInfo().with(IMPORTANCE, DEBUG).log("ATS console ID: %s", clientId);
     logger.atInfo().with(IMPORTANCE, DEBUG).log("Flags: %s", deviceInfraServiceFlags.flags());
-    logger.atInfo().with(IMPORTANCE, DEBUG).log("Java version: %s", Runtime.version());
+    systemInfoPrinter.printSystemInfo(DEBUG);
 
     // Starts listing test plans.
     CommandCompleterHolder.getInstance().initialize(commandCompleter);

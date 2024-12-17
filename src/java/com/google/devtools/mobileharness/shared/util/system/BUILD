@@ -47,3 +47,17 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+java_library(
+    name = "system_info_printer",
+    srcs = ["SystemInfoPrinter.java"],
+    visibility = [
+        "//:deviceinfra_all_pkg",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/constant:log_record_importance",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/network",
+    ],
+)

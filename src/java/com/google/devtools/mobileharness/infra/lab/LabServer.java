@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.lab;
 
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.DEBUG;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
@@ -73,6 +74,7 @@ import com.google.devtools.mobileharness.shared.util.comm.stub.ChannelFactory;
 import com.google.devtools.mobileharness.shared.util.comm.stub.MasterGrpcStubHelper;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.shared.util.system.SystemInfoPrinter;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil.KillSignal;
 import com.google.devtools.mobileharness.shared.version.Version;
@@ -115,6 +117,7 @@ public class LabServer {
   private final ProxyTestManager testManager;
   private final JobManager jobManager;
   private final SystemUtil systemUtil;
+  private final SystemInfoPrinter systemInfoPrinter;
   private final NetUtil netUtil;
   private final LocalDeviceManager deviceManager;
   private final PrepareTestServiceImpl prepareTestService;
@@ -132,6 +135,7 @@ public class LabServer {
       ProxyTestManager testManager,
       JobManager jobManager,
       SystemUtil systemUtil,
+      SystemInfoPrinter systemInfoPrinter,
       NetUtil netUtil,
       LocalDeviceManager deviceManager,
       PrepareTestServiceImpl prepareTestService,
@@ -146,6 +150,7 @@ public class LabServer {
     this.testManager = testManager;
     this.jobManager = jobManager;
     this.systemUtil = systemUtil;
+    this.systemInfoPrinter = systemInfoPrinter;
     this.netUtil = netUtil;
     this.deviceManager = deviceManager;
     this.prepareTestService = prepareTestService;
@@ -161,6 +166,7 @@ public class LabServer {
 
   /** Initializes and runs lab server, and blocks until shutdown. */
   public void run() throws MobileHarnessException, InterruptedException {
+    systemInfoPrinter.printSystemInfo(DEBUG);
     try {
 
       // Sets public general file directory to BaseDevice.

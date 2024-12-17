@@ -77,6 +77,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/logging/flogger:flogger_formatter",
         "//src/java/com/google/devtools/mobileharness/shared/util/port:portprober",
         "//src/java/com/google/devtools/mobileharness/shared/util/shell",
+        "//src/java/com/google/devtools/mobileharness/shared/util/system:system_info_printer",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
         "//src/java/com/google/wireless/qa/mobileharness/shared:log",
         "@maven//:com_google_guava_guava",
