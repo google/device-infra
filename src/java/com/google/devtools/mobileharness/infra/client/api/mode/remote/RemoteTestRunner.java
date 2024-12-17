@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.infra.client.api.mode.remote;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.devtools.mobileharness.infra.client.api.util.resourcefederation.ResourceFederationUtil.getServerMap;
 import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toCollection;
@@ -24,6 +25,7 @@ import static java.util.stream.Collectors.toCollection;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Enums;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Streams;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
@@ -39,6 +41,9 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.api.model.proto.Device.PostTestDeviceOp;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto;
 import com.google.devtools.mobileharness.infra.client.api.mode.remote.util.LabRpcProtoConverter;
+import com.google.devtools.mobileharness.infra.client.api.proto.ResourceFederationProto.ResourceFederation;
+import com.google.devtools.mobileharness.infra.client.api.proto.ResourceFederationProto.ServerResource;
+import com.google.devtools.mobileharness.infra.client.api.proto.ResourceFederationProto.ServerResourceType;
 import com.google.devtools.mobileharness.infra.client.api.util.longevity.LongevityTestHelper;
 import com.google.devtools.mobileharness.infra.container.proto.ModeSettingProto.ContainerModePreference;
 import com.google.devtools.mobileharness.infra.container.proto.ModeSettingProto.SandboxModePreference;
@@ -59,7 +64,6 @@ import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.TestRunnerTiming;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.ExecTestStub;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.PrepareTestStub;
-import com.google.devtools.mobileharness.shared.constant.environment.MobileHarnessServerEnvironment;
 import com.google.devtools.mobileharness.shared.trace.proto.SpanProto.ParentSpan;
 import com.google.devtools.mobileharness.shared.util.comm.messaging.message.TestMessageInfo;
 import com.google.devtools.mobileharness.shared.util.error.ErrorModelConverter;
@@ -152,7 +156,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
   private final TestMessageManager testMessageManager;
   @Nullable private final String impersonationUser;
   private final LabServerLocator labServerLocator;
-  private final MobileHarnessServerEnvironment mhEnvironment;
+  private final ResourceFederation resourceFederation;
   private final List<String> downloadedGenDirs = new ArrayList<>();
   private final LocalFileUtil fileUtil;
   private final JobSpecHelper jobSpecHelper;
@@ -178,7 +182,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
   public RemoteTestRunner(
       DirectTestRunnerSetting setting,
       ListeningExecutorService threadPool,
-      MobileHarnessServerEnvironment mhEnvironment,
+      ResourceFederation resourceFederation,
       boolean supportImpersonation)
       throws MobileHarnessException {
     this(
@@ -191,7 +195,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
         JobSpecHelper.getDefaultHelper(),
         StubManager.getInstance(),
         TestMessageManager.getInstance(),
-        mhEnvironment,
+        resourceFederation,
         supportImpersonation);
   }
 
@@ -206,7 +210,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
       JobSpecHelper jobSpecHelper,
       StubManager stubManager,
       TestMessageManager testMessageManager,
-      MobileHarnessServerEnvironment mhEnvironment,
+      ResourceFederation resourceFederation,
       boolean supportImpersonation)
       throws MobileHarnessException {
     super(launcher, setting, threadPool);
@@ -217,7 +221,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
     this.jobSpecHelper = jobSpecHelper;
     this.stubManager = stubManager;
     this.testMessageManager = testMessageManager;
-    this.mhEnvironment = mhEnvironment;
+    this.resourceFederation = resourceFederation;
 
     this.impersonationUser =
         supportImpersonation ? setting.testInfo().jobInfo().jobUser().getRunAs() : null;
@@ -433,7 +437,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
           .properties()
           .add(
               PropertyName.Test.REMOTE_EXECUTION_TIME_MS,
-              Long.toString(clock.millis() - executeInstant.toEpochMilli()));
+              Long.toString(Duration.between(executeInstant, clock.instant()).toMillis()));
     } finally {
       // Notify lab server that client side postRunTest().Exceptions should be tolerated since the
       // test has been marked DONE already.
@@ -490,18 +494,27 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
 
   /** Gets the {@link PrepareTestStub} to talk to lab PrepareTestService. */
   private PrepareTestStub getPrepareTestStub() {
-    return stubManager.getPrepareTestStub(labServerLocator, mhEnvironment);
+    return getServerResource()
+        .map(serverResource -> stubManager.getPrepareTestStub(labServerLocator, serverResource))
+        .orElseGet(() -> stubManager.getPrepareTestStub(labServerLocator));
   }
 
   /** Gets the {@link VersionStub} to talk to lab VersionService. */
   private VersionStub getLabVersionStub() {
-    return stubManager.getLabVersionStub(labServerLocator, mhEnvironment);
+    return getServerResource()
+        .map(serverResource -> stubManager.getLabVersionStub(labServerLocator, serverResource))
+        .orElseGet(() -> stubManager.getLabVersionStub(labServerLocator));
   }
 
   /** Gets the {@link ExecTestStub} to talk to lab ExecTestService. */
   private ExecTestStub getTestEngineExecTestStub() {
-    return stubManager.getTestEngineExecTestStub(
-        labServerLocator, testEngineLocator, mhEnvironment);
+    return getServerResource()
+        .map(
+            serverResource ->
+                stubManager.getTestEngineExecTestStub(
+                    labServerLocator, testEngineLocator, serverResource))
+        .orElseGet(
+            () -> stubManager.getTestEngineExecTestStub(labServerLocator, testEngineLocator));
   }
 
   /**
@@ -1062,6 +1075,18 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
                 .map(Integer::parseInt)
                 .orElse(0))
         .build();
+  }
+
+  private Optional<ServerResource> getServerResource() {
+    ImmutableMap<ServerResourceType, ServerResource> map = getServerMap(resourceFederation);
+    if (map.containsKey(ServerResourceType.GRPC_RELAY)) {
+      return Optional.of(map.get(ServerResourceType.GRPC_RELAY));
+    } else {
+      logger.atWarning().log(
+          "No GRPC relay or bridge server resource found in resource federation: %s",
+          resourceFederation);
+      return Optional.empty();
+    }
   }
 
   /**

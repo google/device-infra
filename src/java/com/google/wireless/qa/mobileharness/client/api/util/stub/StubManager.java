@@ -16,11 +16,14 @@
 
 package com.google.wireless.qa.mobileharness.client.api.util.stub;
 
+import static com.google.devtools.mobileharness.infra.client.api.util.serverlocator.ServerLocatorUtil.createGrpcDirectStubConfiguration;
 import static com.google.devtools.mobileharness.infra.client.api.util.stub.StubUtils.getLabServerGrpcTarget;
 import static com.google.devtools.mobileharness.infra.client.api.util.stub.StubUtils.getTestEngineGrpcTarget;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.devtools.mobileharness.infra.client.api.mode.remote.LabServerLocator;
+import com.google.devtools.mobileharness.infra.client.api.proto.ResourceFederationProto.ServerResource;
+import com.google.devtools.mobileharness.infra.client.api.proto.ServerLocatorProto.ServerLocator;
 import com.google.devtools.mobileharness.infra.client.api.util.stub.GrpcStubManager;
 import com.google.devtools.mobileharness.infra.client.api.util.stub.StubFactory;
 import com.google.devtools.mobileharness.infra.client.api.util.stub.StubFactoryModule;
@@ -60,12 +63,57 @@ public class StubManager {
     stubFactory = injector.getInstance(StubFactory.class);
   }
 
+  /**
+   * Gets the stub for talking to test engine server ExecTestService.
+   *
+   * @param labServerLocator the lab locator to find the target lab server
+   * @param testEngineLocator the test engine locator to find the target test engine server
+   */
+  public ExecTestStub getTestEngineExecTestStub(
+      LabServerLocator labServerLocator, TestEngineLocator testEngineLocator) {
+    return grpcStubManager.getExecTestGrpcStub(
+        getTestEngineGrpcTarget(labServerLocator, testEngineLocator));
+  }
+
+  /**
+   * Gets the stub for talking to test engine server ExecTestService.
+   *
+   * @param labServerLocator the lab locator to find the target lab server
+   * @param testEngineLocator the test engine locator to find the target test engine server
+   * @param serverResource additional server resource to find the target test engine server.
+   */
   public ExecTestStub getTestEngineExecTestStub(
       LabServerLocator labServerLocator,
       TestEngineLocator testEngineLocator,
+      ServerResource serverResource) {
+    switch (serverResource.getServerResourceType()) {
+      case GRPC_RELAY:
+        return getTestEngineExecTestStubWithGrpcRelay(
+            labServerLocator, testEngineLocator, serverResource.getServerLocator());
+      default:
+        throw new IllegalArgumentException(
+            String.format(
+                "Unsupported server resource: %s for exec test stub",
+                serverResource.getServerResourceType()));
+    }
+  }
+
+  @VisibleForTesting
+  ExecTestStub getTestEngineExecTestStub(
+      LabServerLocator labServerLocator,
+      TestEngineLocator testEngineLocator,
       MobileHarnessServerEnvironment mhEnvironment) {
-    return grpcStubManager.getExecTestGrpcStub(
-        getTestEngineGrpcTarget(labServerLocator, testEngineLocator));
+    return getTestEngineExecTestStub(labServerLocator, testEngineLocator);
+  }
+
+  private ExecTestStub getTestEngineExecTestStubWithGrpcRelay(
+      LabServerLocator labServerLocator,
+      TestEngineLocator testEngineLocator,
+      ServerLocator relayLocator) {
+    // Call grpc client -> grpc relay -> lab server.
+    return stubFactory.createExecTestStub(
+        createGrpcDirectStubConfiguration(
+            relayLocator.getGrpcServerLocator(), labServerLocator, testEngineLocator));
   }
 
   /**
@@ -73,18 +121,80 @@ public class StubManager {
    *
    * @param labServerLocator the lab locator to find the target lab server
    */
-  public PrepareTestStub getPrepareTestStub(
-      LabServerLocator labServerLocator, MobileHarnessServerEnvironment mhEnvironment) {
+  public PrepareTestStub getPrepareTestStub(LabServerLocator labServerLocator) {
     return grpcStubManager.getPrepareTestStub(getLabServerGrpcTarget(labServerLocator));
   }
 
   /**
-   * Gets the stub for talking to lab server version service.
+   * Gets the stub for talking to lab server PrepareTestService.
    *
-   * @param labServerLocator locator to find the targeted lab
+   * @param labServerLocator the lab locator to find the target lab server
+   * @param serverResource additional server resource to find the target lab server.
+   */
+  public PrepareTestStub getPrepareTestStub(
+      LabServerLocator labServerLocator, ServerResource serverResource) {
+    switch (serverResource.getServerResourceType()) {
+      case GRPC_RELAY:
+        return getPrepareTestStubWithGrpcRelay(labServerLocator, serverResource.getServerLocator());
+      default:
+        throw new IllegalArgumentException(
+            String.format(
+                "Unsupported server resource: %s for prepare test stub",
+                serverResource.getServerResourceType()));
+    }
+  }
+
+  @VisibleForTesting
+  PrepareTestStub getPrepareTestStub(
+      LabServerLocator labServerLocator, MobileHarnessServerEnvironment mhEnvironment) {
+    return getPrepareTestStub(labServerLocator);
+  }
+
+  private PrepareTestStub getPrepareTestStubWithGrpcRelay(
+      LabServerLocator labServerLocator, ServerLocator relayLocator) {
+    // Call grpc client -> grpc relay -> lab server.
+    return stubFactory.createPrepareTestStub(
+        createGrpcDirectStubConfiguration(relayLocator.getGrpcServerLocator(), labServerLocator));
+  }
+
+  /**
+   * Gets the stub for talking to lab server VersionService.
+   *
+   * @param labServerLocator locator to find the targeted lab.
+   */
+  public VersionStub getLabVersionStub(LabServerLocator labServerLocator) {
+    return grpcStubManager.getVersionStub(getLabServerGrpcTarget(labServerLocator));
+  }
+
+  /**
+   * Gets the stub for talking to lab server VersionService.
+   *
+   * @param labServerLocator locator to find the targeted lab.
+   * @param serverResource additional server resource to find the target lab server.
    */
   public VersionStub getLabVersionStub(
+      LabServerLocator labServerLocator, ServerResource serverResource) {
+    switch (serverResource.getServerResourceType()) {
+      case GRPC_RELAY:
+        return getLabVersionStubWithGrpcRelay(labServerLocator, serverResource.getServerLocator());
+      default:
+        throw new IllegalArgumentException(
+            String.format(
+                "Unsupported server resource: %s for version stub",
+                serverResource.getServerResourceType()));
+    }
+  }
+
+  @VisibleForTesting
+  VersionStub getLabVersionStub(
       LabServerLocator labServerLocator, MobileHarnessServerEnvironment mhEnvironment) {
-    return grpcStubManager.getVersionStub(getLabServerGrpcTarget(labServerLocator));
+    return getLabVersionStub(labServerLocator);
+  }
+
+  private VersionStub getLabVersionStubWithGrpcRelay(
+      LabServerLocator labServerLocator, ServerLocator relayLocator) {
+    // Call grpc client -> grpc relay -> lab server.
+    return stubFactory.createVersionStub(
+        createGrpcDirectStubConfiguration(relayLocator.getGrpcServerLocator(), labServerLocator));
   }
 }
