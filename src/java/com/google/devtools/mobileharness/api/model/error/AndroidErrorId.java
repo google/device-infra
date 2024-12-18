@@ -707,6 +707,9 @@ public enum AndroidErrorId implements ErrorId {
   // UI operator executor : 176_161 ~ 176_170
   ANDROID_UI_OPERATOR_EECUTOR_ERROR(176_161, ErrorType.UNDETERMINED),
 
+  // Android Battery Test: 176_171 ~ 176_190
+  ANDROID_BATTERY_TEST_LOGCAT_PARSER_ERROR(176_171, ErrorType.UNDETERMINED),
+
   ANDROID_ERROR_ID_PLACE_HOLDER_TO_BE_RENAMED(200_000, ErrorType.UNDETERMINED);
 
   public static final int MIN_CODE = ExtErrorId.MAX_CODE + 1;
