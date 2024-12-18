@@ -124,6 +124,9 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
   /** Whether the current thread is tearing down. */
   private volatile boolean tearingDown = false;
 
+  /** The end time for the latest allocation, or null if the device is not allocated. */
+  private volatile Instant allocationEndTime = null;
+
   /** The running test on this device. */
   @Nullable private volatile LocalDeviceTestExecutor test = null;
 
@@ -268,7 +271,9 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
                 .properties()
                 .put(DEVICE_PROPERTY_RESERVATION_ID, deviceReservation.getReservationId());
           }
-          if (checkDevice()) {
+          // Check if the device is allocated before checking the device state. This will prevent
+          // devices allocated for remote use from cleaning up or interfering with the remote usage.
+          if (!isAllocated() && checkDevice()) {
             postDeviceChangeEvent("changed detected");
           }
           if (test != null) {
@@ -388,7 +393,7 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
 
   @Override
   public boolean isAvailable() {
-    return isReady() && test == null && !isPrepping();
+    return isReady() && test == null && !isPrepping() && !isAllocated();
   }
 
   /** If the device is IDLE in external device manager, it's of course available in external DM. */
@@ -596,6 +601,11 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
     notifyAll();
   }
 
+  @Override
+  public void reserve(Instant allocationEndTime) {
+    this.allocationEndTime = allocationEndTime;
+  }
+
   @Nullable
   @Override
   public LocalDeviceTestExecutor getTest() {
@@ -788,6 +798,10 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
         device.updateDimension(entry.getKey());
       }
     }
+  }
+
+  private boolean isAllocated() {
+    return allocationEndTime != null && allocationEndTime.isBefore(clock.instant());
   }
 
   /** Posts {@link LocalDeviceChangeEvent} to signal the device status/dimension change. */
