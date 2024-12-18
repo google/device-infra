@@ -1194,6 +1194,26 @@ public class JobRunner implements Runnable {
       // Don't override the existing result, like TIMEOUT.
       return;
     }
+    if (jobInfo.properties().getBoolean(PropertyName.Job.MANUALLY_ABORTED).orElse(false)) {
+      MobileHarnessException e =
+          new MobileHarnessException(
+              InfraErrorId.CLIENT_JR_JOB_EXEC_INTERRUPTED,
+              String.format("Job %s is manually aborted.", jobInfo.locator().getId()));
+      jobInfo
+          .resultWithCause()
+          .setNonPassing(
+              com.google.devtools.mobileharness.api.model.proto.Test.TestResult.ERROR, e);
+      // For tests that already have allocated device, it depends on the test runner to set the test
+      // result.
+      jobInfo.tests().getAll().values().stream()
+          .filter(testInfo -> testInfo.status().get() == TestStatus.NEW)
+          .forEach(
+              testInfo -> {
+                testInfo.status().set(TestStatus.DONE);
+                testInfo.resultWithCause().setNonPassing(Test.TestResult.ERROR, e);
+              });
+      return;
+    }
     boolean hasErrorTests = false;
     boolean hasInfraErrorTests = false;
     boolean hasFailTests = false;

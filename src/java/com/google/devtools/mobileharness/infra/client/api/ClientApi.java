@@ -168,7 +168,16 @@ public class ClientApi {
 
   /** Kills a job if it is running. */
   public void killJob(String jobId) {
-    jobManager.killJob(jobId);
+    this.killJob(jobId, /* isManuallyAborted= */ false);
+  }
+
+  /**
+   * Kills a job if it is running.
+   *
+   * @param isManuallyAborted whether the kill signal is due to manual abortion.
+   */
+  public void killJob(String jobId, boolean isManuallyAborted) {
+    jobManager.killJob(jobId, isManuallyAborted);
   }
 
   /**

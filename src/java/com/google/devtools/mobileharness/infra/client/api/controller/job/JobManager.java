@@ -41,6 +41,7 @@ import com.google.devtools.mobileharness.infra.controller.test.event.TestExecuti
 import com.google.devtools.mobileharness.shared.util.comm.messaging.poster.TestMessagePoster;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
+import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import java.time.Duration;
@@ -157,9 +158,13 @@ public class JobManager implements Runnable, MessageSenderFinder {
     }
   }
 
-  /** Kills a job if the job exists and is running. */
+  /**
+   * Kills a job if the job exists and is running.
+   *
+   * @param isManuallyAborted whether the kill signal is due to manual abortion.
+   */
   @SuppressWarnings("Interruption")
-  public void killJob(String jobId) {
+  public void killJob(String jobId, boolean isManuallyAborted) {
     synchronized (jobRunners) {
       JobRunnerAndFuture runnerFuture = jobRunners.get(jobId);
       if (runnerFuture != null) {
@@ -167,6 +172,9 @@ public class JobManager implements Runnable, MessageSenderFinder {
         Future<?> future = runnerFuture.jobRunnerFuture();
         JobInfo jobInfo = runner.getJobInfo();
         if (runner.isRunning() || !future.isDone()) {
+          if (isManuallyAborted) {
+            jobInfo.properties().add(PropertyName.Job.MANUALLY_ABORTED, "true");
+          }
           // Interrupts test runner thread.
           try {
             runner.killAllTests();

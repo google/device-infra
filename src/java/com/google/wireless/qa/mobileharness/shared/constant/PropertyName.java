@@ -61,6 +61,9 @@ public interface PropertyName {
     /** The MHFE link for the job. */
     JOB_LINK_IN_MHFE,
 
+    /** Whether the job is manually aborted. */
+    MANUALLY_ABORTED,
+
     /** The master spec. */
     MASTER_SPEC,
 
