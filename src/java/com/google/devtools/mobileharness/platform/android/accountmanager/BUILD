@@ -55,6 +55,8 @@ java_library(
     srcs = [
         "AndroidAccountSetting.java",
     ],
+    visibility = DEFAULT_VISIBILITY + [
+    ],
     deps = [
         ":enums",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
