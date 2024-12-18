@@ -22,17 +22,16 @@ package(
 )
 
 java_library(
-    name = "base",
+    name = "util",
     srcs = glob(["*.java"]),
     deps = [
-        "//src/java/com/google/devtools/mobileharness/shared/util/base:optionals",
-        "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_reflection_util",
-        "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_text_format",
-        "//src/java/com/google/devtools/mobileharness/shared/util/base:stack_set",
-        "//src/java/com/google/devtools/mobileharness/shared/util/base:table_formatter",
-        "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
+        "//src/devtools/mobileharness/infra/client/api/proto:resource_federation_java_proto",
+        "//src/devtools/mobileharness/infra/client/api/proto:server_locator_java_proto",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/util/resourcefederation:util",
+        "//src/java/com/google/devtools/mobileharness/shared/constant/environment",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
-        "//src/javatests/com/google/devtools/mobileharness/shared/util/base/testdata:foo_java_proto",
+        "//src/javatests/com/google/wireless/qa/mobileharness/shared/model/job:job_info_mocker",
         "@maven//:com_google_guava_guava",
         "@maven//:junit_junit",
     ],
@@ -43,5 +42,5 @@ junit_test_suites(
     sizes = [
         "small",
     ],
-    deps = [":base"],
+    deps = [":util"],
 )

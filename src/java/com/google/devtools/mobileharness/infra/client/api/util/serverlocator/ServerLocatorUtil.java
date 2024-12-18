@@ -88,7 +88,7 @@ public final class ServerLocatorUtil {
       // Try to add the server locator as a grpc server locator if possible.
       try {
         serverLocatorBuilder.setGrpcServerLocator(parseGrpcServerLocator(serverLocator));
-      } catch (IllegalStateException e) {
+      } catch (IllegalStateException | IllegalArgumentException e) {
         logger.atWarning().withCause(e).log(
             "Failed to parse %s as grpc server locator.", serverLocator);
       }

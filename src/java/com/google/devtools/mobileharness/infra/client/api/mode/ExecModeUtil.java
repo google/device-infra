@@ -19,7 +19,7 @@ package com.google.devtools.mobileharness.infra.client.api.mode;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.infra.client.api.proto.ServerLocatorProto.ServerLocator;
+import com.google.devtools.mobileharness.infra.client.api.proto.ResourceFederationProto.ResourceFederation;
 import com.google.wireless.qa.mobileharness.shared.util.ReflectionUtil;
 
 /**
@@ -55,8 +55,8 @@ public final class ExecModeUtil {
   }
 
   /**
-   * Creates {@code ExecMode} instance according to the exec mode name and a {@code ServerLocator}.
-   * Supposes exec mode name is XXX_YYY, and the class definition is
+   * Creates {@code ExecMode} instance according to the exec mode name and a {@code
+   * ResourceFederation}. Supposes exec mode name is XXX_YYY, and the class definition is
    * com.google.devtools.mobileharness.infra.client.api.mode.xxx.yyy.XxxYyyMode. If failed to create
    * {@code ExecMode} instance due to {@code BasicErrorId.REFLECTION_CLASS_NOT_FOUND} , will attempt
    * to create instance in alternative package, example
@@ -64,10 +64,10 @@ public final class ExecModeUtil {
    *
    * @throws MobileHarnessException if {@code ExecMode} instance cannot be created.
    */
-  public static ExecMode createRemoteModeInstance(String modeName, ServerLocator masterLocator)
-      throws MobileHarnessException {
+  public static ExecMode createRemoteModeInstance(
+      String modeName, ResourceFederation resourceFederation) throws MobileHarnessException {
     Class<? extends ExecMode> execModeClass = getExecModeClass(modeName);
-    return ReflectionUtil.newInstance(execModeClass, ServerLocator.class, masterLocator);
+    return ReflectionUtil.newInstance(execModeClass, ResourceFederation.class, resourceFederation);
   }
 
   /**

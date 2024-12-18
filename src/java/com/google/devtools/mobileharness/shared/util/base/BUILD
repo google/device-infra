@@ -99,3 +99,11 @@ java_library(
         "@com_google_protobuf//:protobuf_java",
     ],
 )
+
+java_library(
+    name = "optionals",
+    srcs = ["Optionals.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+    ],
+)
