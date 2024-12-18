@@ -23,6 +23,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.SettableFuture;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.api.model.proto.Device.PostTestDeviceOp;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto;
@@ -39,7 +40,6 @@ import com.google.devtools.mobileharness.infra.controller.test.exception.TestRun
 import com.google.devtools.mobileharness.infra.controller.test.local.annotation.DoNotSubscribeTestEvent;
 import com.google.devtools.mobileharness.infra.controller.test.local.utp.controller.TestFlowConverter;
 import com.google.devtools.mobileharness.infra.controller.test.model.TestExecutionResult;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.ClassUtil;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.BaseDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.Decorator;
@@ -261,9 +261,7 @@ public class LocalTestRunner extends BaseTestRunner<LocalTestRunner> {
     }
 
     @Override
-    public void run(TestInfo testInfo)
-        throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-            InterruptedException {
+    public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
       testInfo
           .log()
           .atInfo()
@@ -420,9 +418,7 @@ public class LocalTestRunner extends BaseTestRunner<LocalTestRunner> {
     }
 
     @Override
-    public void run(TestInfo testInfo)
-        throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-            InterruptedException {
+    public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
       try {
         if (postLocalDecoratorPreForwardEvent()) {
           testInfo

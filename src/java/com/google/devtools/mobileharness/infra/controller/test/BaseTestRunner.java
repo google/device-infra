@@ -28,6 +28,7 @@ import com.google.common.eventbus.EventBus;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptions;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
@@ -52,12 +53,10 @@ import com.google.devtools.mobileharness.shared.util.logging.MobileHarnessLogTag
 import com.google.devtools.mobileharness.shared.util.sharedpool.SharedPoolJobUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.comm.message.CacheableTestMessageHandler;
 import com.google.wireless.qa.mobileharness.shared.comm.message.event.TestMessageEvent;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
-import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
 import com.google.wireless.qa.mobileharness.shared.controller.event.TestEndedEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.event.TestEndingEvent;
@@ -236,7 +235,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
           .resultWithCause()
           .setNonPassing(
               Test.TestResult.TIMEOUT,
-              new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+              new MobileHarnessException(
                   InfraErrorId.TR_TEST_TIMEOUT_AND_KILLED, "Test is TIMEOUT and killed"));
       if (killCount == 1) {
         // Only prints this log the first time a test gets killed.
@@ -255,8 +254,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
   }
 
   @Override
-  public final void finalizeTest(
-      com.google.devtools.mobileharness.api.model.error.MobileHarnessException error) {
+  public final void finalizeTest(MobileHarnessException error) {
     TestInfo test = getTestInfo();
     if (test.status().get() != TestStatus.DONE) {
       // When a test is added to a device, but the device is disconnected during periodical check,
@@ -333,7 +331,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
             .resultWithCause()
             .setNonPassing(
                 Test.TestResult.TIMEOUT,
-                new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+                new MobileHarnessException(
                     InfraErrorId.TR_JOB_TIMEOUT_AND_INTERRUPTED,
                     "Test interrupted due to job timeout",
                     e));
@@ -343,7 +341,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
             .resultWithCause()
             .setNonPassing(
                 Test.TestResult.TIMEOUT,
-                new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+                new MobileHarnessException(
                     InfraErrorId.TR_JOB_TIMEOUT_AND_INTERRUPTED,
                     "Test timeout and interrupted",
                     e));
@@ -353,14 +351,14 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
             .resultWithCause()
             .setNonPassing(
                 Test.TestResult.ERROR,
-                new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+                new MobileHarnessException(
                     InfraErrorId.TR_TEST_INTERRUPTED_WHEN_PROCESS_SHUTDOWN,
                     "The process is shutting down.",
                     e));
       } else {
         // If job is not timeout but test timeout, TestManager has already marked the test as
         // TIMEOUT and can not be overwritten here.
-        com.google.devtools.mobileharness.api.model.error.MobileHarnessException cause;
+        MobileHarnessException cause;
 
         String componentName = getComponentName();
         if (componentName.equals("lab") || componentName.equals("local")) {
@@ -368,14 +366,14 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
           // some error such as device disconnected.
           if (SharedPoolJobUtil.isUsingSharedPool(testInfo.jobInfo())) {
             cause =
-                new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+                new MobileHarnessException(
                     InfraErrorId.TR_TEST_INTERRUPTED_IN_SHARED_LAB,
                     "Test is interrupted in the shared lab. It can be caused by device"
                         + " disconnection.",
                     e);
           } else {
             cause =
-                new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+                new MobileHarnessException(
                     InfraErrorId.TR_TEST_INTERRUPTED_IN_SATELLITE_LAB,
                     "Test is interrupted in the satellite lab. It can be caused by device"
                         + " disconnection",
@@ -384,7 +382,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
         } else {
           // If the test is not timeout, and it runs in client, it's usually killed by user.
           cause =
-              new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+              new MobileHarnessException(
                   InfraErrorId.TR_TEST_INTERRUPTED_WHEN_USER_KILL_JOB,
                   "Test interrupted because it's manually killed by user.",
                   e);
@@ -419,7 +417,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
           .resultWithCause()
           .setNonPassing(
               Test.TestResult.ERROR,
-              new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+              new MobileHarnessException(
                   InfraErrorId.TR_TEST_RUNNER_FATAL_ERROR, "TR FATAL ERROR: " + e.getMessage(), e));
       testInfo
           .log()
@@ -448,8 +446,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
               .resultWithCause()
               .setNonPassing(
                   Test.TestResult.ERROR,
-                  new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
-                      InfraErrorId.TR_TEST_FINISHED_WITHOUT_RESULT, errMsg));
+                  new MobileHarnessException(InfraErrorId.TR_TEST_FINISHED_WITHOUT_RESULT, errMsg));
           testInfo.log().atWarning().alsoTo(logger).log("%s", errMsg);
         }
 
@@ -750,13 +747,13 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
       postTestDeviceOp = postRunTest(testInfo, allocation);
     } catch (InterruptedException e) {
       testInfo
-          .errors()
+          .warnings()
           .addAndLog(
               new MobileHarnessException(
-                  ErrorCode.INTERRUPTED, "Post-test operations interrupted", e),
+                  InfraErrorId.TR_POST_RUN_GENERIC_ERROR, "Post-test operations interrupted", e),
               logger);
     } catch (MobileHarnessException e) {
-      testInfo.errors().addAndLog(e, logger);
+      testInfo.warnings().addAndLog(e, logger);
     } catch (Throwable e) {
       testInfo
           .log()
@@ -766,7 +763,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
       testInfo
           .warnings()
           .add(
-              new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+              new MobileHarnessException(
                   InfraErrorId.TR_POST_RUN_GENERIC_ERROR, "Post-test operations failed", e));
     } finally {
       testInfo.log().atInfo().alsoTo(logger).log("Post TestEndedEvent to test %s", testLocator);
@@ -1036,7 +1033,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
       testInfo
           .warnings()
           .addAndLog(
-              new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+              new MobileHarnessException(
                   InfraErrorId.TR_PLUGIN_INVALID_SKIP_EXCEPTION_ERROR,
                   String.format(
                       "Plugins want to skip test and set test result but it is ignored because the"
@@ -1066,10 +1063,10 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
   /** Logs down the error of the test event. */
   protected final void logTestEventError(Throwable e, String eventType) {
     testInfo
-        .errors()
+        .warnings()
         .addAndLog(
             new MobileHarnessException(
-                ErrorCode.EVENT_NOT_POSTED, "Failed to post " + eventType, e),
+                InfraErrorId.TR_POST_EVENT_ERROR, "Failed to post " + eventType, e),
             logger);
   }
 
