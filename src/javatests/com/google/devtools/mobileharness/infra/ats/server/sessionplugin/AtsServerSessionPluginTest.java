@@ -567,6 +567,40 @@ public final class AtsServerSessionPluginTest {
   }
 
   @Test
+  public void onJobEnded_tradefedJobEnded_addCommandAttemptIdAndDeviceSerials() throws Exception {
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(
+                        SessionRequest.newBuilder().setNewMultiCommandRequest(request).build()))
+                .build());
+    plugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+    verify(sessionInfo).addJob(jobInfo);
+    when(jobInfo.timing()).thenReturn(timing);
+    when(jobInfo.status()).thenReturn(new Status(timing).set(TestStatus.DONE));
+    Result result = new Result(timing, new Params(timing)).set(TestResult.PASS);
+    when(jobInfo.result()).thenReturn(result);
+    JobType jobType = JobType.newBuilder().setDriver("XtsTradefedTest").build();
+    when(jobInfo.type()).thenReturn(jobType);
+
+    plugin.onJobEnded(new JobEndEvent(jobInfo, null));
+
+    // Set 2 times when: session is started and job is ended.
+    verify(sessionInfo, times(2))
+        .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
+    RequestDetail requestDetail = Iterables.getLast(unaryOperatorCaptor.getAllValues()).apply(null);
+    String commandId =
+        UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
+    assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
+    CommandDetail commandDetail = requestDetail.getCommandDetailsMap().get(commandId);
+    assertThat(commandDetail.getOriginalCommandInfo()).isEqualTo(commandInfo);
+    assertThat(commandDetail.getState()).isEqualTo(CommandState.RUNNING);
+    assertThat(commandDetail.getCommandAttemptId()).isEqualTo("test_id");
+    assertThat(commandDetail.getDeviceSerialsList()).containsExactly("device_id_1", "device_id_2");
+  }
+
+  @Test
   public void onJobEnded_multipleTradefedJobsEnded_lastOneTriggerNonTradefedJob() throws Exception {
     request = request.toBuilder().addCommands(commandInfo).build();
     when(sessionInfo.getSessionPluginExecutionConfig())
