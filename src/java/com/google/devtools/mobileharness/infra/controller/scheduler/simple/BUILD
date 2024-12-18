@@ -44,8 +44,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
-        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:error_code",
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event:allocation",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job:job_schedule_unit",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job:locator",

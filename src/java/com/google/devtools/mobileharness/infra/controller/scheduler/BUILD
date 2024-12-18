@@ -31,10 +31,10 @@ java_library(
     srcs = ["AbstractScheduler.java"],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/allocation",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/lab:locator",
         "//src/java/com/google/devtools/mobileharness/api/model/lab:schedule_unit",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
-        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job:job_schedule_unit",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job:locator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job:test_schedule_unit",

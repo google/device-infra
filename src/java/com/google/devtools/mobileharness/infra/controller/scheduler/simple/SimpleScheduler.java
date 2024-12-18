@@ -26,6 +26,9 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.model.allocation.Allocation;
+import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptions;
 import com.google.devtools.mobileharness.api.model.lab.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.lab.DeviceScheduleUnit;
 import com.google.devtools.mobileharness.api.model.lab.LabLocator;
@@ -36,8 +39,6 @@ import com.google.devtools.mobileharness.infra.controller.scheduler.simple.persi
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
-import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import com.google.wireless.qa.mobileharness.shared.controller.event.AllocationEvent;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobScheduleUnit;
@@ -510,7 +511,9 @@ public class SimpleScheduler extends AbstractScheduler implements Runnable {
    */
   private SimpleJobInfo checkJob(String jobId) throws MobileHarnessException {
     SimpleJobInfo jobInfo = jobs.get(jobId);
-    return MobileHarnessException.checkNotNull(
-        jobInfo, ErrorCode.JOB_NOT_FOUND, "Job " + jobId + " not found");
+    return MobileHarnessExceptions.checkNotNull(
+        jobInfo,
+        InfraErrorId.SCHEDULER_LOCAL_DEVICE_ALLOCATOR_SCHEDULER_JOB_NOT_FOUND_ERROR,
+        "Job " + jobId + " not found");
   }
 }

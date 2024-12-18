@@ -24,14 +24,13 @@ import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.api.model.allocation.Allocation;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.lab.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.proto.Error.ExceptionDetail;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.AbstractDeviceAllocator;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.AllocationWithStats;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler;
 import com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
-import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import com.google.wireless.qa.mobileharness.shared.controller.event.AllocationEvent;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -74,7 +73,8 @@ public class LocalDeviceAllocator extends AbstractDeviceAllocator {
     scheduler.registerEventHandler(allocationEventHandler);
     if (!scheduler.addJob(jobInfo)) {
       throw new MobileHarnessException(
-          ErrorCode.JOB_DUPLICATED, "Job " + jobInfo.locator().getId() + " already exist");
+          InfraErrorId.CLIENT_LOCAL_MODE_JOB_ALREADY_EXIST,
+          "Job " + jobInfo.locator().getId() + " already exist");
     }
     for (TestInfo test : jobInfo.tests().getAll().values()) {
       scheduler.addTest(test);
@@ -96,7 +96,7 @@ public class LocalDeviceAllocator extends AbstractDeviceAllocator {
         jobInfo
             .warnings()
             .addAndLog(
-                new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+                new MobileHarnessException(
                     InfraErrorId.CLIENT_LOCAL_MODE_TEST_NOT_FOUND,
                     String.format(
                         "Unknown test %s of job %s in the allocation.",
@@ -113,7 +113,7 @@ public class LocalDeviceAllocator extends AbstractDeviceAllocator {
         jobInfo
             .warnings()
             .addAndLog(
-                new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+                new MobileHarnessException(
                     InfraErrorId.CLIENT_LOCAL_MODE_TEST_NOT_NEW,
                     "Unexpected allocation to test with status " + test.status().get()),
                 logger);
@@ -132,7 +132,7 @@ public class LocalDeviceAllocator extends AbstractDeviceAllocator {
         jobInfo
             .warnings()
             .addAndLog(
-                new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+                new MobileHarnessException(
                     InfraErrorId.CLIENT_LOCAL_MODE_DEVICE_NOT_READY, verificationError.get()),
                 logger);
         scheduler.unallocate(
@@ -163,7 +163,7 @@ public class LocalDeviceAllocator extends AbstractDeviceAllocator {
     AbstractScheduler scheduler = getScheduler();
     if (!scheduler.addTest(testInfo)) {
       throw new MobileHarnessException(
-          ErrorCode.TEST_DUPLICATED,
+          InfraErrorId.CLIENT_LOCAL_MODE_TEST_ALREADY_EXIST,
           "Test "
               + testInfo.locator().getId()
               + " already exists in job "
