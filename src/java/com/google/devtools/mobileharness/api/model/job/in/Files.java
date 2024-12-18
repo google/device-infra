@@ -16,13 +16,14 @@
 
 package com.google.devtools.mobileharness.api.model.job.in;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
+import com.google.auto.value.AutoValue;
 import com.google.common.annotations.Beta;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Multimap;
-import com.google.common.collect.MultimapBuilder.SetMultimapBuilder;
-import com.google.common.collect.SetMultimap;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -33,10 +34,12 @@ import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
+import java.util.Optional;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 
@@ -46,10 +49,31 @@ public class Files {
   /** Logger of this job/test. */
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  /** {Tag, FilePathAndNames} mapping contains the files needed by this job/test. */
+  /** File Info. */
+  @AutoValue
+  public abstract static class FileInfo {
+    public static FileInfo create(String path, @Nullable String checksum) {
+      return new AutoValue_Files_FileInfo(path, Optional.ofNullable(checksum));
+    }
+
+    public abstract String path();
+
+    /**
+     * The checksum of the file.
+     *
+     * <p>Different file/dir types can have different checksum formats.
+     */
+    public abstract Optional<String> checksum();
+  }
+
+  /**
+   * The input files/dirs of the job/test. It's a two-level map:
+   *
+   * <p>The outer map is keyed by the tag of the file/dir. The inner map is keyed by the path of the
+   * file/dir.
+   */
   @GuardedBy("this")
-  private final SetMultimap<String, String> fileOrDirs =
-      SetMultimapBuilder.linkedHashKeys().linkedHashSetValues().build();
+  private final Map<String, Map<String, FileInfo>> fileOrDirs = new HashMap<>();
 
   /** The time records of the job/test. */
   @Nullable private final TouchableTiming timing;
@@ -99,12 +123,13 @@ public class Files {
           e);
     }
     synchronized (this) {
-      if (fileOrDirs.containsEntry(tag, fileOrDirPath)) {
+      Map<String, FileInfo> tagFileOrDirs = getTagFileOrDirs(tag);
+      if (tagFileOrDirs.containsKey(fileOrDirPath)) {
         logger.atInfo().log(
             "Input file/dir [%s]%s already exist", tag, fileUtil.getFileOrDirName(fileOrDirPath));
         return this;
       }
-      fileOrDirs.put(tag, fileOrDirPath);
+      tagFileOrDirs.put(fileOrDirPath, FileInfo.create(fileOrDirPath, null));
     }
     if (timing != null) {
       timing.touch();
@@ -115,13 +140,24 @@ public class Files {
   }
 
   /**
+   * Gets the files with the given tag.
+   *
+   * <p>If the tag is not found, a new map will be created and returned.
+   */
+  private Map<String, FileInfo> getTagFileOrDirs(String tag) {
+    synchronized (this) {
+      return fileOrDirs.computeIfAbsent(tag, (String k) -> new LinkedHashMap<>());
+    }
+  }
+
+  /**
    * Adds the given input files/dirs.
    *
-   * @param fileOrDirs {tag, path} mappings of the input files/dirs
+   * @param inputFileOrDirs {tag, path} mappings of the input files/dirs
    */
   @CanIgnoreReturnValue
-  public Files addAll(Map<String, String> fileOrDirs) throws MobileHarnessException {
-    for (Entry<String, String> inputFileOrDir : fileOrDirs.entrySet()) {
+  public Files addAll(Map<String, String> inputFileOrDirs) throws MobileHarnessException {
+    for (Entry<String, String> inputFileOrDir : inputFileOrDirs.entrySet()) {
       add(inputFileOrDir.getKey(), inputFileOrDir.getValue());
     }
     return this;
@@ -130,11 +166,11 @@ public class Files {
   /**
    * Adds the given input files/dirs.
    *
-   * @param fileOrDirs {tag, path} mappings of the input files/dirs
+   * @param inputFileOrDirs {tag, path} mappings of the input files/dirs
    */
   @CanIgnoreReturnValue
-  public Files addAll(Multimap<String, String> fileOrDirs) throws MobileHarnessException {
-    for (Entry<String, String> inputFileOrDir : fileOrDirs.entries()) {
+  public Files addAll(Multimap<String, String> inputFileOrDirs) throws MobileHarnessException {
+    for (Entry<String, String> inputFileOrDir : inputFileOrDirs.entries()) {
       add(inputFileOrDir.getKey(), inputFileOrDir.getValue());
     }
     return this;
@@ -146,16 +182,16 @@ public class Files {
    * @throws MobileHarnessException if the original/new input files/dirs doesn't exists
    */
   @CanIgnoreReturnValue
-  public Files replace(
-      String tag, String originalFileOrDirPath, Collection<String> newFileOrDirPaths)
+  public Files replaceFileInfos(
+      String tag, String originalFileOrDirPath, Collection<FileInfo> newFileOrDirInfos)
       throws MobileHarnessException {
-    for (String newFileOrDirPath : newFileOrDirPaths) {
-      checkFileOrDirIfLocal(newFileOrDirPath);
+    for (FileInfo newFileOrDirInfo : newFileOrDirInfos) {
+      checkFileOrDirIfLocal(newFileOrDirInfo.path());
     }
     synchronized (this) {
       // Remove original files.
-      Set<String> originalFileOrDirs = fileOrDirs.get(tag);
-      if (!originalFileOrDirs.remove(originalFileOrDirPath)) {
+      Map<String, FileInfo> tagFileOrDirs = getTagFileOrDirs(tag);
+      if (tagFileOrDirs.remove(originalFileOrDirPath) == null) {
         throw new MobileHarnessException(
             BasicErrorId.JOB_OR_TEST_REPLACE_NONEXIST_FILE,
             String.format("Original input file/dir [%s]%s not found", tag, originalFileOrDirPath));
@@ -164,15 +200,16 @@ public class Files {
             "Removed original input file/dir [%s]%s",
             tag, fileUtil.getFileOrDirName(originalFileOrDirPath));
       }
-      for (String newFileOrDirPath : newFileOrDirPaths) {
-        if (fileOrDirs.containsEntry(tag, newFileOrDirPath)) {
+      for (FileInfo newFileOrDirInfo : newFileOrDirInfos) {
+        if (tagFileOrDirs.containsKey(newFileOrDirInfo.path())) {
           logger.atInfo().log(
               "New input file/dir [%s]%s already exist",
-              tag, fileUtil.getFileOrDirName(newFileOrDirPath));
+              tag, fileUtil.getFileOrDirName(newFileOrDirInfo.path()));
         } else {
-          fileOrDirs.put(tag, newFileOrDirPath);
+          tagFileOrDirs.put(newFileOrDirInfo.path(), newFileOrDirInfo);
           logger.atInfo().log(
-              "Added new input file/dir [%s]%s", tag, fileUtil.getFileOrDirName(newFileOrDirPath));
+              "Added new input file/dir [%s]%s",
+              tag, fileUtil.getFileOrDirName(newFileOrDirInfo.path()));
         }
       }
       if (timing != null) {
@@ -180,6 +217,23 @@ public class Files {
       }
     }
     return this;
+  }
+
+  /**
+   * Replaces the input file/dir with a new set of file/dir.
+   *
+   * @throws MobileHarnessException if the original/new input files/dirs doesn't exist
+   */
+  @CanIgnoreReturnValue
+  public Files replace(
+      String tag, String originalFileOrDirPath, Collection<String> newFileOrDirPaths)
+      throws MobileHarnessException {
+    return replaceFileInfos(
+        tag,
+        originalFileOrDirPath,
+        newFileOrDirPaths.stream()
+            .map(path -> FileInfo.create(path, null))
+            .collect(toImmutableList()));
   }
 
   /**
@@ -193,12 +247,17 @@ public class Files {
     for (String newFileOrDirPath : newFileOrDirPaths) {
       checkFileOrDirIfLocal(newFileOrDirPath);
     }
-    Set<String> originalFileOrDirs;
+
+    Map<String, FileInfo> tagFileOrDirs;
     synchronized (this) {
-      originalFileOrDirs = fileOrDirs.replaceValues(tag, newFileOrDirPaths);
+      tagFileOrDirs = getTagFileOrDirs(tag);
+      tagFileOrDirs.clear();
+      for (String newFileOrDirPath : newFileOrDirPaths) {
+        tagFileOrDirs.put(newFileOrDirPath, FileInfo.create(newFileOrDirPath, null));
+      }
     }
     logger.atInfo().log(
-        "Replaced file/dir [%s], original=%s, new=%s", tag, originalFileOrDirs, newFileOrDirPaths);
+        "Replaced file/dir [%s], original=%s, new=%s", tag, tagFileOrDirs, newFileOrDirPaths);
     if (timing != null) {
       timing.touch();
     }
@@ -207,7 +266,12 @@ public class Files {
 
   /** Returns whether the file map is empty. */
   public synchronized boolean isEmpty() {
-    return fileOrDirs.isEmpty();
+    for (Map<String, FileInfo> tagFiles : fileOrDirs.values()) {
+      if (!tagFiles.isEmpty()) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /**
@@ -218,18 +282,18 @@ public class Files {
    * @throws MobileHarnessException when tag did not match exactly one input file/dir
    */
   public synchronized String getSingle(String tag) throws MobileHarnessException {
-    Set<String> taggedFileOrDirs = fileOrDirs.get(tag);
-    if (taggedFileOrDirs.isEmpty()) {
+    Map<String, FileInfo> tagFileOrDirs = getTagFileOrDirs(tag);
+    if (tagFileOrDirs.isEmpty()) {
       throw new MobileHarnessException(
           BasicErrorId.JOB_OR_TEST_FILE_NOT_FOUND,
           String.format("No input file/dir tagged with [%s]", tag));
-    } else if (taggedFileOrDirs.size() > 1) {
+    } else if (tagFileOrDirs.size() > 1) {
       throw new MobileHarnessException(
           BasicErrorId.JOB_OR_TEST_FILE_MULTI_PATHS,
           String.format(
-              "More than one input files/dirs %s are tagged with [%s]", taggedFileOrDirs, tag));
+              "More than one input files/dirs %s are tagged with [%s]", tagFileOrDirs, tag));
     } else {
-      return Iterables.getOnlyElement(taggedFileOrDirs);
+      return Iterables.getOnlyElement(tagFileOrDirs.keySet());
     }
   }
 
@@ -240,14 +304,29 @@ public class Files {
    *     the given tag
    */
   public synchronized ImmutableSet<String> get(String tag) {
-    Set<String> taggedInputFilesOrDirs = fileOrDirs.get(tag);
+    Map<String, FileInfo> tagFilesOrDirs = getTagFileOrDirs(tag);
     // Returns a new copy of the set to avoid concurrency issue.
-    return ImmutableSet.copyOf(taggedInputFilesOrDirs);
+    return ImmutableSet.copyOf(tagFilesOrDirs.keySet());
   }
 
   /** Gets the {tag, path} mapping of all the input files/dirs. */
   public synchronized ImmutableMultimap<String, String> getAll() {
-    return ImmutableMultimap.copyOf(fileOrDirs);
+    ImmutableMultimap.Builder<String, String> builder = ImmutableMultimap.builder();
+    for (Map.Entry<String, Map<String, FileInfo>> entry : fileOrDirs.entrySet()) {
+      for (Map.Entry<String, FileInfo> fileEntry : entry.getValue().entrySet()) {
+        builder.put(entry.getKey(), fileEntry.getKey());
+      }
+    }
+    return builder.build();
+  }
+
+  /** Gets the {tag, FileInfo} mapping of all the input files/dirs. */
+  public synchronized ImmutableMultimap<String, FileInfo> getAllFileInfos() {
+    ImmutableMultimap.Builder<String, FileInfo> builder = ImmutableMultimap.builder();
+    for (Map.Entry<String, Map<String, FileInfo>> entry : fileOrDirs.entrySet()) {
+      builder.putAll(entry.getKey(), entry.getValue().values());
+    }
+    return builder.build();
   }
 
   /**
@@ -280,8 +359,8 @@ public class Files {
    * @return true if the tag is associated with at least one file/dir, otherwise return false.
    */
   public synchronized boolean isTagNotEmpty(String tag) {
-    Set<String> paths = fileOrDirs.get(tag);
-    return !paths.isEmpty();
+    Map<String, FileInfo> paths = fileOrDirs.get(tag);
+    return paths != null && !paths.isEmpty();
   }
 
   /**
@@ -294,10 +373,10 @@ public class Files {
     List<String> emptyTags = new ArrayList<>(tags.length);
     List<String> duplicatedTags = new ArrayList<>(tags.length);
     for (String tag : tags) {
-      Set<String> paths = fileOrDirs.get(tag);
-      if (paths.isEmpty()) {
+      Map<String, FileInfo> tagFileOrDirs = getTagFileOrDirs(tag);
+      if (tagFileOrDirs.isEmpty()) {
         emptyTags.add(tag);
-      } else if (paths.size() != 1) {
+      } else if (tagFileOrDirs.size() != 1) {
         duplicatedTags.add(tag);
       }
     }
@@ -326,7 +405,11 @@ public class Files {
    */
   public synchronized boolean remove(String tag, String fileOrDirPath) {
     logger.atInfo().log("Remove file/dir [%s]%s", tag, fileOrDirPath);
-    boolean changed = fileOrDirs.remove(tag, fileOrDirPath);
+    boolean changed = false;
+    Map<String, FileInfo> tagFiles = fileOrDirs.get(tag);
+    if (tagFiles != null) {
+      changed = tagFiles.remove(fileOrDirPath) != null;
+    }
     if (changed && timing != null) {
       timing.touch();
     }
@@ -337,9 +420,11 @@ public class Files {
   public synchronized String toString() {
     StringBuilder stringBuilder = new StringBuilder("Files:\n");
 
-    for (Entry<String, String> entry : fileOrDirs.entries()) {
-      stringBuilder.append(
-          String.format("\tTag: %s\n\tPath: %s\n", entry.getKey(), entry.getValue()));
+    for (Entry<String, Map<String, FileInfo>> entry : fileOrDirs.entrySet()) {
+      stringBuilder.append(String.format("\tTag: %s\n", entry.getKey()));
+      for (Entry<String, FileInfo> fileEntry : entry.getValue().entrySet()) {
+        stringBuilder.append(String.format("\t\tPath: %s\n", fileEntry.getKey()));
+      }
     }
 
     return stringBuilder.toString();

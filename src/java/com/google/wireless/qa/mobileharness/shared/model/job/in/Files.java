@@ -20,6 +20,7 @@ import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Multimap;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.job.in.Files.FileInfo;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
@@ -108,6 +109,19 @@ public class Files {
   }
 
   /**
+   * Replaces the input file/dir with a new set of file/dir.
+   *
+   * @throws MobileHarnessException if the original/new input files/dirs doesn't exist
+   */
+  @CanIgnoreReturnValue
+  public Files replaceFileInfos(
+      String tag, String originalFileOrDirPath, Collection<FileInfo> newFileOrDirInfos)
+      throws MobileHarnessException {
+    newFiles.replaceFileInfos(tag, originalFileOrDirPath, newFileOrDirInfos);
+    return this;
+  }
+
+  /**
    * Replaces all file/dir of a tag with a new set of file/dir.
    *
    * @throws MobileHarnessException if the new files/dir does not exist
@@ -148,6 +162,11 @@ public class Files {
   /** Gets the {tag, path} mapping of all the input files/dirs. */
   public synchronized ImmutableMultimap<String, String> getAll() {
     return newFiles.getAll();
+  }
+
+  /** Gets the {tag, FileInfo} mapping of all the input files/dirs. */
+  public synchronized ImmutableMultimap<String, FileInfo> getAllFileInfos() {
+    return newFiles.getAllFileInfos();
   }
 
   /**
