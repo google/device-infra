@@ -131,7 +131,8 @@ public class AtsSessionStubTest {
                     RunfilesUtil.getRunfilesLocation(
                         "java/com/google/devtools/mobileharness/infra/ats/common/"
                             + "olcserver/ats_olc_server_local_mode_deploy.jar")),
-                Path.of(systemUtil.getJavaBin())));
+                Path.of(systemUtil.getJavaBin()),
+                Path.of(System.getProperty("user.dir"))));
 
     Guice.createInjector(
             new OlcServerModule(deviceInfraServiceFlags, "ATS console", "fake_client_id"),
