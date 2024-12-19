@@ -232,7 +232,8 @@ public class ServerPreparer {
         ImmutableList<String> serverNativeArguments =
             ImmutableList.of(
                 "-Xmx" + Flags.instance().atsConsoleOlcServerXmx.getNonNull(),
-                "-XX:+HeapDumpOnOutOfMemoryError");
+                "-XX:+HeapDumpOnOutOfMemoryError",
+                "-XX:+ExitOnOutOfMemoryError");
         logger
             .atInfo()
             .with(IMPORTANCE, DEBUG)
