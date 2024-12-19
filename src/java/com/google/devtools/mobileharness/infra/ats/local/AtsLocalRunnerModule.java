@@ -53,7 +53,10 @@ public final class AtsLocalRunnerModule extends AbstractModule {
   @Singleton
   ServerEnvironmentPreparer provideServerEnvironmentPreparer(SystemUtil systemUtil) {
     return new NoOpServerEnvironmentPreparer(
-        ServerEnvironment.of(olcServerBinary, Path.of(systemUtil.getJavaBin())));
+        ServerEnvironment.of(
+            olcServerBinary,
+            Path.of(systemUtil.getJavaBin()),
+            Path.of(System.getProperty("user.dir"))));
   }
 
   @Provides

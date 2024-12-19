@@ -25,6 +25,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.ListMultimap;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.graph.Traverser;
@@ -1299,6 +1300,22 @@ public class SystemUtil {
     } else {
       logger.atWarning().log("Failed to get Ubuntu version. The output is %s", output);
       return Optional.empty();
+    }
+  }
+
+  public String getProcessWorkingDirectory(long processId) throws InterruptedException {
+    if (!isOnLinux()) {
+      return "";
+    }
+    try {
+      return Iterables.get(
+          Splitter.on(' ')
+              .split(executor.run(Command.of("pwdx", String.valueOf(processId))).trim()),
+          1);
+    } catch (CommandException e) {
+      logger.atWarning().withCause(e).log(
+          "Failed to get process working directory for process id %d", processId);
+      return "";
     }
   }
 }
