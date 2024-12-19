@@ -195,28 +195,10 @@ enum ErrorReason {
   TRADEFED_INVOCATION_ERROR = 7;
 }
 
-// TODO: No longer useful. Remove this proto.
-message CommandAttemptDetail {
-  string id = 1;
-  string request_id = 2;
-  string command_id = 3;
-  string task_id = 4;
-
-  optional string host_name = 5;
-  repeated string device_serials = 6;
-  optional google.protobuf.Timestamp start_time = 7;
-  optional google.protobuf.Timestamp end_time = 8;
-  optional google.protobuf.Timestamp create_time = 9;
-  optional google.protobuf.Timestamp update_time = 10;
-
-  optional CommandState state = 11;
-  optional int64 passed_test_count = 12;
-  optional int64 failed_test_count = 13;
-  optional int64 total_test_count = 14;
-}
-
 // Request detail returned by session service.
 message RequestDetail {
+  reserved 15;
+
   string id = 1;
   string user = 2;
   repeated CommandInfo command_infos = 3;
@@ -241,10 +223,6 @@ message RequestDetail {
   optional google.protobuf.Timestamp update_time = 12;
   optional string api_module_version = 13;
   map<string, CommandDetail> command_details = 14;
-
-  // TODO: Will be removed. Don't use this field.
-  repeated CommandAttemptDetail command_attempt_details = 15
-      [deprecated = true];
 
   optional string cluster = 16;
   optional string run_target = 17;
