@@ -77,6 +77,7 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.protobuf.util.Timestamps;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -113,7 +114,7 @@ final class NewMultiCommandRequestHandler {
 
   private static final DateTimeFormatter TIMESTAMP_DIR_NAME_FORMATTER =
       DateTimeFormatter.ofPattern("uuuu.MM.dd_HH.mm.ss.SSS").withZone(ZoneId.systemDefault());
-
+  private static final String OUTPUT_MANIFEST_FILE_NAME = "FILES";
   private static final Pattern ANDROID_XTS_ZIP_FILENAME_REGEX =
       Pattern.compile("android-[a-z]+\\.zip");
   @VisibleForTesting static final String XTS_TF_JOB_PROP = "xts-tradefed-job";
@@ -702,6 +703,8 @@ final class NewMultiCommandRequestHandler {
           localFileUtil.mergeDir(resultDir, outputDirPath);
         }
 
+        createOutputManifestFile(outputDirPath);
+
         if (request.hasRetryPreviousSessionId()) {
           Path prevResultDir =
               Path.of(outputUrl.getPath())
@@ -805,6 +808,43 @@ final class NewMultiCommandRequestHandler {
         logger.atWarning().withCause(e).log(
             "Failed to unmount xts root directory: %s", mountedXtsRootDir);
       }
+    }
+  }
+
+  /**
+   * Creates a manifest file in the output directory, listing all the files (using their relative
+   * paths) in the output directory. Also removes any existing manifest file with the same name if
+   * it exists.
+   */
+  private void createOutputManifestFile(Path outputDirPath) {
+    try {
+      ImmutableList.Builder<String> outputManifestListBuilder = ImmutableList.builder();
+      localFileUtil.listFiles(outputDirPath.toString(), /* recursively= */ true).stream()
+          .map(File::getAbsolutePath)
+          .filter(
+              path -> {
+                if (path.endsWith(OUTPUT_MANIFEST_FILE_NAME)) {
+                  try {
+                    localFileUtil.removeFileOrDir(path);
+                  } catch (MobileHarnessException | InterruptedException e) {
+                    logger.atWarning().withCause(e).log(
+                        "Failed to remove existing output manifest file: %s", path);
+                    if (e instanceof InterruptedException) {
+                      Thread.currentThread().interrupt();
+                    }
+                  }
+                  return false;
+                }
+                return true;
+              })
+          // Get the relative path of the file ("+ 1" to skip past the "/").
+          .map(path -> path.substring(outputDirPath.toString().length() + 1))
+          .forEach(outputManifestListBuilder::add);
+      String outputManifest = String.join("\n", outputManifestListBuilder.build());
+      localFileUtil.writeToFile(
+          outputDirPath.resolve(OUTPUT_MANIFEST_FILE_NAME).toString(), outputManifest);
+    } catch (MobileHarnessException e) {
+      logger.atWarning().withCause(e).log("Failed to create test output manifest file.");
     }
   }
 

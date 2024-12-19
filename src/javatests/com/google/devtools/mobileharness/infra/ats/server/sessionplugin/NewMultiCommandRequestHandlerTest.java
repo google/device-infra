@@ -20,7 +20,9 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoDuration;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.endsWith;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
@@ -82,6 +84,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryResult;
+import java.io.File;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
@@ -972,6 +975,35 @@ public final class NewMultiCommandRequestHandlerTest {
     assertThat(handleResultProcessingResult.errorMessage())
         .hasValue(
             NewMultiCommandRequestHandler.REQUEST_ERROR_MESSAGE_FOR_TRADEFED_INVOCATION_ERROR);
+  }
+
+  @Test
+  public void handleResultProcessing_generatesManifestFile() throws Exception {
+    Result result =
+        Result.newBuilder()
+            .setSummary(Summary.newBuilder().setPassed(10).setFailed(0).build())
+            .build();
+    mockProcessResult(result);
+    String logFile1 = "result.xsl";
+    String logFile2 = "logs/olc_server_session_logs/log.txt";
+    // Any existing manifest file with the name "FILES" won't be included in the new generated
+    // manifest file:
+    String logFile3 = "some-subdir/FILES";
+    doAnswer(
+            invocation -> {
+              String outputDir = invocation.getArgument(0, String.class);
+              return ImmutableList.of(
+                  new File(outputDir + "/" + logFile1),
+                  new File(outputDir + "/" + logFile2),
+                  new File(outputDir + "/" + logFile3));
+            })
+        .when(localFileUtil)
+        .listFiles(any(String.class), /* recursively= */ eq(true));
+
+    HandleResultProcessingResult unused = createJobAndHandleResultProcessing(request);
+
+    verify(localFileUtil).removeFileOrDir(endsWith(logFile3));
+    verify(localFileUtil).writeToFile(isA(String.class), eq(logFile1 + "\n" + logFile2));
   }
 
   @Test
