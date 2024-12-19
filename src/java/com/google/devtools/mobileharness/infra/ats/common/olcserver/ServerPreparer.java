@@ -92,7 +92,7 @@ public class ServerPreparer {
 
   private static final Duration HEARTBEAT_INTERVAL = Duration.ofSeconds(10L);
 
-  private static final int MAX_CONNECT_SERVER_ATTEMPTS = 25;
+  private static final int MAX_CONNECT_SERVER_ATTEMPTS = 60;
   private static final Duration CONNECT_SERVER_INTERVAL = Duration.ofSeconds(1L);
 
   private static final ImmutableList<String> UNFINISHED_SESSIONS_TABLE_HEADER =
