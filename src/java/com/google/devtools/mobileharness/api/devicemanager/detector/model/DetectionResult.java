@@ -58,6 +58,7 @@ public abstract class DetectionResult {
     IDEVICE_ID,
     LIBUSB,
     LINUX,
+    JIT_EMULATOR,
     MAC,
     MANEKI,
     MISC,

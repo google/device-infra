@@ -46,6 +46,9 @@ final class AllDetectorsAndDispatchers {
 
   public static ImmutableList<Detector> detectorCandidatesForLabServerOss() {
     ImmutableList.Builder<Detector> detectorCandidates = ImmutableList.builder();
+    if (Flags.instance().androidJitEmulatorNum.getNonNull() > 0) {
+      detectorCandidates.add(createDetector("AndroidJitEmulatorDetector"));
+    }
     return detectorCandidates
         .addAll(detectorCandidatesForLocalModeInternalOssAndLabServerOss())
         .add(new FailedDeviceDetector())
@@ -100,7 +103,11 @@ final class AllDetectorsAndDispatchers {
 
   private static void addDispatchersForLocalModeLabServerOss(DispatcherManager dispatcherManager) {
     if (Flags.instance().enableEmulatorDetection.getNonNull()) {
-      dispatcherManager.add(AndroidLocalEmulatorDispatcher.class);
+      if (Flags.instance().androidJitEmulatorNum.getNonNull() > 0) {
+        dispatcherManager.add(loadDispatcherClass("AndroidJitEmulatorDispatcher"));
+      } else {
+        dispatcherManager.add(AndroidLocalEmulatorDispatcher.class);
+      }
       dispatcherManager.addDependency(
           AndroidRealDeviceDispatcher.class.getSimpleName(),
           AndroidLocalEmulatorDispatcher.class.getSimpleName());
