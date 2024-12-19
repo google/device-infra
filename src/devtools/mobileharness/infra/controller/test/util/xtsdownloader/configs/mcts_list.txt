@@ -291,11 +291,9 @@ art_libnativebridge_cts_tests
 art_libnativeloader_cts_test
 art_standalone_dex2oat_cts_tests
 art_standalone_libartpalette_tests
-art_standalone_libdexfile_external_tests
 compatibility-host-provider-preconditions
 cts-dalvik-host-test-runner
 net-tests-utils-host-common
-odsign_e2e_tests
 # deviceinfra:google3-begin(internal)
 # LINT.ThenChange(//depot/google3/configs/wireless/android/testing/atp/prod/android-xts/cts/templates/common.gcl)
 # deviceinfra:google3-end
