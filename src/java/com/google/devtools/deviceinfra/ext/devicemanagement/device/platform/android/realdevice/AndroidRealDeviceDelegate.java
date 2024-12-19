@@ -1004,7 +1004,8 @@ public abstract class AndroidRealDeviceDelegate {
     if (testInfo
         .jobInfo()
         .params()
-        .getBool(AndroidRealDeviceConstants.PARAM_CLEAR_GSERVICES_OVERRIDES, true /* default */)) {
+        .getBool(
+            AndroidRealDeviceConstants.PARAM_CLEAR_GSERVICES_OVERRIDES, /* defaultValue= */ true)) {
       clearGServicesOverrides(testInfo);
     }
   }
@@ -1398,13 +1399,16 @@ public abstract class AndroidRealDeviceDelegate {
         .alsoTo(logger)
         .log("Clearing GServices overrides for device %s", deviceId);
     try {
-      String unused = systemSettingUtil.clearGServicesOverrides(deviceId);
+      String unused =
+          systemSettingUtil.clearGServicesOverrides(deviceId, sdkVersion == null ? 0 : sdkVersion);
     } catch (MobileHarnessException e) {
       testInfo
           .log()
           .atInfo()
           .alsoTo(logger)
-          .log("Failed to clear GServices overrides for device %s: %s", deviceId, e.getMessage());
+          .log(
+              "Failed to clear GServices overrides for device %s: %s",
+              deviceId, MoreThrowables.shortDebugString(e));
     }
   }
 
