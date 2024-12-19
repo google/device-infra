@@ -106,8 +106,11 @@ public abstract class AbstractFileResolver implements FileResolver {
     if (shouldActuallyResolve(resolveSource)) {
       ResolveResult result = actuallyResolve(resolveSource);
       return Optional.of(
-          ResolveResult.create(
-              ImmutableList.sortedCopyOf(String::compareToIgnoreCase, result.paths()),
+          ResolveResult.of(
+              ImmutableList.sortedCopyOf(
+                  (resolvedFile1, resolvedFile2) ->
+                      resolvedFile1.path().compareToIgnoreCase(resolvedFile2.path()),
+                  result.resolvedFiles()),
               result.properties(),
               resolveSource));
     }

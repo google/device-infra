@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.shared.file.resolver;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -23,6 +25,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import java.util.List;
 import java.util.Optional;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
 /** The FileResolver interface. */
@@ -50,18 +53,46 @@ public interface FileResolver {
   /** Resolves multiple files asynchronously. */
   ListenableFuture<List<Optional<ResolveResult>>> resolveAsync(List<ResolveSource> resolveSources);
 
+  /** Resolved file. */
+  @AutoValue
+  abstract class ResolvedFile {
+
+    public static ResolvedFile create(String path, @Nullable String checksum) {
+      return new AutoValue_FileResolver_ResolvedFile(path, Optional.ofNullable(checksum));
+    }
+
+    public abstract String path();
+
+    public abstract Optional<String> checksum();
+  }
+
   /** Result of resolved file. */
   @AutoValue
   abstract class ResolveResult {
 
+    @Deprecated
     public static ResolveResult create(
         ImmutableList<String> paths,
         ImmutableMap<String, String> properties,
         ResolveSource source) {
-      return new AutoValue_FileResolver_ResolveResult(paths, properties, source);
+      return new AutoValue_FileResolver_ResolveResult(
+          paths.stream().map(file -> ResolvedFile.create(file, null)).collect(toImmutableList()),
+          properties,
+          source);
     }
 
-    public abstract ImmutableList<String> paths();
+    public static ResolveResult of(
+        ImmutableList<ResolvedFile> resolvedFiles,
+        ImmutableMap<String, String> properties,
+        ResolveSource source) {
+      return new AutoValue_FileResolver_ResolveResult(resolvedFiles, properties, source);
+    }
+
+    public ImmutableList<String> paths() {
+      return resolvedFiles().stream().map(ResolvedFile::path).collect(toImmutableList());
+    }
+
+    public abstract ImmutableList<ResolvedFile> resolvedFiles();
 
     public abstract ImmutableMap<String, String> properties();
 

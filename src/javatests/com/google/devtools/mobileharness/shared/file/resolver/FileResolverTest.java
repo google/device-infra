@@ -25,6 +25,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.devtools.mobileharness.shared.file.resolver.FileResolver.ResolveResult;
 import com.google.devtools.mobileharness.shared.file.resolver.FileResolver.ResolveSource;
+import com.google.devtools.mobileharness.shared.file.resolver.FileResolver.ResolvedFile;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import java.util.List;
 import java.util.Optional;
@@ -50,6 +51,15 @@ public class FileResolverTest {
         resolver.resolve(ResolveSource.create("/a/b/c", ImmutableMap.of(), "/", "/"));
 
     assertThat(result.get().paths()).containsExactly("/a/b/c");
+  }
+
+  @Test
+  public void resolve_checkResolvedFiles() throws MobileHarnessException, InterruptedException {
+    resolver = new FileResolverUnderTest(null);
+    Optional<ResolveResult> result =
+        resolver.resolve(ResolveSource.create("/a/b/c", ImmutableMap.of(), "/", "/"));
+
+    assertThat(result.get().resolvedFiles()).containsExactly(ResolvedFile.create("/a/b/c", null));
   }
 
   @Test
