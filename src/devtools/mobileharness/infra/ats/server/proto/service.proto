@@ -128,7 +128,7 @@ message DeviceActionConfigObject {
 }
 
 // Command detail returned by session service.
-// Next ID: 18
+// Next ID: 20
 message CommandDetail {
   string id = 1;
   string request_id = 2;
@@ -160,6 +160,10 @@ message CommandDetail {
   //
   // Required if cancel_reason or error_reason is present.
   optional string error_message = 16;
+
+  repeated string device_serials = 18;
+  // Only useful to frontend for generating command attempt message.
+  optional string command_attempt_id = 19;
 }
 
 enum CommandState {
