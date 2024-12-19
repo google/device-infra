@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.service.moss.util.slg;
 
+import com.google.devtools.mobileharness.api.model.job.out.JobOutInternalFactory;
+import com.google.devtools.mobileharness.api.model.job.out.Warnings;
 import com.google.devtools.mobileharness.api.model.proto.Job.JobUser;
 import com.google.devtools.mobileharness.service.moss.proto.Slg.FilesProto;
 import com.google.devtools.mobileharness.service.moss.proto.Slg.JobInfoProto;
@@ -31,7 +33,6 @@ import com.google.wireless.qa.mobileharness.shared.model.job.in.JobInInternalFac
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.ScopedSpecs;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.SubDeviceSpecs;
-import com.google.wireless.qa.mobileharness.shared.model.job.out.Errors;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Log;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.RemoteFiles;
@@ -85,8 +86,9 @@ public final class JobInfoConverter {
     Result result = ResultConverter.fromProto(timing, params, jobInfoProto.getResult());
     Log log = new Log(timing);
     Properties properties = PropertiesConverter.fromProto(timing, jobInfoProto.getProperties());
-    Errors errors =
-        ErrorsConverter.fromProto(log, timing.toNewTiming(), jobInfoProto.getErrorList());
+    Warnings warnings =
+        JobOutInternalFactory.createWarnings(
+            log, timing.toNewTiming(), jobInfoProto.getErrorList());
     JobUser jobUser;
     if (jobScheduleUnitProto.hasJobUser()) {
       jobUser = jobScheduleUnitProto.getJobUser();
@@ -110,7 +112,7 @@ public final class JobInfoConverter {
             result,
             log,
             properties,
-            errors,
+            warnings,
             jobInfoProto.getJobSpec());
     if (jobInfoProto.getTestInfoCount() > 0) {
       JobHelper.addTests(
