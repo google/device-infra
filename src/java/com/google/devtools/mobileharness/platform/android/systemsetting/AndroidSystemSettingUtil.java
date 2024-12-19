@@ -38,6 +38,7 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.DumpSysTyp
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.IntentArgs;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.WaitArgs;
 import com.google.devtools.mobileharness.platform.android.shared.autovalue.UtilArgs;
+import com.google.devtools.mobileharness.platform.android.shared.constant.Splitters;
 import com.google.devtools.mobileharness.platform.android.systemstate.AndroidSystemStateUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.wireless.qa.mobileharness.shared.util.ScreenResolution;
@@ -169,7 +170,7 @@ public class AndroidSystemSettingUtil {
   private static final String ANDROID_CONTENT_PROVIDER_SETTING_SECURE = "content://settings/secure";
 
   /** Database file path for gservices on device. */
-  @VisibleForTesting static final String ANDROID_GSERVICE_DB_PATH = "/data/*/*/*/gservices.db";
+  private static final String ANDROID_GSERVICE_DB_PATH_DEFAULT = "/data/*/*/*/gservices.db";
 
   /** Database file path for locksettings on device. */
   @VisibleForTesting
@@ -389,13 +390,15 @@ public class AndroidSystemSettingUtil {
    * devices. Otherwise, there is no effect.
    *
    * @param serial serial number of the device
+   * @param sdkVersion SDK version of device
    * @throws MobileHarnessException if some error occurs in executing system commands
    * @throws InterruptedException if current thread is interrupted during this method
    */
-  public String clearGServicesOverrides(String serial)
+  public String clearGServicesOverrides(String serial, int sdkVersion)
       throws MobileHarnessException, InterruptedException {
     try {
-      return adbUtil.sqlite(serial, ANDROID_GSERVICE_DB_PATH, SQL_CLEAR_GSERVICE_OVERRIDE);
+      return adbUtil.sqlite(
+          serial, getAndroidGserviceDbPath(serial, sdkVersion), SQL_CLEAR_GSERVICE_OVERRIDE);
     } catch (MobileHarnessException e) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_SYSTEM_SETTING_CLEAR_GSERVICE_OVERRIDE_ERROR,
@@ -1034,11 +1037,13 @@ public class AndroidSystemSettingUtil {
    * Run GServices Android ID. Only works with rooted devices with API level >= 18.
    *
    * @param serial serial number of the device
+   * @param sdkVersion SDK version of device
    */
-  public String getGServicesAndroidID(String serial)
+  public String getGServicesAndroidId(String serial, int sdkVersion)
       throws MobileHarnessException, InterruptedException {
     try {
-      return adbUtil.sqlite(serial, ANDROID_GSERVICE_DB_PATH, SQL_GET_GSERVICE_ANDROID_ID);
+      return adbUtil.sqlite(
+          serial, getAndroidGserviceDbPath(serial, sdkVersion), SQL_GET_GSERVICE_ANDROID_ID);
     } catch (MobileHarnessException e) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_SYSTEM_SETTING_GET_GSERVICE_ANDROID_ID_ERROR,
@@ -1834,5 +1839,28 @@ public class AndroidSystemSettingUtil {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_SYSTEM_SETTING_SQLITE_CMD_ERROR, e.getMessage(), e);
     }
+  }
+
+  private String getAndroidGserviceDbPath(String serial, int sdkVersion)
+      throws MobileHarnessException, InterruptedException {
+    if (sdkVersion < AndroidVersion.ANDROID_15.getStartSdkVersion()) {
+      return ANDROID_GSERVICE_DB_PATH_DEFAULT;
+    }
+    List<String> gservicesDbPaths =
+        Splitters.LINE_SPLITTER
+            .trimResults()
+            .omitEmptyStrings()
+            .splitToList(
+                adb.runShellWithRetry(
+                    serial, String.format("ls %s", ANDROID_GSERVICE_DB_PATH_DEFAULT)));
+    if (gservicesDbPaths.size() > 1) {
+      logger.atInfo().log(
+          "Found multiple gservices db paths on device %s: %s", serial, gservicesDbPaths);
+      return gservicesDbPaths.stream()
+          .filter(path -> path.contains(".gms"))
+          .findFirst()
+          .orElse(ANDROID_GSERVICE_DB_PATH_DEFAULT);
+    }
+    return ANDROID_GSERVICE_DB_PATH_DEFAULT;
   }
 }
