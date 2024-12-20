@@ -34,5 +34,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/constant/environment",
         "//src/java/com/google/devtools/mobileharness/shared/util/base:optionals",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@maven//:com_google_guava_guava",
     ],
 )

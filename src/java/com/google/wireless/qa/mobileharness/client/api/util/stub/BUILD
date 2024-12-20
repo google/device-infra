@@ -22,9 +22,11 @@ java_library(
     srcs = ["StubManager.java"],
     visibility = ["//:deviceinfra_all_pkg"],
     deps = [
+        "//src/devtools/mobileharness/infra/client/api/proto:resource_federation_java_proto",
         "//src/devtools/mobileharness/infra/client/api/proto:server_locator_java_proto",
         "//src/devtools/mobileharness/infra/container/proto:test_engine_java_proto",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/remote:lab_server_locator",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/util/resourcefederation:util",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/util/serverlocator:util",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/util/stub:grpc_stub_manager",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/util/stub:stub_factory",

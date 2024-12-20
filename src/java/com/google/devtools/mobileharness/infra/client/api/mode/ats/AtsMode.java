@@ -31,11 +31,11 @@ import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalDevice
 import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalDeviceAllocator.DeviceVerifier;
 import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalDeviceAllocator.EmptyDeviceVerifier;
 import com.google.devtools.mobileharness.infra.client.api.mode.remote.RemoteTestRunner;
+import com.google.devtools.mobileharness.infra.client.api.proto.ResourceFederationProto.ResourceFederation;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.ServiceProvider;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunner;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunnerSetting;
-import com.google.devtools.mobileharness.shared.constant.environment.MobileHarnessServerEnvironment;
 import com.google.devtools.mobileharness.shared.labinfo.LabInfoService;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import io.grpc.BindableService;
@@ -102,7 +102,7 @@ public class AtsMode implements ExecMode, ServiceProvider {
     return new RemoteTestRunner(
         setting,
         threadPool,
-        MobileHarnessServerEnvironment.DEFAULT,
+        ResourceFederation.getDefaultInstance(), // The resource federation is empty.
         /* supportImpersonation= */ false);
   }
 

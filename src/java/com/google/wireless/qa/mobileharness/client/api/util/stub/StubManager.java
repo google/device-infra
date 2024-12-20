@@ -16,11 +16,17 @@
 
 package com.google.wireless.qa.mobileharness.client.api.util.stub;
 
+import static com.google.devtools.mobileharness.infra.client.api.util.resourcefederation.ResourceFederationUtil.getServerMap;
+import static com.google.devtools.mobileharness.infra.client.api.util.serverlocator.ServerLocatorUtil.createGrpcDirectStubConfiguration;
 import static com.google.devtools.mobileharness.infra.client.api.util.stub.StubUtils.getLabServerGrpcTarget;
 import static com.google.devtools.mobileharness.infra.client.api.util.stub.StubUtils.getTestEngineGrpcTarget;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.infra.client.api.mode.remote.LabServerLocator;
+import com.google.devtools.mobileharness.infra.client.api.proto.ResourceFederationProto.ResourceFederation;
+import com.google.devtools.mobileharness.infra.client.api.proto.ResourceFederationProto.ServerResourceType;
+import com.google.devtools.mobileharness.infra.client.api.proto.ServerLocatorProto.ServerLocator;
 import com.google.devtools.mobileharness.infra.client.api.util.stub.GrpcStubManager;
 import com.google.devtools.mobileharness.infra.client.api.util.stub.StubFactory;
 import com.google.devtools.mobileharness.infra.client.api.util.stub.StubFactoryModule;
@@ -31,6 +37,7 @@ import com.google.devtools.mobileharness.shared.constant.environment.MobileHarne
 import com.google.devtools.mobileharness.shared.version.rpc.stub.VersionStub;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import java.util.Map;
 
 /** Shared master and lab server service stubs. */
 public class StubManager {
@@ -60,7 +67,28 @@ public class StubManager {
     stubFactory = injector.getInstance(StubFactory.class);
   }
 
+  /**
+   * Gets the stub for talking to test engine server ExecTestService.
+   *
+   * @param labServerLocator the lab locator to find the target lab server
+   * @param testEngineLocator the test engine locator to find the target test engine server
+   * @param resourceFederation additional server resource to find the target test engine server.
+   */
   public ExecTestStub getTestEngineExecTestStub(
+      LabServerLocator labServerLocator,
+      TestEngineLocator testEngineLocator,
+      ResourceFederation resourceFederation) {
+    ImmutableMap<ServerResourceType, ServerLocator> map = getServerMap(resourceFederation);
+    if (map.containsKey(ServerResourceType.GRPC_RELAY)) {
+      return getTestEngineExecTestStubWithGrpcRelay(
+          labServerLocator, testEngineLocator, map.get(ServerResourceType.GRPC_RELAY));
+    }
+    return getTestEngineExecTestStub(
+        labServerLocator, testEngineLocator, getMobileHarnessEnvironment(map));
+  }
+
+  @VisibleForTesting
+  ExecTestStub getTestEngineExecTestStub(
       LabServerLocator labServerLocator,
       TestEngineLocator testEngineLocator,
       MobileHarnessServerEnvironment mhEnvironment) {
@@ -68,23 +96,77 @@ public class StubManager {
         getTestEngineGrpcTarget(labServerLocator, testEngineLocator));
   }
 
+  private ExecTestStub getTestEngineExecTestStubWithGrpcRelay(
+      LabServerLocator labServerLocator,
+      TestEngineLocator testEngineLocator,
+      ServerLocator relayLocator) {
+    // Call grpc client -> grpc relay -> lab server.
+    return stubFactory.createExecTestStub(
+        createGrpcDirectStubConfiguration(
+            relayLocator.getGrpcServerLocator(), labServerLocator, testEngineLocator));
+  }
+
   /**
    * Gets the stub for talking to lab server PrepareTestService.
    *
    * @param labServerLocator the lab locator to find the target lab server
+   * @param resourceFederation additional server resource to find the target lab server.
    */
   public PrepareTestStub getPrepareTestStub(
+      LabServerLocator labServerLocator, ResourceFederation resourceFederation) {
+    ImmutableMap<ServerResourceType, ServerLocator> map = getServerMap(resourceFederation);
+    if (map.containsKey(ServerResourceType.GRPC_RELAY)) {
+      return getPrepareTestStubWithGrpcRelay(
+          labServerLocator, map.get(ServerResourceType.GRPC_RELAY));
+    }
+    return getPrepareTestStub(labServerLocator, getMobileHarnessEnvironment(map));
+  }
+
+  @VisibleForTesting
+  PrepareTestStub getPrepareTestStub(
       LabServerLocator labServerLocator, MobileHarnessServerEnvironment mhEnvironment) {
     return grpcStubManager.getPrepareTestStub(getLabServerGrpcTarget(labServerLocator));
   }
 
+  private PrepareTestStub getPrepareTestStubWithGrpcRelay(
+      LabServerLocator labServerLocator, ServerLocator relayLocator) {
+    // Call grpc client -> grpc relay -> lab server.
+    return stubFactory.createPrepareTestStub(
+        createGrpcDirectStubConfiguration(relayLocator.getGrpcServerLocator(), labServerLocator));
+  }
+
   /**
-   * Gets the stub for talking to lab server version service.
+   * Gets the stub for talking to lab server VersionService.
    *
-   * @param labServerLocator locator to find the targeted lab
+   * @param labServerLocator locator to find the targeted lab.
+   * @param resourceFederation additional server resource to find the targeted lab.
    */
   public VersionStub getLabVersionStub(
+      LabServerLocator labServerLocator, ResourceFederation resourceFederation) {
+    ImmutableMap<ServerResourceType, ServerLocator> map = getServerMap(resourceFederation);
+    if (map.containsKey(ServerResourceType.GRPC_RELAY)) {
+      return getLabVersionStubWithGrpcRelay(
+          labServerLocator, map.get(ServerResourceType.GRPC_RELAY));
+    }
+    return getLabVersionStub(labServerLocator, getMobileHarnessEnvironment(map));
+  }
+
+  @VisibleForTesting
+  VersionStub getLabVersionStub(
       LabServerLocator labServerLocator, MobileHarnessServerEnvironment mhEnvironment) {
     return grpcStubManager.getVersionStub(getLabServerGrpcTarget(labServerLocator));
+  }
+
+  private VersionStub getLabVersionStubWithGrpcRelay(
+      LabServerLocator labServerLocator, ServerLocator relayLocator) {
+    // Call grpc client -> grpc relay -> lab server.
+    return stubFactory.createVersionStub(
+        createGrpcDirectStubConfiguration(relayLocator.getGrpcServerLocator(), labServerLocator));
+  }
+
+  @VisibleForTesting
+  static MobileHarnessServerEnvironment getMobileHarnessEnvironment(
+      Map<ServerResourceType, ServerLocator> serverResources) {
+    return MobileHarnessServerEnvironment.DEFAULT;
   }
 }

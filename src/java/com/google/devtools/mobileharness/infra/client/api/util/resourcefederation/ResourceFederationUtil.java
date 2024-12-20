@@ -16,8 +16,10 @@
 
 package com.google.devtools.mobileharness.infra.client.api.util.resourcefederation;
 
+import static com.google.common.collect.Maps.toImmutableEnumMap;
 import static com.google.devtools.mobileharness.infra.client.api.util.serverlocator.ServerLocatorUtil.getMasterServerLocator;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.infra.client.api.proto.ResourceFederationProto.ResourceFederation;
 import com.google.devtools.mobileharness.infra.client.api.proto.ResourceFederationProto.ServerResource;
 import com.google.devtools.mobileharness.infra.client.api.proto.ResourceFederationProto.ServerResourceType;
@@ -38,6 +40,15 @@ public final class ResourceFederationUtil {
         .filter(serverResource -> serverResource.getServerResourceType().equals(serverResourceType))
         .findFirst()
         .map(ServerResource::getServerLocator);
+  }
+
+  /** Gets a map from server resource type to server locator from the resource federation. */
+  public static ImmutableMap<ServerResourceType, ServerLocator> getServerMap(
+      ResourceFederation resourceFederation) {
+    return resourceFederation.getServerResourcesList().stream()
+        .collect(
+            toImmutableEnumMap(
+                ServerResource::getServerResourceType, ServerResource::getServerLocator));
   }
 
   /**
