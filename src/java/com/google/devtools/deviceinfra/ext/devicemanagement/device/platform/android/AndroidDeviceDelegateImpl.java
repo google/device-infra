@@ -23,7 +23,6 @@ import com.google.devtools.mobileharness.platform.android.process.AndroidProcess
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.devtools.mobileharness.platform.android.systemstate.AndroidSystemStateUtil;
-import com.google.wireless.qa.mobileharness.shared.android.Sqlite;
 import com.google.wireless.qa.mobileharness.shared.api.device.BaseDevice;
 
 /** Default implementation of {@code AndroidDeviceDelegate}. */
@@ -33,7 +32,6 @@ public class AndroidDeviceDelegateImpl extends AndroidDeviceDelegate {
     this(
         device,
         new ActivityManager(),
-        new Sqlite(),
         new AndroidAdbUtil(),
         new AndroidSystemStateUtil(),
         new AndroidPackageManagerUtil(),
@@ -45,7 +43,6 @@ public class AndroidDeviceDelegateImpl extends AndroidDeviceDelegate {
   AndroidDeviceDelegateImpl(
       BaseDevice device,
       ActivityManager am,
-      Sqlite sqlite,
       AndroidAdbUtil androidAdbUtil,
       AndroidSystemStateUtil androidSystemStateUtil,
       AndroidPackageManagerUtil androidPackageManagerUtil,
@@ -54,7 +51,6 @@ public class AndroidDeviceDelegateImpl extends AndroidDeviceDelegate {
     super(
         device,
         am,
-        sqlite,
         androidAdbUtil,
         androidSystemStateUtil,
         androidPackageManagerUtil,
