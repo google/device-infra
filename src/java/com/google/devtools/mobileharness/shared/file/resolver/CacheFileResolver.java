@@ -203,12 +203,12 @@ public class CacheFileResolver extends AbstractFileResolver {
       if (optionalResolveResult.isPresent()) {
         ResolveResult resolveResult = optionalResolveResult.get();
         logger.atInfo().log("Previous resolved result: %s", resolveResult);
-        for (String path : resolveResult.paths()) {
-          if (!localFileUtil.isFileOrDirExist(path)) {
+        for (ResolvedFile resolvedFile : resolveResult.resolvedFiles()) {
+          if (!localFileUtil.isFileOrDirExist(resolvedFile.path())) {
             logger.atInfo().log(
                 "Previous cached resolved file %s for %s doesn't exist any more. Need to"
                     + " re-resolve.",
-                path, resolveSource);
+                resolvedFile.path(), resolveSource);
             // If any file in the cached result doesn't exist any more, retire cached value
             // and re-resolve.
             removeItemIfValueMatch(cachedResolveSource, previousCachedResolveResult);
@@ -218,19 +218,20 @@ public class CacheFileResolver extends AbstractFileResolver {
         if (!resolveResult.resolveSource().equals(resolveSource)) {
           String cachedRootPath = resolveResult.resolveSource().targetDir();
           String thisRootPath = resolveSource.targetDir();
-          List<String> thisResolvedPaths = new ArrayList<>();
-          for (String cachedPath : resolveResult.paths()) {
+          List<ResolvedFile> thisResolvedFiles = new ArrayList<>();
+          for (ResolvedFile cachedResolvedFile : resolveResult.resolvedFiles()) {
             String thisPath =
-                PathUtil.join(thisRootPath, PathUtil.makeRelative(cachedRootPath, cachedPath));
+                PathUtil.join(
+                    thisRootPath, PathUtil.makeRelative(cachedRootPath, cachedResolvedFile.path()));
             if (!localFileUtil.isFileOrDirExist(thisPath)) {
               try {
                 localFileUtil.prepareDir(PathUtil.dirname(thisPath));
-                localFileUtil.copyFileOrDir(cachedPath, thisPath);
+                localFileUtil.copyFileOrDir(cachedResolvedFile.path(), thisPath);
               } catch (MobileHarnessException e) {
                 // There may be race condition. The cached file is removed after first check.
                 // So check again.
-                if (localFileUtil.isFileOrDirExist(cachedPath)
-                    && localFileUtil.getFileOrDirSize(cachedPath)
+                if (localFileUtil.isFileOrDirExist(cachedResolvedFile.path())
+                    && localFileUtil.getFileOrDirSize(cachedResolvedFile.path())
                         == localFileUtil.getFileOrDirSize(thisPath)) {
                   logger.atInfo().withCause(e).log(
                       "Failed to copy file because of two concurrent copies to same destination."
@@ -244,18 +245,19 @@ public class CacheFileResolver extends AbstractFileResolver {
                   // and re-resolve.
                   removeItemIfValueMatch(cachedResolveSource, previousCachedResolveResult);
                   // Remove already copied file.
-                  for (String path : thisResolvedPaths) {
-                    localFileUtil.removeFileOrDir(path);
+                  for (ResolvedFile resolvedFile : thisResolvedFiles) {
+                    localFileUtil.removeFileOrDir(resolvedFile.path());
                   }
                   return internalResolve(resolveSource);
                 }
               }
             }
-            thisResolvedPaths.add(thisPath);
+            thisResolvedFiles.add(
+                ResolvedFile.create(thisPath, cachedResolvedFile.checksum().orElse(null)));
           }
           ResolveResult result =
-              ResolveResult.create(
-                  ImmutableList.copyOf(thisResolvedPaths),
+              ResolveResult.of(
+                  ImmutableList.copyOf(thisResolvedFiles),
                   resolveResult.properties(),
                   resolveSource);
           logger.atInfo().log("Resolved result: %s", result);
