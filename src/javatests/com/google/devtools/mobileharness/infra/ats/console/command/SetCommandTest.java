@@ -72,7 +72,9 @@ public final class SetCommandTest {
                     new ConsoleCommandTestModule(
                         consoleInfo,
                         ServerEnvironment.of(
-                            Path.of("/fake_server_binary"), Path.of("/fake_java_binary"))))));
+                            Path.of("/fake_server_binary"),
+                            Path.of("/fake_java_binary"),
+                            Path.of("/fake_working_dir"))))));
   }
 
   @Test
