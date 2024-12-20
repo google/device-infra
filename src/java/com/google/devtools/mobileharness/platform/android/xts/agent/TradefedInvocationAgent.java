@@ -28,39 +28,65 @@ import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefe
 import java.lang.instrument.Instrumentation;
 import java.nio.file.Path;
 import net.bytebuddy.agent.builder.AgentBuilder;
+import net.bytebuddy.agent.builder.AgentBuilder.Default;
+import net.bytebuddy.agent.builder.AgentBuilder.Transformer;
 import net.bytebuddy.asm.Advice;
+import net.bytebuddy.dynamic.Transformer.NoOp;
+import net.bytebuddy.implementation.MethodDelegation;
 
-/**
- * The agent to intercept the {@code TestInvocation} and the {@code
- * ClusterCommandScheduler.InvocationEventHandler} classes in Tradefed to get the runtime info.
- */
+/** An agent to record Tradefed runtime info and disable result reporter. */
 public class TradefedInvocationAgent {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
+  /**
+   * The entry point.
+   *
+   * @param agentArgs [String runtimeInfoFilePath]:[boolean disableResultReporter]
+   */
   public static void premain(String agentArgs, Instrumentation inst) {
     new TradefedInvocationAgent().run(agentArgs, inst);
   }
 
-  private void run(String runtimeInfoFilePath, Instrumentation inst) {
-    if (runtimeInfoFilePath.isEmpty()) {
-      return;
-    }
-    TradefedInvocationAgentLogger.init();
-    logger.atInfo().log("Runtime info file path: %s", runtimeInfoFilePath);
+  @SuppressWarnings("StringSplitter")
+  private void run(String agentArgs, Instrumentation inst) {
+    // Parses arguments.
+    String[] arguments = agentArgs.split(":");
+    String runtimeInfoFilePath = arguments.length >= 1 ? arguments[0] : "";
+    boolean disableResultReporter = arguments.length >= 2 && Boolean.parseBoolean(arguments[1]);
 
-    XtsTradefedRuntimeInfoMonitor.getInstance().start(Path.of(runtimeInfoFilePath));
-    intercept(
-        inst,
-        "com.android.tradefed.invoker.TestInvocation",
-        "invoke",
-        4,
-        TradefedTestInvocationInvokeMethodInterceptor.class);
-    intercept(
-        inst,
-        "com.android.tradefed.cluster.ClusterCommandScheduler$InvocationEventHandler",
-        "invocationComplete",
-        2,
-        TradefedInvocationEventHandlerInvocationCompleteMethodInterceptor.class);
+    // Initializes logger.
+    TradefedInvocationAgentLogger.init();
+
+    // Disables result reporter.
+    if (disableResultReporter) {
+      logger.atInfo().log("Disable suite result reporter");
+      intercept(
+          inst,
+          "com.android.tradefed.result.suite.SuiteResultReporter",
+          (builder, typeDescription, classLoader, module, protectionDomain) ->
+              builder
+                  .method(named("invocationEnded").and(takesArguments(1)))
+                  .intercept(MethodDelegation.to(NoOp.INSTANCE)),
+          /* disableClassFormatChanges= */ false);
+    }
+
+    // Records runtime info.
+    if (!runtimeInfoFilePath.isEmpty()) {
+      logger.atInfo().log("Runtime info file path: %s", runtimeInfoFilePath);
+      XtsTradefedRuntimeInfoMonitor.getInstance().start(Path.of(runtimeInfoFilePath));
+      intercept(
+          inst,
+          "com.android.tradefed.invoker.TestInvocation",
+          "invoke",
+          4,
+          TradefedTestInvocationInvokeMethodInterceptor.class);
+      intercept(
+          inst,
+          "com.android.tradefed.cluster.ClusterCommandScheduler$InvocationEventHandler",
+          "invocationComplete",
+          2,
+          TradefedInvocationEventHandlerInvocationCompleteMethodInterceptor.class);
+    }
   }
 
   private static void intercept(
@@ -69,16 +95,29 @@ public class TradefedInvocationAgent {
       String methodName,
       int argumentsLength,
       Class<?> interceptorClass) {
-    new AgentBuilder.Default()
-        .with(toSystemError().withErrorsOnly())
-        .disableClassFormatChanges()
+    intercept(
+        inst,
+        className,
+        (builder, typeDescription, classLoader, module, protectionDomain) ->
+            builder.visit(
+                Advice.to(interceptorClass)
+                    .on(named(methodName).and(takesArguments(argumentsLength)))),
+        /* disableClassFormatChanges= */ true);
+  }
+
+  private static void intercept(
+      Instrumentation inst,
+      String className,
+      Transformer transformer,
+      boolean disableClassFormatChanges) {
+    AgentBuilder agentBuilder = new Default().with(toSystemError().withErrorsOnly());
+    if (disableClassFormatChanges) {
+      agentBuilder = agentBuilder.disableClassFormatChanges();
+    }
+    agentBuilder
         .ignore(none(), not(isBootstrapClassLoader()))
         .type(named(className))
-        .transform(
-            (builder, typeDescription, classLoader, module, protectionDomain) ->
-                builder.visit(
-                    Advice.to(interceptorClass)
-                        .on(named(methodName).and(takesArguments(argumentsLength)))))
+        .transform(transformer)
         .installOn(inst);
   }
 

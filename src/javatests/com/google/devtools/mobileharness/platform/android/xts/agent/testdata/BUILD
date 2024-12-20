@@ -13,7 +13,7 @@
 # limitations under the License.
 #
 
-load("@rules_java//java:defs.bzl", "java_binary", "java_library")
+load("@rules_java//java:defs.bzl", "java_binary")
 
 package(
     default_applicable_licenses = ["//:license"],
@@ -28,12 +28,8 @@ java_binary(
         "FakeClusterCommandSchedulerUtil.java",
         "FakeInvocationContext.java",
         "FakeTradefed.java",
+        "SuiteResultReporter.java",
         "TestInvocation.java",
     ],
     main_class = "com.google.devtools.mobileharness.platform.android.xts.agent.testdata.FakeTradefed",
-)
-
-java_library(
-    name = "fake_tradefed_lib",
-    srcs = glob(["*.java"]),
 )

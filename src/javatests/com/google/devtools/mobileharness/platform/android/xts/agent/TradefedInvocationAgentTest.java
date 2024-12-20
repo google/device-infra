@@ -17,12 +17,12 @@
 package com.google.devtools.mobileharness.platform.android.xts.agent;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.truth.Correspondence.transforming;
 import static com.google.common.truth.Truth.assertThat;
+import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
-import com.google.common.truth.Correspondence;
-import com.google.devtools.mobileharness.platform.android.xts.agent.testdata.FakeTradefed;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfo;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfo.TradefedInvocation;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfoFileUtil;
@@ -81,8 +81,9 @@ public class TradefedInvocationAgentTest {
                             ImmutableList.of("device1", "device2"),
                             ImmutableList.of(
                                 String.format(
-                                    "-javaagent:%s=%s", AGENT_PATH, runtimeInfoFilePath))))
-                .redirectStderr(false)
+                                    "-javaagent:%s=%s",
+                                    AGENT_PATH,
+                                    String.format("%s:%s", runtimeInfoFilePath, "true")))))
                 .showFullResultInException(true));
 
     List<XtsTradefedRuntimeInfo> runtimeInfos = new ArrayList<>();
@@ -106,9 +107,9 @@ public class TradefedInvocationAgentTest {
 
     assertThat(runtimeInfos)
         .comparingElementsUsing(
-            Correspondence.transforming(
+            transforming(
                 (XtsTradefedRuntimeInfo runtimeInfo) ->
-                    runtimeInfo.invocations().stream()
+                    requireNonNull(runtimeInfo).invocations().stream()
                         .map(TradefedInvocation::deviceIds)
                         .collect(toImmutableList()),
                 "has invocations containing device IDs of"))
@@ -120,9 +121,9 @@ public class TradefedInvocationAgentTest {
 
     assertThat(runtimeInfos)
         .comparingElementsUsing(
-            Correspondence.transforming(
+            transforming(
                 (XtsTradefedRuntimeInfo runtimeInfo) ->
-                    runtimeInfo.invocations().stream()
+                    requireNonNull(runtimeInfo).invocations().stream()
                         .map(TradefedInvocation::status)
                         .collect(toImmutableList()),
                 "has invocations containing statuses of"))
@@ -131,9 +132,9 @@ public class TradefedInvocationAgentTest {
 
     assertThat(runtimeInfos)
         .comparingElementsUsing(
-            Correspondence.transforming(
+            transforming(
                 (XtsTradefedRuntimeInfo runtimeInfo) ->
-                    runtimeInfo.invocations().stream()
+                    requireNonNull(runtimeInfo).invocations().stream()
                         .map(TradefedInvocation::errorMessage)
                         .collect(toImmutableList()),
                 "has invocations containing error messages of"))
@@ -143,9 +144,9 @@ public class TradefedInvocationAgentTest {
 
     assertThat(runtimeInfos)
         .comparingElementsUsing(
-            Correspondence.transforming(
+            transforming(
                 (XtsTradefedRuntimeInfo runtimeInfo) ->
-                    runtimeInfo.invocations().stream()
+                    requireNonNull(runtimeInfo).invocations().stream()
                         .map(TradefedInvocation::isRunning)
                         .map(isRunning -> Boolean.toString(isRunning))
                         .collect(toImmutableList()),
@@ -156,10 +157,12 @@ public class TradefedInvocationAgentTest {
     CommandResult commandResult = commandProcess.await();
     logger.atInfo().log("Command result: %s", commandResult);
     assertThat(commandResult.exitCode()).isEqualTo(0);
+
+    assertThat(commandResult.stdout()).doesNotContain("SuiteResultReporter.invocationEnded()");
   }
 
   @Test
-  public void testInvocationThrowsException() throws Exception {
+  public void premain_invocationThrowsException() throws Exception {
     Path runtimeInfoFilePath = tempFolder.newFolder().toPath().resolve("runtime_info_file.txt");
 
     CommandProcess commandProcess =
@@ -170,24 +173,23 @@ public class TradefedInvocationAgentTest {
                         .createJavaCommand(
                             FAKE_TRADEFED_PATH,
                             // Specifying the special device ID to trigger an invocation exception:
-                            ImmutableList.of(
-                                FakeTradefed.DEVICE_ID_TO_TRIGGER_INVOCATION_EXCEPTION),
+                            ImmutableList.of("device_id_to_trigger_invocation_exception"),
                             ImmutableList.of(
                                 String.format(
-                                    "-javaagent:%s=%s", AGENT_PATH, runtimeInfoFilePath))))
-                .redirectStderr(false)
+                                    "-javaagent:%s=%s",
+                                    AGENT_PATH,
+                                    String.format("%s:%s", runtimeInfoFilePath, "true")))))
                 .showFullResultInException(true));
 
     CommandResult commandResult = commandProcess.await();
     assertThat(commandResult.exitCode()).isEqualTo(0);
     Optional<XtsTradefedRuntimeInfoFileDetail> fileDetail =
         xtsTradefedRuntimeInfoFileUtil.readInfo(runtimeInfoFilePath, /* lastModifiedTime= */ null);
-    List<TradefedInvocation> invocations = fileDetail.get().runtimeInfo().invocations();
+    List<TradefedInvocation> invocations = fileDetail.orElseThrow().runtimeInfo().invocations();
     assertThat(invocations).hasSize(1);
     assertThat(invocations.get(0).deviceIds())
-        .containsExactly(FakeTradefed.DEVICE_ID_TO_TRIGGER_INVOCATION_EXCEPTION);
-    assertThat(invocations.get(0).errorMessage())
-        .contains(FakeTradefed.INVOCATION_EXCEPTION_MESSAGE);
+        .containsExactly("device_id_to_trigger_invocation_exception");
+    assertThat(invocations.get(0).errorMessage()).contains("Fake tradefed invocation exception.");
     assertThat(invocations.get(0).isRunning()).isFalse();
   }
 }
