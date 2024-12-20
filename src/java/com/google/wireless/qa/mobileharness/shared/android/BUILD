@@ -121,17 +121,3 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
-
-java_library(
-    name = "sqlite",
-    srcs = ["Sqlite.java"],
-    visibility = [
-        "//:deviceinfra_pkg",
-    ],
-    deps = [
-        "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
-        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:error_code",
-        "@maven//:com_google_guava_guava",
-    ],
-)

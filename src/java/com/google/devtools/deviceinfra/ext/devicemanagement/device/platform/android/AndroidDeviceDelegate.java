@@ -41,7 +41,6 @@ import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.android.AndroidPackages;
-import com.google.wireless.qa.mobileharness.shared.android.Sqlite;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.ParamAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.device.BaseDevice;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
@@ -88,12 +87,10 @@ public abstract class AndroidDeviceDelegate {
   private final AndroidDeviceHelper androidDeviceHelper;
 
   protected final BaseDevice device;
-  protected final Sqlite sqlite;
 
   protected AndroidDeviceDelegate(
       BaseDevice device,
       ActivityManager am,
-      Sqlite sqlite,
       AndroidAdbUtil androidAdbUtil,
       AndroidSystemStateUtil androidSystemStateUtil,
       AndroidPackageManagerUtil androidPackageManagerUtil,
@@ -101,7 +98,6 @@ public abstract class AndroidDeviceDelegate {
       AndroidProcessUtil androidProcessUtil) {
     this.device = device;
     this.am = am;
-    this.sqlite = sqlite;
     this.androidAdbUtil = androidAdbUtil;
     this.androidSystemStateUtil = androidSystemStateUtil;
     this.androidPackageManagerUtil = androidPackageManagerUtil;
