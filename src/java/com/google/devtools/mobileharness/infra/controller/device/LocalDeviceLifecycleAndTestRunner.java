@@ -571,7 +571,7 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
   public DeviceStatusWithTimestamp getDeviceStatusWithTimestamp() {
     return DeviceStatusWithTimestamp.newBuilder()
         .setStatus(getDeviceStatus())
-        .setTimestampMs(clock.millis())
+        .setTimestampMs(clock.instant().toEpochMilli())
         .build();
   }
 
@@ -834,24 +834,7 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
     logger.atInfo().log(
         "Posting TestExecutionEndedEvent, allocation=%s, result=%s, need_reboot=%s",
         allocation, testResult, needReboot);
-    globalInternalBus.post(
-        new TestExecutionEndedEvent() {
-
-          @Override
-          public Allocation getAllocation() {
-            return allocation;
-          }
-
-          @Override
-          public TestResult getTestResult() {
-            return testResult;
-          }
-
-          @Override
-          public boolean needReboot() {
-            return needReboot;
-          }
-        });
+    globalInternalBus.post(new TestExecutionEndedEvent(allocation, testResult, needReboot));
     logger.atInfo().log("TestExecutionEndedEvent posted");
   }
 

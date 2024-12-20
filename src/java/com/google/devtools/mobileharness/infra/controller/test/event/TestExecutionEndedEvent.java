@@ -20,11 +20,26 @@ import com.google.devtools.mobileharness.api.model.allocation.Allocation;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 
 /** Event which signals that a test has just been executed. */
-public interface TestExecutionEndedEvent {
+public class TestExecutionEndedEvent {
+  private final Allocation allocation;
+  private final TestResult testResult;
+  private final boolean needReboot;
 
-  Allocation getAllocation();
+  public TestExecutionEndedEvent(Allocation allocation, TestResult testResult, boolean needReboot) {
+    this.allocation = allocation;
+    this.testResult = testResult;
+    this.needReboot = needReboot;
+  }
 
-  TestResult getTestResult();
+  public Allocation getAllocation() {
+    return allocation;
+  }
 
-  boolean needReboot();
+  public TestResult getTestResult() {
+    return testResult;
+  }
+
+  public boolean needReboot() {
+    return needReboot;
+  }
 }

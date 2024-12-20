@@ -90,24 +90,7 @@ public class ThreadPoolTestRunnerLauncher<T extends TestRunner> extends TestRunn
           String.format(
               "Post TestExecutionEndedEvent, allocation=%s, result=%s, need_reboot=%s",
               allocation, testResult, needReboot));
-      globalInternalEventBus.post(
-          new TestExecutionEndedEvent() {
-
-            @Override
-            public Allocation getAllocation() {
-              return allocation;
-            }
-
-            @Override
-            public TestResult getTestResult() {
-              return testResult;
-            }
-
-            @Override
-            public boolean needReboot() {
-              return needReboot;
-            }
-          });
+      globalInternalEventBus.post(new TestExecutionEndedEvent(allocation, testResult, needReboot));
     }
   }
 
