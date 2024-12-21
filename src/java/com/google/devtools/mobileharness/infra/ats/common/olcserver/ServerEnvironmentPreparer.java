@@ -34,8 +34,11 @@ public interface ServerEnvironmentPreparer {
 
     public abstract Path javaBinary();
 
-    public static ServerEnvironment of(Path serverBinary, Path javaBinary) {
-      return new AutoValue_ServerEnvironmentPreparer_ServerEnvironment(serverBinary, javaBinary);
+    public abstract Path serverWorkingDir();
+
+    public static ServerEnvironment of(Path serverBinary, Path javaBinary, Path serverWorkingDir) {
+      return new AutoValue_ServerEnvironmentPreparer_ServerEnvironment(
+          serverBinary, javaBinary, serverWorkingDir);
     }
   }
 

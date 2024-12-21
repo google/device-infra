@@ -114,6 +114,7 @@ public class ServerPreparer {
   private final ServerEnvironmentPreparer serverEnvironmentPreparer;
   private final FlagsString deviceInfraServiceFlags;
   private final ListeningScheduledExecutorService scheduledThreadPool;
+  private final ServerHeapDumpFileDetector serverHeapDumpFileDetector;
 
   private final Object prepareServerLock = new Object();
 
@@ -132,7 +133,8 @@ public class ServerPreparer {
       @ServerStub(ServerStub.Type.VERSION_SERVICE) Provider<VersionStub> versionStub,
       ServerEnvironmentPreparer serverEnvironmentPreparer,
       @DeviceInfraServiceFlags FlagsString deviceInfraServiceFlags,
-      ListeningScheduledExecutorService scheduledThreadPool) {
+      ListeningScheduledExecutorService scheduledThreadPool,
+      ServerHeapDumpFileDetector serverHeapDumpFileDetector) {
     this.clientComponentName = clientComponentName;
     this.clientId = clientId;
     this.commandExecutor = commandExecutor;
@@ -144,6 +146,7 @@ public class ServerPreparer {
     this.serverEnvironmentPreparer = serverEnvironmentPreparer;
     this.deviceInfraServiceFlags = deviceInfraServiceFlags;
     this.scheduledThreadPool = scheduledThreadPool;
+    this.serverHeapDumpFileDetector = serverHeapDumpFileDetector;
   }
 
   public void startSendingHeartbeats() {
@@ -159,6 +162,7 @@ public class ServerPreparer {
                     .atMostEvery(5, MINUTES)
                     .with(IMPORTANCE, DEBUG)
                     .log("Error when sending heartbeat to OLC server");
+                serverHeapDumpFileDetector.detectHeapDumpExistenceWithGrpcError(e);
               }
             },
             Duration.ZERO,
@@ -195,21 +199,28 @@ public class ServerPreparer {
       // Acquires file lock.
       Optional<NonThrowingAutoCloseable> fileUnlocker = lockFile();
       try {
-
         // Tries to get server version.
-        GetVersionResponse version = tryConnectToOlcServer().orElse(null);
-        if (version != null) {
+        GetVersionResponse existingServerVersion = tryConnectToOlcServer().orElse(null);
+        if (existingServerVersion != null) {
           if (firstPreparation) {
             logger.atInfo().log(
-                "Connected to existing OLC server, version=[%s]", shortDebugString(version));
+                "Connected to existing OLC server, version=[%s]",
+                shortDebugString(existingServerVersion));
           }
 
-          if (needKillExistingServer(firstPreparation, version)) {
+          if (needKillExistingServer(firstPreparation, existingServerVersion)) {
             killExistingServer(/* forcibly= */ false);
           } else {
             if (firstPreparation) {
               logger.atInfo().log("Using existing OLC server");
-              checkAndPrintServerVersionWarning(version);
+              checkAndPrintServerVersionWarning(existingServerVersion);
+              Optional<String> processWorkingDir =
+                  systemUtil.getProcessWorkingDirectory(existingServerVersion.getProcessId());
+              if (processWorkingDir.isPresent()) {
+                // Records the server information.
+                serverHeapDumpFileDetector.setOlcServerInfo(
+                    existingServerVersion.getProcessId(), processWorkingDir.get());
+              }
             }
             return;
           }
@@ -263,6 +274,7 @@ public class ServerPreparer {
                         SH_COMMAND,
                         "-c",
                         Joiner.on(" ").join(startOlcServerCommandBuilder.build())))
+                .workDir(serverEnvironment.serverWorkingDir())
                 .timeout(ChronoUnit.YEARS.getDuration())
                 .redirectStderr(false)
                 .onStdout(serverOutputLineCallback)
@@ -290,6 +302,9 @@ public class ServerPreparer {
           logger.atInfo().log(
               "OLC server started, port=%s, pid=%s",
               Flags.instance().olcServerPort.getNonNull(), serverVersion.getProcessId());
+          // Records the server information.
+          serverHeapDumpFileDetector.setOlcServerInfo(
+              serverVersion.getProcessId(), serverEnvironment.serverWorkingDir().toString());
         } catch (MobileHarnessException | InterruptedException | RuntimeException | Error e) {
           // Kills the wrapper process.
           if (serverProcess.isAlive()) {

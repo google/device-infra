@@ -38,6 +38,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ClientId;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerStub;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerHeapDumpFileDetector;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginNotification;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
@@ -115,17 +116,20 @@ public class AtsSessionStub {
   private final String clientId;
   private final ListeningExecutorService threadPool;
   private final Sleeper sleeper;
+  private final ServerHeapDumpFileDetector serverHeapDumpFileDetector;
 
   @Inject
   AtsSessionStub(
       @ServerStub(ServerStub.Type.SESSION_SERVICE) Provider<SessionStub> sessionStubProvider,
       @ClientId String clientId,
       ListeningExecutorService threadPool,
-      Sleeper sleeper) {
+      Sleeper sleeper,
+      ServerHeapDumpFileDetector serverHeapDumpFileDetector) {
     this.sessionStubProvider = sessionStubProvider;
     this.clientId = clientId;
     this.threadPool = threadPool;
     this.sleeper = sleeper;
+    this.serverHeapDumpFileDetector = serverHeapDumpFileDetector;
   }
 
   /** Runs a session in OmniLab long-running client. */
@@ -147,6 +151,7 @@ public class AtsSessionStub {
       createSessionResponse =
           requireNonNull(sessionStubProvider.get()).createSession(createSessionRequest);
     } catch (GrpcExceptionWithErrorId e) {
+      serverHeapDumpFileDetector.detectHeapDumpExistenceWithGrpcError(e);
       return immediateFailedFuture(
           new MobileHarnessException(
               InfraErrorId.ATSC_SESSION_STUB_CREATE_SESSION_ERROR,
@@ -186,6 +191,7 @@ public class AtsSessionStub {
     try {
       runSessionResponse = requireNonNull(sessionStubProvider.get()).runSession(runSessionRequest);
     } catch (GrpcExceptionWithErrorId e) {
+      serverHeapDumpFileDetector.detectHeapDumpExistenceWithGrpcError(e);
       throw new MobileHarnessException(
           InfraErrorId.ATSC_SESSION_STUB_RUN_SESSION_ERROR,
           String.format(
@@ -251,6 +257,7 @@ public class AtsSessionStub {
     try {
       return requireNonNull(sessionStubProvider.get()).getAllSessions(getAllSessionsRequest);
     } catch (GrpcExceptionWithErrorId e) {
+      serverHeapDumpFileDetector.detectHeapDumpExistenceWithGrpcError(e);
       throw new MobileHarnessException(
           InfraErrorId.ATSC_SESSION_STUB_GET_ALL_SESSIONS_ERROR,
           String.format(
@@ -278,6 +285,7 @@ public class AtsSessionStub {
           .log("Successfully aborted sessions, response=[%s]", shortDebugString(response));
       return response;
     } catch (GrpcExceptionWithErrorId e) {
+      serverHeapDumpFileDetector.detectHeapDumpExistenceWithGrpcError(e);
       throw new MobileHarnessException(
           InfraErrorId.ATSC_SESSION_STUB_ABORT_SESSION_ERROR,
           String.format("Failed to abort sessions, request=[%s]", shortDebugString(request)),
@@ -329,6 +337,7 @@ public class AtsSessionStub {
               shortDebugString(response));
       return response;
     } catch (GrpcExceptionWithErrorId e) {
+      serverHeapDumpFileDetector.detectHeapDumpExistenceWithGrpcError(e);
       throw new MobileHarnessException(
           InfraErrorId.ATSC_SESSION_STUB_CANCEL_UNFINISHED_SESSIONS_ERROR,
           String.format(
@@ -370,6 +379,7 @@ public class AtsSessionStub {
           }
         } while (!sessionStatus.equals(SessionStatus.SESSION_FINISHED));
       } catch (GrpcExceptionWithErrorId e) {
+        serverHeapDumpFileDetector.detectHeapDumpExistenceWithGrpcError(e);
         throw new MobileHarnessException(
             InfraErrorId.ATSC_SESSION_STUB_GET_SESSION_STATUS_ERROR,
             String.format(
@@ -385,6 +395,7 @@ public class AtsSessionStub {
                 .getSession(GetSessionRequest.newBuilder().setSessionId(sessionId).build())
                 .getSessionDetail();
       } catch (GrpcExceptionWithErrorId e) {
+        serverHeapDumpFileDetector.detectHeapDumpExistenceWithGrpcError(e);
         throw new MobileHarnessException(
             InfraErrorId.ATSC_SESSION_STUB_GET_SESSION_RESULT_ERROR,
             String.format(

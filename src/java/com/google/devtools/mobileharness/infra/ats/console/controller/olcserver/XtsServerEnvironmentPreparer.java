@@ -61,6 +61,10 @@ public class XtsServerEnvironmentPreparer implements ServerEnvironmentPreparer {
     Path xtsRootDir = consoleInfo.getXtsRootDirectoryNonEmpty();
     Path initialServerBinary = Path.of(Flags.instance().atsConsoleOlcServerPath.getNonNull());
 
+    // Prepare olc server work dir.
+    Path serverWorkDir = Path.of(Flags.instance().xtsResDirRoot.getNonNull(), "olc_server_work");
+    localFileUtil.prepareDir(serverWorkDir);
+
     if (Flags.instance().atsConsoleOlcServerCopyServerResource.getNonNull()) {
       // Prepares server resource dir.
       Path serverResDir = Path.of(Flags.instance().xtsResDirRoot.getNonNull(), "olc_server_res");
@@ -111,7 +115,7 @@ public class XtsServerEnvironmentPreparer implements ServerEnvironmentPreparer {
     // Checks files.
     localFileUtil.checkFile(serverBinary);
     localFileUtil.checkFile(javaBinary);
-    return ServerEnvironment.of(serverBinary, javaBinary);
+    return ServerEnvironment.of(serverBinary, javaBinary, serverWorkDir);
   }
 
   /** Grants full access to a file/dir and ignores errors if any. */

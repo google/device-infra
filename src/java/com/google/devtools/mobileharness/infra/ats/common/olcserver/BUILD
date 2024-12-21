@@ -103,6 +103,7 @@ java_library(
         ":annotations",
         ":builtin_olc_server_flags",
         ":server_environment_preparer",
+        ":server_heap_dump_file_detector",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:control_service_java_proto",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:version_service_java_proto",
         "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc",
@@ -130,6 +131,20 @@ java_library(
         "@io_grpc_grpc_java//core",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "server_heap_dump_file_detector",
+    srcs = ["ServerHeapDumpFileDetector.java"],
+    deps = [
+        "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc",
+        "//src/java/com/google/devtools/mobileharness/shared/constant:log_record_importance",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "@io_grpc_grpc_java//core",
+        "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:javax_inject_jsr330_api",
     ],
 )

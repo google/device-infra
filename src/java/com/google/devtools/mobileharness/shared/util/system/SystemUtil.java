@@ -25,6 +25,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.ListMultimap;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.graph.Traverser;
@@ -1298,6 +1299,26 @@ public class SystemUtil {
       return Optional.of(matcher.group(1));
     } else {
       logger.atWarning().log("Failed to get Ubuntu version. The output is %s", output);
+      return Optional.empty();
+    }
+  }
+
+  /** Returns the working directory of the process with the given process id. */
+  public Optional<String> getProcessWorkingDirectory(long processId) throws InterruptedException {
+    if (!isOnLinux()) {
+      return Optional.empty();
+    }
+
+    String output = null;
+    try {
+      output = executor.run(Command.of("pwdx", String.valueOf(processId)));
+      // Parse the working directory from the output.
+      // Ideally, the output has the format of "<pid>: <working directory>" like "12345: /tmp/olc".
+      return Optional.of(Iterables.get(Splitter.on(' ').split(output), 1));
+    } catch (CommandException | IndexOutOfBoundsException e) {
+      logger.atWarning().log(
+          "Failed to get process working directory for process id %d with output [%s]",
+          processId, String.valueOf(output));
       return Optional.empty();
     }
   }
