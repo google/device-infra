@@ -91,8 +91,6 @@ public class ServerPreparer {
   private static final String NOHUP_COMMAND = "nohup";
 
   private static final Duration HEARTBEAT_INTERVAL = Duration.ofSeconds(10L);
-
-  private static final int MAX_CONNECT_SERVER_ATTEMPTS = 60;
   private static final Duration CONNECT_SERVER_INTERVAL = Duration.ofSeconds(1L);
 
   private static final ImmutableList<String> UNFINISHED_SESSIONS_TABLE_HEADER =
@@ -346,7 +344,7 @@ public class ServerPreparer {
 
       Duration duration = Duration.between(lastModifiedTime, now);
       if (duration.compareTo(
-              CONNECT_SERVER_INTERVAL.multipliedBy(MAX_CONNECT_SERVER_ATTEMPTS).plusSeconds(5L))
+              Flags.instance().atsConsoleOlcServerStartingTimeout.getNonNull().plusSeconds(5L))
           > 0) {
         // Skip printing if the log file wasn't modified recently.
         return;
@@ -430,18 +428,24 @@ public class ServerPreparer {
   private GetVersionResponse connectWithRetry()
       throws MobileHarnessException, InterruptedException {
     int count = 0;
+    long maxAttempts =
+        Flags.instance()
+                .atsConsoleOlcServerStartingTimeout
+                .getNonNull()
+                .dividedBy(CONNECT_SERVER_INTERVAL)
+            + 1L;
     while (true) {
       try {
         return requireNonNull(versionStub.get()).getVersion();
       } catch (GrpcExceptionWithErrorId e) {
         count++;
-        if (count == MAX_CONNECT_SERVER_ATTEMPTS) {
+        if (count > maxAttempts) {
           throw new MobileHarnessException(
               InfraErrorId.ATSC_SERVER_PREPARER_CONNECT_NEW_OLC_SERVER_ERROR,
               "Failed to connect new OLC server",
               e);
         } else {
-          sleeper.sleep(Duration.ofSeconds(1L));
+          sleeper.sleep(CONNECT_SERVER_INTERVAL);
         }
       }
     }

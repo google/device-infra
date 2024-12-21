@@ -289,6 +289,16 @@ public class Flags {
       converter = Flag.StringConverter.class)
   public Flag<String> atsConsoleOlcServerPath = atsConsoleOlcServerPathDefault;
 
+  private static final Flag<Duration> atsConsoleOlcServerStartingTimeoutDefault =
+      DurationFlag.value(Duration.ofMinutes(1L));
+
+  @com.beust.jcommander.Parameter(
+      names = "--ats_console_olc_server_starting_timeout",
+      description = "OLC server starting timeout of ATS console. Default is 1 minutes",
+      converter = DurationFlag.DurationConverter.class)
+  public Flag<Duration> atsConsoleOlcServerStartingTimeout =
+      atsConsoleOlcServerStartingTimeoutDefault;
+
   private static final Flag<String> atsConsoleOlcServerXmxDefault = Flag.value("24g");
 
   @com.beust.jcommander.Parameter(
