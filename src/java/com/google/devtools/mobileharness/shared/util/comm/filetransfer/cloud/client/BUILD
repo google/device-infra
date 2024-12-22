@@ -21,7 +21,6 @@ package(
         "//java/com/google/devtools/mobileharness:__subpackages__",
         "//javatests/com/google/devtools/mobileharness:__subpackages__",
         "//src/java/com/google/devtools/mobileharness:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness:__subpackages__",
     ],
 )
 
