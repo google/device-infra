@@ -35,3 +35,10 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+java_library(
+    name = "android_emulator_type",
+    srcs = [
+        "AndroidEmulatorType.java",
+    ],
+)
