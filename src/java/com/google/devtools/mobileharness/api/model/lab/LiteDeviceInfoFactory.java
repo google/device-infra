@@ -26,7 +26,7 @@ import com.google.devtools.mobileharness.api.model.lab.out.LocalPropertiesFactor
 public class LiteDeviceInfoFactory {
 
   public static DeviceInfo create(String deviceControlId) {
-    return create(DeviceId.of(deviceControlId, deviceControlId /* deviceUuid */));
+    return create(DeviceId.of(deviceControlId, /* uuid= */ deviceControlId));
   }
 
   public static DeviceInfo create(DeviceId deviceId) {

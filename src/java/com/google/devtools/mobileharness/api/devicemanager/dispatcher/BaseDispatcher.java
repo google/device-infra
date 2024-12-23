@@ -55,6 +55,6 @@ public abstract class BaseDispatcher implements Dispatcher {
 
   @Override
   public DeviceId generateDeviceId(String deviceControlId) {
-    return DeviceId.of(deviceControlId, deviceControlId /* deviceUuid */);
+    return DeviceId.of(deviceControlId, /* uuid= */ deviceControlId);
   }
 }

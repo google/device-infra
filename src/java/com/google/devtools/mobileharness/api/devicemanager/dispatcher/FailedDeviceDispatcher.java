@@ -74,7 +74,7 @@ public class FailedDeviceDispatcher extends CacheableDispatcher {
     } else {
       logger.atWarning().log(
           "Can not find previous uuid for device: %s, using controlId for uuid!", deviceControlId);
-      return DeviceId.of(deviceControlId, deviceControlId /* deviceUuid */);
+      return DeviceId.of(deviceControlId, /* uuid= */ deviceControlId);
     }
   }
 }
