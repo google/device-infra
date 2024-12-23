@@ -956,14 +956,6 @@ public class JobRunner implements Runnable {
       deviceAllocator.tearDown();
     } catch (MobileHarnessException e) {
       jobInfo.warnings().addAndLog(e, logger);
-    } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
-      jobInfo
-          .warnings()
-          .addAndLog(
-              UnknownErrorId.of(e.getErrorCodeEnum(), e.getErrorType()),
-              e.getMessage(),
-              e.getCause(),
-              logger);
     } catch (Throwable t) {
       // For safety, prints out the unknown error.
       logger.atSevere().withCause(t).log("FATAL job error when tearing down allocator");
