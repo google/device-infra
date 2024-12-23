@@ -28,7 +28,6 @@ java_binary(
         "FakeClusterCommandSchedulerUtil.java",
         "FakeInvocationContext.java",
         "FakeTradefed.java",
-        "SuiteResultReporter.java",
         "TestInvocation.java",
     ],
     main_class = "com.google.devtools.mobileharness.platform.android.xts.agent.testdata.FakeTradefed",

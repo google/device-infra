@@ -81,9 +81,7 @@ public class TradefedInvocationAgentTest {
                             ImmutableList.of("device1", "device2"),
                             ImmutableList.of(
                                 String.format(
-                                    "-javaagent:%s=%s",
-                                    AGENT_PATH,
-                                    String.format("%s:%s", runtimeInfoFilePath, "true")))))
+                                    "-javaagent:%s=%s", AGENT_PATH, runtimeInfoFilePath))))
                 .showFullResultInException(true));
 
     List<XtsTradefedRuntimeInfo> runtimeInfos = new ArrayList<>();
@@ -157,8 +155,6 @@ public class TradefedInvocationAgentTest {
     CommandResult commandResult = commandProcess.await();
     logger.atInfo().log("Command result: %s", commandResult);
     assertThat(commandResult.exitCode()).isEqualTo(0);
-
-    assertThat(commandResult.stdout()).doesNotContain("SuiteResultReporter.invocationEnded()");
   }
 
   @Test

@@ -1681,6 +1681,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> useTfRetry = useTfRetryDefault;
 
+  private static final Flag<Boolean> xtsDisableTfResultLogDefault = Flag.value(true);
+
+  @com.beust.jcommander.Parameter(
+      names = "--xts_disable_tf_result_log",
+      description = "Disable xTS TF result logs in terminal. Default is true.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> xtsDisableTfResultLog = xtsDisableTfResultLogDefault;
+
   private static final Flag<String> xtsResDirRootDefault = Flag.value(getXtsResDirRootDefaultOss());
 
   @com.beust.jcommander.Parameter(

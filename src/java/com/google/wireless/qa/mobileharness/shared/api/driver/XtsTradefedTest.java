@@ -89,6 +89,7 @@ import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.XtsTradefed
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
+import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -147,7 +148,7 @@ public class XtsTradefedTest extends BaseDriver
 
   private static final String TF_PATH_KEY = "TF_PATH";
 
-  private static final Duration KILL_TF_AFTER_FINISH_TIME = Duration.ofMinutes(5L);
+  private static final Duration KILL_TF_AFTER_FINISH_TIME = Duration.ofMinutes(4L);
 
   private static final Duration ANDROID_XTS_ZIP_UNCOMPRESS_TIMEOUT = Duration.ofMinutes(15L);
 
@@ -363,14 +364,14 @@ public class XtsTradefedTest extends BaseDriver
     ImmutableMap<String, String> env =
         getEnvironmentToTradefedConsole(tmpXtsRootDir, xtsType, spec);
 
-    // Creates agent arguments.
+    boolean disableTfResultLog = spec.hasDisableTfResultLog() && spec.getDisableTfResultLog();
+
+    // Creates runtime info file path.
     Path runtimeInfoFilePath =
         Path.of(testInfo.getGenFileDir()).resolve(XtsConstants.TRADEFED_RUNTIME_INFO_FILE_NAME);
     testInfo
         .properties()
         .add(XtsConstants.TRADEFED_RUNTIME_INFO_FILE_PATH, runtimeInfoFilePath.toString());
-    boolean disableResultReporter =
-        spec.hasDisableResultReporter() && spec.getDisableResultReporter();
 
     // Creates JVM flags.
     ImmutableList.Builder<String> jvmFlagsBuilder =
@@ -379,10 +380,7 @@ public class XtsTradefedTest extends BaseDriver
                 "-Xmx" + Flags.instance().xtsTfXmx.getNonNull(), "-XX:+HeapDumpOnOutOfMemoryError");
     if (Flags.instance().enableXtsTradefedInvocationAgent.getNonNull()) {
       jvmFlagsBuilder.add(
-          String.format(
-              "-javaagent:%s=%s",
-              getTradefedAgentFilePath(),
-              String.format("%s:%s", runtimeInfoFilePath, disableResultReporter)));
+          String.format("-javaagent:%s=%s", getTradefedAgentFilePath(), runtimeInfoFilePath));
     }
 
     ImmutableList<String> cmd =
@@ -440,8 +438,7 @@ public class XtsTradefedTest extends BaseDriver
     }
 
     CommandProcess process = null;
-    AtomicBoolean tfHasFinished = new AtomicBoolean();
-    try (BufferedWriter writer = Files.newBufferedWriter(tfOutputPath)) {
+    try (BufferedWriter outputFileWriter = Files.newBufferedWriter(tfOutputPath)) {
       synchronized (tfProcessLock) {
         if (xtsTradefedRunCancellation != null) {
           testInfo
@@ -458,68 +455,11 @@ public class XtsTradefedTest extends BaseDriver
                 Command.of(cmd)
                     .extraEnv(env)
                     .onStdout(
-                        LineCallback.does(
-                            line -> {
-                              // Writes to LogManager.
-                              LogRecord.Builder logRecord =
-                                  LogRecord.newBuilder()
-                                      .setFormattedLogRecord(line + "\n")
-                                      .setSourceType(SourceType.TF)
-                                      .setImportance(Importance.TF.value());
-                              if (olcSessionClientId != null) {
-                                logRecord.setClientId(olcSessionClientId);
-                              }
-                              logRecorder.addLogRecord(logRecord.build());
-
-                              // Writes to CommandOutputLogger.
-                              commandOutputLogger.logStdoutLine(line);
-
-                              // Writes to file.
-                              try {
-                                writer.write(line + "\n");
-                              } catch (IOException e) {
-                                throw new LineCallbackException(
-                                    "Failed to write",
-                                    e,
-                                    /* killCommand= */ false,
-                                    /* stopReadingOutput= */ true);
-                              }
-
-                              // Checks if finished.
-                              if (tfFinished(line) && tfHasFinished.compareAndSet(false, true)) {
-                                testInfo.log().atInfo().alsoTo(logger).log("TF finished");
-                                logFailure(
-                                    threadPool.submit(
-                                        threadRenaming(
-                                            (Callable<Void>)
-                                                () -> {
-                                                  sleeper.sleep(KILL_TF_AFTER_FINISH_TIME);
-
-                                                  // Kills the TF process if it finished but the
-                                                  // process is still alive.
-                                                  CommandProcess tfProcess;
-                                                  synchronized (tfProcessLock) {
-                                                    tfProcess = this.tfProcess;
-                                                  }
-                                                  if (tfProcess != null && tfProcess.isAlive()) {
-                                                    testInfo
-                                                        .log()
-                                                        .atInfo()
-                                                        .alsoTo(logger)
-                                                        .log(
-                                                            "Kill TF process since it has finished"
-                                                                + " for %s",
-                                                            KILL_TF_AFTER_FINISH_TIME);
-                                                    tfProcess.killAndThenKillForcibly(
-                                                        /* timeout= */ Duration.ofMinutes(1L));
-                                                  }
-                                                  return null;
-                                                },
-                                            () -> "tf-process-monitor-" + testId)),
-                                    Level.WARNING,
-                                    "Error occurred when waiting TF process exits");
-                              }
-                            }))
+                        new TradefedStdoutLineCallback(
+                            olcSessionClientId,
+                            commandOutputLogger,
+                            outputFileWriter,
+                            disableTfResultLog))
                     .onExit(
                         commandResult -> {
                           synchronized (tfProcessLock) {
@@ -576,8 +516,99 @@ public class XtsTradefedTest extends BaseDriver
     }
   }
 
-  private static boolean tfFinished(String line) {
-    return line.contains("CommandScheduler: All done");
+  private class TradefedStdoutLineCallback implements LineCallback {
+
+    @Nullable private final String olcSessionClientId;
+    private final CommandOutputLogger commandOutputLogger;
+    private final Writer outputFileWriter;
+    private final AtomicBoolean tfHasFinished = new AtomicBoolean();
+
+    /** TODO: Implements it. */
+    @SuppressWarnings({"FieldCanBeLocal", "unused"})
+    private final boolean disableTfResultLog;
+
+    private TradefedStdoutLineCallback(
+        @Nullable String olcSessionClientId,
+        CommandOutputLogger commandOutputLogger,
+        Writer outputFileWriter,
+        boolean disableTfResultLog) {
+      this.olcSessionClientId = olcSessionClientId;
+      this.commandOutputLogger = commandOutputLogger;
+      this.outputFileWriter = outputFileWriter;
+      this.disableTfResultLog = disableTfResultLog;
+    }
+
+    @Override
+    public Response onLine(String line) {
+      // Writes to LogManager (for log stream).
+      LogRecord.Builder logRecord =
+          LogRecord.newBuilder()
+              .setFormattedLogRecord(line + "\n")
+              .setSourceType(SourceType.TF)
+              .setImportance(Importance.TF.value());
+      if (olcSessionClientId != null) {
+        logRecord.setClientId(olcSessionClientId);
+      }
+      logRecorder.addLogRecord(logRecord.build());
+
+      // Writes to CommandOutputLogger (for logs in logger files).
+      commandOutputLogger.logStdoutLine(line);
+
+      // Writes to TF log file.
+      try {
+        outputFileWriter.write(line + "\n");
+      } catch (IOException e) {
+        throw new LineCallbackException(
+            "Failed to write", e, /* killCommand= */ false, /* stopReadingOutput= */ true);
+      }
+
+      // Checks if TF has finished.
+      if (tfFinished(line) && tfHasFinished.compareAndSet(false, true)) {
+        getTest()
+            .log()
+            .atInfo()
+            .alsoTo(logger)
+            .log(
+                "One TF finished (the command is still running, and it will"
+                    + " finish after all TF and the post-processing"
+                    + " finish)");
+        logFailure(
+            threadPool.submit(
+                threadRenaming(
+                    (Callable<Void>)
+                        () -> {
+                          sleeper.sleep(KILL_TF_AFTER_FINISH_TIME);
+
+                          // Kills the TF process if it finished but the
+                          // process is still alive.
+                          CommandProcess tfProcess;
+                          synchronized (tfProcessLock) {
+                            tfProcess = XtsTradefedTest.this.tfProcess;
+                          }
+                          if (tfProcess != null && tfProcess.isAlive()) {
+                            getTest()
+                                .log()
+                                .atInfo()
+                                .alsoTo(logger)
+                                .log(
+                                    "Kill TF process since it has finished" + " for %s",
+                                    KILL_TF_AFTER_FINISH_TIME);
+                            tfProcess.killAndThenKillForcibly(
+                                /* timeout= */ Duration.ofSeconds(50L));
+                          }
+                          return null;
+                        },
+                    () -> "tf-process-monitor-" + getTest().locator().getId())),
+            Level.WARNING,
+            "Error occurred when waiting TF process exits");
+      }
+
+      return Response.empty();
+    }
+
+    private boolean tfFinished(String line) {
+      return line.contains("CommandScheduler: All done");
+    }
   }
 
   private boolean isJarFileIncluded(

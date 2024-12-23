@@ -27,12 +27,9 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfoMonitor;
 import java.lang.instrument.Instrumentation;
 import java.nio.file.Path;
-import net.bytebuddy.agent.builder.AgentBuilder;
 import net.bytebuddy.agent.builder.AgentBuilder.Default;
 import net.bytebuddy.agent.builder.AgentBuilder.Transformer;
 import net.bytebuddy.asm.Advice;
-import net.bytebuddy.dynamic.Transformer.NoOp;
-import net.bytebuddy.implementation.MethodDelegation;
 
 /** An agent to record Tradefed runtime info and disable result reporter. */
 public class TradefedInvocationAgent {
@@ -41,7 +38,7 @@ public class TradefedInvocationAgent {
   /**
    * The entry point.
    *
-   * @param agentArgs [String runtimeInfoFilePath]:[boolean disableResultReporter]
+   * @param agentArgs [String runtimeInfoFilePath]
    */
   public static void premain(String agentArgs, Instrumentation inst) {
     new TradefedInvocationAgent().run(agentArgs, inst);
@@ -52,23 +49,9 @@ public class TradefedInvocationAgent {
     // Parses arguments.
     String[] arguments = agentArgs.split(":");
     String runtimeInfoFilePath = arguments.length >= 1 ? arguments[0] : "";
-    boolean disableResultReporter = arguments.length >= 2 && Boolean.parseBoolean(arguments[1]);
 
     // Initializes logger.
     TradefedInvocationAgentLogger.init();
-
-    // Disables result reporter.
-    if (disableResultReporter) {
-      logger.atInfo().log("Disable suite result reporter");
-      intercept(
-          inst,
-          "com.android.tradefed.result.suite.SuiteResultReporter",
-          (builder, typeDescription, classLoader, module, protectionDomain) ->
-              builder
-                  .method(named("invocationEnded").and(takesArguments(1)))
-                  .intercept(MethodDelegation.to(NoOp.INSTANCE)),
-          /* disableClassFormatChanges= */ false);
-    }
 
     // Records runtime info.
     if (!runtimeInfoFilePath.isEmpty()) {
@@ -101,20 +84,13 @@ public class TradefedInvocationAgent {
         (builder, typeDescription, classLoader, module, protectionDomain) ->
             builder.visit(
                 Advice.to(interceptorClass)
-                    .on(named(methodName).and(takesArguments(argumentsLength)))),
-        /* disableClassFormatChanges= */ true);
+                    .on(named(methodName).and(takesArguments(argumentsLength)))));
   }
 
-  private static void intercept(
-      Instrumentation inst,
-      String className,
-      Transformer transformer,
-      boolean disableClassFormatChanges) {
-    AgentBuilder agentBuilder = new Default().with(toSystemError().withErrorsOnly());
-    if (disableClassFormatChanges) {
-      agentBuilder = agentBuilder.disableClassFormatChanges();
-    }
-    agentBuilder
+  private static void intercept(Instrumentation inst, String className, Transformer transformer) {
+    new Default()
+        .with(toSystemError().withErrorsOnly())
+        .disableClassFormatChanges()
         .ignore(none(), not(isBootstrapClassLoader()))
         .type(named(className))
         .transform(transformer)

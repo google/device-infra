@@ -102,7 +102,7 @@ message XtsTradefedTestDriverSpec {
   optional string retry_type = 16
       [(field_detail) = { help: "The type of the tests that can be retried." }];
 
-  optional bool disable_result_reporter = 17 [
-    (field_detail) = { help: "Whether to disable TF suite result reporter." }
+  optional bool disable_tf_result_log = 17 [
+    (field_detail) = { help: "Whether to disable TF result logs in terminal." }
   ];
 }

@@ -20,7 +20,6 @@ import static java.util.Arrays.asList;
 
 import com.android.tradefed.cluster.FakeClusterCommandSchedulerUtil;
 import com.android.tradefed.invoker.TestInvocation;
-import com.android.tradefed.result.suite.SuiteResultReporter;
 import java.util.UUID;
 
 public class FakeTradefed {
@@ -30,8 +29,6 @@ public class FakeTradefed {
   public static final String INVOCATION_EXCEPTION_MESSAGE = "Fake tradefed invocation exception.";
 
   public static void main(String[] args) throws InterruptedException {
-    new SuiteResultReporter().invocationEnded(0L);
-
     FakeInvocationContext context =
         new FakeInvocationContext(UUID.randomUUID().toString(), asList(args));
     try {

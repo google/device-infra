@@ -46,6 +46,7 @@ import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteResultR
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryType;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import java.io.File;
 import java.nio.file.Path;
@@ -132,19 +133,19 @@ class RunCommandHandler {
       return ImmutableList.of();
     }
 
+    Path xtsLogsDir =
+        XtsDirUtil.getXtsLogsDir(Path.of(command.getXtsRootDir()), command.getXtsType())
+            .resolve(
+                sessionInfo
+                    .getSessionProperty(SESSION_PROPERTY_NAME_TIMESTAMP_DIR_NAME)
+                    .orElseThrow());
+    boolean disableTfResultLog = Flags.instance().xtsDisableTfResultLog.getNonNull();
     jobInfoList.forEach(
         jobInfo -> {
-          jobInfo
-              .params()
-              .add(
-                  "xts_log_root_path",
-                  XtsDirUtil.getXtsLogsDir(Path.of(command.getXtsRootDir()), command.getXtsType())
-                      .resolve(
-                          sessionInfo
-                              .getSessionProperty(SESSION_PROPERTY_NAME_TIMESTAMP_DIR_NAME)
-                              .orElseThrow())
-                      .toString());
+          jobInfo.params().add("xts_log_root_path", xtsLogsDir.toString());
+          jobInfo.params().add("disable_tf_result_log", Boolean.toString(disableTfResultLog));
         });
+
     return jobInfoList;
   }
 
@@ -243,7 +244,7 @@ class RunCommandHandler {
       }
       String xtsTestResultSummary =
           createXtsTestResultSummary(result, resultDir, logDir, previousResult);
-      if (localFileUtil.isDirExist(resultDir)) {
+      if (resultDir != null && localFileUtil.isDirExist(resultDir)) {
         // Only create the invocation_summary.txt when the result dir has been created by the result
         // processing.
         String invocationSummaryFile =
@@ -350,7 +351,7 @@ class RunCommandHandler {
       builder.setMaxSdkLevel(runCommand.getMaxSdkLevel());
     }
     if (runCommand.getEnableXtsDynamicDownload()) {
-      builder.setIsXtsDynamicDownloadEnabled(runCommand.getEnableXtsDynamicDownload());
+      builder.setIsXtsDynamicDownloadEnabled(true);
     }
 
     sessionInfo
