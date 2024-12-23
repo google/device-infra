@@ -61,8 +61,18 @@ public final class FilterUtils {
                       .collect(toImmutableList()));
           return entity -> expectedValues.contains(toLowerCase(stringExtractor.apply(entity)));
         case MATCHES_REGEX:
-          Pattern pattern = Pattern.compile(condition.getMatchesRegex().getRegex());
-          return entity -> pattern.matcher(stringExtractor.apply(entity)).matches();
+          Pattern matchPattern = Pattern.compile(condition.getMatchesRegex().getRegex());
+          return entity -> matchPattern.matcher(stringExtractor.apply(entity)).matches();
+        case EXCLUDE:
+          ImmutableSet<String> valuesToExclude =
+              ImmutableSet.copyOf(
+                  condition.getExclude().getValueList().stream()
+                      .map(Ascii::toLowerCase)
+                      .collect(toImmutableList()));
+          return entity -> !valuesToExclude.contains(toLowerCase(stringExtractor.apply(entity)));
+        case DOES_NOT_MATCH_REGEX:
+          Pattern notMatchPattern = Pattern.compile(condition.getDoesNotMatchRegex().getRegex());
+          return entity -> !notMatchPattern.matcher(stringExtractor.apply(entity)).matches();
         case CONDITION_NOT_SET:
           break;
       }
@@ -106,11 +116,13 @@ public final class FilterUtils {
     try {
       switch (condition.getConditionCase()) {
         case ANY_MATCH:
-          return createStringListMatcherForAnyMatch(
-              condition.getAnyMatch().getCondition(), stringListExtractor);
+          return entity ->
+              stringListExtractor.apply(entity).stream()
+                  .anyMatch(createStringMatcher(condition.getAnyMatch().getCondition(), s -> s));
         case NONE_MATCH:
-          return createStringListMatcherForNoneMatch(
-              condition.getNoneMatch().getCondition(), stringListExtractor);
+          return entity ->
+              stringListExtractor.apply(entity).stream()
+                  .noneMatch(createStringMatcher(condition.getNoneMatch().getCondition(), s -> s));
         case SUBSET_MATCH:
           ImmutableSet<String> expectedValues =
               ImmutableSet.copyOf(
@@ -137,78 +149,6 @@ public final class FilterUtils {
           "Invalid StringListMatchCondition [%s], cause=[%s]", condition, shortDebugString(e));
       return entity -> false;
     }
-  }
-
-  /**
-   * Creates a {@link Predicate} to match a string list field of an entity based on the given {@link
-   * StringMatchCondition}.
-   *
-   * <p>For AnyMatch, if Include is set, it is case-insensitive. If MatchesRegex is set, it is
-   * case-sensitive.
-   *
-   * <p>E.g. condition { any_match { condition { include { expected: "a" expected: "b" } } } } will
-   * match {"a"}, {"a", "c"}, {"A", "b"}, and {"B"}.
-   *
-   * <p>E.g. condition { any_match { condition { matches_regex { regex: "a.*" } } } will match
-   * {"a"}, {"a", "c"} but not match {"A"}.
-   */
-  private static <T> Predicate<T> createStringListMatcherForAnyMatch(
-      StringMatchCondition condition, Function<T, ImmutableSet<String>> stringListExtractor) {
-    switch (condition.getConditionCase()) {
-      case INCLUDE:
-        ImmutableSet<String> expectedValues =
-            ImmutableSet.copyOf(
-                condition.getInclude().getExpectedList().stream()
-                    .map(Ascii::toLowerCase)
-                    .collect(toImmutableList()));
-        return entity ->
-            stringListExtractor.apply(entity).stream()
-                .anyMatch(value -> expectedValues.contains(toLowerCase(value)));
-      case MATCHES_REGEX:
-        Pattern pattern = Pattern.compile(condition.getMatchesRegex().getRegex());
-        return entity ->
-            stringListExtractor.apply(entity).stream()
-                .anyMatch(value -> pattern.matcher(value).matches());
-      case CONDITION_NOT_SET:
-        break;
-    }
-    return entity -> true;
-  }
-
-  /**
-   * Creates a {@link Predicate} to match a string list field of an entity based on the given {@link
-   * StringMatchCondition}.
-   *
-   * <p>For NoneMatch, if Include is set, it is case-insensitive. If MatchesRegex is set, it is
-   * case-sensitive.
-   *
-   * <p>E.g. condition { none_match { condition { include { expected: "a" expected: "b" } } } } will
-   * not match {"a"}, {"a", "c"}, {"A", "b"}, and {"B"}.
-   *
-   * <p>E.g. condition { none_match { condition { matches_regex { regex: "a.*" } } } will not match
-   * {"a"}, {"a", "c"} but will match {"A"}.
-   */
-  private static <T> Predicate<T> createStringListMatcherForNoneMatch(
-      StringMatchCondition condition, Function<T, ImmutableSet<String>> stringListExtractor) {
-    switch (condition.getConditionCase()) {
-      case INCLUDE:
-        ImmutableSet<String> expectedValues =
-            ImmutableSet.copyOf(
-                condition.getInclude().getExpectedList().stream()
-                    .map(Ascii::toLowerCase)
-                    .collect(toImmutableList()));
-        return entity ->
-            stringListExtractor.apply(entity).stream()
-                .noneMatch(value -> expectedValues.contains(toLowerCase(value)));
-      case MATCHES_REGEX:
-        Pattern pattern = Pattern.compile(condition.getMatchesRegex().getRegex());
-        return entity ->
-            stringListExtractor.apply(entity).stream()
-                .noneMatch(value -> pattern.matcher(value).matches());
-      case CONDITION_NOT_SET:
-        break;
-    }
-    return entity -> true;
   }
 
   /**

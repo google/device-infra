@@ -128,10 +128,25 @@ message StringMatchCondition {
     string regex = 1;
   }
 
+  // A string matches this condition if it is not in the list of unexpected
+  // values (case-insensitive).
+  message Exclude {
+    repeated string value = 1;
+  }
+
+  // A string matches this condition if it does not match the given regex.
+  //
+  // An invalid regex will match everything.
+  message DoesNotMatchRegex {
+    string regex = 1;
+  }
+
   // An unset or unrecognized condition will always match.
   oneof condition {
     Include include = 1;
     MatchesRegex matches_regex = 2;
+    Exclude exclude = 3;
+    DoesNotMatchRegex does_not_match_regex = 4;
   }
 }
 

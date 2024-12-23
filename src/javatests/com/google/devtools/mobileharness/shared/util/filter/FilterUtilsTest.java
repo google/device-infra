@@ -28,6 +28,8 @@ import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringListM
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringListMatchCondition.NoneMatch;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringListMatchCondition.SubsetMatch;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringMatchCondition;
+import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringMatchCondition.DoesNotMatchRegex;
+import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringMatchCondition.Exclude;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringMatchCondition.Include;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringMatchCondition.MatchesRegex;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringMultimapMatchCondition;
@@ -74,6 +76,33 @@ public class FilterUtilsTest {
     assertThat(matcher.test("ab")).isTrue();
     assertThat(matcher.test("A")).isFalse();
     assertThat(matcher.test("c")).isFalse();
+  }
+
+  @Test
+  public void createStringMatcher_exclude() {
+    StringMatchCondition condition =
+        StringMatchCondition.newBuilder()
+            .setExclude(Exclude.newBuilder().addValue("a").addValue("b"))
+            .build();
+    Predicate<String> matcher = FilterUtils.createStringMatcher(condition, s -> s);
+    assertThat(matcher.test("a")).isFalse();
+    assertThat(matcher.test("b")).isFalse();
+    assertThat(matcher.test("A")).isFalse();
+    assertThat(matcher.test("B")).isFalse();
+    assertThat(matcher.test("c")).isTrue();
+  }
+
+  @Test
+  public void createStringMatcher_doesNotMatchRegex() {
+    StringMatchCondition condition =
+        StringMatchCondition.newBuilder()
+            .setDoesNotMatchRegex(DoesNotMatchRegex.newBuilder().setRegex("a.*"))
+            .build();
+    Predicate<String> matcher = FilterUtils.createStringMatcher(condition, s -> s);
+    assertThat(matcher.test("a")).isFalse();
+    assertThat(matcher.test("ab")).isFalse();
+    assertThat(matcher.test("A")).isTrue();
+    assertThat(matcher.test("c")).isTrue();
   }
 
   @Test
