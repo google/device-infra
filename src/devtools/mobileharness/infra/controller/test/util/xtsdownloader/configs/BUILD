@@ -19,6 +19,7 @@ package(
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/util/xtsdownloader:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__subpackages__",
+        "//wireless/android/engprod/regression_pipeline/templates:__subpackages__",
     ],
 )
 
