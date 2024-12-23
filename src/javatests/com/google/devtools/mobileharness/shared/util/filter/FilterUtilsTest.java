@@ -28,6 +28,8 @@ import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringListM
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringListMatchCondition.NoneMatch;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringListMatchCondition.SubsetMatch;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringMatchCondition;
+import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringMatchCondition.Contains;
+import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringMatchCondition.DoesNotContain;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringMatchCondition.DoesNotMatchRegex;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringMatchCondition.Exclude;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringMatchCondition.Include;
@@ -102,6 +104,32 @@ public class FilterUtilsTest {
     assertThat(matcher.test("a")).isFalse();
     assertThat(matcher.test("ab")).isFalse();
     assertThat(matcher.test("A")).isTrue();
+    assertThat(matcher.test("c")).isTrue();
+  }
+
+  @Test
+  public void createStringMatcher_contains() {
+    StringMatchCondition condition =
+        StringMatchCondition.newBuilder()
+            .setContains(Contains.newBuilder().setSubstring("a"))
+            .build();
+    Predicate<String> matcher = FilterUtils.createStringMatcher(condition, s -> s);
+    assertThat(matcher.test("a")).isTrue();
+    assertThat(matcher.test("ab")).isTrue();
+    assertThat(matcher.test("A")).isTrue();
+    assertThat(matcher.test("c")).isFalse();
+  }
+
+  @Test
+  public void createStringMatcher_doesNotContain() {
+    StringMatchCondition condition =
+        StringMatchCondition.newBuilder()
+            .setDoesNotContain(DoesNotContain.newBuilder().setSubstring("a"))
+            .build();
+    Predicate<String> matcher = FilterUtils.createStringMatcher(condition, s -> s);
+    assertThat(matcher.test("a")).isFalse();
+    assertThat(matcher.test("ab")).isFalse();
+    assertThat(matcher.test("A")).isFalse();
     assertThat(matcher.test("c")).isTrue();
   }
 

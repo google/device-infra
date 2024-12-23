@@ -141,12 +141,26 @@ message StringMatchCondition {
     string regex = 1;
   }
 
+  // A string matches this condition if it contains the given substring
+  // (case-insensitive).
+  message Contains {
+    string substring = 1;
+  }
+
+  // A string matches this condition if it does not contain the given substring
+  // (case-insensitive).
+  message DoesNotContain {
+    string substring = 1;
+  }
+
   // An unset or unrecognized condition will always match.
   oneof condition {
     Include include = 1;
     MatchesRegex matches_regex = 2;
     Exclude exclude = 3;
     DoesNotMatchRegex does_not_match_regex = 4;
+    Contains contains = 5;
+    DoesNotContain does_not_contain = 6;
   }
 }
 

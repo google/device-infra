@@ -73,6 +73,14 @@ public final class FilterUtils {
         case DOES_NOT_MATCH_REGEX:
           Pattern notMatchPattern = Pattern.compile(condition.getDoesNotMatchRegex().getRegex());
           return entity -> !notMatchPattern.matcher(stringExtractor.apply(entity)).matches();
+        case CONTAINS:
+          return entity ->
+              toLowerCase(stringExtractor.apply(entity))
+                  .contains(toLowerCase(condition.getContains().getSubstring()));
+        case DOES_NOT_CONTAIN:
+          return entity ->
+              !toLowerCase(stringExtractor.apply(entity))
+                  .contains(toLowerCase(condition.getDoesNotContain().getSubstring()));
         case CONDITION_NOT_SET:
           break;
       }
