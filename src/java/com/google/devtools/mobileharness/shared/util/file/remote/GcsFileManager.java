@@ -30,6 +30,7 @@ import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.remote.GcsUtil.GcsApiObject;
 import com.google.devtools.mobileharness.shared.util.file.remote.GcsUtil.GcsParams;
 import com.google.devtools.mobileharness.shared.util.file.remote.GcsUtil.GcsParams.Scope;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -49,16 +50,6 @@ public class GcsFileManager {
 
   /** Random for creating temporary files for compressing directory. */
   private static final Random random = new Random();
-
-  /**
-   * Default Google Cloud Storage of Mobile Harness.
-   * http://pantheon/home/dashboard?project=google.com:mobile-harness-lab-server&pli=1
-   */
-  private static final String DEFAULT_GCS_PROJECT = "mobile-harness-labserver";
-
-  private static final String CREDENTIAL_FILE =
-      "/com/google/devtools/mobileharness/shared/util/file/remote/config/"
-          + "client_secret_for_file_transfer";
 
   /** Default TTL for local cached file. */
   private static final Duration DEFAULT_CACHE_TTL = Duration.ofMinutes(30);
@@ -94,9 +85,8 @@ public class GcsFileManager {
   @VisibleForTesting final Cache<String, Path> localCache;
 
   /**
-   * Creates a GCS file manager of {@code bucket} in {@link #DEFAULT_GCS_PROJECT}. The local cached
-   * in {@code homeDir} is cleaned automatically by GcsFileManager, DO NOT remove them during
-   * GcsFileManager is running.
+   * Creates a GCS file manager of {@code bucket}. The local cached in {@code homeDir} is cleaned
+   * automatically by GcsFileManager, DO NOT remove them during GcsFileManager is running.
    *
    * @param homeDir directory of local cache
    * @param bucket name of bucket to manage
@@ -117,7 +107,7 @@ public class GcsFileManager {
       throws MobileHarnessException, InterruptedException {
     this(
         homeDir,
-        new GcsUtil(new GcsParams(DEFAULT_GCS_PROJECT, bucket, CREDENTIAL_FILE, Scope.READ_WRITE)),
+        new GcsUtil(new GcsParams(bucket, getCredentialFile(), Scope.READ_WRITE)),
         new LocalFileUtil(),
         cloudCacheTtl,
         localCacheTtl,
@@ -149,6 +139,10 @@ public class GcsFileManager {
             .expireAfterAccess(localCacheTtl)
             .removalListener(this::onLocalCacheRemoval)
             .build();
+  }
+
+  private static String getCredentialFile() {
+    return Flags.instance().fileTransferCredFile.getNonNull();
   }
 
   /** Information of an execution (uploading/downloading). */

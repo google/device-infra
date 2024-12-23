@@ -1042,6 +1042,14 @@ public class Flags {
       converter = DurationFlag.DurationConverter.class)
   public Flag<Duration> fileTransferCloudCacheTtl = fileTransferCloudCacheTtlDefault;
 
+  private static final Flag<String> fileTransferCredFileDefault = Flag.value(null);
+
+  @com.beust.jcommander.Parameter(
+      names = "--file_transfer_cred_file",
+      description = "The credential file path for the service account to use file transfer.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> fileTransferCredFile = fileTransferCredFileDefault;
+
   private static final Flag<Duration> fileTransferLocalCacheTtlDefault =
       DurationFlag.value(Duration.ofHours(3));
 

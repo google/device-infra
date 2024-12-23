@@ -140,6 +140,13 @@ public class GcsUtil {
 
   /** Parameters about the Google Cloud Storage the client used. */
   public static class GcsParams {
+    /**
+     * Default application name for using GCS.
+     *
+     * <p>The application name is to be sent in the User-Agent header of Google API requests.
+     */
+    private static final String DEFAULT_APPLICATION_NAME = "mobile-harness-labserver";
+
     /** access scope of the client to the bucket. */
     public enum Scope {
       READ_ONLY("https://www.googleapis.com/auth/devstorage.read_only"),
@@ -163,7 +170,19 @@ public class GcsUtil {
     /**
      * Constructs CloudStorage Params given parameters about the storage.
      *
-     * @param applicationName name of the Google Cloud application
+     * @param bucketName name of the bucket containing files
+     * @param cloudStorageConfigPath path of the credential file for the service accounts
+     * @param scope access scope of the service account
+     */
+    public GcsParams(String bucketName, @Nullable String cloudStorageConfigPath, Scope scope) {
+      this(DEFAULT_APPLICATION_NAME, bucketName, cloudStorageConfigPath, scope);
+    }
+
+    /**
+     * Constructs CloudStorage Params given parameters about the storage.
+     *
+     * @param applicationName name of the Google Cloud application to send in the User-Agent header
+     *     of Google API requests.
      * @param bucketName name of the bucket containing files
      * @param cloudStorageConfigPath path of the credential file for the service accounts
      * @param scope access scope of the service account

@@ -58,7 +58,6 @@ final class GsUtil {
   /** A wrapper of GcsParams with a builder to help parsing flags. */
   @AutoValue
   abstract static class GcsClient {
-    abstract String projectId();
 
     abstract String bucketName();
 
@@ -66,7 +65,7 @@ final class GsUtil {
 
     @Memoized
     GcsParams gcsParams() {
-      return new GcsParams(projectId(), bucketName(), credentialFile(), GcsParams.Scope.READ_WRITE);
+      return new GcsParams(bucketName(), credentialFile(), GcsParams.Scope.READ_WRITE);
     }
 
     static Builder builder() {
@@ -75,7 +74,6 @@ final class GsUtil {
 
     @AutoValue.Builder
     abstract static class Builder {
-      abstract Builder setProjectId(String projectId);
 
       abstract Builder setBucketName(String bucketName);
 
@@ -97,9 +95,7 @@ final class GsUtil {
       while (!leftOvers.isEmpty()) {
         String arg = leftOvers.remove(0);
         if (arg.startsWith("--")) {
-          if (arg.startsWith("--project")) {
-            builder.setProjectId(Iterables.get(Splitter.on('=').split(arg), 1));
-          } else if (arg.startsWith("--bucket")) {
+          if (arg.startsWith("--bucket")) {
             builder.setBucketName(Iterables.get(Splitter.on('=').split(arg), 1));
           } else if (arg.startsWith("--credential")) {
             builder.setCredentialFile(Iterables.get(Splitter.on('=').split(arg), 1));
@@ -158,8 +154,7 @@ final class GsUtil {
   }
 
   /**
-   * Usage: gs_util command --project=<project_id> --bucket=bucket_name>
-   * --credential=<credential_file> [args]...
+   * Usage: gs_util command --bucket=bucket_name> --credential=<credential_file> [args]...
    *
    * <p>command: list. download. upload. delete.
    *
