@@ -781,6 +781,9 @@ public final class NewMultiCommandRequestHandlerTest {
   }
 
   @Test
+  public void handleResultProcessing_failResult_withRetryPreviousSessionId() throws Exception {}
+
+  @Test
   public void handleResultProcessing_zeroTotalTest_treatAsError() throws Exception {
     Result.Builder resultBuilder =
         Result.newBuilder().setSummary(Summary.newBuilder().setPassed(0).setFailed(0).build());
