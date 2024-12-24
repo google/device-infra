@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.shared.labinfo;
 
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Filter;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
 
@@ -23,5 +24,5 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryR
 public interface LabInfoProvider {
 
   /** Gets information of lab(s). */
-  LabView getLabInfos(Filter filter);
+  LabView getLabInfos(Filter filter) throws MobileHarnessException;
 }

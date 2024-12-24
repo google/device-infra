@@ -31,6 +31,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.math.IntMath;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceGroup;
@@ -68,7 +69,7 @@ import java.util.stream.Stream;
 public class LabQueryUtils {
 
   public static LabQueryResult createNewLabQueryResult(
-      LabQuery query, LabInfoProvider labInfoProvider) {
+      LabQuery query, LabInfoProvider labInfoProvider) throws MobileHarnessException {
     LabQueryResult.Builder result =
         LabQueryResult.newBuilder().setTimestamp(TimeUtils.toProtoTimestamp(Instant.now()));
 

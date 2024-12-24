@@ -130,7 +130,7 @@ public class LabInfoServiceTest {
   @Inject private LabInfoService labInfoService;
 
   @Before
-  public void setUp() {
+  public void setUp() throws Exception {
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
 
     when(labInfoProvider.getLabInfos(any(Filter.class)))
@@ -149,7 +149,7 @@ public class LabInfoServiceTest {
   }
 
   @Test
-  public void getLabInfo_emptyQuery_ordered() {
+  public void getLabInfo_emptyQuery_ordered() throws Exception {
     GetLabInfoResponse response =
         labInfoService.doGetLabInfo(GetLabInfoRequest.getDefaultInstance());
 
@@ -174,7 +174,7 @@ public class LabInfoServiceTest {
   }
 
   @Test
-  public void getLabInfo_emptyQuery_cached() {
+  public void getLabInfo_emptyQuery_cached() throws Exception {
     GetLabInfoResponse response1 =
         labInfoService.doGetLabInfo(GetLabInfoRequest.getDefaultInstance());
     GetLabInfoResponse response2 =
@@ -185,7 +185,7 @@ public class LabInfoServiceTest {
   }
 
   @Test
-  public void getLabInfo_deviceView() {
+  public void getLabInfo_deviceView() throws Exception {
     GetLabInfoResponse response =
         labInfoService.doGetLabInfo(
             GetLabInfoRequest.newBuilder()
@@ -213,7 +213,7 @@ public class LabInfoServiceTest {
   }
 
   @Test
-  public void getLabInfo_deviceView_page() {
+  public void getLabInfo_deviceView_page() throws Exception {
     GetLabInfoResponse response =
         labInfoService.doGetLabInfo(
             GetLabInfoRequest.newBuilder()
@@ -241,7 +241,7 @@ public class LabInfoServiceTest {
   }
 
   @Test
-  public void getLabInfo_deviceView_group() {
+  public void getLabInfo_deviceView_group() throws Exception {
     DeviceGroupOperation deviceGroupOperation =
         DeviceGroupOperation.newBuilder()
             .setDeviceGroupCondition(

@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.infra.monitoring;
 
 import com.google.common.collect.ImmutableList;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
@@ -50,7 +51,7 @@ public final class LabInfoPullerImpl implements DataPuller<MonitorEntry> {
   public void tearDown() {}
 
   @Override
-  public ImmutableList<MonitorEntry> pull() {
+  public ImmutableList<MonitorEntry> pull() throws MobileHarnessException {
     ImmutableList.Builder<MonitorEntry> builder = ImmutableList.builder();
     for (LabData labData :
         labInfoProvider.getLabInfos(Filter.getDefaultInstance()).getLabDataList()) {

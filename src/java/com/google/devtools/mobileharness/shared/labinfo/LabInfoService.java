@@ -27,6 +27,7 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcServiceUtil;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.Page;
@@ -79,7 +80,7 @@ public class LabInfoService extends LabInfoServiceGrpc.LabInfoServiceImplBase {
   }
 
   @VisibleForTesting
-  GetLabInfoResponse doGetLabInfo(GetLabInfoRequest request) {
+  GetLabInfoResponse doGetLabInfo(GetLabInfoRequest request) throws MobileHarnessException {
     String clientId = getClientId();
     LabQuery query = request.getLabQuery();
     Page page = normalizePage(request.getPage());

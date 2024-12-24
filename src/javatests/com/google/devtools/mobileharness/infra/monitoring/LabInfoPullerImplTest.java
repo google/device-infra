@@ -152,7 +152,7 @@ public final class LabInfoPullerImplTest {
   }
 
   @Test
-  public void pull_empty() {
+  public void pull_empty() throws Exception {
     when(labInfoProvider.getLabInfos(any(Filter.class))).thenReturn(LabView.getDefaultInstance());
 
     ImmutableList<MonitorEntry> monitorEntries = labInfoPuller.pull();
@@ -161,7 +161,7 @@ public final class LabInfoPullerImplTest {
   }
 
   @Test
-  public void pull_success() {
+  public void pull_success() throws Exception {
 
     when(labInfoProvider.getLabInfos(any(Filter.class)))
         .thenReturn(
