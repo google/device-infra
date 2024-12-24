@@ -20,6 +20,7 @@ load("@rules_java//java:defs.bzl", "java_library")
 
 package(
     default_visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/lab:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/lab/controller:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/service:__pkg__",
@@ -116,5 +117,23 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/path",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "file_resolver_builder",
+    srcs = ["FileResolverBuilder.java"],
+    deps = [
+        ":ats_file_server_file_resolver",
+        ":cache_file_resolver",
+        ":file_resolver",
+        ":gcs_file_resolver",
+        ":local_file_resolver",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "@maven//:com_google_errorprone_error_prone_annotations",
+        "@maven//:com_google_guava_guava",
+        "@maven//:com_google_inject_extensions_guice_assistedinject",
+        "@maven//:com_google_inject_guice",
     ],
 )
