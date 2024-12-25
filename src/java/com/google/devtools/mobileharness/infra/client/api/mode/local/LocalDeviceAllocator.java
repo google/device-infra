@@ -68,7 +68,6 @@ public class LocalDeviceAllocator extends AbstractDeviceAllocator {
   @Override
   public synchronized Optional<ExceptionDetail> setUp()
       throws MobileHarnessException, InterruptedException {
-    super.setUp();
     AbstractScheduler scheduler = getScheduler();
     scheduler.registerEventHandler(allocationEventHandler);
     if (!scheduler.addJob(jobInfo)) {
