@@ -723,7 +723,8 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
         device.info().properties().remove(DEVICE_PROPERTY_RESERVATION_ID);
         deviceStat.addFinishedTest(testExecutionResult.testResult());
         // Invalidate device cache after test is finished.
-        DeviceCacheManager.getInstance().invalidateAllCaches(device.getDeviceControlId());
+        DeviceCacheManager.getInstance()
+            .invalidateGeneralAndContainerCaches(device.getDeviceControlId());
         needReboot =
             deviceRebootUtil.needRebootUponTestResults(
                 getDevice(), deviceStat, apiConfig, testExecutionResult);

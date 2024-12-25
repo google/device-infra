@@ -17,7 +17,6 @@
 package com.google.wireless.qa.mobileharness.shared.api;
 
 import java.time.Duration;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Shared cache of devices which are undergoing reboot and should not be detected offline.
@@ -31,28 +30,12 @@ public final class DeviceCache {
 
   private DeviceCache() {}
 
-  /** Default expiration time of a cached device IDs. */
-  private static final long DEFAULT_CACHE_TIMEOUT_MS = TimeUnit.SECONDS.toMillis(30);
-
   private static final com.google.devtools.mobileharness.api.testrunner.device.cache.DeviceCache
       newDeviceCache;
 
   static {
     newDeviceCache =
         com.google.devtools.mobileharness.api.testrunner.device.cache.DeviceCache.getInstance();
-  }
-
-  /**
-   * Caches the given device ID. Allows it to get disconnected for {@link
-   * #DEFAULT_CACHE_TIMEOUT_MS}.
-   *
-   * @deprecated use {@link #cache(String, String, long)} instead
-   * @param typeName Device type name to be cached, e.g., AndroidRealDevice, TestbedDevice, etc.
-   * @param deviceId Device serial number to be cached
-   */
-  @Deprecated
-  public static void cache(String typeName, String deviceId) {
-    cache(typeName, deviceId, DEFAULT_CACHE_TIMEOUT_MS);
   }
 
   /**

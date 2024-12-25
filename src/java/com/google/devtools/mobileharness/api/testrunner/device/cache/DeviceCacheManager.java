@@ -21,6 +21,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
 import com.google.common.flogger.FluentLogger;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.protobuf.Timestamp;
 import com.google.protobuf.util.Timestamps;
 import java.time.Clock;
@@ -30,9 +31,11 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 
 /**
@@ -44,28 +47,13 @@ import javax.annotation.concurrent.GuardedBy;
  *   <li>For devices running tests in container, they are passed through to container and cannot be
  *       detected by lab. These devices are cached as {@code CacheType.CONTAINER} to avoid tests in
  *       container being killed. This class is supposed to be used only by MH device manager and
- *       some specific MH device detectors, like {@link
- *       com.google.wireless.qa.mobileharness.shared.api.detector.CacheableDetector}.
+ *       some specific MH device dispatchers, like {@link
+ *       com.google.devtools.mobileharness.api.devicemanager.dispatcher.CacheableDispatcher}.
  * </ol>
  */
 public class DeviceCacheManager {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
-
-  /** Clock for generating the time used with the caches. */
-  @VisibleForTesting static volatile Clock clock = Clock.systemUTC();
-
-  /** Total number of cache overridden. */
-  private static final AtomicInteger overriddenCount = new AtomicInteger(0);
-
-  @GuardedBy("itself")
-  private static final Map<CacheType, Map<String, CacheInfo>> cachesByCacheType =
-      new EnumMap<>(CacheType.class);
-
-  static {
-    cachesByCacheType.put(CacheType.GENERAL, new HashMap<>());
-    cachesByCacheType.put(CacheType.CONTAINER, new HashMap<>());
-  }
 
   private static final Supplier<DeviceCacheManager> INSTANCE =
       Suppliers.memoize(DeviceCacheManager::new);
@@ -74,14 +62,32 @@ public class DeviceCacheManager {
     return INSTANCE.get();
   }
 
+  /** Clock for generating the time used with the caches. */
+  @VisibleForTesting volatile Clock clock = Clock.systemUTC();
+
+  /** Total number of cache overridden. */
+  private final AtomicInteger overriddenCount = new AtomicInteger(0);
+
+  @GuardedBy("itself")
+  private final Map<CacheType, Map<String, CacheInfo>> cachesByCacheType =
+      new EnumMap<>(CacheType.class);
+
+  @VisibleForTesting
+  DeviceCacheManager() {
+    for (CacheType cacheType : CacheType.values()) {
+      cachesByCacheType.put(cacheType, new HashMap<>());
+    }
+  }
+
   @AutoValue
   abstract static class CacheInfo {
-    private static CacheInfo create(String deviceType, Timestamp expireTimestamp) {
-      return new AutoValue_DeviceCacheManager_CacheInfo(deviceType, expireTimestamp);
+    private static CacheInfo create(@Nullable String deviceType, Timestamp expireTimestamp) {
+      return new AutoValue_DeviceCacheManager_CacheInfo(
+          Optional.ofNullable(deviceType), expireTimestamp);
     }
 
-    /** Device type this cache is for. */
-    abstract String deviceType();
+    /** Device type this cache is for. Empty to match any types */
+    abstract Optional<String> deviceType();
 
     /** Timestamp when this cache will expire. */
     abstract Timestamp expireTimestamp();
@@ -89,10 +95,13 @@ public class DeviceCacheManager {
 
   enum CacheType {
     GENERAL,
-    CONTAINER
+    CONTAINER,
+    XTS,
   }
 
-  boolean cache(CacheType cacheType, String deviceControlId, String deviceType, Duration timeout) {
+  @CanIgnoreReturnValue
+  boolean cache(
+      CacheType cacheType, String deviceControlId, @Nullable String deviceType, Duration timeout) {
     synchronized (cachesByCacheType) {
       Map<String, CacheInfo> caches = cachesByCacheType.get(cacheType);
       if (caches.containsKey(deviceControlId) && overriddenCount.incrementAndGet() % 100 == 0) {
@@ -133,17 +142,18 @@ public class DeviceCacheManager {
   }
 
   /** Invalidate both container and general device cache. */
-  public void invalidateAllCaches(String deviceControId) {
-    invalidate(CacheType.GENERAL, deviceControId);
-    invalidate(CacheType.CONTAINER, deviceControId);
+  public void invalidateGeneralAndContainerCaches(String deviceControlId) {
+    invalidate(CacheType.GENERAL, deviceControlId);
+    invalidate(CacheType.CONTAINER, deviceControlId);
   }
 
   public Set<String> getCachedDevices(String deviceType) {
     synchronized (cachesByCacheType) {
-      Set<String> cachedIds = getCachedDevices(CacheType.GENERAL, deviceType);
-      Set<String> containerCaches = getCachedDevices(CacheType.CONTAINER, deviceType);
-      cachedIds.addAll(containerCaches);
-      return cachedIds;
+      Set<String> result = new HashSet<>();
+      for (CacheType cacheType : CacheType.values()) {
+        result.addAll(getCachedDevices(cacheType, deviceType));
+      }
+      return result;
     }
   }
 
@@ -164,7 +174,7 @@ public class DeviceCacheManager {
                               entry.getValue().expireTimestamp().getNanos())));
       caches.forEach(
           (key, value) -> {
-            if (value.deviceType().equals(deviceType)) {
+            if (value.deviceType().isEmpty() || value.deviceType().get().equals(deviceType)) {
               cachedIds.add(key);
             }
           });

@@ -58,6 +58,15 @@ java_library(
 )
 
 java_library(
+    name = "xts_device_cache",
+    srcs = ["XtsDeviceCache.java"],
+    deps = [
+        ":device_cache_manager",
+        "@maven//:com_google_errorprone_error_prone_annotations",
+    ],
+)
+
+java_library(
     name = "device_cache",
     visibility = [
         "//:deviceinfra_pkg",
