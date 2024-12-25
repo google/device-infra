@@ -267,6 +267,7 @@ public class GcsUtil {
         .build();
   }
 
+  @SuppressWarnings("unused") // deviceinfra:internal-only
   private static HttpRequestInitializer getCredential(GcsParams storageParams)
       throws MobileHarnessException {
     if (storageParams.cloudStorageConfigPath != null) {
@@ -1281,6 +1282,7 @@ public class GcsUtil {
     return getOutputStreamFromLocalFile(localFile);
   }
 
+  @SuppressWarnings("unused") // deviceinfra:internal-only
   private static BufferedOutputStream getOutputStreamFromLocalFile(Path localFile)
       throws IOException {
     return new BufferedOutputStream(new FileOutputStream(localFile.toFile()));
@@ -1298,6 +1300,7 @@ public class GcsUtil {
     return currentInstant();
   }
 
+  @SuppressWarnings("unused") // deviceinfra:internal-only
   private Instant currentInstant() {
     return Clock.systemUTC().instant();
   }
