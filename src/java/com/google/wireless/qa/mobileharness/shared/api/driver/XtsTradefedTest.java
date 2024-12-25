@@ -522,10 +522,9 @@ public class XtsTradefedTest extends BaseDriver
     private final CommandOutputLogger commandOutputLogger;
     private final Writer outputFileWriter;
     private final AtomicBoolean tfHasFinished = new AtomicBoolean();
-
-    /** TODO: Implements it. */
-    @SuppressWarnings({"FieldCanBeLocal", "unused"})
     private final boolean disableTfResultLog;
+
+    private boolean printingTfResult;
 
     private TradefedStdoutLineCallback(
         @Nullable String olcSessionClientId,
@@ -541,15 +540,21 @@ public class XtsTradefedTest extends BaseDriver
     @Override
     public Response onLine(String line) {
       // Writes to LogManager (for log stream).
-      LogRecord.Builder logRecord =
-          LogRecord.newBuilder()
-              .setFormattedLogRecord(line + "\n")
-              .setSourceType(SourceType.TF)
-              .setImportance(Importance.TF.value());
-      if (olcSessionClientId != null) {
-        logRecord.setClientId(olcSessionClientId);
+      if (tfResultStarting(line)) {
+        printingTfResult = true;
+        if (disableTfResultLog) {
+          printToLogRecorder("Generating result of one TF execution");
+        }
       }
-      logRecorder.addLogRecord(logRecord.build());
+      if (!printingTfResult || !disableTfResultLog) {
+        printToLogRecorder(line);
+      }
+      if (tfResultEnded(line)) {
+        printingTfResult = false;
+        if (disableTfResultLog) {
+          printToLogRecorder("Generated result of one TF execution");
+        }
+      }
 
       // Writes to CommandOutputLogger (for logs in logger files).
       commandOutputLogger.logStdoutLine(line);
@@ -606,8 +611,28 @@ public class XtsTradefedTest extends BaseDriver
       return Response.empty();
     }
 
+    private void printToLogRecorder(String line) {
+      LogRecord.Builder logRecord =
+          LogRecord.newBuilder()
+              .setFormattedLogRecord(line + "\n")
+              .setSourceType(SourceType.TF)
+              .setImportance(Importance.TF.value());
+      if (olcSessionClientId != null) {
+        logRecord.setClientId(olcSessionClientId);
+      }
+      logRecorder.addLogRecord(logRecord.build());
+    }
+
     private boolean tfFinished(String line) {
       return line.contains("CommandScheduler: All done");
+    }
+
+    private boolean tfResultStarting(String line) {
+      return line.equals("================= Results ==================");
+    }
+
+    private boolean tfResultEnded(String line) {
+      return line.equals("============== End of Results ==============");
     }
   }
 
