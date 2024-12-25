@@ -33,6 +33,7 @@ java_library(
         "//src/devtools/mobileharness/shared/util/comm/relay/proto:destination_java_proto",
         "//src/devtools/mobileharness/shared/util/comm/stub:stub_configuration_java_proto",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/remote:lab_server_locator",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/util/stub:stub_utils",
         "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_text_format",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/relay",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",

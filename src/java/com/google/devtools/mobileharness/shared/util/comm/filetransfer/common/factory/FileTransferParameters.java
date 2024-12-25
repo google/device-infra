@@ -59,6 +59,8 @@ public abstract class FileTransferParameters {
   /** Home directory of the file transfer client. */
   public abstract Path homeDir();
 
+  public abstract String cloudFileTransferBucket();
+
   public static Builder builder() {
     return new AutoValue_FileTransferParameters.Builder()
         .setZipStoreOnly(false)
@@ -69,6 +71,7 @@ public abstract class FileTransferParameters {
         .setAttempts(FileTransferConstant.getMaximumAttempts())
         .setTimeout(FileTransferConstant.getTimeout())
         .setEnableCloudFileTransfer(true)
+        .setCloudFileTransferBucket(FileTransferConstant.getBucket())
         .setHomeDir(createHomeDir());
   }
 
@@ -102,6 +105,8 @@ public abstract class FileTransferParameters {
     public abstract Builder setTimeout(Duration timeout);
 
     public abstract Builder setHomeDir(Path homeDir);
+
+    public abstract Builder setCloudFileTransferBucket(String bucket);
 
     public abstract FileTransferParameters build();
   }

@@ -68,7 +68,7 @@ public final class ResourceFederationUtil {
   }
 
   /** Converts a controller server locator a {@link ResourceFederation} for the ATS lab. */
-  public static ResourceFederation toResourceFederationForAts(
+  private static ResourceFederation toResourceFederationForAts(
       ServerLocator controllerServerLocator) {
     return ResourceFederation.newBuilder()
         .addServerResources(

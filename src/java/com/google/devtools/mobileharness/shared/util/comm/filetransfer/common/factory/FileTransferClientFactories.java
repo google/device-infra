@@ -31,6 +31,11 @@ public final class FileTransferClientFactories {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
+  /** Creates a cloud file transfer client factory from a stub. */
+  public static FileTransferClientFactory fromStub(CloudFileTransferStubInterface stub) {
+    return new CloudFileTransferStubFactory(stub);
+  }
+
   static class CloudFileTransferStubFactory implements FileTransferClientFactory {
     private final CloudFileTransferStubInterface stub;
 

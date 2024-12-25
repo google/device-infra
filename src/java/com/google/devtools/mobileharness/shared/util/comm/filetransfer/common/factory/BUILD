@@ -61,7 +61,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/filetransfer/cloud/common:file_transfer_constant",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
-        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
     ],
 )
 

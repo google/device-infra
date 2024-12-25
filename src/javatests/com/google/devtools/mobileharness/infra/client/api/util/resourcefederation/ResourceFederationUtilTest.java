@@ -28,7 +28,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
-public final class ResourceFederationTest {
+public final class ResourceFederationUtilTest {
 
   @Test
   public void findServerLocator_success() {

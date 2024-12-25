@@ -34,10 +34,15 @@ import com.google.devtools.mobileharness.infra.container.proto.TestEngine.TestEn
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.ExecTestStub;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.PrepareTestStub;
 import com.google.devtools.mobileharness.shared.constant.environment.MobileHarnessServerEnvironment;
+import com.google.devtools.mobileharness.shared.util.comm.filetransfer.common.factory.FileTransferClientFactories;
+import com.google.devtools.mobileharness.shared.util.comm.filetransfer.common.factory.FileTransferClientFactory;
+import com.google.devtools.mobileharness.shared.util.comm.stub.StubConfigurationProto.StubConfiguration;
 import com.google.devtools.mobileharness.shared.version.rpc.stub.VersionStub;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.wireless.qa.mobileharness.shared.model.lab.LabLocator;
 import java.util.Map;
+import javax.annotation.Nullable;
 
 /** Shared master and lab server service stubs. */
 public class StubManager {
@@ -162,6 +167,82 @@ public class StubManager {
     // Call grpc client -> grpc relay -> lab server.
     return stubFactory.createVersionStub(
         createGrpcDirectStubConfiguration(relayLocator.getGrpcServerLocator(), labServerLocator));
+  }
+
+  /**
+   * Gets factory for creating a client to transfer files with lab server or test engine.
+   *
+   * <p>In most cases (CloudRpc is enabled), if {@code testEngineLocator} is not null, the client
+   * will talk to the test engine.
+   */
+  public FileTransferClientFactory getFileTransferClientFactory(
+      LabServerLocator labServerLocator, @Nullable TestEngineLocator testEngineLocator) {
+    return getFileTransferClientFactory(
+        labServerLocator, testEngineLocator, MobileHarnessServerEnvironment.DEFAULT);
+  }
+
+  /**
+   * Gets factory for creating a client to transfer files with lab server or test engine.
+   *
+   * <p>In most cases (CloudRpc is enabled), if {@code testEngineLocator} is not null, the client
+   * will talk to the test engine.
+   */
+  public FileTransferClientFactory getFileTransferClientFactory(
+      LabServerLocator labServerLocator,
+      @Nullable TestEngineLocator testEngineLocator,
+      MobileHarnessServerEnvironment mhEnvironment) {
+    return getFileTransferClientFactoryWithDirectTarget(labServerLocator, testEngineLocator);
+  }
+
+  /** Gets factory for creating a client to transfer files with lab server or test engine. */
+  public FileTransferClientFactory getFileTransferClientFactory(
+      LabServerLocator labServerLocator,
+      @Nullable TestEngineLocator testEngineLocator,
+      ResourceFederation resourceFederation) {
+    ImmutableMap<ServerResourceType, ServerLocator> map = getServerMap(resourceFederation);
+    if (map.containsKey(ServerResourceType.GRPC_RELAY)) {
+      return getFileTransferClientFactoryWithGrpcRelay(
+          labServerLocator, testEngineLocator, map.get(ServerResourceType.GRPC_RELAY));
+    }
+    return getFileTransferClientFactory(
+        labServerLocator, testEngineLocator, getMobileHarnessEnvironment(map));
+  }
+
+  /**
+   * Gets factory for creating a client to transfer files with lab server or test engine.
+   *
+   * <p>In most cases (CloudRpc is enabled), if {@code testEngineLocator} is not null, the client
+   * will talk to the test engine.
+   *
+   * <p><b>WARNING</b>: for a per-test-lab-server test, this method will return an invalid stub.
+   * TODO: removes the method and all calls from MH plugins.
+   */
+  public FileTransferClientFactory getFileTransferClientFactory(
+      LabLocator labLocator, @Nullable TestEngineLocator testEngineLocator) {
+    return getFileTransferClientFactory(
+        LabServerLocator.longRunningLabServer(labLocator.toNewLabLocator()), testEngineLocator);
+  }
+
+  private FileTransferClientFactory getFileTransferClientFactoryWithGrpcRelay(
+      LabServerLocator labServerLocator,
+      @Nullable TestEngineLocator testEngineLocator,
+      ServerLocator relayLocator) {
+    // Call grpc client -> grpc relay -> lab server.
+    return FileTransferClientFactories.fromStub(
+        stubFactory.createCloudFileTransferStub(
+            createGrpcDirectStubConfiguration(
+                relayLocator.getGrpcServerLocator(), labServerLocator, testEngineLocator)));
+  }
+
+  @SuppressWarnings("unused") // deviceinfra:internal-only
+  private FileTransferClientFactory getFileTransferClientFactoryWithDirectTarget(
+      LabServerLocator labServerLocator, @Nullable TestEngineLocator testEngineLocator) {
+    StubConfiguration stubConfiguration =
+        (testEngineLocator != null)
+            ? createGrpcDirectStubConfiguration(labServerLocator, testEngineLocator)
+            : createGrpcDirectStubConfiguration(labServerLocator);
+    return FileTransferClientFactories.fromStub(
+        stubFactory.createCloudFileTransferStub(stubConfiguration));
   }
 
   @VisibleForTesting

@@ -21,6 +21,8 @@ import static com.google.common.net.HostAndPort.fromParts;
 import static com.google.common.net.InetAddresses.forString;
 import static com.google.common.net.InetAddresses.isInetAddress;
 import static com.google.common.net.InetAddresses.toAddrString;
+import static com.google.devtools.mobileharness.infra.client.api.util.stub.StubUtils.getLabServerGrpcTarget;
+import static com.google.devtools.mobileharness.infra.client.api.util.stub.StubUtils.getTestEngineGrpcTarget;
 import static com.google.devtools.mobileharness.shared.util.comm.relay.DestinationUtils.createDestination;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -173,6 +175,19 @@ public final class ServerLocatorUtil {
         grpcServerLocator, createDestination(labServerLocator, testEngineLocator));
   }
 
+  /** Creates a {@link StubConfiguration} from a lab server locator. */
+  public static StubConfiguration createGrpcDirectStubConfiguration(
+      LabServerLocator labServerLocator) {
+    return createGrpcDirectStubConfiguration(getLabServerGrpcTarget(labServerLocator));
+  }
+
+  /** Creates a {@link StubConfiguration} from a lab server locator and a test engine locator. */
+  public static StubConfiguration createGrpcDirectStubConfiguration(
+      LabServerLocator labServerLocator, TestEngineLocator testEngineLocator) {
+    return createGrpcDirectStubConfiguration(
+        getTestEngineGrpcTarget(labServerLocator, testEngineLocator));
+  }
+
   private static StubConfiguration createGrpcDirectStubConfiguration(
       GrpcServerLocator grpcServerLocator, Destination destination) {
     return StubConfiguration.newBuilder()
@@ -181,6 +196,14 @@ public final class ServerLocatorUtil {
             DirectTarget.newBuilder()
                 .setServerSpec(ServerSpec.newBuilder().setTarget(toGrpcTarget(grpcServerLocator)))
                 .setRelayDestination(destination))
+        .build();
+  }
+
+  private static StubConfiguration createGrpcDirectStubConfiguration(String grpcTarget) {
+    return StubConfiguration.newBuilder()
+        .setTransport(Transport.GRPC)
+        .setDirectTarget(
+            DirectTarget.newBuilder().setServerSpec(ServerSpec.newBuilder().setTarget(grpcTarget)))
         .build();
   }
 

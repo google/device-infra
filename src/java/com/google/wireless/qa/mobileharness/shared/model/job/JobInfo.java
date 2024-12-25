@@ -188,6 +188,9 @@ public class JobInfo extends JobScheduleUnit {
               + " false.")
   public static final String PARAM_MASTER_LOCAL_GRPC_TARGET = "master_local_grpc_target";
 
+  @ParamAnnotation(required = false, help = "The gcs bucket for cloud file transfer.")
+  public static final String PARAM_CLOUD_FILE_TRANSFER_BUCKET = "cloud_file_transfer_bucket";
+
   /** Input files of the job. */
   private final Files files;
 

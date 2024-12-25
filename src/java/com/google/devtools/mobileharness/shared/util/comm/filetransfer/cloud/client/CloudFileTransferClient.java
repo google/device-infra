@@ -125,7 +125,7 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
         stub,
         new GcsFileManager(
             params.homeDir().resolve("gcs"),
-            FileTransferConstant.getBucket(),
+            params.cloudFileTransferBucket(),
             Optional.of(FileTransferConstant.getCloudCacheTtl()),
             FileTransferConstant.getLocalCacheTtl(),
             Optional.of(params.uploadShardSize()),

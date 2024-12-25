@@ -20,6 +20,7 @@ import static com.google.devtools.mobileharness.shared.util.comm.filetransfer.co
 
 import com.google.common.flogger.FluentLogger;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
+import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
 import java.nio.file.Path;
@@ -110,13 +111,15 @@ public class FileTransferParametersFactory {
       fileTransferParams.setZipStoreOnly(params.getBool(PARAM_FILE_TRANSFER_ZIP_STORE_ONLY, false));
     }
 
-    fileTransferParams.setZipTimeout(
-        Duration.ofSeconds(
-            params.getLong(PARAM_ZIP_TIMEOUT_SEC, DEFAULT_ZIP_TIMEOUT.getSeconds())));
+    fileTransferParams
+        .setZipTimeout(
+            Duration.ofSeconds(
+                params.getLong(PARAM_ZIP_TIMEOUT_SEC, DEFAULT_ZIP_TIMEOUT.toSeconds())))
+        .setHomeDir(Path.of(testInfo.getTmpFileDir()).resolve(DEFAULT_FILE_TRANSFER_HOME_DIR_NAME));
 
-    fileTransferParams.setHomeDir(
-        Path.of(testInfo.getTmpFileDir()).resolve(DEFAULT_FILE_TRANSFER_HOME_DIR_NAME));
-
+    params
+        .getOptional(JobInfo.PARAM_CLOUD_FILE_TRANSFER_BUCKET)
+        .ifPresent(fileTransferParams::setCloudFileTransferBucket);
     return fileTransferParams.build();
   }
 }
