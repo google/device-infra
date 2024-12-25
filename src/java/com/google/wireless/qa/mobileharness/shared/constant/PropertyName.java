@@ -278,7 +278,9 @@ public interface PropertyName {
     RETRY_AFTER_NO_VALID_UID_ASSIGNED,
 
     /**
-     * Retry index. Only count valid attempts. Null for the first attempt and starts from 1. Eg. the
+     * Retry index. Only count valid attempts.
+     *
+     * <p>If the test has no retry, the RETRY_INDEX is null. Otherwise, it starts from 0. E.g., the
      * second attempt with 1 previous valid attempt is the first retry and its retry index is 1.
      */
     RETRY_INDEX,

@@ -375,6 +375,9 @@ public class TestRetryHandler {
     if (validAttemptNum > 0) {
       // If there have been valid attempts, set the index for the retry
       newTestInfo.properties().add(Test.RETRY_INDEX, Long.toString(validAttemptNum));
+      if (!currentTestInfo.properties().has(Test.RETRY_INDEX)) {
+        currentTestInfo.properties().add(Test.RETRY_INDEX, Long.toString(validAttemptNum - 1));
+      }
     }
     currentTestInfo.properties().add(Test.RETRY_TEST_ID, newTestInfo.locator().getId());
 
