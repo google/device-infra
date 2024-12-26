@@ -26,32 +26,14 @@ import com.google.protobuf.Descriptors.FieldDescriptor;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceInfo;
-import com.google.wireless.qa.mobileharness.shared.model.lab.LabInfo;
-import com.google.wireless.qa.mobileharness.shared.proto.DeviceQuery.DeviceFilter;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryFilter;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryResult;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.Dimension;
 import java.util.List;
-import javax.annotation.Nullable;
 
 /** Device querier for querying the information of the available devices/labs. */
 public interface DeviceQuerier {
-  /**
-   * Queries device information. It is highly recommended to provide the device filter to reduce the
-   * size of the query result and improve the performance.
-   *
-   * @param deviceFilter if provided, only the devices that matched this filter will be returned
-   * @return the information of the devices grouped by labs
-   * @throws MobileHarnessException if failed to query the device info
-   * @throws InterruptedException if the current thread is interrupted
-   * @deprecated Use {@link #queryDevice(DeviceQueryFilter)} instead
-   */
-  @Deprecated
-  default List<LabInfo> getDeviceInfos(@Nullable DeviceFilter deviceFilter)
-      throws MobileHarnessException, InterruptedException {
-    throw new UnsupportedOperationException();
-  }
 
   /**
    * Queries device information.

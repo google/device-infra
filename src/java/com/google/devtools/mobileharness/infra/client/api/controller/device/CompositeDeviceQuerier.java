@@ -22,14 +22,11 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier.LabQueryResult;
 import com.google.protobuf.Descriptors.FieldDescriptor;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
-import com.google.wireless.qa.mobileharness.shared.model.lab.LabInfo;
-import com.google.wireless.qa.mobileharness.shared.proto.DeviceQuery.DeviceFilter;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryFilter;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryResult;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executor;
-import javax.annotation.Nullable;
 
 /** The composite device querier which can query devices from multiple sources. */
 public class CompositeDeviceQuerier implements DeviceQuerier {
@@ -44,16 +41,6 @@ public class CompositeDeviceQuerier implements DeviceQuerier {
   public CompositeDeviceQuerier(List<DeviceQuerier> deviceQuerierList, Executor executor) {
     this.deviceQuerierList = deviceQuerierList;
     this.executor = executor;
-  }
-
-  @Override
-  public List<LabInfo> getDeviceInfos(@Nullable DeviceFilter deviceFilter)
-      throws MobileHarnessException, InterruptedException {
-    List<LabInfo> labInfos = new ArrayList<>();
-    for (DeviceQuerier deviceQuerier : deviceQuerierList) {
-      labInfos.addAll(deviceQuerier.getDeviceInfos(deviceFilter));
-    }
-    return labInfos;
   }
 
   @Override

@@ -25,29 +25,20 @@ import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
-import com.google.devtools.mobileharness.infra.controller.device.DeviceStatusInfo;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceManager;
 import com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures;
 import com.google.devtools.mobileharness.shared.util.message.StrPairUtil;
 import com.google.devtools.mobileharness.shared.util.network.localhost.LocalHost;
 import com.google.protobuf.Descriptors.FieldDescriptor;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
-import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
-import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceInfo;
-import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator;
-import com.google.wireless.qa.mobileharness.shared.model.lab.LabInfo;
-import com.google.wireless.qa.mobileharness.shared.model.lab.LabLocator;
-import com.google.wireless.qa.mobileharness.shared.proto.DeviceQuery.DeviceFilter;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryFilter;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryResult;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.Dimension;
 import java.net.UnknownHostException;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.concurrent.CountDownLatch;
-import javax.annotation.Nullable;
 
 /** Device querier for retrieving the local device information. */
 class LocalDeviceQuerier implements DeviceQuerier {
@@ -62,30 +53,6 @@ class LocalDeviceQuerier implements DeviceQuerier {
       ListenableFuture<LocalDeviceManager> deviceManagerFuture, CountDownLatch firstDeviceLatch) {
     this.deviceManagerFuture = deviceManagerFuture;
     this.firstDeviceLatch = firstDeviceLatch;
-  }
-
-  @Override
-  public List<LabInfo> getDeviceInfos(@Nullable DeviceFilter deviceFilter)
-      throws MobileHarnessException, InterruptedException {
-    LocalDeviceManager deviceManager = getDeviceManager();
-    LabInfo labInfo = new LabInfo(LabLocator.LOCALHOST);
-    for (Entry<Device, DeviceStatusInfo> entry :
-        deviceManager.getAllDeviceStatus(false /* realtimeDetect */).entrySet()) {
-      // TODO: Support device filter.
-      Device device = entry.getKey();
-      DeviceInfo deviceInfo =
-          new DeviceInfo(
-              new DeviceLocator(device.getDeviceId()),
-              entry.getValue().getDeviceStatusWithTimestamp().getStatus());
-      deviceInfo.owners().addAll(device.getOwners());
-      deviceInfo.types().addAll(device.getDeviceTypes());
-      deviceInfo.drivers().addAll(device.getDriverTypes());
-      deviceInfo.decorators().addAll(device.getDecoratorTypes());
-      deviceInfo.dimensions().supported().addAll(device.getDimensions());
-      deviceInfo.dimensions().required().addAll(device.getRequiredDimensions());
-      labInfo.devices().add(deviceInfo);
-    }
-    return ImmutableList.of(labInfo);
   }
 
   @Override
