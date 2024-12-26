@@ -343,7 +343,8 @@ public class GcsFileManager {
    * @return information of the uploading
    */
   public ExecutionInfo upload(Path fileOrDir) throws MobileHarnessException, InterruptedException {
-    return upload(fileOrDir, /* zipStoreOnly= */ false, /* zipTimeout= */ Optional.empty());
+    return upload(
+        fileOrDir, /* zipStoreOnly= */ false, /* zipTimeout= */ Optional.empty(), Optional.empty());
   }
 
   /**
@@ -356,7 +357,11 @@ public class GcsFileManager {
    * @return information of the uploading
    */
   @SuppressWarnings("GoodTime") // TODO: fix GoodTime violation
-  public ExecutionInfo upload(Path fileOrDir, boolean zipStoreOnly, Optional<Duration> zipTimeout)
+  public ExecutionInfo upload(
+      Path fileOrDir,
+      boolean zipStoreOnly,
+      Optional<Duration> zipTimeout,
+      Optional<String> checksum)
       throws MobileHarnessException, InterruptedException {
     AtomicBoolean isCached = new AtomicBoolean(true);
     Callable<ExecutionInfo> finalizedLoader =
@@ -365,13 +370,14 @@ public class GcsFileManager {
           if (localFileUtil.isDirExist(fileOrDir)) {
             ZipInfo zipInfo = compressDirectory(fileOrDir, zipStoreOnly, zipTimeout);
             long fileSize = localFileUtil.getFileSize(zipInfo.zipFilePath());
+            String decodedChecksum = checksum.orElse(zipInfo.decodedChecksum());
             return ExecutionInfo.create(
                 fileSize,
-                !uploadFile(
-                    zipInfo.zipFilePath(), Path.of(zipInfo.decodedChecksum() + "_" + fileSize)),
-                zipInfo.decodedChecksum() + "_" + fileSize);
+                !uploadFile(zipInfo.zipFilePath(), Path.of(decodedChecksum + "_" + fileSize)),
+                decodedChecksum + "_" + fileSize);
           } else if (fileExists(fileOrDir)) {
-            String decodedChecksum = gcsUtil.decodeCrc32c(gcsUtil.calculateCrc32c(fileOrDir));
+            String decodedChecksum =
+                checksum.orElse(gcsUtil.decodeCrc32c(gcsUtil.calculateCrc32c(fileOrDir)));
             long fileSize = gcsUtil.getFileSize(fileOrDir);
             return ExecutionInfo.create(
                 fileSize,
@@ -532,5 +538,10 @@ public class GcsFileManager {
   public boolean fileExist(GcsApiObject gcsFile)
       throws MobileHarnessException, InterruptedException {
     return gcsUtil.fileExist(gcsFile);
+  }
+
+  /** Returns the file size of the path {@code gcsFile}. */
+  public long getGcsFileSize(Path gcsFile) throws MobileHarnessException, InterruptedException {
+    return gcsUtil.getGcsFileSize(gcsFile);
   }
 }

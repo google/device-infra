@@ -153,7 +153,7 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
   }
 
   /** Sends file {@code local} to remote side with {@code metadata}. */
-  public void sendFile(Any metadata, Path local)
+  public void sendFile(Any metadata, Path local, @Nullable String checksum)
       throws MobileHarnessException, InterruptedException {
     FileTransferEvent.Builder event =
         FileTransferEvent.builder().setStart(Instant.now()).setType(ExecutionType.SEND);
@@ -171,7 +171,11 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
     }
 
     ExecutionInfo executionInfo =
-        gcsFileManager.upload(local, params.zipStoreOnly(), Optional.of(params.zipTimeout()));
+        gcsFileManager.upload(
+            local,
+            params.zipStoreOnly(),
+            Optional.of(params.zipTimeout()),
+            Optional.ofNullable(checksum));
     downloadGcsFileToServer(metadata, executionInfo.checksum(), local);
     publishEvent(
         event
@@ -184,7 +188,7 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
 
   /** {@inheritDoc} */
   @Override
-  public void sendFile(String fileId, String tag, String srcPath)
+  public void sendFile(String fileId, String tag, String srcPath, @Nullable String checksum)
       throws MobileHarnessException, InterruptedException {
     sendFile(
         Any.pack(
@@ -193,7 +197,8 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
                 .setTag(tag)
                 .setOriginalPath(srcPath)
                 .build()),
-        Path.of(srcPath));
+        Path.of(srcPath),
+        checksum);
   }
 
   /**

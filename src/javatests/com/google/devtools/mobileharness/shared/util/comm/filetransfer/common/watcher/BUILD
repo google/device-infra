@@ -33,6 +33,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/filetransfer/common/watcher:file_transfer_event",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/filetransfer/common/watcher:file_transfer_watcher",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/filetransfer/common/watcher:watchable_file_transfer_client",
+        "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:junit_junit",
         "@maven//:org_mockito_mockito_core",
     ],

@@ -25,6 +25,7 @@ import com.google.devtools.mobileharness.shared.util.comm.filetransfer.common.pr
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.common.watcher.FileTransferEvent.ExecutionType;
 import java.time.Instant;
 import java.util.List;
+import javax.annotation.Nullable;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -36,7 +37,7 @@ public class WatchableFileTransferClientTest {
   private final WatchableFileTransferClient client =
       new WatchableFileTransferClient() {
         @Override
-        public void sendFile(String fileId, String tag, String path) {}
+        public void sendFile(String fileId, String tag, String path, @Nullable String checksum) {}
 
         @Override
         public long downloadFile(String remote, String local) {

@@ -35,6 +35,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/constant/closeable:mobile_harness_auto_closeable",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/filetransfer/common/watcher:file_transfer_watcher",
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_errorprone_error_prone_annotations",
     ],
 )

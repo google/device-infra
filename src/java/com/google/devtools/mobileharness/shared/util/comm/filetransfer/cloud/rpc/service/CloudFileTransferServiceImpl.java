@@ -281,7 +281,8 @@ public class CloudFileTransferServiceImpl {
                 .upload(
                     src,
                     compressOptions.getStoreOnly(),
-                    Optional.of(Duration.ofMillis(compressOptions.getTimeoutMs())))
+                    Optional.of(Duration.ofMillis(compressOptions.getTimeoutMs())),
+                    Optional.empty())
                 .checksum();
       } else {
         checksum = gcsFileManager.upload(src).checksum();
@@ -665,8 +666,8 @@ public class CloudFileTransferServiceImpl {
     @Override
     public String toString() {
       return response
-          .map(response -> "Response: " + response.toString())
-          .orElseGet(() -> "Exception: " + exception.get().toString());
+          .map(response -> "Response: " + response)
+          .orElseGet(() -> "Exception: " + exception.get());
     }
   }
 }

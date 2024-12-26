@@ -267,7 +267,6 @@ public class GcsUtil {
         .build();
   }
 
-  @SuppressWarnings("unused") // deviceinfra:internal-only
   private static HttpRequestInitializer getCredential(GcsParams storageParams)
       throws MobileHarnessException {
     if (storageParams.cloudStorageConfigPath != null) {
@@ -537,17 +536,7 @@ public class GcsUtil {
    */
   public void copyFileToLocalInParallel(GcsApiObject gcsFile, Path localFile, long shardSize)
       throws MobileHarnessException, InterruptedException {
-    StorageObject metadata =
-        getMetadata(gcsFile)
-            .orElseThrow(
-                () ->
-                    new MobileHarnessException(
-                        BasicErrorId.GCS_NO_METADATA,
-                        String.format(
-                            "GCS file gs://%s/%s doesn't exist.",
-                            storageParams.bucketName, gcsFile.path())));
-
-    long fileSize = metadata.getSize().longValue();
+    long fileSize = getGcsFileSize(gcsFile.path());
     if (shardSize <= 0) {
       logger.atWarning().log(
           "The shard size %s should not be a negative value. So copy with only one shard",
@@ -617,6 +606,20 @@ public class GcsUtil {
         tryRemoveFile(shard);
       }
     }
+  }
+
+  /** Gets the size of the GCS file {@code gcsFile}. */
+  public long getGcsFileSize(Path gcsFile) throws MobileHarnessException, InterruptedException {
+    StorageObject metadata =
+        getMetadata(GcsApiObject.create(gcsFile))
+            .orElseThrow(
+                () ->
+                    new MobileHarnessException(
+                        BasicErrorId.GCS_NO_METADATA,
+                        String.format(
+                            "GCS file gs://%s/%s doesn't exist.",
+                            storageParams.bucketName, gcsFile)));
+    return metadata.getSize().longValue();
   }
 
   /** Remove {@code file} without throwing an exception. */
@@ -755,7 +758,7 @@ public class GcsUtil {
       throws MobileHarnessException {
     List<String> files = new ArrayList<>();
     logger.atInfo().log(
-        "List files wihh prefix(%s), delimiter(%s), recursively(%s)",
+        "List files with prefix(%s), delimiter(%s), recursively(%s)",
         prefix, delimiter, recursively);
     try {
       Storage.Objects.List listObjects = client.objects().list(storageParams.bucketName);
@@ -1282,7 +1285,6 @@ public class GcsUtil {
     return getOutputStreamFromLocalFile(localFile);
   }
 
-  @SuppressWarnings("unused") // deviceinfra:internal-only
   private static BufferedOutputStream getOutputStreamFromLocalFile(Path localFile)
       throws IOException {
     return new BufferedOutputStream(new FileOutputStream(localFile.toFile()));
@@ -1300,7 +1302,6 @@ public class GcsUtil {
     return currentInstant();
   }
 
-  @SuppressWarnings("unused") // deviceinfra:internal-only
   private Instant currentInstant() {
     return Clock.systemUTC().instant();
   }
