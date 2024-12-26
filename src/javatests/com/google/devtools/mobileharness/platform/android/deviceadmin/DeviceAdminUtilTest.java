@@ -130,7 +130,8 @@ public final class DeviceAdminUtilTest {
                 "--action=UNLOCK",
                 "--serial=" + DEVICE_ID,
                 "--kms_key_name=" + KMS_KEY_NAME,
-                "--credentials_path=" + CRED_PATH));
+                "--credentials_path=" + CRED_PATH,
+                "--admin_app_path=" + ADMIN_APP_PATH));
   }
 
   @Test

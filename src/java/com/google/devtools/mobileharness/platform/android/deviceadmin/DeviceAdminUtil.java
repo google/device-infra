@@ -79,6 +79,8 @@ public class DeviceAdminUtil {
     try {
       exec(deviceId, ACTION_INSTALL);
     } catch (CommandException e) {
+      logger.atWarning().log(
+          "Fail to install device admin on %s. Error message: %s", deviceId, e.getMessage());
       throw new MobileHarnessException(
           AndroidErrorId.DEVICE_ADMIN_UTIL_INSTALL_ERROR,
           "Fail to install the device admin app",
@@ -96,6 +98,8 @@ public class DeviceAdminUtil {
     try {
       exec(deviceId, ACTION_ENABLE);
     } catch (CommandException e) {
+      logger.atWarning().log(
+          "Fail to enable device admin on %s. Error message: %s", deviceId, e.getMessage());
       throw new MobileHarnessException(
           AndroidErrorId.DEVICE_ADMIN_UTIL_ENABLE_ERROR, "Fail to enable the device admin app", e);
     }
@@ -111,6 +115,7 @@ public class DeviceAdminUtil {
     try {
       exec(deviceId, ACTION_LOCK);
     } catch (CommandException e) {
+      logger.atWarning().log("Fail to lock device %s. Error message: %s", deviceId, e.getMessage());
       throw new MobileHarnessException(
           AndroidErrorId.DEVICE_ADMIN_UTIL_LOCK_ERROR,
           "Fail to lock the device with device admin",
@@ -128,6 +133,8 @@ public class DeviceAdminUtil {
     try {
       exec(deviceId, ACTION_UNLOCK);
     } catch (CommandException e) {
+      logger.atWarning().log(
+          "Fail to unlock device %s. Error message: %s", deviceId, e.getMessage());
       throw new MobileHarnessException(
           AndroidErrorId.DEVICE_ADMIN_UTIL_UNLOCK_ERROR,
           "Fail to unlock the device with device admin",
@@ -161,7 +168,7 @@ public class DeviceAdminUtil {
             "--kms_key_name=" + kmsKeyName,
             "--credentials_path=" + credPath);
 
-    if (action.equals(ACTION_INSTALL)) {
+    if (action.equals(ACTION_INSTALL) || action.equals(ACTION_UNLOCK)) {
       command = command.argsAppended("--admin_app_path=" + adminAppPath);
     }
     String commandId = UUID.randomUUID().toString();
