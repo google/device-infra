@@ -30,7 +30,7 @@ java_library(
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/api/model/proto:lab_java_proto",
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
-        "//src/devtools/mobileharness/infra/monitoring/proto:monitor_entry_java_proto",
+        "//src/devtools/mobileharness/infra/monitoring/proto:monitored_record_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/monitoring:cloud_pubsub_monitor_module",
         "//src/java/com/google/devtools/mobileharness/infra/monitoring:monitor_lib",

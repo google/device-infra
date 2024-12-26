@@ -35,7 +35,7 @@ java_library(
         ":monitor_pipeline_launcher",
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
-        "//src/devtools/mobileharness/infra/monitoring/proto:monitor_entry_java_proto",
+        "//src/devtools/mobileharness/infra/monitoring/proto:monitored_record_java_proto",
         "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc",
         "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc:stub_util",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
@@ -77,7 +77,7 @@ java_library(
     srcs = ["MonitorPipelineLauncher.java"],
     deps = [
         ":monitor_lib",
-        "//src/devtools/mobileharness/infra/monitoring/proto:monitor_entry_java_proto",
+        "//src/devtools/mobileharness/infra/monitoring/proto:monitored_record_java_proto",
         "@maven//:com_google_inject_guice",
     ],
 )

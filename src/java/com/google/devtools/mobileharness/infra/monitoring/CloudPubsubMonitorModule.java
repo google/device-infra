@@ -22,7 +22,7 @@ import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 import com.google.auth.oauth2.GoogleCredentials;
-import com.google.devtools.mobileharness.infra.monitoring.proto.MonitorEntryProto.MonitorEntry;
+import com.google.devtools.mobileharness.infra.monitoring.proto.MonitoredRecordProto.MonitoredRecord;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
@@ -61,7 +61,7 @@ public final class CloudPubsubMonitorModule extends AbstractModule {
 
   @Override
   protected void configure() {
-    bind(new TypeLiteral<DataPuller<MonitorEntry>>() {}).to(LabInfoPullerImpl.class);
+    bind(new TypeLiteral<DataPuller<MonitoredRecord>>() {}).to(LabInfoPullerImpl.class);
     bind(DataPusher.class).to(PubsubClientImpl.class);
   }
 
@@ -93,7 +93,7 @@ public final class CloudPubsubMonitorModule extends AbstractModule {
   @Provides
   @Singleton
   MonitorPipelineLauncher provideMonitorPipelineLauncher(
-      BatchPipelineService<MonitorEntry> batchPipelineService) {
+      BatchPipelineService<MonitoredRecord> batchPipelineService) {
     return new MonitorPipelineLauncher(batchPipelineService);
   }
 }

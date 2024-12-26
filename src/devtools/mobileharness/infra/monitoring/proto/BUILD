@@ -33,6 +33,17 @@ java_proto_library(
 )
 
 proto_library(
+    name = "monitored_record_proto",
+    srcs = ["monitored_record.proto"],
+    deps = ["@com_google_protobuf//:timestamp_proto"],
+)
+
+java_proto_library(
+    name = "monitored_record_java_proto",
+    deps = [":monitored_record_proto"],
+)
+
+proto_library(
     name = "record_proto",
     srcs = ["record.proto"],
 )

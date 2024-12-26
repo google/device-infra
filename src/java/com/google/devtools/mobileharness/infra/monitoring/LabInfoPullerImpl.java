@@ -23,9 +23,9 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Filter;
-import com.google.devtools.mobileharness.infra.monitoring.proto.MonitorEntryProto.DeviceData;
-import com.google.devtools.mobileharness.infra.monitoring.proto.MonitorEntryProto.HostData;
-import com.google.devtools.mobileharness.infra.monitoring.proto.MonitorEntryProto.MonitorEntry;
+import com.google.devtools.mobileharness.infra.monitoring.proto.MonitoredRecordProto.Attribute;
+import com.google.devtools.mobileharness.infra.monitoring.proto.MonitoredRecordProto.MonitoredEntry;
+import com.google.devtools.mobileharness.infra.monitoring.proto.MonitoredRecordProto.MonitoredRecord;
 import com.google.devtools.mobileharness.shared.labinfo.LabInfoProvider;
 import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
 import com.google.inject.Inject;
@@ -35,7 +35,7 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 /** Pulls lab info from LabInfoProvider. */
-public final class LabInfoPullerImpl implements DataPuller<MonitorEntry> {
+public final class LabInfoPullerImpl implements DataPuller<MonitoredRecord> {
 
   private final LabInfoProvider labInfoProvider;
 
@@ -51,17 +51,18 @@ public final class LabInfoPullerImpl implements DataPuller<MonitorEntry> {
   public void tearDown() {}
 
   @Override
-  public ImmutableList<MonitorEntry> pull() throws MobileHarnessException {
-    ImmutableList.Builder<MonitorEntry> builder = ImmutableList.builder();
+  public ImmutableList<MonitoredRecord> pull() throws MobileHarnessException {
+    ImmutableList.Builder<MonitoredRecord> builder = ImmutableList.builder();
     for (LabData labData :
         labInfoProvider.getLabInfos(Filter.getDefaultInstance()).getLabDataList()) {
-      MonitorEntry.Builder monitorEntry =
-          MonitorEntry.newBuilder()
+      MonitoredRecord.Builder record =
+          MonitoredRecord.newBuilder()
               .setTimestamp(TimeUtils.toProtoTimestamp(Instant.now()))
-              .setHostData(
-                  HostData.newBuilder()
-                      .setHostName(labData.getLabInfo().getLabLocator().getHostName())
-                      .setHostIp(labData.getLabInfo().getLabLocator().getIp()));
+              .setHostEntry(
+                  MonitoredEntry.newBuilder()
+                      .putIdentifier(
+                          "host_name", labData.getLabInfo().getLabLocator().getHostName())
+                      .putIdentifier("host_ip", labData.getLabInfo().getLabLocator().getIp()));
       for (DeviceInfo deviceInfo : labData.getDeviceList().getDeviceInfoList()) {
         DeviceCompositeDimension compositeDimension =
             deviceInfo.getDeviceFeature().getCompositeDimension();
@@ -71,27 +72,43 @@ public final class LabInfoPullerImpl implements DataPuller<MonitorEntry> {
                 .addAll(compositeDimension.getRequiredDimensionList())
                 .build();
 
-        DeviceData.Builder deviceData =
-            DeviceData.newBuilder()
-                .setId(deviceInfo.getDeviceLocator().getId())
-                .setStatus(deviceInfo.getDeviceStatus().toString())
-                .addAllDeviceType(deviceInfo.getDeviceFeature().getTypeList());
+        MonitoredEntry.Builder deviceEntry =
+            MonitoredEntry.newBuilder()
+                .putIdentifier("device_id", deviceInfo.getDeviceLocator().getId());
 
-        getDimension(dimensionList, "model").ifPresent(deviceData::setModel);
-        Stream.of(
-                getDimension(dimensionList, "sdk_version"),
-                getDimension(dimensionList, "software_version"))
-            .flatMap(Optional::stream)
-            .findFirst()
-            .ifPresent(deviceData::setVersion);
-        getDimension(dimensionList, "hardware").ifPresent(deviceData::setHardware);
-        getDimension(dimensionList, "build_type").ifPresent(deviceData::setBuildType);
+        addAttribute(deviceEntry, "status", Optional.of(deviceInfo.getDeviceStatus().toString()));
+        addAttribute(deviceEntry, "device_type", deviceInfo.getDeviceFeature().getTypeList());
+        addAttribute(deviceEntry, "model", getDimension(dimensionList, "model"));
+        addAttribute(
+            deviceEntry,
+            "version",
+            Stream.of(
+                    getDimension(dimensionList, "sdk_version"),
+                    getDimension(dimensionList, "software_version"))
+                .flatMap(Optional::stream)
+                .findFirst());
+        addAttribute(deviceEntry, "hardware", getDimension(dimensionList, "hardware"));
+        addAttribute(deviceEntry, "build_type", getDimension(dimensionList, "build_type"));
 
-        monitorEntry.addDeviceData(deviceData.build());
+        record.addDeviceEntry(deviceEntry.build());
       }
-      builder.add(monitorEntry.build());
+      builder.add(record.build());
     }
     return builder.build();
+  }
+
+  private void addAttribute(
+      MonitoredEntry.Builder builder, String attributeName, Optional<String> attributeValue) {
+    if (attributeValue.isPresent() && !attributeValue.get().isEmpty()) {
+      addAttribute(builder, attributeName, ImmutableList.of(attributeValue.get()));
+    }
+  }
+
+  private void addAttribute(
+      MonitoredEntry.Builder builder, String attributeName, List<String> attributeValues) {
+    for (String attributeValue : attributeValues) {
+      builder.addAttribute(Attribute.newBuilder().setName(attributeName).setValue(attributeValue));
+    }
   }
 
   private Optional<String> getDimension(List<DeviceDimension> dimensions, String name) {

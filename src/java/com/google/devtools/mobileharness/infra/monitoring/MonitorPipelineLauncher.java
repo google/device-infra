@@ -16,7 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.monitoring;
 
-import com.google.devtools.mobileharness.infra.monitoring.proto.MonitorEntryProto.MonitorEntry;
+import com.google.devtools.mobileharness.infra.monitoring.proto.MonitoredRecordProto.MonitoredRecord;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 
@@ -24,10 +24,10 @@ import com.google.inject.Singleton;
 @Singleton
 public final class MonitorPipelineLauncher {
 
-  private final BatchPipelineService<MonitorEntry> labMonitorService;
+  private final BatchPipelineService<MonitoredRecord> labMonitorService;
 
   @Inject
-  MonitorPipelineLauncher(BatchPipelineService<MonitorEntry> labMonitorService) {
+  MonitorPipelineLauncher(BatchPipelineService<MonitoredRecord> labMonitorService) {
     this.labMonitorService = labMonitorService;
   }
 

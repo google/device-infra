@@ -33,9 +33,9 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Filter;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
-import com.google.devtools.mobileharness.infra.monitoring.proto.MonitorEntryProto.DeviceData;
-import com.google.devtools.mobileharness.infra.monitoring.proto.MonitorEntryProto.HostData;
-import com.google.devtools.mobileharness.infra.monitoring.proto.MonitorEntryProto.MonitorEntry;
+import com.google.devtools.mobileharness.infra.monitoring.proto.MonitoredRecordProto.Attribute;
+import com.google.devtools.mobileharness.infra.monitoring.proto.MonitoredRecordProto.MonitoredEntry;
+import com.google.devtools.mobileharness.infra.monitoring.proto.MonitoredRecordProto.MonitoredRecord;
 import com.google.devtools.mobileharness.shared.labinfo.LabInfoProvider;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
@@ -155,9 +155,9 @@ public final class LabInfoPullerImplTest {
   public void pull_empty() throws Exception {
     when(labInfoProvider.getLabInfos(any(Filter.class))).thenReturn(LabView.getDefaultInstance());
 
-    ImmutableList<MonitorEntry> monitorEntries = labInfoPuller.pull();
+    ImmutableList<MonitoredRecord> monitoredRecords = labInfoPuller.pull();
 
-    assertThat(monitorEntries).isEmpty();
+    assertThat(monitoredRecords).isEmpty();
   }
 
   @Test
@@ -177,31 +177,39 @@ public final class LabInfoPullerImplTest {
                                 .addDeviceInfo(DEVICE_INFO_1)))
                 .build());
 
-    ImmutableList<MonitorEntry> monitorEntries = labInfoPuller.pull();
+    ImmutableList<MonitoredRecord> monitoredRecords = labInfoPuller.pull();
 
-    assertThat(monitorEntries).hasSize(1);
-    MonitorEntry monitorEntry = monitorEntries.get(0);
+    assertThat(monitoredRecords).hasSize(1);
+    MonitoredRecord monitoredRecord = monitoredRecords.get(0);
 
-    assertThat(monitorEntry.getHostData())
-        .isEqualTo(HostData.newBuilder().setHostName(HOST_NAME).setHostIp(HOST_IP).build());
-    assertThat(monitorEntry.getDeviceDataCount()).isEqualTo(2);
-    assertThat(monitorEntry.getDeviceDataList())
+    assertThat(monitoredRecord.getHostEntry())
+        .isEqualTo(
+            MonitoredEntry.newBuilder()
+                .putIdentifier("host_name", HOST_NAME)
+                .putIdentifier("host_ip", HOST_IP)
+                .build());
+    assertThat(monitoredRecord.getDeviceEntryList().size()).isEqualTo(2);
+    assertThat(monitoredRecord.getDeviceEntryList())
         .containsExactly(
-            DeviceData.newBuilder()
-                .setId(DEVICE_ID_1)
-                .setStatus("BUSY")
-                .addDeviceType(DEVICE_TYPE_1)
-                .setModel(DEVICE_MODEL_1)
-                .setVersion(DEVICE_SDK_VERSION_1)
-                .setHardware(DEVICE_HARDWARE_1)
-                .setBuildType(DEVICE_BUILD_TYPE_1)
+            MonitoredEntry.newBuilder()
+                .putIdentifier("device_id", DEVICE_ID_1)
+                .addAttribute(Attribute.newBuilder().setName("status").setValue("BUSY"))
+                .addAttribute(Attribute.newBuilder().setName("device_type").setValue(DEVICE_TYPE_1))
+                .addAttribute(Attribute.newBuilder().setName("model").setValue(DEVICE_MODEL_1))
+                .addAttribute(
+                    Attribute.newBuilder().setName("version").setValue(DEVICE_SDK_VERSION_1))
+                .addAttribute(
+                    Attribute.newBuilder().setName("hardware").setValue(DEVICE_HARDWARE_1))
+                .addAttribute(
+                    Attribute.newBuilder().setName("build_type").setValue(DEVICE_BUILD_TYPE_1))
                 .build(),
-            DeviceData.newBuilder()
-                .setId(DEVICE_ID_2)
-                .setStatus("IDLE")
-                .addDeviceType(DEVICE_TYPE_2)
-                .setModel(DEVICE_MODEL_2)
-                .setVersion(DEVICE_SOFTWARE_VERSION_2)
+            MonitoredEntry.newBuilder()
+                .putIdentifier("device_id", DEVICE_ID_2)
+                .addAttribute(Attribute.newBuilder().setName("status").setValue("IDLE"))
+                .addAttribute(Attribute.newBuilder().setName("device_type").setValue(DEVICE_TYPE_2))
+                .addAttribute(Attribute.newBuilder().setName("model").setValue(DEVICE_MODEL_2))
+                .addAttribute(
+                    Attribute.newBuilder().setName("version").setValue(DEVICE_SOFTWARE_VERSION_2))
                 .build());
   }
 }
