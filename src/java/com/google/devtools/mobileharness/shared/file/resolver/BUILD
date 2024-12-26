@@ -20,6 +20,7 @@ load("@rules_java//java:defs.bzl", "java_library")
 
 package(
     default_visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/job:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/lab:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/lab/controller:__pkg__",

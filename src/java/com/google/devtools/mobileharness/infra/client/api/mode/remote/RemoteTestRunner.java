@@ -60,6 +60,7 @@ import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.TestRunnerTiming;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.ExecTestStub;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.PrepareTestStub;
+import com.google.devtools.mobileharness.shared.file.resolver.FileResolver;
 import com.google.devtools.mobileharness.shared.trace.proto.SpanProto.ParentSpan;
 import com.google.devtools.mobileharness.shared.util.comm.messaging.message.TestMessageInfo;
 import com.google.devtools.mobileharness.shared.util.error.ErrorModelConverter;
@@ -179,7 +180,8 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
       DirectTestRunnerSetting setting,
       ListeningExecutorService threadPool,
       ResourceFederation resourceFederation,
-      boolean supportImpersonation)
+      boolean supportImpersonation,
+      FileResolver fileResolver)
       throws MobileHarnessException {
     this(
         new ThreadPoolTestRunnerLauncher<>(threadPool, setting.globalInternalBus().orElse(null)),
@@ -192,6 +194,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
         StubManager.getInstance(),
         TestMessageManager.getInstance(),
         resourceFederation,
+        fileResolver,
         supportImpersonation);
   }
 
@@ -207,6 +210,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
       StubManager stubManager,
       TestMessageManager testMessageManager,
       ResourceFederation resourceFederation,
+      FileResolver fileResolver,
       boolean supportImpersonation)
       throws MobileHarnessException {
     super(launcher, setting, threadPool);

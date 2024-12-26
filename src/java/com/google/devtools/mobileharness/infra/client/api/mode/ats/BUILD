@@ -62,6 +62,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/scheduler:abstract_scheduler",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:direct_test_runner",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:direct_test_runner_setting",
+        "//src/java/com/google/devtools/mobileharness/shared/file/resolver:file_resolver",
         "//src/java/com/google/devtools/mobileharness/shared/labinfo:lab_info_service",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "@io_grpc_grpc_java//core",

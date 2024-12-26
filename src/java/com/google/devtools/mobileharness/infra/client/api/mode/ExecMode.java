@@ -23,6 +23,7 @@ import com.google.devtools.mobileharness.infra.client.api.controller.allocation.
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunner;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunnerSetting;
+import com.google.devtools.mobileharness.shared.file.resolver.FileResolver;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 
@@ -49,6 +50,8 @@ public interface ExecMode {
 
   /** Creates a test runner for executing the given test on the given device. */
   DirectTestRunner createTestRunner(
-      DirectTestRunnerSetting setting, ListeningExecutorService threadPool)
+      DirectTestRunnerSetting setting,
+      ListeningExecutorService threadPool,
+      FileResolver fileResolver)
       throws MobileHarnessException, InterruptedException;
 }

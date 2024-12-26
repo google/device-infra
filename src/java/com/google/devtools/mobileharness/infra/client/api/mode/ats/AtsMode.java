@@ -36,6 +36,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.control
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunner;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunnerSetting;
+import com.google.devtools.mobileharness.shared.file.resolver.FileResolver;
 import com.google.devtools.mobileharness.shared.labinfo.LabInfoService;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import io.grpc.BindableService;
@@ -97,13 +98,16 @@ public class AtsMode implements ExecMode, ServiceProvider {
 
   @Override
   public DirectTestRunner createTestRunner(
-      DirectTestRunnerSetting setting, ListeningExecutorService threadPool)
+      DirectTestRunnerSetting setting,
+      ListeningExecutorService threadPool,
+      FileResolver fileResolver)
       throws MobileHarnessException {
     return new RemoteTestRunner(
         setting,
         threadPool,
         ResourceFederation.getDefaultInstance(), // The resource federation is empty.
-        /* supportImpersonation= */ false);
+        /* supportImpersonation= */ false,
+        fileResolver);
   }
 
   @Override

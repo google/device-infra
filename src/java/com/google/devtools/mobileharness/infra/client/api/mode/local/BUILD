@@ -69,6 +69,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/local/utp/controller:test_flow_converter",
         "//src/java/com/google/devtools/mobileharness/infra/lab/controller:local_file_based_device_config_manager",
         "//src/java/com/google/devtools/mobileharness/shared/context:invocation_context_executors",
+        "//src/java/com/google/devtools/mobileharness/shared/file/resolver:file_resolver",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:callables",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:more_futures",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_factory_util",

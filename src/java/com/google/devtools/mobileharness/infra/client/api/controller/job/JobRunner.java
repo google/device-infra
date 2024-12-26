@@ -576,7 +576,12 @@ public class JobRunner implements Runnable {
                           scopeEventSubscribers.get(EventScope.INTERNAL_PLUGIN),
                           scopeEventSubscribers.get(EventScope.API_PLUGIN),
                           scopeEventSubscribers.get(EventScope.JAR_PLUGIN));
-                  DirectTestRunner testRunner = execMode.createTestRunner(setting, threadPool);
+                  DirectTestRunner testRunner =
+                      execMode.createTestRunner(
+                          setting,
+                          threadPool,
+                          new com.google.devtools.mobileharness.shared.file.resolver
+                              .LocalFileResolver(null, fileUtil));
 
                   // Subscribes test messages of the test.
                   synchronized (testMessageSubscribers) {

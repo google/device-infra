@@ -56,6 +56,7 @@ import com.google.devtools.mobileharness.infra.controller.test.local.utp.control
 import com.google.devtools.mobileharness.infra.controller.test.local.utp.proto.IncompatibleReasonProto;
 import com.google.devtools.mobileharness.infra.lab.controller.LocalFileBasedDeviceConfigManager;
 import com.google.devtools.mobileharness.shared.context.InvocationContextExecutors;
+import com.google.devtools.mobileharness.shared.file.resolver.FileResolver;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadFactoryUtil;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
@@ -227,7 +228,9 @@ public class LocalMode implements ExecMode {
 
   @Override
   public DirectTestRunner createTestRunner(
-      DirectTestRunnerSetting setting, ListeningExecutorService threadPool)
+      DirectTestRunnerSetting setting,
+      ListeningExecutorService threadPool,
+      FileResolver fileResolver)
       throws MobileHarnessException, InterruptedException {
     initialize(setting.globalInternalBus().orElseThrow());
     List<LocalDeviceTestRunner> deviceRunners = new ArrayList<>();
