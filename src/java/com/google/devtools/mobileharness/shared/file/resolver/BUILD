@@ -130,6 +130,7 @@ java_library(
         ":file_resolver",
         ":gcs_file_resolver",
         ":local_file_resolver",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/checksum",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_errorprone_error_prone_annotations",

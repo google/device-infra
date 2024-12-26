@@ -70,6 +70,9 @@ public interface FileResolver {
   @AutoValue
   abstract class ResolveResult {
 
+    /**
+     * @deprecated Use {@link #of(ImmutableList, ImmutableMap, ResolveSource)} instead.
+     */
     @Deprecated
     public static ResolveResult create(
         ImmutableList<String> paths,
