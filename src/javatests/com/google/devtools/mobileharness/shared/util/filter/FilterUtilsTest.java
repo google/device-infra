@@ -25,6 +25,7 @@ import com.google.devtools.mobileharness.api.query.proto.FilterProto.IntegerMatc
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.IntegerMatch.GreaterThanOrEqual;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringListMatchCondition;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringListMatchCondition.AnyMatch;
+import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringListMatchCondition.ExactMatch;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringListMatchCondition.NoneMatch;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringListMatchCondition.SubsetMatch;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringMatchCondition;
@@ -259,6 +260,31 @@ public class FilterUtilsTest {
   }
 
   @Test
+  public void createStringListMatcher_exactMatch() {
+    StringListMatchCondition condition =
+        StringListMatchCondition.newBuilder()
+            .setExactMatch(ExactMatch.newBuilder().addValue("a").addValue("b"))
+            .build();
+    Predicate<ImmutableSet<String>> matcher =
+        FilterUtils.createStringListMatcher(condition, s -> s);
+    assertThat(matcher.test(ImmutableSet.of("a", "b"))).isTrue();
+    assertThat(matcher.test(ImmutableSet.of("A", "B", "c"))).isFalse();
+    assertThat(matcher.test(ImmutableSet.of("A", "B", "b"))).isTrue();
+    assertThat(matcher.test(ImmutableSet.of("a"))).isFalse();
+    assertThat(matcher.test(ImmutableSet.of("c"))).isFalse();
+
+    condition =
+        StringListMatchCondition.newBuilder()
+            .setExactMatch(ExactMatch.newBuilder().addValue("a").addValue("b").addValue("B"))
+            .build();
+    matcher = FilterUtils.createStringListMatcher(condition, s -> s);
+    assertThat(matcher.test(ImmutableSet.of("a", "b"))).isTrue();
+    assertThat(matcher.test(ImmutableSet.of("A", "B", "c"))).isFalse();
+    assertThat(matcher.test(ImmutableSet.of("a"))).isFalse();
+    assertThat(matcher.test(ImmutableSet.of("c"))).isFalse();
+  }
+
+  @Test
   public void createStringMultimapMatcher_empty() {
     StringMultimapMatchCondition condition = StringMultimapMatchCondition.getDefaultInstance();
     Predicate<ImmutableListMultimap<String, String>> matcher =
@@ -332,5 +358,24 @@ public class FilterUtilsTest {
     assertThat(matcher.test(ImmutableListMultimap.of("POOL", "shared", "pool", "private")))
         .isTrue();
     assertThat(matcher.test(ImmutableListMultimap.of("label", "test"))).isFalse();
+  }
+
+  @Test
+  public void createStringMultimapMatcher_exactMatch() {
+    StringMultimapMatchCondition condition =
+        StringMultimapMatchCondition.newBuilder()
+            .setKey("pool")
+            .setValueCondition(
+                StringListMatchCondition.newBuilder()
+                    .setExactMatch(ExactMatch.newBuilder().addValue("shared").addValue("private")))
+            .build();
+    Predicate<ImmutableListMultimap<String, String>> matcher =
+        FilterUtils.createStringMultimapMatcher(condition, s -> s);
+    assertThat(matcher.test(ImmutableListMultimap.of("pool", "shared"))).isFalse();
+    assertThat(matcher.test(ImmutableListMultimap.of("POOL", "private"))).isFalse();
+    assertThat(matcher.test(ImmutableListMultimap.of("pool", "shared", "POOL", "private")))
+        .isTrue();
+    assertThat(matcher.test(ImmutableListMultimap.of("pool", "private", "label", "test")))
+        .isFalse();
   }
 }

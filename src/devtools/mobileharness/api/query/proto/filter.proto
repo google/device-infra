@@ -179,12 +179,21 @@ message StringListMatchCondition {
   }
 
   // A string list matches this condition if it contains all the given strings
-  // (case-insensitive) as the given list. Don't support regex.
+  // (case-insensitive) as the given list. Regex is not supported.
   //
-  // If the expected list is empty, the condition will always match. The
+  // If the expected value list is empty, the condition will always match. The
   // expected list will be converted to a set, so allow duplicate values.
   message SubsetMatch {
     repeated string expected = 1;
+  }
+
+  // A string list matches this condition if it contains exactly the given
+  // values (case-insensitive). Regex is not supported.
+  //
+  // The expected value list and the actual value list will be converted to a
+  // set, so duplicate values will be ignored.
+  message ExactMatch {
+    repeated string value = 1;
   }
 
   // An unset or unrecognized condition will always match.
@@ -193,6 +202,7 @@ message StringListMatchCondition {
     NoneMatch none_match = 2;
     SubsetMatch subset_match = 3;
     IntegerMatch length_match = 4;
+    ExactMatch exact_match = 5;
   }
 }
 

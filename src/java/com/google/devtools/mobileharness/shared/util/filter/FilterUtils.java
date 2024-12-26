@@ -132,22 +132,30 @@ public final class FilterUtils {
               stringListExtractor.apply(entity).stream()
                   .noneMatch(createStringMatcher(condition.getNoneMatch().getCondition(), s -> s));
         case SUBSET_MATCH:
-          ImmutableSet<String> expectedValues =
+          ImmutableSet<String> expectedSubsetValues =
               ImmutableSet.copyOf(
                   condition.getSubsetMatch().getExpectedList().stream()
                       .map(Ascii::toLowerCase)
                       .collect(toImmutableList()));
           return entity ->
-              expectedValues.stream()
-                  .allMatch(
-                      value ->
-                          stringListExtractor.apply(entity).stream()
-                              .map(Ascii::toLowerCase)
-                              .collect(toImmutableSet())
-                              .contains(value));
+              stringListExtractor.apply(entity).stream()
+                  .map(Ascii::toLowerCase)
+                  .collect(toImmutableSet())
+                  .containsAll(expectedSubsetValues);
         case LENGTH_MATCH:
           return createStringListMatcherForLengthMatch(
               condition.getLengthMatch(), stringListExtractor);
+        case EXACT_MATCH:
+          ImmutableSet<String> expectedExactValues =
+              ImmutableSet.copyOf(
+                  condition.getExactMatch().getValueList().stream()
+                      .map(Ascii::toLowerCase)
+                      .collect(toImmutableList()));
+          return entity ->
+              expectedExactValues.equals(
+                  stringListExtractor.apply(entity).stream()
+                      .map(Ascii::toLowerCase)
+                      .collect(toImmutableSet()));
         case CONDITION_NOT_SET:
           break;
       }
