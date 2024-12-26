@@ -71,17 +71,6 @@ java_proto_library(
 )
 
 proto_library(
-    name = "device_query_proto",
-    srcs = ["device_query.proto"],
-    deps = [":lab_query_proto"],
-)
-
-java_proto_library(
-    name = "device_query_java_proto",
-    deps = [":device_query_proto"],
-)
-
-proto_library(
     name = "job_proto",
     srcs = ["job.proto"],
 )

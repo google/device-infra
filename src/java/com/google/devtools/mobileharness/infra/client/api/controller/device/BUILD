@@ -35,9 +35,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/lab",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:device_query_java_proto",
         "@com_google_protobuf//:protobuf_java",
-        "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
     ],
 )
@@ -51,10 +49,7 @@ java_library(
         ":querier",
         "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/lab",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:device_query_java_proto",
         "@com_google_protobuf//:protobuf_java",
-        "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
     ],
 )
