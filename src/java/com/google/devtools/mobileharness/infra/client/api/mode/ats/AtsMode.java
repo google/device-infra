@@ -54,6 +54,7 @@ public class AtsMode implements ExecMode, ServiceProvider {
   private final RemoteDeviceManager remoteDeviceManager;
   private final DeviceQuerier deviceQuerier;
   private final AbstractScheduler scheduler;
+  private final ListeningExecutorService threadPool;
   private final LabInfoService labInfoService;
   private final LabRecordManager labRecordManager;
   private final LabRecordService labRecordService;
@@ -65,6 +66,7 @@ public class AtsMode implements ExecMode, ServiceProvider {
       RemoteDeviceManager remoteDeviceManager,
       @AtsModeDeviceQuerier DeviceQuerier deviceQuerier,
       @AtsModeAbstractScheduler AbstractScheduler scheduler,
+      ListeningExecutorService threadPool,
       LabInfoService labInfoService,
       LabRecordManager labRecordManager,
       LabRecordService labRecordService,
@@ -72,6 +74,7 @@ public class AtsMode implements ExecMode, ServiceProvider {
     this.remoteDeviceManager = remoteDeviceManager;
     this.deviceQuerier = deviceQuerier;
     this.scheduler = scheduler;
+    this.threadPool = threadPool;
     this.labInfoService = labInfoService;
     this.labRecordManager = labRecordManager;
     this.labRecordService = labRecordService;
@@ -88,7 +91,8 @@ public class AtsMode implements ExecMode, ServiceProvider {
 
   @Override
   public DeviceAllocator createDeviceAllocator(JobInfo jobInfo, EventBus globalInternalBus) {
-    return new LocalDeviceAllocator(jobInfo, deviceVerifier, immediateFuture(scheduler));
+    return new LocalDeviceAllocator(
+        jobInfo, deviceVerifier, threadPool, immediateFuture(scheduler));
   }
 
   @Override

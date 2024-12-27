@@ -22,15 +22,18 @@ import static java.util.Objects.requireNonNull;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.model.allocation.Allocation;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.job.TestLocator;
 import com.google.devtools.mobileharness.api.model.lab.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.proto.Error.ExceptionDetail;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.AbstractDeviceAllocator;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.AllocationWithStats;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler;
 import com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.wireless.qa.mobileharness.shared.controller.event.AllocationEvent;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -56,27 +59,40 @@ public class LocalDeviceAllocator extends AbstractDeviceAllocator {
   /** Handlers for allocation events of the scheduler. */
   private final AllocationEventHandler allocationEventHandler = new AllocationEventHandler();
 
+  private final ListeningExecutorService threadPool;
+
+  private final boolean enableProxyMode;
+
   public LocalDeviceAllocator(
       final JobInfo jobInfo,
       DeviceVerifier deviceVerifier,
+      ListeningExecutorService threadPool,
       ListenableFuture<AbstractScheduler> schedulerFuture) {
     super(jobInfo);
     this.deviceVerifier = deviceVerifier;
+    this.threadPool = threadPool;
     this.schedulerFuture = schedulerFuture;
+    this.enableProxyMode = Flags.instance().enableProxyMode.getNonNull();
   }
 
   @Override
   public synchronized Optional<ExceptionDetail> setUp()
       throws MobileHarnessException, InterruptedException {
-    AbstractScheduler scheduler = getScheduler();
-    scheduler.registerEventHandler(allocationEventHandler);
-    if (!scheduler.addJob(jobInfo)) {
-      throw new MobileHarnessException(
-          InfraErrorId.CLIENT_LOCAL_MODE_JOB_ALREADY_EXIST,
-          "Job " + jobInfo.locator().getId() + " already exist");
-    }
-    for (TestInfo test : jobInfo.tests().getAll().values()) {
-      scheduler.addTest(test);
+    // Currently a test's devices are assumed to be either all local or all proxied, determined
+    // solely by the flag (whether a device can be proxied or provided locally is not verified).
+    if (enableProxyMode) {
+      throw new UnsupportedOperationException("Proxy mode is not supported");
+    } else {
+      AbstractScheduler scheduler = getScheduler();
+      scheduler.registerEventHandler(allocationEventHandler);
+      if (!scheduler.addJob(jobInfo)) {
+        throw new MobileHarnessException(
+            InfraErrorId.CLIENT_LOCAL_MODE_JOB_ALREADY_EXIST,
+            "Job " + jobInfo.locator().getId() + " already exist");
+      }
+      for (TestInfo test : jobInfo.tests().getAll().values()) {
+        scheduler.addTest(test);
+      }
     }
     return Optional.empty();
   }
@@ -86,65 +102,70 @@ public class LocalDeviceAllocator extends AbstractDeviceAllocator {
       throws MobileHarnessException, InterruptedException {
     List<AllocationWithStats> results = new ArrayList<>();
     Allocation allocation;
-    AbstractScheduler scheduler = getScheduler();
     while ((allocation = allocations.poll()) != null) {
       // Finds the TestInfo in the current job.
-      TestInfo test = jobInfo.tests().getById(allocation.getTest().id());
+      TestLocator testLocator = allocation.getTest();
+      String testId = testLocator.id();
+      String jobId = testLocator.jobLocator().id();
+      TestInfo test = jobInfo.tests().getById(testId);
 
-      if (test == null) {
-        jobInfo
-            .warnings()
-            .addAndLog(
-                new MobileHarnessException(
-                    InfraErrorId.CLIENT_LOCAL_MODE_TEST_NOT_FOUND,
-                    String.format(
-                        "Unknown test %s of job %s in the allocation.",
-                        allocation.getTest().id(), jobInfo.locator().getId())),
-                logger);
-        scheduler.unallocate(
-            allocation,
-            // Releases the device back to IDLE.
-            false,
-            // Closes the test because it doesn't exist.
-            true);
-        continue;
-      } else if (test.status().get() != TestStatus.NEW) {
-        jobInfo
-            .warnings()
-            .addAndLog(
-                new MobileHarnessException(
-                    InfraErrorId.CLIENT_LOCAL_MODE_TEST_NOT_NEW,
-                    "Unexpected allocation to test with status " + test.status().get()),
-                logger);
-        scheduler.unallocate(
-            allocation,
-            // Releases the device back to IDLE.
-            false,
-            // Closes the test in scheduler because it is not new and doesn't need new allocation.
-            true);
-        continue;
-      }
+      if (enableProxyMode) {
+        throw new UnsupportedOperationException("Proxy mode is not supported");
+      } else {
+        AbstractScheduler scheduler = getScheduler();
+        if (test == null) {
+          jobInfo
+              .warnings()
+              .addAndLog(
+                  new MobileHarnessException(
+                      InfraErrorId.CLIENT_LOCAL_MODE_TEST_NOT_FOUND,
+                      String.format("Unknown test %s of job %s in the allocation.", testId, jobId)),
+                  logger);
+          scheduler.unallocate(
+              allocation,
+              // Releases the device back to IDLE.
+              false,
+              // Closes the test because it doesn't exist.
+              true);
+          continue;
+        } else if (test.status().get() != TestStatus.NEW) {
+          jobInfo
+              .warnings()
+              .addAndLog(
+                  new MobileHarnessException(
+                      InfraErrorId.CLIENT_LOCAL_MODE_TEST_NOT_NEW,
+                      "Unexpected allocation to test with status " + test.status().get()),
+                  logger);
+          scheduler.unallocate(
+              allocation,
+              // Releases the device back to IDLE.
+              false,
+              // Closes the test in scheduler because it is not new and doesn't need new allocation.
+              true);
+          continue;
+        }
 
-      String deviceSerial = allocation.getDevice().id();
-      Optional<String> verificationError = deviceVerifier.verifyDeviceForAllocation(deviceSerial);
-      if (verificationError.isPresent()) {
-        jobInfo
-            .warnings()
-            .addAndLog(
-                new MobileHarnessException(
-                    InfraErrorId.CLIENT_LOCAL_MODE_DEVICE_NOT_READY, verificationError.get()),
-                logger);
-        scheduler.unallocate(
-            allocation,
-            // Device is not active. Also removes it from scheduler.
-            /* removeDevices= */ true,
-            // Closes the test and adds it back to scheduler below to get a new allocation.
-            /* closeTest= */ true);
-        // Note that even if calling unallocate(allocation, true, false) above, it is necessary to
-        // add the test back to scheduler here because the test may be removed from scheduler by
-        // local device manager.
-        scheduler.addTest(test);
-        continue;
+        String deviceSerial = allocation.getDevice().id();
+        Optional<String> verificationError = deviceVerifier.verifyDeviceForAllocation(deviceSerial);
+        if (verificationError.isPresent()) {
+          jobInfo
+              .warnings()
+              .addAndLog(
+                  new MobileHarnessException(
+                      InfraErrorId.CLIENT_LOCAL_MODE_DEVICE_NOT_READY, verificationError.get()),
+                  logger);
+          scheduler.unallocate(
+              allocation,
+              // Device is not active. Also removes it from scheduler.
+              /* removeDevices= */ true,
+              // Closes the test and adds it back to scheduler below to get a new allocation.
+              /* closeTest= */ true);
+          // Note that even if calling unallocate(allocation, true, false) above, it is necessary to
+          // add the test back to scheduler here because the test may be removed from scheduler by
+          // local device manager.
+          scheduler.addTest(test);
+          continue;
+        }
       }
 
       // Marks the test as assigned. The scheduler uses cloned test objects so it won't update the
@@ -159,48 +180,60 @@ public class LocalDeviceAllocator extends AbstractDeviceAllocator {
   @Override
   public void extraAllocation(TestInfo testInfo)
       throws MobileHarnessException, InterruptedException {
-    AbstractScheduler scheduler = getScheduler();
-    if (!scheduler.addTest(testInfo)) {
-      throw new MobileHarnessException(
-          InfraErrorId.CLIENT_LOCAL_MODE_TEST_ALREADY_EXIST,
-          "Test "
-              + testInfo.locator().getId()
-              + " already exists in job "
-              + jobInfo.locator().getId());
+    if (enableProxyMode) {
+      throw new UnsupportedOperationException("Proxy mode is not supported");
+    } else {
+      AbstractScheduler scheduler = getScheduler();
+      if (!scheduler.addTest(testInfo)) {
+        throw new MobileHarnessException(
+            InfraErrorId.CLIENT_LOCAL_MODE_TEST_ALREADY_EXIST,
+            "Test "
+                + testInfo.locator().getId()
+                + " already exists in job "
+                + jobInfo.locator().getId());
+      }
     }
   }
 
   @Override
   public void releaseAllocation(Allocation allocation, TestResult testResult, boolean deviceDirty)
       throws MobileHarnessException, InterruptedException {
-    DeviceLocator deviceLocator = allocation.getDevice();
-    String deviceSerial = deviceLocator.id();
-    AbstractScheduler scheduler = getScheduler();
-    Optional<Boolean> deviceDirtyFromVerifier =
-        deviceVerifier.getDeviceDirtyForAllocationRelease(deviceSerial);
-    try {
-      if (deviceDirtyFromVerifier.isPresent()) {
-        deviceDirty = deviceDirtyFromVerifier.get();
+    if (enableProxyMode) {
+      throw new UnsupportedOperationException("Proxy mode is not supported");
+    } else {
+      DeviceLocator deviceLocator = allocation.getDevice();
+      String deviceSerial = deviceLocator.id();
+      AbstractScheduler scheduler = getScheduler();
+      Optional<Boolean> deviceDirtyFromVerifier =
+          deviceVerifier.getDeviceDirtyForAllocationRelease(deviceSerial);
+      try {
+        if (deviceDirtyFromVerifier.isPresent()) {
+          deviceDirty = deviceDirtyFromVerifier.get();
+        }
+      } finally {
+        jobInfo
+            .log()
+            .atInfo()
+            .alsoTo(logger)
+            .log("Release device %s in scheduler, DeviceDirty=%s", deviceSerial, deviceDirty);
+        scheduler.unallocate(deviceLocator, deviceDirty, true);
       }
-    } finally {
-      jobInfo
-          .log()
-          .atInfo()
-          .alsoTo(logger)
-          .log("Release device %s in scheduler, DeviceDirty=%s", deviceSerial, deviceDirty);
-      scheduler.unallocate(deviceLocator, deviceDirty, true);
     }
   }
 
   @Override
   public synchronized void tearDown() throws MobileHarnessException {
-    if (!schedulerFuture.isDone()) {
-      return;
+    if (enableProxyMode) {
+      throw new UnsupportedOperationException("Proxy mode is not supported");
+    } else {
+      if (!schedulerFuture.isDone()) {
+        return;
+      }
+      AbstractScheduler scheduler = requireNonNull(getUnchecked(schedulerFuture));
+      // Closes the job and changes the device back to IDLE.
+      scheduler.removeJob(jobInfo.locator().getId(), false);
+      scheduler.unregisterEventHandler(allocationEventHandler);
     }
-    AbstractScheduler scheduler = requireNonNull(getUnchecked(schedulerFuture));
-    // Closes the job and changes the device back to IDLE.
-    scheduler.removeJob(jobInfo.locator().getId(), false);
-    scheduler.unregisterEventHandler(allocationEventHandler);
   }
 
   private AbstractScheduler getScheduler() throws MobileHarnessException, InterruptedException {

@@ -903,6 +903,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableMessagingService = enableMessagingServiceDefault;
 
+  private static final Flag<Boolean> enableProxyModeDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enable_proxy_mode",
+      description = "Whether to enable proxy mode.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableProxyMode = enableProxyModeDefault;
+
   private static final Flag<Boolean> enableRdhDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(
@@ -1412,6 +1420,14 @@ public class Flags {
               + "ignored.",
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> printLabStats = printLabStatsDefault;
+
+  private static final Flag<Boolean> proxyModeLeaseDevicesImmediatelyDefault = Flag.value(true);
+
+  @com.beust.jcommander.Parameter(
+      names = "--proxy_mode_lease_devices_immediately",
+      description = "Always lease all devices immediately in proxy mode. Default is true.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> proxyModeLeaseDevicesImmediately = proxyModeLeaseDevicesImmediatelyDefault;
 
   private static final Flag<String> publicDirDefault = Flag.value(getPublicDirDefaultOss());
 

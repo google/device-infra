@@ -20,6 +20,21 @@ package(
 )
 
 java_library(
+    name = "device_id_util",
+    srcs = ["DeviceIdUtil.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/api/devicemanager/proxy:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device:__pkg__",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/lab:device_id_descriptor",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "device_reboot_util",
     srcs = [
         "DeviceRebootUtil.java",

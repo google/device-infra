@@ -21,7 +21,6 @@ import static java.util.concurrent.TimeUnit.MINUTES;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.common.eventbus.EventBus;
@@ -42,6 +41,7 @@ import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfi
 import com.google.devtools.mobileharness.infra.controller.device.external.ExternalDeviceManager;
 import com.google.devtools.mobileharness.infra.controller.device.external.ExternalDeviceManager.DeviceReservation;
 import com.google.devtools.mobileharness.infra.controller.device.faileddevice.FailedDeviceTable;
+import com.google.devtools.mobileharness.infra.controller.device.util.DeviceIdUtil;
 import com.google.devtools.mobileharness.infra.controller.device.util.DeviceRebootUtil;
 import com.google.devtools.mobileharness.infra.controller.test.event.TestExecutionEndedEvent;
 import com.google.devtools.mobileharness.infra.controller.test.model.TestExecutionResult;
@@ -179,7 +179,7 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
         .add(deviceId, apiConfig, type.isAnnotationPresent(RetainDeviceInfoAnnotation.class));
 
     device = new DeviceFactory().createDevice(type, deviceId.controlId());
-    addDeviceIdAndClassNameToDimension(deviceId);
+    DeviceIdUtil.addDeviceIdAndClassNameToDimension(deviceId, device);
     deviceStat = stat;
     deviceStat.onShowUp();
     clock = Clock.systemUTC();
@@ -202,7 +202,7 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
       Thread runningThread,
       ExternalDeviceManager externalDeviceManager) {
     this.device = device;
-    addDeviceIdAndClassNameToDimension(deviceId);
+    DeviceIdUtil.addDeviceIdAndClassNameToDimension(deviceId, device);
     this.deviceStat = stat;
     this.apiConfig = apiConfig;
     this.clock = clock;
@@ -674,19 +674,6 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
 
     // Counts the status.
     deviceStat.countStatus(status);
-  }
-
-  /** Adds the device ID and class name to the device dimensions. */
-  private void addDeviceIdAndClassNameToDimension(DeviceId deviceId) {
-    // Currently it's control id, need to reconsider whether to keep this field.
-    device.addDimension(Dimension.Name.ID, deviceId.controlId());
-    device.addDimension(Dimension.Name.CONTROL_ID, deviceId.controlId());
-    if (!Strings.isNullOrEmpty(deviceId.uuid())) {
-      device.addDimension(Dimension.Name.UUID, deviceId.uuid());
-      device.addDimension(Dimension.Name.UUID_VOLATILE, String.valueOf(deviceId.isUuidVolatile()));
-    }
-
-    device.addDimension(Dimension.Name.DEVICE_CLASS_NAME, device.getClass().getSimpleName());
   }
 
   /**

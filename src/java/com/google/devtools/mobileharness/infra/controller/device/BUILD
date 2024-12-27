@@ -206,6 +206,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/device/config",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device/external:external_device_manager",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device/faileddevice:failed_device_table",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device/util:device_id_util",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device/util:device_reboot_util",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/event",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/model:test_execution_result",

@@ -98,6 +98,8 @@ public class LocalMode implements ExecMode {
   private static final SettableFuture<AbstractScheduler> localSchedulerFuture =
       SettableFuture.create();
 
+  private static volatile ListeningExecutorService localEnvThreadPool;
+
   /** Synchronization lock for {@link #localDeviceManager} and {@link #localScheduler}. */
   private static final Object LOCAL_ENV_LOCK = new Object();
 
@@ -109,7 +111,7 @@ public class LocalMode implements ExecMode {
         if (localDeviceManager == null) {
           logger.atInfo().log("Starting local device manager");
 
-          final ListeningExecutorService localEnvThreadPool =
+          localEnvThreadPool =
               InvocationContextExecutors.propagatingContext(
                   MoreExecutors.listeningDecorator(
                       Executors.newCachedThreadPool(
@@ -218,7 +220,10 @@ public class LocalMode implements ExecMode {
       throws InterruptedException {
     initialize(globalInternalBus);
     return new LocalDeviceAllocator(
-        jobInfo, new LocalDeviceVerifier(localDeviceManager), localSchedulerFuture);
+        jobInfo,
+        new LocalDeviceVerifier(localDeviceManager),
+        localEnvThreadPool,
+        localSchedulerFuture);
   }
 
   @Override
@@ -232,28 +237,35 @@ public class LocalMode implements ExecMode {
       ListeningExecutorService threadPool,
       FileResolver fileResolver)
       throws MobileHarnessException, InterruptedException {
-    initialize(setting.globalInternalBus().orElseThrow());
-    List<LocalDeviceTestRunner> deviceRunners = new ArrayList<>();
-    for (DeviceLocator deviceLocator : setting.allocation().getAllDeviceLocators()) {
-      String deviceSerial = deviceLocator.getSerial();
-      LocalDeviceTestRunner deviceRunner =
-          MobileHarnessExceptions.checkNotNull(
-              localDeviceManager.getLocalDeviceRunner(deviceSerial),
-              InfraErrorId.CLIENT_LOCAL_MODE_ALLOCATED_DEVICE_NOT_FOUND,
-              String.format("Device %s not found", deviceSerial));
-      deviceRunners.add(deviceRunner);
+    EventBus globalInternalBus = setting.globalInternalBus().orElseThrow();
+    initialize(globalInternalBus);
+    ImmutableList<Device> devices;
+    TestRunnerLauncher<TestRunner> launcher;
+
+    if (Flags.instance().enableProxyMode.getNonNull()) {
+      throw new UnsupportedOperationException("Proxy mode is not supported");
+    } else {
+      List<LocalDeviceTestRunner> deviceRunners = new ArrayList<>();
+      for (DeviceLocator deviceLocator : setting.allocation().getAllDeviceLocators()) {
+        String deviceSerial = deviceLocator.getSerial();
+        LocalDeviceTestRunner deviceRunner =
+            MobileHarnessExceptions.checkNotNull(
+                localDeviceManager.getLocalDeviceRunner(deviceSerial),
+                InfraErrorId.CLIENT_LOCAL_MODE_ALLOCATED_DEVICE_NOT_FOUND,
+                String.format("Device %s not found", deviceSerial));
+        deviceRunners.add(deviceRunner);
+      }
+      LocalDeviceTestRunner primaryDeviceRunner = deviceRunners.get(0);
+      ImmutableList<LocalDeviceTestRunner> secondaryDeviceRunners =
+          deviceRunners.stream().skip(1L).collect(toImmutableList());
+      launcher = new LocalDeviceTestRunnerLauncher(primaryDeviceRunner, secondaryDeviceRunners);
+      devices =
+          deviceRunners.stream().map(LocalDeviceTestRunner::getDevice).collect(toImmutableList());
     }
-    LocalDeviceTestRunner primaryDeviceRunner = deviceRunners.get(0);
-    ImmutableList<LocalDeviceTestRunner> secondaryDeviceRunners =
-        deviceRunners.stream().skip(1L).collect(toImmutableList());
-    TestRunnerLauncher<TestRunner> launcher =
-        new LocalDeviceTestRunnerLauncher(primaryDeviceRunner, secondaryDeviceRunners);
-    ImmutableList<Device> devices =
-        deviceRunners.stream().map(LocalDeviceTestRunner::getDevice).collect(toImmutableList());
     return doCreateTestRunner(launcher, setting, devices, threadPool);
   }
 
-  protected DirectTestRunner doCreateTestRunner(
+  private DirectTestRunner doCreateTestRunner(
       TestRunnerLauncher<TestRunner> launcher,
       DirectTestRunnerSetting setting,
       List<Device> devices,
