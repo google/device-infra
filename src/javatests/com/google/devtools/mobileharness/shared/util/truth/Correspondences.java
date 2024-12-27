@@ -16,9 +16,11 @@
 
 package com.google.devtools.mobileharness.shared.util.truth;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.truth.Correspondence;
+import java.util.List;
 
 /** Common {@link Correspondence} definitions. */
 public class Correspondences {
@@ -28,6 +30,14 @@ public class Correspondences {
           (actual, expected) -> requireNonNull(actual).contains(requireNonNull(expected)),
           "contains");
 
+  private static final Correspondence<String, List<String>> CONTAINS_ALL =
+      Correspondence.from(
+          (actual, expected) -> {
+            checkNotNull(actual);
+            return requireNonNull(expected).stream().allMatch(actual::contains);
+          },
+          "contains all elements in");
+
   private static final Correspondence<String, String> STARTS_WITH =
       Correspondence.from(
           (actual, expected) -> requireNonNull(actual).startsWith(requireNonNull(expected)),
@@ -35,6 +45,10 @@ public class Correspondences {
 
   public static Correspondence<String, String> contains() {
     return CONTAINS;
+  }
+
+  public static Correspondence<String, List<String>> containsAll() {
+    return CONTAINS_ALL;
   }
 
   public static Correspondence<String, String> startsWith() {

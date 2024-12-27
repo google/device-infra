@@ -24,5 +24,8 @@ package(
 java_library(
     name = "correspondences",
     srcs = ["Correspondences.java"],
-    deps = ["//src/javatests/com/google/devtools/mobileharness/builddefs:truth"],
+    deps = [
+        "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
+        "@maven//:com_google_guava_guava",
+    ],
 )

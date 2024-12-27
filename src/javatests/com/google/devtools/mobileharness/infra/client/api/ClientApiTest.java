@@ -23,8 +23,8 @@ import static com.google.common.truth.extensions.proto.ProtoTruth.assertThat;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toJavaInstant;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoTimestamp;
+import static com.google.devtools.mobileharness.shared.util.truth.Correspondences.containsAll;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.Objects.requireNonNull;
 
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
@@ -32,8 +32,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
-import com.google.common.truth.Correspondence;
-import com.google.common.truth.Correspondence.BinaryPredicate;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.SettableFuture;
@@ -217,13 +215,7 @@ public class ClientApiTest {
       String logs = outputStream.toString(UTF_8);
 
       assertThat(Splitter.on('\n').splitToList(logs))
-          .comparingElementsUsing(
-              Correspondence.from(
-                  (BinaryPredicate<String, List<String>>)
-                      (actual, expected) ->
-                          requireNonNull(expected).stream()
-                              .allMatch(requireNonNull(actual)::contains),
-                  "has all substrings in"))
+          .comparingElementsUsing(containsAll())
           .contains(ImmutableList.of("Sleep for 5 seconds", "{olc_client_id=fake_client_id}"));
 
       assertWithMessage(
