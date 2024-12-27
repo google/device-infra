@@ -82,6 +82,7 @@ import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
 import com.google.devtools.mobileharness.shared.util.command.CommandStartException;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.junit.rule.PrintTestName;
 import com.google.devtools.mobileharness.shared.util.port.PortProber;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
@@ -124,21 +125,12 @@ public class OlcServerIntegrationTest {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  @Rule public TemporaryFolder tmpFolder = new TemporaryFolder();
+  @Rule public final TemporaryFolder tmpFolder = new TemporaryFolder();
+  @Rule public final PrintTestName printTestName = new PrintTestName();
 
   @Rule
   public TestWatcher testWatcher =
       new TestWatcher() {
-
-        @Override
-        protected void starting(Description description) {
-          // Prints test name to help debug server output in test logs.
-          logger.atInfo().log(
-              "\n========================================\n"
-                  + "Starting test: %s\n"
-                  + "========================================\n",
-              description.getDisplayName());
-        }
 
         @Override
         protected void failed(Throwable e, Description description) {
