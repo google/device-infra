@@ -24,7 +24,6 @@ import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutur
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toJavaInstant;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoTimestamp;
 import static com.google.devtools.mobileharness.shared.util.truth.Correspondences.containsAll;
-import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
@@ -61,7 +60,8 @@ import com.google.devtools.mobileharness.shared.context.InvocationContext.Invoca
 import com.google.devtools.mobileharness.shared.context.InvocationContext.InvocationType;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
-import com.google.devtools.mobileharness.shared.util.logging.MobileHarnessLogFormatter;
+import com.google.devtools.mobileharness.shared.util.junit.rule.CaptureLogs;
+import com.google.devtools.mobileharness.shared.util.junit.rule.PrintTestName;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
@@ -77,18 +77,15 @@ import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobSetting;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
-import java.io.ByteArrayOutputStream;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Handler;
 import java.util.logging.Level;
-import java.util.logging.Logger;
-import java.util.logging.StreamHandler;
 import javax.inject.Inject;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -98,7 +95,8 @@ public class ClientApiTest {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  private static final Logger rootLogger = Logger.getLogger("");
+  @Rule public final CaptureLogs captureLogs = new CaptureLogs("", /* printFailedLogs= */ true);
+  @Rule public final PrintTestName printTestName = new PrintTestName();
 
   @Bind @GlobalInternalEventBus private EventBus globalInternalEventBus;
 
@@ -108,9 +106,6 @@ public class ClientApiTest {
 
   private final ListeningScheduledExecutorService scheduledThreadPool =
       ThreadPools.createStandardScheduledThreadPool("testing-scheduled-thread-pool", 1);
-
-  private final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-  private Handler logHandler;
 
   @Inject private ClientApi clientApi;
 
@@ -136,9 +131,6 @@ public class ClientApiTest {
             .collect(toImmutableList());
     Flags.parse(flagList.toArray(new String[0]));
 
-    logHandler = new StreamHandler(outputStream, MobileHarnessLogFormatter.getDefaultFormatter());
-    rootLogger.addHandler(logHandler);
-
     globalInternalEventBus = new EventBus();
 
     Guice.createInjector(new ClientApiModule(), BoundFieldModule.of(this)).injectMembers(this);
@@ -158,8 +150,6 @@ public class ClientApiTest {
   @After
   public void tearDown() {
     Flags.resetToDefault();
-
-    rootLogger.removeHandler(logHandler);
   }
 
   @Test
@@ -212,7 +202,7 @@ public class ClientApiTest {
       assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
       assertThat(testInfo.log().get(0)).contains("Sleep for 5 seconds");
 
-      String logs = outputStream.toString(UTF_8);
+      String logs = captureLogs.getLogs();
 
       assertThat(Splitter.on('\n').splitToList(logs))
           .comparingElementsUsing(containsAll())
@@ -225,15 +215,6 @@ public class ClientApiTest {
           .doesNotContain("\tat ");
 
       assertThat(jobStartResults).containsExactly("1", "2", "3").inOrder();
-    } catch (
-        @SuppressWarnings("InterruptedExceptionSwallowed")
-        Throwable e) {
-      e.addSuppressed(
-          new IllegalStateException(
-              String.format(
-                  "job_result=%s, job_log=[%s]",
-                  jobInfo.resultWithCause().get().toStringWithDetail(), jobInfo.log().get(0))));
-      throw e;
     }
   }
 
