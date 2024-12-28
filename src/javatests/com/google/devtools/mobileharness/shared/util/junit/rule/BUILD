@@ -31,6 +31,14 @@ java_library(
 )
 
 java_library(
+    name = "monitored_string_builders",
+    srcs = ["MonitoredStringBuilders.java"],
+    deps = [
+        "@maven//:junit_junit",
+    ],
+)
+
+java_library(
     name = "print_test_name",
     srcs = ["PrintTestName.java"],
     deps = [

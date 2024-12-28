@@ -69,6 +69,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/version",
         "//src/java/com/google/devtools/mobileharness/shared/version/rpc/stub/grpc",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
+        "//src/javatests/com/google/devtools/mobileharness/shared/util/junit/rule:monitored_string_builders",
         "//src/javatests/com/google/devtools/mobileharness/shared/util/junit/rule:print_test_name",
         "//src/javatests/com/google/devtools/mobileharness/shared/util/runfiles:runfiles_util",
         "@com_google_protobuf_protobuf_java",

@@ -82,6 +82,7 @@ import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
 import com.google.devtools.mobileharness.shared.util.command.CommandStartException;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.junit.rule.MonitoredStringBuilders;
 import com.google.devtools.mobileharness.shared.util.junit.rule.PrintTestName;
 import com.google.devtools.mobileharness.shared.util.port.PortProber;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
@@ -115,8 +116,6 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
-import org.junit.rules.TestWatcher;
-import org.junit.runner.Description;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
@@ -127,41 +126,7 @@ public class OlcServerIntegrationTest {
 
   @Rule public final TemporaryFolder tmpFolder = new TemporaryFolder();
   @Rule public final PrintTestName printTestName = new PrintTestName();
-
-  @Rule
-  public TestWatcher testWatcher =
-      new TestWatcher() {
-
-        @Override
-        protected void failed(Throwable e, Description description) {
-          // Adds server stdout/stderr to a failed test.
-          Exception serverOutput =
-              new IllegalStateException(
-                  String.format(
-                      "\nolc_server_stdout:\n"
-                          + "=====BEGIN===================================\n"
-                          + "%s\n"
-                          + "=====END=====================================\n"
-                          + "olc_server_stderr:\n"
-                          + "=====BEGIN===================================\n"
-                          + "%s\n"
-                          + "=====END=====================================\n"
-                          + "lab_server_stdout:\n"
-                          + "=====BEGIN===================================\n"
-                          + "%s\n"
-                          + "=====END=====================================\n"
-                          + "lab_server_stderr:\n"
-                          + "=====BEGIN===================================\n"
-                          + "%s\n"
-                          + "=====END=====================================\n",
-                      olcServerStdoutBuilder,
-                      olcServerStderrBuilder,
-                      labServerStdoutBuilder,
-                      labServerStderrBuilder));
-          serverOutput.setStackTrace(new StackTraceElement[0]);
-          e.addSuppressed(serverOutput);
-        }
-      };
+  @Rule public final MonitoredStringBuilders stringBuilders = new MonitoredStringBuilders();
 
   private static final String OLC_SERVER_FILE_PATH =
       RunfilesUtil.getRunfilesLocation(
@@ -204,12 +169,6 @@ public class OlcServerIntegrationTest {
 
   private final CommandExecutor commandExecutor = new CommandExecutor();
   private final LocalFileUtil localFileUtil = new LocalFileUtil();
-
-  private final StringBuilder olcServerStdoutBuilder = new StringBuilder();
-  private final StringBuilder olcServerStderrBuilder = new StringBuilder();
-
-  private final StringBuilder labServerStdoutBuilder = new StringBuilder();
-  private final StringBuilder labServerStderrBuilder = new StringBuilder();
 
   private int olcServerPort;
   private int atsWorkerGrpcPort;
@@ -326,7 +285,7 @@ public class OlcServerIntegrationTest {
     Sleeper.defaultSleeper().sleep(Duration.ofSeconds(6L));
     assertThat(olcServerProcess.isAlive()).isFalse();
 
-    String olcServerStderr = olcServerStderrBuilder.toString();
+    String olcServerStderr = stringBuilders.getOrCreate("olc_server_stderr").toString();
 
     // Verifies the driver has run.
     assertWithMessage("OLC server stderr").that(olcServerStderr).contains("Sleep for 2 seconds");
@@ -404,8 +363,8 @@ public class OlcServerIntegrationTest {
         .ignoringExtraRepeatedFieldElements()
         .isEqualTo(createGetSessionResponse(deviceControlId));
 
-    String olcServerStderr = olcServerStderrBuilder.toString();
-    String labServerStderr = labServerStderrBuilder.toString();
+    String olcServerStderr = stringBuilders.getOrCreate("olc_server_stderr").toString();
+    String labServerStderr = stringBuilders.getOrCreate("lab_server_stderr").toString();
 
     // Verifies the driver has run.
     assertWithMessage("lab server stderr").that(labServerStderr).contains("Sleep for 2 seconds");
@@ -505,6 +464,8 @@ public class OlcServerIntegrationTest {
     CountDownSet<String> olcServerUndetectedLocalDevices = new CountDownSet<>(deviceIds);
     CountDownSet<String> olcServerUnreportedRemoteDevices = new CountDownSet<>(deviceIds);
 
+    StringBuilder olcServerStdout = stringBuilders.getOrCreate("olc_server_stdout");
+    StringBuilder olcServerStderr = stringBuilders.getOrCreate("olc_server_stderr");
     Command olcServerCommand =
         Command.of(
                 new SystemUtil()
@@ -543,13 +504,13 @@ public class OlcServerIntegrationTest {
                 does(
                     stdout -> {
                       System.out.printf("olc_server_stdout %s\n", stdout);
-                      olcServerStdoutBuilder.append(stdout).append('\n');
+                      olcServerStdout.append(stdout).append('\n');
                     }))
             .onStderr(
                 does(
                     stderr -> {
                       System.err.printf("olc_server_stderr %s\n", stderr);
-                      olcServerStderrBuilder.append(stderr).append('\n');
+                      olcServerStderr.append(stderr).append('\n');
 
                       if (stderr.contains("New device NoOpDevice-")) {
                         findAllDeviceIds(stderr).forEach(olcServerUndetectedLocalDevices::remove);
@@ -581,6 +542,8 @@ public class OlcServerIntegrationTest {
       int labServerRpcPort = PortProber.pickUnusedPort();
       int labServerSocketPort = PortProber.pickUnusedPort();
 
+      StringBuilder labServerStdout = stringBuilders.getOrCreate("lab_server_stdout");
+      StringBuilder labServerStderr = stringBuilders.getOrCreate("lab_server_stderr");
       Command labServerCommand =
           Command.of(
                   new SystemUtil()
@@ -621,13 +584,13 @@ public class OlcServerIntegrationTest {
                   does(
                       stdout -> {
                         System.out.printf("lab_server_stdout %s\n", stdout);
-                        labServerStdoutBuilder.append(stdout).append('\n');
+                        labServerStdout.append(stdout).append('\n');
                       }))
               .onStderr(
                   does(
                       stderr -> {
                         System.err.printf("lab_server_stderr %s\n", stderr);
-                        labServerStderrBuilder.append(stderr).append('\n');
+                        labServerStderr.append(stderr).append('\n');
 
                         if (stderr.contains("New device NoOpDevice-")) {
                           findAllDeviceIds(stderr).forEach(labServerUndetectedLocalDevices::remove);

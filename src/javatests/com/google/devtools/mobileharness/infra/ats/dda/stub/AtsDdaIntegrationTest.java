@@ -40,6 +40,7 @@ import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
 import com.google.devtools.mobileharness.shared.util.command.CommandStartException;
+import com.google.devtools.mobileharness.shared.util.junit.rule.MonitoredStringBuilders;
 import com.google.devtools.mobileharness.shared.util.junit.rule.PrintTestName;
 import com.google.devtools.mobileharness.shared.util.port.PortProber;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
@@ -69,6 +70,7 @@ public class AtsDdaIntegrationTest {
 
   @Rule public final TemporaryFolder tmpFolder = new TemporaryFolder();
   @Rule public final PrintTestName printTestName = new PrintTestName();
+  @Rule public final MonitoredStringBuilders stringBuilders = new MonitoredStringBuilders();
 
   @Rule
   public TestWatcher testWatcher =
@@ -80,34 +82,12 @@ public class AtsDdaIntegrationTest {
           Exception debugInfo =
               new IllegalStateException(
                   String.format(
-                      "debug info:\n"
-                          + "session_info=%s\n"
-                          + "session_error=[%s]\n"
-                          + "olc_server_stdout:\n"
-                          + "=====BEGIN===================================\n"
-                          + "%s\n"
-                          + "=====END=====================================\n"
-                          + "olc_server_stderr:\n"
-                          + "=====BEGIN===================================\n"
-                          + "%s\n"
-                          + "=====END=====================================\n"
-                          + "lab_server_stdout:\n"
-                          + "=====BEGIN===================================\n"
-                          + "%s\n"
-                          + "=====END=====================================\n"
-                          + "lab_server_stderr:\n"
-                          + "=====BEGIN===================================\n"
-                          + "%s\n"
-                          + "=====END=====================================\n",
+                      "debug info:\nsession_info=%s\nsession_error=[%s]\n",
                       sessionInfo,
                       Optional.ofNullable(sessionInfo)
                           .flatMap(SessionInfo::sessionError)
                           .map(Throwables::getStackTraceAsString)
-                          .orElse("null"),
-                      olcServerStdoutBuilder,
-                      olcServerStderrBuilder,
-                      labServerStdoutBuilder,
-                      labServerStderrBuilder));
+                          .orElse("null")));
           debugInfo.setStackTrace(new StackTraceElement[0]);
           e.addSuppressed(debugInfo);
         }
@@ -123,11 +103,6 @@ public class AtsDdaIntegrationTest {
 
   private final CommandExecutor commandExecutor = new CommandExecutor();
   private final SystemUtil systemUtil = new SystemUtil();
-
-  private final StringBuilder olcServerStdoutBuilder = new StringBuilder();
-  private final StringBuilder olcServerStderrBuilder = new StringBuilder();
-  private final StringBuilder labServerStdoutBuilder = new StringBuilder();
-  private final StringBuilder labServerStderrBuilder = new StringBuilder();
 
   private final CountDownLatch driverStarted = new CountDownLatch(1);
   private final CountDownLatch driverCancelled = new CountDownLatch(1);
@@ -214,7 +189,7 @@ public class AtsDdaIntegrationTest {
   }
 
   @Test
-  public void run_emptyHeatbeatTimeout_useLeaseExpirationTimeFromFlag() throws Exception {
+  public void run_emptyHeartbeatTimeout_useLeaseExpirationTimeFromFlag() throws Exception {
     startServers(/* ddaLeaseExpirationTime= */ Duration.ofSeconds(1L));
 
     // Creates session.
@@ -246,7 +221,7 @@ public class AtsDdaIntegrationTest {
   }
 
   @Test
-  public void run_heatbeatTimeoutIsSet() throws Exception {
+  public void run_heartbeatTimeoutIsSet() throws Exception {
     startServers(/* ddaLeaseExpirationTime= */ Duration.ofSeconds(1L));
 
     // Creates session.
@@ -327,6 +302,8 @@ public class AtsDdaIntegrationTest {
 
     // Starts the OLC server.
     CountDownLatch olcServerAllRemoteDevicesFound = new CountDownLatch(deviceNum);
+    StringBuilder olcServerStdout = stringBuilders.getOrCreate("olc_server_stdout");
+    StringBuilder olcServerStderr = stringBuilders.getOrCreate("olc_server_stderr");
     Command olcServerCommand =
         Command.of(
                 systemUtil
@@ -351,13 +328,13 @@ public class AtsDdaIntegrationTest {
                 does(
                     stdout -> {
                       System.out.printf("olc_server_stdout %s\n", stdout);
-                      olcServerStdoutBuilder.append(stdout).append('\n');
+                      olcServerStdout.append(stdout).append('\n');
                     }))
             .onStderr(
                 does(
                     stderr -> {
                       System.err.printf("olc_server_stderr %s\n", stderr);
-                      olcServerStderrBuilder.append(stderr).append('\n');
+                      olcServerStderr.append(stderr).append('\n');
 
                       if (stderr.contains("Sign up lab") && stderr.contains("AndroidRealDevice-")) {
                         olcServerAllRemoteDevicesFound.countDown();
@@ -386,6 +363,8 @@ public class AtsDdaIntegrationTest {
     int labServerRpcPort = PortProber.pickUnusedPort();
     int labServerSocketPort = PortProber.pickUnusedPort();
 
+    StringBuilder labServerStdout = stringBuilders.getOrCreate("lab_server_stdout");
+    StringBuilder labServerStderr = stringBuilders.getOrCreate("lab_server_stderr");
     Command labServerCommand =
         Command.of(
                 systemUtil
@@ -425,13 +404,13 @@ public class AtsDdaIntegrationTest {
                 does(
                     stdout -> {
                       System.out.printf("lab_server_stdout %s\n", stdout);
-                      labServerStdoutBuilder.append(stdout).append('\n');
+                      labServerStdout.append(stdout).append('\n');
                     }))
             .onStderr(
                 does(
                     stderr -> {
                       System.err.printf("lab_server_stderr %s\n", stderr);
-                      labServerStderrBuilder.append(stderr).append('\n');
+                      labServerStderr.append(stderr).append('\n');
 
                       if (stderr.contains("New device AndroidRealDevice-")) {
                         labServerAllLocalDevicesFound.countDown();
@@ -489,10 +468,10 @@ public class AtsDdaIntegrationTest {
         "A successful run should not print exception stack traces, which will confuse"
             + " users and affect debuggability when debugging a failed one.\n";
     assertWithMessage(checkWarningsMessagePrefix + "OLC server stderr")
-        .that(olcServerStderrBuilder.toString())
+        .that(stringBuilders.getOrCreate("olc_server_stderr").toString())
         .doesNotContain("\tat ");
     assertWithMessage(checkWarningsMessagePrefix + "Lab server stderr")
-        .that(labServerStderrBuilder.toString())
+        .that(stringBuilders.getOrCreate("lab_server_stderr").toString())
         .doesNotContain("\tat ");
   }
 }

@@ -45,6 +45,7 @@ import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.error.ErrorModelConverter;
+import com.google.devtools.mobileharness.shared.util.junit.rule.MonitoredStringBuilders;
 import com.google.devtools.mobileharness.shared.util.junit.rule.PrintTestName;
 import com.google.devtools.mobileharness.shared.util.port.PortProber;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
@@ -78,8 +79,6 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
-import org.junit.rules.TestWatcher;
-import org.junit.runner.Description;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
@@ -90,23 +89,7 @@ public class LabServerIntegrationTest {
 
   @Rule public final TemporaryFolder tmpFolder = new TemporaryFolder();
   @Rule public final PrintTestName printTestName = new PrintTestName();
-
-  @Rule
-  public TestWatcher testWatcher =
-      new TestWatcher() {
-
-        @Override
-        protected void failed(Throwable e, Description description) {
-          // Adds lab server stdout/stderr to a failed test.
-          Exception labServerOutput =
-              new IllegalStateException(
-                  String.format(
-                      "lab_server_stdout=[%s], lab_server_stderr=[%s]",
-                      labServerStdoutBuilder, labServerStderrBuilder));
-          labServerOutput.setStackTrace(new StackTraceElement[0]);
-          e.addSuppressed(labServerOutput);
-        }
-      };
+  @Rule public final MonitoredStringBuilders stringBuilders = new MonitoredStringBuilders();
 
   private static final String LAB_SERVER_FILE_PATH =
       RunfilesUtil.getRunfilesLocation(
@@ -114,9 +97,6 @@ public class LabServerIntegrationTest {
   private static final String API_CONFIG_FILE_PATH =
       RunfilesUtil.getRunfilesLocation(
           "javatests/com/google/devtools/mobileharness/infra/lab/api_config.textproto");
-
-  private StringBuilder labServerStdoutBuilder;
-  private StringBuilder labServerStderrBuilder;
 
   private CountDownLatch labServerFoundDevice;
 
@@ -156,8 +136,8 @@ public class LabServerIntegrationTest {
     String labServerPublicDirPath = tmpFolder.newFolder("lab_server_public_dir").toString();
     String labServerTmpDirPath = tmpFolder.newFolder("lab_server_tmp_dir").toString();
 
-    labServerStdoutBuilder = new StringBuilder();
-    labServerStderrBuilder = new StringBuilder();
+    StringBuilder labServerStdout = stringBuilders.getOrCreate("lab_server_stdout");
+    StringBuilder labServerStderr = stringBuilders.getOrCreate("lab_server_stderr");
 
     labServerFoundDevice = new CountDownLatch(1);
 
@@ -200,13 +180,13 @@ public class LabServerIntegrationTest {
                 does(
                     stdout -> {
                       System.out.printf("lab_server_stdout %s\n", stdout);
-                      labServerStdoutBuilder.append(stdout).append('\n');
+                      labServerStdout.append(stdout).append('\n');
                     }))
             .onStderr(
                 does(
                     stderr -> {
                       System.err.printf("lab_server_stderr %s\n", stderr);
-                      labServerStderrBuilder.append(stderr).append('\n');
+                      labServerStderr.append(stderr).append('\n');
 
                       if (stderr.contains("New device NoOpDevice-0")) {
                         labServerFoundDevice.countDown();
@@ -254,7 +234,7 @@ public class LabServerIntegrationTest {
             "A normal lab server run should not print exception stack traces, which will confuse"
                 + " users and affect debuggability when debugging lab server logs.\n"
                 + "lab server stderr")
-        .that(labServerStderrBuilder.toString())
+        .that(stringBuilders.getOrCreate("lab_server_stderr").toString())
         .doesNotContain("\tat ");
   }
 

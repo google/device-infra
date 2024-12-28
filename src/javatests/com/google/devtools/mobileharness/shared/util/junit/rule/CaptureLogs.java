@@ -28,7 +28,7 @@ import org.junit.runner.Description;
 
 /**
  * Capture logs from a {@link Logger} during a test. This allows the logs to be used for
- * verification and to be automatically appended to the failure details of a test, thereby
+ * verification and to be automatically appended to the failure details of a failed test, thereby
  * simplifying the debugging process.
  */
 public class CaptureLogs extends TestWatcher {
@@ -43,8 +43,8 @@ public class CaptureLogs extends TestWatcher {
    *
    * @param loggerName the name of the {@link Logger} whose logs will be captured during a test. For
    *     example, an empty string for the root logger.
-   * @param printFailedLogs whether to append the captured logs to the failure details (if the test
-   *     fails)
+   * @param printFailedLogs whether to append the captured logs to the failure details of a test (if
+   *     the test fails)
    */
   public CaptureLogs(String loggerName, boolean printFailedLogs) {
     this.printFailedLogs = printFailedLogs;
