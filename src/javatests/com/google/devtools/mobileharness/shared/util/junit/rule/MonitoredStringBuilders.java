@@ -16,18 +16,20 @@
 
 package com.google.devtools.mobileharness.shared.util.junit.rule;
 
-import static java.util.stream.Collectors.joining;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
+import com.google.devtools.mobileharness.shared.util.junit.rule.util.FinishWithFailureTestWatcher;
+import com.google.devtools.mobileharness.shared.util.junit.rule.util.StringsDebugger;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import org.junit.rules.TestWatcher;
+import javax.annotation.Nullable;
 import org.junit.runner.Description;
 
 /**
  * Monitored {@link StringBuilder}s whose value will be automatically appended to the failure
  * details of a failed test, thereby simplifying the debugging process.
  */
-public class MonitoredStringBuilders extends TestWatcher {
+public class MonitoredStringBuilders extends FinishWithFailureTestWatcher {
 
   private final Map<String, StringBuilder> stringBuilders = new ConcurrentHashMap<>();
 
@@ -40,24 +42,13 @@ public class MonitoredStringBuilders extends TestWatcher {
   }
 
   @Override
-  protected void failed(Throwable error, Description description) {
-    Exception suppressed =
-        new IllegalStateException(
-            stringBuilders.entrySet().stream()
-                .map(
-                    e ->
-                        String.format(
-                            "\n"
-                                + "==============================\n"
-                                + "begin of [%s]\n"
-                                + "==============================\n"
-                                + "%s\n"
-                                + "==============================\n"
-                                + "end of [%s]\n"
-                                + "==============================\n",
-                            e.getKey(), e.getValue(), e.getKey()))
-                .collect(joining()));
-    suppressed.setStackTrace(new StackTraceElement[0]);
-    error.addSuppressed(suppressed);
+  protected void onFinished(@Nullable Throwable testFailure, Description description) {
+    StringsDebugger.onTestFinished(
+        testFailure,
+        stringBuilders.entrySet().stream()
+            .collect(
+                toImmutableMap(
+                    entry -> String.format("[%s]", entry.getKey()),
+                    entry -> entry.getValue().toString())));
   }
 }

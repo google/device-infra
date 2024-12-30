@@ -41,6 +41,7 @@ import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
 import com.google.devtools.mobileharness.shared.util.command.CommandStartException;
 import com.google.devtools.mobileharness.shared.util.junit.rule.MonitoredStringBuilders;
+import com.google.devtools.mobileharness.shared.util.junit.rule.MonitoredStringSuppliers;
 import com.google.devtools.mobileharness.shared.util.junit.rule.PrintTestName;
 import com.google.devtools.mobileharness.shared.util.port.PortProber;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
@@ -58,8 +59,6 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
-import org.junit.rules.TestWatcher;
-import org.junit.runner.Description;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
@@ -71,27 +70,7 @@ public class AtsDdaIntegrationTest {
   @Rule public final TemporaryFolder tmpFolder = new TemporaryFolder();
   @Rule public final PrintTestName printTestName = new PrintTestName();
   @Rule public final MonitoredStringBuilders stringBuilders = new MonitoredStringBuilders();
-
-  @Rule
-  public TestWatcher testWatcher =
-      new TestWatcher() {
-
-        @Override
-        protected void failed(Throwable e, Description description) {
-          // Adds debug info to a failed test.
-          Exception debugInfo =
-              new IllegalStateException(
-                  String.format(
-                      "debug info:\nsession_info=%s\nsession_error=[%s]\n",
-                      sessionInfo,
-                      Optional.ofNullable(sessionInfo)
-                          .flatMap(SessionInfo::sessionError)
-                          .map(Throwables::getStackTraceAsString)
-                          .orElse("null")));
-          debugInfo.setStackTrace(new StackTraceElement[0]);
-          e.addSuppressed(debugInfo);
-        }
-      };
+  @Rule public final MonitoredStringSuppliers monitoredStrings = new MonitoredStringSuppliers();
 
   private static final String OLC_SERVER_FILE_PATH =
       RunfilesUtil.getRunfilesLocation(
@@ -124,6 +103,15 @@ public class AtsDdaIntegrationTest {
     olcServerPort = PortProber.pickUnusedPort();
     olcServerChannel = ChannelFactory.createLocalChannel(olcServerPort, directExecutor());
     atsDdaStub = new AtsDdaStub(olcServerChannel);
+
+    monitoredStrings.add("session_info", () -> String.valueOf(sessionInfo));
+    monitoredStrings.add(
+        "session_error",
+        () ->
+            Optional.ofNullable(sessionInfo)
+                .flatMap(SessionInfo::sessionError)
+                .map(Throwables::getStackTraceAsString)
+                .orElse("null"));
   }
 
   @After

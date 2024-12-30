@@ -18,12 +18,15 @@ package com.google.devtools.mobileharness.shared.util.junit.rule;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.devtools.mobileharness.shared.util.junit.rule.util.FinishWithFailureTestWatcher;
+import com.google.devtools.mobileharness.shared.util.junit.rule.util.StringsDebugger;
 import com.google.devtools.mobileharness.shared.util.logging.MobileHarnessLogFormatter;
 import java.io.ByteArrayOutputStream;
 import java.util.logging.Handler;
 import java.util.logging.Logger;
 import java.util.logging.StreamHandler;
-import org.junit.rules.TestWatcher;
+import javax.annotation.Nullable;
 import org.junit.runner.Description;
 
 /**
@@ -31,7 +34,7 @@ import org.junit.runner.Description;
  * verification and to be automatically appended to the failure details of a failed test, thereby
  * simplifying the debugging process.
  */
-public class CaptureLogs extends TestWatcher {
+public class CaptureLogs extends FinishWithFailureTestWatcher {
 
   private final Logger capturedLogger;
   private final boolean printFailedLogs;
@@ -64,27 +67,12 @@ public class CaptureLogs extends TestWatcher {
   }
 
   @Override
-  protected void failed(Throwable e, Description description) {
-    if (printFailedLogs) {
-      Exception logsException =
-          new IllegalStateException(
-              String.format(
-                  "\n"
-                      + "==============================\n"
-                      + "begin of logs from logger \"%s\"\n"
-                      + "==============================\n"
-                      + "%s\n"
-                      + "==============================\n"
-                      + "end of logs from logger \"%s\"\n"
-                      + "==============================\n",
-                  capturedLogger.getName(), getLogs(), capturedLogger.getName()));
-      logsException.setStackTrace(new StackTraceElement[0]);
-      e.addSuppressed(logsException);
-    }
-  }
-
-  @Override
-  protected void finished(Description description) {
+  protected void onFinished(@Nullable Throwable testFailure, Description description) {
     capturedLogger.removeHandler(logHandler);
+
+    StringsDebugger.onTestFinished(
+        printFailedLogs ? testFailure : null,
+        ImmutableMap.of(
+            String.format("logs from logger\"%s\"", capturedLogger.getName()), getLogs()));
   }
 }

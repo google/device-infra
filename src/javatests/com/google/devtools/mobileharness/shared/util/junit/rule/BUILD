@@ -26,6 +26,10 @@ java_library(
     srcs = ["CaptureLogs.java"],
     deps = [
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:formatter",
+        "//src/javatests/com/google/devtools/mobileharness/shared/util/junit/rule/util:finish_with_failure_test_watcher",
+        "//src/javatests/com/google/devtools/mobileharness/shared/util/junit/rule/util:strings_debugger",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
         "@maven//:junit_junit",
     ],
 )
@@ -34,6 +38,22 @@ java_library(
     name = "monitored_string_builders",
     srcs = ["MonitoredStringBuilders.java"],
     deps = [
+        "//src/javatests/com/google/devtools/mobileharness/shared/util/junit/rule/util:finish_with_failure_test_watcher",
+        "//src/javatests/com/google/devtools/mobileharness/shared/util/junit/rule/util:strings_debugger",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+        "@maven//:junit_junit",
+    ],
+)
+
+java_library(
+    name = "monitored_string_suppliers",
+    srcs = ["MonitoredStringSuppliers.java"],
+    deps = [
+        "//src/javatests/com/google/devtools/mobileharness/shared/util/junit/rule/util:finish_with_failure_test_watcher",
+        "//src/javatests/com/google/devtools/mobileharness/shared/util/junit/rule/util:strings_debugger",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
         "@maven//:junit_junit",
     ],
 )
