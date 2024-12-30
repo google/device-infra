@@ -1411,6 +1411,14 @@ public class Flags {
       converter = Flag.StringConverter.class)
   public Flag<String> perfettoScriptPath = perfettoScriptPathDefault;
 
+  private static final Flag<Boolean> prepareDeviceAfterTestDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--prepare_device_after_test",
+      description = "If true, prepare the device after test. Default is false.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> prepareDeviceAfterTest = prepareDeviceAfterTestDefault;
+
   private static final Flag<Boolean> printLabStatsDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(

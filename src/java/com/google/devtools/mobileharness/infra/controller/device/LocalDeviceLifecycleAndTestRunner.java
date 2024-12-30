@@ -178,9 +178,9 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
     DeviceInfoManager.getInstance()
         .add(deviceId, apiConfig, type.isAnnotationPresent(RetainDeviceInfoAnnotation.class));
 
-    device = new DeviceFactory().createDevice(type, deviceId.controlId());
+    this.device = new DeviceFactory().createDevice(type, deviceId.controlId());
     DeviceIdUtil.addDeviceIdAndClassNameToDimension(deviceId, device);
-    deviceStat = stat;
+    this.deviceStat = stat;
     deviceStat.onShowUp();
     clock = Clock.systemUTC();
     sleeper = Sleeper.defaultSleeper();
@@ -242,21 +242,8 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
       } else {
         logger.atWarning().log("Device config is not synced");
       }
-      // Initializes the device.
-      deviceReservation =
-          externalDeviceManager.reserveDevice(
-              device.getDeviceId(),
-              device.getClass().getSimpleName(),
-              Duration.ofDays(1).minusMinutes(1));
-      initDevice();
-      // Release the reservation if it can be successfully initialized.
-      if (deviceReservation != null) {
-        deviceReservation.close();
-        deviceReservation = null;
-      }
+      prepareDevice();
 
-      recordBecomeIdleTime();
-      postDeviceChangeEvent("initialized");
       // Keeps running until interrupted.
       while (isReady()) {
         extendExpireTime();
@@ -278,9 +265,11 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
           }
           if (test != null) {
             deviceReservation.markRunningTest();
-          }
-          if (checkNRunTest()) {
-            needReboot = true;
+            if (checkNRunTest()) {
+              needReboot = true;
+            }
+            // prepare the device if needed.
+            mayPrepareDeviceAfterTest(needReboot);
           }
         } catch (MobileHarnessException e) {
           // Need to quit the loop when it's draining; Otherwise, just log the warning.
@@ -348,8 +337,6 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
                 && (!externalDeviceManager.isManagingDeviceLifeCycle()
                     || (!initialized && !externalDeviceManager.isManagingDeviceRecovery()));
 
-        // TODO: Leaves the device in an unusable state instead of put it in the reboot
-        // loop when rebooting doesn't help.
         try {
           // Always reboot the device if force to do so.
           if (forceDeviceRebootAfterTest() || (needReboot && device.canReboot())) {
@@ -615,14 +602,20 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
   /** Initializes the device. If fails, will set {@link #initialized} to false. */
   @VisibleForTesting
   @SuppressWarnings("LogAndThrow")
-  void initDevice() throws InterruptedException, MobileHarnessException {
+  void prepareDevice() throws InterruptedException, MobileHarnessException {
+    // Initializes the device.
+    DeviceReservation deviceReservation =
+        externalDeviceManager.reserveDevice(
+            device.getDeviceId(),
+            device.getClass().getSimpleName(),
+            Duration.ofDays(1).minusMinutes(1));
     extendExpireTime(Duration.ofDays(1));
     logger.atInfo().log("Initializing...");
 
     // Block the device setup process until it's reserved by MH DM.
     try {
       extendExpireTime(device.getSetupTimeout());
-      device.setUp();
+      device.prepare();
       updateExtraDimensions();
     } catch (MobileHarnessException | InterruptedException e) {
       logger.atWarning().withCause(e).log("Failed to initialize device");
@@ -656,6 +649,15 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
         Joiner.on("\n").join(device.getDriverTypes()),
         Joiner.on("\n").join(device.getDecoratorTypes()));
     extendExpireTime();
+
+    // Release the reservation if it can be successfully initialized.
+    if (deviceReservation != null) {
+      deviceReservation.close();
+      deviceReservation = null;
+    }
+
+    recordBecomeIdleTime();
+    postDeviceChangeEvent("initialized");
   }
 
   /** Turn this device into a FailedDevice waiting for recovery job. */
@@ -685,7 +687,7 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
    * @throws InterruptedException the current thread is interrupted
    */
   @VisibleForTesting
-  boolean checkNRunTest() throws InterruptedException {
+  boolean checkNRunTest() throws MobileHarnessException, InterruptedException {
     boolean needReboot = false;
     if (test == null || !isAlive()) {
       return needReboot;
@@ -730,7 +732,6 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
         recordBecomeIdleTime();
       }
     }
-
     return needReboot;
   }
 
@@ -840,11 +841,30 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
             String.valueOf(now.toEpochMilli()));
   }
 
+  /** Prepares the device after test if needed. */
+  @VisibleForTesting
+  void mayPrepareDeviceAfterTest(boolean needReboot)
+      throws MobileHarnessException, InterruptedException {
+    if (!needReboot && prepareDeviceAfterTest()) {
+      logger.atWarning().log("Prepare the device after test.");
+      initialized = false;
+      // Clear the device info.
+      device.info().clearAll();
+      // Post the event to notify Master it's INIT
+      postDeviceChangeEvent("prepare the device after test");
+      prepareDevice();
+    }
+  }
+
   private static boolean disableDeviceReboot() {
     return Flags.instance().disableDeviceReboot.getNonNull();
   }
 
   private static boolean forceDeviceRebootAfterTest() {
     return Flags.instance().forceDeviceRebootAfterTest.getNonNull();
+  }
+
+  private static boolean prepareDeviceAfterTest() {
+    return Flags.instance().prepareDeviceAfterTest.getNonNull();
   }
 }

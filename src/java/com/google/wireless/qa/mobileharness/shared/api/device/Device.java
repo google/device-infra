@@ -349,8 +349,33 @@ public interface Device {
    *     go through the {@link #tearDown()} and get destroyed. If the device remains detectable, MH
    *     Device Manager framework will create new Device object for the device and try this {@link
    *     #setUp()} again, until it succeeds or device disconnected.
+   * @deprecated Use {@link #prepare()} instead.
    */
+  @Deprecated
   void setUp() throws MobileHarnessException, InterruptedException;
+
+  /**
+   * Prepares the device for a test. This method will be invoked in two ways:
+   *
+   * <ol>
+   *   <li>Immediately after the device is first detected and initialized.
+   *   <li>After an allocation is completed when the flag {@code prepare_device_after_test} is set
+   *       true.
+   * </ol>
+   *
+   * <p>MH will assign a task to this device only after it successfully passes this method. If this
+   * method fails, the device will be marked as DIRTY and will not be allocated to any tests until
+   * it is IDLE again.
+   *
+   * @throws MobileHarnessException If fails to initialize the device, you can throw out this
+   *     exception to prevent this device from being assigned to any task. The device instance will
+   *     go through the {@link #tearDown()} and get destroyed. If the device remains detectable, MH
+   *     Device Manager framework will create new Device object for the device and try this {@link
+   *     #prepare()} again, until it succeeds or device disconnected.
+   */
+  default void prepare() throws MobileHarnessException, InterruptedException {
+    this.setUp();
+  }
 
   /**
    * Checks and update the device types, dimensions, and supported drivers/decorators.

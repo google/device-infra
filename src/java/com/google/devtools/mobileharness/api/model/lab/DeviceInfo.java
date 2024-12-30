@@ -48,6 +48,16 @@ public abstract class DeviceInfo {
    */
   public abstract Decorators supportedDrivers();
 
+  /** Clears all device info. */
+  public void clearAll() {
+    dimensions().supported().removeAll();
+    dimensions().required().removeAll();
+    properties().clear();
+    deviceTypes().clear();
+    supportedDecorators().clear();
+    supportedDrivers().clear();
+  }
+
   /**
    * Do <b>not</b> make it public. Device info instances are created and managed by Mobile Harness
    * device manager and test runner. If you still want to create a device info instance, please use
