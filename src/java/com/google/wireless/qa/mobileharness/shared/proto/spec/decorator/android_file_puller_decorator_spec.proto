@@ -55,4 +55,17 @@ message AndroidFilePullerDecoratorSpec {
       help: "Whether to ignore errors when pulling existing files."
     }
   ];
+
+  optional string pulled_file_dir = 5 [(field_detail) = {
+    help: "The directory relative to the test's gen file directory to pull the "
+          "files to. If not set, the files will be pulled to the test's gen "
+          "file directory."
+  }];
+
+  optional bool preserve_absolute_path = 6 [
+    default = false,
+    (field_detail) = {
+      help: "Whether to preserve the absolute path of the files on device."
+    }
+  ];
 }

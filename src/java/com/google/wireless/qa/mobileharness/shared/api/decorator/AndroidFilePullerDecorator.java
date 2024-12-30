@@ -23,6 +23,8 @@ import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Test;
 import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
+import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidFilePullerSpec;
@@ -48,20 +50,26 @@ public class AndroidFilePullerDecorator extends BaseDecorator
 
   private final AndroidFileUtil androidFileUtil;
 
+  private final LocalFileUtil localFileUtil;
+
   /**
    * Constructor. Do NOT modify the parameter list. This constructor is required by the lab server
    * framework.
    */
   public AndroidFilePullerDecorator(Driver decoratedDriver, TestInfo testInfo) {
-    this(decoratedDriver, testInfo, new AndroidFileUtil());
+    this(decoratedDriver, testInfo, new AndroidFileUtil(), new LocalFileUtil());
   }
 
   /** Constructor for testing only. */
   @VisibleForTesting
   public AndroidFilePullerDecorator(
-      Driver decoratedDriver, TestInfo testInfo, AndroidFileUtil androidFileUtil) {
+      Driver decoratedDriver,
+      TestInfo testInfo,
+      AndroidFileUtil androidFileUtil,
+      LocalFileUtil localFileUtil) {
     super(decoratedDriver, testInfo);
     this.androidFileUtil = androidFileUtil;
+    this.localFileUtil = localFileUtil;
   }
 
   @Override
@@ -98,6 +106,12 @@ public class AndroidFilePullerDecorator extends BaseDecorator
     } finally {
       // Pulls the device files to PUBLIC_TMP dir of the test. MobileHarness client will get and
       // send them to Sponge automatically.
+      String targetRootDir;
+      if (spec.getPulledFileDir().isEmpty()) {
+        targetRootDir = testInfo.getGenFileDir();
+      } else {
+        targetRootDir = PathUtil.join(testInfo.getGenFileDir(), spec.getPulledFileDir());
+      }
       for (String path : fileOrDirPathsOnDevice) {
         String noPathLog =
             "Skip pulling file/dir because directory [" + path + "] does not exist in the device. ";
@@ -129,7 +143,10 @@ public class AndroidFilePullerDecorator extends BaseDecorator
 
         // Now pull existing files from device.
         try {
-          String info = androidFileUtil.pull(deviceId, path, testInfo.getGenFileDir());
+          String targetPath =
+              spec.getPreserveAbsolutePath() ? PathUtil.join(targetRootDir, path) : targetRootDir;
+          localFileUtil.prepareParentDir(targetPath);
+          String info = androidFileUtil.pull(deviceId, path, targetPath);
           testInfo.log().atInfo().alsoTo(logger).log("%s", info);
         } catch (MobileHarnessException e) {
           MobileHarnessException exception =
