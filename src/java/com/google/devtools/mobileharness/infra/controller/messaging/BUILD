@@ -55,6 +55,7 @@ java_library(
         ":message_subscriber_backend",
         "//src/devtools/mobileharness/api/messaging:messaging_java_proto",
         "//src/java/com/google/devtools/mobileharness/shared/constant/closeable",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:more_futures",
         "@maven//:com_google_guava_guava",
     ],
 )

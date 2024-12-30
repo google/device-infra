@@ -16,7 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.controller.messaging;
 
-import static java.util.Objects.requireNonNull;
+import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.getUnchecked;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.SettableFuture;
@@ -28,7 +28,6 @@ import com.google.devtools.mobileharness.api.messaging.proto.MessagingProto.Mess
 import com.google.devtools.mobileharness.infra.controller.messaging.MessageSubscriberBackend.MessageSubscribers;
 import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
 import java.util.concurrent.CancellationException;
-import java.util.concurrent.ExecutionException;
 
 /** Message sender for sending messages of OmniLab messaging system. */
 public class MessageSender implements NonThrowingAutoCloseable {
@@ -48,13 +47,10 @@ public class MessageSender implements NonThrowingAutoCloseable {
     // Waits until local subscribers are initialized.
     ImmutableList<MessageSubscribers> localSubscribers;
     try {
-      localSubscribers = requireNonNull(this.localSubscribers.get());
+      localSubscribers = getUnchecked(this.localSubscribers);
     } catch (CancellationException e) {
       // Returns if the sender is closed.
       return;
-    } catch (ExecutionException e) {
-      // It will not happen.
-      throw new AssertionError(e);
     }
 
     // Sends message to local subscribers.

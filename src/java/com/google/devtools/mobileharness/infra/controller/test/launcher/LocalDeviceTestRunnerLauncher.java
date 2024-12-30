@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.infra.controller.test.launcher;
 
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
+import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.getUnchecked;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -39,7 +40,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
-import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 /** Local device test runner launcher which uses {@code LocalDeviceRunner}s to launch the test. */
@@ -115,18 +115,7 @@ public class LocalDeviceTestRunnerLauncher extends TestRunnerLauncher<TestRunner
           "Secondary device runner [%s] of test [%s] is waiting test execution result",
           getDeviceRunner().getDevice().getDeviceId(),
           getTestRunner().getTestExecutionUnit().locator().id());
-      try {
-        return resultFuture.get();
-      } catch (ExecutionException e) {
-        Throwable cause = e.getCause();
-        if (cause instanceof InterruptedException) {
-          throw (InterruptedException) cause;
-        }
-        if (cause instanceof RuntimeException) {
-          throw (RuntimeException) cause;
-        }
-        throw new IllegalStateException(cause);
-      }
+      return getUnchecked(resultFuture);
     }
   }
 
