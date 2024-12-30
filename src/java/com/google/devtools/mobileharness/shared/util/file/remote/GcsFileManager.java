@@ -540,6 +540,11 @@ public class GcsFileManager {
     return gcsUtil.fileExist(gcsFile);
   }
 
+  /** Returns whether the path {@code gcsFile} exists. */
+  public boolean fileExist(Path gcsFile) throws MobileHarnessException, InterruptedException {
+    return gcsUtil.fileExist(gcsFile);
+  }
+
   /** Returns the file size of the path {@code gcsFile}. */
   public long getGcsFileSize(Path gcsFile) throws MobileHarnessException, InterruptedException {
     return gcsUtil.getGcsFileSize(gcsFile);

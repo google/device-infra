@@ -37,6 +37,11 @@ public class WatchableFileTransferClientTest {
   private final WatchableFileTransferClient client =
       new WatchableFileTransferClient() {
         @Override
+        public boolean isSendable(String path, @Nullable String checksum) {
+          return true;
+        }
+
+        @Override
         public void sendFile(String fileId, String tag, String path, @Nullable String checksum) {}
 
         @Override

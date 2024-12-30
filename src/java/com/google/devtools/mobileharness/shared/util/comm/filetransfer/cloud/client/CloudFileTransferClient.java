@@ -153,7 +153,8 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
   }
 
   /** Sends file {@code local} to remote side with {@code metadata}. */
-  public void sendFile(Any metadata, Path local, @Nullable String checksum)
+  @VisibleForTesting
+  void sendFile(Any metadata, String local, @Nullable String checksum)
       throws MobileHarnessException, InterruptedException {
     FileTransferEvent.Builder event =
         FileTransferEvent.builder().setStart(Instant.now()).setType(ExecutionType.SEND);
@@ -162,7 +163,7 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
       throw new MobileHarnessException(
           ErrorCode.FILE_TRANSFER_ERROR, "File Or directory doesn't exist: " + local);
     }
-    FileOperationStatus result = sendDirectlyIfSmall(metadata, local);
+    FileOperationStatus result = sendDirectlyIfSmall(metadata, Path.of(local));
     if (result.isFinished()) {
       publishEvent(
           event.setEnd(Instant.now()).setFileSize(result.fileSize()).setIsCached(false).build());
@@ -172,11 +173,11 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
 
     ExecutionInfo executionInfo =
         gcsFileManager.upload(
-            local,
+            Path.of(local),
             params.zipStoreOnly(),
             Optional.of(params.zipTimeout()),
             Optional.ofNullable(checksum));
-    downloadGcsFileToServer(metadata, executionInfo.checksum(), local);
+    downloadGcsFileToServer(metadata, executionInfo.checksum(), Path.of(local), dirExists(local));
     publishEvent(
         event
             .setEnd(Instant.now())
@@ -197,8 +198,15 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
                 .setTag(tag)
                 .setOriginalPath(srcPath)
                 .build()),
-        Path.of(srcPath),
+        srcPath,
         checksum);
+  }
+
+  @Override
+  public boolean isSendable(String path, @Nullable String checksum)
+      throws MobileHarnessException, InterruptedException {
+    return fileOrDirExists(path)
+        || (checksum != null && gcsFileManager.fileExist(Path.of(checksum)));
   }
 
   /**
@@ -210,7 +218,7 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
   private FileOperationStatus sendDirectlyIfSmall(Any metadata, Path local)
       throws MobileHarnessException, InterruptedException {
     try {
-      if (!fileOrDirExists(local)) {
+      if (!fileOrDirExists(local.toString())) {
         throw new MobileHarnessException(
             ErrorCode.FILE_TRANSFER_ERROR, "File Or directory doesn't exist: " + local);
       }
@@ -221,7 +229,7 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
 
       SaveFileRequest.Builder request =
           SaveFileRequest.newBuilder().setMetadata(metadata).setOriginalPath(local.toString());
-      if (dirExists(local)) {
+      if (dirExists(local.toString())) {
         long totalSize = 0;
         for (Path file : listFilesForPath(local)) {
           totalSize += getFileSize(file);
@@ -279,7 +287,8 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
     return e.getMessage().contains("Method not found");
   }
 
-  private void downloadGcsFileToServer(Any metadata, String checksum, Path local)
+  private void downloadGcsFileToServer(
+      Any metadata, String checksum, Path local, boolean isCompressed)
       throws MobileHarnessException, InterruptedException {
     withTimeout(
         () -> {
@@ -292,7 +301,7 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
                               .setGcsFile(checksum)
                               .setChecksum(checksum)
                               .setBucket(gcsFileManager.getBucketName())
-                              .setIsCompressed(dirExists(local))
+                              .setIsCompressed(isCompressed)
                               .setCompressOptions(toCompressOptions(params))
                               .setOriginalPath(local.toString())
                               .setMetadata(metadata)
@@ -406,7 +415,7 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
 
       if (localFileUtil.isFileExist(finalizedReceivedFileOrDir)) {
         prepareParentDir(local);
-        if (dirExists(local)) {
+        if (dirExists(local.toString())) {
           // If |local| has already existed and is a directory, copy received files to the
           // directory with the same relative path as |remote|.
           Path localFile = join(local, remote);
@@ -691,11 +700,11 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
     threadPool.shutdownNow();
   }
 
-  private boolean fileOrDirExists(Path local) {
-    return localFileUtil.isFileOrDirExist(local);
+  private boolean fileOrDirExists(String path) {
+    return localFileUtil.isFileOrDirExist(path);
   }
 
-  private boolean dirExists(Path local) {
+  private boolean dirExists(String local) {
     return localFileUtil.isDirExist(local);
   }
 

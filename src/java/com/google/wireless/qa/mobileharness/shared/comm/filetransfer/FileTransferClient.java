@@ -50,6 +50,9 @@ public interface FileTransferClient {
   void sendFile(String fileId, String tag, String path, @Nullable String checksum)
       throws MobileHarnessException, InterruptedException;
 
+  boolean isSendable(String path, @Nullable String checksum)
+      throws MobileHarnessException, InterruptedException;
+
   /**
    * Gets file {@code remote} from peer side, and saves it to {@code local}. Both {@code remote} and
    * {@code local} should be relative path.
