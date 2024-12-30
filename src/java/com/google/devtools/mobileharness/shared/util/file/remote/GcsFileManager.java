@@ -373,16 +373,14 @@ public class GcsFileManager {
             String decodedChecksum = checksum.orElse(zipInfo.decodedChecksum());
             return ExecutionInfo.create(
                 fileSize,
-                !uploadFile(zipInfo.zipFilePath(), Path.of(decodedChecksum + "_" + fileSize)),
-                decodedChecksum + "_" + fileSize);
+                !uploadFile(zipInfo.zipFilePath(), Path.of(decodedChecksum)),
+                decodedChecksum);
           } else if (fileExists(fileOrDir)) {
             String decodedChecksum =
                 checksum.orElse(gcsUtil.decodeCrc32c(gcsUtil.calculateCrc32c(fileOrDir)));
             long fileSize = gcsUtil.getFileSize(fileOrDir);
             return ExecutionInfo.create(
-                fileSize,
-                !uploadFile(fileOrDir, Path.of(decodedChecksum + "_" + fileSize)),
-                decodedChecksum + "_" + fileSize);
+                fileSize, !uploadFile(fileOrDir, Path.of(decodedChecksum)), decodedChecksum);
           }
           throw new MobileHarnessException(
               BasicErrorId.GCS_UPLOAD_FILE_ERROR,

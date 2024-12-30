@@ -61,6 +61,10 @@ public class ChecksumUtil {
 
   private final HashFunction hashFunction;
 
+  /**
+   * @deprecated Use {@link #ChecksumUtil(HashFunction)} instead.
+   */
+  @Deprecated
   public ChecksumUtil() {
     this(Hashing.crc32());
   }

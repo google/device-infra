@@ -25,7 +25,9 @@ import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -58,7 +60,7 @@ public final class ChecksumUtilTest {
                   + "shared/util/file/checksum/testdata/Md5.empty"));
 
   private final LocalFileUtil fileUtil = new LocalFileUtil();
-  private final ChecksumUtil util = new ChecksumUtil();
+  private final ChecksumUtil util = new ChecksumUtil(Hashing.murmur3_128());
   private Path homeDir;
 
   @Before
@@ -93,25 +95,26 @@ public final class ChecksumUtilTest {
   }
 
   @Test
-  public void testFingerprint_runForFile_returnValidCrc32() throws Exception {
-    assertThat(util.fingerprint(EMPTY_FILE)).isEqualTo("00000000");
-    assertThat(util.fingerprint(SMALL_FILE)).isEqualTo("3d720930");
-    assertThat(util.fingerprint(TEST_DATA_DIR)).isEqualTo("963d67af");
+  public void testFingerprint_runForFile_returnValidMurmur3_128() throws Exception {
+    assertThat(util.fingerprint(EMPTY_FILE)).isEqualTo("00000000000000000000000000000000");
+    assertThat(util.fingerprint(SMALL_FILE)).isEqualTo("efeb5e72d8f8ed1a7f787f8a70895d35");
+    assertThat(util.fingerprint(TEST_DATA_DIR)).isEqualTo("c9462864b948810f764d81c57f515dba");
   }
 
   @Test
-  public void testFingerprint_runForString_returnCrc32() throws Exception {
-    assertThat(util.fingerprintStr("")).isEqualTo("00000000");
-    assertThat(util.fingerprintStr("aa")).isEqualTo("d7198a07");
-    assertThat(util.fingerprintStr("abcädef")).isEqualTo("5e7b1374");
+  public void testFingerprint_runForString_returnMurmur3_128() throws Exception {
+    assertThat(util.fingerprintStr("")).isEqualTo("00000000000000000000000000000000");
+    assertThat(util.fingerprintStr("aa")).isEqualTo("6fa3fb04347141b739464d9c42fb7098");
+    assertThat(util.fingerprintStr("abcädef")).isEqualTo("104328d599032887c82a48b32ef9f2c5");
   }
 
   @Test
-  public void testFingerprint_runForString_returnMd5() throws Exception {
-    ChecksumUtil md5Util = new ChecksumUtil(Hashing.md5());
-    assertThat(md5Util.fingerprintStr("")).isEqualTo("d41d8cd98f00b204e9800998ecf8427e");
-    assertThat(md5Util.fingerprintStr("aa")).isEqualTo("4124bc0a9335c27f086f24ba207a4912");
-    assertThat(md5Util.fingerprintStr("abcädef")).isEqualTo("2a2494d3760d4c6906cdf133bca3cb9e");
+  public void testFingerPrint_longString() throws Exception {
+    String s = "a".repeat(1000000000);
+    Instant start = Clock.systemUTC().instant();
+    var unused = util.fingerprintStr(s);
+    Instant end = Clock.systemUTC().instant();
+    assertThat(Duration.between(start, end)).isLessThan(Duration.ofSeconds(5));
   }
 
   @Test
@@ -119,24 +122,24 @@ public final class ChecksumUtilTest {
     Path file = homeDir.resolve("src");
     fileUtil.writeToFile(file.toString(), "aa");
 
-    assertThat(util.fingerprint(file)).isEqualTo("d7198a07");
+    assertThat(util.fingerprint(file)).isEqualTo("6fa3fb04347141b739464d9c42fb7098");
     assertThat(util.fingerprintBytesHashCode("aa".getBytes(UTF_8)).toString())
-        .isEqualTo("d7198a07");
+        .isEqualTo("6fa3fb04347141b739464d9c42fb7098");
   }
 
   @Test
   public void testFingerprint_fileIsModified() throws Exception {
     Path file = homeDir.resolve("src");
     fileUtil.writeToFile(file.toString(), "aa");
-    assertThat(util.fingerprint(file)).isEqualTo("d7198a07");
+    assertThat(util.fingerprint(file)).isEqualTo("6fa3fb04347141b739464d9c42fb7098");
     assertThat(util.fingerprintBytesHashCode("aa".getBytes(UTF_8)).toString())
-        .isEqualTo("d7198a07");
+        .isEqualTo("6fa3fb04347141b739464d9c42fb7098");
 
     fileUtil.removeFileOrDir(file.toString());
     fileUtil.writeToFile(file.toString(), "abcädef");
-    assertThat(util.fingerprint(file)).isEqualTo("5e7b1374");
+    assertThat(util.fingerprint(file)).isEqualTo("104328d599032887c82a48b32ef9f2c5");
     assertThat(util.fingerprintBytesHashCode("abcädef".getBytes(UTF_8)).toString())
-        .isEqualTo("5e7b1374");
+        .isEqualTo("104328d599032887c82a48b32ef9f2c5");
   }
 
   @Test
@@ -145,12 +148,12 @@ public final class ChecksumUtilTest {
     fileUtil.prepareDir(file.toString());
     fileUtil.writeToFile(file + "/Md5.small", fileUtil.readFile(SMALL_FILE));
     fileUtil.writeToFile(file + "/Md5.empty", fileUtil.readFile(EMPTY_FILE));
-    assertThat(util.fingerprint(file)).isEqualTo("963d67af");
+    assertThat(util.fingerprint(file)).isEqualTo("c9462864b948810f764d81c57f515dba");
 
     // Add a short delay because if file's two modification times are very very close (at microsec
     // level), it will get fingerprint from cache at the latter call and cause test flaky.
     Sleeper.defaultSleeper().sleep(Duration.ofMillis(2));
     fileUtil.writeToFile(file + "/Md5.empty", "aa");
-    assertThat(util.fingerprint(file)).isEqualTo("fe6765c7");
+    assertThat(util.fingerprint(file)).isEqualTo("508dbabd27b77402dc9865b17442176d");
   }
 }

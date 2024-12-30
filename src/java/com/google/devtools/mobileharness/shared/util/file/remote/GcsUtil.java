@@ -320,7 +320,7 @@ public class GcsUtil {
     this(
         storageParams,
         getClient(storageParams),
-        new ChecksumUtil(Hashing.crc32c()),
+        new ChecksumUtil(Hashing.murmur3_128()),
         new LocalFileUtil());
   }
 
