@@ -92,7 +92,11 @@ public class AtsMode implements ExecMode, ServiceProvider {
   @Override
   public DeviceAllocator createDeviceAllocator(JobInfo jobInfo, EventBus globalInternalBus) {
     return new LocalDeviceAllocator(
-        jobInfo, deviceVerifier, threadPool, immediateFuture(scheduler));
+        jobInfo,
+        deviceVerifier,
+        threadPool,
+        /* proxyDeviceManager= */ null, // RemoteTestRunner does not use proxied devices
+        immediateFuture(scheduler));
   }
 
   @Override

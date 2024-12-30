@@ -17,8 +17,10 @@
 package com.google.devtools.mobileharness.infra.client.api.mode.local;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.util.concurrent.Futures.getUnchecked;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
+import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.EventBus;
@@ -42,6 +44,9 @@ import com.google.devtools.mobileharness.infra.controller.device.bootstrap.Detec
 import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
 import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfigFileProcessor;
 import com.google.devtools.mobileharness.infra.controller.device.external.NoopExternalDeviceManager;
+import com.google.devtools.mobileharness.infra.controller.device.proxy.ProxyDeviceManager;
+import com.google.devtools.mobileharness.infra.controller.device.proxy.ProxyDeviceManager.ProxyDevices;
+import com.google.devtools.mobileharness.infra.controller.device.proxy.ProxyDeviceManagerModule;
 import com.google.devtools.mobileharness.infra.controller.device.util.DeviceStatusInfoPrinter;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler;
 import com.google.devtools.mobileharness.infra.controller.scheduler.simple.SimpleScheduler;
@@ -50,6 +55,7 @@ import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunnerS
 import com.google.devtools.mobileharness.infra.controller.test.TestRunner;
 import com.google.devtools.mobileharness.infra.controller.test.TestRunnerLauncher;
 import com.google.devtools.mobileharness.infra.controller.test.launcher.LocalDeviceTestRunnerLauncher;
+import com.google.devtools.mobileharness.infra.controller.test.launcher.ThreadPoolTestRunnerLauncher;
 import com.google.devtools.mobileharness.infra.controller.test.local.LocalTestRunner;
 import com.google.devtools.mobileharness.infra.controller.test.local.utp.controller.NoOpTestFlowConverter;
 import com.google.devtools.mobileharness.infra.controller.test.local.utp.controller.TestFlowConverter;
@@ -61,10 +67,13 @@ import com.google.devtools.mobileharness.shared.util.concurrent.ThreadFactoryUti
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
+import com.google.inject.AbstractModule;
+import com.google.inject.Guice;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.controller.event.LocalDeviceUpEvent;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
+import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -73,6 +82,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.logging.Level;
+import java.util.stream.IntStream;
 
 /** Execution mode which run tests on local devices. */
 public class LocalMode implements ExecMode {
@@ -99,6 +109,8 @@ public class LocalMode implements ExecMode {
       SettableFuture.create();
 
   private static volatile ListeningExecutorService localEnvThreadPool;
+
+  private static volatile ProxyDeviceManager proxyDeviceManager;
 
   /** Synchronization lock for {@link #localDeviceManager} and {@link #localScheduler}. */
   private static final Object LOCAL_ENV_LOCK = new Object();
@@ -130,6 +142,18 @@ public class LocalMode implements ExecMode {
 
           // Subscribes LocalDeviceUpEvent.
           globalInternalBus.register(this);
+
+          // Initializes ProxyDeviceManager.
+          proxyDeviceManager =
+              Guice.createInjector(
+                      new AbstractModule() {
+                        @Override
+                        protected void configure() {
+                          bind(ListeningExecutorService.class).toInstance(localEnvThreadPool);
+                          install(new ProxyDeviceManagerModule());
+                        }
+                      })
+                  .getInstance(ProxyDeviceManager.class);
 
           // Initializes local device manager.
           DetectorsAndDispatchers detectorsAndDispatchers =
@@ -223,6 +247,7 @@ public class LocalMode implements ExecMode {
         jobInfo,
         new LocalDeviceVerifier(localDeviceManager),
         localEnvThreadPool,
+        proxyDeviceManager,
         localSchedulerFuture);
   }
 
@@ -243,7 +268,18 @@ public class LocalMode implements ExecMode {
     TestRunnerLauncher<TestRunner> launcher;
 
     if (Flags.instance().enableProxyMode.getNonNull()) {
-      throw new UnsupportedOperationException("Proxy mode is not supported");
+      TestInfo testInfo = setting.testInfo();
+      JobInfo jobInfo = testInfo.jobInfo();
+      ProxyDevices proxyDevices =
+          requireNonNull(
+              getUnchecked(
+                  proxyDeviceManager.getDevicesOfTest(testInfo.locator().toNewTestLocator())));
+      devices =
+          IntStream.range(0, jobInfo.subDeviceSpecs().getSubDeviceCount())
+              .boxed()
+              .map(subDeviceIndex -> requireNonNull(proxyDevices.devices().get(subDeviceIndex)))
+              .collect(toImmutableList());
+      launcher = new ThreadPoolTestRunnerLauncher<>(threadPool, globalInternalBus);
     } else {
       List<LocalDeviceTestRunner> deviceRunners = new ArrayList<>();
       for (DeviceLocator deviceLocator : setting.allocation().getAllDeviceLocators()) {

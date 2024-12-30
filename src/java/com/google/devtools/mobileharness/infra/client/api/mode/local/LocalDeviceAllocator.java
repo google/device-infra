@@ -16,24 +16,36 @@
 
 package com.google.devtools.mobileharness.infra.client.api.mode.local;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.google.common.util.concurrent.Futures.addCallback;
 import static com.google.common.util.concurrent.Futures.getUnchecked;
 import static java.util.Objects.requireNonNull;
+import static java.util.function.Function.identity;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.model.allocation.Allocation;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.job.JobLocator;
 import com.google.devtools.mobileharness.api.model.job.TestLocator;
 import com.google.devtools.mobileharness.api.model.lab.DeviceLocator;
+import com.google.devtools.mobileharness.api.model.lab.LabLocator;
 import com.google.devtools.mobileharness.api.model.proto.Error.ExceptionDetail;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.AbstractDeviceAllocator;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.AllocationWithStats;
+import com.google.devtools.mobileharness.infra.controller.device.proxy.ProxyDeviceManager;
+import com.google.devtools.mobileharness.infra.controller.device.proxy.ProxyDeviceManager.ProxyDevices;
+import com.google.devtools.mobileharness.infra.controller.device.proxy.ProxyDeviceRequirement;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler;
 import com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.controller.event.AllocationEvent;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -43,6 +55,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.stream.IntStream;
+import javax.annotation.Nullable;
 
 /** For managing the local device resources and allocating devices for a single job. */
 public class LocalDeviceAllocator extends AbstractDeviceAllocator {
@@ -61,18 +75,23 @@ public class LocalDeviceAllocator extends AbstractDeviceAllocator {
 
   private final ListeningExecutorService threadPool;
 
+  private final ProxyDeviceManager proxyDeviceManager;
+
   private final boolean enableProxyMode;
 
   public LocalDeviceAllocator(
       final JobInfo jobInfo,
       DeviceVerifier deviceVerifier,
       ListeningExecutorService threadPool,
+      @Nullable ProxyDeviceManager proxyDeviceManager,
       ListenableFuture<AbstractScheduler> schedulerFuture) {
     super(jobInfo);
     this.deviceVerifier = deviceVerifier;
     this.threadPool = threadPool;
+    this.proxyDeviceManager = proxyDeviceManager;
     this.schedulerFuture = schedulerFuture;
-    this.enableProxyMode = Flags.instance().enableProxyMode.getNonNull();
+    this.enableProxyMode =
+        proxyDeviceManager != null && Flags.instance().enableProxyMode.getNonNull();
   }
 
   @Override
@@ -81,7 +100,39 @@ public class LocalDeviceAllocator extends AbstractDeviceAllocator {
     // Currently a test's devices are assumed to be either all local or all proxied, determined
     // solely by the flag (whether a device can be proxied or provided locally is not verified).
     if (enableProxyMode) {
-      throw new UnsupportedOperationException("Proxy mode is not supported");
+      // Prepares parameters to lease devices.
+      JobLocator jobLocator = jobInfo.locator().toNewJobLocator();
+      ImmutableMap<Integer, ProxyDeviceRequirement> deviceRequirements =
+          IntStream.range(0, jobInfo.subDeviceSpecs().getSubDeviceCount())
+              .boxed()
+              .collect(
+                  toImmutableMap(
+                      identity(),
+                      subDeviceIndex ->
+                          ProxyDeviceRequirement.of(jobInfo.subDeviceSpecs(), subDeviceIndex)));
+      ImmutableMap<TestLocator, TestInfo> tests =
+          jobInfo.tests().getAll().values().stream()
+              .collect(
+                  toImmutableMap(testInfo -> testInfo.locator().toNewTestLocator(), identity()));
+
+      // Leases the job's devices asynchronously.
+      // ProxyDeviceManager will control the device leasing concurrency.
+      try {
+        proxyDeviceManager
+            .leaseDevicesOfJobAsync(jobLocator, deviceRequirements, tests.keySet())
+            .forEach(
+                // When a test's devices have been leased, creates an allocation.
+                (testLocator, proxyDevices) ->
+                    addCallback(
+                        proxyDevices,
+                        new TestProxyDevicesCallback(tests.get(testLocator)),
+                        threadPool));
+      } catch (IllegalStateException e) {
+        throw new MobileHarnessException(
+            InfraErrorId.CLIENT_LOCAL_MODE_JOB_ALREADY_EXIST,
+            "Job " + jobLocator.id() + " already exist",
+            e);
+      }
     } else {
       AbstractScheduler scheduler = getScheduler();
       scheduler.registerEventHandler(allocationEventHandler);
@@ -110,7 +161,27 @@ public class LocalDeviceAllocator extends AbstractDeviceAllocator {
       TestInfo test = jobInfo.tests().getById(testId);
 
       if (enableProxyMode) {
-        throw new UnsupportedOperationException("Proxy mode is not supported");
+        if (test == null) {
+          jobInfo
+              .warnings()
+              .addAndLog(
+                  new MobileHarnessException(
+                      InfraErrorId.CLIENT_LOCAL_MODE_TEST_NOT_FOUND,
+                      String.format("Unknown test %s of job %s in the allocation.", testId, jobId)),
+                  logger);
+          proxyDeviceManager.releaseDevicesOfTest(testLocator);
+          continue;
+        } else if (test.status().get() != TestStatus.NEW) {
+          jobInfo
+              .warnings()
+              .addAndLog(
+                  new MobileHarnessException(
+                      InfraErrorId.CLIENT_LOCAL_MODE_TEST_NOT_NEW,
+                      "Unexpected allocation to test with status " + test.status().get()),
+                  logger);
+          proxyDeviceManager.releaseDevicesOfTest(testLocator);
+          continue;
+        }
       } else {
         AbstractScheduler scheduler = getScheduler();
         if (test == null) {
@@ -181,7 +252,20 @@ public class LocalDeviceAllocator extends AbstractDeviceAllocator {
   public void extraAllocation(TestInfo testInfo)
       throws MobileHarnessException, InterruptedException {
     if (enableProxyMode) {
-      throw new UnsupportedOperationException("Proxy mode is not supported");
+      TestLocator testLocator = testInfo.locator().toNewTestLocator();
+
+      // Leases the test's devices asynchronously.
+      try {
+        addCallback(
+            proxyDeviceManager.leaseDevicesOfTestAsync(testLocator),
+            new TestProxyDevicesCallback(testInfo),
+            threadPool);
+      } catch (IllegalStateException e) {
+        throw new MobileHarnessException(
+            InfraErrorId.CLIENT_LOCAL_MODE_TEST_ALREADY_EXIST,
+            "Test " + testLocator + " already exists in job",
+            e);
+      }
     } else {
       AbstractScheduler scheduler = getScheduler();
       if (!scheduler.addTest(testInfo)) {
@@ -199,7 +283,8 @@ public class LocalDeviceAllocator extends AbstractDeviceAllocator {
   public void releaseAllocation(Allocation allocation, TestResult testResult, boolean deviceDirty)
       throws MobileHarnessException, InterruptedException {
     if (enableProxyMode) {
-      throw new UnsupportedOperationException("Proxy mode is not supported");
+      // Releases the test's devices synchronously.
+      proxyDeviceManager.releaseDevicesOfTest(allocation.getTest());
     } else {
       DeviceLocator deviceLocator = allocation.getDevice();
       String deviceSerial = deviceLocator.id();
@@ -224,7 +309,8 @@ public class LocalDeviceAllocator extends AbstractDeviceAllocator {
   @Override
   public synchronized void tearDown() throws MobileHarnessException {
     if (enableProxyMode) {
-      throw new UnsupportedOperationException("Proxy mode is not supported");
+      // Releases the job's devices synchronously.
+      proxyDeviceManager.releaseDevicesOfJob(jobInfo.locator().toNewJobLocator());
     } else {
       if (!schedulerFuture.isDone()) {
         return;
@@ -233,6 +319,47 @@ public class LocalDeviceAllocator extends AbstractDeviceAllocator {
       // Closes the job and changes the device back to IDLE.
       scheduler.removeJob(jobInfo.locator().getId(), false);
       scheduler.unregisterEventHandler(allocationEventHandler);
+    }
+  }
+
+  /**
+   * Callback invoked when either all proxied devices of a test have been leased successfully, or as
+   * soon as any device fails to lease.
+   */
+  private class TestProxyDevicesCallback implements FutureCallback<ProxyDevices> {
+
+    private final TestInfo testInfo;
+
+    private TestProxyDevicesCallback(TestInfo testInfo) {
+      this.testInfo = testInfo;
+    }
+
+    @Override
+    public void onSuccess(ProxyDevices devices) {
+      logger.atInfo().log("All proxy devices of test [%s] have been leased", testInfo.locator());
+
+      // Adds the allocation of all proxied devices to the queue.
+      allocations.add(createAllocation(devices));
+    }
+
+    @Override
+    public void onFailure(Throwable t) {
+      logger.atWarning().withCause(t).log(
+          "Failed to proxy devices of test [%s]", testInfo.locator());
+    }
+
+    private Allocation createAllocation(ProxyDevices devices) {
+      return new Allocation(
+          testInfo.locator().toNewTestLocator(),
+          IntStream.range(0, jobInfo.subDeviceSpecs().getSubDeviceCount())
+              .boxed()
+              .map(subDeviceIndex -> requireNonNull(devices.devices().get(subDeviceIndex)))
+              .map(this::createDeviceLocator)
+              .collect(toImmutableList()));
+    }
+
+    private DeviceLocator createDeviceLocator(Device device) {
+      return DeviceLocator.of(device.getDeviceUuid(), LabLocator.LOCALHOST);
     }
   }
 
