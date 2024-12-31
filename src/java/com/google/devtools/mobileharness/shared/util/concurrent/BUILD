@@ -23,6 +23,15 @@ package(
 )
 
 java_library(
+    name = "barrier",
+    srcs = ["Barrier.java"],
+    deps = [
+        "@maven//:com_google_errorprone_error_prone_annotations",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "callables",
     srcs = ["Callables.java"],
     deps = [
