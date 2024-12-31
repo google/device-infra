@@ -16,7 +16,6 @@
 
 package com.google.devtools.mobileharness.infra.ats.common.jobcreator;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -42,7 +41,7 @@ import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryA
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryGenerator;
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
-import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.shared.util.junit.rule.SetFlagsOss;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
@@ -52,7 +51,6 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
 import javax.inject.Inject;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -71,6 +69,7 @@ public final class ConsoleJobCreatorTest {
 
   @Rule public MockitoRule mockito = MockitoJUnit.rule();
   @Rule public TemporaryFolder folder = new TemporaryFolder();
+  @Rule public final SetFlagsOss flags = new SetFlagsOss();
 
   @Bind @Mock private SessionRequestHandlerUtil sessionRequestHandlerUtil;
   @Bind @Mock private LocalFileUtil localFileUtil;
@@ -85,29 +84,10 @@ public final class ConsoleJobCreatorTest {
 
   @Before
   public void setUp() throws Exception {
-    setFlags(/* enableAtsMode= */ true, /* useTfRetry= */ false);
+    flags.setAllFlags(ImmutableMap.of("enable_ats_mode", "true", "use_tf_retry", "false"));
 
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
     testPlanFilter = TestPlanParser.TestPlanFilter.create(ImmutableSet.of(), ImmutableSet.of());
-  }
-
-  private void setFlags(boolean enableAtsMode, boolean useTfRetry) {
-    ImmutableMap<String, String> flagMap =
-        ImmutableMap.of(
-            "enable_ats_mode",
-            String.valueOf(enableAtsMode),
-            "use_tf_retry",
-            String.valueOf(useTfRetry));
-    Flags.parse(
-        flagMap.entrySet().stream()
-            .map(e -> String.format("--%s=%s", e.getKey(), e.getValue()))
-            .collect(toImmutableList())
-            .toArray(new String[0]));
-  }
-
-  @After
-  public void tearDown() {
-    Flags.resetToDefault();
   }
 
   @SuppressWarnings("unchecked")
@@ -384,7 +364,7 @@ public final class ConsoleJobCreatorTest {
 
   @Test
   public void createXtsTradefedTestJob_tfRetryWithModules() throws Exception {
-    setFlags(/* enableAtsMode= */ true, /* useTfRetry= */ true);
+    flags.setAllFlags(ImmutableMap.of("enable_ats_mode", "true", "use_tf_retry", "true"));
     SessionRequestInfo sessionRequestInfo =
         SessionRequestInfo.builder()
             .setTestPlan("retry")

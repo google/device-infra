@@ -28,6 +28,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.LinkedListMultimap;
@@ -69,7 +70,7 @@ import com.google.devtools.mobileharness.infra.controller.scheduler.model.job.in
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
-import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.shared.util.junit.rule.SetFlagsOss;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
@@ -130,6 +131,7 @@ public final class AtsServerSessionPluginTest {
 
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
   @Rule public final TemporaryFolder tmpFolder = new TemporaryFolder();
+  @Rule public final SetFlagsOss flags = new SetFlagsOss();
 
   @Bind @Mock private DeviceQuerier deviceQuerier;
   @Bind @Mock private SessionInfo sessionInfo;
@@ -161,7 +163,7 @@ public final class AtsServerSessionPluginTest {
   @Before
   public void setup() throws Exception {
     String publicDir = tmpFolder.newFolder("public_dir").getAbsolutePath();
-    Flags.parse(new String[] {String.format("--public_dir=%s", publicDir)});
+    flags.setAllFlags(ImmutableMap.of("public_dir", publicDir));
     Instant baseTime = Instant.ofEpochMilli(1000);
     timing = new Timing(baseTime);
     timing.start(baseTime.plusMillis(1));
@@ -844,7 +846,7 @@ public final class AtsServerSessionPluginTest {
 
   @Test
   public void onSessionEnded_retryNeededAndHasPrevContext_createRetrySession() throws Exception {
-    String originalCommandLine = "run cts -m OrigianlModule";
+    String originalCommandLine = "run cts -m OriginalModule";
     request =
         request.toBuilder()
             .setPrevTestContext(

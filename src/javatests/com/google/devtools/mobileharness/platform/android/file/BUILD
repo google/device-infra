@@ -34,6 +34,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/path",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
+        "//src/javatests/com/google/devtools/mobileharness/shared/util/junit/rule:set_flags_oss",
         "@maven//:com_google_guava_guava",
         "@maven//:junit_junit",
         "@maven//:org_mockito_mockito_core",

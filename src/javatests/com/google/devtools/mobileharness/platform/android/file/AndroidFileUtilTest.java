@@ -36,6 +36,7 @@ import com.google.devtools.mobileharness.platform.android.systemspec.AndroidSyst
 import com.google.devtools.mobileharness.platform.android.user.AndroidUserUtil;
 import com.google.devtools.mobileharness.shared.util.command.LineCallback;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.junit.rule.SetFlagsOss;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import java.time.Duration;
 import java.util.Map;
@@ -52,6 +53,7 @@ import org.mockito.junit.MockitoRule;
 public final class AndroidFileUtilTest {
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
+  @Rule public final SetFlagsOss flags = new SetFlagsOss();
   @Mock private Adb adb;
   @Mock private LocalFileUtil fileUtil;
   @Mock private AndroidUserUtil androidUserUtil;

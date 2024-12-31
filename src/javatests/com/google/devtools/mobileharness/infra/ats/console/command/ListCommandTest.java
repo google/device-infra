@@ -32,7 +32,7 @@ import com.google.devtools.mobileharness.infra.ats.common.FlagsString;
 import com.google.devtools.mobileharness.infra.ats.console.AtsConsole;
 import com.google.devtools.mobileharness.infra.ats.console.AtsConsoleModule;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
-import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.shared.util.junit.rule.SetFlagsOss;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.shared.util.port.PortProber;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
@@ -76,8 +76,9 @@ public class ListCommandTest {
       RunfilesUtil.getRunfilesLocation(
           "javatests/com/google/devtools/mobileharness/infra/ats/console/command/testdata/android-cts");
 
-  @Rule public MockitoRule mockito = MockitoJUnit.rule();
-  @Rule public TemporaryFolder tmpFolder = new TemporaryFolder();
+  @Rule public final MockitoRule mockito = MockitoJUnit.rule();
+  @Rule public final TemporaryFolder tmpFolder = new TemporaryFolder();
+  @Rule public final SetFlagsOss flags = new SetFlagsOss();
 
   private final LocalFileUtil realLocalFileUtil = new LocalFileUtil();
 
@@ -124,12 +125,12 @@ public class ListCommandTest {
             tmpDirPath,
             "xts_res_dir_root",
             xtsResourceDirPath);
+    flags.setAllFlags(flagMap);
     ImmutableList<String> flagList =
         flagMap.entrySet().stream()
             .map(e -> String.format("--%s=%s", e.getKey(), e.getValue()))
             .collect(toImmutableList());
     FlagsString deviceInfraServiceFlags = FlagsString.of(String.join(" ", flagList), flagList);
-    Flags.parse(deviceInfraServiceFlags.flags().toArray(new String[0]));
 
     // Sets console stdout/stderr.
     ByteArrayOutputStream consoleOutOutputStream = new ByteArrayOutputStream();
@@ -156,8 +157,6 @@ public class ListCommandTest {
 
   @After
   public void tearDown() throws Exception {
-    Flags.resetToDefault();
-
     Path serverLogDir = Path.of(publicDirPath, "olc_server_log");
     if (Files.exists(serverLogDir)) {
       try (Stream<Path> files = Files.list(serverLogDir)) {

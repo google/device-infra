@@ -16,7 +16,6 @@
 
 package com.google.devtools.mobileharness.infra.ats.common;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil.MOBLY_TEST_SELECTOR_KEY;
 import static com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil.PARAM_XTS_SUITE_INFO;
@@ -48,7 +47,7 @@ import com.google.devtools.mobileharness.platform.android.xts.config.proto.Confi
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper;
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
-import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.shared.util.junit.rule.SetFlagsOss;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.google.inject.Guice;
@@ -66,7 +65,6 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
 import javax.inject.Inject;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -82,8 +80,9 @@ public final class SessionRequestHandlerUtilTest {
 
   private static final String XTS_ROOT_DIR_PATH = "/path/to/xts_root_dir";
 
-  @Rule public MockitoRule mockito = MockitoJUnit.rule();
-  @Rule public TemporaryFolder folder = new TemporaryFolder();
+  @Rule public final MockitoRule mockito = MockitoJUnit.rule();
+  @Rule public final TemporaryFolder folder = new TemporaryFolder();
+  @Rule public final SetFlagsOss flags = new SetFlagsOss();
 
   @Bind @Mock private DeviceQuerier deviceQuerier;
   @Bind @Mock private LocalFileUtil localFileUtil;
@@ -103,7 +102,7 @@ public final class SessionRequestHandlerUtilTest {
 
   @Before
   public void setUp() throws Exception {
-    setFlags(/* enableAtsMode= */ true, /* useTfRetry= */ false);
+    flags.setAllFlags(ImmutableMap.of("enable_ats_mode", "true", "use_tf_retry", "false"));
 
     sessionGenDir = folder.newFolder("session_gen_dir").toPath();
     sessionTempDir = folder.newFolder("session_temp_dir").toPath();
@@ -118,25 +117,6 @@ public final class SessionRequestHandlerUtilTest {
                 .addDeviceInfo(
                     DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
                 .build());
-  }
-
-  private void setFlags(boolean enableAtsMode, boolean useTfRetry) {
-    ImmutableMap<String, String> flagMap =
-        ImmutableMap.of(
-            "enable_ats_mode",
-            String.valueOf(enableAtsMode),
-            "use_tf_retry",
-            String.valueOf(useTfRetry));
-    Flags.parse(
-        flagMap.entrySet().stream()
-            .map(e -> String.format("--%s=%s", e.getKey(), e.getValue()))
-            .collect(toImmutableList())
-            .toArray(new String[0]));
-  }
-
-  @After
-  public void tearDown() {
-    Flags.resetToDefault();
   }
 
   private SessionRequestInfo.Builder defaultSessionRequestInfoBuilder() {
@@ -194,7 +174,7 @@ public final class SessionRequestHandlerUtilTest {
     assertThat(jobConfig.getDriver().getName()).isEqualTo("XtsTradefedTest");
     String driverParamsStr = jobConfig.getDriver().getParam();
     Map<String, String> driverParamsMap =
-        new Gson().fromJson(driverParamsStr, new TypeToken<Map<String, String>>() {});
+        new Gson().fromJson(driverParamsStr, new TypeToken<>() {});
     assertThat(driverParamsMap).containsExactlyEntriesIn(driverParams);
   }
 
@@ -254,7 +234,7 @@ public final class SessionRequestHandlerUtilTest {
     assertThat(jobConfig.getDriver().getName()).isEqualTo("XtsTradefedTest");
     String driverParamsStr = jobConfig.getDriver().getParam();
     Map<String, String> driverParamsMap =
-        new Gson().fromJson(driverParamsStr, new TypeToken<Map<String, String>>() {});
+        new Gson().fromJson(driverParamsStr, new TypeToken<>() {});
     assertThat(driverParamsMap).containsExactlyEntriesIn(driverParams);
   }
 
@@ -400,7 +380,7 @@ public final class SessionRequestHandlerUtilTest {
   }
 
   @Test
-  public void initializeJobConfig_allGivenSerialsNotExist_noJobConfig() throws Exception {
+  public void initializeJobConfig_allGivenSerialsNotExist_noJobConfig() {
     assertThrows(
         MobileHarnessException.class,
         () ->
@@ -496,7 +476,7 @@ public final class SessionRequestHandlerUtilTest {
 
   @Test
   public void getFilteredTradefedModules_testFilters_tfRetryWithModules() throws Exception {
-    setFlags(/* enableAtsMode= */ true, /* useTfRetry= */ true);
+    flags.setAllFlags(ImmutableMap.of("enable_ats_mode", "true", "use_tf_retry", "true"));
     Configuration config1 =
         defaultConfigurationBuilder()
             .setMetadata(

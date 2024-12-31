@@ -45,7 +45,7 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.proto.Sess
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.SessionStub;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
-import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.shared.util.junit.rule.SetFlagsOss;
 import com.google.devtools.mobileharness.shared.util.port.PortProber;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
@@ -56,7 +56,6 @@ import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import java.io.PrintStream;
 import java.nio.file.Path;
 import javax.inject.Inject;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -67,7 +66,8 @@ import org.junit.runners.JUnit4;
 @RunWith(JUnit4.class)
 public class AtsSessionStubTest {
 
-  @Rule public TemporaryFolder tmpFolder = new TemporaryFolder();
+  @Rule public final TemporaryFolder tmpFolder = new TemporaryFolder();
+  @Rule public final SetFlagsOss flags = new SetFlagsOss();
 
   private final SystemUtil systemUtil = new SystemUtil();
 
@@ -109,12 +109,12 @@ public class AtsSessionStubTest {
             "false",
             "tmp_dir_root",
             tmpDirPath);
+    flags.setAllFlags(flagMap);
     ImmutableList<String> flagList =
         flagMap.entrySet().stream()
             .map(e -> String.format("--%s=%s", e.getKey(), e.getValue()))
             .collect(toImmutableList());
     deviceInfraServiceFlags = FlagsString.of(String.join(" ", flagList), flagList);
-    Flags.parse(deviceInfraServiceFlags.flags().toArray(new String[0]));
 
     sleeper = Sleeper.defaultSleeper();
     threadPool = ThreadPools.createStandardThreadPool("main-thread");
@@ -138,11 +138,6 @@ public class AtsSessionStubTest {
             new OlcServerModule(deviceInfraServiceFlags, "ATS console", "fake_client_id"),
             BoundFieldModule.of(this))
         .injectMembers(this);
-  }
-
-  @After
-  public void tearDown() {
-    Flags.resetToDefault();
   }
 
   @Test

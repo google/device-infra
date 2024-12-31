@@ -16,7 +16,6 @@
 
 package com.google.devtools.mobileharness.infra.client.api;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static com.google.common.truth.extensions.proto.ProtoTruth.assertThat;
@@ -59,9 +58,9 @@ import com.google.devtools.mobileharness.shared.context.InvocationContext.Contex
 import com.google.devtools.mobileharness.shared.context.InvocationContext.InvocationInfo;
 import com.google.devtools.mobileharness.shared.context.InvocationContext.InvocationType;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
-import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.junit.rule.CaptureLogs;
 import com.google.devtools.mobileharness.shared.util.junit.rule.PrintTestName;
+import com.google.devtools.mobileharness.shared.util.junit.rule.SetFlagsOss;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
@@ -83,7 +82,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import javax.inject.Inject;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -95,6 +93,7 @@ public class ClientApiTest {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
+  @Rule public final SetFlagsOss flags = new SetFlagsOss();
   @Rule public final CaptureLogs captureLogs = new CaptureLogs("", /* printFailedLogs= */ true);
   @Rule public final PrintTestName printTestName = new PrintTestName();
 
@@ -117,19 +116,14 @@ public class ClientApiTest {
 
   @Before
   public void setUp() {
-    ImmutableMap<String, String> flagMap =
+    flags.setAllFlags(
         ImmutableMap.of(
             "detect_adb_device",
             "false",
             "external_adb_initializer_template",
             "true",
             "no_op_device_num",
-            "1");
-    ImmutableList<String> flagList =
-        flagMap.entrySet().stream()
-            .map(e -> String.format("--%s=%s", e.getKey(), e.getValue()))
-            .collect(toImmutableList());
-    Flags.parse(flagList.toArray(new String[0]));
+            "1"));
 
     globalInternalEventBus = new EventBus();
 
@@ -145,11 +139,6 @@ public class ClientApiTest {
                 },
                 BoundFieldModule.of(this))
             .getInstance(MessagingManager.class);
-  }
-
-  @After
-  public void tearDown() {
-    Flags.resetToDefault();
   }
 
   @Test

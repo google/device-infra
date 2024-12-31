@@ -29,7 +29,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.infra.ats.common.FlagsString;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
-import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.shared.util.junit.rule.SetFlagsOss;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.shared.util.port.PortProber;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
@@ -43,7 +43,6 @@ import javax.inject.Inject;
 import org.jline.reader.History;
 import org.jline.reader.LineReader;
 import org.jline.utils.AttributedString;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -57,8 +56,9 @@ import org.mockito.junit.MockitoRule;
 @RunWith(JUnit4.class)
 public final class AtsConsoleTest {
 
-  @Rule public MockitoRule mockito = MockitoJUnit.rule();
-  @Rule public TemporaryFolder tmpFolder = new TemporaryFolder();
+  @Rule public final MockitoRule mockito = MockitoJUnit.rule();
+  @Rule public final TemporaryFolder tmpFolder = new TemporaryFolder();
+  @Rule public final SetFlagsOss flags = new SetFlagsOss();
 
   @Mock private LineReader lineReader;
   @Mock private History history;
@@ -109,12 +109,12 @@ public final class AtsConsoleTest {
             tmpDirPath,
             "xts_res_dir_root",
             xtsResourceDirPath);
+    flags.setAllFlags(flagMap);
     ImmutableList<String> flagList =
         flagMap.entrySet().stream()
             .map(e -> String.format("--%s=%s", e.getKey(), e.getValue()))
             .collect(toImmutableList());
     deviceInfraServiceFlags = FlagsString.of(String.join(" ", flagList), flagList);
-    Flags.parse(deviceInfraServiceFlags.flags().toArray(new String[0]));
 
     ByteArrayOutputStream consoleOutOutputStream = new ByteArrayOutputStream();
     consoleOutPrintStream = new PrintStream(consoleOutOutputStream, false, UTF_8);
@@ -138,11 +138,6 @@ public final class AtsConsoleTest {
                 /* parseCommandOnly= */ false));
     injector.injectMembers(this);
     atsConsole.injector = injector;
-  }
-
-  @After
-  public void tearDown() {
-    Flags.resetToDefault();
   }
 
   @Test

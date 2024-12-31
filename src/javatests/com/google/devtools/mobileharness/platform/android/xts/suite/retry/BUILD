@@ -32,7 +32,6 @@ java_library(
     ],
     deps = [
         "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:suite_test_filter",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:previous_result_loader",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:retry_args",
@@ -42,8 +41,8 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/subplan:sub_plan",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/subplan:sub_plan_helper",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
-        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
+        "//src/javatests/com/google/devtools/mobileharness/shared/util/junit/rule:set_flags_oss",
         "//src/javatests/com/google/devtools/mobileharness/shared/util/runfiles:runfiles_util",
         "@com_google_protobuf//:protobuf_java",
         "@maven//:com_google_guava_guava",

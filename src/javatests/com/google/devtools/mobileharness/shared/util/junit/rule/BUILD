@@ -66,3 +66,13 @@ java_library(
         "@maven//:junit_junit",
     ],
 )
+
+java_library(
+    name = "set_flags_oss",
+    srcs = ["SetFlagsOss.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
+        "@maven//:com_google_guava_guava",
+        "@maven//:junit_junit",
+    ],
+)

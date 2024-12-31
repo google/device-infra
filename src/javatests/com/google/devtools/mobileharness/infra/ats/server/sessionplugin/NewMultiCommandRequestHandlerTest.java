@@ -71,7 +71,7 @@ import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandException;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
-import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.shared.util.junit.rule.SetFlagsOss;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
@@ -94,7 +94,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 import java.util.UUID;
 import javax.inject.Inject;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -125,6 +124,7 @@ public final class NewMultiCommandRequestHandlerTest {
 
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
   @Rule public final TemporaryFolder tmpFolder = new TemporaryFolder();
+  @Rule public final SetFlagsOss flags = new SetFlagsOss();
 
   @Bind @Mock private DeviceQuerier deviceQuerier;
   @Bind @Mock private SessionRequestHandlerUtil sessionRequestHandlerUtil;
@@ -150,7 +150,7 @@ public final class NewMultiCommandRequestHandlerTest {
   @Before
   public void setup() throws Exception {
     String publicDir = tmpFolder.newFolder("public_dir").getAbsolutePath();
-    Flags.parse(new String[] {String.format("--public_dir=%s", publicDir)});
+    flags.setAllFlags(ImmutableMap.of("public_dir", publicDir));
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
     when(sessionInfo.getSessionId()).thenReturn("session_id");
     properties.add(Job.IS_XTS_TF_JOB, "true");
@@ -233,11 +233,6 @@ public final class NewMultiCommandRequestHandlerTest {
                     new XtsTradefedRuntimeInfo(
                         /* invocations= */ ImmutableList.of(), /* timestamp= */ Instant.now()),
                     /* lastModifiedTime= */ Instant.now())));
-  }
-
-  @After
-  public void tearDown() {
-    Flags.resetToDefault();
   }
 
   @Test

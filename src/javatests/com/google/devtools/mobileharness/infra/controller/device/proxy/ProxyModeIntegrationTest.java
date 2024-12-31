@@ -16,7 +16,6 @@
 
 package com.google.devtools.mobileharness.infra.controller.device.proxy;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 
@@ -31,9 +30,9 @@ import com.google.devtools.mobileharness.infra.client.api.ClientApi;
 import com.google.devtools.mobileharness.infra.client.api.ClientApiModule;
 import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalMode;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
-import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.junit.rule.CaptureLogs;
 import com.google.devtools.mobileharness.shared.util.junit.rule.PrintTestName;
+import com.google.devtools.mobileharness.shared.util.junit.rule.SetFlagsOss;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
@@ -46,7 +45,6 @@ import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.Timeout;
 import java.time.Duration;
 import javax.inject.Inject;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -56,6 +54,7 @@ import org.junit.runners.JUnit4;
 @RunWith(JUnit4.class)
 public class ProxyModeIntegrationTest {
 
+  @Rule public final SetFlagsOss flags = new SetFlagsOss();
   @Rule public final CaptureLogs captureLogs = new CaptureLogs("", /* printFailedLogs= */ true);
   @Rule public final PrintTestName printTestName = new PrintTestName();
 
@@ -69,26 +68,16 @@ public class ProxyModeIntegrationTest {
 
   @Before
   public void setUp() {
-    ImmutableMap<String, String> flagMap =
+    flags.setAllFlags(
         ImmutableMap.of(
             "detect_adb_device",
             "false",
             "enable_proxy_mode",
             "true",
             "external_adb_initializer_template",
-            "true");
-    ImmutableList<String> flagList =
-        flagMap.entrySet().stream()
-            .map(e -> String.format("--%s=%s", e.getKey(), e.getValue()))
-            .collect(toImmutableList());
-    Flags.parse(flagList.toArray(new String[0]));
+            "true"));
 
     Guice.createInjector(new ClientApiModule(), BoundFieldModule.of(this)).injectMembers(this);
-  }
-
-  @After
-  public void tearDown() {
-    Flags.resetToDefault();
   }
 
   @Test
