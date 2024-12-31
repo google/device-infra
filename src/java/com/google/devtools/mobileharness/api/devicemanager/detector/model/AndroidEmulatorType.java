@@ -17,4 +17,6 @@
 package com.google.devtools.mobileharness.api.devicemanager.detector.model;
 
 /** Android emulator device types */
-public enum AndroidEmulatorType {}
+public enum AndroidEmulatorType {
+  JIT_EMULATOR,
+}

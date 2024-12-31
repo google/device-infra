@@ -24,6 +24,19 @@ package(
 )
 
 java_library(
+    name = "android_jit_emulator_detector",
+    srcs = ["AndroidJitEmulatorDetector.java"],
+    deps = [
+        ":base",
+        "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector/model",
+        "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector/model:android_emulator_type",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "base",
     srcs = ["Detector.java"],
     deps = [

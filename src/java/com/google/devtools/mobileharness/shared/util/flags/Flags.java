@@ -47,6 +47,14 @@ public class Flags {
       converter = Flag.StringConverter.class)
   public Flag<String> aaptPath = aaptPathDefault;
 
+  private static final Flag<String> acloudPathDefault = Flag.value("/bin/acloud_prebuilt");
+
+  @com.beust.jcommander.Parameter(
+      names = "--acloud_path",
+      description = "Path to the acloud binary.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> acloudPath = acloudPathDefault;
+
   private static final Flag<Integer> adbCommandRetryAttemptsDefault = Flag.value(2);
 
   @com.beust.jcommander.Parameter(
@@ -215,6 +223,16 @@ public class Flags {
               + " Default is 30 seconds.",
       converter = DurationFlag.DurationConverter.class)
   public Flag<Duration> androidFactoryResetWaitTime = androidFactoryResetWaitTimeDefault;
+
+  private static final Flag<Integer> androidJitEmulatorNumDefault = Flag.value(0);
+
+  @com.beust.jcommander.Parameter(
+      names = "--android_jit_emulator_num",
+      description =
+          "The naximum number of android Just-in-time emulators that could be run on the server"
+              + " simultaneously.",
+      converter = Flag.IntegerConverter.class)
+  public Flag<Integer> androidJitEmulatorNum = androidJitEmulatorNumDefault;
 
   private static final Flag<String> apiConfigFileDefault = Flag.value("");
 
