@@ -17,13 +17,16 @@
 package com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin;
 
 import static com.google.common.base.Ascii.toUpperCase;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
 import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
+import static java.util.Arrays.stream;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
@@ -38,6 +41,7 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.proto.Sess
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommandState;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.console.util.result.ResultListerHelper;
+import com.google.devtools.mobileharness.infra.ats.console.util.verifier.VerifierResultHelper;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
@@ -47,6 +51,7 @@ import com.google.devtools.mobileharness.platform.android.xts.suite.retry.Previo
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryType;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import java.io.File;
 import java.nio.file.Path;
@@ -54,6 +59,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.annotation.Nullable;
@@ -76,6 +82,7 @@ class RunCommandHandler {
   private final XtsJobCreator xtsJobCreator;
   private final PreviousResultLoader previousResultLoader;
   private final ResultListerHelper resultListerHelper;
+  private final VerifierResultHelper verifierResultHelper;
 
   /** Set in {@link #initialize}. */
   private volatile boolean initialized;
@@ -92,7 +99,8 @@ class RunCommandHandler {
       SuiteResultReporter suiteResultReporter,
       XtsJobCreator xtsJobCreator,
       PreviousResultLoader previousResultLoader,
-      ResultListerHelper resultListerHelper) {
+      ResultListerHelper resultListerHelper,
+      VerifierResultHelper verifierResultHelper) {
     this.localFileUtil = localFileUtil;
     this.sessionRequestHandlerUtil = sessionRequestHandlerUtil;
     this.sessionResultHandlerUtil = sessionResultHandlerUtil;
@@ -101,6 +109,7 @@ class RunCommandHandler {
     this.xtsJobCreator = xtsJobCreator;
     this.previousResultLoader = previousResultLoader;
     this.resultListerHelper = resultListerHelper;
+    this.verifierResultHelper = verifierResultHelper;
   }
 
   void initialize(RunCommand command) throws MobileHarnessException, InterruptedException {
@@ -230,6 +239,20 @@ class RunCommandHandler {
                 prevResultDir, resultDir);
           }
         }
+      }
+      if (Flags.instance().enableCtsVerifierResultReporter.getNonNull() && result != null) {
+        ImmutableSet<String> serials =
+            allJobs.stream()
+                .flatMap(jobInfo -> jobInfo.tests().getAll().values().stream())
+                .map(testInfo -> testInfo.properties().getOptional(Test.DEVICE_ID_LIST))
+                .filter(Optional::isPresent)
+                .flatMap(ids -> stream(ids.get().split(",")))
+                .collect(toImmutableSet());
+        logger
+            .atInfo()
+            .with(IMPORTANCE, IMPORTANT)
+            .log("Push cts-v-interactive results to %s", serials);
+        verifierResultHelper.broadcastResults(result, serials);
       }
     } finally {
       sessionResultHandlerUtil.cleanUpJobGenDirs(allJobs);

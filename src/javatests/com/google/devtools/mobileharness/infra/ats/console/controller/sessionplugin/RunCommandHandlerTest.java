@@ -42,6 +42,7 @@ import com.google.devtools.mobileharness.infra.ats.console.result.report.Compati
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportMerger;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportParser;
 import com.google.devtools.mobileharness.infra.ats.console.util.result.ResultListerHelper;
+import com.google.devtools.mobileharness.infra.ats.console.util.verifier.VerifierResultHelper;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.SessionGenDir;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.SessionTempDir;
@@ -113,6 +114,7 @@ public final class RunCommandHandlerTest {
   @Bind @Mock private XtsJobCreator xtsJobCreator;
   @Bind @Mock private PreviousResultLoader previousResultLoader;
   @Bind @Mock private ResultListerHelper resultListerHelper;
+  @Bind @Mock private VerifierResultHelper verifierResultHelper;
 
   private RunCommandHandler runCommandHandler;
   @Inject private SessionRequestHandlerUtil sessionRequestHandlerUtil;
@@ -152,7 +154,8 @@ public final class RunCommandHandlerTest {
             suiteResultReporter,
             xtsJobCreator,
             previousResultLoader,
-            resultListerHelper);
+            resultListerHelper,
+            verifierResultHelper);
   }
 
   @Test

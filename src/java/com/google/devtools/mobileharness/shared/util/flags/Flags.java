@@ -761,6 +761,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableCloudFileTransfer = enableCloudFileTransferDefault;
 
+  private static final Flag<Boolean> enableCtsVerifierResultReporterDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enable_cts_verifier_result_reporter",
+      description = "Whether enable result reporter for cts verifier.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableCtsVerifierResultReporter = enableCtsVerifierResultReporterDefault;
+
   private static final Flag<Boolean> enableDebugModeDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(
