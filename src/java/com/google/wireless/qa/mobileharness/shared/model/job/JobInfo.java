@@ -48,7 +48,6 @@ import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.JobSpecHelp
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.ProtoJobSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.UnionJobSpec;
-import com.google.wireless.qa.mobileharness.shared.model.job.out.Errors;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Log;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.RemoteFiles;
@@ -212,7 +211,7 @@ public class JobInfo extends JobScheduleUnit {
   private final Properties properties;
 
   /** Job warnings. */
-  private final Errors errors;
+  private final Warnings warnings;
 
   /** Job spec which contains the structured parameters and files. */
   private final ProtoJobSpec spec;
@@ -247,7 +246,7 @@ public class JobInfo extends JobScheduleUnit {
       Result result,
       Log log,
       Properties properties,
-      Errors errors,
+      Warnings warnings,
       JobSpec jobSpec) {
     super(locator, jobUser, type, setting, timing, params, scopedSpecs, subDeviceSpecs);
     this.files = files;
@@ -257,7 +256,7 @@ public class JobInfo extends JobScheduleUnit {
     this.result = result;
     this.log = log;
     this.properties = properties;
-    this.errors = errors;
+    this.warnings = warnings;
     this.spec = new ProtoJobSpec(jobSpec);
     this.tests = new TestInfos(this);
     this.jobExecutionUnitSupplier =
@@ -305,7 +304,7 @@ public class JobInfo extends JobScheduleUnit {
     result = new Result(timing(), params());
     log = new Log(timing());
     properties = new Properties(timing());
-    errors = new Errors(log, timing());
+    warnings = new Warnings(log, timing().toNewTiming());
     spec = new ProtoJobSpec();
     tests = new TestInfos(this);
 
@@ -427,19 +426,9 @@ public class JobInfo extends JobScheduleUnit {
     return properties;
   }
 
-  /**
-   * Please use {@link #warnings()} instead.
-   *
-   * <p>Warnings that occur during execution.
-   */
-  @Deprecated
-  public Errors errors() {
-    return errors;
-  }
-
   /** Warnings that occur during execution. */
   public Warnings warnings() {
-    return errors.toWarnings();
+    return warnings;
   }
 
   /** Timer of the job which starts when the job starts and expires when the job expires. */
