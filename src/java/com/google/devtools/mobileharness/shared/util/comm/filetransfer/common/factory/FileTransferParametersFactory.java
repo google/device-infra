@@ -19,7 +19,7 @@ package com.google.devtools.mobileharness.shared.util.comm.filetransfer.common.f
 import static com.google.devtools.mobileharness.shared.util.comm.filetransfer.common.factory.FileTransferParameters.DEFAULT_ZIP_TIMEOUT;
 
 import com.google.common.flogger.FluentLogger;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;

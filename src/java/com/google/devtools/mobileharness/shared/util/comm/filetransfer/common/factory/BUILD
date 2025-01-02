@@ -29,7 +29,7 @@ java_library(
     srcs = ["FileTransferClientFactory.java"],
     deps = [
         ":file_transfer_parameters",
-        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/wireless/qa/mobileharness/shared/comm/filetransfer",
     ],
 )
@@ -42,10 +42,10 @@ java_library(
     deps = [
         ":file_transfer_client_factory",
         ":file_transfer_parameters",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/filetransfer/cloud/client:cloud_file_transfer_client",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/filetransfer/cloud/rpc/stub:cloud_file_transfer_stub",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "//src/java/com/google/wireless/qa/mobileharness/shared/comm/filetransfer",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_errorprone_error_prone_annotations",
@@ -69,8 +69,8 @@ java_library(
     srcs = ["FileTransferParametersFactory.java"],
     deps = [
         ":file_transfer_parameters",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in",
         "@maven//:com_google_guava_guava",

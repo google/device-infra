@@ -16,11 +16,11 @@
 
 package com.google.wireless.qa.mobileharness.shared.comm.filetransfer;
 
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.constant.closeable.MobileHarnessAutoCloseable;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.common.proto.FileInfoProto.FileInfo;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.common.watcher.FileTransferWatcher;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import java.util.List;
 import javax.annotation.Nullable;
 

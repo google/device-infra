@@ -29,6 +29,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.common.metrics.stability.rpc.RpcExceptionWithErrorId;
 import com.google.devtools.deviceinfra.shared.util.file.remote.constant.RemoteFileType;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.util.base.StrUtil;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.common.FileTransferConstant;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.proto.CloudFileTransfer.CompressOptions;
@@ -61,8 +62,6 @@ import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.protobuf.Any;
 import com.google.protobuf.ByteString;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
-import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import io.grpc.Status;
 import io.grpc.StatusException;
 import io.grpc.StatusRuntimeException;
@@ -161,7 +160,7 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
     logger.atInfo().log("Sending file: %s", local);
     if (!fileOrDirExists(local)) {
       throw new MobileHarnessException(
-          ErrorCode.FILE_TRANSFER_ERROR, "File Or directory doesn't exist: " + local);
+          InfraErrorId.FT_FILE_NOT_EXIST, "File Or directory doesn't exist: " + local);
     }
     FileOperationStatus result = sendDirectlyIfSmall(metadata, Path.of(local));
     if (result.isFinished()) {
@@ -220,7 +219,7 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
     try {
       if (!fileOrDirExists(local.toString())) {
         throw new MobileHarnessException(
-            ErrorCode.FILE_TRANSFER_ERROR, "File Or directory doesn't exist: " + local);
+            InfraErrorId.FT_FILE_NOT_EXIST, "File Or directory doesn't exist: " + local);
       }
 
       if (params.smallFileSize() < 0) {
@@ -349,7 +348,7 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
   public long getFile(Path remote, Path local) throws MobileHarnessException, InterruptedException {
     if (!isWritableFileType(local)) {
       throw new MobileHarnessException(
-          ErrorCode.FILE_WRITE_ERROR, "Doesn't support to write to file " + local);
+          InfraErrorId.FT_LOCAL_FILE_NOT_WRITABLE, "Doesn't support to write to file " + local);
     }
     FileTransferEvent.Builder event =
         FileTransferEvent.builder().setStart(Instant.now()).setType(ExecutionType.GET);
@@ -428,7 +427,8 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
         mergeDir(finalizedReceivedFileOrDir, local);
       } else {
         // Should never reach here but just in case the received file is not found.
-        throw new MobileHarnessException(ErrorCode.FILE_NOT_FOUND, "Received file not found.");
+        throw new MobileHarnessException(
+            InfraErrorId.FT_RECEIVED_FILE_NOT_FOUND, "Received file not found.");
       }
     } finally {
       // Cleanup the unzipped caches as soon as possible as zipped file for directory could be large
@@ -601,11 +601,11 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
         }
         throw e;
       } catch (Throwable e) {
-        throw new MobileHarnessException(ErrorCode.FILE_TRANSFER_ERROR, "Failed to " + msg, e);
+        throw new MobileHarnessException(InfraErrorId.FT_GENERAL_ERROR, "Failed to " + msg, e);
       }
     }
     throw new MobileHarnessException(
-        ErrorCode.FILE_TRANSFER_ERROR,
+        InfraErrorId.FT_GENERAL_ERROR,
         String.format(
             "Failed to %s after %s attempts. Exceptions from all tries:\n%s",
             msg, params.attempts(), String.join(",", exceptions)));
@@ -651,10 +651,10 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
       logger.atInfo().log("Finish to %s", msg);
       return response;
     } catch (ExecutionException e) {
-      throw new MobileHarnessException(ErrorCode.FILE_TRANSFER_ERROR, "Failed to " + msg, e);
+      throw new MobileHarnessException(InfraErrorId.FT_GENERAL_ERROR, "Failed to " + msg, e);
     } catch (TimeoutException e) {
       future.cancel(true);
-      throw new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+      throw new MobileHarnessException(
           isUploadFile
               ? InfraErrorId.LAB_UPLOAD_FILE_TIMEOUT
               : InfraErrorId.LAB_DOWNLOAD_FILE_TIMEOUT,

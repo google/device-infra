@@ -16,7 +16,7 @@
 
 package com.google.devtools.mobileharness.shared.util.comm.filetransfer.common.factory;
 
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.comm.filetransfer.FileTransferClient;
 
 /** Factory of {@link FileTransferClient}. */

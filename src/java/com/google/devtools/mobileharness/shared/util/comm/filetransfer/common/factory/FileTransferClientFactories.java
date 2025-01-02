@@ -17,10 +17,10 @@
 package com.google.devtools.mobileharness.shared.util.comm.filetransfer.common.factory;
 
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.client.CloudFileTransferClient;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.rpc.stub.CloudFileTransferStubInterface;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.comm.filetransfer.FileTransferClient;
 
 /**

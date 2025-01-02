@@ -17,8 +17,8 @@
 package com.google.devtools.mobileharness.shared.util.comm.filetransfer.common.watcher;
 
 import com.google.common.collect.Sets;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.constant.closeable.MobileHarnessAutoCloseable;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.comm.filetransfer.FileTransferClient;
 import java.util.Set;
 
