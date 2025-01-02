@@ -69,6 +69,18 @@ message GetDeviceSearchSuggestionsRequest {}
 
 message GetDeviceSearchSuggestionsResponse {
   repeated SearchSuggestions search_suggestions = 1;
+  // The search suggestions for device supported dimensions.
+  repeated SearchSuggestions supported_dimension_search_suggestions = 2;
+  // The search suggestions for device required dimensions.
+  repeated SearchSuggestions required_dimension_search_suggestions = 3;
+  // The search suggestions for MasterDevice filter keys.
+  // - Type
+  // - Status
+  // - Owner
+  // - Driver
+  // - Decorator
+  // - Custom keyword, e.g. "version"
+  repeated SearchSuggestions master_device_search_suggestions = 4;
 }
 
 message GetGroupedDeviceInfosRequest {
