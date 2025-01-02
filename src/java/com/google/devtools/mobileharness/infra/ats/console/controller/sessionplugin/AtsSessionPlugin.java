@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.infra.ats.console.controller.sessionpl
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
 import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
@@ -28,6 +29,7 @@ import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toPro
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoTimestamp;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
@@ -36,6 +38,8 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
 import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
+import com.google.devtools.mobileharness.api.testrunner.device.cache.XtsDeviceCache;
+import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.infra.ats.common.jobcreator.XtsJobCreator;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionCancellation;
@@ -67,6 +71,7 @@ import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefe
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil.KillSignal;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -83,12 +88,15 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -123,6 +131,7 @@ public class AtsSessionPlugin {
   private final TestMessageUtil testMessageUtil;
   private final XtsTradefedRuntimeInfoFileUtil xtsTradefedRuntimeInfoFileUtil;
   private final LocalFileUtil localFileUtil;
+  private final XtsDeviceCache xtsDeviceCache;
   private final ListeningScheduledExecutorService scheduledThreadPool;
 
   @GuardedBy("itself")
@@ -142,6 +151,12 @@ public class AtsSessionPlugin {
   @GuardedBy("addingJobLock")
   private AtsSessionCancellation sessionCancellation;
 
+  @GuardedBy("addingJobLock")
+  private final Set<String> cachedDeviceControlIds = new HashSet<>();
+
+  @GuardedBy("addingJobLock")
+  private boolean sessionEnded;
+
   /** Set in {@link #onSessionStarting}. */
   private volatile AtsSessionPluginConfig config;
 
@@ -158,7 +173,8 @@ public class AtsSessionPlugin {
       RunCommandHandler runCommandHandler,
       TestMessageUtil testMessageUtil,
       XtsTradefedRuntimeInfoFileUtil xtsTradefedRuntimeInfoFileUtil,
-      LocalFileUtil localFileUtil) {
+      LocalFileUtil localFileUtil,
+      XtsDeviceCache xtsDeviceCache) {
     this.sessionInfo = sessionInfo;
     this.dumpEnvVarCommandHandler = dumpEnvVarCommandHandler;
     this.dumpStackCommandHandler = dumpStackCommandHandler;
@@ -169,6 +185,7 @@ public class AtsSessionPlugin {
     this.testMessageUtil = testMessageUtil;
     this.xtsTradefedRuntimeInfoFileUtil = xtsTradefedRuntimeInfoFileUtil;
     this.localFileUtil = localFileUtil;
+    this.xtsDeviceCache = xtsDeviceCache;
     this.scheduledThreadPool =
         ThreadPools.createStandardScheduledThreadPool(
             "ats-session-plugin-scheduled-thread-pool-" + sessionInfo.getSessionId(),
@@ -333,6 +350,18 @@ public class AtsSessionPlugin {
   @Subscribe
   public void onSessionEnded(SessionEndedEvent event)
       throws MobileHarnessException, InterruptedException {
+    synchronized (addingJobLock) {
+      sessionEnded = true;
+
+      // Invalidates xTS device caches.
+      if (!cachedDeviceControlIds.isEmpty()) {
+        logger.atInfo().log("Invalidate xTS device caches: %s", cachedDeviceControlIds);
+        for (String deviceControlId : cachedDeviceControlIds) {
+          xtsDeviceCache.invalidateCache(deviceControlId);
+        }
+      }
+    }
+
     scheduledThreadPool.shutdown();
 
     if (config.getCommandCase().equals(CommandCase.RUN_COMMAND)) {
@@ -541,8 +570,12 @@ public class AtsSessionPlugin {
    * @return a list of job IDs of the added jobs
    */
   @CanIgnoreReturnValue
-  private ImmutableList<String> addJobsToSession(ImmutableList<JobInfo> jobInfoList) {
-    ImmutableList.Builder<String> jobIds = ImmutableList.builder();
+  private ImmutableList<String> addJobsToSession(ImmutableList<JobInfo> jobInfos) {
+    ImmutableSet<String> deviceControlIds =
+        jobInfos.stream()
+            .map(SessionRequestHandlerUtil::getControlIdsSpecifiedInJob)
+            .flatMap(Collection::stream)
+            .collect(toImmutableSet());
 
     synchronized (addingJobLock) {
       if (sessionCancellation != null) {
@@ -550,13 +583,27 @@ public class AtsSessionPlugin {
             "Skip adding jobs to session due to [%s]", shortDebugString(sessionCancellation));
         return ImmutableList.of();
       }
+      if (sessionEnded) {
+        logger.atInfo().log("Skip adding jobs to session because session ended");
+        return ImmutableList.of();
+      }
 
-      for (JobInfo jobInfo : jobInfoList) {
+      // Caches xTS devices before adding jobs to session.
+      if (!deviceControlIds.isEmpty() && Flags.instance().atsConsoleCacheXtsDevices.getNonNull()) {
+        logger.atInfo().log("Cache xTS devices: %s", deviceControlIds);
+        cachedDeviceControlIds.addAll(deviceControlIds);
+        for (String deviceControlId : deviceControlIds) {
+          xtsDeviceCache.cache(deviceControlId, ChronoUnit.YEARS.getDuration());
+        }
+      }
+
+      // Adds jobs to session.
+      for (JobInfo jobInfo : jobInfos) {
         sessionInfo.addJob(jobInfo);
-        jobIds.add(jobInfo.locator().getId());
       }
     }
-    return jobIds.build();
+
+    return jobInfos.stream().map(jobInfo -> jobInfo.locator().getId()).collect(toImmutableList());
   }
 
   /** TODO: Support killing jobs here (for non-TF jobs or jobs during allocation). */
