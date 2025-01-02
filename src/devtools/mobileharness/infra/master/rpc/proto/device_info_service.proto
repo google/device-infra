@@ -65,7 +65,9 @@ message SearchSuggestions {
   repeated string suggestion = 2;
 }
 
-message GetDeviceSearchSuggestionsRequest {}
+message GetDeviceSearchSuggestionsRequest {
+  bool only_return_dimensions = 1;
+}
 
 message GetDeviceSearchSuggestionsResponse {
   repeated SearchSuggestions search_suggestions = 1;
