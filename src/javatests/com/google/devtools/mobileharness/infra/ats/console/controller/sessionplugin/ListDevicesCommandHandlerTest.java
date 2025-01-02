@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.infra.ats.console.controller.sessionpl
 
 import static com.google.common.truth.extensions.proto.ProtoTruth.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
@@ -30,6 +31,8 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.proto.Sess
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceState;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.inject.Guice;
@@ -87,8 +90,19 @@ public class ListDevicesCommandHandlerTest {
                             Dimension.newBuilder()
                                 .setName(Name.BATTERY_LEVEL.lowerCaseName())
                                 .setValue("100")))
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder()
+                        .setId("def")
+                        .setStatus("idle")
+                        .addType("AndroidOnlineDevice")
+                        .addDimension(
+                            Dimension.newBuilder()
+                                .setName(Name.BATTERY_LEVEL.lowerCaseName())
+                                .setValue("100")))
                 .build());
-    when(androidAdbInternalUtil.getDeviceSerialsAsMap(any())).thenReturn(ImmutableMap.of());
+    when(androidAdbInternalUtil.getDeviceSerialsAsMap(any()))
+        .thenReturn(ImmutableMap.of("abc", DeviceState.DEVICE));
+    when(androidAdbUtil.getProperty(eq("abc"), any(AndroidProperty.class))).thenReturn("n/a");
     Instant now = Instant.now();
     when(clock.instant()).thenReturn(now);
 

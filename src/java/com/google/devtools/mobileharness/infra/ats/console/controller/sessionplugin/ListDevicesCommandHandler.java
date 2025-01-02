@@ -160,7 +160,7 @@ class ListDevicesCommandHandler {
     remainingQueryDuration = max(remainingQueryDuration, Duration.ZERO);
     DeviceQueryResult deviceQueryResult = null;
     try {
-      deviceQueryResult = deviceQueryResultFuture.get(remainingQueryDuration.getSeconds(), SECONDS);
+      deviceQueryResult = deviceQueryResultFuture.get(remainingQueryDuration.toSeconds(), SECONDS);
     } catch (ExecutionException | TimeoutException e) {
       logger.atWarning().withCause(e).log(
           "Failed to query device within %s. Going to use status from ADB directly.",
@@ -171,8 +171,10 @@ class ListDevicesCommandHandler {
     if (deviceQueryResult != null) {
       for (DeviceInfo deviceInfo : deviceQueryResult.getDeviceInfoList()) {
         String serial = deviceInfo.getId();
-        deviceDescriptorMap.put(
-            deviceInfo.getId(), convertDeviceInfo(deviceInfo, deviceInfoFromAdb.get(serial)));
+        if (deviceInfoFromAdb.containsKey(serial)) {
+          deviceDescriptorMap.put(
+              deviceInfo.getId(), convertDeviceInfo(deviceInfo, deviceInfoFromAdb.get(serial)));
+        }
       }
     }
 
