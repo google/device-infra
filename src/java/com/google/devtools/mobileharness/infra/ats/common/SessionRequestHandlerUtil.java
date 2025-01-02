@@ -76,6 +76,8 @@ import com.google.devtools.mobileharness.shared.util.jobconfig.JobInfoCreator;
 import com.google.gson.Gson;
 import com.google.inject.Provider;
 import com.google.protobuf.TextFormat.ParseException;
+import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
+import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Value;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.Priority;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
@@ -115,39 +117,40 @@ public class SessionRequestHandlerUtil {
   public static final String ANDROID_REAL_DEVICE_TYPE = "AndroidRealDevice";
   public static final String ANDROID_LOCAL_EMULATOR_TYPE = "AndroidLocalEmulator";
   public static final String ANDROID_DEVICE_TYPE = "AndroidDevice";
-  private static final Pattern MODULE_PARAMETER_PATTERN =
-      Pattern.compile(".*\\[(?<moduleParam>.*)]$");
 
   /**
-   * The same as
-   * com.google.wireless.qa.mobileharness.shared.api.driver.MoblyGenericTest.TEST_SELECTOR_KEY
+   * The same as {@link
+   * com.google.wireless.qa.mobileharness.shared.api.driver.MoblyGenericTest#TEST_SELECTOR_KEY}.
    */
   public static final String MOBLY_TEST_SELECTOR_KEY = "test_case_selector";
 
   /**
-   * The same as
-   * com.google.devtools.mobileharness.platform.android.xts.plugin.NonTradefedReportGenerator.PARAM_RUN_CERTIFICATION_TEST_SUITE
+   * The same as {@link
+   * com.google.devtools.mobileharness.platform.android.xts.plugin.NonTradefedReportGenerator#PARAM_RUN_CERTIFICATION_TEST_SUITE}.
    */
   public static final String PARAM_RUN_CERTIFICATION_TEST_SUITE = "run_certification_test_suite";
 
   /**
-   * The same as
-   * com.google.devtools.mobileharness.platform.android.xts.plugin.NonTradefedReportGenerator.PARAM_XTS_SUITE_INFO
+   * The same as {@link
+   * com.google.devtools.mobileharness.platform.android.xts.plugin.NonTradefedReportGenerator#PARAM_XTS_SUITE_INFO}.
    */
   public static final String PARAM_XTS_SUITE_INFO = "xts_suite_info";
 
   /**
-   * The same as
-   * com.google.devtools.deviceinfra.ext.devicemanagement.device.platform.android.realdevice.AndroidRealDeviceConstants.PARAM_CLEAR_GSERVICES_OVERRIDES
+   * The same as {@link
+   * com.google.devtools.deviceinfra.ext.devicemanagement.device.platform.android.realdevice.AndroidRealDeviceConstants#PARAM_CLEAR_GSERVICES_OVERRIDES}.
    */
   public static final String PARAM_CLEAR_GSERVICES_OVERRIDES = "clear_gservices_overrides";
 
   /**
-   * The same as
-   * com.google.wireless.qa.mobileharness.shared.api.step.android.InstallApkStepConstants.PARAM_CHECK_INSTALLED_GMS_CORE_VERSION
+   * The same as {@link
+   * com.google.wireless.qa.mobileharness.shared.api.step.android.InstallApkStepConstants#PARAM_CHECK_INSTALLED_GMS_CORE_VERSION}.
    */
   public static final String PARAM_CHECK_INSTALLED_GMS_CORE_VERSION =
       "check_installed_gms_core_version";
+
+  private static final Pattern MODULE_PARAMETER_PATTERN =
+      Pattern.compile(".*\\[(?<moduleParam>.*)]$");
 
   private static final Duration JOB_TEST_TIMEOUT_DIFF = Duration.ofMinutes(1L);
   private static final Duration DEFAULT_TRADEFED_JOB_TIMEOUT = Duration.ofDays(15L);
@@ -222,9 +225,11 @@ public class SessionRequestHandlerUtil {
         StringMap dimensions =
             StringMap.newBuilder()
                 .putContent(
-                    "uuid",
+                    Name.UUID.lowerCaseName(),
                     String.format(
-                        "regex:(%s)", Joiner.on('|').join(sessionRequestInfo.deviceSerials())))
+                        "%s(%s)",
+                        Value.PREFIX_REGEX,
+                        Joiner.on('|').join(sessionRequestInfo.deviceSerials())))
                 .build();
         return ImmutableList.of(
             SubDeviceSpec.newBuilder()
@@ -237,7 +242,9 @@ public class SessionRequestHandlerUtil {
                 deviceSerial ->
                     SubDeviceSpec.newBuilder()
                         .setType(getTradefedRequiredDeviceType(sessionRequestInfo))
-                        .setDimensions(StringMap.newBuilder().putContent("uuid", deviceSerial))
+                        .setDimensions(
+                            StringMap.newBuilder()
+                                .putContent(Name.UUID.lowerCaseName(), deviceSerial))
                         .build())
             .collect(toImmutableList());
       }
@@ -257,7 +264,9 @@ public class SessionRequestHandlerUtil {
             deviceDetails ->
                 SubDeviceSpec.newBuilder()
                     .setType(getTradefedRequiredDeviceType(sessionRequestInfo))
-                    .setDimensions(StringMap.newBuilder().putContent("id", deviceDetails.id()))
+                    .setDimensions(
+                        StringMap.newBuilder()
+                            .putContent(Name.ID.lowerCaseName(), deviceDetails.id()))
                     .build())
         .collect(toImmutableList());
   }
@@ -302,8 +311,10 @@ public class SessionRequestHandlerUtil {
     StringMap dimensions =
         StringMap.newBuilder()
             .putContent(
-                "id",
-                String.format("regex:(%s)", Joiner.on('|').join(allMatchAndroidOnlineDevices)))
+                Name.ID.lowerCaseName(),
+                String.format(
+                    "%s(%s)",
+                    Value.PREFIX_REGEX, Joiner.on('|').join(allMatchAndroidOnlineDevices)))
             .build();
     SubDeviceSpec subDeviceSpec =
         SubDeviceSpec.newBuilder()
@@ -700,7 +711,8 @@ public class SessionRequestHandlerUtil {
     final String deviceSerialsDimensionValue =
         availableDeviceSerials.isEmpty()
             ? null
-            : String.format("regex:(%s)", Joiner.on('|').join(availableDeviceSerials));
+            : String.format(
+                "%s(%s)", Value.PREFIX_REGEX, Joiner.on('|').join(availableDeviceSerials));
 
     ImmutableMap<String, String> moduleNameToConfigFilePathMap =
         sessionRequestInfo.v2ConfigsMap().entrySet().stream()
@@ -897,7 +909,7 @@ public class SessionRequestHandlerUtil {
                       subDeviceSpec
                           .deviceRequirement()
                           .dimensions()
-                          .add("id", deviceSerialsDimensionValue));
+                          .add(Name.ID, deviceSerialsDimensionValue));
         }
         addSessionClientIdToJobInfo(jobInfo, sessionRequestInfo);
         extraJobProperties.forEach((key, value) -> jobInfo.properties().add(key, value));
@@ -907,6 +919,24 @@ public class SessionRequestHandlerUtil {
     }
 
     return jobInfos.build();
+  }
+
+  /**
+   * Returns concrete device control IDs specified in the job dimension {@link Name#ID} of the given
+   * job if any (not including {@linkplain Value#PREFIX_REGEX regex values}).
+   */
+  public static ImmutableSet<String> getControlIdsSpecifiedInJob(JobInfo jobInfo) {
+    return jobInfo.subDeviceSpecs().getAllSubDevices().stream()
+        .flatMap(
+            subDeviceSpec -> {
+              String dimensionValue = subDeviceSpec.dimensions().get(Name.ID);
+              if (dimensionValue == null || dimensionValue.startsWith(Value.PREFIX_REGEX)) {
+                return Stream.empty();
+              } else {
+                return Stream.of(dimensionValue);
+              }
+            })
+        .collect(toImmutableSet());
   }
 
   private DeviceConfigurations readXtsDeviceConfigFile(Path xtsDeviceConfigFile)
