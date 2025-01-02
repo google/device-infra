@@ -89,9 +89,6 @@ public class JobInfo extends JobScheduleUnit {
    */
   public static final String PARAM_CLIENT_PLUGIN = "client_plugin_class";
 
-  /** Param name of the canonical class names of the client plugin module. */
-  public static final String PARAM_CLIENT_PLUGIN_MODULES = "client_plugin_module_classes";
-
   /**
    * Param name of the regex of class names that we force to be loaded from the client plugin's
    * classloader.
@@ -103,25 +100,11 @@ public class JobInfo extends JobScheduleUnit {
   public static final String PARAM_CLIENT_PLUGIN_FORCE_LOAD_FROM_JAR_CLASS_REGEX =
       "client_plugin_force_load_from_jar_class_regex";
 
-  /**
-   * Param name of the canonical class names (split by ",") of the plugin handlers for test
-   * start/end events. The handlers are executed on lab server side.
-   */
-  public static final String PARAM_LAB_PLUGIN = "lab_plugin_class";
-
   /** Param name of the canonical class names of the client plugin module. */
-  public static final String PARAM_LAB_PLUGIN_MODULES = "lab_plugin_module_classes";
+  public static final String PARAM_CLIENT_PLUGIN_MODULES = "client_plugin_module_classes";
 
-  /**
-   * Param name of the regex of class names that we force to be loaded from the lab plugin's
-   * classloader.
-   *
-   * <p>If specified, this can be used to resolve problems arising from a plugin's unintended use of
-   * classes from Mobile Harness, rather than its own classes (since parent classes are always used,
-   * if they are present).
-   */
-  public static final String PARAM_LAB_PLUGIN_FORCE_LOAD_FROM_JAR_CLASS_REGEX =
-      "lab_plugin_force_load_from_jar_class_regex";
+  @ParamAnnotation(required = false, help = "The gcs bucket for cloud file transfer.")
+  public static final String PARAM_CLOUD_FILE_TRANSFER_BUCKET = "cloud_file_transfer_bucket";
 
   @ParamAnnotation(
       required = false,
@@ -134,44 +117,29 @@ public class JobInfo extends JobScheduleUnit {
   @ParamAnnotation(
       required = false,
       help =
-          "Sandbox mode preference for testing/debugging/backward-compatibility."
-              + " See the enum SandboxModePreference. Case is ignored. By default, it is"
-              + "SandboxModePreference.NON_SANDBOX.\n")
-  public static final String PARAM_SANDBOX_MODE_PREFERENCE = "sandbox_mode_preference";
-
-  @ParamAnnotation(
-      required = false,
-      help =
           "If this flag is true, the not assigned tests will still show in sponge \"Test Method\" "
               + "but won't effect job result (target result).")
   public static final String PARAM_IGNORE_NOT_ASSIGNED_TESTS = "ignore_not_assigned_tests";
 
-  @ParamAnnotation(
-      required = false,
-      help =
-          "Sandbox memory (MB). If it is 0 or not specified, default value from lab server will be"
-              + " used.\n")
-  public static final String PARAM_SANDBOX_MEMORY_MB = "sandbox_memory_mb";
+  /**
+   * Param name of the canonical class names (split by ",") of the plugin handlers for test
+   * start/end events. The handlers are executed on lab server side.
+   */
+  public static final String PARAM_LAB_PLUGIN = "lab_plugin_class";
 
-  @ParamAnnotation(
-      required = false,
-      help =
-          "Whether to report test error as TOOL_FAILED. Default value is not set. Currently it only"
-              + " supports tests triggered by gateway.")
-  public static final String PARAM_REPORT_ERROR_AS_TOOL_FAILED = "report_error_as_tool_failed";
+  /**
+   * Param name of the regex of class names that we force to be loaded from the lab plugin's
+   * classloader.
+   *
+   * <p>If specified, this can be used to resolve problems arising from a plugin's unintended use of
+   * classes from Mobile Harness, rather than its own classes (since parent classes are always used,
+   * if they are present).
+   */
+  public static final String PARAM_LAB_PLUGIN_FORCE_LOAD_FROM_JAR_CLASS_REGEX =
+      "lab_plugin_force_load_from_jar_class_regex";
 
-  @ParamAnnotation(
-      required = false,
-      help =
-          "If this flag is true, the udeclared_output.zip won't be uploaded to Sponge. Only works"
-              + " if the job is triggered via gateway. This param is only for PMW temperally usage,"
-              + " and will be removed in early 2024.")
-  public static final String PARAM_SKIP_UPLOAD_UNDECLARED_OUTPUT = "skip_upload_undeclared_output";
-
-  @ParamAnnotation(
-      required = false,
-      help = "If this flag is true, the job will use gRPC router to connect to cloud servers.")
-  public static final String PARAM_USE_GRPC_ROUTER = "use_grpc_router";
+  /** Param name of the canonical class names of the client plugin module. */
+  public static final String PARAM_LAB_PLUGIN_MODULES = "lab_plugin_module_classes";
 
   @ParamAnnotation(
       required = false,
@@ -187,8 +155,40 @@ public class JobInfo extends JobScheduleUnit {
               + " false.")
   public static final String PARAM_MASTER_LOCAL_GRPC_TARGET = "master_local_grpc_target";
 
-  @ParamAnnotation(required = false, help = "The gcs bucket for cloud file transfer.")
-  public static final String PARAM_CLOUD_FILE_TRANSFER_BUCKET = "cloud_file_transfer_bucket";
+  @ParamAnnotation(
+      required = false,
+      help =
+          "Whether to report test error as TOOL_FAILED. Default value is not set. Currently it only"
+              + " supports tests triggered by gateway.")
+  public static final String PARAM_REPORT_ERROR_AS_TOOL_FAILED = "report_error_as_tool_failed";
+
+  @ParamAnnotation(
+      required = false,
+      help =
+          "Sandbox memory (MB). If it is 0 or not specified, default value from lab server will be"
+              + " used.\n")
+  public static final String PARAM_SANDBOX_MEMORY_MB = "sandbox_memory_mb";
+
+  @ParamAnnotation(
+      required = false,
+      help =
+          "Sandbox mode preference for testing/debugging/backward-compatibility."
+              + " See the enum SandboxModePreference. Case is ignored. By default, it is"
+              + "SandboxModePreference.NON_SANDBOX.\n")
+  public static final String PARAM_SANDBOX_MODE_PREFERENCE = "sandbox_mode_preference";
+
+  @ParamAnnotation(
+      required = false,
+      help =
+          "If this flag is true, the udeclared_output.zip won't be uploaded to Sponge. Only works"
+              + " if the job is triggered via gateway. This param is only for PMW temperally usage,"
+              + " and will be removed in early 2024.")
+  public static final String PARAM_SKIP_UPLOAD_UNDECLARED_OUTPUT = "skip_upload_undeclared_output";
+
+  @ParamAnnotation(
+      required = false,
+      help = "If this flag is true, the job will use gRPC router to connect to cloud servers.")
+  public static final String PARAM_USE_GRPC_ROUTER = "use_grpc_router";
 
   /** Input files of the job. */
   private final Files files;
