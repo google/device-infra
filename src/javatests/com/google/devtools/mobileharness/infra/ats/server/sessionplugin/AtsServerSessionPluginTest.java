@@ -598,7 +598,7 @@ public final class AtsServerSessionPluginTest {
     CommandDetail commandDetail = requestDetail.getCommandDetailsMap().get(commandId);
     assertThat(commandDetail.getOriginalCommandInfo()).isEqualTo(commandInfo);
     assertThat(commandDetail.getState()).isEqualTo(CommandState.RUNNING);
-    assertThat(commandDetail.getCommandAttemptId()).isEqualTo("test_id");
+    assertThat(isValidUuid(commandDetail.getCommandAttemptId())).isTrue();
     assertThat(commandDetail.getDeviceSerialsList()).containsExactly("device_id_1", "device_id_2");
   }
 
@@ -1168,5 +1168,14 @@ public final class AtsServerSessionPluginTest {
     RequestDetail finalRequestDetail =
         Iterables.getLast(unaryOperatorCaptor.getAllValues()).apply(null);
     assertThat(finalRequestDetail.getState()).isEqualTo(RequestState.ERROR);
+  }
+
+  private static boolean isValidUuid(String uuid) {
+    try {
+      UUID.fromString(uuid);
+      return true;
+    } catch (IllegalArgumentException e) {
+      return false;
+    }
   }
 }

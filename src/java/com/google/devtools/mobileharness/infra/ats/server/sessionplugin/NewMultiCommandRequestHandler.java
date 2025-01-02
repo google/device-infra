@@ -287,6 +287,7 @@ final class NewMultiCommandRequestHandler {
                   .setStartTime(Timestamps.fromMillis(clock.millis()))
                   .setUpdateTime(Timestamps.fromMillis(clock.millis()))
                   .setRequestId(sessionInfo.getSessionId())
+                  .setCommandAttemptId(getCommandAttemptId(commandId, sessionInfo.getSessionId()))
                   .setId(commandId)
                   .setState(CommandState.RUNNING));
     } else {
@@ -350,6 +351,8 @@ final class NewMultiCommandRequestHandler {
     commandDetailBuilder.setRequestId(sessionInfo.getSessionId());
     String commandId = getCommandId(commandInfo, request);
     commandDetailBuilder.setId(commandId);
+    commandDetailBuilder.setCommandAttemptId(
+        getCommandAttemptId(commandId, sessionInfo.getSessionId()));
     // Set initial state.
     commandDetailBuilder.setState(CommandState.UNKNOWN_STATE);
 
@@ -424,6 +427,11 @@ final class NewMultiCommandRequestHandler {
           .toString();
     }
     return UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
+  }
+
+  private String getCommandAttemptId(String commandId, String sessionId) {
+    String mergedId = sessionId + "_" + commandId;
+    return UUID.nameUUIDFromBytes(mergedId.getBytes(UTF_8)).toString();
   }
 
   private String replacePathForRemoteRunner(String path) {

@@ -270,16 +270,12 @@ final class AtsServerSessionPlugin {
                   .flatMap(
                       subDeviceSpec -> Stream.ofNullable(subDeviceSpec.dimensions().get("uuid")))
                   .collect(toImmutableList());
-          TestInfo testInfo = jobInfo.tests().getAll().values().iterator().next();
-
           CommandDetail updatedCommandDetail =
               requestDetail
                   .getCommandDetailsOrDefault(commandId, CommandDetail.getDefaultInstance())
                   .toBuilder()
                   .addAllDeviceSerials(deviceUuids)
-                  .setCommandAttemptId(testInfo.locator().getId())
                   .build();
-
           requestDetail
               .putCommandDetails(commandId, updatedCommandDetail)
               .setUpdateTime(TimeUtils.toProtoTimestamp(Instant.now()));
