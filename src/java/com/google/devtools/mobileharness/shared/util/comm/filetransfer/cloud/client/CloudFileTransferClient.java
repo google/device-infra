@@ -183,8 +183,11 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
     } else if (checksum != null && gcsFileManager.fileExist(Path.of(checksum))) {
       fileSize = gcsFileManager.getGcsFileSize(Path.of(checksum));
       isCached = true;
-      // TODO: We need to check the file type to decide whether it is compressed.
-      downloadGcsFileToServer(metadata, checksum, Path.of(local), /* isCompressed= */ false);
+      downloadGcsFileToServer(
+          metadata,
+          checksum,
+          Path.of(local),
+          /* isCompressed= */ gcsFileManager.isCompressed(Path.of(checksum)));
     } else {
       throw new MobileHarnessException(
           InfraErrorId.FT_FILE_NOT_EXIST,
