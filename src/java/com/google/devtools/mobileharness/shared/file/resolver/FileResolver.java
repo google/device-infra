@@ -70,20 +70,6 @@ public interface FileResolver {
   @AutoValue
   abstract class ResolveResult {
 
-    /**
-     * @deprecated Use {@link #of(ImmutableList, ImmutableMap, ResolveSource)} instead.
-     */
-    @Deprecated
-    public static ResolveResult create(
-        ImmutableList<String> paths,
-        ImmutableMap<String, String> properties,
-        ResolveSource source) {
-      return new AutoValue_FileResolver_ResolveResult(
-          paths.stream().map(file -> ResolvedFile.create(file, null)).collect(toImmutableList()),
-          properties,
-          source);
-    }
-
     public static ResolveResult of(
         ImmutableList<ResolvedFile> resolvedFiles,
         ImmutableMap<String, String> properties,

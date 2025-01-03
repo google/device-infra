@@ -78,7 +78,8 @@ public class GcsFileResolver extends AbstractFileResolver {
     logger.atInfo().log("Downloading GCS file %s to %s", fileOrDirPath, localPath);
     gcsUtil.copyFileOrDirectoryToLocal(gcsPath, Path.of(localPath));
 
-    return ResolveResult.create(ImmutableList.of(localPath), ImmutableMap.of(), resolveSource);
+    return ResolveResult.of(
+        ImmutableList.of(ResolvedFile.create(localPath, null)), ImmutableMap.of(), resolveSource);
   }
 
   @Nullable

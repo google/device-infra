@@ -54,8 +54,10 @@ public class LocalFileResolver extends AbstractFileResolver {
         resolveSource.parameters().get(PARAM_IGNORE_NON_EXISTING_LOCAL_FILE))) {
       localFileUtil.checkFileOrDir(resolveSource.path());
     }
-    return ResolveResult.create(
-        ImmutableList.of(resolveSource.path()), ImmutableMap.of(), resolveSource);
+    return ResolveResult.of(
+        ImmutableList.of(ResolvedFile.create(resolveSource.path(), null)),
+        ImmutableMap.of(),
+        resolveSource);
   }
 
   @Override

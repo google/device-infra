@@ -73,13 +73,13 @@ public class FileResolverTest {
     assertThat(resolvedResults)
         .containsExactly(
             Optional.of(
-                ResolveResult.create(
-                    ImmutableList.of("/a/b"),
+                ResolveResult.of(
+                    ImmutableList.of(ResolvedFile.create("/a/b", null)),
                     ImmutableMap.of(),
                     ResolveSource.create("/a/b", ImmutableMap.of(), "/", "/"))),
             Optional.of(
-                ResolveResult.create(
-                    ImmutableList.of("/a/c"),
+                ResolveResult.of(
+                    ImmutableList.of(ResolvedFile.create("/a/c", null)),
                     ImmutableMap.of(),
                     ResolveSource.create("/a/c", ImmutableMap.of(), "/", "/"))));
   }
@@ -96,13 +96,13 @@ public class FileResolverTest {
     assertThat(resolvedResults)
         .containsExactly(
             Optional.of(
-                ResolveResult.create(
-                    ImmutableList.of("/a/b"),
+                ResolveResult.of(
+                    ImmutableList.of(ResolvedFile.create("/a/b", null)),
                     ImmutableMap.of(),
                     ResolveSource.create("/a/b", ImmutableMap.of(), "/", "/"))),
             Optional.of(
-                ResolveResult.create(
-                    ImmutableList.of("/a/c"),
+                ResolveResult.of(
+                    ImmutableList.of(ResolvedFile.create("/a/c", null)),
                     ImmutableMap.of(),
                     ResolveSource.create("/a/c", ImmutableMap.of(), "/", "/"))));
   }
@@ -121,13 +121,13 @@ public class FileResolverTest {
     assertThat(resolvedResults)
         .containsExactly(
             Optional.of(
-                ResolveResult.create(
-                    ImmutableList.of("/a/b"),
+                ResolveResult.of(
+                    ImmutableList.of(ResolvedFile.create("/a/b", null)),
                     ImmutableMap.of(),
                     ResolveSource.create("/a/b", ImmutableMap.of(), "/", "/"))),
             Optional.of(
-                ResolveResult.create(
-                    ImmutableList.of("/a/c"),
+                ResolveResult.of(
+                    ImmutableList.of(ResolvedFile.create("/a/c", null)),
                     ImmutableMap.of(),
                     ResolveSource.create("/a/c", ImmutableMap.of(), "/", "/"))));
   }
@@ -144,8 +144,8 @@ public class FileResolverTest {
                 ResolveSource.create("/a/c", ImmutableMap.of(), "/", "/")));
     assertThat(resolvedResults)
         .containsExactly(
-            ResolveResult.create(
-                ImmutableList.of("/a/b"),
+            ResolveResult.of(
+                ImmutableList.of(ResolvedFile.create("/a/b", null)),
                 ImmutableMap.of(),
                 ResolveSource.create("/a/b", ImmutableMap.of(), "/", "/")));
   }
@@ -171,8 +171,10 @@ public class FileResolverTest {
 
     @Override
     protected ResolveResult actuallyResolve(ResolveSource resolveSource) {
-      return ResolveResult.create(
-          ImmutableList.of(resolveSource.path()), ImmutableMap.of(), resolveSource);
+      return ResolveResult.of(
+          ImmutableList.of(ResolvedFile.create(resolveSource.path(), null)),
+          ImmutableMap.of(),
+          resolveSource);
     }
 
     @Override
