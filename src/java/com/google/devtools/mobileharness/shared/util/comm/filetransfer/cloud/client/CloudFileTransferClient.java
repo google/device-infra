@@ -158,32 +158,40 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
     FileTransferEvent.Builder event =
         FileTransferEvent.builder().setStart(Instant.now()).setType(ExecutionType.SEND);
     logger.atInfo().log("Sending file: %s", local);
-    if (!fileOrDirExists(local)) {
-      throw new MobileHarnessException(
-          InfraErrorId.FT_FILE_NOT_EXIST, "File Or directory doesn't exist: " + local);
-    }
-    FileOperationStatus result = sendDirectlyIfSmall(metadata, Path.of(local));
-    if (result.isFinished()) {
-      publishEvent(
-          event.setEnd(Instant.now()).setFileSize(result.fileSize()).setIsCached(false).build());
-      logger.atInfo().log("Sent file: %s with size %s", local, prettySize(result.fileSize()));
-      return;
-    }
-
-    ExecutionInfo executionInfo =
-        gcsFileManager.upload(
+    long fileSize;
+    boolean isCached;
+    if (fileOrDirExists(local)) {
+      FileOperationStatus result = sendDirectlyIfSmall(metadata, Path.of(local));
+      if (result.isFinished()) {
+        fileSize = result.fileSize();
+        isCached = false;
+      } else {
+        ExecutionInfo executionInfo =
+            gcsFileManager.upload(
+                Path.of(local),
+                params.zipStoreOnly(),
+                Optional.of(params.zipTimeout()),
+                Optional.ofNullable(checksum));
+        fileSize = executionInfo.fileSize();
+        isCached = executionInfo.isCached();
+        downloadGcsFileToServer(
+            metadata,
+            executionInfo.checksum(),
             Path.of(local),
-            params.zipStoreOnly(),
-            Optional.of(params.zipTimeout()),
-            Optional.ofNullable(checksum));
-    downloadGcsFileToServer(metadata, executionInfo.checksum(), Path.of(local), dirExists(local));
-    publishEvent(
-        event
-            .setEnd(Instant.now())
-            .setFileSize(executionInfo.fileSize())
-            .setIsCached(executionInfo.isCached())
-            .build());
-    logger.atInfo().log("Sent file: %s with size %s", local, prettySize(executionInfo.fileSize()));
+            /* isCompressed= */ dirExists(local));
+      }
+    } else if (checksum != null && gcsFileManager.fileExist(Path.of(checksum))) {
+      fileSize = gcsFileManager.getGcsFileSize(Path.of(checksum));
+      isCached = true;
+      // TODO: We need to check the file type to decide whether it is compressed.
+      downloadGcsFileToServer(metadata, checksum, Path.of(local), /* isCompressed= */ false);
+    } else {
+      throw new MobileHarnessException(
+          InfraErrorId.FT_FILE_NOT_EXIST,
+          "File Or directory doesn't exist and not cached: " + local);
+    }
+    publishEvent(event.setEnd(Instant.now()).setFileSize(fileSize).setIsCached(isCached).build());
+    logger.atInfo().log("Sent file: %s with size %s", local, prettySize(fileSize));
   }
 
   /** {@inheritDoc} */
