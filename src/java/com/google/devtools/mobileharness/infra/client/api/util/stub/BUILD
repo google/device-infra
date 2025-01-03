@@ -53,6 +53,8 @@ java_library(
         "StubFactory.java",
     ],
     deps = [
+        "//java/com/google/wireless/qa/mobileharness/master/rpc/stub:lab_info_future",
+        "//java/com/google/wireless/qa/mobileharness/master/rpc/stub/grpc:lab_info_future",
         "//src/devtools/mobileharness/shared/util/comm/stub:stub_configuration_java_proto",
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/stub:exec_test",
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/stub:prepare_test",
