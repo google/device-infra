@@ -18,9 +18,13 @@ package com.google.devtools.mobileharness.infra.client.api.util.stub;
 
 import com.google.devtools.mobileharness.infra.master.rpc.stub.grpc.JobSyncGrpcStub;
 import com.google.devtools.mobileharness.shared.util.comm.stub.StubConfigurationProto.StubConfiguration;
+import com.google.wireless.qa.mobileharness.master.rpc.stub.grpc.LabInfoGrpcFutureStub;
 
 /** Interface to create future interface for different services. */
 interface GrpcFutureInterfaceFactory {
 
   JobSyncGrpcStub.FutureInterface createJobSyncFutureInterface(StubConfiguration stubConfiguration);
+
+  LabInfoGrpcFutureStub.FutureInterface createLabInfoFutureInterface(
+      StubConfiguration stubConfiguration);
 }
