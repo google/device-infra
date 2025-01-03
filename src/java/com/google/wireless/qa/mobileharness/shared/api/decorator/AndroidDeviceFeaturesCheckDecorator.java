@@ -92,7 +92,8 @@ public class AndroidDeviceFeaturesCheckDecorator extends BaseDecorator
                   deviceId));
       testInfo.resultWithCause().setNonPassing(TestResult.SKIP, error);
       testInfo.getRootTest().resultWithCause().setNonPassing(TestResult.SKIP, error);
-      throw error;
+      // Skips later decorators and driver execution because it wants to skip the test. Don't throw
+      // the exception out so to avoid the test result being overridden as FAIL/ERROR later.
     }
   }
 

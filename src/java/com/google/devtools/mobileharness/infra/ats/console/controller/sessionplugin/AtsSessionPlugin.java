@@ -452,7 +452,24 @@ public class AtsSessionPlugin {
     }
 
     ResultTypeWithCause resultTypeWithCause = testInfo.resultWithCause().get();
-    if (!resultTypeWithCause.type().equals(TestResult.PASS)) {
+    if (resultTypeWithCause.type().equals(TestResult.SKIP)) {
+      String shortSkipReason = "";
+      if (resultTypeWithCause.causeProto().isPresent()) {
+        shortSkipReason = resultTypeWithCause.causeProto().get().getSummary().getMessage();
+      }
+      logger
+          .atInfo()
+          .with(IMPORTANCE, IMPORTANT)
+          .log(
+              "Test [%s/%s] was skipped with reason [%s]",
+              testInfo.locator().getId(), testInfo.locator().getName(), shortSkipReason);
+      // Don't show detailed skip reason with stack trace in the console but just in olc server logs
+      logger.atInfo().log(
+          "Skip reason of test [%s/%s]:\n%s",
+          testInfo.locator().getId(),
+          testInfo.locator().getName(),
+          resultTypeWithCause.toStringWithDetail());
+    } else if (!resultTypeWithCause.type().equals(TestResult.PASS)) {
       logger
           .atWarning()
           .with(IMPORTANCE, IMPORTANT)
