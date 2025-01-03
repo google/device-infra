@@ -32,6 +32,7 @@ java_library(
         "//src/java/com/google/devtools/common/metrics/stability/converter",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/local/annotation",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:barrier",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:concurrency_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:tag",

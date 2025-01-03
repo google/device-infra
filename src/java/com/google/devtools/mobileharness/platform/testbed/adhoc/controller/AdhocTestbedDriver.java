@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.platform.testbed.adhoc.controller;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.Multimaps.toMultimap;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -32,6 +33,7 @@ import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.controller.test.local.annotation.DoNotSubscribeTestEvent;
+import com.google.devtools.mobileharness.shared.util.concurrent.Barrier;
 import com.google.devtools.mobileharness.shared.util.concurrent.ConcurrencyUtil;
 import com.google.devtools.mobileharness.shared.util.concurrent.ConcurrencyUtil.SubTask;
 import com.google.devtools.mobileharness.shared.util.logging.MobileHarnessLogTag;
@@ -48,8 +50,6 @@ import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.BrokenBarrierException;
-import java.util.concurrent.CyclicBarrier;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -81,6 +81,12 @@ public class AdhocTestbedDriver extends BaseDriver {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   /**
+   * Test property used to indicate whether the main/secondary driver's driver barrier's run method
+   * is called.
+   */
+  private static final String TEST_PROP_DRIVER_BARRIER_RUN_CALLED = "driver_barrier_run_called";
+
+  /**
    * A list of sub drivers which contains:
    *
    * <ul>
@@ -93,11 +99,23 @@ public class AdhocTestbedDriver extends BaseDriver {
    */
   private final ImmutableList<Driver> subDrivers;
 
-  /** Lets all threads wait until all decorators' preRun() finish before running the main driver. */
-  private final CyclicBarrier preDriverBarrier;
+  /**
+   * Lets all threads wait until all decorators' preRun() finish before running the main driver.
+   *
+   * <p>Waiting threads may be woken up before all threads reach the barrier point if the barrier
+   * wakes them up, for example any decorator stacks try to skip the main driver execution, or
+   * awaiting threads are interrupted.
+   */
+  private final Barrier preDriverBarrier;
 
-  /** Lets all threads wait until the main driver finishes before running decorators' postRun(). */
-  private final CyclicBarrier postDriverBarrier;
+  /**
+   * Lets all threads wait until the main driver finishes before running decorators' postRun().
+   *
+   * <p>Waiting threads may be woken up before all threads reach the barrier point if the barrier
+   * wakes them up, for example any decorator stacks try to skip the main driver execution, or
+   * awaiting threads are interrupted.
+   */
+  private final Barrier postDriverBarrier;
 
   private final ListeningExecutorService threadPool;
   private final DriverFactory driverFactory;
@@ -108,6 +126,8 @@ public class AdhocTestbedDriver extends BaseDriver {
   /** For posting decorator events. */
   @Nullable
   private final BiFunction<Driver, Class<? extends Decorator>, Decorator> decoratorExtender;
+
+  private volatile boolean mainDriverSkipped = false;
 
   AdhocTestbedDriver(
       List<Device> devices,
@@ -124,8 +144,8 @@ public class AdhocTestbedDriver extends BaseDriver {
     this.driverWrapper = driverWrapper;
     this.decoratorExtender = null;
     this.subDrivers = ImmutableList.copyOf(createSubDrivers(devices));
-    this.preDriverBarrier = new CyclicBarrier(devices.size());
-    this.postDriverBarrier = new CyclicBarrier(devices.size());
+    this.preDriverBarrier = new Barrier(devices.size());
+    this.postDriverBarrier = new Barrier(devices.size());
 
     // Sets up TestbedDevice.
     testInfo.log().atInfo().alsoTo(logger).log("Setting up TestbedDevice");
@@ -191,7 +211,7 @@ public class AdhocTestbedDriver extends BaseDriver {
           threadPool,
           /* resultMerger= */ results -> null);
     } finally {
-      updateRootTestResultIfNeeded(testInfo);
+      updateRootTestResultIfNeeded(testInfo, mainDriverSkipped);
     }
   }
 
@@ -221,17 +241,28 @@ public class AdhocTestbedDriver extends BaseDriver {
    * sponge can reflect it as expected.
    */
   @VisibleForTesting
-  static void updateRootTestResultIfNeeded(TestInfo rootTestInfo) {
+  static void updateRootTestResultIfNeeded(TestInfo rootTestInfo, boolean mainDriverSkipped) {
     TestResult rootTestResult = rootTestInfo.resultWithCause().get().type();
     if (rootTestResult.equals(TestResult.UNKNOWN)) {
-      rootTestInfo
-          .resultWithCause()
-          .setNonPassing(
-              TestResult.ERROR,
-              new MobileHarnessException(
-                  ExtErrorId.MOBLY_TESTBED_ADHOC_DRIVER_END_WITH_UNKNOWN_RESULT,
-                  "Set root test result to ERROR because adhoc testbed driver ends with UNKNOWN"
-                      + " test result. Maybe the primary driver has not been triggered."));
+      if (mainDriverSkipped) {
+        rootTestInfo
+            .resultWithCause()
+            .setNonPassing(
+                TestResult.SKIP,
+                new MobileHarnessException(
+                    ExtErrorId.MOBLY_TESTBED_ADHOC_DRIVER_END_WITH_UNKNOWN_RESULT,
+                    "Set root test result to SKIP because adhoc testbed driver ends with UNKNOWN"
+                        + " and the primary driver was skipped."));
+      } else {
+        rootTestInfo
+            .resultWithCause()
+            .setNonPassing(
+                TestResult.ERROR,
+                new MobileHarnessException(
+                    ExtErrorId.MOBLY_TESTBED_ADHOC_DRIVER_END_WITH_UNKNOWN_RESULT,
+                    "Set root test result to ERROR because adhoc testbed driver ends with UNKNOWN"
+                        + " test result. Maybe the primary driver has not been triggered."));
+      }
     } else if (rootTestResult.equals(TestResult.PASS)) {
       // Subtests in mobly tests may have different results, b/175287972
       int errorTestsTotalCnt = 0;
@@ -347,7 +378,8 @@ public class AdhocTestbedDriver extends BaseDriver {
               getTest().jobInfo().subDeviceSpecs().getSubDevice(i).decorators().getAll());
       subDriver.add(decoratedDriver);
     }
-    return subDriver;
+    // Wraps each decorator stack with a decorator to handle barrier.
+    return subDriver.stream().map(DecoratorBarrier::new).collect(toImmutableList());
   }
 
   private List<Driver> createRawSubDrivers(List<Device> devices) throws MobileHarnessException {
@@ -449,31 +481,54 @@ public class AdhocTestbedDriver extends BaseDriver {
 
     @Override
     public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+      testInfo.properties().add(TEST_PROP_DRIVER_BARRIER_RUN_CALLED, "true");
       try {
         testInfo
             .log()
             .atInfo()
             .alsoTo(logger)
             .log("Waiting on pre-driver barrier, device=[%s]", getDevice().getDeviceId());
-        preDriverBarrier.await();
-
-        // The main "run" of AdhocTestbedDriver runs each stack using a sub-TestInfo specific to
-        // each sub-device. We need to make sure the main driver is run against the TestInfo passed
-        // to the AdhocTestbedDriver constructor.
-        getDecorated().run(AdhocTestbedDriver.this.getTest());
-
+        boolean allPartiesInvokedOnPreDriverBarrier = preDriverBarrier.await();
         testInfo
             .log()
             .atInfo()
             .alsoTo(logger)
-            .log("Waiting on post-driver barrier, device=[%s]", getDevice().getDeviceId());
-        postDriverBarrier.await();
+            .log(
+                "All parties invoked on pre-driver barrier: %s, device=[%s]",
+                allPartiesInvokedOnPreDriverBarrier, getDevice().getDeviceId());
+        if (allPartiesInvokedOnPreDriverBarrier) {
+          // The main "run" of AdhocTestbedDriver runs each stack using a sub-TestInfo specific to
+          // each sub-device. We need to make sure the main driver is run against the TestInfo
+          // passed to the AdhocTestbedDriver constructor.
+          getDecorated().run(AdhocTestbedDriver.this.getTest());
 
-        // If non of the sub device decorators failed, set the device TestInfo result to PASS.
+          testInfo
+              .log()
+              .atInfo()
+              .alsoTo(logger)
+              .log("Waiting on post-driver barrier, device=[%s]", getDevice().getDeviceId());
+          boolean allPartiesInvokedOnPostDriverBarrier = postDriverBarrier.await();
+          testInfo
+              .log()
+              .atInfo()
+              .alsoTo(logger)
+              .log(
+                  "All parties invoked on post-driver barrier: %s, device=[%s]",
+                  allPartiesInvokedOnPostDriverBarrier, getDevice().getDeviceId());
+        } else {
+          mainDriverSkipped = true;
+          testInfo
+              .log()
+              .atInfo()
+              .alsoTo(logger)
+              .log("Skipping driver with device [%s]", getDevice().getDeviceId());
+        }
+
+        // If none of the sub device decorators failed, set the device TestInfo result to PASS.
         if (testInfo.resultWithCause().get().type().equals(TestResult.UNKNOWN)) {
           testInfo.resultWithCause().setPass();
         }
-      } catch (BrokenBarrierException e) {
+      } catch (InterruptedException e) {
         InterruptedException exception =
             new InterruptedException(
                 String.format(
@@ -481,6 +536,33 @@ public class AdhocTestbedDriver extends BaseDriver {
                     getDevice().getDeviceId()));
         exception.addSuppressed(e);
         throw exception;
+      }
+    }
+  }
+
+  @DoNotSubscribeTestEvent
+  private class DecoratorBarrier extends BaseDecorator {
+
+    private DecoratorBarrier(Driver decorated) {
+      super(decorated, decorated.getTest());
+    }
+
+    @Override
+    public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+      getDecorated().run(testInfo);
+
+      boolean driverBarrierRunCalled =
+          testInfo.properties().getBoolean(TEST_PROP_DRIVER_BARRIER_RUN_CALLED).orElse(false);
+      if (!driverBarrierRunCalled) {
+        testInfo
+            .log()
+            .atInfo()
+            .alsoTo(logger)
+            .log("Driver barrier for device [%s] was not called", getDevice().getDeviceId());
+        // The driver barrier (right before the driver) was not called for the current device's
+        // decorators stack, it's possible that a decorator decides to skip the test (b/384636099)
+        preDriverBarrier.stopAwaitations();
+        postDriverBarrier.stopAwaitations();
       }
     }
   }
