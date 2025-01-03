@@ -222,6 +222,7 @@ public class InstallApkStep implements InstallApkStepConstants {
     boolean clearGmsAppData = spec.getClearGmsAppData();
     boolean forceInstallApks = spec.getForceInstallApks();
     boolean bypassLowTargetSdkBlock = spec.getBypassLowTargetSdkBlock();
+    boolean skipApkDowngrade = spec.getSkipApkDowngrade();
 
     SetMultimap<String, String> allPackages = LinkedHashMultimap.create();
     Set<String> allPackageNames = new HashSet<>();
@@ -280,7 +281,8 @@ public class InstallApkStep implements InstallApkStepConstants {
           grantPermissionsOnInstall,
           bypassLowTargetSdkBlock,
           installTimeout,
-          sleepAfterInstallGms);
+          sleepAfterInstallGms,
+          skipApkDowngrade);
 
       if (installSuccessHandler != null) {
         installSuccessHandler.handle(PackageConstants.PACKAGE_NAME_GMS, buildApk);
@@ -360,7 +362,8 @@ public class InstallApkStep implements InstallApkStepConstants {
             grantPermissionsOnInstall,
             bypassLowTargetSdkBlock,
             installTimeout,
-            sleepAfterInstallGms);
+            sleepAfterInstallGms,
+            skipApkDowngrade);
 
         if (installSuccessHandler != null) {
           installSuccessHandler.handle(buildPackageName, buildApk);
@@ -396,7 +399,8 @@ public class InstallApkStep implements InstallApkStepConstants {
       boolean grantPermissionsOnInstall,
       boolean bypassLowTargetSdkBlock,
       Optional<Duration> installTimeout,
-      Optional<Duration> sleepAfterInstallGms)
+      Optional<Duration> sleepAfterInstallGms,
+      boolean skipApkDowngrade)
       throws MobileHarnessException, InterruptedException {
     String deviceId = device.getDeviceId();
     try {
@@ -420,7 +424,7 @@ public class InstallApkStep implements InstallApkStepConstants {
       ApkInstallArgs.Builder installArgsBuilder =
           ApkInstallArgs.builder()
               .setApkPath(apkPath)
-              .setSkipDowngrade(isGms && skipGmsDowngrade)
+              .setSkipDowngrade((isGms && skipGmsDowngrade) || (!isGms && skipApkDowngrade))
               .setClearAppData(isGms && clearGmsAppData)
               .setGrantPermissions(grantPermissionsOnInstall)
               .setBypassLowTargetSdkBlock(bypassLowTargetSdkBlock);
@@ -622,7 +626,8 @@ public class InstallApkStep implements InstallApkStepConstants {
             .setRebootAfterAllBuildApksInstallation(
                 jobInfo.params().getBool(PARAM_REBOOT_AFTER_ALL_BUILD_APKS_INSTALLATION, false))
             .setBypassLowTargetSdkBlock(
-                jobInfo.params().getBool(PARAM_BYPASS_LOW_TARGET_SDK_BLOCK, false));
+                jobInfo.params().getBool(PARAM_BYPASS_LOW_TARGET_SDK_BLOCK, false))
+            .setSkipApkDowngrade(jobInfo.params().getBool(PARAM_SKIP_APK_DOWNGRADE, false));
     if (jobInfo.params().has(PARAM_INSTALL_APK_TIMEOUT_SEC)) {
       spec.setInstallApkTimeoutSec(jobInfo.params().getLong(PARAM_INSTALL_APK_TIMEOUT_SEC));
     }
