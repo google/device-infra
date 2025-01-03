@@ -559,4 +559,8 @@ public class GcsFileManager {
   public long getGcsFileSize(Path gcsFile) throws MobileHarnessException, InterruptedException {
     return gcsUtil.getGcsFileSize(gcsFile);
   }
+
+  public boolean isCompressed(Path gcsFile) throws MobileHarnessException, InterruptedException {
+    return gcsUtil.isCompressed(gcsFile);
+  }
 }
