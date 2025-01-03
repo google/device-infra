@@ -72,6 +72,7 @@ java_library(
     srcs = ["InstallApkStepJobValidator.java"],
     deps = [
         ":install_apk_step_constants",
+        "//src/java/com/google/devtools/mobileharness/api/model/job/in",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/path",

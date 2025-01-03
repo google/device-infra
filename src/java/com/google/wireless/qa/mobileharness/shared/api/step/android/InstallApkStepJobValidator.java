@@ -19,6 +19,7 @@ package com.google.wireless.qa.mobileharness.shared.api.step.android;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.mobileharness.api.model.job.in.Files.FileInfo;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
@@ -71,7 +72,7 @@ public class InstallApkStepJobValidator implements JobValidator {
           newPath = PathUtil.join(job.setting().getRunFileDir(), path + APK_EXT_NAME);
           fileUtil.prepareParentDir(newPath);
           fileUtil.copyFileOrDir(path, newPath);
-          job.files().replace(tag, path, ImmutableList.of(newPath));
+          job.files().replaceFileInfos(tag, path, ImmutableList.of(FileInfo.create(newPath, null)));
         } catch (MobileHarnessException e) {
           errors.add(
               String.format(
