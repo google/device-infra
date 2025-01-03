@@ -146,7 +146,7 @@ final class GsUtil {
 
   private void upload(String localPath, String gcsObjectPath)
       throws MobileHarnessException, InterruptedException {
-    gcsUtil.copyFileToCloud(Path.of(localPath), Path.of(gcsObjectPath));
+    gcsUtil.copyFileToCloud(Path.of(localPath), Path.of(gcsObjectPath), "text/plain");
   }
 
   void delete(String gcsObjectPath) throws MobileHarnessException {

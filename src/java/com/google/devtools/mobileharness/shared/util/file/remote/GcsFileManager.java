@@ -373,13 +373,15 @@ public class GcsFileManager {
             String decodedChecksum = checksum.orElse(zipInfo.decodedChecksum());
             return ExecutionInfo.create(
                 fileSize,
-                !uploadFile(zipInfo.zipFilePath(), Path.of(decodedChecksum)),
+                !uploadFile(zipInfo.zipFilePath(), Path.of(decodedChecksum), "application/zip"),
                 decodedChecksum);
           } else if (fileExists(fileOrDir)) {
             String decodedChecksum = checksum.orElse(gcsUtil.calculateChecksum(fileOrDir));
             long fileSize = gcsUtil.getFileSize(fileOrDir);
             return ExecutionInfo.create(
-                fileSize, !uploadFile(fileOrDir, Path.of(decodedChecksum)), decodedChecksum);
+                fileSize,
+                !uploadFile(fileOrDir, Path.of(decodedChecksum), "text/plain"),
+                decodedChecksum);
           }
           throw new MobileHarnessException(
               BasicErrorId.GCS_UPLOAD_FILE_ERROR,
@@ -399,13 +401,23 @@ public class GcsFileManager {
   }
 
   /**
-   * Uploads local {@code fileOrDir} to GCS, with the checksum as the name. Return the gcs file
-   * path.
+   * Uploads local {@code fileOrDir} as "text/plain" type to GCS, with the checksum as the name.
    *
    * @return true if file is upload; false if it is cached
    */
   @CanIgnoreReturnValue
   public boolean uploadFile(Path localFile, Path gcsFilePath)
+      throws MobileHarnessException, InterruptedException {
+    return uploadFile(localFile, gcsFilePath, "text/plain");
+  }
+
+  /**
+   * Uploads local {@code fileOrDir} to GCS, with the checksum as the name.
+   *
+   * @return true if file is upload; false if it is cached
+   */
+  @CanIgnoreReturnValue
+  public boolean uploadFile(Path localFile, Path gcsFilePath, String contentType)
       throws MobileHarnessException, InterruptedException {
     // Acquire the lock to upload |gcsFile|. There is only one uploading thread allowed for
     // each gcsFile.
@@ -422,16 +434,17 @@ public class GcsFileManager {
       if (cloudCacheTtl.isPresent()) {
         if (uploadShardSize.isPresent()) {
           return gcsUtil.copyFileToCloudInParallelIfNonExistingOrDead(
-              localFile, gcsFilePath, cloudCacheTtl.get(), uploadShardSize.get());
+              localFile, gcsFilePath, cloudCacheTtl.get(), uploadShardSize.get(), contentType);
         } else {
           return gcsUtil.copyFileToCloudIfNonExistingOrDead(
-              localFile, gcsFilePath, cloudCacheTtl.get());
+              localFile, gcsFilePath, cloudCacheTtl.get(), contentType);
         }
       } else {
         if (uploadShardSize.isPresent()) {
-          gcsUtil.copyFileToCloudInParallel(localFile, gcsFilePath, uploadShardSize.get());
+          gcsUtil.copyFileToCloudInParallel(
+              localFile, gcsFilePath, uploadShardSize.get(), contentType);
         } else {
-          gcsUtil.copyFileToCloud(localFile, gcsFilePath);
+          gcsUtil.copyFileToCloud(localFile, gcsFilePath, contentType);
         }
         return true;
       }

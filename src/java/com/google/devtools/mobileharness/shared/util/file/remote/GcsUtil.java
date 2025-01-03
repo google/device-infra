@@ -816,10 +816,12 @@ public class GcsUtil {
    * @param localFile path of source file
    * @param gcsFile name of the object in the cloud
    * @throws MobileHarnessException if failed to copy file
+   * @deprecated Use {@link #copyFileToCloud(Path, Path, String)} instead.
    */
+  @Deprecated
   public void copyFileToCloud(String localFile, String gcsFile)
       throws MobileHarnessException, InterruptedException {
-    copyFileToCloud(Path.of(localFile), Path.of(gcsFile));
+    copyFileToCloud(localFile, gcsFile, "text/plain");
   }
 
   /**
@@ -827,20 +829,34 @@ public class GcsUtil {
    *
    * @param localFile path of source file
    * @param gcsFile name of the object in the cloud
+   * @param contentType content type of the object in the cloud
    * @throws MobileHarnessException if failed to copy file
    */
-  public void copyFileToCloud(Path localFile, Path gcsFile)
+  public void copyFileToCloud(String localFile, String gcsFile, String contentType)
+      throws MobileHarnessException, InterruptedException {
+    copyFileToCloud(Path.of(localFile), Path.of(gcsFile), contentType);
+  }
+
+  /**
+   * Copies {@code localFile} to Google Cloud Storage file {@code gcsFile}.
+   *
+   * @param localFile path of source file
+   * @param gcsFile name of the object in the cloud
+   * @param contentType content type of the object in the cloud
+   * @throws MobileHarnessException if failed to copy file
+   */
+  public void copyFileToCloud(Path localFile, Path gcsFile, String contentType)
       throws MobileHarnessException, InterruptedException {
     String fileInfo =
         String.format("local %s to gs://%s/%s", localFile, storageParams.bucketName, gcsFile);
     logger.atInfo().log("Uploading %s", fileInfo);
     retryIfMeetQuotaIssue(
         () -> {
-          StorageObject metadata = new StorageObject();
-          metadata.setName(gcsFile.toString());
+          StorageObject metadata =
+              new StorageObject().setName(gcsFile.toString()).setContentType(contentType);
 
           InputStreamContent contentStream =
-              new InputStreamContent("text/plain", getInputStream(localFile));
+              new InputStreamContent(contentType, getInputStream(localFile));
           contentStream.setLength(getFileSize(localFile));
           copyContentStreamToCloud(contentStream, metadata);
           return null;
@@ -924,7 +940,8 @@ public class GcsUtil {
   }
 
   /** Composes gcs files in list {@code srcGcsFiles} to {@code dstGcsFile}. */
-  public void compose(Path dstGcsFile, boolean removeSources, List<Path> srcGcsFiles)
+  public void compose(
+      Path dstGcsFile, boolean removeSources, List<Path> srcGcsFiles, String contentType)
       throws MobileHarnessException, InterruptedException {
     try {
       String actionInfo =
@@ -932,7 +949,9 @@ public class GcsUtil {
       retryIfMeetQuotaIssue(
           () -> {
             try {
-              StorageObject metadata = new StorageObject().setName(dstGcsFile.toString());
+              StorageObject metadata =
+                  new StorageObject().setName(dstGcsFile.toString()).setContentType(contentType);
+
               ComposeRequest request =
                   new ComposeRequest()
                       .setDestination(metadata)
@@ -976,11 +995,12 @@ public class GcsUtil {
    * @param gcsFile name of the object in the cloud
    * @throws MobileHarnessException if failed to copy file
    */
-  public void copyFileToCloudInParallel(Path localFile, Path gcsFile, long shardSize)
+  public void copyFileToCloudInParallel(
+      Path localFile, Path gcsFile, long shardSize, String contentType)
       throws MobileHarnessException, InterruptedException {
     long fileSize = getFileSize(localFile);
     if (fileSize < shardSize) {
-      copyFileToCloud(localFile, gcsFile);
+      copyFileToCloud(localFile, gcsFile, contentType);
       return;
     }
 
@@ -1029,7 +1049,7 @@ public class GcsUtil {
     try {
       future.get();
 
-      compose(gcsFile, true, gcsShards);
+      compose(gcsFile, true, gcsShards, contentType);
       logger.atInfo().log(
           "Uploaded local %s to gs://%s/%s in %s shards,",
           localFile, storageParams.bucketName, gcsFile, shardCount);
@@ -1052,7 +1072,8 @@ public class GcsUtil {
    * @return whether copy is executed
    */
   @SuppressWarnings("GoodTime") // TODO: fix GoodTime violation
-  public boolean copyFileToCloudIfNonExistingOrDead(Path localFile, Path gcsFile, Duration ttl)
+  public boolean copyFileToCloudIfNonExistingOrDead(
+      Path localFile, Path gcsFile, Duration ttl, String contentType)
       throws MobileHarnessException, InterruptedException {
     Optional<Duration> age = getAge(gcsFile);
     if (age.isPresent() && age.get().compareTo(ttl) < 0) {
@@ -1062,7 +1083,7 @@ public class GcsUtil {
           localFile, gcsFile, age.get(), ttl);
       return false;
     }
-    copyFileToCloud(localFile, gcsFile);
+    copyFileToCloud(localFile, gcsFile, contentType);
     return true;
   }
 
@@ -1073,7 +1094,7 @@ public class GcsUtil {
    * @return whether copy is executed
    */
   public boolean copyFileToCloudInParallelIfNonExistingOrDead(
-      Path localFile, Path gcsFile, Duration ttl, long shardSize)
+      Path localFile, Path gcsFile, Duration ttl, long shardSize, String contentType)
       throws MobileHarnessException, InterruptedException {
     Optional<Duration> age = getAge(gcsFile);
     if (age.isPresent() && age.get().compareTo(ttl) < 0) {
@@ -1083,7 +1104,7 @@ public class GcsUtil {
           localFile, gcsFile, age.get(), ttl);
       return false;
     }
-    copyFileToCloudInParallel(localFile, gcsFile, shardSize);
+    copyFileToCloudInParallel(localFile, gcsFile, shardSize, contentType);
     return true;
   }
 
