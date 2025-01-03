@@ -376,8 +376,7 @@ public class GcsFileManager {
                 !uploadFile(zipInfo.zipFilePath(), Path.of(decodedChecksum)),
                 decodedChecksum);
           } else if (fileExists(fileOrDir)) {
-            String decodedChecksum =
-                checksum.orElse(gcsUtil.decodeCrc32c(gcsUtil.calculateCrc32c(fileOrDir)));
+            String decodedChecksum = checksum.orElse(gcsUtil.calculateChecksum(fileOrDir));
             long fileSize = gcsUtil.getFileSize(fileOrDir);
             return ExecutionInfo.create(
                 fileSize, !uploadFile(fileOrDir, Path.of(decodedChecksum)), decodedChecksum);
@@ -470,22 +469,22 @@ public class GcsFileManager {
           zipStoreOnly,
           /* compressionLevel= */ 1,
           zipTimeout.map(Timeout::fixed).orElse(null));
-      String checksum = gcsUtil.calculateCrc32c(tmpZipFile);
-      String decodedChecksum = gcsUtil.decodeCrc32c(checksum);
+      String checksum = gcsUtil.calculateChecksum(tmpZipFile);
+      String crc32cChecksum = gcsUtil.decodeCrc32c(gcsUtil.calculateCrc32c(tmpZipFile));
       logger.atInfo().log(
-          "Compressed: directory %s to tmp file %s. checksum: %s. decoded checksum: %s;"
+          "Compressed: directory %s to tmp file %s. checksum: %s. crc32c checksum: %s;"
               + "store_only: %s; timeout: %s",
-          dir, tmpZipFile, checksum, decodedChecksum, zipStoreOnly, zipTimeout);
+          dir, tmpZipFile, checksum, crc32cChecksum, zipStoreOnly, zipTimeout);
 
-      Path zipFile = homeDir.resolve(decodedChecksum + ".zip");
+      Path zipFile = homeDir.resolve(checksum + ".zip");
       return ZipInfo.create(
-          decodedChecksum,
+          checksum,
           localCache.get(
-              decodedChecksum,
+              crc32cChecksum,
               () -> {
                 localFileUtil.moveFileOrDir(tmpZipFile, zipFile);
                 localFileUtil.setFilePermission(zipFile, "r-xr-xr-x");
-                logger.atInfo().log("Update local cache: %s: %s", decodedChecksum, zipFile);
+                logger.atInfo().log("Update local cache: %s: %s", checksum, zipFile);
                 return zipFile;
               }));
     } catch (ExecutionException e) {

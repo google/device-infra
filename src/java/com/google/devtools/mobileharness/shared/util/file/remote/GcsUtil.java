@@ -249,6 +249,8 @@ public class GcsUtil {
 
   private final ChecksumUtil checksumUtil;
 
+  private final ChecksumUtil crc32cChecksumUtil;
+
   private final LocalFileUtil localFileUtil;
 
   private static Storage getClient(GcsParams storageParams) throws MobileHarnessException {
@@ -321,6 +323,7 @@ public class GcsUtil {
         storageParams,
         getClient(storageParams),
         new ChecksumUtil(Hashing.murmur3_128()),
+        new ChecksumUtil(Hashing.crc32c()),
         new LocalFileUtil());
   }
 
@@ -329,10 +332,12 @@ public class GcsUtil {
       GcsParams storageParams,
       Storage client,
       ChecksumUtil checksumUtil,
+      ChecksumUtil crc32cChecksumUtil,
       LocalFileUtil localFileUtil) {
     this.storageParams = storageParams;
     this.client = client;
     this.checksumUtil = checksumUtil;
+    this.crc32cChecksumUtil = crc32cChecksumUtil;
     this.localFileUtil = localFileUtil;
   }
 
@@ -711,7 +716,7 @@ public class GcsUtil {
    * big-endian order.,
    */
   public String calculateCrc32c(Path localFile) throws MobileHarnessException {
-    byte[] bytes = checksumUtil.fingerprintHashCode(localFile).asBytes();
+    byte[] bytes = crc32cChecksumUtil.fingerprintHashCode(localFile).asBytes();
     Bytes.reverse(bytes);
     return BaseEncoding.base64().encode(bytes);
   }
@@ -721,9 +726,18 @@ public class GcsUtil {
    * big-endian order.,
    */
   public String calculateCrc32cOfBytes(byte[] bytes) {
-    byte[] checksumBytes = checksumUtil.fingerprintBytesHashCode(bytes).asBytes();
+    byte[] checksumBytes = crc32cChecksumUtil.fingerprintBytesHashCode(bytes).asBytes();
     Bytes.reverse(checksumBytes);
     return BaseEncoding.base64().encode(checksumBytes);
+  }
+
+  /**
+   * Calculates the checksum of {@code localFile}.
+   *
+   * <p>The checksum algorithm is murmur3_128 now.
+   */
+  public String calculateChecksum(Path localFile) throws MobileHarnessException {
+    return checksumUtil.fingerprint(localFile);
   }
 
   /** Return all the objects names beginning with this prefix. */
