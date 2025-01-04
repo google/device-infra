@@ -24,7 +24,6 @@ import com.google.wireless.qa.mobileharness.shared.model.job.in.Files;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.ScopedSpecs;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.SubDeviceSpecs;
-import com.google.wireless.qa.mobileharness.shared.model.job.out.Errors;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Log;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.RemoteFiles;
@@ -106,7 +105,7 @@ public final class JobInternalFactory {
       Result result,
       Log log,
       Properties properties,
-      Errors errors) {
+      Warnings warnings) {
     return new TestInfo(
         testLocator,
         timing,
@@ -118,6 +117,6 @@ public final class JobInternalFactory {
         result,
         log,
         properties,
-        errors);
+        warnings);
   }
 }

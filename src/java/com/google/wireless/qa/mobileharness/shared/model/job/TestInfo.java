@@ -29,7 +29,6 @@ import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.shared.util.time.CountDownTimer;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Files;
-import com.google.wireless.qa.mobileharness.shared.model.job.out.Errors;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Log;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.RemoteFiles;
@@ -75,7 +74,7 @@ public class TestInfo extends TestScheduleUnit implements Cloneable {
   private final Properties properties;
 
   /** Test warnings. */
-  private final Errors errors;
+  private final Warnings warnings;
 
   /** Utilities for local file operations. */
   private final LocalFileUtil fileUtil;
@@ -99,7 +98,7 @@ public class TestInfo extends TestScheduleUnit implements Cloneable {
       Result result,
       Log log,
       Properties properties,
-      Errors errors) {
+      Warnings warnings) {
     super(testLocator, timing);
     this.jobInfo = jobInfo;
     this.parentTest = parentTest;
@@ -111,7 +110,7 @@ public class TestInfo extends TestScheduleUnit implements Cloneable {
     this.result = result;
     this.log = log;
     this.properties = properties;
-    this.errors = errors;
+    this.warnings = warnings;
     testExecutionUnitSupplier =
         Suppliers.memoize(
             () ->
@@ -150,7 +149,7 @@ public class TestInfo extends TestScheduleUnit implements Cloneable {
                             remoteFileDir,
                             "j_" + jobInfo.locator().getId(),
                             "test_" + locator().getId())));
-    errors = new Errors(log, timing());
+    warnings = new Warnings(log, timing().toNewTiming());
     properties = new Properties(timing());
     result = new Result(timing(), jobInfo.params());
     status = new Status(timing());
@@ -288,19 +287,9 @@ public class TestInfo extends TestScheduleUnit implements Cloneable {
     return properties;
   }
 
-  /**
-   * Please use {@link #warnings()} instead, which is the new name and API of the legacy errors.
-   *
-   * <p>Warnings that occur during execution.
-   */
-  @Deprecated
-  public Errors errors() {
-    return errors;
-  }
-
   /** Warnings that occur during execution. */
   public Warnings warnings() {
-    return errors.toWarnings();
+    return warnings;
   }
 
   /**
