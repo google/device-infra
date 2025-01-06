@@ -40,6 +40,7 @@ import com.google.devtools.mobileharness.infra.lab.controller.util.LabFileNotifi
 import com.google.devtools.mobileharness.infra.lab.rpc.service.util.LabResponseProtoGenerator;
 import com.google.devtools.mobileharness.infra.lab.rpc.service.util.TestInfoCreator;
 import com.google.devtools.mobileharness.shared.util.comm.messaging.message.TestMessageInfo;
+import com.google.devtools.mobileharness.shared.util.error.ErrorModelConverter;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.message.StrPairUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
@@ -63,7 +64,6 @@ import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
 import com.google.wireless.qa.mobileharness.shared.model.allocation.Allocation;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
-import com.google.wireless.qa.mobileharness.shared.model.job.out.Errors;
 import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import java.util.ArrayList;
@@ -330,7 +330,7 @@ public class ExecTestServiceImpl {
     testResult.causeProto().ifPresent(testProto::setResultCause);
     testProto.setLog(testInfo.log().get(0));
     testInfo.warnings().getAll().stream()
-        .map(exceptionDetail -> Errors.toLegacyErrorInfo(exceptionDetail))
+        .map(exceptionDetail -> ErrorModelConverter.toLegacyErrorInfo(exceptionDetail))
         .forEach(testProto::addError);
     testProto.addAllProperty(StrPairUtil.convertMapToList(testInfo.properties().getAll()));
     return testProto.build();

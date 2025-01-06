@@ -35,6 +35,7 @@ import com.google.devtools.mobileharness.api.model.proto.Error;
 import com.google.devtools.mobileharness.api.model.proto.Error.ExceptionDetail;
 import com.google.devtools.mobileharness.api.model.proto.Error.ExceptionSummary;
 import com.google.devtools.mobileharness.shared.model.error.UnknownErrorId;
+import com.google.wireless.qa.mobileharness.shared.proto.Common.ErrorInfo;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
@@ -324,6 +325,25 @@ public class ErrorModelConverter {
     return Throwables.getStackTraceAsString(
         com.google.devtools.common.metrics.stability.converter.ErrorModelConverter
             .toDeserializedException(detail));
+  }
+
+  public static ErrorInfo toLegacyErrorInfo(ExceptionProto.ExceptionDetail detail) {
+    ExceptionProto.ExceptionSummary summary = detail.getSummary();
+    ErrorInfo.Builder errorInfo = ErrorInfo.newBuilder();
+    if (summary.getErrorId().getCode() != 0) {
+      errorInfo.setCode(summary.getErrorId().getCode());
+    }
+    if (!summary.getErrorId().getName().isEmpty()) {
+      errorInfo.setName(summary.getErrorId().getName());
+    }
+    if (!summary.getMessage().isEmpty()) {
+      errorInfo.setMessage(summary.getMessage());
+    }
+    return errorInfo
+        .setType(summary.getErrorId().getType())
+        .setNamespace(summary.getErrorId().getNamespace())
+        .setStackTrace(getCompleteStackTrace(detail))
+        .build();
   }
 
   private static java.lang.StackTraceElement[] getStackTrace(ExceptionSummary summary) {
