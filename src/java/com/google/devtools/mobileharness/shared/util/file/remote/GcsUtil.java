@@ -643,6 +643,14 @@ public class GcsUtil {
     return storageParams.bucketName;
   }
 
+  /** Checks if the GCS file {@code gcsFile} is compressed. */
+  public boolean isCompressed(Path gcsFile) throws MobileHarnessException, InterruptedException {
+    return getMetadata(GcsApiObject.create(gcsFile))
+        .map(StorageObject::getContentType)
+        .map(contentType -> contentType.equals("application/zip"))
+        .orElse(false);
+  }
+
   /**
    * Gets MD5 Hash of GCS file {@code gscFile}. Go to
    * https://cloud.google.com/storage/docs/composite-objects for more details.

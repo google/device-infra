@@ -160,7 +160,7 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
     logger.atInfo().log("Sending file: %s", local);
     long fileSize;
     boolean isCached;
-    if (fileOrDirExists(local)) {
+    if (isFileExists(Path.of(local)) || localFileUtil.isDirExist(local)) {
       FileOperationStatus result = sendDirectlyIfSmall(metadata, Path.of(local));
       if (result.isFinished()) {
         fileSize = result.fileSize();
@@ -183,8 +183,11 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
     } else if (checksum != null && gcsFileManager.fileExist(Path.of(checksum))) {
       fileSize = gcsFileManager.getGcsFileSize(Path.of(checksum));
       isCached = true;
-      // TODO: We need to check the file type to decide whether it is compressed.
-      downloadGcsFileToServer(metadata, checksum, Path.of(local), /* isCompressed= */ false);
+      downloadGcsFileToServer(
+          metadata,
+          checksum,
+          Path.of(local),
+          /* isCompressed= */ gcsFileManager.isCompressed(Path.of(checksum)));
     } else {
       throw new MobileHarnessException(
           InfraErrorId.FT_FILE_NOT_EXIST,
@@ -212,7 +215,8 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
   @Override
   public boolean isSendable(String path, @Nullable String checksum)
       throws MobileHarnessException, InterruptedException {
-    return fileOrDirExists(path)
+    return isFileExists(Path.of(path))
+        || localFileUtil.isDirExist(path)
         || (checksum != null && gcsFileManager.fileExist(Path.of(checksum)));
   }
 

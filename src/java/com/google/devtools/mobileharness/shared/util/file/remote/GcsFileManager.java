@@ -368,9 +368,9 @@ public class GcsFileManager {
         () -> {
           isCached.set(false);
           if (localFileUtil.isDirExist(fileOrDir)) {
-            ZipInfo zipInfo = compressDirectory(fileOrDir, zipStoreOnly, zipTimeout);
+            ZipInfo zipInfo = compressDirectory(fileOrDir, zipStoreOnly, zipTimeout, checksum);
             long fileSize = localFileUtil.getFileSize(zipInfo.zipFilePath());
-            String decodedChecksum = checksum.orElse(zipInfo.decodedChecksum());
+            String decodedChecksum = zipInfo.decodedChecksum();
             return ExecutionInfo.create(
                 fileSize,
                 !uploadFile(zipInfo.zipFilePath(), Path.of(decodedChecksum), "application/zip"),
@@ -461,9 +461,11 @@ public class GcsFileManager {
    * @param dir directory to zip
    * @param zipStoreOnly whether pack all file together without any compression
    * @param zipTimeout the timeout of the zip operation in milliseconds; empty means default timeout
+   * @param checksum the checksum of the directory; empty means it need to calculate the checksum
    * @return {@code pair<decoded_checksum, zip_file_path>}
    */
-  private ZipInfo compressDirectory(Path dir, boolean zipStoreOnly, Optional<Duration> zipTimeout)
+  private ZipInfo compressDirectory(
+      Path dir, boolean zipStoreOnly, Optional<Duration> zipTimeout, Optional<String> checksum)
       throws MobileHarnessException, InterruptedException {
     if (!localFileUtil.isDirExist(dir)) {
       throw new MobileHarnessException(
@@ -482,22 +484,22 @@ public class GcsFileManager {
           zipStoreOnly,
           /* compressionLevel= */ 1,
           zipTimeout.map(Timeout::fixed).orElse(null));
-      String checksum = gcsUtil.calculateChecksum(tmpZipFile);
+      String decodedChecksum = checksum.orElse(gcsUtil.calculateChecksum(tmpZipFile));
       String crc32cChecksum = gcsUtil.decodeCrc32c(gcsUtil.calculateCrc32c(tmpZipFile));
       logger.atInfo().log(
           "Compressed: directory %s to tmp file %s. checksum: %s. crc32c checksum: %s;"
               + "store_only: %s; timeout: %s",
-          dir, tmpZipFile, checksum, crc32cChecksum, zipStoreOnly, zipTimeout);
+          dir, tmpZipFile, decodedChecksum, crc32cChecksum, zipStoreOnly, zipTimeout);
 
-      Path zipFile = homeDir.resolve(checksum + ".zip");
+      Path zipFile = homeDir.resolve(decodedChecksum + ".zip");
       return ZipInfo.create(
-          checksum,
+          decodedChecksum,
           localCache.get(
               crc32cChecksum,
               () -> {
                 localFileUtil.moveFileOrDir(tmpZipFile, zipFile);
                 localFileUtil.setFilePermission(zipFile, "r-xr-xr-x");
-                logger.atInfo().log("Update local cache: %s: %s", checksum, zipFile);
+                logger.atInfo().log("Update local cache: %s: %s", crc32cChecksum, zipFile);
                 return zipFile;
               }));
     } catch (ExecutionException e) {
@@ -558,5 +560,10 @@ public class GcsFileManager {
   /** Returns the file size of the path {@code gcsFile}. */
   public long getGcsFileSize(Path gcsFile) throws MobileHarnessException, InterruptedException {
     return gcsUtil.getGcsFileSize(gcsFile);
+  }
+
+  /** Returns whether the path {@code gcsFile} is compressed. */
+  public boolean isCompressed(Path gcsFile) throws MobileHarnessException, InterruptedException {
+    return gcsUtil.isCompressed(gcsFile);
   }
 }
