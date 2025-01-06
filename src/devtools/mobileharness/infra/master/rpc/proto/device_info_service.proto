@@ -65,7 +65,10 @@ message SearchSuggestions {
   repeated string suggestion = 2;
 }
 
-message GetDeviceSearchSuggestionsRequest {}
+message GetDeviceSearchSuggestionsRequest {
+  // Whether to return only the device dimensions.
+  bool dimension_only = 1;
+}
 
 message GetDeviceSearchSuggestionsResponse {
   repeated SearchSuggestions search_suggestions = 1;
