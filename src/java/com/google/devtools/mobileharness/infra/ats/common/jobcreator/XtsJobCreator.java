@@ -73,6 +73,8 @@ public abstract class XtsJobCreator {
           InfraErrorId.XTS_NO_MATCHED_TRADEFED_MODULES,
           InfraErrorId.XTS_NO_MATCHED_NON_TF_MODULES_TO_RETRY);
 
+  private static final ImmutableSet<String> CTS_TEST_PLANS = ImmutableSet.of("cts", "cts-system");
+
   private final SessionRequestHandlerUtil sessionRequestHandlerUtil;
   private final LocalFileUtil localFileUtil;
   private final TestPlanParser testPlanParser;
@@ -496,9 +498,10 @@ public abstract class XtsJobCreator {
   private boolean isCtsTestPlan(ImmutableMap<XtsPropertyName, String> extraJobProperties) {
     if (extraJobProperties.getOrDefault(Job.IS_RUN_RETRY, "").equals("true")) {
       // check the previous session test plan
-      return extraJobProperties.getOrDefault(Job.PREV_SESSION_XTS_TEST_PLAN, "").equals("cts");
+      return CTS_TEST_PLANS.contains(
+          extraJobProperties.getOrDefault(Job.PREV_SESSION_XTS_TEST_PLAN, ""));
     } else {
-      return extraJobProperties.getOrDefault(Job.XTS_TEST_PLAN, "").equals("cts");
+      return CTS_TEST_PLANS.contains(extraJobProperties.getOrDefault(Job.XTS_TEST_PLAN, ""));
     }
   }
 
