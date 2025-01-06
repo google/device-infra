@@ -160,6 +160,8 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
   private final StubManager stubManager;
   private final LongevityTestHelper longevityTestHelper = new LongevityTestHelper();
 
+  private final FileResolver fileResolver;
+
   /** Whether the test is actually started in the remote lab. */
   private volatile boolean testKickedOff = false;
 
@@ -222,6 +224,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
     this.stubManager = stubManager;
     this.testMessageManager = testMessageManager;
     this.resourceFederation = resourceFederation;
+    this.fileResolver = fileResolver;
 
     this.impersonationUser =
         supportImpersonation ? setting.testInfo().jobInfo().jobUser().getRunAs() : null;
@@ -610,7 +613,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
 
     JobInfo jobInfo = testInfo.jobInfo();
     Timeout timeout = getTestTimeout(jobInfo.setting().getNewTimeout());
-    ImmutableList<ResolveFileItem> unresolvedJobFiles = getUnresolvedJobFiles(jobInfo);
+    ImmutableList<ResolveFileItem> labResolveFiles = getLabResolveFiles(jobInfo);
 
     logger.atInfo().log("Prepare test %s with devices %s", testInfo.locator(), deviceLocators);
     CreateTestRequest createTestRequest =
@@ -633,7 +636,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
                             .setTestTimeoutMs(timeout.getTestTimeoutMs())
                             .setStartTimeoutMs(timeout.getStartTimeoutMs()))
                     .setJobFeature(jobInfo.toFeature())
-                    .addAllLabResolveFile(unresolvedJobFiles))
+                    .addAllLabResolveFile(labResolveFiles))
             .setTest(
                 CreateTestRequest.Test.newBuilder()
                     .setTestId(testInfo.locator().getId())
@@ -664,23 +667,19 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
     return response;
   }
 
-  private ImmutableList<ResolveFileItem> getUnresolvedJobFiles(JobInfo jobInfo)
+  private ImmutableList<ResolveFileItem> getLabResolveFiles(JobInfo jobInfo)
       throws MobileHarnessException, InterruptedException {
     return Streams.concat(
             jobInfo.files().getAll().entries().stream(),
             JobSpecHelper.getFiles(jobInfo.protoSpec().getProto()).entrySet().stream(),
             jobInfo.scopedSpecs().getFiles(jobSpecHelper).entrySet().stream())
-        .filter(entry -> !isResolvedInClient(entry.getValue()))
+        .filter(entry -> !resolveInClient(entry.getValue()))
         .map(entry -> createResolveFileItem(entry.getKey(), entry.getValue(), jobInfo))
         .collect(toImmutableList());
   }
 
-  /**
-   * Returns whether the client should send the given file to the lab (and also send the file
-   * metadata). If not, the client will only send the file metadata to the lab, and the lab will be
-   * responsible for resolving the file.
-   */
-  private static boolean isResolvedInClient(String filePath) {
+  /** Returns whether the file should be resolved in the client. */
+  private static boolean resolveInClient(String filePath) {
     if (Flags.instance().enableClientFileTransfer.getNonNull()) {
       return Stream.of(RemoteFileType.ATS_FILE_SERVER.prefix()).noneMatch(filePath::startsWith);
     } else {
@@ -940,7 +939,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
     if (resp.getDeviceFeatureCount() > 0) {
       try {
         updateDeviceStatus(resp.getDeviceFeatureList());
-      } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
+      } catch (MobileHarnessException e) {
         throw new MobileHarnessException(
             InfraErrorId.CLIENT_REMOTE_MODE_UPDATE_DEVICE_FEATURE_ERROR,
             "Failed to update the device features",
