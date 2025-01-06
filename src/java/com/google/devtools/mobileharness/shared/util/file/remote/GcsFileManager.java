@@ -356,7 +356,6 @@ public class GcsFileManager {
    * @param zipTimeout the timeout of the zip operation in milliseconds; empty means default timeout
    * @return information of the uploading
    */
-  @SuppressWarnings("GoodTime") // TODO: fix GoodTime violation
   public ExecutionInfo upload(
       Path fileOrDir,
       boolean zipStoreOnly,
@@ -371,10 +370,14 @@ public class GcsFileManager {
             ZipInfo zipInfo = compressDirectory(fileOrDir, zipStoreOnly, zipTimeout, checksum);
             long fileSize = localFileUtil.getFileSize(zipInfo.zipFilePath());
             String decodedChecksum = zipInfo.decodedChecksum();
-            return ExecutionInfo.create(
-                fileSize,
-                !uploadFile(zipInfo.zipFilePath(), Path.of(decodedChecksum), "application/zip"),
-                decodedChecksum);
+            ExecutionInfo executionInfo =
+                ExecutionInfo.create(
+                    fileSize,
+                    !uploadFile(zipInfo.zipFilePath(), Path.of(decodedChecksum), "application/zip"),
+                    decodedChecksum);
+            // Remove the zip file after uploading.
+            localFileUtil.removeFileOrDir(zipInfo.zipFilePath());
+            return executionInfo;
           } else if (fileExists(fileOrDir)) {
             String decodedChecksum = checksum.orElse(gcsUtil.calculateChecksum(fileOrDir));
             long fileSize = gcsUtil.getFileSize(fileOrDir);
