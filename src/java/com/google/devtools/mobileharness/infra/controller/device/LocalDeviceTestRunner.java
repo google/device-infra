@@ -45,8 +45,7 @@ public interface LocalDeviceTestRunner {
   /**
    * Adds the test to run on this device.
    *
-   * @throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException if device is
-   *     not available
+   * @throws MobileHarnessException if device is not available
    */
   void reserve(LocalDeviceTestExecutor test) throws MobileHarnessException;
 

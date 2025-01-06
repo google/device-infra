@@ -18,6 +18,7 @@ package com.google.wireless.qa.mobileharness.shared.api.device;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
+import com.google.common.annotations.Beta;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.lab.DeviceInfo;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
@@ -394,6 +395,35 @@ public interface Device {
    *     #tearDown()}, and {@link #reboot()} if {@link #canReboot()} is {@code true}
    */
   boolean checkDevice() throws MobileHarnessException, InterruptedException;
+
+  /**
+   * This method is called before a device is allocated to a test. It can be used to perform
+   * additional checks on the device before it is allocated.
+   *
+   * <p>The timeout for this method is 1 minute. If the method does not complete within 1 minute,
+   * the check will be treated as failed.
+   *
+   * <p>Best practices:
+   *
+   * <ul>
+   *   <li>This method should only perform lightweight operations, such as:
+   *       <ul>
+   *         <li>Checking the device's battery level.
+   *         <li>Verifying the device's network connectivity.
+   *         <li>Checking the device's free storage space.
+   *       </ul>
+   *   <li>Avoid performing time-consuming operations, such as installing APKs or running complex
+   *       tests.
+   *   <li>If the device does not pass the checks, throw a {@link MobileHarnessException}.
+   * </ul>
+   *
+   * <p>Note: This method is in prototype stage and may be changed in the future. Do not rely on it
+   * for production use.
+   */
+  @Beta
+  default void preAllocationCheckDevice() throws MobileHarnessException, InterruptedException {
+    // By default, it does nothing.
+  }
 
   /** Returns whether the device is is not yet ready for use; e.g. needs to recharge its battery. */
   boolean isPrepping();

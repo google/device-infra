@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.controller.device;
 
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatusWithTimestamp;
 import java.time.Instant;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -64,5 +65,5 @@ public abstract class LocalDeviceRunner implements Runnable, LocalDeviceTestRunn
    * <p>A time in the future will reserve the device. Set to {@link Instant#MIN} to immediately
    * deallocate.
    */
-  public abstract void reserve(Instant instant);
+  public abstract void reserve(Instant instant) throws InterruptedException, MobileHarnessException;
 }

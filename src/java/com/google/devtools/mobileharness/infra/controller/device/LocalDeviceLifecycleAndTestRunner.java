@@ -67,6 +67,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 
@@ -126,6 +127,11 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
 
   /** The end time for the latest allocation, or null if the device is not allocated. */
   private volatile Instant allocationEndTime = null;
+
+  /**
+   * Whether the device is under checking ({@code checkDevice} or {@code preAllocationCheckDevice}).
+   */
+  private final AtomicBoolean checking = new AtomicBoolean(false);
 
   /** The running test on this device. */
   @Nullable private volatile LocalDeviceTestExecutor test = null;
@@ -589,8 +595,24 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
   }
 
   @Override
-  public void reserve(Instant allocationEndTime) {
+  public void reserve(Instant allocationEndTime)
+      throws InterruptedException, MobileHarnessException {
     this.allocationEndTime = allocationEndTime;
+    if (allocationEndTime.equals(Instant.EPOCH)) {
+      // It's deallocated, do nothing.
+      return;
+    }
+    if (checking.compareAndSet(false, true)) {
+      try {
+        logger.atInfo().log("Start preAllocationCheck");
+        device.preAllocationCheckDevice();
+        logger.atInfo().log("Finished preAllocationCheck");
+      } finally {
+        checking.set(false);
+      }
+    } else {
+      logger.atInfo().log("The device is doing checkDevice, skip preAllocationCheck");
+    }
   }
 
   @Nullable
@@ -748,24 +770,29 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
    *
    * @return whether the device is changed, to notify the device management framework
    */
-  private boolean checkDevice() throws InterruptedException, MobileHarnessException {
+  @VisibleForTesting
+  boolean checkDevice() throws InterruptedException, MobileHarnessException {
     if (clock
         .instant()
         .minus(Flags.instance().checkDeviceInterval.getNonNull())
         .isBefore(lastCheckDeviceTime)) {
       return false;
     }
-    logger.atInfo().log("Start periodical check");
-    lastCheckDeviceTime = clock.instant();
-
-    updateExtraDimensions();
+    if (!checking.compareAndSet(false, true)) {
+      logger.atInfo().log("The device is being preallocation checked.");
+      return false;
+    }
 
     try {
+      logger.atInfo().log("Start periodical check");
+      lastCheckDeviceTime = clock.instant();
+      updateExtraDimensions();
       return device.checkDevice();
     } catch (MobileHarnessException e) {
       postDeviceErrorEvent(e);
       throw e;
     } finally {
+      checking.set(false);
       logger.atInfo().log("Finish periodical check");
     }
   }
