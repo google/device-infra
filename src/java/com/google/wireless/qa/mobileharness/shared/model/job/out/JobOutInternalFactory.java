@@ -17,7 +17,6 @@
 package com.google.wireless.qa.mobileharness.shared.model.job.out;
 
 import com.google.devtools.mobileharness.api.model.job.out.TouchableTiming;
-import com.google.devtools.mobileharness.api.model.job.out.Warnings;
 import com.google.devtools.mobileharness.service.moss.proto.Slg.PropertiesProto;
 import com.google.devtools.mobileharness.service.moss.proto.Slg.RemoteFilesProto;
 import com.google.devtools.mobileharness.service.moss.proto.Slg.ResultProto;
@@ -31,11 +30,6 @@ import com.google.wireless.qa.mobileharness.shared.proto.Job.TestStatus;
 public final class JobOutInternalFactory {
 
   private JobOutInternalFactory() {}
-
-  /** Creates a {@link Errors} instance by the given {@link Warnings}. */
-  public static Errors createErrors(Warnings warnings) {
-    return new Errors(warnings);
-  }
 
   /**
    * Creates a {@link Properties} instance by the given {@link Timing} and {@link PropertiesProto}.
