@@ -16,9 +16,9 @@
 
 package com.google.devtools.mobileharness.infra.client.api.util.lister;
 
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.lister.Lister;
-import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 
 /** Simple factory for creating {@link Lister} instances. */
 public class ListerFactory {
@@ -37,7 +37,7 @@ public class ListerFactory {
         | ExceptionInInitializerError
         | SecurityException e) {
       throw new MobileHarnessException(
-          ErrorCode.TEST_LISTER_ERROR,
+          InfraErrorId.TEST_LISTER_CREATE_ERROR,
           "Failed to create new instant for " + listerClass.getSimpleName(),
           e);
     }

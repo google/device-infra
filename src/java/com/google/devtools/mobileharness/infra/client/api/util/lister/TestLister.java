@@ -21,12 +21,13 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptions;
 import com.google.devtools.mobileharness.shared.util.reflection.ClientClassUtil;
 import com.google.wireless.qa.mobileharness.client.api.event.JobStartEvent;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.ParamAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.lister.Lister;
-import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.util.List;
@@ -69,9 +70,9 @@ public class TestLister {
     // Only use test lister when no test specified.
     String driver = jobInfo.type().getDriver();
     Class<? extends Lister> listerClass = ClientClassUtil.getListerClass(driver);
-    MobileHarnessException.checkNotNull(
+    MobileHarnessExceptions.checkNotNull(
         listerClass,
-        ErrorCode.TEST_LISTER_ERROR,
+        InfraErrorId.TEST_LISTER_NOT_FOUND_ERROR,
         String.format(
             "Can't find test lister for driver: %s (expected class with name %s)",
             driver, driver + Lister.class.getSimpleName()));
@@ -86,7 +87,7 @@ public class TestLister {
     List<String> tests = lister.listTests(jobInfo);
     if (tests.isEmpty() && jobInfo.tests().isEmpty()) {
       throw new MobileHarnessException(
-          ErrorCode.TEST_LISTER_ERROR,
+          InfraErrorId.TEST_LISTER_RETURN_EMPTY_LIST_ERROR,
           "Failed to generate the test list of the job with driver: " + driver);
     }
 
@@ -97,7 +98,7 @@ public class TestLister {
         filterPattern = Pattern.compile(filterRegex);
       } catch (PatternSyntaxException exception) {
         throw new MobileHarnessException(
-            ErrorCode.TEST_LISTER_ERROR,
+            InfraErrorId.TEST_LISTER_INVALID_FILTER_ERROR,
             String.format("Param %s is not a valid regular expression", filterRegex),
             exception);
       }

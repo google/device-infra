@@ -17,7 +17,7 @@
 package com.google.wireless.qa.mobileharness.shared.api.lister;
 
 import com.google.common.collect.ImmutableSet;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.driver.AndroidNativeBin;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import java.io.File;
@@ -31,8 +31,7 @@ import java.util.List;
  */
 public class AndroidNativeBinLister implements Lister {
   @Override
-  public List<String> listTests(JobInfo jobInfo)
-      throws MobileHarnessException, InterruptedException {
+  public List<String> listTests(JobInfo jobInfo) throws MobileHarnessException {
     ImmutableSet<String> binPaths = jobInfo.files().get(AndroidNativeBin.TAG_BIN);
     List<String> results = new ArrayList<>(binPaths.size());
     for (String binPath : binPaths) {

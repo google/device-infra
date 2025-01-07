@@ -16,7 +16,7 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.lister;
 
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import java.util.List;
 

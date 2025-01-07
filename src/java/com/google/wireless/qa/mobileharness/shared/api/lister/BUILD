@@ -30,7 +30,7 @@ java_library(
     name = "lister",
     srcs = ["Lister.java"],
     deps = [
-        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
     ],
 )
@@ -44,7 +44,7 @@ java_library(
     srcs = ["AndroidNativeBinLister.java"],
     deps = [
         ":lister",
-        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:android_native_bin",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "@maven//:com_google_guava_guava",
@@ -61,7 +61,6 @@ java_library(
     ],
     deps = [
         ":lister",
-        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "@maven//:com_google_guava_guava",
     ],

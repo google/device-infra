@@ -17,7 +17,6 @@
 package com.google.wireless.qa.mobileharness.shared.api.lister;
 
 import com.google.common.collect.ImmutableList;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import java.util.List;
 
@@ -29,8 +28,7 @@ import java.util.List;
 public class AndroidRoboTestLister implements Lister {
 
   @Override
-  public List<String> listTests(JobInfo jobInfo)
-      throws MobileHarnessException, InterruptedException {
+  public List<String> listTests(JobInfo jobInfo) {
     return ImmutableList.of(jobInfo.locator().getName());
   }
 }
