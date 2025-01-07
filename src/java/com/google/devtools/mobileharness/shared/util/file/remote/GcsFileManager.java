@@ -555,9 +555,15 @@ public class GcsFileManager {
     return gcsUtil.fileExist(gcsFile);
   }
 
-  /** Returns whether the path {@code gcsFile} exists. */
-  public boolean fileExist(Path gcsFile) throws MobileHarnessException, InterruptedException {
-    return gcsUtil.fileExist(gcsFile);
+  /** Returns whether the path {@code gcsFile} exists and also fresh. */
+  public boolean fileExistAndFresh(Path gcsFile)
+      throws MobileHarnessException, InterruptedException {
+    if (cloudCacheTtl.isPresent()) {
+      Optional<Duration> age = gcsUtil.getAge(gcsFile);
+      return age.isPresent() && age.get().compareTo(cloudCacheTtl.get()) < 0;
+    } else {
+      return gcsUtil.fileExist(gcsFile);
+    }
   }
 
   /** Returns the file size of the path {@code gcsFile}. */

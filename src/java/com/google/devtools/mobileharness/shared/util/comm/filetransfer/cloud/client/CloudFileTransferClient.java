@@ -157,7 +157,7 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
       throws MobileHarnessException, InterruptedException {
     FileTransferEvent.Builder event =
         FileTransferEvent.builder().setStart(Instant.now()).setType(ExecutionType.SEND);
-    logger.atInfo().log("Sending file: %s", local);
+    logger.atInfo().log("Sending file: %s, checksum: %s", local, checksum);
     long fileSize;
     boolean isCached;
     if (isFileExists(Path.of(local)) || localFileUtil.isDirExist(local)) {
@@ -180,7 +180,10 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
             Path.of(local),
             /* isCompressed= */ dirExists(local));
       }
-    } else if (checksum != null && gcsFileManager.fileExist(Path.of(checksum))) {
+    } else if (checksum != null && gcsFileManager.fileExistAndFresh(Path.of(checksum))) {
+      logger.atInfo().log(
+          "Remote file %s is already cached as %s in GCS. Let lab server download it directly.",
+          local, checksum);
       fileSize = gcsFileManager.getGcsFileSize(Path.of(checksum));
       isCached = true;
       downloadGcsFileToServer(
@@ -217,7 +220,7 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
       throws MobileHarnessException, InterruptedException {
     return isFileExists(Path.of(path))
         || localFileUtil.isDirExist(path)
-        || (checksum != null && gcsFileManager.fileExist(Path.of(checksum)));
+        || (checksum != null && gcsFileManager.fileExistAndFresh(Path.of(checksum)));
   }
 
   /**
