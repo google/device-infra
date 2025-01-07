@@ -34,8 +34,6 @@ java_library(
         ":api_config.textproto",
         ":olc_server_for_testing_deploy.jar",
         ":olc_server_for_testing_local_mode_deploy.jar",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:ats_olc_server_deploy.jar",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:ats_olc_server_local_mode_deploy.jar",
         "//src/java/com/google/devtools/mobileharness/infra/lab:lab_server_oss_deploy.jar",
     ],
     deps = [
