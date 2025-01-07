@@ -72,7 +72,7 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 
 /** A runnable class representing the life cycle of a device. */
-public class LocalDeviceLifecycleAndTestRunner extends AbstractLocalDeviceRunner {
+public class LocalDeviceRunner extends AbstractLocalDeviceRunner {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -172,7 +172,7 @@ public class LocalDeviceLifecycleAndTestRunner extends AbstractLocalDeviceRunner
    * @throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException if fails to
    *     create the runner
    */
-  public LocalDeviceLifecycleAndTestRunner(
+  public LocalDeviceRunner(
       DeviceId deviceId,
       Class<? extends Device> type,
       EventBus globalInternalBus,
@@ -198,7 +198,7 @@ public class LocalDeviceLifecycleAndTestRunner extends AbstractLocalDeviceRunner
 
   /** Creates a new device runner. For test only. */
   @VisibleForTesting
-  LocalDeviceLifecycleAndTestRunner(
+  LocalDeviceRunner(
       DeviceId deviceId,
       Device device,
       DeviceStat stat,
@@ -779,7 +779,7 @@ public class LocalDeviceLifecycleAndTestRunner extends AbstractLocalDeviceRunner
       return false;
     }
     if (!checking.compareAndSet(false, true)) {
-      logger.atInfo().log("The device is being preallocation checked.");
+      logger.atInfo().log("The device is being pre-allocation checked.");
       return false;
     }
 

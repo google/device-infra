@@ -281,7 +281,7 @@ public class LocalDeviceDispatch {
         DeviceStat deviceStat = labStat.getOrCreateDeviceStat(newId);
         DispatchResult dispatchResult = mergedResults.get(newId);
         runner =
-            new LocalDeviceLifecycleAndTestRunner(
+            new LocalDeviceRunner(
                 dispatchResult.deviceId(),
                 dispatchResult.deviceType(),
                 globalInternalBus,

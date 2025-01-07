@@ -59,7 +59,7 @@ java_library(
         ":device_state_checker",
         ":device_status_info",
         ":device_status_provider",
-        ":local_device_lifecycle_and_test_runner",
+        ":local_device_runner",
         ":local_device_runner_provider",
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:base",
@@ -188,8 +188,8 @@ java_library(
 )
 
 java_library(
-    name = "local_device_lifecycle_and_test_runner",
-    srcs = ["LocalDeviceLifecycleAndTestRunner.java"],
+    name = "local_device_runner",
+    srcs = ["LocalDeviceRunner.java"],
     deps = [
         ":abstract_local_device_runner",
         ":device_info_manager",
