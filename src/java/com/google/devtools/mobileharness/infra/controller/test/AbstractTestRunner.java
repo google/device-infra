@@ -178,7 +178,7 @@ public abstract class AbstractTestRunner<T extends AbstractTestRunner<T>>
    * <p>This method will be invoked if {@link #start()} has been invoked but {@link #execute()} has
    * not been invoked and the {@link TestRunnerLauncher} knows that it will not invoke {@link
    * #execute()} anymore in the future because of some errors (e.g., the device disconnects when
-   * {@linkplain com.google.devtools.mobileharness.infra.controller.device.LocalDeviceRunner
+   * {@linkplain com.google.devtools.mobileharness.infra.controller.device.AbstractLocalDeviceRunner
    * LocalDeviceRunner} is checking the device after {@linkplain
    * com.google.devtools.mobileharness.infra.controller.test.launcher.LocalDeviceTestRunnerLauncher
    * LocalDeviceTestRunnerLauncher} has reserved the device).
@@ -193,8 +193,6 @@ public abstract class AbstractTestRunner<T extends AbstractTestRunner<T>>
    */
   protected abstract void finalizeTest(MobileHarnessException error);
 
-  /**
-   * @return self
-   */
+  /** Returns itself. */
   protected abstract T self();
 }

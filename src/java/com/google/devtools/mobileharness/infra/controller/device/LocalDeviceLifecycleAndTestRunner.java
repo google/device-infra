@@ -72,7 +72,7 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 
 /** A runnable class representing the life cycle of a device. */
-public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
+public class LocalDeviceLifecycleAndTestRunner extends AbstractLocalDeviceRunner {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 

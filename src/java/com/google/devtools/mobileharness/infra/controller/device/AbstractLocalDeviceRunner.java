@@ -22,7 +22,7 @@ import java.time.Instant;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /** Runner for test and device lifecycle on device. */
-public abstract class LocalDeviceRunner implements Runnable, LocalDeviceTestRunner {
+public abstract class AbstractLocalDeviceRunner implements Runnable, LocalDeviceTestRunner {
 
   /** Total instance number of this class. */
   protected static AtomicInteger runnerCount = new AtomicInteger(0);

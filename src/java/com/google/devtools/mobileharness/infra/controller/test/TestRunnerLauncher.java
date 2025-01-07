@@ -45,7 +45,7 @@ import javax.annotation.concurrent.GuardedBy;
  * <ul>
  *   <li>{@link #executeTest()}
  *   <li>{@link #isTestExecuting()}
- *   <li>{@link #finalizeTest(String)}
+ *   <li>{@link #finalizeTest}
  *   <li>{@link #getTestRunner()}
  * </ul>
  *
@@ -55,8 +55,8 @@ import javax.annotation.concurrent.GuardedBy;
  * <p>An example implementation of this class is {@linkplain
  * com.google.devtools.mobileharness.infra.controller.test.launcher.LocalDeviceTestRunnerLauncher
  * LocalDeviceTestRunnerLauncher}, which submits the test to a {@linkplain
- * com.google.devtools.mobileharness.infra.controller.device.LocalDeviceRunner LocalDeviceRunner}
- * and runs the test in the main thread of the device runner.
+ * com.google.devtools.mobileharness.infra.controller.device.AbstractLocalDeviceRunner
+ * LocalDeviceRunner} and runs the test in the main thread of the device runner.
  *
  * @param <T> the type of test runner the launcher can connect to
  * @see AbstractTestRunner
@@ -88,9 +88,7 @@ public abstract class TestRunnerLauncher<T extends TestRunner> {
   /** Kills the test. */
   protected abstract void killTest();
 
-  /**
-   * @return whether the test is running
-   */
+  /** Returns whether the test is running. */
   protected abstract boolean isTestRunning();
 
   /**
@@ -157,9 +155,7 @@ public abstract class TestRunnerLauncher<T extends TestRunner> {
     }
   }
 
-  /**
-   * @return whether the launcher has been connected to a test runner
-   */
+  /** Returns whether the launcher has been connected to a test runner. */
   protected final boolean isConnected() {
     synchronized (testRunnerLock) {
       return testRunner != null;
