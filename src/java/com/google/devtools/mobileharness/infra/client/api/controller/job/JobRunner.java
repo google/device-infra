@@ -171,9 +171,6 @@ public class JobRunner implements Runnable {
   /** Timeout for waiting for the test thread pool terminate. */
   private static final Duration TERMINATE_TEST_TIMEOUT = Duration.ofMinutes(5);
 
-  /** Interval for checking the tests which are waiting for allocating devices. */
-  private static final Duration CHECK_NEW_TESTS_INTERVAL = Duration.ofSeconds(30);
-
   /** Logger for this job. */
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -210,6 +207,8 @@ public class JobRunner implements Runnable {
 
   private final Clock clock;
   private final Sleeper sleeper;
+  private final PendingTestPrinter pendingTestPrinter;
+  private final SuitableDeviceChecker suitableDeviceChecker = new SuitableDeviceChecker();
 
   /** Util for diagnostic the reasons when the job fails to allocate devices. */
   private volatile AllocationDiagnostician allocDiagnostician;
@@ -278,6 +277,7 @@ public class JobRunner implements Runnable {
     this.deviceQuerier = execMode.createDeviceQuerier();
     this.threadPool = threadPool;
     this.testManager = testManager;
+    this.pendingTestPrinter = new PendingTestPrinter(clock, jobInfo);
 
     logFailure(this.threadPool.submit(testManager), Level.SEVERE, "Fatal error in test manager");
     scopedEventBus = new ScopedEventBus<>(EventScope.class);
@@ -382,7 +382,6 @@ public class JobRunner implements Runnable {
     }
   }
 
-  @SuppressWarnings("EmptyTryBlock")
   @Override
   public void run() {
     running = true;
@@ -434,13 +433,13 @@ public class JobRunner implements Runnable {
         }
 
         isDeviceAllocatorSetUp = true;
-        Instant nextCheckNewTestTime = clock.instant();
+        pendingTestPrinter.initialize();
         int countPollAllocation = 0;
         Instant nextPollAllocationTime = getNextPollAllocationTime(countPollAllocation);
         // Uses this to log allocation start point of retry tests incrementally.
         Set<String> loggedTests = new HashSet<>();
 
-        SuitableDeviceChecker suitableDeviceChecker = new SuitableDeviceChecker();
+        suitableDeviceChecker.initialize();
         // Don't check whether there's potential suitable device for tests in M&M. b/124489785
         if (Objects.equals(jobInfo.dimensions().get(Name.POOL), Value.POOL_SHARED)) {
           suitableDeviceChecker.setHasFoundPotentialSuitableDevice();
@@ -486,146 +485,9 @@ public class JobRunner implements Runnable {
             nextPollAllocationTime = getNextPollAllocationTime(countPollAllocation);
 
             for (AllocationWithStats allocationWithStats : deviceAllocator.pollAllocations()) {
-              Allocation allocation = allocationWithStats.allocation();
-              logger.atInfo().log("Allocation: %s", allocation);
-              // Double checks the allocation.
-              ImmutableList<DeviceLocator> deviceLocators = allocation.getAllDevices();
-              TestLocator testLocator = allocation.getTest();
-              if (!testLocator.jobLocator().id().equals(jobInfo.locator().getId())) {
-                String error = "Receive allocation which doesn't belong to this job: " + allocation;
-                logger.atSevere().log("%s", error);
-                jobInfo
-                    .warnings()
-                    .addAndLog(
-                        new MobileHarnessException(
-                            InfraErrorId.CLIENT_JR_ALLOC_RESULT_TEST_NOT_IN_JOB, error));
-                continue;
-              }
-
-              String testId = testLocator.id();
-              TestInfo testInfo = jobInfo.tests().getById(testId);
-              if (testInfo == null) {
-                String error = "Test of the allocation not found: " + allocation;
-                logger.atSevere().log("%s", error);
-                jobInfo
-                    .warnings()
-                    .addAndLog(
-                        new MobileHarnessException(
-                            InfraErrorId.CLIENT_JR_ALLOC_RESULT_TEST_NOT_FOUND, error));
-                continue;
-              }
-
-              // Doesn't need to start the test if the test of the allocation is already running.
-              if (testManager.isTestRunning(allocation)) {
-                jobInfo
-                    .warnings()
-                    .addAndLog(
-                        new MobileHarnessException(
-                            InfraErrorId.CLIENT_JR_ALLOC_RESULT_TEST_ALREADY_ALLOCATED,
-                            "Ignore allocation "
-                                + allocation
-                                + " because the test is already running on the device"),
-                        logger);
-              } else {
-                // Copy the allocation stats to test properties.
-                testInfo.properties().addAll(allocationWithStats.stats());
-
-                // Records the allocation time of the test.
-                Duration allocationTime =
-                    Duration.between(
-                        getCorrectAllocationStartTime(startDeviceAllocationTime, testInfo),
-                        clock.instant());
-                testInfo
-                    .properties()
-                    .add(
-                        PropertyName.Test.ALLOCATION_TIME_MS,
-                        Long.toString(allocationTime.toMillis()));
-                String allocationTimeSec = String.valueOf(allocationTime.toSeconds());
-                testInfo.properties().add(PropertyName.Test.ALLOCATION_TIME_SEC, allocationTimeSec);
-                jobInfo.log().atInfo().alsoTo(logger).log("Device allocation finished");
-
-                try (MobileHarnessAutoCloseable ignored1 =
-                    getAllocateDeviceSpan(startDeviceAllocationTime, testInfo)) {
-                  // Does nothing.
-                }
-
-                if (!hasAllocation) {
-                  jobInfo
-                      .properties()
-                      .add(PropertyName.Job.FIRST_TEST_ALLOCATION_TIME_SEC, allocationTimeSec);
-                }
-
-                // Creates TestRunner with the allocation.
-                hasAllocation = true;
-                suitableDeviceChecker.setHasFoundPotentialSuitableDevice();
-                jobInfo
-                    .log()
-                    .atInfo()
-                    .alsoTo(logger)
-                    .log("Allocated devices %s for test %s", deviceLocators, testId);
-                testInfo.status().set(TestStatus.ASSIGNED);
-                try {
-                  // Passing plugins(INTERNAL_PLUGIN + API_PLUGIN + JAR_PLUGIN) to test runner
-                  // thread.
-                  DirectTestRunnerSetting setting =
-                      DirectTestRunnerSetting.create(
-                          testInfo,
-                          new com.google.wireless.qa.mobileharness.shared.model.allocation
-                              .Allocation(allocation),
-                          scopedEventBus.inScope(EventScope.GLOBAL_INTERNAL),
-                          scopeEventSubscribers.get(EventScope.INTERNAL_PLUGIN),
-                          scopeEventSubscribers.get(EventScope.API_PLUGIN),
-                          scopeEventSubscribers.get(EventScope.JAR_PLUGIN));
-                  DirectTestRunner testRunner =
-                      execMode.createTestRunner(
-                          setting,
-                          threadPool,
-                          new com.google.devtools.mobileharness.shared.file.resolver
-                              .LocalFileResolver(null, fileUtil));
-
-                  // Subscribes test messages of the test.
-                  synchronized (testMessageSubscribers) {
-                    for (Object testMessageSubscriber : testMessageSubscribers) {
-                      testRunner.registerTestEventSubscriber(
-                          testMessageSubscriber, DirectTestRunner.EventScope.TEST_MESSAGE);
-                    }
-                  }
-
-                  // Starts the test.
-                  testManager.startTest(testRunner);
-                } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
-                  TestResult result = ResultUtil.getResultByException(e);
-                  if (e instanceof MobileHarnessException) {
-                    testInfo
-                        .result()
-                        .toNewResult()
-                        .setNonPassing(
-                            Result.upgradeTestResult(result), (MobileHarnessException) e);
-                  } else {
-                    testInfo
-                        .result()
-                        .toNewResult()
-                        .setNonPassing(
-                            Result.upgradeTestResult(result),
-                            new MobileHarnessException(
-                                InfraErrorId.CLIENT_JR_TEST_START_ERROR,
-                                "Revert allocation "
-                                    + allocation
-                                    + " because failed to start the test on the devices",
-                                e));
-                  }
-                  testInfo
-                      .log()
-                      .atWarning()
-                      .withCause(e)
-                      .alsoTo(logger)
-                      .log(
-                          "Revert allocation %s because failed to start the test on the devices",
-                          allocation);
-                  deviceAllocator.releaseAllocation(allocation, result, true);
-                }
-              }
+              handleNewAllocation(allocationWithStats, startDeviceAllocationTime);
             }
+
             if (!hasAllocation) {
               if (!jobInfo.properties().getBoolean(Job.HAS_ASSOCIATED_ALLOCATION).orElse(false)) {
                 Instant now = clock.instant();
@@ -648,25 +510,7 @@ public class JobRunner implements Runnable {
                 suitableDeviceChecker.check();
               }
             }
-            if (nextCheckNewTestTime.isBefore(clock.instant())) {
-              int newTestCount = jobInfo.tests().getNewTestCount();
-              if (newTestCount > 0) {
-                jobInfo
-                    .log()
-                    .atInfo()
-                    .alsoTo(logger)
-                    .log("%s tests waiting for device allocation", newTestCount);
-              }
-              int suspendedTestCount = jobInfo.tests().getSuspendedTestCount();
-              if (suspendedTestCount > 0) {
-                jobInfo
-                    .log()
-                    .atInfo()
-                    .alsoTo(logger)
-                    .log("%s tests suspended due to quota issues.", suspendedTestCount);
-              }
-              nextCheckNewTestTime = nextCheckNewTestTime.plus(CHECK_NEW_TESTS_INTERVAL);
-            }
+            pendingTestPrinter.tryPrintPendingTests();
           }
         }
       }
@@ -948,6 +792,147 @@ public class JobRunner implements Runnable {
       }
     }
     return skipJob;
+  }
+
+  @SuppressWarnings("EmptyTryBlock")
+  private void handleNewAllocation(
+      AllocationWithStats allocationWithStats, Instant startDeviceAllocationTime)
+      throws com.google.wireless.qa.mobileharness.shared.MobileHarnessException,
+          InterruptedException {
+    Allocation allocation = allocationWithStats.allocation();
+    logger.atInfo().log("Allocation: %s", allocation);
+    // Double checks the allocation.
+    ImmutableList<DeviceLocator> deviceLocators = allocation.getAllDevices();
+    TestLocator testLocator = allocation.getTest();
+    if (!testLocator.jobLocator().id().equals(jobInfo.locator().getId())) {
+      String error = "Receive allocation which doesn't belong to this job: " + allocation;
+      logger.atSevere().log("%s", error);
+      jobInfo
+          .warnings()
+          .addAndLog(
+              new MobileHarnessException(
+                  InfraErrorId.CLIENT_JR_ALLOC_RESULT_TEST_NOT_IN_JOB, error));
+      return;
+    }
+
+    String testId = testLocator.id();
+    TestInfo testInfo = jobInfo.tests().getById(testId);
+    if (testInfo == null) {
+      String error = "Test of the allocation not found: " + allocation;
+      logger.atSevere().log("%s", error);
+      jobInfo
+          .warnings()
+          .addAndLog(
+              new MobileHarnessException(
+                  InfraErrorId.CLIENT_JR_ALLOC_RESULT_TEST_NOT_FOUND, error));
+      return;
+    }
+
+    // Doesn't need to start the test if the test of the allocation is already running.
+    if (testManager.isTestRunning(allocation)) {
+      jobInfo
+          .warnings()
+          .addAndLog(
+              new MobileHarnessException(
+                  InfraErrorId.CLIENT_JR_ALLOC_RESULT_TEST_ALREADY_ALLOCATED,
+                  "Ignore allocation "
+                      + allocation
+                      + " because the test is already running on the device"),
+              logger);
+    } else {
+      // Copy the allocation stats to test properties.
+      testInfo.properties().addAll(allocationWithStats.stats());
+
+      // Records the allocation time of the test.
+      Duration allocationTime =
+          Duration.between(
+              getCorrectAllocationStartTime(startDeviceAllocationTime, testInfo), clock.instant());
+      testInfo
+          .properties()
+          .add(PropertyName.Test.ALLOCATION_TIME_MS, Long.toString(allocationTime.toMillis()));
+      String allocationTimeSec = String.valueOf(allocationTime.toSeconds());
+      testInfo.properties().add(PropertyName.Test.ALLOCATION_TIME_SEC, allocationTimeSec);
+      jobInfo.log().atInfo().alsoTo(logger).log("Device allocation finished");
+
+      try (MobileHarnessAutoCloseable ignored1 =
+          getAllocateDeviceSpan(startDeviceAllocationTime, testInfo)) {
+        // Does nothing.
+      }
+
+      if (!hasAllocation) {
+        jobInfo
+            .properties()
+            .add(PropertyName.Job.FIRST_TEST_ALLOCATION_TIME_SEC, allocationTimeSec);
+      }
+
+      // Creates TestRunner with the allocation.
+      hasAllocation = true;
+      suitableDeviceChecker.setHasFoundPotentialSuitableDevice();
+      jobInfo
+          .log()
+          .atInfo()
+          .alsoTo(logger)
+          .log("Allocated devices %s for test %s", deviceLocators, testId);
+      testInfo.status().set(TestStatus.ASSIGNED);
+      try {
+        // Passing plugins(INTERNAL_PLUGIN + API_PLUGIN + JAR_PLUGIN) to test runner
+        // thread.
+        DirectTestRunnerSetting setting =
+            DirectTestRunnerSetting.create(
+                testInfo,
+                new com.google.wireless.qa.mobileharness.shared.model.allocation.Allocation(
+                    allocation),
+                scopedEventBus.inScope(EventScope.GLOBAL_INTERNAL),
+                scopeEventSubscribers.get(EventScope.INTERNAL_PLUGIN),
+                scopeEventSubscribers.get(EventScope.API_PLUGIN),
+                scopeEventSubscribers.get(EventScope.JAR_PLUGIN));
+        DirectTestRunner testRunner =
+            execMode.createTestRunner(
+                setting,
+                threadPool,
+                new com.google.devtools.mobileharness.shared.file.resolver.LocalFileResolver(
+                    null, fileUtil));
+
+        // Subscribes test messages of the test.
+        synchronized (testMessageSubscribers) {
+          for (Object testMessageSubscriber : testMessageSubscribers) {
+            testRunner.registerTestEventSubscriber(
+                testMessageSubscriber, DirectTestRunner.EventScope.TEST_MESSAGE);
+          }
+        }
+
+        // Starts the test.
+        testManager.startTest(testRunner);
+      } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
+        TestResult result = ResultUtil.getResultByException(e);
+        if (e instanceof MobileHarnessException) {
+          testInfo
+              .result()
+              .toNewResult()
+              .setNonPassing(Result.upgradeTestResult(result), (MobileHarnessException) e);
+        } else {
+          testInfo
+              .result()
+              .toNewResult()
+              .setNonPassing(
+                  Result.upgradeTestResult(result),
+                  new MobileHarnessException(
+                      InfraErrorId.CLIENT_JR_TEST_START_ERROR,
+                      "Revert allocation "
+                          + allocation
+                          + " because failed to start the test on the devices",
+                      e));
+        }
+        testInfo
+            .log()
+            .atWarning()
+            .withCause(e)
+            .alsoTo(logger)
+            .log(
+                "Revert allocation %s because failed to start the test on the devices", allocation);
+        deviceAllocator.releaseAllocation(allocation, result, true);
+      }
+    }
   }
 
   /**
@@ -1670,7 +1655,7 @@ public class JobRunner implements Runnable {
     private boolean hasFoundPotentialSuitableDevice;
     private int deviceQueryTimes;
 
-    private SuitableDeviceChecker() {
+    private void initialize() {
       nextQueryDeviceTime = clock.instant().plus(startQueryDeviceLatency);
     }
 
