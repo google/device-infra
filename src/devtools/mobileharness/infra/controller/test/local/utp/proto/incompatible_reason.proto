@@ -113,6 +113,7 @@ enum ConverterIncompatibleReason {
   // IosGoogleAccountDecorator (IDGA = IOS_DECORATOR_GOOGLE_ACCOUNT)
   // Range: 20_401 ~ 20_500
   IDGA_DEPRECATED_PARAMS_UNSUPPORTED = 20401;
+  IDGA_DISABLED = 20402;
 }
 
 // MH infra-related reasons why a MH test can not run in hybrid UTP mode.
