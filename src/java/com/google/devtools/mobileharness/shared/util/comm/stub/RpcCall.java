@@ -16,10 +16,12 @@
 
 package com.google.devtools.mobileharness.shared.util.comm.stub;
 
+import static com.google.common.base.Ascii.toUpperCase;
 import static com.google.common.base.Preconditions.checkArgument;
 
 import com.google.auto.value.AutoValue;
 import com.google.auto.value.extension.memoized.Memoized;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.shared.util.base.ProtoReflectionUtil;
 import com.google.protobuf.GeneratedMessage;
@@ -40,6 +42,7 @@ public abstract class RpcCall<ReqT extends GeneratedMessage, RespT extends Gener
 
   public abstract Class<RespT> responseType();
 
+  // The method name is in PascalCase.
   public abstract String methodName();
 
   public abstract ReqT request();
@@ -51,6 +54,7 @@ public abstract class RpcCall<ReqT extends GeneratedMessage, RespT extends Gener
         .getFullName();
   }
 
+  @VisibleForTesting
   static <ReqT extends GeneratedMessage, RespT extends GeneratedMessage>
       RpcCall<ReqT, RespT> create(
           Class<ReqT> requestType, Class<RespT> responseType, String methodName, ReqT request) {
@@ -74,7 +78,7 @@ public abstract class RpcCall<ReqT extends GeneratedMessage, RespT extends Gener
     @SuppressWarnings("unchecked") // Safe by rpc method.
     Class<RespT> responseType = (Class<RespT>) method.getReturnType();
     ReqT request = requestType.cast(reqArg);
-    return RpcCall.create(requestType, responseType, method.getName(), request);
+    return RpcCall.create(requestType, responseType, camelToPascal(method.getName()), request);
   }
 
   /**
@@ -112,7 +116,7 @@ public abstract class RpcCall<ReqT extends GeneratedMessage, RespT extends Gener
     @SuppressWarnings("unchecked") // Safe by rpc method.
     Class<RespT> responseType = (Class<RespT>) typeArgClazz;
     ReqT request = requestType.cast(reqArg);
-    return RpcCall.create(requestType, responseType, method.getName(), request);
+    return RpcCall.create(requestType, responseType, camelToPascal(method.getName()), request);
   }
 
   @SuppressWarnings("unchecked") // Safe by rpc method.
@@ -124,5 +128,9 @@ public abstract class RpcCall<ReqT extends GeneratedMessage, RespT extends Gener
         reqIndex,
         method.getParameterTypes()[reqIndex]);
     return (Class<ReqT>) method.getParameterTypes()[reqIndex];
+  }
+
+  private static String camelToPascal(String str) {
+    return toUpperCase(str.substring(0, 1)) + str.substring(1);
   }
 }
