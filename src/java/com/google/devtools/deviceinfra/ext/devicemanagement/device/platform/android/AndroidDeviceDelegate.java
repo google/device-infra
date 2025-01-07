@@ -402,6 +402,8 @@ public abstract class AndroidDeviceDelegate {
     device.addDimension(Dimension.Name.OS, Dimension.Value.ANDROID);
 
     // Adds general drivers.
+    device.addSupportedDriver("AndroidInstrumentation");
+    device.addSupportedDriver("AndroidNativeBin");
     device.addSupportedDriver("NoOpDriver");
     device.addSupportedDriver("XtsTradefedTest");
 
@@ -418,9 +420,13 @@ public abstract class AndroidDeviceDelegate {
     // Advanced device settings. This decorator is only full tested on AndroidRealDevice. Some
     // settings may not be supported for emulators.
     device.addSupportedDecorator("AndroidDeviceSettingsDecorator");
+    device.addSupportedDecorator("AndroidFilePullerDecorator");
+    device.addSupportedDecorator("AndroidFilePusherDecorator");
     device.addSupportedDecorator("AndroidInstallAppsDecorator");
+    device.addSupportedDecorator("AndroidLogCatDecorator");
     device.addSupportedDecorator("AndroidMainlineModulesCheckDecorator");
     device.addSupportedDecorator("AndroidMinSdkVersionCheckDecorator");
+    device.addSupportedDecorator("AndroidSwitchLanguageDecorator");
     device.addSupportedDecorator("AndroidSwitchUserDecorator");
   }
 
