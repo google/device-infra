@@ -228,10 +228,15 @@ public class StubManager {
       @Nullable TestEngineLocator testEngineLocator,
       ServerLocator relayLocator) {
     // Call grpc client -> grpc relay -> lab server.
-    return FileTransferClientFactories.fromStub(
-        stubFactory.createCloudFileTransferStub(
-            createGrpcDirectStubConfiguration(
-                relayLocator.getGrpcServerLocator(), labServerLocator, testEngineLocator)));
+    return (testEngineLocator == null)
+        ? FileTransferClientFactories.fromStub(
+            stubFactory.createCloudFileTransferStub(
+                createGrpcDirectStubConfiguration(
+                    relayLocator.getGrpcServerLocator(), labServerLocator)))
+        : FileTransferClientFactories.fromStub(
+            stubFactory.createCloudFileTransferStub(
+                createGrpcDirectStubConfiguration(
+                    relayLocator.getGrpcServerLocator(), labServerLocator, testEngineLocator)));
   }
 
   @SuppressWarnings("unused") // deviceinfra:internal-only
