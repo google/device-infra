@@ -18,10 +18,11 @@ package com.google.wireless.qa.mobileharness.shared.android;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptions;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
-import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import java.util.List;
 import javax.annotation.Nullable;
 
@@ -116,7 +117,7 @@ public class RuntimeChargingUtil {
     SupportedDeviceModel model = getRuntimeChargingModel(device);
     if (model == null) {
       throw new MobileHarnessException(
-          ErrorCode.ANDROID_RUNTIME_CHARGING_ERROR,
+          AndroidErrorId.ANDROID_RUNTIME_CHARGING_ERROR,
           "Runtime charge is not supported for given device.");
     }
     String unused =
@@ -135,13 +136,16 @@ public class RuntimeChargingUtil {
    */
   public void setFullChargeLevel(Device device, int level)
       throws MobileHarnessException, InterruptedException {
-    MobileHarnessException.checkArgument(level > 0 && level <= 100, "Incorrect battery level");
+    MobileHarnessExceptions.check(
+        level > 0 && level <= 100,
+        AndroidErrorId.ANDROID_RUNTIME_CHARGING_ERROR,
+        () -> "Incorrect battery level");
 
     // An exception will be thrown if the device is not supported.
     SupportedDeviceModel model = getFullChargingLevelModel(device);
     if (model == null) {
       throw new MobileHarnessException(
-          ErrorCode.ANDROID_RUNTIME_CHARGING_ERROR,
+          AndroidErrorId.ANDROID_RUNTIME_CHARGING_ERROR,
           "Setting full charge level is not supported for given device.");
     }
 
@@ -157,7 +161,7 @@ public class RuntimeChargingUtil {
     List<String> deviceModels = device.getDimension(Name.MODEL);
     if (deviceModels == null || deviceModels.isEmpty()) {
       throw new MobileHarnessException(
-          ErrorCode.ANDROID_RUNTIME_CHARGING_ERROR,
+          AndroidErrorId.ANDROID_RUNTIME_CHARGING_ERROR,
           "Cannot get the model name of the give device.");
     }
     String model = deviceModels.get(0);
