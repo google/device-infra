@@ -26,6 +26,13 @@ import java.util.Optional;
 
 /** For allocating devices for tests. */
 public interface DeviceAllocator {
+
+  /**
+   * Whether the allocating happens locally (so that the allocation polling can happens more
+   * frequently).
+   */
+  boolean isLocal();
+
   /**
    * Sets up this device allocator.
    *

@@ -95,6 +95,11 @@ public class LocalDeviceAllocator extends AbstractDeviceAllocator {
   }
 
   @Override
+  public boolean isLocal() {
+    return true;
+  }
+
+  @Override
   public synchronized Optional<ExceptionDetail> setUp()
       throws MobileHarnessException, InterruptedException {
     // Currently a test's devices are assumed to be either all local or all proxied, determined

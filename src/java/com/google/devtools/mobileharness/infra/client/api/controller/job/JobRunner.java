@@ -150,6 +150,9 @@ public class JobRunner implements Runnable {
 
   private static final int MAX_ALLOCATION_DIAGNOSE_TIMES_BEFORE_JOB_TIMEOUT = 3;
 
+  /** The local base interval multiplier for polling the device manager to allocate devices. */
+  private static final int LOCAL_POLL_ALLOCATION_INTERVAL_MULTIPLIER = 1;
+
   /** The large base interval multiplier for polling the device manager to allocate devices. */
   private static final int LARGE_POLL_ALLOCATION_INTERVAL_MULTIPLIER = 40;
 
@@ -1465,7 +1468,9 @@ public class JobRunner implements Runnable {
    */
   private Instant getNextPollAllocationTime(int countPollAllocation) {
     int multiplier;
-    if (jobInfo.tests().getNewTestCount() > 0) {
+    if (deviceAllocator.isLocal()) {
+      multiplier = LOCAL_POLL_ALLOCATION_INTERVAL_MULTIPLIER;
+    } else if (jobInfo.tests().getNewTestCount() > 0) {
       if (Boolean.TRUE.equals(Flags.instance().realTimeJob.getNonNull())) {
         if (countPollAllocation < NUM_USE_REAL_TIME_POLL_ALLOCATION_INTERVAL_MULTIPLIER) {
           // Uses the real-time polling allocation interval multiplier when the job starts and
