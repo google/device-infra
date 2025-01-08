@@ -48,9 +48,9 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/device:querier",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device",
-        "//src/java/com/google/devtools/mobileharness/infra/controller/device:abstract_local_device_runner",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:device_id_manager",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:device_status_info",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device:local_device_runner",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:local_device_test_runner",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device/bootstrap:detector_dispatcher_selector",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device/bootstrap:detectors_and_dispatchers",
@@ -137,7 +137,7 @@ java_library(
     deps = [
         ":local_device_allocator",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device",
-        "//src/java/com/google/devtools/mobileharness/infra/controller/device:abstract_local_device_runner",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device:local_device_runner",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
     ],
 )

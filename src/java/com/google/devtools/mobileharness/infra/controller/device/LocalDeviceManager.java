@@ -51,8 +51,8 @@ import javax.annotation.Nullable;
 
 /**
  * Manages all local devices which are physically connected to the host machine. It detects new
- * devices, generates a new {@link AbstractLocalDeviceRunner} for each new device, destroy the
- * {@link AbstractLocalDeviceRunner}s when devices disconnected.
+ * devices, generates a new {@link LocalDeviceRunner} for each new device, destroy the {@link
+ * LocalDeviceRunner}s when devices disconnected.
  */
 public class LocalDeviceManager extends BaseDeviceStatusProvider
     implements Runnable, DeviceHelperFactory, LocalDeviceRunnerProvider, DeviceStateChecker {
@@ -228,7 +228,7 @@ public class LocalDeviceManager extends BaseDeviceStatusProvider
    */
   @Override
   @Nullable
-  public AbstractLocalDeviceRunner getLocalDeviceRunner(String deviceId) {
+  public LocalDeviceRunner getLocalDeviceRunner(String deviceId) {
     return getLocalDeviceRunner(deviceId, /* deviceType= */ null);
   }
 
@@ -240,9 +240,8 @@ public class LocalDeviceManager extends BaseDeviceStatusProvider
    * @return the runner, or null if not found
    */
   @Nullable
-  public AbstractLocalDeviceRunner getLocalDeviceRunner(
-      String deviceId, @Nullable String deviceType) {
-    AbstractLocalDeviceRunner runner = localDeviceDispatch.getDeviceRunner(deviceId);
+  public LocalDeviceRunner getLocalDeviceRunner(String deviceId, @Nullable String deviceType) {
+    LocalDeviceRunner runner = localDeviceDispatch.getDeviceRunner(deviceId);
     if (runner != null) {
       if (deviceType == null || runner.getDevice().getClass().getSimpleName().equals(deviceType)) {
         return runner;
@@ -260,7 +259,7 @@ public class LocalDeviceManager extends BaseDeviceStatusProvider
 
   @Override
   public Device getDeviceHelper(String deviceId) throws MobileHarnessException {
-    AbstractLocalDeviceRunner deviceRunner = getLocalDeviceRunner(deviceId);
+    LocalDeviceRunner deviceRunner = getLocalDeviceRunner(deviceId);
     if (deviceRunner == null) {
       throw new MobileHarnessException(
           InfraErrorId.LAB_RPC_EXEC_TEST_KICK_OFF_TEST_DEVICE_NOT_FOUND,
@@ -279,7 +278,7 @@ public class LocalDeviceManager extends BaseDeviceStatusProvider
   @Override
   @Nullable
   public DeviceWithStatusInfo getDeviceAndStatusInfo(String deviceId, @Nullable String deviceType) {
-    AbstractLocalDeviceRunner deviceRunner = getLocalDeviceRunner(deviceId, deviceType);
+    LocalDeviceRunner deviceRunner = getLocalDeviceRunner(deviceId, deviceType);
     if (deviceRunner == null) {
       return null;
     }
@@ -303,8 +302,7 @@ public class LocalDeviceManager extends BaseDeviceStatusProvider
     Map<Device, DeviceStatusInfo> deviceStatusMap = new HashMap<>();
     // Uses the cached detection result to do the realtime dispatch.
     DetectionResults detectionResults = realtimeDispatch ? getCachedDetectionResults() : null;
-    for (AbstractLocalDeviceRunner runner :
-        localDeviceDispatch.getDeviceRunners(detectionResults)) {
+    for (LocalDeviceRunner runner : localDeviceDispatch.getDeviceRunners(detectionResults)) {
       deviceStatusMap.put(
           runner.getDevice(),
           DeviceStatusInfo.newBuilder()

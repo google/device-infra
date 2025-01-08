@@ -24,9 +24,9 @@ import com.google.devtools.mobileharness.api.model.lab.DeviceScheduleUnit;
 import com.google.devtools.mobileharness.api.model.lab.LabLocator;
 import com.google.devtools.mobileharness.api.model.lab.LabScheduleUnit;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
-import com.google.devtools.mobileharness.infra.controller.device.AbstractLocalDeviceRunner;
 import com.google.devtools.mobileharness.infra.controller.device.DeviceStatusInfo;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceManager;
+import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceRunner;
 import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
@@ -67,8 +67,7 @@ class LocalDeviceManagerSchedulerSyncer implements Observer {
   public void onDeviceChanged(LocalDeviceChangeEvent event) {
     String deviceId = event.getDeviceControlId();
     String deviceType = event.getDeviceType();
-    AbstractLocalDeviceRunner deviceRunner =
-        deviceManager.getLocalDeviceRunner(deviceId, deviceType);
+    LocalDeviceRunner deviceRunner = deviceManager.getLocalDeviceRunner(deviceId, deviceType);
     DeviceStatus deviceStatus = deviceRunner.getDeviceStatus();
 
     upsertDeviceToScheduler(deviceStatus, deviceId, deviceType, deviceRunner);
@@ -78,7 +77,7 @@ class LocalDeviceManagerSchedulerSyncer implements Observer {
       DeviceStatus deviceStatus,
       String deviceId,
       String deviceType,
-      AbstractLocalDeviceRunner deviceRunner) {
+      LocalDeviceRunner deviceRunner) {
     if (deviceStatus == DeviceStatus.IDLE) {
       logger.atInfo().log("Update device %s(%s) to scheduler", deviceId, deviceType);
       scheduler.upsertDevice(toDeviceScheduleUnit(deviceRunner.getDevice()), LOCAL_LAB_UNIT);
@@ -119,7 +118,7 @@ class LocalDeviceManagerSchedulerSyncer implements Observer {
     try {
       Map<Device, DeviceStatusInfo> deviceStatusMap = deviceManager.getAllDeviceStatus(true);
       for (Entry<Device, DeviceStatusInfo> entry : deviceStatusMap.entrySet()) {
-        AbstractLocalDeviceRunner deviceRunner =
+        LocalDeviceRunner deviceRunner =
             deviceManager.getLocalDeviceRunner(entry.getKey().getDeviceId());
         upsertDeviceToScheduler(
             entry.getValue().getDeviceStatusWithTimestamp().getStatus(),

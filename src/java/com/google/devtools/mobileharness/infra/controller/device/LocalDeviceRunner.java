@@ -68,13 +68,22 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 
 /** A runnable class representing the life cycle of a device. */
-public class LocalDeviceRunner extends AbstractLocalDeviceRunner {
+public class LocalDeviceRunner implements Runnable, LocalDeviceTestRunner {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
+  /** Total instance number of this class. */
+  private static final AtomicInteger runnerCount = new AtomicInteger(0);
+
+  /** Returns the thread number of the instances of this class. */
+  public static int getRunnerCount() {
+    return runnerCount.get();
+  }
 
   /** Ask the DeviceInfoManager to keep the device info for this long. */
   public static final Duration DEVICE_INFO_REMOVE_DELAY = Duration.ofMinutes(5L);
@@ -384,7 +393,7 @@ public class LocalDeviceRunner extends AbstractLocalDeviceRunner {
     }
   }
 
-  @Override
+  /** Returns whether this device is available for running new test. */
   public boolean isAvailable() {
     return isReady() && test == null && !isPrepping() && !isAllocated();
   }
@@ -428,12 +437,12 @@ public class LocalDeviceRunner extends AbstractLocalDeviceRunner {
         && !Thread.currentThread().isInterrupted();
   }
 
-  @Override
+  /** Returns whether this device is ready. */
   public boolean isReady() {
     return initialized && isAlive();
   }
 
-  @Override
+  /** Returns whether this device is preparing. */
   public boolean isPrepping() {
     return device.isPrepping()
         || !device.getDimension(Dimension.Name.ALERT_LAB_DISK_USABLE_SIZE).isEmpty()
@@ -443,23 +452,23 @@ public class LocalDeviceRunner extends AbstractLocalDeviceRunner {
         || !isAvailableInExternalDeviceManager();
   }
 
-  @Override
+  /** Returns whether the current thread is stopped. */
   public boolean isStopped() {
     return !running;
   }
 
-  @Override
+  /** Returns whether the current runner thread is canceled. */
   public boolean isCancelled() {
     return cancelled;
   }
 
-  @Override
+  /** Returns whether the device is in tear down process. */
   public boolean isTearingDown() {
     return tearingDown && expireTime.isAfter(clock.instant());
   }
 
   @SuppressWarnings("Interruption")
-  @Override
+  /* Tries to stop the current device runner. It will be stopped as quickly as possible. */
   public void cancel() {
     synchronized (interruptLock) {
       if (!cancelled) {
@@ -560,7 +569,7 @@ public class LocalDeviceRunner extends AbstractLocalDeviceRunner {
     return status;
   }
 
-  @Override
+  /** Gets status of a device. Will also record the timestamp of the status. */
   public DeviceStatusWithTimestamp getDeviceStatusWithTimestamp() {
     return DeviceStatusWithTimestamp.newBuilder()
         .setStatus(getDeviceStatus())
@@ -594,7 +603,12 @@ public class LocalDeviceRunner extends AbstractLocalDeviceRunner {
     notifyAll();
   }
 
-  @Override
+  /**
+   * Sets the end time of the current allocation.
+   *
+   * <p>A time in the future will reserve the device. Set to {@link Instant#MIN} to immediately
+   * deallocate.
+   */
   public void reserve(Instant allocationEndTime)
       throws InterruptedException, MobileHarnessException {
     this.allocationEndTime = allocationEndTime;
@@ -689,7 +703,7 @@ public class LocalDeviceRunner extends AbstractLocalDeviceRunner {
     FailedDeviceTable.getInstance().add(device.getDeviceControlId());
   }
 
-  @Override
+  /** Updates the device status and billing statistic. */
   public void updateStatusStat() {
     DeviceStatus status;
     synchronized (this) {

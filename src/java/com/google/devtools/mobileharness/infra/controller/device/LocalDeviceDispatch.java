@@ -59,7 +59,7 @@ import javax.annotation.Nullable;
 
 /**
  * Manages devices, including the device dispatchers, and the management of the {@link
- * AbstractLocalDeviceRunner}s of the devices.
+ * LocalDeviceRunner}s of the devices.
  */
 public class LocalDeviceDispatch {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
@@ -69,7 +69,7 @@ public class LocalDeviceDispatch {
   private final List<Dispatcher> dispatchers;
 
   /** Device {ID, {LocalDeviceRunner, Future}} of the devices detected and managed by this class. */
-  private final ConcurrentMap<String, Entry<AbstractLocalDeviceRunner, Future<?>>> devices =
+  private final ConcurrentMap<String, Entry<LocalDeviceRunner, Future<?>>> devices =
       new ConcurrentHashMap<>();
 
   /** The {@link DispatchResults} of the previous round of detection. */
@@ -173,7 +173,7 @@ public class LocalDeviceDispatch {
 
   /**
    * Checks the current active devices, updates the device runners. Always keeps one {@link
-   * AbstractLocalDeviceRunner} thread for one active device.
+   * LocalDeviceRunner} thread for one active device.
    *
    * @return whether the device set are changed
    */
@@ -192,9 +192,9 @@ public class LocalDeviceDispatch {
     previousResults = realtimeDispatchResults;
     mergedResults.mergeFrom(realtimeDispatchResults);
     Set<String> newIds = mergedResults.getDeviceControlIds(DispatchType.LIVE);
-    for (Entry<String, Entry<AbstractLocalDeviceRunner, Future<?>>> device : devices.entrySet()) {
+    for (Entry<String, Entry<LocalDeviceRunner, Future<?>>> device : devices.entrySet()) {
       String id = device.getKey();
-      AbstractLocalDeviceRunner runner = device.getValue().getKey();
+      LocalDeviceRunner runner = device.getValue().getKey();
       Future<?> future = device.getValue().getValue();
       // Will kill the runner, or wait for its termination if:
       // - ID of the runner doesn't show up in the merged ids,
@@ -266,7 +266,7 @@ public class LocalDeviceDispatch {
     for (String newId : newIds) {
       // Removes the device IDs that are detectable by old detectors, to avoid
       // generating multiple test runner threads for the same device ID.
-      AbstractLocalDeviceRunner deviceRunner = deviceManager.getLocalDeviceRunner(newId);
+      LocalDeviceRunner deviceRunner = deviceManager.getLocalDeviceRunner(newId);
       if (deviceRunner != null) {
         logger.atInfo().log(
             "Ignored new device ID %s because there is a %s device runner for it",
@@ -276,7 +276,7 @@ public class LocalDeviceDispatch {
 
       isChanged = true;
       logger.atInfo().with(IMPORTANCE, IMPORTANT).log("New device %s", newId);
-      AbstractLocalDeviceRunner runner;
+      LocalDeviceRunner runner;
       try {
         DeviceStat deviceStat = labStat.getOrCreateDeviceStat(newId);
         DispatchResult dispatchResult = mergedResults.get(newId);
@@ -316,7 +316,7 @@ public class LocalDeviceDispatch {
               .collect(joining(", "));
       logger.atInfo().log(
           "Current runner count: %d, new round dispatch result: %s",
-          AbstractLocalDeviceRunner.getRunnerCount(), dispatchResultLogStr);
+          LocalDeviceRunner.getRunnerCount(), dispatchResultLogStr);
     }
 
     return isChanged;
@@ -341,10 +341,10 @@ public class LocalDeviceDispatch {
       throws InterruptedException {
     if (deviceIdManager.containsUuid(deviceUuid)) {
       String deviceControlId = deviceIdManager.getDeviceIdFromUuid(deviceUuid).get().controlId();
-      Entry<AbstractLocalDeviceRunner, Future<?>> device = devices.get(deviceControlId);
+      Entry<LocalDeviceRunner, Future<?>> device = devices.get(deviceControlId);
       if (device != null) {
         // Found the device.
-        AbstractLocalDeviceRunner runner = device.getKey();
+        LocalDeviceRunner runner = device.getKey();
         if (runner.isAlive()) {
           DispatchResult dispatchResult = realtimeDispatch(detectionResults).get(deviceControlId);
           if (dispatchResult != null
@@ -369,13 +369,13 @@ public class LocalDeviceDispatch {
    * @return the runner, or null if not found
    */
   @Nullable
-  public AbstractLocalDeviceRunner getDeviceRunner(String deviceControlIdOrUuid) {
+  public LocalDeviceRunner getDeviceRunner(String deviceControlIdOrUuid) {
     String deviceControlId = deviceControlIdOrUuid;
     if (deviceIdManager.containsUuid(deviceControlIdOrUuid)) {
       deviceControlId =
           deviceIdManager.getDeviceIdFromUuid(deviceControlIdOrUuid).get().controlId();
     }
-    Entry<AbstractLocalDeviceRunner, Future<?>> device = devices.get(deviceControlId);
+    Entry<LocalDeviceRunner, Future<?>> device = devices.get(deviceControlId);
     if (device != null) {
       return device.getKey();
     }
@@ -388,16 +388,16 @@ public class LocalDeviceDispatch {
    * @param detectionResults whether to do a real-time detection to make sure the devices of the
    *     runners are detectable
    */
-  List<AbstractLocalDeviceRunner> getDeviceRunners(@Nullable DetectionResults detectionResults)
+  List<LocalDeviceRunner> getDeviceRunners(@Nullable DetectionResults detectionResults)
       throws InterruptedException {
-    List<AbstractLocalDeviceRunner> runners = new ArrayList<>();
+    List<LocalDeviceRunner> runners = new ArrayList<>();
     Set<String> realtimeIds =
         detectionResults != null
             ? realtimeDispatch(detectionResults)
                 .getDeviceControlIds(DispatchType.LIVE, DispatchType.CACHE)
             : null;
-    for (Entry<AbstractLocalDeviceRunner, Future<?>> device : devices.values()) {
-      AbstractLocalDeviceRunner runner = device.getKey();
+    for (Entry<LocalDeviceRunner, Future<?>> device : devices.values()) {
+      LocalDeviceRunner runner = device.getKey();
       if (realtimeIds != null && !realtimeIds.contains(runner.getDevice().getDeviceControlId())) {
         continue;
       }

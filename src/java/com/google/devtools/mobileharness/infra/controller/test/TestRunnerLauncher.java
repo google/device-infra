@@ -55,8 +55,8 @@ import javax.annotation.concurrent.GuardedBy;
  * <p>An example implementation of this class is {@linkplain
  * com.google.devtools.mobileharness.infra.controller.test.launcher.LocalDeviceTestRunnerLauncher
  * LocalDeviceTestRunnerLauncher}, which submits the test to a {@linkplain
- * com.google.devtools.mobileharness.infra.controller.device.AbstractLocalDeviceRunner
- * LocalDeviceRunner} and runs the test in the main thread of the device runner.
+ * com.google.devtools.mobileharness.infra.controller.device.LocalDeviceRunner LocalDeviceRunner}
+ * and runs the test in the main thread of the device runner.
  *
  * @param <T> the type of test runner the launcher can connect to
  * @see AbstractTestRunner

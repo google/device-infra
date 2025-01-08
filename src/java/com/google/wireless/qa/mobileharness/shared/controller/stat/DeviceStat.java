@@ -36,8 +36,8 @@ import javax.annotation.concurrent.GuardedBy;
  * Statistic data of a device in the lab server.
  *
  * <p>All test related stats are only updated in {@linkplain
- * com.google.devtools.mobileharness.infra.controller.device.AbstractLocalDeviceRunner local device
- * runner}, so they do not work for the local lite mode.
+ * com.google.devtools.mobileharness.infra.controller.device.LocalDeviceRunner local device runner},
+ * so they do not work for the local lite mode.
  */
 @ProcessIncompatible
 public class DeviceStat {
