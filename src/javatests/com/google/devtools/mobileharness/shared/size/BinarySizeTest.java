@@ -36,7 +36,8 @@ public class BinarySizeTest {
               "com/google/devtools/mobileharness/platform/android/xts/agent/tradefed_invocation_agent_deploy.jar");
   private static final ImmutableSet<String> LAB_SERVER_LARGE_RESOURCE_PATH_ALLOWLIST =
       ImmutableSet.of(
-          "com/google/devtools/mobileharness/platform/android/xts/agent/tradefed_invocation_agent_deploy.jar");
+          "com/google/devtools/mobileharness/platform/android/xts/agent/tradefed_invocation_agent_deploy.jar",
+          "com/google/wireless/qa/mobileharness/tool/android/language/switchlanguage.apk");
   private static final ImmutableSet<String> ATS_CONSOLE_LARGE_RESOURCE_PATH_ALLOWLIST =
       ImmutableSet.of();
 
@@ -46,7 +47,7 @@ public class BinarySizeTest {
   private static final long MAX_BASE_OLC_SERVER_BINARY_SIZE_BYTE = 31_450_000L;
   private static final long MAX_ATS_OLC_SERVER_BINARY_SIZE_BYTE = 41_550_000L;
   private static final long MAX_ATS_OLC_SERVER_LOCAL_MODE_BINARY_SIZE_BYTE = 41_250_000L;
-  private static final long MAX_LAB_SERVER_BINARY_SIZE_BYTE = 38_150_000L;
+  private static final long MAX_LAB_SERVER_BINARY_SIZE_BYTE = 39_650_000L;
   private static final long MAX_ATS_CONSOLE_BINARY_SIZE_BYTE = 23_450_000L;
   private static final long MAX_XTS_TRADEFED_AGENT_BINARY_SIZE_BYTE = 4_550_000L;
 

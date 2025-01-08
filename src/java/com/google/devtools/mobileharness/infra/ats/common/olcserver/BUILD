@@ -34,7 +34,7 @@ olc_server_binary(
         "//src/java/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:ats_server_session_plugin",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/relay/service:server_utils_impl",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api:ats_test_client",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api:xts_test_client",
         "@io_grpc_grpc_java//alts",
         "@maven//:com_mysql_mysql_connector_j",
         "@maven//:com_kohlschutter_junixsocket_junixsocket_common",
@@ -49,7 +49,7 @@ olc_server_binary(
         "//src/java/com/google/devtools/mobileharness/infra/ats/local/sessionplugin:ats_local_session_plugin",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:ats_session_plugin",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api:ats_test",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api:xts_test",
     ],
 )
 
