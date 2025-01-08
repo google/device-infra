@@ -563,7 +563,7 @@ public enum InfraErrorId implements ErrorId {
   // Moreto: 53_401 ~ 53_500
   MORETO_TIMEOUT_ERROR(53_401, ErrorType.INFRA_ISSUE),
 
-  // ID space here:53_101 ~ 60_000
+  // ID space here: 53_501 ~ 60_000
   PLACE_HOLDER_TO_BE_RENAMED(60_000, ErrorType.UNDETERMINED);
 
   public static final int MIN_CODE = BasicErrorId.MAX_CODE + 1;
