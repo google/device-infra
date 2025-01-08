@@ -59,6 +59,8 @@ import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.An
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Log;
+import com.google.wireless.qa.mobileharness.shared.model.job.util.ResultUtil;
+import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.AndroidInstrumentationSpec;
 import java.io.File;
 import java.io.FileInputStream;
@@ -1102,6 +1104,61 @@ public class AndroidInstrumentationUtil {
       showRawResults = true;
     }
     return showRawResults;
+  }
+
+  /**
+   * Gets the test result from the testInfo.
+   *
+   * @param deviceId The related Android device
+   * @param testInfo The target {@code testInfo} of this test
+   * @param gtestXmlFile The gtest XML file path with the file name (e.g.
+   *     /sdcard/Download/test_results.xml)
+   * @param output The stdout from the am instrument command
+   * @param errorMsg returns the error message after parsing the gtest XML files
+   * @param exception returns the exception after parsing the gtest XML files
+   * @return The test result
+   */
+  public TestResult getGtestResult(
+      String deviceId,
+      TestInfo testInfo,
+      String gtestXmlFile,
+      String output,
+      StringBuilder errorMsg,
+      @Nullable MobileHarnessException exception)
+      throws InterruptedException {
+    TestResult result;
+
+    // Handle the CommandException exception first
+    if (exception != null) {
+      if (exception.getErrorId() == AndroidErrorId.ANDROID_INSTRUMENTATION_COMMAND_EXEC_TIMEOUT) {
+        result = TestResult.TIMEOUT;
+      } else {
+        result = ResultUtil.getResultByException(exception);
+      }
+      errorMsg.append(output);
+      return result;
+    }
+    //
+
+    // Ensure device is online before pulling files from it.
+    try {
+      boolean isDeviceOnline = systemStateManager.isOnline(deviceId);
+      if (!isDeviceOnline) {
+        errorMsg.append(String.format("Device %s is not online", deviceId));
+        return TestResult.INFRA_ERROR;
+      }
+    } catch (MobileHarnessException e) {
+      errorMsg.append(e.getMessage());
+      return TestResult.INFRA_ERROR;
+    }
+
+    // Get the test result from the testInfo and check if the individual test cases passed.
+    if (testInfo.resultWithCause().get().type()
+        == com.google.devtools.mobileharness.api.model.proto.Test.TestResult.PASS) {
+      return TestResult.PASS;
+    } else {
+      return TestResult.FAIL;
+    }
   }
 
   /** Check the external storage path is not null. */

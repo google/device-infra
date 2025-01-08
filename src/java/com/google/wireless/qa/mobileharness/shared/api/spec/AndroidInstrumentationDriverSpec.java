@@ -100,10 +100,17 @@ public interface AndroidInstrumentationDriverSpec {
   @ParamAnnotation(
       required = false,
       help =
-          "Whether to skip instrumentation code parsing. By default, this is false. Use it"
-              + " carefully to make sure you have plugins later to set the test result,  otherwise"
-              + " the test will fail due to no result provided at the end.")
-  String PARAM_IGNORE_INSTRUMENT_OUTPUT = "ignore_instrument_output";
+          "Whether to use android instrumentation parsing or gtest XML parsing. If omitted, this"
+              + "defaults to true to use instrumentation parsing.")
+  String PARAM_USE_ANDROIDINSTRUMENTATION_PARSER = "use_androidinstrumentation_parser";
+
+  @ParamAnnotation(
+      required = false,
+      help =
+          "The path to the gtest XML file on the device. This should be set if"
+              + " use_androidinstrumentation_parser is set to false. e.g."
+              + " /sdcard/Download/test_results.xml")
+  String PARAM_GTEST_XML_FILE_ON_DEVICE = "gtest_xml_file_on_device";
 
   /**
    * adb shell command before each repeat, within each option map. The parameter name should be

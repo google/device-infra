@@ -252,30 +252,6 @@ public class AndroidInstrumentationTest {
   }
 
   @Test
-  public void run_ignoreInstrumentationOutput() throws Exception {
-    mockRunTestBasicSteps(TEST_NAME, OPTIONS, false, false);
-    jobInfo.params().add(AndroidInstrumentationDriverSpec.PARAM_IGNORE_INSTRUMENT_OUTPUT, "true");
-    String instrumentationLog = "INSTRUMENTATION_CODE: -1\n";
-
-    AndroidInstrumentationSetting setting =
-        mockInstrumentSetting(
-            TEST_NAME,
-            OPTION_MAP,
-            /* async= */ false,
-            /* showRawResults= */ false,
-            /* prefixAndroidTest= */ true,
-            /* noIsolatedStorage= */ true,
-            /* useTestStorageService= */ true);
-    when(androidInstrumentationUtil.instrument(
-            DEVICE_ID, DEFAULT_SDK_VERSION, setting, TEST_TIMEOUT))
-        .thenReturn(instrumentationLog);
-
-    driver.run(testInfo);
-
-    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.UNKNOWN);
-  }
-
-  @Test
   public void run_showRawData_pass() throws Exception {
     mockRunTestBasicSteps(TEST_PACKAGE + "." + TEST_CLASS_NAME, OPTIONS, true, false);
     when(androidInstrumentationUtil.showRawResultsIfNeeded(testInfo)).thenReturn(true);
