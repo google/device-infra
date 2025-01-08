@@ -211,7 +211,7 @@ public class JobRunner implements Runnable {
   private final Clock clock;
   private final Sleeper sleeper;
   private final PendingTestPrinter pendingTestPrinter;
-  private final SuitableDeviceChecker suitableDeviceChecker = new SuitableDeviceChecker();
+  @Nullable private final SuitableDeviceChecker suitableDeviceChecker;
 
   /** Util for diagnostic the reasons when the job fails to allocate devices. */
   private volatile AllocationDiagnostician allocDiagnostician;
@@ -228,7 +228,7 @@ public class JobRunner implements Runnable {
   /** Checker for validating the job config. */
   private final JobChecker jobChecker;
 
-  private final DeviceQuerier deviceQuerier;
+  @Nullable private final DeviceQuerier deviceQuerier;
 
   private final DeviceQueryFilter deviceQueryFilter;
 
@@ -277,7 +277,13 @@ public class JobRunner implements Runnable {
     this.fileUtil = fileUtil;
     this.clock = clock;
     this.sleeper = sleeper;
-    this.deviceQuerier = execMode.createDeviceQuerier();
+    if (Flags.instance().disableDeviceQuerier.getNonNull()) {
+      this.deviceQuerier = null;
+      this.suitableDeviceChecker = null;
+    } else {
+      this.deviceQuerier = execMode.createDeviceQuerier();
+      this.suitableDeviceChecker = new SuitableDeviceChecker();
+    }
     this.threadPool = threadPool;
     this.testManager = testManager;
     this.pendingTestPrinter = new PendingTestPrinter(clock, jobInfo);
@@ -442,10 +448,12 @@ public class JobRunner implements Runnable {
         // Uses this to log allocation start point of retry tests incrementally.
         Set<String> loggedTests = new HashSet<>();
 
-        suitableDeviceChecker.initialize();
-        // Don't check whether there's potential suitable device for tests in M&M. b/124489785
-        if (Objects.equals(jobInfo.dimensions().get(Name.POOL), Value.POOL_SHARED)) {
-          suitableDeviceChecker.setHasFoundPotentialSuitableDevice();
+        if (suitableDeviceChecker != null) {
+          suitableDeviceChecker.initialize();
+          // Don't check whether there's potential suitable device for tests in M&M. b/124489785
+          if (Objects.equals(jobInfo.dimensions().get(Name.POOL), Value.POOL_SHARED)) {
+            suitableDeviceChecker.setHasFoundPotentialSuitableDevice();
+          }
         }
         try (MobileHarnessAutoCloseable ignored = getRunAllTestsSpan()) {
           while (true) {
@@ -509,7 +517,9 @@ public class JobRunner implements Runnable {
                   diagnose(false);
                 }
               }
-              if (jobInfo.setting().getAllocationExitStrategy() != AllocationExitStrategy.NORMAL) {
+              if (suitableDeviceChecker != null
+                  && jobInfo.setting().getAllocationExitStrategy()
+                      != AllocationExitStrategy.NORMAL) {
                 suitableDeviceChecker.check();
               }
             }
@@ -870,7 +880,9 @@ public class JobRunner implements Runnable {
 
       // Creates TestRunner with the allocation.
       hasAllocation = true;
-      suitableDeviceChecker.setHasFoundPotentialSuitableDevice();
+      if (suitableDeviceChecker != null) {
+        suitableDeviceChecker.setHasFoundPotentialSuitableDevice();
+      }
       jobInfo
           .log()
           .atInfo()
@@ -1502,7 +1514,7 @@ public class JobRunner implements Runnable {
   private Optional<Report> diagnose(boolean noPerfectCandidate) throws InterruptedException {
     diagnosticTimes++;
     try {
-      if (allocDiagnostician == null) {
+      if (allocDiagnostician == null && deviceQuerier != null) {
         allocDiagnostician = createAllocationDiagnostician(jobInfo, deviceQuerier);
       }
       if (allocDiagnostician != null) {

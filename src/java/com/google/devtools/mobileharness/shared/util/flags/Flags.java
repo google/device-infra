@@ -659,6 +659,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> disableCellBroadcastReceiver = disableCellBroadcastReceiverDefault;
 
+  private static final Flag<Boolean> disableDeviceQuerierDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--disable_device_querier",
+      description = "Whether to disable device querier in client. Default is false.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> disableDeviceQuerier = disableDeviceQuerierDefault;
+
   private static final Flag<Boolean> disableDeviceRebootDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(
