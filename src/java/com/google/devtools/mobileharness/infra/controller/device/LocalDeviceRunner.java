@@ -73,7 +73,7 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 
 /** A runnable class representing the life cycle of a device. */
-public class LocalDeviceRunner implements Runnable, LocalDeviceTestRunner {
+public class LocalDeviceRunner implements Runnable {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -429,7 +429,7 @@ public class LocalDeviceRunner implements Runnable, LocalDeviceTestRunner {
     return false;
   }
 
-  @Override
+  /** Returns whether the current device is still alive. */
   public boolean isAlive() {
     return running
         && !cancelled
@@ -495,7 +495,10 @@ public class LocalDeviceRunner implements Runnable, LocalDeviceTestRunner {
     }
   }
 
-  @Override
+  /**
+   * Tries to stop the current device runner if it is running the giving test. It will be stopped as
+   * quickly as possible.
+   */
   public synchronized void cancel(LocalDeviceTestExecutor test) {
     if (this.test != test) {
       logger.atWarning().log(
@@ -509,7 +512,7 @@ public class LocalDeviceRunner implements Runnable, LocalDeviceTestRunner {
     }
   }
 
-  @Override
+  /** Checks whether the job type is supported by this device. */
   public synchronized boolean isJobSupported(JobType jobType) {
     synchronized (interruptLock) {
       if (!isAlive()) {
@@ -547,12 +550,12 @@ public class LocalDeviceRunner implements Runnable, LocalDeviceTestRunner {
     return true;
   }
 
-  @Override
+  /** Returns the device which is associated with this runner. */
   public Device getDevice() {
     return device;
   }
 
-  @Override
+  /** Gets status of a device. */
   public DeviceStatus getDeviceStatus() {
     DeviceStatus status = DeviceStatus.DYING;
     if (isAlive()) {
@@ -577,7 +580,11 @@ public class LocalDeviceRunner implements Runnable, LocalDeviceTestRunner {
         .build();
   }
 
-  @Override
+  /**
+   * Adds the test to run on this device.
+   *
+   * @throws MobileHarnessException if device is not available
+   */
   public synchronized void reserve(LocalDeviceTestExecutor test) throws MobileHarnessException {
     if (!isReady()) {
       throw new MobileHarnessException(
@@ -629,8 +636,8 @@ public class LocalDeviceRunner implements Runnable, LocalDeviceTestRunner {
     }
   }
 
+  /** Gets the current running test. */
   @Nullable
-  @Override
   public LocalDeviceTestExecutor getTest() {
     return test;
   }

@@ -51,8 +51,8 @@ import com.google.devtools.mobileharness.infra.container.proto.TestEngine.TestEn
 import com.google.devtools.mobileharness.infra.container.proto.TestEngine.TestEngineLocator.GrpcLocator;
 import com.google.devtools.mobileharness.infra.container.proto.TestEngine.TestEngineLocator.StubbyLocator;
 import com.google.devtools.mobileharness.infra.container.proto.TestEngine.TestEngineStatus;
+import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceRunner;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceRunnerProvider;
-import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceTestRunner;
 import com.google.devtools.mobileharness.infra.controller.test.TestRunnerLauncher;
 import com.google.devtools.mobileharness.infra.controller.test.launcher.LocalDeviceTestRunnerLauncher;
 import com.google.devtools.mobileharness.infra.controller.test.manager.ProxyTestManager;
@@ -180,7 +180,7 @@ public class PrepareTestServiceImpl {
         versionChecker.checkStub(req.getVersionCheckRequest());
 
     // Gets LocalDeviceRunner.
-    List<LocalDeviceTestRunner> deviceRunners = getDeviceRunnersUntilReady(req.getDeviceIdList());
+    List<LocalDeviceRunner> deviceRunners = getDeviceRunnersUntilReady(req.getDeviceIdList());
 
     // Checks the job feature.
     checkJobFeature(req.getJob().getJobFeature(), deviceRunners);
@@ -192,7 +192,7 @@ public class PrepareTestServiceImpl {
     TestExecutionUnit testExecutionUnit = createTestExecutionUnit(req.getTest(), jobExecutionUnit);
 
     ImmutableList<Device> devices =
-        deviceRunners.stream().map(LocalDeviceTestRunner::getDevice).collect(toImmutableList());
+        deviceRunners.stream().map(LocalDeviceRunner::getDevice).collect(toImmutableList());
 
     // Creates TestRunnerLauncher.
     TestRunnerLauncher<? super ProxyTestRunner> launcher =
@@ -257,7 +257,7 @@ public class PrepareTestServiceImpl {
             .setVersionCheckResponse(versionCheckResponse)
             .addAllDeviceFeature(
                 deviceRunners.stream()
-                    .map(LocalDeviceTestRunner::getDevice)
+                    .map(LocalDeviceRunner::getDevice)
                     .map(Device::toFeature)
                     .collect(toImmutableList()))
             .setContainerInfo(
@@ -362,7 +362,7 @@ public class PrepareTestServiceImpl {
     return testRunnerTiming.build();
   }
 
-  private void checkJobFeature(JobFeature jobFeature, List<LocalDeviceTestRunner> deviceRunners)
+  private void checkJobFeature(JobFeature jobFeature, List<LocalDeviceRunner> deviceRunners)
       throws MobileHarnessException {
     // TODO: Checks device requirement directly rather than job type.
     JobType primaryDeviceJobType =
@@ -374,7 +374,7 @@ public class PrepareTestServiceImpl {
                     jobFeature.getDeviceRequirements().getDeviceRequirement(0).getDecoratorList()))
             .build();
 
-    for (LocalDeviceTestRunner deviceRunner : deviceRunners) {
+    for (LocalDeviceRunner deviceRunner : deviceRunners) {
       if (deviceRunner.isJobSupported(primaryDeviceJobType)) {
         return;
       }
@@ -416,7 +416,7 @@ public class PrepareTestServiceImpl {
     return new TestExecutionUnit(testLocator, testTiming, job);
   }
 
-  private List<LocalDeviceTestRunner> getDeviceRunnersUntilReady(List<String> deviceIds)
+  private List<LocalDeviceRunner> getDeviceRunnersUntilReady(List<String> deviceIds)
       throws MobileHarnessException, InterruptedException {
     // Waits for the device to be ready, since the device maybe INIT in LabServer.
     Clock clock = Clock.systemUTC();
@@ -440,11 +440,11 @@ public class PrepareTestServiceImpl {
     }
   }
 
-  private List<LocalDeviceTestRunner> getDeviceRunners(List<String> deviceIds)
+  private List<LocalDeviceRunner> getDeviceRunners(List<String> deviceIds)
       throws MobileHarnessException {
-    List<LocalDeviceTestRunner> deviceRunners = new ArrayList<>();
+    List<LocalDeviceRunner> deviceRunners = new ArrayList<>();
     for (String deviceId : deviceIds) {
-      LocalDeviceTestRunner deviceRunner = deviceRunnerProvider.getLocalDeviceRunner(deviceId);
+      LocalDeviceRunner deviceRunner = deviceRunnerProvider.getLocalDeviceRunner(deviceId);
       MobileHarnessExceptions.check(
           deviceRunner != null,
           InfraErrorId.LAB_RPC_PREPARE_TEST_DEVICE_NOT_FOUND,

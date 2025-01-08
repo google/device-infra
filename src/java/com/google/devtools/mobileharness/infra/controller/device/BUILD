@@ -192,7 +192,6 @@ java_library(
     deps = [
         ":device_info_manager",
         ":local_device_test_executor",
-        ":local_device_test_runner",
         "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
@@ -233,7 +232,7 @@ java_library(
     name = "local_device_runner_provider",
     srcs = ["LocalDeviceRunnerProvider.java"],
     deps = [
-        ":local_device_test_runner",
+        ":local_device_runner",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
     ],
 )
@@ -244,17 +243,5 @@ java_library(
     deps = [
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:test_runner",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/model:test_execution_result",
-    ],
-)
-
-java_library(
-    name = "local_device_test_runner",
-    srcs = ["LocalDeviceTestRunner.java"],
-    deps = [
-        ":local_device_test_executor",
-        "//src/devtools/mobileharness/api/model/proto:device_java_proto",
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
     ],
 )

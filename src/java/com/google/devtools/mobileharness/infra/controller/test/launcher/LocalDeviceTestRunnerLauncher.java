@@ -25,8 +25,8 @@ import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceRunner;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceTestExecutor;
-import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceTestRunner;
 import com.google.devtools.mobileharness.infra.controller.test.TestRunner;
 import com.google.devtools.mobileharness.infra.controller.test.TestRunnerLauncher;
 import com.google.devtools.mobileharness.infra.controller.test.model.TestExecutionResult;
@@ -56,7 +56,7 @@ public class LocalDeviceTestRunnerLauncher extends TestRunnerLauncher<TestRunner
    */
   private class PrimaryDeviceTestExecutor extends AbstractDeviceTestExecutor {
 
-    private PrimaryDeviceTestExecutor(LocalDeviceTestRunner deviceRunner) {
+    private PrimaryDeviceTestExecutor(LocalDeviceRunner deviceRunner) {
       super(deviceRunner);
     }
 
@@ -96,7 +96,7 @@ public class LocalDeviceTestRunnerLauncher extends TestRunnerLauncher<TestRunner
    */
   private class SecondaryDeviceTestExecutor extends AbstractDeviceTestExecutor {
 
-    private SecondaryDeviceTestExecutor(LocalDeviceTestRunner deviceRunner) {
+    private SecondaryDeviceTestExecutor(LocalDeviceRunner deviceRunner) {
       super(deviceRunner);
     }
 
@@ -122,13 +122,13 @@ public class LocalDeviceTestRunnerLauncher extends TestRunnerLauncher<TestRunner
   /** Base class of {@link LocalDeviceTestExecutor}. */
   private abstract class AbstractDeviceTestExecutor implements LocalDeviceTestExecutor {
 
-    private final LocalDeviceTestRunner deviceRunner;
+    private final LocalDeviceRunner deviceRunner;
 
-    private AbstractDeviceTestExecutor(LocalDeviceTestRunner deviceRunner) {
+    private AbstractDeviceTestExecutor(LocalDeviceRunner deviceRunner) {
       this.deviceRunner = deviceRunner;
     }
 
-    protected final LocalDeviceTestRunner getDeviceRunner() {
+    protected final LocalDeviceRunner getDeviceRunner() {
       return deviceRunner;
     }
 
@@ -156,8 +156,7 @@ public class LocalDeviceTestRunnerLauncher extends TestRunnerLauncher<TestRunner
   private volatile boolean hasExecuted;
 
   public LocalDeviceTestRunnerLauncher(
-      LocalDeviceTestRunner primaryDeviceRunner,
-      List<LocalDeviceTestRunner> secondaryDeviceRunners) {
+      LocalDeviceRunner primaryDeviceRunner, List<LocalDeviceRunner> secondaryDeviceRunners) {
     this.testExecutors =
         ImmutableList.<AbstractDeviceTestExecutor>builder()
             .add(new PrimaryDeviceTestExecutor(primaryDeviceRunner))
@@ -175,7 +174,7 @@ public class LocalDeviceTestRunnerLauncher extends TestRunnerLauncher<TestRunner
         "Reserving devices %s for test [%s]",
         testExecutors.stream()
             .map(AbstractDeviceTestExecutor::getDeviceRunner)
-            .map(LocalDeviceTestRunner::getDevice)
+            .map(LocalDeviceRunner::getDevice)
             .map(Device::getDeviceId)
             .collect(Collectors.toList()),
         getTestRunner().getTestExecutionUnit().locator().id());
@@ -206,7 +205,7 @@ public class LocalDeviceTestRunnerLauncher extends TestRunnerLauncher<TestRunner
     // If the test is not executing, only if all device runners are holding the test, we treat the
     // test as running.
     boolean allDeviceReserved = true;
-    List<LocalDeviceTestRunner> disconnectedDevices = new ArrayList<>();
+    List<LocalDeviceRunner> disconnectedDevices = new ArrayList<>();
     for (AbstractDeviceTestExecutor testExecutor : testExecutors) {
       if (!(testExecutor.getDeviceRunner().isAlive()
           && testExecutor.getDeviceRunner().getTest() == testExecutor)) {
@@ -225,7 +224,7 @@ public class LocalDeviceTestRunnerLauncher extends TestRunnerLauncher<TestRunner
               String.format(
                   "Devices %s disconnected before test executes",
                   disconnectedDevices.stream()
-                      .map(LocalDeviceTestRunner::getDevice)
+                      .map(LocalDeviceRunner::getDevice)
                       .map(Device::getDeviceId)
                       .collect(Collectors.toList()))));
     }

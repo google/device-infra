@@ -24,8 +24,8 @@ java_library(
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device:local_device_runner",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:local_device_test_executor",
-        "//src/java/com/google/devtools/mobileharness/infra/controller/device:local_device_test_runner",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:abstract_test_runner",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:test_runner",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/model:test_execution_result",

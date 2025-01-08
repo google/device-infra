@@ -18,7 +18,7 @@ package com.google.devtools.mobileharness.infra.controller.device;
 
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 
-/** Provider for getting {@linkplain LocalDeviceTestRunner}. */
+/** Provider for getting {@linkplain LocalDeviceRunner}. */
 public interface LocalDeviceRunnerProvider {
 
   /**
@@ -27,5 +27,5 @@ public interface LocalDeviceRunnerProvider {
    * @param deviceId ID of the device
    * @return the runner, or null if not found
    */
-  LocalDeviceTestRunner getLocalDeviceRunner(String deviceId) throws MobileHarnessException;
+  LocalDeviceRunner getLocalDeviceRunner(String deviceId) throws MobileHarnessException;
 }
