@@ -35,6 +35,7 @@ proto_library(
         ":android_instrumentation_spec_proto",
         ":android_mainline_modules_check_decorator_spec_proto",
         ":android_min_sdk_version_check_decorator_spec_proto",
+        ":android_show_instruction_decorator_spec_proto",
         ":android_switch_language_decorator_spec_proto",
         ":android_switch_user_decorator_spec_proto",
         ":base_spec_proto",
@@ -218,6 +219,19 @@ proto_library(
 java_proto_library(
     name = "android_min_sdk_version_check_decorator_spec_java_proto",
     deps = [":android_min_sdk_version_check_decorator_spec_proto"],
+)
+
+proto_library(
+    name = "android_show_instruction_decorator_spec_proto",
+    srcs = ["decorator/android_show_instruction_decorator_spec.proto"],
+    deps = [
+        ":base_spec_proto",
+    ],
+)
+
+java_proto_library(
+    name = "android_show_instruction_decorator_spec_java_proto",
+    deps = [":android_show_instruction_decorator_spec_proto"],
 )
 
 proto_library(
