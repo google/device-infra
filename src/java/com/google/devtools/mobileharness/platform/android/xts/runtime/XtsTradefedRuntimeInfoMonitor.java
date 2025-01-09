@@ -26,6 +26,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +41,7 @@ public class XtsTradefedRuntimeInfoMonitor {
   private static final XtsTradefedRuntimeInfoMonitor INSTANCE = new XtsTradefedRuntimeInfoMonitor();
 
   private static final Duration UPDATE_INTERVAL = Duration.ofSeconds(5L);
+  private static final String MISSING_INVOCATION_ID = "missing-invocation-id";
 
   public static XtsTradefedRuntimeInfoMonitor getInstance() {
     return INSTANCE;
@@ -78,6 +80,13 @@ public class XtsTradefedRuntimeInfoMonitor {
     triggerAsyncUpdate();
   }
 
+  /**
+   * Called when the {@link com.android.tradefed.invoker.TestInvocation#invoke} method exits. If
+   * there's no exception, the invocation is removed from the running invocations map. Otherwise,
+   * the invocation in the map is updated with the exception.
+   *
+   * <p>This is for when {@code TestInvocation} encounters an uncaught exception.
+   */
   public void onInvocationExit(
       Object testInvocation, Object invocationContext, Throwable exception) {
     synchronized (runningInvocations) {
@@ -112,6 +121,29 @@ public class XtsTradefedRuntimeInfoMonitor {
       if (!invocation.getErrorMessage().isEmpty()) {
         runningInvocations.putIfAbsent(Invocation.getInvocationId(invocationContext), invocation);
       }
+    }
+    triggerAsyncUpdate();
+  }
+
+  /**
+   * Called when the {@link com.android.tradefed.result.CollectingTestListener#invocationFailed}
+   * method is entered.
+   *
+   * <p>This is for when {@code TestInvocation} explicitly catches an exception, and forwards it to
+   * the {@code CollectingTestListener} to handle.
+   */
+  public void onInvocationFailed(Throwable exception) {
+    synchronized (runningInvocations) {
+      runningInvocations.putIfAbsent(
+          // In this case, the invocation context is not available, so we use a fake ID, instead of
+          // invocation ID, as the key for the map:
+          MISSING_INVOCATION_ID,
+          new Invocation(
+              /* isRunning= */ false,
+              /* testInvocation= */ null,
+              /* invocationContext= */ null,
+              /* invocationEventHandler= */ null,
+              exception));
     }
     triggerAsyncUpdate();
   }
@@ -240,16 +272,17 @@ public class XtsTradefedRuntimeInfoMonitor {
      * InvocationEventHandler} or the Throwable exception thrown by the monitored methods.
      */
     private String getErrorMessage() {
-      if (invocationEventHandler != null) {
+      if (exception != null) {
+        return printThrowable(exception);
+      } else if (invocationEventHandler != null) {
         try {
           Field errorMessageField = invocationEventHandler.getClass().getDeclaredField("mError");
           errorMessageField.setAccessible(true);
-          return (String) errorMessageField.get(invocationEventHandler);
+          String value = (String) errorMessageField.get(invocationEventHandler);
+          return value != null && !value.isEmpty() ? value : "";
         } catch (ReflectiveOperationException e) {
           throw new LinkageError("Failed to read the mError field of InvocationEventHandler", e);
         }
-      } else if (exception != null) {
-        return printThrowable(exception);
       } else {
         return "";
       }
@@ -258,8 +291,10 @@ public class XtsTradefedRuntimeInfoMonitor {
     @SuppressWarnings("unchecked")
     private List<String> getDeviceIds() {
       try {
-        return (List<String>)
-            invocationContext.getClass().getMethod("getSerials").invoke(invocationContext);
+        return invocationContext == null
+            ? Collections.<String>emptyList()
+            : (List<String>)
+                invocationContext.getClass().getMethod("getSerials").invoke(invocationContext);
       } catch (ReflectiveOperationException e) {
         throw new LinkageError("Failed to call IInvocationContext.getSerials()", e);
       }
@@ -267,8 +302,10 @@ public class XtsTradefedRuntimeInfoMonitor {
 
     private static String getInvocationId(Object invocationContext) {
       try {
-        return (String)
-            invocationContext.getClass().getMethod("getInvocationId").invoke(invocationContext);
+        return invocationContext == null
+            ? MISSING_INVOCATION_ID
+            : (String)
+                invocationContext.getClass().getMethod("getInvocationId").invoke(invocationContext);
       } catch (ReflectiveOperationException e) {
         throw new LinkageError("Failed to call IInvocationContext.getInvocationId()", e);
       }

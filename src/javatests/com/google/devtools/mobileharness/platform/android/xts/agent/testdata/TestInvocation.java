@@ -16,9 +16,12 @@
 
 package com.android.tradefed.invoker;
 
-import static com.google.devtools.mobileharness.platform.android.xts.agent.testdata.FakeTradefed.DEVICE_ID_TO_TRIGGER_INVOCATION_EXCEPTION;
-import static com.google.devtools.mobileharness.platform.android.xts.agent.testdata.FakeTradefed.INVOCATION_EXCEPTION_MESSAGE;
+import static com.google.devtools.mobileharness.platform.android.xts.agent.testdata.FakeTradefed.DEVICE_ID_TO_TRIGGER_CHECKED_INVOCATION_EXCEPTION;
+import static com.google.devtools.mobileharness.platform.android.xts.agent.testdata.FakeTradefed.DEVICE_ID_TO_TRIGGER_UNCHECKED_INVOCATION_EXCEPTION;
+import static com.google.devtools.mobileharness.platform.android.xts.agent.testdata.FakeTradefed.INVOCATION_CHECKED_EXCEPTION_MESSAGE;
+import static com.google.devtools.mobileharness.platform.android.xts.agent.testdata.FakeTradefed.INVOCATION_UNCHECKED_EXCEPTION_MESSAGE;
 
+import com.android.tradefed.result.CollectingTestListener;
 import com.google.devtools.mobileharness.platform.android.xts.agent.testdata.FakeInvocationContext;
 
 public class TestInvocation {
@@ -28,8 +31,13 @@ public class TestInvocation {
   @SuppressWarnings("unused")
   public void invoke(FakeInvocationContext context, int param2, int param3, int param4)
       throws InterruptedException {
-    if (context.getSerials().contains(DEVICE_ID_TO_TRIGGER_INVOCATION_EXCEPTION)) {
-      throw new RuntimeException(INVOCATION_EXCEPTION_MESSAGE);
+    if (context.getSerials().contains(DEVICE_ID_TO_TRIGGER_UNCHECKED_INVOCATION_EXCEPTION)) {
+      throw new RuntimeException(INVOCATION_UNCHECKED_EXCEPTION_MESSAGE);
+    }
+
+    if (context.getSerials().contains(DEVICE_ID_TO_TRIGGER_CHECKED_INVOCATION_EXCEPTION)) {
+      new CollectingTestListener()
+          .invocationFailed(new InterruptedException(INVOCATION_CHECKED_EXCEPTION_MESSAGE));
     }
 
     // Briefly sleeps to make sure the monitoring agent will be reading (and writing to file) the

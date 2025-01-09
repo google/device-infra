@@ -24,9 +24,14 @@ import java.util.UUID;
 
 public class FakeTradefed {
 
-  public static final String DEVICE_ID_TO_TRIGGER_INVOCATION_EXCEPTION =
-      "device_id_to_trigger_invocation_exception";
-  public static final String INVOCATION_EXCEPTION_MESSAGE = "Fake tradefed invocation exception.";
+  public static final String DEVICE_ID_TO_TRIGGER_CHECKED_INVOCATION_EXCEPTION =
+      "device_id_to_trigger_invocation_checked_exception";
+  public static final String DEVICE_ID_TO_TRIGGER_UNCHECKED_INVOCATION_EXCEPTION =
+      "device_id_to_trigger_invocation_unchecked_exception";
+  public static final String INVOCATION_CHECKED_EXCEPTION_MESSAGE =
+      "Fake tradefed invocation checked exception.";
+  public static final String INVOCATION_UNCHECKED_EXCEPTION_MESSAGE =
+      "Fake tradefed invocation unchecked exception.";
 
   public static void main(String[] args) throws InterruptedException {
     FakeInvocationContext context =
@@ -34,7 +39,7 @@ public class FakeTradefed {
     try {
       new TestInvocation().invoke(context, 0, 0, 0);
     } catch (RuntimeException e) {
-      if (!e.getMessage().equals(INVOCATION_EXCEPTION_MESSAGE)) {
+      if (!e.getMessage().equals(INVOCATION_UNCHECKED_EXCEPTION_MESSAGE)) {
         throw e;
       }
     }

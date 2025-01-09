@@ -19,6 +19,10 @@ package com.google.devtools.mobileharness.platform.android.xts.agent;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Correspondence.transforming;
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.devtools.mobileharness.platform.android.xts.agent.testdata.FakeTradefed.DEVICE_ID_TO_TRIGGER_CHECKED_INVOCATION_EXCEPTION;
+import static com.google.devtools.mobileharness.platform.android.xts.agent.testdata.FakeTradefed.DEVICE_ID_TO_TRIGGER_UNCHECKED_INVOCATION_EXCEPTION;
+import static com.google.devtools.mobileharness.platform.android.xts.agent.testdata.FakeTradefed.INVOCATION_CHECKED_EXCEPTION_MESSAGE;
+import static com.google.devtools.mobileharness.platform.android.xts.agent.testdata.FakeTradefed.INVOCATION_UNCHECKED_EXCEPTION_MESSAGE;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableList;
@@ -158,7 +162,7 @@ public class TradefedInvocationAgentTest {
   }
 
   @Test
-  public void premain_invocationThrowsException() throws Exception {
+  public void premain_invocationThrowsUncheckedException() throws Exception {
     Path runtimeInfoFilePath = tempFolder.newFolder().toPath().resolve("runtime_info_file.txt");
 
     CommandProcess commandProcess =
@@ -168,8 +172,9 @@ public class TradefedInvocationAgentTest {
                         .getJavaCommandCreator()
                         .createJavaCommand(
                             FAKE_TRADEFED_PATH,
-                            // Specifying the special device ID to trigger an invocation exception:
-                            ImmutableList.of("device_id_to_trigger_invocation_exception"),
+                            // Specifying the special device ID to trigger an invocation unchecked
+                            // exception:
+                            ImmutableList.of(DEVICE_ID_TO_TRIGGER_UNCHECKED_INVOCATION_EXCEPTION),
                             ImmutableList.of(
                                 String.format(
                                     "-javaagent:%s=%s",
@@ -184,8 +189,42 @@ public class TradefedInvocationAgentTest {
     List<TradefedInvocation> invocations = fileDetail.orElseThrow().runtimeInfo().invocations();
     assertThat(invocations).hasSize(1);
     assertThat(invocations.get(0).deviceIds())
-        .containsExactly("device_id_to_trigger_invocation_exception");
-    assertThat(invocations.get(0).errorMessage()).contains("Fake tradefed invocation exception.");
+        .containsExactly(DEVICE_ID_TO_TRIGGER_UNCHECKED_INVOCATION_EXCEPTION);
+    assertThat(invocations.get(0).errorMessage()).contains(INVOCATION_UNCHECKED_EXCEPTION_MESSAGE);
+    assertThat(invocations.get(0).isRunning()).isFalse();
+  }
+
+  @Test
+  public void premain_invocationThrowsCheckedException() throws Exception {
+    Path runtimeInfoFilePath = tempFolder.newFolder().toPath().resolve("runtime_info_file.txt");
+
+    CommandProcess commandProcess =
+        commandExecutor.start(
+            Command.of(
+                    systemUtil
+                        .getJavaCommandCreator()
+                        .createJavaCommand(
+                            FAKE_TRADEFED_PATH,
+                            // Specifying the special device ID to trigger an invocation checked
+                            // exception:
+                            ImmutableList.of(DEVICE_ID_TO_TRIGGER_CHECKED_INVOCATION_EXCEPTION),
+                            ImmutableList.of(
+                                String.format(
+                                    "-javaagent:%s=%s",
+                                    AGENT_PATH,
+                                    String.format("%s:%s", runtimeInfoFilePath, "true")))))
+                .showFullResultInException(true));
+
+    CommandResult commandResult = commandProcess.await();
+    assertThat(commandResult.exitCode()).isEqualTo(0);
+    Optional<XtsTradefedRuntimeInfoFileDetail> fileDetail =
+        xtsTradefedRuntimeInfoFileUtil.readInfo(runtimeInfoFilePath, /* lastModifiedTime= */ null);
+    List<TradefedInvocation> invocations = fileDetail.orElseThrow().runtimeInfo().invocations();
+    assertThat(invocations).hasSize(1);
+    // The device ID list is empty since for this case, the agent won't have access to the
+    // invocation context.
+    assertThat(invocations.get(0).deviceIds()).isEmpty();
+    assertThat(invocations.get(0).errorMessage()).contains(INVOCATION_CHECKED_EXCEPTION_MESSAGE);
     assertThat(invocations.get(0).isRunning()).isFalse();
   }
 }

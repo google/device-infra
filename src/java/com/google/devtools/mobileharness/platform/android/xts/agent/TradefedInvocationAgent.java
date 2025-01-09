@@ -69,6 +69,12 @@ public class TradefedInvocationAgent {
           "invocationComplete",
           2,
           TradefedInvocationEventHandlerInvocationCompleteMethodInterceptor.class);
+      intercept(
+          inst,
+          "com.android.tradefed.result.CollectingTestListener",
+          "invocationFailed",
+          1,
+          TradefedCollectingTestListenerInvocationFailedMethodInterceptor.class);
     }
   }
 
@@ -125,6 +131,13 @@ public class TradefedInvocationAgent {
         @Advice.Thrown Throwable exception) {
       XtsTradefedRuntimeInfoMonitor.getInstance()
           .onInvocationComplete(invocationEventHandler, invocationContext, exception);
+    }
+  }
+
+  private static class TradefedCollectingTestListenerInvocationFailedMethodInterceptor {
+    @Advice.OnMethodEnter()
+    public static void onEnter(@Advice.Argument(value = 0) Object exception) {
+      XtsTradefedRuntimeInfoMonitor.getInstance().onInvocationFailed((Throwable) exception);
     }
   }
 
