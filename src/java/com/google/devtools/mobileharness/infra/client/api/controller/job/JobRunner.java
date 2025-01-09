@@ -1513,8 +1513,13 @@ public class JobRunner implements Runnable {
   @CanIgnoreReturnValue
   private Optional<Report> diagnose(boolean noPerfectCandidate) throws InterruptedException {
     diagnosticTimes++;
+    if (deviceQuerier == null) {
+      logger.atInfo().log("DeviceQuerier is disabled, skip diagnose.");
+      return Optional.empty();
+    }
+
     try {
-      if (allocDiagnostician == null && deviceQuerier != null) {
+      if (allocDiagnostician == null) {
         allocDiagnostician = createAllocationDiagnostician(jobInfo, deviceQuerier);
       }
       if (allocDiagnostician != null) {
