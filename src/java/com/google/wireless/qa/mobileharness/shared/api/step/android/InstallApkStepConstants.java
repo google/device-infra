@@ -39,7 +39,9 @@ public interface InstallApkStepConstants {
 
   @ParamAnnotation(
       required = false,
-      help = "File tags separated by comma. Apks in these tags will also be installed.")
+      help =
+          "Comma separated file tags. Apks in this tags will be installed in the order the tags are"
+              + " listed.")
   String PARAM_INSTALL_APK_EXTRA_FILE_TAGS = "install_apk_extra_file_tags";
 
   @FileAnnotation(

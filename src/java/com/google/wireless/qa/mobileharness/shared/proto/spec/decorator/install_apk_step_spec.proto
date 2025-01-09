@@ -42,7 +42,8 @@ message InstallApkStepSpec {
   }];
 
   optional string install_apk_extra_file_tags = 3 [(field_detail) = {
-    help: "Comma separated file tags. Apks in this tags will also be installed"
+    help: "Comma separated file tags. Apks in this tags will be installed in "
+          "the order the tags are listed."
   }];
 
   optional bool skip_gms_downgrade = 4 [
