@@ -24,7 +24,6 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.mobileharness.infra.controller.device.DeviceHelperFactory;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceManager;
-import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceRunnerProvider;
 import com.google.devtools.mobileharness.infra.controller.device.bootstrap.DetectorDispatcherSelector;
 import com.google.devtools.mobileharness.infra.controller.device.bootstrap.DetectorDispatcherSelector.Component;
 import com.google.devtools.mobileharness.infra.controller.device.bootstrap.DetectorsAndDispatchers;
@@ -40,7 +39,6 @@ import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberEx
 import com.google.devtools.mobileharness.infra.lab.Annotations.CloudRpcDnsAddress;
 import com.google.devtools.mobileharness.infra.lab.Annotations.CloudRpcShardName;
 import com.google.devtools.mobileharness.infra.lab.Annotations.DebugThreadPool;
-import com.google.devtools.mobileharness.infra.lab.Annotations.DeviceRunner;
 import com.google.devtools.mobileharness.infra.lab.Annotations.GlobalEventBus;
 import com.google.devtools.mobileharness.infra.lab.Annotations.LabGrpcPort;
 import com.google.devtools.mobileharness.infra.lab.Annotations.LabRpcPort;
@@ -89,9 +87,6 @@ public class LabServerModule extends AbstractModule {
   protected void configure() {
     // Binds controllers.
     install(new FactoryModuleBuilder().build(ExecTestServiceImpl.ExecTestServiceImplFactory.class));
-    bind(LocalDeviceRunnerProvider.class)
-        .annotatedWith(DeviceRunner.class)
-        .to(LocalDeviceManager.class);
     bind(DeviceHelperFactory.class).to(LocalDeviceManager.class);
     bind(new Key<TestManager<?>>() {}).to(ProxyTestManager.class);
     bind(ProxyTestManager.class).in(Singleton.class);

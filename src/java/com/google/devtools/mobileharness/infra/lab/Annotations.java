@@ -86,10 +86,4 @@ public class Annotations {
   @Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER})
   @BindingAnnotation
   public @interface ServViaCloudRpc {}
-
-  /** Annotation for binding device runner. */
-  @Retention(RetentionPolicy.RUNTIME)
-  @Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER})
-  @BindingAnnotation
-  public @interface DeviceRunner {}
 }

@@ -55,7 +55,7 @@ import javax.annotation.Nullable;
  * LocalDeviceRunner}s when devices disconnected.
  */
 public class LocalDeviceManager extends BaseDeviceStatusProvider
-    implements Runnable, DeviceHelperFactory, LocalDeviceRunnerProvider, DeviceStateChecker {
+    implements Runnable, DeviceHelperFactory, DeviceStateChecker {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private static final int DISPATCH_DEVICE_INTERVAL_SEC = 1;
@@ -220,13 +220,15 @@ public class LocalDeviceManager extends BaseDeviceStatusProvider
   }
 
   /**
-   * {@inheritDoc}
+   * Gets the device runner according to its device ID.
    *
    * <p>Note looking up the device runner without the device type is not safe inside the lab when
    * the device monitor is enabled. See b/23560412. So always try to use {@link
    * #getLocalDeviceRunner(String, String)} instead if possible.
+   *
+   * @param deviceId ID of the device
+   * @return the runner, or null if not found
    */
-  @Override
   @Nullable
   public LocalDeviceRunner getLocalDeviceRunner(String deviceId) {
     return getLocalDeviceRunner(deviceId, /* deviceType= */ null);

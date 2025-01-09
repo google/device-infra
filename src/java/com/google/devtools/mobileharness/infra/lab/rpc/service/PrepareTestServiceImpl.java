@@ -51,8 +51,8 @@ import com.google.devtools.mobileharness.infra.container.proto.TestEngine.TestEn
 import com.google.devtools.mobileharness.infra.container.proto.TestEngine.TestEngineLocator.GrpcLocator;
 import com.google.devtools.mobileharness.infra.container.proto.TestEngine.TestEngineLocator.StubbyLocator;
 import com.google.devtools.mobileharness.infra.container.proto.TestEngine.TestEngineStatus;
+import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceManager;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceRunner;
-import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceRunnerProvider;
 import com.google.devtools.mobileharness.infra.controller.test.TestRunnerLauncher;
 import com.google.devtools.mobileharness.infra.controller.test.launcher.LocalDeviceTestRunnerLauncher;
 import com.google.devtools.mobileharness.infra.controller.test.manager.ProxyTestManager;
@@ -61,7 +61,6 @@ import com.google.devtools.mobileharness.infra.controller.test.model.JobExecutio
 import com.google.devtools.mobileharness.infra.controller.test.model.TestExecutionUnit;
 import com.google.devtools.mobileharness.infra.lab.Annotations.CloudRpcDnsAddress;
 import com.google.devtools.mobileharness.infra.lab.Annotations.CloudRpcShardName;
-import com.google.devtools.mobileharness.infra.lab.Annotations.DeviceRunner;
 import com.google.devtools.mobileharness.infra.lab.Annotations.GlobalEventBus;
 import com.google.devtools.mobileharness.infra.lab.Annotations.LabGrpcPort;
 import com.google.devtools.mobileharness.infra.lab.Annotations.LabRpcPort;
@@ -120,7 +119,7 @@ public class PrepareTestServiceImpl {
 
   private static final Duration WAIT_DEVICE_READY_TIMEOUT = Duration.ofSeconds(20L);
 
-  private final LocalDeviceRunnerProvider deviceRunnerProvider;
+  private final LocalDeviceManager localDeviceManager;
   private final JobManager jobManager;
   private final ProxyTestManager testManager;
   private final ServiceSideVersionChecker versionChecker =
@@ -140,7 +139,7 @@ public class PrepareTestServiceImpl {
 
   @Inject
   public PrepareTestServiceImpl(
-      @DeviceRunner LocalDeviceRunnerProvider deviceRunnerProvider,
+      LocalDeviceManager localDeviceManager,
       JobManager jobManager,
       ProxyTestManager testManager,
       LocalFileUtil localFileUtil,
@@ -154,7 +153,7 @@ public class PrepareTestServiceImpl {
       @CloudRpcDnsAddress String cloudRpcDnsName,
       @CloudRpcShardName String cloudRpcShardName,
       @GlobalEventBus EventBus globalInternalEventBus) {
-    this.deviceRunnerProvider = deviceRunnerProvider;
+    this.localDeviceManager = localDeviceManager;
     this.jobManager = jobManager;
     this.testManager = testManager;
     this.localFileUtil = localFileUtil;
@@ -444,7 +443,7 @@ public class PrepareTestServiceImpl {
       throws MobileHarnessException {
     List<LocalDeviceRunner> deviceRunners = new ArrayList<>();
     for (String deviceId : deviceIds) {
-      LocalDeviceRunner deviceRunner = deviceRunnerProvider.getLocalDeviceRunner(deviceId);
+      LocalDeviceRunner deviceRunner = localDeviceManager.getLocalDeviceRunner(deviceId);
       MobileHarnessExceptions.check(
           deviceRunner != null,
           InfraErrorId.LAB_RPC_PREPARE_TEST_DEVICE_NOT_FOUND,
