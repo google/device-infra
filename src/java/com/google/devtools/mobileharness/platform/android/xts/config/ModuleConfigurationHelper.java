@@ -19,9 +19,7 @@ package com.google.devtools.mobileharness.platform.android.xts.config;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
 
-import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ListMultimap;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
@@ -154,33 +152,15 @@ public class ModuleConfigurationHelper {
     Optional<DeviceGroup> validDeviceGroup =
         getValidDeviceGroup(moduleDeviceConfig, configs.size());
 
-    ListMultimap<String, Device> configsByDeviceType = ArrayListMultimap.create();
-    ListMultimap<String, SubDeviceSpec> subDeviceSpecsByDeviceType = ArrayListMultimap.create();
-
-    for (Device device : configs) {
-      configsByDeviceType.put(device.getName(), device);
+    if (configs.size() != subDeviceSpecs.getSubDeviceCount()) {
+      throw new MobileHarnessException(
+          ExtErrorId.MODULE_CONFIG_DEVICE_NUMBER_NOT_MATCH,
+          String.format(
+              "The module requires %d but %d are provided.",
+              configs.size(), subDeviceSpecs.getSubDeviceCount()));
     }
-    for (SubDeviceSpec subDeviceSpec : subDeviceSpecs.getAllSubDevices()) {
-      subDeviceSpecsByDeviceType.put(subDeviceSpec.type(), subDeviceSpec);
-    }
-
-    for (String deviceType : configsByDeviceType.keySet()) {
-      List<Device> configsOfType = configsByDeviceType.get(deviceType);
-      List<SubDeviceSpec> subDeviceSpecsOfType = subDeviceSpecsByDeviceType.get(deviceType);
-      if (configsOfType.size() != subDeviceSpecsOfType.size()) {
-        throw new MobileHarnessException(
-            ExtErrorId.MODULE_CONFIG_DEVICE_NUMBER_NOT_MATCH,
-            String.format(
-                "The module requires %d %s but %d %s are provided.",
-                configsOfType.size(), deviceType, subDeviceSpecsOfType.size(), deviceType));
-      }
-
-      // Adds decorators.
-      addDecorators(
-          configsByDeviceType.get(deviceType),
-          subDeviceSpecsByDeviceType.get(deviceType),
-          fileResolver);
-    }
+    // Adds decorators.
+    addDecorators(configs, subDeviceSpecs.getAllSubDevices(), fileResolver);
 
     // Adds dimensions.
     for (int i = 0; i < configs.size(); i++) {

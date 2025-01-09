@@ -145,20 +145,6 @@ public class ModuleConfigurationHelperTest {
                             .setValue("fake_dimension_1_value")))
             .addDevices(
                 Device.newBuilder()
-                    .setName("AndroidRealDevice")
-                    .addTargetPreparers(
-                        TargetPreparer.newBuilder()
-                            .setClazz("NoOpDecorator")
-                            // File option
-                            .addOptions(
-                                Option.newBuilder().setName("dummy_file").setValue("file1")))
-                    .addOptions(
-                        Option.newBuilder()
-                            .setName("dimension")
-                            .setKey("fake_dimension_2_name")
-                            .setValue("fake_dimension_2_value")))
-            .addDevices(
-                Device.newBuilder()
                     .setName("NoOpDevice")
                     .addTargetPreparers(
                         TargetPreparer.newBuilder()
@@ -167,7 +153,21 @@ public class ModuleConfigurationHelperTest {
                             .addOptions(
                                 Option.newBuilder().setName("dummy_file_group").setValue("file2"))
                             .addOptions(
-                                Option.newBuilder().setName("dummy_file_group").setValue("file3"))))
+                                Option.newBuilder().setName("dummy_file_group").setValue("file3")))
+                    .addOptions(
+                        Option.newBuilder()
+                            .setName("dimension")
+                            .setKey("fake_dimension_2_name")
+                            .setValue("fake_dimension_2_value")))
+            .addDevices(
+                Device.newBuilder()
+                    .setName("AndroidRealDevice")
+                    .addTargetPreparers(
+                        TargetPreparer.newBuilder()
+                            .setClazz("NoOpDecorator")
+                            // File option
+                            .addOptions(
+                                Option.newBuilder().setName("dummy_file").setValue("file1"))))
             .build();
     ModuleDeviceConfiguration moduleDeviceConfig =
         ModuleDeviceConfiguration.newBuilder()
