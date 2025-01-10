@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.infra.lab.controller;
 
+import static java.util.concurrent.TimeUnit.SECONDS;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
@@ -44,7 +46,6 @@ import java.util.Map.Entry;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
@@ -83,7 +84,7 @@ public class MasterSyncerForDevice implements Runnable, Observer {
       try {
         syncLock.lock();
         try {
-          readyToSync.await(SYNC_INTERVAL.getSeconds(), TimeUnit.SECONDS);
+          readyToSync.await(SYNC_INTERVAL.toSeconds(), SECONDS);
         } finally {
           syncLock.unlock();
         }
@@ -167,7 +168,7 @@ public class MasterSyncerForDevice implements Runnable, Observer {
     }
   }
 
-  /** Signs out the device when its error info changes. */
+  /** Updates the device when its error info changes. */
   @Subscribe
   public void onDeviceErrorChanged(LocalDeviceErrorEvent event) {
     String deviceId = event.getDeviceUuid();
