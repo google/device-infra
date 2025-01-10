@@ -16,6 +16,8 @@
 
 package com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.initializer;
 
+import static com.google.devtools.mobileharness.shared.util.error.MoreThrowables.shortDebugCurrentStackTrace;
+
 import com.google.common.base.Suppliers;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.platform.android.sdktool.proto.Adb.AdbParam;
@@ -38,7 +40,9 @@ public class AdbInitializer {
       Suppliers.memoize(AdbInitializer::initializeAdb);
 
   private static AdbParam initializeAdb() {
-    logger.atInfo().log("Initializing ADB with adb initializer...");
+    logger.atInfo().log(
+        "Initializing ADB tools with ADB initializer, stack_trace=%s",
+        shortDebugCurrentStackTrace(0L));
     return getAdbInitializeTemplate().initializeAdb();
   }
 

@@ -18,6 +18,7 @@ package com.google.wireless.qa.mobileharness.shared.android;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.devtools.mobileharness.shared.util.command.LineCallback.does;
+import static com.google.devtools.mobileharness.shared.util.error.MoreThrowables.shortDebugCurrentStackTrace;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
@@ -121,6 +122,8 @@ public class Aapt {
     }
 
     static {
+      logger.atInfo().log(
+          "Initializing AAPT tools, stack_trace=%s", shortDebugCurrentStackTrace(0L));
       String path = null;
       String error = null;
       try {

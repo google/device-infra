@@ -16,6 +16,8 @@
 
 package com.google.devtools.deviceinfra.platform.android.sdk.fastboot.initializer;
 
+import static com.google.devtools.mobileharness.shared.util.error.MoreThrowables.shortDebugCurrentStackTrace;
+
 import com.google.common.base.Suppliers;
 import com.google.common.flogger.FluentLogger;
 import java.util.function.Supplier;
@@ -34,7 +36,9 @@ public class FastbootInitializer {
       Suppliers.memoize(FastbootInitializer::initializeFastboot);
 
   private static FastbootParam initializeFastboot() {
-    logger.atInfo().log("Initializing fastboot tools with fastboot initializer...");
+    logger.atInfo().log(
+        "Initializing fastboot tools with fastboot initializer, stack_trace=%s",
+        shortDebugCurrentStackTrace(0L));
     return getFastbootInitializeTemplate().initializeFastboot();
   }
 

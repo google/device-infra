@@ -25,6 +25,7 @@ java_library(
         ":fastboot_initialize_template",
         ":fastboot_initialize_template_impl",
         ":fastboot_param",
+        "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_guava_guava",
     ],
