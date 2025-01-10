@@ -47,7 +47,6 @@ CtsAdservicesHostTestApp
 CtsAlarmManagerTestCases
 CtsAppCloningHostTest
 CtsAppCloningMediaProviderHostTest
-CtsAppDataIsolationHostTestCases
 CtsAppSearchHostTestCases
 CtsAppSearchTestCases
 CtsAppSetIdEndToEndTest
@@ -56,7 +55,6 @@ CtsAutoRevokeQApp
 CtsAutoRevokeRApp
 CtsAutoRevokeSApp
 CtsClasspathsTestCases
-CtsContentTestCases
 CtsDeviceConfigTestCases
 CtsDeviceInfo
 CtsDocumentContentTestCases
@@ -184,7 +182,6 @@ CtsJvmtiRunTest983HostTestCases
 CtsJvmtiRunTest984HostTestCases
 CtsJvmtiRunTest985HostTestCases
 CtsJvmtiRunTest986HostTestCases
-CtsJvmtiRunTest988HostTestCases
 CtsJvmtiRunTest989HostTestCases
 CtsJvmtiRunTest990HostTestCases
 CtsJvmtiRunTest991HostTestCases
@@ -266,8 +263,6 @@ CtsUwbMultiDeviceTestCase_UwbManagerTests
 CtsUwbTestCases
 CtsWifiTestCases
 LegacyStorageTest
-MctsAdoptableHostTestCases
-MctsAppSecurityHostTestCases
 MctsMediaBetterTogetherTestCases
 MctsMediaCodecTestCases
 MctsMediaDecoderTestCases
@@ -275,13 +270,10 @@ MctsMediaDrmFrameworkTestCases
 MctsMediaEncoderTestCases
 MctsMediaExtractorTestCases
 MctsMediaMiscTestCases
-MctsMediaMuxerTestCases
 MctsMediaParserTestCases
 MctsMediaPlayerTestCases
-MctsMediaRecorderTestCases
 MctsMediaTranscodingTestCases
 MctsMediaV2TestCases
-MctsStorageHostTestCases
 MctsTextClassifierTestCases
 SdkSandboxManagerDisabledTests
 SdkSandboxManagerTests
