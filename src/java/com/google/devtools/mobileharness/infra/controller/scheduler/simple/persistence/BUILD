@@ -52,7 +52,6 @@ java_library(
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/scheduler/simple:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/controller/scheduler/simple:__subpackages__",
     ],
     deps = [
         ":allocation_persistence_util",
