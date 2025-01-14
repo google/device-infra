@@ -669,6 +669,12 @@ public class LocalDeviceRunner implements Runnable {
         transformToFailedDevice();
       }
       throw e;
+    } finally {
+      // Release the reservation if it can be successfully initialized.
+      if (deviceReservation != null) {
+        deviceReservation.close();
+        deviceReservation = null;
+      }
     }
     initialized = true;
     lastCheckDeviceTime = clock.instant();
