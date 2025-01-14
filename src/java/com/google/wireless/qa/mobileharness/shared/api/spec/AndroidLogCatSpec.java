@@ -71,6 +71,11 @@ public interface AndroidLogCatSpec {
 
   @ParamAnnotation(
       required = false,
+      help = "Whether to set the size of the log buffer. By default it is True.")
+  String PARAM_SET_LOG_BUFFER_SIZE = "set_log_buffer_size";
+
+  @ParamAnnotation(
+      required = false,
       help = "The size of the log buffer. If not specified, use default.")
   String PARAM_LOG_BUFFER_SIZE_KB = "log_buffer_size_kb";
 

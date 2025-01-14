@@ -190,52 +190,57 @@ public class AndroidLogCatDecorator extends BaseDecorator implements AndroidLogC
     if (jobInfo.params().isTrue(AndroidLogCatSpec.PARAM_LOG_TO_FILE)) {
       logFilePath = PathUtil.join(testInfo.getGenFileDir(), LOG_CAT_FILE_NAME);
     }
-    int bufferSize = AndroidLogCatSpec.LOG_BUFFER_SIZE_MAX_KB;
-    boolean isLogBufferSizeSpecified =
-        jobInfo.params().has(AndroidLogCatSpec.PARAM_LOG_BUFFER_SIZE_KB);
-    if (isLogBufferSizeSpecified) {
-      bufferSize = jobInfo.params().getInt(AndroidLogCatSpec.PARAM_LOG_BUFFER_SIZE_KB, 0);
-    }
     int sdkVersion = getDeviceSdkVersion(deviceId);
-    try {
-      testInfo
-          .log()
-          .atInfo()
-          .alsoTo(logger)
-          .log(
-              "Output setting log buffer size = %d KB: %s",
-              bufferSize, adbUtil.setLogCatBufferSize(deviceId, sdkVersion, bufferSize));
-    } catch (MobileHarnessException e) {
-      if (isLogBufferSizeSpecified
-          && !jobInfo
-              .params()
-              .getBool(
-                  AndroidLogCatSpec.PARAM_IGNORE_LOG_BUFFER_SIZE_SET_FAILURE,
-                  DEFAULT_IGNORE_LOG_BUFFER_SIZE_SET_FAILURE)) {
-        if (DeviceUtil.inSharedLab()) {
-          throw new MobileHarnessException(
-              AndroidErrorId.ANDROID_LOGCAT_DECORATOR_SET_LOGCAT_BUFFER_SIZE_ERROR_IN_SHARED_LAB,
-              String.format("Failed to set logcat buffer size on device %s", deviceId),
-              e);
-        } else {
-          throw new MobileHarnessException(
-              AndroidErrorId.ANDROID_LOGCAT_DECORATOR_SET_LOGCAT_BUFFER_SIZE_ERROR_IN_SATELLITE_LAB,
-              String.format(
-                  "Failed to set logcat buffer size on device %s. Please consider 1. not setting"
-                      + " log_buffer_size_kb, and we'll use a default size; or 2. set"
-                      + " ignore_log_buffer_size_set_failure true, the default size will also be"
-                      + " used",
-                  deviceId),
-              e);
-        }
-      } else {
+
+    if (jobInfo.params().getBool(AndroidLogCatSpec.PARAM_SET_LOG_BUFFER_SIZE, true)) {
+      int bufferSize = AndroidLogCatSpec.LOG_BUFFER_SIZE_MAX_KB;
+      boolean isLogBufferSizeSpecified =
+          jobInfo.params().has(AndroidLogCatSpec.PARAM_LOG_BUFFER_SIZE_KB);
+      if (isLogBufferSizeSpecified) {
+        bufferSize = jobInfo.params().getInt(AndroidLogCatSpec.PARAM_LOG_BUFFER_SIZE_KB, 0);
+      }
+      try {
         testInfo
             .log()
             .atInfo()
             .alsoTo(logger)
-            .log("Failed to set logcat buffer size on device %s. Ignoring.", deviceId);
+            .log(
+                "Output setting log buffer size = %d KB: %s",
+                bufferSize, adbUtil.setLogCatBufferSize(deviceId, sdkVersion, bufferSize));
+      } catch (MobileHarnessException e) {
+        if (isLogBufferSizeSpecified
+            && !jobInfo
+                .params()
+                .getBool(
+                    AndroidLogCatSpec.PARAM_IGNORE_LOG_BUFFER_SIZE_SET_FAILURE,
+                    DEFAULT_IGNORE_LOG_BUFFER_SIZE_SET_FAILURE)) {
+          if (DeviceUtil.inSharedLab()) {
+            throw new MobileHarnessException(
+                AndroidErrorId.ANDROID_LOGCAT_DECORATOR_SET_LOGCAT_BUFFER_SIZE_ERROR_IN_SHARED_LAB,
+                String.format("Failed to set logcat buffer size on device %s", deviceId),
+                e);
+          } else {
+            throw new MobileHarnessException(
+                AndroidErrorId
+                    .ANDROID_LOGCAT_DECORATOR_SET_LOGCAT_BUFFER_SIZE_ERROR_IN_SATELLITE_LAB,
+                String.format(
+                    "Failed to set logcat buffer size on device %s. Please consider 1. not setting"
+                        + " log_buffer_size_kb, and we'll use a default size; or 2. set"
+                        + " ignore_log_buffer_size_set_failure true, the default size will also be"
+                        + " used",
+                    deviceId),
+                e);
+          }
+        } else {
+          testInfo
+              .log()
+              .atInfo()
+              .alsoTo(logger)
+              .log("Failed to set logcat buffer size on device %s. Ignoring.", deviceId);
+        }
       }
     }
+
     if (jobInfo.params().isTrue(AndroidLogCatSpec.PARAM_ASYNC_LOG)) {
       asyncRun(testInfo, sdkVersion, filterSpecs, options, logFilePath);
     } else {
