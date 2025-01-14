@@ -328,6 +328,7 @@ public class OlcServer {
   }
 
   private void onShutdown() {
+    logger.atInfo().log("OLC server shutting down...");
     if (monitorPipelineLauncher != null) {
       logger.atInfo().log("Stopping monitoring service.");
       monitorPipelineLauncher.stop();
