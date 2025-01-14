@@ -267,6 +267,18 @@ public abstract class XtsJobCreator {
                                   .map(
                                       excludeFilter ->
                                           String.format("--exclude-filter \"%s\"", excludeFilter)),
+                          sessionRequestInfo.moduleMetadataIncludeFilters().entries().stream()
+                              .map(
+                                  entry ->
+                                      String.format(
+                                          "--module-metadata-include-filter \"%s\" \"%s\"",
+                                          entry.getKey(), entry.getValue())),
+                          sessionRequestInfo.moduleMetadataExcludeFilters().entries().stream()
+                              .map(
+                                  entry ->
+                                      String.format(
+                                          "--module-metadata-exclude-filter \"%s\" \"%s\"",
+                                          entry.getKey(), entry.getValue())),
                           reportSystemCheckersArg.stream(),
                           skipDeviceInfoArg.stream(),
                           sessionRequestInfo.moduleArgs().stream()

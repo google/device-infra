@@ -72,6 +72,13 @@ enum DeviceType {
   REAL_DEVICE = 2;
 }
 
+message ModuleMetadataFilterEntry {
+  // Required.
+  string key = 1;
+  // Required.
+  string value = 2;
+}
+
 message RunCommand {
   // Required.
   //
@@ -154,6 +161,12 @@ message RunCommand {
 
   // Optional.
   repeated string module_arg = 29;
+
+  // Optional. A multimap of module metadata include filters.
+  repeated ModuleMetadataFilterEntry module_metadata_include_filter = 30;
+
+  // Optional. A multimap of module metadata exclude filters.
+  repeated ModuleMetadataFilterEntry module_metadata_exclude_filter = 31;
 }
 
 message RunCommandState {

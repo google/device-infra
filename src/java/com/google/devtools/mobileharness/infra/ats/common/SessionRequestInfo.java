@@ -20,6 +20,7 @@ import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.ShardingMode;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
@@ -61,6 +62,10 @@ public abstract class SessionRequestInfo {
   public abstract ImmutableList<String> includeFilters();
 
   public abstract ImmutableList<String> excludeFilters();
+
+  public abstract ImmutableMultimap<String, String> moduleMetadataIncludeFilters();
+
+  public abstract ImmutableMultimap<String, String> moduleMetadataExcludeFilters();
 
   /**
    * When testPlan is "retry", at least one of retrySessionId or retrySessionIndex should be set
@@ -145,6 +150,8 @@ public abstract class SessionRequestInfo {
         .setDeviceProperties(ImmutableMap.of())
         .setIncludeFilters(ImmutableList.of())
         .setExcludeFilters(ImmutableList.of())
+        .setModuleMetadataIncludeFilters(ImmutableMultimap.of())
+        .setModuleMetadataExcludeFilters(ImmutableMultimap.of())
         .setModuleArgs(ImmutableList.of())
         .setExtraArgs(ImmutableList.of())
         .setGivenMatchedNonTfModules(ImmutableSet.of())
@@ -190,6 +197,12 @@ public abstract class SessionRequestInfo {
     public abstract Builder setIncludeFilters(List<String> includeFilters);
 
     public abstract Builder setExcludeFilters(List<String> excludeFilters);
+
+    public abstract Builder setModuleMetadataIncludeFilters(
+        ImmutableMultimap<String, String> moduleMetadataIncludeFilters);
+
+    public abstract Builder setModuleMetadataExcludeFilters(
+        ImmutableMultimap<String, String> moduleMetadataExcludeFilters);
 
     public abstract Builder setRetrySessionIndex(int retrySessionIndex);
 

@@ -26,6 +26,7 @@ import static java.util.Arrays.stream;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -331,6 +332,18 @@ class RunCommandHandler {
             .setExcludeFilters(runCommand.getExcludeFilterList())
             .setModuleArgs(runCommand.getModuleArgList())
             .setExtraArgs(runCommand.getExtraArgList());
+    ImmutableMultimap.Builder<String, String> moduleMetadataIncludeFilters =
+        ImmutableMultimap.builder();
+    runCommand
+        .getModuleMetadataIncludeFilterList()
+        .forEach(entry -> moduleMetadataIncludeFilters.put(entry.getKey(), entry.getValue()));
+    builder.setModuleMetadataIncludeFilters(moduleMetadataIncludeFilters.build());
+    ImmutableMultimap.Builder<String, String> moduleMetadataExcludeFilters =
+        ImmutableMultimap.builder();
+    runCommand
+        .getModuleMetadataExcludeFilterList()
+        .forEach(entry -> moduleMetadataExcludeFilters.put(entry.getKey(), entry.getValue()));
+    builder.setModuleMetadataExcludeFilters(moduleMetadataExcludeFilters.build());
     if (runCommand.hasSkipDeviceInfo()) {
       builder.setSkipDeviceInfo(runCommand.getSkipDeviceInfo());
     }

@@ -27,7 +27,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
+import com.google.common.collect.ImmutableMultimap;
+import com.google.common.collect.Multimap;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -38,12 +39,15 @@ import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPrepar
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ParseCommandOnly;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.RunCommandParsingResultFuture;
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
+import com.google.devtools.mobileharness.infra.ats.console.command.picocli.parameterpreprocessor.MapPreprocessor;
+import com.google.devtools.mobileharness.infra.ats.console.command.picocli.parameterpreprocessor.MultimapPreprocessor;
 import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.AtsSessionStub;
 import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.ServerLogPrinter;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.DeviceType;
+import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.ModuleMetadataFilterEntry;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommandState;
 import com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin.PluginOutputPrinter;
 import com.google.devtools.mobileharness.infra.ats.console.util.command.CommandHelper;
@@ -60,13 +64,10 @@ import com.google.devtools.mobileharness.shared.util.command.Timeout;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import java.nio.file.Path;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Stack;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
@@ -77,8 +78,6 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.ExitCode;
 import picocli.CommandLine.Help.Ansi;
 import picocli.CommandLine.HelpCommand;
-import picocli.CommandLine.IParameterPreprocessor;
-import picocli.CommandLine.Model.ArgSpec;
 import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.ParameterException;
@@ -154,7 +153,7 @@ public final class RunCommand implements Callable<Integer> {
   @Option(
       names = {"--property"},
       paramLabel = "<device_property>",
-      preprocessor = DevicePropertyMapParameterPreprocessor.class,
+      preprocessor = MapPreprocessor.class,
       description =
           "Run test on device with this property value. Expected format --property <propertyname>"
               + " <propertyvalue>.")
@@ -245,6 +244,35 @@ public final class RunCommand implements Callable<Integer> {
               + " specified module.")
   @SuppressWarnings("PreferredInterfaceType")
   private List<String> excludeFilters;
+
+  @Option(
+      names = {
+        "--module-metadata-include-filter",
+        "--compatibility:module-metadata-include-filter"
+      },
+      paramLabel = "<key> <value>",
+      preprocessor = MultimapPreprocessor.class,
+      description =
+          "Run modules with specific metadata in key-value pairs. For example, run"
+              + " cts --module-metadata-include-filter component gts-root"
+              + " includes modules with metadata key=component value=gts-root.")
+  @SuppressWarnings("PreferredInterfaceType")
+  private Multimap<String, String> moduleMetadataIncludeFilters;
+
+  @Option(
+      names = {
+        "--module-metadata-exclude-filter",
+        "--compatibility:module-metadata-exclude-filter"
+      },
+      arity = "2",
+      paramLabel = "<key> <value>",
+      preprocessor = MultimapPreprocessor.class,
+      description =
+          "Exclude modules with specific metadata in key-value pairs. For example, run"
+              + " cts --module-metadata-exclude-filter component gts-root"
+              + " excludes modules with metadata key=component value=gts-root.")
+  @SuppressWarnings("PreferredInterfaceType")
+  private Multimap<String, String> moduleMetadataExcludeFilters;
 
   @Option(
       names = {"--html-in-zip"},
@@ -379,54 +407,6 @@ public final class RunCommand implements Callable<Integer> {
     this.parseCommandOnly = parseCommandOnly;
   }
 
-  static class DevicePropertyMapParameterPreprocessor implements IParameterPreprocessor {
-    @Override
-    public boolean preprocess(
-        Stack<String> args, CommandSpec commandSpec, ArgSpec argSpec, Map<String, Object> info) {
-      ArrayList<String> tmpLeftArgs = new ArrayList<>();
-      Map<String, String> map = argSpec.getValue();
-      map = map == null ? new HashMap<>() : map;
-      argSpec.setValue(map);
-
-      ArrayList<String> propEntry = new ArrayList<>();
-
-      if (!args.isEmpty()) {
-        while (!args.isEmpty() && !args.peek().startsWith("-")) {
-          propEntry.add(args.pop());
-        }
-
-        if (propEntry.size() < 2) {
-          throw generateMissingPropertyParameterException(commandSpec);
-        } else {
-          map.put(propEntry.get(0), propEntry.get(1));
-          // For rest of them, push them back to the stack later so picocli can process them later
-          for (int i = 2; i < propEntry.size(); i++) {
-            tmpLeftArgs.add(propEntry.get(i));
-          }
-        }
-        while (!args.isEmpty()) {
-          tmpLeftArgs.add(args.pop());
-        }
-      } else {
-        throw generateMissingPropertyParameterException(commandSpec);
-      }
-
-      // Push not processed args back to the stack so picocli can process them later
-      for (String item : Lists.reverse(tmpLeftArgs)) {
-        args.push(item);
-      }
-      return true;
-    }
-
-    ParameterException generateMissingPropertyParameterException(CommandSpec commandSpec) {
-      return new ParameterException(
-          commandSpec.commandLine(),
-          Ansi.AUTO.string(
-              "Must provide key value pair in format '--property <propertyname>"
-                  + " <propertyvalue>'"));
-    }
-  }
-
   @Override
   public Integer call() throws MobileHarnessException, InterruptedException {
     ImmutableList<String> command = consoleInfo.getLastCommand();
@@ -472,7 +452,15 @@ public final class RunCommand implements Callable<Integer> {
         .setExcludeFilters(
             this.excludeFilters == null
                 ? ImmutableList.of()
-                : ImmutableList.copyOf(this.excludeFilters));
+                : ImmutableList.copyOf(this.excludeFilters))
+        .setModuleMetadataIncludeFilters(
+            this.moduleMetadataIncludeFilters == null
+                ? ImmutableMultimap.of()
+                : ImmutableMultimap.copyOf(this.moduleMetadataIncludeFilters))
+        .setModuleMetadataExcludeFilters(
+            this.moduleMetadataExcludeFilters == null
+                ? ImmutableMultimap.of()
+                : ImmutableMultimap.copyOf(this.moduleMetadataExcludeFilters));
     if (this.shardCount > 0) {
       sessionRequestBuilder.setShardCount(this.shardCount);
     }
@@ -681,6 +669,15 @@ public final class RunCommand implements Callable<Integer> {
             ? ImmutableList.of()
             : ImmutableList.copyOf(this.excludeFilters);
 
+    ImmutableMultimap<String, String> moduleMetadataIncludeFilters =
+        this.moduleMetadataIncludeFilters == null
+            ? ImmutableMultimap.of()
+            : ImmutableMultimap.copyOf(this.moduleMetadataIncludeFilters);
+    ImmutableMultimap<String, String> moduleMetadataExcludeFilters =
+        this.moduleMetadataExcludeFilters == null
+            ? ImmutableMultimap.of()
+            : ImmutableMultimap.copyOf(this.moduleMetadataExcludeFilters);
+
     ImmutableList<String> moduleArgs =
         moduleCmdArgs != null ? ImmutableList.copyOf(moduleCmdArgs) : ImmutableList.of();
     ImmutableList<String> extraArgs =
@@ -701,6 +698,14 @@ public final class RunCommand implements Callable<Integer> {
             .addAllExcludeFilter(excludeFilters)
             .setHtmlInZip(htmlInZip)
             .setReportSystemCheckers(reportSystemCheckers);
+    moduleMetadataIncludeFilters.forEach(
+        (key, value) ->
+            runCommand.addModuleMetadataIncludeFilter(
+                ModuleMetadataFilterEntry.newBuilder().setKey(key).setValue(value)));
+    moduleMetadataExcludeFilters.forEach(
+        (key, value) ->
+            runCommand.addModuleMetadataExcludeFilter(
+                ModuleMetadataFilterEntry.newBuilder().setKey(key).setValue(value)));
     isSkipDeviceInfo().ifPresent(runCommand::setSkipDeviceInfo);
     if (shardCount > 0) {
       runCommand.setShardCount(shardCount);
@@ -841,6 +846,16 @@ public final class RunCommand implements Callable<Integer> {
   @VisibleForTesting
   List<String> getExtraRunCmdArgs() {
     return this.extraRunCmdArgs;
+  }
+
+  @VisibleForTesting
+  Multimap<String, String> getModuleMetadataIncludeFilters() {
+    return this.moduleMetadataIncludeFilters;
+  }
+
+  @VisibleForTesting
+  Multimap<String, String> getModuleMetadataExcludeFilters() {
+    return this.moduleMetadataExcludeFilters;
   }
 
   private Optional<Boolean> isSkipDeviceInfo() {

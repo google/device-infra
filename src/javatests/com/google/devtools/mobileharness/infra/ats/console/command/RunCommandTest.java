@@ -203,6 +203,71 @@ public final class RunCommandTest {
   }
 
   @Test
+  public void parseArgs_moduleMetadataFilterIsNotKeyValuePair() {
+    assertThat(
+            assertThrows(
+                ParameterException.class,
+                () -> commandLine.parseArgs("cts", "--module-metadata-include-filter", "name1")))
+        .hasMessageThat()
+        .contains("Must provide key value pair");
+
+    assertThat(
+            assertThrows(
+                ParameterException.class,
+                () -> commandLine.parseArgs("cts", "--module-metadata-exclude-filter")))
+        .hasMessageThat()
+        .contains("Must provide key value pair");
+
+    assertThat(
+            assertThrows(
+                ParameterException.class,
+                () ->
+                    commandLine.parseArgs(
+                        "cts", "--compatibility:module-metadata-exclude-filter", "-s", "device1")))
+        .hasMessageThat()
+        .contains("Must provide key value pair");
+  }
+
+  @Test
+  public void parseArgs_moduleMetadataFilter() {
+    commandLine.parseArgs(
+        "cts",
+        "-s",
+        "device1",
+        "tf-arg0",
+        "--module-metadata-include-filter",
+        "key1",
+        "value1",
+        "tf-arg1",
+        "-opt0",
+        "--compatibility:module-metadata-include-filter",
+        "key2",
+        "value2",
+        "--product-type",
+        "product1",
+        "--compatibility:module-metadata-exclude-filter",
+        "key3",
+        "value3",
+        "-opt1",
+        "opt1-value",
+        "-opt2",
+        "--module-metadata-exclude-filter",
+        "key4",
+        "value4",
+        "-s",
+        "device2");
+
+    assertThat(runCommand.getSerials()).containsExactly("device1", "device2");
+    assertThat(runCommand.getProductTypes()).containsExactly("product1");
+    assertThat(runCommand.getModuleMetadataIncludeFilters())
+        .containsExactly("key1", "value1", "key2", "value2");
+    assertThat(runCommand.getModuleMetadataExcludeFilters())
+        .containsExactly("key3", "value3", "key4", "value4");
+    assertThat(runCommand.getExtraRunCmdArgs())
+        .containsExactly("tf-arg0", "tf-arg1", "-opt0", "-opt1", "opt1-value", "-opt2");
+  }
+
+  @Test
   public void showHelpMessage_success() throws Exception {
     commandLine.parseArgs("cts", "--help");
     when(commandExecutor.run(any(Command.class)))
