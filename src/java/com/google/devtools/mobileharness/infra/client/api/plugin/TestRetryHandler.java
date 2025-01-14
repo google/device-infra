@@ -37,6 +37,7 @@ import com.google.devtools.mobileharness.infra.container.proto.ModeSettingProto.
 import com.google.devtools.mobileharness.infra.controller.test.local.utp.common.UtpMode;
 import com.google.devtools.mobileharness.infra.controller.test.local.utp.proto.IncompatibleReasonProto.InfraIncompatibleReason;
 import com.google.wireless.qa.mobileharness.client.api.event.JobStartEvent;
+import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Job;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test;
 import com.google.wireless.qa.mobileharness.shared.controller.event.TestEndedEvent;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -97,6 +98,7 @@ public class TestRetryHandler {
       return;
     }
     jobInfo.log().atInfo().alsoTo(logger).log("Create %d repeat runs for every tests", repeatRuns);
+    jobInfo.properties().add(Job.REPEAT_RUNS, Integer.toString(repeatRuns));
     for (TestInfo testInfo : jobInfo.tests().getAll().values()) {
       String testName = testInfo.locator().getName();
       testInfo.properties().add(PROPERTY_REPEAT_INDEX, "0");
