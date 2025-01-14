@@ -43,7 +43,8 @@ public final class XtsCommandUtil {
         .addAll(jvmFlags)
         .add("-cp")
         .add(concatenatedJarPath)
-        .add(String.format("-D%s_ROOT=%s", Ascii.toUpperCase(xtsType), xtsRootDir))
+        .add(
+            String.format("-D%s_ROOT=%s", Ascii.toUpperCase(xtsType).replace('-', '_'), xtsRootDir))
         .add(COMPATIBILITY_CONSOLE_CLASS)
         .addAll(xtsRunCommandArgs)
         .build();
