@@ -864,7 +864,7 @@ public class XtsTradefedTest extends BaseDriver
 
   private ImmutableList<String> getXtsRunCommandArgs(
       XtsTradefedTestDriverSpec spec, Map<String, String> envVars, TestInfo testInfo)
-      throws MobileHarnessException {
+      throws MobileHarnessException, InterruptedException {
     ImmutableList.Builder<String> xtsRunCommand =
         ImmutableList.<String>builder().add("run", "commandAndExit");
 
@@ -921,6 +921,7 @@ public class XtsTradefedTest extends BaseDriver
               TradefedConfigGenerator.OUTPUT_DIR_TEMPLATE, "file://" + testInfo.getGenFileDir());
       logger.atInfo().log("Run xTS cluster command with config:\n%s", config);
       localFileUtil.writeToFile(spec.getXtsTestPlanFile(), config);
+      localFileUtil.copyFileOrDir(spec.getXtsTestPlanFile(), testInfo.getGenFileDir());
       xtsRunCommand.add(spec.getXtsTestPlanFile());
     }
 

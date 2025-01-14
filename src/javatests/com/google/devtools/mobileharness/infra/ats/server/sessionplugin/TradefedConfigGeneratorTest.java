@@ -83,6 +83,11 @@ public class TradefedConfigGeneratorTest {
                 DeviceActionConfigObject.newBuilder()
                     .setType(DeviceActionConfigObjectType.RESULT_REPORTER)
                     .setClassName("class2"))
+            // Intentionally add a duplicate action to test deduplication.
+            .addDeviceActionConfigObjects(
+                DeviceActionConfigObject.newBuilder()
+                    .setType(DeviceActionConfigObjectType.RESULT_REPORTER)
+                    .setClassName("class2"))
             // Unused fields
             .addOutputFilePatterns("pattern")
             .setOutputFileUploadUrl("url")

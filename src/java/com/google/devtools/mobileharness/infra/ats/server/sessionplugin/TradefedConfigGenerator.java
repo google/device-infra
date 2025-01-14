@@ -16,7 +16,12 @@
 
 package com.google.devtools.mobileharness.infra.ats.server.sessionplugin;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
+
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.DeviceActionConfigObject;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.DeviceActionConfigObject.Option;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestEnvironment;
@@ -86,14 +91,29 @@ public class TradefedConfigGenerator {
 
     serializer.startDocument(ENCODING, /* standalone= */ false);
     serializer.startTag(NULL_NS, CONFIGURATION_TAG);
-
     if (deviceCount > 1) {
+      ImmutableSet<DeviceActionConfigObject> deviceActionResultReporters =
+          testEnvironment.getDeviceActionConfigObjectsList().stream()
+              .filter(
+                  deviceActionConfigObject ->
+                      deviceActionConfigObject.getType()
+                          == DeviceActionConfigObject.DeviceActionConfigObjectType.RESULT_REPORTER)
+              .collect(toImmutableSet());
+      ImmutableList<DeviceActionConfigObject> remainingDeviceActionConfigObjects =
+          testEnvironment.getDeviceActionConfigObjectsList().stream()
+              .filter(
+                  deviceActionConfigObject ->
+                      deviceActionConfigObject.getType()
+                          != DeviceActionConfigObject.DeviceActionConfigObjectType.RESULT_REPORTER)
+              .collect(toImmutableList());
       for (int i = 0; i < deviceCount; i++) {
         serializer.startTag(NULL_NS, DEVICE_TAG);
         serializer.attribute(NULL_NS, NAME_ATTR, String.format("TF_DEVICE_%d", i));
-        serializedDevicePreparers(
-            serializer, testEnvironment.getDeviceActionConfigObjectsList(), testResources);
+        serializedDevicePreparers(serializer, remainingDeviceActionConfigObjects, testResources);
         serializer.endTag(NULL_NS, DEVICE_TAG);
+      }
+      for (DeviceActionConfigObject deviceActionResultReporter : deviceActionResultReporters) {
+        serializeDeviceAction(serializer, deviceActionResultReporter);
       }
     } else {
       serializedDevicePreparers(
