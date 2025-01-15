@@ -28,5 +28,5 @@ public interface AndroidForegroundServiceMessengerSpec {
               + " shell am start-foreground-service -n com.yourcompany.yourservice/.YourService"
               + " --ei port'.The port will be used for transmitting data between the service and"
               + " the device via socket.")
-  String ANDROID_SERVICE_PACPKAGE_ANDD_NAME = "android_service_package_and_name";
+  String ANDROID_SERVICE_PACKAGE_AND_NAME = "android_service_package_and_name";
 }
