@@ -87,6 +87,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_local_emulator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_real_device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:failed_device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:android_foreground_service_messenger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:android_instrumentation",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:android_native_bin",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/env:android_native_bin_env_validator",
