@@ -257,7 +257,18 @@ public class LocalDeviceRunner implements Runnable {
       } else {
         logger.atWarning().log("Device config is not synced");
       }
+      extendExpireTime(Duration.ofDays(1));
+      deviceReservation =
+          externalDeviceManager.reserveDevice(
+              device.getDeviceId(),
+              device.getClass().getSimpleName(),
+              Duration.ofDays(1).minusMinutes(1));
       prepareDevice();
+      // Release the reservation if it can be successfully initialized.
+      if (deviceReservation != null) {
+        deviceReservation.close();
+        deviceReservation = null;
+      }
 
       // Keeps running until interrupted.
       while (isReady()) {
@@ -647,15 +658,7 @@ public class LocalDeviceRunner implements Runnable {
   @SuppressWarnings("LogAndThrow")
   void prepareDevice() throws InterruptedException, MobileHarnessException {
     // Initializes the device.
-    DeviceReservation deviceReservation =
-        externalDeviceManager.reserveDevice(
-            device.getDeviceId(),
-            device.getClass().getSimpleName(),
-            Duration.ofDays(1).minusMinutes(1));
-    extendExpireTime(Duration.ofDays(1));
     logger.atInfo().log("Initializing...");
-
-    // Block the device setup process until it's reserved by MH DM.
     try {
       extendExpireTime(device.getSetupTimeout());
       device.prepare();
@@ -692,13 +695,6 @@ public class LocalDeviceRunner implements Runnable {
         Joiner.on("\n").join(device.getDriverTypes()),
         Joiner.on("\n").join(device.getDecoratorTypes()));
     extendExpireTime();
-
-    // Release the reservation if it can be successfully initialized.
-    if (deviceReservation != null) {
-      deviceReservation.close();
-      deviceReservation = null;
-    }
-
     recordBecomeIdleTime();
     postDeviceChangeEvent("initialized");
   }
