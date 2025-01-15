@@ -70,6 +70,31 @@ java_library(
 ################################################################################
 
 java_library(
+    name = "android_foreground_service_messenger",
+    srcs = ["AndroidForegroundServiceMessenger.java"],
+    deps = [
+        ":base_driver",
+        "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/platform/android/file:android_file_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/port:portprober",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:android_foreground_service_messenger_spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/comm/message",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/comm/message/event",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
     name = "android_instrumentation",
     srcs = ["AndroidInstrumentation.java"],
     deps = [

@@ -700,6 +700,9 @@ public enum AndroidErrorId implements ErrorId {
   // Android WifiUtil: 175_851 ~ 175_900
   ANDROID_WIFI_UTIL_APK_NOT_FOUND(175_851, ErrorType.INFRA_ISSUE),
 
+  // Android Foreground Service Messenger related errors: 176_001 ~ 176_100
+  ANDROD_FOREGROUND_SERVICE_MESSENGER_INIT_ERROR(176_001, ErrorType.INFRA_ISSUE),
+
   // Legacy Android ADB error: 176_101 ~ 176_150
   LEGACY_ANDROID_ADB_ERROR(176_101, ErrorType.UNDETERMINED),
 
