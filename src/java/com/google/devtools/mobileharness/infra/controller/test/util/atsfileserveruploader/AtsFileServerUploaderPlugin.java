@@ -119,38 +119,40 @@ public class AtsFileServerUploaderPlugin {
   }
 
   private void cleanFiles(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
-    Callables.callAll(
-        () -> {
-          try {
-            localFileUtil.removeFileOrDir(testInfo.getGenFileDir());
-          } catch (MobileHarnessException e) {
-            logger.atWarning().withCause(e).log(
-                "Failed to clean up gen file dir for test %s.", testInfo.locator().getId());
-          }
-          return null;
-        },
-        () -> {
-          try {
-            localFileUtil.removeFileOrDir(testInfo.getTmpFileDir());
-          } catch (MobileHarnessException e) {
-            logger.atWarning().withCause(e).log(
-                "Failed to clean up tmp file dir for test %s.", testInfo.locator().getId());
-          }
-          return null;
-        },
-
-        // TODO: Make sure there are only one test for one job in the same lab server.
-        () -> {
-          try {
-            if (testInfo.jobInfo().setting().hasRunFileDir()) {
-              localFileUtil.removeFileOrDir(testInfo.jobInfo().setting().getRunFileDir());
+    if (Flags.instance().atsFileServerUploaderFileCleanup.getNonNull()) {
+      Callables.callAll(
+          () -> {
+            try {
+              localFileUtil.removeFileOrDir(testInfo.getGenFileDir());
+            } catch (MobileHarnessException e) {
+              logger.atWarning().withCause(e).log(
+                  "Failed to clean up gen file dir for test %s.", testInfo.locator().getId());
             }
-          } catch (MobileHarnessException e) {
-            logger.atWarning().withCause(e).log(
-                "Failed to clean up run file dir for test %s.", testInfo.locator().getId());
-          }
-          return null;
-        });
+            return null;
+          },
+          () -> {
+            try {
+              localFileUtil.removeFileOrDir(testInfo.getTmpFileDir());
+            } catch (MobileHarnessException e) {
+              logger.atWarning().withCause(e).log(
+                  "Failed to clean up tmp file dir for test %s.", testInfo.locator().getId());
+            }
+            return null;
+          },
+
+          // TODO: Make sure there are only one test for one job in the same lab server.
+          () -> {
+            try {
+              if (testInfo.jobInfo().setting().hasRunFileDir()) {
+                localFileUtil.removeFileOrDir(testInfo.jobInfo().setting().getRunFileDir());
+              }
+            } catch (MobileHarnessException e) {
+              logger.atWarning().withCause(e).log(
+                  "Failed to clean up run file dir for test %s.", testInfo.locator().getId());
+            }
+            return null;
+          });
+    }
   }
 
   @VisibleForTesting
