@@ -53,16 +53,17 @@ public class MonitoredStringSuppliers extends FinishWithFailureTestWatcher {
   protected void onFinished(@Nullable Throwable testFailure, Description description) {
     StringsDebugger.onTestFinished(
         testFailure,
-        stringSuppliers.entrySet().stream()
-            .collect(
-                toImmutableMap(
-                    entry -> String.format("[%s]", entry.getKey()),
-                    entry -> {
-                      try {
-                        return nullToEmpty(entry.getValue().get());
-                      } catch (RuntimeException | Error e) {
-                        return getStackTraceAsString(e);
-                      }
-                    })));
+        () ->
+            stringSuppliers.entrySet().stream()
+                .collect(
+                    toImmutableMap(
+                        entry -> String.format("[%s]", entry.getKey()),
+                        entry -> {
+                          try {
+                            return nullToEmpty(entry.getValue().get());
+                          } catch (RuntimeException | Error e) {
+                            return getStackTraceAsString(e);
+                          }
+                        })));
   }
 }

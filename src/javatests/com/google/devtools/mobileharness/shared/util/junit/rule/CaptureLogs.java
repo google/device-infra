@@ -72,7 +72,8 @@ public class CaptureLogs extends FinishWithFailureTestWatcher {
 
     StringsDebugger.onTestFinished(
         printFailedLogs ? testFailure : null,
-        ImmutableMap.of(
-            String.format("logs from logger\"%s\"", capturedLogger.getName()), getLogs()));
+        () ->
+            ImmutableMap.of(
+                String.format("logs from logger\"%s\"", capturedLogger.getName()), getLogs()));
   }
 }

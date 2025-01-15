@@ -45,10 +45,11 @@ public class MonitoredStringBuilders extends FinishWithFailureTestWatcher {
   protected void onFinished(@Nullable Throwable testFailure, Description description) {
     StringsDebugger.onTestFinished(
         testFailure,
-        stringBuilders.entrySet().stream()
-            .collect(
-                toImmutableMap(
-                    entry -> String.format("[%s]", entry.getKey()),
-                    entry -> entry.getValue().toString())));
+        () ->
+            stringBuilders.entrySet().stream()
+                .collect(
+                    toImmutableMap(
+                        entry -> String.format("[%s]", entry.getKey()),
+                        entry -> entry.getValue().toString())));
   }
 }

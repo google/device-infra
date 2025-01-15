@@ -19,13 +19,15 @@ package com.google.devtools.mobileharness.shared.util.junit.rule.util;
 import static java.util.stream.Collectors.joining;
 
 import com.google.common.collect.ImmutableMap;
+import java.util.function.Supplier;
 import javax.annotation.Nullable;
 
 public class StringsDebugger {
 
   public static void onTestFinished(
-      @Nullable Throwable testFailure, ImmutableMap<String, String> strings) {
+      @Nullable Throwable testFailure, Supplier<ImmutableMap<String, String>> stringsSupplier) {
     if (testFailure != null) {
+      ImmutableMap<String, String> strings = stringsSupplier.get();
       Exception exception =
           new IllegalStateException(
               strings.entrySet().stream()
