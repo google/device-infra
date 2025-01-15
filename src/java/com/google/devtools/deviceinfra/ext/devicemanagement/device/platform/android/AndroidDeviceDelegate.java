@@ -402,6 +402,7 @@ public abstract class AndroidDeviceDelegate {
     device.addDimension(Dimension.Name.OS, Dimension.Value.ANDROID);
 
     // Adds general drivers.
+    device.addSupportedDriver("AndroidForegroundServiceMessenger");
     device.addSupportedDriver("AndroidInstrumentation");
     device.addSupportedDriver("AndroidNativeBin");
     device.addSupportedDriver("NoOpDriver");
