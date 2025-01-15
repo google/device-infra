@@ -30,6 +30,7 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser.TestPlanFilter;
@@ -98,7 +99,8 @@ public final class SessionRequestHandlerUtilTest {
   @Inject private SessionRequestHandlerUtil sessionRequestHandlerUtil;
 
   private final TestPlanFilter testPlanFilter =
-      TestPlanFilter.create(ImmutableSet.of(), ImmutableSet.of());
+      TestPlanFilter.create(
+          ImmutableSet.of(), ImmutableSet.of(), ImmutableMultimap.of(), ImmutableMultimap.of());
 
   @Before
   public void setUp() throws Exception {

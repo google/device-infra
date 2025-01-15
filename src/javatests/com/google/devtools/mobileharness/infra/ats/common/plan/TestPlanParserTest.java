@@ -21,6 +21,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser.TestPlanFilter;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
@@ -85,11 +86,21 @@ public final class TestPlanParserTest {
             "CtsNetTestCases android.net.cts.NetworkStatsManagerTest#testUidDetails",
             "CtsNetTestCases android.net.cts.NetworkStatsManagerTest#testUserSummary",
             "CtsContentSuggestionsTestCases");
+    assertThat(filter.moduleMetadataIncludeFilters())
+        .containsExactly("component", "cts-root", "component", "mcts-root", "mock_flag", "none");
+    assertThat(filter.moduleMetadataExcludeFilters())
+        .containsExactly(
+            "component", "pts-root", "mock_key", "mock_value", "component", "gts-root");
   }
 
   @Test
   public void parseFilters_retry() throws Exception {
     assertThat(testPlanParser.parseFilters(Path.of("mock"), "cts", "retry"))
-        .isEqualTo(TestPlanFilter.create(ImmutableSet.of(), ImmutableSet.of()));
+        .isEqualTo(
+            TestPlanFilter.create(
+                ImmutableSet.of(),
+                ImmutableSet.of(),
+                ImmutableMultimap.of(),
+                ImmutableMultimap.of()));
   }
 }

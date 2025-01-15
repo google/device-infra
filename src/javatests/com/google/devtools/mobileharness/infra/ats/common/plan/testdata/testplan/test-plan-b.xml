@@ -18,6 +18,11 @@
     <include name="test-plan-c" />
     <include name="test-plan-d" />
 
+    <option name="compatibility:test-arg" value="com.android.tradefed.testtype.AndroidJUnitTest:exclude-annotation:com.android.xts.root.annotations.RequireAdbRoot" />
+    <option name="compatibility:test-arg" value="com.android.tradefed.testtype.HostTest:exclude-annotation:com.android.xts.root.annotations.RequireAdbRoot" />
+    <option name="compatibility:test-arg" value="com.android.compatibility.common.tradefed.testtype.JarHostTest:exclude-annotation:com.android.xts.root.annotations.RequireAdbRoot" />
+
+    <option name="compatibility:module-metadata-exclude-filter" key="component" value="pts-root" />
     <option name="compatibility:exclude-filter" value="CtsNetTestCases android.net.cts.NetworkStatsManagerTest#testUidDetails" />
     <option name="compatibility:exclude-filter" value="CtsNetTestCases android.net.cts.NetworkStatsManagerTest#testUserSummary" />
 

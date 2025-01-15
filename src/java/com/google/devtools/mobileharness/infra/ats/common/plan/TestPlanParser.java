@@ -18,7 +18,10 @@ package com.google.devtools.mobileharness.infra.ats.common.plan;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ListMultimap;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
@@ -44,10 +47,15 @@ public class TestPlanParser {
   private static final String INCLUDE_NODE_NAME = "include";
 
   private static final String ATTR_NAME_KEY = "name";
+  private static final String ATTR_KEY_KEY = "key";
   private static final String ATTR_VALUE_KEY = "value";
 
   private static final String INCLUDE_FILTER_ATTR_NAME = "compatibility:include-filter";
   private static final String EXCLUDE_FILTER_ATTR_NAME = "compatibility:exclude-filter";
+  private static final String MODULE_METADATA_INCLUDE_FILTER_ATTR_NAME =
+      "compatibility:module-metadata-include-filter";
+  private static final String MODULE_METADATA_EXCLUDE_FILTER_ATTR_NAME =
+      "compatibility:module-metadata-exclude-filter";
 
   private final PlanConfigUtil planConfigUtil;
 
@@ -60,7 +68,8 @@ public class TestPlanParser {
       throws MobileHarnessException {
     if (rootTestPlan.equals("retry")) {
       // Skip parsing the retry test plan since it is not a valid XML.
-      return TestPlanFilter.create(ImmutableSet.of(), ImmutableSet.of());
+      return TestPlanFilter.create(
+          ImmutableSet.of(), ImmutableSet.of(), ImmutableMultimap.of(), ImmutableMultimap.of());
     }
 
     Path xtsTradefedJarPath =
@@ -72,10 +81,12 @@ public class TestPlanParser {
   @VisibleForTesting
   TestPlanFilter parseFilters(Path xtsTradefedJarPath, String rootTestPlan)
       throws MobileHarnessException {
-    HashSet<String> includeFilters = new HashSet<>();
-    HashSet<String> excludeFilters = new HashSet<>();
-    HashSet<String> parsedTestPlans = new HashSet<>();
+    Set<String> includeFilters = new HashSet<>();
+    Set<String> excludeFilters = new HashSet<>();
+    ListMultimap<String, String> metadataIncludeFilters = ArrayListMultimap.create();
+    ListMultimap<String, String> metadataExcludeFilters = ArrayListMultimap.create();
 
+    HashSet<String> parsedTestPlans = new HashSet<>();
     Queue<Node> pendingNodes = new ArrayDeque<>();
     Queue<String> pendingTestPlans = new ArrayDeque<>();
 
@@ -101,7 +112,12 @@ public class TestPlanParser {
             parseConfigurationNode(node, pendingNodes);
             break;
           case OPTION_NODE_NAME:
-            parseOptionNode(node, includeFilters, excludeFilters);
+            parseOptionNode(
+                node,
+                includeFilters,
+                excludeFilters,
+                metadataIncludeFilters,
+                metadataExcludeFilters);
             break;
           case INCLUDE_NODE_NAME:
             parseIncludeNode(node, parsedTestPlans, pendingTestPlans);
@@ -112,7 +128,10 @@ public class TestPlanParser {
       }
     }
     return TestPlanFilter.create(
-        ImmutableSet.copyOf(includeFilters), ImmutableSet.copyOf(excludeFilters));
+        ImmutableSet.copyOf(includeFilters),
+        ImmutableSet.copyOf(excludeFilters),
+        ImmutableMultimap.copyOf(metadataIncludeFilters),
+        ImmutableMultimap.copyOf(metadataExcludeFilters));
   }
 
   /**
@@ -134,8 +153,8 @@ public class TestPlanParser {
       Node node, Set<String> parsedTestPlans, Queue<String> pendingTestPlans) {
     NamedNodeMap attributes = node.getAttributes();
     if (attributes != null && attributes.getLength() == 1) {
-      Node item = attributes.item(0);
-      if (item.getNodeName().equals(ATTR_NAME_KEY)) {
+      Node item = attributes.getNamedItem(ATTR_NAME_KEY);
+      if (item != null) {
         String newTestPlan = item.getNodeValue();
         if (!parsedTestPlans.contains(newTestPlan)) {
           pendingTestPlans.offer(newTestPlan);
@@ -149,42 +168,47 @@ public class TestPlanParser {
    * is an example.
    */
   private static void parseOptionNode(
-      Node node, Set<String> includeFilters, Set<String> excludeFilters) {
+      Node node,
+      Set<String> includeFilters,
+      Set<String> excludeFilters,
+      ListMultimap<String, String> metadataIncludeFilters,
+      ListMultimap<String, String> metadataExcludeFilters) {
     NamedNodeMap attributes = node.getAttributes();
-    if (attributes != null) {
-      int index = 0;
-      while (index < attributes.getLength() - 1) {
-        if (checkAndInsertFilter(
-            attributes.item(index), attributes.item(index + 1), includeFilters, excludeFilters)) {
-          // Skip current node and next node as they are qualified to be a filter.
-          index += 2;
-        } else {
-          index++;
-        }
-      }
+    if (attributes == null) {
+      return;
     }
-  }
 
-  /**
-   * Insert the filter and return true the given items pair is qualified to be a include/exclude
-   * filter. Return false otherwise.
-   */
-  private static boolean checkAndInsertFilter(
-      Node nameNode, Node valueNode, Set<String> includeFilters, Set<String> excludeFilters) {
-    if (!nameNode.getNodeName().equals(ATTR_NAME_KEY)
-        || !valueNode.getNodeName().equals(ATTR_VALUE_KEY)) {
-      return false;
+    Node nameNode = attributes.getNamedItem(ATTR_NAME_KEY);
+    if (nameNode == null) {
+      return;
     }
+
+    Node keyNode = attributes.getNamedItem(ATTR_KEY_KEY);
+    Node valueNode = attributes.getNamedItem(ATTR_VALUE_KEY);
 
     switch (nameNode.getNodeValue()) {
       case INCLUDE_FILTER_ATTR_NAME:
-        includeFilters.add(valueNode.getNodeValue());
-        return true;
+        if (valueNode != null) {
+          includeFilters.add(valueNode.getNodeValue());
+        }
+        return;
       case EXCLUDE_FILTER_ATTR_NAME:
-        excludeFilters.add(valueNode.getNodeValue());
-        return true;
+        if (valueNode != null) {
+          excludeFilters.add(valueNode.getNodeValue());
+        }
+        return;
+      case MODULE_METADATA_INCLUDE_FILTER_ATTR_NAME:
+        if (keyNode != null && valueNode != null) {
+          metadataIncludeFilters.put(keyNode.getNodeValue(), valueNode.getNodeValue());
+        }
+        return;
+      case MODULE_METADATA_EXCLUDE_FILTER_ATTR_NAME:
+        if (keyNode != null && valueNode != null) {
+          metadataExcludeFilters.put(keyNode.getNodeValue(), valueNode.getNodeValue());
+        }
+        return;
       default:
-        return false;
+        return;
     }
   }
 
@@ -195,9 +219,20 @@ public class TestPlanParser {
 
     public abstract ImmutableSet<String> excludeFilters();
 
+    public abstract ImmutableMultimap<String, String> moduleMetadataIncludeFilters();
+
+    public abstract ImmutableMultimap<String, String> moduleMetadataExcludeFilters();
+
     public static TestPlanFilter create(
-        ImmutableSet<String> includeFilters, ImmutableSet<String> excludeFilters) {
-      return new AutoValue_TestPlanParser_TestPlanFilter(includeFilters, excludeFilters);
+        ImmutableSet<String> includeFilters,
+        ImmutableSet<String> excludeFilters,
+        ImmutableMultimap<String, String> moduleMetadataIncludeFilters,
+        ImmutableMultimap<String, String> moduleMetadataExcludeFilters) {
+      return new AutoValue_TestPlanParser_TestPlanFilter(
+          includeFilters,
+          excludeFilters,
+          moduleMetadataIncludeFilters,
+          moduleMetadataExcludeFilters);
     }
   }
 }
