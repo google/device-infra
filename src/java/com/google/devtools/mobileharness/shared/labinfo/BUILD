@@ -51,6 +51,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_text_format",
+        "//src/java/com/google/devtools/mobileharness/shared/util/filter:mask_utils",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@io_grpc_grpc_java//stub",
         "@maven//:com_google_guava_guava",

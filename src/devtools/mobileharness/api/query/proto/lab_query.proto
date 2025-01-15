@@ -18,6 +18,7 @@ syntax = "proto3";
 
 package mobileharness.api.query;
 
+import "google/protobuf/field_mask.proto";
 import "google/protobuf/timestamp.proto";
 import "src/devtools/mobileharness/api/model/proto/device.proto";
 import "src/devtools/mobileharness/api/model/proto/lab.proto";
@@ -48,7 +49,10 @@ message LabQuery {
     //
     // If all fields are removed, LabInfo won't be in result.
     message LabInfoMask {
-      // TODO: Supports mask.
+      // Field mask of `mobileharness.api.query.proto.LabQueryProto.LabInfo`.
+      //
+      // If all fields are removed, LabInfo won't be in result.
+      google.protobuf.FieldMask field_mask = 1;
     }
 
     // Optional.
@@ -60,7 +64,10 @@ message LabQuery {
     //
     // If all fields are removed, DeviceInfo won't be in result.
     message DeviceInfoMask {
-      // TODO: Supports field mask and dimension mask.
+      // Field mask of `mobileharness.api.query.proto.LabQueryProto.DeviceInfo`.
+      google.protobuf.FieldMask field_mask = 1;
+
+      // TODO: Supports dimension mask.
     }
 
     // Optional.

@@ -20,6 +20,7 @@ import static com.google.devtools.mobileharness.shared.labinfo.LabQueryUtils.cre
 import static com.google.devtools.mobileharness.shared.labinfo.LabQueryUtils.getPagedResult;
 import static com.google.devtools.mobileharness.shared.labinfo.LabQueryUtils.normalizePage;
 import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
+import static com.google.devtools.mobileharness.shared.util.filter.MaskUtils.trimLabQueryResult;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
@@ -108,7 +109,12 @@ public class LabInfoService extends LabInfoServiceGrpc.LabInfoServiceImplBase {
     // Returns the specified page of the query result.
     LabQueryResult pagedResult = getPagedResult(result, page);
 
-    return GetLabInfoResponse.newBuilder().setLabQueryResult(pagedResult).build();
+    LabQueryResult trimmedResult =
+        request.getLabQuery().hasMask()
+            ? trimLabQueryResult(pagedResult, request.getLabQuery().getMask())
+            : pagedResult;
+
+    return GetLabInfoResponse.newBuilder().setLabQueryResult(trimmedResult).build();
   }
 
   private Optional<LabQueryResult> getCachedResult(QueryAndClient session, Page page) {
