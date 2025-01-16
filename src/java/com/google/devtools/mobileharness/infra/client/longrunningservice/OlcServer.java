@@ -54,6 +54,7 @@ import com.google.devtools.mobileharness.shared.util.database.TablesLister;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.logging.flogger.FloggerFormatter;
+import com.google.devtools.mobileharness.shared.util.signal.Signals;
 import com.google.devtools.mobileharness.shared.util.system.SystemInfoPrinter;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.version.Version;
@@ -178,6 +179,11 @@ public class OlcServer {
 
     // Adds shutdown hook.
     Runtime.getRuntime().addShutdownHook(new Thread(this::onShutdown));
+
+    // Monitors known signals.
+    if (Flags.instance().monitorSignals.getNonNull()) {
+      Signals.monitorKnownSignals();
+    }
 
     // Logs arguments and version.
     if (!args.isEmpty()) {

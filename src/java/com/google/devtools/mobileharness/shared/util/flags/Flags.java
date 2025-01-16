@@ -1360,14 +1360,6 @@ public class Flags {
       converter = Flag.StringConverter.class)
   public Flag<String> mhProxySpec = mhProxySpecDefault;
 
-  private static final Flag<Boolean> monitorLabDefault = Flag.value(true);
-
-  @com.beust.jcommander.Parameter(
-      names = "--monitor_lab",
-      description = "Whether enable the lab monitor. default is true.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> monitorLab = monitorLabDefault;
-
   private static final Flag<Boolean> monitorCloudRpcDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(
@@ -1376,6 +1368,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> monitorCloudRpc = monitorCloudRpcDefault;
 
+  private static final Flag<Boolean> monitorLabDefault = Flag.value(true);
+
+  @com.beust.jcommander.Parameter(
+      names = "--monitor_lab",
+      description = "Whether enable the lab monitor. default is true.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> monitorLab = monitorLabDefault;
+
   private static final Flag<Boolean> monitorGcsDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(
@@ -1383,6 +1383,14 @@ public class Flags {
       description = "Whether enable the gcs monitor. default is true.",
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> monitorGcs = monitorGcsDefault;
+
+  private static final Flag<Boolean> monitorSignalsDefault = Flag.value(true);
+
+  @com.beust.jcommander.Parameter(
+      names = "--monitor_signals",
+      description = "Whether to monitor signals. Default is true.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> monitorSignals = monitorSignalsDefault;
 
   private static final Flag<Boolean> muteAndroidDefault = Flag.value(true);
 
