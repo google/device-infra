@@ -47,7 +47,6 @@ import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberEx
 import com.google.devtools.mobileharness.shared.constant.closeable.MobileHarnessAutoCloseable;
 import com.google.devtools.mobileharness.shared.util.comm.messaging.message.TestMessageInfo;
 import com.google.devtools.mobileharness.shared.util.comm.messaging.poster.TestMessagePoster;
-import com.google.devtools.mobileharness.shared.util.error.ErrorModelConverter;
 import com.google.devtools.mobileharness.shared.util.event.EventBus.SubscriberExceptionContext;
 import com.google.devtools.mobileharness.shared.util.logging.MobileHarnessLogTag;
 import com.google.devtools.mobileharness.shared.util.sharedpool.SharedPoolJobUtil;
@@ -401,9 +400,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
       // {@link TestResult}.
       testInfo
           .resultWithCause()
-          .setNonPassing(
-              Result.upgradeTestResult(ResultUtil.getResultByException(e)),
-              ErrorModelConverter.upgradeMobileHarnessException(e));
+          .setNonPassing(Result.upgradeTestResult(ResultUtil.getResultByException(e)), e);
       testInfo
           .log()
           .atWarning()

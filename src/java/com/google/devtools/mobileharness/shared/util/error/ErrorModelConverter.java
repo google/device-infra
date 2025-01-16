@@ -22,7 +22,6 @@ import static java.util.Arrays.stream;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.devtools.common.metrics.stability.model.proto.ErrorIdProto;
-import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.ExceptionClassType;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.StackTrace;
@@ -263,22 +262,6 @@ public class ErrorModelConverter {
         .getSuppressedList()
         .forEach(suppressed -> result.addSuppressed(toMobileHarnessException(suppressed)));
     return result;
-  }
-
-  /** Converts an old MH exception to a new version. */
-  public static MobileHarnessException upgradeMobileHarnessException(
-      com.google.wireless.qa.mobileharness.shared.MobileHarnessException oldException) {
-    if (oldException instanceof MobileHarnessException) {
-      return (MobileHarnessException) oldException;
-    }
-    ErrorId errorId = UnknownErrorId.of(oldException.getErrorCodeEnum(), ErrorType.UNCLASSIFIED);
-    MobileHarnessException newException =
-        new MobileHarnessException(errorId, oldException.getMessage(), oldException.getCause());
-    for (Throwable suppressed : oldException.getSuppressed()) {
-      newException.addSuppressed(suppressed);
-    }
-    newException.setStackTrace(oldException.getStackTrace());
-    return newException;
   }
 
   private static ErrorId getErrorId(ExceptionDetail detail) {
