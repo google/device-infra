@@ -43,6 +43,8 @@ import com.google.devtools.mobileharness.platform.android.xts.common.util.MoblyT
 import com.google.devtools.mobileharness.platform.android.xts.config.ConfigurationUtil;
 import com.google.devtools.mobileharness.platform.android.xts.config.ModuleConfigurationHelper;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
+import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.ConfigurationDescriptor;
+import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.ConfigurationDescriptorMetadata;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.ConfigurationMetadata;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Device;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper;
@@ -938,5 +940,70 @@ public final class SessionRequestHandlerUtilTest {
     assertThat(jobInfos.get(1).params().get("option")).isNull();
     assertThat(jobInfos.get(0).files().get("config")).containsExactly(file1, file2);
     assertThat(jobInfos.get(1).files().get("config")).isEmpty();
+  }
+
+  @Test
+  public void filterModuleByConfigMetadata_success() throws Exception {
+    Configuration config =
+        defaultConfigurationBuilder()
+            .setConfigDescriptor(
+                ConfigurationDescriptor.newBuilder()
+                    .putMetadata(
+                        "key1",
+                        ConfigurationDescriptorMetadata.newBuilder()
+                            .setKey("key1")
+                            .addValue("value1")
+                            .addValue("value2")
+                            .build())
+                    .putMetadata(
+                        "key2",
+                        ConfigurationDescriptorMetadata.newBuilder()
+                            .setKey("key2")
+                            .addValue("value3")
+                            .addValue("value4")
+                            .build()))
+            .build();
+
+    // Include filter partially matched.
+    assertThat(
+            SessionRequestHandlerUtil.filterModuleByConfigMetadata(
+                config,
+                ImmutableMultimap.of("key1", "value1", "key1", "value2"),
+                ImmutableMultimap.of("key2", "value5")))
+        .isTrue();
+    // Include filter fully match.
+    assertThat(
+            SessionRequestHandlerUtil.filterModuleByConfigMetadata(
+                config,
+                ImmutableMultimap.of(
+                    "key1", "value1", "key1", "value2", "key2", "value3", "key2", "value4"),
+                ImmutableMultimap.of("key1", "value5", "key2", "value5")))
+        .isTrue();
+    // Include filter unmatched.
+    assertThat(
+            SessionRequestHandlerUtil.filterModuleByConfigMetadata(
+                config,
+                ImmutableMultimap.of("key1", "value1", "key1", "value2", "key1", "value3"),
+                ImmutableMultimap.of()))
+        .isFalse();
+    // Exclude filter partially matched.
+    assertThat(
+            SessionRequestHandlerUtil.filterModuleByConfigMetadata(
+                config,
+                ImmutableMultimap.of("key1", "value1", "key1", "value2"),
+                ImmutableMultimap.of("key2", "value3")))
+        .isFalse();
+    // Exclude filter fully match.
+    assertThat(
+            SessionRequestHandlerUtil.filterModuleByConfigMetadata(
+                config,
+                ImmutableMultimap.of("key1", "value1", "key1", "value2"),
+                ImmutableMultimap.of("key2", "value3", "key2", "value4")))
+        .isFalse();
+    // Exclude filter unmatched.
+    assertThat(
+            SessionRequestHandlerUtil.filterModuleByConfigMetadata(
+                config, ImmutableMultimap.of(), ImmutableMultimap.of("key2", "value5")))
+        .isTrue();
   }
 }

@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.infra.ats.common;
 
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableListMultimap.toImmutableListMultimap;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.primitives.Ints.saturatedCast;
@@ -41,6 +42,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Maps;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -762,6 +764,17 @@ public class SessionRequestHandlerUtil {
               .collect(toImmutableList());
     }
 
+    ImmutableMultimap<String, String> moduleMetadataIncludeFilters =
+        ImmutableMultimap.<String, String>builder()
+            .putAll(sessionRequestInfo.moduleMetadataIncludeFilters())
+            .putAll(testPlanFilter.moduleMetadataIncludeFilters())
+            .build();
+    ImmutableMultimap<String, String> moduleMetadataExcludeFilters =
+        ImmutableMultimap.<String, String>builder()
+            .putAll(sessionRequestInfo.moduleMetadataExcludeFilters())
+            .putAll(testPlanFilter.moduleMetadataExcludeFilters())
+            .build();
+
     Duration jobTimeout =
         sessionRequestInfo.jobTimeout().isZero()
             ? DEFAULT_NON_TRADEFED_JOB_TIMEOUT
@@ -836,6 +849,12 @@ public class SessionRequestHandlerUtil {
           if (!matched) {
             continue;
           }
+        }
+
+        // Filters the module by metadata include-filter and exclude-filter.
+        if (!filterModuleByConfigMetadata(
+            entry.getValue(), moduleMetadataIncludeFilters, moduleMetadataExcludeFilters)) {
+          continue;
         }
 
         // Get excluded test names in current module.
@@ -937,6 +956,40 @@ public class SessionRequestHandlerUtil {
               }
             })
         .collect(toImmutableSet());
+  }
+
+  /**
+   * Applies the metadata filter to see if the module should run.
+   *
+   * @param config The {@link Configuration} being evaluated.
+   * @param includeFilters the metadata include filter
+   * @param excludeFilters the metadata exclude filter
+   * @return True if the module should run, false otherwise.
+   */
+  @VisibleForTesting
+  static boolean filterModuleByConfigMetadata(
+      Configuration config,
+      ImmutableMultimap<String, String> includeFilters,
+      ImmutableMultimap<String, String> excludeFilters) {
+    ImmutableListMultimap<String, String> moduleMetadata =
+        config.getConfigDescriptor().getMetadataMap().values().stream()
+            .flatMap(
+                metadata ->
+                    metadata.getValueList().stream()
+                        .map(value -> Maps.immutableEntry(metadata.getKey(), value)))
+            .collect(toImmutableListMultimap(Entry::getKey, Entry::getValue));
+
+    if (!includeFilters.isEmpty()
+        && !includeFilters.entries().stream()
+            .allMatch(filter -> moduleMetadata.containsEntry(filter.getKey(), filter.getValue()))) {
+      return false;
+    }
+    if (!excludeFilters.isEmpty()
+        && excludeFilters.entries().stream()
+            .anyMatch(filter -> moduleMetadata.containsEntry(filter.getKey(), filter.getValue()))) {
+      return false;
+    }
+    return true;
   }
 
   private DeviceConfigurations readXtsDeviceConfigFile(Path xtsDeviceConfigFile)
