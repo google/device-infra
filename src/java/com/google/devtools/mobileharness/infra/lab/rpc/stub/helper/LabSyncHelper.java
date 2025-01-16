@@ -84,10 +84,7 @@ public class LabSyncHelper {
   /** Banned decorators of fast wipe devices. */
   @VisibleForTesting
   static final ImmutableList<String> FAST_WIPE_BANNED_DECORATORS =
-      ImmutableList.of(
-          "AndroidOtaUpdateDecorator",
-          "AndroidFlashDeviceDecorator",
-          "AndroidFlashstationDecorator");
+      ImmutableList.of("AndroidFlashDeviceDecorator", "AndroidFlashstationDecorator");
 
   /** Banned device types of fast wipe devices. */
   @VisibleForTesting
