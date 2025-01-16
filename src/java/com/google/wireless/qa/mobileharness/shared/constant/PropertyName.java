@@ -262,7 +262,7 @@ public interface PropertyName {
      */
     REMOTE_TEST_ENGINE_SETUP_TIME_MS,
 
-    /** Only present when --repeat_runs (or RETRY_LEVEL=ALL) is set. Started from 1. */
+    /** Only present when --repeat_runs (or RETRY_LEVEL=ALL) is set. Started from 0. */
     REPEAT_INDEX,
 
     /** Whether the test is started because a forgoing container-mode test fails. */

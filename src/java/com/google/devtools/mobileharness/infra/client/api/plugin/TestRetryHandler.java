@@ -97,8 +97,8 @@ public class TestRetryHandler {
     jobInfo.log().atInfo().alsoTo(logger).log("Create %d repeat runs for every tests", repeatRuns);
     for (TestInfo testInfo : jobInfo.tests().getAll().values()) {
       String testName = testInfo.locator().getName();
-      testInfo.properties().add(PROPERTY_REPEAT_INDEX, "1");
-      for (int i = 2; i <= repeatRuns; i++) {
+      testInfo.properties().add(PROPERTY_REPEAT_INDEX, "0");
+      for (int i = 1; i < repeatRuns; i++) {
         jobInfo.tests().add(testName).properties().add(PROPERTY_REPEAT_INDEX, Integer.toString(i));
       }
     }
