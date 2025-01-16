@@ -17,7 +17,6 @@
 package com.google.wireless.qa.mobileharness.shared;
 
 import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
-import javax.annotation.Nullable;
 
 /**
  * Deprecated. Use {@link com.google.devtools.mobileharness.api.model.error.MobileHarnessException}
@@ -70,15 +69,6 @@ public class MobileHarnessException extends Exception {
   @Deprecated
   public MobileHarnessException(int errorCode, String message) {
     this(ErrorCode.enumOf(errorCode), message);
-  }
-
-  /**
-   * @deprecated Please create a new {@link
-   *     com.google.devtools.mobileharness.api.model.error.MobileHarnessException} instead.
-   */
-  @Deprecated
-  public MobileHarnessException(int errorCode, String message, Throwable cause) {
-    this(ErrorCode.enumOf(errorCode), message, cause);
   }
 
   /**
@@ -139,15 +129,6 @@ public class MobileHarnessException extends Exception {
   }
 
   /**
-   * @deprecated Please create a new {@link
-   *     com.google.devtools.mobileharness.api.model.error.MobileHarnessException} instead.
-   */
-  @Deprecated
-  public MobileHarnessException(Throwable cause) {
-    this(ErrorCode.UNKNOWN, cause.getMessage());
-  }
-
-  /**
    * @deprecated Use {@link
    *     com.google.devtools.mobileharness.api.model.error.MobileHarnessException#getErrorId()#getErrorCode()}
    *     instead.
@@ -187,112 +168,5 @@ public class MobileHarnessException extends Exception {
   @Deprecated
   public ErrorType getErrorType() {
     return errorType;
-  }
-
-  /**
-   * @deprecated The erryr type will be immutable with the new {@link
-   *     com.google.devtools.mobileharness.api.model.error.MobileHarnessException}. When you need to
-   *     change it, creates a new {@link
-   *     com.google.devtools.mobileharness.api.model.error.MobileHarnessException} with a new {@link
-   *     com.google.devtools.mobileharness.api.model.error.ErrorId}.
-   */
-  @Deprecated
-  public void setErrorType(ErrorType errorType) throws MobileHarnessException {
-    this.errorType = errorType;
-  }
-
-  /**
-   * @deprecated Please create a new {@link
-   *     com.google.devtools.mobileharness.api.model.error.MobileHarnessException} instead.
-   */
-  @Deprecated
-  public static void checkState(
-      boolean expression, ErrorType errorType, @Nullable Object errorMessage)
-      throws MobileHarnessException {
-    if (!expression) {
-      throw new MobileHarnessException(
-          ErrorCode.ILLEGAL_STATE, errorType, String.valueOf(errorMessage));
-    }
-  }
-
-  /**
-   * @deprecated Please create a new {@link
-   *     com.google.devtools.mobileharness.api.model.error.MobileHarnessException} instead.
-   */
-  @Deprecated
-  public static void checkState(boolean expression, @Nullable Object errorMessage)
-      throws MobileHarnessException {
-    checkState(expression, ErrorType.UNCLASSIFIED_ERROR, errorMessage);
-  }
-
-  /**
-   * @deprecated Please create a new {@link
-   *     com.google.devtools.mobileharness.api.model.error.MobileHarnessException} instead.
-   */
-  @Deprecated
-  public static void checkArgument(
-      boolean expression, ErrorType errorType, @Nullable Object errorMessage)
-      throws MobileHarnessException {
-    if (!expression) {
-      throw new MobileHarnessException(
-          ErrorCode.ILLEGAL_ARGUMENT, errorType, String.valueOf(errorMessage));
-    }
-  }
-
-  /**
-   * @deprecated Please create a new {@link
-   *     com.google.devtools.mobileharness.api.model.error.MobileHarnessException} instead.
-   */
-  @Deprecated
-  public static void checkArgument(boolean expression, @Nullable Object errorMessage)
-      throws MobileHarnessException {
-    checkArgument(expression, ErrorType.UNCLASSIFIED_ERROR, errorMessage);
-  }
-
-  /**
-   * @deprecated Please create a new {@link
-   *     com.google.devtools.mobileharness.api.model.error.MobileHarnessException} instead.
-   */
-  @Deprecated
-  public static <T> T checkNotNull(
-      T reference, ErrorCode code, ErrorType errorType, @Nullable Object message)
-      throws MobileHarnessException {
-    if (reference == null) {
-      throw new MobileHarnessException(code, errorType, String.valueOf(message));
-    }
-    return reference;
-  }
-
-  /**
-   * @deprecated Please create a new {@link
-   *     com.google.devtools.mobileharness.api.model.error.MobileHarnessException} instead.
-   */
-  @Deprecated
-  public static <T> T checkNotNull(T reference, ErrorCode code, @Nullable Object message)
-      throws MobileHarnessException {
-    return checkNotNull(reference, code, ErrorType.UNCLASSIFIED_ERROR, message);
-  }
-
-  /**
-   * @deprecated Please create a new {@link
-   *     com.google.devtools.mobileharness.api.model.error.MobileHarnessException} instead.
-   */
-  @Deprecated
-  public static void check(
-      boolean expression, ErrorCode code, ErrorType errorType, @Nullable Object errorMessage)
-      throws MobileHarnessException {
-    if (!expression) {
-      throw new MobileHarnessException(code, errorType, String.valueOf(errorMessage));
-    }
-  }
-
-  /**
-   * @deprecated Please create a new {@link
-   *     com.google.devtools.mobileharness.api.model.error.MobileHarnessException} instead.
-   */
-  @Deprecated
-  public static void check(boolean expression, ErrorCode code, @Nullable Object errorMessage)
-      throws MobileHarnessException {
-    check(expression, code, ErrorType.UNCLASSIFIED_ERROR, errorMessage);
   }
 }
