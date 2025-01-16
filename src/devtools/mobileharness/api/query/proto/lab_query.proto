@@ -51,7 +51,12 @@ message LabQuery {
     message LabInfoMask {
       // Field mask of `mobileharness.api.query.proto.LabQueryProto.LabInfo`.
       //
-      // If all fields are removed, LabInfo won't be in result.
+      // If LabInfoMask is not set, returns all fields of LabInfo.
+      //
+      // If LabInfoMask is set but field_mask is empty, returns result without
+      // LabInfo.
+      //
+      // If field_mask is not empty, returns result with trimmed LabInfo.
       google.protobuf.FieldMask field_mask = 1;
     }
 
@@ -61,13 +66,27 @@ message LabQuery {
     LabInfoMask lab_info_mask = 1;
 
     // Mask for mobileharness.api.query.DeviceInfo.
-    //
-    // If all fields are removed, DeviceInfo won't be in result.
     message DeviceInfoMask {
       // Field mask of `mobileharness.api.query.proto.LabQueryProto.DeviceInfo`.
+      //
+      // If DeviceInfoMask is not set, returns all fields of DeviceInfo.
+      //
+      // If DeviceInfoMask is set but field_mask is empty, returns result
+      // without DeviceInfo.
+      //
+      // If field_mask is not empty, returns result with trimmed DeviceInfo.
       google.protobuf.FieldMask field_mask = 1;
 
-      // TODO: Supports dimension mask.
+      // Optional. Returns only those dimensions with the given names
+      // (case-insensitive).
+      //
+      // If not present, returns all dimensions in DeviceInfo.
+      //
+      // If `device_feature.composite_dimension.required_dimension` and
+      // `device_feature.composite_dimension.supported_dimension` are not in
+      // `field_mask`, `selected_dimension_names` is ignored as there are no
+      // dimensions to return.
+      repeated string selected_dimension_names = 2;
     }
 
     // Optional.

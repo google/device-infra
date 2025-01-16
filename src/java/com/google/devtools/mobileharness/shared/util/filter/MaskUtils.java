@@ -16,9 +16,12 @@
 
 package com.google.devtools.mobileharness.shared.util.filter;
 
+import static com.google.common.base.Ascii.toLowerCase;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.protobuf.util.FieldMaskUtil.trim;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceList;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
@@ -86,8 +89,56 @@ public final class MaskUtils {
         .setDeviceTotalCount(deviceList.getDeviceTotalCount())
         .addAllDeviceInfo(
             deviceInfos.stream()
-                .map(deviceInfo -> trim(fieldMask, deviceInfo))
+                .map(
+                    deviceInfo ->
+                        trim(
+                            fieldMask,
+                            trimDeviceDimension(
+                                deviceInfo,
+                                mask.getDeviceInfoMask().getSelectedDimensionNamesList())))
                 .collect(toImmutableList()))
         .build();
+  }
+
+  private static DeviceInfo trimDeviceDimension(
+      DeviceInfo deviceInfo, List<String> dimensionNames) {
+    if (dimensionNames.isEmpty()) {
+      return deviceInfo;
+    }
+
+    ImmutableSet<String> dimensionNamesLowerCase =
+        dimensionNames.stream().map(String::toLowerCase).collect(toImmutableSet());
+
+    DeviceInfo.Builder deviceInfoBuilder = deviceInfo.toBuilder();
+
+    deviceInfoBuilder
+        .getDeviceFeatureBuilder()
+        .getCompositeDimensionBuilder()
+        .clearSupportedDimension()
+        .addAllSupportedDimension(
+            deviceInfo
+                .getDeviceFeature()
+                .getCompositeDimension()
+                .getSupportedDimensionList()
+                .stream()
+                .filter(
+                    dimension -> dimensionNamesLowerCase.contains(toLowerCase(dimension.getName())))
+                .collect(toImmutableList()));
+
+    deviceInfoBuilder
+        .getDeviceFeatureBuilder()
+        .getCompositeDimensionBuilder()
+        .clearRequiredDimension()
+        .addAllRequiredDimension(
+            deviceInfo
+                .getDeviceFeature()
+                .getCompositeDimension()
+                .getRequiredDimensionList()
+                .stream()
+                .filter(
+                    dimension -> dimensionNamesLowerCase.contains(toLowerCase(dimension.getName())))
+                .collect(toImmutableList()));
+
+    return deviceInfoBuilder.build();
   }
 }

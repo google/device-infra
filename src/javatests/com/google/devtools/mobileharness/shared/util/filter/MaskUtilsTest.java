@@ -18,6 +18,8 @@ package com.google.devtools.mobileharness.shared.util.filter;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
@@ -41,6 +43,30 @@ import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
 public final class MaskUtilsTest {
+
+  private static final DeviceFeature DEVICE_FEATURE_1 =
+      DeviceFeature.newBuilder()
+          .addOwner("owner1")
+          .setCompositeDimension(
+              DeviceCompositeDimension.newBuilder()
+                  .addSupportedDimension(
+                      DeviceDimension.newBuilder().setName("pool").setValue("supported_pool"))
+                  .addSupportedDimension(
+                      DeviceDimension.newBuilder().setName("label").setValue("label_1"))
+                  .addRequiredDimension(
+                      DeviceDimension.newBuilder().setName("pool").setValue("required_pool")))
+          .build();
+
+  private static final DeviceFeature DEVICE_FEATURE_2 =
+      DeviceFeature.newBuilder()
+          .addOwner("owner2")
+          .setCompositeDimension(
+              DeviceCompositeDimension.newBuilder()
+                  .addSupportedDimension(
+                      DeviceDimension.newBuilder().setName("pool").setValue("fake_pool_1"))
+                  .addRequiredDimension(
+                      DeviceDimension.newBuilder().setName("pool").setValue("fake_pool_1")))
+          .build();
 
   private static final LabQueryResult ORIGINAL_RESULT =
       LabQueryResult.newBuilder()
@@ -68,7 +94,7 @@ public final class MaskUtilsTest {
                                                           .setIp("1.1.1.1")
                                                           .setHostName("lab1")))
                                           .setDeviceStatus(DeviceStatus.IDLE)
-                                          .setDeviceFeature(DeviceFeature.getDefaultInstance()))
+                                          .setDeviceFeature(DEVICE_FEATURE_1))
                                   .addDeviceInfo(
                                       DeviceInfo.newBuilder()
                                           .setDeviceLocator(
@@ -78,7 +104,8 @@ public final class MaskUtilsTest {
                                                       LabLocator.newBuilder()
                                                           .setIp("1.1.1.1")
                                                           .setHostName("lab1")))
-                                          .setDeviceStatus(DeviceStatus.BUSY))))
+                                          .setDeviceStatus(DeviceStatus.BUSY)
+                                          .setDeviceFeature(DEVICE_FEATURE_2))))
                   .addLabData(
                       LabData.newBuilder()
                           .setLabInfo(
@@ -168,6 +195,7 @@ public final class MaskUtilsTest {
             .setDeviceInfoMask(
                 DeviceInfoMask.newBuilder().setFieldMask(FieldMask.getDefaultInstance()))
             .build();
+
     LabQueryResult.Builder expectedResult = ORIGINAL_RESULT.toBuilder();
     expectedResult
         .getLabViewBuilder()
@@ -182,5 +210,147 @@ public final class MaskUtilsTest {
   public void trimLabQueryResult_withEmptyMask_returnsOriginalResult() {
     assertThat(MaskUtils.trimLabQueryResult(ORIGINAL_RESULT, Mask.getDefaultInstance()))
         .isEqualTo(ORIGINAL_RESULT);
+  }
+
+  @Test
+  public void trimLabQueryResult_withSelectedDimensionNames() {
+    Mask mask =
+        Mask.newBuilder()
+            .setLabInfoMask(LabInfoMask.newBuilder().setFieldMask(FieldMask.getDefaultInstance()))
+            .setDeviceInfoMask(
+                DeviceInfoMask.newBuilder()
+                    .setFieldMask(FieldMask.newBuilder().addPaths("device_feature"))
+                    .addSelectedDimensionNames("pool"))
+            .build();
+
+    LabQueryResult expectedResult =
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabView.newBuilder()
+                    .addLabData(
+                        LabData.newBuilder()
+                            .setDeviceList(
+                                DeviceList.newBuilder()
+                                    .setDeviceTotalCount(2)
+                                    .addDeviceInfo(
+                                        DeviceInfo.newBuilder()
+                                            .setDeviceFeature(
+                                                DeviceFeature.newBuilder()
+                                                    .addOwner("owner1")
+                                                    .setCompositeDimension(
+                                                        DeviceCompositeDimension.newBuilder()
+                                                            .addSupportedDimension(
+                                                                DeviceDimension.newBuilder()
+                                                                    .setName("pool")
+                                                                    .setValue("supported_pool"))
+                                                            .addRequiredDimension(
+                                                                DeviceDimension.newBuilder()
+                                                                    .setName("pool")
+                                                                    .setValue("required_pool")))
+                                                    .build()))
+                                    .addDeviceInfo(
+                                        DeviceInfo.newBuilder()
+                                            .setDeviceFeature(DEVICE_FEATURE_2))))
+                    // returns empty DeviceList because the DeviceInfoMask is not empty.
+                    .addLabData(
+                        LabData.newBuilder().setDeviceList(DeviceList.getDefaultInstance())))
+            .build();
+
+    assertThat(MaskUtils.trimLabQueryResult(ORIGINAL_RESULT, mask)).isEqualTo(expectedResult);
+  }
+
+  @Test
+  public void trimLabQueryResult_withRequiredDimensionPathsAndNames() {
+    Mask mask =
+        Mask.newBuilder()
+            .setLabInfoMask(LabInfoMask.newBuilder().setFieldMask(FieldMask.getDefaultInstance()))
+            .setDeviceInfoMask(
+                DeviceInfoMask.newBuilder()
+                    .setFieldMask(
+                        FieldMask.newBuilder()
+                            .addPaths("device_feature.composite_dimension.required_dimension"))
+                    .addSelectedDimensionNames("pool"))
+            .build();
+
+    LabQueryResult expectedResult =
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabView.newBuilder()
+                    .addLabData(
+                        LabData.newBuilder()
+                            .setDeviceList(
+                                DeviceList.newBuilder()
+                                    .setDeviceTotalCount(2)
+                                    .addDeviceInfo(
+                                        DeviceInfo.newBuilder()
+                                            .setDeviceFeature(
+                                                DeviceFeature.newBuilder()
+                                                    .setCompositeDimension(
+                                                        DeviceCompositeDimension.newBuilder()
+                                                            .addRequiredDimension(
+                                                                DeviceDimension.newBuilder()
+                                                                    .setName("pool")
+                                                                    .setValue("required_pool")))
+                                                    .build()))
+                                    .addDeviceInfo(
+                                        DeviceInfo.newBuilder()
+                                            .setDeviceFeature(
+                                                DeviceFeature.newBuilder()
+                                                    .setCompositeDimension(
+                                                        DeviceCompositeDimension.newBuilder()
+                                                            .addRequiredDimension(
+                                                                DeviceDimension.newBuilder()
+                                                                    .setName("pool")
+                                                                    .setValue("fake_pool_1")))))))
+                    // returns empty DeviceList because the DeviceInfoMask is not empty.
+                    .addLabData(
+                        LabData.newBuilder().setDeviceList(DeviceList.getDefaultInstance())))
+            .build();
+
+    assertThat(MaskUtils.trimLabQueryResult(ORIGINAL_RESULT, mask)).isEqualTo(expectedResult);
+  }
+
+  @Test
+  public void trimLabQueryResult_withDimensionNameNotMatch_returnsEmptyDimension() {
+    Mask mask =
+        Mask.newBuilder()
+            .setLabInfoMask(LabInfoMask.newBuilder().setFieldMask(FieldMask.getDefaultInstance()))
+            .setDeviceInfoMask(
+                DeviceInfoMask.newBuilder()
+                    .setFieldMask(FieldMask.newBuilder().addPaths("device_feature"))
+                    .addSelectedDimensionNames("fake_dimension"))
+            .build();
+
+    LabQueryResult expectedResult =
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabView.newBuilder()
+                    .addLabData(
+                        LabData.newBuilder()
+                            .setDeviceList(
+                                DeviceList.newBuilder()
+                                    .setDeviceTotalCount(2)
+                                    .addDeviceInfo(
+                                        DeviceInfo.newBuilder()
+                                            .setDeviceFeature(
+                                                DeviceFeature.newBuilder()
+                                                    .addOwner("owner1")
+                                                    .setCompositeDimension(
+                                                        DeviceCompositeDimension
+                                                            .getDefaultInstance())))
+                                    .addDeviceInfo(
+                                        DeviceInfo.newBuilder()
+                                            .setDeviceFeature(
+                                                DeviceFeature.newBuilder()
+                                                    .addOwner("owner2")
+                                                    .setCompositeDimension(
+                                                        DeviceCompositeDimension
+                                                            .getDefaultInstance())))))
+                    // returns empty DeviceList because the DeviceInfoMask is not empty.
+                    .addLabData(
+                        LabData.newBuilder().setDeviceList(DeviceList.getDefaultInstance())))
+            .build();
+
+    assertThat(MaskUtils.trimLabQueryResult(ORIGINAL_RESULT, mask)).isEqualTo(expectedResult);
   }
 }
