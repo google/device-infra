@@ -77,10 +77,10 @@ java_library(
     deps = [
         ":remote_device_manager",
         "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/device:querier",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local:device_info_filter",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:callables",
-        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
         "@com_google_protobuf//:protobuf_java",
         "@maven//:com_google_guava_guava",
