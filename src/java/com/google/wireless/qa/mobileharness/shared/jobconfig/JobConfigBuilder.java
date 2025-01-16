@@ -19,6 +19,8 @@ package com.google.wireless.qa.mobileharness.shared.jobconfig;
 import com.google.api.client.util.Strings;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.util.base.StrUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
@@ -34,8 +36,6 @@ import com.google.protobuf.Message;
 import com.google.protobuf.ProtocolMessageEnum;
 import com.google.protobuf.TextFormat;
 import com.google.protobuf.TextFormat.ParseException;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
-import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.FileConfigList;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.StringList;
@@ -96,7 +96,9 @@ public final class JobConfigBuilder {
       TextFormat.merge(fileUtil.readFile(path), jobConfigBuilder.getProtoBuilder());
     } catch (ParseException | MobileHarnessException e) {
       throw new MobileHarnessException(
-          ErrorCode.JOB_CONFIG_ERROR, "Failed to parse JobConfig proto text from file: " + path, e);
+          BasicErrorId.JOB_CONFIG_FROM_TEXT_PROTOBUF_ERROR,
+          "Failed to parse JobConfig proto text from file: " + path,
+          e);
     }
     return jobConfigBuilder;
   }
@@ -155,17 +157,17 @@ public final class JobConfigBuilder {
           json = configJson.toString();
         } else if (hasDimensions(dimensionsObject)) {
           throw new MobileHarnessException(
-              ErrorCode.JOB_CONFIG_ERROR,
+              BasicErrorId.JOB_CONFIG_GENERIC_ERROR,
               "JobConfig mixing dimension specification syntax is not allowed:" + json);
         } else if (hasDecorators(decoratorsArray)) {
           throw new MobileHarnessException(
-              ErrorCode.JOB_CONFIG_ERROR,
+              BasicErrorId.JOB_CONFIG_GENERIC_ERROR,
               "JobConfig mixing decorator specification syntaxes is not allowed:" + json);
         }
       } else if (deviceObject == null && driverSpecified) {
         if (hasDimensions(dimensionsObject)) {
           throw new MobileHarnessException(
-              ErrorCode.JOB_CONFIG_ERROR,
+              BasicErrorId.JOB_CONFIG_GENERIC_ERROR,
               "JobConfig mixing dimension specification and target_device syntax is not allowed:"
                   + json);
         }
@@ -178,7 +180,7 @@ public final class JobConfigBuilder {
           .updateParamStats(subDeviceSpecsSpecified);
     } catch (JsonParseException | IllegalStateException e) {
       throw new MobileHarnessException(
-          ErrorCode.JOB_CONFIG_ERROR,
+          BasicErrorId.JOB_CONFIG_FROM_JSON_ERROR,
           "Failed to parse JobConfig from json:" + JobConfigGsonHolder.prettyJson(json),
           e);
     }
@@ -289,7 +291,7 @@ public final class JobConfigBuilder {
         }
       } catch (ClassCastException e) {
         throw new MobileHarnessException(
-            ErrorCode.JOB_CONFIG_ERROR,
+            BasicErrorId.JOB_CONFIG_GENERIC_ERROR,
             String.format(
                 "Failed to cast value %s to message type %s.", value, messageType.getName()),
             e);
@@ -328,7 +330,7 @@ public final class JobConfigBuilder {
     if (!config.hasDevice() || config.getDevice().getSubDeviceSpecList().isEmpty()) {
       // The !config.hasDevice() case should have been caught in validate(), but check again.
       throw new MobileHarnessException(
-          ErrorCode.JOB_CONFIG_ERROR, "Device-subdevices are not initialized.");
+          BasicErrorId.JOB_CONFIG_INVALID_DEVICE_ERROR, "Device-subdevices are not initialized.");
     }
   }
 
@@ -394,7 +396,7 @@ public final class JobConfigBuilder {
       return JobConfigGsonHolder.getGson().toJson(config);
     } catch (JsonParseException e) {
       throw new MobileHarnessException(
-          ErrorCode.JOB_CONFIG_ERROR,
+          BasicErrorId.JOB_CONFIG_TO_JSON_ERROR,
           "Failed to serialize proto to json. proto message: " + config,
           e);
     }

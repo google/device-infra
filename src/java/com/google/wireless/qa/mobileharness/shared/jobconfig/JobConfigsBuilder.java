@@ -16,6 +16,8 @@
 
 package com.google.wireless.qa.mobileharness.shared.jobconfig;
 
+import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.gson.JsonArray;
@@ -23,8 +25,6 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
-import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfigs;
 import java.util.ArrayList;
@@ -81,7 +81,7 @@ public class JobConfigsBuilder {
       return new JobConfigsBuilder(jobConfigsBuilder.build());
     } catch (JsonParseException e) {
       throw new MobileHarnessException(
-          ErrorCode.JOB_CONFIG_ERROR,
+          BasicErrorId.JOB_CONFIG_FROM_JSON_ERROR,
           "Json string is not a valid job config: " + JobConfigGsonHolder.prettyJson(json),
           e);
     }
@@ -93,7 +93,7 @@ public class JobConfigsBuilder {
       return JobConfigGsonHolder.getGson().toJson(proto, JobConfigs.class);
     } catch (JsonParseException e) {
       throw new MobileHarnessException(
-          ErrorCode.JOB_CONFIG_ERROR,
+          BasicErrorId.JOB_CONFIG_TO_JSON_ERROR,
           "Failed to serialize proto to json. proto message: " + proto,
           e);
     }
@@ -150,7 +150,7 @@ public class JobConfigsBuilder {
       int size = size();
       if (other.size() != size) {
         throw new MobileHarnessException(
-            ErrorCode.JOB_CONFIG_ERROR,
+            BasicErrorId.JOB_CONFIG_MERGE_ERROR,
             String.format(
                 "Failed to merge JobConfigsBuilder with size [%s], expected size is [%s]",
                 other.size(), size));
