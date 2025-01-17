@@ -277,7 +277,8 @@ public class JobRunner implements Runnable {
     this.fileUtil = fileUtil;
     this.clock = clock;
     this.sleeper = sleeper;
-    if (Flags.instance().disableDeviceQuerier.getNonNull()) {
+    if (Flags.instance().disableDeviceQuerier.getNonNull()
+        || jobInfo.params().getBool(JobInfo.PARAM_DISABLE_DEVICE_QUERIER, false)) {
       this.deviceQuerier = null;
       this.suitableDeviceChecker = null;
     } else {

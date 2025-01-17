@@ -114,6 +114,9 @@ public class JobInfo extends JobScheduleUnit {
               + "ContainerModePreference.NON_CONTAINER.\n")
   public static final String PARAM_CONTAINER_MODE_PREFERENCE = "container_mode_preference";
 
+  @ParamAnnotation(required = false, help = "Whether to disable device querier in client.")
+  public static final String PARAM_DISABLE_DEVICE_QUERIER = "disable_device_querier";
+
   @ParamAnnotation(
       required = false,
       help =
