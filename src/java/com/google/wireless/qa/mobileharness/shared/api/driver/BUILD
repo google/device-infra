@@ -301,20 +301,16 @@ java_library(
 java_library(
     name = "android_robo_test",
     srcs = ["AndroidRoboTest.java"],
-    resources = [
-        # UTP Driver
-        # UTP Launcher and Main
-        # UTP Device Provider
-    ],
     tags = ["avoid_dep"],
     deps = [
         ":base_driver",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/devtools/mobileharness/shared/util/file/local:res_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:android_robo_test_spec_java_proto",
         "@maven//:com_google_inject_guice",
         "@maven//:javax_inject_jsr330_api",
     ],

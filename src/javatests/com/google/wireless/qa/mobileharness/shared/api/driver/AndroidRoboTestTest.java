@@ -17,10 +17,7 @@
 package com.google.wireless.qa.mobileharness.shared.api.driver;
 
 import static com.google.common.truth.Truth.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
 
-import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.device.NoOpDevice;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -33,7 +30,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
-import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
@@ -42,8 +38,6 @@ public class AndroidRoboTestTest {
 
   @Rule public final MockitoRule rule = MockitoJUnit.rule();
 
-  @Mock private ResUtil resUtil;
-
   private JobInfo jobInfo;
 
   private Device device;
@@ -51,7 +45,6 @@ public class AndroidRoboTestTest {
   @Before
   public void setUp() throws Exception {
     device = new NoOpDevice("device_name");
-    when(resUtil.getResourceFile(any(), any())).thenReturn("/extracted/path/to/some.jar");
     jobInfo =
         JobInfo.newBuilder()
             .setLocator(new JobLocator("job_id", "job_name"))
@@ -63,7 +56,7 @@ public class AndroidRoboTestTest {
   @Test
   public void run_pass() throws Exception {
     TestInfo testInfo = jobInfo.tests().add("fake test");
-    AndroidRoboTest roboTest = new AndroidRoboTest(device, testInfo, resUtil);
+    AndroidRoboTest roboTest = new AndroidRoboTest(device, testInfo);
 
     roboTest.run(testInfo);
 

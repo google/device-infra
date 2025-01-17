@@ -57,6 +57,7 @@ public final class DriverDecoratorSpecMapper {
      * =============================================================================================
      */
     builder.put("AndroidInstrumentation", "AndroidInstrumentationSpec");
+    builder.put("AndroidRoboTest", "AndroidRoboTestSpec");
     builder.put("NoOpDriver", "NoOpDriverSpec");
     builder.put("XtsTradefedTest", "XtsTradefedTestDriverSpec");
 

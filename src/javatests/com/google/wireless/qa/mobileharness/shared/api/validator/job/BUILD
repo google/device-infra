@@ -27,9 +27,12 @@ java_library(
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:mobly_aosp_package_test_spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:android_robo_test_job_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:mobly_aosp_package_test_job_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:xts_tradefed_test_job_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:android_robo_test_spec_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:xts_tradefed_test_spec_java_proto",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "@maven//:junit_junit",
