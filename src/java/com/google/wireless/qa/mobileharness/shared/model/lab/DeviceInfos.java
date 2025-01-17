@@ -17,9 +17,9 @@
 package com.google.wireless.qa.mobileharness.shared.model.lab;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
-import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.Nullable;
@@ -40,7 +40,7 @@ public class DeviceInfos {
     DeviceInfo previousDevice = devices.putIfAbsent(deviceInfo.locator().getSerial(), deviceInfo);
     if (previousDevice != null) {
       throw new MobileHarnessException(
-          ErrorCode.DEVICE_DUPLICATED,
+          BasicErrorId.DEVICE_INFO_ALREADY_EXIST_ERROR,
           "Device " + deviceInfo.locator() + " already exists in the lab");
     }
     return this;

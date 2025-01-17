@@ -32,6 +32,7 @@ import com.google.common.collect.Multimap;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.allocation.Allocation;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.TestLocator;
 import com.google.devtools.mobileharness.infra.controller.test.TestRunner;
 import com.google.devtools.mobileharness.infra.controller.test.model.JobExecutionUnit;
@@ -39,8 +40,6 @@ import com.google.devtools.mobileharness.infra.controller.test.model.TestExecuti
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
-import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -200,7 +199,7 @@ public class TestManager<T extends TestRunner> implements Runnable {
           .apply(testRunner.getAllocation())
           .equals(deviceIdGetter.apply(allocation))) {
         throw new MobileHarnessException(
-            ErrorCode.TEST_DUPLICATED_ALLOCATION,
+            InfraErrorId.TM_TEST_DUPLICATED_ALLOCATION,
             String.format(
                 "Test %s already has allocation %s. The allocation %s is illegal.",
                 testId, testRunner.getAllocation(), allocation));
@@ -283,12 +282,11 @@ public class TestManager<T extends TestRunner> implements Runnable {
    * Do NOT make it public. Test runner should be managed only by test manager and related util
    * classes in the same package.
    */
-  T getTestRunnerNonEmpty(String testId)
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException {
+  T getTestRunnerNonEmpty(String testId) throws MobileHarnessException {
     return getTestRunner(testId)
         .orElseThrow(
             () ->
-                new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+                new MobileHarnessException(
                     InfraErrorId.TM_TEST_NOT_FOUND,
                     String.format("Test [%s] is not found", testId)));
   }

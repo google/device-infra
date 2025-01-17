@@ -32,7 +32,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 import java.util.TimeZone;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.annotation.Nullable;
 
 /** Output log of the job/test. */
