@@ -140,6 +140,12 @@ public final class Dimension {
     ROOTED,
     /** The run target of the device. */
     RUN_TARGET,
+    /** Whether the device has a device SoC chip ID bound DPM flashed. */
+    SBDP_ALLOW,
+    /** Whether the device has bootloader AntiRollback check disabled by DPM. */
+    SBDP_AR_CHECK,
+    /** Whether the device has bootloader AntiRollback counter update disabled by DPM. */
+    SBDP_AR_UPDATE,
     /** Whether to enable taking screenshot from FE. */
     SCREENSHOT_ABLE,
     /** The device secure boot status (LifeCycleState, LCS). */
