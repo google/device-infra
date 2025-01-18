@@ -80,8 +80,11 @@ public class AndroidAdbUtil {
   /** ADB args for port reverse. Should be followed by the "tcp:device_port" and "tcp:host_port". */
   @VisibleForTesting static final String ADB_ARG_REVERSE_TCP = "reverse";
 
+  /** ADB arg to wait for the device to be ready. */
+  @VisibleForTesting static final String ADB_ARG_WAIT_FOR_DEVICE = "wait-for-device";
+
   /** ADB args for clearing the entire log of a device. */
-  @VisibleForTesting static final String[] ADB_ARGS_CLEAR_LOG = new String[] {"logcat", "-c"};
+  @VisibleForTesting static final String[] adbArgsClearLog = new String[] {"logcat", "-c"};
 
   /** ADB Shell command for "cmd". */
   @VisibleForTesting static final String ADB_SHELL_CMD = "cmd";
@@ -295,7 +298,7 @@ public class AndroidAdbUtil {
    */
   public void clearLog(String serial) throws MobileHarnessException, InterruptedException {
     try {
-      String unused = adb.runWithRetry(serial, ADB_ARGS_CLEAR_LOG);
+      String unused = adb.runWithRetry(serial, adbArgsClearLog);
     } catch (MobileHarnessException e) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_ADB_UTIL_CLEAR_LOG_ERROR, e.getMessage(), e);
@@ -532,7 +535,7 @@ public class AndroidAdbUtil {
     if (sdkVersion >= AndroidVersion.NOUGAT.getStartSdkVersion()) {
       baseCommand =
           new String[] {
-            "dumpsys", "-t", String.valueOf(timeout.getSeconds()), dumpSysType.getTypeValue()
+            "dumpsys", "-t", String.valueOf(timeout.toSeconds()), dumpSysType.getTypeValue()
           };
     } else {
       baseCommand = new String[] {"dumpsys", dumpSysType.getTypeValue()};
@@ -564,7 +567,7 @@ public class AndroidAdbUtil {
    */
   public void forwardTcpPort(String serial, int hostPort, int devicePort)
       throws MobileHarnessException, InterruptedException {
-    forwardTcpPort(serial, hostPort, "tcp:" + devicePort);
+    forwardTcpPort(serial, hostPort, "tcp:" + devicePort, /* shouldWait= */ false);
   }
 
   /**
@@ -573,17 +576,36 @@ public class AndroidAdbUtil {
    * @param serial serial number of the device
    * @param hostPort the port on local machine
    * @param devicePortDescription the description of port on the android device. See <a
-   *     href="https://developer.android.com/studio/command-line/adb.html#forwardports" /> for more
-   *     details.
+   *     href="https://developer.android.com/tools/adb#forwardports" /> for more details.
    * @throws MobileHarnessException if fails to set tcp forward
    * @throws InterruptedException if the thread executing the commands is interrupted
    */
   public void forwardTcpPort(String serial, int hostPort, String devicePortDescription)
       throws MobileHarnessException, InterruptedException {
+    forwardTcpPort(serial, hostPort, devicePortDescription, /* shouldWait= */ false);
+  }
+
+  /**
+   * Sets tcp port forwarding on an android device with specific port description on device.
+   *
+   * @param serial serial number of the device
+   * @param hostPort the port on local machine
+   * @param devicePortDescription the description of port on the android device. See <a
+   *     href="https://developer.android.com/tools/adb#forwardports" /> for more details.
+   * @param shouldWait whether to wait for the device to be ready before forwarding the port
+   * @throws MobileHarnessException if fails to set tcp forward
+   * @throws InterruptedException if the thread executing the commands is interrupted
+   */
+  public void forwardTcpPort(
+      String serial, int hostPort, String devicePortDescription, boolean shouldWait)
+      throws MobileHarnessException, InterruptedException {
+    String[] args = new String[] {ADB_ARG_FORWARD_TCP, "tcp:" + hostPort, devicePortDescription};
     try {
-      String unused =
-          adb.runWithRetry(
-              serial, new String[] {ADB_ARG_FORWARD_TCP, "tcp:" + hostPort, devicePortDescription});
+      String unused;
+      if (shouldWait) {
+        unused = adb.runWithRetry(serial, new String[] {ADB_ARG_WAIT_FOR_DEVICE});
+      }
+      unused = adb.runWithRetry(serial, args);
     } catch (MobileHarnessException e) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_ADB_UTIL_FORWARD_TCP_PORT_ERROR, e.getMessage(), e);
@@ -646,9 +668,7 @@ public class AndroidAdbUtil {
         String output =
             adb.runShellWithRetry(serial, ADB_SHELL_GET_PROPERTY + " " + key, SHORT_COMMAND_TIMEOUT)
                 .trim();
-        if (output.isEmpty() || output.contains(OUTPUT_KEY_NOT_FOUND)) {
-          continue;
-        } else {
+        if (!output.isEmpty() && !output.contains(OUTPUT_KEY_NOT_FOUND)) {
           return output;
         }
       }
@@ -838,10 +858,28 @@ public class AndroidAdbUtil {
    */
   public void reverseTcpPort(String serial, int devicePort, int hostPort)
       throws MobileHarnessException, InterruptedException {
+    reverseTcpPort(serial, devicePort, hostPort, /* shouldWait= */ false);
+  }
+
+  /**
+   * Sets tcp port reversing on an android device. Only works with API level >= 21.
+   *
+   * @param serial serial number of the device
+   * @param devicePort the port on the android device
+   * @param hostPort the port on local machine
+   * @param shouldWait whether to wait for the device to be ready before reversing the port
+   * @throws MobileHarnessException if fails to set tcp reverse
+   * @throws InterruptedException if the thread executing the commands is interrupted
+   */
+  public void reverseTcpPort(String serial, int devicePort, int hostPort, boolean shouldWait)
+      throws MobileHarnessException, InterruptedException {
+    String[] args = new String[] {ADB_ARG_REVERSE_TCP, "tcp:" + devicePort, "tcp:" + hostPort};
     try {
-      String unused =
-          adb.runWithRetry(
-              serial, new String[] {ADB_ARG_REVERSE_TCP, "tcp:" + devicePort, "tcp:" + hostPort});
+      String unused;
+      if (shouldWait) {
+        unused = adb.runWithRetry(serial, new String[] {ADB_ARG_WAIT_FOR_DEVICE});
+      }
+      unused = adb.runWithRetry(serial, args);
     } catch (MobileHarnessException e) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_ADB_UTIL_REVERSE_TCP_PORT_ERROR, e.getMessage(), e);
