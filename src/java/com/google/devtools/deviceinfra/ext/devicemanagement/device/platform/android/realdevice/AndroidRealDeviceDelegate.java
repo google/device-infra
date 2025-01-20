@@ -310,6 +310,18 @@ public abstract class AndroidRealDeviceDelegate {
       if (!Strings.isNullOrEmpty(devkeyAllow)) {
         device.updateDimension(Dimension.Name.DEVKEY_ALLOW, Ascii.toLowerCase(devkeyAllow));
       }
+      String sbdpAllow = fastboot.getVar(deviceId, FastbootProperty.SBDP_ALLOW);
+      if (!Strings.isNullOrEmpty(sbdpAllow)) {
+        device.updateDimension(Dimension.Name.SBDP_ALLOW, Ascii.toLowerCase(sbdpAllow));
+      }
+      String sbdpArCheck = fastboot.getVar(deviceId, FastbootProperty.SBDP_AR_CHECK);
+      if (!Strings.isNullOrEmpty(sbdpArCheck)) {
+        device.updateDimension(Dimension.Name.SBDP_AR_CHECK, Ascii.toLowerCase(sbdpArCheck));
+      }
+      String sbdpArUpdate = fastboot.getVar(deviceId, FastbootProperty.SBDP_AR_UPDATE);
+      if (!Strings.isNullOrEmpty(sbdpArUpdate)) {
+        device.updateDimension(Dimension.Name.SBDP_AR_UPDATE, Ascii.toLowerCase(sbdpArUpdate));
+      }
 
       try {
         String serialno = fastboot.getVar(deviceId, FastbootProperty.SERIALNO);

@@ -52,6 +52,7 @@ public enum AndroidProperty {
   DEVKEY_ALLOW("ro.boot.devkey-allow"),
   @DoNotAddToDimension
   DISABLE_CALL("ro.telephony.disable-call"),
+  DPM_STATE("ro.boot.dpm_state"),
   @DoNotAddToDimension
   FLAVOR("ro.build.flavor"),
   HARDWARE("ro.hardware"),
