@@ -320,10 +320,10 @@ public class LocalFileUtil {
         }
       }
     } catch (CommandException e) {
-      throw new MobileHarnessException(
-          BasicErrorId.SYSTEM_LIST_OPEN_FILES_ERROR,
-          String.format("Failed to list open files or directories under %s", dirPath),
-          e);
+      // Catch exception here to avoid breaking the whole process. It is known that "lsof" command
+      // may stuck on gLinux machines.
+      logger.atWarning().withCause(e).log(
+          "Failed to list open files or directories under %s", dirPath);
     }
     ImmutableSet<String> allOpenedFilesOrDirs = allOpenedFilesOrDirsBuilder.build();
     logger.atInfo().log("Opened files or dirs: %s", allOpenedFilesOrDirs);
