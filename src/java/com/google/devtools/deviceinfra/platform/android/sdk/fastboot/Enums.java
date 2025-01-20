@@ -54,6 +54,9 @@ public final class Enums {
     HW_REVISION,
     IS_USERSPACE,
     PRODUCT,
+    SBDP_ALLOW,
+    SBDP_AR_CHECK,
+    SBDP_AR_UPDATE,
     SECURE_BOOT,
     SERIALNO,
     UNLOCKED
