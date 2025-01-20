@@ -25,6 +25,7 @@ import com.google.devtools.mobileharness.infra.client.api.ClientApi;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionDetailHolder;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
+import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Job;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import java.time.Duration;
@@ -88,6 +89,7 @@ public class SessionJobRunner {
             logger.atInfo().log(
                 "Starting job %s of session %s",
                 jobInfo.locator().getId(), sessionDetailHolder.getSessionId());
+            jobInfo.properties().add(Job.CLIENT_TYPE, "olc");
             clientApi.startJob(jobInfo, execMode, sessionPlugins);
           }
         }

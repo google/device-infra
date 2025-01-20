@@ -35,7 +35,7 @@ public interface PropertyName {
 
     CLIENT_HOSTNAME,
 
-    /** Client type. Examples: moscar_native_executor, mobile_test_bin. */
+    /** Client type. Examples: moscar_native_executor, mobile_test_bin, olc. */
     CLIENT_TYPE,
 
     CLIENT_VERSION,

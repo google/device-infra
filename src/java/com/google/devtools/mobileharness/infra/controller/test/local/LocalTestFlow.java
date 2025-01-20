@@ -67,6 +67,7 @@ import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.driver.DriverFactory;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
+import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Job;
 import com.google.wireless.qa.mobileharness.shared.controller.event.LocalTestEndedEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.event.LocalTestEndingEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.event.LocalTestStartEvent;
@@ -90,6 +91,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.BiFunction;
@@ -150,7 +152,7 @@ public class LocalTestFlow {
       builtinPluginsBuilder.add(
           PluginItem.create(new TestLogCollectorPlugin(), EventScope.CLASS_INTERNAL));
     }
-    if (isAtsFileServerUploaderEnabled()) {
+    if (isAtsFileServerUploaderEnabled(testInfo)) {
       builtinPluginsBuilder.add(
           PluginItem.create(new AtsFileServerUploaderPlugin(), EventScope.CLASS_INTERNAL));
     }
@@ -747,8 +749,9 @@ public class LocalTestFlow {
         .orElse(false);
   }
 
-  private static boolean isAtsFileServerUploaderEnabled() {
-    return Flags.instance().enableAtsFileServerUploader.getNonNull();
+  private static boolean isAtsFileServerUploaderEnabled(TestInfo testInfo) {
+    return Flags.instance().enableAtsFileServerUploader.getNonNull()
+        && Objects.equals(testInfo.jobInfo().properties().get(Job.CLIENT_TYPE), "olc");
   }
 
   private static boolean isTestLogCollectorEnabled() {
