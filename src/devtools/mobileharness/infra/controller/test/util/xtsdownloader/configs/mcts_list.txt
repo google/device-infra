@@ -221,6 +221,7 @@ CtsPerfettoTestCases
 CtsPermissionMultiDeviceTestCases
 CtsPermissionMultiUserTestCases
 CtsPermissionUiTestCases
+CtsPhotoPickerTest
 CtsRebootReadinessTestCases
 CtsRoleTestCases
 CtsSafetyCenterTestCases
