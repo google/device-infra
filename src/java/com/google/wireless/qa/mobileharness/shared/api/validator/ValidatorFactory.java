@@ -18,10 +18,9 @@ package com.google.wireless.qa.mobileharness.shared.api.validator;
 
 import com.google.common.collect.Lists;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.validator.env.EnvValidator;
 import com.google.wireless.qa.mobileharness.shared.api.validator.job.JobValidator;
-import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import java.util.Collection;
 import java.util.List;
 
@@ -32,16 +31,15 @@ public class ValidatorFactory {
    * Creates a new {@link EnvValidator} instance according to the given class type.
    *
    * @param envValidatorClass {@link EnvValidator} class type
-   * @throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException if fails to
-   *     create a new {@link EnvValidator} instance
+   * @throws MobileHarnessException if fails to create a new {@link EnvValidator} instance
    */
   public EnvValidator createEnvValidator(Class<? extends EnvValidator> envValidatorClass)
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException {
+      throws MobileHarnessException {
     // Gets the constructor.
     try {
       return envValidatorClass.getDeclaredConstructor().newInstance();
     } catch (ReflectiveOperationException | ExceptionInInitializerError | SecurityException e) {
-      throw new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+      throw new MobileHarnessException(
           BasicErrorId.REFLECTION_INSTANTIATION_ERROR,
           "Failed to create new instance for " + envValidatorClass.getSimpleName(),
           e);
@@ -52,8 +50,7 @@ public class ValidatorFactory {
    * Create a list of env validator classes.
    *
    * @param envValidatorClasses a list of {@code EnvValidator} class types
-   * @throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException if fails to
-   *     create {@code EnvValidator} instance
+   * @throws MobileHarnessException if fails to create {@code EnvValidator} instance
    */
   public List<EnvValidator> createEnvValidators(
       Collection<Class<? extends EnvValidator>> envValidatorClasses)
@@ -69,16 +66,15 @@ public class ValidatorFactory {
    * Creates a new {@link JobValidator} instance according to the given class type.
    *
    * @param jobValidatorClass {@link JobValidator} class type
-   * @throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException if fails to
-   *     create a new {@link JobValidator} instance
+   * @throws MobileHarnessException if fails to create a new {@link JobValidator} instance
    */
   public JobValidator createJobValidator(Class<? extends JobValidator> jobValidatorClass)
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException {
+      throws MobileHarnessException {
     // Gets the constructor.
     try {
       return jobValidatorClass.getDeclaredConstructor().newInstance();
     } catch (ReflectiveOperationException | ExceptionInInitializerError | SecurityException e) {
-      throw new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+      throw new MobileHarnessException(
           BasicErrorId.REFLECTION_INSTANTIATION_ERROR,
           "Failed to create new instance for " + jobValidatorClass.getSimpleName(),
           e);
@@ -89,12 +85,10 @@ public class ValidatorFactory {
    * Create a list of job validator classes.
    *
    * @param jobValidatorClasses a list of {@code JobValidator} class types
-   * @throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException if fails to
-   *     create {@code JobValidator} instance
+   * @throws MobileHarnessException if fails to create {@code JobValidator} instance
    */
   public List<JobValidator> createJobValidators(
-      Collection<Class<? extends JobValidator>> jobValidatorClasses)
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException {
+      Collection<Class<? extends JobValidator>> jobValidatorClasses) throws MobileHarnessException {
     List<JobValidator> jobValidators = Lists.newArrayList();
     for (Class<? extends JobValidator> jobValidatorClass : jobValidatorClasses) {
       jobValidators.add(createJobValidator(jobValidatorClass));
@@ -118,7 +112,7 @@ public class ValidatorFactory {
         | ExceptionInInitializerError
         | SecurityException e) {
       throw new MobileHarnessException(
-          ErrorCode.REFLECTION_INSTANTIATION_ERROR,
+          BasicErrorId.REFLECTION_INSTANTIATION_ERROR,
           "Failed to create new instance for " + validatorClass.getSimpleName(),
           e);
     }

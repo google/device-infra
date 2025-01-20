@@ -16,7 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.client.api.controller.allocation.diagnostic;
 
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import java.util.Optional;
 
 /** AllocationDiagnostician provides a report for identifying the cause of an allocation failure. */

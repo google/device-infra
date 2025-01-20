@@ -27,6 +27,7 @@ import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.E
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.ExceptionDetail;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Job.Retry;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.DeviceAllocator;
 import com.google.devtools.mobileharness.infra.client.api.util.result.ClientAllocErrorUtil;
@@ -35,7 +36,6 @@ import com.google.devtools.mobileharness.infra.container.proto.ModeSettingProto.
 import com.google.devtools.mobileharness.infra.controller.test.local.utp.common.UtpMode;
 import com.google.devtools.mobileharness.infra.controller.test.local.utp.proto.IncompatibleReasonProto.InfraIncompatibleReason;
 import com.google.wireless.qa.mobileharness.client.api.event.JobStartEvent;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test;
 import com.google.wireless.qa.mobileharness.shared.controller.event.TestEndedEvent;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;

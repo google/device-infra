@@ -18,11 +18,11 @@ package com.google.wireless.qa.mobileharness.shared.api.validator;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
+import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.util.reflection.ClientClassUtil;
 import com.google.devtools.mobileharness.shared.util.reflection.ValidatorClassUtil;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.validator.job.JobValidator;
-import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
 import java.util.ArrayList;
@@ -87,7 +87,7 @@ public class JobChecker {
 
     if (!errors.isEmpty()) {
       throw new MobileHarnessException(
-          ErrorCode.JOB_CONFIG_ERROR,
+          BasicErrorId.JOB_CONFIG_GENERIC_ERROR,
           "Job configuration error:\n - " + Joiner.on("\n - ").join(errors));
     }
   }
