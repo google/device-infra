@@ -592,7 +592,7 @@ public class AndroidAccountDecorator extends BaseDecorator
       AndroidDevice androidDevice = ((AndroidDevice) device);
       try {
         deviceIsRooted = androidDevice.isRooted();
-      } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
+      } catch (MobileHarnessException e) {
         throw new MobileHarnessException(
             AndroidErrorId.ANDROID_ACCOUNT_DECORATOR_CHECK_DEVICE_ROOTED_ERROR, e.getMessage());
       }

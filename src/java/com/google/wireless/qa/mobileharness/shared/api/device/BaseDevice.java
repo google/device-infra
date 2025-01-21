@@ -339,8 +339,7 @@ public abstract class BaseDevice implements Device {
   @CanIgnoreReturnValue
   @Override
   public PostTestDeviceOp postRunTest(TestInfo testInfo)
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-          InterruptedException {
+      throws MobileHarnessException, InterruptedException {
     // Removes the device cache after tests finish, otherwise device status may be wrong. b/32101092
     DeviceCache.getInstance().invalidateCache(info().deviceId().controlId());
     return PostTestDeviceOp.NONE;
@@ -352,35 +351,28 @@ public abstract class BaseDevice implements Device {
   }
 
   @Override
-  public void reboot()
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-          InterruptedException {
+  public void reboot() throws MobileHarnessException, InterruptedException {
     if (!canReboot()) {
-      throw new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+      throw new MobileHarnessException(
           InfraErrorId.LAB_REBOOT_METHOD_UNSUPPORTED, "Unsupported reboot");
     }
   }
 
   @Override
-  public void tearDown()
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-          InterruptedException {
+  public void tearDown() throws MobileHarnessException, InterruptedException {
     // Do nothing.
   }
 
   @Override
-  public String takeScreenshot()
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-          InterruptedException {
-    throw new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+  public String takeScreenshot() throws MobileHarnessException, InterruptedException {
+    throw new MobileHarnessException(
         InfraErrorId.LAB_TAKE_SCREENSHOT_METHOD_UNSUPPORTED, "Unsupported screenshot");
   }
 
   @Override
   public String getDeviceLog(DeviceLogType deviceLogType)
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-          InterruptedException {
-    throw new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+      throws MobileHarnessException, InterruptedException {
+    throw new MobileHarnessException(
         InfraErrorId.LAB_GET_DEVICE_LOG_METHOD_UNSUPPORTED, "Unsupported getDeviceLog");
   }
 
@@ -453,8 +445,7 @@ public abstract class BaseDevice implements Device {
   }
 
   @Override
-  public String getGenFileDir()
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException {
+  public String getGenFileDir() throws MobileHarnessException {
     checkNotNull(genFileDirRoot, "genFileDirRoot isn't set.");
     String genFileDir = PathUtil.join(genFileDirRoot, info().deviceId().controlId());
     fileUtil.prepareDir(genFileDir);

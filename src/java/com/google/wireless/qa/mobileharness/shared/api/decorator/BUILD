@@ -74,7 +74,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/lightning/accountmanager:account_manager",
         "//src/java/com/google/devtools/mobileharness/platform/android/lightning/systemstate",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_device",
