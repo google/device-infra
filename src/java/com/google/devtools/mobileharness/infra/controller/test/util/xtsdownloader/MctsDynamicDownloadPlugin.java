@@ -96,6 +96,8 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
 
   private static final String MAINLINE_AOSP_VERSION_KEY = "AOSP";
 
+  private static final String ANDROID_B_CODENAME = "Baklava";
+
   private static final ImmutableMap<String, Integer> SDK_LEVEL_TO_YEAR =
       ImmutableMap.of(
           "30", 2020,
@@ -116,7 +118,7 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
           "x86_64", "x86_64");
   // Build prefix of Trunk release build only for Pixel devices.
   private static final ImmutableSet<String> BUILD_PREFIX_FOR_TRUNK_RELEASE =
-      ImmutableSet.of("AP3A", "AP4A", "AH1A", "BP1A", "BP2A");
+      ImmutableSet.of("AP3A", "AP4A", "AH1A");
   private final AndroidPackageManagerUtil androidPackageManagerUtil;
   private final AndroidAdbUtil adbUtil;
   private final LocalFileUtil fileUtil;
@@ -161,7 +163,9 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
                 && BUILD_PREFIX_FOR_TRUNK_RELEASE.contains(
                     buildAlias.substring(0, buildAlias.indexOf(".")))
             ? buildAlias.substring(0, buildAlias.indexOf("."))
-            : adbUtil.getProperty(deviceId, AndroidProperty.SDK_VERSION);
+            : (adbUtil.getProperty(deviceId, AndroidProperty.CODENAME).equals(ANDROID_B_CODENAME)
+                ? "36"
+                : adbUtil.getProperty(deviceId, AndroidProperty.SDK_VERSION));
 
     List<String> downloadLinkUrls = new ArrayList<>();
     // Add the Lorry download link url of MCTS file for preloaded mainline modules. For example:
