@@ -38,6 +38,7 @@ import com.google.devtools.mobileharness.infra.ats.console.util.tradefed.TestRec
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -87,11 +88,14 @@ public class CompatibilityReportCreator {
 
   private final LocalFileUtil localFileUtil;
   private final TestRecordWriter testRecordWriter;
+  private final SystemUtil systemUtil;
 
   @Inject
-  CompatibilityReportCreator(LocalFileUtil localFileUtil, TestRecordWriter testRecordWriter) {
+  CompatibilityReportCreator(
+      LocalFileUtil localFileUtil, TestRecordWriter testRecordWriter, SystemUtil systemUtil) {
     this.localFileUtil = localFileUtil;
     this.testRecordWriter = testRecordWriter;
+    this.systemUtil = systemUtil;
   }
 
   /**
@@ -491,8 +495,11 @@ public class CompatibilityReportCreator {
     try (InputStream xslStream =
             new FileInputStream(new File(inputXml.getParentFile(), REPORT_XSL_FILE_NAME));
         OutputStream outputStream = new FileOutputStream(report)) {
-      Transformer transformer =
-          TransformerFactory.newInstance().newTransformer(new StreamSource(xslStream));
+      TransformerFactory transformerFactory = TransformerFactory.newInstance();
+      if (systemUtil.getJavaMajorVersion() >= 25) {
+        transformerFactory.setFeature("jdk.xml.enableExtensionFunctions", true);
+      }
+      Transformer transformer = transformerFactory.newTransformer(new StreamSource(xslStream));
       transformer.setParameter("reportDir", inputXml.getParentFile().toString());
       transformer.setParameter("reportName", HTML_REPORT_NAME);
       transformer.transform(new StreamSource(inputXml), new StreamResult(outputStream));
