@@ -41,7 +41,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/network",
         "//src/java/com/google/devtools/mobileharness/shared/version",
-        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "//src/java/com/google/wireless/qa/mobileharness/shared/comm/message:test_message_manager",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",

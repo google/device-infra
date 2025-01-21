@@ -65,7 +65,6 @@ import com.google.devtools.mobileharness.infra.controller.test.manager.DirectTes
 import com.google.devtools.mobileharness.infra.controller.test.manager.TestManager;
 import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberExceptionLoggingHandler;
 import com.google.devtools.mobileharness.shared.constant.closeable.MobileHarnessAutoCloseable;
-import com.google.devtools.mobileharness.shared.model.error.UnknownErrorId;
 import com.google.devtools.mobileharness.shared.util.comm.messaging.poster.TestMessagePoster;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.error.ErrorModelConverter;
@@ -80,7 +79,6 @@ import com.google.wireless.qa.mobileharness.client.api.event.JobStartEvent;
 import com.google.wireless.qa.mobileharness.shared.api.validator.JobChecker;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Value;
-import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Job;
 import com.google.wireless.qa.mobileharness.shared.controller.event.util.ScopedEventBus;
@@ -541,20 +539,6 @@ public class JobRunner implements Runnable {
     } catch (MobileHarnessException e) {
       jobError = e;
       jobInfo.warnings().addAndLog(e, logger);
-    } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
-      if (jobInfo.params().getBool(JobInfo.PARAM_IGNORE_NOT_ASSIGNED_TESTS, false)
-          && e.getErrorCode() == ErrorCode.DEVICE_NOT_FOUND.code()) {
-        jobInfo.log().atInfo().alsoTo(logger).log("Ignoring: %s", e);
-      } else {
-        jobError = e;
-        jobInfo
-            .warnings()
-            .addAndLog(
-                UnknownErrorId.of(e.getErrorCodeEnum(), e.getErrorType()),
-                e.getMessage(),
-                e.getCause(),
-                logger);
-      }
     } catch (InterruptedException e) {
       jobError = e;
       Thread.currentThread().interrupt();
@@ -692,9 +676,7 @@ public class JobRunner implements Runnable {
    *     should also be set.
    */
   @SuppressWarnings("LogAndThrow")
-  private boolean preRunJob()
-      throws com.google.wireless.qa.mobileharness.shared.MobileHarnessException,
-          InterruptedException {
+  private boolean preRunJob() throws MobileHarnessException, InterruptedException {
     Stopwatch stopwatch = Stopwatch.createStarted();
     boolean skipJob = false;
     try {
@@ -811,8 +793,7 @@ public class JobRunner implements Runnable {
   @SuppressWarnings("EmptyTryBlock")
   private void handleNewAllocation(
       AllocationWithStats allocationWithStats, Instant startDeviceAllocationTime)
-      throws com.google.wireless.qa.mobileharness.shared.MobileHarnessException,
-          InterruptedException {
+      throws MobileHarnessException, InterruptedException {
     Allocation allocation = allocationWithStats.allocation();
     logger.atInfo().log("Allocation: %s", allocation);
     // Double checks the allocation.
@@ -919,26 +900,12 @@ public class JobRunner implements Runnable {
 
         // Starts the test.
         testManager.startTest(testRunner);
-      } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
+      } catch (MobileHarnessException e) {
         TestResult result = ResultUtil.getResultByException(e);
-        if (e instanceof MobileHarnessException) {
-          testInfo
-              .result()
-              .toNewResult()
-              .setNonPassing(Result.upgradeTestResult(result), (MobileHarnessException) e);
-        } else {
-          testInfo
-              .result()
-              .toNewResult()
-              .setNonPassing(
-                  Result.upgradeTestResult(result),
-                  new MobileHarnessException(
-                      InfraErrorId.CLIENT_JR_TEST_START_ERROR,
-                      "Revert allocation "
-                          + allocation
-                          + " because failed to start the test on the devices",
-                      e));
-        }
+        testInfo
+            .result()
+            .toNewResult()
+            .setNonPassing(Result.upgradeTestResult(result), (MobileHarnessException) e);
         testInfo
             .log()
             .atWarning()
@@ -1136,11 +1103,11 @@ public class JobRunner implements Runnable {
    */
   private void onJobStartTimeout(boolean isDeviceAllocatorSetUp, boolean isStartTimeoutExpired)
       throws MobileHarnessException, InterruptedException {
-    com.google.wireless.qa.mobileharness.shared.MobileHarnessException suppressed = null;
+    MobileHarnessException suppressed = null;
     try {
       finalizeJobResult(
           /* failFastError= */ null, isDeviceAllocatorSetUp, !isStartTimeoutExpired, null);
-    } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
+    } catch (MobileHarnessException e) {
       suppressed = e;
     }
 
@@ -1565,7 +1532,7 @@ public class JobRunner implements Runnable {
         }
         return allocDiagnostician.getLastReport();
       }
-    } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
+    } catch (MobileHarnessException e) {
       jobInfo
           .warnings()
           .addAndLog(
@@ -1686,9 +1653,7 @@ public class JobRunner implements Runnable {
       hasFoundPotentialSuitableDevice = true;
     }
 
-    private void check()
-        throws com.google.wireless.qa.mobileharness.shared.MobileHarnessException,
-            InterruptedException {
+    private void check() throws MobileHarnessException, InterruptedException {
       if (!hasFoundPotentialSuitableDevice && nextQueryDeviceTime.isBefore(clock.instant())) {
         DeviceQueryResult deviceQueryResult = null;
         try {

@@ -150,12 +150,6 @@ public class ClientApi {
       jobInfo.warnings().add(e);
       throw new MobileHarnessException(
           InfraErrorId.CLIENT_API_START_JOB_ERROR, "Failed to start job", e);
-    } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
-      MobileHarnessException newMobileHarnessException =
-          new MobileHarnessException(
-              InfraErrorId.CLIENT_API_START_JOB_ERROR, "Failed to start job", e);
-      jobInfo.warnings().add(newMobileHarnessException);
-      throw newMobileHarnessException;
     } catch (Throwable e) {
       jobInfo
           .warnings()

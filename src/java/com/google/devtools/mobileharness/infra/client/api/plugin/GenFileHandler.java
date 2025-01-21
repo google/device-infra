@@ -20,11 +20,11 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
-import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import com.google.wireless.qa.mobileharness.shared.controller.event.TestEndedEvent;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -66,14 +66,15 @@ public class GenFileHandler {
       genFileDir = jobInfo.setting().getGenFileDir();
     } catch (MobileHarnessException e) {
       throw new MobileHarnessException(
-          ErrorCode.FILE_READ_ERROR, "Failed to open test gen file dir: " + e.getMessage());
+          InfraErrorId.CLIENT_GEN_FILE_HANDLER_GET_JOB_GEN_FILE_DIR_ERROR,
+          "Failed to open test gen file dir: " + e.getMessage());
     }
     String filePath = PathUtil.join(genFileDir, "job_output.txt");
     try {
       localFileUtil.writeToFile(filePath, jobInfo.log().get(0));
     } catch (MobileHarnessException e) {
       throw new MobileHarnessException(
-          ErrorCode.FILE_WRITE_ERROR,
+          InfraErrorId.CLIENT_GEN_FILE_HANDLER_WRITE_JOB_OUTPUT_ERROR,
           "Failed to save test log to " + genFileDir + ": " + e.getMessage());
     }
     jobInfo.log().atInfo().alsoTo(logger).log("GenFileHandler finished to ack JobEndEvent.");
@@ -89,14 +90,15 @@ public class GenFileHandler {
       genFileDir = testInfo.getGenFileDir();
     } catch (MobileHarnessException e) {
       throw new MobileHarnessException(
-          ErrorCode.FILE_READ_ERROR, "Failed to open test gen file dir: " + e.getMessage());
+          InfraErrorId.CLIENT_GEN_FILE_HANDLER_GET_TEST_GEN_FILE_DIR_ERROR,
+          "Failed to open test gen file dir: " + e.getMessage());
     }
     String filePath = PathUtil.join(genFileDir, "test_output.txt");
     try {
       localFileUtil.writeToFile(filePath, testInfo.log().get(0));
     } catch (MobileHarnessException e) {
       throw new MobileHarnessException(
-          ErrorCode.FILE_WRITE_ERROR,
+          InfraErrorId.CLIENT_GEN_FILE_HANDLER_WRITE_TEST_OUTPUT_ERROR,
           "Failed to save test log to " + genFileDir + ": " + e.getMessage());
     }
     testInfo.log().atInfo().alsoTo(logger).log("Saved the test log to %s", filePath);

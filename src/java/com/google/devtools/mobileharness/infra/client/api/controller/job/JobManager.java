@@ -104,8 +104,7 @@ public class JobManager implements Runnable, MessageSenderFinder {
    * @throws MobileHarnessException if the job is already started, or failed to start the new thread
    */
   public void startJob(JobInfo jobInfo, ExecMode execMode, @Nullable Collection<Object> jobPlugins)
-      throws InterruptedException,
-          com.google.wireless.qa.mobileharness.shared.MobileHarnessException {
+      throws InterruptedException, MobileHarnessException {
     synchronized (jobRunners) {
       String jobId = jobInfo.locator().getId();
       JobRunnerAndFuture runnerFuture = jobRunners.get(jobId);
@@ -319,8 +318,7 @@ public class JobManager implements Runnable, MessageSenderFinder {
   @Subscribe
   @VisibleForTesting
   void onTestExecutionEnded(TestExecutionEndedEvent event)
-      throws com.google.wireless.qa.mobileharness.shared.MobileHarnessException,
-          InterruptedException {
+      throws MobileHarnessException, InterruptedException {
     String jobId = event.getAllocation().getTest().jobLocator().id();
     JobRunnerAndFuture jobRunnerFuture;
     synchronized (jobRunners) {
