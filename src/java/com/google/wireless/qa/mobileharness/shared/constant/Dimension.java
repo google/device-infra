@@ -112,6 +112,10 @@ public final class Dimension {
     MODEL,
     /** Whether this device is monitored by the lab it connects to. */
     MONITORED,
+    /** The monsoon id of the device. */
+    MONSOON_ID,
+    /** The monsoon status of the device. */
+    MONSOON_STATUS,
     /** The network address. */
     NETWORK_ADDRESS,
     /** The network SSID. */
