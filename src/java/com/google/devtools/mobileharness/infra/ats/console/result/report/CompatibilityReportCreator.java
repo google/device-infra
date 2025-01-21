@@ -496,7 +496,7 @@ public class CompatibilityReportCreator {
             new FileInputStream(new File(inputXml.getParentFile(), REPORT_XSL_FILE_NAME));
         OutputStream outputStream = new FileOutputStream(report)) {
       TransformerFactory transformerFactory = TransformerFactory.newInstance();
-      if (systemUtil.getJavaMajorVersion() >= 25) {
+      if (systemUtil.getJavaFeatureVersion() >= 25) {
         transformerFactory.setFeature("jdk.xml.enableExtensionFunctions", true);
       }
       Transformer transformer = transformerFactory.newTransformer(new StreamSource(xslStream));

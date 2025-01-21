@@ -351,26 +351,9 @@ public class SystemUtil {
     return JAVA_VERSION.value();
   }
 
-  /** Returns the java major version. */
-  public int getJavaMajorVersion() {
-    @Nullable String javaVersion = getJavaVersion();
-    if (Strings.isNullOrEmpty(javaVersion)) {
-      return 0;
-    }
-    if (javaVersion.startsWith("1.")) {
-      javaVersion = javaVersion.substring(2);
-    }
-    // Allow these formats:
-    // 1.8.0_72-ea
-    // 9-ea
-    // 9
-    // 9.0.1
-    // 17
-    int dotPos = javaVersion.indexOf('.');
-    int dashPos = javaVersion.indexOf('-');
-    return Integer.parseInt(
-        javaVersion.substring(
-            0, dotPos > -1 ? dotPos : dashPos > -1 ? dashPos : javaVersion.length()));
+  /** Returns the java feature version. */
+  public int getJavaFeatureVersion() {
+    return Runtime.version().feature();
   }
 
   /** Returns the java binary path. */
