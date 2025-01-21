@@ -16,7 +16,9 @@
 
 package com.google.wireless.qa.mobileharness.shared.model.job.in;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
@@ -27,6 +29,7 @@ import com.google.protobuf.Message;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.JobSpecHelper;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.JobSpecWrapper;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.BaseSpec;
+import com.google.wireless.qa.mobileharness.shared.proto.spec.Google3File;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.JobSpec;
 import java.util.ArrayList;
 import java.util.List;
@@ -55,6 +58,19 @@ public class FilesJobSpec implements JobSpecWrapper {
   private void fillFileField(FieldDescriptor field, Message.Builder builder) {
     ImmutableSet<String> paths = files.get(field.getName());
     if (paths == null || paths.isEmpty()) {
+      return;
+    }
+    if (field.getJavaType().equals(JavaType.MESSAGE)
+        && field.getMessageType().equals(Google3File.getDescriptor())) {
+      ImmutableList<Google3File> google3FileList =
+          paths.stream()
+              .map(p -> Google3File.newBuilder().addOutput(p).build())
+              .collect(toImmutableList());
+      if (field.isRepeated()) {
+        builder.setField(field, google3FileList);
+      } else {
+        builder.setField(field, google3FileList.get(0));
+      }
       return;
     }
 
