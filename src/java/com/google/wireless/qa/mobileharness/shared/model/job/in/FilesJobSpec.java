@@ -76,7 +76,8 @@ public class FilesJobSpec implements JobSpecWrapper {
 
     if (!field.getJavaType().equals(JavaType.STRING)) {
       logger.atInfo().log(
-          "File field is not a String or a List of String: %s", field.getFullName());
+          "File field is not a String or Google3File, or a List of String or Google3File: %s",
+          field.getFullName());
       return;
     }
 
