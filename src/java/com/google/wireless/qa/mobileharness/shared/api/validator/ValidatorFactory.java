@@ -53,8 +53,7 @@ public class ValidatorFactory {
    * @throws MobileHarnessException if fails to create {@code EnvValidator} instance
    */
   public List<EnvValidator> createEnvValidators(
-      Collection<Class<? extends EnvValidator>> envValidatorClasses)
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException {
+      Collection<Class<? extends EnvValidator>> envValidatorClasses) throws MobileHarnessException {
     List<EnvValidator> envValidators = Lists.newArrayList();
     for (Class<? extends EnvValidator> envValidatorClass : envValidatorClasses) {
       envValidators.add(createEnvValidator(envValidatorClass));
