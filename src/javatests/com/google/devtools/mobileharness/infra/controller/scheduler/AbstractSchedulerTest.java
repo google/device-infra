@@ -21,12 +21,12 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.lab.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.lab.DeviceScheduleUnit;
 import com.google.devtools.mobileharness.api.model.lab.LabLocator;
 import com.google.devtools.mobileharness.api.model.proto.Job.JobUser;
 import com.google.devtools.mobileharness.infra.controller.event.handler.EventCollector;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.EmptyDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.EmptyDecorator1;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.EmptyDecorator2;

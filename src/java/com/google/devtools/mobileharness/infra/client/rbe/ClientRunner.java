@@ -17,11 +17,11 @@
 package com.google.devtools.mobileharness.infra.client.rbe;
 
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.client.api.ClientApi;
 import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalMode;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.constant.ExitCode;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import java.util.ArrayList;

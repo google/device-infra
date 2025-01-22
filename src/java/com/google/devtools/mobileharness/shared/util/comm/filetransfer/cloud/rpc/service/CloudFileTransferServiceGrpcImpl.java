@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.rpc.service;
 
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcServiceUtil;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.proto.CloudFileTransfer.DownloadGcsFileRequest;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.proto.CloudFileTransfer.DownloadGcsFileResponse;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.proto.CloudFileTransfer.GetFileRequest;
@@ -38,7 +39,6 @@ import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.pro
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.common.FileHandlers.Handler;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.protobuf.Message;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import io.grpc.stub.StreamObserver;
 import java.nio.file.Path;
 

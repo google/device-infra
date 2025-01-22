@@ -27,6 +27,7 @@ java_library(
     ],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/manager",
         "//src/java/com/google/devtools/mobileharness/infra/daemon/health/handler:drain_handler",
@@ -36,7 +37,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/service:exec_test",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
-        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "@maven//:com_google_inject_guice",
     ],
 )

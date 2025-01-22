@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.ExceptionDetail;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatusWithTimestamp;
 import com.google.devtools.mobileharness.infra.controller.device.DeviceStatusInfo;
@@ -33,7 +34,6 @@ import com.google.devtools.mobileharness.infra.controller.device.util.DeviceStat
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.helper.LabSyncHelper;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.HeartbeatLabResponse;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignUpLabResponse;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.controller.event.LocalDeviceChangeEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.event.LocalDeviceDownEvent;

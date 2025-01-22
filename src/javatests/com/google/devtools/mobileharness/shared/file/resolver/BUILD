@@ -28,7 +28,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/file/resolver:abstract_file_resolver",
         "//src/java/com/google/devtools/mobileharness/shared/file/resolver:file_resolver",
-        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "@maven//:com_google_guava_guava",
         "@maven//:junit_junit",
