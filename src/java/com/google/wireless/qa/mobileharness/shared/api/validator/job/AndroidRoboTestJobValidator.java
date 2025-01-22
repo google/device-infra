@@ -16,6 +16,8 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.validator.job;
 
+import static com.google.wireless.qa.mobileharness.shared.proto.spec.driver.AndroidRoboTestSpec.ControllerEndpoint.CONTROLLER_ENDPOINT_UNSPECIFIED;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -32,7 +34,7 @@ public class AndroidRoboTestJobValidator
   @Override
   public List<String> validate(JobInfo jobInfo) throws InterruptedException {
     ImmutableList.Builder<String> errorsBuilder = ImmutableList.builder();
-    jobInfo.log().atInfo().alsoTo(logger).log("\n\nRunning AndroidRoboTestJobValidator\n\n");
+    jobInfo.log().atInfo().alsoTo(logger).log("--- Running AndroidRoboTestJobValidator ---");
     AndroidRoboTestSpec spec;
     try {
       spec = jobInfo.combinedSpec(this);
@@ -53,6 +55,21 @@ public class AndroidRoboTestJobValidator
     }
     if (spec.getCrawlerStubApk().isEmpty()) {
       errorsBuilder.add("Crawler stub apk cannot be empty.");
+    }
+    if (spec.getAppPackageId().isEmpty()) {
+      errorsBuilder.add("App package Id cannot be empty.");
+    }
+    if (spec.getControllerEndpoint().equals(CONTROLLER_ENDPOINT_UNSPECIFIED)) {
+      errorsBuilder.add("Controller endpoint has to be prod or autopush.");
+    }
+    if (!spec.getCrawlerFlagsList().stream().allMatch(flag -> flag.split("=").length == 2)) {
+      errorsBuilder.add("Crawler flags should be of the form flag1=value1");
+    }
+    if (!spec.getCrawlerAssetsList().stream().allMatch(flag -> flag.split("=").length == 2)) {
+      errorsBuilder.add("Crawler assets should be of the form assetName1=path/to/file");
+    }
+    if (spec.getCrawlTimeoutSecs() <= 0) {
+      errorsBuilder.add("Crawl timeout seconds should be greater than zero.");
     }
     return errorsBuilder.build();
   }

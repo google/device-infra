@@ -17,7 +17,9 @@
 package com.google.wireless.qa.mobileharness.shared.api.driver;
 
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.wireless.qa.mobileharness.shared.android.Aapt;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DriverAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.TestAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
@@ -34,9 +36,14 @@ import javax.inject.Inject;
 @TestAnnotation(required = false, help = "Crawls the app. No specific test to execute.")
 public class AndroidRoboTest extends BaseDriver implements SpecConfigable<AndroidRoboTestSpec> {
 
+  private final Aapt aapt;
+  private final Adb adb;
+
   @Inject
-  AndroidRoboTest(Device device, TestInfo testInfo) {
+  AndroidRoboTest(Device device, TestInfo testInfo, Adb adb, Aapt aapt) {
     super(device, testInfo);
+    this.aapt = aapt;
+    this.adb = adb;
   }
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();

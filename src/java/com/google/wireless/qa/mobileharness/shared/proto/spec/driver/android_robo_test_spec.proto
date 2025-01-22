@@ -43,4 +43,51 @@ message AndroidRoboTestSpec {
     is_required: true
     help: "The crawler stub apk, which is necessary for UI Automator mode based crawling."
   }];
+
+  optional string app_package_id = 4 [(field_detail) = {
+    is_required: true
+    help: "Package ID of the app to crawl."
+  }];
+
+  optional string crawler_package_id = 5
+      [(field_detail) = { help: "Package ID of the crawler app." }];
+
+  optional string stub_app_package_id = 6
+      [(field_detail) = { help: "Package ID of the crawler app." }];
+
+  enum ControllerEndpoint {
+    CONTROLLER_ENDPOINT_UNSPECIFIED = 0;
+    AUTOPUSH = 1;
+    PROD = 2;
+  }
+
+  optional ControllerEndpoint controller_endpoint = 7
+      [(field_detail) = { help: "Crawler service controller endpoint." }];
+
+  optional int32 crawl_timeout_secs = 9
+      [(field_detail) = { help: "Timeout of the crawl in seconds." }];
+
+  enum RoboscriptRecorder {
+    NONE = 0;
+    TEXT = 1;
+    WEB = 2;
+  }
+
+  optional RoboscriptRecorder roboscript_recorder = 10
+      [(field_detail) = { help: "Roboscript recorder type." }, default = NONE];
+
+  optional bool record_crawl = 11 [(field_detail) = { help: "Record crawl." }];
+
+  repeated string crawler_flags = 12
+      [(field_detail) = { help: "Crawler flags. Example flag1=value1." }];
+
+  optional string robo_config_proto = 13
+      [(file_detail) = { help: "Robo config binary proto." }];
+
+  optional string crawl_guidance_proto = 14
+      [(file_detail) = { help: "Crawl guidance binary proto." }];
+
+  repeated string crawler_assets = 15 [(file_detail) = {
+    help: "Crawler assets. Example assetName1=/path/to/asset"
+  }];
 }

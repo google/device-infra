@@ -22,6 +22,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.proto.Job;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.AndroidRoboTestSpec;
+import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.AndroidRoboTestSpec.ControllerEndpoint;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -45,6 +46,9 @@ public class AndroidRoboTestJobValidatorTest {
             .setAppApk("appPath")
             .setCrawlerApk("crawlerPath")
             .setCrawlerStubApk("stubPath")
+            .setAppPackageId("com.some.app")
+            .setCrawlTimeoutSecs(60)
+            .setControllerEndpoint(ControllerEndpoint.AUTOPUSH)
             .build();
     jobInfo.scopedSpecs().add("AndroidRoboTestSpec", spec);
 
@@ -58,6 +62,94 @@ public class AndroidRoboTestJobValidatorTest {
         AndroidRoboTestSpec.newBuilder()
             .setCrawlerApk("crawlerPath")
             .setCrawlerStubApk("stubPath")
+            .setCrawlTimeoutSecs(60)
+            .build();
+    jobInfo.scopedSpecs().add("AndroidRoboTestSpec", spec);
+
+    assertThat(validator.validate(jobInfo)).isNotEmpty();
+  }
+
+  @Test
+  public void validate_noAppPackageId_hasErrorMessages() throws Exception {
+    JobInfo jobInfo = setUpJobInfo();
+    AndroidRoboTestSpec spec =
+        AndroidRoboTestSpec.newBuilder()
+            .setAppApk("appPath")
+            .setCrawlerApk("crawlerPath")
+            .setCrawlerStubApk("stubPath")
+            .setControllerEndpoint(ControllerEndpoint.AUTOPUSH)
+            .setCrawlTimeoutSecs(60)
+            .build();
+    jobInfo.scopedSpecs().add("AndroidRoboTestSpec", spec);
+
+    assertThat(validator.validate(jobInfo)).isNotEmpty();
+  }
+
+  @Test
+  public void validate_noControllerEndpoint_hasErrorMessages() throws Exception {
+    JobInfo jobInfo = setUpJobInfo();
+    AndroidRoboTestSpec spec =
+        AndroidRoboTestSpec.newBuilder()
+            .setAppApk("appPath")
+            .setCrawlerApk("crawlerPath")
+            .setCrawlerStubApk("stubPath")
+            .setAppPackageId("com.some.app")
+            .setCrawlTimeoutSecs(60)
+            .build();
+    jobInfo.scopedSpecs().add("AndroidRoboTestSpec", spec);
+
+    assertThat(validator.validate(jobInfo)).isNotEmpty();
+  }
+
+  @Test
+  public void validate_invalidTimeoutValue_hasErrorMessages() throws Exception {
+    JobInfo jobInfo = setUpJobInfo();
+    AndroidRoboTestSpec spec =
+        AndroidRoboTestSpec.newBuilder()
+            .setAppApk("appPath")
+            .setCrawlerApk("crawlerPath")
+            .setCrawlerStubApk("stubPath")
+            .setAppPackageId("com.some.app")
+            .setControllerEndpoint(ControllerEndpoint.AUTOPUSH)
+            .setCrawlTimeoutSecs(0)
+            .build();
+    jobInfo.scopedSpecs().add("AndroidRoboTestSpec", spec);
+
+    assertThat(validator.validate(jobInfo)).isNotEmpty();
+  }
+
+  @Test
+  public void validate_invalidCrawlerFlag_hasErrorMessages() throws Exception {
+    JobInfo jobInfo = setUpJobInfo();
+    AndroidRoboTestSpec spec =
+        AndroidRoboTestSpec.newBuilder()
+            .setAppApk("appPath")
+            .setCrawlerApk("crawlerPath")
+            .setCrawlerStubApk("stubPath")
+            .setAppPackageId("com.some.app")
+            .setControllerEndpoint(ControllerEndpoint.AUTOPUSH)
+            .addCrawlerFlags("flag1=value1")
+            .addCrawlerFlags("invalidFlag")
+            .setCrawlTimeoutSecs(60)
+            .build();
+    jobInfo.scopedSpecs().add("AndroidRoboTestSpec", spec);
+
+    assertThat(validator.validate(jobInfo)).isNotEmpty();
+  }
+
+  @Test
+  public void validate_invalidCrawlerAsset_hasErrorMessages() throws Exception {
+    JobInfo jobInfo = setUpJobInfo();
+    AndroidRoboTestSpec spec =
+        AndroidRoboTestSpec.newBuilder()
+            .setAppApk("appPath")
+            .setCrawlerApk("crawlerPath")
+            .setCrawlerStubApk("stubPath")
+            .setAppPackageId("com.some.app")
+            .setControllerEndpoint(ControllerEndpoint.AUTOPUSH)
+            .addCrawlerAssets("asset1=some_asset")
+            .addCrawlerAssets("invalidAssetValue")
+            .setCrawlTimeoutSecs(60)
             .build();
     jobInfo.scopedSpecs().add("AndroidRoboTestSpec", spec);
 
