@@ -16,7 +16,10 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.util.verifier;
 
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
@@ -25,6 +28,7 @@ import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportPr
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Reason;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.TestCase;
+import com.google.devtools.mobileharness.platform.android.process.AndroidProcessUtil;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
@@ -40,14 +44,20 @@ import org.mockito.junit.MockitoRule;
 
 @RunWith(JUnit4.class)
 public class VerifierResultHelperTest {
+
+  private static final String CURRENT_TIME = "2025-01-21 20:44:24.181";
+
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
 
   @Bind @Mock private Adb adb;
+  @Bind @Mock private AndroidProcessUtil androidProcessUtil;
 
   @Inject private VerifierResultHelper verifierResultHelper;
 
   @Before
-  public void setUp() {
+  public void setUp() throws Exception {
+    when(adb.runShellWithRetry(anyString(), eq("date '+%Y-%m-%d %H:%M:%S.%3N'")))
+        .thenReturn(CURRENT_TIME);
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
   }
 
@@ -100,7 +110,11 @@ public class VerifierResultHelperTest {
   }
 
   private void verifyCommandsOnDevice(String serial) throws Exception {
-    verify(adb).runShell(serial, VerifierResultHelper.START_INTERACTIVE_ACTIVITY_COMMAND);
+    verify(androidProcessUtil)
+        .startApplication(
+            serial,
+            VerifierResultHelper.VERIFIER_PACKAGE,
+            VerifierResultHelper.INTERACTIVE_ACTIVITY);
     verify(adb)
         .runShell(
             serial,

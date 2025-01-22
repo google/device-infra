@@ -26,7 +26,10 @@ import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportPr
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Test;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.TestCase;
+import com.google.devtools.mobileharness.platform.android.process.AndroidProcessUtil;
+import com.google.devtools.mobileharness.shared.util.command.linecallback.ScanSignalOutputCallback;
 import com.google.gson.Gson;
+import java.time.Duration;
 import java.util.Collection;
 import javax.inject.Inject;
 
@@ -40,9 +43,9 @@ public class VerifierResultHelper {
 
   private static final int MAX_DETAIL_LENGTH = 100;
 
-  @VisibleForTesting
-  static final String START_INTERACTIVE_ACTIVITY_COMMAND =
-      "am start com.android.cts.verifier/.InteractiveTestsActivity --activity-brought-to-front";
+  @VisibleForTesting static final String VERIFIER_PACKAGE = "com.android.cts.verifier";
+  @VisibleForTesting static final String MAIN_ACTIVITY = ".CtsVerifierActivity";
+  @VisibleForTesting static final String INTERACTIVE_ACTIVITY = ".InteractiveTestsActivity";
 
   @VisibleForTesting
   static final String BROADCAST_COMMAND =
@@ -50,10 +53,12 @@ public class VerifierResultHelper {
           + " com.android.cts.verifier.extra.HOST_TEST_RESULT ";
 
   private final Adb adb;
+  private final AndroidProcessUtil androidProcessUtil;
 
   @Inject
-  VerifierResultHelper(Adb adb) {
+  VerifierResultHelper(Adb adb, AndroidProcessUtil androidProcessUtil) {
     this.adb = adb;
+    this.androidProcessUtil = androidProcessUtil;
   }
 
   public void broadcastResults(Result result, Collection<String> serials)
@@ -91,7 +96,18 @@ public class VerifierResultHelper {
   private void startInteractiveActivity(Collection<String> serials) throws InterruptedException {
     for (String serial : serials) {
       try {
-        var unused = adb.runShell(serial, START_INTERACTIVE_ACTIVITY_COMMAND);
+        String currentTime = adb.runShellWithRetry(serial, "date '+%Y-%m-%d %H:%M:%S.%3N'").trim();
+        androidProcessUtil.startApplication(
+            serial, VERIFIER_PACKAGE, MAIN_ACTIVITY, /* extras= */ null, /* clearTop= */ true);
+        androidProcessUtil.startApplication(serial, VERIFIER_PACKAGE, INTERACTIVE_ACTIVITY);
+        // Wait for the interactive activity to be ready.
+        var unused =
+            adb.run(
+                serial,
+                new String[] {"logcat", "-T", currentTime, "HostTestsActivity:I", "*:S"},
+                Duration.ofSeconds(60),
+                new ScanSignalOutputCallback(
+                    "Registered broadcast receivers", /* stopOnSignal= */ true));
       } catch (MobileHarnessException e) {
         logger.atInfo().withCause(e).log("Unable to start interactive activity on %s", serial);
       }
