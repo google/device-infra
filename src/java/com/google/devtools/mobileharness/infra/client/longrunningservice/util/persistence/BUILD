@@ -54,3 +54,13 @@ java_library(
         "@maven//:javax_inject_jsr330_api",
     ],
 )
+
+filegroup(
+    name = "unfinished_session_sql",
+    srcs = [
+        "unfinished_sessions.sql",
+    ],
+    visibility = [
+        "//third_party/py/multitest_transport:__pkg__",
+    ],
+)
