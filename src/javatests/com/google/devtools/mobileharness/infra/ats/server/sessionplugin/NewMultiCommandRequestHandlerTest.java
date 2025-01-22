@@ -1117,10 +1117,16 @@ public final class NewMultiCommandRequestHandlerTest {
     verify(sessionResultHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
     verifyUnmountRootDir(DirUtil.getPublicGenDir() + "/session_session_id/file");
     String path1 = pathCaptor1.getValue().toString();
-    String fileNamePrefix =
-        DateTimeFormatter.ofPattern("uuuu.MM.dd_HH.mm")
-            .withZone(ZoneId.systemDefault())
-            .format(Instant.now());
+    Instant now = Instant.now();
+    DateTimeFormatter dateTimeFormatter =
+        DateTimeFormatter.ofPattern("uuuu.MM.dd_HH.mm").withZone(ZoneId.systemDefault());
+    String fileNamePrefix = dateTimeFormatter.format(now);
+    if (!path1.startsWith(outputPath + "/" + fileNamePrefix)) {
+      // The file name prefix should be the previous minute if it's not the current minute.
+      // This can happen because the time used in the test code is a little later than the time used
+      // in the production code.
+      fileNamePrefix = dateTimeFormatter.format(now.minus(Duration.ofMinutes(1)));
+    }
     assertThat(path1).startsWith(outputPath + "/" + fileNamePrefix);
     // Verify test context.
     TestContext testContext = handleResultProcessingResult.testContexts().get(commandId);
