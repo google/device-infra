@@ -70,35 +70,35 @@ public class SubPlanHelper {
                 "%s %s %s", module.getAbi(), module.getName(), previousResult.getTestFilter()),
             isNonTfModule);
       }
-      // If the previous result has include/exclude filters, for example the previous run was
-      // running with given subplan file, whose include/exclude filters are stored in the
-      // previous result.
-      if (!prevResultIncludeFilters.isEmpty()) {
-        prevResultIncludeFilters.stream()
-            .filter(
-                filter ->
-                    filter.matchModule(
-                        module.getName(), module.getAbi(), /* moduleParameter= */ null))
-            .forEach(
-                prevResultIncludeFilter ->
-                    addIncludeFilter(
-                        subPlan, prevResultIncludeFilter.filterString(), isNonTfModule));
-      }
-      if (!prevResultExcludeFilters.isEmpty()) {
-        prevResultExcludeFilters.stream()
-            .filter(
-                filter ->
-                    filter.matchModule(
-                        module.getName(), module.getAbi(), /* moduleParameter= */ null))
-            .forEach(
-                prevResultExcludeFilter ->
-                    addExcludeFilter(
-                        subPlan, prevResultExcludeFilter.filterString(), isNonTfModule));
-      }
       if (RetryResultHelper.shouldRunModule(module, types, addSubPlanCmd, passedInModules)) {
         if (types.contains("not_executed") && !module.getDone()) {
           logger.atInfo().log(
               "Module [%s %s] was not done in previous run", module.getAbi(), module.getName());
+          // If the previous result has include/exclude filters, for example the previous run was
+          // running with given subplan file, previous include/exclude filters should be applied to
+          // the current run when the module is not done.
+          if (!prevResultIncludeFilters.isEmpty()) {
+            prevResultIncludeFilters.stream()
+                .filter(
+                    filter ->
+                        filter.matchModule(
+                            module.getName(), module.getAbi(), /* moduleParameter= */ null))
+                .forEach(
+                    prevResultIncludeFilter ->
+                        addIncludeFilter(
+                            subPlan, prevResultIncludeFilter.filterString(), isNonTfModule));
+          }
+          if (!prevResultExcludeFilters.isEmpty()) {
+            prevResultExcludeFilters.stream()
+                .filter(
+                    filter ->
+                        filter.matchModule(
+                            module.getName(), module.getAbi(), /* moduleParameter= */ null))
+                .forEach(
+                    prevResultExcludeFilter ->
+                        addExcludeFilter(
+                            subPlan, prevResultExcludeFilter.filterString(), isNonTfModule));
+          }
           // Exclude tests that should not be run
           for (TestCase testCase : module.getTestCaseList()) {
             for (Test test : testCase.getTestList()) {

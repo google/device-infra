@@ -22,7 +22,7 @@ import java.time.Duration;
 public final class Constants {
 
   /** Default timeout in milliseconds for installation/uninstallation. */
-  public static final Duration DEFAULT_INSTALL_TIMEOUT = Duration.ofMinutes(6);
+  public static final Duration DEFAULT_INSTALL_TIMEOUT = Duration.ofMinutes(15);
 
   private Constants() {}
 }

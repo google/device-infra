@@ -94,7 +94,7 @@ public class ClientApiTest {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   @Rule public final SetFlagsOss flags = new SetFlagsOss();
-  @Rule public final CaptureLogs captureLogs = new CaptureLogs("", /* printFailedLogs= */ true);
+  @Rule public final CaptureLogs captureLogs = new CaptureLogs();
   @Rule public final PrintTestName printTestName = new PrintTestName();
 
   @Bind @GlobalInternalEventBus private EventBus globalInternalEventBus;
