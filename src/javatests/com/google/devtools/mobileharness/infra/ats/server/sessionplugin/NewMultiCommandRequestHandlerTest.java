@@ -535,7 +535,7 @@ public final class NewMultiCommandRequestHandlerTest {
   }
 
   @Test
-  public void createTradefedJobs_mountAndroidXtsZipFailed_errorWithInvalidResourceError()
+  public void createTradefedJobs_mountOrUnzipAndroidXtsZipFailed_errorWithInvalidResourceError()
       throws Exception {
     when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
     MobileHarnessException commandExecutorException = Mockito.mock(CommandException.class);
@@ -1022,7 +1022,7 @@ public final class NewMultiCommandRequestHandlerTest {
   }
 
   @Test
-  public void cleanup_unmountAndroidXtsZipFailed_logWarningAndProceed() throws Exception {
+  public void cleanup_unmountAndRemoveAndroidXtsZipFailed_logWarningAndProceed() throws Exception {
     when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
     String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
     Command mountCommand =
@@ -1033,11 +1033,16 @@ public final class NewMultiCommandRequestHandlerTest {
     // Create a tradefed job so that the xts zip file can be mounted.
     var unused = newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
 
-    // Throw exception when running unmount command.
+    // Mock an exception to be thrown when running the unmount command.
     Command unmountCommand =
         Command.of("fusermount", "-u", xtsRootDir).timeout(Duration.ofMinutes(10));
-    MobileHarnessException commandExecutorException = Mockito.mock(CommandException.class);
-    when(commandExecutor.run(unmountCommand)).thenThrow(commandExecutorException);
+    when(commandExecutor.run(unmountCommand)).thenThrow(Mockito.mock(CommandException.class));
+
+    // Mock an exception to be thrown when removing the xts root dir through local file util.
+    doThrow(Mockito.mock(CommandException.class))
+        .when(localFileUtil)
+        .removeFileOrDir(eq(xtsRootDir));
+
     newMultiCommandRequestHandler.cleanup(sessionInfo);
   }
 
@@ -1054,9 +1059,7 @@ public final class NewMultiCommandRequestHandlerTest {
     var unused = newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
 
     // Throw exception when running unmount command.
-
     MobileHarnessException mhException = Mockito.mock(CommandException.class);
-
     doThrow(mhException).when(sessionResultHandlerUtil).cleanUpJobGenDirs(any());
     newMultiCommandRequestHandler.cleanup(sessionInfo);
   }

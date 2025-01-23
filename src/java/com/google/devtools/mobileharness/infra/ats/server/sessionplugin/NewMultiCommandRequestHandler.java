@@ -125,7 +125,9 @@ final class NewMultiCommandRequestHandler {
 
   private static final ImmutableSet<ErrorId> INVALID_RESOURCE_ERROR_IDS =
       ImmutableSet.of(
-          BasicErrorId.LOCAL_MOUNT_ZIP_TO_DIR_ERROR, InfraErrorId.ATS_SERVER_INVALID_TEST_RESOURCE);
+          BasicErrorId.LOCAL_MOUNT_ZIP_TO_DIR_ERROR,
+          BasicErrorId.LOCAL_FILE_UNZIP_ERROR,
+          InfraErrorId.ATS_SERVER_INVALID_TEST_RESOURCE);
 
   private final SessionRequestHandlerUtil sessionRequestHandlerUtil;
   private final SessionResultHandlerUtil sessionResultHandlerUtil;
@@ -506,7 +508,7 @@ final class NewMultiCommandRequestHandler {
             Files.getNameWithoutExtension(androidXtsZipPath));
     if (mountedXtsRootDir.isEmpty()) {
       localFileUtil.prepareDir(xtsRootDir);
-      mountZip(androidXtsZipPath, xtsRootDir);
+      mountOrUnzipXtsZip(androidXtsZipPath, xtsRootDir);
       mountedXtsRootDir = xtsRootDir;
     }
     final String androidXtsZipPathCopy = androidXtsZipPath;
@@ -810,11 +812,11 @@ final class NewMultiCommandRequestHandler {
     }
     if (!mountedXtsRootDir.isEmpty()) {
       try {
-        unmountZip(mountedXtsRootDir);
+        unmountOrRemoveZipDir(mountedXtsRootDir);
         mountedXtsRootDir = "";
       } catch (MobileHarnessException e) {
         logger.atWarning().withCause(e).log(
-            "Failed to unmount xts root directory: %s", mountedXtsRootDir);
+            "Failed to unmount or unzip xts root directory: %s", mountedXtsRootDir);
       }
     }
   }
@@ -945,10 +947,10 @@ final class NewMultiCommandRequestHandler {
   }
 
   @CanIgnoreReturnValue
-  private String mountZip(String zipFilePath, String mountDirPath)
+  private String mountOrUnzipXtsZip(String zipFilePath, String targetDirPath)
       throws MobileHarnessException, InterruptedException {
     Command command =
-        Command.of("fuse-zip", "-r", zipFilePath, mountDirPath).timeout(SLOW_CMD_TIMEOUT);
+        Command.of("fuse-zip", "-r", zipFilePath, targetDirPath).timeout(SLOW_CMD_TIMEOUT);
     try {
       return commandExecutor.run(command);
     } catch (MobileHarnessException e) {
@@ -958,25 +960,27 @@ final class NewMultiCommandRequestHandler {
                 + " acceptable.");
         return "";
       } else {
-        throw new MobileHarnessException(
-            BasicErrorId.LOCAL_MOUNT_ZIP_TO_DIR_ERROR,
-            String.format("Failed to mount zip %s into dir %s", zipFilePath, mountDirPath),
-            e);
+        // This might happen when the host machine doesn't have the fuse-zip binary installed (e.g.
+        // running on Forge during integration tests). We'll try to unzip the XTS zip file instead.
+        logger.atWarning().withCause(e).log(
+            "Failed to mount XTS zip file %s to %s. Trying to unzip it instead.",
+            zipFilePath, targetDirPath);
+        return localFileUtil.unzipFile(zipFilePath, targetDirPath, SLOW_CMD_TIMEOUT);
       }
     }
   }
 
-  @CanIgnoreReturnValue
-  private String unmountZip(String mountDirPath)
+  private void unmountOrRemoveZipDir(String targetDirPath)
       throws MobileHarnessException, InterruptedException {
-    Command command = Command.of("fusermount", "-u", mountDirPath).timeout(SLOW_CMD_TIMEOUT);
+    Command command = Command.of("fusermount", "-u", targetDirPath).timeout(SLOW_CMD_TIMEOUT);
     try {
-      return commandExecutor.run(command);
+      commandExecutor.run(command);
     } catch (MobileHarnessException e) {
-      throw new MobileHarnessException(
-          BasicErrorId.LOCAL_UNMOUNT_DIR_ERROR,
-          String.format("Failed to unmount dir %s", mountDirPath),
-          e);
+      // If unmounting fails, it might be because we unzipped the xTS zip file instead of mounting
+      // it. In this case, we'll try to remove the directory instead.
+      logger.atWarning().withCause(e).log(
+          "Failed to unmount XTS zip file at %s. Trying to remove it instead.", targetDirPath);
+      localFileUtil.removeFileOrDir(targetDirPath);
     }
   }
 
