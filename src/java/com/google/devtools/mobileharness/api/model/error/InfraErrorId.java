@@ -570,10 +570,14 @@ public enum InfraErrorId implements ErrorId {
   CLOUD_RPC_CLIENT_ERROR(53_301, ErrorType.INFRA_ISSUE),
   CLOUD_RPC_INIT_ERROR(53_302, ErrorType.INFRA_ISSUE),
 
-  // Moreto: 53_401 ~ 53_500
+  // Moreto: 53_401 ~ 53_450
   MORETO_TIMEOUT_ERROR(53_401, ErrorType.INFRA_ISSUE),
+  MORETO_CREATE_JOB_INFO_ERROR(53_402, ErrorType.INFRA_ISSUE),
 
-  // ID space here: 53_501 ~ 60_000
+  // Nezha ERROR: 53_451 ~ 53_460
+  NEZHA_LEGACY_ERROR(53_501, ErrorType.UNDETERMINED),
+
+  // ID space here: 53_461 ~ 60_000
   PLACE_HOLDER_TO_BE_RENAMED(60_000, ErrorType.UNDETERMINED);
 
   public static final int MIN_CODE = BasicErrorId.MAX_CODE + 1;
