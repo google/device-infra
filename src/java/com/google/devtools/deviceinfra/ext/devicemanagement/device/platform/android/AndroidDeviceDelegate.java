@@ -53,7 +53,31 @@ import javax.annotation.Nullable;
 
 /** Utility class to control an Android device (including Android real device, emulator). */
 public abstract class AndroidDeviceDelegate {
-
+  /**
+   * When adding a new decorator, driver or dimension to an Android device via this class, please
+   * check the following things in order:
+   *
+   * <ul>
+   *   <li>If the new decorator should be supported by ALL Android root/non-root devices in all lab
+   *       types, add it to {@link #basicAndroidDecoratorConfiguration()}.
+   *   <li>If the new dimension should be supported by STANDARD Android root/non-root devices in all
+   *       lab types, add it to {@link #basicAndroidDimensionConfiguration(boolean)}.
+   *   <li>If the new driver should be supported by STANDARD Android root/non-root devices in all
+   *       lab types, add it to {@link #basicAndroidDriverConfiguration()}.
+   *   <li>If the new decorator, driver or dimension should be supported by STANDARD Android
+   *       root/non-root devices based on lab types, add it to {@link
+   *       #additionalAndroidDeviceConfiguration(boolean)}.
+   *   <li>If the new decorator, driver or dimension should be supported by STANDARD Android rooted
+   *       devices only, add it to {@link #rootedAndroidDeviceConfiguration(String)}.
+   * </ul>
+   *
+   * Context:
+   *
+   * <pre>#1 Currently STANDARD Android devices include AndroidRealDevice and AndroidLocalEmulator.
+   * </pre>
+   *
+   * <pre>#2 ALL Android devices mean all device types extending from AndroidDevice.</pre>
+   */
   @ParamAnnotation(
       required = false,
       help =
@@ -137,7 +161,7 @@ public abstract class AndroidDeviceDelegate {
     // Adds drivers/decorators only after the properties are read. Because the validators of the
     // drivers/decorators may depend on those properties.
     basicAndroidDeviceConfiguration(isRooted);
-    additionalAndroidDeviceConfiguration();
+    additionalAndroidDeviceConfiguration(ifEnableFullStackFeatures());
     if (isRooted) {
       rootedAndroidDeviceConfiguration(deviceId);
     }
@@ -395,23 +419,38 @@ public abstract class AndroidDeviceDelegate {
         deviceId, Dimension.Name.GMS_VERSION, AndroidPackages.GMS.getPackageName());
   }
 
-  /** List of decorators/drivers that should be supported by root/non-root devices. */
+  /**
+   * List of decorators/drivers, dimensions that should be supported by standard Android
+   * root/non-root devices in all lab types.
+   */
   public void basicAndroidDeviceConfiguration(boolean isRooted) throws InterruptedException {
+    basicAndroidDimensionConfiguration(isRooted);
+    basicAndroidDriverConfiguration();
+    basicAndroidDecoratorConfiguration();
+  }
+
+  /**
+   * Dimensions that should be supported by standard Android root/non-root devices in all lab types.
+   */
+  private void basicAndroidDimensionConfiguration(boolean isRooted) {
     // Checks root.
     device.addDimension(Dimension.Name.ROOTED, String.valueOf(isRooted));
     device.addDimension(Dimension.Name.OS, Dimension.Value.ANDROID);
+  }
 
+  /**
+   * Drivers that should be supported by standard Android root/non-root devices in all lab types.
+   */
+  private void basicAndroidDriverConfiguration() throws InterruptedException {
     // Adds general drivers.
     device.addSupportedDriver("AndroidForegroundServiceMessenger");
     device.addSupportedDriver("AndroidInstrumentation");
     device.addSupportedDriver("AndroidNativeBin");
     device.addSupportedDriver("NoOpDriver");
     device.addSupportedDriver("XtsTradefedTest");
-
-    basicAndroidDecoratorConfiguration();
   }
 
-  /** List of decorators that should be supported by root/non-root devices. */
+  /** Decorators that should be supported by ALL Android root/non-root devices in all lab types. */
   public void basicAndroidDecoratorConfiguration() throws InterruptedException {
     // Adds general decorators.
     device.addSupportedDecorator("AndroidAdbShellDecorator");
@@ -432,14 +471,24 @@ public abstract class AndroidDeviceDelegate {
     device.addSupportedDecorator("AndroidSwitchUserDecorator");
   }
 
-  /** List of additional decorators/drivers that should be supported by root/non-root devices. */
-  private void additionalAndroidDeviceConfiguration() throws InterruptedException {
+  /**
+   * List of additional decorators/drivers, dimensions that should be supported by standard Android
+   * root/non-root devices.
+   *
+   * <p>Devices like OxygenDevice don't have this additional Android device configuration, they have
+   * theirs own customized configuration.
+   *
+   * @param fullStackFeaturesEnabled more dimensions, supported decorators and drivers will be added
+   *     if full stack features are enabled
+   */
+  private void additionalAndroidDeviceConfiguration(boolean fullStackFeaturesEnabled)
+      throws InterruptedException {
     device.addSupportedDecorator("NoOpDecorator");
     // *********************************************************************************************
     // The following features are only enabled in full stack labs or Local Mode.
     // *********************************************************************************************
 
-    if (!ifEnableFullStackFeatures()) {
+    if (!fullStackFeaturesEnabled) {
       return;
     }
     // For OSS
@@ -459,7 +508,10 @@ public abstract class AndroidDeviceDelegate {
     }
   }
 
-  /** List of decorators/drivers that should be supported by rooted devices. */
+  /**
+   * List of decorators/drivers and dimensions that should be supported by standard Android rooted
+   * devices only.
+   */
   private void rootedAndroidDeviceConfiguration(String deviceId) throws InterruptedException {
 
     // *********************************************************************************************
@@ -492,7 +544,9 @@ public abstract class AndroidDeviceDelegate {
   /**
    * Whether it will enable full stack features for the lab.
    *
-   * <p>Subclass can override it to decide whether enable full stack features.
+   * <p>Subclass can override it to decide whether enable full stack features. Currently it behaves
+   * differently for different labs types, for example, Satellite Lab, Local Mode and OSS Lab enable
+   * full stack features, and only Core Lab enables part of them.
    */
   protected abstract boolean ifEnableFullStackFeatures();
 }
