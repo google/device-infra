@@ -113,6 +113,10 @@ public abstract class AndroidRealDeviceDelegate {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
+  // The property written to the device before resetting. The value of this property will be checked
+  // to confirm whether the device was reset successfully.
+  private static final String RESET_PROPERTY_LABEL = "debug.mobileharness.before_reset";
+
   /** Last time record for checkPingGoogle method in order to call it every 30 minutes. */
   private Instant lastCheckPingGoogleTime = null;
 
@@ -454,6 +458,10 @@ public abstract class AndroidRealDeviceDelegate {
 
     boolean isOverTcpDevice = DeviceUtil.isOverTcpDevice(deviceId);
     cacheDevice(deviceId, AndroidRealDeviceConstants.WAIT_FOR_REBOOT_TIMEOUT);
+
+    // Set the property to the device. Will check the value of this property after resetting to
+    // ensure the reset is successful.
+    androidAdbUtil.setProperty(deviceId, RESET_PROPERTY_LABEL, "true", /* ignoreError= */ false);
     try {
       logger.atInfo().log("Start to factory reset device %s via test harness", deviceId);
       systemStateUtil.factoryResetViaTestHarness(deviceId, /* waitTime= */ null);
@@ -475,6 +483,20 @@ public abstract class AndroidRealDeviceDelegate {
       systemStateUtil.waitUntilReady(deviceId, deviceReadyTimeout);
     } finally {
       invalidateCacheDevice(deviceId);
+    }
+
+    try {
+      if (!Strings.isNullOrEmpty(
+          androidAdbUtil.getProperty(deviceId, ImmutableList.of(RESET_PROPERTY_LABEL)))) {
+        throw new MobileHarnessException(
+            AndroidErrorId.ANDROID_REAL_DEVICE_DELEGATE_RESET_DEVICE_FAILED,
+            String.format(
+                "The property %s is not deleted after resetting on device %s, which means the"
+                    + " device is not reset successfully.",
+                RESET_PROPERTY_LABEL, deviceId));
+      }
+    } finally {
+      androidAdbUtil.setProperty(deviceId, RESET_PROPERTY_LABEL, "", /* ignoreError= */ true);
     }
     logger.atInfo().log("Device %s reset is done", deviceId);
   }
