@@ -253,7 +253,7 @@ class RunCommandHandler {
             .atInfo()
             .with(IMPORTANCE, IMPORTANT)
             .log("Push cts-v-interactive results to %s", serials);
-        verifierResultHelper.broadcastResults(result, serials);
+        verifierResultHelper.broadcastResults(result, serials, xtsRootDir);
       }
     } finally {
       sessionResultHandlerUtil.cleanUpJobGenDirs(allJobs);

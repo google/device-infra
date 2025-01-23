@@ -26,11 +26,16 @@ import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportPr
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Test;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.TestCase;
+import com.google.devtools.mobileharness.platform.android.packagemanager.AndroidPackageManagerUtil;
 import com.google.devtools.mobileharness.platform.android.process.AndroidProcessUtil;
+import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.devtools.mobileharness.shared.util.command.linecallback.ScanSignalOutputCallback;
 import com.google.gson.Gson;
+import java.io.File;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Collection;
+import java.util.Objects;
 import javax.inject.Inject;
 
 /** Helper class to broadcast results to CTS-V * */
@@ -43,6 +48,7 @@ public class VerifierResultHelper {
 
   private static final int MAX_DETAIL_LENGTH = 100;
 
+  @VisibleForTesting static final String CTS_VERIFIER_APK = "CtsVerifier.apk";
   @VisibleForTesting static final String VERIFIER_PACKAGE = "com.android.cts.verifier";
   @VisibleForTesting static final String MAIN_ACTIVITY = ".CtsVerifierActivity";
   @VisibleForTesting static final String HOST_TESTS_ACTIVITY = ".HostTestsActivity";
@@ -53,17 +59,26 @@ public class VerifierResultHelper {
           + " com.android.cts.verifier.extra.HOST_TEST_RESULT ";
 
   private final Adb adb;
+  private final AndroidPackageManagerUtil androidPackageManagerUtil;
   private final AndroidProcessUtil androidProcessUtil;
+  private final AndroidSystemSettingUtil systemSettingUtil;
 
   @Inject
-  VerifierResultHelper(Adb adb, AndroidProcessUtil androidProcessUtil) {
+  VerifierResultHelper(
+      Adb adb,
+      AndroidPackageManagerUtil androidPackageManagerUtil,
+      AndroidProcessUtil androidProcessUtil,
+      AndroidSystemSettingUtil systemSettingUtil) {
     this.adb = adb;
+    this.androidPackageManagerUtil = androidPackageManagerUtil;
     this.androidProcessUtil = androidProcessUtil;
+    this.systemSettingUtil = systemSettingUtil;
   }
 
-  public void broadcastResults(Result result, Collection<String> serials)
+  public void broadcastResults(Result result, Collection<String> serials, Path xtsRootDir)
       throws InterruptedException {
-    startHostTestsActivity(serials);
+    File verifierApk = xtsRootDir.resolve(CTS_VERIFIER_APK).toFile();
+    startHostTestsActivity(serials, verifierApk);
     Gson gson = new Gson();
     for (Module module : result.getModuleInfoList()) {
       ImmutableMap.Builder<String, VerifierResult> testCases = new ImmutableMap.Builder<>();
@@ -93,9 +108,18 @@ public class VerifierResultHelper {
     }
   }
 
-  private void startHostTestsActivity(Collection<String> serials) throws InterruptedException {
+  private void startHostTestsActivity(Collection<String> serials, File verifierApk)
+      throws InterruptedException {
     for (String serial : serials) {
       try {
+        if (verifierApk.exists()) {
+          installApkIfVersionNameMismatch(serial, verifierApk.getPath());
+        } else {
+          logger.atWarning().log(
+              "Cannot find CTS Verifier APK at %s. Results cannot be pushed to %s if the Verifier"
+                  + " APP has not been installed.",
+              verifierApk.getPath(), serial);
+        }
         String currentTime = adb.runShellWithRetry(serial, "date '+%Y-%m-%d %H:%M:%S.%3N'").trim();
         androidProcessUtil.startApplication(
             serial, VERIFIER_PACKAGE, MAIN_ACTIVITY, /* extras= */ null, /* clearTop= */ true);
@@ -145,6 +169,28 @@ public class VerifierResultHelper {
     return test.getResult().equals(FAIL_RESULT)
         ? BROADCAST_TEST_RESULT_FAIL
         : BROADCAST_TEST_RESULT_PASS;
+  }
+
+  /**
+   * Installs the CTS Verifier APK if the version name (e.g. 16_r1) is different from the one on the
+   * device or the APK is not installed.
+   */
+  private void installApkIfVersionNameMismatch(String serial, String apkPath)
+      throws InterruptedException, MobileHarnessException {
+    String originalVersionName = "not installed";
+    try {
+      originalVersionName = androidPackageManagerUtil.getAppVersionName(serial, VERIFIER_PACKAGE);
+    } catch (MobileHarnessException e) {
+      logger.atInfo().withCause(e).log("Unable to find CTS Verifier on device %s.", serial);
+    }
+    String newVersionName = androidPackageManagerUtil.getApkVersionName(apkPath);
+    if (!Objects.equals(newVersionName, originalVersionName)) {
+      logger.atInfo().log(
+          "Install CTS Verifier %s on %s. [Previous version: %s]",
+          newVersionName, serial, originalVersionName);
+      int sdkVersion = systemSettingUtil.getDeviceSdkVersion(serial);
+      androidPackageManagerUtil.installApk(serial, sdkVersion, apkPath);
+    }
   }
 
   /** Represents a CTS-V result. */
