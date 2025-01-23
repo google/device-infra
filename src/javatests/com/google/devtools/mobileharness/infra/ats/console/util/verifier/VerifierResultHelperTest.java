@@ -114,7 +114,7 @@ public class VerifierResultHelperTest {
         .startApplication(
             serial,
             VerifierResultHelper.VERIFIER_PACKAGE,
-            VerifierResultHelper.INTERACTIVE_ACTIVITY);
+            VerifierResultHelper.HOST_TESTS_ACTIVITY);
     verify(adb)
         .runShell(
             serial,

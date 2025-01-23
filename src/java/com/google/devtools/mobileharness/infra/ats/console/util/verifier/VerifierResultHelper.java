@@ -45,7 +45,7 @@ public class VerifierResultHelper {
 
   @VisibleForTesting static final String VERIFIER_PACKAGE = "com.android.cts.verifier";
   @VisibleForTesting static final String MAIN_ACTIVITY = ".CtsVerifierActivity";
-  @VisibleForTesting static final String INTERACTIVE_ACTIVITY = ".InteractiveTestsActivity";
+  @VisibleForTesting static final String HOST_TESTS_ACTIVITY = ".HostTestsActivity";
 
   @VisibleForTesting
   static final String BROADCAST_COMMAND =
@@ -63,7 +63,7 @@ public class VerifierResultHelper {
 
   public void broadcastResults(Result result, Collection<String> serials)
       throws InterruptedException {
-    startInteractiveActivity(serials);
+    startHostTestsActivity(serials);
     Gson gson = new Gson();
     for (Module module : result.getModuleInfoList()) {
       ImmutableMap.Builder<String, VerifierResult> testCases = new ImmutableMap.Builder<>();
@@ -93,23 +93,25 @@ public class VerifierResultHelper {
     }
   }
 
-  private void startInteractiveActivity(Collection<String> serials) throws InterruptedException {
+  private void startHostTestsActivity(Collection<String> serials) throws InterruptedException {
     for (String serial : serials) {
       try {
         String currentTime = adb.runShellWithRetry(serial, "date '+%Y-%m-%d %H:%M:%S.%3N'").trim();
         androidProcessUtil.startApplication(
             serial, VERIFIER_PACKAGE, MAIN_ACTIVITY, /* extras= */ null, /* clearTop= */ true);
-        androidProcessUtil.startApplication(serial, VERIFIER_PACKAGE, INTERACTIVE_ACTIVITY);
-        // Wait for the interactive activity to be ready.
+        androidProcessUtil.startApplication(serial, VERIFIER_PACKAGE, HOST_TESTS_ACTIVITY);
+        // Wait for the HostTestsActivity to be ready.
         var unused =
             adb.run(
                 serial,
-                new String[] {"logcat", "-T", currentTime, "HostTestsActivity:I", "*:S"},
+                new String[] {
+                  "logcat", "-T", currentTime, HOST_TESTS_ACTIVITY.substring(1) + ":I", "*:S"
+                },
                 Duration.ofSeconds(60),
                 new ScanSignalOutputCallback(
                     "Registered broadcast receivers", /* stopOnSignal= */ true));
       } catch (MobileHarnessException e) {
-        logger.atInfo().withCause(e).log("Unable to start interactive activity on %s", serial);
+        logger.atInfo().withCause(e).log("Unable to start HostTestsActivity on %s", serial);
       }
     }
   }
