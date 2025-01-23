@@ -27,9 +27,6 @@ java_library(
     name = "client_class_util",
     srcs = ["ClientClassUtil.java"],
     visibility = [
-        "//java/com/google/devtools/mobileharness/shared/util/metadata:__pkg__",
-        "//java/com/google/wireless/qa/mobileharness/shared/api:__pkg__",
-        "//javatests/com/google/wireless/qa/mobileharness/shared/api:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/util/lister:__pkg__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator:__pkg__",
     ],
@@ -57,8 +54,6 @@ java_library(
     name = "validator_class_util",
     srcs = ["ValidatorClassUtil.java"],
     visibility = [
-        "//java/com/google/wireless/qa/mobileharness/shared/api:__pkg__",
-        "//javatests/com/google/wireless/qa/mobileharness/shared/api:__pkg__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:__pkg__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator:__pkg__",
     ],
