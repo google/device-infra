@@ -943,6 +943,21 @@ public final class SessionRequestHandlerUtilTest {
   }
 
   @Test
+  public void createXtsNonTradefedJobs_noEnoughDevices() throws Exception {
+    setUpForCreateXtsNonTradefedJobs();
+    SessionRequestInfo sessionRequestInfo =
+        sessionRequestHandlerUtil.addNonTradefedModuleInfo(
+            defaultSessionRequestInfoBuilder().build());
+    when(deviceQuerier.queryDevice(any())).thenReturn(DeviceQueryResult.getDefaultInstance());
+
+    assertThrows(
+        MobileHarnessException.class,
+        () ->
+            sessionRequestHandlerUtil.createXtsNonTradefedJobs(
+                sessionRequestInfo, testPlanFilter, null, ImmutableMap.of()));
+  }
+
+  @Test
   public void filterModuleByConfigMetadata_success() throws Exception {
     Configuration config =
         defaultConfigurationBuilder()

@@ -806,6 +806,20 @@ public class SessionRequestHandlerUtil {
             .collect(toImmutableList())) {
       String originalModuleName = entry.getValue().getMetadata().getXtsModule();
       String expandedModuleName = entry.getKey();
+
+      // For console, if available devices < required devices, throw exception.
+      if (!sessionRequestInfo.isAtsServerRequest()
+          && entry.getValue().getDevicesCount() > availableDeviceSerials.size()) {
+        throw MobileHarnessExceptionFactory.createUserFacingException(
+            InfraErrorId.OLCS_NO_ENOUGH_MATCHED_DEVICES,
+            String.format(
+                "Found no enough devices for %s. Require %d, avaliable %d.",
+                originalModuleName,
+                entry.getValue().getDevicesCount(),
+                availableDeviceSerials.size()),
+            /* cause= */ null);
+      }
+
       // If it has a subplan(either from the retry command or the subplan command), do a early check
       // for whether the module should be run
       if (subPlan != null
