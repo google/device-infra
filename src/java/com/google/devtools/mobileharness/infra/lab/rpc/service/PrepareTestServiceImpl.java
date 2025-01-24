@@ -239,7 +239,7 @@ public class PrepareTestServiceImpl {
           "Skip duplicated CreateTest request for the allocation %s. "
               + "See b/38099373 for more detail.",
           allocation);
-    } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
+    } catch (MobileHarnessException e) {
       throw new MobileHarnessException(
           InfraErrorId.LAB_RPC_PREPARE_TEST_TEST_RUNNER_START_ERROR,
           String.format("Failed to start test %s", testExecutionUnit.locator().id()),

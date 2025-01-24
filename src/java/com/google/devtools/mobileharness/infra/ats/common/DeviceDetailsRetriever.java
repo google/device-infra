@@ -231,7 +231,7 @@ public class DeviceDetailsRetriever {
     DeviceQueryResult queryResult;
     try {
       queryResult = deviceQuerier.queryDevice(DeviceQueryFilter.getDefaultInstance());
-    } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
+    } catch (MobileHarnessException e) {
       throw new MobileHarnessException(
           InfraErrorId.ATSC_RUN_COMMAND_QUERY_DEVICE_ERROR, "Failed to query device", e);
     }

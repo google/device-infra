@@ -323,10 +323,7 @@ public class LabServer {
 
       logger.atInfo().log("Lab server successfully started");
       startingFuture.set(TestServices.of(testManager, deviceManager));
-    } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException
-        | IOException
-        | RuntimeException
-        | Error e) {
+    } catch (MobileHarnessException | IOException | RuntimeException | Error e) {
       MobileHarnessException exception =
           new MobileHarnessException(
               InfraErrorId.LAB_UTRS_SERVER_START_ERROR, "Failed to run lab server", e);

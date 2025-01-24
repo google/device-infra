@@ -96,7 +96,7 @@ public class TestInfoCreator {
     jobInfo.protoSpec().setProto(req.getJob().getJobSpec()).tryResolveUnknownExtension();
     try {
       jobInfo.scopedSpecs().addJson(req.getJob().getJobScopedSpecsJson());
-    } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
+    } catch (MobileHarnessException e) {
       throw new MobileHarnessException(
           BasicErrorId.JOB_SET_JOB_SCOPED_SPECS_ERROR_IN_LAB,
           "Failed to set job scoped specs: " + req.getJob().getJobScopedSpecsJson(),

@@ -258,7 +258,7 @@ class ListDevicesCommandHandler {
   private DeviceQueryResult queryDevice() throws MobileHarnessException, InterruptedException {
     try {
       return deviceQuerier.queryDevice(DeviceQueryFilter.getDefaultInstance());
-    } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
+    } catch (MobileHarnessException e) {
       throw new MobileHarnessException(
           InfraErrorId.ATSC_LIST_DEVICES_QUERY_DEVICE_ERROR, "Failed to query device", e);
     }

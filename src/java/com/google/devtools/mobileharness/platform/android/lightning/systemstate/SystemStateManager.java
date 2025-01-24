@@ -192,7 +192,7 @@ public class SystemStateManager {
         systemStateUtil.waitForDevice(deviceId, deviceReadyTimeout);
       }
       systemStateUtil.waitUntilReady(deviceId, deviceReadyTimeout);
-    } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
+    } catch (MobileHarnessException e) {
       throw new MobileHarnessException(
           AndroidErrorId.SYSTEM_STATE_MANAGER_REBOOT_DEVICE_ERROR, e.getMessage(), e);
     } finally {

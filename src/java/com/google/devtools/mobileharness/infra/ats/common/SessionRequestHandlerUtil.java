@@ -576,7 +576,7 @@ public class SessionRequestHandlerUtil {
     DeviceQueryResult queryResult;
     try {
       queryResult = deviceQuerier.queryDevice(DeviceQueryFilter.getDefaultInstance());
-    } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
+    } catch (MobileHarnessException e) {
       throw new MobileHarnessException(
           InfraErrorId.ATSC_RUN_COMMAND_QUERY_DEVICE_ERROR, "Failed to query device", e);
     }
@@ -813,7 +813,7 @@ public class SessionRequestHandlerUtil {
         throw MobileHarnessExceptionFactory.createUserFacingException(
             InfraErrorId.OLCS_NO_ENOUGH_MATCHED_DEVICES,
             String.format(
-                "Found no enough devices for %s. Require %d, avaliable %d.",
+                "Found no enough devices for %s. Require %d, available %d.",
                 originalModuleName,
                 entry.getValue().getDevicesCount(),
                 availableDeviceSerials.size()),

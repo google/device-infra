@@ -458,7 +458,7 @@ public class AndroidInstrumentationUtil {
     try {
       androidInstrumentationSpec =
           testInfo.jobInfo().combinedSpecOfClass(AndroidInstrumentationSpec.class);
-    } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
+    } catch (MobileHarnessException e) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_INSTRUMENTATION_SPEC_PARSE_ERROR,
           "Failed to parse Android Instrumentation Spec",

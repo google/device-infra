@@ -1212,13 +1212,10 @@ public abstract class AndroidRealDeviceDelegate {
 
   /** Returns {@code true} if skip the default operations after the test. */
   protected abstract boolean skipRealDeviceDefaultAfterTestProcess()
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-          InterruptedException;
+      throws MobileHarnessException, InterruptedException;
 
   /** Reboots the Android real device. */
-  public void reboot()
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-          InterruptedException {
+  public void reboot() throws MobileHarnessException, InterruptedException {
     if (Flags.instance().disableDeviceReboot.getNonNull()) {
       logger.atInfo().log("Device reboot is disabled, skip rebooting device %s.", deviceId);
       return;
@@ -1262,9 +1259,7 @@ public abstract class AndroidRealDeviceDelegate {
   }
 
   /** Takes device screenshot and returns the screenshot local path in the host machine. */
-  public String takeScreenshot()
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-          InterruptedException {
+  public String takeScreenshot() throws MobileHarnessException, InterruptedException {
     String screensShotFilePathOnDevice =
         PathUtil.join(AndroidRealDeviceConstants.TEMP_SCREEN_SHOT_PATH, UUID.randomUUID() + ".png");
     String desFilePathOnHost = BaseDeviceHelper.getGenScreenshotPathWithDate(device);
@@ -1633,8 +1628,7 @@ public abstract class AndroidRealDeviceDelegate {
    */
   private void connectToWifi(
       String serial, int sdkVersion, String ssid, String pwd, boolean scanSsid)
-      throws com.google.wireless.qa.mobileharness.shared.MobileHarnessException,
-          InterruptedException {
+      throws MobileHarnessException, InterruptedException {
     if (Flags.instance().disableWifiUtilFunc.getNonNull()) {
       logger.atInfo().log(
           "Wifi util functionality is disabled. Skip connecting device %s to wifi.", serial);
@@ -1687,7 +1681,7 @@ public abstract class AndroidRealDeviceDelegate {
                   // device. {@link b/197480620#comment6}.
                   .build(),
               null);
-        } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
+        } catch (MobileHarnessException e) {
           logger.atWarning().log(
               "Failed to install WiFi apk: %s", MoreThrowables.shortDebugString(e));
         }
@@ -1778,7 +1772,7 @@ public abstract class AndroidRealDeviceDelegate {
           defaultWifi.getSsid(),
           defaultWifi.getPsk(),
           defaultWifi.getScanSsid());
-    } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
+    } catch (MobileHarnessException e) {
       logger.atWarning().log(
           "Failed to connect device %s to WIFI %s with psk %s, scan_ssid %s: %s",
           deviceId,
@@ -2470,8 +2464,7 @@ public abstract class AndroidRealDeviceDelegate {
    * @param startChargeLevel battery level at which charging should be started
    */
   private void toggleChargingForSafeDischarge(int stopChargeLevel, int startChargeLevel)
-      throws com.google.wireless.qa.mobileharness.shared.MobileHarnessException,
-          InterruptedException {
+      throws MobileHarnessException, InterruptedException {
     int batteryLevel = systemSettingUtil.getBatteryLevel(deviceId);
     boolean enableCharging;
     if (batteryLevel <= startChargeLevel) {
@@ -2501,13 +2494,13 @@ public abstract class AndroidRealDeviceDelegate {
     Integer startChargeLevelInt = Flags.instance().startChargeLevel.getNonNull();
     try {
       chargingUtil.setFullChargeLevel(device, safeChargeLevelInt);
-    } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
+    } catch (MobileHarnessException e) {
       logger.atWarning().log(
           "Error setting full charge level for device %s: %s",
           deviceId, MoreThrowables.shortDebugString(e));
       try {
         toggleChargingForSafeDischarge(stopChargeLevelInt, startChargeLevelInt);
-      } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e2) {
+      } catch (MobileHarnessException e2) {
         logger.atWarning().log(
             "Failed to enforce device %s safe discharge level: %s",
             deviceId, MoreThrowables.shortDebugString(e2));
@@ -2548,7 +2541,7 @@ public abstract class AndroidRealDeviceDelegate {
           .atInfo()
           .alsoTo(logger)
           .log("Turn on charging on device %s before test %s", deviceId, testId);
-    } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
+    } catch (MobileHarnessException e) {
       logger.atWarning().log(
           "Error when enabling charge for device %s before test %s: %s",
           deviceId, testInfo.locator().getId(), MoreThrowables.shortDebugString(e));

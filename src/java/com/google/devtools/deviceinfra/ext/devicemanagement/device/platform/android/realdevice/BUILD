@@ -69,7 +69,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/network",
         "//src/java/com/google/devtools/mobileharness/shared/util/path",
-        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "//src/java/com/google/wireless/qa/mobileharness/shared/android:runtime_charging_util",
         "//src/java/com/google/wireless/qa/mobileharness/shared/android:wifi_util",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_device",
