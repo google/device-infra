@@ -47,6 +47,8 @@ java_library(
     srcs = [
         "DeviceDaemonApkInfoProvider.java",
     ],
+    visibility = [
+    ],
     deps = [
         ":device_daemon_apk_info_interface",
         "//src/java/com/google/devtools/mobileharness/platform/android/app/devicedaemon/impl",
