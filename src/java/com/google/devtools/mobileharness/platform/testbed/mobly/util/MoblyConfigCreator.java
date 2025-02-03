@@ -319,7 +319,9 @@ public class MoblyConfigCreator {
       while (controllerKeys.hasNext()) {
         String key = (String) controllerKeys.next();
         // If the key doesn't exist, or overwriteOriginal is set to true, add/update it.
-        if (!controllers.has(key) || overwriteOriginal) {
+        // Do not overwrite the original if the added controller config is a wildcard (*).
+        if (!controllers.has(key)
+            || (overwriteOriginal && !String.valueOf(addedControllers.get(key)).equals("*"))) {
           controllers.put(key, addedControllers.get(key));
         } else {
           if (controllers.get(key) instanceof JSONArray
