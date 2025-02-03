@@ -24,6 +24,7 @@ java_library(
     name = "in",
     visibility = [
         "//:deviceinfra_all_pkg",
+        "//java/com/google/devtools/omnilab/device/lab/server:__subpackages__",
     ],
     exports = [
         ":decorators",
