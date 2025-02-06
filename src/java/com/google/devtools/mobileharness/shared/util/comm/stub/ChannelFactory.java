@@ -38,7 +38,11 @@ public class ChannelFactory {
 
   private static ManagedChannel createChannel(
       NettyChannelBuilder channelBuilder, Executor executor) {
-    return channelBuilder.negotiationType(NegotiationType.PLAINTEXT).executor(executor).build();
+    return channelBuilder
+        .enableRetry()
+        .negotiationType(NegotiationType.PLAINTEXT)
+        .executor(executor)
+        .build();
   }
 
   private ChannelFactory() {}
