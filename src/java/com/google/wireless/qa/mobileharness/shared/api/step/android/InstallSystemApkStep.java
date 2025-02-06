@@ -291,8 +291,7 @@ public class InstallSystemApkStep {
       fileUtil.removeFiles(deviceId, installedPath);
     } catch (MobileHarnessException e) {
       if (!allowNotInstalled
-          || e.getErrorCode()
-              != AndroidErrorId.ANDROID_PKG_MNGR_UTIL_PM_PATH_NO_PACKAGE_FOUND.code()) {
+          || e.getErrorId() != AndroidErrorId.ANDROID_PKG_MNGR_UTIL_PM_PATH_NO_PACKAGE_FOUND) {
         throw e;
       }
     }

@@ -120,20 +120,7 @@ public final class JobInitializer {
             jobInfo.files().getAll());
         jobInfos.add(jobInfo);
       } catch (MobileHarnessException e) {
-        ExitCode exitCode;
-        switch (e.getErrorCodeEnum()) {
-          case FILE_READ_ERROR:
-          case FILE_DELETE_ERROR:
-            exitCode = ExitCode.Shared.FILE_OPERATION_ERROR;
-            break;
-          case JOB_SPEC_ERROR:
-            exitCode = ExitCode.Client.JOB_SPEC_ERROR;
-            break;
-          default:
-            exitCode = ExitCode.Client.JOB_INFO_ERROR;
-            break;
-        }
-        systemUtil.exit(exitCode, e);
+        systemUtil.exit(ExitCode.Client.JOB_INFO_ERROR, e);
       }
     }
     return jobInfos;

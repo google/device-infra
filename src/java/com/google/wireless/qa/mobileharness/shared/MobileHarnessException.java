@@ -120,15 +120,6 @@ public class MobileHarnessException extends Exception {
   }
 
   /**
-   * @deprecated Please create a new {@link
-   *     com.google.devtools.mobileharness.api.model.error.MobileHarnessException} instead.
-   */
-  @Deprecated
-  public MobileHarnessException(String message) {
-    this(ErrorCode.UNKNOWN, message);
-  }
-
-  /**
    * @deprecated Use {@link
    *     com.google.devtools.mobileharness.api.model.error.MobileHarnessException#getErrorId()#getErrorCode()}
    *     instead.
