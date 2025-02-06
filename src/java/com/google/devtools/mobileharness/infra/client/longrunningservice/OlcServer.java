@@ -243,6 +243,9 @@ public class OlcServer {
         Level.SEVERE,
         "Fatal error while resuming unfinished sessions.");
 
+    // Starts session manager.
+    sessionManager.start();
+
     // Prints signal.
     logger.atInfo().log("Servers have started: %s", SERVER_STARTED_SIGNAL);
     logger.atInfo().log(

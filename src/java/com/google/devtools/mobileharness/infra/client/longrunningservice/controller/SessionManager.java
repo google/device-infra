@@ -34,6 +34,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.devtools.common.metrics.stability.converter.ErrorModelConverter;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
@@ -66,6 +67,7 @@ import com.google.protobuf.TextFormat;
 import com.google.protobuf.TextFormat.Printer;
 import com.google.protobuf.util.FieldMaskUtil;
 import io.grpc.stub.StreamObserver;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -97,6 +99,8 @@ public class SessionManager {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
+  private static final Duration PRINT_SESSIONS_INTERVAL = Duration.ofMinutes(2L);
+
   /** Queue capacity for submitted and non-started sessions. */
   private static final int SESSION_QUEUE_CAPACITY = 50_000;
 
@@ -116,6 +120,7 @@ public class SessionManager {
   private final SessionRunner.Factory sessionRunnerFactory;
   private final LocalFileUtil localFileUtil;
   private final ListeningExecutorService threadPool;
+  private final ListeningScheduledExecutorService scheduledThreadPool;
   private final SessionPersistenceUtil sessionPersistenceUtil;
 
   private final Object sessionsLock = new Object();
@@ -144,12 +149,33 @@ public class SessionManager {
       SessionRunner.Factory sessionRunnerFactory,
       LocalFileUtil localFileUtil,
       ListeningExecutorService threadPool,
+      ListeningScheduledExecutorService scheduledThreadPool,
       SessionPersistenceUtil sessionPersistenceUtil) {
     this.sessionDetailCreator = sessionDetailCreator;
     this.sessionRunnerFactory = sessionRunnerFactory;
     this.localFileUtil = localFileUtil;
     this.threadPool = threadPool;
+    this.scheduledThreadPool = scheduledThreadPool;
     this.sessionPersistenceUtil = sessionPersistenceUtil;
+  }
+
+  public void start() {
+    // Prints unfinished sessions periodically.
+    logFailure(
+        scheduledThreadPool.scheduleWithFixedDelay(
+            threadRenaming(
+                () -> {
+                  synchronized (sessionsLock) {
+                    logger.atInfo().log(
+                        "Running sessions: %s, pending sessions: %s",
+                        runningSessions.keySet(), pendingSessions.keySet());
+                  }
+                },
+                () -> "running-sessions-printer"),
+            Duration.ZERO,
+            PRINT_SESSIONS_INTERVAL),
+        Level.WARNING,
+        "Fatal error when printing running sessions");
   }
 
   /**
