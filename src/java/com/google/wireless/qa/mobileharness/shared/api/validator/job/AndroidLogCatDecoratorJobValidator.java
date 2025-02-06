@@ -17,7 +17,7 @@
 package com.google.wireless.qa.mobileharness.shared.api.validator.job;
 
 import com.google.common.collect.ImmutableSet;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidLogCatSpec;
 import com.google.wireless.qa.mobileharness.shared.api.validator.util.AndroidDecoratorValidatorUtil;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;

@@ -84,7 +84,6 @@ java_library(
         ":job_validator",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:android_device_setting_decorator_spec_java_proto",
@@ -125,7 +124,7 @@ java_library(
     srcs = ["AndroidLogCatDecoratorJobValidator.java"],
     deps = [
         ":job_validator",
-        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:android_logcat_spec",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/util:android_decorator_validator_util",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
@@ -138,7 +137,7 @@ java_library(
     srcs = ["AndroidNativeBinJobValidator.java"],
     deps = [
         ":job_validator",
-        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:android_native_bin_spec",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
     ],

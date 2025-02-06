@@ -19,7 +19,7 @@ package com.google.wireless.qa.mobileharness.shared.api.validator.job;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.AndroidDeviceSettingsDecoratorSpec;

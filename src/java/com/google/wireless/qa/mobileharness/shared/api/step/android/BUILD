@@ -72,11 +72,11 @@ java_library(
     srcs = ["InstallApkStepJobValidator.java"],
     deps = [
         ":install_apk_step_constants",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/job/in",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/path",
-        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:job_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "@maven//:com_google_guava_guava",
