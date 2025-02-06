@@ -21,7 +21,6 @@ import com.google.common.base.Joiner;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.util.reflection.ClientClassUtil;
-import com.google.devtools.mobileharness.shared.util.reflection.ValidatorClassUtil;
 import com.google.wireless.qa.mobileharness.shared.api.validator.job.JobValidator;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
@@ -47,7 +46,6 @@ public class JobChecker {
   /** Validates the job information. */
   public void validateJob(JobInfo jobInfo) throws MobileHarnessException, InterruptedException {
     JobType jobType = jobInfo.type();
-    List<Class<? extends Validator>> validatorClasses = new ArrayList<>();
     List<Class<? extends JobValidator>> jobValidatorClasses = new ArrayList<>();
 
     // Checks the driver type.
@@ -56,10 +54,6 @@ public class JobChecker {
         ClientClassUtil.getJobValidatorClass(driverName);
     if (jobValidatorClass.isPresent()) {
       jobValidatorClasses.add(jobValidatorClass.get());
-    } else {
-      Optional<Class<? extends Validator>> validatorClass =
-          ValidatorClassUtil.getValidatorClass(driverName);
-      validatorClass.ifPresent(validatorClasses::add);
     }
 
     // Checks the decorator type.
@@ -67,10 +61,6 @@ public class JobChecker {
       jobValidatorClass = ClientClassUtil.getJobValidatorClass(decoratorName);
       if (jobValidatorClass.isPresent()) {
         jobValidatorClasses.add(jobValidatorClass.get());
-      } else {
-        Optional<Class<? extends Validator>> validatorClass =
-            ValidatorClassUtil.getValidatorClass(decoratorName);
-        validatorClass.ifPresent(validatorClasses::add);
       }
     }
 
@@ -78,11 +68,6 @@ public class JobChecker {
     List<String> errors = new ArrayList<>();
     for (JobValidator jobValidator : validatorFactory.createJobValidators(jobValidatorClasses)) {
       errors.addAll(jobValidator.validate(jobInfo));
-    }
-
-    // Runs the legacy validators.
-    for (Validator validator : validatorFactory.createValidators(validatorClasses)) {
-      errors.addAll(validator.validateJob(jobInfo));
     }
 
     if (!errors.isEmpty()) {

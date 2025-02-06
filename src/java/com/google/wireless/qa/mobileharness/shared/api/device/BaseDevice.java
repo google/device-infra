@@ -38,14 +38,12 @@ import com.google.devtools.mobileharness.infra.controller.device.DeviceInfoManag
 import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
-import com.google.devtools.mobileharness.shared.util.reflection.ValidatorClassUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.protobuf.TextFormat;
 import com.google.protobuf.TextFormat.ParseException;
 import com.google.wireless.qa.mobileharness.shared.api.ClassUtil;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.Decorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
-import com.google.wireless.qa.mobileharness.shared.api.validator.Validator;
 import com.google.wireless.qa.mobileharness.shared.api.validator.ValidatorFactory;
 import com.google.wireless.qa.mobileharness.shared.api.validator.env.EnvValidator;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
@@ -492,15 +490,8 @@ public abstract class BaseDevice implements Device {
       if (envValidatorClass.isPresent()) {
         // Runs the env validator.
         validatorFactory.createEnvValidator(envValidatorClass.get()).validate(this);
-      } else {
-        // Runs the legacy validator.
-        Optional<Class<? extends Validator>> validatorClass =
-            ValidatorClassUtil.getValidatorClass(driverClass.getSimpleName());
-        if (validatorClass.isPresent()) {
-          validatorFactory.createValidator(validatorClass.get()).validateEnv(this);
-        }
       }
-    } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
+    } catch (MobileHarnessException e) {
       logger.atInfo().log(
           "Driver %s not supported: %s", driverClass.getSimpleName(), e.getMessage());
       return;
@@ -566,16 +557,8 @@ public abstract class BaseDevice implements Device {
       if (envValidatorClass.isPresent()) {
         // Runs the env validator.
         validatorFactory.createEnvValidator(envValidatorClass.get()).validate(this);
-      } else {
-        // Runs the legacy validator.
-        Optional<Class<? extends Validator>> validatorClass =
-            ValidatorClassUtil.getValidatorClass(decoratorClass.getSimpleName());
-        // If there is no Validator for the given decorator type, will skip the validation.
-        if (validatorClass.isPresent()) {
-          validatorFactory.createValidator(validatorClass.get()).validateEnv(this);
-        }
       }
-    } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
+    } catch (MobileHarnessException e) {
       logger.atInfo().log("%s not supported: %s", decoratorClass.getSimpleName(), e.getMessage());
       return;
     }

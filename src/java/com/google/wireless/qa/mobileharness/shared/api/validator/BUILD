@@ -25,28 +25,13 @@ package(
 ################################################################################
 # Common libraries in alphabetical order
 ################################################################################
-
-java_library(
-    name = "base_validator",
-    srcs = ["BaseValidator.java"],
-    deps = [
-        ":validator",
-        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
-        "@maven//:com_google_guava_guava",
-    ],
-)
-
 java_library(
     name = "job_checker",
     srcs = ["JobChecker.java"],
     deps = [
-        ":validator",
         ":validator_factory",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/reflection:client_class_util",
-        "//src/java/com/google/devtools/mobileharness/shared/util/reflection:validator_class_util",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:job_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
@@ -55,20 +40,9 @@ java_library(
 )
 
 java_library(
-    name = "validator",
-    srcs = ["Validator.java"],
-    deps = [
-        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
-    ],
-)
-
-java_library(
     name = "validator_factory",
     srcs = ["ValidatorFactory.java"],
     deps = [
-        ":validator",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/env:env_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:job_validator",

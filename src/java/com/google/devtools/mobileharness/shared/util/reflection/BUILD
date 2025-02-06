@@ -49,19 +49,3 @@ java_library(
     ],
     deps = ["//src/java/com/google/devtools/mobileharness/api/model/error"],
 )
-
-java_library(
-    name = "validator_class_util",
-    srcs = ["ValidatorClassUtil.java"],
-    visibility = [
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:__pkg__",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator:__pkg__",
-    ],
-    deps = [
-        ":class_constants",
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/util:reflection",
-    ],
-)

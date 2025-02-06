@@ -166,7 +166,6 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/job:job_type_util",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/lister",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator",
     ],
 )
 
@@ -180,7 +179,6 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:device_factory",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:base_driver",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:driver_factory",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator:base_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator:validator_factory",
     ],
 )

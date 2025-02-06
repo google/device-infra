@@ -24,7 +24,7 @@ import com.google.wireless.qa.mobileharness.shared.api.validator.job.JobValidato
 import java.util.Collection;
 import java.util.List;
 
-/** Simple factory for creating {@link Validator} instances. */
+/** Simple factory for creating {@link JobValidator} and {@link EnvValidator} instances. */
 public class ValidatorFactory {
 
   /**
@@ -93,42 +93,5 @@ public class ValidatorFactory {
       jobValidators.add(createJobValidator(jobValidatorClass));
     }
     return jobValidators;
-  }
-
-  /**
-   * Creates a new {@link Validator} instance according to the given class type.
-   *
-   * @param validatorClass {@link Validator} class type
-   * @throws MobileHarnessException if fails to create a new {@link Validator} instance
-   */
-  public Validator createValidator(Class<? extends Validator> validatorClass)
-      throws MobileHarnessException {
-    // Gets the constructor.
-    try {
-      return validatorClass.newInstance();
-    } catch (IllegalAccessException
-        | InstantiationException
-        | ExceptionInInitializerError
-        | SecurityException e) {
-      throw new MobileHarnessException(
-          BasicErrorId.REFLECTION_INSTANTIATION_ERROR,
-          "Failed to create new instance for " + validatorClass.getSimpleName(),
-          e);
-    }
-  }
-
-  /**
-   * Create a list of validator classes.
-   *
-   * @param validatorClasses a list of {@code Validator} class types
-   * @throws MobileHarnessException if fails to create {@code Validator} instance
-   */
-  public List<Validator> createValidators(Collection<Class<? extends Validator>> validatorClasses)
-      throws MobileHarnessException {
-    List<Validator> validators = Lists.newArrayList();
-    for (Class<? extends Validator> validatorClass : validatorClasses) {
-      validators.add(createValidator(validatorClass));
-    }
-    return validators;
   }
 }
