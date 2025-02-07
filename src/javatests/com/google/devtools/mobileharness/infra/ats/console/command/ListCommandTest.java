@@ -153,6 +153,9 @@ public class ListCommandTest {
                 /* parseCommandOnly= */ false));
     injector.injectMembers(this);
     atsConsole.injector = injector;
+
+    // Prepares the cts configs file for testing
+    realLocalFileUtil.copyFileOrDir(TEST_CTS_CONFIG_DIR, xtsRootDirPath);
   }
 
   @After
@@ -182,9 +185,6 @@ public class ListCommandTest {
 
   @Test
   public void listDevicesAndModules_expectedOutput() throws Exception {
-    // Prepares the cts configs file for testing
-    realLocalFileUtil.copyFileOrDir(TEST_CTS_CONFIG_DIR, xtsRootDirPath);
-
     when(lineReader.readLine(anyString()))
         .thenReturn("list devices")
         .thenReturn("list devices all")
@@ -230,6 +230,18 @@ public class ListCommandTest {
                 + " serial(s)  Build ID            Product\n"
                 + "0        117   0     1 of 1            2023.11.30_12.34.56  cts        ABC, DEF "
                 + "         SQ3A.220705.003.A1  redfin");
+  }
+
+  @Test
+  public void listCommands() throws Exception {
+    when(lineReader.readLine(anyString()))
+        .thenReturn("run cts")
+        .thenReturn("list commands")
+        .thenReturn("exit");
+
+    atsConsole.run();
+
+    verify(lineReader).printAbove("Command n/a: [0m:00] cts");
   }
 
   @Test
