@@ -104,11 +104,12 @@ class ListCommand implements Callable<Integer> {
       name = "commands",
       aliases = {"c"},
       description = "List all commands currently waiting to be executed")
-  public int commands() throws MobileHarnessException, InterruptedException {
+  public int commands(@Option(names = "all") boolean listAllCommands)
+      throws MobileHarnessException, InterruptedException {
     serverPreparer.prepareOlcServer();
     ImmutableList<AtsSessionPluginConfigOutput> sessionPluginConfigOutputs =
         atsSessionStub.getAllUnfinishedSessions(
-            RunCommand.RUN_COMMAND_SESSION_NAME, /* fromCurrentClient= */ true);
+            RunCommand.RUN_COMMAND_SESSION_NAME, /* fromCurrentClient= */ !listAllCommands);
     String result = PluginOutputPrinter.listCommands(sessionPluginConfigOutputs);
     consoleUtil.printlnStdout(result);
     return ExitCode.OK;
@@ -139,11 +140,12 @@ class ListCommand implements Callable<Integer> {
       name = "invocations",
       aliases = {"i"},
       description = "List all invocation threads")
-  public int invocations() throws MobileHarnessException, InterruptedException {
+  public int invocations(@Option(names = "all") boolean listAllInvocations)
+      throws MobileHarnessException, InterruptedException {
     serverPreparer.prepareOlcServer();
     ImmutableList<AtsSessionPluginConfigOutput> sessionPluginConfigOutputs =
         atsSessionStub.getAllUnfinishedSessions(
-            RunCommand.RUN_COMMAND_SESSION_NAME, /* fromCurrentClient= */ true);
+            RunCommand.RUN_COMMAND_SESSION_NAME, /* fromCurrentClient= */ !listAllInvocations);
     String result = PluginOutputPrinter.listInvocations(sessionPluginConfigOutputs);
     consoleUtil.printlnStdout(result);
     return ExitCode.OK;
