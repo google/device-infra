@@ -55,7 +55,7 @@ import org.junit.runners.JUnit4;
 public class ProxyModeIntegrationTest {
 
   @Rule public final SetFlagsOss flags = new SetFlagsOss();
-  @Rule public final CaptureLogs captureLogs = new CaptureLogs("", /* printFailedLogs= */ true);
+  @Rule public final CaptureLogs captureLogs = new CaptureLogs();
   @Rule public final PrintTestName printTestName = new PrintTestName();
 
   @Bind @GlobalInternalEventBus private final EventBus globalInternalEventBus = new EventBus();
