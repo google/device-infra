@@ -914,6 +914,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableAtsFileServerUploader = enableAtsFileServerUploaderDefault;
 
+  private static final Flag<Boolean> enableFastbootDetectorDefault = Flag.value(true);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enable_fastboot_detector",
+      description = "Whether to enable fastboot detector. Default is true.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableFastbootDetector = enableFastbootDetectorDefault;
+
   private static final Flag<Boolean> enableFastbootInAndroidRealDeviceDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(

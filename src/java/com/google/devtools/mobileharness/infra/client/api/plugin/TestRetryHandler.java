@@ -64,6 +64,7 @@ public class TestRetryHandler {
           "AndroidCopycatRemoteControlledMoblySnippetTest",
           "IosCopycatRemoteControlledMoblySnippetTest",
           "MoblyAospPackageTest",
+          "VegaTest",
           "XtsTradefedTest");
 
   /** Minimal job remaining time needed for triggering the extra retry for infra errors. */
