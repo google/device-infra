@@ -19,12 +19,15 @@ package com.google.devtools.mobileharness.platform.android.sdktool.adb;
 /**
  * Types of dumpsys.
  *
+ * @see <a href="https://developer.android.com/studio/command-line/dumpsys">dumpsys</a>
  * @see <a href="http://wrightrocket.blogspot.com/2010/12/useful-commands-in-adb-shell.html">Using
  *     dumpsys commands in the Android adb shell</a>
  */
 public enum DumpSysType {
   ACCOUNT("account"), // Account information
   ACTIVITY("activity"), // Activity information
+  ALL("all"), // Use it to get a diagnostic output for all system services as command "adb shell
+  // dumpsys".
   BATTERY("battery"), // Battery information
   BATTERYSTATS("batterystats"), // Batterystats information
   CAMERA("media.camera"), // Camera information
@@ -32,16 +35,17 @@ public enum DumpSysType {
   CPUINFO("cpuinfo"), // Processor usage
   DISPLAY("display"), // Information of the keyboards, windows and their z order
   GFXINFO("gfxinfo"), // GPU rendering information
+  INPUT(
+      "input"), // The state of the system’s input devices, such as keyboards and touchscreens, and
+  // processing of input events. See https://source.android.com/devices/input/diagnostics.html.
   MEMINFO("meminfo"), // Memory usage
-  NONE(""), // Use it to for all types as command "adb shell dumpsys".
+  NONE(""), // Alias for ALL.
   PACKAGE("package"), // Package info of applications
-  PROCSTATS("procstats"), // statistics of app's runtime, PSS and USS
   POWER("power"), // Power manager information
+  PROCSTATS("procstats"), // statistics of app's runtime, PSS and USS
   WIFI("wifi"), // Available access points and current connection
   WIFISCANNER("wifiscanner"), // Scanned wifi information
-  WINDOW("window"), // Display information
-  INPUT("input"); // The state of the system’s input devices, such as keyboards and touchscreens,
-  // and processing of input events. See https://source.android.com/devices/input/diagnostics.html
+  WINDOW("window"); // Display information
 
   private final String dumpSysTypeValue;
 
