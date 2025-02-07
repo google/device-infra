@@ -41,6 +41,11 @@ public class CaptureLogs extends FinishWithFailureTestWatcher {
   private final ByteArrayOutputStream logOutputStream = new ByteArrayOutputStream();
   private Handler logHandler;
 
+  /** Equivalent to {@linkplain #CaptureLogs(String, boolean) CaptureLogs("", true)}. */
+  public CaptureLogs() {
+    this(/* loggerName= */ "", /* printFailedLogs= */ true);
+  }
+
   /**
    * The constructor.
    *
@@ -74,6 +79,6 @@ public class CaptureLogs extends FinishWithFailureTestWatcher {
         printFailedLogs ? testFailure : null,
         () ->
             ImmutableMap.of(
-                String.format("logs from logger\"%s\"", capturedLogger.getName()), getLogs()));
+                String.format("logs from logger \"%s\"", capturedLogger.getName()), getLogs()));
   }
 }
