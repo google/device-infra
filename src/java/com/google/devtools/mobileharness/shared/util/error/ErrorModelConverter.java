@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.shared.util.error;
 
 import static com.google.common.base.Strings.nullToEmpty;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Arrays.stream;
 
 import com.google.common.base.Strings;
@@ -167,12 +168,12 @@ public class ErrorModelConverter {
                                     .setFileName(mhStackTraceElement.getFileName())
                                     .setLineNumber(mhStackTraceElement.getLineNumber())
                                     .build())
-                        .collect(Collectors.toList())))
+                        .collect(toImmutableList())))
         .build();
   }
 
   /**
-   * Coverts the ExceptionDetail proto from the devtools/common/metrics/stability version to the MH
+   * Converts the ExceptionDetail proto from the devtools/common/metrics/stability version to the MH
    * version.
    *
    * <p>Note this conversion will drop the error namespace info.
@@ -285,15 +286,6 @@ public class ErrorModelConverter {
     if (throwable instanceof MobileHarnessException) {
       MobileHarnessException mhException = (MobileHarnessException) throwable;
       errorId = mhException.getErrorId();
-    } else if (throwable
-        instanceof com.google.wireless.qa.mobileharness.shared.MobileHarnessException) {
-      com.google.wireless.qa.mobileharness.shared.MobileHarnessException mhOldException =
-          (com.google.wireless.qa.mobileharness.shared.MobileHarnessException) throwable;
-      errorId =
-          UnknownErrorId.of(
-              mhOldException.getErrorCode(),
-              mhOldException.getErrorName(),
-              mhOldException.getErrorType());
     } else if (errorId == null) {
       errorId = BasicErrorId.NON_MH_EXCEPTION;
     }

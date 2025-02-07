@@ -93,10 +93,7 @@ public final class ActivityManagerTest {
   }
 
   @Test
-  public void getLocale_ok()
-      throws MobileHarnessException,
-          InterruptedException,
-          com.google.wireless.qa.mobileharness.shared.MobileHarnessException {
+  public void getLocale_ok() throws MobileHarnessException, InterruptedException {
     String expectOutput =
         "config:"
             + " en-rUS-ldltr-sw411dp-w411dp-h659dp-normal-notlong-notround-lowdr-nowidecg-port-notnight-420dpi-finger-keysexposed-nokeys-navhidden-nonav-1794x1080-v28";
@@ -106,10 +103,7 @@ public final class ActivityManagerTest {
   }
 
   @Test
-  public void getLocale_emptyException()
-      throws MobileHarnessException,
-          InterruptedException,
-          com.google.wireless.qa.mobileharness.shared.MobileHarnessException {
+  public void getLocale_emptyException() throws MobileHarnessException, InterruptedException {
     String emptyOutput = "";
     when(adb.runShellWithRetry(eq(SERIAL), eq(ADB_SHELL_GET_CONFIG), any(Duration.class)))
         .thenReturn(emptyOutput);
@@ -118,10 +112,7 @@ public final class ActivityManagerTest {
   }
 
   @Test
-  public void getLocale_missingException()
-      throws MobileHarnessException,
-          InterruptedException,
-          com.google.wireless.qa.mobileharness.shared.MobileHarnessException {
+  public void getLocale_missingException() throws MobileHarnessException, InterruptedException {
     String missingOutput = "config: ";
     when(adb.runShellWithRetry(eq(SERIAL), eq(ADB_SHELL_GET_CONFIG), any(Duration.class)))
         .thenReturn(missingOutput);
@@ -130,10 +121,7 @@ public final class ActivityManagerTest {
   }
 
   @Test
-  public void getLocale_invalidException()
-      throws MobileHarnessException,
-          InterruptedException,
-          com.google.wireless.qa.mobileharness.shared.MobileHarnessException {
+  public void getLocale_invalidException() throws MobileHarnessException, InterruptedException {
     String invalidOutput = "config: ss";
     when(adb.runShellWithRetry(eq(SERIAL), eq(ADB_SHELL_GET_CONFIG), any(Duration.class)))
         .thenReturn(invalidOutput);
@@ -142,10 +130,7 @@ public final class ActivityManagerTest {
   }
 
   @Test
-  public void getLocale_notFoundException()
-      throws MobileHarnessException,
-          InterruptedException,
-          com.google.wireless.qa.mobileharness.shared.MobileHarnessException {
+  public void getLocale_notFoundException() throws MobileHarnessException, InterruptedException {
     String notFoundOutput = "not found";
     when(adb.runShellWithRetry(eq(SERIAL), eq(ADB_SHELL_GET_CONFIG), any(Duration.class)))
         .thenReturn(notFoundOutput);

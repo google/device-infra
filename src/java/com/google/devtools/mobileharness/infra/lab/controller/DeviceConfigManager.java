@@ -206,8 +206,7 @@ public abstract class DeviceConfigManager implements Runnable {
    *     failed while updating remote testbed directory
    */
   @VisibleForTesting
-  void refreshLabConfig()
-      throws com.google.wireless.qa.mobileharness.shared.MobileHarnessException {
+  void refreshLabConfig() throws MobileHarnessException {
     Optional<LabConfig> remoteLabConfig = loadLabConfig(hostName);
     LabConfig localLabConfig = apiConfig.getLabConfigToStore();
     // If lab config exists in device config server, update local ApiConfig with it;

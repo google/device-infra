@@ -168,6 +168,7 @@ public final class RetryGeneratorTest {
           .addModuleInfo(MODULE_5_V7A)
           .addIncludeFilter("armeabi-v7a Module5 TestClass3#Test1")
           .addIncludeFilter("armeabi-v7a Module5 TestClass1#Test1")
+          .addExcludeFilter("arm64-v8a Module1 TestClass1#Test3")
           .addExcludeFilter("armeabi-v7a Module5 TestClass4#Test1")
           .addExcludeFilter("armeabi-v7a FakeModule FakeTestClass#Test1")
           .build();

@@ -14,14 +14,15 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.infra.controller.device.proxy;
+package com.google.devtools.mobileharness.infra.client.api.performance;
 
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 
-import com.google.common.collect.ImmutableList;
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.eventbus.EventBus;
+import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.model.proto.Job.Retry;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
@@ -36,13 +37,10 @@ import com.google.devtools.mobileharness.shared.util.junit.rule.SetFlagsOss;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
-import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobSetting;
-import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
-import com.google.wireless.qa.mobileharness.shared.proto.Job.Timeout;
 import java.time.Duration;
 import javax.inject.Inject;
 import org.junit.Before;
@@ -52,13 +50,15 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
-public class ProxyModeIntegrationTest {
+public class ClientApiLatencyTest {
+
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   @Rule public final SetFlagsOss flags = new SetFlagsOss();
   @Rule public final CaptureLogs captureLogs = new CaptureLogs();
   @Rule public final PrintTestName printTestName = new PrintTestName();
 
-  @Bind @GlobalInternalEventBus private final EventBus globalInternalEventBus = new EventBus();
+  @Bind @GlobalInternalEventBus private final EventBus globalEventBus = new EventBus();
 
   @Bind
   private final ListeningExecutorService threadPool =
@@ -72,37 +72,22 @@ public class ProxyModeIntegrationTest {
         ImmutableMap.of(
             "detect_adb_device",
             "false",
-            "enable_proxy_mode",
-            "true",
-            "external_adb_initializer_template",
-            "true"));
+            "enable_device_config_manager",
+            "false",
+            "enable_emulator_detection",
+            "false",
+            "enable_fastboot_detector",
+            "false",
+            "enable_fastboot_in_android_real_device",
+            "false",
+            "no_op_device_num",
+            "1"));
 
     Guice.createInjector(new ClientApiModule(), BoundFieldModule.of(this)).injectMembers(this);
   }
 
   @Test
-  public void startJob() throws Exception {
-    JobInfo jobInfo = createJobInfo();
-
-    clientApi.startJob(jobInfo, new LocalMode(), ImmutableList.of());
-    clientApi.waitForJob(jobInfo.locator().getId());
-
-    TestInfo testInfo = jobInfo.tests().getOnly();
-    assertThat(jobInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
-    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
-    assertThat(testInfo.log().get(0)).contains("Sleep for 5 seconds");
-
-    assertThat(testInfo.properties().getAll())
-        .containsEntry("dimension_control_id", "fake-device-id");
-
-    assertWithMessage(
-            "Log of a passed MH job should not contain exception stack traces, which will"
-                + " confuse users when they debug a failed one")
-        .that(captureLogs.getLogs())
-        .doesNotContain("\tat ");
-  }
-
-  private static JobInfo createJobInfo() {
+  public void noOpTest_localMode() throws Exception {
     JobInfo jobInfo =
         JobInfo.newBuilder()
             .setLocator(new JobLocator("fake_job_name"))
@@ -110,14 +95,19 @@ public class ProxyModeIntegrationTest {
             .setSetting(
                 JobSetting.newBuilder()
                     .setRetry(Retry.newBuilder().setTestAttempts(1).build())
-                    .setTimeout(
-                        Timeout.newBuilder()
-                            .setStartTimeoutMs(Duration.ofSeconds(10L).toMillis())
-                            .build())
                     .build())
             .build();
-    jobInfo.subDeviceSpecs().getSubDevice(0).dimensions().add(Name.ID, "fake-device-id");
-    jobInfo.params().add("sleep_time_sec", Integer.toString(5));
-    return jobInfo;
+
+    logger.atInfo().log("Starting job");
+    Stopwatch stopwatch = Stopwatch.createStarted();
+    clientApi.startJob(jobInfo, new LocalMode());
+    clientApi.waitForJob(jobInfo.locator().getId());
+    Duration executionTime = stopwatch.elapsed();
+    logger.atInfo().log("Job ended, execution_time=%s", executionTime);
+
+    assertThat(jobInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
+    assertWithMessage("No-op job execution time")
+        .that(executionTime)
+        .isAtMost(Duration.ofSeconds(10L));
   }
 }
