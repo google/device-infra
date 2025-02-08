@@ -13,6 +13,7 @@ import (
 	"flag"
 	
 	log "github.com/golang/glog"
+	"github.com/bazelbuild/remote-apis-sdks/go/pkg/contextmd"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
 	"github.com/google/device-infra/src/devtools/rbe/casuploader/metrics"
 	"github.com/google/device-infra/src/devtools/rbe/casuploader/uploader"
@@ -20,7 +21,7 @@ import (
 )
 
 const (
-	version = "1.4"
+	version = "1.5"
 	// RBECASConcurrency is the default maximum number of concurrent upload and download operations for RBE clients.
 	RBECASConcurrency = 500
 )
@@ -106,6 +107,17 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	// Populate metadata to context for traffic classification.
+	metadata := &contextmd.Metadata{
+		ToolName:    "casuploader",
+		ToolVersion: version,
+	}
+	if ctxMd, err := contextmd.WithMetadata(ctx, metadata); err != nil {
+		log.Infof("Failed to add metadata to context: %v", err)
+	} else {
+		ctx = ctxMd
+	}
 
 	// Handle interruption and SIGTERM to cancel read operations, so that the FUSE directory can be unmounted safely.
 	go func() {

@@ -27,6 +27,7 @@ go_binary(
         "//src/devtools/rbe/casuploader/metrics",
         "//src/devtools/rbe/casuploader/uploader",
         "//src/devtools/rbe/rbeclient",
+        "@com_github_bazelbuild_remote_apis_sdks//go/pkg/contextmd",
         "@com_github_bazelbuild_remote_apis_sdks//go/pkg/digest",
         "@com_github_golang_glog//:glog",
     ],
