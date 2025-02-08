@@ -249,10 +249,7 @@ class RunCommandHandler {
                 .filter(Optional::isPresent)
                 .flatMap(ids -> stream(ids.get().split(",")))
                 .collect(toImmutableSet());
-        logger
-            .atInfo()
-            .with(IMPORTANCE, IMPORTANT)
-            .log("Push cts-v-interactive results to %s", serials);
+        logger.atInfo().with(IMPORTANCE, IMPORTANT).log("Push cts-v-host results to %s", serials);
         verifierResultHelper.broadcastResults(result, serials, xtsRootDir);
       }
     } finally {
