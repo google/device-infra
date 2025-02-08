@@ -129,8 +129,11 @@ public final class Dimension {
     /** Customized dimension, SSID for network simulation. */
     NETWORK_SIMULATION_USE_NETTROL,
     PING_GOOGLE_STABILITY,
+    /** The average ping time of the device. */
+    /** The max ping time of the device. */
     /** Device pool name. Values include: shared/shared_without_recovery/group_shared/dedicated. */
     POOL,
+    /** Whether the device is reachable from the host. */
     /** The release version of the device. */
     RELEASE_VERSION,
     /**
