@@ -23,7 +23,7 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.DeviceActionConfigObject;
-import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.DeviceActionConfigObject.Option;
+import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.Option;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestEnvironment;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestResource;
 import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
@@ -122,9 +122,16 @@ public class TradefedConfigGenerator {
     serializeTest(serializer, testEnvironment);
     serializeCmdOptions(serializer, testEnvironment);
     serializeLogSaver(serializer);
-
+    serializeTradefedOptions(serializer, testEnvironment);
     serializer.endTag(NULL_NS, CONFIGURATION_TAG);
     serializer.endDocument();
+  }
+
+  private static void serializeTradefedOptions(
+      XmlSerializer serializer, TestEnvironment testEnvironment) throws IOException {
+    for (Option option : testEnvironment.getTradefedOptionsList()) {
+      serializeOptionObject(serializer, option);
+    }
   }
 
   private static void serializedDevicePreparers(

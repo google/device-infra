@@ -21,7 +21,7 @@ import static com.google.common.truth.Truth.assertThat;
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.DeviceActionConfigObject;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.DeviceActionConfigObject.DeviceActionConfigObjectType;
-import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.DeviceActionConfigObject.Option;
+import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.Option;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestEnvironment;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestEnvironment.LogLevel;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestResource;
@@ -88,6 +88,8 @@ public class TradefedConfigGeneratorTest {
                 DeviceActionConfigObject.newBuilder()
                     .setType(DeviceActionConfigObjectType.RESULT_REPORTER)
                     .setClassName("class2"))
+            .addTradefedOptions(Option.newBuilder().setName("tf_option1").addValue("value1"))
+            .addTradefedOptions(Option.newBuilder().setName("tf_option2").addValue("value2"))
             // Unused fields
             .addOutputFilePatterns("pattern")
             .setOutputFileUploadUrl("url")
