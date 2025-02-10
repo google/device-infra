@@ -241,7 +241,7 @@ class RunCommandHandler {
           }
         }
       }
-      if (Flags.instance().enableCtsVerifierResultReporter.getNonNull() && result != null) {
+      if (command.getEnableCtsVerifierResultReporter() && result != null) {
         ImmutableSet<String> serials =
             allJobs.stream()
                 .flatMap(jobInfo -> jobInfo.tests().getAll().values().stream())

@@ -761,6 +761,9 @@ public final class RunCommand implements Callable<Integer> {
     if (maxSdk != null) {
       runCommand.setMaxSdkLevel(maxSdk);
     }
+    if (Flags.instance().enableCtsVerifierResultReporter.getNonNull()) {
+      runCommand.setEnableCtsVerifierResultReporter(true);
+    }
 
     ImmutableList<String> commandLineArgs = command.stream().skip(1L).collect(toImmutableList());
     runCommand.setInitialState(

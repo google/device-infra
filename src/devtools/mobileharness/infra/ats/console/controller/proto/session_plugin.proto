@@ -167,6 +167,10 @@ message RunCommand {
 
   // Optional. A multimap of module metadata exclude filters.
   repeated ModuleMetadataFilterEntry module_metadata_exclude_filter = 31;
+
+  // Optional. Whether to broadcast results to CTS verifier. Only applicable to
+  // CTS-V-HOST tests.
+  optional bool enable_cts_verifier_result_reporter = 32;
 }
 
 message RunCommandState {
