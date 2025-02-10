@@ -457,6 +457,7 @@ public abstract class AndroidDeviceDelegate {
     device.addSupportedDecorator("AndroidAtsDynamicConfigPusherDecorator");
     device.addSupportedDecorator("AndroidCleanAppsDecorator");
     device.addSupportedDecorator("AndroidDeviceFeaturesCheckDecorator");
+    device.addSupportedDecorator("AndroidDeviceInfoDecorator");
     // Advanced device settings. This decorator is only full tested on AndroidRealDevice. Some
     // settings may not be supported for emulators.
     device.addSupportedDecorator("AndroidDeviceSettingsDecorator");
