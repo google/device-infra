@@ -25,7 +25,6 @@ package(
 py_library(
     name = "grpc_error_util_lib",
     srcs = ["grpc_error_util.py"],
-    srcs_version = "PY3",
     tags = ["deviceinfra_disable_in_kokoro"],
     deps = [
         "//src/devtools/common/metrics/stability/model/proto:error_py_proto",
