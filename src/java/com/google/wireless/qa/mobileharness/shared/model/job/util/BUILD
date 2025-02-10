@@ -35,7 +35,6 @@ java_library(
         ":result_comparator",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/testrunner/plugin:exception",
-        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
     ],
 )

@@ -17,8 +17,8 @@
 package com.google.wireless.qa.mobileharness.shared.model.job.util;
 
 import com.google.devtools.mobileharness.api.model.error.ErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.testrunner.plugin.SkipTestException.DesiredTestResult;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.ResultCounter;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestStatus;
@@ -50,57 +50,33 @@ public final class ResultUtil {
 
   /** Gets test result with the given exception. */
   public static TestResult getResultByException(MobileHarnessException e) {
-    if (e instanceof com.google.devtools.mobileharness.api.model.error.MobileHarnessException) {
-      ErrorId errorId =
-          ((com.google.devtools.mobileharness.api.model.error.MobileHarnessException) e)
-              .getErrorId();
-      switch (errorId.type()) {
-        case CUSTOMER_ISSUE:
-          return TestResult.FAIL;
-        case INFRA_ISSUE:
-          return TestResult.INFRA_ERROR;
-        case DEPENDENCY_ISSUE:
-        case UNCLASSIFIED:
-        case UNDETERMINED:
-        case UNRECOGNIZED:
-          break;
-      }
-      return TestResult.ERROR;
-    }
-    switch (e.getErrorType()) {
-      case INFRA_ERROR:
-        return TestResult.INFRA_ERROR;
-      case USERS_FAILURE:
+    ErrorId errorId = e.getErrorId();
+    switch (errorId.type()) {
+      case CUSTOMER_ISSUE:
         return TestResult.FAIL;
-      case UNCLASSIFIED_ERROR:
+      case INFRA_ISSUE:
+        return TestResult.INFRA_ERROR;
+      case DEPENDENCY_ISSUE:
+      case UNCLASSIFIED:
+      case UNDETERMINED:
+      case UNRECOGNIZED:
+        break;
     }
     return TestResult.ERROR;
   }
 
   public static DesiredTestResult getDesiredTestResultByException(MobileHarnessException e) {
-    if (e instanceof com.google.devtools.mobileharness.api.model.error.MobileHarnessException) {
-      ErrorId errorId =
-          ((com.google.devtools.mobileharness.api.model.error.MobileHarnessException) e)
-              .getErrorId();
-      switch (errorId.type()) {
-        case CUSTOMER_ISSUE:
-          return DesiredTestResult.FAIL;
-        case INFRA_ISSUE:
-          return DesiredTestResult.ERROR;
-        case DEPENDENCY_ISSUE:
-        case UNCLASSIFIED:
-        case UNDETERMINED:
-        case UNRECOGNIZED:
-          break;
-      }
-      return DesiredTestResult.ERROR;
-    }
-    switch (e.getErrorType()) {
-      case INFRA_ERROR:
-        return DesiredTestResult.ERROR;
-      case USERS_FAILURE:
+    ErrorId errorId = e.getErrorId();
+    switch (errorId.type()) {
+      case CUSTOMER_ISSUE:
         return DesiredTestResult.FAIL;
-      case UNCLASSIFIED_ERROR:
+      case INFRA_ISSUE:
+        return DesiredTestResult.ERROR;
+      case DEPENDENCY_ISSUE:
+      case UNCLASSIFIED:
+      case UNDETERMINED:
+      case UNRECOGNIZED:
+        break;
     }
     return DesiredTestResult.ERROR;
   }
