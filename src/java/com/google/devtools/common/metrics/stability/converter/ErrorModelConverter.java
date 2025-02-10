@@ -30,6 +30,7 @@ import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.E
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.ExceptionSummary;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.FlattenedExceptionDetail;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.StackTrace;
+import com.google.devtools.common.metrics.stability.model.proto.NamespaceProto.Namespace;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -245,15 +246,16 @@ public class ErrorModelConverter {
   }
 
   /**
-   * Return whether the given error is INFRA_ISSUE, or any of its cause/suppressed errors is
-   * INFRA_ISSUE.
+   * Return whether the given error is INFRA_ISSUE in MH namespace, or any of its cause/suppressed
+   * errors is INFRA_ISSUE.
    */
-  public static boolean hasInfraIssue(ExceptionProto.ExceptionDetail detail) {
-    return detail.getSummary().getErrorId().getType() == ErrorType.INFRA_ISSUE
+  public static boolean hasMhInfraIssue(ExceptionProto.ExceptionDetail detail) {
+    return (detail.getSummary().getErrorId().getType() == ErrorType.INFRA_ISSUE
+            && detail.getSummary().getErrorId().getNamespace() == Namespace.MH)
         || Stream.concat(
                 detail.hasCause() ? Stream.of(detail.getCause()) : Stream.empty(),
                 detail.getSuppressedList().stream())
-            .anyMatch(ErrorModelConverter::hasInfraIssue);
+            .anyMatch(ErrorModelConverter::hasMhInfraIssue);
   }
 
   private ErrorModelConverter() {}

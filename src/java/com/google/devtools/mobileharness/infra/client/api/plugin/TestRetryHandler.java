@@ -25,6 +25,7 @@ import com.google.devtools.common.metrics.stability.converter.ErrorModelConverte
 import com.google.devtools.common.metrics.stability.model.proto.ErrorIdProto.ErrorId;
 import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.ExceptionDetail;
+import com.google.devtools.common.metrics.stability.model.proto.NamespaceProto.Namespace;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -235,9 +236,10 @@ public class TestRetryHandler {
                 .size() /* no auto retry for UTP/sandbox */) {
       // Have another retry for the INFRA_ISSUE even when the max attempt number is reached.
       if (testResult != TestResult.PASS && testResult != TestResult.SKIP && cause.isPresent()) {
-        if (criticalErrorId.getType() == ErrorType.INFRA_ISSUE) {
+        if (criticalErrorId.getType() == ErrorType.INFRA_ISSUE
+            && criticalErrorId.getNamespace().equals(Namespace.MH)) {
           retryReason = "EXTRA_RETRY_FOR_INFRA_ISSUE_AS_CRITICAL_ERROR";
-        } else if (ErrorModelConverter.hasInfraIssue(cause.get())) {
+        } else if (ErrorModelConverter.hasMhInfraIssue(cause.get())) {
           retryReason = "EXTRA_RETRY_FOR_INFRA_ISSUE_AS_CAUSE_OR_SUPPRESSED_ERROR";
         }
         if (retryReason != null) {
@@ -452,7 +454,13 @@ public class TestRetryHandler {
         && testResult != TestResult.PASS
         && testResult != TestResult.FAIL
         && !(testResult == TestResult.ERROR
-            && testInfo.resultWithCause().get().causeNonEmpty().getSummary().getErrorType()
+            && testInfo
+                    .resultWithCause()
+                    .get()
+                    .causeProtoNonEmpty()
+                    .getSummary()
+                    .getErrorId()
+                    .getType()
                 == ErrorType.CUSTOMER_ISSUE);
   }
 

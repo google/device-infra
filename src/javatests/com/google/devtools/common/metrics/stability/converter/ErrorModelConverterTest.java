@@ -443,9 +443,10 @@ public class ErrorModelConverterTest {
                     .setErrorId(
                         ErrorIdProto.ErrorId.newBuilder()
                             .setCode(1)
-                            .setType(ErrorTypeProto.ErrorType.INFRA_ISSUE)))
+                            .setType(ErrorTypeProto.ErrorType.INFRA_ISSUE)
+                            .setNamespace(Namespace.MH)))
             .build();
-    assertThat(ErrorModelConverter.hasInfraIssue(error)).isTrue();
+    assertThat(ErrorModelConverter.hasMhInfraIssue(error)).isTrue();
 
     error =
         ExceptionProto.ExceptionDetail.newBuilder()
@@ -472,7 +473,7 @@ public class ErrorModelConverterTest {
                                             .setCode(3)
                                             .setType(ErrorTypeProto.ErrorType.UNDETERMINED)))))
             .build();
-    assertThat(ErrorModelConverter.hasInfraIssue(error)).isFalse();
+    assertThat(ErrorModelConverter.hasMhInfraIssue(error)).isFalse();
 
     error =
         error.toBuilder()
@@ -499,7 +500,8 @@ public class ErrorModelConverterTest {
                                             .setErrorId(
                                                 ErrorIdProto.ErrorId.newBuilder()
                                                     .setCode(6)
-                                                    .setType(ErrorTypeProto.ErrorType.INFRA_ISSUE)))
+                                                    .setType(ErrorTypeProto.ErrorType.INFRA_ISSUE)
+                                                    .setNamespace(Namespace.MH)))
                                     .setCause(
                                         ExceptionProto.ExceptionDetail.newBuilder()
                                             .setSummary(
@@ -511,6 +513,6 @@ public class ErrorModelConverterTest {
                                                                 ErrorTypeProto.ErrorType
                                                                     .UNDETERMINED)))))))
             .build();
-    assertThat(ErrorModelConverter.hasInfraIssue(error)).isTrue();
+    assertThat(ErrorModelConverter.hasMhInfraIssue(error)).isTrue();
   }
 }
