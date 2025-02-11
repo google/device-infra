@@ -1,0 +1,48 @@
+# RBE CAS speicific definitions.
+# Spinned off from third_party/deviceinfra/copy.bara.sky for ownership purposes.
+
+CAS_BUILD_FILES = [
+    "BUILD",
+    "**/BUILD",
+    "**.bzl",
+]
+
+def cas_build_file_replace(before_target, after_target):
+    """
+    Replace package targets (such as in dependencies) with a given prefix with a new prefix.
+
+    Args:
+      before_target: a prefix build target path to replace, examples:
+              "//java/com/google/common/", "//third_party/absl"
+      after_target: a prefix path to replace <before> with, examples:
+              "@maven//:com_google_guava_guava", "//@com.google.absl"
+    Returns:
+      A transform that fixes instances of <before> with <after> in java_package
+      rules inside protos. This transform is not guaranteed to be reversible.
+  """
+    return core.transform(
+        transformations = [
+            core.replace(
+                before = "%s" % before_target,
+                after = "%s" % after_target,
+                paths = glob(CAS_BUILD_FILES),
+            ),
+        ],
+        ignore_noop = True,
+    )
+
+cas_blaze_to_bazel_transforms = [
+    # Go lib mappings
+    cas_build_file_replace("//third_party/fastcdc_go:fastcdc", "@com_github_jotfs_fastcdc_go//:fastcdc-go"),
+]
+
+cas_go_imports_map = {
+    # Replace some internal-only imports with their external equivalents.
+    "google3/third_party/bazel_remote_apis_sdks/go/pkg/client/client": "github.com/bazelbuild/remote-apis-sdks/go/pkg/client",
+    "google3/third_party/bazel_remote_apis_sdks/go/pkg/command/command": "github.com/bazelbuild/remote-apis-sdks/go/pkg/command",
+    "google3/third_party/bazel_remote_apis_sdks/go/pkg/contextmd/contextmd": "github.com/bazelbuild/remote-apis-sdks/go/pkg/contextmd",
+    "google3/third_party/bazel_remote_apis_sdks/go/pkg/digest/digest": "github.com/bazelbuild/remote-apis-sdks/go/pkg/digest",
+    "google3/third_party/bazel_remote_apis_sdks/go/pkg/filemetadata/filemetadata": "github.com/bazelbuild/remote-apis-sdks/go/pkg/filemetadata",
+    "google3/third_party/bazel_remote_apis_sdks/go/pkg/uploadinfo/uploadinfo": "github.com/bazelbuild/remote-apis-sdks/go/pkg/uploadinfo",
+    "google3/third_party/fastcdc_go/fastcdc": "github.com/jotfs/fastcdc-go",
+}
