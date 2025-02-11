@@ -772,5 +772,15 @@ public interface PropertyName {
       /** Whether to omit the test info from Sponge. */
       OMIT_FROM_SPONGE,
     }
+
+    /** AndroidGmsCoreInstallerPlugin property name constants. */
+    public enum AndroidGmsCoreInstallerPlugin implements PropertyName {
+      /** The path from where to download the GMS APK. */
+      GMS_APK_PATH,
+      /** The time it took to fetch the GMS APK, in milliseconds. */
+      GMS_APK_FETCH_MS,
+      /** Whether the GMS APK was downloaded from L-Space. */
+      GMS_DOWNLOADED_FROM_LSPACE,
+    }
   }
 }
