@@ -45,6 +45,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_ats_dynamic_config_pusher_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_clean_apps_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_device_features_check_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_device_info_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_device_settings_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_install_apps_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_mainline_modules_check_decorator",

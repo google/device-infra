@@ -155,6 +155,19 @@ java_proto_library(
 )
 
 proto_library(
+    name = "android_device_info_decorator_spec_proto",
+    srcs = ["decorator/android_device_info_decorator_spec.proto"],
+    deps = [
+        ":base_spec_proto",
+    ],
+)
+
+java_proto_library(
+    name = "android_device_info_decorator_spec_java_proto",
+    deps = [":android_device_info_decorator_spec_proto"],
+)
+
+proto_library(
     name = "android_device_setting_decorator_spec_proto",
     srcs = ["decorator/android_device_settings_decorator_spec.proto"],
     deps = [

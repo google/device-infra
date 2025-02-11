@@ -70,6 +70,7 @@ public final class DriverDecoratorSpecMapper {
     builder.put(
         "AndroidAtsDynamicConfigPusherDecorator", "AndroidAtsDynamicConfigPusherDecoratorSpec");
     builder.put("AndroidDeviceFeaturesCheckDecorator", "AndroidDeviceFeaturesCheckDecoratorSpec");
+    builder.put("AndroidDeviceInfoDecorator", "AndroidDeviceInfoDecoratorSpec");
     builder.put("AndroidDeviceSettingsDecorator", "AndroidDeviceSettingsDecoratorSpec");
     builder.put("AndroidFilePullerDecorator", "AndroidFilePullerDecoratorSpec");
     builder.put("AndroidInstallAppsDecorator", "InstallApkStepSpec");
