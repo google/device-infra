@@ -28,11 +28,9 @@ java_library(
         "//java/com/google/devtools/mobileharness/infra/controller/device:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:__subpackages__",
-        "//src/java/com/google/devtools/mobileharness/platform/android/delegator:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/api/devicemanager/detector:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/controller/device/faileddevice:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/platform/android/delegator:__subpackages__",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
