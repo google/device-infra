@@ -1066,6 +1066,16 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enforceSafeDischarge = enforceSafeDischargeDefault;
 
+  private static final Flag<String> externalResJarDefault = Flag.value("");
+
+  @com.beust.jcommander.Parameter(
+      names = "--external_res_jar",
+      description =
+          "Absolute path to the jar file of external resources. This jar contains the"
+              + "resources that are not in binary jar.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> externalResJar = externalResJarDefault;
+
   private static final Flag<String> adbKeyPathsFromUserDefault = Flag.value("");
 
   @com.beust.jcommander.Parameter(

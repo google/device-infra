@@ -31,7 +31,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.file.Path;
 import java.util.Map;
+import java.util.Optional;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
+import javax.annotation.Nullable;
 
 /** Utility class for handling resource files which are packed into jar package. */
 public class ResUtil {
@@ -47,6 +52,10 @@ public class ResUtil {
   private static final SystemUtil systemUtil = new SystemUtil();
 
   private final String resDir;
+  // Use external directory to avoid conflict with the internal resource directory.
+  // One may use resources in extResDir to override the internal resources in resDir.
+  private final String extResDir;
+  @Nullable private final String externalResJar;
 
   /** Holder of {@link #RES_DIR} for lazy initialization. */
   private static class ResDirHolder {
@@ -89,7 +98,17 @@ public class ResUtil {
   @VisibleForTesting
   ResUtil(String resDir, LocalFileUtil fileUtil) {
     this.resDir = resDir;
+    this.extResDir = PathUtil.join(resDir, "external");
     this.fileUtil = fileUtil;
+    String jarPath = Flags.instance().externalResJar.getNonNull();
+    if (!Strings.isNullOrEmpty(jarPath)
+        && fileUtil.isFileExist(jarPath)
+        && jarPath.endsWith(".jar")) {
+      this.externalResJar = jarPath;
+      logger.atInfo().log("External res jar path: %s", jarPath);
+    } else {
+      this.externalResJar = null;
+    }
   }
 
   /**
@@ -172,6 +191,71 @@ public class ResUtil {
       }
       return filePath;
     }
+  }
+
+  /**
+   * Gets the resource file which is packed into the external jar package, copies to local tmp
+   * directory if it is never copied before, and return the file path.
+   *
+   * @param resPathInJar path of the resource file in the jar package, it can be the absolute path
+   *     of the resource if it begins with '/', or it is the relative path in the jar package.
+   * @return path of the local copy of the resource file.
+   */
+  @CanIgnoreReturnValue
+  public Optional<String> getExternalResourceFile(String resPathInJar) {
+    if (externalResJar == null) {
+      return Optional.empty();
+    }
+    String key = externalResJar + "_" + resPathInJar;
+    synchronized (resFiles) {
+      String filePath = resFiles.get(key);
+      if (filePath != null) {
+        try {
+          fileUtil.checkFile(filePath);
+          logger.atInfo().log("Resource %s is already copied to %s", key, filePath);
+          return Optional.of(filePath);
+        } catch (MobileHarnessException e) {
+          // File does not exist, needs to recreate the file.
+          resFiles.put(key, null);
+        }
+      }
+      Optional<String> extractedFilePath = extractResourceFile(externalResJar, resPathInJar);
+      extractedFilePath.ifPresent(f -> resFiles.put(key, f));
+      return extractedFilePath;
+    }
+  }
+
+  private Optional<String> extractResourceFile(String jarPath, String resPathInJar) {
+    String relativePath = getRelativePath(resPathInJar);
+    try (JarFile jarFile = new JarFile(jarPath)) {
+      JarEntry jarEntry = jarFile.getJarEntry(relativePath);
+      if (jarEntry == null) {
+        return Optional.empty();
+      }
+      String filePath = PathUtil.join(extResDir, relativePath);
+      try (InputStream inputStream = jarFile.getInputStream(jarEntry)) {
+        fileUtil.prepareDir(fileUtil.getParentDirPath(filePath), LocalFileUtil.FULL_ACCESS);
+        fileUtil.writeToFile(filePath, inputStream);
+        fileUtil.grantFileOrDirFullAccess(extResDir);
+        fileUtil.grantFileOrDirFullAccess(filePath);
+        return Optional.of(filePath);
+      } catch (MobileHarnessException e) {
+        logger.atWarning().withCause(e).log(
+            "Failed to copy resource %s to %s", resPathInJar, filePath);
+        return Optional.empty();
+      }
+    } catch (IOException e) {
+      logger.atWarning().withCause(e).log("Failed to extract resource from jar %s", jarPath);
+      return Optional.empty();
+    }
+  }
+
+  private static String getRelativePath(String path) {
+    Path relativePath = Path.of(path);
+    if (relativePath.isAbsolute()) {
+      return Path.of("/").relativize(relativePath).toString();
+    }
+    return relativePath.toString();
   }
 
   /**

@@ -610,8 +610,7 @@ public class AndroidInstrumentationUtil {
                 .files()
                 .get(AndroidInstrumentationDriverSpec.TAG_BASIC_SERVICES_APK)
                 .isEmpty()
-            ? resUtil.getResourceFile(
-                this.getClass(), AndroidInstrumentationDriverSpec.BASIC_SERVICE_APK_PATH)
+            ? getResourceFile(AndroidInstrumentationDriverSpec.BASIC_SERVICE_APK_PATH)
             : testInfo
                 .jobInfo()
                 .files()
@@ -623,8 +622,7 @@ public class AndroidInstrumentationUtil {
                 .files()
                 .get(AndroidInstrumentationDriverSpec.TAG_TEST_SERVICES_APK)
                 .isEmpty()
-            ? resUtil.getResourceFile(
-                this.getClass(), AndroidInstrumentationDriverSpec.TEST_SERVICES_APK_PATH)
+            ? getResourceFile(AndroidInstrumentationDriverSpec.TEST_SERVICES_APK_PATH)
             : testInfo
                 .jobInfo()
                 .files()
@@ -1449,5 +1447,13 @@ public class AndroidInstrumentationUtil {
               logger);
     }
     return false;
+  }
+
+  private String getResourceFile(String resPath) throws MobileHarnessException {
+    Optional<String> externalResFile = resUtil.getExternalResourceFile(resPath);
+    if (externalResFile.isPresent()) {
+      return externalResFile.get();
+    }
+    return resUtil.getResourceFile(this.getClass(), resPath);
   }
 }
