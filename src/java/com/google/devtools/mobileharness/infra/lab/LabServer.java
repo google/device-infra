@@ -85,11 +85,11 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessLogger;
 import com.google.wireless.qa.mobileharness.shared.api.device.BaseDevice;
+import com.google.wireless.qa.mobileharness.shared.api.host.HostUtil;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Value;
 import com.google.wireless.qa.mobileharness.shared.constant.DirCommon;
 import com.google.wireless.qa.mobileharness.shared.constant.ExitCode;
-import com.google.wireless.qa.mobileharness.shared.util.DeviceUtil;
 import com.google.wireless.qa.mobileharness.shared.util.NetUtil;
 import io.grpc.BindableService;
 import io.grpc.netty.NettyServerBuilder;
@@ -418,14 +418,6 @@ public class LabServer {
 
     HostProperties.Builder hostProperties = HostProperties.newBuilder();
 
-    // Required dimensions
-    // Adds "pool:shared" to lab required dimensions for m&m labs.
-    if (DeviceUtil.inSharedLab()) {
-      LabDimensionManager.getInstance()
-          .getRequiredLocalDimensions()
-          .add(Name.POOL, Value.POOL_SHARED);
-    }
-
     // Supported dimensions
     if (systemUtil.isOnLinux()) {
       // By default, all newly upgraded Linux labs will support container-mode tests.
@@ -509,12 +501,12 @@ public class LabServer {
             .setValue(Ascii.toLowerCase(locationType))
             .build());
 
-    addExtraHostProperties(hostProperties);
+    addExtraHostProperties(hostProperties, hostUtil);
 
     return hostProperties.build();
   }
 
-  private void addExtraHostProperties(HostProperties.Builder hostProperties)
+  private void addExtraHostProperties(HostProperties.Builder hostProperties, HostUtil hostUtil)
       throws InterruptedException {
     // Java version
     hostProperties.addHostProperty(
