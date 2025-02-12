@@ -1649,7 +1649,7 @@ public abstract class AndroidRealDeviceDelegate {
       argsBuilder.setWifiPsk(pwd);
     }
     if (!connectivityUtil.connectToWifi(argsBuilder.build(), /* log= */ null)) {
-      logger.atWarning().log("Failed to connect device %s to SSID '%S'", serial, ssid);
+      logger.atWarning().log("Failed to connect device %s to SSID '%s'", serial, ssid);
     }
   }
 
