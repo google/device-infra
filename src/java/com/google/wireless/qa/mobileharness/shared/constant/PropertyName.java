@@ -772,5 +772,13 @@ public interface PropertyName {
       /** Whether to omit the test info from Sponge. */
       OMIT_FROM_SPONGE,
     }
+
+    /** AndroidGmsCoreFetcherPlugin property name constants. */
+    public enum AndroidGmsCoreFetcherPlugin implements PropertyName {
+      /** The path from where to download the GMS APK. */
+      GMS_APK_PATH,
+      /** The time it took to fetch the GMS APK, in milliseconds. */
+      GMS_APK_FETCH_MS,
+    }
   }
 }
