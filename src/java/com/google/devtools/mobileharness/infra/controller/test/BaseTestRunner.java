@@ -595,7 +595,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
     // 1) MossUploader.
     // Event handlers in API_PLUGIN:
     // 1) Inherit the event handlers of the API_PLUGIN bus from JobRunner.
-    // 2) AndroidGmsCoreInstallerPlugin on Client side.
+    // 2) AndroidGmsCoreFetcherPlugin on Client side.
     // Event handlers in JAR_PLUGIN:
     // 1) Copy the event handlers of the JAR_PLUGIN bus from JobRunner on Client side.
     // 2) Lab plugins from "lab_plugin_jar" on Lab side.
