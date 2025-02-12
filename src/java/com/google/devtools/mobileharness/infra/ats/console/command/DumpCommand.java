@@ -19,6 +19,8 @@ package com.google.devtools.mobileharness.infra.ats.console.command;
 import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
 import static com.google.devtools.mobileharness.shared.util.error.MoreThrowables.shortDebugString;
 
+import com.google.common.base.Ascii;
+import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer;
@@ -35,11 +37,14 @@ import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleU
 import com.google.devtools.mobileharness.infra.ats.console.util.log.LogDumper;
 import com.google.devtools.mobileharness.infra.ats.console.util.plan.PlanHelper;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.OlcServerDirs;
+import com.google.devtools.mobileharness.shared.util.command.CommandException;
+import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.wireless.qa.mobileharness.shared.constant.DirCommon;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 import javax.inject.Inject;
@@ -64,6 +69,7 @@ import picocli.CommandLine.Spec;
 class DumpCommand implements Callable<Integer> {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+  private static final String TRADEFED_CLASS_NAME = "CompatibilityConsole";
 
   @Spec private CommandSpec spec;
 
@@ -78,6 +84,7 @@ class DumpCommand implements Callable<Integer> {
   private final AtsSessionStub atsSessionStub;
   private final LocalFileUtil localFileUtil;
   private final PlanHelper planHelper;
+  private final CommandExecutor cmdExecutor;
 
   @Inject
   DumpCommand(
@@ -85,12 +92,14 @@ class DumpCommand implements Callable<Integer> {
       ServerPreparer serverPreparer,
       AtsSessionStub atsSessionStub,
       LocalFileUtil localFileUtil,
-      PlanHelper planHelper) {
+      PlanHelper planHelper,
+      CommandExecutor cmdExecutor) {
     this.consoleUtil = consoleUtil;
     this.serverPreparer = serverPreparer;
     this.atsSessionStub = atsSessionStub;
     this.localFileUtil = localFileUtil;
     this.planHelper = planHelper;
+    this.cmdExecutor = cmdExecutor;
   }
 
   @Override
@@ -175,9 +184,28 @@ class DumpCommand implements Callable<Integer> {
   @Command(
       name = "stack",
       aliases = {"s"},
-      description = "Dump the stack traces of all threads")
-  public int stack() throws MobileHarnessException, InterruptedException {
-    return runDumpCommandSessionAndPrint(DUMP_STACK_TRACE_SESSION_NAME, DUMP_STACK_TRACE_COMMAND);
+      description = "Dump the stack traces of a Java process")
+  public int stack(
+      @Parameters(
+              index = "0",
+              paramLabel = "<process>",
+              defaultValue = "OLC",
+              description =
+                  "Process to dump stack traces for: [${COMPLETION-CANDIDATES}]. Default value:"
+                      + " ${DEFAULT-VALUE}.",
+              completionCandidates = ProcessCandidatesToDumpStackTrace.class)
+          String processType)
+      throws MobileHarnessException, InterruptedException {
+    switch (Ascii.toLowerCase(processType)) {
+      case "olc":
+        return runDumpCommandSessionAndPrint(
+            DUMP_STACK_TRACE_SESSION_NAME, DUMP_STACK_TRACE_COMMAND);
+      case "tradefed":
+        return dumpTradefedStackTrace();
+      default:
+        throw new ParameterException(
+            spec.commandLine(), "Unsupported process type: " + processType);
+    }
   }
 
   @Command(
@@ -234,6 +262,7 @@ class DumpCommand implements Callable<Integer> {
     }
   }
 
+  /** Runs an OLC server dump command session (to dump OLC server stack traces, uptime, etc.). */
   private int runDumpCommandSessionAndPrint(
       String sessionName, SessionPluginProto.DumpCommand dumpCommand)
       throws MobileHarnessException, InterruptedException {
@@ -247,5 +276,37 @@ class DumpCommand implements Callable<Integer> {
     serverPreparer.prepareOlcServer();
     return atsSessionStub.runShortSession(
         sessionName, AtsSessionPluginConfig.newBuilder().setDumpCommand(dumpCommand).build());
+  }
+
+  private int dumpTradefedStackTrace() throws InterruptedException {
+    try {
+      String tradefedPid =
+          cmdExecutor.run(
+              com.google.devtools.mobileharness.shared.util.command.Command.of(
+                  "/bin/sh",
+                  "-c",
+                  String.format("jps | grep %s | awk '{print $1}'", TRADEFED_CLASS_NAME)));
+
+      if (tradefedPid.isEmpty()) {
+        consoleUtil.printlnStdout("No Tradefed process found.");
+        return ExitCode.SOFTWARE;
+      }
+
+      String tradefedStackTrace =
+          cmdExecutor.run(
+              com.google.devtools.mobileharness.shared.util.command.Command.of(
+                  "/bin/sh", "-c", String.format("jstack %s", tradefedPid)));
+      consoleUtil.printlnStdout(tradefedStackTrace);
+      return ExitCode.OK;
+    } catch (CommandException | RuntimeException | Error e) {
+      consoleUtil.printlnStdout("Failed to dump Tradefed stack trace: " + e.getMessage());
+      return ExitCode.SOFTWARE;
+    }
+  }
+
+  private static class ProcessCandidatesToDumpStackTrace extends ArrayList<String> {
+    ProcessCandidatesToDumpStackTrace() {
+      super(ImmutableList.of("OLC", "Tradefed"));
+    }
   }
 }
