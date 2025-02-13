@@ -48,6 +48,10 @@ public enum AndroidProperty {
   BUILD_TYPE("ro.build.type"),
   CHARACTERISTICS("ro.build.characteristics"),
   CODENAME("ro.build.version.codename"),
+  @DoNotAddToDimension
+  DALVIK_HEAP_GROWTH_LIMIT("dalvik.vm.heapgrowthlimit"),
+  @DoNotAddToDimension
+  DALVIK_HEAP_SIZE("dalvik.vm.heapsize"),
   DEVICE("ro.product.vendor.device", "ro.vendor.product.device", "ro.product.device"),
   DEVKEY_ALLOW("ro.boot.devkey-allow"),
   @DoNotAddToDimension

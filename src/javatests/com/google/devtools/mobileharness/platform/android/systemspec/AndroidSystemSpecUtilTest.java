@@ -598,6 +598,21 @@ public class AndroidSystemSpecUtilTest {
   }
 
   @Test
+  public void getMemoryClassInMb_validValue_returnsValueInMb() throws Exception {
+    when(adbUtil.getProperty(SERIAL, AndroidProperty.DALVIK_HEAP_GROWTH_LIMIT)).thenReturn("32m");
+
+    assertThat(systemSpecUtil.getMemoryClassInMb(SERIAL)).isEqualTo(32);
+  }
+
+  @Test
+  public void getMemoryClassInMb_invalidValue_returnsZero() throws Exception {
+    when(adbUtil.getProperty(SERIAL, AndroidProperty.DALVIK_HEAP_GROWTH_LIMIT)).thenReturn(null);
+    when(adbUtil.getProperty(SERIAL, AndroidProperty.DALVIK_HEAP_SIZE)).thenReturn("");
+
+    assertThat(systemSpecUtil.getMemoryClassInMb(SERIAL)).isEqualTo(0);
+  }
+
+  @Test
   public void isAndroidEmulator_serialStartsWithLocalhost_true() {
     assertThat(AndroidSystemSpecUtil.isAndroidEmulator("localhost:8091")).isTrue();
   }
