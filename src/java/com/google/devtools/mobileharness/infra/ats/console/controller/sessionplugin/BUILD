@@ -170,9 +170,11 @@ java_library(
     srcs = ["RunCommandHandler.java"],
     visibility = ["//src/javatests/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__"],
     deps = [
+        "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/devtools/mobileharness/infra/ats/console/controller/proto:session_plugin_java_proto",
         "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_handler_helper",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_handler_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_info",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_result_handler_util",

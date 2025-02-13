@@ -30,6 +30,8 @@ import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
+import com.google.devtools.mobileharness.infra.ats.common.SessionHandlerHelper;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.SessionResultHandlerUtil;
@@ -40,6 +42,8 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.proto.Sess
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.DeviceType;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommand;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommandState;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Reason;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.console.util.result.ResultListerHelper;
 import com.google.devtools.mobileharness.infra.ats.console.util.verifier.VerifierResultHelper;
@@ -242,6 +246,31 @@ class RunCommandHandler {
         }
       }
       if (command.getEnableCtsVerifierResultReporter() && result != null) {
+        ImmutableSet<Module> skippedModules =
+            allJobs.stream()
+                .filter(
+                    jobInfo ->
+                        jobInfo.resultWithCause().get().type() == TestResult.SKIP
+                            && jobInfo.properties().has(SessionHandlerHelper.XTS_MODULE_NAME_PROP))
+                .map(
+                    jobInfo -> {
+                      // Mark skipped modules done when broadcasting results to update the status of
+                      // CTS Verifier APP.
+                      Module.Builder builder =
+                          Module.newBuilder()
+                              .setName(
+                                  jobInfo
+                                      .properties()
+                                      .get(SessionHandlerHelper.XTS_MODULE_NAME_PROP))
+                              .setDone(true);
+                      jobInfo.tests().getAll().values().stream()
+                          .findFirst()
+                          .flatMap(testInfo -> testInfo.resultWithCause().get().causeException())
+                          .ifPresent(
+                              e -> builder.setReason(Reason.newBuilder().setMsg(e.getMessage())));
+                      return builder.build();
+                    })
+                .collect(toImmutableSet());
         ImmutableSet<String> serials =
             allJobs.stream()
                 .flatMap(jobInfo -> jobInfo.tests().getAll().values().stream())
@@ -250,7 +279,8 @@ class RunCommandHandler {
                 .flatMap(ids -> stream(ids.get().split(",")))
                 .collect(toImmutableSet());
         logger.atInfo().with(IMPORTANCE, IMPORTANT).log("Push cts-v-host results to %s", serials);
-        verifierResultHelper.broadcastResults(result, serials, xtsRootDir);
+        verifierResultHelper.broadcastResults(
+            result.toBuilder().addAllModuleInfo(skippedModules).build(), serials, xtsRootDir);
       }
     } finally {
       sessionResultHandlerUtil.cleanUpJobGenDirs(allJobs);
