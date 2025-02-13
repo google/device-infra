@@ -230,7 +230,8 @@ public class LabServer {
 
       logger.atInfo().log("Lab server %s starts.", Version.LAB_VERSION);
       logger.atInfo().log(
-          "Lab server GitHub version: %s", VersionUtil.getGitHubVersion().orElse("n/a"));
+          "Lab server starts with hostname: %s, version: %s, Github version: %s",
+          hostName, Version.LAB_VERSION, VersionUtil.getGitHubVersion().orElse("n/a"));
 
       // Starts controllers. The file cleaner should be the first one to start.
       // TODO: Start fileCleaner.
