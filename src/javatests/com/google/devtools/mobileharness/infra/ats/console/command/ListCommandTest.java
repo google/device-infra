@@ -20,6 +20,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.matches;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verify;
@@ -36,6 +37,7 @@ import com.google.devtools.mobileharness.shared.util.junit.rule.SetFlagsOss;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.shared.util.port.PortProber;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
+import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.shared.util.truth.Correspondences;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -44,6 +46,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.stream.Stream;
 import javax.inject.Inject;
 import org.jline.reader.LineReader;
@@ -236,12 +239,18 @@ public class ListCommandTest {
   public void listCommands() throws Exception {
     when(lineReader.readLine(anyString()))
         .thenReturn("run cts")
-        .thenReturn("list commands")
+        .thenAnswer(
+            invocation -> {
+              // Sleep briefly to make sure the command starts executing.
+              Sleeper.defaultSleeper().sleep(Duration.ofMillis(100));
+              return "list commands";
+            })
         .thenReturn("exit");
 
     atsConsole.run();
 
-    verify(lineReader).printAbove("Command n/a: [0m:00] cts");
+    // It's either "Command 1" or "Command n/a" depending on slight timing differences.
+    verify(lineReader).printAbove(matches("Command (1|n/a): \\[0m:00\\] cts"));
   }
 
   @Test

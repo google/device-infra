@@ -47,6 +47,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/path",
         "//src/java/com/google/devtools/mobileharness/shared/util/port:portprober",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "//src/javatests/com/google/devtools/mobileharness/shared/util/junit/rule:set_flags_oss",
         "//src/javatests/com/google/devtools/mobileharness/shared/util/runfiles:runfiles_util",
