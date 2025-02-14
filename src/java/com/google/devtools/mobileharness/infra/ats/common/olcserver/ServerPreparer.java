@@ -101,8 +101,6 @@ public class ServerPreparer {
           + " also forcibly kill all running jobs submitted from this console and other consoles on"
           + " the same machine)";
 
-  private static final Version MIN_CLIENT_VERSION = new Version(0, 0, 0);
-
   private final String clientComponentName;
   private final String clientId;
   private final CommandExecutor commandExecutor;
@@ -216,11 +214,11 @@ public class ServerPreparer {
               checkAndPrintServerVersionWarning(existingServerVersion);
               Optional<String> processWorkingDir =
                   systemUtil.getProcessWorkingDirectory(existingServerVersion.getProcessId());
-              if (processWorkingDir.isPresent()) {
-                // Records the server information.
-                serverHeapDumpFileDetector.setOlcServerInfo(
-                    existingServerVersion.getProcessId(), processWorkingDir.get());
-              }
+              // Records the server information.
+              processWorkingDir.ifPresent(
+                  dir ->
+                      serverHeapDumpFileDetector.setOlcServerInfo(
+                          existingServerVersion.getProcessId(), dir));
             }
             return;
           }
@@ -481,13 +479,17 @@ public class ServerPreparer {
                 + " --ats_console_always_restart_olc_server=true");
         return true;
       }
-      String clientVersion = getVersionResponse.getClientVersion();
-      Version version = clientVersion.isEmpty() ? new Version(0, 0, 0) : new Version(clientVersion);
-      if (version.compareTo(MIN_CLIENT_VERSION) < 0) {
+      String olcLabVersionString = getVersionResponse.getLabVersion();
+      Version olcLabVersion =
+          olcLabVersionString.isEmpty() ? new Version(0, 0, 0) : new Version(olcLabVersionString);
+      String minOlcLabVersionString =
+          Flags.instance().atsConsoleOlcServerMinLabVersion.getNonNull();
+      Version minOlcLabVersion = new Version(minOlcLabVersionString);
+      if (olcLabVersion.compareTo(minOlcLabVersion) < 0) {
         logger.atInfo().log(
-            "Need to kill existing OLC server because the current OLC client version %s is older"
-                + " than the minimum version %s",
-            clientVersion, MIN_CLIENT_VERSION);
+            "Need to kill existing OLC server because the current OLC lab version [%s] is older"
+                + " than the minimum version [%s]",
+            olcLabVersionString, minOlcLabVersionString);
         return true;
       }
     }
