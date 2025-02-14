@@ -57,11 +57,11 @@ func (zu *ZipUploader) DoUpload() (digest.Digest, error) {
 	targetDir := createTmpDir()
 	defer func() {
 		if err := os.RemoveAll(targetDir); err != nil {
-			log.Errorf("Failed to remove tmp dir: %v\n", err)
+			log.ErrorContextf(zu.CommonConfig.ctx, "Failed to remove tmp dir: %v\n", err)
 		}
 	}()
 
-	log.Infof("Extracting %s to %s with digests\n", zu.zipPath, targetDir)
+	log.InfoContextf(zu.CommonConfig.ctx, "Extracting %s to %s with digests\n", zu.zipPath, targetDir)
 
 	unarchiver, err := newZipUnarchiver(zu.zipPath, targetDir)
 	if err != nil {

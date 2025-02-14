@@ -76,7 +76,7 @@ func (du *DirUploader) DoUpload() (digest.Digest, error) {
 	printEntriesStats(uploadEntries, allEntriesMessage, du.CommonConfig.metrics)
 	err = du.exportUploadFilesDetails(rootDigest, uploadEntries)
 	if err != nil {
-		log.Warningf("failed to export upload files info: %v", err)
+		log.WarningContextf(du.CommonConfig.ctx, "failed to export upload files info: %v", err)
 	}
 
 	// Check with CAS service to find out all files that do not exist remotely, and only load these
@@ -109,7 +109,7 @@ func (du *DirUploader) chunkAndUpload() (digest.Digest, error) {
 	targetDir := createTmpDir()
 	defer func() {
 		if err := os.RemoveAll(targetDir); err != nil {
-			log.Errorf("Failed to remove tmp dir: %v\n", err)
+			log.ErrorContextf(du.CommonConfig.ctx, "Failed to remove tmp dir: %v\n", err)
 		}
 	}()
 
@@ -166,7 +166,7 @@ func (du *DirUploader) chunkFiles(chunksDir string, paths []string) ([]chunkerut
 	}
 	elapsedTime := time.Since(start)
 	du.CommonConfig.metrics.ChunkTimeMs = elapsedTime.Milliseconds()
-	log.Infof("Chunked %d files. Elapsed time: %v\n", len(paths), elapsedTime)
+	log.InfoContextf(du.CommonConfig.ctx, "Chunked %d files. Elapsed time: %v\n", len(paths), elapsedTime)
 	return chunksIndexEntries, nil
 }
 
@@ -202,7 +202,7 @@ func (du *DirUploader) upload(uploadInfos []*uploadinfo.Entry) error {
 	if err == nil {
 		du.CommonConfig.metrics.UploadedSizeBytes = size
 		du.CommonConfig.metrics.UploadedEntries = len(digests)
-		log.Infof("Uploaded %d blobs, %d bytes. Elapsed time: %v\n", len(digests), size, time.Since(start))
+		log.InfoContextf(du.CommonConfig.ctx, "Uploaded %d blobs, %d bytes. Elapsed time: %v\n", len(digests), size, time.Since(start))
 	}
 	return err
 }
@@ -301,6 +301,6 @@ func (du *DirUploader) exportUploadFilesDetails(root digest.Digest, entries []*u
 	if err = ioutil.WriteFile(path, outputContent, 0644); err != nil {
 		return fmt.Errorf("failed to export upload entries info to %s: %v", path, err)
 	}
-	log.Infof("exported file digests to %s, size of files: %d", path, len(files))
+	log.InfoContextf(du.CommonConfig.ctx, "exported file digests to %s, size of files: %d", path, len(files))
 	return nil
 }
