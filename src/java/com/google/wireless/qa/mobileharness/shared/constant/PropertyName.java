@@ -98,7 +98,17 @@ public interface PropertyName {
     _IS_RESUMED_JOB,
 
     /** The parameters to be recorded from mobile_test macro to the job creation. */
-    _PARAM_STATS,
+    _PARAM_STATS;
+
+    /** Gateway service property name constants in the job level. */
+    public enum Gateway implements PropertyName {
+      /**
+       * If multiple jobs in the same gateway session sharing the same blaze_target or same job
+       * name, set this index to distinguish these jobs. This property started with prefix '_' so it
+       * won't be shown in sponge.
+       */
+      _DUPLICATE_JOB_INDEX,
+    }
   }
 
   /** Mobile Harness test property name constants. */
