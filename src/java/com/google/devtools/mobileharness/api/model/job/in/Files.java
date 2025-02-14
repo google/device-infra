@@ -34,7 +34,6 @@ import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -73,7 +72,7 @@ public class Files {
    * file/dir.
    */
   @GuardedBy("this")
-  private final Map<String, Map<String, FileInfo>> fileOrDirs = new HashMap<>();
+  private final Map<String, Map<String, FileInfo>> fileOrDirs = new LinkedHashMap<>();
 
   /** The time records of the job/test. */
   @Nullable private final TouchableTiming timing;
