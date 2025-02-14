@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	version = "1.5"
+	version = "1.6"
 	// RBECASConcurrency is the default maximum number of concurrent upload and download operations for RBE clients.
 	RBECASConcurrency = 500
 )
@@ -146,6 +146,7 @@ func main() {
 	metrics := metrics.Metrics{}
 	var rootDigest digest.Digest
 	uploaderConfig := uploader.NewCommonConfig(ctx, client, excludeFilters, *dumpFileDetails, *chunk, *avgChunkSizeKb, &metrics)
+	path := *zipPath
 	if *zipPath != "" {
 		zipUploader := uploader.NewZipUploader(uploaderConfig, *zipPath)
 		rootDigest, err = zipUploader.DoUpload()
@@ -158,12 +159,14 @@ func main() {
 		if err != nil {
 			log.Exitf("Failed to upload the directory to CAS: %v", err)
 		}
+		path = *dirPath
 	} else if *filePath != "" {
 		fileUploader := uploader.NewFileUploader(uploaderConfig, *filePath)
 		rootDigest, err = fileUploader.DoUpload()
 		if err != nil {
 			log.Exitf("Failed to upload the file to CAS: %v", err)
 		}
+		path = *filePath
 	}
 
 	output := fmt.Sprintf("%s/%d", rootDigest.Hash, rootDigest.Size)
@@ -172,7 +175,7 @@ func main() {
 	}
 	elapsedTime := time.Since(start)
 	metrics.TimeMs = elapsedTime.Milliseconds()
-	log.Infof("Uploaded %s to RBE instance %s, root digest: %s. E2E time: %v\n", *zipPath, *casInstance, output, elapsedTime)
+	log.Infof("Uploaded '%s' to RBE instance %s, root digest: %s. E2E time: %v\n", path, *casInstance, output, elapsedTime)
 
 	if *dumpMetrics != "" {
 		metrics.Digest = output
