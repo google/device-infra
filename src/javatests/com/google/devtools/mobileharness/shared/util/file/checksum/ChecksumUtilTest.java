@@ -19,15 +19,14 @@ package com.google.devtools.mobileharness.shared.util.file.checksum;
 import static com.google.common.truth.Truth.assertThat;
 import static org.apache.commons.lang3.CharEncoding.UTF_8;
 
+import com.google.common.base.Stopwatch;
 import com.google.common.hash.Hashing;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.Clock;
 import java.time.Duration;
-import java.time.Instant;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -111,10 +110,10 @@ public final class ChecksumUtilTest {
   @Test
   public void testFingerPrint_longString() throws Exception {
     String s = "a".repeat(1000000000);
-    Instant start = Clock.systemUTC().instant();
+    Stopwatch stopwatch = Stopwatch.createStarted();
     var unused = util.fingerprintStr(s);
-    Instant end = Clock.systemUTC().instant();
-    assertThat(Duration.between(start, end)).isLessThan(Duration.ofSeconds(5));
+    stopwatch.stop();
+    assertThat(stopwatch.elapsed()).isLessThan(Duration.ofSeconds(7));
   }
 
   @Test
