@@ -114,7 +114,7 @@ func main() {
 		ToolVersion: version,
 	}
 	if ctxMd, err := contextmd.WithMetadata(ctx, metadata); err != nil {
-		log.Infof("Failed to add metadata to context: %v", err)
+		log.InfoContextf(ctxMd, "Failed to add metadata to context: %v", err)
 	} else {
 		ctx = ctxMd
 	}
@@ -124,14 +124,14 @@ func main() {
 		sigChan := make(chan os.Signal, 1)
 		signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 		<-sigChan
-		log.Infoln("Interrupted, exiting...")
+		log.InfoContextf(ctx, "Interrupted, exiting...\n")
 		cancel()
 		time.Sleep(3 * time.Second)
 		os.Exit(1)
 	}()
 
 	if err := checkFlags(); err != nil {
-		log.Exit(err)
+		log.ExitContext(ctx, err)
 	}
 
 	start := time.Now()
@@ -139,7 +139,7 @@ func main() {
 	// Create a new RBE client.
 	client, err := rbeclient.New(ctx, rbeclient.Opts{Instance: *casInstance, ServiceAddress: *casAddr, ServiceAccountJSON: *serviceAccount, UseApplicationDefault: *useADC, CASConcurrency: *casConcurrency})
 	if err != nil {
-		log.Exit(err)
+		log.ExitContext(ctx, err)
 	}
 	defer client.Close()
 
@@ -151,20 +151,20 @@ func main() {
 		zipUploader := uploader.NewZipUploader(uploaderConfig, *zipPath)
 		rootDigest, err = zipUploader.DoUpload()
 		if err != nil {
-			log.Exitf("Failed to upload the zip archive to CAS: %v", err)
+			log.ExitContextf(ctx, "Failed to upload the zip archive to CAS: %v", err)
 		}
 	} else if *dirPath != "" {
 		dirUploader := uploader.NewDirUploader(uploaderConfig, *dirPath, nil)
 		rootDigest, err = dirUploader.DoUpload()
 		if err != nil {
-			log.Exitf("Failed to upload the directory to CAS: %v", err)
+			log.ExitContextf(ctx, "Failed to upload the directory to CAS: %v", err)
 		}
 		path = *dirPath
 	} else if *filePath != "" {
 		fileUploader := uploader.NewFileUploader(uploaderConfig, *filePath)
 		rootDigest, err = fileUploader.DoUpload()
 		if err != nil {
-			log.Exitf("Failed to upload the file to CAS: %v", err)
+			log.ExitContextf(ctx, "Failed to upload the file to CAS: %v", err)
 		}
 		path = *filePath
 	}
@@ -175,12 +175,12 @@ func main() {
 	}
 	elapsedTime := time.Since(start)
 	metrics.TimeMs = elapsedTime.Milliseconds()
-	log.Infof("Uploaded '%s' to RBE instance %s, root digest: %s. E2E time: %v\n", path, *casInstance, output, elapsedTime)
+	log.InfoContextf(ctx, "Uploaded '%s' to RBE instance %s, root digest: %s. E2E time: %v\n", path, *casInstance, output, elapsedTime)
 
 	if *dumpMetrics != "" {
 		metrics.Digest = output
 		if err := metrics.Dump(*dumpMetrics); err != nil {
-			log.Errorf("Failed to dump metrics to %s: %v", *dumpMetrics, err)
+			log.ErrorContextf(ctx, "Failed to dump metrics to %s: %v", *dumpMetrics, err)
 		}
 	}
 }

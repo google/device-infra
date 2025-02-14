@@ -31,7 +31,7 @@ func (fu *FileUploader) DoUpload() (digest.Digest, error) {
 	targetDir := createTmpDir()
 	defer func() {
 		if err := os.RemoveAll(targetDir); err != nil {
-			log.Errorf("Failed to remove tmp dir: %v\n", err)
+			log.ErrorContextf(fu.CommonConfig.ctx, "Failed to remove tmp dir: %v\n", err)
 		}
 	}()
 
