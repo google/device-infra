@@ -228,6 +228,8 @@ public final class Dimension {
     LAUNCHER_3,
     /** The Google Experience Launcher package. */
     LAUNCHER_GEL,
+    /** The manufacturer of the device. */
+    MANUFACTURER,
     /** Moreto lab version for Moreto remote control protocol backward compatibility. */
     MORETO_LAB_VERSION,
     /** Number of CPUs on the android device */

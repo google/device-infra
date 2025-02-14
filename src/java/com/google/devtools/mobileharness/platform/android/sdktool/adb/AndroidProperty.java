@@ -62,6 +62,7 @@ public enum AndroidProperty {
   KAIOS_RUNTIME_TOKEN("kaios.services.runtime.token"),
   LANGUAGE("persist.sys.language", "ro.product.locale.language"),
   LOCALE("persist.sys.locale"),
+  MANUFACTURER("ro.product.manufacturer"),
   MODEL("ro.product.model"),
   NATIVE_BRIDGE("ro.dalvik.vm.native.bridge"),
   PREVIEW_SDK_VERSION("ro.build.version.preview_sdk"),
