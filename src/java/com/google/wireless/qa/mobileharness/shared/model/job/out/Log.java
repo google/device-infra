@@ -19,9 +19,9 @@ package com.google.wireless.qa.mobileharness.shared.model.job.out;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.errorprone.annotations.CheckReturnValue;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.log.LogCollector;
 import com.google.wireless.qa.mobileharness.shared.log.LogCollectorBackend;
 import com.google.wireless.qa.mobileharness.shared.log.LogContext;
@@ -61,11 +61,8 @@ public class Log implements LogCollector<Api> {
     private String formatCause(Throwable cause, boolean withCauseStack) {
       if (withCauseStack) {
         return Throwables.getStackTraceAsString(cause);
-      } else if (cause
-          instanceof com.google.devtools.mobileharness.api.model.error.MobileHarnessException) {
-        return cause.getMessage();
       } else if (cause instanceof MobileHarnessException) {
-        return ((MobileHarnessException) cause).getErrorCodeEnum() + ": " + cause.getMessage();
+        return cause.getMessage();
       } else {
         return cause.getClass().getSimpleName()
             + (cause.getMessage() == null ? "" : ": " + cause.getMessage());

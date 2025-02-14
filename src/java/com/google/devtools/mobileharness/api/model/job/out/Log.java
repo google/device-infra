@@ -18,9 +18,9 @@ package com.google.devtools.mobileharness.api.model.job.out;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.out.Log.Api;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.log.LogCollector;
 import com.google.wireless.qa.mobileharness.shared.log.LogCollectorBackend;
 import com.google.wireless.qa.mobileharness.shared.log.LogContext;
@@ -61,7 +61,7 @@ public class Log implements LogCollector<Api> {
                           data.getWithCauseStack()
                               ? Throwables.getStackTraceAsString(c)
                               : (c instanceof MobileHarnessException
-                                  ? ((MobileHarnessException) c).getErrorName()
+                                  ? ((MobileHarnessException) c).getErrorId().name()
                                       + ": "
                                       + c.getMessage()
                                   : c.getClass().getSimpleName()
