@@ -113,6 +113,8 @@ message RunCommand {
   // Optional.
   optional int32 retry_session_index = 11;
   // Optional.
+  optional string retry_session_result_dir_name = 33;
+  // Optional.
   optional string retry_type = 12;
 
   // Optional.

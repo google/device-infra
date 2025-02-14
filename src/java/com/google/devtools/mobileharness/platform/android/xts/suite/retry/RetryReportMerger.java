@@ -20,6 +20,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -69,25 +70,37 @@ public class RetryReportMerger {
   /**
    * Merges result from the previous session and the result from the retry.
    *
+   * <p>Either {@code previousSessionIndex} or {@code previousSessionResultDirName} must be
+   * provided.
+   *
    * @param resultsDir the path to the "results" directory which stores the results for the previous
    *     sessions
    * @param previousSessionIndex index of the previous session being retried
+   * @param previousSessionResultDirName name of the previous session result dir
    * @param retryType test statuses for retry
    * @param retryResult the result report for the "retry" run
    * @param passedInModules passed in module names from the command
    */
   public Result mergeReports(
       Path resultsDir,
-      int previousSessionIndex,
+      @Nullable Integer previousSessionIndex,
+      @Nullable String previousSessionResultDirName,
       @Nullable RetryType retryType,
       @Nullable Result retryResult,
       ImmutableList<String> passedInModules)
       throws MobileHarnessException {
+    Preconditions.checkState(previousSessionIndex != null || previousSessionResultDirName != null);
     // Loads the previous session result and its subplan used for the retry
     Result previousResult =
-        previousResultLoader.loadPreviousResult(resultsDir, previousSessionIndex);
-    RetryArgs.Builder retryArgs =
-        RetryArgs.builder().setResultsDir(resultsDir).setPreviousSessionIndex(previousSessionIndex);
+        previousResultLoader.loadPreviousResult(
+            resultsDir, previousSessionIndex, previousSessionResultDirName);
+    RetryArgs.Builder retryArgs = RetryArgs.builder().setResultsDir(resultsDir);
+    if (previousSessionIndex != null) {
+      retryArgs.setPreviousSessionIndex(previousSessionIndex);
+    }
+    if (previousSessionResultDirName != null) {
+      retryArgs.setPreviousSessionResultDirName(previousSessionResultDirName);
+    }
     if (retryType != null) {
       retryArgs.setRetryType(retryType);
     }

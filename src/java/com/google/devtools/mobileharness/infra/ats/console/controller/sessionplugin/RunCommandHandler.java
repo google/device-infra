@@ -45,7 +45,6 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.proto.Sess
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Reason;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
-import com.google.devtools.mobileharness.infra.ats.console.util.result.ResultListerHelper;
 import com.google.devtools.mobileharness.infra.ats.console.util.verifier.VerifierResultHelper;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
@@ -58,14 +57,12 @@ import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
-import java.io.File;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
-import java.util.OptionalInt;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
@@ -86,7 +83,6 @@ class RunCommandHandler {
   private final SuiteResultReporter suiteResultReporter;
   private final XtsJobCreator xtsJobCreator;
   private final PreviousResultLoader previousResultLoader;
-  private final ResultListerHelper resultListerHelper;
   private final VerifierResultHelper verifierResultHelper;
 
   /** Set in {@link #initialize}. */
@@ -104,7 +100,6 @@ class RunCommandHandler {
       SuiteResultReporter suiteResultReporter,
       XtsJobCreator xtsJobCreator,
       PreviousResultLoader previousResultLoader,
-      ResultListerHelper resultListerHelper,
       VerifierResultHelper verifierResultHelper) {
     this.localFileUtil = localFileUtil;
     this.sessionRequestHandlerUtil = sessionRequestHandlerUtil;
@@ -113,7 +108,6 @@ class RunCommandHandler {
     this.suiteResultReporter = suiteResultReporter;
     this.xtsJobCreator = xtsJobCreator;
     this.previousResultLoader = previousResultLoader;
-    this.resultListerHelper = resultListerHelper;
     this.verifierResultHelper = verifierResultHelper;
   }
 
@@ -228,21 +222,21 @@ class RunCommandHandler {
                   sessionRequestInfo)
               .orElse(null);
       // Copy previous attempts' result files.
-      if (sessionRequestInfo.retrySessionIndex().isPresent()
+      if ((sessionRequestInfo.retrySessionIndex().isPresent()
+              || sessionRequestInfo.retrySessionResultDirName().isPresent())
           && SessionRequestHandlerUtil.isRunRetry(sessionRequestInfo.testPlan())
           && localFileUtil.isDirExist(resultDir)) {
-        ImmutableList<File> allResultDirs =
-            resultListerHelper.listResultDirsInOrder(resultsDir.toAbsolutePath().toString());
-        if (allResultDirs.size() > sessionRequestInfo.retrySessionIndex().getAsInt()) {
-          Path prevResultDir =
-              allResultDirs.get(sessionRequestInfo.retrySessionIndex().getAsInt()).toPath();
-          try {
-            sessionResultHandlerUtil.copyRetryFiles(prevResultDir.toString(), resultDir.toString());
-          } catch (MobileHarnessException e) {
-            logger.atWarning().withCause(e).log(
-                "Failed to copy contents of previous result dir %s to current result dir %s",
-                prevResultDir, resultDir);
-          }
+        Path prevResultDir =
+            previousResultLoader.getPrevSessionResultDir(
+                resultsDir,
+                sessionRequestInfo.retrySessionIndex().orElse(null),
+                sessionRequestInfo.retrySessionResultDirName().orElse(null));
+        try {
+          sessionResultHandlerUtil.copyRetryFiles(prevResultDir.toString(), resultDir.toString());
+        } catch (MobileHarnessException e) {
+          logger.atWarning().withCause(e).log(
+              "Failed to copy contents of previous result dir %s to current result dir %s",
+              prevResultDir, resultDir);
         }
       }
       if (command.getEnableCtsVerifierResultReporter() && result != null) {
@@ -287,10 +281,15 @@ class RunCommandHandler {
 
       Result previousResult = null;
       if (SessionRequestHandlerUtil.isRunRetry(sessionRequestInfo.testPlan())) {
-        OptionalInt previousSessionIndex = sessionRequestInfo.retrySessionIndex();
-        if (previousSessionIndex.isPresent()) {
+        Optional<Integer> previousSessionIndex = sessionRequestInfo.retrySessionIndex();
+        Optional<String> previousSessionResultDirName =
+            sessionRequestInfo.retrySessionResultDirName();
+        if (previousSessionIndex.isPresent() || previousSessionResultDirName.isPresent()) {
           previousResult =
-              previousResultLoader.loadPreviousResult(resultsDir, previousSessionIndex.getAsInt());
+              previousResultLoader.loadPreviousResult(
+                  resultsDir,
+                  previousSessionIndex.orElse(null),
+                  previousSessionResultDirName.orElse(null));
         }
       }
       String xtsTestResultSummary =
@@ -385,6 +384,9 @@ class RunCommandHandler {
     }
     if (runCommand.hasRetrySessionIndex()) {
       builder.setRetrySessionIndex(runCommand.getRetrySessionIndex());
+    }
+    if (runCommand.hasRetrySessionResultDirName()) {
+      builder.setRetrySessionResultDirName(runCommand.getRetrySessionResultDirName());
     }
     if (runCommand.hasRetryType()) {
       builder.setRetryType(RetryType.valueOf(toUpperCase(runCommand.getRetryType())));

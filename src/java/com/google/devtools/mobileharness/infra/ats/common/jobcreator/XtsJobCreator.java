@@ -61,6 +61,7 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Stream;
+import javax.annotation.Nullable;
 
 /** A creator to create XTS tradefed jobs and non tradefed jobs. */
 public abstract class XtsJobCreator {
@@ -554,7 +555,10 @@ public abstract class XtsJobCreator {
   }
 
   protected SubPlan generateRetrySubPlan(
-      RetryArgs retryArgs, boolean forTf, String previousSessionIdOrIndex)
+      RetryArgs retryArgs,
+      boolean forTf,
+      @Nullable String previousSessionIdOrIndex,
+      @Nullable String previousSessionResultDirName)
       throws MobileHarnessException {
     SubPlan subPlan = retryGenerator.generateRetrySubPlan(retryArgs);
     if ((forTf
@@ -568,7 +572,9 @@ public abstract class XtsJobCreator {
           String.format(
               "No include or exclude filters found for %s retry session %s with retry type %s",
               forTf ? "TF" : "Non-TF",
-              previousSessionIdOrIndex,
+              previousSessionIdOrIndex != null
+                  ? previousSessionIdOrIndex
+                  : previousSessionResultDirName,
               retryArgs.retryType().isPresent() ? retryArgs.retryType().get() : "UNKNOWN"),
           /* cause= */ null);
     }

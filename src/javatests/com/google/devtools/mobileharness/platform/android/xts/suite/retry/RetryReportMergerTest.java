@@ -106,7 +106,9 @@ public final class RetryReportMergerTest {
     Result expectedMergedReport =
         TextFormat.parse(
             localFileUtil.readFile(MERGED_REPORT_FOR_ALL_PASSED_TEXTPROTO), Result.class);
-    when(previousResultLoader.loadPreviousResult(RESULTS_DIR_PATH, 0)).thenReturn(prevReport);
+    when(previousResultLoader.loadPreviousResult(
+            RESULTS_DIR_PATH, 0, /* previousSessionResultDirName= */ null))
+        .thenReturn(prevReport);
     SubPlan subPlan = new SubPlan();
     when(retryGenerator.generateRetrySubPlan(any())).thenReturn(subPlan);
 
@@ -114,6 +116,7 @@ public final class RetryReportMergerTest {
         retryReportMerger.mergeReports(
             RESULTS_DIR_PATH,
             0,
+            /* previousSessionResultDirName= */ null,
             /* retryType= */ null,
             /* retryResult= */ null,
             /* passedInModules= */ ImmutableList.of());
@@ -155,7 +158,9 @@ public final class RetryReportMergerTest {
     Result expectedMergedReport =
         TextFormat.parse(
             localFileUtil.readFile(MERGED_REPORT_FOR_SOME_FAILED_TEXTPROTO), Result.class);
-    when(previousResultLoader.loadPreviousResult(RESULTS_DIR_PATH, 0)).thenReturn(prevReport);
+    when(previousResultLoader.loadPreviousResult(
+            RESULTS_DIR_PATH, 0, /* previousSessionResultDirName= */ null))
+        .thenReturn(prevReport);
     SubPlan subPlan = new SubPlan();
     subPlan.addIncludeFilter(
         "arm64-v8a CtsAccelerationTestCases"
@@ -172,6 +177,7 @@ public final class RetryReportMergerTest {
         retryReportMerger.mergeReports(
             RESULTS_DIR_PATH,
             0,
+            /* previousSessionResultDirName= */ null,
             /* retryType= */ null,
             retryReport,
             /* passedInModules= */ ImmutableList.of());
@@ -189,7 +195,9 @@ public final class RetryReportMergerTest {
     Result expectedMergedReport =
         TextFormat.parse(
             localFileUtil.readFile(MERGED_REPORT_FOR_ALL_FAILED_TEXTPROTO), Result.class);
-    when(previousResultLoader.loadPreviousResult(RESULTS_DIR_PATH, 0)).thenReturn(prevReport);
+    when(previousResultLoader.loadPreviousResult(
+            RESULTS_DIR_PATH, 0, /* previousSessionResultDirName= */ null))
+        .thenReturn(prevReport);
     SubPlan subPlan = new SubPlan();
     subPlan.addIncludeFilter("arm64-v8a CtsAccelerationTestCases");
     subPlan.addIncludeFilter("arm64-v8a CtsAccelerationTestCases[instant]");
@@ -199,6 +207,7 @@ public final class RetryReportMergerTest {
         retryReportMerger.mergeReports(
             RESULTS_DIR_PATH,
             0,
+            /* previousSessionResultDirName= */ null,
             /* retryType= */ null,
             retryReport,
             /* passedInModules= */ ImmutableList.of());
@@ -219,7 +228,9 @@ public final class RetryReportMergerTest {
         TextFormat.parse(
             localFileUtil.readFile(MERGED_REPORT_FOR_ALL_ASSUMPTION_FAILURE_TEXTPROTO),
             Result.class);
-    when(previousResultLoader.loadPreviousResult(RESULTS_DIR_PATH, 0)).thenReturn(prevReport);
+    when(previousResultLoader.loadPreviousResult(
+            RESULTS_DIR_PATH, 0, /* previousSessionResultDirName= */ null))
+        .thenReturn(prevReport);
 
     SubPlan subPlan =
         SubPlanHelper.createSubPlanForPreviousResult(
@@ -235,6 +246,7 @@ public final class RetryReportMergerTest {
         retryReportMerger.mergeReports(
             RESULTS_DIR_PATH,
             0,
+            /* previousSessionResultDirName= */ null,
             RetryType.NOT_EXECUTED,
             retryReport,
             /* passedInModules= */ ImmutableList.of());

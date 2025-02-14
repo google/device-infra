@@ -179,7 +179,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_info",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_result_handler_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/jobcreator:xts_job_creator",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/result:result_lister_helper",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/verifier:verifier_result_helper",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/constant:session_properties",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_info",

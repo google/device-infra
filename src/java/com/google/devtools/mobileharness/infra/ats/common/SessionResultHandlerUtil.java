@@ -26,7 +26,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
-import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName.Job;
@@ -455,12 +454,14 @@ public class SessionResultHandlerUtil {
         // If the test report will have TF module but the current session doesn't retry any TF
         // module, need to copy test-record.pb from previous session to the current session.
         ImmutableList<Path> testRecordProtoFiles = ImmutableList.of();
-        if (sessionRequestInfo.retrySessionIndex().isPresent()) {
+        if (sessionRequestInfo.retrySessionIndex().isPresent()
+            || sessionRequestInfo.retrySessionResultDirName().isPresent()) {
           testRecordProtoFiles =
               previousResultLoader.getPrevSessionTestRecordProtoFiles(
                   XtsDirUtil.getXtsResultsDir(
                       Path.of(sessionRequestInfo.xtsRootDir()), sessionRequestInfo.xtsType()),
-                  sessionRequestInfo.retrySessionIndex().orElseThrow());
+                  sessionRequestInfo.retrySessionIndex().orElse(null),
+                  sessionRequestInfo.retrySessionResultDirName().orElse(null));
         } else {
           testRecordProtoFiles =
               previousResultLoader.getPrevSessionTestRecordProtoFiles(
@@ -486,19 +487,12 @@ public class SessionResultHandlerUtil {
                   mergedReport.orElse(null),
                   sessionRequestInfo.moduleNames());
         } else {
-          int previousSessionIndex =
-              sessionRequestInfo
-                  .retrySessionIndex()
-                  .orElseThrow(
-                      () ->
-                          new MobileHarnessException(
-                              InfraErrorId.ATSC_RUN_RETRY_COMMAND_MISSING_SESSION_INDEX_ERROR,
-                              "Missing session index for retry"));
           finalReport =
               retryReportMerger.mergeReports(
                   XtsDirUtil.getXtsResultsDir(
                       Path.of(sessionRequestInfo.xtsRootDir()), sessionRequestInfo.xtsType()),
-                  previousSessionIndex,
+                  sessionRequestInfo.retrySessionIndex().orElse(null),
+                  sessionRequestInfo.retrySessionResultDirName().orElse(null),
                   sessionRequestInfo.retryType().orElse(null),
                   mergedReport.orElse(null),
                   sessionRequestInfo.moduleNames());

@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.platform.android.xts.suite.retry;
 
 import com.google.auto.value.AutoValue;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
@@ -35,6 +36,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 
 /** Class to load xTS previous results. */
@@ -61,12 +63,22 @@ public class PreviousResultLoader {
   /**
    * Loads the result for the given session from ATS Console.
    *
+   * <p>Either {@code previousSessionIndex} or {@code previousSessionResultDirName} must be
+   * provided.
+   *
    * @param resultsDir path to the "results" directory
    * @param previousSessionIndex index of the previous session being loaded
+   * @param previousSessionResultDirName name of the previous session result dir
    */
-  public Result loadPreviousResult(Path resultsDir, int previousSessionIndex)
+  public Result loadPreviousResult(
+      Path resultsDir,
+      @Nullable Integer previousSessionIndex,
+      @Nullable String previousSessionResultDirName)
       throws MobileHarnessException {
-    Path testResultProtoFile = getPrevSessionTestResultProtoFile(resultsDir, previousSessionIndex);
+    Preconditions.checkState(previousSessionIndex != null || previousSessionResultDirName != null);
+    Path testResultProtoFile =
+        getPrevSessionTestResultProtoFile(
+            resultsDir, previousSessionIndex, previousSessionResultDirName);
     if (localFileUtil.isFileExist(testResultProtoFile)) {
       return loadResult(testResultProtoFile, String.valueOf(previousSessionIndex));
     } else {
@@ -112,13 +124,41 @@ public class PreviousResultLoader {
     }
   }
 
-  private Path getPrevSessionTestResultProtoFile(Path resultsDir, int previousSessionIndex)
+  private Path getPrevSessionTestResultProtoFile(
+      Path resultsDir,
+      @Nullable Integer previousSessionIndex,
+      @Nullable String previousSessionResultDirName)
       throws MobileHarnessException {
-    List<File> allResultDirs = getAllResultDirs(resultsDir, previousSessionIndex);
-    return allResultDirs
-        .get(previousSessionIndex)
-        .toPath()
+    return getPrevSessionResultDir(resultsDir, previousSessionIndex, previousSessionResultDirName)
         .resolve(SuiteCommon.TEST_RESULT_PB_FILE_NAME);
+  }
+
+  /**
+   * Gets the result dir for the given session from ATS Console.
+   *
+   * <p>Either {@code previousSessionIndex} or {@code previousSessionResultDirName} must be
+   * provided.
+   *
+   * @param resultsDir path to the "results" directory
+   * @param previousSessionIndex index of the previous session being loaded
+   * @param previousSessionResultDirName name of the previous session result dir
+   */
+  public Path getPrevSessionResultDir(
+      Path resultsDir,
+      @Nullable Integer previousSessionIndex,
+      @Nullable String previousSessionResultDirName)
+      throws MobileHarnessException {
+    Preconditions.checkState(previousSessionIndex != null || previousSessionResultDirName != null);
+    ImmutableList<File> allResultDirs =
+        getAllResultDirs(resultsDir, previousSessionIndex, previousSessionResultDirName);
+    if (previousSessionIndex != null) {
+      return allResultDirs.get(previousSessionIndex).toPath();
+    }
+    return allResultDirs.stream()
+        .filter(resultDir -> resultDir.getName().equals(previousSessionResultDirName))
+        .findFirst()
+        .get()
+        .toPath();
   }
 
   /** Try to find the result with the legacy path. */
@@ -181,17 +221,18 @@ public class PreviousResultLoader {
   }
 
   public Optional<TradefedResultFilesBundle> getPrevSessionResultFilesBundle(
-      Path resultsDir, int previousSessionIndex) throws MobileHarnessException {
-    ImmutableList<File> allResultDirs = getAllResultDirs(resultsDir, previousSessionIndex);
-    Path testResultXmlFile =
-        allResultDirs
-            .get(previousSessionIndex)
-            .toPath()
-            .resolve(SuiteCommon.TEST_RESULT_XML_FILE_NAME);
+      Path resultsDir,
+      @Nullable Integer previousSessionIndex,
+      @Nullable String previousSessionResultDirName)
+      throws MobileHarnessException {
+    Preconditions.checkState(previousSessionIndex != null || previousSessionResultDirName != null);
+    Path prevSessionResultDir =
+        getPrevSessionResultDir(resultsDir, previousSessionIndex, previousSessionResultDirName);
+    Path testResultXmlFile = prevSessionResultDir.resolve(SuiteCommon.TEST_RESULT_XML_FILE_NAME);
     if (!localFileUtil.isFileExist(testResultXmlFile)) {
       return Optional.empty();
     }
-    Path testRecordProtoDir = allResultDirs.get(previousSessionIndex).toPath().resolve("proto");
+    Path testRecordProtoDir = prevSessionResultDir.resolve("proto");
     if (!localFileUtil.isDirExist(testRecordProtoDir)) {
       return Optional.empty();
     }
@@ -207,18 +248,23 @@ public class PreviousResultLoader {
   /**
    * Loads the test report properties for the given session from ATS Console.
    *
+   * <p>Either {@code previousSessionIndex} or {@code previousSessionResultDirName} must be
+   * provided.
+   *
    * @param resultsDir path to the "results" directory
    * @param previousSessionIndex index of the previous session being loaded
+   * @param previousSessionResultDirName name of the previous session result dir
    */
   public Optional<Path> getPrevSessionTestReportProperties(
-      Path resultsDir, int previousSessionIndex) throws MobileHarnessException {
-    ImmutableList<File> allResultDirs = getAllResultDirs(resultsDir, previousSessionIndex);
+      Path resultsDir,
+      @Nullable Integer previousSessionIndex,
+      @Nullable String previousSessionResultDirName)
+      throws MobileHarnessException {
+    Preconditions.checkState(previousSessionIndex != null || previousSessionResultDirName != null);
+    Path prevSessionResultDir =
+        getPrevSessionResultDir(resultsDir, previousSessionIndex, previousSessionResultDirName);
     Optional<Path> testReportPropertiesFile =
-        Optional.of(
-            allResultDirs
-                .get(previousSessionIndex)
-                .toPath()
-                .resolve(SuiteCommon.TEST_REPORT_PROPERTIES_FILE_NAME));
+        Optional.of(prevSessionResultDir.resolve(SuiteCommon.TEST_REPORT_PROPERTIES_FILE_NAME));
     if (!localFileUtil.isFileExist(testReportPropertiesFile.get())) {
       testReportPropertiesFile = Optional.empty();
     }
@@ -242,14 +288,22 @@ public class PreviousResultLoader {
   /**
    * Loads the test record proto files for the given session from ATS Console.
    *
+   * <p>Either {@code previousSessionIndex} or {@code previousSessionResultDirName} must be
+   * provided.
+   *
    * @param resultsDir path to the "results" directory
    * @param previousSessionIndex index of the previous session being loaded
+   * @param previousSessionResultDirName name of the previous session result dir
    */
   public ImmutableList<Path> getPrevSessionTestRecordProtoFiles(
-      Path resultsDir, int previousSessionIndex) throws MobileHarnessException {
-    ImmutableList<File> allResultDirs = getAllResultDirs(resultsDir, previousSessionIndex);
-    Path testRecordProtoDir =
-        allResultDirs.get(previousSessionIndex).toPath().resolve(TEST_RECORD_PROTO_DIR_NAME);
+      Path resultsDir,
+      @Nullable Integer previousSessionIndex,
+      @Nullable String previousSessionResultDirName)
+      throws MobileHarnessException {
+    Preconditions.checkState(previousSessionIndex != null || previousSessionResultDirName != null);
+    Path prevSessionResultDir =
+        getPrevSessionResultDir(resultsDir, previousSessionIndex, previousSessionResultDirName);
+    Path testRecordProtoDir = prevSessionResultDir.resolve(TEST_RECORD_PROTO_DIR_NAME);
     if (!localFileUtil.isDirExist(testRecordProtoDir)) {
       return ImmutableList.of();
     }
@@ -272,7 +326,10 @@ public class PreviousResultLoader {
         localFileUtil.listFilesOrDirs(testRecordProtoDir, p -> p.toFile().isFile()));
   }
 
-  private ImmutableList<File> getAllResultDirs(Path resultsDir, int previousSessionIndex)
+  private ImmutableList<File> getAllResultDirs(
+      Path resultsDir,
+      @Nullable Integer previousSessionIndex,
+      @Nullable String previousSessionResultDirName)
       throws MobileHarnessException {
     ImmutableList<File> allResultDirs =
         resultListerHelper.listResultDirsInOrder(resultsDir.toAbsolutePath().toString());
@@ -280,7 +337,8 @@ public class PreviousResultLoader {
       throw new MobileHarnessException(
           ExtErrorId.PREV_RESULT_LOADER_NO_PREVIOUS_SESSION_FOUND, "No previous session found.");
     }
-    if (previousSessionIndex < 0 || previousSessionIndex >= allResultDirs.size()) {
+    if (previousSessionIndex != null
+        && (previousSessionIndex < 0 || previousSessionIndex >= allResultDirs.size())) {
       throw new MobileHarnessException(
           ExtErrorId.PREV_RESULT_LOADER_SESSION_INDEX_OUT_OF_RANGE,
           String.format(
@@ -288,6 +346,16 @@ public class PreviousResultLoader {
                   + " %d]",
               previousSessionIndex, 0, allResultDirs.size() - 1));
     }
+    if (previousSessionResultDirName != null
+        && allResultDirs.stream()
+            .noneMatch(resultDir -> resultDir.getName().equals(previousSessionResultDirName))) {
+      throw new MobileHarnessException(
+          ExtErrorId.PREV_RESULT_LOADER_SESSION_RESULT_DIR_NOT_FOUND,
+          String.format(
+              "The given previous session result dir [%s] is not found in the result dir [%s].",
+              previousSessionResultDirName, resultsDir));
+    }
+
     return allResultDirs;
   }
 

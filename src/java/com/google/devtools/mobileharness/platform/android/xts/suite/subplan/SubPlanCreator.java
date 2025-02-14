@@ -85,7 +85,9 @@ public class SubPlanCreator {
 
     Result previousResult =
         previousResultLoader.loadPreviousResult(
-            XtsDirUtil.getXtsResultsDir(xtsRootDir, xtsType), sessionIndex);
+            XtsDirUtil.getXtsResultsDir(xtsRootDir, xtsType),
+            sessionIndex,
+            /* previousSessionResultDirName= */ null);
 
     Optional<Attribute> startTimeAttr =
         previousResult.getAttributeList().stream()

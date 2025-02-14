@@ -41,7 +41,6 @@ import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportPr
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportCreator;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportMerger;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportParser;
-import com.google.devtools.mobileharness.infra.ats.console.util.result.ResultListerHelper;
 import com.google.devtools.mobileharness.infra.ats.console.util.verifier.VerifierResultHelper;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.SessionGenDir;
@@ -114,7 +113,6 @@ public final class RunCommandHandlerTest {
   @Bind @Mock private SuiteResultReporter suiteResultReporter;
   @Bind @Mock private XtsJobCreator xtsJobCreator;
   @Bind @Mock private PreviousResultLoader previousResultLoader;
-  @Bind @Mock private ResultListerHelper resultListerHelper;
   @Bind @Mock private VerifierResultHelper verifierResultHelper;
 
   private RunCommandHandler runCommandHandler;
@@ -149,7 +147,6 @@ public final class RunCommandHandlerTest {
             suiteResultReporter,
             xtsJobCreator,
             previousResultLoader,
-            resultListerHelper,
             verifierResultHelper);
   }
 
@@ -337,8 +334,10 @@ public final class RunCommandHandlerTest {
     when(sessionResultHandlerUtil.isSessionCompleted(anyList())).thenReturn(true);
 
     Result previousResult = Result.getDefaultInstance();
-    when(previousResultLoader.loadPreviousResult(any(), anyInt())).thenReturn(previousResult);
-    when(resultListerHelper.listResultDirsInOrder(any())).thenReturn(ImmutableList.of());
+    when(previousResultLoader.getPrevSessionResultDir(any(), anyInt(), any()))
+        .thenReturn(Path.of("/path/to/prev_result_dir"));
+    when(previousResultLoader.loadPreviousResult(any(), anyInt(), any()))
+        .thenReturn(previousResult);
 
     runCommandHandler.initialize(command);
     runCommandHandler.handleResultProcessing(command, RunCommandState.getDefaultInstance());

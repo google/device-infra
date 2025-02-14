@@ -328,8 +328,19 @@ public final class RunCommand implements Callable<Integer> {
       paramLabel = "<retry_session_id>",
       description =
           "Index for the retry session. Use @|bold list results|@ to get the session index."
-              + " Required when calling 'run retry' command")
+              + " Either this or <retry_session_result_dir_name> must be set when calling 'run"
+              + " retry' command")
   private Integer retrySessionIndex; // Use Integer instead of int to check if it's set
+
+  @Option(
+      names = "--retry-result-dir",
+      paramLabel = "<retry_session_result_dir_name>",
+      description =
+          "Result directory name for the retry session. Use @|bold list results|@ to get the result"
+              + " directory name. Either this or <retry_session_id> must be set when calling 'run"
+              + " retry' command. Use this option instead of <retry_session_id> to retry specific"
+              + " sessions parallelly if needed")
+  private String retrySessionResultDirName;
 
   @Option(
       names = "--retry-type",
@@ -540,10 +551,19 @@ public final class RunCommand implements Callable<Integer> {
   }
 
   private void validateRunRetryCommandParameters() {
-    if (retrySessionIndex == null) {
+    if (retrySessionIndex == null && isNullOrEmpty(retrySessionResultDirName)) {
       throw new ParameterException(
           spec.commandLine(),
-          Ansi.AUTO.string("Option '--retry <retry_session_id>' is required for retry command.\n"));
+          Ansi.AUTO.string(
+              "Must provide option '--retry <retry_session_id>' or '--retry-result-dir"
+                  + " <retry_session_result_dir_name>' for retry command.\n"));
+    }
+    if (retrySessionIndex != null && !isNullOrEmpty(retrySessionResultDirName)) {
+      throw new ParameterException(
+          spec.commandLine(),
+          Ansi.AUTO.string(
+              "Option '--retry <retry_session_id>' and '--retry-result-dir"
+                  + " <retry_session_result_dir_name>' are mutually exclusive.\n"));
     }
     if (!isNullOrEmpty(subPlanName)) {
       throw new ParameterException(
@@ -727,6 +747,9 @@ public final class RunCommand implements Callable<Integer> {
     }
     if (retrySessionIndex != null) {
       runCommand.setRetrySessionIndex(retrySessionIndex);
+    }
+    if (!isNullOrEmpty(retrySessionResultDirName)) {
+      runCommand.setRetrySessionResultDirName(retrySessionResultDirName.trim());
     }
     if (retryType != null) {
       runCommand.setRetryType(Ascii.toUpperCase(retryType.name()));

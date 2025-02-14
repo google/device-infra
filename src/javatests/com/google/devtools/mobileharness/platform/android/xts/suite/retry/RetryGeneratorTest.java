@@ -188,7 +188,8 @@ public final class RetryGeneratorTest {
   public void generateRetrySubPlan_defaultRetryType() throws Exception {
     Path resultsDir = Path.of("/path/to/results_dir");
     int previousSessionIndex = 0;
-    when(previousResultLoader.loadPreviousResult(resultsDir, previousSessionIndex))
+    when(previousResultLoader.loadPreviousResult(
+            resultsDir, previousSessionIndex, /* previousSessionResultDirName= */ null))
         .thenReturn(REPORT_1);
 
     SubPlan subPlan =
@@ -261,7 +262,8 @@ public final class RetryGeneratorTest {
       throws Exception {
     Path resultsDir = Path.of("/path/to/results_dir");
     int previousSessionIndex = 0;
-    when(previousResultLoader.loadPreviousResult(resultsDir, previousSessionIndex))
+    when(previousResultLoader.loadPreviousResult(
+            resultsDir, previousSessionIndex, /* previousSessionResultDirName= */ null))
         .thenReturn(REPORT_3);
 
     SubPlan subPlan =
@@ -506,7 +508,8 @@ public final class RetryGeneratorTest {
   public void generateRetrySubPlan_retryTypeIsNotExecuted() throws Exception {
     Path resultsDir = Path.of("/path/to/results_dir");
     int previousSessionIndex = 0;
-    when(previousResultLoader.loadPreviousResult(resultsDir, previousSessionIndex))
+    when(previousResultLoader.loadPreviousResult(
+            resultsDir, previousSessionIndex, /* previousSessionResultDirName= */ null))
         .thenReturn(REPORT_1);
 
     SubPlan subPlan =
@@ -545,7 +548,8 @@ public final class RetryGeneratorTest {
   public void generateRetrySubPlan_withPassedInModules() throws Exception {
     Path resultsDir = Path.of("/path/to/results_dir");
     int previousSessionIndex = 0;
-    when(previousResultLoader.loadPreviousResult(resultsDir, previousSessionIndex))
+    when(previousResultLoader.loadPreviousResult(
+            resultsDir, previousSessionIndex, /* previousSessionResultDirName= */ null))
         .thenReturn(REPORT_2);
 
     SubPlan subPlan =
@@ -584,7 +588,8 @@ public final class RetryGeneratorTest {
   public void generateRetrySubPlan_passedInModulesAllPassed_skip() throws Exception {
     Path resultsDir = Path.of("/path/to/results_dir");
     int previousSessionIndex = 0;
-    when(previousResultLoader.loadPreviousResult(resultsDir, previousSessionIndex))
+    when(previousResultLoader.loadPreviousResult(
+            resultsDir, previousSessionIndex, /* previousSessionResultDirName= */ null))
         .thenReturn(REPORT_2);
 
     SubPlan subPlan =
@@ -626,7 +631,8 @@ public final class RetryGeneratorTest {
   public void generateRetrySubPlan_withTestFilter() throws Exception {
     Path resultsDir = Path.of("/path/to/results_dir");
     int previousSessionIndex = 0;
-    when(previousResultLoader.loadPreviousResult(resultsDir, previousSessionIndex))
+    when(previousResultLoader.loadPreviousResult(
+            resultsDir, previousSessionIndex, /* previousSessionResultDirName= */ null))
         .thenReturn(
             Result.newBuilder()
                 .addModuleInfo(
@@ -656,7 +662,8 @@ public final class RetryGeneratorTest {
   public void generateRetrySubPlan_withTestFilter_notExecuted() throws Exception {
     Path resultsDir = Path.of("/path/to/results_dir");
     int previousSessionIndex = 0;
-    when(previousResultLoader.loadPreviousResult(resultsDir, previousSessionIndex))
+    when(previousResultLoader.loadPreviousResult(
+            resultsDir, previousSessionIndex, /* previousSessionResultDirName= */ null))
         .thenReturn(
             Result.newBuilder()
                 .addModuleInfo(

@@ -114,7 +114,9 @@ public final class SubPlanCreatorTest {
             realLocalFileUtil.readFile(PREV_REPORT_SOME_FAILED_AND_NOT_EXECUTED_TEXTPROTO),
             Result.class);
     when(previousResultLoader.loadPreviousResult(
-            XtsDirUtil.getXtsResultsDir(xtsRootDir.toPath(), xtsType), sessionIndex))
+            XtsDirUtil.getXtsResultsDir(xtsRootDir.toPath(), xtsType),
+            sessionIndex,
+            /* previousSessionResultDirName= */ null))
         .thenReturn(prevReport);
 
     Optional<File> subPlanFile =
@@ -149,7 +151,9 @@ public final class SubPlanCreatorTest {
             realLocalFileUtil.readFile(PREV_REPORT_SOME_FAILED_AND_NOT_EXECUTED_TEXTPROTO),
             Result.class);
     when(previousResultLoader.loadPreviousResult(
-            XtsDirUtil.getXtsResultsDir(xtsRootDir.toPath(), xtsType), sessionIndex))
+            XtsDirUtil.getXtsResultsDir(xtsRootDir.toPath(), xtsType),
+            sessionIndex,
+            /* previousSessionResultDirName= */ null))
         .thenReturn(prevReport);
     Configuration config =
         Configuration.newBuilder()
@@ -190,7 +194,9 @@ public final class SubPlanCreatorTest {
             realLocalFileUtil.readFile(PREV_REPORT_SOME_FAILED_AND_NOT_EXECUTED_TEXTPROTO),
             Result.class);
     when(previousResultLoader.loadPreviousResult(
-            XtsDirUtil.getXtsResultsDir(xtsRootDir.toPath(), xtsType), sessionIndex))
+            XtsDirUtil.getXtsResultsDir(xtsRootDir.toPath(), xtsType),
+            sessionIndex,
+            /* previousSessionResultDirName= */ null))
         .thenReturn(prevReport);
     Configuration config =
         Configuration.newBuilder()
@@ -231,7 +237,9 @@ public final class SubPlanCreatorTest {
             realLocalFileUtil.readFile(PREV_REPORT_SOME_FAILED_AND_NOT_EXECUTED_TEXTPROTO),
             Result.class);
     when(previousResultLoader.loadPreviousResult(
-            XtsDirUtil.getXtsResultsDir(xtsRootDir.toPath(), xtsType), sessionIndex))
+            XtsDirUtil.getXtsResultsDir(xtsRootDir.toPath(), xtsType),
+            sessionIndex,
+            /* previousSessionResultDirName= */ null))
         .thenReturn(prevReport);
     Configuration config =
         Configuration.newBuilder()
@@ -274,7 +282,9 @@ public final class SubPlanCreatorTest {
             realLocalFileUtil.readFile(PREV_REPORT_SOME_FAILED_AND_NOT_EXECUTED_TEXTPROTO),
             Result.class);
     when(previousResultLoader.loadPreviousResult(
-            XtsDirUtil.getXtsResultsDir(xtsRootDir.toPath(), xtsType), sessionIndex))
+            XtsDirUtil.getXtsResultsDir(xtsRootDir.toPath(), xtsType),
+            sessionIndex,
+            /* previousSessionResultDirName= */ null))
         .thenReturn(prevReport);
 
     Optional<File> subPlanFile =
@@ -307,7 +317,9 @@ public final class SubPlanCreatorTest {
             realLocalFileUtil.readFile(PREV_REPORT_SOME_FAILED_AND_NOT_EXECUTED_TEXTPROTO),
             Result.class);
     when(previousResultLoader.loadPreviousResult(
-            XtsDirUtil.getXtsResultsDir(xtsRootDir.toPath(), xtsType), sessionIndex))
+            XtsDirUtil.getXtsResultsDir(xtsRootDir.toPath(), xtsType),
+            sessionIndex,
+            /* previousSessionResultDirName= */ null))
         .thenReturn(prevReport);
 
     Optional<File> subPlanFile =
@@ -340,7 +352,9 @@ public final class SubPlanCreatorTest {
             realLocalFileUtil.readFile(PREV_REPORT_SOME_FAILED_AND_NOT_EXECUTED_TEXTPROTO),
             Result.class);
     when(previousResultLoader.loadPreviousResult(
-            XtsDirUtil.getXtsResultsDir(xtsRootDir.toPath(), xtsType), sessionIndex))
+            XtsDirUtil.getXtsResultsDir(xtsRootDir.toPath(), xtsType),
+            sessionIndex,
+            /* previousSessionResultDirName= */ null))
         .thenReturn(prevReport);
 
     Optional<File> subPlanFile =
@@ -374,7 +388,9 @@ public final class SubPlanCreatorTest {
             realLocalFileUtil.readFile(PREV_REPORT_SOME_FAILED_AND_NOT_EXECUTED_TEXTPROTO),
             Result.class);
     when(previousResultLoader.loadPreviousResult(
-            XtsDirUtil.getXtsResultsDir(xtsRootDir.toPath(), xtsType), sessionIndex))
+            XtsDirUtil.getXtsResultsDir(xtsRootDir.toPath(), xtsType),
+            sessionIndex,
+            /* previousSessionResultDirName= */ null))
         .thenReturn(prevReport);
 
     Optional<File> subPlanFile =
@@ -409,7 +425,9 @@ public final class SubPlanCreatorTest {
             realLocalFileUtil.readFile(PREV_REPORT_SOME_FAILED_AND_NOT_EXECUTED_TEXTPROTO),
             Result.class);
     when(previousResultLoader.loadPreviousResult(
-            XtsDirUtil.getXtsResultsDir(xtsRootDir.toPath(), xtsType), sessionIndex))
+            XtsDirUtil.getXtsResultsDir(xtsRootDir.toPath(), xtsType),
+            sessionIndex,
+            /* previousSessionResultDirName= */ null))
         .thenReturn(prevReport);
 
     Optional<File> subPlanFile =
@@ -446,7 +464,9 @@ public final class SubPlanCreatorTest {
             realLocalFileUtil.readFile(PREV_REPORT_SOME_FAILED_AND_NOT_EXECUTED_TEXTPROTO),
             Result.class);
     when(previousResultLoader.loadPreviousResult(
-            XtsDirUtil.getXtsResultsDir(xtsRootDir.toPath(), xtsType), sessionIndex))
+            XtsDirUtil.getXtsResultsDir(xtsRootDir.toPath(), xtsType),
+            sessionIndex,
+            /* previousSessionResultDirName= */ null))
         .thenReturn(prevReport);
 
     Optional<File> subPlanFile =

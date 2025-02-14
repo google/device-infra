@@ -349,7 +349,7 @@ public final class ConsoleJobCreatorTest {
         .when(sessionRequestHandlerUtil)
         .canCreateNonTradefedJobs(any(SessionRequestInfo.class));
     when(retryGenerator.generateRetrySubPlan(any())).thenReturn(new SubPlan());
-    when(previousResultLoader.getPrevSessionTestReportProperties(any(Path.class), anyInt()))
+    when(previousResultLoader.getPrevSessionTestReportProperties(any(Path.class), anyInt(), any()))
         .thenReturn(Optional.empty());
 
     SessionRequestInfo sessionRequestInfo =
@@ -377,11 +377,11 @@ public final class ConsoleJobCreatorTest {
             .setRetrySessionIndex(0)
             .setModuleNames(ImmutableList.of("mock_module[instant]"))
             .build();
-    when(previousResultLoader.getPrevSessionTestReportProperties(any(Path.class), anyInt()))
+    when(previousResultLoader.getPrevSessionTestReportProperties(any(Path.class), anyInt(), any()))
         .thenReturn(Optional.empty());
     Path testResultPath = folder.newFile("test_result.xml").toPath();
     Path testRecordPath = folder.newFile("test_record.pb").toPath();
-    when(previousResultLoader.getPrevSessionResultFilesBundle(any(Path.class), anyInt()))
+    when(previousResultLoader.getPrevSessionResultFilesBundle(any(Path.class), anyInt(), any()))
         .thenReturn(
             Optional.of(
                 TradefedResultFilesBundle.of(testResultPath, ImmutableList.of(testRecordPath))));

@@ -22,7 +22,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteTestFilter;
 import java.nio.file.Path;
 import java.util.Optional;
-import java.util.OptionalInt;
 
 /** Args for the retry. */
 @AutoValue
@@ -35,13 +34,20 @@ public abstract class RetryArgs {
   public abstract Path resultsDir();
 
   /**
-   * Index to the previous session. One of previousSessionIndex or previousSessionId should be
-   * present.
+   * Index to the previous session. One of previousSessionIndex, retrySessionResultDirName or
+   * previousSessionId should be present.
    */
-  public abstract OptionalInt previousSessionIndex();
+  public abstract Optional<Integer> previousSessionIndex();
 
   /**
-   * ID to the previous session. One of previousSessionIndex or previousSessionId should be present.
+   * Name of the previous session result directory. One of previousSessionIndex,
+   * retrySessionResultDirName or previousSessionId should be present.
+   */
+  public abstract Optional<String> previousSessionResultDirName();
+
+  /**
+   * ID to the previous session. One of previousSessionIndex, retrySessionResultDirName or
+   * previousSessionId should be present.
    */
   public abstract Optional<String> previousSessionId();
 
@@ -79,14 +85,24 @@ public abstract class RetryArgs {
     /**
      * Previous session index for ATS Console.
      *
-     * <p>One of previousSessionIndex or previousSessionId must be set.
+     * <p>One of previousSessionIndex, previousSessionResultDirName or previousSessionId must be
+     * set.
      */
     public abstract Builder setPreviousSessionIndex(int previousSessionIndex);
 
     /**
+     * Name of the previous session result directory for ATS Console.
+     *
+     * <p>One of previousSessionIndex, previousSessionResultDirName or previousSessionId must be
+     * set.
+     */
+    public abstract Builder setPreviousSessionResultDirName(String previousSessionResultDirName);
+
+    /**
      * Previous session for ATS Server.
      *
-     * <p>One of previousSessionIndex or previousSessionId must be set.
+     * <p>One of previousSessionIndex, previousSessionResultDirName or previousSessionId must be
+     * set.
      */
     public abstract Builder setPreviousSessionId(String previousSessionId);
 
@@ -108,6 +124,7 @@ public abstract class RetryArgs {
       RetryArgs retryArgs = autoBuild();
       Preconditions.checkState(
           retryArgs.previousSessionIndex().isPresent()
+              || retryArgs.previousSessionResultDirName().isPresent()
               || retryArgs.previousSessionId().isPresent());
 
       return retryArgs;

@@ -47,7 +47,9 @@ public class RetryGenerator {
     if (retryArgs.previousSessionId().isEmpty()) {
       previousResult =
           previousResultLoader.loadPreviousResult(
-              resultsDir, retryArgs.previousSessionIndex().orElseThrow());
+              resultsDir,
+              retryArgs.previousSessionIndex().orElse(null),
+              retryArgs.previousSessionResultDirName().orElse(null));
     } else {
       previousResult =
           previousResultLoader.loadPreviousResult(resultsDir, retryArgs.previousSessionId().get());

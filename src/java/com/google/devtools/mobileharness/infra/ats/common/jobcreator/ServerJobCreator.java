@@ -132,7 +132,8 @@ public class ServerJobCreator extends XtsJobCreator {
     if (!passedInModules.isEmpty()) {
       retryArgs.setPassedInModules(ImmutableSet.copyOf(passedInModules));
     }
-    return generateRetrySubPlan(retryArgs.build(), forTf, previousSessionId);
+    return generateRetrySubPlan(
+        retryArgs.build(), forTf, previousSessionId, /* previousSessionResultDirName= */ null);
   }
 
   @Override

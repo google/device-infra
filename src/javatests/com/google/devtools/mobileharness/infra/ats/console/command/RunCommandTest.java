@@ -101,12 +101,33 @@ public final class RunCommandTest {
   }
 
   @Test
-  public void validateCommandParameters_retryCommandRequiresSessionId() {
+  public void validateCommandParameters_retryCommandRequiresSessionIdOrResultDirName() {
     commandLine.parseArgs("retry", "--shard-count", "2");
 
     assertThat(assertThrows(ParameterException.class, () -> runCommand.validateCommandParameters()))
         .hasMessageThat()
-        .contains("Option '--retry <retry_session_id>' is required for retry command");
+        .contains(
+            "Must provide option '--retry <retry_session_id>' or '--retry-result-dir"
+                + " <retry_session_result_dir_name>' for retry command");
+  }
+
+  @Test
+  public void
+      validateCommandParameters_retryCommandCannotSpecifySessionIdAndResultDirNameAtTheSameTime() {
+    commandLine.parseArgs(
+        "retry",
+        "--retry",
+        "0",
+        "--retry-result-dir",
+        "2025.02.10_15.11.19.261_7233",
+        "--shard-count",
+        "2");
+
+    assertThat(assertThrows(ParameterException.class, () -> runCommand.validateCommandParameters()))
+        .hasMessageThat()
+        .contains(
+            "Option '--retry <retry_session_id>' and '--retry-result-dir"
+                + " <retry_session_result_dir_name>' are mutually exclusive");
   }
 
   @Test

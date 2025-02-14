@@ -28,7 +28,6 @@ import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryT
 import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
-import java.util.OptionalInt;
 
 /**
  * Data holder used to create jobInfo. Data comes from session request handlers, like
@@ -68,14 +67,20 @@ public abstract class SessionRequestInfo {
   public abstract ImmutableMultimap<String, String> moduleMetadataExcludeFilters();
 
   /**
-   * When testPlan is "retry", at least one of retrySessionId or retrySessionIndex should be set
-   * before calling build().
+   * When testPlan is "retry", at least one of retrySessionId, retrySessionResultDirName or
+   * retrySessionIndex should be set before calling build().
    */
-  public abstract OptionalInt retrySessionIndex();
+  public abstract Optional<Integer> retrySessionIndex();
 
   /**
-   * When testPlan is "retry", at least one of retrySessionId or retrySessionIndex should be set
-   * before calling build().
+   * When testPlan is "retry", at least one of retrySessionId, retrySessionResultDirName or
+   * retrySessionIndex should be set before calling build().
+   */
+  public abstract Optional<String> retrySessionResultDirName();
+
+  /**
+   * When testPlan is "retry", at least one of retrySessionId, retrySessionResultDirName or
+   * retrySessionIndex should be set before calling build().
    */
   public abstract Optional<String> retrySessionId();
 
@@ -204,7 +209,9 @@ public abstract class SessionRequestInfo {
     public abstract Builder setModuleMetadataExcludeFilters(
         ImmutableMultimap<String, String> moduleMetadataExcludeFilters);
 
-    public abstract Builder setRetrySessionIndex(int retrySessionIndex);
+    public abstract Builder setRetrySessionIndex(Integer retrySessionIndex);
+
+    public abstract Builder setRetrySessionResultDirName(String retrySessionResultDirName);
 
     public abstract Builder setRetrySessionId(String retrySessionId);
 
@@ -278,6 +285,7 @@ public abstract class SessionRequestInfo {
       if (sessionRequestInfo.testPlan().equals("retry")) {
         Preconditions.checkState(
             sessionRequestInfo.retrySessionIndex().isPresent()
+                || sessionRequestInfo.retrySessionResultDirName().isPresent()
                 || sessionRequestInfo.retrySessionId().isPresent());
         if (sessionRequestInfo.retrySessionId().isPresent()) {
           Preconditions.checkState(sessionRequestInfo.retryResultDir().isPresent());
