@@ -516,6 +516,26 @@ public class AndroidSystemSpecUtilTest {
   }
 
   @Test
+  public void getMaxCpuFrequency_validFrequency_returnsFrequencyInHz() throws Exception {
+    when(adb.runShellWithRetry(SERIAL, AndroidSystemSpecUtil.ADB_SHELL_GET_CPU_MAX_FREQ))
+        .thenReturn("1804800\n");
+
+    assertThat(systemSpecUtil.getMaxCpuFrequency(SERIAL)).isEqualTo(1804800);
+  }
+
+  @Test
+  public void getMaxCpuFrequency_noFrequency_throwsException() throws Exception {
+    when(adb.runShellWithRetry(SERIAL, AndroidSystemSpecUtil.ADB_SHELL_GET_CPU_MAX_FREQ))
+        .thenReturn("");
+
+    assertThat(
+            assertThrows(
+                    MobileHarnessException.class, () -> systemSpecUtil.getMaxCpuFrequency(SERIAL))
+                .getErrorId())
+        .isEqualTo(AndroidErrorId.ANDROID_SYSTEM_SPEC_NO_VALID_CPU_MAX_FREQ);
+  }
+
+  @Test
   public void getSystemFeatures_commaDelimitter() throws Exception {
     when(adb.runShellWithRetry(SERIAL, AndroidSystemSpecUtil.ADB_SHELL_LIST_FEATURES))
         .thenReturn("feature:foo,feature:bar")

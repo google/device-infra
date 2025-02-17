@@ -87,6 +87,7 @@ import com.google.wireless.qa.mobileharness.shared.android.WifiUtil;
 import com.google.wireless.qa.mobileharness.shared.api.device.AndroidDevice;
 import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidRealDeviceSpec;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
+import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidSetWifiDecorator;
 import com.google.wireless.qa.mobileharness.shared.controller.stat.DeviceStat;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -102,6 +103,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
@@ -514,6 +516,13 @@ public abstract class AndroidRealDeviceDelegate {
     try {
       device.addDimension(
           Dimension.Name.NUM_CPUS, String.valueOf(systemSpecUtil.getNumberOfCpus(deviceId)));
+    } catch (MobileHarnessException e) {
+      logger.atInfo().log("%s", e.getMessage());
+    }
+    try {
+      device.addDimension(
+          Name.CPU_FREQ_IN_GHZ,
+          String.format(Locale.US, "%.1f", systemSpecUtil.getMaxCpuFrequency(deviceId) / 1000000f));
     } catch (MobileHarnessException e) {
       logger.atInfo().log("%s", e.getMessage());
     }
