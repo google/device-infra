@@ -55,6 +55,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryR
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.DeviceView;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.Page;
+import com.google.devtools.mobileharness.shared.util.filter.MaskUtils;
 import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
 import java.time.Instant;
 import java.util.Collection;
@@ -361,10 +362,8 @@ public class LabQueryUtils {
   }
 
   /** Applies the given {@link Mask} to the {@link LabQueryResult}. */
-  private static void applyMask(
-      @SuppressWarnings("unused") LabQueryResult.Builder result,
-      @SuppressWarnings("unused") Mask mask) {
-    // TODO: Supports lab/device mask. Removes lab/device if all fields are removed.
+  private static void applyMask(LabQueryResult.Builder result, Mask mask) {
+    MaskUtils.trimLabQueryResult(result, mask);
   }
 
   /** Gets a page of the result. */
