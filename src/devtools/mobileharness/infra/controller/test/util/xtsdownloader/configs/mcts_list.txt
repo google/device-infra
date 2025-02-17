@@ -1,6 +1,3 @@
-# deviceinfra:google3-begin(internal)
-# LINT.IfChange
-# deviceinfra:google3-end
 AdExtServicesGaUxAlreadyEnrolledChannelEuTest
 AdExtServicesGaUxAlreadyEnrolledChannelRowTest
 AdExtServicesGaUxDebugChannelApiOffTest
@@ -289,6 +286,3 @@ art_standalone_libartpalette_tests
 compatibility-host-provider-preconditions
 cts-dalvik-host-test-runner
 net-tests-utils-host-common
-# deviceinfra:google3-begin(internal)
-# LINT.ThenChange(//depot/google3/configs/wireless/android/testing/atp/prod/android-xts/cts/templates/common.gcl)
-# deviceinfra:google3-end
