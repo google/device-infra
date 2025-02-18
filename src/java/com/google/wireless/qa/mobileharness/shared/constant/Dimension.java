@@ -232,6 +232,11 @@ public final class Dimension {
     LAUNCHER_GEL,
     /** The manufacturer of the device. */
     MANUFACTURER,
+    /**
+     * The approximate per-application memory class. Provides a memory limit for applications to let
+     * the overall system work best.
+     */
+    MEMORY_CLASS_IN_MB,
     /** Moreto lab version for Moreto remote control protocol backward compatibility. */
     MORETO_LAB_VERSION,
     /** Number of CPUs on the android device */

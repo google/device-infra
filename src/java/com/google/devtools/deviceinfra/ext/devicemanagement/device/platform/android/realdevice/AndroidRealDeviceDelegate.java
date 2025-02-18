@@ -559,6 +559,13 @@ public abstract class AndroidRealDeviceDelegate {
       logger.atInfo().log("%s", e.getMessage());
     }
 
+    try {
+      device.addDimension(
+          Name.MEMORY_CLASS_IN_MB, String.valueOf(systemSpecUtil.getMemoryClassInMb(deviceId)));
+    } catch (MobileHarnessException e) {
+      logger.atInfo().log("%s", e.getMessage());
+    }
+
     // Gets the device external storage path.
     logger.atInfo().log("Checking device %s external storage...", deviceId);
     try {
