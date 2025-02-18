@@ -211,6 +211,13 @@ public interface AndroidInstrumentationDriverSpec {
               + " repeated tests. By default, this is false.")
   String PARAM_FILTER_INSTRUMENTATION_REPEATED_TESTS = "filter_instrumentation_repeated_tests";
 
+  @ParamAnnotation(
+      required = false,
+      help =
+          "Whether to enable coverage generation for the instrumentation command. By default, this"
+              + " is false.")
+  String PARAM_ENABLE_COVERAGE = "enable_coverage";
+
   /** Resource path of the Android basic_services.apk which is needed for reading test_args. */
   String BASIC_SERVICE_APK_PATH =
       "/com/google/android/apps/common/testing/services/basic_services.apk";

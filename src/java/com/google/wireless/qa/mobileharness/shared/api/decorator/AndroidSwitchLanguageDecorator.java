@@ -283,7 +283,8 @@ public class AndroidSwitchLanguageDecorator extends BaseDecorator
                 /* showRawResults= */ false,
                 /* prefixAndroidTest= */ false,
                 /* noIsolatedStorage= */ false,
-                /* useTestStorageService= */ false),
+                /* useTestStorageService= */ false,
+                /* enableCoverage= */ false),
             /* timeout= */ Duration.ofMinutes(1));
     try {
       adbUtil.waitForSignalInLog(deviceId, LOG_SIGNAL, timeout);
@@ -313,6 +314,7 @@ public class AndroidSwitchLanguageDecorator extends BaseDecorator
         testInfo.log().atInfo().alsoTo(logger).log("%s", e.getMessage());
       }
     }
+    @SuppressWarnings("UnsafeLocaleUsage")
     Locale locale =
         country == null
             ? Locale.forLanguageTag(language.replace('_', '-'))

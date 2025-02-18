@@ -354,7 +354,8 @@ public class AndroidInstrumentation extends BaseDriver
               job.params()
                   .getBool(AndroidInstrumentationDriverSpec.PARAM_PREFIX_ANDROID_TEST, false),
               noIsolatedStorage,
-              /* useTestStorageService= */ true),
+              /* useTestStorageService= */ true,
+              job.params().getBool(AndroidInstrumentationDriverSpec.PARAM_ENABLE_COVERAGE, false)),
           Duration.ofMillis(testTimeoutMs));
     } catch (MobileHarnessException e) {
       if (e.getErrorId() == AndroidErrorId.ANDROID_INSTRUMENTATION_COMMAND_EXEC_TIMEOUT) {
@@ -473,7 +474,9 @@ public class AndroidInstrumentation extends BaseDriver
                     job.params()
                         .getBool(AndroidInstrumentationDriverSpec.PARAM_PREFIX_ANDROID_TEST, false),
                     noIsolatedStorage,
-                    /* useTestStorageService= */ true),
+                    /* useTestStorageService= */ true,
+                    job.params()
+                        .getBool(AndroidInstrumentationDriverSpec.PARAM_ENABLE_COVERAGE, false)),
                 Duration.ofMillis(testTimeoutMs));
       } catch (MobileHarnessException e) {
         testInfo

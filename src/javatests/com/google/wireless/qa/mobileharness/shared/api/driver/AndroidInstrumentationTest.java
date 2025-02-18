@@ -656,6 +656,26 @@ public class AndroidInstrumentationTest {
       boolean prefixAndroidTest,
       boolean noIsolatedStorage,
       boolean useTestStorageService) {
+    return mockInstrumentSetting(
+        className,
+        otherOptions,
+        async,
+        showRawResults,
+        prefixAndroidTest,
+        noIsolatedStorage,
+        useTestStorageService,
+        /* enableCoverage= */ false);
+  }
+
+  private AndroidInstrumentationSetting mockInstrumentSetting(
+      @Nullable String className,
+      @Nullable Map<String, String> otherOptions,
+      boolean async,
+      boolean showRawResults,
+      boolean prefixAndroidTest,
+      boolean noIsolatedStorage,
+      boolean useTestStorageService,
+      boolean enableCoverage) {
     return AndroidInstrumentationSetting.create(
         TEST_PACKAGE,
         RUNNER,
@@ -665,6 +685,7 @@ public class AndroidInstrumentationTest {
         showRawResults,
         prefixAndroidTest,
         noIsolatedStorage,
-        useTestStorageService);
+        useTestStorageService,
+        enableCoverage);
   }
 }

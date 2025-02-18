@@ -36,7 +36,8 @@ public abstract class AndroidInstrumentationSetting {
       boolean showRawResults,
       boolean prefixAndroidTest,
       boolean noIsolatedStorage,
-      boolean useTestStorageService) {
+      boolean useTestStorageService,
+      boolean enableCoverage) {
     return new AutoValue_AndroidInstrumentationSetting(
         checkNotNull(packageName),
         checkNotNull(runnerName),
@@ -46,7 +47,8 @@ public abstract class AndroidInstrumentationSetting {
         showRawResults,
         prefixAndroidTest,
         noIsolatedStorage,
-        useTestStorageService);
+        useTestStorageService,
+        enableCoverage);
   }
 
   /** The Android package name of the test package. */
@@ -78,6 +80,9 @@ public abstract class AndroidInstrumentationSetting {
   /** Whether to whether to disable isolated-storage for instrumentation command. */
   public abstract boolean noIsolatedStorage();
 
-  /** Whether to set useTesstStorageService in instrumentation command */
+  /** Whether to set useTestStorageService in instrumentation command */
   public abstract boolean useTestStorageService();
+
+  /** Whether to enable coverage for the instrumentation command. */
+  public abstract boolean enableCoverage();
 }
