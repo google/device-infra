@@ -87,6 +87,7 @@ import com.google.wireless.qa.mobileharness.shared.android.WifiUtil;
 import com.google.wireless.qa.mobileharness.shared.api.device.AndroidDevice;
 import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidRealDeviceSpec;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
+import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidSetWifiDecorator;
 import com.google.wireless.qa.mobileharness.shared.controller.stat.DeviceStat;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -511,6 +512,12 @@ public abstract class AndroidRealDeviceDelegate {
     addAdbCommunication(deviceId);
     // Adds real device specific dimensions.
     device.addDimension(Dimension.Name.DEVICE_FORM, Dimension.Value.PHYSICAL);
+    try {
+      device.addDimension(
+          Name.MACHINE_HARDWARE_NAME, systemSpecUtil.getMachineHardwareName(deviceId));
+    } catch (MobileHarnessException e) {
+      logger.atInfo().log("%s", e.getMessage());
+    }
     try {
       device.addDimension(
           Dimension.Name.NUM_CPUS, String.valueOf(systemSpecUtil.getNumberOfCpus(deviceId)));

@@ -83,6 +83,9 @@ public class AndroidSystemSpecUtil {
   @VisibleForTesting
   static final String ADB_SHELL_GET_BLUETOOTH_MAC_ADDRESS = "settings get secure bluetooth_address";
 
+  /** ADB shell command for getting the machine hardware name. */
+  @VisibleForTesting static final String ADB_SHELL_GET_MACHINE_HARDWARE_NAME = "uname -m";
+
   /** ADB shell command for getting cpu info. */
   @VisibleForTesting static final String ADB_SHELL_GET_CPU_INFO = "cat /proc/cpuinfo";
 
@@ -332,6 +335,23 @@ public class AndroidSystemSpecUtil {
     // Sample output:
     // 00:9a:cd:56:0e:88
     return output;
+  }
+
+  /**
+   * Gets the machine hardware name, as given by {@code uname -m}.
+   *
+   * @param serial the serial number of the device
+   * @throws MobileHarnessException if some error occurs in executing system commands, or memory
+   *     info not found
+   */
+  public String getMachineHardwareName(String serial)
+      throws MobileHarnessException, InterruptedException {
+    try {
+      return adb.runShellWithRetry(serial, ADB_SHELL_GET_MACHINE_HARDWARE_NAME).trim();
+    } catch (MobileHarnessException e) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_SYSTEM_SPEC_GET_MACHINE_HARDWARE_NAME_ERROR, e.getMessage(), e);
+    }
   }
 
   /**

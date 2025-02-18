@@ -491,6 +491,23 @@ public class AndroidSystemSpecUtilTest {
   }
 
   @Test
+  public void getMachineHardwareName() throws Exception {
+    when(adb.runShellWithRetry(SERIAL, AndroidSystemSpecUtil.ADB_SHELL_GET_MACHINE_HARDWARE_NAME))
+        .thenReturn("aarch64\n")
+        .thenThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE, "Error"));
+
+    assertThat(systemSpecUtil.getMachineHardwareName(SERIAL)).isEqualTo("aarch64");
+    assertThat(
+            assertThrows(
+                    MobileHarnessException.class,
+                    () -> systemSpecUtil.getMachineHardwareName(SERIAL))
+                .getErrorId())
+        .isEqualTo(AndroidErrorId.ANDROID_SYSTEM_SPEC_GET_MACHINE_HARDWARE_NAME_ERROR);
+  }
+
+  @Test
   public void getNumberOfCpus() throws Exception {
     when(adb.runShellWithRetry(SERIAL, AndroidSystemSpecUtil.ADB_SHELL_GET_CPU_INFO))
         .thenReturn(

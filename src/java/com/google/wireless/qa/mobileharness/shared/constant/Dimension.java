@@ -104,6 +104,8 @@ public final class Dimension {
     LOCATION_TYPE,
     /** A customized dimension to make devices easier to identify on device list page of FE. */
     LABEL,
+    /** The machine hardware name, as given by {@code uname -m}. */
+    MACHINE_HARDWARE_NAME,
     /** Network connection stability. */
     MAC_ADDRESS,
     /** Network provider of the SIM card. */
