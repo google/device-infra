@@ -187,28 +187,6 @@ public class AndroidAccountManager {
   }
 
   /**
-   * Adds a list of Google accounts on device.
-   *
-   * <p>Before adding accounts, this method will prepare device if needed.
-   *
-   * @param device the device on which the Google accounts are being added
-   * @param accountsArgs list of {@link AddAccountArgs} for added Google accounts
-   * @param log log of the currently running test, usually from {@code TestInfo}
-   * @throws MobileHarnessException if fails in checking if device is rooted, or using LST to login
-   *     but device is unrooted, or fails to prepare device before adding account, or fails to log
-   *     in account. Can ignore the login error if {@code accountsArgs} sets ignoreLoginError with
-   *     {@code true}.
-   * @throws InterruptedException if the thread executing the commands is interrupted.
-   */
-  public void addAccounts(
-      Device device, List<AddAccountArgs> accountsArgs, @Nullable LogCollector<?> log)
-      throws MobileHarnessException, InterruptedException {
-    for (AddAccountArgs accountArgs : accountsArgs) {
-      addAccount(device, accountArgs, log);
-    }
-  }
-
-  /**
    * Remove existing Google accounts that are not included in new accounts on device. If force
    * remove option is true, remove all existing Google accounts in new account list on device.
    *
