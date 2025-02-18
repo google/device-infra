@@ -41,6 +41,9 @@ public abstract class ScreenRecordArgs {
   @VisibleForTesting
   public abstract boolean bugreport();
 
+  @VisibleForTesting
+  public abstract Optional<Integer> timeLimit();
+
   abstract String outputFile();
 
   String toShellCmd() {
@@ -62,6 +65,11 @@ public abstract class ScreenRecordArgs {
 
     if (bugreport()) {
       args.add("--bugreport");
+    }
+
+    if (timeLimit().isPresent()) {
+      args.add("--time-limit");
+      args.add(timeLimit().get().toString());
     }
 
     args.add(outputFile());
@@ -104,6 +112,9 @@ public abstract class ScreenRecordArgs {
 
     /** Set whether to add additional information, such as a timestamp overlay. */
     public abstract Builder setBugreport(boolean value);
+
+    /** Set the time limit of the recording. */
+    public abstract Builder setTimeLimit(Optional<Integer> value);
 
     abstract Builder setOutputFile(String value);
 

@@ -58,9 +58,10 @@ public class AndroidHdVideoDecorator extends AsyncTimerDecorator {
   @ParamAnnotation(
       required = false,
       help =
-          "The number of video clips. If it equals x, records screen at the last (x*3-3, x*3] "
-              + "minutes. By default, it is 3 (recording at the last 6-9 minutes). At least it's "
-              + "2.")
+          "The number of video clips. If it equals x, records screen at the last"
+              + " (x*screenrecord_time_limit/60-screenrecord_time_limit/60,"
+              + " x*screenrecord_time_limit/60] minutes. By default, it is 3 (recording at the last"
+              + " 6-9 minutes). At least it's 2.")
   public static final String PARAM_NUM_VIDEO_CLIPS = "video_clip_num";
 
   @ParamAnnotation(
@@ -102,6 +103,14 @@ public class AndroidHdVideoDecorator extends AsyncTimerDecorator {
               + "set this to true if test runs in VR mode with VrCore as the compositor, "
               + "since the Android default screen recording does not work in this situation.")
   public static final String PARAM_RECORD_VR_VIDEO = "record_vr_video";
+
+  @ParamAnnotation(
+      required = false,
+      help =
+          "The maximum screen recording time, in seconds. If not set, it is 180 seconds.Set to 0"
+              + " will remove the time limit. Use this param at your own risk of exharsting the"
+              + " device's storage.")
+  public static final String PARAM_SCREENRECORD_TIME_LIMIT = "screenrecord_time_limit";
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -169,6 +178,8 @@ public class AndroidHdVideoDecorator extends AsyncTimerDecorator {
   @VisibleForTesting String videoSize;
 
   @VisibleForTesting boolean bugreport;
+
+  @VisibleForTesting Integer screenRecordTimeLimit;
 
   /**
    * Running recording processes on device.
@@ -246,6 +257,10 @@ public class AndroidHdVideoDecorator extends AsyncTimerDecorator {
     oldestClipIdToKeep = currentClipId;
     videoSize = jobInfo.params().get(PARAM_VIDEO_SIZE, null);
     bugreport = jobInfo.params().getBool(PARAM_BUGREPORT, /* defaultValue= */ false);
+    screenRecordTimeLimit =
+        jobInfo.params().has(PARAM_SCREENRECORD_TIME_LIMIT)
+            ? Integer.parseInt(jobInfo.params().get(PARAM_SCREENRECORD_TIME_LIMIT))
+            : null;
 
     prepareWorkingDir(testInfo, systemSettingUtil.getDeviceSdkVersion(deviceId));
 
@@ -258,8 +273,8 @@ public class AndroidHdVideoDecorator extends AsyncTimerDecorator {
         .alsoTo(logger)
         .log(
             "Start AndroidHdVideoDecorator, numVideoClips=%s, videoOnPass=%s, bitRate=%s, "
-                + "bugreport=%s",
-            numVideoClips, videoOnPass, videoBitRate, bugreport);
+                + "bugreport=%s, timeLimit=%s",
+            numVideoClips, videoOnPass, videoBitRate, bugreport, screenRecordTimeLimit);
     recordVrVideo = jobInfo.params().getBool(PARAM_RECORD_VR_VIDEO, /* defaultValue= */ false);
     if (recordVrVideo) {
       androidMediaUtil.enterVrMode(deviceId);
@@ -292,6 +307,7 @@ public class AndroidHdVideoDecorator extends AsyncTimerDecorator {
                       .setSize(Optional.fromNullable(videoSize))
                       .setVerbose(true)
                       .setBugreport(bugreport)
+                      .setTimeLimit(Optional.fromNullable(screenRecordTimeLimit))
                       .build(),
                   Comparators.min(
                       testInfo.timer().remainingTimeJava(),
