@@ -48,6 +48,7 @@ public enum AndroidProperty {
   BUILD_TYPE("ro.build.type"),
   CHARACTERISTICS("ro.build.characteristics"),
   CODENAME("ro.build.version.codename"),
+  COLOR("ro.boot.hardware.color"),
   DEVICE("ro.product.vendor.device", "ro.vendor.product.device", "ro.product.device"),
   DEVKEY_ALLOW("ro.boot.devkey-allow"),
   @DoNotAddToDimension
