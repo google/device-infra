@@ -37,8 +37,7 @@ java_library(
 java_library(
     name = "file_transfer_client_factories",
     srcs = ["FileTransferClientFactories.java"],
-    visibility = DEFAULT_VISIBILITY + [
-    ],
+    visibility = DEFAULT_VISIBILITY,
     deps = [
         ":file_transfer_client_factory",
         ":file_transfer_parameters",
