@@ -834,7 +834,7 @@ public class LocalDeviceRunner implements Runnable {
   }
 
   private boolean isAllocated() {
-    return allocationEndTime != null && allocationEndTime.isBefore(clock.instant());
+    return allocationEndTime != null && clock.instant().isBefore(allocationEndTime);
   }
 
   /** Posts {@link LocalDeviceChangeEvent} to signal the device status/dimension change. */
