@@ -53,6 +53,9 @@ message LabQuery {
       //
       // If LabInfoMask is not set, returns all fields of LabInfo.
       //
+      // If LabInfoMask is set but field_mask is not set, returns all fields of
+      // LabInfo.
+      //
       // If LabInfoMask is set but field_mask is empty, returns result without
       // LabInfo.
       //
@@ -71,6 +74,9 @@ message LabQuery {
       //
       // If DeviceInfoMask is not set, returns all fields of DeviceInfo.
       //
+      // If DeviceInfoMask is set but field_mask is not set, returns all fields
+      // of DeviceInfo.
+      //
       // If DeviceInfoMask is set but field_mask is empty, returns result
       // without DeviceInfo.
       //
@@ -86,7 +92,31 @@ message LabQuery {
       // `device_feature.composite_dimension.supported_dimension` are not in
       // `field_mask`, `selected_dimension_names` is ignored as there are no
       // dimensions to return.
-      repeated string selected_dimension_names = 2;
+      repeated string selected_dimension_names = 2 [deprecated = true];
+
+      message DimensionsMask {
+        repeated string dimension_names = 1;
+      }
+
+      // Optional.
+      //
+      // If the mask is not present or dimension_names is empty, returns all
+      // supported dimensions in DeviceInfo.
+      //
+      // If `device_feature.composite_dimension.supported_dimension` is not in
+      // `field_mask`, `supported_dimensions_mask` is ignored as there are no
+      // supported dimensions to return.
+      DimensionsMask supported_dimensions_mask = 3;
+
+      // Optional.
+      //
+      // If the mask is not present or dimension_names is empty, returns all
+      // required dimensions in DeviceInfo.
+      //
+      // If `device_feature.composite_dimension.required_dimension` is not in
+      // `field_mask`, `required_dimensions_mask` is ignored as there are no
+      // required dimensions to return.
+      DimensionsMask required_dimensions_mask = 4;
     }
 
     // Optional.
