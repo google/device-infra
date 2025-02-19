@@ -26,10 +26,8 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.api.testrunner.plugin.SkipJobException;
 import com.google.devtools.mobileharness.api.testrunner.plugin.SkipTestException;
-import com.google.devtools.mobileharness.shared.model.error.UnknownErrorId;
 import com.google.devtools.mobileharness.shared.util.event.EventBus;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEvent;
-import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import com.google.wireless.qa.mobileharness.shared.controller.event.TestEvent;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -214,22 +212,10 @@ public class SubscriberExceptionLoggingHandler
                     "User test plugin error",
                     context.exception()));
       } else {
-        if (context.exception()
-                instanceof com.google.wireless.qa.mobileharness.shared.MobileHarnessException
-            && ((com.google.wireless.qa.mobileharness.shared.MobileHarnessException)
-                        context.exception())
-                    .getErrorCode()
-                != ErrorCode.UNKNOWN.code()) {
+        if (context.exception() instanceof MobileHarnessException) {
           // Uses the error code in MobileHarnessException.
-          com.google.wireless.qa.mobileharness.shared.MobileHarnessException e =
-              (com.google.wireless.qa.mobileharness.shared.MobileHarnessException)
-                  context.exception();
-          testInfo
-              .warnings()
-              .add(
-                  UnknownErrorId.of(e.getErrorCodeEnum(), e.getErrorType()),
-                  e.getMessage(),
-                  e.getCause());
+          MobileHarnessException e = (MobileHarnessException) context.exception();
+          testInfo.warnings().add(e.getErrorId(), e.getMessage(), e.getCause());
         } else {
           testInfo
               .warnings()
@@ -253,22 +239,10 @@ public class SubscriberExceptionLoggingHandler
                     "User job plugin error",
                     context.exception()));
       } else {
-        if (context.exception()
-                instanceof com.google.wireless.qa.mobileharness.shared.MobileHarnessException
-            && ((com.google.wireless.qa.mobileharness.shared.MobileHarnessException)
-                        context.exception())
-                    .getErrorCode()
-                != ErrorCode.UNKNOWN.code()) {
+        if (context.exception() instanceof MobileHarnessException) {
           // Uses the error code in MobileHarnessException.
-          com.google.wireless.qa.mobileharness.shared.MobileHarnessException e =
-              (com.google.wireless.qa.mobileharness.shared.MobileHarnessException)
-                  context.exception();
-          jobInfo
-              .warnings()
-              .add(
-                  UnknownErrorId.of(e.getErrorCodeEnum(), e.getErrorType()),
-                  e.getMessage(),
-                  e.getCause());
+          MobileHarnessException e = (MobileHarnessException) context.exception();
+          jobInfo.warnings().add(e.getErrorId(), e.getMessage(), e.getCause());
         } else {
           jobInfo
               .warnings()
