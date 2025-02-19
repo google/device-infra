@@ -28,3 +28,19 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
     ],
 )
+
+java_library(
+    name = "android_jit_emulator_util",
+    srcs = ["AndroidJitEmulatorUtil.java"],
+    visibility = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
+    ],
+)
+
+filegroup(
+    name = "tf_virtual_device_host_config",
+    srcs = ["host-config.xml"],
+    visibility = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
+    ],
+)

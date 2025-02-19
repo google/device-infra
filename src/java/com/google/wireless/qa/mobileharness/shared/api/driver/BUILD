@@ -244,6 +244,7 @@ java_library(
     srcs = ["XtsTradefedTest.java"],
     resources = [
         "//src/devtools/mobileharness/infra/controller/test/util/xtsdownloader/configs:mcts_list",
+        "//src/java/com/google/devtools/mobileharness/platform/android/shared/emulator:tf_virtual_device_host_config",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/agent:tradefed_invocation_agent_deploy.jar",
     ],
     deps = [
@@ -257,6 +258,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:tradefed_config_generator",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:log_recorder",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_internal_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/shared/emulator:android_jit_emulator_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_command_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_constants",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_dir_util",
@@ -282,6 +284,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:composite_device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/comm/message/event",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:xts_tradefed_test_spec_java_proto",

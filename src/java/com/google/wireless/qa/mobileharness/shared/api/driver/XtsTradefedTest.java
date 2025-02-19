@@ -47,6 +47,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.control
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecord;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecord.SourceType;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
+import com.google.devtools.mobileharness.platform.android.shared.emulator.AndroidJitEmulatorUtil;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsCommandUtil;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
@@ -83,6 +84,7 @@ import com.google.wireless.qa.mobileharness.shared.api.annotation.DriverAnnotati
 import com.google.wireless.qa.mobileharness.shared.api.device.CompositeDevice;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.comm.message.event.TestMessageEvent;
+import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.XtsTradefedTestDriverSpec;
@@ -157,6 +159,9 @@ public class XtsTradefedTest extends BaseDriver
 
   private static final String STATIC_MCTS_LIST_FILE_PATH =
       "/devtools/mobileharness/infra/controller/test/util/xtsdownloader/configs/mcts_list.txt";
+
+  private static final String TF_VIRTUAL_DEVICE_HOST_CONFIG =
+      "/com/google/devtools/mobileharness/platform/android/shared/emulator/host-config.xml";
 
   private final CommandExecutor cmdExecutor;
   private final LocalFileUtil localFileUtil;
@@ -787,6 +792,9 @@ public class XtsTradefedTest extends BaseDriver
         "LD_LIBRARY_PATH", getConcatenatedLdLibraryPath(tmpXtsRootDir, xtsType));
     environmentToTradefedConsole.put("PATH", getEnvPath());
     environmentToTradefedConsole.put("TF_WORK_DIR", tmpXtsRootDir.toString());
+    if (getDevice().hasDimension(Dimension.Name.DEVICE_CLASS_NAME, "AndroidJitEmulator")) {
+      environmentToTradefedConsole.put("TF_GLOBAL_CONFIG", getTradefedVirtualDeviceHostConfig());
+    }
     if (!spec.getEnvVars().isEmpty()) {
       String envVarJson = spec.getEnvVars();
       Map<String, String> envVar =
@@ -926,7 +934,16 @@ public class XtsTradefedTest extends BaseDriver
     }
 
     // Appends allocated device(s) serial
-    getDeviceIds().forEach(serial -> xtsRunCommand.add("-s", serial));
+    if (getDevice().hasDimension(Dimension.Name.DEVICE_CLASS_NAME, "AndroidJitEmulator")) {
+      logger.atInfo().log("Adding TF-based virtual device name to xts run command");
+      getDeviceIds()
+          .forEach(
+              serial ->
+                  xtsRunCommand.add(
+                      "-s", AndroidJitEmulatorUtil.getVirtualDeviceNameInTradefed(serial)));
+    } else {
+      getDeviceIds().forEach(serial -> xtsRunCommand.add("-s", serial));
+    }
 
     return xtsRunCommand.build();
   }
@@ -1254,5 +1271,9 @@ public class XtsTradefedTest extends BaseDriver
 
   private String getStaticMctsListFilePath() throws MobileHarnessException {
     return resUtil.getResourceFile(getClass(), STATIC_MCTS_LIST_FILE_PATH);
+  }
+
+  private String getTradefedVirtualDeviceHostConfig() throws MobileHarnessException {
+    return resUtil.getResourceFile(getClass(), TF_VIRTUAL_DEVICE_HOST_CONFIG);
   }
 }

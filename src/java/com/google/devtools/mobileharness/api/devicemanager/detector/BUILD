@@ -26,6 +26,10 @@ package(
 java_library(
     name = "android_jit_emulator_detector",
     srcs = ["AndroidJitEmulatorDetector.java"],
+    visibility = [
+        "//:deviceinfra_devicemanagement_pkg",
+        "//:deviceinfra_pkg",
+    ],
     deps = [
         ":base",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector/model",

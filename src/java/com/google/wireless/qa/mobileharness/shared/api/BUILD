@@ -41,6 +41,8 @@ java_library(
     name = "xts_test",
     runtime_deps = [
         ":xts_test_client",
+        "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:android_jit_emulator_detector",
+        "//src/java/com/google/devtools/mobileharness/api/devicemanager/dispatcher:android_jit_emulator_dispatcher",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_adb_shell_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_ats_dynamic_config_pusher_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_clean_apps_decorator",
@@ -51,6 +53,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_min_sdk_version_check_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_show_instruction_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_switch_user_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_jit_emulator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_local_emulator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_real_device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:failed_device",

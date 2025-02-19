@@ -24,6 +24,7 @@ import com.google.devtools.mobileharness.api.model.proto.Device.PostTestDeviceOp
 import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
+import com.google.devtools.mobileharness.platform.android.shared.emulator.AndroidJitEmulatorUtil;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.Timeout;
@@ -101,6 +102,10 @@ public class AndroidJitEmulator extends AndroidDevice {
 
   @Override
   public void preRunTest(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+    if (Flags.instance().noopJitEmulator.getNonNull()) {
+      logger.atInfo().log("JIT emulator %s is no-op", deviceId);
+      return;
+    }
     String imgZip = testInfo.jobInfo().files().getSingle("device");
     String hostPkg = testInfo.jobInfo().files().getSingle("cvd-host_package.tar.gz");
     Path imageDir = Path.of(testInfo.getTmpFileDir()).resolve("image_dir");
@@ -124,7 +129,7 @@ public class AndroidJitEmulator extends AndroidDevice {
                 acloudPath,
                 "create",
                 "--local-instance",
-                getInstanceId(),
+                AndroidJitEmulatorUtil.getAcloudInstanceId(getDeviceId()),
                 "--local-image",
                 imageDir.toString(),
                 "--local-tool",
@@ -144,10 +149,18 @@ public class AndroidJitEmulator extends AndroidDevice {
   @Override
   public PostTestDeviceOp postRunTest(TestInfo testInfo)
       throws MobileHarnessException, InterruptedException {
+    if (Flags.instance().noopJitEmulator.getNonNull()) {
+      logger.atInfo().log("JIT emulator %s is no-op", deviceId);
+      return PostTestDeviceOp.NONE;
+    }
     String acloudPath = Flags.instance().acloudPath.getNonNull();
     localFileUtil.grantFileOrDirFullAccess(acloudPath);
     Command command =
-        Command.of(acloudPath, "delete", "--instance-names", "local-instance-" + getInstanceId());
+        Command.of(
+            acloudPath,
+            "delete",
+            "--instance-names",
+            "local-instance-" + AndroidJitEmulatorUtil.getAcloudInstanceId(getDeviceId()));
     String output = commandExecutor.run(command);
     logger.atInfo().log("acloud delete output: %s", output);
     return PostTestDeviceOp.NONE;
@@ -167,14 +180,5 @@ public class AndroidJitEmulator extends AndroidDevice {
   public boolean isRooted() {
     //  We suppose all emulators are rooted.
     return true;
-  }
-
-  // TODO: Move instance id logic to a shared class to share with
-  // AndroidJitEmulatorDetector.
-  private String getInstanceId() {
-    return String.valueOf(
-        Integer.parseInt(getDeviceId().substring(getDeviceId().indexOf(':') + 1))
-            - EMULATOR_BASE_PORT
-            + EMULATOR_INSTANCE_ID_BASE);
   }
 }

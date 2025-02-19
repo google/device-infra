@@ -61,6 +61,13 @@ final class AllDetectorsAndDispatchers {
       detectorCandidates.add(createAdbDetectorOss());
     }
 
+    // Android JIT emulator detector.
+    if (Flags.instance().enableEmulatorDetection.getNonNull()) {
+      if (Flags.instance().androidJitEmulatorNum.getNonNull() > 0) {
+        detectorCandidates.add(createDetector("AndroidJitEmulatorDetector"));
+      }
+    }
+
     // NoOpDevice detector.
     if (Flags.instance().noOpDeviceNum.getNonNull() > 0) {
       detectorCandidates.add(new NoOpDeviceDetector());
@@ -95,6 +102,13 @@ final class AllDetectorsAndDispatchers {
     // NoOpDevice dispatcher.
     if (Flags.instance().noOpDeviceNum.getNonNull() > 0) {
       dispatcherManager.add(NoOpDeviceDispatcher.class);
+    }
+
+    // Android JIT emulator dispatcher.
+    if (Flags.instance().enableEmulatorDetection.getNonNull()) {
+      if (Flags.instance().androidJitEmulatorNum.getNonNull() > 0) {
+        dispatcherManager.add(loadDispatcherClass("AndroidJitEmulatorDispatcher"));
+      }
     }
   }
 

@@ -73,6 +73,9 @@ java_library(
 java_library(
     name = "android_jit_emulator_dispatcher",
     srcs = ["AndroidJitEmulatorDispatcher.java"],
+    visibility = [
+        "//:deviceinfra_all_pkg",
+    ],
     deps = [
         ":base",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector/model",

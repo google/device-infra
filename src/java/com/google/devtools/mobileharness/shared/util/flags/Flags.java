@@ -1457,6 +1457,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> noOpLabServer = noOpLabServerDefault;
 
+  private static final Flag<Boolean> noopJitEmulatorDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--noop_jit_emulator",
+      description = "Make jit emulator no-op and work as placeholder",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> noopJitEmulator = noopJitEmulatorDefault;
+
   private static final Flag<Map<String, String>> olcDatabaseJdbcPropertyDefault =
       Flag.value(ImmutableMap.of());
 

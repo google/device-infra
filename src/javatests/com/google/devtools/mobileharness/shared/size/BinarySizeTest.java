@@ -47,7 +47,7 @@ public class BinarySizeTest {
   private static final long MAX_BASE_OLC_SERVER_BINARY_SIZE_BYTE = 31_450_000L;
   private static final long MAX_ATS_OLC_SERVER_BINARY_SIZE_BYTE = 41_650_000L;
   private static final long MAX_ATS_OLC_SERVER_LOCAL_MODE_BINARY_SIZE_BYTE = 41_350_000L;
-  private static final long MAX_LAB_SERVER_BINARY_SIZE_BYTE = 39_650_000L;
+  private static final long MAX_LAB_SERVER_BINARY_SIZE_BYTE = 39_750_000L;
   private static final long MAX_ATS_CONSOLE_BINARY_SIZE_BYTE = 23_450_000L;
   private static final long MAX_XTS_TRADEFED_AGENT_BINARY_SIZE_BYTE = 4_550_000L;
 
