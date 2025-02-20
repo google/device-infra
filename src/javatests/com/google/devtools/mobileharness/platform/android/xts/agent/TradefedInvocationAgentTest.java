@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.platform.android.xts.agent;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.truth.Correspondence.transforming;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.devtools.mobileharness.platform.android.xts.agent.testdata.FakeTradefed.DEVICE_ID_TO_TRIGGER_CHECKED_INVOCATION_EXCEPTION;
@@ -26,6 +27,7 @@ import static com.google.devtools.mobileharness.platform.android.xts.agent.testd
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfo;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfo.TradefedInvocation;
@@ -82,7 +84,7 @@ public class TradefedInvocationAgentTest {
                         .getJavaCommandCreator()
                         .createJavaCommand(
                             FAKE_TRADEFED_PATH,
-                            ImmutableList.of("device1", "device2"),
+                            ImmutableList.of("-s", "device1", "-s", "device2"),
                             ImmutableList.of(
                                 String.format(
                                     "-javaagent:%s=%s", AGENT_PATH, runtimeInfoFilePath))))
@@ -162,6 +164,104 @@ public class TradefedInvocationAgentTest {
   }
 
   @Test
+  public void premain_sharding() throws Exception {
+    Path runtimeInfoFilePath = tempFolder.newFolder().toPath().resolve("runtime_info_file.txt");
+
+    CommandProcess commandProcess =
+        commandExecutor.start(
+            Command.of(
+                    systemUtil
+                        .getJavaCommandCreator()
+                        .createJavaCommand(
+                            FAKE_TRADEFED_PATH,
+                            // Enable sharding by specifying the --shard-count param:
+                            ImmutableList.of(
+                                "-s", "device1", "-s", "device2", "--shard-count", "2"),
+                            ImmutableList.of(
+                                String.format(
+                                    "-javaagent:%s=%s", AGENT_PATH, runtimeInfoFilePath))))
+                .showFullResultInException(true));
+
+    List<XtsTradefedRuntimeInfo> runtimeInfos = new ArrayList<>();
+    Instant lastModifiedTime = null;
+    while (commandProcess.isAlive()) {
+      Sleeper.defaultSleeper().sleep(Duration.ofMillis(200L));
+      Optional<XtsTradefedRuntimeInfoFileDetail> fileDetail =
+          xtsTradefedRuntimeInfoFileUtil.readInfo(runtimeInfoFilePath, lastModifiedTime);
+      if (fileDetail.isPresent()) {
+        lastModifiedTime = fileDetail.get().lastModifiedTime();
+        runtimeInfos.add(fileDetail.get().runtimeInfo());
+      }
+    }
+
+    // runtimeInfos should contain three elements:
+    // 1. The first is the initial invocation record when tradefed is running.
+    // 2. The second is when tradefed completes, so it's an empty XtsTradefedRuntimeInfo with no
+    // running invocations.
+    // 3. The third is when the agent checks for the tradefed invocation error, and saves the
+    // invocation record with error message (and isRunning=false).
+
+    assertThat(runtimeInfos)
+        .comparingElementsUsing(
+            transforming(
+                (XtsTradefedRuntimeInfo runtimeInfo) ->
+                    requireNonNull(runtimeInfo).invocations().stream()
+                        .map(TradefedInvocation::deviceIds)
+                        .collect(toImmutableSet()),
+                "has invocations containing device IDs of"))
+        .containsExactly(
+            ImmutableSet.of(ImmutableList.of("device1"), ImmutableList.of("device2")),
+            ImmutableSet.of(),
+            ImmutableSet.of(ImmutableList.of("device1"), ImmutableList.of("device2")))
+        .inOrder();
+
+    assertThat(runtimeInfos)
+        .comparingElementsUsing(
+            transforming(
+                (XtsTradefedRuntimeInfo runtimeInfo) ->
+                    requireNonNull(runtimeInfo).invocations().stream()
+                        .map(TradefedInvocation::status)
+                        .collect(toImmutableList()),
+                "has invocations containing statuses of"))
+        .containsExactly(
+            ImmutableList.of("init", "init"), ImmutableList.of(), ImmutableList.of("", ""))
+        .inOrder();
+
+    assertThat(runtimeInfos)
+        .comparingElementsUsing(
+            transforming(
+                (XtsTradefedRuntimeInfo runtimeInfo) ->
+                    requireNonNull(runtimeInfo).invocations().stream()
+                        .map(TradefedInvocation::errorMessage)
+                        .collect(toImmutableList()),
+                "has invocations containing error messages of"))
+        .containsExactly(
+            ImmutableList.of("", ""),
+            ImmutableList.of(),
+            ImmutableList.of("Fake error message", "Fake error message"))
+        .inOrder();
+
+    assertThat(runtimeInfos)
+        .comparingElementsUsing(
+            transforming(
+                (XtsTradefedRuntimeInfo runtimeInfo) ->
+                    requireNonNull(runtimeInfo).invocations().stream()
+                        .map(TradefedInvocation::isRunning)
+                        .map(isRunning -> Boolean.toString(isRunning))
+                        .collect(toImmutableList()),
+                "has invocations containing isRunning values of"))
+        .containsExactly(
+            ImmutableList.of("true", "true"),
+            ImmutableList.of(),
+            ImmutableList.of("false", "false"))
+        .inOrder();
+
+    CommandResult commandResult = commandProcess.await();
+    logger.atInfo().log("Command result: %s", commandResult);
+    assertThat(commandResult.exitCode()).isEqualTo(0);
+  }
+
+  @Test
   public void premain_invocationThrowsUncheckedException() throws Exception {
     Path runtimeInfoFilePath = tempFolder.newFolder().toPath().resolve("runtime_info_file.txt");
 
@@ -174,7 +274,8 @@ public class TradefedInvocationAgentTest {
                             FAKE_TRADEFED_PATH,
                             // Specifying the special device ID to trigger an invocation unchecked
                             // exception:
-                            ImmutableList.of(DEVICE_ID_TO_TRIGGER_UNCHECKED_INVOCATION_EXCEPTION),
+                            ImmutableList.of(
+                                "-s", DEVICE_ID_TO_TRIGGER_UNCHECKED_INVOCATION_EXCEPTION),
                             ImmutableList.of(
                                 String.format(
                                     "-javaagent:%s=%s",
@@ -207,7 +308,8 @@ public class TradefedInvocationAgentTest {
                             FAKE_TRADEFED_PATH,
                             // Specifying the special device ID to trigger an invocation checked
                             // exception:
-                            ImmutableList.of(DEVICE_ID_TO_TRIGGER_CHECKED_INVOCATION_EXCEPTION),
+                            ImmutableList.of(
+                                "-s", DEVICE_ID_TO_TRIGGER_CHECKED_INVOCATION_EXCEPTION),
                             ImmutableList.of(
                                 String.format(
                                     "-javaagent:%s=%s",
