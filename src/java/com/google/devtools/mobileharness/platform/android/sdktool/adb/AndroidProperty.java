@@ -64,6 +64,7 @@ public enum AndroidProperty {
   LANGUAGE("persist.sys.language", "ro.product.locale.language"),
   LOCALE("persist.sys.locale"),
   MANUFACTURER("ro.product.manufacturer"),
+  MEMORY_CLASS("dalvik.vm.heapgrowthlimit", "dalvik.vm.heapsize"),
   MODEL("ro.product.model"),
   NATIVE_BRIDGE("ro.dalvik.vm.native.bridge"),
   PREVIEW_SDK_VERSION("ro.build.version.preview_sdk"),

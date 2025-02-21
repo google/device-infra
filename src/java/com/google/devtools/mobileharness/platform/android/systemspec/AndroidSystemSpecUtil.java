@@ -22,6 +22,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.base.Splitter;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
@@ -473,6 +474,26 @@ public class AndroidSystemSpecUtil {
     throw new MobileHarnessException(
         AndroidErrorId.ANDROID_SYSTEM_SPEC_TOTAL_MEM_VALUE_NOT_FOUND,
         "Memory info not found:\n" + output);
+  }
+
+  /**
+   * Returns the per-application memory class.
+   *
+   * <p>This represents an approximate memory limit Android applications should impose on themselves
+   * to let the overall system work best. Logic derived from {@code
+   * ActivityManager::staticGetMemoryClass()}.
+   */
+  public int getMemoryClassInMb(String serial) throws MobileHarnessException, InterruptedException {
+    String value = adbUtil.getProperty(serial, AndroidProperty.MEMORY_CLASS);
+    // Currently, `m` is the only valid, used suffix
+    if (Strings.isNullOrEmpty(value) || !value.endsWith("m")) {
+      return 0;
+    }
+    try {
+      return Integer.parseInt(value, 0, value.length() - 1, 10);
+    } catch (NumberFormatException e) {
+      return 0;
+    }
   }
 
   /**
