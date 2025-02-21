@@ -51,7 +51,9 @@ java_library(
     srcs = [
         "AndroidPackages.java",
     ],
-    visibility = ["//:deviceinfra_all_pkg"],
+    visibility = [
+        "//:deviceinfra_all_pkg",
+    ],
 )
 
 java_library(

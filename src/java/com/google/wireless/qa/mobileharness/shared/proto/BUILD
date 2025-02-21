@@ -27,6 +27,8 @@ package_group(
     includes = [
         "//:deviceinfra_all_pkg",
     ],
+    packages = [
+    ],
 )
 
 exports_files([
