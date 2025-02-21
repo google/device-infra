@@ -38,6 +38,7 @@ java_library(
     name = "mask_utils",
     srcs = ["MaskUtils.java"],
     deps = [
+        "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
         "@com_google_protobuf//:protobuf_java_util",
         "@com_google_protobuf_protobuf_java",
