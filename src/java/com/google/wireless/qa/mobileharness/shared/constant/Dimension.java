@@ -98,9 +98,9 @@ public final class Dimension {
     GMSCORE_SIGNATURE,
     /** The lab location of the device. */
     LAB_LOCATION,
-    /** The location type of the device. */
+    /** The type of the lab: Satellite/SLaaS/Core */
     LAB_TYPE,
-    /** The type of the lab. */
+    /** The location type of the lab. */
     LOCATION_TYPE,
     /** A customized dimension to make devices easier to identify on device list page of FE. */
     LABEL,

@@ -65,7 +65,6 @@ import com.google.devtools.mobileharness.infra.master.rpc.stub.grpc.LabSyncGrpcS
 import com.google.devtools.mobileharness.shared.constant.hostmanagement.HostPropertyConstants.HostPropertyKey;
 import com.google.devtools.mobileharness.shared.labinfo.LabInfoProvider;
 import com.google.devtools.mobileharness.shared.labinfo.LocalLabInfoProvider;
-import com.google.devtools.mobileharness.shared.util.base.StrUtil;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.rpc.service.CloudFileTransferServiceGrpcImpl;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.rpc.service.CloudFileTransferServiceImpl;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.common.TaggedFileHandler;
@@ -89,7 +88,6 @@ import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Value;
 import com.google.wireless.qa.mobileharness.shared.constant.DirCommon;
 import com.google.wireless.qa.mobileharness.shared.constant.ExitCode;
-import com.google.wireless.qa.mobileharness.shared.util.DeviceUtil;
 import com.google.wireless.qa.mobileharness.shared.util.NetUtil;
 import io.grpc.BindableService;
 import io.grpc.netty.NettyServerBuilder;
@@ -419,14 +417,6 @@ public class LabServer {
 
     HostProperties.Builder hostProperties = HostProperties.newBuilder();
 
-    // Required dimensions
-    // Adds "pool:shared" to lab required dimensions for m&m labs.
-    if (DeviceUtil.inSharedLab()) {
-      LabDimensionManager.getInstance()
-          .getRequiredLocalDimensions()
-          .add(Name.POOL, Value.POOL_SHARED);
-    }
-
     // Supported dimensions
     if (systemUtil.isOnLinux()) {
       // By default, all newly upgraded Linux labs will support container-mode tests.
@@ -510,26 +500,7 @@ public class LabServer {
             .setValue(Ascii.toLowerCase(locationType))
             .build());
 
-    addExtraHostProperties(hostProperties);
-
     return hostProperties.build();
-  }
-
-  private void addExtraHostProperties(HostProperties.Builder hostProperties)
-      throws InterruptedException {
-    // Java version
-    hostProperties.addHostProperty(
-        HostProperty.newBuilder()
-            .setKey(Ascii.toLowerCase(HostPropertyKey.JAVA_VERSION.name()))
-            .setValue(systemUtil.getJavaVersion())
-            .build());
-
-    // Host total memory
-    hostProperties.addHostProperty(
-        HostProperty.newBuilder()
-            .setKey(Ascii.toLowerCase(HostPropertyKey.TOTAL_MEM.name()))
-            .setValue(StrUtil.getHumanReadableSize(systemUtil.getTotalMemory()))
-            .build());
   }
 
   /** Test services created by lab server. */
