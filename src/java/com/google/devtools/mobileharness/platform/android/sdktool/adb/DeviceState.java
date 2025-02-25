@@ -19,7 +19,7 @@ package com.google.devtools.mobileharness.platform.android.sdktool.adb;
 /**
  * Device state information of an Android device.
  *
- * <p>@see //system/core/adb/adb.h and //system/core/adb/transport.cpp
+ * <p>@see //packages/modules/adb/adb.h and //packages/modules/adb/transport.cpp
  */
 public enum DeviceState {
   // TODO:Split up device connection state and MH device state.
