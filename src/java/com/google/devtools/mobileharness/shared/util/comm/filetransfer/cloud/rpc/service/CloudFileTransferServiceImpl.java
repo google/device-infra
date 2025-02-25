@@ -415,7 +415,7 @@ public class CloudFileTransferServiceImpl {
       } catch (ExecutionException e) {
         // It mostly shouldn't happen, because |Process.run| catches all errors.
         throw new MobileHarnessException(
-            InfraErrorId.FT_FILE_UPLOAD_ERROR, "Failed to " + actionInfo, e);
+            InfraErrorId.FT_FILE_DOWNLOAD_ERROR, "Failed to " + actionInfo, e);
       } catch (TimeoutException e) {
         logger.atInfo().log(
             "[%s] %s is still running after initial timeout %s seconds",
