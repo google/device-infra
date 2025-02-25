@@ -209,7 +209,9 @@ public class TradefedInvocationAgentTest {
                         .map(TradefedInvocation::deviceIds)
                         .collect(toImmutableSet()),
                 "has invocations containing device IDs of"))
-        .containsExactly(
+        // Not using containsExactly since how the test reads the runtime info file periodically
+        // might also capture some other intermediary states.
+        .containsAtLeast(
             ImmutableSet.of(ImmutableList.of("device1"), ImmutableList.of("device2")),
             ImmutableSet.of(),
             ImmutableSet.of(ImmutableList.of("device1"), ImmutableList.of("device2")))
@@ -223,7 +225,7 @@ public class TradefedInvocationAgentTest {
                         .map(TradefedInvocation::status)
                         .collect(toImmutableList()),
                 "has invocations containing statuses of"))
-        .containsExactly(
+        .containsAtLeast(
             ImmutableList.of("init", "init"), ImmutableList.of(), ImmutableList.of("", ""))
         .inOrder();
 
@@ -235,7 +237,7 @@ public class TradefedInvocationAgentTest {
                         .map(TradefedInvocation::errorMessage)
                         .collect(toImmutableList()),
                 "has invocations containing error messages of"))
-        .containsExactly(
+        .containsAtLeast(
             ImmutableList.of("", ""),
             ImmutableList.of(),
             ImmutableList.of("Fake error message", "Fake error message"))
@@ -250,7 +252,7 @@ public class TradefedInvocationAgentTest {
                         .map(isRunning -> Boolean.toString(isRunning))
                         .collect(toImmutableList()),
                 "has invocations containing isRunning values of"))
-        .containsExactly(
+        .containsAtLeast(
             ImmutableList.of("true", "true"),
             ImmutableList.of(),
             ImmutableList.of("false", "false"))
