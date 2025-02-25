@@ -148,7 +148,9 @@ java_library(
 java_library(
     name = "messaging_service",
     srcs = ["MessagingService.java"],
-    visibility = ["//src/java/com/google/devtools/mobileharness/infra/lab:__pkg__"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/lab:__pkg__",
+    ],
     deps = [
         ":messaging_manager",
         "//src/devtools/mobileharness/api/messaging:messaging_java_proto",

@@ -83,6 +83,7 @@ java_library(
     srcs = ["ProxyTestManager.java"],
     visibility = [
         "//java/com/google/devtools/deviceinfra/host/utrs:__subpackages__",
+        "//java/com/google/devtools/mobileharness/infra/lab/rpc/service:__subpackages__",
         "//javatests/com/google/devtools/deviceinfra/host/utrs:__subpackages__",
         "//javatests/com/google/devtools/mobileharness/infra/controller/test/manager:__subpackages__",
         "//javatests/com/google/devtools/mobileharness/infra/lab:__subpackages__",
