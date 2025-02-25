@@ -84,8 +84,9 @@ public class AndroidDeviceFeaturesCheckDecorator extends BaseDecorator
           new MobileHarnessException(
               AndroidErrorId.ANDROID_DEVICE_FEATURES_CHECK_DECORATOR_CEHCK_FAILURE,
               String.format(
-                  "Android device features check failure. nonexistent_required_features=%s,"
-                      + " existent_forbidden_features=%s, device_features=%s, device_id=%s",
+                  "Skipped due to incompatible device features."
+                      + " nonexistent_required_features=%s, existent_forbidden_features=%s,"
+                      + " device_features=%s, device_id=%s",
                   nonexistentRequiredFeatures,
                   existentForbiddenFeatures,
                   supportedFeatures,
