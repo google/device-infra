@@ -25,8 +25,6 @@ import com.google.devtools.mobileharness.api.model.error.ErrorId;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.UserErrorId;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
-import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -99,31 +97,6 @@ public class UnknownErrorId implements ErrorId {
       errorId = findMatchedErrorId(code, name, type, UserErrorId.values());
     }
     return errorId.orElse(new UnknownErrorId(code, name, type));
-  }
-
-  /**
-   * Looks up an existing {@link BasicErrorId}, {@link InfraErrorId}, {@link ExtErrorId} or {@link
-   * AndroidErrorId} enum type according to the given code, name and type. Otherwise, returns an
-   * {@link UnknownErrorId} instance.
-   */
-  public static ErrorId of(int code, String name, MobileHarnessException.ErrorType oldType) {
-    ErrorType newType = ErrorType.UNCLASSIFIED;
-    if (oldType == MobileHarnessException.ErrorType.INFRA_ERROR) {
-      newType = ErrorType.INFRA_ISSUE;
-    } else if (oldType == MobileHarnessException.ErrorType.USERS_FAILURE) {
-      newType = ErrorType.CUSTOMER_ISSUE;
-    }
-    return of(code, name, newType);
-  }
-
-  /** Creates an {@link UnknownErrorId} instance for the legacy {@link ErrorCode} */
-  public static ErrorId of(ErrorCode errorCode, ErrorType errorType) {
-    return of(errorCode.code(), errorCode.name(), errorType);
-  }
-
-  /** Creates an {@link UnknownErrorId} instance for the legacy {@link ErrorCode} */
-  public static ErrorId of(ErrorCode errorCode, MobileHarnessException.ErrorType errorType) {
-    return of(errorCode.code(), errorCode.name(), errorType);
   }
 
   private static Optional<ErrorId> findMatchedErrorId(

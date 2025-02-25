@@ -41,8 +41,6 @@ java_library(
         "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
         "//src/java/com/google/devtools/common/metrics/stability/util:error_id_formatter",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:error_code",
         "@maven//:com_google_guava_guava",
     ],
 )
