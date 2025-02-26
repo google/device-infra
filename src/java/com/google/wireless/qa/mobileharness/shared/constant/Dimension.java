@@ -263,6 +263,8 @@ public final class Dimension {
     SDK_VERSION,
     /** Whether the system build is signed. Values includes: dev-keys/release-keys/test-keys. */
     SIGN,
+    /** The remaining storage lifetime in percentages. */
+    STORAGE_LIFETIME_PERCENTAGE,
     /** Whether the device is a svelte device. */
     SVELTE_DEVICE,
     /** Supports GmsCore. */

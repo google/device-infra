@@ -176,6 +176,13 @@ public class AndroidSystemSpecUtil {
           OUTPUT_FEATURE_STARTING_PATTERN
               + "com\\.google\\.android\\.feature\\.(PIXEL|GOOGLE)_EXPERIENCE");
 
+  /** ADB shell command to get storage lifetime. This does not work in old android builds. */
+  @VisibleForTesting static final String ADB_SHELL_GET_STORAGE_LIFETIME = "tradeinmode getstatus";
+
+  /** The pattern of storage lifetime. */
+  private static final Pattern PATTERN_STORAGE_LIFETIME =
+      Pattern.compile("\"useful_lifetime_remaining\":\\s*(\\d+)");
+
   private final Adb adb;
 
   private final AndroidAdbInternalUtil adbInternalUtil;
@@ -789,5 +796,27 @@ public class AndroidSystemSpecUtil {
     }
     // getImeiForSubscriber
     return 5;
+  }
+
+  /**
+   * Returns the remaining storage lifetime in percentages, or -1 if the information is unavailable.
+   *
+   * @param serial the serial number of the device
+   */
+  public int getStorageLifetime(String serial) throws InterruptedException {
+    try {
+      String out = adb.runShell(serial, ADB_SHELL_GET_STORAGE_LIFETIME);
+      Matcher matcher = PATTERN_STORAGE_LIFETIME.matcher(out);
+      if (matcher.find()) {
+        return Integer.parseInt(matcher.group(1));
+      }
+      logger.atWarning().log(
+          "Device %s does not support retrieving storage lifetime. Got output: %s", serial, out);
+      return -1;
+    } catch (MobileHarnessException | NumberFormatException e) {
+      logger.atWarning().withCause(e).log(
+          "Device %s does not support retrieving storage lifetime.", serial);
+      return -1;
+    }
   }
 }

@@ -577,6 +577,10 @@ public abstract class AndroidRealDeviceDelegate {
     } catch (MobileHarnessException e) {
       logger.atWarning().log("%s", e.getMessage());
     }
+    int storageLifetime = systemSpecUtil.getStorageLifetime(deviceId);
+    if (0 <= storageLifetime && storageLifetime <= 100) {
+      device.addDimension(Name.STORAGE_LIFETIME_PERCENTAGE, String.valueOf(storageLifetime));
+    }
   }
 
   private void addRealDeviceBasicSupportedDriversDecorators()
