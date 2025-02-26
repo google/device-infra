@@ -190,52 +190,7 @@ public final class MaskUtils {
                   deviceInfoMask.getRequiredDimensionsMask().getDimensionNamesList()));
     }
 
-    return trim(
-        fieldMask,
-        trimDeviceDimension(
-            deviceInfoBuilder.build(), deviceInfoMask.getSelectedDimensionNamesList()));
-  }
-
-  private static DeviceInfo trimDeviceDimension(
-      DeviceInfo deviceInfo, List<String> dimensionNames) {
-    if (dimensionNames.isEmpty()) {
-      return deviceInfo;
-    }
-
-    ImmutableSet<String> dimensionNamesLowerCase =
-        dimensionNames.stream().map(String::toLowerCase).collect(toImmutableSet());
-
-    DeviceInfo.Builder deviceInfoBuilder = deviceInfo.toBuilder();
-
-    deviceInfoBuilder
-        .getDeviceFeatureBuilder()
-        .getCompositeDimensionBuilder()
-        .clearSupportedDimension()
-        .addAllSupportedDimension(
-            deviceInfo
-                .getDeviceFeature()
-                .getCompositeDimension()
-                .getSupportedDimensionList()
-                .stream()
-                .filter(
-                    dimension -> dimensionNamesLowerCase.contains(toLowerCase(dimension.getName())))
-                .collect(toImmutableList()));
-
-    deviceInfoBuilder
-        .getDeviceFeatureBuilder()
-        .getCompositeDimensionBuilder()
-        .clearRequiredDimension()
-        .addAllRequiredDimension(
-            deviceInfo
-                .getDeviceFeature()
-                .getCompositeDimension()
-                .getRequiredDimensionList()
-                .stream()
-                .filter(
-                    dimension -> dimensionNamesLowerCase.contains(toLowerCase(dimension.getName())))
-                .collect(toImmutableList()));
-
-    return deviceInfoBuilder.build();
+    return trim(fieldMask, deviceInfoBuilder.build());
   }
 
   private static List<DeviceDimension> trimDimension(
