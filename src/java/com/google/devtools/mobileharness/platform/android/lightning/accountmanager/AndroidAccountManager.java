@@ -38,6 +38,7 @@ import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.log.LogCollector;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.logging.Level;
 import javax.annotation.Nullable;
 
@@ -154,7 +155,7 @@ public class AndroidAccountManager {
       }
     }
 
-    prepareAddAndroidAccount(device, this.getClass(), log);
+    prepareAddAndroidAccount(device, log);
     SharedLogUtil.logMsg(
         logger, log, "Successfully prepared device %s before adding Google account.", deviceId);
     try {
@@ -207,7 +208,7 @@ public class AndroidAccountManager {
       @Nullable List<String> newAccounts,
       @Nullable LogCollector<?> log)
       throws MobileHarnessException, InterruptedException {
-    prepareAddAndroidAccount(device, this.getClass(), log);
+    prepareAddAndroidAccount(device, log);
     String deviceId = device.getDeviceId();
     SharedLogUtil.logMsg(
         logger, log, "Successfully prepared device %s before removing Google account.", deviceId);
@@ -256,14 +257,12 @@ public class AndroidAccountManager {
    * Install specific apk to help add/remove account if apk is not installed on device.
    *
    * @param device the device being prepared for adding/removing Android account
-   * @param relativeClass class name calling the method
    * @param log log of the currently running test, usually from {@code TestInfo}
    * @throws MobileHarnessException if errors occur during installing apk
    * @throws InterruptedException if current thread is interrupted during this method
    */
   @VisibleForTesting
-  void prepareAddAndroidAccount(
-      Device device, Class<?> relativeClass, @Nullable LogCollector<?> log)
+  void prepareAddAndroidAccount(Device device, @Nullable LogCollector<?> log)
       throws MobileHarnessException, InterruptedException {
     // Makes sure the supporting apk files is installed.
     String deviceId = device.getDeviceId();
@@ -277,8 +276,8 @@ public class AndroidAccountManager {
           deviceId);
     }
 
-    installApkHelper(device, ApkType.ACCOUNT_MANAGER, installSignedVersion, relativeClass, log);
-    installApkHelper(device, ApkType.AUTH_TEST_SUPPORT, installSignedVersion, relativeClass, log);
+    installApkHelper(device, ApkType.ACCOUNT_MANAGER, installSignedVersion, log);
+    installApkHelper(device, ApkType.AUTH_TEST_SUPPORT, installSignedVersion, log);
   }
 
   // Determine whether to install signed version by detecting production build.
@@ -301,18 +300,12 @@ public class AndroidAccountManager {
   }
 
   private void installApkHelper(
-      Device device,
-      ApkType apkType,
-      boolean installSignedVersion,
-      Class<?> relativeClass,
-      @Nullable LogCollector<?> log)
+      Device device, ApkType apkType, boolean installSignedVersion, @Nullable LogCollector<?> log)
       throws MobileHarnessException, InterruptedException {
     try {
       apkInstaller.installApkIfNotExist(
           device,
-          ApkInstallArgs.builder()
-              .setApkPath(getApkPath(apkType, installSignedVersion, relativeClass))
-              .build(),
+          ApkInstallArgs.builder().setApkPath(getApkPath(apkType, installSignedVersion)).build(),
           log);
     } catch (MobileHarnessException e) {
       ErrorId errorId = AndroidErrorId.ANDROID_ACCOUNT_MANAGER_APK_INSTALL_ERROR;
@@ -324,7 +317,7 @@ public class AndroidAccountManager {
     }
   }
 
-  private String getApkPath(ApkType apkType, boolean installSignedVersion, Class<?> relativeClass)
+  private String getApkPath(ApkType apkType, boolean installSignedVersion)
       throws MobileHarnessException {
     switch (apkType) {
       case ACCOUNT_MANAGER:
@@ -333,14 +326,14 @@ public class AndroidAccountManager {
           if (!isNullOrEmpty(apkPathFromFlag)) {
             return apkPathFromFlag;
           } else {
-            return resUtil.getResourceFile(relativeClass, ACCOUNT_MANAGER_SIGNED_APK_PATH);
+            return getResourceFile(ACCOUNT_MANAGER_SIGNED_APK_PATH);
           }
         } else {
           String apkPathFromFlag = Flags.instance().androidAccountManagerApkPath.get();
           if (!isNullOrEmpty(apkPathFromFlag)) {
             return apkPathFromFlag;
           } else {
-            return resUtil.getResourceFile(relativeClass, ACCOUNT_MANAGER_APK_PATH);
+            return getResourceFile(ACCOUNT_MANAGER_APK_PATH);
           }
         }
       case AUTH_TEST_SUPPORT:
@@ -349,17 +342,25 @@ public class AndroidAccountManager {
           if (!isNullOrEmpty(apkPathFromFlag)) {
             return apkPathFromFlag;
           } else {
-            return resUtil.getResourceFile(relativeClass, AUTH_TEST_SUPPORT_SIGNED_APK_PATH);
+            return getResourceFile(AUTH_TEST_SUPPORT_SIGNED_APK_PATH);
           }
         } else {
           String apkPathFromFlag = Flags.instance().androidAuthTestSupportApkPath.get();
           if (!isNullOrEmpty(apkPathFromFlag)) {
             return apkPathFromFlag;
           } else {
-            return resUtil.getResourceFile(relativeClass, AUTH_TEST_SUPPORT_DEBUG_APK_PATH);
+            return getResourceFile(AUTH_TEST_SUPPORT_DEBUG_APK_PATH);
           }
         }
     }
     throw new AssertionError("Unsupported apk type: " + apkType);
+  }
+
+  private String getResourceFile(String resPath) throws MobileHarnessException {
+    Optional<String> externalResFile = resUtil.getExternalResourceFile(resPath);
+    if (externalResFile.isPresent()) {
+      return externalResFile.get();
+    }
+    return resUtil.getResourceFile(this.getClass(), resPath);
   }
 }
