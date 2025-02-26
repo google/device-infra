@@ -75,6 +75,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import javax.annotation.Nullable;
 
@@ -447,7 +448,6 @@ public final class JobInfoCreator {
     // Implementation of the MapSplitter is backed up by a LinkedMultimap, so the order of
     // file keeps the same as defined.
     Map<String, String> targetLocations = jobConfig.getTargetLocations().getContentMap();
-    boolean needToCheckBuiltFiles = jobConfig.getNeedCheckBuiltFiles();
     List<String> apksUnderTest = new ArrayList<>();
     for (FileConfig fileConfig : jobConfig.getFiles().getContentList()) {
       String tag = fileConfig.getTag();
@@ -460,7 +460,7 @@ public final class JobInfoCreator {
           apksUnderTest = putApksUnderTestInFront(files);
         }
         for (String file : files) {
-          if (needToCheckBuiltFiles) {
+          if (checkBuiltFiles(jobConfig, jobInfo, tag)) {
             for (String fileOrDirPath :
                 getFileOrDirPath(tag, file, genDirPath, targetLocations, localFileUtil)) {
               if (tmpRunDirPath != null
@@ -508,6 +508,14 @@ public final class JobInfoCreator {
         jobInfo.files().add(tag, fileOrDirPath);
       }
     }
+  }
+
+  /** Returns {@code true} if need to check the built files. */
+  private static boolean checkBuiltFiles(
+      com.google.wireless.qa.mobileharness.shared.proto.JobConfig jobConfig,
+      JobInfo jobInfo,
+      @Nullable String fileTag) {
+    return jobConfig.getNeedCheckBuiltFiles();
   }
 
   /**
@@ -789,7 +797,8 @@ public final class JobInfoCreator {
   }
 
   /** Finalizes scoped specs in {@code jobInfo}. */
-  private static void finalizeJobScopedSpecs(
+  @VisibleForTesting
+  static void finalizeJobScopedSpecs(
       com.google.wireless.qa.mobileharness.shared.proto.JobConfig jobConfig,
       JobInfo jobInfo,
       @Nullable String genDirPath)
@@ -823,6 +832,10 @@ public final class JobInfoCreator {
                 if (field.isRepeated() && builder.getRepeatedFieldCount(field) <= 0) {
                   return;
                 }
+                Optional<FieldDescriptor> tagField =
+                    builder.getDescriptorForType().getFields().stream()
+                        .filter(f -> f.getName().equals("tag"))
+                        .findFirst();
                 List<Object> originalPaths = new ArrayList<>();
                 if (field.isRepeated()) {
                   int size = builder.getRepeatedFieldCount(field);
@@ -848,8 +861,15 @@ public final class JobInfoCreator {
                   String rawPathString = (String) rawPath;
                   if (rawPathString.startsWith(SCOPED_SPEC_FILE_PREFIX)) {
                     rawPathString = rawPathString.substring(SCOPED_SPEC_FILE_PREFIX.length());
-                    resolvedPaths.addAll(
-                        getFileOrDirPath(fieldName, rawPathString, genDirPath, targetLocations));
+                    if (checkBuiltFiles(
+                        jobConfig,
+                        jobInfo,
+                        tagField.isEmpty() ? null : (String) builder.getField(tagField.get()))) {
+                      resolvedPaths.addAll(
+                          getFileOrDirPath(fieldName, rawPathString, genDirPath, targetLocations));
+                    } else {
+                      resolvedPaths.add(rawPathString);
+                    }
                   } else {
                     resolvedPaths.add(rawPathString);
                   }
