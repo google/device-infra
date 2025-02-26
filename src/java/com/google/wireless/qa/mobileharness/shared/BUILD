@@ -23,11 +23,6 @@ package(
 java_library(
     name = "exception",
     srcs = ["MobileHarnessException.java"],
-    deps = [
-        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:error_code",
-        "@maven//:com_google_code_findbugs_jsr305",
-        "@maven//:com_google_guava_guava",
-    ],
 )
 
 java_library(

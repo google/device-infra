@@ -17,7 +17,6 @@
 package com.google.devtools.mobileharness.api.model.error;
 
 import com.google.devtools.common.metrics.stability.model.ErrorIdProvider;
-import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import javax.annotation.Nullable;
 
 /** Base class of all Mobile Harness exceptions. */
@@ -50,12 +49,7 @@ public class MobileHarnessException
       @Nullable Throwable cause,
       boolean addErrorIdToMessage,
       boolean clearStackTrace) {
-    super(
-        ErrorCode.NEXT_GEN_ERROR,
-        ErrorType.UNCLASSIFIED_ERROR,
-        addErrorIdToMessage ? message + getMessageSuffix(errorId) : message,
-        cause,
-        false /* don't add cause to message */);
+    super(addErrorIdToMessage ? message + getMessageSuffix(errorId) : message, cause);
     this.errorId = errorId;
     if (clearStackTrace) {
       setStackTrace(EMPTY_STACK_TRACE);
@@ -72,50 +66,6 @@ public class MobileHarnessException
     String classSimpleName = getClass().getSimpleName();
     String message = getLocalizedMessage();
     return message == null ? classSimpleName : classSimpleName + ": " + message;
-  }
-
-  /**
-   * {@inheritDoc}
-   *
-   * @deprecated Please use {@link #getErrorId()}.code()
-   */
-  @Override
-  @Deprecated
-  public int getErrorCode() {
-    return errorId.code();
-  }
-
-  /**
-   * {@inheritDoc}
-   *
-   * <p>@deprecated Please use {@link #getErrorId()}.name()
-   */
-  @Override
-  @Deprecated
-  public String getErrorName() {
-    return errorId.name();
-  }
-
-  /**
-   * {@inheritDoc}
-   *
-   * <p>@deprecated Please use {@link #getErrorId()}.type()
-   */
-  @Override
-  @Deprecated
-  public ErrorType getErrorType() {
-    switch (errorId.type()) {
-      case INFRA_ISSUE:
-      case DEPENDENCY_ISSUE:
-        return ErrorType.INFRA_ERROR;
-      case CUSTOMER_ISSUE:
-        return ErrorType.USERS_FAILURE;
-      case UNCLASSIFIED:
-      case UNDETERMINED:
-      case UNRECOGNIZED:
-        break;
-    }
-    return ErrorType.UNCLASSIFIED_ERROR;
   }
 
   private static String getMessageSuffix(ErrorId errorId) {
