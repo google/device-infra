@@ -35,6 +35,7 @@ import com.google.devtools.mobileharness.infra.ats.common.SessionHandlerHelper;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.SessionResultHandlerUtil;
+import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.infra.ats.common.jobcreator.XtsJobCreator;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Failure;
@@ -244,8 +245,16 @@ class RunCommandHandler {
             allJobs.stream()
                 .filter(
                     jobInfo ->
+                        // There are two skipped cases:
+                        // 1. The module is not executed at all (SKIP_COLLECTING_NON_TF_REPORTS)
+                        // 2. The module is executed but skipped by feature checkers
+                        // Only mark the second case as done.
                         jobInfo.resultWithCause().get().type() == TestResult.SKIP
-                            && jobInfo.properties().has(SessionHandlerHelper.XTS_MODULE_NAME_PROP))
+                            && jobInfo.properties().has(SessionHandlerHelper.XTS_MODULE_NAME_PROP)
+                            && !jobInfo
+                                .properties()
+                                .getBoolean(Job.SKIP_COLLECTING_NON_TF_REPORTS)
+                                .orElse(false))
                 .map(
                     jobInfo -> {
                       // Mark skipped modules done when broadcasting results to update the status of

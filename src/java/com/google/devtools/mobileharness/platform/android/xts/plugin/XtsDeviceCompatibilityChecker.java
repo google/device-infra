@@ -76,7 +76,7 @@ public final class XtsDeviceCompatibilityChecker {
           .log()
           .atInfo()
           .alsoTo(logger)
-          .log("Validating device build fingerprint for test %s", testInfo.locator().getName());
+          .log("Validating device build fingerprint for retry %s", testInfo.locator().getName());
       validateDeviceBuildFingerprintMatchPrevSession(
           getAllocatedAndroidDeviceSerials(event),
           testInfo,
@@ -89,6 +89,17 @@ public final class XtsDeviceCompatibilityChecker {
               .properties()
               .getOptional(Job.PREV_SESSION_DEVICE_VENDOR_BUILD_FINGERPRINT)
               .orElse(""));
+    }
+
+    if (jobInfo.properties().getBoolean(Job.IS_XTS_NON_TF_JOB).orElse(false)) {
+      testInfo
+          .log()
+          .atInfo()
+          .alsoTo(logger)
+          .log(
+              "Validating device build fingerprint for non TF test %s",
+              testInfo.locator().getName());
+      validateDeviceBuildFingerprintsTheSame(getAllocatedAndroidDeviceSerials(event), testInfo);
     }
   }
 
@@ -120,10 +131,7 @@ public final class XtsDeviceCompatibilityChecker {
 
     try {
       for (String serial : deviceSerials) {
-        String deviceBuildFingerprint =
-            androidAdbUtil
-                .getProperty(serial, ImmutableList.of(DeviceBuildInfo.FINGERPRINT.getPropName()))
-                .trim();
+        String deviceBuildFingerprint = getDeviceBuildFingerprint(serial);
         if (!Ascii.equalsIgnoreCase(
             deviceBuildFingerprint, prevSessionDeviceBuildFingerprintToCompare)) {
           setSkipCollectingNonTfReports(testInfo.jobInfo());
@@ -140,11 +148,7 @@ public final class XtsDeviceCompatibilityChecker {
         }
 
         if (!prevSessionDeviceVendorBuildFingerprint.isEmpty()) {
-          String deviceVendorBuildFingerprint =
-              androidAdbUtil
-                  .getProperty(
-                      serial, ImmutableList.of(DeviceBuildInfo.VENDOR_FINGERPRINT.getPropName()))
-                  .trim();
+          String deviceVendorBuildFingerprint = getDeviceVendorBuildFingerprint(serial);
           if (!Ascii.equalsIgnoreCase(
               deviceVendorBuildFingerprint, prevSessionDeviceVendorBuildFingerprint)) {
             setSkipCollectingNonTfReports(testInfo.jobInfo());
@@ -173,6 +177,62 @@ public final class XtsDeviceCompatibilityChecker {
     }
   }
 
+  private void validateDeviceBuildFingerprintsTheSame(
+      ImmutableList<String> deviceSerials, TestInfo testInfo)
+      throws InterruptedException, SkipTestException {
+    if (deviceSerials.size() < 2) {
+      return;
+    }
+
+    try {
+      String deviceBuildFingerprint = getDeviceBuildFingerprint(deviceSerials.get(0));
+      String deviceVendorBuildFingerprint = getDeviceVendorBuildFingerprint(deviceSerials.get(0));
+      for (int i = 1; i < deviceSerials.size(); i++) {
+        String serial = deviceSerials.get(i);
+        String deviceBuildFingerprintToCompare = getDeviceBuildFingerprint(serial);
+        if (!Ascii.equalsIgnoreCase(deviceBuildFingerprint, deviceBuildFingerprintToCompare)) {
+          setSkipCollectingNonTfReports(testInfo.jobInfo());
+          throw SkipTestException.create(
+              String.format(
+                  "Device build fingerprints should be the same for multi-device tests."
+                      + " Found [%s: %s] and [%s: %s]. Skipping test [%s]",
+                  deviceSerials.get(0),
+                  deviceBuildFingerprint,
+                  serial,
+                  deviceBuildFingerprintToCompare,
+                  testInfo.locator().getName()),
+              DesiredTestResult.SKIP,
+              AndroidErrorId.XTS_DEVICE_COMPAT_CHECKER_DEVICE_BUILDS_NOT_THE_SAME);
+        }
+        String deviceVendorBuildFingerprintToCompare = getDeviceVendorBuildFingerprint(serial);
+        if (!Ascii.equalsIgnoreCase(
+            deviceVendorBuildFingerprint, deviceVendorBuildFingerprintToCompare)) {
+          setSkipCollectingNonTfReports(testInfo.jobInfo());
+          throw SkipTestException.create(
+              String.format(
+                  "Device vendor build fingerprints should be the same for multi-device tests."
+                      + "Found [%s: %s] and [%s: %s]. Skipping test [%s]",
+                  deviceSerials.get(0),
+                  deviceVendorBuildFingerprint,
+                  serial,
+                  deviceVendorBuildFingerprintToCompare,
+                  testInfo.locator().getName()),
+              DesiredTestResult.SKIP,
+              AndroidErrorId.XTS_DEVICE_COMPAT_CHECKER_DEVICE_BUILDS_NOT_THE_SAME);
+        }
+      }
+    } catch (MobileHarnessException e) {
+      setSkipCollectingNonTfReports(testInfo.jobInfo());
+      throw SkipTestException.create(
+          String.format(
+              "Error when checking device build fingerprint for test [%s]",
+              testInfo.locator().getName()),
+          DesiredTestResult.SKIP,
+          AndroidErrorId.XTS_DEVICE_COMPAT_CHECKER_CHECK_DEVICE_BUILD_ERROR,
+          e);
+    }
+  }
+
   private void setSkipCollectingNonTfReports(JobInfo jobInfo) {
     jobInfo.properties().add(Job.SKIP_COLLECTING_NON_TF_REPORTS, "true");
   }
@@ -185,5 +245,19 @@ public final class XtsDeviceCompatibilityChecker {
         .map(DeviceLocator::getSerial)
         .filter(allAndroidDevices::contains)
         .collect(toImmutableList());
+  }
+
+  private String getDeviceBuildFingerprint(String serial)
+      throws MobileHarnessException, InterruptedException {
+    return androidAdbUtil
+        .getProperty(serial, ImmutableList.of(DeviceBuildInfo.FINGERPRINT.getPropName()))
+        .trim();
+  }
+
+  private String getDeviceVendorBuildFingerprint(String serial)
+      throws MobileHarnessException, InterruptedException {
+    return androidAdbUtil
+        .getProperty(serial, ImmutableList.of(DeviceBuildInfo.VENDOR_FINGERPRINT.getPropName()))
+        .trim();
   }
 }
