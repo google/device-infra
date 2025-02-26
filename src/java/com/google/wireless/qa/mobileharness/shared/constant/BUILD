@@ -51,11 +51,6 @@ java_library(
 )
 
 java_library(
-    name = "error_code",
-    srcs = ["ErrorCode.java"],
-)
-
-java_library(
     name = "exit_code",
     srcs = ["ExitCode.java"],
     deps = ["//src/java/com/google/devtools/mobileharness/shared/util/system/constant:exit_code"],
