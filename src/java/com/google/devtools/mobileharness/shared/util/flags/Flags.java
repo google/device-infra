@@ -260,12 +260,12 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> atsConsoleAlwaysRestartOlcServer = atsConsoleAlwaysRestartOlcServerDefault;
 
-  private static final Flag<Boolean> atsConsoleCacheXtsDevicesDefault = Flag.value(true);
+  private static final Flag<Boolean> atsConsoleCacheXtsDevicesDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(
       names = "--ats_console_cache_xts_devices",
       description =
-          "Whether to cache devices during xTS execution in ATS console. Default is true.",
+          "Whether to cache devices during xTS execution in ATS console. Default is false.",
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> atsConsoleCacheXtsDevices = atsConsoleCacheXtsDevicesDefault;
 
