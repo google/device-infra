@@ -90,6 +90,11 @@ public class AndroidSystemSpecUtil {
   /** ADB shell command for getting cpu info. */
   @VisibleForTesting static final String ADB_SHELL_GET_CPU_INFO = "cat /proc/cpuinfo";
 
+  /** ADB shell command for retrieving max cpu frequency. */
+  @VisibleForTesting
+  static final String ADB_SHELL_GET_CPU_MAX_FREQ =
+      "cat /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq";
+
   /** ADB shell command for listing all features of device. */
   @VisibleForTesting static final String ADB_SHELL_LIST_FEATURES = "pm list features";
 
@@ -404,6 +409,22 @@ public class AndroidSystemSpecUtil {
     }
     throw new MobileHarnessException(
         AndroidErrorId.ANDROID_SYSTEM_SPEC_NO_CPU_FOUND, "No CPUs found:\n" + output);
+  }
+
+  /**
+   * Gets the max CPU frequency in Hertz, or 0 if the information is not available.
+   *
+   * @param serial the serial number of the device
+   */
+  public int getMaxCpuFrequency(String serial) throws InterruptedException {
+    try {
+      String output = adb.runShell(serial, ADB_SHELL_GET_CPU_MAX_FREQ);
+      return Integer.parseInt(output.trim());
+    } catch (MobileHarnessException | NumberFormatException e) {
+      logger.atWarning().withCause(e).log(
+          "Device %s does not support retrieving max cpu frequency.", serial);
+      return 0;
+    }
   }
 
   /**

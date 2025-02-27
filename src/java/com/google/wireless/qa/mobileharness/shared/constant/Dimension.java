@@ -200,6 +200,8 @@ public final class Dimension {
     CHROME_VERSION,
     /** The current development codename, or the string "REL" if this is a release build. */
     CODENAME,
+    /** Max CPU frequency in Ghz. Precision is 1 decimal place. */
+    CPU_FREQ_IN_GHZ,
     /**
      * The disk status of the device. The common value is OK. If free space is less than 1.0G, this
      * value will be LOW.

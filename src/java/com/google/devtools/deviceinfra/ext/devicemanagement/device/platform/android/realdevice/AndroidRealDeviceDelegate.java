@@ -103,6 +103,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
@@ -523,6 +524,11 @@ public abstract class AndroidRealDeviceDelegate {
           Dimension.Name.NUM_CPUS, String.valueOf(systemSpecUtil.getNumberOfCpus(deviceId)));
     } catch (MobileHarnessException e) {
       logger.atInfo().log("%s", e.getMessage());
+    }
+    int frequency = systemSpecUtil.getMaxCpuFrequency(deviceId);
+    if (frequency != 0) {
+      device.addDimension(
+          Name.CPU_FREQ_IN_GHZ, String.format(Locale.US, "%.1f", frequency / 1000000f));
     }
     try {
       device.addDimension(Dimension.Name.MAC_ADDRESS, systemSpecUtil.getMacAddress(deviceId));
