@@ -379,6 +379,7 @@ public class Adb {
    *
    * @param serial device serial number
    * @param command the shell command
+   * @return command std output
    * @throws MobileHarnessException if fails to execute the commands or timeout
    * @throws InterruptedException if the thread executing the commands is interrupted
    */
@@ -410,6 +411,7 @@ public class Adb {
    * @param command the shell command
    * @param timeout max execution time
    * @param lineCallback callback for each line of std/err output
+   * @return command std output
    * @throws MobileHarnessException if fails to execute the commands or timeout
    * @throws InterruptedException if the thread executing the commands is interrupted
    */
@@ -465,6 +467,7 @@ public class Adb {
    * @param command the shell command as a String array
    * @param timeout max execution time
    * @param lineCallback callback for each line of std/err output
+   * @return command std output
    * @throws MobileHarnessException if fails to execute the commands or timeout
    * @throws InterruptedException if the thread executing the commands is interrupted
    */
