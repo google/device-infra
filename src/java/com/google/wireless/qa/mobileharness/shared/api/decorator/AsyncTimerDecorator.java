@@ -77,7 +77,10 @@ public abstract class AsyncTimerDecorator extends BaseDecorator {
     }
   }
 
-  /** The interval time in milliseconds between two successive timer task executions. */
+  /**
+   * The interval time in milliseconds between two successive timer task executions. Called after
+   * {@link #onStart(TestInfo)} returns.
+   */
   @VisibleForTesting
   abstract long getIntervalMs(TestInfo testInfo)
       throws MobileHarnessException, InterruptedException;

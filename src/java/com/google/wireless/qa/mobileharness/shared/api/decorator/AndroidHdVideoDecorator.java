@@ -28,6 +28,7 @@ import com.google.devtools.mobileharness.platform.android.media.ScreenRecordArgs
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
+import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.ParamAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
@@ -54,6 +55,14 @@ public class AndroidHdVideoDecorator extends AsyncTimerDecorator {
       required = false,
       help = "Whether to upload video when test pass. By default, it is true.")
   public static final String PARAM_VIDEO_ON_PASS = "video_on_pass";
+
+  @ParamAnnotation(
+      required = false,
+      help =
+          "Whether one full video of the whole test should be recorded, instead of multiple video"
+              + " clips. Default is false. If set to true the param video_clip_num has no meaning."
+              + " Only supported on API 34+ and non-VR mode. On API <34 this param is disregarded.")
+  public static final String PARAM_FULL_VIDEO = "full_video";
 
   @ParamAnnotation(
       required = false,
@@ -124,14 +133,13 @@ public class AndroidHdVideoDecorator extends AsyncTimerDecorator {
   @VisibleForTesting static final int MAX_BIT_RATE = 100_000_000;
 
   /** The maximum recording time. */
-  @VisibleForTesting static final long MAX_RECORDING_TIME_MS = Duration.ofMinutes(3L).toMillis();
+  @VisibleForTesting static final Duration MAX_RECORDING_TIME = Duration.ofMinutes(3L);
 
   /** The overlap recording time between two video clips. */
-  @VisibleForTesting
-  static final long OVERLAP_RECORDING_TIME_MS = Duration.ofSeconds(5L).toMillis();
+  @VisibleForTesting static final Duration OVERLAP_RECORDING_TIME = Duration.ofSeconds(5L);
 
   /** The expected upper bound of post processing time of screenrecord. */
-  @VisibleForTesting static final long POST_PROCESSING_TIME_MS = Duration.ofSeconds(10L).toMillis();
+  @VisibleForTesting static final Duration POST_PROCESSING_TIME = Duration.ofSeconds(10L);
 
   @VisibleForTesting static final String DATA_LOCAL_TMP_DIR = "/data/local/tmp";
 
@@ -140,6 +148,9 @@ public class AndroidHdVideoDecorator extends AsyncTimerDecorator {
 
   /** The default video clip file name. */
   @VisibleForTesting static final String DEFAULT_CLIP_FILE_NAME = "video";
+
+  /** Whether one full video should be recorded, instead of video clips. */
+  @VisibleForTesting boolean fullVideo;
 
   /** The max number of video clips to take. */
   @VisibleForTesting int numVideoClips;
@@ -221,9 +232,11 @@ public class AndroidHdVideoDecorator extends AsyncTimerDecorator {
     if (recordVrVideo) {
       // Recording using VrCore RecorderService doesn't support overlap, as only one instance of the
       // recorder runs at any time
-      return MAX_RECORDING_TIME_MS;
+      return MAX_RECORDING_TIME.toMillis();
+    } else if (fullVideo) {
+      return testInfo.timer().remainingTimeJava().toMillis();
     } else {
-      return MAX_RECORDING_TIME_MS - OVERLAP_RECORDING_TIME_MS;
+      return MAX_RECORDING_TIME.minus(OVERLAP_RECORDING_TIME).toMillis();
     }
   }
 
@@ -232,6 +245,11 @@ public class AndroidHdVideoDecorator extends AsyncTimerDecorator {
     stopwatch.start();
     String deviceId = getDevice().getDeviceId();
     JobInfo jobInfo = testInfo.jobInfo();
+    recordVrVideo = jobInfo.params().getBool(PARAM_RECORD_VR_VIDEO, false);
+    fullVideo =
+        jobInfo.params().getBool(PARAM_FULL_VIDEO, false)
+            && systemSettingUtil.getDeviceSdkVersion(getDevice().getDeviceId()) >= 34
+            && !recordVrVideo;
     numVideoClips =
         Math.max(
             jobInfo.params().getInt(PARAM_NUM_VIDEO_CLIPS, DEFAULT_NUM_VIDEO_CLIPS),
@@ -260,7 +278,6 @@ public class AndroidHdVideoDecorator extends AsyncTimerDecorator {
             "Start AndroidHdVideoDecorator, numVideoClips=%s, videoOnPass=%s, bitRate=%s, "
                 + "bugreport=%s",
             numVideoClips, videoOnPass, videoBitRate, bugreport);
-    recordVrVideo = jobInfo.params().getBool(PARAM_RECORD_VR_VIDEO, /* defaultValue= */ false);
     if (recordVrVideo) {
       androidMediaUtil.enterVrMode(deviceId);
     }
@@ -292,10 +309,13 @@ public class AndroidHdVideoDecorator extends AsyncTimerDecorator {
                       .setSize(Optional.fromNullable(videoSize))
                       .setVerbose(true)
                       .setBugreport(bugreport)
+                      .setTimeLimit(fullVideo ? Optional.of(Duration.ZERO) : Optional.absent())
                       .build(),
                   Comparators.min(
                       testInfo.timer().remainingTimeJava(),
-                      Duration.ofMillis(MAX_RECORDING_TIME_MS + OVERLAP_RECORDING_TIME_MS)));
+                      fullVideo
+                          ? testInfo.timer().remainingTimeJava()
+                          : MAX_RECORDING_TIME.plus(OVERLAP_RECORDING_TIME)));
           runningProcesses.add(process);
         }
         currentClipId++;
@@ -335,7 +355,7 @@ public class AndroidHdVideoDecorator extends AsyncTimerDecorator {
     } else {
       // First to stop the screen record program on device.
       try {
-        androidMediaUtil.stopScreenRecord(deviceId, Duration.ofMillis(POST_PROCESSING_TIME_MS));
+        androidMediaUtil.stopScreenRecord(deviceId, POST_PROCESSING_TIME);
       } catch (MobileHarnessException e) {
         testInfo
             .log()
@@ -363,7 +383,7 @@ public class AndroidHdVideoDecorator extends AsyncTimerDecorator {
         killRecordingProcesses(deviceId, testInfo);
       }
       // Waits for post processing completed, or the video files will be incomplete.
-      Thread.sleep(POST_PROCESSING_TIME_MS);
+      Sleeper.defaultSleeper().sleep(POST_PROCESSING_TIME);
       // TODO: Uploads the video to test result even if the test result is TIMEOUT.
       if (testInfo.result().get() == TestResult.TIMEOUT) {
         testInfo
