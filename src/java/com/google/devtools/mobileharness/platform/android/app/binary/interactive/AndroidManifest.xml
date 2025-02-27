@@ -10,7 +10,6 @@
   <application>
     <activity
         android:name=".InstructionDialogActivity"
-        android:excludeFromRecents="true"
         android:exported="true"
         android:label="@string/title"
         android:theme="@android:style/ThemeOverlay.Material.Dialog">
