@@ -20,6 +20,7 @@ import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.regex.Pattern;
 
@@ -34,6 +35,8 @@ public abstract class ScreenRecordArgs {
 
   @VisibleForTesting
   public abstract Optional<String> size();
+
+  public abstract Optional<Duration> timeLimit();
 
   @VisibleForTesting
   public abstract boolean verbose();
@@ -54,6 +57,11 @@ public abstract class ScreenRecordArgs {
     if (size().isPresent()) {
       args.add("--size");
       args.add(size().get());
+    }
+
+    if (timeLimit().isPresent()) {
+      args.add("--time-limit");
+      args.add(Long.toString(timeLimit().get().toSeconds()));
     }
 
     if (verbose()) {
@@ -78,7 +86,8 @@ public abstract class ScreenRecordArgs {
     return new AutoValue_ScreenRecordArgs.Builder()
         .setOutputFile(outputFile)
         .setVerbose(false)
-        .setBugreport(false);
+        .setBugreport(false)
+        .setTimeLimit(Optional.absent());
   }
 
   /** Builder for {@link ScreenRecordArgs}. */
@@ -99,6 +108,14 @@ public abstract class ScreenRecordArgs {
     /** Set the video size. e.g. 1280x720. */
     public abstract Builder setSize(String value);
 
+    /**
+     * Sets the maximum recording time. Default is 180 seconds.
+     *
+     * <p>On API <34 the maximum recording time is limited to 180 seconds. Set to {@code
+     * Duration.ZERO} to remove the time limit (API 34+ only).
+     */
+    public abstract Builder setTimeLimit(Optional<Duration> value);
+
     /** Set whether to show verbose log. */
     public abstract Builder setVerbose(boolean value);
 
@@ -114,8 +131,9 @@ public abstract class ScreenRecordArgs {
       Preconditions.checkState(!args.bitRate().isPresent() || args.bitRate().get() >= MIN_BIT_RATE);
       Preconditions.checkState(
           !args.size().isPresent() || SIZE_PATTERN.matcher(args.size().get()).matches());
+      Preconditions.checkState(
+          !args.timeLimit().isPresent() || !args.timeLimit().get().isNegative());
       return args;
     }
-    ;
   }
 }
