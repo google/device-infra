@@ -167,6 +167,8 @@ public final class Dimension {
     SERIAL_RESPONSIVE,
     /** The total memory size in MB. */
     TOTAL_MEMORY,
+    /** The virtual device id in Tradefed. */
+    TRADEFED_VIRTUAL_DEVICE_ID,
     /** Type, usually the product code, e.g., 'shamu', 'marlin'. */
     TYPE,
     /** The wifi strength of the device. */
