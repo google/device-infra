@@ -116,9 +116,6 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
           "arm64-v8a", "arm64",
           "x86", "x86_64",
           "x86_64", "x86_64");
-  // Build prefix of Trunk release build only for Pixel devices.
-  private static final ImmutableSet<String> BUILD_PREFIX_FOR_TRUNK_RELEASE =
-      ImmutableSet.of("AP3A", "AP4A", "AH1A");
   private final AndroidPackageManagerUtil androidPackageManagerUtil;
   private final AndroidAdbUtil adbUtil;
   private final LocalFileUtil fileUtil;
@@ -152,20 +149,10 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
           String.format(
               "The ABI of device %s is not compatible with the xts dynamic downloader.", deviceId));
     }
-    // Set the aosp version as the build prefix from build alias for Pixel devices starting from
-    // Trunk release. For example, if the build alias is AP1A.240624.003.XX..., the aosp version
-    // will be AP3A. If the build alias is not in the right format then set the aosp version as the
-    // SDK version.
-    String buildAlias = adbUtil.getProperty(deviceId, AndroidProperty.BUILD_ALIAS);
     String aospVersion =
-        buildAlias != null
-                && buildAlias.contains(".")
-                && BUILD_PREFIX_FOR_TRUNK_RELEASE.contains(
-                    buildAlias.substring(0, buildAlias.indexOf(".")))
-            ? buildAlias.substring(0, buildAlias.indexOf("."))
-            : (adbUtil.getProperty(deviceId, AndroidProperty.CODENAME).equals(ANDROID_B_CODENAME)
-                ? "36"
-                : adbUtil.getProperty(deviceId, AndroidProperty.SDK_VERSION));
+        adbUtil.getProperty(deviceId, AndroidProperty.CODENAME).equals(ANDROID_B_CODENAME)
+            ? "36"
+            : adbUtil.getProperty(deviceId, AndroidProperty.SDK_VERSION);
 
     List<String> downloadLinkUrls = new ArrayList<>();
     // Add the Lorry download link url of MCTS file for preloaded mainline modules. For example:
@@ -199,10 +186,12 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
       for (String mctsNameAndVersioncode : mctsNamesOfPreloadedMainlineModules.get(PRELOADED_KEY)) {
         String moduleVersioncode =
             mctsNameAndVersioncode.substring(mctsNameAndVersioncode.indexOf(":") + 1);
+        // TODO: Remove the logic to check if the preloadedMainlineVersion equals 36
+        // after Android V release.
         String downloadUrl =
             String.format(
                 "https://dl.google.com/dl/android/xts/mcts/%s/%s/%s.zip",
-                moduleVersioncode.equals(MAINLINE_AOSP_VERSION_KEY)
+                (moduleVersioncode.equals(MAINLINE_AOSP_VERSION_KEY) || aospVersion.equals("36"))
                     ? aospVersion
                     : moduleVersioncode,
                 deviceAbi,
