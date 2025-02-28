@@ -275,6 +275,12 @@ public interface PropertyName {
     /** Only present when --repeat_runs (or RETRY_LEVEL=ALL) is set. Started from 0. */
     REPEAT_INDEX,
 
+    /** Invocation ID of the ResultDB invocation. */
+    RESULTDB_INVOCATION_ID,
+
+    /** Update token of the ResultDB invocation. */
+    RESULTDB_UPDATE_TOKEN,
+
     /** Whether the test is started because a forgoing container-mode test fails. */
     RETRY_AFTER_CONTAINER_FAILS,
 
