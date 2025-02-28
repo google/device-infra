@@ -2,9 +2,11 @@ package uploader
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"path/filepath"
+
 	"time"
 
 	log "github.com/golang/glog"
@@ -24,6 +26,23 @@ func NewFileUploader(config *CommonConfig, path string) Uploader {
 		CommonConfig: *config,
 		path:         path,
 	}
+}
+
+func copyFile(dstPath string, srcPath string, mode os.FileMode) error {
+	src, err := os.Open(srcPath)
+	if err != nil {
+		return err
+	}
+	defer src.Close()
+
+	dst, err := os.OpenFile(dstPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, mode)
+	if err != nil {
+		return err
+	}
+	defer dst.Close()
+
+	_, err = io.Copy(dst, src)
+	return err
 }
 
 // DoUpload uploads the file to CAS, and returns the digest of the root.
@@ -53,7 +72,14 @@ func (fu *FileUploader) DoUpload() (digest.Digest, error) {
 		// Upload as a dir with the file in it.
 		path := filepath.Join(targetDir, filepath.Base(fu.path))
 		if err := os.Symlink(fu.path, path); err != nil {
-			return digest.Digest{}, err
+			// Failover to copy the file.
+			fileInfo, err := os.Stat(fu.path)
+			if err != nil {
+				return digest.Digest{}, err
+			}
+			if err := copyFile(path, fu.path, fileInfo.Mode()); err != nil {
+				return digest.Digest{}, fmt.Errorf("failed to copy file: %w", err)
+			}
 		}
 	}
 

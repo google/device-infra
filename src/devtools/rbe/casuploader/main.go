@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	version = "1.6"
+	version = "1.7"
 	// RBECASConcurrency is the default maximum number of concurrent upload and download operations for RBE clients.
 	RBECASConcurrency = 500
 )
