@@ -23,6 +23,7 @@ java_library(
         "SkipTestException.java",
     ],
     visibility = [
+        "//devtools/mobileharness/project:sophont",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/util:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/plugin:__subpackages__",
