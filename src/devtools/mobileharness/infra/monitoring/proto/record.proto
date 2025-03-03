@@ -61,6 +61,9 @@ message HostRecord {
 
   // The Java Version of the host.
   string java_version = 13;
+
+  // The total memory of the host.
+  string total_mem = 14;
 }
 
 // The record of a device of a certain timestamp.
