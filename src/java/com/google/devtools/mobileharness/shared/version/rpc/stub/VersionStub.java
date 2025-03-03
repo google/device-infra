@@ -20,10 +20,18 @@ import com.google.devtools.common.metrics.stability.rpc.RpcExceptionWithErrorId;
 import com.google.devtools.mobileharness.shared.version.proto.VersionServiceProto.GetVersionRequest;
 import com.google.devtools.mobileharness.shared.version.proto.VersionServiceProto.GetVersionResponse;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import javax.annotation.Nullable;
 
 /** Stub interface for talking to {@code VersionService}. */
 public interface VersionStub {
 
   @CanIgnoreReturnValue
   GetVersionResponse getVersion(GetVersionRequest request) throws RpcExceptionWithErrorId;
+
+  @CanIgnoreReturnValue
+  default GetVersionResponse getVersion(
+      GetVersionRequest request, @Nullable String impersonationUser)
+      throws RpcExceptionWithErrorId {
+    return getVersion(request);
+  }
 }
