@@ -27,6 +27,7 @@ import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutur
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toJavaDuration;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoDuration;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoTimestamp;
+import static java.util.Arrays.stream;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -79,10 +80,13 @@ import com.google.protobuf.Timestamp;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
 import com.google.wireless.qa.mobileharness.client.api.event.JobStartEvent;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageUtil;
+import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
+import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test;
 import com.google.wireless.qa.mobileharness.shared.controller.event.TestEndedEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.event.TestStartingEvent;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
+import com.google.wireless.qa.mobileharness.shared.model.job.in.SubDeviceSpec;
 import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -93,6 +97,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -156,6 +161,9 @@ public class AtsSessionPlugin {
 
   @GuardedBy("addingJobLock")
   private boolean sessionEnded;
+
+  @GuardedBy("itself")
+  private final List<JobInfo> additionalTradefedJobs = new ArrayList<>();
 
   /** Set in {@link #onSessionStarting}. */
   private volatile AtsSessionPluginConfig config;
@@ -319,19 +327,31 @@ public class AtsSessionPlugin {
             /* cause= */ null);
       }
 
-      ImmutableList<String> tradefedJobIds = addJobsToSession(tradefedJobs);
-      if (!tradefedJobIds.isEmpty()) {
-        synchronized (runningTradefedJobs) {
-          for (String tradefedJobId : tradefedJobIds) {
-            runningTradefedJobs.putIfAbsent(tradefedJobId, true);
+      // If have several tradefed jobs, add them to session one by one. Save the unstarted jobs in
+      // additionalTradefedJobs.
+      if (tradefedJobs.size() > 1) {
+        List<JobInfo> tradefedJobsToAdd = new ArrayList<>();
+        for (JobInfo tradefedJob : tradefedJobs) {
+          // To first execute the CTS job.
+          if (tradefedJob.locator().getName().contains(XtsConstants.STATIC_XTS_JOB_NAME)) {
+            tradefedJobsToAdd.add(tradefedJob);
+          } else {
+            synchronized (additionalTradefedJobs) {
+              additionalTradefedJobs.add(tradefedJob);
+            }
           }
         }
+
+        // No static CTS job found.
+        if (tradefedJobsToAdd.isEmpty()) {
+          synchronized (additionalTradefedJobs) {
+            tradefedJobsToAdd.add(additionalTradefedJobs.remove(0));
+          }
+        }
+
+        addJobListToSession(tradefedJobsToAdd);
       } else {
-        logger.atInfo().log(
-            "On session [%s] starting, no tradefed job was added, try add non-tradefed jobs if"
-                + " needed.",
-            sessionInfo.getSessionId());
-        addJobsToSession(nonTradefedJobs);
+        addJobListToSession(tradefedJobs);
       }
 
       // Starts TF runtime info updater.
@@ -379,6 +399,24 @@ public class AtsSessionPlugin {
         return;
       }
       runningTradefedJobs.put(jobId, false);
+
+      // Add the additional tradefed jobs if needed.
+      synchronized (additionalTradefedJobs) {
+        if (!additionalTradefedJobs.isEmpty()) {
+          ImmutableSet<String> devicesOfCurrentJob = getDeviceSerials(jobEndEvent.getJob());
+          List<JobInfo> additionalTradefedJobsToAdd = new ArrayList<>();
+          for (JobInfo additionalTradefedJob : additionalTradefedJobs) {
+            // Add the device ids of the current job to the sub device specs of the additional
+            // tradefed job.
+            addDeviceIdsToSubDeviceSpecs(
+                additionalTradefedJob.subDeviceSpecs().getAllSubDevices(), devicesOfCurrentJob);
+          }
+          additionalTradefedJobsToAdd.add(additionalTradefedJobs.remove(0));
+
+          addJobListToSession(additionalTradefedJobsToAdd);
+        }
+      }
+
       if (runningTradefedJobs.values().stream().noneMatch(running -> running)) {
         logger.atInfo().log(
             "All added tradefed jobs have been done, try add non-tradefed jobs if needed.");
@@ -682,6 +720,50 @@ public class AtsSessionPlugin {
         .getSessionPluginOutput(AtsSessionPluginOutput.class)
         .orElse(AtsSessionPluginOutput.getDefaultInstance())
         .getRunCommandState();
+  }
+
+  private ImmutableSet<String> getDeviceSerials(JobInfo jobInfo) {
+    return jobInfo.tests().getAll().values().stream()
+        .map(testInfo -> testInfo.properties().getOptional(Test.DEVICE_ID_LIST))
+        .filter(Optional::isPresent)
+        .flatMap(ids -> stream(ids.get().split(",")))
+        .collect(toImmutableSet());
+  }
+
+  private void addDeviceIdsToSubDeviceSpecs(
+      List<SubDeviceSpec> subDeviceSpecs, ImmutableSet<String> deviceIds) {
+
+    if (subDeviceSpecs.isEmpty() || deviceIds.isEmpty()) {
+      return;
+    }
+
+    // Return if the number of device IDs is not equal to the number of sub-device specs.
+    if (subDeviceSpecs.size() != deviceIds.size()) {
+      return;
+    }
+
+    Iterator<String> deviceIdIterator = deviceIds.iterator();
+    for (SubDeviceSpec subDeviceSpec : subDeviceSpecs) {
+      String deviceId = deviceIdIterator.next();
+      subDeviceSpec.dimensions().add(Name.ID.lowerCaseName(), deviceId);
+    }
+  }
+
+  private void addJobListToSession(List<JobInfo> jobInfos) {
+    ImmutableList<String> tradefedJobIds = addJobsToSession(ImmutableList.copyOf(jobInfos));
+    if (!tradefedJobIds.isEmpty()) {
+      synchronized (runningTradefedJobs) {
+        for (String tradefedJobId : tradefedJobIds) {
+          runningTradefedJobs.putIfAbsent(tradefedJobId, true);
+        }
+      }
+    } else {
+      logger.atInfo().log(
+          "On session [%s] starting, no tradefed job was added, try add non-tradefed jobs if"
+              + " needed.",
+          sessionInfo.getSessionId());
+      addJobsToSession(nonTradefedJobs);
+    }
   }
 
   private class RunningTradefedTest {

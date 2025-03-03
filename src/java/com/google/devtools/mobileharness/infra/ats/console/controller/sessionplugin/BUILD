@@ -66,6 +66,8 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
         "//src/java/com/google/wireless/qa/mobileharness/client/api/event:job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/comm/message",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event:client_test_events",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/lab",
