@@ -22,6 +22,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.util.command.Command;
@@ -205,5 +206,41 @@ public final class DeviceAdminUtilTest {
                 "--serial=" + DEVICE_ID,
                 "--kms_key_name=" + KMS_KEY_NAME,
                 "--credentials_path=" + CRED_PATH));
+  }
+
+  @Test
+  public void toggleRestrictions_eanble_commandExecuted() throws Exception {
+    ImmutableList<String> restrictions = ImmutableList.of("restriction1", "restriction2");
+    deviceAdminUtil.toggleRestrictions(DEVICE_ID, restrictions, true);
+
+    verify(commandExecutor)
+        .run(
+            Command.of(
+                JAVA_BIN,
+                "-jar",
+                DEVICE_ADMIN_CLI_PATH,
+                "--action=TOGGLE_ON",
+                "--serial=" + DEVICE_ID,
+                "--kms_key_name=" + KMS_KEY_NAME,
+                "--credentials_path=" + CRED_PATH,
+                "--restrictions=restriction1,restriction2"));
+  }
+
+  @Test
+  public void toggleRestrictions_disableFeatures_commandExecuted() throws Exception {
+    ImmutableList<String> restrictions = ImmutableList.of("restriction1", "restriction2");
+    deviceAdminUtil.toggleRestrictions(DEVICE_ID, restrictions, false);
+
+    verify(commandExecutor)
+        .run(
+            Command.of(
+                JAVA_BIN,
+                "-jar",
+                DEVICE_ADMIN_CLI_PATH,
+                "--action=TOGGLE_OFF",
+                "--serial=" + DEVICE_ID,
+                "--kms_key_name=" + KMS_KEY_NAME,
+                "--credentials_path=" + CRED_PATH,
+                "--restrictions=restriction1,restriction2"));
   }
 }

@@ -25,6 +25,7 @@ import com.google.devtools.mobileharness.shared.util.command.CommandException;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
+import java.util.List;
 import java.util.UUID;
 
 /** Utility class for controlling Android device admin. */
@@ -42,6 +43,8 @@ public class DeviceAdminUtil {
   private static final String ACTION_ENABLE = "ENABLE";
   private static final String ACTION_LOCK = "LOCK";
   private static final String ACTION_UNLOCK = "UNLOCK";
+  private static final String ACTION_TOGGLE_ON = "TOGGLE_ON";
+  private static final String ACTION_TOGGLE_OFF = "TOGGLE_OFF";
 
   public DeviceAdminUtil() {
     this(
@@ -77,7 +80,10 @@ public class DeviceAdminUtil {
   public void install(String deviceId) throws MobileHarnessException, InterruptedException {
     logger.atInfo().log("Installing device admin app on %s", deviceId);
     try {
-      exec(deviceId, ACTION_INSTALL);
+      Command command =
+          createBasicCommand(deviceId, ACTION_INSTALL)
+              .argsAppended("--admin_app_path=" + adminAppPath);
+      exec(deviceId, command);
     } catch (CommandException e) {
       logger.atWarning().log(
           "Fail to install device admin on %s. Error message: %s", deviceId, e.getMessage());
@@ -96,7 +102,8 @@ public class DeviceAdminUtil {
   public void enable(String deviceId) throws MobileHarnessException, InterruptedException {
     logger.atInfo().log("Enabling device admin on %s", deviceId);
     try {
-      exec(deviceId, ACTION_ENABLE);
+      Command command = createBasicCommand(deviceId, ACTION_ENABLE);
+      exec(deviceId, command);
     } catch (CommandException e) {
       logger.atWarning().log(
           "Fail to enable device admin on %s. Error message: %s", deviceId, e.getMessage());
@@ -113,7 +120,8 @@ public class DeviceAdminUtil {
   public void lock(String deviceId) throws MobileHarnessException, InterruptedException {
     logger.atInfo().log("Locking device %s with device admin", deviceId);
     try {
-      exec(deviceId, ACTION_LOCK);
+      Command command = createBasicCommand(deviceId, ACTION_LOCK);
+      exec(deviceId, command);
     } catch (CommandException e) {
       logger.atWarning().log("Fail to lock device %s. Error message: %s", deviceId, e.getMessage());
       throw new MobileHarnessException(
@@ -131,7 +139,10 @@ public class DeviceAdminUtil {
   public void unlock(String deviceId) throws MobileHarnessException, InterruptedException {
     logger.atInfo().log("Unlocking device %s with device admin", deviceId);
     try {
-      exec(deviceId, ACTION_UNLOCK);
+      Command command =
+          createBasicCommand(deviceId, ACTION_UNLOCK)
+              .argsAppended("--admin_app_path=" + adminAppPath);
+      exec(deviceId, command);
     } catch (CommandException e) {
       logger.atWarning().log(
           "Fail to unlock device %s. Error message: %s", deviceId, e.getMessage());
@@ -156,21 +167,48 @@ public class DeviceAdminUtil {
     lock(deviceId);
   }
 
-  private void exec(String deviceId, String action)
+  /**
+   * Toggles the device restrictions on/off.
+   *
+   * @param deviceId the serial number of the device
+   * @param restrictions the restrictions to toggle, e.g. no_remove_user, no_bluetooth. The
+   *     restrictions are defined in https://developer.android.com/reference/android/os/UserManager
+   * @param enable true to enable the restrictions, false to disable the restrictions
+   */
+  public void toggleRestrictions(String deviceId, List<String> restrictions, boolean enable)
       throws MobileHarnessException, InterruptedException {
-    Command command =
-        Command.of(
-            systemUtil.getJavaBin(),
-            "-jar",
-            deviceAdminCliPath,
-            "--action=" + action,
-            "--serial=" + deviceId,
-            "--kms_key_name=" + kmsKeyName,
-            "--credentials_path=" + credPath);
-
-    if (action.equals(ACTION_INSTALL) || action.equals(ACTION_UNLOCK)) {
-      command = command.argsAppended("--admin_app_path=" + adminAppPath);
+    String logMessage =
+        String.format(
+            "restrictions: %s, device: %s, target status: %s",
+            restrictions, deviceId, enable ? "ON" : "OFF");
+    logger.atInfo().log("Toggling device restrictions, %s", logMessage);
+    try {
+      Command command =
+          createBasicCommand(deviceId, enable ? ACTION_TOGGLE_ON : ACTION_TOGGLE_OFF)
+              .argsAppended("--restrictions=" + String.join(",", restrictions));
+      exec(deviceId, command);
+    } catch (CommandException e) {
+      logger.atWarning().log("Fail to toggle device restrictions, %s", logMessage);
+      throw new MobileHarnessException(
+          AndroidErrorId.DEVICE_ADMIN_UTIL_TOGGLE_RESTRICTIONS_ERROR,
+          "Fail to toggle device restrictions, " + logMessage,
+          e);
     }
+  }
+
+  private Command createBasicCommand(String deviceId, String action) {
+    return Command.of(
+        systemUtil.getJavaBin(),
+        "-jar",
+        deviceAdminCliPath,
+        "--action=" + action,
+        "--serial=" + deviceId,
+        "--kms_key_name=" + kmsKeyName,
+        "--credentials_path=" + credPath);
+  }
+
+  private void exec(String deviceId, Command command)
+      throws MobileHarnessException, InterruptedException {
     String commandId = UUID.randomUUID().toString();
     logger.atInfo().log(
         "Device admin util is running command [CID=%s] on %s: %s", commandId, deviceId, command);
