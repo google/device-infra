@@ -1683,7 +1683,7 @@ public abstract class AndroidRealDeviceDelegate {
    * @return whether there is any dimension changed
    */
   @VisibleForTesting
-  boolean checkNetwork() throws InterruptedException {
+  boolean checkNetwork() throws MobileHarnessException, InterruptedException {
     if (needToInstallWifiApk()) {
       if (Flags.instance().disableWifiUtilFunc.getNonNull()) {
         logger.atInfo().log(
@@ -1730,12 +1730,18 @@ public abstract class AndroidRealDeviceDelegate {
    *
    * @return the ssid.
    */
-  private Optional<String> bestEffortConnectNetworkSsid() throws InterruptedException {
-    Optional<String> currentSsid = checkNetworkSsid();
-    if (currentSsid.isEmpty()) {
-      currentSsid = recoverWifiConnectionIfRequired();
+  private Optional<String> bestEffortConnectNetworkSsid()
+      throws MobileHarnessException, InterruptedException {
+    toggleWifiRestriction(/* enable= */ false);
+    try {
+      Optional<String> currentSsid = checkNetworkSsid();
+      if (currentSsid.isEmpty()) {
+        currentSsid = recoverWifiConnectionIfRequired();
+      }
+      return currentSsid;
+    } finally {
+      toggleWifiRestriction(/* enable= */ true);
     }
-    return currentSsid;
   }
 
   /**
@@ -2596,6 +2602,20 @@ public abstract class AndroidRealDeviceDelegate {
     logger.atInfo().log("Start to unlock device %s", deviceId);
     deviceAdminUtil.unlock(deviceId);
     device.removeDimension(Dimension.Name.DEVICE_ADMIN_LOCKED);
+  }
+
+  /**
+   * Toggles the wifi restriction on/off with device admin.
+   *
+   * @param enable whether to enable the wifi restriction
+   * @return whether the wifi restriction is toggled successfully
+   */
+  private void toggleWifiRestriction(boolean enable)
+      throws MobileHarnessException, InterruptedException {
+    if (device.getDimension(Dimension.Name.DEVICE_ADMIN_LOCKED).contains(Dimension.Value.TRUE)) {
+      deviceAdminUtil.toggleRestrictions(
+          deviceId, ImmutableList.of("no_config_wifi"), /* enable= */ enable);
+    }
   }
 
   /**
