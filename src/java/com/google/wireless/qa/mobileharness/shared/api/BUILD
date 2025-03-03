@@ -219,8 +219,8 @@ java_library(
     name = "composite_device_util",
     srcs = ["CompositeDeviceUtil.java"],
     deps = [
-        ":device_cache",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/api/testrunner/device/cache:device_cache",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:composite_device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",

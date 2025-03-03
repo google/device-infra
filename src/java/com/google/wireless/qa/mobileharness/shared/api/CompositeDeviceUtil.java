@@ -17,9 +17,11 @@
 package com.google.wireless.qa.mobileharness.shared.api;
 
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.testrunner.device.cache.DeviceCache;
 import com.google.wireless.qa.mobileharness.shared.api.device.CompositeDevice;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
+import java.time.Duration;
 
 /** Static helper methods for managing composite devices and subclasses. */
 public final class CompositeDeviceUtil {
@@ -33,22 +35,16 @@ public final class CompositeDeviceUtil {
    * @param device CompositeDevice to cache
    */
   public static void cacheTestbed(TestInfo testInfo, Device device) throws MobileHarnessException {
-    long cacheTimeoutMs = testInfo.timer().remainingTimeJava().toMillis();
+    Duration cacheTimeout = testInfo.timer().remainingTimeJava();
     if (device instanceof CompositeDevice) {
       for (Device subDevice : ((CompositeDevice) device).getManagedDevices()) {
-        DeviceCache.cache(
-            subDevice.getClass().getSimpleName(),
-            subDevice.getDeviceId(),
-            cacheTimeoutMs,
-            /* autoDelete= */ false);
+        DeviceCache.getInstance()
+            .cache(subDevice.getDeviceId(), subDevice.getClass().getSimpleName(), cacheTimeout);
       }
     }
     if (!(device instanceof CompositeDevice)) {
-      DeviceCache.cache(
-          device.getClass().getSimpleName(),
-          device.getDeviceId(),
-          cacheTimeoutMs,
-          /* autoDelete= */ false);
+      DeviceCache.getInstance()
+          .cache(device.getDeviceId(), device.getClass().getSimpleName(), cacheTimeout);
     }
   }
 
@@ -58,10 +54,10 @@ public final class CompositeDeviceUtil {
    * @param device CompositeDevice to uncache
    */
   public static void uncacheTestbed(Device device) {
-    DeviceCache.invalidateCache(device.getClass().getSimpleName(), device.getDeviceId());
+    DeviceCache.getInstance().invalidateCache(device.getDeviceId());
     if (device instanceof CompositeDevice) {
       for (Device subDevice : ((CompositeDevice) device).getManagedDevices()) {
-        DeviceCache.invalidateCache(subDevice.getClass().getSimpleName(), subDevice.getDeviceId());
+        DeviceCache.getInstance().invalidateCache(subDevice.getDeviceId());
       }
     }
   }

@@ -70,7 +70,7 @@ java_library(
 java_library(
     name = "device_cache",
     visibility = [
-        "//:deviceinfra_pkg",
+        "//:deviceinfra_all_pkg",
     ],
     exports = [":device_cache_interface"],
     runtime_deps = [
