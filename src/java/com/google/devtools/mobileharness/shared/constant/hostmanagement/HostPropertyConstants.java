@@ -41,6 +41,8 @@ public final class HostPropertyConstants {
     LOCATION_TYPE,
     /** The total memory of the host. */
     TOTAL_MEM,
+    /** The total disk space of the host. */
+    ROOT_DISK_SPACE
   }
 
   private HostPropertyConstants() {}

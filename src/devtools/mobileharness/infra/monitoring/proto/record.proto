@@ -64,6 +64,9 @@ message HostRecord {
 
   // The total memory of the host.
   string total_mem = 14;
+
+  // The total disk space of the host.
+  string root_disk_space = 15;
 }
 
 // The record of a device of a certain timestamp.

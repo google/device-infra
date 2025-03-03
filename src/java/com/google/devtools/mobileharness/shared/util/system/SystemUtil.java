@@ -41,6 +41,7 @@ import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.errorprone.annotations.DoNotCall;
 import com.google.wireless.qa.mobileharness.shared.constant.ExitCode;
 import com.sun.management.OperatingSystemMXBean;
+import java.io.File;
 import java.lang.management.ManagementFactory;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -1239,6 +1240,11 @@ public class SystemUtil {
   public long getFreeMemory() {
     // TODO: Use getTotalMemorySize() after JDK21.
     return getOperatingSystemMxBean().getFreePhysicalMemorySize();
+  }
+
+  /** Gets the amount of root disk space in bytes on the local system. */
+  public long getRootDiskSpace() {
+    return new File("/").getTotalSpace();
   }
 
   private static OperatingSystemMXBean getOperatingSystemMxBean() {
