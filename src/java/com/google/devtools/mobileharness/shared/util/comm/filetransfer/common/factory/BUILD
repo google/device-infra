@@ -31,7 +31,6 @@ java_library(
         ":file_transfer_parameters",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/wireless/qa/mobileharness/shared/comm/filetransfer",
-        "@maven//:com_google_code_findbugs_jsr305",
     ],
 )
 

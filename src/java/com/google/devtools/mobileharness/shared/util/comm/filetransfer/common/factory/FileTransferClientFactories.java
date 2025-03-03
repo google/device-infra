@@ -22,7 +22,6 @@ import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.cli
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.rpc.stub.CloudFileTransferStubInterface;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.comm.filetransfer.FileTransferClient;
-import javax.annotation.Nullable;
 
 /**
  * Factories of {@link FileTransferClient}. It creates different factories according to the
@@ -49,14 +48,6 @@ public final class FileTransferClientFactories {
     public FileTransferClient create(FileTransferParameters parameters)
         throws MobileHarnessException, InterruptedException {
       return new CloudFileTransferClient(stub, parameters);
-    }
-
-    @CanIgnoreReturnValue
-    @Override
-    public FileTransferClient create(
-        FileTransferParameters parameters, @Nullable String impersonationUser)
-        throws MobileHarnessException, InterruptedException {
-      return new CloudFileTransferClient(stub, parameters, impersonationUser);
     }
 
     @Override

@@ -113,29 +113,12 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
 
   private final FileTransferParameters params;
 
-  /** The impersonation user for the file transfer stub. */
-  private final String impersonationUser;
-
   /**
    * Creates a file transfer client based on cloud file transfer stub {@code stub}.
    *
    * @param stub for talking to the server in peer side
    */
   public CloudFileTransferClient(CloudFileTransferStubInterface stub, FileTransferParameters params)
-      throws MobileHarnessException, InterruptedException {
-    this(stub, params, null);
-  }
-
-  /**
-   * Creates a file transfer client based on cloud file transfer stub {@code stub}.
-   *
-   * @param stub for talking to the server in peer side
-   * @param impersonationUser the impersonated user for the file transfer stub
-   */
-  public CloudFileTransferClient(
-      CloudFileTransferStubInterface stub,
-      FileTransferParameters params,
-      @Nullable String impersonationUser)
       throws MobileHarnessException, InterruptedException {
     this(
         stub,
@@ -149,8 +132,7 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
         params.homeDir().resolve("tmp"),
         params,
         new LocalFileUtil(),
-        FileTransferConstant.getInitialTimeout(),
-        impersonationUser);
+        FileTransferConstant.getInitialTimeout());
   }
 
   @VisibleForTesting
@@ -160,15 +142,13 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
       Path tmpDir,
       FileTransferParameters params,
       LocalFileUtil localFileUtil,
-      Duration initialTimeout,
-      @Nullable String impersonationUser) {
+      Duration initialTimeout) {
     this.stub = stub;
     this.gcsFileManager = gcsFileManager;
     this.tmpDir = tmpDir;
     this.params = params;
     this.localFileUtil = localFileUtil;
     this.initialTimeout = initialTimeout;
-    this.impersonationUser = impersonationUser;
   }
 
   /** Sends file {@code local} to remote side with {@code metadata}. */
@@ -302,7 +282,7 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
       logger.atInfo().log(
           "File %s size %s is less than %s, send directly to server",
           local, prettySize(request.getContent().size()), prettySize(params.smallFileSize()));
-      stub.saveFile(request.build(), impersonationUser);
+      stub.saveFile(request.build());
       return FileOperationStatus.create(true, (long) request.getContent().size());
     } catch (MobileHarnessException e) {
       if (isMethodNonFound(e)) {
@@ -340,8 +320,7 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
                               .setOriginalPath(local.toString())
                               .setMetadata(metadata)
                               .build(),
-                          initialTimeout,
-                          impersonationUser),
+                          initialTimeout),
                   String.format(
                       "trigger server download gcs file %s; original path: %s", checksum, local));
           String processId = response.getProcessId();
@@ -355,7 +334,7 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
           while (!Thread.interrupted()) {
             GetProcessStatusResponse statusResponse =
                 withRetry(
-                    () -> stub.getProcessStatus(processId, impersonationUser),
+                    () -> stub.getProcessStatus(processId),
                     String.format(
                         "[%s] get status of downloading gcs file %s; original path: %s",
                         processId, checksum, local));
@@ -526,8 +505,7 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
                   .setFileSizeByteLimit(params.smallFileSize())
                   .setPath(remote.toString())
                   .setCompressOptions(toCompressOptions(params))
-                  .build(),
-              impersonationUser);
+                  .build());
       if (response.getSizeExceed()) {
         return FileOperationStatus.create(false, 0L);
       }
@@ -560,7 +538,7 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
         () -> {
           StartUploadingFileResponse response =
               withRetry(
-                  () -> stub.startUploadingFile(request, initialTimeout, impersonationUser),
+                  () -> stub.startUploadingFile(request, initialTimeout),
                   "trigger server uploading file " + local);
           if (response.hasResponse()) {
             return response.getResponse();
@@ -571,7 +549,7 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
           while (!Thread.interrupted()) {
             GetProcessStatusResponse statusResponse =
                 withRetry(
-                    () -> stub.getProcessStatus(processId, impersonationUser),
+                    () -> stub.getProcessStatus(processId),
                     String.format("get status of uploading file [%s] %s", processId, local));
             if (statusResponse.getStatus() == ProcessStatus.FINISHED) {
               return statusResponse.getResponse().unpack(UploadFileResponse.class);
@@ -727,8 +705,7 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
   /** {@inheritDoc} */
   @Override
   public List<FileInfo> listFiles(String dir) throws MobileHarnessException {
-    return stub.listFiles(ListFilesRequest.newBuilder().setDirPath(dir).build(), impersonationUser)
-        .getFileList();
+    return stub.listFiles(ListFilesRequest.newBuilder().setDirPath(dir).build()).getFileList();
   }
 
   /** {@inheritDoc} */

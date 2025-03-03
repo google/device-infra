@@ -18,7 +18,6 @@ package com.google.devtools.mobileharness.shared.util.comm.filetransfer.common.f
 
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.comm.filetransfer.FileTransferClient;
-import javax.annotation.Nullable;
 
 /** Factory of {@link FileTransferClient}. */
 public interface FileTransferClientFactory {
@@ -34,16 +33,6 @@ public interface FileTransferClientFactory {
   /** Creates a new instance of {@link FileTransferClient} with {@code parameters}. */
   FileTransferClient create(FileTransferParameters parameters)
       throws MobileHarnessException, InterruptedException;
-
-  /**
-   * Creates a new instance of {@link FileTransferClient} with {@code parameters} and {@code
-   * impersonationUser}.
-   */
-  default FileTransferClient create(
-      FileTransferParameters parameters, @Nullable String impersonationUser)
-      throws MobileHarnessException, InterruptedException {
-    return create(parameters);
-  }
 
   /** Shutdown any shared resources in all created clients. */
   void shutdown();
