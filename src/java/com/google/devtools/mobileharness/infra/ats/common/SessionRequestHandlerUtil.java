@@ -1047,8 +1047,8 @@ public class SessionRequestHandlerUtil {
   }
 
   /**
-   * TestName is set with pattern TestClassName#TestCaseName while Mobly needs the test case name
-   * without the test class name.
+   * TestName is set with pattern "TestClassName#TestCaseName" while Mobly needs the pattern
+   * "TestClassName.TestCaseName".
    */
   private String parseTestName(@Nullable String testName) {
     if (testName == null) {
@@ -1056,7 +1056,7 @@ public class SessionRequestHandlerUtil {
     }
     List<String> list = Splitter.on('#').trimResults().omitEmptyStrings().splitToList(testName);
     if (list.size() == 2) {
-      return list.get(1);
+      return Joiner.on('.').join(list);
     }
     logger
         .atWarning()

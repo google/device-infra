@@ -47,9 +47,12 @@ import org.mockito.junit.MockitoRule;
 
 @RunWith(JUnit4.class)
 public final class MoblyTestLoaderTest {
-  private static final String SUCCESS_OUTPUT_PATH =
+  private static final String TEST_RUNNER_OUTPUT_PATH =
       RunfilesUtil.getRunfilesLocation(
-          "javatests/com/google/devtools/mobileharness/platform/android/xts/common/util/testdata/success_output.txt");
+          "javatests/com/google/devtools/mobileharness/platform/android/xts/common/util/testdata/test_runner_output.txt");
+  private static final String SUITE_RUNNER_OUTPUT_PATH =
+      RunfilesUtil.getRunfilesLocation(
+          "javatests/com/google/devtools/mobileharness/platform/android/xts/common/util/testdata/suite_runner_output.txt");
   private static final Path MODULE_CONFIG_PATH = Path.of("/path/to/config");
   private static final Configuration MODULE_CONFIG =
       Configuration.newBuilder()
@@ -69,15 +72,28 @@ public final class MoblyTestLoaderTest {
   }
 
   @Test
-  public void getTestNamesInModule_success() throws Exception {
-    String output = new LocalFileUtil().readFile(SUCCESS_OUTPUT_PATH);
+  public void getTestNamesInModule_withTestRunnerOutputFormat_success() throws Exception {
+    String output = new LocalFileUtil().readFile(TEST_RUNNER_OUTPUT_PATH);
     Command expectedCommand = Command.of("/path/to/x86_64/module1", "--", "-l");
     when(commandExecutor.run(expectedCommand)).thenReturn(output);
     assertThat(moblyTestLoader.getTestNamesInModule(MODULE_CONFIG_PATH, MODULE_CONFIG))
         .containsExactly(
-            "test_associate_createsAssociation_classicBluetooth",
-            "test_permissions_sync",
-            "test_removeBond_associatedDevice_succeeds");
+            "CompanionDeviceManagerTestClass.test_associate_createsAssociation_classicBluetooth",
+            "CompanionDeviceManagerTestClass.test_permissions_sync",
+            "CompanionDeviceManagerTestClass.test_removeBond_associatedDevice_succeeds");
+  }
+
+  @Test
+  public void getTestNamesInModule_withSuiteRunnerOutputFormat_success() throws Exception {
+    String output = new LocalFileUtil().readFile(SUITE_RUNNER_OUTPUT_PATH);
+    Command expectedCommand = Command.of("/path/to/x86_64/module1", "--", "-l");
+    when(commandExecutor.run(expectedCommand)).thenReturn(output);
+    assertThat(moblyTestLoader.getTestNamesInModule(MODULE_CONFIG_PATH, MODULE_CONFIG))
+        .containsExactly(
+            "GroupOwnerNegotiationTest.test_group_owner_negotiation_with_pin_button",
+            "GroupOwnerNegotiationTest.test_group_owner_negotiation_with_push_button",
+            "GroupOwnerTest.test_connect_with_pin_code",
+            "GroupOwnerTest.test_connect_with_push_button");
   }
 
   @Test

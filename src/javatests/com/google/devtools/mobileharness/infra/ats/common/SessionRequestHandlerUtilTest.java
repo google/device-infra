@@ -703,7 +703,8 @@ public final class SessionRequestHandlerUtilTest {
         .thenReturn(
             ImmutableMap.of("module1", config[0], "module2", config[1], "module3", config[2]));
     when(moblyTestLoader.getTestNamesInModule(Path.of("/path/to/config3"), config[2]))
-        .thenReturn(ImmutableList.of("test1", "test2", "test3"));
+        .thenReturn(
+            ImmutableList.of("test_class1.test1", "test_class2.test2", "test_class2.test3"));
     SessionRequestInfo sessionRequestInfo =
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(
             defaultSessionRequestInfoBuilder()
@@ -722,9 +723,10 @@ public final class SessionRequestHandlerUtilTest {
 
     assertThat(jobInfos).hasSize(3);
     assertThat(jobInfos.get(0).params().get(MOBLY_TEST_SELECTOR_KEY))
-        .isEqualTo("test1 test2 test3");
+        .isEqualTo("test_class1.test1 test_class2.test2 test_class2.test3");
     assertThat(jobInfos.get(1).params().get(MOBLY_TEST_SELECTOR_KEY)).isNull();
-    assertThat(jobInfos.get(2).params().get(MOBLY_TEST_SELECTOR_KEY)).isEqualTo("test2 test3");
+    assertThat(jobInfos.get(2).params().get(MOBLY_TEST_SELECTOR_KEY))
+        .isEqualTo("test_class2.test2 test_class2.test3");
   }
 
   @Test
@@ -749,7 +751,8 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
             sessionRequestInfo, testPlanFilter, null, ImmutableMap.of());
     assertThat(jobInfos).hasSize(1);
-    assertThat(jobInfos.get(0).params().get(MOBLY_TEST_SELECTOR_KEY)).isEqualTo("test1");
+    assertThat(jobInfos.get(0).params().get(MOBLY_TEST_SELECTOR_KEY))
+        .isEqualTo("test_class1.test1");
 
     // Test invalid TestName
     sessionRequestInfo =
@@ -771,8 +774,8 @@ public final class SessionRequestHandlerUtilTest {
 
     SubPlan subPlan = new SubPlan();
     subPlan.setPreviousSessionXtsTestPlan("cts");
-    subPlan.addNonTfIncludeFilter("arm64-v8a module1 android.test.Foo#test1");
-    subPlan.addNonTfIncludeFilter("arm64-v8a module1 android.test.Foo#test2");
+    subPlan.addNonTfIncludeFilter("arm64-v8a module1 FooTest#test1");
+    subPlan.addNonTfIncludeFilter("arm64-v8a module1 FooTest#test2");
     subPlan.addNonTfIncludeFilter("arm64-v8a module2"); // retry entire module
     doCallRealMethod()
         .when(certificationSuiteInfoFactory)
@@ -790,7 +793,8 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
             sessionRequestInfo, testPlanFilter, subPlan, ImmutableMap.of());
     assertThat(jobInfos).hasSize(2);
-    assertThat(jobInfos.get(0).params().get(MOBLY_TEST_SELECTOR_KEY)).isEqualTo("test1 test2");
+    assertThat(jobInfos.get(0).params().get(MOBLY_TEST_SELECTOR_KEY))
+        .isEqualTo("FooTest.test1 FooTest.test2");
     assertThat(jobInfos.get(0).params().get(PARAM_XTS_SUITE_INFO)).contains("suite_plan=cts");
     assertThat(jobInfos.get(1).params().get(MOBLY_TEST_SELECTOR_KEY)).isNull();
     assertThat(jobInfos.get(1).params().get(PARAM_XTS_SUITE_INFO)).contains("suite_plan=cts");
@@ -807,7 +811,8 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
             sessionRequestInfo, testPlanFilter, subPlan, ImmutableMap.of());
     assertThat(jobInfos).hasSize(2);
-    assertThat(jobInfos.get(0).params().get(MOBLY_TEST_SELECTOR_KEY)).isEqualTo("test1 test2");
+    assertThat(jobInfos.get(0).params().get(MOBLY_TEST_SELECTOR_KEY))
+        .isEqualTo("FooTest.test1 FooTest.test2");
     assertThat(jobInfos.get(0).params().get(PARAM_XTS_SUITE_INFO)).contains("suite_plan=cts");
     assertThat(jobInfos.get(1).params().get(MOBLY_TEST_SELECTOR_KEY)).isNull();
     assertThat(jobInfos.get(1).params().get(PARAM_XTS_SUITE_INFO)).contains("suite_plan=cts");
@@ -897,7 +902,8 @@ public final class SessionRequestHandlerUtilTest {
         .thenReturn(
             ImmutableMap.of("module1", config[0], "module2", config[1], "module3", config[2]));
     when(moblyTestLoader.getTestNamesInModule(Path.of("/path/to/config1"), config[0]))
-        .thenReturn(ImmutableList.of("test1", "test2", "test3"));
+        .thenReturn(
+            ImmutableList.of("test_class1.test1", "test_class2.test2", "test_class3.test3"));
 
     SubPlan subPlan = new SubPlan();
     subPlan.addNonTfExcludeFilter("module1 test_class1#test1");
@@ -914,7 +920,8 @@ public final class SessionRequestHandlerUtilTest {
             sessionRequestInfo, testPlanFilter, subPlan, ImmutableMap.of());
 
     assertThat(jobInfos).hasSize(1);
-    assertThat(jobInfos.get(0).params().get(MOBLY_TEST_SELECTOR_KEY)).isEqualTo("test3");
+    assertThat(jobInfos.get(0).params().get(MOBLY_TEST_SELECTOR_KEY))
+        .isEqualTo("test_class3.test3");
   }
 
   @Test

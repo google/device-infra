@@ -1,0 +1,6 @@
+==========> GroupOwnerNegotiationTest <==========
+GroupOwnerNegotiationTest.test_group_owner_negotiation_with_pin_button
+GroupOwnerNegotiationTest.test_group_owner_negotiation_with_push_button
+==========> GroupOwnerTest <==========
+GroupOwnerTest.test_connect_with_pin_code
+GroupOwnerTest.test_connect_with_push_button
