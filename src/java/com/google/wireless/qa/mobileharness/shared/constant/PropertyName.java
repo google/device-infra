@@ -70,6 +70,9 @@ public interface PropertyName {
     /** The pre-run job time in milliseconds. */
     PRE_RUN_JOB_TIME_MS,
 
+    /** The repeat runs for the job. Only present when --repeat_runs (or RETRY_LEVEL=ALL) is set. */
+    REPEAT_RUNS,
+
     /** The run as user. */
     RUN_AS,
 
@@ -272,7 +275,10 @@ public interface PropertyName {
      */
     REMOTE_TEST_ENGINE_SETUP_TIME_MS,
 
-    /** Only present when --repeat_runs (or RETRY_LEVEL=ALL) is set. Started from 0. */
+    /**
+     * Only present when --repeat_runs (or RETRY_LEVEL=ALL) is set. It should be within [0,
+     * REPEAT_RUNS).
+     */
     REPEAT_INDEX,
 
     /** Invocation ID of the ResultDB invocation. */

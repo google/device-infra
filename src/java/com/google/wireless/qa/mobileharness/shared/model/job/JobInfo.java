@@ -83,6 +83,15 @@ public class JobInfo extends JobScheduleUnit {
    */
   public static final String TAG_LAB_PLUGIN = "lab_plugin_jar";
 
+  /** Param name to allow gateway render a different layout in Sponge comparing to blaze test. */
+  @ParamAnnotation(
+      required = false,
+      help =
+          "Whether to use Sponge Action run_number and attempt_number to represent retry and"
+              + " repeat.")
+  public static final String PARAM_ALLOW_GATEWAY_USE_STANDARD_SPONGE_LAYOUT =
+      "allow_gateway_use_standard_sponge_layout";
+
   /**
    * Param name of the canonical class names (split by ",") of the plugin handlers for job/test
    * start/end events. The handlers are executed on client side.
