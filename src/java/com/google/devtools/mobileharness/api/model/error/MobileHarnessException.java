@@ -21,9 +21,7 @@ import javax.annotation.Nullable;
 
 /** Base class of all Mobile Harness exceptions. */
 @SuppressWarnings("OverrideThrowableToString")
-public class MobileHarnessException
-    extends com.google.wireless.qa.mobileharness.shared.MobileHarnessException
-    implements ErrorIdProvider<ErrorId> {
+public class MobileHarnessException extends Exception implements ErrorIdProvider<ErrorId> {
 
   private static final StackTraceElement[] EMPTY_STACK_TRACE = new StackTraceElement[0];
 
