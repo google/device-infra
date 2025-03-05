@@ -21,11 +21,6 @@ package(
 )
 
 java_library(
-    name = "exception",
-    srcs = ["MobileHarnessException.java"],
-)
-
-java_library(
     name = "log",
     srcs = ["MobileHarnessLogger.java"],
     visibility = [
