@@ -81,6 +81,10 @@ public class MoblyYamlParser {
   private static final String SUMMARY_FAILED = "Failed";
   private static final String SUMMARY_ERROR = "Error";
 
+  // Special names for Mobly test stages, reported in the same way as a test case record
+  private static final String STAGE_SETUP_CLASS = "setup_class";
+  private static final String STAGE_TEARDOWN_CLASS = "teardown_class";
+
   /**
    * Takes in the path to the test_summary.yaml file and parses the result into a list of
    * MoblyYamlDocEntry results. If the path given is invalid, a FileNotFoundException is thrown.
@@ -103,13 +107,30 @@ public class MoblyYamlParser {
 
     ImmutableList.Builder<MoblyYamlDocEntry> results = new ImmutableList.Builder<>();
 
+    String currentTestClass = null;
+    boolean hasSetupClassError = false;
+
     // Parse all yaml documents
     for (Object document : yamlDocuments) {
       @SuppressWarnings("unchecked") // snakeyaml only supports this return value atm
       Map<String, Object> documentMap = (Map<String, Object>) document;
       switch (String.valueOf(documentMap.get(RESULT_TYPE))) {
         case RESULT_TYPE_RECORD:
-          results.add(parseRecord(documentMap));
+          // Reset hasSetupClassError upon encountering a new test class.
+          String newTestClass = String.valueOf(documentMap.get(RESULT_TESTCLASS));
+          if (!newTestClass.equals(currentTestClass)) {
+            hasSetupClassError = false;
+            currentTestClass = newTestClass;
+          }
+          if (String.valueOf(documentMap.get(RESULT_TESTNAME)).equals(STAGE_SETUP_CLASS)
+              && String.valueOf(documentMap.get(RESULT_RESULT)).equals(RESULT_ERROR)) {
+            hasSetupClassError = true;
+            continue;
+          }
+          if (String.valueOf(documentMap.get(RESULT_TESTNAME)).equals(STAGE_TEARDOWN_CLASS)) {
+            continue;
+          }
+          results.add(parseRecord(documentMap, hasSetupClassError));
           break;
         case RESULT_TYPE_CONTROLLERINFO:
           results.add(parseControllerInfo(documentMap));
@@ -145,14 +166,15 @@ public class MoblyYamlParser {
    * Parses a Mobly record. A Mobly record contains the results of a single method run on a Mobly
    * test. The results of a record are parsed into a MoblyTestEntry object.
    */
-  private MoblyTestEntry parseRecord(Map<String, Object> record) throws MobileHarnessException {
+  private MoblyTestEntry parseRecord(Map<String, Object> record, boolean hasSetupClassError)
+      throws MobileHarnessException {
     Yaml yaml = new Yaml(new SafeConstructor(new LoaderOptions()));
     // Build MoblyTestEntry for Mobly result
     MoblyTestEntry.Builder builder = MoblyTestEntry.builder();
     builder.setTestName(String.valueOf(record.get(RESULT_TESTNAME)));
     builder.setTestClass(String.valueOf(record.get(RESULT_TESTCLASS)));
 
-    setResult(builder, record);
+    setResult(builder, record, hasSetupClassError);
     setTiming(builder, record);
     setExtraErrors(builder, record);
 
@@ -197,8 +219,14 @@ public class MoblyYamlParser {
     }
   }
 
-  private void setResult(MoblyTestEntry.Builder builder, Map<String, Object> record)
+  private void setResult(
+      MoblyTestEntry.Builder builder, Map<String, Object> record, boolean hasSetupClassError)
       throws MobileHarnessException {
+    // If the test's setup_class failed, set the test case result to ERROR.
+    if (hasSetupClassError) {
+      builder.setResult(MoblyResult.ERROR);
+      return;
+    }
     String testName = String.valueOf(record.get(RESULT_TESTNAME));
     String result = String.valueOf(record.get(RESULT_RESULT));
     switch (result) {
