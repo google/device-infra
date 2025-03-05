@@ -75,6 +75,11 @@ message DeviceFilter {
       StringListMatchCondition condition = 1;
     }
 
+    // Condition to match the executor of a device.
+    message ExecutorMatchCondition {
+      StringListMatchCondition condition = 1;
+    }
+
     // Condition to match the driver of a device.
     message DriverMatchCondition {
       StringListMatchCondition condition = 1;
@@ -99,6 +104,7 @@ message DeviceFilter {
       DriverMatchCondition driver_match_condition = 5;
       DecoratorMatchCondition decorator_match_condition = 6;
       DimensionMatchCondition dimension_match_condition = 7;
+      ExecutorMatchCondition executor_match_condition = 8;
     }
   }
 
