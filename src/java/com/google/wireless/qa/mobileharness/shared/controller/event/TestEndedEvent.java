@@ -17,7 +17,6 @@
 package com.google.wireless.qa.mobileharness.shared.controller.event;
 
 import com.google.common.annotations.Beta;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.wireless.qa.mobileharness.shared.model.allocation.Allocation;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo;
@@ -44,20 +43,6 @@ public class TestEndedEvent extends TestEvent {
       @SuppressWarnings("unused") boolean shouldRebootDevice,
       @Nullable Throwable testError) {
     super(testInfo, allocation, deviceInfo);
-    this.testError = testError;
-  }
-
-  /**
-   * @deprecated Use mocked {@link TestEndedEvent} instead in test.
-   */
-  @Deprecated
-  @VisibleForTesting
-  public TestEndedEvent(
-      TestInfo testInfo,
-      Allocation allocation,
-      @SuppressWarnings("unused") boolean shouldRebootDevice,
-      @Nullable Throwable testError) {
-    super(testInfo, allocation, DeviceInfo.getDefaultInstance());
     this.testError = testError;
   }
 

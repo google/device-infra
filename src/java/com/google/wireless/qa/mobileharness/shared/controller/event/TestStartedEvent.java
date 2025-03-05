@@ -19,7 +19,6 @@ package com.google.wireless.qa.mobileharness.shared.controller.event;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.annotations.Beta;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.wireless.qa.mobileharness.shared.model.allocation.Allocation;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo;
@@ -40,15 +39,6 @@ public class TestStartedEvent extends TestEvent implements DeviceCheckedTestEven
   @Beta
   public TestStartedEvent(TestInfo testInfo, Allocation allocation, DeviceInfo deviceInfo) {
     super(testInfo, allocation, checkNotNull(deviceInfo));
-  }
-
-  /**
-   * @deprecated Use mocked {@link TestStartedEvent} instead in test.
-   */
-  @Deprecated
-  @VisibleForTesting
-  public TestStartedEvent(TestInfo testInfo, Allocation allocation) {
-    super(testInfo, allocation, DeviceInfo.getDefaultInstance());
   }
 
   @Override
