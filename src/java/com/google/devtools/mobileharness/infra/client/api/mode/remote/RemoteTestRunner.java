@@ -572,7 +572,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
     GetVersionRequest request = GetVersionRequest.getDefaultInstance();
     GetVersionResponse response;
     try {
-      response = getLabVersionStub().getVersion(request);
+      response = getLabVersionStub().getVersion(request, impersonationUser);
     } catch (RpcExceptionWithErrorId e) {
       if (e.getRpcCanonicalCode() == 12) {
         // If the lab does not have VersionService, treat it as a low-version lab server.
