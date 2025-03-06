@@ -64,7 +64,9 @@ public final class LabConfigGenerator {
 
     // Generates a basic device config from the api config.
     BasicDeviceConfig.Builder basicDeviceConfig =
-        BasicDeviceConfig.newBuilder().addAllOwner(apiConfig.getOwnerList());
+        BasicDeviceConfig.newBuilder()
+            .addAllOwner(apiConfig.getOwnerList())
+            .addAllExecutor(apiConfig.getExecutorList());
     if (apiConfig.hasCompositeDimension() || apiConfig.getDimensionCount() != 0) {
       DeviceCompositeDimension deviceCompositeDimension =
           apiConfig.getCompositeDimension().toBuilder()

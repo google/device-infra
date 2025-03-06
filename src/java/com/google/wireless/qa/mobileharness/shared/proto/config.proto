@@ -78,6 +78,9 @@ message ApiConfig {
 
   // Testbed specific config.
   repeated TestbedConfig testbed_config = 12;
+
+  // Executors of all the devices.
+  repeated string executor = 13;
 }
 
 // Configuration of a specific device.
@@ -132,6 +135,9 @@ message DeviceConfig {
   // each failed test. If <=0, device will be rebooted after every test no
   // matter the test passed or failed.
   optional int32 max_consecutive_fail = 11 [default = 5];
+
+  // Executors of the device.
+  repeated string executor = 12;
 }
 
 // Configuration of a specific testbed

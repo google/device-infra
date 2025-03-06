@@ -63,6 +63,7 @@ public final class ApiConfigGenerator {
       apiConfig.setMaxConsecutiveFail(defaultDeviceConfig.getMaxConsecutiveFail().getValue());
     }
     apiConfig.addAllOwner(defaultDeviceConfig.getOwnerList());
+    apiConfig.addAllExecutor(defaultDeviceConfig.getExecutorList());
     Set<String> overTcpIds = new HashSet<>(labConfig.getOverTcpIpList());
     apiConfig.addAllDeviceConfig(
         deviceConfigs.stream()
@@ -96,7 +97,8 @@ public final class ApiConfigGenerator {
     Config.DeviceConfig.Builder oldDeviceConfig =
         Config.DeviceConfig.newBuilder()
             .setId(deviceControlId)
-            .addAllOwner(basicDeviceConfig.getOwnerList());
+            .addAllOwner(basicDeviceConfig.getOwnerList())
+            .addAllExecutor(basicDeviceConfig.getExecutorList());
     if (overTcp) {
       oldDeviceConfig.setOverTcp(overTcp);
     }

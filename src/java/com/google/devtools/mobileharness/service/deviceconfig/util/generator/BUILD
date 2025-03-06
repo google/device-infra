@@ -37,5 +37,6 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:config_java_proto",
         "@com_google_protobuf_protobuf_java",
         "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
     ],
 )

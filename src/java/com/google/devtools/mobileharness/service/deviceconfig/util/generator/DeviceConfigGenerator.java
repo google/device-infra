@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.service.deviceconfig.util.generator;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.BasicDeviceConfig;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.WifiConfig;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig;
@@ -49,7 +51,9 @@ public final class DeviceConfigGenerator {
       @Nullable Integer maxConsecutiveTest,
       @Nullable Integer maxConsecutiveFail) {
     BasicDeviceConfig.Builder basicDeviceConfig =
-        BasicDeviceConfig.newBuilder().addAllOwner(oldDeviceConfig.getOwnerList());
+        BasicDeviceConfig.newBuilder()
+            .addAllOwner(oldDeviceConfig.getOwnerList())
+            .addAllExecutor(oldDeviceConfig.getExecutorList());
 
     if (oldDeviceConfig.hasDefaultWifi()) {
       WifiConfig.Builder wifiConfig = WifiConfig.newBuilder();
@@ -98,6 +102,13 @@ public final class DeviceConfigGenerator {
                     firstDeviceConfig.getOwnerList().stream(),
                     secondDeviceConfig.getOwnerList().stream())
                 .distinct()
+                .collect(toImmutableList()))
+        .clearExecutor()
+        .addAllExecutor(
+            Stream.concat(
+                    firstDeviceConfig.getExecutorList().stream(),
+                    secondDeviceConfig.getExecutorList().stream())
+                .distinct()
                 .collect(Collectors.toList()));
     if (firstDeviceConfig.hasCompositeDimension() || secondDeviceConfig.hasCompositeDimension()) {
       firstDeviceConfigBuilder
@@ -140,6 +151,7 @@ public final class DeviceConfigGenerator {
         Config.DeviceConfig.newBuilder().setId(deviceControlId);
     BasicDeviceConfig basicConfig = deviceConfig.getBasicConfig();
     oldDeviceConfig.addAllOwner(basicConfig.getOwnerList());
+    oldDeviceConfig.addAllExecutor(basicConfig.getExecutorList());
     if (basicConfig.hasDefaultWifi()) {
       Config.WifiConfig.Builder oldWifiConfig = Config.WifiConfig.newBuilder();
       ProtoUtil.convert(basicConfig.getDefaultWifi(), oldWifiConfig);
