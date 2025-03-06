@@ -1029,7 +1029,9 @@ public class AndroidFileUtil {
       if (androidSystemSpecUtil.isEmulator(serial)) {
         int sdkVersion = androidSystemSettingUtil.getDeviceSdkVersion(serial);
         String result = "";
-        if (sdkVersion >= AndroidVersion.ANDROID_13.getStartSdkVersion()) {
+        if (sdkVersion >= AndroidVersion.ANDROID_16.getStartSdkVersion()) {
+          result = adb.run(serial, new String[] {"shell", "remount", "/"});
+        } else if (sdkVersion >= AndroidVersion.ANDROID_13.getStartSdkVersion()) {
           result = adb.run(serial, new String[] {"shell", "remount"});
         } else if (sdkVersion >= AndroidVersion.ANDROID_11.getStartSdkVersion()) {
           result = adb.run(serial, new String[] {"shell", "mount", "-o", "rw,remount", "/"});
