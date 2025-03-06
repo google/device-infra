@@ -27,6 +27,7 @@ import com.google.testing.junit.testparameterinjector.TestParameterInjector;
 import com.google.testing.junit.testparameterinjector.TestParameters;
 import com.google.testing.junit.testparameterinjector.TestParameters.TestParametersValues;
 import com.google.testing.junit.testparameterinjector.TestParametersValuesProvider;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.stream.IntStream;
 import org.junit.Test;
@@ -40,14 +41,16 @@ public final class ScreenRecordArgsTest {
     public ImmutableList<TestParametersValues> provideValues(Context context) {
 
       String[] parameterNames =
-          new String[] {"bitRate", "size", "verbose", "bugreport", "argsExpected"};
+          new String[] {"bitRate", "size", "verbose", "bugreport", "timeLimit", "argsExpected"};
       Object[][] data =
           new Object[][] {
-            {null, "1280x720", false, false, "--size 1280x720"},
-            {4000000, null, false, false, "--bit-rate 4000000"},
-            {null, null, true, false, "--verbose"},
-            {null, null, false, true, "--bugreport"},
-            {null, null, true, true, "--verbose --bugreport"},
+            {null, "1280x720", false, false, null, "--size 1280x720"},
+            {4000000, null, false, false, null, "--bit-rate 4000000"},
+            {null, null, true, false, null, "--verbose"},
+            {null, null, false, true, null, "--bugreport"},
+            {null, null, true, true, null, "--verbose --bugreport"},
+            {null, null, false, false, Duration.ZERO, "--time-limit 0"},
+            {null, null, false, false, Duration.ofSeconds(150), "--time-limit 150"},
           };
 
       ArrayList<TestParametersValues> cases = new ArrayList<>();
@@ -69,13 +72,19 @@ public final class ScreenRecordArgsTest {
   @Test
   @TestParameters(valuesProvider = BuildArgsTestParametersProvider.class)
   public void testBuildArgs(
-      Integer bitRate, String size, boolean verbose, boolean bugreport, String argsExpected) {
+      Integer bitRate,
+      String size,
+      boolean verbose,
+      boolean bugreport,
+      Duration timeLimit,
+      String argsExpected) {
     ScreenRecordArgs.Builder builder =
         ScreenRecordArgs.builder("output")
             .setBitRate(Optional.fromNullable(bitRate))
             .setVerbose(verbose)
             .setBugreport(bugreport)
-            .setSize(Optional.fromNullable(size));
+            .setSize(Optional.fromNullable(size))
+            .setTimeLimit(Optional.fromNullable(timeLimit));
     assertThat(builder.build().toShellCmd())
         .isEqualTo(String.format("%s %s output", ScreenRecordArgs.COMMAND_NAME, argsExpected));
   }

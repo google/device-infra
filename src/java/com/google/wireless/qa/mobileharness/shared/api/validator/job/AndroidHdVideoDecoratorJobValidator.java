@@ -21,6 +21,7 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.AndroidHdVideoDecorator;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -40,6 +41,21 @@ public class AndroidHdVideoDecoratorJobValidator implements JobValidator {
       errors.add(
           "video_size must be width x height. width & height should be valid 4 digit number. e.g. "
               + "1280x720");
+    }
+    if (job.params().has(AndroidHdVideoDecorator.PARAM_SCREENRECORD_TIME_LIMIT_SECONDS)) {
+      Duration timeLimit =
+          Duration.ofSeconds(
+              job.params()
+                  .getLong(AndroidHdVideoDecorator.PARAM_SCREENRECORD_TIME_LIMIT_SECONDS, 0L));
+      if (!timeLimit.isZero()
+          && timeLimit
+              .minusMillis(AndroidHdVideoDecorator.OVERLAP_RECORDING_TIME_MS)
+              .isNegative()) {
+        errors.add(
+            String.format(
+                "screenrecord_time_limit_seconds must be larger than %s. ",
+                Duration.ofMillis(AndroidHdVideoDecorator.OVERLAP_RECORDING_TIME_MS)));
+      }
     }
     boolean hasMetAndroidHdVideoDecorator = false;
     if (type.getDecoratorList().contains("AndroidMonsoonDecorator")) {

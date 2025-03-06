@@ -20,6 +20,7 @@ import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.regex.Pattern;
 
@@ -40,6 +41,9 @@ public abstract class ScreenRecordArgs {
 
   @VisibleForTesting
   public abstract boolean bugreport();
+
+  @VisibleForTesting
+  public abstract Optional<Duration> timeLimit();
 
   abstract String outputFile();
 
@@ -62,6 +66,11 @@ public abstract class ScreenRecordArgs {
 
     if (bugreport()) {
       args.add("--bugreport");
+    }
+
+    if (timeLimit().isPresent()) {
+      args.add("--time-limit");
+      args.add(String.format("%d", timeLimit().get().toSeconds()));
     }
 
     args.add(outputFile());
@@ -104,6 +113,9 @@ public abstract class ScreenRecordArgs {
 
     /** Set whether to add additional information, such as a timestamp overlay. */
     public abstract Builder setBugreport(boolean value);
+
+    /** Set the time limit of the recording. */
+    public abstract Builder setTimeLimit(Optional<Duration> value);
 
     abstract Builder setOutputFile(String value);
 

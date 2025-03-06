@@ -33,6 +33,7 @@ import com.google.wireless.qa.mobileharness.shared.api.annotation.ParamAnnotatio
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
+import com.google.wireless.qa.mobileharness.shared.model.job.JobSetting;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import java.time.Duration;
@@ -58,9 +59,10 @@ public class AndroidHdVideoDecorator extends AsyncTimerDecorator {
   @ParamAnnotation(
       required = false,
       help =
-          "The number of video clips. If it equals x, records screen at the last (x*3-3, x*3] "
-              + "minutes. By default, it is 3 (recording at the last 6-9 minutes). At least it's "
-              + "2.")
+          "The number of video clips. If it equals x, records screen at the last"
+              + " (x*screenrecord_time_limit/60-screenrecord_time_limit/60,"
+              + " x*screenrecord_time_limit/60] minutes. By default, it is 3 (recording at the last"
+              + " 6-9 minutes). At least it's 2.")
   public static final String PARAM_NUM_VIDEO_CLIPS = "video_clip_num";
 
   @ParamAnnotation(
@@ -103,6 +105,16 @@ public class AndroidHdVideoDecorator extends AsyncTimerDecorator {
               + "since the Android default screen recording does not work in this situation.")
   public static final String PARAM_RECORD_VR_VIDEO = "record_vr_video";
 
+  @ParamAnnotation(
+      required = false,
+      help =
+          "The maximum screen recording time for each video file, in seconds. If not set, it is 180"
+              + " seconds.Set to 0 will remove the time limit, and generate only one video file."
+              + " Only supported on API 34+. Use this param at your own risk of exhausting the"
+              + " device's storage.")
+  public static final String PARAM_SCREENRECORD_TIME_LIMIT_SECONDS =
+      "screenrecord_time_limit_seconds";
+
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   /** The default number of video clips. */
@@ -127,8 +139,7 @@ public class AndroidHdVideoDecorator extends AsyncTimerDecorator {
   @VisibleForTesting static final long MAX_RECORDING_TIME_MS = Duration.ofMinutes(3L).toMillis();
 
   /** The overlap recording time between two video clips. */
-  @VisibleForTesting
-  static final long OVERLAP_RECORDING_TIME_MS = Duration.ofSeconds(5L).toMillis();
+  public static final long OVERLAP_RECORDING_TIME_MS = Duration.ofSeconds(5L).toMillis();
 
   /** The expected upper bound of post processing time of screenrecord. */
   @VisibleForTesting static final long POST_PROCESSING_TIME_MS = Duration.ofSeconds(10L).toMillis();
@@ -169,6 +180,8 @@ public class AndroidHdVideoDecorator extends AsyncTimerDecorator {
   @VisibleForTesting String videoSize;
 
   @VisibleForTesting boolean bugreport;
+
+  @VisibleForTesting Duration screenRecordTimeLimit;
 
   /**
    * Running recording processes on device.
@@ -215,15 +228,24 @@ public class AndroidHdVideoDecorator extends AsyncTimerDecorator {
     runningProcesses = new LinkedList<>();
   }
 
+  // Overwrite the interval according to the param.
+  private long overwriteMaxRecordingTimeMs() {
+    if (screenRecordTimeLimit != null && screenRecordTimeLimit.isZero()) {
+      return JobSetting.MAX_TEST_TIMEOUT.toMillis();
+    }
+    return screenRecordTimeLimit == null ? MAX_RECORDING_TIME_MS : screenRecordTimeLimit.toMillis();
+  }
+
   @Override
   protected long getIntervalMs(TestInfo testInfo)
       throws MobileHarnessException, InterruptedException {
+    long maxRecordingTimeMs = overwriteMaxRecordingTimeMs();
     if (recordVrVideo) {
       // Recording using VrCore RecorderService doesn't support overlap, as only one instance of the
       // recorder runs at any time
-      return MAX_RECORDING_TIME_MS;
+      return maxRecordingTimeMs;
     } else {
-      return MAX_RECORDING_TIME_MS - OVERLAP_RECORDING_TIME_MS;
+      return maxRecordingTimeMs - OVERLAP_RECORDING_TIME_MS;
     }
   }
 
@@ -246,6 +268,32 @@ public class AndroidHdVideoDecorator extends AsyncTimerDecorator {
     oldestClipIdToKeep = currentClipId;
     videoSize = jobInfo.params().get(PARAM_VIDEO_SIZE, null);
     bugreport = jobInfo.params().getBool(PARAM_BUGREPORT, /* defaultValue= */ false);
+    screenRecordTimeLimit = null;
+    if (jobInfo.params().has(PARAM_SCREENRECORD_TIME_LIMIT_SECONDS)) {
+      int sdkVersion = 0;
+      try {
+        sdkVersion = systemSettingUtil.getDeviceSdkVersion(deviceId);
+      } catch (MobileHarnessException e) {
+        testInfo
+            .log()
+            .atWarning()
+            .withCause(e)
+            .alsoTo(logger)
+            .log("Failed to get device sdk version, skip setting time limit.");
+      }
+      if (sdkVersion >= 34) {
+        screenRecordTimeLimit =
+            Duration.ofSeconds(jobInfo.params().getLong(PARAM_SCREENRECORD_TIME_LIMIT_SECONDS, 0L));
+      } else {
+        testInfo
+            .log()
+            .atWarning()
+            .alsoTo(logger)
+            .log(
+                "Device sdk version is lower than 34, doesn't support %s, will ignore this param.",
+                PARAM_SCREENRECORD_TIME_LIMIT_SECONDS);
+      }
+    }
 
     prepareWorkingDir(testInfo, systemSettingUtil.getDeviceSdkVersion(deviceId));
 
@@ -258,8 +306,12 @@ public class AndroidHdVideoDecorator extends AsyncTimerDecorator {
         .alsoTo(logger)
         .log(
             "Start AndroidHdVideoDecorator, numVideoClips=%s, videoOnPass=%s, bitRate=%s, "
-                + "bugreport=%s",
-            numVideoClips, videoOnPass, videoBitRate, bugreport);
+                + "bugreport=%s, timeLimit=%s",
+            numVideoClips,
+            videoOnPass,
+            videoBitRate,
+            bugreport,
+            screenRecordTimeLimit == null ? "null" : screenRecordTimeLimit.toSeconds());
     recordVrVideo = jobInfo.params().getBool(PARAM_RECORD_VR_VIDEO, /* defaultValue= */ false);
     if (recordVrVideo) {
       androidMediaUtil.enterVrMode(deviceId);
@@ -292,10 +344,12 @@ public class AndroidHdVideoDecorator extends AsyncTimerDecorator {
                       .setSize(Optional.fromNullable(videoSize))
                       .setVerbose(true)
                       .setBugreport(bugreport)
+                      .setTimeLimit(Optional.fromNullable(screenRecordTimeLimit))
                       .build(),
                   Comparators.min(
                       testInfo.timer().remainingTimeJava(),
-                      Duration.ofMillis(MAX_RECORDING_TIME_MS + OVERLAP_RECORDING_TIME_MS)));
+                      Duration.ofMillis(
+                          overwriteMaxRecordingTimeMs() + OVERLAP_RECORDING_TIME_MS)));
           runningProcesses.add(process);
         }
         currentClipId++;
@@ -397,7 +451,7 @@ public class AndroidHdVideoDecorator extends AsyncTimerDecorator {
       }
     } finally {
       // Removes video files.
-      logger.atInfo().log("Remove video files");
+      logger.atInfo().log("Try to remove video files");
       for (int clipId = currentClipId - 1;
           clipId >= Math.max(currentClipId - numVideoClips, 0);
           clipId--) {
