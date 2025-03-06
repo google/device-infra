@@ -226,11 +226,3 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
     ],
 )
-
-java_library(
-    name = "device_cache",
-    srcs = ["DeviceCache.java"],
-    deps = [
-        "//src/java/com/google/devtools/mobileharness/api/testrunner/device/cache:device_cache",
-    ],
-)
