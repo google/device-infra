@@ -515,7 +515,7 @@ public final class AtsServerSessionPluginTest {
             sessionInfo,
             SessionNotification.newBuilder().setNotification(Any.pack(notification)).build(),
             TextFormat.printer()));
-    plugin.onTestStarting(new TestStartingEvent(testInfo, null));
+    plugin.onTestStarting(new TestStartingEvent(testInfo, null, DeviceInfo.getDefaultInstance()));
 
     verify(testMessageUtil).sendProtoMessageToTest(eq(testInfo), any());
   }
@@ -549,7 +549,7 @@ public final class AtsServerSessionPluginTest {
         AtsServerSessionNotification.newBuilder()
             .setCancelSession(CancelSession.getDefaultInstance())
             .build();
-    plugin.onTestStarting(new TestStartingEvent(testInfo, null));
+    plugin.onTestStarting(new TestStartingEvent(testInfo, null, DeviceInfo.getDefaultInstance()));
     plugin.onSessionNotification(
         new SessionNotificationEvent(
             sessionInfo,
