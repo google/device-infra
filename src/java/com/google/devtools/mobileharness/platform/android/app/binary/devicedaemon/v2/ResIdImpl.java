@@ -52,6 +52,11 @@ public final class ResIdImpl implements ResId {
   }
 
   @Override
+  public int getExecutors() {
+    return R.id.Executors;
+  }
+
+  @Override
   public int getWifiInfo() {
     return R.id.WifiInfo;
   }

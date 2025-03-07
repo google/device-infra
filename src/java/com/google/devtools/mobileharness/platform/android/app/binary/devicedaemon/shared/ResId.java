@@ -37,6 +37,9 @@ public interface ResId {
   /** Get resource id for view Owners. */
   int getOwners();
 
+  /** Get resource id for view Executors. */
+  int getExecutors();
+
   /** Get resource id for view WifiInfo. */
   int getWifiInfo();
 
