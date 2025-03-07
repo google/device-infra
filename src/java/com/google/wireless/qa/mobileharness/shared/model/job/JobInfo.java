@@ -550,6 +550,15 @@ public class JobInfo extends JobScheduleUnit {
     return tests;
   }
 
+  /** Gets the job user to impersonate. */
+  public String getImpersonatee() {
+    // Default to use the run_as user as impersonatee to keep the existing behavior.
+    if (properties().getBoolean(Job.IMPERSONATE_RUN_AS).orElse(true)) {
+      return jobUser().getRunAs();
+    }
+    return jobUser().getActualUser();
+  }
+
   /**
    * <b>NOTE</b>: For internal use only.
    *

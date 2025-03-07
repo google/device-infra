@@ -55,6 +55,12 @@ public interface PropertyName {
     /** Whether the job is resumable. */
     IS_RESUMABLE,
 
+    /**
+     * If this is true, the job will use run_as as the impersonate user when impersonation is
+     * supported.
+     */
+    IMPERSONATE_RUN_AS,
+
     /** The job access account. */
     JOB_ACCESS_ACCOUNT,
 

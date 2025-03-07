@@ -227,7 +227,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
     this.fileResolver = fileResolver;
 
     this.impersonationUser =
-        supportImpersonation ? setting.testInfo().jobInfo().jobUser().getRunAs() : null;
+        supportImpersonation ? setting.testInfo().jobInfo().getImpersonatee() : null;
     this.testMessageForwarder = new CachedTestMessageForwarder(threadPool);
     this.labServerLocator =
         LabServerLocator.longRunningLabServer(getAllocation().getDevice().labLocator());
