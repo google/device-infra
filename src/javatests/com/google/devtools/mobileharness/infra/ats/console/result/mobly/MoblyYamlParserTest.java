@@ -40,6 +40,10 @@ public final class MoblyYamlParserTest {
   private static final String GEN_FILE_DIR_SKIP =
       TestRunfilesUtil.getRunfilesLocation("result/mobly/testdata/parser/skip/test_summary.yaml");
 
+  private static final String GEN_FILE_DIR_SETUP_CLASS_ERROR =
+      TestRunfilesUtil.getRunfilesLocation(
+          "result/mobly/testdata/parser/setup_class_error/test_summary.yaml");
+
   private MoblyYamlParser parser;
 
   @Before
@@ -175,5 +179,34 @@ public final class MoblyYamlParserTest {
                 .setSkipped(1)
                 .setPassed(1)
                 .build());
+  }
+
+  @Test
+  public void parseSetupClassErrorTest() throws Exception {
+    ImmutableList<MoblyYamlDocEntry> results = parser.parse(GEN_FILE_DIR_SETUP_CLASS_ERROR);
+
+    assertThat(results).hasSize(4);
+
+    // Test cases in a class with a setup_class error should have their results set to ERROR.
+    assertThat(results.get(0)).isInstanceOf(MoblyTestEntry.class);
+    MoblyTestEntry entry = (MoblyTestEntry) results.get(0);
+    assertThat(entry.getResult()).isEqualTo(MoblyResult.ERROR);
+    assertThat(entry.getTestClass()).isEqualTo("HelloWorldTest1");
+    assertThat(entry.getTestName()).isEqualTo("test_hello_world1_1");
+
+    assertThat(results.get(1)).isInstanceOf(MoblyTestEntry.class);
+    entry = (MoblyTestEntry) results.get(1);
+    assertThat(entry.getBeginTime()).hasValue(1663584280794L);
+    assertThat(entry.getEndTime()).hasValue(1663584283819L);
+    assertThat(entry.getResult()).isEqualTo(MoblyResult.ERROR);
+    assertThat(entry.getTestClass()).isEqualTo("HelloWorldTest1");
+    assertThat(entry.getTestName()).isEqualTo("test_hello_world1_2");
+
+    // Test case in a new test class without a setup_class error, keep original result.
+    assertThat(results.get(2)).isInstanceOf(MoblyTestEntry.class);
+    entry = (MoblyTestEntry) results.get(2);
+    assertThat(entry.getResult()).isEqualTo(MoblyResult.SKIP);
+    assertThat(entry.getTestClass()).isEqualTo("HelloWorldTest2");
+    assertThat(entry.getTestName()).isEqualTo("test_hello_world2_1");
   }
 }
