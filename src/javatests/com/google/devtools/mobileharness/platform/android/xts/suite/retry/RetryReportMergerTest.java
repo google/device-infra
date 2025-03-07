@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
+import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteTestFilter;
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlanHelper;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -78,6 +79,15 @@ public final class RetryReportMergerTest {
   private static final String MERGED_REPORT_FOR_ALL_ASSUMPTION_FAILURE_TEXTPROTO =
       RunfilesUtil.getRunfilesLocation(
           TEST_DATA_DIR + "merged_report_for_all_assumption_failure.textproto");
+
+  private static final String PREV_REPORT_MODULE_FAILURE_TEXTPROTO =
+      RunfilesUtil.getRunfilesLocation(TEST_DATA_DIR + "prev_report_module_failure.textproto");
+  private static final String RETRY_REPORT_MODULE_FAILURE_FIXED_TEXTPROTO =
+      RunfilesUtil.getRunfilesLocation(
+          TEST_DATA_DIR + "retry_report_module_failure_fixed.textproto");
+  private static final String MERGED_REPORT_MODULE_FAILURE_FIXED_TEXTPROTO =
+      RunfilesUtil.getRunfilesLocation(
+          TEST_DATA_DIR + "merged_report_module_failure_fixed.textproto");
 
   private static final Path RESULTS_DIR_PATH = Path.of("/path/to/xts-root/android-cts/results");
 
@@ -250,6 +260,48 @@ public final class RetryReportMergerTest {
             RetryType.NOT_EXECUTED,
             retryReport,
             /* passedInModules= */ ImmutableList.of());
+
+    assertThat(mergedReport).isEqualTo(expectedMergedReport);
+  }
+
+  @Test
+  public void mergeReports_prevReportHasModuleFailure_modulePassedInRetry() throws Exception {
+    Result prevReport =
+        TextFormat.parse(
+            localFileUtil.readFile(PREV_REPORT_MODULE_FAILURE_TEXTPROTO), Result.class);
+    Result retryReport =
+        TextFormat.parse(
+            localFileUtil.readFile(RETRY_REPORT_MODULE_FAILURE_FIXED_TEXTPROTO), Result.class);
+    Result expectedMergedReport =
+        TextFormat.parse(
+            localFileUtil.readFile(MERGED_REPORT_MODULE_FAILURE_FIXED_TEXTPROTO), Result.class);
+    when(previousResultLoader.loadPreviousResult(
+            RESULTS_DIR_PATH, 0, /* previousSessionResultDirName= */ null))
+        .thenReturn(prevReport);
+
+    SubPlan subPlan =
+        SubPlanHelper.createSubPlanForPreviousResult(
+            prevReport,
+            ImmutableSet.of("not_executed", "failed"),
+            /* addSubPlanCmd= */ false,
+            // Previous run ran with a subplan that has include filters.
+            /* prevResultIncludeFilters= */ ImmutableSet.of(
+                SuiteTestFilter.create(
+                    "arm64-v8a CtsVcnTestCases"
+                        + " android.net.vcn.cts.VcnManagerTest#testClearVcnConfig_withCarrierPrivileges")),
+            /* prevResultExcludeFilters= */ ImmutableSet.of(),
+            // The retry run was triggered with a passed-in module.
+            /* passedInModules= */ ImmutableSet.of("CtsVcnTestCases"));
+    when(retryGenerator.generateRetrySubPlan(any())).thenReturn(subPlan);
+
+    Result mergedReport =
+        retryReportMerger.mergeReports(
+            RESULTS_DIR_PATH,
+            0,
+            /* previousSessionResultDirName= */ null,
+            /* retryType= */ null,
+            retryReport,
+            /* passedInModules= */ ImmutableList.of("CtsVcnTestCases"));
 
     assertThat(mergedReport).isEqualTo(expectedMergedReport);
   }
