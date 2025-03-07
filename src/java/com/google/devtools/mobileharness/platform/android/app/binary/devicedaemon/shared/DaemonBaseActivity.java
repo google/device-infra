@@ -91,6 +91,8 @@ public abstract class DaemonBaseActivity extends Activity {
         (TextView) findViewById(resId.getCustomLabels()), getIntent().getStringExtra("labels"));
     daemonUtil.updateOwnerInfo(
         (TextView) findViewById(resId.getOwners()), getIntent().getStringExtra("owners"));
+    daemonUtil.updateExecutorInfo(
+        (TextView) findViewById(resId.getExecutors()), getIntent().getStringExtra("executors"));
     showWifiInfo();
     showPhoneInfo();
     registerWifiChangeReceiver();
