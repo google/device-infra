@@ -26,6 +26,7 @@ public interface XtsDynamicDownloadPlugin {
       throws MobileHarnessException, InterruptedException;
 
   /** Downloads the xts files based on the download url link */
-  void downloadXtsFiles(XtsDynamicDownloadInfo xtsDynamicDownloadInfo, TestInfo test)
+  void downloadXtsFiles(
+      XtsDynamicDownloadInfo xtsDynamicDownloadInfo, TestInfo test, String deviceId)
       throws MobileHarnessException, InterruptedException;
 }

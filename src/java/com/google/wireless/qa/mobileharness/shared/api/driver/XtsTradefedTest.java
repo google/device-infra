@@ -1029,13 +1029,14 @@ public class XtsTradefedTest extends BaseDriver
 
     // Create symlinks for the downloaded JDK only for the dynamic download jobs.
     if (testInfo.properties().has(XtsConstants.XTS_DYNAMIC_DOWNLOAD_PATH_JDK_PROPERTY_KEY)) {
-      createSymlink(
-          linkJdkDir,
+      Path downloadedJdkPath =
           Path.of(
               testInfo.getTmpFileDir()
                   + testInfo
                       .properties()
-                      .get(XtsConstants.XTS_DYNAMIC_DOWNLOAD_PATH_JDK_PROPERTY_KEY)));
+                      .get(XtsConstants.XTS_DYNAMIC_DOWNLOAD_PATH_JDK_PROPERTY_KEY));
+      createSymlink(linkJdkDir, downloadedJdkPath);
+      logger.atInfo().log("Use the downloaded JDK files from %s", downloadedJdkPath);
     } else {
       createSymlink(linkJdkDir, sourceXtsBundledJdkDir);
     }

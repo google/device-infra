@@ -149,10 +149,7 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
           String.format(
               "The ABI of device %s is not compatible with the xts dynamic downloader.", deviceId));
     }
-    String aospVersion =
-        adbUtil.getProperty(deviceId, AndroidProperty.CODENAME).equals(ANDROID_B_CODENAME)
-            ? "36"
-            : adbUtil.getProperty(deviceId, AndroidProperty.SDK_VERSION);
+    String aospVersion = getAospVersion(deviceId);
 
     List<String> downloadLinkUrls = new ArrayList<>();
     // Add the Lorry download link url of MCTS file for preloaded mainline modules. For example:
@@ -216,7 +213,8 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
   }
 
   @Override
-  public void downloadXtsFiles(XtsDynamicDownloadInfo xtsDynamicDownloadInfo, TestInfo testInfo)
+  public void downloadXtsFiles(
+      XtsDynamicDownloadInfo xtsDynamicDownloadInfo, TestInfo testInfo, String deviceId)
       throws MobileHarnessException, InterruptedException {
     List<String> downloadUrlList = new ArrayList<>(xtsDynamicDownloadInfo.getDownloadUrlList());
     // Download the MCTS full test list.
@@ -285,8 +283,10 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
       logger.atInfo().log("%s", testModule);
     }
     // Download the JDK file.
+    String aospVersion = getAospVersion(deviceId);
+    String jdkFileTargetPath = TMP_MCTS_TOOL_PATH + "/" + aospVersion + "/jdk.zip";
     String jdkFilePath =
-        downloadPublicUrlFiles("https://dl.google.com/dl" + MCTS_JDK_PATH, MCTS_JDK_PATH);
+        downloadPublicUrlFiles("https://dl.google.com/dl" + jdkFileTargetPath, MCTS_JDK_PATH);
     if (jdkFilePath != null) {
       fileUtil.unzipFile(jdkFilePath, testInfo.getTmpFileDir() + TMP_MCTS_TOOL_PATH);
       testInfo
@@ -311,7 +311,8 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
                   + " downloading step)");
       XtsDynamicDownloadInfo xtsDynamicDownloadInfo =
           parse(event.getTest(), event.getDeviceLocator().getSerial());
-      downloadXtsFiles(xtsDynamicDownloadInfo, event.getTest());
+      downloadXtsFiles(
+          xtsDynamicDownloadInfo, event.getTest(), event.getDeviceLocator().getSerial());
       logger.atInfo().with(IMPORTANCE, IMPORTANT).log("Finished MCTS test modules preparation.");
     } catch (MobileHarnessException e) {
       throw SkipTestException.create(
@@ -506,5 +507,12 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
     }
     logger.atInfo().log("Unzipped resource to %s", unzipDirPath);
     return testModules;
+  }
+
+  private String getAospVersion(String deviceId)
+      throws MobileHarnessException, InterruptedException {
+    return adbUtil.getProperty(deviceId, AndroidProperty.CODENAME).equals(ANDROID_B_CODENAME)
+        ? "36"
+        : adbUtil.getProperty(deviceId, AndroidProperty.SDK_VERSION);
   }
 }
