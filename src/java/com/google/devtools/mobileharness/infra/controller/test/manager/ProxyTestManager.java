@@ -30,8 +30,10 @@ import com.google.devtools.mobileharness.infra.lab.controller.util.LabFileNotifi
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.util.List;
 import java.util.Optional;
+import javax.inject.Singleton;
 
 /** {@link TestManager} for {@link ProxyTestRunner}s. */
+@Singleton
 public class ProxyTestManager extends TestManager<ProxyTestRunner>
     implements LabDirectTestRunnerHolder {
 

@@ -64,7 +64,6 @@ import com.google.inject.assistedinject.FactoryModuleBuilder;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageManager;
 import com.google.wireless.qa.mobileharness.shared.constant.ExitCode;
 import com.google.wireless.qa.mobileharness.shared.util.DeviceUtil;
-import com.google.wireless.qa.mobileharness.shared.util.NetUtil;
 import java.time.Clock;
 
 /** Guice module for {@link LabServer}. */
@@ -89,7 +88,6 @@ public class LabServerModule extends AbstractModule {
     install(new FactoryModuleBuilder().build(ExecTestServiceImpl.ExecTestServiceImplFactory.class));
     bind(DeviceHelperFactory.class).to(LocalDeviceManager.class);
     bind(new Key<TestManager<?>>() {}).to(ProxyTestManager.class);
-    bind(ProxyTestManager.class).in(Singleton.class);
     bind(LabDirectTestRunnerHolder.class).to(ProxyTestManager.class);
     bind(EventBus.class).annotatedWith(GlobalEventBus.class).toInstance(globalInternalBus);
 
@@ -118,9 +116,6 @@ public class LabServerModule extends AbstractModule {
     bind(ListeningScheduledExecutorService.class)
         .annotatedWith(DebugThreadPool.class)
         .toInstance(createStandardScheduledThreadPool("mh-lab-server-debug-random-exit-task", 1));
-    bind(LocalFileUtil.class).in(Singleton.class);
-    bind(SystemUtil.class).in(Singleton.class);
-    bind(NetUtil.class).in(Singleton.class);
   }
 
   private static String getCloudRpcName() {

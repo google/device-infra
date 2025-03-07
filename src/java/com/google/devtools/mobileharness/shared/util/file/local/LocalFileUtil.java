@@ -85,6 +85,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import java.util.zip.ZipFile;
 import javax.annotation.Nullable;
+import javax.inject.Singleton;
 
 /**
  * Utility class for operating with files on local disc.
@@ -104,6 +105,7 @@ import javax.annotation.Nullable;
  * <p>Error handling rules: DO NOT throw out the exception from the underlying CommandExecutor
  * directly.
  */
+@Singleton
 public class LocalFileUtil {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 

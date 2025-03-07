@@ -56,8 +56,10 @@ import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.annotation.Nullable;
+import javax.inject.Singleton;
 
 /** Utility class for system operations. */
+@Singleton
 public class SystemUtil {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 

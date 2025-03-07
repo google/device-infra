@@ -106,6 +106,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/lab/controller/util:lab_file_notifier",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@maven//:javax_inject_jsr330_api",
     ],
 )
 

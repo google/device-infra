@@ -95,6 +95,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/system",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
         "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
     ],
 )
 

@@ -35,11 +35,13 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Optional;
+import javax.inject.Singleton;
 
 /**
  * Utility class for common network operation. It contains methods for determining what location a
  * particular IP address of a Mobile Harness lab server belongs to.
  */
+@Singleton
 public class NetUtil {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
