@@ -1821,12 +1821,25 @@ public class Flags {
 
   @com.beust.jcommander.Parameter(
       names = "--xts_res_dir_root",
-      description = "The xts resources Dir Root.",
+      description = "The xTS resources dir root.",
       converter = Flag.StringConverter.class)
   public Flag<String> xtsResDirRoot = xtsResDirRootDefault;
 
   private static String getXtsResDirRootDefaultOss() {
     return Strings.nullToEmpty(System.getenv("HOME")) + "/xts";
+  }
+
+  private static final Flag<String> xtsServerResDirRootDefault =
+      Flag.value(getXtsServerResDirRootDefaultOss());
+
+  @com.beust.jcommander.Parameter(
+      names = "--xts_server_res_dir_root",
+      description = "The xTS server resources dir root.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> xtsServerResDirRoot = xtsServerResDirRootDefault;
+
+  private static String getXtsServerResDirRootDefaultOss() {
+    return Strings.nullToEmpty(System.getenv("HOME")) + "/xts_server";
   }
 
   private static final Flag<String> xtsTfXmxDefault = Flag.value("24g");
