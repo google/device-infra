@@ -70,12 +70,10 @@ import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Job;
 import com.google.wireless.qa.mobileharness.shared.controller.event.LocalTestEndedEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.event.LocalTestEndingEvent;
-import com.google.wireless.qa.mobileharness.shared.controller.event.LocalTestStartEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.event.LocalTestStartedEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.event.LocalTestStartingEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.event.TestEndedEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.event.TestEndingEvent;
-import com.google.wireless.qa.mobileharness.shared.controller.event.TestStartEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.event.TestStartedEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.event.TestStartingEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.plugin.Plugin.PluginType;
@@ -394,9 +392,6 @@ public class LocalTestFlow {
           return allocation.toNewAllocation();
         }
       };
-    } else if (eventType == TestStartEvent.class || eventType == LocalTestStartEvent.class) {
-      return new LocalTestStartEvent(
-          testInfo, devicesById, allocation, checkNotNull(deviceInfos).get(0));
     } else if (eventType == TestStartedEvent.class || eventType == LocalTestStartedEvent.class) {
       return new LocalTestStartedEvent(
           testInfo, devicesById, allocation, checkNotNull(deviceInfos).get(0));

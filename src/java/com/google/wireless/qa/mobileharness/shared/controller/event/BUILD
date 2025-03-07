@@ -70,7 +70,6 @@ java_library(
     srcs = [
         "TestEndedEvent.java",
         "TestEndingEvent.java",
-        "TestStartEvent.java",
         "TestStartedEvent.java",
         "TestStartingEvent.java",
     ],
@@ -90,7 +89,6 @@ java_library(
         "LocalTestEndedEvent.java",
         "LocalTestEndingEvent.java",
         "LocalTestEvent.java",
-        "LocalTestStartEvent.java",
         "LocalTestStartedEvent.java",
         "LocalTestStartingEvent.java",
     ],
