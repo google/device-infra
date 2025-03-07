@@ -50,6 +50,9 @@ public class DeviceDaemonHelper {
   /** Daemon activity extra for showing owners on daemon. */
   @VisibleForTesting static final String OWNERS_EXTRA = "owners";
 
+  /** Daemon activity extra for showing executors on daemon. */
+  @VisibleForTesting static final String EXECUTORS_EXTRA = "executors";
+
   /** Daemon activity extra for showing id on daemon. */
   @VisibleForTesting static final String ID_EXTRA = "id";
 
@@ -138,6 +141,7 @@ public class DeviceDaemonHelper {
       @Nullable String hostname,
       @Nullable String owners)
       throws MobileHarnessException, InterruptedException {
+    @Nullable String executors = null;
     if (!DeviceDaemonApkInfoProvider.isDeviceDaemonEnabled()) {
       logMessage(
           log,
@@ -176,7 +180,7 @@ public class DeviceDaemonHelper {
           deviceId,
           deviceDaemonApkInfo.getPackageName(),
           deviceDaemonApkInfo.getActivityName(),
-          prepareDeviceDaemonExtras(deviceId, sdkVersion, log, labels, hostname, owners),
+          prepareDeviceDaemonExtras(deviceId, sdkVersion, log, labels, hostname, owners, executors),
           /* clearTop= */ true);
     } catch (MobileHarnessException e) {
       if (e.getMessage().contains(AndroidProcessUtil.OUTPUT_START_APP_FAILED)) {
@@ -199,12 +203,14 @@ public class DeviceDaemonHelper {
       @Nullable LogCollector<?> log,
       @Nullable String labels,
       @Nullable String hostname,
-      @Nullable String owners)
+      @Nullable String owners,
+      @Nullable String executors)
       throws MobileHarnessException, InterruptedException {
     Map<String, String> extras = new HashMap<>();
     labels = Strings.nullToEmpty(labels);
     hostname = Strings.nullToEmpty(hostname);
     owners = Strings.nullToEmpty(owners);
+    executors = Strings.nullToEmpty(executors);
     String ssid = "";
     if (sdkVersion >= 28 && systemSettingUtil.isLocationServiceDisabled(deviceId)) {
       try {
@@ -217,11 +223,12 @@ public class DeviceDaemonHelper {
     logMessage(
         log,
         "Prepare extras for device daemon with device id [%s], labels [%s], hostname [%s], "
-            + "owners [%s], ssid [%s]",
+            + "owners [%s], executors [%s], ssid [%s]",
         deviceId,
         labels,
         hostname,
         owners,
+        executors,
         ssid);
     if (!StrUtil.isEmptyOrWhitespace(labels)) {
       extras.put(DEVICE_DAEMON_LABEL_EXTRA, labels);
@@ -231,6 +238,9 @@ public class DeviceDaemonHelper {
     }
     if (!StrUtil.isEmptyOrWhitespace(owners)) {
       extras.put(OWNERS_EXTRA, owners);
+    }
+    if (!StrUtil.isEmptyOrWhitespace(executors)) {
+      extras.put(EXECUTORS_EXTRA, executors);
     }
     if (!StrUtil.isEmptyOrWhitespace(ssid)) {
       extras.put(DEVICE_DAEMON_SSID_EXTRA, ssid);
