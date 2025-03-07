@@ -127,6 +127,16 @@ public class DaemonUtil {
     }
   }
 
+  /** Update device executors info. */
+  @SuppressWarnings("SetTextI18n")
+  public void updateExecutorInfo(TextView executorsView, @Nullable String executors) {
+    if (isStringNullOrEmpty(executors)) {
+      executorsView.setVisibility(View.GONE);
+    } else {
+      executorsView.setText("executors:" + executors);
+    }
+  }
+
   /**
    * Update the WiFi info label according to the current WIFI status.
    *
