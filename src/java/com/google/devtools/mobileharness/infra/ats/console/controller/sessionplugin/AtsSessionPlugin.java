@@ -40,7 +40,6 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionF
 import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.api.testrunner.device.cache.XtsDeviceCache;
-import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.infra.ats.common.jobcreator.XtsJobCreator;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionCancellation;
@@ -80,6 +79,7 @@ import com.google.protobuf.Timestamp;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
 import com.google.wireless.qa.mobileharness.client.api.event.JobStartEvent;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageUtil;
+import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test;
 import com.google.wireless.qa.mobileharness.shared.controller.event.TestEndedEvent;
@@ -156,7 +156,7 @@ public class AtsSessionPlugin {
   @GuardedBy("addingJobLock")
   private AtsSessionCancellation sessionCancellation;
 
-  @GuardedBy("addingJobLock")
+  @GuardedBy("itself")
   private final Set<String> cachedDeviceControlIds = new HashSet<>();
 
   @GuardedBy("addingJobLock")
@@ -372,13 +372,14 @@ public class AtsSessionPlugin {
       throws MobileHarnessException, InterruptedException {
     synchronized (addingJobLock) {
       sessionEnded = true;
+    }
 
-      // Invalidates xTS device caches.
+    // Invalidates xTS device caches.
+    synchronized (cachedDeviceControlIds) {
       if (!cachedDeviceControlIds.isEmpty()) {
         logger.atInfo().log("Invalidate xTS device caches: %s", cachedDeviceControlIds);
-        for (String deviceControlId : cachedDeviceControlIds) {
-          xtsDeviceCache.invalidateCache(deviceControlId);
-        }
+        cachedDeviceControlIds.forEach(xtsDeviceCache::invalidateCache);
+        cachedDeviceControlIds.clear();
       }
     }
 
@@ -489,6 +490,30 @@ public class AtsSessionPlugin {
         startedTestsBeforeCancellation.add(testInfo);
       } else {
         sendCancellationMessageToStartedTest(testInfo, cancellationTestMessage);
+      }
+    }
+
+    // Caches devices (as a xTS type) used in the test.
+    // The intention is to make sure if any device goes offline between job runs, the next job
+    // shouldn't be blocked on waiting for the device to become online, so we cache the devices
+    // here.
+    if (Flags.instance().atsConsoleCacheXtsDevices.getNonNull()) {
+      synchronized (cachedDeviceControlIds) {
+        testInfo
+            .jobInfo()
+            .subDeviceSpecs()
+            .getAllSubDevices()
+            .forEach(
+                subDeviceSpec -> {
+                  String idDimensionValue = subDeviceSpec.dimensions().get(Name.ID);
+                  if (idDimensionValue == null
+                      || idDimensionValue.startsWith(Dimension.Value.PREFIX_REGEX)) {
+                    return;
+                  }
+                  xtsDeviceCache.cache(
+                      idDimensionValue, subDeviceSpec.type(), ChronoUnit.YEARS.getDuration());
+                  cachedDeviceControlIds.add(idDimensionValue);
+                });
       }
     }
   }
@@ -609,12 +634,6 @@ public class AtsSessionPlugin {
    */
   @CanIgnoreReturnValue
   private ImmutableList<String> addJobsToSession(ImmutableList<JobInfo> jobInfos) {
-    ImmutableSet<String> deviceControlIds =
-        jobInfos.stream()
-            .map(SessionRequestHandlerUtil::getControlIdsSpecifiedInJob)
-            .flatMap(Collection::stream)
-            .collect(toImmutableSet());
-
     synchronized (addingJobLock) {
       if (sessionCancellation != null) {
         logger.atInfo().log(
@@ -624,15 +643,6 @@ public class AtsSessionPlugin {
       if (sessionEnded) {
         logger.atInfo().log("Skip adding jobs to session because session ended");
         return ImmutableList.of();
-      }
-
-      // Caches xTS devices before adding jobs to session.
-      if (!deviceControlIds.isEmpty() && Flags.instance().atsConsoleCacheXtsDevices.getNonNull()) {
-        logger.atInfo().log("Cache xTS devices: %s", deviceControlIds);
-        cachedDeviceControlIds.addAll(deviceControlIds);
-        for (String deviceControlId : deviceControlIds) {
-          xtsDeviceCache.cache(deviceControlId, ChronoUnit.YEARS.getDuration());
-        }
       }
 
       // Adds jobs to session.

@@ -21,15 +21,19 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.time.Duration;
 
 /** Device cache for local xTS testing. */
-public class XtsDeviceCache {
+public class XtsDeviceCache extends DeviceCache {
 
-  public void cache(String deviceControlId, Duration timeout) {
-    DeviceCacheManager.getInstance()
-        .cache(CacheType.XTS, deviceControlId, /* deviceType= */ null, timeout);
+  private static final CacheType CACHE_TYPE = CacheType.XTS;
+
+  @Override
+  @CanIgnoreReturnValue
+  public boolean cache(String deviceControlId, String deviceType, Duration timeout) {
+    return DeviceCacheManager.getInstance().cache(CACHE_TYPE, deviceControlId, deviceType, timeout);
   }
 
+  @Override
   @CanIgnoreReturnValue
   public boolean invalidateCache(String deviceControlId) {
-    return DeviceCacheManager.getInstance().invalidate(CacheType.XTS, deviceControlId);
+    return DeviceCacheManager.getInstance().invalidate(CACHE_TYPE, deviceControlId);
   }
 }

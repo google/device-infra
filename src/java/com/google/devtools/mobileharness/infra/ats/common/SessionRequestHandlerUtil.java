@@ -955,24 +955,6 @@ public class SessionRequestHandlerUtil {
   }
 
   /**
-   * Returns concrete device control IDs specified in the job dimension {@link Name#ID} of the given
-   * job if any (not including {@linkplain Value#PREFIX_REGEX regex values}).
-   */
-  public static ImmutableSet<String> getControlIdsSpecifiedInJob(JobInfo jobInfo) {
-    return jobInfo.subDeviceSpecs().getAllSubDevices().stream()
-        .flatMap(
-            subDeviceSpec -> {
-              String dimensionValue = subDeviceSpec.dimensions().get(Name.ID);
-              if (dimensionValue == null || dimensionValue.startsWith(Value.PREFIX_REGEX)) {
-                return Stream.empty();
-              } else {
-                return Stream.of(dimensionValue);
-              }
-            })
-        .collect(toImmutableSet());
-  }
-
-  /**
    * Applies the metadata filter to see if the module should run.
    *
    * @param config The {@link Configuration} being evaluated.
