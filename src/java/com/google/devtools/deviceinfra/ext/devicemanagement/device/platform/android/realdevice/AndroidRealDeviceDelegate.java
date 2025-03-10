@@ -937,6 +937,14 @@ public abstract class AndroidRealDeviceDelegate {
         shouldInstallAndStartDaemon = true;
       }
 
+      // Show executor label.
+      String executorList = device.getExecutors().toString();
+      String propExecutorList = device.getProperty(AndroidRealDeviceConstants.PROP_EXECUTORS);
+      if (!executorList.equals(propExecutorList)) {
+        device.setProperty(AndroidRealDeviceConstants.PROP_EXECUTORS, executorList);
+        shouldInstallAndStartDaemon = true;
+      }
+
       // Sets the hostname shown on the device daemon.
       String hostname = null;
       try {
