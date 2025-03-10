@@ -64,6 +64,7 @@ java_library(
     deps = [
         ":device_cache_interface",
         ":device_cache_manager",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_errorprone_error_prone_annotations",
     ],
 )

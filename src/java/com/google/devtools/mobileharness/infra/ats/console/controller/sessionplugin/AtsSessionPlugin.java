@@ -79,11 +79,10 @@ import com.google.protobuf.Timestamp;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
 import com.google.wireless.qa.mobileharness.client.api.event.JobStartEvent;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageUtil;
-import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test;
+import com.google.wireless.qa.mobileharness.shared.controller.event.LocalTestStartingEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.event.TestEndedEvent;
-import com.google.wireless.qa.mobileharness.shared.controller.event.TestStartingEvent;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.SubDeviceSpec;
@@ -442,7 +441,7 @@ public class AtsSessionPlugin {
   }
 
   @Subscribe
-  public void onTestStarting(TestStartingEvent event) {
+  public void onTestStarting(LocalTestStartingEvent event) {
     TestInfo testInfo = event.getTest();
     boolean tfTest = testInfo.jobInfo().properties().getBoolean(Job.IS_XTS_TF_JOB).orElse(false);
     ImmutableList<String> deviceSerials =
@@ -499,20 +498,13 @@ public class AtsSessionPlugin {
     // here.
     if (Flags.instance().atsConsoleCacheXtsDevices.getNonNull()) {
       synchronized (cachedDeviceControlIds) {
-        testInfo
-            .jobInfo()
-            .subDeviceSpecs()
-            .getAllSubDevices()
+        event
+            .getLocalDevices()
             .forEach(
-                subDeviceSpec -> {
-                  String idDimensionValue = subDeviceSpec.dimensions().get(Name.ID);
-                  if (idDimensionValue == null
-                      || idDimensionValue.startsWith(Dimension.Value.PREFIX_REGEX)) {
-                    return;
-                  }
+                (deviceId, device) -> {
                   xtsDeviceCache.cache(
-                      idDimensionValue, subDeviceSpec.type(), ChronoUnit.YEARS.getDuration());
-                  cachedDeviceControlIds.add(idDimensionValue);
+                      deviceId, device.getClass().getSimpleName(), ChronoUnit.YEARS.getDuration());
+                  cachedDeviceControlIds.add(deviceId);
                 });
       }
     }

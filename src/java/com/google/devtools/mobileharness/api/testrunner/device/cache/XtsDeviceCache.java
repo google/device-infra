@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.api.testrunner.device.cache;
 
+import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.testrunner.device.cache.DeviceCacheManager.CacheType;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.time.Duration;
@@ -23,11 +24,15 @@ import java.time.Duration;
 /** Device cache for local xTS testing. */
 public class XtsDeviceCache extends DeviceCache {
 
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
   private static final CacheType CACHE_TYPE = CacheType.XTS;
 
   @Override
   @CanIgnoreReturnValue
   public boolean cache(String deviceControlId, String deviceType, Duration timeout) {
+    logger.atInfo().log(
+        "Caching device %s of type %s for %s", deviceControlId, deviceType, timeout);
     return DeviceCacheManager.getInstance().cache(CACHE_TYPE, deviceControlId, deviceType, timeout);
   }
 
