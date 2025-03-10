@@ -59,7 +59,6 @@ import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
 import com.google.wireless.qa.mobileharness.shared.controller.event.TestEndedEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.event.TestEndingEvent;
-import com.google.wireless.qa.mobileharness.shared.controller.event.TestStartEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.event.TestStartedEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.event.TestStartingEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.event.util.ScopedEventBus;
@@ -660,14 +659,6 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
             /* eventType= */ "test started event",
             /* afterDriverExecution= */ false,
             createTestEvent(
-                TestStartEvent.class,
-                testInfo,
-                allocation,
-                deviceInfos,
-                newDeviceInfos,
-                deviceFeatures,
-                null),
-            createTestEvent(
                 TestStartedEvent.class,
                 testInfo,
                 allocation,
@@ -867,8 +858,6 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
           return allocation.toNewAllocation();
         }
       };
-    } else if (eventType == TestStartEvent.class) {
-      return new TestStartEvent(testInfo, allocation, checkNotNull(deviceInfos).get(0));
     } else if (eventType == TestStartedEvent.class) {
       return new TestStartedEvent(testInfo, allocation, checkNotNull(deviceInfos).get(0));
     } else if (eventType
