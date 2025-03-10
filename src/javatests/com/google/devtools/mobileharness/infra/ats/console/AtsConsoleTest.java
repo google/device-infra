@@ -79,6 +79,7 @@ public final class AtsConsoleTest {
     String publicDirPath = tmpFolder.newFolder("public_dir").toString();
     String tmpDirPath = tmpFolder.newFolder("tmp_dir").toString();
     String xtsResourceDirPath = tmpFolder.newFolder("xts_resource_dir").toString();
+    String xtsServerResourceDirPath = tmpFolder.newFolder("xts_server_resource_dir").toString();
     String xtsRootDirPath = tmpFolder.newFolder("xts_root_dir").toString();
     String versionFilePath = PathUtil.join(xtsRootDirPath, "android-cts/tools/version.txt");
     localFileUtil.writeToFile(versionFilePath, "fake_version");
@@ -108,7 +109,9 @@ public final class AtsConsoleTest {
             "tmp_dir_root",
             tmpDirPath,
             "xts_res_dir_root",
-            xtsResourceDirPath);
+            xtsResourceDirPath,
+            "xts_server_res_dir_root",
+            xtsServerResourceDirPath);
     flags.setAllFlags(flagMap);
     ImmutableList<String> flagList =
         flagMap.entrySet().stream()
