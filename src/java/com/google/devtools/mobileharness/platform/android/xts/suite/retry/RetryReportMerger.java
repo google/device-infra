@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.platform.android.xts.suite.retry;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static java.util.stream.Collectors.toCollection;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -45,6 +46,7 @@ import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubP
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -358,7 +360,10 @@ public class RetryReportMerger {
         moduleFromRetry.getTestCaseList().stream()
             .collect(toImmutableMap(TestCase::getName, Function.identity()));
 
+    HashSet<String> notCheckedTestCasesFromRetry =
+        testCasesFromRetry.keySet().stream().collect(toCollection(HashSet::new));
     for (TestCase testCaseFromPrevSession : moduleFromPrevSession.getTestCaseList()) {
+      notCheckedTestCasesFromRetry.remove(testCaseFromPrevSession.getName());
       mergedModuleBuilder.addTestCase(
           createMergedTestCase(
               moduleId,
@@ -367,6 +372,14 @@ public class RetryReportMerger {
               matchedRetryExcludeTestFilters.stream()
                   .filter(filter -> filter.contains(testCaseFromPrevSession.getName()))
                   .collect(toImmutableSet())));
+    }
+    if (!notCheckedTestCasesFromRetry.isEmpty()) {
+      logger.atInfo().log(
+          "Found %d test cases in retry result (module %s) but not in previous result",
+          notCheckedTestCasesFromRetry.size(), moduleId);
+      for (String testCaseName : notCheckedTestCasesFromRetry) {
+        mergedModuleBuilder.addTestCase(testCasesFromRetry.get(testCaseName));
+      }
     }
 
     int passedTests = 0;
