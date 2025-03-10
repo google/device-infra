@@ -139,7 +139,7 @@ public class VerifierResultHelperTest {
     verifierResultHelper.broadcastResults(
         Result.getDefaultInstance(), ImmutableList.of("device"), xtsRoot);
 
-    verify(androidPackageManagerUtil).installApk("device", SDK_VERSION, apk.getPath());
+    verifyInstallCtsVerifierApk(apk.getPath());
   }
 
   @Test
@@ -152,7 +152,7 @@ public class VerifierResultHelperTest {
     verifierResultHelper.broadcastResults(
         Result.getDefaultInstance(), ImmutableList.of("device"), xtsRoot);
 
-    verify(androidPackageManagerUtil).installApk("device", SDK_VERSION, apk.getPath());
+    verifyInstallCtsVerifierApk(apk.getPath());
   }
 
   @Test
@@ -208,5 +208,13 @@ public class VerifierResultHelperTest {
                 + "'{\"module3\":{\"result\":\"FAIL\",\"details\":\"Test run failed to complete."
                 + " Expected 11 tests, received 2. onError: commandError\\u003dfalse"
                 + " message\\u003dINST...\",\"subtests\":{}}}'");
+  }
+
+  private void verifyInstallCtsVerifierApk(String apkPath) throws Exception {
+    verify(adb).runShellWithRetry("device", "settings put global hidden_api_policy 1");
+    verify(androidPackageManagerUtil).installApk("device", SDK_VERSION, apkPath);
+    for (String command : VerifierResultHelper.CTS_VERIFIER_SETTING_SHELL_COMMANDS) {
+      verify(adb).runShellWithRetry("device", command);
+    }
   }
 }

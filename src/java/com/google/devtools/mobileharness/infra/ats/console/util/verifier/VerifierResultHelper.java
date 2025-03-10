@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.infra.ats.console.util.verifier;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
@@ -52,6 +53,14 @@ public class VerifierResultHelper {
   @VisibleForTesting static final String VERIFIER_PACKAGE = "com.android.cts.verifier";
   @VisibleForTesting static final String MAIN_ACTIVITY = ".CtsVerifierActivity";
   @VisibleForTesting static final String HOST_TESTS_ACTIVITY = ".HostTestsActivity";
+
+  @VisibleForTesting
+  static final ImmutableList<String> CTS_VERIFIER_SETTING_SHELL_COMMANDS =
+      ImmutableList.of(
+          "appops set com.android.cts.verifier android:read_device_identifiers allow",
+          "appops set com.android.cts.verifier MANAGE_EXTERNAL_STORAGE 0",
+          "am compat enable ALLOW_TEST_API_ACCESS com.android.cts.verifier",
+          "appops set com.android.cts.verifier TURN_SCREEN_ON 0");
 
   @VisibleForTesting
   static final String BROADCAST_COMMAND =
@@ -188,8 +197,27 @@ public class VerifierResultHelper {
       logger.atInfo().log(
           "Install CTS Verifier %s on %s. [Previous version: %s]",
           newVersionName, serial, originalVersionName);
+      // Allow access to non-SDK interfaces.
+      var unused = adb.runShellWithRetry(serial, "settings put global hidden_api_policy 1");
       int sdkVersion = systemSettingUtil.getDeviceSdkVersion(serial);
       androidPackageManagerUtil.installApk(serial, sdkVersion, apkPath);
+      setUpCtsVerifier(serial);
+    }
+  }
+
+  /**
+   * Sets up the CTS Verifier app. There is no guarantee that all the permissions are granted
+   * successfully. https://source.android.com/docs/compatibility/cts/verifier#setup
+   */
+  private void setUpCtsVerifier(String serial) throws InterruptedException {
+    for (String command : CTS_VERIFIER_SETTING_SHELL_COMMANDS) {
+      try {
+        var unused = adb.runShellWithRetry(serial, command);
+      } catch (MobileHarnessException e) {
+        logger.atInfo().withCause(e).log(
+            "Unable to give permissions to CTS Verifier on device %s. ADB shell command [%s]",
+            serial, command);
+      }
     }
   }
 
