@@ -92,6 +92,9 @@ public class AndroidRealDeviceConstants {
   /** Device property(in host machine memory) names of owner list to show on device daemon. */
   public static final String PROP_OWNERS = "owners";
 
+  /** Device property(in host machine memory) names of executor list to show on device daemon. */
+  public static final String PROP_EXECUTORS = "executors";
+
   /** Deprecated device feature indicating it is an AndroidThings (IoT) device. */
   public static final String FEATURE_IOT = "feature:android.hardware.type.iot";
 
