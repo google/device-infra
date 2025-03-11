@@ -69,6 +69,15 @@ message DeviceCompositeDimension {
   repeated DeviceDimension required_dimension = 2;
 }
 
+message DeviceProperty {
+  string name = 1;
+  string value = 2;
+}
+
+message DeviceProperties {
+  repeated DeviceProperty property = 1;
+}
+
 // Device features.
 message DeviceFeature {
   repeated string owner = 2;
@@ -78,6 +87,7 @@ message DeviceFeature {
   DeviceCompositeDimension composite_dimension = 6;
   // Executors of the device.
   repeated string executor = 7;
+  DeviceProperties properties = 8;
 }
 
 // An equivalent to
