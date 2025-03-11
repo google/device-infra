@@ -101,6 +101,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/olcserver:ats_session_stub",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/olcserver:server_log_printer",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:plugin_output_printer",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:certification_suite_info_factory",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/command:command_helper",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/console:console_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/subplan:sub_plan_lister",

@@ -66,6 +66,7 @@ import com.google.devtools.mobileharness.platform.android.xts.config.proto.Confi
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.DeviceConfigurationProto.DeviceConfigurations;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.DeviceConfigurationProto.ModuleDeviceConfiguration;
 import com.google.devtools.mobileharness.platform.android.xts.suite.ModuleArg;
+import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteTestFilter;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper.DeviceInfo;
@@ -932,7 +933,8 @@ public class SessionRequestHandlerUtil {
                 jobTimeout,
                 testTimeout,
                 startTimeout,
-                isSkipDeviceInfo(sessionRequestInfo, subPlan));
+                isSkipDeviceInfo(sessionRequestInfo, subPlan),
+                sessionRequestInfo.xtsSuiteInfo());
         if (deviceSerialsDimensionValue != null) {
           jobInfo
               .subDeviceSpecs()
@@ -1064,7 +1066,8 @@ public class SessionRequestHandlerUtil {
       Duration jobTimeout,
       Duration testTimeout,
       Duration startTimeout,
-      boolean skipDeviceInfo)
+      boolean skipDeviceInfo,
+      ImmutableMap<String, String> xtsSuiteInfo)
       throws MobileHarnessException, InterruptedException {
     JobInfo jobInfo =
         createBaseXtsNonTradefedJob(
@@ -1122,7 +1125,9 @@ public class SessionRequestHandlerUtil {
             generateXtsSuiteInfoMap(
                 xtsRootDir.toAbsolutePath().toString(),
                 xtsType,
-                previousSessionTestPlan != null ? previousSessionTestPlan : testPlan));
+                previousSessionTestPlan != null ? previousSessionTestPlan : testPlan,
+                isRunRetry(testPlan),
+                xtsSuiteInfo));
 
     // TODO: Add multi hosts mode support.
     jobInfo
@@ -1140,9 +1145,28 @@ public class SessionRequestHandlerUtil {
     jobInfo.params().add(PARAM_CHECK_INSTALLED_GMS_CORE_VERSION, "false");
   }
 
-  private String generateXtsSuiteInfoMap(String xtsRootDir, String xtsType, String testPlan) {
-    Map<String, String> xtsSuiteInfoMap =
-        certificationSuiteInfoFactory.generateSuiteInfoMap(xtsRootDir, xtsType, testPlan);
+  private String generateXtsSuiteInfoMap(
+      String xtsRootDir,
+      String xtsType,
+      String testPlan,
+      boolean isRunRetry,
+      ImmutableMap<String, String> xtsSuiteInfoFromClient) {
+    Map<String, String> xtsSuiteInfoMap = new HashMap<>();
+    if (xtsSuiteInfoFromClient.isEmpty()) {
+      logger.atInfo().log("No xTS suite info from client, regenerating xTS suite info.");
+      xtsSuiteInfoMap =
+          certificationSuiteInfoFactory.generateSuiteInfoMap(xtsRootDir, xtsType, testPlan);
+    } else {
+      xtsSuiteInfoMap.putAll(xtsSuiteInfoFromClient);
+      if (isRunRetry) {
+        // Overwrite the suite plan and suite variant if it's run retry
+        xtsSuiteInfoMap.put(SuiteCommon.SUITE_PLAN, testPlan);
+        xtsSuiteInfoMap.put(
+            SuiteCommon.SUITE_VARIANT,
+            certificationSuiteInfoFactory.getSuiteVariant(
+                testPlan, xtsSuiteInfoFromClient.getOrDefault(SuiteCommon.SUITE_NAME, "")));
+      }
+    }
     return Joiner.on(",").withKeyValueSeparator("=").join(xtsSuiteInfoMap);
   }
 

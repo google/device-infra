@@ -50,6 +50,7 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.proto.Sess
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.ModuleMetadataFilterEntry;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommandState;
 import com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin.PluginOutputPrinter;
+import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfoFactory;
 import com.google.devtools.mobileharness.infra.ats.console.util.command.CommandHelper;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
 import com.google.devtools.mobileharness.infra.ats.console.util.subplan.SubPlanLister;
@@ -717,7 +718,10 @@ public final class RunCommand implements Callable<Integer> {
             .addAllIncludeFilter(includeFilters)
             .addAllExcludeFilter(excludeFilters)
             .setHtmlInZip(htmlInZip)
-            .setReportSystemCheckers(reportSystemCheckers);
+            .setReportSystemCheckers(reportSystemCheckers)
+            .putAllXtsSuiteInfo(
+                new CertificationSuiteInfoFactory()
+                    .generateSuiteInfoMap(xtsRootDirectory.toString(), xtsType, config));
     moduleMetadataIncludeFilters.forEach(
         (key, value) ->
             runCommand.addModuleMetadataIncludeFilter(

@@ -90,12 +90,16 @@ public class CertificationSuiteInfoFactory {
     Map<String, String> suiteInfoMap = new HashMap<>();
     suiteInfoMap.put(SuiteCommon.SUITE_NAME, testSuiteInfo.getName());
     suiteInfoMap.put(
-        SuiteCommon.SUITE_VARIANT, createSuiteVariant(suitePlan).orElse(testSuiteInfo.getName()));
+        SuiteCommon.SUITE_VARIANT, getSuiteVariant(suitePlan, testSuiteInfo.getName()));
     suiteInfoMap.put(SuiteCommon.SUITE_VERSION, testSuiteInfo.getVersion());
     suiteInfoMap.put(SuiteCommon.SUITE_PLAN, suitePlan);
     suiteInfoMap.put(SuiteCommon.SUITE_BUILD, testSuiteInfo.getBuildNumber());
 
     return suiteInfoMap;
+  }
+
+  public String getSuiteVariant(String suitePlan, String defaultValue) {
+    return createSuiteVariant(suitePlan).orElse(defaultValue);
   }
 
   private Optional<String> createSuiteVariant(String suitePlan) {

@@ -173,6 +173,9 @@ message RunCommand {
   // Optional. Whether to broadcast results to CTS verifier. Only applicable to
   // CTS-V-HOST tests.
   optional bool enable_cts_verifier_result_reporter = 32;
+
+  // xTS suite info from console.
+  map<string, string> xts_suite_info = 34;
 }
 
 message RunCommandState {

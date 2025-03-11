@@ -190,6 +190,7 @@ java_library(
     srcs = ["CertificationSuiteInfoFactory.java"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/command:__pkg__",
         "//src/java/com/google/devtools/mobileharness/platform:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result/report:__pkg__",

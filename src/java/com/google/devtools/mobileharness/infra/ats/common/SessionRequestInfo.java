@@ -146,6 +146,8 @@ public abstract class SessionRequestInfo {
 
   public abstract Optional<Boolean> isXtsDynamicDownloadEnabled();
 
+  public abstract ImmutableMap<String, String> xtsSuiteInfo();
+
   public static Builder builder() {
     return new AutoValue_SessionRequestInfo.Builder()
         .setModuleNames(ImmutableList.of())
@@ -170,7 +172,8 @@ public abstract class SessionRequestInfo {
         .setHtmlInZip(false)
         .setReportSystemCheckers(false)
         .setIsAtsServerRequest(false)
-        .setShardingMode(ShardingMode.RUNNER);
+        .setShardingMode(ShardingMode.RUNNER)
+        .setXtsSuiteInfo(ImmutableMap.of());
   }
 
   public abstract Builder toBuilder();
@@ -277,6 +280,8 @@ public abstract class SessionRequestInfo {
     public abstract Builder setSkipDeviceInfo(boolean skipDeviceInfo);
 
     public abstract Builder setIsXtsDynamicDownloadEnabled(boolean isXtsDynamicDownloadEnabled);
+
+    public abstract Builder setXtsSuiteInfo(ImmutableMap<String, String> xtsSuiteInfo);
 
     protected abstract SessionRequestInfo autoBuild();
 

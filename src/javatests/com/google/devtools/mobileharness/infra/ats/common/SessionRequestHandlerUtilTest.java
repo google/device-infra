@@ -780,6 +780,7 @@ public final class SessionRequestHandlerUtilTest {
     doCallRealMethod()
         .when(certificationSuiteInfoFactory)
         .generateSuiteInfoMap(any(), any(), any());
+    doCallRealMethod().when(certificationSuiteInfoFactory).getSuiteVariant(any(), any());
 
     SessionRequestInfo sessionRequestInfo =
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(

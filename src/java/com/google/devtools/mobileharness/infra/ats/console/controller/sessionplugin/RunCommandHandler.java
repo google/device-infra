@@ -366,7 +366,8 @@ class RunCommandHandler {
             .setIncludeFilters(runCommand.getIncludeFilterList())
             .setExcludeFilters(runCommand.getExcludeFilterList())
             .setModuleArgs(runCommand.getModuleArgList())
-            .setExtraArgs(runCommand.getExtraArgList());
+            .setExtraArgs(runCommand.getExtraArgList())
+            .setXtsSuiteInfo(ImmutableMap.copyOf(runCommand.getXtsSuiteInfoMap()));
     ImmutableMultimap.Builder<String, String> moduleMetadataIncludeFilters =
         ImmutableMultimap.builder();
     runCommand
