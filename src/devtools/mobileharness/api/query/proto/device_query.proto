@@ -119,9 +119,11 @@ message DeviceInfo {
   int64 last_healthy_time_ms = 13;
   // Optional. Errors on this device.
   repeated .mobileharness.api.model.DeviceError device_error_from_lab = 14;
+  // Device properties.
+  .mobileharness.api.model.DeviceProperties properties = 15;
 }
 
-// The Dimension is a <name, value> pair specifying a device property.
+// The Dimension is a <name, value> pair specifying a device dimension.
 message Dimension {
   // The key in the dimension map.
   string name = 1;
