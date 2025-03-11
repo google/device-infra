@@ -590,7 +590,10 @@ public abstract class AndroidRealDeviceDelegate {
   }
 
   private void addRealDeviceBasicSupportedDriversDecorators()
-      throws MobileHarnessException, InterruptedException {}
+      throws MobileHarnessException, InterruptedException {
+    // HD Video decorator is supported by real device only.
+    device.addSupportedDecorator("AndroidHdVideoDecorator");
+  }
 
   /** Returns {@code true} if need to enable device flash and reset decorators. */
   protected abstract boolean ifEnableDeviceFlashAndResetDecorators();

@@ -446,6 +446,7 @@ public abstract class AndroidDeviceDelegate {
     device.addSupportedDriver("AndroidForegroundServiceMessenger");
     device.addSupportedDriver("AndroidInstrumentation");
     device.addSupportedDriver("AndroidNativeBin");
+    device.addSupportedDriver("AndroidRoboTest");
     device.addSupportedDriver("NoOpDriver");
     device.addSupportedDriver("XtsTradefedTest");
   }
@@ -453,6 +454,7 @@ public abstract class AndroidDeviceDelegate {
   /** Decorators that should be supported by ALL Android root/non-root devices in all lab types. */
   public void basicAndroidDecoratorConfiguration() throws InterruptedException {
     // Adds general decorators.
+    device.addSupportedDecorator("AndroidAccountDecorator");
     device.addSupportedDecorator("AndroidAdbShellDecorator");
     device.addSupportedDecorator("AndroidAtsDynamicConfigPusherDecorator");
     device.addSupportedDecorator("AndroidCleanAppsDecorator");
