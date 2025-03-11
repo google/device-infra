@@ -24,6 +24,7 @@ package(
 
 java_library(
     name = "longrunningservice",
+    testonly = 1,
     srcs = glob(
         ["*.java"],
         exclude = [
@@ -85,6 +86,7 @@ java_library(
 
 olc_server_binary(
     name = "olc_server_for_testing",
+    testonly = 1,
     extra_runtime_deps = [
         ":session_plugin_for_testing",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats",
@@ -95,6 +97,7 @@ olc_server_binary(
 
 olc_server_binary(
     name = "olc_server_for_testing_local_mode",
+    testonly = 1,
     extra_runtime_deps = [
         ":session_plugin_for_testing",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local",
@@ -104,6 +107,7 @@ olc_server_binary(
 
 java_library(
     name = "session_plugin_for_testing",
+    testonly = 1,
     srcs = ["SessionPluginForTesting.java"],
     deps = [
         ":session_plugin_for_testing_java_proto",

@@ -21,6 +21,7 @@ package(default_applicable_licenses = ["//:license"])
 
 java_library(
     name = "client_lib",
+    testonly = 1,
     srcs = [
         "Client.java",
         "ClientModule.java",
@@ -58,6 +59,7 @@ java_library(
 
 java_binary(
     name = "client_bin",
+    testonly = 1,
     main_class = "com.google.devtools.mobileharness.infra.client.rbe.Client",
     runtime_deps = [
         ":client_lib",

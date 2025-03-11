@@ -19,7 +19,7 @@ Macros for generating OLC server java binaries.
 
 load("@rules_java//java:java_binary.bzl", "java_binary")
 
-def olc_server_binary(name, extra_runtime_deps, visibility = None):
+def olc_server_binary(name, extra_runtime_deps, visibility = None, testonly = False):
     """Macro for generating OLC server java binaries.
 
     Args:
@@ -32,6 +32,7 @@ def olc_server_binary(name, extra_runtime_deps, visibility = None):
         name = name,
         main_class = "com.google.devtools.mobileharness.infra.client.longrunningservice.OlcServer",
         visibility = visibility,
+        testonly = testonly,
         runtime_deps = [
             "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:olc_server",
         ] + extra_runtime_deps,
