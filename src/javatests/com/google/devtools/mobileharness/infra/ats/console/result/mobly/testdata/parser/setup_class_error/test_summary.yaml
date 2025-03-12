@@ -65,10 +65,10 @@ Test Name: test_hello_world2_1
 Type: Record
 UID: null
 ---
-Error: 0
-Executed: 3
-Failed: 1
-Passed: 1
+Error: 1
+Executed: 0
+Failed: 0
+Passed: 0
 Requested: 3
-Skipped: 1
+Skipped: 3
 Type: Summary

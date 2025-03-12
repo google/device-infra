@@ -76,10 +76,8 @@ public class MoblyYamlParser {
 
   private static final String SUMMARY_REQUESTED = "Requested";
   private static final String SUMMARY_EXECUTED = "Executed";
-  private static final String SUMMARY_SKIPPED = "Skipped";
   private static final String SUMMARY_PASSED = "Passed";
   private static final String SUMMARY_FAILED = "Failed";
-  private static final String SUMMARY_ERROR = "Error";
 
   // Special names for Mobly test stages, reported in the same way as a test case record
   private static final String STAGE_SETUP_CLASS = "setup_class";
@@ -109,6 +107,8 @@ public class MoblyYamlParser {
 
     String currentTestClass = null;
     boolean hasSetupClassError = false;
+    int errorTestCount = 0;
+    int skippedTestCount = 0;
 
     // Parse all yaml documents
     for (Object document : yamlDocuments) {
@@ -130,7 +130,14 @@ public class MoblyYamlParser {
           if (String.valueOf(documentMap.get(RESULT_TESTNAME)).equals(STAGE_TEARDOWN_CLASS)) {
             continue;
           }
-          results.add(parseRecord(documentMap, hasSetupClassError));
+          MoblyTestEntry testEntry = parseRecord(documentMap, hasSetupClassError);
+          // Count the number of error and skipped tests since the result may be overridden.
+          if (testEntry.getResult() == MoblyResult.ERROR) {
+            errorTestCount++;
+          } else if (testEntry.getResult() == MoblyResult.SKIP) {
+            skippedTestCount++;
+          }
+          results.add(testEntry);
           break;
         case RESULT_TYPE_CONTROLLERINFO:
           results.add(parseControllerInfo(documentMap));
@@ -139,7 +146,7 @@ public class MoblyYamlParser {
           results.add(parseUserData(documentMap));
           break;
         case RESULT_TYPE_SUMMARY:
-          results.add(parseSummary(documentMap));
+          results.add(parseSummary(documentMap, errorTestCount, skippedTestCount));
           break;
         case RESULT_TYPE_TESTNAMELIST:
           // Do nothing. We don't care about this for now
@@ -342,15 +349,16 @@ public class MoblyYamlParser {
     return builder.build();
   }
 
-  private MoblySummaryEntry parseSummary(Map<String, Object> record) {
+  private MoblySummaryEntry parseSummary(
+      Map<String, Object> record, int errorTestCount, int skippedTestCount) {
     try {
       return MoblySummaryEntry.builder()
           .setRequested(Integer.parseInt(String.valueOf(record.get(SUMMARY_REQUESTED))))
           .setExecuted(Integer.parseInt(String.valueOf(record.get(SUMMARY_EXECUTED))))
-          .setSkipped(Integer.parseInt(String.valueOf(record.get(SUMMARY_SKIPPED))))
           .setPassed(Integer.parseInt(String.valueOf(record.get(SUMMARY_PASSED))))
           .setFailed(Integer.parseInt(String.valueOf(record.get(SUMMARY_FAILED))))
-          .setError(Integer.parseInt(String.valueOf(record.get(SUMMARY_ERROR))))
+          .setError(errorTestCount)
+          .setSkipped(skippedTestCount)
           .build();
     } catch (NumberFormatException e) {
       logger.atSevere().withCause(e).log("Failed to parse summary stats: %s", e.getMessage());

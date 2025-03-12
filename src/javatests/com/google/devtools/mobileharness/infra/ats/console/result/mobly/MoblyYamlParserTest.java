@@ -208,5 +208,18 @@ public final class MoblyYamlParserTest {
     assertThat(entry.getResult()).isEqualTo(MoblyResult.SKIP);
     assertThat(entry.getTestClass()).isEqualTo("HelloWorldTest2");
     assertThat(entry.getTestName()).isEqualTo("test_hello_world2_1");
+
+    // Summary entry should have error count set to 2.
+    assertThat(results.get(3)).isInstanceOf(MoblySummaryEntry.class);
+    MoblySummaryEntry summaryEntry = (MoblySummaryEntry) results.get(3);
+    assertThat(summaryEntry)
+        .isEqualTo(
+            MoblySummaryEntry.builder()
+                .setRequested(3)
+                .setExecuted(0)
+                .setSkipped(1)
+                .setPassed(0)
+                .setError(2)
+                .build());
   }
 }
