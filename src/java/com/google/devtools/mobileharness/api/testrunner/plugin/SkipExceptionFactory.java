@@ -50,19 +50,6 @@ public final class SkipExceptionFactory {
   /**
    * Creates a {@link SkipTestException} which can have any {@link TestResult} for MH internal use.
    *
-   * @deprecated Please use {@link #createSkipTestException(String, TestResult, ErrorId, Throwable)}
-   *     instead.
-   * @param testResult the desired test result which should not be {@link TestResult#UNKNOWN}.
-   */
-  @Deprecated
-  public static SkipTestException createSkipTestException(
-      String reason, TestResult testResult, @Nullable Throwable cause) {
-    return createSkipTestException(reason, testResult, SkipTestException.DEFAULT_ERROR_ID, cause);
-  }
-
-  /**
-   * Creates a {@link SkipTestException} which can have any {@link TestResult} for MH internal use.
-   *
    * @param testResult the desired test result which should not be {@link TestResult#UNKNOWN}.
    * @param errorId the plugin defined errorId
    */

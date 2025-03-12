@@ -78,19 +78,19 @@ public final class DeviceUtil {
     for (Map.Entry<String, Collection<String>> entry : dimensions.asMap().entrySet()) {
       switch (entry.getKey()) {
         case "devicetype":
-          deviceUnit.setTypes(entry.getValue());
+          deviceUnit.types().setAll(entry.getValue());
           break;
         case "driver":
-          deviceUnit.setDrivers(entry.getValue());
+          deviceUnit.drivers().setAll(entry.getValue());
           break;
         case "decorator":
-          deviceUnit.setDecorators(entry.getValue());
+          deviceUnit.decorators().setAll(entry.getValue());
           break;
         default:
           mobileHarnessDimensions.putAll(entry.getKey(), entry.getValue());
       }
     }
-    deviceUnit.setDimensions(mobileHarnessDimensions);
+    deviceUnit.dimensions().supported().setAll(mobileHarnessDimensions);
   }
 
   /**

@@ -19,7 +19,6 @@ package com.google.wireless.qa.mobileharness.shared.model.job.in;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.service.moss.proto.Slg.SubDeviceSpecsProto;
-import com.google.errorprone.annotations.InlineMe;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
@@ -145,17 +144,6 @@ public class SubDeviceSpecs {
     return device;
   }
 
-  /**
-   * Adds a list of subDeviceSpecs to the spec.
-   *
-   * @deprecated use {@link SubDeviceSpecs#addAllSubDevices(List)} instead.
-   */
-  @InlineMe(replacement = "this.addAllSubDevices(deviceList)")
-  @Deprecated
-  public final void addAll(List<SubDeviceSpec> deviceList) {
-    addAllSubDevices(deviceList);
-  }
-
   /** Adds a list of subDeviceSpecs to the spec. */
   public void addAllSubDevices(List<SubDeviceSpec> deviceList) {
     for (SubDeviceSpec device : deviceList) {
@@ -163,30 +151,9 @@ public class SubDeviceSpecs {
     }
   }
 
-  /**
-   * Gets a list of {@link SubDeviceSpec}s. \
-   *
-   * @deprecated use {@link SubDeviceSpecs#getAllSubDevices()} instead.
-   */
-  @InlineMe(replacement = "this.getAllSubDevices()")
-  @Deprecated
-  public final List<SubDeviceSpec> getAll() {
-    return getAllSubDevices();
-  }
-
   /** Gets a list of {@link SubDeviceSpec}s. */
   public List<SubDeviceSpec> getAllSubDevices() {
     return Collections.unmodifiableList(subDevices);
-  }
-
-  /**
-   * Gets a {@link SubDeviceSpec} by index.
-   *
-   * @deprecated use {@link SubDeviceSpecs#getSubDevice(int)} instead.
-   */
-  @Deprecated
-  public SubDeviceSpec get(int index) {
-    return subDevices.get(index);
   }
 
   /** Gets a {@link SubDeviceSpec} by index. */
@@ -276,18 +243,6 @@ public class SubDeviceSpecs {
     if (timing != null) {
       timing.touch();
     }
-  }
-
-  /**
-   * Returns true if no device have been added. This should not happen after finalizing the
-   * sub-devices in the Client code, but is needed as part of the migration from a single device
-   * type and dimensions fields to a sub-devices list in job info.
-   *
-   * @deprecated use {@link SubDeviceSpecs#getSubDeviceCount()} instead.
-   */
-  @Deprecated
-  public boolean isEmpty() {
-    return subDevices.isEmpty();
   }
 
   /** Returns the number of subdevices that have been added. */

@@ -79,12 +79,6 @@ public class JobSetting {
   public static final Duration MAX_JOB_TIMEOUT =
       com.google.devtools.mobileharness.api.model.job.in.Timeout.MAX_JOB_TIMEOUT;
 
-  /**
-   * @deprecated java/com/google/sitespeed/pagespeed/speedindex/MobileHarnessClient.java still uses
-   *     it.
-   */
-  @Deprecated public static final long MAX_JOB_TIMEOUT_MS = MAX_JOB_TIMEOUT.toMillis();
-
   /** Max timeout setting for a test. */
   public static final Duration MAX_TEST_TIMEOUT =
       com.google.devtools.mobileharness.api.model.job.in.Timeout.MAX_TEST_TIMEOUT;

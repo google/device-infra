@@ -43,18 +43,6 @@ public class AndroidInstallAppsDecorator extends BaseDecorator
 
   @StepAnnotation private final InstallApkStep installApkStep;
 
-  /**
-   * @deprecated Use {@code InstallApkStep.PARAM_SKIP_GMS_DOWNGRADE} instead.
-   */
-  @Deprecated
-  public static final String PARAM_SKIP_GMS_DOWNGRADE = InstallApkStep.PARAM_SKIP_GMS_DOWNGRADE;
-
-  /**
-   * @deprecated Use {@code InstallApkStep.PARAM_CLEAR_GMS_APP_DATA} instead.
-   */
-  @Deprecated
-  public static final String PARAM_CLEAR_GMS_APP_DATA = InstallApkStep.PARAM_CLEAR_GMS_APP_DATA;
-
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   /** Util for sending progress report messages. */
