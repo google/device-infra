@@ -24,6 +24,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.mobileharness.infra.controller.device.DeviceHelperFactory;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceManager;
+import com.google.devtools.mobileharness.infra.controller.device.TestExecutorProvider;
 import com.google.devtools.mobileharness.infra.controller.device.bootstrap.DetectorDispatcherSelector;
 import com.google.devtools.mobileharness.infra.controller.device.bootstrap.DetectorDispatcherSelector.Component;
 import com.google.devtools.mobileharness.infra.controller.device.bootstrap.DetectorsAndDispatchers;
@@ -146,6 +147,11 @@ public class LabServerModule extends AbstractModule {
             globalInternalBus,
             externalDeviceManager);
     localDeviceManager.initialize();
+    return localDeviceManager;
+  }
+
+  @Provides
+  TestExecutorProvider provideTestExecutorProvider(LocalDeviceManager localDeviceManager) {
     return localDeviceManager;
   }
 

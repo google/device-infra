@@ -25,8 +25,8 @@ import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceRunner;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceTestExecutor;
+import com.google.devtools.mobileharness.infra.controller.device.TestExecutor;
 import com.google.devtools.mobileharness.infra.controller.test.TestRunner;
 import com.google.devtools.mobileharness.infra.controller.test.TestRunnerLauncher;
 import com.google.devtools.mobileharness.infra.controller.test.model.TestExecutionResult;
@@ -42,21 +42,21 @@ import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
 import java.util.stream.Collectors;
 
-/** Local device test runner launcher which uses {@code LocalDeviceRunner}s to launch the test. */
+/** Local device test runner launcher which uses {@code TestExecutor}s to launch the test. */
 public class LocalDeviceTestRunnerLauncher extends TestRunnerLauncher<TestRunner> {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   /**
    * Primary local device test executor which will invoke {@link #executeTest()} synchronously on
-   * the main thread of the primary {@code LocalDeviceRunner} of the test.
+   * the main thread of the primary {@code TestExecutor} of the test.
    *
-   * <p>When a test has multiple {@code LocalDeviceRunner}, one and only one will be the primary
-   * {@code LocalDeviceRunner} and the other ones will wait until the primary one finishes the test.
+   * <p>When a test has multiple {@code TestExecutor}, one and only one will be the primary {@code
+   * TestExecutor} and the other ones will wait until the primary one finishes the test.
    */
   private class PrimaryDeviceTestExecutor extends AbstractDeviceTestExecutor {
 
-    private PrimaryDeviceTestExecutor(LocalDeviceRunner deviceRunner) {
+    private PrimaryDeviceTestExecutor(TestExecutor deviceRunner) {
       super(deviceRunner);
     }
 
@@ -96,7 +96,7 @@ public class LocalDeviceTestRunnerLauncher extends TestRunnerLauncher<TestRunner
    */
   private class SecondaryDeviceTestExecutor extends AbstractDeviceTestExecutor {
 
-    private SecondaryDeviceTestExecutor(LocalDeviceRunner deviceRunner) {
+    private SecondaryDeviceTestExecutor(TestExecutor deviceRunner) {
       super(deviceRunner);
     }
 
@@ -122,13 +122,13 @@ public class LocalDeviceTestRunnerLauncher extends TestRunnerLauncher<TestRunner
   /** Base class of {@link LocalDeviceTestExecutor}. */
   private abstract class AbstractDeviceTestExecutor implements LocalDeviceTestExecutor {
 
-    private final LocalDeviceRunner deviceRunner;
+    private final TestExecutor deviceRunner;
 
-    private AbstractDeviceTestExecutor(LocalDeviceRunner deviceRunner) {
+    private AbstractDeviceTestExecutor(TestExecutor deviceRunner) {
       this.deviceRunner = deviceRunner;
     }
 
-    protected final LocalDeviceRunner getDeviceRunner() {
+    protected final TestExecutor getDeviceRunner() {
       return deviceRunner;
     }
 
@@ -156,7 +156,7 @@ public class LocalDeviceTestRunnerLauncher extends TestRunnerLauncher<TestRunner
   private volatile boolean hasExecuted;
 
   public LocalDeviceTestRunnerLauncher(
-      LocalDeviceRunner primaryDeviceRunner, List<LocalDeviceRunner> secondaryDeviceRunners) {
+      TestExecutor primaryDeviceRunner, List<? extends TestExecutor> secondaryDeviceRunners) {
     this.testExecutors =
         ImmutableList.<AbstractDeviceTestExecutor>builder()
             .add(new PrimaryDeviceTestExecutor(primaryDeviceRunner))
@@ -174,7 +174,7 @@ public class LocalDeviceTestRunnerLauncher extends TestRunnerLauncher<TestRunner
         "Reserving devices %s for test [%s]",
         testExecutors.stream()
             .map(AbstractDeviceTestExecutor::getDeviceRunner)
-            .map(LocalDeviceRunner::getDevice)
+            .map(TestExecutor::getDevice)
             .map(Device::getDeviceId)
             .collect(Collectors.toList()),
         getTestRunner().getTestExecutionUnit().locator().id());
@@ -205,7 +205,7 @@ public class LocalDeviceTestRunnerLauncher extends TestRunnerLauncher<TestRunner
     // If the test is not executing, only if all device runners are holding the test, we treat the
     // test as running.
     boolean allDeviceReserved = true;
-    List<LocalDeviceRunner> disconnectedDevices = new ArrayList<>();
+    List<TestExecutor> disconnectedDevices = new ArrayList<>();
     for (AbstractDeviceTestExecutor testExecutor : testExecutors) {
       if (!(testExecutor.getDeviceRunner().isAlive()
           && testExecutor.getDeviceRunner().getTest() == testExecutor)) {
@@ -224,7 +224,7 @@ public class LocalDeviceTestRunnerLauncher extends TestRunnerLauncher<TestRunner
               String.format(
                   "Devices %s disconnected before test executes",
                   disconnectedDevices.stream()
-                      .map(LocalDeviceRunner::getDevice)
+                      .map(TestExecutor::getDevice)
                       .map(Device::getDeviceId)
                       .collect(Collectors.toList()))));
     }

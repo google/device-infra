@@ -53,8 +53,8 @@ import com.google.devtools.mobileharness.infra.container.proto.TestEngine.TestEn
 import com.google.devtools.mobileharness.infra.container.proto.TestEngine.TestEngineLocator.GrpcLocator;
 import com.google.devtools.mobileharness.infra.container.proto.TestEngine.TestEngineLocator.StubbyLocator;
 import com.google.devtools.mobileharness.infra.container.proto.TestEngine.TestEngineStatus;
-import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceManager;
-import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceRunner;
+import com.google.devtools.mobileharness.infra.controller.device.TestExecutor;
+import com.google.devtools.mobileharness.infra.controller.device.TestExecutorProvider;
 import com.google.devtools.mobileharness.infra.controller.test.TestRunnerLauncher;
 import com.google.devtools.mobileharness.infra.controller.test.launcher.LocalDeviceTestRunnerLauncher;
 import com.google.devtools.mobileharness.infra.controller.test.manager.ProxyTestManager;
@@ -121,7 +121,7 @@ public class PrepareTestServiceImpl {
 
   private static final Duration WAIT_DEVICE_READY_TIMEOUT = Duration.ofSeconds(20L);
 
-  private final LocalDeviceManager localDeviceManager;
+  private final TestExecutorProvider testExecutorProvider;
   private final JobManager jobManager;
   private final ProxyTestManager testManager;
   private final ServiceSideVersionChecker versionChecker =
@@ -141,7 +141,7 @@ public class PrepareTestServiceImpl {
 
   @Inject
   public PrepareTestServiceImpl(
-      LocalDeviceManager localDeviceManager,
+      TestExecutorProvider testExecutorProvider,
       JobManager jobManager,
       ProxyTestManager testManager,
       LocalFileUtil localFileUtil,
@@ -155,7 +155,7 @@ public class PrepareTestServiceImpl {
       @CloudRpcDnsAddress String cloudRpcDnsName,
       @CloudRpcShardName String cloudRpcShardName,
       @GlobalEventBus EventBus globalInternalEventBus) {
-    this.localDeviceManager = localDeviceManager;
+    this.testExecutorProvider = testExecutorProvider;
     this.jobManager = jobManager;
     this.testManager = testManager;
     this.localFileUtil = localFileUtil;
@@ -180,8 +180,8 @@ public class PrepareTestServiceImpl {
     VersionCheckResponse versionCheckResponse =
         versionChecker.checkStub(req.getVersionCheckRequest());
 
-    // Gets LocalDeviceRunner.
-    List<LocalDeviceRunner> deviceRunners = getDeviceRunnersUntilReady(req.getDeviceIdList());
+    // Gets TestExecutors.
+    List<TestExecutor> deviceRunners = getDeviceRunnersUntilReady(req.getDeviceIdList());
 
     // Checks the job feature.
     checkJobFeature(req.getJob().getJobFeature(), deviceRunners);
@@ -193,7 +193,7 @@ public class PrepareTestServiceImpl {
     TestExecutionUnit testExecutionUnit = createTestExecutionUnit(req.getTest(), jobExecutionUnit);
 
     ImmutableList<Device> devices =
-        deviceRunners.stream().map(LocalDeviceRunner::getDevice).collect(toImmutableList());
+        deviceRunners.stream().map(TestExecutor::getDevice).collect(toImmutableList());
 
     // Creates TestRunnerLauncher.
     TestRunnerLauncher<? super ProxyTestRunner> launcher =
@@ -258,7 +258,7 @@ public class PrepareTestServiceImpl {
             .setVersionCheckResponse(versionCheckResponse)
             .addAllDeviceFeature(
                 deviceRunners.stream()
-                    .map(LocalDeviceRunner::getDevice)
+                    .map(TestExecutor::getDevice)
                     .map(Device::toFeature)
                     .collect(toImmutableList()))
             .setContainerInfo(
@@ -363,7 +363,7 @@ public class PrepareTestServiceImpl {
     return testRunnerTiming.build();
   }
 
-  private void checkJobFeature(JobFeature jobFeature, List<LocalDeviceRunner> deviceRunners)
+  private void checkJobFeature(JobFeature jobFeature, List<TestExecutor> testExecutors)
       throws MobileHarnessException {
     // TODO: Checks device requirement directly rather than job type.
     JobType primaryDeviceJobType =
@@ -375,8 +375,8 @@ public class PrepareTestServiceImpl {
                     jobFeature.getDeviceRequirements().getDeviceRequirement(0).getDecoratorList()))
             .build();
 
-    for (LocalDeviceRunner deviceRunner : deviceRunners) {
-      if (isJobSupported(deviceRunner.getDevice(), primaryDeviceJobType)) {
+    for (TestExecutor testExecutor : testExecutors) {
+      if (isJobSupported(testExecutor.getDevice(), primaryDeviceJobType)) {
         return;
       }
     }
@@ -446,7 +446,7 @@ public class PrepareTestServiceImpl {
     return new TestExecutionUnit(testLocator, testTiming, job);
   }
 
-  private List<LocalDeviceRunner> getDeviceRunnersUntilReady(List<String> deviceIds)
+  private List<TestExecutor> getDeviceRunnersUntilReady(List<String> deviceIds)
       throws MobileHarnessException, InterruptedException {
     // Waits for the device to be ready, since the device maybe INIT in LabServer.
     Clock clock = Clock.systemUTC();
@@ -470,11 +470,11 @@ public class PrepareTestServiceImpl {
     }
   }
 
-  private List<LocalDeviceRunner> getDeviceRunners(List<String> deviceIds)
+  private List<TestExecutor> getDeviceRunners(List<String> deviceIds)
       throws MobileHarnessException {
-    List<LocalDeviceRunner> deviceRunners = new ArrayList<>();
+    List<TestExecutor> deviceRunners = new ArrayList<>();
     for (String deviceId : deviceIds) {
-      LocalDeviceRunner deviceRunner = localDeviceManager.getLocalDeviceRunner(deviceId);
+      TestExecutor deviceRunner = testExecutorProvider.getTestExecutorForDeviceId(deviceId);
       MobileHarnessExceptions.check(
           deviceRunner != null,
           InfraErrorId.LAB_RPC_PREPARE_TEST_DEVICE_NOT_FOUND,
@@ -482,10 +482,7 @@ public class PrepareTestServiceImpl {
       MobileHarnessExceptions.check(
           deviceRunner.isAlive(),
           InfraErrorId.LAB_RPC_PREPARE_TEST_DEVICE_NOT_ALIVE,
-          () ->
-              String.format(
-                  "Device [%s] is not alive with status [%s] when preparing test",
-                  deviceId, deviceRunner.getDeviceStatus()));
+          () -> String.format("Device [%s] is not alive when preparing test", deviceId));
       deviceRunners.add(deviceRunner);
     }
     return deviceRunners;

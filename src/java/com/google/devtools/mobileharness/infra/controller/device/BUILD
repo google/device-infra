@@ -59,6 +59,8 @@ java_library(
         ":device_status_info",
         ":device_status_provider",
         ":local_device_runner",
+        ":test_executor",
+        ":test_executor_provider",
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:base",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector/model",
@@ -191,6 +193,7 @@ java_library(
     deps = [
         ":device_info_manager",
         ":local_device_test_executor",
+        ":test_executor",
         "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
@@ -220,7 +223,6 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event:device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/stat",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:common_java_proto",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/util:device",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
@@ -234,4 +236,21 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:test_runner",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/model:test_execution_result",
     ],
+)
+
+java_library(
+    name = "test_executor",
+    srcs = ["TestExecutor.java"],
+    deps = [
+        ":local_device_test_executor",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
+        "@maven//:com_google_code_findbugs_jsr305",
+    ],
+)
+
+java_library(
+    name = "test_executor_provider",
+    srcs = ["TestExecutorProvider.java"],
+    deps = [":test_executor"],
 )

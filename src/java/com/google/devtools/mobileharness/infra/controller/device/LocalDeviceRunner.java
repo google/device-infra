@@ -70,7 +70,7 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 
 /** A runnable class representing the life cycle of a device. */
-public class LocalDeviceRunner implements Runnable {
+public class LocalDeviceRunner implements TestExecutor, Runnable {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -438,6 +438,7 @@ public class LocalDeviceRunner implements Runnable {
   }
 
   /** Returns whether the current device is still alive. */
+  @Override
   public boolean isAlive() {
     return running
         && !cancelled
@@ -503,10 +504,7 @@ public class LocalDeviceRunner implements Runnable {
     }
   }
 
-  /**
-   * Tries to stop the current device runner if it is running the giving test. It will be stopped as
-   * quickly as possible.
-   */
+  @Override
   public synchronized void cancel(LocalDeviceTestExecutor test) {
     if (this.test != test) {
       logger.atWarning().log(
@@ -521,6 +519,7 @@ public class LocalDeviceRunner implements Runnable {
   }
 
   /** Returns the device which is associated with this runner. */
+  @Override
   public Device getDevice() {
     return device;
   }
@@ -550,11 +549,7 @@ public class LocalDeviceRunner implements Runnable {
         .build();
   }
 
-  /**
-   * Adds the test to run on this device.
-   *
-   * @throws MobileHarnessException if device is not available
-   */
+  @Override
   public synchronized void reserve(LocalDeviceTestExecutor test) throws MobileHarnessException {
     if (!isReady()) {
       throw new MobileHarnessException(
@@ -608,6 +603,7 @@ public class LocalDeviceRunner implements Runnable {
 
   /** Gets the current running test. */
   @Nullable
+  @Override
   public LocalDeviceTestExecutor getTest() {
     return test;
   }

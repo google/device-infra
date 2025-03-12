@@ -55,7 +55,7 @@ import javax.annotation.Nullable;
  * LocalDeviceRunner}s when devices disconnected.
  */
 public class LocalDeviceManager extends BaseDeviceStatusProvider
-    implements Runnable, DeviceHelperFactory, DeviceStateChecker {
+    implements Runnable, DeviceHelperFactory, DeviceStateChecker, TestExecutorProvider {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private static final int DISPATCH_DEVICE_INTERVAL_SEC = 1;
@@ -250,6 +250,11 @@ public class LocalDeviceManager extends BaseDeviceStatusProvider
       }
     }
     return null;
+  }
+
+  @Override
+  public TestExecutor getTestExecutorForDeviceId(String deviceId) {
+    return localDeviceDispatch.getDeviceRunner(deviceId);
   }
 
   @Override
