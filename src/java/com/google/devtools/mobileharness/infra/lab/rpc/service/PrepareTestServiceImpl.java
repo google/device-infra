@@ -27,7 +27,9 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.google.common.eventbus.EventBus;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.Futures;
@@ -374,7 +376,7 @@ public class PrepareTestServiceImpl {
             .build();
 
     for (LocalDeviceRunner deviceRunner : deviceRunners) {
-      if (deviceRunner.isJobSupported(primaryDeviceJobType)) {
+      if (isJobSupported(deviceRunner.getDevice(), primaryDeviceJobType)) {
         return;
       }
     }
@@ -382,6 +384,35 @@ public class PrepareTestServiceImpl {
     throw new MobileHarnessException(
         InfraErrorId.LAB_RPC_PREPARE_TEST_JOB_TYPE_NOT_SUPPORTED,
         String.format("Job type [%s] is not supported by MH lab", primaryDeviceJobType));
+  }
+
+  /** Checks whether the job type is supported by this device. */
+  private static boolean isJobSupported(Device device, JobType jobType) {
+    if (!device.getDeviceTypes().contains(jobType.getDevice())) {
+      logger.atWarning().log(
+          "The device type [%s] is not supported by the device with ID %s",
+          Sets.difference(ImmutableSet.of(jobType.getDevice()), device.getDeviceTypes()),
+          device.getDeviceControlId());
+      return false;
+    }
+
+    if (!device.getDriverTypes().contains(jobType.getDriver())) {
+      logger.atWarning().log(
+          "The driver [%s] is not supported by the device with ID %s",
+          Sets.difference(ImmutableSet.of(jobType.getDriver()), device.getDriverTypes()),
+          device.getDeviceControlId());
+      return false;
+    }
+
+    if (!device.getDecoratorTypes().containsAll(jobType.getDecoratorList())) {
+      logger.atWarning().log(
+          "The decorators [%s] are not supported by the device with ID %s",
+          Sets.difference(
+              ImmutableSet.copyOf(jobType.getDecoratorList()), device.getDecoratorTypes()),
+          device.getDeviceControlId());
+      return false;
+    }
+    return true;
   }
 
   private JobExecutionUnit createAndAddJobIfAbsent(CreateTestRequest.Job job) {
