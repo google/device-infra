@@ -107,7 +107,10 @@ public interface PropertyName {
     _IS_RESUMED_JOB,
 
     /** The parameters to be recorded from mobile_test macro to the job creation. */
-    _PARAM_STATS;
+    _PARAM_STATS,
+
+    /** ResultStore link of test. */
+    RESULT_STORE_LINK_OF_TEST;
 
     /** Gateway service property name constants in the job level. */
     public enum Gateway implements PropertyName {
