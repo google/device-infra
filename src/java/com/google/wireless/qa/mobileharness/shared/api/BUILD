@@ -83,8 +83,10 @@ java_library(
     name = "partner_test",
     runtime_deps = [
         ":partner_test_client",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_account_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_file_puller_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_file_pusher_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_hd_video_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_logcat_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_switch_language_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_local_emulator",
@@ -93,6 +95,8 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:android_foreground_service_messenger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:android_instrumentation",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:android_native_bin",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:android_robo_test",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/env:android_hd_video_decorator_env_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/env:android_native_bin_env_validator",
     ],
 )
@@ -102,9 +106,13 @@ java_library(
     name = "partner_test_client",
     runtime_deps = [
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/lister:android_native_bin_lister",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/lister:android_robo_driver_lister",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:android_account_decorator_job_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:android_file_puller_decorator_job_validator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:android_hd_video_decorator_job_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:android_logcat_decorator_job_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:android_native_bin_job_validator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:android_robo_test_job_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:android_switch_language_decorator_job_validator",
     ],
 )
