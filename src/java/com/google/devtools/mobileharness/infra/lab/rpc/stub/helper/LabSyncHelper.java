@@ -31,6 +31,8 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceProperties;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceProperty;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatusWithTimestamp;
 import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperties;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabPort;
@@ -271,6 +273,13 @@ public class LabSyncHelper {
                           .setName(dimension.getName())
                           .setValue(dimension.getValue())
                           .build()));
+      DeviceProperties.Builder properties = DeviceProperties.newBuilder();
+      device
+          .getProperties()
+          .forEach(
+              (key, value) ->
+                  properties.addProperty(
+                      DeviceProperty.newBuilder().setName(key).setValue(value).build()));
 
       SignUpLabRequest.Device.Builder deviceSummary =
           SignUpLabRequest.Device.newBuilder()
@@ -286,6 +295,7 @@ public class LabSyncHelper {
                       .addAllDriver(drivers)
                       .addAllDecorator(decorators)
                       .setCompositeDimension(compositeDimension)
+                      .setProperties(properties)
                       .build());
       if (exceptionDetail != null) {
         deviceSummary.setFlattenedExceptionDetail(
