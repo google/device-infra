@@ -68,6 +68,7 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidPro
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidVersion;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceConnectionState;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceState;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.RebootMode;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.UsbDeviceLocator;
 import com.google.devtools.mobileharness.platform.android.shared.constant.PackageConstants;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
@@ -1274,7 +1275,7 @@ public abstract class AndroidRealDeviceDelegate {
           break;
         default:
           logger.atInfo().log("Device %s reboot to fastboot mode", deviceId);
-          systemStateUtil.rebootToBootloader(deviceId);
+          systemStateUtil.reboot(deviceId, RebootMode.BOOTLOADER);
           break;
       }
     } else if (Flags.instance().enableFastbootInAndroidRealDevice.getNonNull()

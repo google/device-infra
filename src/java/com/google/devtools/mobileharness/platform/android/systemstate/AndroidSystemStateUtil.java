@@ -571,21 +571,6 @@ public class AndroidSystemStateUtil {
   }
 
   /**
-   * Reboots the device into bootloader.
-   *
-   * @param serial serial number of the device
-   * @throws MobileHarnessException if fails to execute the commands or timeout
-   * @throws InterruptedException if the thread executing the commands is interrupted
-   * @deprecated Prefer {@code reboot(serial, RebootMode.BOOTLOADER)}.
-   */
-  // TODO: b/307912207 - Inline the method.
-  @Deprecated
-  public void rebootToBootloader(String serial)
-      throws MobileHarnessException, InterruptedException {
-    reboot(serial, RebootMode.BOOTLOADER);
-  }
-
-  /**
    * Reboots the device into recovery.
    *
    * @param serial serial number of the device
