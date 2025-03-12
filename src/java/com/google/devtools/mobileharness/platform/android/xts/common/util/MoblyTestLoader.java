@@ -29,7 +29,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import javax.inject.Inject;
 
 /**
@@ -37,8 +36,6 @@ import javax.inject.Inject;
  * binary.
  */
 public class MoblyTestLoader {
-  private static final Pattern TEST_CLASS_PATTERN =
-      Pattern.compile("==========> (\\w+) <==========");
   private static final Splitter NEWLINE_SPLITTER =
       Splitter.on('\n').trimResults().omitEmptyStrings();
 
@@ -84,7 +81,7 @@ public class MoblyTestLoader {
     List<String> testNames = new ArrayList<>();
     String testClass = null;
     for (String line : lines) {
-      Matcher matcher = TEST_CLASS_PATTERN.matcher(line);
+      Matcher matcher = XtsConstants.MOBLY_TEST_CLASS_PATTERN.matcher(line);
       if (matcher.matches()) {
         testClass = matcher.group(1);
       } else if (testClass != null) {

@@ -73,5 +73,9 @@ public class XtsConstants {
   public static final Pattern RESULT_ZIP_FILENAME_PATTERN =
       Pattern.compile("^\\d{4}\\.\\d{2}\\.\\d{2}_\\d{2}\\.\\d{2}\\.\\d{2}\\.\\d{3}_\\d{4}\\.zip$");
 
+  /** A pattern that matches a test class entry in Mobly test listing. */
+  public static final Pattern MOBLY_TEST_CLASS_PATTERN =
+      Pattern.compile("==========> (\\w+) <==========");
+
   private XtsConstants() {}
 }

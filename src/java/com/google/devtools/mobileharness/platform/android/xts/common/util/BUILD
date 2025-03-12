@@ -51,6 +51,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/local:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/util/xtsdownloader:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/platform/testbed/mobly/util:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/controller/test/util/xtsdownloader:__subpackages__",
@@ -96,6 +97,7 @@ java_library(
         "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/common/util:__subpackages__",
     ],
     deps = [
+        ":xts_constants",
         "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",

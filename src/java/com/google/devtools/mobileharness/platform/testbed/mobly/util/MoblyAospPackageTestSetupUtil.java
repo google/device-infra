@@ -16,13 +16,17 @@
 
 package com.google.devtools.mobileharness.platform.testbed.mobly.util;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandException;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
@@ -32,6 +36,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
 import javax.annotation.Nullable;
 
 /** Utility for running Mobly tests packaged in AOSP and distributed via the Android Build. */
@@ -235,20 +240,59 @@ public class MoblyAospPackageTestSetupUtil {
       @Nullable Path venvPythonBin,
       Path moblyTestBin,
       Path configFile,
-      @Nullable String testCaseSelector) {
+      @Nullable String testCaseSelector)
+      throws MobileHarnessException, InterruptedException {
     List<String> cmdElements = Lists.newArrayList();
     if (venvPythonBin != null) {
       cmdElements.add(venvPythonBin.toString());
     }
     cmdElements.add(moblyTestBin.toString());
     cmdElements.add("--config=" + configFile);
+
     if (testCaseSelector != null && !testCaseSelector.equals(TEST_SELECTOR_ALL)) {
-      logger.atInfo().log("Selected test cases: %s", testCaseSelector);
+      // If the test package is not a Mobly suite, drop the test class names from the test case
+      // selector.
+      final boolean isMoblySuite = isMoblySuite(venvPythonBin, moblyTestBin);
+      ImmutableList<String> testCases =
+          Splitter.on(" ")
+              .splitToStream(testCaseSelector)
+              .map(
+                  testName ->
+                      !isMoblySuite && testName.contains(".")
+                          ? Splitter.on(".").splitToList(testName).get(1)
+                          : testName)
+              .collect(toImmutableList());
+
+      logger.atInfo().log("Selected test cases: %s", testCases);
       cmdElements.add("--test_case");
-      for (String testCase : Splitter.on(" ").split(testCaseSelector)) {
-        cmdElements.add(testCase);
-      }
+      cmdElements.addAll(testCases);
     }
     return cmdElements.toArray(new String[0]);
+  }
+
+  // Check if the test package is a Mobly suite via the test case list.
+  boolean isMoblySuite(@Nullable Path venvPythonBin, Path moblyTestBin)
+      throws MobileHarnessException, InterruptedException {
+    List<String> cmdElements = Lists.newArrayList();
+    if (venvPythonBin != null) {
+      cmdElements.add(venvPythonBin.toString());
+    }
+    cmdElements.add(moblyTestBin.toString());
+    cmdElements.add("-l");
+
+    Command listTestsCommand = Command.of(cmdElements).redirectStderr(false);
+    String result = executor.run(listTestsCommand);
+    if (result != null) {
+      List<String> lines = Splitter.on('\n').trimResults().omitEmptyStrings().splitToList(result);
+      for (String line : lines) {
+        Matcher matcher = XtsConstants.MOBLY_TEST_CLASS_PATTERN.matcher(line);
+        if (!matcher.matches()) {
+          // Test name is in the format of "TestClass.test_case" if it is a Mobly suite, and just
+          // "test_case" otherwise.
+          return line.contains(".");
+        }
+      }
+    }
+    return false;
   }
 }

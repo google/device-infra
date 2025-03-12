@@ -271,7 +271,7 @@ public final class MoblyAospPackageTestSetupUtilTest {
   }
 
   @Test
-  public void getTestCommand_customTestSelector_setsTestCase() throws Exception {
+  public void getTestCommand_customTestSelectorWithShortNames_setsTestCase() throws Exception {
     assertThat(
             moblyAospTestSetupUtil.getTestCommand(
                 Path.of("venv/python3"),
@@ -280,6 +280,38 @@ public final class MoblyAospPackageTestSetupUtilTest {
                 "test1 test2"))
         .asList()
         .containsAtLeast("--test_case", "test1", "test2");
+  }
+
+  @Test
+  public void getTestCommand_customTestSelectorWithFullNames_setsTestCaseForMoblyNonSuite()
+      throws Exception {
+    when(commandExecutor.run(any(Command.class)))
+        .thenReturn("==========> TestClass <==========\ntest1\ntest2");
+
+    assertThat(
+            moblyAospTestSetupUtil.getTestCommand(
+                Path.of("venv/python3"),
+                Path.of("mobly/sample_test.py"),
+                Path.of("config.yaml"),
+                "TestClass.test1 TestClass.test2"))
+        .asList()
+        .containsAtLeast("--test_case", "test1", "test2");
+  }
+
+  @Test
+  public void getTestCommand_customTestSelectorWithFullNames_setsTestCaseForMoblySuite()
+      throws Exception {
+    when(commandExecutor.run(any(Command.class)))
+        .thenReturn("==========> TestClass <==========\nTestClass.test1\nTestClass.test2");
+
+    assertThat(
+            moblyAospTestSetupUtil.getTestCommand(
+                Path.of("venv/python3"),
+                Path.of("mobly/sample_test.py"),
+                Path.of("config.yaml"),
+                "TestClass.test1 TestClass.test2"))
+        .asList()
+        .containsAtLeast("--test_case", "TestClass.test1", "TestClass.test2");
   }
 
   @Test
