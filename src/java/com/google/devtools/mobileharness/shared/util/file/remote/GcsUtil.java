@@ -823,20 +823,6 @@ public class GcsUtil {
    *
    * @param localFile path of source file
    * @param gcsFile name of the object in the cloud
-   * @throws MobileHarnessException if failed to copy file
-   * @deprecated Use {@link #copyFileToCloud(Path, Path, String)} instead.
-   */
-  @Deprecated
-  public void copyFileToCloud(String localFile, String gcsFile)
-      throws MobileHarnessException, InterruptedException {
-    copyFileToCloud(localFile, gcsFile, "text/plain");
-  }
-
-  /**
-   * Copies {@code localFile} to Google Cloud Storage file {@code gcsFile}.
-   *
-   * @param localFile path of source file
-   * @param gcsFile name of the object in the cloud
    * @param contentType content type of the object in the cloud
    * @throws MobileHarnessException if failed to copy file
    */
