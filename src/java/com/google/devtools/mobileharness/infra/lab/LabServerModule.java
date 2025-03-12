@@ -36,15 +36,8 @@ import com.google.devtools.mobileharness.infra.controller.test.manager.LabDirect
 import com.google.devtools.mobileharness.infra.controller.test.manager.ProxyTestManager;
 import com.google.devtools.mobileharness.infra.controller.test.manager.TestManager;
 import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberExceptionLoggingHandler;
-import com.google.devtools.mobileharness.infra.lab.Annotations.CloudRpcDnsAddress;
-import com.google.devtools.mobileharness.infra.lab.Annotations.CloudRpcShardName;
 import com.google.devtools.mobileharness.infra.lab.Annotations.DebugThreadPool;
 import com.google.devtools.mobileharness.infra.lab.Annotations.GlobalEventBus;
-import com.google.devtools.mobileharness.infra.lab.Annotations.LabGrpcPort;
-import com.google.devtools.mobileharness.infra.lab.Annotations.LabRpcPort;
-import com.google.devtools.mobileharness.infra.lab.Annotations.RpcPort;
-import com.google.devtools.mobileharness.infra.lab.Annotations.ServViaCloudRpc;
-import com.google.devtools.mobileharness.infra.lab.Annotations.ServViaStubby;
 import com.google.devtools.mobileharness.infra.lab.controller.LabDirectTestRunnerHolder;
 import com.google.devtools.mobileharness.infra.lab.rpc.service.ExecTestServiceImpl;
 import com.google.devtools.mobileharness.shared.file.resolver.AbstractFileResolver;
@@ -54,7 +47,6 @@ import com.google.devtools.mobileharness.shared.file.resolver.FileResolver;
 import com.google.devtools.mobileharness.shared.file.resolver.GcsFileResolver;
 import com.google.devtools.mobileharness.shared.file.resolver.LocalFileResolver;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
-import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.inject.AbstractModule;
 import com.google.inject.Key;
@@ -63,7 +55,6 @@ import com.google.inject.Singleton;
 import com.google.inject.assistedinject.FactoryModuleBuilder;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageManager;
 import com.google.wireless.qa.mobileharness.shared.constant.ExitCode;
-import com.google.wireless.qa.mobileharness.shared.util.DeviceUtil;
 import java.time.Clock;
 
 /** Guice module for {@link LabServer}. */
@@ -84,6 +75,7 @@ public class LabServerModule extends AbstractModule {
 
   @Override
   protected void configure() {
+    install(new LabServerConstantsModule());
     // Binds controllers.
     install(new FactoryModuleBuilder().build(ExecTestServiceImpl.ExecTestServiceImplFactory.class));
     bind(DeviceHelperFactory.class).to(LocalDeviceManager.class);
@@ -91,44 +83,12 @@ public class LabServerModule extends AbstractModule {
     bind(LabDirectTestRunnerHolder.class).to(ProxyTestManager.class);
     bind(EventBus.class).annotatedWith(GlobalEventBus.class).toInstance(globalInternalBus);
 
-    // Binds ports.
-    String cloudRpcDnsName = getCloudRpcName();
-    String shardName = getShardName();
-    bind(String.class).annotatedWith(CloudRpcDnsAddress.class).toInstance(cloudRpcDnsName);
-    bind(String.class).annotatedWith(CloudRpcShardName.class).toInstance(shardName);
-    bind(Integer.class)
-        .annotatedWith(LabRpcPort.class)
-        .toInstance(Flags.instance().rpcPort.getNonNull());
-    bind(Integer.class)
-        .annotatedWith(LabGrpcPort.class)
-        .toInstance(Flags.instance().grpcPort.getNonNull());
-    bind(Boolean.class)
-        .annotatedWith(ServViaCloudRpc.class)
-        .toInstance(Flags.instance().servViaCloudRpc.getNonNull());
-    bind(Boolean.class).annotatedWith(ServViaStubby.class).toInstance(enableStubbyRpcServer());
-    bind(Integer.class)
-        .annotatedWith(RpcPort.class)
-        .toInstance(Flags.instance().rpcPort.getNonNull());
-
     // Binds utils.
     bind(ListeningExecutorService.class)
         .toInstance(createStandardThreadPool("mh-lab-server-main-thread"));
     bind(ListeningScheduledExecutorService.class)
         .annotatedWith(DebugThreadPool.class)
         .toInstance(createStandardScheduledThreadPool("mh-lab-server-debug-random-exit-task", 1));
-  }
-
-  private static String getCloudRpcName() {
-
-    return Flags.instance().mhProxySpec.getNonNull();
-  }
-
-  private static String getShardName() {
-    return "<n/a>";
-  }
-
-  private static boolean enableStubbyRpcServer() {
-    return Flags.instance().enableStubbyRpcServer.getNonNull() && !DeviceUtil.inSharedLab();
   }
 
   @Provides

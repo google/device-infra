@@ -45,12 +45,6 @@ public class Annotations {
   @BindingAnnotation
   public @interface GlobalEventBus {}
 
-  /** Annotation for binding SandboxUtil. */
-  @Retention(RetentionPolicy.RUNTIME)
-  @Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER})
-  @BindingAnnotation
-  public @interface Sandbox {}
-
   /** Annotation for binding cloud rpc DNS address. */
   @Retention(RetentionPolicy.RUNTIME)
   @Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER})

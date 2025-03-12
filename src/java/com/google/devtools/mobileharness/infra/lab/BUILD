@@ -46,6 +46,7 @@ java_library(
     ],
     deps = [
         ":annotations",
+        ":lab_server_constants_module",
         "//src/devtools/mobileharness/api/model/proto:lab_java_proto",
         "//src/devtools/mobileharness/shared/trace/proto:span_java_proto",
         "//src/devtools/mobileharness/shared/util/comm/filetransfer/common/proto:tagged_file_metadata_java_proto",
@@ -137,6 +138,20 @@ java_library(
         "@maven//:com_google_inject_extensions_guice_assistedinject",
         "@maven//:com_google_inject_guice",
         "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "lab_server_constants_module",
+    srcs = [
+        "LabServerConstantsModule.java",
+    ],
+    deps = [
+        ":annotations",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/util:device",
+        "@maven//:com_google_inject_guice",
     ],
 )
 
