@@ -18,9 +18,11 @@ package com.google.wireless.qa.mobileharness.shared.api;
 
 import com.google.common.base.Suppliers;
 import com.google.common.base.Ticker;
+import com.google.common.hash.Hashing;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.testrunner.device.cache.DeviceCache;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
+import com.google.devtools.mobileharness.shared.util.file.checksum.ChecksumUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
@@ -68,6 +70,11 @@ public class CommonLibraryModule extends AbstractModule {
   @Provides
   Ticker provideTicker() {
     return Ticker.systemTicker();
+  }
+
+  @Provides
+  ChecksumUtil provideChecksumUtil() {
+    return new ChecksumUtil(Hashing.crc32());
   }
 
   private static ListeningExecutorService createThreadPool() {

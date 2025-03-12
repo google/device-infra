@@ -26,7 +26,6 @@ import com.google.common.cache.LoadingCache;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hasher;
-import com.google.common.hash.Hashing;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import java.io.File;
@@ -60,14 +59,6 @@ public class ChecksumUtil {
   private final LoadingCache<FileNameWithTime, HashCode> lastFingerprints;
 
   private final HashFunction hashFunction;
-
-  /**
-   * @deprecated Use {@link #ChecksumUtil(HashFunction)} instead.
-   */
-  @Deprecated
-  public ChecksumUtil() {
-    this(Hashing.crc32());
-  }
 
   /**
    * Passes in hash function and avoid MD5 if possible, while MD5 is probably neither fast nor
