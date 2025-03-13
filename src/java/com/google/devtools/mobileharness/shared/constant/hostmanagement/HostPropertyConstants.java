@@ -35,7 +35,7 @@ public final class HostPropertyConstants {
     JAVA_VERSION,
     /** the location of the host. */
     LAB_LOCATION,
-    /** The lab type of the host, whose value should be "Core", "Satellite" or "SLaaS". */
+    /** The lab type of the host, whose value should be "Core", "Satellite", "SLaaS" or "Fusion". */
     LAB_TYPE,
     /** The type of the location of the host. */
     LOCATION_TYPE,
