@@ -501,6 +501,15 @@ public class SessionResultHandlerUtil {
         finalReport = mergedReport.orElse(null);
       }
       if (finalReport != null) {
+        // For console, before creating the report and zipping result folder, copy previous session
+        // result files into final result folder.
+        callAndLogException(
+            () -> {
+              copyRetryFilesForConsole(sessionRequestInfo, resultDir);
+              return null;
+            },
+            String.format(
+                "Failed to copy files from previsou session to result dir [%s].", resultDir));
         reportCreator.createReport(
             finalReport,
             resultDir,
@@ -1017,6 +1026,27 @@ public class SessionResultHandlerUtil {
         localFileUtil.copyFileOrDir(oldChild.getAbsolutePath(), newChild.getAbsolutePath());
       } else if (newChild.isDirectory() && oldChild.isDirectory()) {
         copyRetryFiles(oldChild.getAbsolutePath(), newChild.getAbsolutePath());
+      }
+    }
+  }
+
+  private void copyRetryFilesForConsole(SessionRequestInfo sessionRequestInfo, Path resultDir)
+      throws MobileHarnessException, InterruptedException {
+    if ((sessionRequestInfo.retrySessionIndex().isPresent()
+            || sessionRequestInfo.retrySessionResultDirName().isPresent())
+        && localFileUtil.isDirExist(resultDir)) {
+      Path prevResultDir =
+          previousResultLoader.getPrevSessionResultDir(
+              XtsDirUtil.getXtsResultsDir(
+                  Path.of(sessionRequestInfo.xtsRootDir()), sessionRequestInfo.xtsType()),
+              sessionRequestInfo.retrySessionIndex().orElse(null),
+              sessionRequestInfo.retrySessionResultDirName().orElse(null));
+      try {
+        copyRetryFiles(prevResultDir.toString(), resultDir.toString());
+      } catch (MobileHarnessException e) {
+        logger.atWarning().withCause(e).log(
+            "Failed to copy contents of previous result dir %s to current result dir %s",
+            prevResultDir, resultDir);
       }
     }
   }

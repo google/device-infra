@@ -222,24 +222,6 @@ class RunCommandHandler {
                   allJobs,
                   sessionRequestInfo)
               .orElse(null);
-      // Copy previous attempts' result files.
-      if ((sessionRequestInfo.retrySessionIndex().isPresent()
-              || sessionRequestInfo.retrySessionResultDirName().isPresent())
-          && SessionRequestHandlerUtil.isRunRetry(sessionRequestInfo.testPlan())
-          && localFileUtil.isDirExist(resultDir)) {
-        Path prevResultDir =
-            previousResultLoader.getPrevSessionResultDir(
-                resultsDir,
-                sessionRequestInfo.retrySessionIndex().orElse(null),
-                sessionRequestInfo.retrySessionResultDirName().orElse(null));
-        try {
-          sessionResultHandlerUtil.copyRetryFiles(prevResultDir.toString(), resultDir.toString());
-        } catch (MobileHarnessException e) {
-          logger.atWarning().withCause(e).log(
-              "Failed to copy contents of previous result dir %s to current result dir %s",
-              prevResultDir, resultDir);
-        }
-      }
       if (command.getEnableCtsVerifierResultReporter() && result != null) {
         ImmutableSet<Module> skippedModules =
             allJobs.stream()
