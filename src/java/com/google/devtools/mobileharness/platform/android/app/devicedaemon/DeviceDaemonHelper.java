@@ -119,7 +119,12 @@ public class DeviceDaemonHelper {
   public void installAndStartDaemon(Device device, @Nullable LogCollector<?> log)
       throws MobileHarnessException, InterruptedException {
     installAndStartDaemon(
-        device, log, /* labels= */ null, /* hostname= */ null, /* owners= */ null);
+        device,
+        log,
+        /* labels= */ null,
+        /* hostname= */ null,
+        /* owners= */ null,
+        /* executors= */ null);
   }
 
   /**
@@ -133,15 +138,16 @@ public class DeviceDaemonHelper {
    * @param labels device dimension labels passed to device daemon app
    * @param hostname device's hostname passed to device daemon app
    * @param owners device owners passed to device daemon app
+   * @param executors device executors passed to device daemon app
    */
   public void installAndStartDaemon(
       Device device,
       @Nullable LogCollector<?> log,
       @Nullable String labels,
       @Nullable String hostname,
-      @Nullable String owners)
+      @Nullable String owners,
+      @Nullable String executors)
       throws MobileHarnessException, InterruptedException {
-    @Nullable String executors = null;
     if (!DeviceDaemonApkInfoProvider.isDeviceDaemonEnabled()) {
       logMessage(
           log,

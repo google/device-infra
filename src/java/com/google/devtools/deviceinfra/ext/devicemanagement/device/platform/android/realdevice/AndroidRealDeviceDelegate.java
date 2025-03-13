@@ -973,7 +973,8 @@ public abstract class AndroidRealDeviceDelegate {
             /* log= */ null,
             device.getProperty(AndroidRealDeviceConstants.PROP_LABELS),
             device.getProperty(AndroidRealDeviceConstants.PROP_HOSTNAME),
-            device.getProperty(AndroidRealDeviceConstants.PROP_OWNERS));
+            device.getProperty(AndroidRealDeviceConstants.PROP_OWNERS),
+            device.getProperty(AndroidRealDeviceConstants.PROP_EXECUTORS));
       }
     } else {
       logger.atInfo().log("Android device daemon is disabled on device %s", deviceId);
@@ -1033,7 +1034,8 @@ public abstract class AndroidRealDeviceDelegate {
               testInfo.log(),
               device.getProperty(AndroidRealDeviceConstants.PROP_LABELS),
               device.getProperty(AndroidRealDeviceConstants.PROP_HOSTNAME),
-              device.getProperty(AndroidRealDeviceConstants.PROP_OWNERS));
+              device.getProperty(AndroidRealDeviceConstants.PROP_OWNERS),
+              device.getProperty(AndroidRealDeviceConstants.PROP_EXECUTORS));
         }
       } else {
         testInfo
@@ -1209,7 +1211,8 @@ public abstract class AndroidRealDeviceDelegate {
               testInfo.log(),
               device.getProperty(AndroidRealDeviceConstants.PROP_LABELS),
               device.getProperty(AndroidRealDeviceConstants.PROP_HOSTNAME),
-              device.getProperty(AndroidRealDeviceConstants.PROP_OWNERS));
+              device.getProperty(AndroidRealDeviceConstants.PROP_OWNERS),
+              device.getProperty(AndroidRealDeviceConstants.PROP_EXECUTORS));
           if (testInfo.jobInfo().params().isTrue(AndroidRealDeviceSpec.PARAM_KILL_DAEMON_ON_TEST)) {
             testInfo
                 .log()
