@@ -30,7 +30,7 @@ class BuiltinOlcServerFlags {
           "--adb_dont_kill_server=true",
           "--adb_max_no_device_detection_rounds=1200",
           "--android_device_daemon=false",
-          "--check_device_interval=1h",
+          "--check_device_interval=30d",
           "--clear_android_device_multi_users=false",
           "--detect_device_interval_sec=2",
           "--disable_calling=false",
