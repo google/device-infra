@@ -1194,6 +1194,14 @@ public class Flags {
       converter = Flag.IntegerConverter.class)
   public Flag<Integer> grpcPort = grpcPortDefault;
 
+  private static final Flag<Boolean> ignoreCheckDeviceFailureDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--ignore_check_device_failure",
+      description = "Whether to ignore failures during checking device. Default is false.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> ignoreCheckDeviceFailure = ignoreCheckDeviceFailureDefault;
+
   private static final Flag<Integer> internalStorageAlertDefault = Flag.value(200);
 
   @com.beust.jcommander.Parameter(

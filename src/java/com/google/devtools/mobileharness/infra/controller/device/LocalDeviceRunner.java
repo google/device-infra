@@ -760,9 +760,17 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
       lastCheckDeviceTime = clock.instant();
       updateExtraDimensions();
       return device.checkDevice();
-    } catch (MobileHarnessException e) {
-      postDeviceErrorEvent(e);
-      throw e;
+    } catch (MobileHarnessException | RuntimeException | Error e) {
+      if (Flags.instance().ignoreCheckDeviceFailure.getNonNull()) {
+        logger.atWarning().withCause(e).log("Ignored failure during checking device");
+        // We don't want to trigger an update with partial device state changes.
+        return false;
+      } else {
+        if (e instanceof MobileHarnessException) {
+          postDeviceErrorEvent((Exception) e);
+        }
+        throw e;
+      }
     } finally {
       checking.set(false);
       logger.atInfo().log("Finish periodical check");
