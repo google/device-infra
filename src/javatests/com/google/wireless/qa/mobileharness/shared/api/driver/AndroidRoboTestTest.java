@@ -80,7 +80,6 @@ public class AndroidRoboTestTest {
   public void run_pass() throws Exception {
     AndroidRoboTestSpec spec =
         AndroidRoboTestSpec.newBuilder()
-            .setAppApk("/path/to/app.apk")
             .setCrawlerApk("/path/to/crawler.apk")
             .setCrawlerStubApk("/path/to/stub.apk")
             .setAppPackageId("com.some.app")

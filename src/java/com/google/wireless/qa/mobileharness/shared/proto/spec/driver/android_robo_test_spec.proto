@@ -29,11 +29,6 @@ message AndroidRoboTestSpec {
     optional AndroidRoboTestSpec ext = 71151824;
   }
 
-  optional string app_apk = 1 [(file_detail) = {
-    is_required: true
-    help: "The app apk, which is the app under test."
-  }];
-
   optional string crawler_apk = 2 [(file_detail) = {
     is_required: true
     help: "The crawler apk, which contains the base crawler apk."
@@ -90,4 +85,6 @@ message AndroidRoboTestSpec {
   repeated string crawler_assets = 15 [(file_detail) = {
     help: "Crawler assets. Example assetName1=/path/to/asset"
   }];
+
+  reserved 1;
 }

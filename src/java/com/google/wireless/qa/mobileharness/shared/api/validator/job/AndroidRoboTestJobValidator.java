@@ -47,9 +47,6 @@ public class AndroidRoboTestJobValidator
       }
       return errorsBuilder.build();
     }
-    if (spec.getAppApk().isEmpty()) {
-      errorsBuilder.add("App apk cannot be empty.");
-    }
     if (spec.getCrawlerApk().isEmpty()) {
       errorsBuilder.add("Crawler apk cannot be empty.");
     }

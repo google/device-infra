@@ -43,7 +43,6 @@ public class AndroidRoboTestJobValidatorTest {
     JobInfo jobInfo = setUpJobInfo();
     AndroidRoboTestSpec spec =
         AndroidRoboTestSpec.newBuilder()
-            .setAppApk("appPath")
             .setCrawlerApk("crawlerPath")
             .setCrawlerStubApk("stubPath")
             .setAppPackageId("com.some.app")
@@ -56,25 +55,10 @@ public class AndroidRoboTestJobValidatorTest {
   }
 
   @Test
-  public void validate_noAppApk_hasErrorMessages() throws Exception {
-    JobInfo jobInfo = setUpJobInfo();
-    AndroidRoboTestSpec spec =
-        AndroidRoboTestSpec.newBuilder()
-            .setCrawlerApk("crawlerPath")
-            .setCrawlerStubApk("stubPath")
-            .setCrawlTimeoutSecs(60)
-            .build();
-    jobInfo.scopedSpecs().add("AndroidRoboTestSpec", spec);
-
-    assertThat(validator.validate(jobInfo)).isNotEmpty();
-  }
-
-  @Test
   public void validate_noAppPackageId_hasErrorMessages() throws Exception {
     JobInfo jobInfo = setUpJobInfo();
     AndroidRoboTestSpec spec =
         AndroidRoboTestSpec.newBuilder()
-            .setAppApk("appPath")
             .setCrawlerApk("crawlerPath")
             .setCrawlerStubApk("stubPath")
             .setControllerEndpoint(ControllerEndpoint.AUTOPUSH)
@@ -90,7 +74,6 @@ public class AndroidRoboTestJobValidatorTest {
     JobInfo jobInfo = setUpJobInfo();
     AndroidRoboTestSpec spec =
         AndroidRoboTestSpec.newBuilder()
-            .setAppApk("appPath")
             .setCrawlerApk("crawlerPath")
             .setCrawlerStubApk("stubPath")
             .setAppPackageId("com.some.app")
@@ -106,7 +89,6 @@ public class AndroidRoboTestJobValidatorTest {
     JobInfo jobInfo = setUpJobInfo();
     AndroidRoboTestSpec spec =
         AndroidRoboTestSpec.newBuilder()
-            .setAppApk("appPath")
             .setCrawlerApk("crawlerPath")
             .setCrawlerStubApk("stubPath")
             .setAppPackageId("com.some.app")
@@ -123,7 +105,6 @@ public class AndroidRoboTestJobValidatorTest {
     JobInfo jobInfo = setUpJobInfo();
     AndroidRoboTestSpec spec =
         AndroidRoboTestSpec.newBuilder()
-            .setAppApk("appPath")
             .setCrawlerApk("crawlerPath")
             .setCrawlerStubApk("stubPath")
             .setAppPackageId("com.some.app")
@@ -142,7 +123,6 @@ public class AndroidRoboTestJobValidatorTest {
     JobInfo jobInfo = setUpJobInfo();
     AndroidRoboTestSpec spec =
         AndroidRoboTestSpec.newBuilder()
-            .setAppApk("appPath")
             .setCrawlerApk("crawlerPath")
             .setCrawlerStubApk("stubPath")
             .setAppPackageId("com.some.app")
