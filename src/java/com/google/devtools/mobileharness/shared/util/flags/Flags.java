@@ -289,12 +289,12 @@ public class Flags {
   public Flag<Boolean> atsConsoleOlcServerCopyServerResource =
       atsConsoleOlcServerCopyServerResourceDefault;
 
-  private static final Flag<String> atsConsoleOlcServerMinLabVersionDefault = Flag.value("0.0.0");
+  private static final Flag<String> atsConsoleOlcServerMinLabVersionDefault = Flag.value("4.309.1");
 
   @com.beust.jcommander.Parameter(
       names = "--ats_console_olc_server_min_lab_version",
       description =
-          "Minimum OLC server lab version string required by ATS console. Default is 0.0.0",
+          "Minimum OLC server lab version string required by ATS console. Default is 4.309.1",
       converter = Flag.StringConverter.class)
   public Flag<String> atsConsoleOlcServerMinLabVersion = atsConsoleOlcServerMinLabVersionDefault;
 

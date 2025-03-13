@@ -97,9 +97,10 @@ public class ServerPreparer {
       ImmutableList.of("Session ID", "Name", "Status", "Submitted Time");
 
   private static final String FORCIBLY_RESTART_SUGGESTION =
-      "if necessary, run \"server restart -f\" command to forcibly restart OLC server (which will"
-          + " also forcibly kill all running jobs submitted from this console and other consoles on"
-          + " the same machine)";
+      "if necessary, run \"server restart -f\" command in the console or \"kill -9 %s\" in the"
+          + " terminal to forcibly restart OLC server.\nIMPORTANT: This action will also forcibly"
+          + " kill all running jobs submitted from ANY console on the same machine. Ensure all"
+          + " critical jobs are finished before proceeding.";
 
   private final String clientComponentName;
   private final String clientId;
@@ -418,14 +419,14 @@ public class ServerPreparer {
                 "Existing OLC server (pid=%s) cannot be killed, reason=[%s], %s",
                 serverPid,
                 createKillServerFailureReasons(killServerResponse.getFailure()),
-                FORCIBLY_RESTART_SUGGESTION),
+                String.format(FORCIBLY_RESTART_SUGGESTION, serverPid)),
             /* cause= */ null);
       } else {
         throw MobileHarnessExceptionFactory.createUserFacingException(
             InfraErrorId.ATSC_SERVER_PREPARER_EXISTING_OLC_SERVER_STILL_RUNNING_ERROR,
             String.format(
                 "Existing OLC server (pid=%s) is still running for 10s after it was killed, %s",
-                serverPid, FORCIBLY_RESTART_SUGGESTION),
+                serverPid, String.format(FORCIBLY_RESTART_SUGGESTION, serverPid)),
             /* cause= */ null);
       }
     }
