@@ -29,6 +29,7 @@ java_library(
     deps = [
         "//src/devtools/mobileharness/shared/util/comm/testing/proto:dummy_service_java_grpc",
         "//src/devtools/mobileharness/shared/util/comm/testing/proto:dummy_service_java_proto",
+        "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@io_grpc_grpc_java//core",
         "@io_grpc_grpc_java//stub",

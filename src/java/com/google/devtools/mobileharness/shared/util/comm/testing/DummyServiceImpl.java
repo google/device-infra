@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.shared.util.comm.testing;
 
+import static com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionUtil.toStatusRuntimeException;
+
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.shared.util.comm.testing.proto.DummyServiceGrpc;
 import com.google.devtools.mobileharness.shared.util.comm.testing.proto.DummyServiceProto.DummyRequest;
@@ -54,7 +56,14 @@ public class DummyServiceImpl extends DummyServiceGrpc.DummyServiceImplBase {
 
   @Override
   public void unaryMethod(DummyRequest request, StreamObserver<DummyResponse> responseObserver) {
-    responseObserver.onNext(unaryReply(request));
+    DummyResponse response;
+    try {
+      response = unaryReply(request);
+    } catch (Throwable t) {
+      responseObserver.onError(toStatusRuntimeException(t));
+      return;
+    }
+    responseObserver.onNext(response);
     responseObserver.onCompleted();
   }
 
@@ -63,7 +72,14 @@ public class DummyServiceImpl extends DummyServiceGrpc.DummyServiceImplBase {
       DummyRequest request, StreamObserver<DummyResponse> responseObserver) {
     for (int i = 0; i < repeat; i++) {
       logger.atInfo().log("ServerStreamingMethod: %s for %d", request.getName(), i);
-      responseObserver.onNext(unaryReply(request));
+      DummyResponse response;
+      try {
+        response = unaryReply(request);
+      } catch (Throwable t) {
+        responseObserver.onError(toStatusRuntimeException(t));
+        return;
+      }
+      responseObserver.onNext(response);
     }
     responseObserver.onCompleted();
   }
@@ -86,11 +102,19 @@ public class DummyServiceImpl extends DummyServiceGrpc.DummyServiceImplBase {
       @Override
       public void onError(Throwable t) {
         logger.atWarning().withCause(t).log("ClientStreamingMethod: %s", t);
+        responseObserver.onError(toStatusRuntimeException(t));
       }
 
       @Override
       public void onCompleted() {
-        responseObserver.onNext(unaryReply(builder.toString()));
+        DummyResponse response;
+        try {
+          response = unaryReply(builder.toString());
+        } catch (Throwable t) {
+          responseObserver.onError(toStatusRuntimeException(t));
+          return;
+        }
+        responseObserver.onNext(response);
         responseObserver.onCompleted();
       }
     };
@@ -109,12 +133,20 @@ public class DummyServiceImpl extends DummyServiceGrpc.DummyServiceImplBase {
           builder.append(DELIMITER);
         }
         builder.append(request.getName());
-        responseObserver.onNext(unaryReply(builder.toString()));
+        DummyResponse response;
+        try {
+          response = unaryReply(builder.toString());
+        } catch (Throwable t) {
+          responseObserver.onError(toStatusRuntimeException(t));
+          return;
+        }
+        responseObserver.onNext(response);
       }
 
       @Override
       public void onError(Throwable t) {
         logger.atWarning().withCause(t).log("BidiStreamingMethod: %s", t);
+        responseObserver.onError(toStatusRuntimeException(t));
       }
 
       @Override
@@ -129,6 +161,10 @@ public class DummyServiceImpl extends DummyServiceGrpc.DummyServiceImplBase {
   }
 
   private DummyResponse unaryReply(String name) {
+    if (name.contains("error")) {
+      throw new IllegalArgumentException(
+          "This is message.", new IllegalStateException("This is cause"));
+    }
     return DummyResponse.newBuilder()
         .setName(String.format("%s, %s.", welcomeMessage, name))
         .build();
