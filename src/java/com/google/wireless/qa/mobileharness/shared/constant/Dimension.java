@@ -136,6 +136,7 @@ public final class Dimension {
     /** Device pool name. Values include: shared/shared_without_recovery/group_shared/dedicated. */
     POOL,
     /** Whether the device is reachable from the host. */
+    /** Whether the device has the YouTube app installed. */
     /** The release version of the device. */
     RELEASE_VERSION,
     /**
