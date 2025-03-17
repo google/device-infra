@@ -264,6 +264,7 @@ public class SessionResultHandlerUtil {
     boolean curSessionHasTfJob = false;
     boolean previousSessionHasNonTfModule = false;
     boolean previousSessionHasTfModule = false;
+    List<Path> extraFilesOrDirsToZip = new ArrayList<>();
 
     // Copies tradefed test relevant log and result files to dedicated locations
     for (Entry<JobInfo, Optional<TestInfo>> testEntry : tradefedTests.entrySet()) {
@@ -274,6 +275,8 @@ public class SessionResultHandlerUtil {
       }
       curSessionHasTfJob = true;
       TestInfo test = testEntry.getValue().get();
+
+      addExtraFilesToResultDir(extraFilesOrDirsToZip, test);
 
       if (!previousSessionHasNonTfModule) {
         previousSessionHasNonTfModule =
@@ -448,7 +451,8 @@ public class SessionResultHandlerUtil {
           resultDir,
           /* testRecord= */ null,
           sessionRequestInfo.htmlInZip(),
-          testReportProperties.buildOrThrow());
+          testReportProperties.buildOrThrow(),
+          extraFilesOrDirsToZip);
     } else if (isRunRetry) {
       if (testReportHasTfModule && !curSessionHasTfJob) {
         // If the test report will have TF module but the current session doesn't retry any TF
@@ -515,7 +519,8 @@ public class SessionResultHandlerUtil {
             resultDir,
             /* testRecord= */ null,
             sessionRequestInfo.htmlInZip(),
-            testReportProperties.buildOrThrow());
+            testReportProperties.buildOrThrow(),
+            extraFilesOrDirsToZip);
       }
     } else {
       logger.atWarning().log("Failed to merge reports.");
@@ -1047,6 +1052,17 @@ public class SessionResultHandlerUtil {
         logger.atWarning().withCause(e).log(
             "Failed to copy contents of previous result dir %s to current result dir %s",
             prevResultDir, resultDir);
+      }
+    }
+  }
+
+  private void addExtraFilesToResultDir(List<Path> extraFilesOrDirsToZip, TestInfo testInfo) {
+    String testListProperty =
+        testInfo.properties().get(XtsConstants.XTS_DYNAMIC_DOWNLOAD_PATH_TEST_LIST_PROPERTY_KEY);
+    if (testListProperty != null) {
+      Path testListPath = Path.of(testListProperty);
+      if (localFileUtil.isFileOrDirExist(testListPath)) {
+        extraFilesOrDirsToZip.add(testListPath);
       }
     }
   }
