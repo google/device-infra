@@ -83,16 +83,6 @@ public class LabSyncHelper {
   private static final ImmutableList<String> PRIVATE_LAB_DECORATORS =
       ImmutableList.of("AndroidFlashDeviceDecorator", "AndroidInstallSystemAppsDecorator");
 
-  /** Banned decorators of fast wipe devices. */
-  @VisibleForTesting
-  static final ImmutableList<String> FAST_WIPE_BANNED_DECORATORS =
-      ImmutableList.of("AndroidFlashDeviceDecorator", "AndroidFlashstationDecorator");
-
-  /** Banned device types of fast wipe devices. */
-  @VisibleForTesting
-  static final ImmutableList<String> FAST_WIPE_BANNED_DEVICE_TYPES =
-      ImmutableList.of("AndroidFlashableDevice");
-
   /** Stub for syncing lab info with Master. */
   private final LabSyncStub labSyncStub;
 
@@ -241,17 +231,6 @@ public class LabSyncHelper {
             .contains(Value.POOL_SHARED)) {
           drivers.removeAll(ImmutableList.of("AndroidMonkey"));
         }
-      }
-
-      // Bans the flash/recovery related decorators on fastwipe devices.
-      // We could consider re-flash the device in future if these decorators have strong reasons to
-      // run on the fastwipe devices.
-      List<String> recoveryTypes = device.getDimension(Name.RECOVERY);
-      if (recoveryTypes.size() == 1
-          && (recoveryTypes.get(0).equalsIgnoreCase("wipe")
-              || recoveryTypes.get(0).equalsIgnoreCase("standard"))) {
-        deviceTypes.removeAll(FAST_WIPE_BANNED_DEVICE_TYPES);
-        decorators.removeAll(FAST_WIPE_BANNED_DECORATORS);
       }
 
       DeviceCompositeDimension.Builder compositeDimension = DeviceCompositeDimension.newBuilder();
