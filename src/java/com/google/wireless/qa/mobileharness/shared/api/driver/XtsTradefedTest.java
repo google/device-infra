@@ -160,9 +160,6 @@ public class XtsTradefedTest extends BaseDriver
   private static final String STATIC_MCTS_LIST_FILE_PATH =
       "/devtools/mobileharness/infra/controller/test/util/xtsdownloader/configs/mcts_list.txt";
 
-  private static final String TF_VIRTUAL_DEVICE_HOST_CONFIG =
-      "/com/google/devtools/mobileharness/platform/android/shared/emulator/host-config.xml";
-
   private final CommandExecutor cmdExecutor;
   private final LocalFileUtil localFileUtil;
   private final SystemUtil systemUtil;
@@ -793,7 +790,8 @@ public class XtsTradefedTest extends BaseDriver
     environmentToTradefedConsole.put("PATH", getEnvPath());
     environmentToTradefedConsole.put("TF_WORK_DIR", tmpXtsRootDir.toString());
     if (getDevice().hasDimension(Dimension.Name.DEVICE_CLASS_NAME, "AndroidJitEmulator")) {
-      environmentToTradefedConsole.put("TF_GLOBAL_CONFIG", getTradefedVirtualDeviceHostConfig());
+      environmentToTradefedConsole.put(
+          "TF_GLOBAL_CONFIG", AndroidJitEmulatorUtil.getHostConfigPath());
     }
     if (!spec.getEnvVars().isEmpty()) {
       String envVarJson = spec.getEnvVars();
@@ -1274,9 +1272,5 @@ public class XtsTradefedTest extends BaseDriver
 
   private String getStaticMctsListFilePath() throws MobileHarnessException {
     return resUtil.getResourceFile(getClass(), STATIC_MCTS_LIST_FILE_PATH);
-  }
-
-  private String getTradefedVirtualDeviceHostConfig() throws MobileHarnessException {
-    return resUtil.getResourceFile(getClass(), TF_VIRTUAL_DEVICE_HOST_CONFIG);
   }
 }

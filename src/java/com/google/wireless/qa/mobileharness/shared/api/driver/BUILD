@@ -244,7 +244,6 @@ java_library(
     srcs = ["XtsTradefedTest.java"],
     resources = [
         "//src/devtools/mobileharness/infra/controller/test/util/xtsdownloader/configs:mcts_list",
-        "//src/java/com/google/devtools/mobileharness/platform/android/shared/emulator:tf_virtual_device_host_config",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/agent:tradefed_invocation_agent_deploy.jar",
     ],
     deps = [

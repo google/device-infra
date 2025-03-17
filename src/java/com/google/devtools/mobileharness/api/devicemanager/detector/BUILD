@@ -34,7 +34,7 @@ java_library(
         ":base",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector/model",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector/model:android_emulator_type",
-        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
+        "//src/java/com/google/devtools/mobileharness/platform/android/shared/emulator:android_jit_emulator_util",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
     ],
