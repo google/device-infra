@@ -29,12 +29,12 @@ message IosNativeXcTestSpec {
     optional IosNativeXcTestSpec ext = 73604609;
   }
 
-  optional string xcode_derived_data_zip = 1 [(file_detail) = {
+  optional string xcode_derived_data = 1 [(file_detail) = {
     is_required: true
-    help: "The path of zipped xcode derived data which includes the test bundles and app under test."
+    help: "The path of xcode derived data which includes the test bundles and app under test. It can be a zip file or a directory."
   }];
 
   optional string xctestrun = 2 [
-    (file_detail) = { is_required: true help: "The path of .xctestrun file." }
+    (file_detail) = { is_required: false help: "The path of .xctestrun file." }
   ];
 }
