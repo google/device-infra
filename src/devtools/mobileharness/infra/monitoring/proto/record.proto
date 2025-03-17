@@ -64,6 +64,9 @@ message HostRecord {
 
   // The total memory of the host.
   string total_mem = 14;
+
+  // The owners of the host.
+  repeated string host_owner = 15;
 }
 
 // The record of a device of a certain timestamp.
