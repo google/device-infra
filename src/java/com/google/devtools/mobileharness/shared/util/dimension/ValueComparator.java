@@ -27,6 +27,12 @@ public final class ValueComparator {
   /** Dimension value prefix which indicates it is an int value comparison. */
   public static final String PREFIX_INT_COMPARISON = "compare_int:";
 
+  /** Returns true if the dimension value is a comparison. */
+  public static boolean isComparison(String dimensionValue) {
+    return dimensionValue.startsWith(PREFIX_STR_COMPARISON)
+        || dimensionValue.startsWith(PREFIX_INT_COMPARISON);
+  }
+
   /**
    * Compares the size relationship between the actual dimension value and the * value specified by
    * the user.
