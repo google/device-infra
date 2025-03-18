@@ -22,18 +22,13 @@ import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.api.devicemanager.detector.model.AndroidEmulatorType;
 import com.google.devtools.mobileharness.api.devicemanager.detector.model.DetectionResult;
 import com.google.devtools.mobileharness.api.devicemanager.detector.model.DetectionResult.DetectionType;
-import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.platform.android.shared.emulator.AndroidJitEmulatorUtil;
 import javax.annotation.Nullable;
 
 /** Detector for Android JIT emulators. */
 public final class AndroidJitEmulatorDetector implements Detector {
   /** Initialized in {@link #precondition()}. */
   @Nullable private volatile ImmutableList<String> emulatorIds;
-
-  // Acloud creates cuttlefish emulator with port 6520 + index, where index is instance id minus
-  // one. Example: "acloud create --local-instance 1" will create a local emulator with port 6520.
-  // And instance 2 will be 6521, so on and so forth.
-  private static final int EMULATOR_BASE_PORT = 6520;
 
   public AndroidJitEmulatorDetector() {}
 
@@ -44,13 +39,8 @@ public final class AndroidJitEmulatorDetector implements Detector {
    */
   @Override
   public boolean precondition() {
-    int emulatorNumber = Flags.instance().androidJitEmulatorNum.getNonNull();
-    ImmutableList.Builder<String> emulatorIdsBuilder = ImmutableList.builder();
-    for (int i = 0; i < emulatorNumber; i++) {
-      emulatorIdsBuilder.add("0.0.0.0:" + (i + EMULATOR_BASE_PORT));
-    }
-    emulatorIds = emulatorIdsBuilder.build();
-    return emulatorNumber > 0;
+    emulatorIds = AndroidJitEmulatorUtil.getAllVirtualDeviceIds();
+    return emulatorIds != null && !emulatorIds.isEmpty();
   }
 
   /**

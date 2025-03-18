@@ -1,5 +1,0 @@
-<configuration description="Common TF config">
-
-  <option name="dmgr:max-local-virtual-devices" value="100" />
-
-</configuration>
