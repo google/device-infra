@@ -32,6 +32,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSetMultimap;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser.TestPlanFilter;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfoFactory;
@@ -702,31 +703,122 @@ public final class SessionRequestHandlerUtilTest {
     when(testSuiteHelper.loadTests(any()))
         .thenReturn(
             ImmutableMap.of("module1", config[0], "module2", config[1], "module3", config[2]));
+    // Include the whole module
+    when(moblyTestLoader.getTestNamesInModule(Path.of("/path/to/config1"), config[0]))
+        .thenReturn(ImmutableSetMultimap.of());
+    // Include 1 test class (with 1 cases) and 2 test cases, run 3 test cases
+    when(moblyTestLoader.getTestNamesInModule(Path.of("/path/to/config2"), config[1]))
+        .thenReturn(
+            ImmutableSetMultimap.of(
+                "test_class1",
+                "test_class1.test1",
+                "test_class2",
+                "test_class2.test2",
+                "test_class2",
+                "test_class2.test3"));
+    // Exclude 1 test class (with 1 cases) and 1 test cases, run 1 test cases
     when(moblyTestLoader.getTestNamesInModule(Path.of("/path/to/config3"), config[2]))
         .thenReturn(
-            ImmutableList.of("test_class1.test1", "test_class2.test2", "test_class2.test3"));
+            ImmutableSetMultimap.of(
+                "test_class1",
+                "test_class1.test1",
+                "test_class2",
+                "test_class2.test2",
+                "test_class2",
+                "test_class2.test3"));
     SessionRequestInfo sessionRequestInfo =
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(
             defaultSessionRequestInfoBuilder()
                 .setIncludeFilters(
                     ImmutableList.of(
-                        "module1 test_class1#test1",
-                        "module1 test_class2#test2",
-                        "module1 test_class2#test3",
-                        "module2",
+                        "module1",
+                        "module2 test_class1",
+                        "module2 test_class2#test2",
+                        "module2 test_class2#test3",
                         "module3"))
-                .setExcludeFilters(ImmutableList.of("module3 test_class1#test1"))
+                .setExcludeFilters(
+                    ImmutableList.of("module3 test_class1", "module3 test_class2#test2"))
                 .build());
     ImmutableList<JobInfo> jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
             sessionRequestInfo, testPlanFilter, null, ImmutableMap.of());
 
     assertThat(jobInfos).hasSize(3);
-    assertThat(jobInfos.get(0).params().get(MOBLY_TEST_SELECTOR_KEY))
-        .isEqualTo("test_class1.test1 test_class2.test2 test_class2.test3");
-    assertThat(jobInfos.get(1).params().get(MOBLY_TEST_SELECTOR_KEY)).isNull();
+    assertThat(jobInfos.get(0).params().get(MOBLY_TEST_SELECTOR_KEY)).isNull();
+    assertThat(jobInfos.get(1).params().get(MOBLY_TEST_SELECTOR_KEY).split(" "))
+        .asList()
+        .containsExactly("test_class1.test1", "test_class2.test2", "test_class2.test3");
     assertThat(jobInfos.get(2).params().get(MOBLY_TEST_SELECTOR_KEY))
-        .isEqualTo("test_class2.test2 test_class2.test3");
+        .isEqualTo("test_class2.test3");
+  }
+
+  @Test
+  public void createXtsNonTradefedJobs_testFilters_override() throws Exception {
+    setUpForCreateXtsNonTradefedJobs();
+    Configuration config1 =
+        defaultConfigurationBuilder()
+            .setMetadata(
+                ConfigurationMetadata.newBuilder().setXtsModule("module1").setIsConfigV2(true))
+            .build();
+    when(configurationUtil.getConfigsV2FromDirs(any()))
+        .thenReturn(ImmutableMap.of("/path/to/config1", config1));
+    when(testSuiteHelper.loadTests(any())).thenReturn(ImmutableMap.of("module1", config1));
+    when(moblyTestLoader.getTestNamesInModule(any(), any()))
+        .thenReturn(
+            ImmutableSetMultimap.of(
+                "test_class1",
+                "test_class1.test1",
+                "test_class2",
+                "test_class2.test2",
+                "test_class2",
+                "test_class2.test3"));
+
+    // When include filters for test cases are specified, test class filters are ignored.
+    SessionRequestInfo sessionRequestInfo =
+        sessionRequestHandlerUtil.addNonTradefedModuleInfo(
+            defaultSessionRequestInfoBuilder()
+                .setIncludeFilters(
+                    ImmutableList.of(
+                        "module1 test_class1#test1",
+                        "module1 test_class2",
+                        "module1 test_class2#test3"))
+                .build());
+    ImmutableList<JobInfo> jobInfos =
+        sessionRequestHandlerUtil.createXtsNonTradefedJobs(
+            sessionRequestInfo, testPlanFilter, null, ImmutableMap.of());
+    assertThat(jobInfos).hasSize(1);
+    assertThat(jobInfos.get(0).params().get(MOBLY_TEST_SELECTOR_KEY).split(" "))
+        .asList()
+        .containsExactly("test_class1.test1", "test_class2.test3");
+
+    // When exclude filters for test classes are specified, test case filters are ignored
+    sessionRequestInfo =
+        sessionRequestHandlerUtil.addNonTradefedModuleInfo(
+            defaultSessionRequestInfoBuilder()
+                .setExcludeFilters(
+                    ImmutableList.of(
+                        "module1 test_class1#test1",
+                        "module1 test_class2",
+                        "module1 test_class2#test3"))
+                .build());
+    jobInfos =
+        sessionRequestHandlerUtil.createXtsNonTradefedJobs(
+            sessionRequestInfo, testPlanFilter, null, ImmutableMap.of());
+    assertThat(jobInfos).isEmpty();
+
+    // Exclude filters have higher priority than include filters
+    sessionRequestInfo =
+        sessionRequestHandlerUtil.addNonTradefedModuleInfo(
+            defaultSessionRequestInfoBuilder()
+                .setIncludeFilters(
+                    ImmutableList.of("module1 test_class1#test1", "module1 test_class2#test2"))
+                .setExcludeFilters(
+                    ImmutableList.of("module1 test_class1#test1", "module1 test_class2"))
+                .build());
+    jobInfos =
+        sessionRequestHandlerUtil.createXtsNonTradefedJobs(
+            sessionRequestInfo, testPlanFilter, null, ImmutableMap.of());
+    assertThat(jobInfos).isEmpty();
   }
 
   @Test
@@ -740,6 +832,8 @@ public final class SessionRequestHandlerUtilTest {
     when(configurationUtil.getConfigsV2FromDirs(any()))
         .thenReturn(ImmutableMap.of("/path/to/config1", config1));
     when(testSuiteHelper.loadTests(any())).thenReturn(ImmutableMap.of("module1", config1));
+    when(moblyTestLoader.getTestNamesInModule(any(), any()))
+        .thenReturn(ImmutableSetMultimap.of("test_class1", "test_class1.test1"));
 
     SessionRequestInfo sessionRequestInfo =
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(
@@ -754,12 +848,12 @@ public final class SessionRequestHandlerUtilTest {
     assertThat(jobInfos.get(0).params().get(MOBLY_TEST_SELECTOR_KEY))
         .isEqualTo("test_class1.test1");
 
-    // Test invalid TestName
+    // Test invalid class name
     sessionRequestInfo =
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(
             defaultSessionRequestInfoBuilder()
                 .setModuleNames(ImmutableList.of("module1"))
-                .setTestName("test_class1")
+                .setTestName("test_class2")
                 .build());
     jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
@@ -781,6 +875,9 @@ public final class SessionRequestHandlerUtilTest {
         .when(certificationSuiteInfoFactory)
         .generateSuiteInfoMap(any(), any(), any());
     doCallRealMethod().when(certificationSuiteInfoFactory).getSuiteVariant(any(), any());
+    when(moblyTestLoader.getTestNamesInModule(any(), any()))
+        .thenReturn(
+            ImmutableSetMultimap.of("FooTest", "FooTest.test1", "FooTest", "FooTest.test2"));
 
     SessionRequestInfo sessionRequestInfo =
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(
@@ -904,7 +1001,13 @@ public final class SessionRequestHandlerUtilTest {
             ImmutableMap.of("module1", config[0], "module2", config[1], "module3", config[2]));
     when(moblyTestLoader.getTestNamesInModule(Path.of("/path/to/config1"), config[0]))
         .thenReturn(
-            ImmutableList.of("test_class1.test1", "test_class2.test2", "test_class3.test3"));
+            ImmutableSetMultimap.of(
+                "test_class1",
+                "test_class1.test1",
+                "test_class2",
+                "test_class2.test2",
+                "test_class3",
+                "test_class3.test3"));
 
     SubPlan subPlan = new SubPlan();
     subPlan.addNonTfExcludeFilter("module1 test_class1#test1");

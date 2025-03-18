@@ -18,7 +18,7 @@ package com.google.devtools.mobileharness.platform.android.xts.common.util;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
-import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSetMultimap;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
@@ -26,7 +26,6 @@ import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import javax.inject.Inject;
@@ -53,10 +52,10 @@ public class MoblyTestLoader {
    *
    * @param moduleConfigPath the path of the module config file
    * @param moduleConfig the module config
-   * @return a list of test names
+   * @return a set multimap of test class name to test names
    * @throws MobileHarnessException if fails to get test names
    */
-  public ImmutableList<String> getTestNamesInModule(
+  public ImmutableSetMultimap<String, String> getTestNamesInModule(
       Path moduleConfigPath, Configuration moduleConfig)
       throws InterruptedException, MobileHarnessException {
     List<Path> filePaths =
@@ -78,7 +77,7 @@ public class MoblyTestLoader {
     String output = commandExecutor.run(command);
     List<String> lines = NEWLINE_SPLITTER.splitToList(output);
 
-    List<String> testNames = new ArrayList<>();
+    ImmutableSetMultimap.Builder<String, String> testNames = ImmutableSetMultimap.builder();
     String testClass = null;
     for (String line : lines) {
       Matcher matcher = XtsConstants.MOBLY_TEST_CLASS_PATTERN.matcher(line);
@@ -87,14 +86,15 @@ public class MoblyTestLoader {
       } else if (testClass != null) {
         if (line.contains(".")) {
           // Test name is in the format of "TestClass.test_case", as output by Mobly suite_runner.
-          testNames.add(line);
+          testNames.put(testClass, line);
         } else {
           // Test name is in the format of "test_case", as output by Mobly test_runner.
-          testNames.add(Joiner.on(".").join(testClass, line));
+          testNames.put(testClass, Joiner.on(".").join(testClass, line));
         }
       }
     }
-    if (testNames.isEmpty()) {
+    ImmutableSetMultimap<String, String> testNamesMap = testNames.build();
+    if (testNamesMap.isEmpty()) {
       throw new MobileHarnessException(
           InfraErrorId.ATSC_LOAD_MOBLY_TEST_NAMES_ERROR,
           "Failed to get test cases from the mobly binary. Command: "
@@ -102,6 +102,6 @@ public class MoblyTestLoader {
               + ". Output: "
               + output);
     }
-    return ImmutableList.copyOf(testNames);
+    return testNamesMap;
   }
 }

@@ -78,9 +78,12 @@ public final class MoblyTestLoaderTest {
     when(commandExecutor.run(expectedCommand)).thenReturn(output);
     assertThat(moblyTestLoader.getTestNamesInModule(MODULE_CONFIG_PATH, MODULE_CONFIG))
         .containsExactly(
-            "CompanionDeviceManagerTestClass.test_associate_createsAssociation_classicBluetooth",
-            "CompanionDeviceManagerTestClass.test_permissions_sync",
-            "CompanionDeviceManagerTestClass.test_removeBond_associatedDevice_succeeds");
+            "CompanionDeviceManagerTestClass",
+                "CompanionDeviceManagerTestClass.test_associate_createsAssociation_classicBluetooth",
+            "CompanionDeviceManagerTestClass",
+                "CompanionDeviceManagerTestClass.test_permissions_sync",
+            "CompanionDeviceManagerTestClass",
+                "CompanionDeviceManagerTestClass.test_removeBond_associatedDevice_succeeds");
   }
 
   @Test
@@ -90,9 +93,13 @@ public final class MoblyTestLoaderTest {
     when(commandExecutor.run(expectedCommand)).thenReturn(output);
     assertThat(moblyTestLoader.getTestNamesInModule(MODULE_CONFIG_PATH, MODULE_CONFIG))
         .containsExactly(
+            "GroupOwnerNegotiationTest",
             "GroupOwnerNegotiationTest.test_group_owner_negotiation_with_pin_button",
+            "GroupOwnerNegotiationTest",
             "GroupOwnerNegotiationTest.test_group_owner_negotiation_with_push_button",
+            "GroupOwnerTest",
             "GroupOwnerTest.test_connect_with_pin_code",
+            "GroupOwnerTest",
             "GroupOwnerTest.test_connect_with_push_button");
   }
 

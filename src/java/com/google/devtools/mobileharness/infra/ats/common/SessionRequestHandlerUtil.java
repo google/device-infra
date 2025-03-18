@@ -41,6 +41,7 @@ import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Maps;
 import com.google.common.flogger.FluentLogger;
@@ -100,6 +101,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -820,31 +822,42 @@ public class SessionRequestHandlerUtil {
         String moduleAbi = getModuleAbi(expandedModuleName).orElse(null);
         // Gets module parameter
         String moduleParameter = getModuleParameter(expandedModuleName).orElse(null);
-        ImmutableList.Builder<String> matchedTestCasesBuilder = ImmutableList.builder();
 
-        // Filters the module by include-filter and exclude-filter.
-        if (excludeFilters.stream()
-            .anyMatch(
-                excludeFilter ->
-                    excludeFilter.matchModule(originalModuleName, moduleAbi, moduleParameter)
-                        && excludeFilter.testName().isEmpty())) {
+        // Filters the module by metadata include-filter and exclude-filter.
+        if (!filterModuleByConfigMetadata(
+            entry.getValue(), moduleMetadataIncludeFilters, moduleMetadataExcludeFilters)) {
           continue;
         }
+
+        // Handles exclude-filter.
+        Map<String, Collection<String>> excludeTestCaseMap = new HashMap<>();
+        if (excludeFilters.stream()
+            .filter(
+                excludeFilter ->
+                    excludeFilter.matchModule(originalModuleName, moduleAbi, moduleParameter))
+            .anyMatch(
+                excludeFilter -> {
+                  if (excludeFilter.testName().isPresent()) {
+                    parseExcludeTestNames(excludeFilter.testName().get(), excludeTestCaseMap);
+                    return false;
+                  }
+                  return true;
+                })) {
+          // Excludes the whole module.
+          continue;
+        }
+
+        // Handles include-filter.
+        Map<String, Collection<String>> includeTestCaseMap = new HashMap<>();
         if (sessionRequestInfo.testName().isPresent()) {
-          String parsedTestName = parseTestName(sessionRequestInfo.testName().get());
-          if (!parsedTestName.isEmpty()) {
-            matchedTestCasesBuilder.add(parsedTestName);
-          } else {
-            continue;
-          }
+          parseIncludeTestNames(sessionRequestInfo.testName().get(), includeTestCaseMap);
         } else if (!includeFilters.isEmpty()) {
           boolean matched = false;
           for (SuiteTestFilter filter : includeFilters) {
             if (filter.matchModule(originalModuleName, moduleAbi, moduleParameter)) {
               matched = true;
-              String parsedTestName = parseTestName(filter.testName().orElse(null));
-              if (!parsedTestName.isEmpty()) {
-                matchedTestCasesBuilder.add(parsedTestName);
+              if (filter.testName().isPresent()) {
+                parseIncludeTestNames(filter.testName().get(), includeTestCaseMap);
               }
             }
           }
@@ -853,51 +866,62 @@ public class SessionRequestHandlerUtil {
           }
         }
 
-        // Filters the module by metadata include-filter and exclude-filter.
-        if (!filterModuleByConfigMetadata(
-            entry.getValue(), moduleMetadataIncludeFilters, moduleMetadataExcludeFilters)) {
-          continue;
-        }
-
-        // Get excluded test names in current module.
-        ImmutableList<String> matchedTestCases = matchedTestCasesBuilder.build();
-        ImmutableList<String> excludedTestNames =
-            excludeFilters.stream()
-                .filter(
-                    excludeFilter ->
-                        excludeFilter.matchModule(originalModuleName, moduleAbi, moduleParameter))
-                .filter(excludeFilter -> excludeFilter.testName().isPresent())
-                .map(excludeFilter -> parseTestName(excludeFilter.testName().get()))
-                .collect(toImmutableList());
-        if (!excludedTestNames.isEmpty()) {
-          if (matchedTestCases.isEmpty()) {
-            try {
-              matchedTestCases =
-                  moblyTestLoader.getTestNamesInModule(
-                      Path.of(
-                          requireNonNull(moduleNameToConfigFilePathMap.get(originalModuleName))),
-                      entry.getValue());
-            } catch (MobileHarnessException e) {
+        ImmutableList.Builder<String> matchedTestCases = ImmutableList.builder();
+        if (!includeTestCaseMap.isEmpty() || !excludeTestCaseMap.isEmpty()) {
+          try {
+            ImmutableSetMultimap<String, String> allTestCases =
+                moblyTestLoader.getTestNamesInModule(
+                    Path.of(requireNonNull(moduleNameToConfigFilePathMap.get(originalModuleName))),
+                    entry.getValue());
+            if (includeTestCaseMap.isEmpty()) {
+              includeTestCaseMap = allTestCases.asMap();
+            }
+            for (Entry<String, Collection<String>> testCaseEntry : includeTestCaseMap.entrySet()) {
+              String testClass = testCaseEntry.getKey();
+              if (!allTestCases.containsKey(testClass)) {
+                logger
+                    .atWarning()
+                    .with(IMPORTANCE, IMPORTANT)
+                    .log("Test class %s not found in module %s", testClass, originalModuleName);
+                continue;
+              }
+              Collection<String> includeTestCases =
+                  testCaseEntry.getValue().isEmpty()
+                      ? allTestCases.get(testClass)
+                      : testCaseEntry.getValue();
+              if (excludeTestCaseMap.containsKey(testClass)) {
+                Collection<String> excludeTestCases = excludeTestCaseMap.get(testClass);
+                // Exclude all test cases in the test class
+                if (excludeTestCases.isEmpty()) {
+                  continue;
+                }
+                matchedTestCases.addAll(
+                    includeTestCases.stream()
+                        .filter(testName -> !excludeTestCases.contains(testName))
+                        .collect(toImmutableList()));
+              } else {
+                matchedTestCases.addAll(includeTestCases);
+              }
+            }
+            if (matchedTestCases.build().isEmpty()) {
               logger
                   .atWarning()
                   .with(IMPORTANCE, IMPORTANT)
-                  .withCause(e)
                   .log(
-                      "Failed to get all test names from module %s. Will run all test cases in the"
-                          + " module",
-                      originalModuleName);
+                      "No test cases left after filtering.\nIncludes: %s.\nExcludes: %s\n"
+                          + "No job created for this module: %s.",
+                      includeTestCaseMap, excludeTestCaseMap, expandedModuleName);
+              continue;
             }
-          }
-          matchedTestCases =
-              matchedTestCases.stream()
-                  .filter(testName -> !excludedTestNames.contains(testName))
-                  .collect(toImmutableList());
-          if (matchedTestCases.isEmpty()) {
-            logger.atInfo().log(
-                "Test case exclude filters filtered every test cases: %s.\n"
-                    + "No job created for this module: %s.",
-                excludedTestNames, expandedModuleName);
-            continue;
+          } catch (MobileHarnessException e) {
+            logger
+                .atWarning()
+                .with(IMPORTANCE, IMPORTANT)
+                .withCause(e)
+                .log(
+                    "Failed to get all test names from module %s. Will run all test cases in the"
+                        + " module",
+                    originalModuleName);
           }
         }
 
@@ -929,7 +953,7 @@ public class SessionRequestHandlerUtil {
                 moduleAbi,
                 moduleParameter,
                 moduleArgMap,
-                matchedTestCases,
+                matchedTestCases.build(),
                 jobTimeout,
                 testTimeout,
                 startTimeout,
@@ -1030,23 +1054,41 @@ public class SessionRequestHandlerUtil {
         .resolve("device_configurations.textproto");
   }
 
+  private void parseIncludeTestNames(String testName, Map<String, Collection<String>> filterMap) {
+    parseTestName(testName, filterMap, /* isExcluded= */ false);
+  }
+
+  private void parseExcludeTestNames(String testName, Map<String, Collection<String>> filterMap) {
+    parseTestName(testName, filterMap, /* isExcluded= */ true);
+  }
+
   /**
-   * TestName is set with pattern "TestClassName#TestCaseName" while Mobly needs the pattern
+   * Parses the test name and adds it to the filter map.
+   *
+   * <p>For include filter, includes specified test cases if test class and test case are both
+   * specified. For exclude filter, excludes the whole test class if test class and test case are
+   * both specified.
+   *
+   * <p>TestName is set with pattern "TestClassName#TestCaseName" while Mobly needs the pattern
    * "TestClassName.TestCaseName".
    */
-  private String parseTestName(@Nullable String testName) {
-    if (testName == null) {
-      return "";
+  private void parseTestName(
+      String testName, Map<String, Collection<String>> filterMap, boolean isExcluded) {
+    List<String> list =
+        Splitter.on('#').limit(2).trimResults().omitEmptyStrings().splitToList(testName);
+    String testClass = list.get(0);
+    if (list.size() == 1) {
+      if (isExcluded) {
+        filterMap.put(testClass, new HashSet<>());
+      } else {
+        filterMap.putIfAbsent(testClass, new HashSet<>());
+      }
+    } else if (list.size() == 2) {
+      if (isExcluded && filterMap.containsKey(testClass) && filterMap.get(testClass).isEmpty()) {
+        return;
+      }
+      filterMap.computeIfAbsent(testClass, k -> new HashSet<>()).add(Joiner.on('.').join(list));
     }
-    List<String> list = Splitter.on('#').trimResults().omitEmptyStrings().splitToList(testName);
-    if (list.size() == 2) {
-      return Joiner.on('.').join(list);
-    }
-    logger
-        .atWarning()
-        .with(IMPORTANCE, IMPORTANT)
-        .log("Failed to parse test case name from [%s].", testName);
-    return "";
   }
 
   private JobInfo createXtsNonTradefedJob(
