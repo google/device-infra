@@ -95,3 +95,15 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+java_library(
+    name = "config_module",
+    srcs = ["ApiConfigModule.java"],
+    visibility = [
+        "//:deviceinfra_all_pkg",
+    ],
+    deps = [
+        ":config",
+        "@maven//:com_google_inject_guice",
+    ],
+)
