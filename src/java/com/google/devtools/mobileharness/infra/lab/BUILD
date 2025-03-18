@@ -136,6 +136,7 @@ java_library(
         "@io_grpc_grpc_java//netty",
         "@io_grpc_grpc_java//services:reflection",
         "@maven//:com_google_guava_guava",
+        "@maven//:com_google_guava_guava:service_module",
         "@maven//:com_google_inject_extensions_guice_assistedinject",
         "@maven//:com_google_inject_guice",
         "@maven//:javax_inject_jsr330_api",
