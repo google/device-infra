@@ -140,21 +140,17 @@ public class Result {
         return Test.TestResult.PASS;
       case FAIL:
         return Test.TestResult.FAIL;
-      case ERROR:
-      default:
-        return Test.TestResult.ERROR;
       case TIMEOUT:
         return Test.TestResult.TIMEOUT;
       case SKIP:
         return Test.TestResult.SKIP;
-      case ALLOC_FAIL:
-        return Test.TestResult.ALLOC_FAIL;
       case INFRA_ERROR:
         return Test.TestResult.INFRA_ERROR;
-      case ALLOC_ERROR:
-        return Test.TestResult.ALLOC_ERROR;
       case ABORT:
         return Test.TestResult.ABORT;
+      case ERROR:
+      default:
+        return Test.TestResult.ERROR;
     }
   }
 

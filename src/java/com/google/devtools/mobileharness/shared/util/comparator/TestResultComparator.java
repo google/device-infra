@@ -41,12 +41,6 @@ public class TestResultComparator implements Comparator<TestResult> {
       case TIMEOUT:
         priority = 2;
         break;
-      case ALLOC_ERROR:
-        priority = 3;
-        break;
-      case ALLOC_FAIL:
-        priority = 4;
-        break;
       case ABORT:
         priority = 5;
         break;
