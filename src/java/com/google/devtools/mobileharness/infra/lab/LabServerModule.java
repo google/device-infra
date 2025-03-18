@@ -20,8 +20,12 @@ import static com.google.devtools.mobileharness.shared.util.concurrent.ThreadPoo
 import static com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools.createStandardThreadPool;
 
 import com.google.common.eventbus.EventBus;
+import com.google.common.util.concurrent.AbstractIdleService;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
+import com.google.common.util.concurrent.ServiceModule;
+import com.google.devtools.mobileharness.api.testrunner.device.cache.DeviceCacheProxy;
+import com.google.devtools.mobileharness.infra.container.controller.ContainerFileNotificationCache;
 import com.google.devtools.mobileharness.infra.controller.device.DeviceHelperFactory;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceManager;
 import com.google.devtools.mobileharness.infra.controller.device.TestExecutorProvider;
@@ -39,6 +43,7 @@ import com.google.devtools.mobileharness.infra.controller.test.manager.TestManag
 import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberExceptionLoggingHandler;
 import com.google.devtools.mobileharness.infra.lab.Annotations.DebugThreadPool;
 import com.google.devtools.mobileharness.infra.lab.Annotations.GlobalEventBus;
+import com.google.devtools.mobileharness.infra.lab.Annotations.GlobalEventBusSubscriber;
 import com.google.devtools.mobileharness.infra.lab.controller.LabDirectTestRunnerHolder;
 import com.google.devtools.mobileharness.infra.lab.rpc.service.ExecTestServiceImpl;
 import com.google.devtools.mobileharness.shared.file.resolver.AbstractFileResolver;
@@ -48,15 +53,19 @@ import com.google.devtools.mobileharness.shared.file.resolver.FileResolver;
 import com.google.devtools.mobileharness.shared.file.resolver.GcsFileResolver;
 import com.google.devtools.mobileharness.shared.file.resolver.LocalFileResolver;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.quota.ContainerQuotaProxy;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.inject.AbstractModule;
 import com.google.inject.Key;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.assistedinject.FactoryModuleBuilder;
+import com.google.inject.multibindings.Multibinder;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageManager;
 import com.google.wireless.qa.mobileharness.shared.constant.ExitCode;
 import java.time.Clock;
+import java.util.Set;
+import javax.inject.Inject;
 
 /** Guice module for {@link LabServer}. */
 @SuppressWarnings("AvoidObjectArrays")
@@ -83,6 +92,14 @@ public class LabServerModule extends AbstractModule {
     bind(new Key<TestManager<?>>() {}).to(ProxyTestManager.class);
     bind(LabDirectTestRunnerHolder.class).to(ProxyTestManager.class);
     bind(EventBus.class).annotatedWith(GlobalEventBus.class).toInstance(globalInternalBus);
+
+    // Create an empty Multibinder for the EventBus.
+    Multibinder<Object> subscriberBinder =
+        Multibinder.newSetBinder(binder(), Key.get(Object.class, GlobalEventBusSubscriber.class));
+    subscriberBinder.addBinding().to(ContainerQuotaProxy.class);
+    subscriberBinder.addBinding().to(DeviceCacheProxy.class);
+    subscriberBinder.addBinding().to(ContainerFileNotificationCache.class);
+    install(ServiceModule.forService(EventBusService.class));
 
     // Binds utils.
     bind(ListeningExecutorService.class)
@@ -178,5 +195,28 @@ public class LabServerModule extends AbstractModule {
         testId -> LabDirectTestRunnerUtil.getTestMessagePoster(testManager, testId));
     MessagingManagerHolder.initialize(messagingManager);
     return factory.create(mainThreadPool);
+  }
+
+  private static class EventBusService extends AbstractIdleService {
+    private final EventBus eventBus;
+    private final Set<Object> eventBusSubscribers;
+
+    @Inject
+    EventBusService(
+        @GlobalEventBus EventBus eventBus,
+        @GlobalEventBusSubscriber Set<Object> eventBusSubscribers) {
+      this.eventBus = eventBus;
+      this.eventBusSubscribers = eventBusSubscribers;
+    }
+
+    @Override
+    protected void startUp() {
+      eventBusSubscribers.forEach(eventBus::register);
+    }
+
+    @Override
+    protected void shutDown() {
+      eventBusSubscribers.forEach(eventBus::unregister);
+    }
   }
 }
