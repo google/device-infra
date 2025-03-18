@@ -50,18 +50,6 @@ public final class ResultUtil {
 
   /** Gets test result with the given exception. */
   public static TestResult getResultByException(MobileHarnessException e) {
-    ErrorId errorId = e.getErrorId();
-    switch (errorId.type()) {
-      case CUSTOMER_ISSUE:
-        return TestResult.FAIL;
-      case INFRA_ISSUE:
-        return TestResult.INFRA_ERROR;
-      case DEPENDENCY_ISSUE:
-      case UNCLASSIFIED:
-      case UNDETERMINED:
-      case UNRECOGNIZED:
-        break;
-    }
     return TestResult.ERROR;
   }
 
