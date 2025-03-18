@@ -29,6 +29,7 @@ import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.inject.Inject;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -61,11 +62,8 @@ public class ChecksumUtil {
 
   private final HashFunction hashFunction;
 
-  /**
-   * @deprecated Use {@link #ChecksumUtil(HashFunction)} instead.
-   */
-  @Deprecated
-  public ChecksumUtil() {
+  @Inject
+  ChecksumUtil() {
     this(Hashing.crc32());
   }
 

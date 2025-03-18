@@ -34,5 +34,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "@maven//:com_google_guava_guava",
+        "@maven//:com_google_inject_guice",
     ],
 )
