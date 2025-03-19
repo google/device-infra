@@ -16,6 +16,8 @@
 
 package com.google.devtools.common.metrics.stability.rpc.grpc;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.common.metrics.stability.converter.DeserializedException;
@@ -29,10 +31,12 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
 import io.grpc.Metadata;
 import io.grpc.Status;
+import io.grpc.StatusException;
 import io.grpc.StatusRuntimeException;
 import io.grpc.protobuf.ProtoUtils;
 import java.io.IOException;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 /**
  * Utility for converting between {@link StatusRuntimeException} and {@linkplain
@@ -108,56 +112,70 @@ public class GrpcExceptionUtil {
     return result;
   }
 
-  private static Optional<DeserializedException> getApplicationError(
-      StatusRuntimeException grpcException) throws IOException {
-    Optional<RpcError> payload = getPayload(grpcException);
-    return payload.isPresent()
-        ? RpcErrorUtil.toExceptionDetail(payload.get())
+  private static Optional<DeserializedException> getApplicationError(Throwable throwable)
+      throws IOException {
+    Optional<RpcError> error =
+        getPayload(throwable)
+            .filter(RpcErrorPayload::hasRpcError)
+            .map(RpcErrorPayload::getRpcError);
+    return error.isPresent()
+        ? RpcErrorUtil.toExceptionDetail(error.get())
             .map(ErrorModelConverter::toDeserializedException)
         : Optional.empty();
   }
 
-  private static Optional<RpcError> getPayload(StatusRuntimeException grpcException) {
-    RpcErrorPayload payload;
-
-    Metadata trailers = grpcException.getTrailers();
-    if (trailers == null) {
-      payload = null;
-    } else {
-      RpcErrorPayload payloadFromTrailers =
-          trailers.get(ProtoUtils.keyForProto(RpcErrorPayload.getDefaultInstance()));
-      if (payloadFromTrailers == null) {
-        // For local generated exceptions.
-        byte[] bytes =
-            trailers.get(
-                Metadata.Key.of(
-                    String.format(
-                        "__crpc_mse_%d%s", // See com.google.cloud.rpc2.prodx.MessageSetErrors.
-                        300713958, // RpcErrorPayload.MESSAGE_SET_EXTENSION_FIELD_NUMBER
-                        Metadata.BINARY_HEADER_SUFFIX),
-                    Metadata.BINARY_BYTE_MARSHALLER));
-        if (bytes == null) {
-          payload = null;
-        } else {
-          RpcErrorPayload payloadFromBinary = null;
-          try {
-            payloadFromBinary =
-                RpcErrorPayload.parseFrom(bytes, ProtoExtensionRegistry.getGeneratedRegistry());
-
-          } catch (InvalidProtocolBufferException e) {
-            logger.atWarning().withCause(grpcException).log(
-                "Failed to parse payload from StatusRuntimeException trailers: %s", trailers);
-          }
-          payload = payloadFromBinary;
-        }
-      } else {
-        payload = payloadFromTrailers;
+  public static Optional<RpcErrorPayload> getPayload(Throwable throwable) {
+    Throwable cause = checkNotNull(throwable, "throwable cannot be null");
+    while (cause != null) {
+      if (cause instanceof StatusRuntimeException) {
+        StatusRuntimeException e = (StatusRuntimeException) cause;
+        return getPayload(e.getStatus(), e.getTrailers(), e);
+      } else if (cause instanceof StatusException) {
+        StatusException e = (StatusException) cause;
+        return getPayload(e.getStatus(), e.getTrailers(), e);
       }
+      cause = cause.getCause();
     }
+    return Optional.empty();
+  }
 
-    return payload != null && payload.hasRpcError()
-        ? Optional.of(payload.getRpcError())
-        : Optional.empty();
+  private static Optional<RpcErrorPayload> getPayload(
+      Status status, Metadata trailers, Throwable cause) {
+    return Stream.of(getPayloadFromProto(trailers), getPayloadFromBinary(trailers, cause))
+        .filter(Optional::isPresent)
+        .flatMap(Optional::stream)
+        .findFirst();
+  }
+
+  private static Optional<RpcErrorPayload> getPayloadFromProto(Metadata trailers) {
+    return Optional.ofNullable(
+        trailers.get(ProtoUtils.keyForProto(RpcErrorPayload.getDefaultInstance())));
+  }
+
+  private static Optional<RpcErrorPayload> getPayloadFromBinary(
+      Metadata trailers, Throwable cause) {
+    // For local generated exceptions.
+    byte[] bytes =
+        trailers.get(
+            Metadata.Key.of(
+                String.format(
+                    "__crpc_mse_%d%s", // See com.google.cloud.rpc2.prodx.MessageSetErrors.
+                    300713958, // RpcErrorPayload.MESSAGE_SET_EXTENSION_FIELD_NUMBER
+                    Metadata.BINARY_HEADER_SUFFIX),
+                Metadata.BINARY_BYTE_MARSHALLER));
+    if (bytes == null) {
+      return Optional.empty();
+    }
+    try {
+      return Optional.of(
+          RpcErrorPayload.parseFrom(bytes, ProtoExtensionRegistry.getGeneratedRegistry()));
+
+    } catch (InvalidProtocolBufferException e) {
+      logger.atWarning().withCause(cause).log(
+          "Failed to parse payload from %s trailers: %s",
+          cause.getClass().getSimpleName(), trailers);
+      return Optional.empty();
+    }
   }
 
   /** Branched from com.google.cloud.rpc2.prodx.MessageSetErrors.addToMetadata(). */
