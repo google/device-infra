@@ -228,7 +228,10 @@ public final class AtsServerSessionPluginTest {
             .setUserId("user_id")
             .addCommands(commandInfo)
             .setTestEnvironment(
-                TestEnvironment.newBuilder().setOutputFileUploadUrl(OUTPUT_FILE_UPLOAD_URL).build())
+                TestEnvironment.newBuilder()
+                    .setRetryCommandLine("retry --retry 0")
+                    .setOutputFileUploadUrl(OUTPUT_FILE_UPLOAD_URL)
+                    .build())
             .setMaxRetryOnTestFailures(3)
             .addTestResources(
                 TestResource.newBuilder()
@@ -842,6 +845,74 @@ public final class AtsServerSessionPluginTest {
     assertThat(requestDetail.getState()).isEqualTo(RequestState.COMPLETED);
     assertThat(requestDetail.getTestContextMap().get(commandId))
         .isEqualTo(newMultiCommandRequest.getPrevTestContext());
+  }
+
+  @Test
+  public void onSessionEnded_retryNeededHasCurrentContext_emptyRetryCommand() throws Exception {
+    request =
+        request.toBuilder()
+            .setMaxRetryOnTestFailures(1)
+            .setTestEnvironment(request.getTestEnvironment().toBuilder().clearRetryCommandLine())
+            .build();
+    when(xtsJobCreator.createXtsNonTradefedJobs(any())).thenReturn(ImmutableList.of());
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(
+                        SessionRequest.newBuilder().setNewMultiCommandRequest(request).build()))
+                .build());
+    plugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+    verify(sessionInfo).addJob(jobInfo);
+    Timing timing = new Timing();
+    when(jobInfo.timing()).thenReturn(timing);
+    timing.start();
+    var unused = timing.end();
+
+    when(testInfo.status()).thenReturn(new Status(timing).set(TestStatus.DONE));
+    Result result = new Result(timing, new Params(timing)).set(TestResult.PASS);
+    when(testInfo.result()).thenReturn(result);
+
+    when(jobInfo.result()).thenReturn(result);
+    JobType jobType = JobType.newBuilder().setDriver("XtsTradefedTest").build();
+    when(jobInfo.type()).thenReturn(jobType);
+    plugin.onJobEnded(new JobEndEvent(jobInfo, null));
+    CreateSessionResponse response =
+        CreateSessionResponse.newBuilder()
+            .setSessionId(SessionId.newBuilder().setId("retry_session_id"))
+            .build();
+    when(localSessionStub.createSession(any())).thenReturn(response);
+    com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result.Builder
+        resultBuilder =
+            com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result
+                .newBuilder()
+                .setSummary(
+                    Summary.newBuilder().setPassed(5).setFailed(5).setModulesTotal(1).build());
+    when(sessionResultHandlerUtil.processResult(
+            any(), any(), any(), any(), eq(ImmutableList.of(jobInfo)), any()))
+        .thenReturn(Optional.of(resultBuilder.build()));
+    Mockito.doReturn(true).when(localFileUtil).isFileExist(any(Path.class));
+
+    plugin.onSessionEnded(new SessionEndedEvent(sessionInfo, null));
+    ArgumentCaptor<CreateSessionRequest> requestCaptor =
+        ArgumentCaptor.forClass(CreateSessionRequest.class);
+    verify(localSessionStub).createSession(requestCaptor.capture());
+    SessionRequest sessionRequest =
+        requestCaptor
+            .getValue()
+            .getSessionConfig()
+            .getSessionPluginConfigs()
+            .getSessionPluginConfig(0)
+            .getExecutionConfig()
+            .getConfig()
+            .unpack(SessionRequest.class);
+    NewMultiCommandRequest newMultiCommandRequest = sessionRequest.getNewMultiCommandRequest();
+    assertThat(newMultiCommandRequest.getMaxRetryOnTestFailures()).isEqualTo(0);
+    assertThat(newMultiCommandRequest.getRetryPreviousSessionId()).isEqualTo("session_id");
+    assertThat(newMultiCommandRequest.getAllPreviousSessionIdsList()).containsExactly("session_id");
+    assertThat(newMultiCommandRequest.getCommandsCount()).isEqualTo(1);
+    assertThat(newMultiCommandRequest.getCommandsList().get(0).getCommandLine())
+        .isEqualTo("retry --retry 0");
   }
 
   @Test

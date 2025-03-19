@@ -90,6 +90,7 @@ final class AtsServerSessionPlugin {
           .setKillTradefedSignal(2)
           .setCancelReason("User cancelled the test request")
           .build();
+  private static final String DEFAULT_RETRY_COMMAND_LINE = "retry --retry 0";
 
   private final Object sessionLock = new Object();
 
@@ -456,6 +457,9 @@ final class AtsServerSessionPlugin {
           .setPrevTestContext(requestDetail.getTestContextMap().values().iterator().next())
           .clearCommands();
       String retryCommandLine = originalRequest.getTestEnvironment().getRetryCommandLine();
+      if (retryCommandLine.isEmpty()) {
+        retryCommandLine = DEFAULT_RETRY_COMMAND_LINE;
+      }
       retryRequestBuilder.addCommands(
           originalRequest.getCommandsList().get(0).toBuilder()
               .setCommandLine(retryCommandLine)
