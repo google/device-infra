@@ -45,10 +45,12 @@ import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportPr
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Run;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.RunHistory;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Summary;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Test;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.TestCase;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.MoblyReportParser.MoblyReportInfo;
 import com.google.devtools.mobileharness.infra.ats.console.result.xml.XmlConstants;
 import com.google.devtools.mobileharness.infra.ats.console.util.tradefed.TestRecordProtoUtil;
+import com.google.devtools.mobileharness.platform.android.xts.common.TestStatus;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommonUtil;
 import java.io.File;
 import java.io.IOException;
@@ -246,26 +248,38 @@ public class CompatibilityReportMerger {
     long mergedModuleRuntime = 0L;
     boolean mergedModuleDone = true;
     int mergedModulePassedTests = 0;
+    int mergedModuleFailedTests = 0;
     int mergedModuleTotalTests = 0;
     List<TestCase> testCases = new ArrayList<>();
     Reason moduleNotDoneReason = null;
     for (Module module : modules) {
       mergedModuleRuntime += module.getRuntimeMillis();
       mergedModuleDone &= module.getDone();
-      mergedModulePassedTests += module.getPassed();
-      mergedModuleTotalTests += module.getTotalTests();
       if (module.hasReason()) {
         moduleNotDoneReason = module.getReason();
       }
       testCases.addAll(module.getTestCaseList());
     }
-    testCases = mergeTestCasesFromSameModule(testCases);
+    ImmutableList<TestCase> mergedtestCases = mergeTestCasesFromSameModule(testCases);
+    for (TestCase testCase : mergedtestCases) {
+      for (Test test : testCase.getTestList()) {
+        if (test.getResult()
+            .equals(TestStatus.convertToTestStatusCompatibilityString(TestStatus.PASSED))) {
+          mergedModulePassedTests++;
+        } else if (test.getResult()
+            .equals(TestStatus.convertToTestStatusCompatibilityString(TestStatus.FAILURE))) {
+          mergedModuleFailedTests++;
+        }
+        mergedModuleTotalTests++;
+      }
+    }
     mergedModule
         .setRuntimeMillis(mergedModuleRuntime)
         .setDone(mergedModuleDone)
         .setPassed(mergedModulePassedTests)
+        .setFailedTests(mergedModuleFailedTests)
         .setTotalTests(mergedModuleTotalTests)
-        .addAllTestCase(testCases);
+        .addAllTestCase(mergedtestCases);
     if (moduleNotDoneReason != null) {
       mergedModule.setReason(moduleNotDoneReason);
     }
@@ -300,11 +314,37 @@ public class CompatibilityReportMerger {
     }
 
     TestCase.Builder mergedTestCase = TestCase.newBuilder().setName(testCases.get(0).getName());
-    for (TestCase testCase : testCases) {
-      mergedTestCase.addAllTest(testCase.getTestList());
+    LinkedHashMap<String, ImmutableList<Test>> testMap =
+        testCases.stream()
+            .flatMap(testCase -> testCase.getTestList().stream())
+            .collect(Collectors.groupingBy(Test::getName, LinkedHashMap::new, toImmutableList()));
+    for (ImmutableList<Test> tests : testMap.values()) {
+      mergeTestsWithSameName(tests).ifPresent(mergedTestCase::addTest);
     }
 
     return Optional.of(mergedTestCase.build());
+  }
+
+  private static Optional<Test> mergeTestsWithSameName(List<Test> tests) {
+    if (tests.isEmpty()) {
+      return Optional.empty();
+    } else if (tests.size() == 1) {
+      return Optional.of(tests.get(0));
+    }
+
+    logger.atInfo().log("Found %d duplicated test cases: %s", tests.size(), tests.get(0).getName());
+    Optional<Test> passTest =
+        tests.stream()
+            .filter(
+                test ->
+                    test.getResult()
+                        .equals(
+                            TestStatus.convertToTestStatusCompatibilityString(TestStatus.PASSED)))
+            .findFirst();
+    if (passTest.isPresent()) {
+      return passTest;
+    }
+    return Optional.of(tests.get(0));
   }
 
   /**

@@ -208,11 +208,29 @@ public final class CompatibilityReportMergerTest {
     Module module1 = result.getModuleInfoList().get(0);
     assertThat(module1.getName()).isEqualTo("Module1");
     assertThat(module1.getRuntimeMillis()).isEqualTo(7495 + 7495);
-    assertThat(module1.getPassed()).isEqualTo(6);
-    assertThat(module1.getTotalTests()).isEqualTo(8);
+    assertThat(module1.getPassed()).isEqualTo(3);
+    assertThat(module1.getFailedTests()).isEqualTo(1);
+    assertThat(module1.getTotalTests()).isEqualTo(4);
     assertThat(module1.getTestCaseCount()).isEqualTo(2);
-    assertThat(module1.getTestCase(0).getTestCount()).isEqualTo(4);
-    assertThat(module1.getTestCase(1).getTestCount()).isEqualTo(4);
+    assertThat(module1.getTestCase(0).getTestCount()).isEqualTo(2);
+    assertThat(module1.getTestCase(1).getTestCount()).isEqualTo(2);
+    Module module2 = result.getModuleInfoList().get(1);
+    assertThat(module2.getName()).isEqualTo("Module2");
+    assertThat(module2.getRuntimeMillis()).isEqualTo(7495 + 7495);
+    assertThat(module2.getPassed()).isEqualTo(6);
+    assertThat(module2.getFailedTests()).isEqualTo(0);
+    assertThat(module2.getTotalTests()).isEqualTo(6);
+    assertThat(module2.getTestCaseCount()).isEqualTo(3);
+    assertThat(module2.getTestCase(0).getTestCount()).isEqualTo(2);
+    assertThat(module2.getTestCase(1).getTestCount()).isEqualTo(2);
+    assertThat(module2.getTestCase(2).getTestCount()).isEqualTo(2);
+    Module module3 = result.getModuleInfoList().get(2);
+    assertThat(module3.getName()).isEqualTo("Module3");
+    assertThat(module3.getRuntimeMillis()).isEqualTo(7495);
+    assertThat(module3.getPassed()).isEqualTo(2);
+    assertThat(module3.getTotalTests()).isEqualTo(2);
+    assertThat(module3.getTestCaseCount()).isEqualTo(1);
+    assertThat(module3.getTestCase(0).getTestCount()).isEqualTo(2);
   }
 
   @Test

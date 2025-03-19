@@ -34,11 +34,10 @@
     </TestCase>
     <TestCase name="android.cts.Hello2Test">
       <Test result="pass" name="testMethod1" />
-      <Test result="pass" name="testMethod2" />
     </TestCase>
     <TestCase name="android.cts.Hello3Test">
       <Test result="pass" name="testMethod1" />
-      <Test result="pass" name="testMethod2" />
+      <Test result="fail" name="testMethod2" />
     </TestCase>
   </Module>
   <Module name="Module3" abi="arm64-v8a" runtime="7495" done="true" pass="2" total_tests="2">
