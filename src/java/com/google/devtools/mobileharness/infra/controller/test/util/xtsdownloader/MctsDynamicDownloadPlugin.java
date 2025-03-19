@@ -183,12 +183,10 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
       for (String mctsNameAndVersioncode : mctsNamesOfPreloadedMainlineModules.get(PRELOADED_KEY)) {
         String moduleVersioncode =
             mctsNameAndVersioncode.substring(mctsNameAndVersioncode.indexOf(":") + 1);
-        // TODO: Remove the logic to check if the preloadedMainlineVersion equals 36
-        // after Android V release.
         String downloadUrl =
             String.format(
                 "https://dl.google.com/dl/android/xts/mcts/%s/%s/%s.zip",
-                (moduleVersioncode.equals(MAINLINE_AOSP_VERSION_KEY) || aospVersion.equals("36"))
+                moduleVersioncode.equals(MAINLINE_AOSP_VERSION_KEY)
                     ? aospVersion
                     : moduleVersioncode,
                 deviceAbi,

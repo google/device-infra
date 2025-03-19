@@ -258,8 +258,6 @@ CtsTestAppWithQueryAllPackagesPermission
 CtsTetheringTest
 CtsTfliteNnapiDelegateTestCases
 CtsThreadNetworkTestCases
-CtsUsbTests
-CtsUsbSerialTestApp
 CtsUwbMultiDeviceTestCase_FiraRangingTests
 CtsUwbMultiDeviceTestCase_UwbManagerTests
 CtsUwbTestCases

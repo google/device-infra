@@ -138,7 +138,7 @@ public class XtsTradefedTest extends BaseDriver
           "--compatibility:exclude-filter");
 
   private static final ImmutableSet<String> DYNAMIC_JOB_TEST_DEPENDENCIES =
-      ImmutableSet.of("CtsPreconditions", "CtsDeviceInfo", "CtsUsbSerialTestApp");
+      ImmutableSet.of("CtsPreconditions", "CtsDeviceInfo");
 
   // Will remove these cases from MCTS.
   private static final ImmutableSet<String> STATIC_JOB_TEST_DEPENDENCIES =
