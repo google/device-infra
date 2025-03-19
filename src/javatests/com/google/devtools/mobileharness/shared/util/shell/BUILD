@@ -25,7 +25,9 @@ java_library(
     name = "shell",
     srcs = glob(["*.java"]),
     deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/shell",
+        "//src/java/com/google/devtools/mobileharness/shared/util/shell:ansi_terminal",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "@maven//:com_google_guava_guava",
         "@maven//:junit_junit",

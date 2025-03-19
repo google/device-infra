@@ -25,3 +25,9 @@ java_library(
     srcs = ["ShellUtils.java"],
     deps = ["@maven//:com_google_guava_guava"],
 )
+
+java_library(
+    name = "ansi_terminal",
+    srcs = ["AnsiTerminal.java"],
+    deps = ["@com_google_protobuf//:protobuf_java"],
+)
