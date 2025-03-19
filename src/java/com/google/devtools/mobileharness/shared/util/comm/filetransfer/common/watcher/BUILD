@@ -46,7 +46,6 @@ java_library(
     deps = [
         ":file_transfer_event",
         ":file_transfer_watcher",
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/constant/closeable:mobile_harness_auto_closeable",
         "//src/java/com/google/wireless/qa/mobileharness/shared/comm/filetransfer",
         "@maven//:com_google_guava_guava",

@@ -33,18 +33,6 @@ public interface FileTransferClient {
    * @param fileId ID of file
    * @param tag tag of file
    * @param path path of file to send
-   * @deprecated Use {@link #sendFile(String, String, String, String)} instead.
-   */
-  @Deprecated
-  void sendFile(String fileId, String tag, String path)
-      throws MobileHarnessException, InterruptedException;
-
-  /**
-   * Sends files to receiver server.
-   *
-   * @param fileId ID of file
-   * @param tag tag of file
-   * @param path path of file to send
    * @param checksum checksum of file to send
    */
   void sendFile(String fileId, String tag, String path, @Nullable String checksum)

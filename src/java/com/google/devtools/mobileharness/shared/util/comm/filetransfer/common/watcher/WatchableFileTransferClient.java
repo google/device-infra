@@ -17,7 +17,6 @@
 package com.google.devtools.mobileharness.shared.util.comm.filetransfer.common.watcher;
 
 import com.google.common.collect.Sets;
-import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.constant.closeable.MobileHarnessAutoCloseable;
 import com.google.wireless.qa.mobileharness.shared.comm.filetransfer.FileTransferClient;
 import java.util.Set;
@@ -49,12 +48,6 @@ public abstract class WatchableFileTransferClient implements FileTransferClient 
   public MobileHarnessAutoCloseable addWatcher(FileTransferWatcher watcher) {
     watchers.add(watcher);
     return new WatcherRemover(watcher);
-  }
-
-  @Override
-  public void sendFile(String fileId, String tag, String path)
-      throws MobileHarnessException, InterruptedException {
-    sendFile(fileId, tag, path, null);
   }
 
   /** Notifies all observers with {@code event}. */
