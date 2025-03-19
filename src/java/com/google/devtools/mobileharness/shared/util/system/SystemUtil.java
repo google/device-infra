@@ -112,6 +112,8 @@ public class SystemUtil {
   /** Pattern of UBUNTU version. */
   private static final Pattern UBUNTU_VERSION_PATTERN = Pattern.compile("Description:\\s+(.*)");
 
+  private static final Pattern WHITESPACE_PATTERN = Pattern.compile("\\s+");
+
   @VisibleForTesting static final String GUITAR_CHANGELIST_ENV_VAR = "GUITAR_CHANGELIST";
   private static final Pattern CHANGELIST_PATTERN = Pattern.compile("^\\d+$");
   private static volatile boolean processIsShuttingDown;
@@ -1327,6 +1329,23 @@ public class SystemUtil {
       logger.atWarning().log(
           "Failed to get process working directory for process id %d with output [%s]",
           processId, String.valueOf(output));
+      return Optional.empty();
+    }
+  }
+
+  /** Gets the amount of root disk space in human readable size on the local system. */
+  public Optional<String> getRootDiskSpace() throws InterruptedException {
+    String output = "";
+    try {
+      output = executor.run(Command.of("df", "-h", "/"));
+      return Optional.of(
+          Iterables.get(
+              Splitter.on(WHITESPACE_PATTERN)
+                  .split(Iterables.get(Splitter.on('\n').split(output), 1)),
+              1));
+    } catch (CommandException | IndexOutOfBoundsException e) {
+      logger.atWarning().log(
+          "Failed to get root disk space with error %s and output %s", e.getMessage(), output);
       return Optional.empty();
     }
   }
