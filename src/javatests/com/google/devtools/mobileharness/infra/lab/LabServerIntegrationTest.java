@@ -151,6 +151,7 @@ public class LabServerIntegrationTest {
                             "--adb_dont_kill_server=true",
                             "--android_device_daemon=false",
                             "--api_config=" + API_CONFIG_FILE_PATH,
+                            "--cache_installed_apks=false",
                             "--clear_android_device_multi_users=false",
                             "--detect_adb_device=false",
                             "--disable_calling=false",
