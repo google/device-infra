@@ -28,7 +28,7 @@
  * the License.
  */
 
-package com.google.devtools.common.util.concurrent;
+package com.google.devtools.mobileharness.shared.util.concurrent;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
@@ -38,6 +38,7 @@ import static com.google.inject.multibindings.Multibinder.newSetBinder;
 
 import com.google.common.annotations.GwtIncompatible;
 import com.google.common.annotations.J2ktIncompatible;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
 import com.google.common.util.concurrent.ServiceManager.Listener;

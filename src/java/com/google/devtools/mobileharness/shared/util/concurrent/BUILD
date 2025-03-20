@@ -58,6 +58,15 @@ java_library(
 )
 
 java_library(
+    name = "external_service_manager",
+    srcs = ["ExternalServiceManager.java"],
+    deps = [
+        "@maven//:com_google_inject_guice",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
     name = "mobile_harness_callable",
     srcs = ["MobileHarnessCallable.java"],
     deps = ["//src/java/com/google/devtools/mobileharness/api/model/error"],
@@ -72,6 +81,19 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "service_module",
+    srcs = ["ServiceModule.java"],
+    deps = [
+        ":external_service_manager",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_errorprone_error_prone_annotations",
+        "@maven//:com_google_guava_guava",
+        "@maven//:com_google_inject_guice",
+        "@maven//:javax_inject_jsr330_api",
     ],
 )
 

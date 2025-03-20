@@ -25,9 +25,12 @@ java_library(
     name = "concurrent",
     srcs = glob(["*.java"]),
     deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:external_service_manager",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:more_futures",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:service_module",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "@maven//:com_google_guava_guava",
+        "@maven//:com_google_inject_guice",
         "@maven//:junit_junit",
     ],
 )
