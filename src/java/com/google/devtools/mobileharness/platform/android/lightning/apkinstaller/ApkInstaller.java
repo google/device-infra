@@ -32,6 +32,8 @@ import com.google.devtools.mobileharness.platform.android.lightning.shared.Share
 import com.google.devtools.mobileharness.platform.android.lightning.shared.SharedPropertyUtil;
 import com.google.devtools.mobileharness.platform.android.packagemanager.AndroidPackageManagerUtil;
 import com.google.devtools.mobileharness.platform.android.packagemanager.InstallCmdArgs;
+import com.google.devtools.mobileharness.platform.android.packagemanager.ListPackagesArgs;
+import com.google.devtools.mobileharness.platform.android.packagemanager.PackageType;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidVersion;
 import com.google.devtools.mobileharness.platform.android.shared.autovalue.UtilArgs;
 import com.google.devtools.mobileharness.platform.android.shared.constant.PackageConstants;
@@ -710,7 +712,7 @@ public class ApkInstaller {
       String packageName,
       String userId,
       @Nullable LogCollector<?> log)
-      throws InterruptedException {
+      throws MobileHarnessException, InterruptedException {
     // Tries to get md5 from device property, if failed, calculates it from the installed apk file.
     String deviceId = device.getDeviceId();
     String installedApkMd5 = null;
@@ -750,9 +752,29 @@ public class ApkInstaller {
 
     // Skips installation if MD5s match.
     if (apkMd5.equals(installedApkMd5)) {
-      if (Flags.instance().cacheInstalledApks.get()
-          && Strings.isNullOrEmpty(device.getProperty(propertyName))) {
-        device.setProperty(propertyName, apkMd5);
+      if (Flags.instance().cacheInstalledApks.get()) {
+        if (Strings.isNullOrEmpty(device.getProperty(propertyName))) {
+          device.setProperty(propertyName, apkMd5);
+        }
+        // In case the package somehow was uninstalled before but not cleared from the device
+        // property.
+        if (!androidPackageManagerUtil
+            .listPackages(
+                UtilArgs.builder()
+                    .setSerial(deviceId)
+                    .setSdkVersion(sdkVersion)
+                    .setUserId(userId)
+                    .build(),
+                ListPackagesArgs.builder()
+                    .setPackageType(PackageType.ALL)
+                    .setNameFilter(packageName)
+                    .build())
+            .contains(packageName)) {
+          SharedLogUtil.logMsg(
+              logger, log, "Package %s doesn't exist on device %s", packageName, deviceId);
+          device.setProperty(propertyName, null);
+          return false;
+        }
       }
       SharedLogUtil.logMsg(
           logger, log, "Skip installing %s which has been installed before", apkName);
