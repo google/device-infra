@@ -997,6 +997,14 @@ public class SessionResultHandlerUtil {
     }
   }
 
+  public void cleanUpLabGenFileDir(TestInfo testInfo)
+      throws MobileHarnessException, InterruptedException {
+    Optional<String> labGenFileDir = getLabGenFileDir(testInfo);
+    if (labGenFileDir.isPresent()) {
+      localFileUtil.removeFileOrDir(labGenFileDir.get());
+    }
+  }
+
   /** Returns true if any of the {@code jobInfos} has a test with a completed result. */
   public boolean isSessionCompleted(List<JobInfo> jobInfos) {
     if (jobInfos.isEmpty()) {

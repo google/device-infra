@@ -825,6 +825,7 @@ public final class NewMultiCommandRequestHandlerTest {
         .processResult(any(), any(), any(), any(), any(), any());
     verifyUnmountRootDir(DirUtil.getPublicGenDir() + "/session_session_id/file");
     verify(sessionResultHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
+    verify(sessionResultHandlerUtil).cleanUpLabGenFileDir(testInfo);
   }
 
   @Test
@@ -855,6 +856,7 @@ public final class NewMultiCommandRequestHandlerTest {
                 + "/session_id/olc_server_session_logs/olc_server_session_log.txt");
     verifyUnmountRootDir(DirUtil.getPublicGenDir() + "/session_session_id/file");
     verify(sessionResultHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
+    verify(sessionResultHandlerUtil).cleanUpLabGenFileDir(testInfo);
   }
 
   @Test
@@ -882,6 +884,7 @@ public final class NewMultiCommandRequestHandlerTest {
         .processResult(any(), any(), any(), any(), any(), any());
     verifyUnmountRootDir(DirUtil.getPublicGenDir() + "/session_session_id/file");
     verify(sessionResultHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
+    verify(sessionResultHandlerUtil).cleanUpLabGenFileDir(testInfo);
   }
 
   @Test
@@ -1118,6 +1121,7 @@ public final class NewMultiCommandRequestHandlerTest {
             eq(sessionRequestInfoCaptor.getValue()));
 
     verify(sessionResultHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
+    verify(sessionResultHandlerUtil).cleanUpLabGenFileDir(testInfo);
     verifyUnmountRootDir(DirUtil.getPublicGenDir() + "/session_session_id/file");
     String path1 = pathCaptor1.getValue().toString();
     Instant now = Instant.now();

@@ -805,6 +805,14 @@ final class NewMultiCommandRequestHandler {
   @VisibleForTesting
   void cleanup(SessionInfo sessionInfo) throws InterruptedException {
     try {
+      ImmutableList<TestInfo> tests =
+          sessionInfo.getAllJobs().stream()
+              .map(jobInfo -> jobInfo.tests().getAll().values())
+              .flatMap(Collection::stream)
+              .collect(toImmutableList());
+      for (TestInfo testInfo : tests) {
+        sessionResultHandlerUtil.cleanUpLabGenFileDir(testInfo);
+      }
       sessionResultHandlerUtil.cleanUpJobGenDirs(sessionInfo.getAllJobs());
     } catch (MobileHarnessException e) {
       logger.atWarning().withCause(e).log(
