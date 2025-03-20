@@ -557,6 +557,9 @@ public class SessionResultHandlerUtil {
     Path invocationDir = prepareTradefedInvocationDir(tradefedTestInfo, logRootDir);
     Path testLogDir = prepareLogOrResultDirForTest(tradefedTestInfo, invocationDir);
 
+    tradefedTestInfo
+        .properties()
+        .add(XtsConstants.XTS_FINAL_TEST_LOG_DIR_PROPERTY_KEY, invocationDir.toString());
     ImmutableList<Path> genFiles = getGenFilesFromTest(tradefedTestInfo);
     for (Path genFile : genFiles) {
       if (genFile.getFileName().toString().endsWith("gen-files")) {
@@ -733,6 +736,9 @@ public class SessionResultHandlerUtil {
       throws MobileHarnessException, InterruptedException {
     Path testLogDir = prepareLogOrResultDirForTest(nonTradefedTestInfo, logDir);
     ImmutableList<Path> genFiles = getGenFilesFromTest(nonTradefedTestInfo);
+    nonTradefedTestInfo
+        .properties()
+        .add(XtsConstants.XTS_FINAL_TEST_LOG_DIR_PROPERTY_KEY, testLogDir.toString());
     for (Path genFile : genFiles) {
       logger.atInfo().log(
           "Copying non-tradefed test log relevant file/dir [%s] into dir [%s]",

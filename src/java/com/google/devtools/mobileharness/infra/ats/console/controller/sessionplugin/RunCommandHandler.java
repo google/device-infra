@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin;
 
 import static com.google.common.base.Ascii.toUpperCase;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
@@ -63,6 +64,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.annotation.Nullable;
@@ -284,7 +286,7 @@ class RunCommandHandler {
         }
       }
       String xtsTestResultSummary =
-          createXtsTestResultSummary(result, resultDir, logDir, previousResult);
+          createXtsTestResultSummary(allJobs, result, resultDir, logDir, previousResult);
       if (resultDir != null && localFileUtil.isDirExist(resultDir)) {
         // Only create the invocation_summary.txt when the result dir has been created by the result
         // processing.
@@ -418,13 +420,14 @@ class RunCommandHandler {
   }
 
   private String createXtsTestResultSummary(
+      List<JobInfo> allJobs,
       @Nullable Result result,
       @Nullable Path resultDir,
       @Nullable Path logDir,
       @Nullable Result previousResult) {
     return String.format(
-            "%s=========== Result/Log Location ============\n",
-            suiteResultReporter.getSummary(result, previousResult))
+            "%s=========== Result/Log Location ============\n%s",
+            suiteResultReporter.getSummary(result, previousResult), getNonTfModuleLogPath(allJobs))
         + (logDir != null && localFileUtil.isDirExist(logDir)
             ? String.format("LOG DIRECTORY               : %s\n", logDir)
             : "")
@@ -432,5 +435,39 @@ class RunCommandHandler {
             ? String.format("RESULT DIRECTORY            : %s\n", resultDir)
             : "")
         + "=================== End ====================\n";
+  }
+
+  private String getNonTfModuleLogPath(List<JobInfo> jobInfos) {
+    StringBuilder builder = new StringBuilder();
+    builder.append("Failed standalone module log locations:\n");
+    ImmutableMap<String, String> failedNonTfTestLogDirs =
+        jobInfos.stream()
+            .filter(
+                jobInfo ->
+                    jobInfo.resultWithCause().get().type() == TestResult.FAIL
+                        && jobInfo.properties().getBoolean(Job.IS_XTS_NON_TF_JOB).orElse(false)
+                        && jobInfo.properties().has(SessionHandlerHelper.XTS_MODULE_NAME_PROP))
+            .flatMap(jobInfo -> jobInfo.tests().getAll().values().stream())
+            .filter(
+                testInfo ->
+                    testInfo.properties().has(XtsConstants.XTS_FINAL_TEST_LOG_DIR_PROPERTY_KEY))
+            .collect(
+                toImmutableMap(
+                    testInfo ->
+                        testInfo
+                            .jobInfo()
+                            .properties()
+                            .get(SessionHandlerHelper.XTS_MODULE_NAME_PROP),
+                    testInfo ->
+                        testInfo
+                            .properties()
+                            .get(XtsConstants.XTS_FINAL_TEST_LOG_DIR_PROPERTY_KEY)));
+    for (Entry<String, String> entry : failedNonTfTestLogDirs.entrySet()) {
+      if (localFileUtil.isDirExist(entry.getValue())) {
+        builder.append(String.format("%s\t: %s\n", entry.getKey(), entry.getValue()));
+      }
+    }
+    builder.append("============================================\n");
+    return builder.toString();
   }
 }

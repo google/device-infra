@@ -77,5 +77,7 @@ public class XtsConstants {
   public static final Pattern MOBLY_TEST_CLASS_PATTERN =
       Pattern.compile("==========> (\\w+) <==========");
 
+  public static final String XTS_FINAL_TEST_LOG_DIR_PROPERTY_KEY = "xts_final_test_log_dir";
+
   private XtsConstants() {}
 }
