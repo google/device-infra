@@ -14,6 +14,7 @@
 #
 
 load("@com_google_protobuf//:protobuf.bzl", "py_proto_library")
+load("//third_party/protobuf/build_defs:kt_jvm_proto_library.bzl", "kt_jvm_proto_library")
 
 DEFAULT_VISIBILITY = [
     "//:deviceinfra_all_pkg",
@@ -36,6 +37,11 @@ proto_library(
 
 java_proto_library(
     name = "error_java_proto",
+    deps = [":error_proto"],
+)
+
+kt_jvm_proto_library(
+    name = "error_kt_proto",
     deps = [":error_proto"],
 )
 
