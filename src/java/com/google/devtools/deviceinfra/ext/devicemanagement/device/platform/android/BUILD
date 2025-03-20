@@ -21,9 +21,7 @@ java_library(
     name = "android_device_delegate",
     srcs = ["AndroidDeviceDelegate.java"],
     visibility = [
-        "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
-        "//src/javatests/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
+        "//:deviceinfra_all_pkg",
     ],
     deps = [
         "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device:base_device_helper",
