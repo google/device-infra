@@ -447,7 +447,7 @@ public final class RunCommand implements Callable<Integer> {
   }
 
   /** Returns the number of currently running RunCommand instances. */
-  static int getRunningRunCommandCount() {
+  public static int getRunningRunCommandCount() {
     return RUNNING_COMMAND_COUNT.get();
   }
 

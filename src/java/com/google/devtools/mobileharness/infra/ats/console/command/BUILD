@@ -54,6 +54,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:ats_session_plugin_config_output",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:plugin_output_printer",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/command:command_helper",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/command:exit_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/console:console_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/log:log_dumper",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/plan:plan_helper",
@@ -63,7 +64,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/constant:dirs",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:control_stub",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/params:module_parameters",
-        "//src/java/com/google/devtools/mobileharness/shared/constant:log_record_importance",
         "//src/java/com/google/devtools/mobileharness/shared/util/base",
         "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_text_format",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
@@ -87,6 +87,7 @@ java_library(
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/command/parser:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/command:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/command:__subpackages__",
     ],
     deps = [

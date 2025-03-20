@@ -64,6 +64,9 @@ message AtsSessionPluginNotification {
 message AtsSessionCancellation {
   // Required.
   string reason = 1;
+
+  // Optional. Whether to cancel the session aggressively.
+  bool aggressive = 2;
 }
 
 enum DeviceType {

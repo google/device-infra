@@ -16,20 +16,11 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.command;
 
-import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
-import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.DEBUG;
-import static java.util.concurrent.TimeUnit.MINUTES;
-
-import com.google.common.flogger.FluentLogger;
-import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
 import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.AtsSessionStub;
-import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionCancellation;
-import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginNotification;
+import com.google.devtools.mobileharness.infra.ats.console.util.command.ExitUtil;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
-import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
-import java.time.Duration;
 import java.util.concurrent.Callable;
 import javax.inject.Inject;
 import picocli.CommandLine.Command;
@@ -43,17 +34,12 @@ import picocli.CommandLine.Option;
     description = "Exit the console.")
 final class ExitCommand implements Callable<Integer> {
 
-  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
-
   @Option(
       names = {"--wait-for-command", "-c"},
       required = false,
       paramLabel = "<wait_for_command>",
       description = "Whether to exit only after all commands have executed.")
   private boolean waitForCommand = false;
-
-  private static final Duration SHORT_SLEEP_INTERVAL = Duration.ofSeconds(3L);
-  private static final Duration LONG_SLEEP_INTERVAL = Duration.ofSeconds(30L);
 
   private final ConsoleInfo consoleInfo;
   private final ConsoleUtil consoleUtil;
@@ -76,21 +62,11 @@ final class ExitCommand implements Callable<Integer> {
   public Integer call() {
     try {
       if (!waitForCommand) {
-        try {
-          atsSessionStub.cancelUnfinishedNotAbortedSessions(
-              /* fromCurrentClient= */ true,
-              AtsSessionPluginNotification.newBuilder()
-                  .setSessionCancellation(
-                      AtsSessionCancellation.newBuilder().setReason("Exit command."))
-                  .build());
-        } catch (MobileHarnessException e) {
-          logger.atWarning().log(
-              "Failed to cancel unfinished sessions with error. Error=[%s]",
-              MoreThrowables.shortDebugString(e));
-        }
+        ExitUtil.cancelUnfinishedSessions(
+            atsSessionStub, consoleUtil, "User triggered Exit Command.", /* aggressive= */ false);
       }
       // Wait until no running sessions.
-      waitUntilNoRunningSessions();
+      ExitUtil.waitUntilNoRunningSessions(consoleUtil, sleeper);
     } finally {
       consoleUtil.printlnStdout("Exiting...");
 
@@ -99,33 +75,5 @@ final class ExitCommand implements Callable<Integer> {
     }
 
     return ExitCode.OK;
-  }
-
-  private void waitUntilNoRunningSessions() {
-    consoleUtil.printlnStdout("Will exit the console after all commands have executed.");
-    try {
-      int sleepCount = 0;
-      int runningRunCommandCount;
-      do {
-        // Sessions of RunCommand are the only async sessions in ATS console.
-        runningRunCommandCount = RunCommand.getRunningRunCommandCount();
-        if (runningRunCommandCount > 0) {
-          logger
-              .atInfo()
-              .with(IMPORTANCE, DEBUG)
-              .atMostEvery(1, MINUTES)
-              .log(
-                  "Still need to wait as %s RunCommands are still running.",
-                  runningRunCommandCount);
-          sleeper.sleep(sleepCount < 10 ? SHORT_SLEEP_INTERVAL : LONG_SLEEP_INTERVAL);
-          sleepCount++;
-        }
-      } while (runningRunCommandCount > 0);
-    } catch (InterruptedException e) {
-      consoleUtil.printlnStderr(
-          "Interrupted while waiting until no running sessions. Going to exit the console"
-              + " directly.");
-      Thread.currentThread().interrupt();
-    }
   }
 }

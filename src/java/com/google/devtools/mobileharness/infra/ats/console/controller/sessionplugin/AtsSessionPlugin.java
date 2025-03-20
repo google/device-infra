@@ -660,7 +660,10 @@ public class AtsSessionPlugin {
     // Creates test message.
     XtsTradefedRunCancellation cancellationTestMessage =
         XtsTradefedRunCancellation.newBuilder()
-            .setKillTradefedSignal(KillSignal.SIGTSTP.value())
+            .setKillTradefedSignal(
+                sessionCancellation.getAggressive()
+                    ? KillSignal.SIGTERM.value()
+                    : KillSignal.SIGTSTP.value())
             .setCancelReason(sessionCancellation.getReason())
             .build();
 
