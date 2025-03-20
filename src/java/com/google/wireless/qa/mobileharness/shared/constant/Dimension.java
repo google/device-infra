@@ -433,6 +433,14 @@ public final class Dimension {
     /** Dimension value for iOS device that is provisioned by FTL. */
     public static final String IOS_PROVISIONED_BY_FTL = "FTL";
 
+    /** Dimension value for the Google Development provisioning profile in the core lab. */
+    public static final String IOS_PROVISIONED_BY_GOOGLE_IN_CORE_LAB =
+        "Apple Development: Google Development (69FHSU289T)";
+
+    /** Dimension value for the Firebase Test Lab provisioning profile in the core lab. */
+    public static final String IOS_PROVISIONED_BY_FTL_IN_CORE_LAB =
+        "iPhone Developer: Firebase Test Lab (2JX573L4Q7)";
+
     /** Dimension value for no sim for sim_card_info dimension. */
     public static final String NO_SIM = "NO_SIM";
 
