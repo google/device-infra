@@ -56,7 +56,5 @@ public class AndroidRoboTest extends BaseDriver implements SpecConfigable<Androi
         .alsoTo(logger)
         .log("Running Android Robo Driver on %s.", this.getDevice().getDeviceId());
     testInfo.log().atInfo().alsoTo(logger).log("Job Info: %s", this.getTest().jobInfo());
-
-    testInfo.resultWithCause().setPass();
   }
 }

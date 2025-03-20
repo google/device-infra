@@ -16,7 +16,6 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.driver;
 
-import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.Mockito.when;
 
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
@@ -28,7 +27,6 @@ import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobSetting;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
-import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.AndroidRoboTestSpec;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.AndroidRoboTestSpec.ControllerEndpoint;
 import java.nio.file.Path;
@@ -90,8 +88,6 @@ public class AndroidRoboTestTest {
     AndroidRoboTest roboTest = createAndroidRoboTest(testInfo);
 
     roboTest.run(testInfo);
-
-    assertThat(testInfo.result().get()).isEqualTo(TestResult.PASS);
   }
 
   private AndroidRoboTest createAndroidRoboTest(TestInfo testInfo) {
