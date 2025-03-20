@@ -269,6 +269,15 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> atsConsoleCacheXtsDevices = atsConsoleCacheXtsDevicesDefault;
 
+  private static final Flag<Duration> atsConsoleListDeviceTimeoutDefault =
+      DurationFlag.value(Duration.ofSeconds(3L));
+
+  @com.beust.jcommander.Parameter(
+      names = "--ats_console_list_device_timeout",
+      description = "Timeout of listing devices in ATS console. Default is 3 seconds.",
+      converter = DurationFlag.DurationConverter.class)
+  public Flag<Duration> atsConsoleListDeviceTimeout = atsConsoleListDeviceTimeoutDefault;
+
   private static final Flag<Integer> atsConsoleMinLogRecordImportanceDefault = Flag.value(100);
 
   @com.beust.jcommander.Parameter(

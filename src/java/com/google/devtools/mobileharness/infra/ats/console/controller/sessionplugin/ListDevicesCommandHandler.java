@@ -22,8 +22,9 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableListMultimap.toImmutableListMultimap;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
-import static java.util.concurrent.TimeUnit.SECONDS;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
+import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.base.CaseFormat;
@@ -85,7 +86,8 @@ class ListDevicesCommandHandler {
           .thenComparing(DeviceDescriptor::getSerial);
   private static final String NOT_APPLICABLE = "n/a";
 
-  private static final Duration QUERY_DEVICE_TIMEOUT = Duration.ofSeconds(1);
+  private static final DeviceProperties DEFAULT_DEVICE_PROPERTIES =
+      DeviceProperties.of(NOT_APPLICABLE, NOT_APPLICABLE, NOT_APPLICABLE, NOT_APPLICABLE);
 
   private final DeviceQuerier deviceQuerier;
   private final AndroidAdbUtil androidAdbUtil;
@@ -93,6 +95,7 @@ class ListDevicesCommandHandler {
   private final AndroidSystemSettingUtil androidSystemSettingUtil;
   private final ListeningExecutorService threadPool;
   private final Clock clock;
+  private final Duration listDeviceTimeout;
 
   @Inject
   ListDevicesCommandHandler(
@@ -108,6 +111,8 @@ class ListDevicesCommandHandler {
     this.androidSystemSettingUtil = androidSystemSettingUtil;
     this.threadPool = threadPool;
     this.clock = clock;
+
+    listDeviceTimeout = Flags.instance().atsConsoleListDeviceTimeout.getNonNull();
   }
 
   /**
@@ -153,18 +158,22 @@ class ListDevicesCommandHandler {
                 threadRenaming(this::queryDevice, () -> "list-device-device-querier")),
             Level.WARNING,
             "Error occurred in device querier of device lister");
-    ImmutableMap<String, DeviceDescriptor> deviceInfoFromAdb = queryDeviceInfoFromAdb();
+    ImmutableMap<String, DeviceDescriptor> deviceInfoFromAdb =
+        queryDeviceInfoFromAdb(listDevicesQueryInstant);
+
+    Duration listDeviceTimeout = Flags.instance().atsConsoleListDeviceTimeout.getNonNull();
 
     Duration remainingQueryDuration =
-        QUERY_DEVICE_TIMEOUT.minus(Duration.between(listDevicesQueryInstant, clock.instant()));
+        listDeviceTimeout.minus(Duration.between(listDevicesQueryInstant, clock.instant()));
     remainingQueryDuration = max(remainingQueryDuration, Duration.ZERO);
     DeviceQueryResult deviceQueryResult = null;
     try {
-      deviceQueryResult = deviceQueryResultFuture.get(remainingQueryDuration.toSeconds(), SECONDS);
+      deviceQueryResult =
+          deviceQueryResultFuture.get(remainingQueryDuration.toMillis(), MILLISECONDS);
     } catch (ExecutionException | TimeoutException e) {
       logger.atWarning().withCause(e).log(
           "Failed to query device within %s. Going to use status from ADB directly.",
-          QUERY_DEVICE_TIMEOUT);
+          listDeviceTimeout);
     }
 
     HashMap<String, DeviceDescriptor> deviceDescriptorMap = new HashMap<>(deviceInfoFromAdb);
@@ -182,20 +191,22 @@ class ListDevicesCommandHandler {
   }
 
   /** Queries device info from ADB to be the backup info for devices. */
-  private ImmutableMap<String, DeviceDescriptor> queryDeviceInfoFromAdb()
+  private ImmutableMap<String, DeviceDescriptor> queryDeviceInfoFromAdb(Instant queryInstant)
       throws InterruptedException {
     Map<String, DeviceState> deviceState;
     try {
-      deviceState = androidAdbInternalUtil.getDeviceSerialsAsMap(QUERY_DEVICE_TIMEOUT);
+      deviceState = androidAdbInternalUtil.getDeviceSerialsAsMap(listDeviceTimeout);
     } catch (MobileHarnessException e) {
       logger.atWarning().withCause(e).log(
           "Failed to query device state from ADB within %s. Going to use status from DeviceManager"
               + " directly.",
-          QUERY_DEVICE_TIMEOUT);
+          listDeviceTimeout);
       return ImmutableMap.of();
     }
 
-    ImmutableMap.Builder<String, DeviceDescriptor> deviceDescriptorMap = ImmutableMap.builder();
+    HashMap<String, DeviceDescriptor> basicDeviceDescriptorMap = new HashMap<>();
+    ImmutableMap.Builder<String, ListenableFuture<DeviceProperties>> propertiesFutureMapBuilder =
+        ImmutableMap.builder();
 
     for (Entry<String, DeviceState> entry : deviceState.entrySet()) {
       String serial = entry.getKey();
@@ -219,20 +230,52 @@ class ListDevicesCommandHandler {
           .setIsStubDevice(false);
 
       if (state.equals(DeviceState.DEVICE)) {
-        try {
-          builder
-              .setProduct(androidAdbUtil.getProperty(serial, AndroidProperty.PRODUCT_BOARD))
-              .setProductVariant(androidAdbUtil.getProperty(serial, AndroidProperty.DEVICE))
-              .setBuildId(androidAdbUtil.getProperty(serial, AndroidProperty.BUILD_ALIAS))
-              .setBatteryLevel(Integer.toString(androidSystemSettingUtil.getBatteryLevel(serial)));
-        } catch (MobileHarnessException e) {
-          logger.atWarning().withCause(e).log(
-              "Failed to get info of device - %s from ADB. The device may be offline.", serial);
-        }
+        // Use thread pool to query device properties from ADB in parallel to accelerate the process
+        // since it could be slow for broken devices.
+        propertiesFutureMapBuilder.put(
+            serial,
+            logFailure(
+                threadPool.submit(
+                    threadRenaming(
+                        () -> getDevicePropertiesFromAdb(serial),
+                        () -> "get-device-properties-from-adb")),
+                Level.WARNING,
+                "Error occurred in getting device properties of device lister"));
       }
-      deviceDescriptorMap.put(serial, builder.build());
+      basicDeviceDescriptorMap.put(serial, builder.build());
     }
-    return deviceDescriptorMap.buildOrThrow();
+
+    ImmutableMap.Builder<String, DeviceDescriptor> deviceDescriptorMapBuilder =
+        ImmutableMap.builder();
+
+    ImmutableMap<String, ListenableFuture<DeviceProperties>> propertiesFutureMap =
+        propertiesFutureMapBuilder.buildOrThrow();
+    for (Entry<String, DeviceDescriptor> entry : basicDeviceDescriptorMap.entrySet()) {
+      String serial = entry.getKey();
+      Duration remainingQueryDuration =
+          listDeviceTimeout.minus(Duration.between(queryInstant, clock.instant()));
+      remainingQueryDuration = max(remainingQueryDuration, Duration.ZERO);
+      DeviceProperties properties;
+      try {
+        properties =
+            propertiesFutureMap.get(serial).get(remainingQueryDuration.toMillis(), MILLISECONDS);
+
+      } catch (ExecutionException | TimeoutException e) {
+        logger.atWarning().withCause(e).log(
+            "Failed to query properties of device [%s] via ADB", serial);
+        properties = DEFAULT_DEVICE_PROPERTIES;
+      }
+      DeviceDescriptor builder =
+          entry.getValue().toBuilder()
+              .setProduct(properties.productBoard())
+              .setProductVariant(properties.device())
+              .setBuildId(properties.buildAlias())
+              .setBatteryLevel(properties.batteryLevel())
+              .build();
+      deviceDescriptorMapBuilder.put(serial, builder);
+    }
+
+    return deviceDescriptorMapBuilder.buildOrThrow();
   }
 
   // Converts device state from ADB to the one in DeviceDescriptor.
@@ -262,6 +305,15 @@ class ListDevicesCommandHandler {
       throw new MobileHarnessException(
           InfraErrorId.ATSC_LIST_DEVICES_QUERY_DEVICE_ERROR, "Failed to query device", e);
     }
+  }
+
+  private DeviceProperties getDevicePropertiesFromAdb(String serial)
+      throws MobileHarnessException, InterruptedException {
+    return DeviceProperties.of(
+        androidAdbUtil.getProperty(serial, AndroidProperty.PRODUCT_BOARD),
+        androidAdbUtil.getProperty(serial, AndroidProperty.DEVICE),
+        androidAdbUtil.getProperty(serial, AndroidProperty.BUILD_ALIAS),
+        Integer.toString(androidSystemSettingUtil.getBatteryLevel(serial)));
   }
 
   /** Combines {@link DeviceInfo} from DeviceManager and {@link DeviceDescriptor} from ADB. */
@@ -445,5 +497,24 @@ class ListDevicesCommandHandler {
       result.add(deviceDescriptor.getDeviceClass(), deviceDescriptor.getTestDeviceState());
     }
     return Optional.of(result.build());
+  }
+
+  /** A wrapper class for device properties from ADB. */
+  @AutoValue
+  abstract static class DeviceProperties {
+
+    abstract String productBoard();
+
+    abstract String device();
+
+    abstract String buildAlias();
+
+    abstract String batteryLevel();
+
+    private static DeviceProperties of(
+        String productBoard, String device, String buildAlias, String batteryLevel) {
+      return new AutoValue_ListDevicesCommandHandler_DeviceProperties(
+          productBoard, device, buildAlias, batteryLevel);
+    }
   }
 }
