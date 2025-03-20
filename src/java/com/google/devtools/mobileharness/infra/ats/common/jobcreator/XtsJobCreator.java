@@ -55,11 +55,9 @@ import java.io.OutputStream;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
-import java.util.Set;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
 
@@ -106,6 +104,7 @@ public abstract class XtsJobCreator {
    */
   public ImmutableList<JobInfo> createXtsTradefedTestJob(SessionRequestInfo sessionRequestInfo)
       throws MobileHarnessException, InterruptedException {
+    // This static lists are currently not used anymore.
     ImmutableSet<String> staticMctsModules = sessionRequestHandlerUtil.getStaticMctsModules();
     ImmutableList<String> tfModules =
         sessionRequestHandlerUtil.getFilteredTradefedModules(sessionRequestInfo);
@@ -127,7 +126,7 @@ public abstract class XtsJobCreator {
       if (!SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo)
           && isCtsTestPlan(tradefedJobInfo.extraJobProperties())) {
         createDynamicDownloadJobs(
-            jobInfos, tradefedJobInfo, totalDynamicModuleVariables, sessionRequestInfo, tfModules);
+            jobInfos, tradefedJobInfo, totalDynamicModuleVariables, sessionRequestInfo);
         // Only if none of the dynamic jobs are created, we'll create only one xTS job.
         if (jobInfos.build().isEmpty()) {
           jobInfos.add(
@@ -462,28 +461,15 @@ public abstract class XtsJobCreator {
       ImmutableList.Builder<JobInfo> jobInfos,
       TradefedJobInfo tradefedJobInfo,
       Map<String, ImmutableSet<String>> totalDynamicModuleVariables,
-      SessionRequestInfo sessionRequestInfo,
-      ImmutableList<String> tfModules)
+      SessionRequestInfo sessionRequestInfo)
       throws MobileHarnessException, InterruptedException {
     if (sessionRequestInfo.isXtsDynamicDownloadEnabled().orElse(false)) {
-      // Consider below independent cases, for MCTS as an example:
-      // 1. No -m and no --include-filter MCTS modules specified, dynamic download is disabled.
-      // 2. Some of the MCTS modules are specified, create a dynamic download job and a static job.
-      // 3. All of the MCTS modules are specified, create only one dynamic download job.
-      Set<String> totalDynamicModules = new HashSet<>();
+      // Create two jobs: create a dynamic download job and a static job.
       for (Map.Entry<String, ImmutableSet<String>> entry : totalDynamicModuleVariables.entrySet()) {
-        ImmutableSet<String> dynamicModuleList = entry.getValue();
-        totalDynamicModules.addAll(dynamicModuleList);
         String jobName = entry.getKey();
-        if (tfModules.stream().anyMatch(dynamicModuleList::contains)) {
-          // If tfModules match any of the dynamic modules, create a dynamic download job.
-          jobInfos.add(createDynamicJobInfo(sessionRequestInfo, tradefedJobInfo, jobName));
-        }
+        jobInfos.add(createDynamicJobInfo(sessionRequestInfo, tradefedJobInfo, jobName));
       }
-      // If all of the tfModules match the dynamic modules, then we create only one xts dynamic job
-      // or we also need to create a xts static job.
-      if (!tfModules.stream().allMatch(totalDynamicModules::contains)
-          && !jobInfos.build().isEmpty()) {
+      if (!jobInfos.build().isEmpty()) {
         jobInfos.add(
             createDynamicJobInfo(
                 sessionRequestInfo, tradefedJobInfo, XtsConstants.STATIC_XTS_JOB_NAME));
