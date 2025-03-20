@@ -96,8 +96,9 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
 
   // Add the initial release versioncode for Android SDK release which we don't need to download
   // the MCTS files.
-  private static final ImmutableSet<String> INITIAL_RELEASE_VERSIONCODE_LIST =
-      ImmutableSet.of("2025-05");
+  private static final ImmutableMap<String, ImmutableList<String>> INITIAL_RELEASE_VERSIONCODE_MAP =
+      ImmutableMap.of(
+          "36", ImmutableList.of("2025-01", "2025-02", "2025-03", "2025-04", "2025-05"));
 
   private static final String MAINLINE_AOSP_VERSION_KEY = "AOSP";
 
@@ -169,7 +170,7 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
       // We will only support Android V train for downloading train MCTS, otherwise will download
       // from aosp.
       String preloadedMainlineVersion =
-          processModuleVersion(versioncode, MAINLINE_TVP_PKG, aospVersion);
+          processModuleVersion(versioncode, MAINLINE_TVP_PKG, aospVersion, aospVersion);
       // Add the MCTS exclude file link url to the front of the list.
       downloadLinkUrls.add(
           String.format(
@@ -340,6 +341,7 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
   private ListMultimap<String, String> getMctsNamesOfPreloadedMainlineModules(
       ImmutableList<String> moduleList, String deviceId)
       throws MobileHarnessException, InterruptedException {
+    String aospVersion = getAospVersion(deviceId);
     String configFilePath =
         resUtil.getResourceFile(
             getClass(),
@@ -370,7 +372,8 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
               Integer.toString(androidPackageManagerUtil.getAppVersionCode(deviceId, moduleName));
           // Only parse the module versioncode released start from Android V (35+).
           String moduleVersioncode =
-              processModuleVersion(moduleVersion, moduleName, MAINLINE_AOSP_VERSION_KEY);
+              processModuleVersion(
+                  moduleVersion, moduleName, MAINLINE_AOSP_VERSION_KEY, aospVersion);
           preloadedModulesMctsAndVersioncode.add(mctsName + ':' + moduleVersioncode);
         }
       }
@@ -510,18 +513,19 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
   }
 
   private String processModuleVersion(
-      String moduleVersionNumber, String moduleName, String defaultVersion)
+      String moduleVersionNumber, String moduleName, String defaultVersion, String aospVersion)
       throws MobileHarnessException {
     if (VERSIONCODE_PATTERN.matcher(moduleVersionNumber).matches()
         && !AOSP_VERSIONCODE_LIST.contains(moduleVersionNumber)) {
       String preloadVersion = getPreloadedMainlineVersion(moduleVersionNumber, moduleName);
-      if (INITIAL_RELEASE_VERSIONCODE_LIST.contains(preloadVersion)) {
+      ImmutableList<String> versionCodes = INITIAL_RELEASE_VERSIONCODE_MAP.get(aospVersion);
+      if (versionCodes != null && versionCodes.contains(preloadVersion)) {
         logger.atInfo().log(
             "The train version %s is Android new SDK initial release", preloadVersion);
         return defaultVersion;
-      } else {
-        return preloadVersion;
       }
+      return preloadVersion; // Return preloadVersion if aospVersion key is not found, or
+      // preloadVersion is not in the list.
     } else {
       return defaultVersion;
     }
