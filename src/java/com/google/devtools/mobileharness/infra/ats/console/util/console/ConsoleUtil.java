@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.util.console;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleLineReader;
 import com.google.devtools.mobileharness.shared.constant.LogRecordImportance;
@@ -23,7 +24,6 @@ import com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Log
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.errorprone.annotations.FormatMethod;
 import java.io.PrintStream;
-import java.util.Objects;
 import java.util.logging.ErrorManager;
 import java.util.logging.Handler;
 import java.util.logging.LogRecord;
@@ -38,7 +38,8 @@ public class ConsoleUtil {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  private static final String LOGGER_NAME = ConsoleUtil.class.getName();
+  private static final ImmutableSet<String> HIDDEN_LOGGER_NAMES =
+      ImmutableSet.of(ConsoleUtil.class.getName(), "com.google.protobuf.TextFormat");
 
   private final int minLogRecordImportance =
       Flags.instance().atsConsoleMinLogRecordImportance.getNonNull();
@@ -157,7 +158,7 @@ public class ConsoleUtil {
     private LogHandler() {
       setFilter(
           record ->
-              !Objects.equals(record.getLoggerName(), LOGGER_NAME)
+              !HIDDEN_LOGGER_NAMES.contains(record.getLoggerName())
                   && LogRecordImportance.getLogRecordImportance(
                               record, LogImportanceScope.getCurrentScope())
                           .value()
