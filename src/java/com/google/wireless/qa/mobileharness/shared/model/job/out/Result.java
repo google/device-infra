@@ -90,15 +90,6 @@ public class Result {
         case FAIL:
           errorId = BasicErrorId.JOB_OR_TEST_RESULT_LEGACY_FAIL;
           break;
-        case ALLOC_FAIL:
-          errorId = BasicErrorId.JOB_OR_TEST_RESULT_LEGACY_ALLOC_FAIL;
-          break;
-        case INFRA_ERROR:
-          errorId = BasicErrorId.JOB_OR_TEST_RESULT_LEGACY_INFRA_ERROR;
-          break;
-        case ALLOC_ERROR:
-          errorId = BasicErrorId.JOB_OR_TEST_RESULT_LEGACY_ALLOC_ERROR;
-          break;
         case ABORT:
           errorId = BasicErrorId.JOB_OR_TEST_RESULT_LEGACY_ABORT;
           break;
@@ -144,8 +135,6 @@ public class Result {
         return Test.TestResult.TIMEOUT;
       case SKIP:
         return Test.TestResult.SKIP;
-      case INFRA_ERROR:
-        return Test.TestResult.INFRA_ERROR;
       case ABORT:
         return Test.TestResult.ABORT;
       case ERROR:

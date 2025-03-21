@@ -1180,7 +1180,6 @@ public class JobRunner implements Runnable {
       return;
     }
     boolean hasErrorTests = false;
-    boolean hasInfraErrorTests = false;
     boolean hasFailTests = false;
     boolean hasAllocFailTests = false;
     boolean hasAllocErrorTests = false;
@@ -1288,14 +1287,6 @@ public class JobRunner implements Runnable {
               testIdForDisplayMhfeLink = testInfo.locator().getId();
               break;
             case INFRA_ERROR:
-              hasInfraErrorTests = true;
-              testIdForDisplayMhfeLink = testInfo.locator().getId();
-              break;
-            case ALLOC_FAIL:
-              // UMTS does allocation as part of test
-              hasAllocFailTests = true;
-              testIdForDisplayMhfeLink = testInfo.locator().getId();
-              break;
             case ERROR:
             case TIMEOUT:
             case UNKNOWN:
@@ -1311,17 +1302,7 @@ public class JobRunner implements Runnable {
       }
     }
 
-    if (hasInfraErrorTests) {
-      jobInfo
-          .result()
-          .toNewResult()
-          .setNonPassing(
-              Test.TestResult.INFRA_ERROR,
-              new MobileHarnessException(
-                  InfraErrorId.CLIENT_JR_JOB_HAS_INFRA_ERROR_TEST,
-                  "Job has >=1 INFRA_ERROR test(s). You can get the detailed error info in the test"
-                      + " level."));
-    } else if (hasErrorTests) {
+    if (hasErrorTests) {
       if (jobError instanceof MobileHarnessException
           && ((MobileHarnessException) jobError)
               .getErrorId()
