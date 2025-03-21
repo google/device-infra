@@ -198,11 +198,13 @@ CtsLibcoreLegacy22TestCases
 CtsLibcoreOjTestCases
 CtsLibcoreOkHttpTestCases
 CtsLibcoreTestCases
+CtsLibcoreTestRunner
 CtsLibcoreWycheproofBCTestCases
 CtsLibcoreWycheproofConscryptTestCases
 CtsMediaProviderTestCases
 CtsMediaProviderTranscodeTests
 CtsModernMediaProviderTests
+CtsMultiDeviceGenericRangingTests
 CtsNNAPIBenchmarkTestCases
 CtsNNAPIStatsdAtomHostTestCases
 CtsNNAPITestCases
@@ -222,6 +224,7 @@ CtsPermissionMultiDeviceTestCases
 CtsPermissionMultiUserTestCases
 CtsPermissionUiTestCases
 CtsPhotoPickerTest
+CtsRangingTestCases
 CtsRebootReadinessTestCases
 CtsRoleMultiUserTestCases
 CtsRoleTestCases
@@ -258,9 +261,13 @@ CtsTestAppWithQueryAllPackagesPermission
 CtsTetheringTest
 CtsTfliteNnapiDelegateTestCases
 CtsThreadNetworkTestCases
+CtsUwbMultiDeviceFiraRangingTests
 CtsUwbMultiDeviceTestCase_FiraRangingTests
 CtsUwbMultiDeviceTestCase_UwbManagerTests
+CtsUwbMultiDeviceUwbManagerTests
 CtsUwbTestCases
+CtsVcnTestCases
+CtsVMDebugDeviceTestCases
 CtsWifiTestCases
 LegacyStorageTest
 MctsMediaBetterTogetherTestCases
@@ -274,9 +281,11 @@ MctsMediaMuxerTestCases
 MctsMediaParserTestCases
 MctsMediaPlayerTestCases
 MctsMediaRecorderTestCases
+MctsMediaSessionTestCases
 MctsMediaTranscodingTestCases
 MctsMediaV2TestCases
 MctsTextClassifierTestCases
+MultiDeviceRangingTestCases
 SdkSandboxManagerDisabledTests
 SdkSandboxManagerTests
 art-run-test-018-stack-overflow
