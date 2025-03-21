@@ -283,6 +283,7 @@ final class NewMultiCommandRequestHandler {
       commandDetail =
           Optional.of(
               CommandDetail.newBuilder()
+                  .addAllDeviceSerials(sessionRequestInfo.deviceSerials())
                   .setCommandLine(commandInfo.getCommandLine())
                   .setOriginalCommandInfo(commandInfo)
                   .setCreateTime(Timestamps.fromMillis(clock.millis()))
@@ -366,6 +367,7 @@ final class NewMultiCommandRequestHandler {
       commandDetailsBuilder.put(commandId, commandDetailBuilder.build());
       throw e;
     }
+    commandDetailBuilder.addAllDeviceSerials(sessionRequestInfo.deviceSerials());
 
     ImmutableList<JobInfo> jobInfoList;
     try {

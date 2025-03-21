@@ -312,6 +312,9 @@ public final class AtsServerSessionPluginTest {
     assertThat(requestDetail.getUpdateTime()).isEqualTo(Timestamps.fromMillis(3000L));
     assertThat(requestDetail.getMaxRetryOnTestFailures())
         .isEqualTo(request.getMaxRetryOnTestFailures());
+    assertThat(
+            requestDetail.getCommandDetailsMap().values().iterator().next().getDeviceSerialsList())
+        .containsExactly("device_id_1", "device_id_2");
   }
 
   @Test
@@ -330,6 +333,12 @@ public final class AtsServerSessionPluginTest {
                 .build());
     plugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
     verify(sessionInfo).addJob(moblyJobInfo);
+    verify(sessionInfo)
+        .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
+    RequestDetail requestDetail = unaryOperatorCaptor.getValue().apply(null);
+    assertThat(
+            requestDetail.getCommandDetailsMap().values().iterator().next().getDeviceSerialsList())
+        .containsExactly("device_id_1", "device_id_2");
   }
 
   @Test

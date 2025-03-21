@@ -26,7 +26,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.AtsServerSessionNotification;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.AtsServerSessionNotification.NotificationCase;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CancelReason;
@@ -54,7 +53,6 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.CreateSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.LocalSessionStub;
 import com.google.devtools.mobileharness.platform.android.xts.message.proto.TestMessageProto.XtsTradefedRunCancellation;
-import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.protobuf.Any;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -66,11 +64,9 @@ import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestStatus;
 import java.time.Clock;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.stream.Stream;
 import javax.inject.Inject;
 
 /** Session Plugin to serve test requests coming from ATS server. */
@@ -261,28 +257,6 @@ final class AtsServerSessionPlugin {
         // after the previous job is ended.
         if (!tradefedJobs.isEmpty()) {
           sessionInfo.addJob(tradefedJobs.remove(0));
-        }
-
-        String commandId = getCommandIdOfJob(jobInfo);
-        if (requestDetail.containsCommandDetails(commandId)) {
-          // ATS server requests use device UUIDs to schedule tests.
-          ImmutableList<String> deviceUuids =
-              jobInfo.subDeviceSpecs().getAllSubDevices().stream()
-                  .flatMap(
-                      subDeviceSpec -> Stream.ofNullable(subDeviceSpec.dimensions().get("uuid")))
-                  .collect(toImmutableList());
-          CommandDetail updatedCommandDetail =
-              requestDetail
-                  .getCommandDetailsOrDefault(commandId, CommandDetail.getDefaultInstance())
-                  .toBuilder()
-                  .addAllDeviceSerials(deviceUuids)
-                  .build();
-          requestDetail
-              .putCommandDetails(commandId, updatedCommandDetail)
-              .setUpdateTime(TimeUtils.toProtoTimestamp(Instant.now()));
-        } else {
-          logger.atWarning().log(
-              "Tradefed job %s not found in requestDetail", jobInfo.locator().getId());
         }
 
         if (requestDetail.getState() == RequestState.CANCELED) {
@@ -533,10 +507,6 @@ final class AtsServerSessionPlugin {
         && hasSessionCompleted(commandDetailsMap)
         && commandDetailsMap.values().stream()
             .anyMatch(commandDetail -> commandDetail.getFailedTestCount() > 0);
-  }
-
-  private static String getCommandIdOfJob(JobInfo jobInfo) {
-    return jobInfo.properties().getOptional(XtsPropertyName.Job.XTS_COMMAND_ID).orElse("");
   }
 
   private static void appendErrorMessage(RequestDetail.Builder requestDetail, String newMessage) {
