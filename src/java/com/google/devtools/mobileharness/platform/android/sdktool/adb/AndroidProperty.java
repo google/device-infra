@@ -67,6 +67,7 @@ public enum AndroidProperty {
   MEMORY_CLASS("dalvik.vm.heapgrowthlimit", "dalvik.vm.heapsize"),
   MODEL("ro.product.model"),
   NATIVE_BRIDGE("ro.dalvik.vm.native.bridge"),
+  NONSEC_AR("ro.boot.hw.soc.nonsec-ar"),
   PREVIEW_SDK_VERSION("ro.build.version.preview_sdk"),
   @DoNotAddToDimension
   PRODUCT("ro.build.product"),
@@ -78,6 +79,7 @@ public enum AndroidProperty {
   SCREEN_DENSITY("qemu.sf.lcd_density", "ro.sf.lcd_density"),
   SDK_VERSION("ro.build.version.sdk"),
   SECURE_BOOT("ro.boot.secure_boot"),
+  SEC_AR("ro.boot.hw.soc.sec-ar"),
   @KeepDimensionValueCase
   SERIAL("ro.serialno"),
   SIGN("ro.build.tags"),

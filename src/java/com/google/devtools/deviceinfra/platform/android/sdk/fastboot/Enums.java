@@ -48,6 +48,8 @@ public final class Enums {
 
   /** Android device properties in fastboot mode. */
   public enum FastbootProperty {
+    AP_AR_NS,
+    AP_AR_S,
     CURRENT_SLOT,
     DEVKEY_ALLOW,
     HARDWARE,
