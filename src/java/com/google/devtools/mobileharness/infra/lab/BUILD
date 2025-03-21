@@ -158,6 +158,7 @@ java_library(
 
 java_library(
     name = "lab_server_launcher",
+    testonly = 1,
     srcs = ["LabServerLauncher.java"],
     resources = [
     ],
@@ -182,6 +183,7 @@ java_library(
 # Open-source version of MH lab server.
 java_binary(
     name = "lab_server_oss",
+    testonly = 1,
     main_class = "com.google.devtools.mobileharness.infra.lab.LabServerLauncher",
     # Think twice before adding resources here. Always try to pack the resources
     # into the libraries using the resources.

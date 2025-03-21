@@ -29,6 +29,7 @@ package(
 # runtime_deps for OSS lab server tests.
 java_library(
     name = "oss_lab_test",
+    testonly = 1,
     runtime_deps = [
         ":no_op_test",
         ":partner_test",
@@ -81,6 +82,7 @@ java_library(
 # runtime_deps for partner tests.
 java_library(
     name = "partner_test",
+    testonly = 1,
     runtime_deps = [
         ":partner_test_client",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_account_decorator",

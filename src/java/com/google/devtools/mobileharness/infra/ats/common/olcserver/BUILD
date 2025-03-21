@@ -45,6 +45,7 @@ olc_server_binary(
 
 olc_server_binary(
     name = "ats_olc_server_local_mode",
+    testonly = 1,
     extra_runtime_deps = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/local/sessionplugin:ats_local_session_plugin",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:ats_session_plugin",
