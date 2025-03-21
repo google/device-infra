@@ -14,6 +14,7 @@
 #
 
 load("@com_google_protobuf//:protobuf.bzl", "py_proto_library")
+load("//third_party/protobuf/build_defs:kt_jvm_proto_library.bzl", "kt_jvm_proto_library")
 
 package(
     default_applicable_licenses = ["//:license"],
@@ -31,6 +32,11 @@ proto_library(
         ":lab_proto",
         "//src/devtools/common/metrics/stability/model/proto:error_proto",
     ],
+)
+
+kt_jvm_proto_library(
+    name = "device_kt_proto",
+    deps = [":device_proto"],
 )
 
 py_proto_library(
