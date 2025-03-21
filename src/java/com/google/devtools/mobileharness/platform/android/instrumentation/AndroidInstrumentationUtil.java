@@ -1209,11 +1209,11 @@ public class AndroidInstrumentationUtil {
       boolean isDeviceOnline = systemStateManager.isOnline(deviceId);
       if (!isDeviceOnline) {
         errorMsg.append(String.format("Device %s is not online", deviceId));
-        return TestResult.INFRA_ERROR;
+        return TestResult.ERROR;
       }
     } catch (MobileHarnessException e) {
       errorMsg.append(e.getMessage());
-      return TestResult.INFRA_ERROR;
+      return TestResult.ERROR;
     }
 
     // Get the test result from the testInfo and check if the individual test cases passed.
