@@ -186,6 +186,10 @@ public final class Dimension {
     ABI,
     /** Customized dimension: Android Google Search App version */
     AGSA_VERSION,
+    /** The non-secure Android AR counter. */
+    AP_AR_NS,
+    /** The secure Android AR counter. */
+    AP_AR_S,
     /** The brand of the device. */
     BRAND,
     /** The build name of the device. */
@@ -244,6 +248,8 @@ public final class Dimension {
     MEMORY_CLASS_IN_MB,
     /** Moreto lab version for Moreto remote control protocol backward compatibility. */
     MORETO_LAB_VERSION,
+    /** The non-secure Android AR counter. */
+    NONSEC_AR,
     /** Number of CPUs on the android device */
     NUM_CPUS,
     /** The oem unlock statue of the device. Only used in fastboot mode. */
@@ -259,6 +265,8 @@ public final class Dimension {
     SCREEN_DENSITY,
     /** The screen size. */
     SCREEN_SIZE,
+    /** The secure Android AR counter. */
+    SEC_AR,
     /**
      * Serial no of the device. For normal Android device, SERIAL = ID. For Arc++, SERIAL is the
      * value of Build.SERIAL while ID is the ip of the device
