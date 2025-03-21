@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.infra.lab;
 import com.google.common.base.Throwables;
 import com.google.common.eventbus.EventBus;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.util.concurrent.AbstractIdleService;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberExceptionLoggingHandler;
 import com.google.devtools.mobileharness.shared.logging.MobileHarnessHostLogManager;
@@ -145,5 +146,15 @@ public class LabServerLauncher {
     }
 
     logger.atInfo().log("Lab server arguments: %s", Arrays.toString(labArgs));
+  }
+
+  // NoOpService is used so the ServiceManager has at least one service when starting up. Otherwise,
+  // it will write an exception to stdout, which is forbidden in the ATS tests.
+  private static class NoOpService extends AbstractIdleService {
+    @Override
+    protected void startUp() throws Exception {}
+
+    @Override
+    protected void shutDown() throws Exception {}
   }
 }
