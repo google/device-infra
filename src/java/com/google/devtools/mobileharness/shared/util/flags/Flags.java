@@ -444,6 +444,16 @@ public class Flags {
       converter = DurationFlag.DurationConverter.class)
   public Flag<Duration> checkDeviceInterval = checkDeviceIntervalDefault;
 
+  private static final Flag<Duration> checkFilesIntervalDefault =
+      DurationFlag.value(Duration.ofMinutes(5L));
+
+  @com.beust.jcommander.Parameter(
+      names = "--check_file_interval",
+      description =
+          "For file cleaner, sleep interval for checking and removing expired files or dirs.",
+      converter = DurationFlag.DurationConverter.class)
+  public Flag<Duration> checkFilesInterval = checkFilesIntervalDefault;
+
   private static final Flag<Boolean> clearAndroidDeviceMultiUsersDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(
@@ -885,6 +895,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableDeviceSystemSettingsChange = enableDeviceSystemSettingsChangeDefault;
 
+  private static final Flag<Boolean> enableDiskCheckDefault = Flag.value(true);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enable_disk_check",
+      description = "For file cleaner, enable/disable checkDiskSpace in each check interval.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableDiskCheck = enableDiskCheckDefault;
+
   private static final Flag<Boolean> enableEmulatorDetectionDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(
@@ -923,6 +941,14 @@ public class Flags {
       description = "Whether to enable file cleaner.",
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableFileCleaner = enableFileCleanerDefault;
+
+  private static final Flag<Boolean> enableFileSystemIoCheckDefault = Flag.value(true);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enable_file_system_io_check",
+      description = "For file cleaner, enable/disable checkFileSystemIo in each check interval.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableFileSystemIoCheck = enableFileSystemIoCheckDefault;
 
   private static final Flag<Boolean> enableAtsFileServerUploaderDefault = Flag.value(false);
 
@@ -1072,6 +1098,16 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableXtsTradefedInvocationAgent = enableXtsTradefedInvocationAgentDefault;
 
+  private static final Flag<Boolean> enableZombieFileCleanDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enable_zombie_file_clean",
+      description =
+          "For file cleaner, enable/disable cleanZombieFile in each check interval. By default is"
+              + " false.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableZombieFileClean = enableZombieFileCleanDefault;
+
   private static final Flag<Boolean> enforceSafeDischargeDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(
@@ -1121,6 +1157,17 @@ public class Flags {
       description = "File path of the fastboot tool",
       converter = Flag.StringConverter.class)
   public Flag<String> fastbootPathFromUser = fastbootPathFromUserDefault;
+
+  private static final Flag<Duration> fileExpireTimeDefault =
+      DurationFlag.value(Duration.ofHours(3L));
+
+  @com.beust.jcommander.Parameter(
+      names = "--file_expire_time",
+      description =
+          "For file cleaner, file expire time for default managed directories, such as receive file"
+              + " directory.",
+      converter = DurationFlag.DurationConverter.class)
+  public Flag<Duration> fileExpireTime = fileExpireTimeDefault;
 
   private static final Flag<String> fileTransferBucketDefault = Flag.value("");
 
