@@ -118,24 +118,6 @@ public class AndroidRoboTestJobValidatorTest {
     assertThat(validator.validate(jobInfo)).isNotEmpty();
   }
 
-  @Test
-  public void validate_invalidCrawlerAsset_hasErrorMessages() throws Exception {
-    JobInfo jobInfo = setUpJobInfo();
-    AndroidRoboTestSpec spec =
-        AndroidRoboTestSpec.newBuilder()
-            .setCrawlerApk("crawlerPath")
-            .setCrawlerStubApk("stubPath")
-            .setAppPackageId("com.some.app")
-            .setControllerEndpoint(ControllerEndpoint.AUTOPUSH)
-            .addCrawlerAssets("asset1=some_asset")
-            .addCrawlerAssets("invalidAssetValue")
-            .setCrawlTimeoutSecs(60)
-            .build();
-    jobInfo.scopedSpecs().add("AndroidRoboTestSpec", spec);
-
-    assertThat(validator.validate(jobInfo)).isNotEmpty();
-  }
-
   private JobInfo setUpJobInfo() {
     return JobInfo.newBuilder()
         .setLocator(new JobLocator("job_id", "job_name"))

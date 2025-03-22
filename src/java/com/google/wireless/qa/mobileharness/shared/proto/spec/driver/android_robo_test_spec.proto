@@ -82,10 +82,6 @@ message AndroidRoboTestSpec {
   optional string crawl_guidance_proto = 14
       [(file_detail) = { help: "Crawl guidance binary proto." }];
 
-  repeated string crawler_assets = 15 [(file_detail) = {
-    help: "Crawler assets. Robo script and contextual robo script files."
-  }];
-
   optional bool unpack_per_screen_screenshots = 16 [(field_detail) = {
     help: "Unpack screenshots named #.png where # is the screen ID."
   }];
@@ -112,5 +108,12 @@ message AndroidRoboTestSpec {
     (field_detail) = { help: "The downstream client that invoked this test." }
   ];
 
-  reserved 1;
+  optional string robo_script = 23
+      [(file_detail) = { help: "Robo script to be used with crawl." }];
+
+  repeated string contextual_robo_scripts = 24 [(file_detail) = {
+    help: "Contextual robo scripts to be used with crawl. Order of the scripts supplied matters."
+  }];
+
+  reserved 1, 15;
 }

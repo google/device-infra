@@ -62,9 +62,6 @@ public class AndroidRoboTestJobValidator
     if (!spec.getCrawlerFlagsList().stream().allMatch(flag -> flag.split("=").length == 2)) {
       errorsBuilder.add("Crawler flags should be of the form flag1=value1");
     }
-    if (!spec.getCrawlerAssetsList().stream().allMatch(flag -> flag.split("=").length == 2)) {
-      errorsBuilder.add("Crawler assets should be of the form assetName1=path/to/file");
-    }
     if (spec.getCrawlTimeoutSecs() <= 0) {
       errorsBuilder.add("Crawl timeout seconds should be greater than zero.");
     }
