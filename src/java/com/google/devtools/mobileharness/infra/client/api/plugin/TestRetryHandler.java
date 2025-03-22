@@ -65,6 +65,7 @@ public class TestRetryHandler {
           "AndroidTradefedTest",
           "AndroidCopycatRemoteControlledMoblySnippetTest",
           "IosCopycatRemoteControlledMoblySnippetTest",
+          "IosNativeXcTest",
           "MoblyAospPackageTest",
           "VegaTest",
           "XtsTradefedTest");
