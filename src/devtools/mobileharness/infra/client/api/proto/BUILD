@@ -44,7 +44,6 @@ java_proto_library(
         "//src/java/com/google/devtools/mobileharness/infra/client/api:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/client/api:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/api:__subpackages__",
-        "//src/javatests/com/google/wireless/qa/mobileharness/client/api:__subpackages__",
     ],
     deps = [":resource_federation_proto"],
 )
