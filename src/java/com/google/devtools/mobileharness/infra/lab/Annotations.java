@@ -45,6 +45,12 @@ public class Annotations {
   @BindingAnnotation
   public @interface GlobalEventBus {}
 
+  /** Annotation for binding GlobalInternalBus subscribers. */
+  @Retention(RetentionPolicy.RUNTIME)
+  @Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER})
+  @BindingAnnotation
+  public @interface GlobalEventBusSubscriber {}
+
   /** Annotation for binding cloud rpc DNS address. */
   @Retention(RetentionPolicy.RUNTIME)
   @Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER})

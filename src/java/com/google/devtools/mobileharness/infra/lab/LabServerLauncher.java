@@ -20,6 +20,7 @@ import com.google.common.base.Throwables;
 import com.google.common.eventbus.EventBus;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.AbstractIdleService;
+import com.google.common.util.concurrent.ServiceManager;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberExceptionLoggingHandler;
 import com.google.devtools.mobileharness.shared.logging.MobileHarnessHostLogManager;
@@ -27,12 +28,14 @@ import com.google.devtools.mobileharness.shared.logging.MobileHarnessHostLogMana
 import com.google.devtools.mobileharness.shared.logging.parameter.LogManagerParameters;
 import com.google.devtools.mobileharness.shared.logging.parameter.LogProject;
 import com.google.devtools.mobileharness.shared.logging.parameter.StackdriverLogUploaderParameters;
+import com.google.devtools.mobileharness.shared.util.concurrent.ExternalServiceManager;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.logging.flogger.FloggerFormatter;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.version.Version;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.Key;
 import com.google.wireless.qa.mobileharness.shared.constant.ExitCode;
 import com.google.wireless.qa.mobileharness.shared.constant.ExitCode.Lab;
 import com.google.wireless.qa.mobileharness.shared.util.ArrayUtil;
@@ -112,6 +115,10 @@ public class LabServerLauncher {
   public void run() throws MobileHarnessException, InterruptedException, IOException {
     Injector injector = Guice.createInjector(new LabServerModule(labArgs, globalInternalBus));
     initializeEnv(injector);
+
+    ServiceManager externalServiceManager =
+        injector.getInstance(Key.get(ServiceManager.class, ExternalServiceManager.class));
+    externalServiceManager.startAsync().awaitHealthy();
 
     labServer.run();
   }

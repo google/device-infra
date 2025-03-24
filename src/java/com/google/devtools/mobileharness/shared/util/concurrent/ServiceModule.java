@@ -91,7 +91,7 @@ public class ServiceModule extends AbstractModule {
         @Singleton
         @ExternalServiceManager
         ServiceManager provideServiceManager(
-            Set<Service> services,
+            @Internal Set<Service> services,
             @Internal Map<Integer, Listener> listeners,
             @Internal Map<Integer, Executor> executors) {
           ServiceManager manager = new ServiceManager(services);
@@ -122,7 +122,9 @@ public class ServiceModule extends AbstractModule {
         newMapBinder(userBinder, Integer.class, Executor.class, Internal.class);
     serviceManagerListeners =
         newMapBinder(userBinder, Integer.class, Listener.class, Internal.class);
-    serviceMultibinder = newSetBinder(userBinder, Service.class);
+    // Annotate Service bindings with @Internal to prevent conflicts with Services bound with the
+    // internal ServiceModule. This creates two disjoint sets of services.
+    serviceMultibinder = newSetBinder(userBinder, Service.class, Internal.class);
     configureServices();
     serviceMultibinder = null;
     serviceManagerListeners = null;
