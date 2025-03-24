@@ -387,12 +387,10 @@ public class AndroidInstrumentation extends BaseDriver
     String deviceId = getDevice().getDeviceId();
 
     boolean hasError = false;
-    boolean hasInfraError = false;
     boolean hasFail = false;
     boolean hasPass = false;
     MobileHarnessException errorResultCause = null;
     MobileHarnessException failResultCause = null;
-    MobileHarnessException infraErrorResultCause = null;
 
     properties.add(PropertyName.Test.ANDROID_INST_TEST_METHOD_REPEAT_TIMES, String.valueOf(1));
     boolean hasSequentialOptionMaps =
@@ -561,14 +559,6 @@ public class AndroidInstrumentation extends BaseDriver
                   "Instrumentation start/finish unexpectedly: " + errorMsg,
                   mhException);
           break;
-        case INFRA_ERROR:
-          hasInfraError = true;
-          infraErrorResultCause =
-              new MobileHarnessException(
-                  AndroidErrorId.ANDROID_INSTRUMENTATION_TEST_INFRA_ERROR,
-                  "Instrumentation start/finish unexpectedly: " + errorMsg,
-                  mhException);
-          break;
         case TIMEOUT:
           MobileHarnessException timeoutCause =
               new MobileHarnessException(
@@ -664,13 +654,7 @@ public class AndroidInstrumentation extends BaseDriver
         logFilenames.toString());
 
     // Uses the worse case as the final result.
-    if (hasInfraError) {
-      testInfo
-          .resultWithCause()
-          .setNonPassing(
-              com.google.devtools.mobileharness.api.model.proto.Test.TestResult.ERROR,
-              infraErrorResultCause);
-    } else if (hasError) {
+    if (hasError) {
       testInfo
           .resultWithCause()
           .setNonPassing(
