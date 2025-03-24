@@ -1873,6 +1873,22 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> useTfRetry = useTfRetryDefault;
 
+  private static final Flag<String> virtualDeviceServerIpDefault = Flag.value("");
+
+  @com.beust.jcommander.Parameter(
+      names = "--virtual_device_server_ip",
+      description = "The IP address of the remote virtual device server.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> virtualDeviceServerIp = virtualDeviceServerIpDefault;
+
+  private static final Flag<String> virtualDeviceServerUsernameDefault = Flag.value("");
+
+  @com.beust.jcommander.Parameter(
+      names = "--virtual_device_server_username",
+      description = "The username of the remote virtual device server.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> virtualDeviceServerUsername = virtualDeviceServerUsernameDefault;
+
   private static final Flag<Boolean> xtsDisableTfResultLogDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(

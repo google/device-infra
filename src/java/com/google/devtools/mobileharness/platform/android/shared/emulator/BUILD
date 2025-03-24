@@ -33,14 +33,12 @@ java_library(
     name = "android_jit_emulator_util",
     srcs = ["AndroidJitEmulatorUtil.java"],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/shared/emulator:__subpackages__",
     ],
-)
-
-filegroup(
-    name = "tf_virtual_device_host_config",
-    srcs = ["host-config.xml"],
-    visibility = [
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
+        "@maven//:com_google_guava_guava",
     ],
 )

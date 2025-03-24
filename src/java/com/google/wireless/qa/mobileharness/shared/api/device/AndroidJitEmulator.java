@@ -82,8 +82,8 @@ public class AndroidJitEmulator extends AndroidDevice {
   @Override
   public void setUp() throws MobileHarnessException, InterruptedException {
     logger.atInfo().log("JIT emulator start setup. %s", deviceId);
-    addDimension(Ascii.toLowerCase(AndroidProperty.ABILIST.name()), "x86_64");
-    addDimension(Ascii.toLowerCase(AndroidProperty.ABI.name()), "x86_64");
+    addDimension(Ascii.toLowerCase(AndroidProperty.ABILIST.name()), "x86_64,arm64-v8a");
+    addDimension(Ascii.toLowerCase(AndroidProperty.ABI.name()), "arm64-v8a");
     addSupportedDriver("NoOpDriver");
     addSupportedDriver("AndroidInstrumentation");
     addSupportedDriver("MoblyTest");
@@ -103,7 +103,10 @@ public class AndroidJitEmulator extends AndroidDevice {
   @Override
   public void preRunTest(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
     if (Flags.instance().noopJitEmulator.getNonNull()) {
-      logger.atInfo().log("JIT emulator %s is no-op", deviceId);
+      logger.atInfo().log(
+          "JIT emulator %s is no-op. Tradefed will be responsible for actually launching the"
+              + " emulator.",
+          deviceId);
       return;
     }
     String imgZip = testInfo.jobInfo().files().getSingle("device");
