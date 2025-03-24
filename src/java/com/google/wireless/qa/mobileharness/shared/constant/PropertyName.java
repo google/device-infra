@@ -510,6 +510,12 @@ public interface PropertyName {
       ANDROID_ACCOUNT_DECORATOR_AUTHCODES,
     }
 
+    /** AndroidHdVideoDecorator property name constants. */
+    public enum AndroidHdVideoDecorator implements PropertyName {
+      /** Start time of recording the (first) video. */
+      ANDROID_HD_VIDEO_DECORATOR_VIDEO_START_EPOCH_MS,
+    }
+
     /** IosGoogleAccountDecorator property name constants. */
     public enum IosGoogleAccountDecorator implements PropertyName {
 

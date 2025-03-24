@@ -32,10 +32,12 @@ import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnot
 import com.google.wireless.qa.mobileharness.shared.api.annotation.ParamAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
+import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobSetting;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
+import java.time.Clock;
 import java.time.Duration;
 import java.util.LinkedList;
 import java.util.Queue;
@@ -196,6 +198,8 @@ public class AndroidHdVideoDecorator extends AsyncTimerDecorator {
 
   private final AndroidMediaUtil androidMediaUtil;
 
+  private final Clock clock;
+
   private final Stopwatch stopwatch;
 
   /**
@@ -208,7 +212,8 @@ public class AndroidHdVideoDecorator extends AsyncTimerDecorator {
         testInfo,
         new AndroidSystemSettingUtil(),
         new AndroidFileUtil(),
-        new AndroidMediaUtil());
+        new AndroidMediaUtil(),
+        Clock.systemUTC());
   }
 
   /** Constructor for testing only. */
@@ -219,11 +224,13 @@ public class AndroidHdVideoDecorator extends AsyncTimerDecorator {
       TestInfo testInfo,
       AndroidSystemSettingUtil systemSettingUtil,
       AndroidFileUtil androidFileUtil,
-      AndroidMediaUtil androidMediaUtil) {
+      AndroidMediaUtil androidMediaUtil,
+      Clock clock) {
     super(decoratedDriver, testInfo);
     this.systemSettingUtil = systemSettingUtil;
     this.androidFileUtil = androidFileUtil;
     this.androidMediaUtil = androidMediaUtil;
+    this.clock = clock;
     this.stopwatch = Stopwatch.createUnstarted();
     runningProcesses = new LinkedList<>();
   }
@@ -351,6 +358,13 @@ public class AndroidHdVideoDecorator extends AsyncTimerDecorator {
                       Duration.ofMillis(
                           overwriteMaxRecordingTimeMs() + OVERLAP_RECORDING_TIME_MS)));
           runningProcesses.add(process);
+        }
+        if (currentClipId == 0) {
+          testInfo
+              .properties()
+              .add(
+                  Test.AndroidHdVideoDecorator.ANDROID_HD_VIDEO_DECORATOR_VIDEO_START_EPOCH_MS,
+                  Long.toString(clock.instant().toEpochMilli()));
         }
         currentClipId++;
       }
