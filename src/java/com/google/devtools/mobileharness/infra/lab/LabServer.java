@@ -58,9 +58,11 @@ import com.google.devtools.mobileharness.infra.lab.rpc.service.PrepareTestServic
 import com.google.devtools.mobileharness.infra.lab.rpc.service.grpc.ExecTestGrpcImpl;
 import com.google.devtools.mobileharness.infra.lab.rpc.service.grpc.PrepareTestGrpcImpl;
 import com.google.devtools.mobileharness.infra.lab.rpc.service.grpc.StatGrpcImpl;
+import com.google.devtools.mobileharness.infra.lab.rpc.stub.helper.JobSyncHelper;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.helper.LabSyncHelper;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.JobSyncStub;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.LabSyncStub;
+import com.google.devtools.mobileharness.infra.master.rpc.stub.grpc.JobSyncGrpcStub;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.grpc.LabSyncGrpcStub;
 import com.google.devtools.mobileharness.shared.constant.hostmanagement.HostPropertyConstants.HostPropertyKey;
 import com.google.devtools.mobileharness.shared.labinfo.LabInfoProvider;
@@ -208,6 +210,13 @@ public class LabServer {
                 ChannelFactory.createChannel(
                     Flags.instance().masterGrpcTarget.getNonNull(), mainThreadPool));
         labSyncStub = new LabSyncGrpcStub(helper);
+        jobSyncStub = new JobSyncGrpcStub(helper);
+      }
+
+      if (jobSyncStub != null) {
+        JobSyncHelper jobSyncHelper = new JobSyncHelper(jobSyncStub);
+        masterSyncerForJob = new MasterSyncerForJob(jobManager, jobSyncHelper, deviceManager);
+        globalInternalBus.register(masterSyncerForJob);
       }
 
       if (labSyncStub != null) {
