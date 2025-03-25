@@ -33,7 +33,6 @@ public class ResultComparator implements Comparator<TestResult> {
           .put(TestResult.ABORT, 2)
           .put(TestResult.UNKNOWN, 1)
           .put(TestResult.ERROR, -1)
-          .put(TestResult.INFRA_ERROR, -2)
           .put(TestResult.SKIP, -3)
           .buildOrThrow();
 
