@@ -37,4 +37,12 @@ message IosNativeXcTestSpec {
   optional string xctestrun = 2 [
     (file_detail) = { is_required: false help: "The path of .xctestrun file." }
   ];
+
+  // Whether or not allow the unsigned bundle. If true, the unsigned bundle will
+  // be signed with a default templated entitlements. If false, the code signing
+  // process will throws an exception. The default value is false.
+  optional bool allow_unsigned_bundle = 3 [
+    default = false,
+    (field_detail) = { help: "Whether or not allow the unsigned bundle." }
+  ];
 }
