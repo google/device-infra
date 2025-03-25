@@ -132,6 +132,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:abi_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:suite_common_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/subplan:sub_plan",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_code_findbugs_jsr305",

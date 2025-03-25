@@ -19,8 +19,12 @@ package com.google.devtools.mobileharness.platform.android.xts.suite.retry;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static java.lang.Math.min;
+import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toCollection;
 
+import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -46,6 +50,7 @@ import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubP
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -360,6 +365,16 @@ public class RetryReportMerger {
         moduleFromRetry.getTestCaseList().stream()
             .collect(toImmutableMap(TestCase::getName, Function.identity()));
 
+    // Gets test case name and test name from exclude filters.
+    Map<String, ImmutableSet<String>> excludedTestCaseNamesAndTestNamesInRetry =
+        matchedRetryExcludeTestFilters.stream()
+            .map(TestCaseNameAndTestName::parse)
+            .collect(
+                groupingBy(
+                    TestCaseNameAndTestName::testCaseName,
+                    HashMap::new,
+                    mapping(TestCaseNameAndTestName::testName, toImmutableSet())));
+
     HashSet<String> notCheckedTestCasesFromRetry =
         testCasesFromRetry.keySet().stream().collect(toCollection(HashSet::new));
     for (TestCase testCaseFromPrevSession : moduleFromPrevSession.getTestCaseList()) {
@@ -369,9 +384,8 @@ public class RetryReportMerger {
               moduleId,
               testCaseFromPrevSession,
               testCasesFromRetry,
-              matchedRetryExcludeTestFilters.stream()
-                  .filter(filter -> filter.contains(testCaseFromPrevSession.getName()))
-                  .collect(toImmutableSet())));
+              excludedTestCaseNamesAndTestNamesInRetry.getOrDefault(
+                  testCaseFromPrevSession.getName(), ImmutableSet.of())));
     }
     if (!notCheckedTestCasesFromRetry.isEmpty()) {
       logger.atInfo().log(
@@ -408,11 +422,11 @@ public class RetryReportMerger {
       String moduleId,
       TestCase testCaseFromPrevSession,
       Map<String, TestCase> testCasesFromRetry,
-      Set<String> matchedRetryExcludeTestFilters) {
+      ImmutableSet<String> excludedTestNamesInTestCaseRetry) {
     String testCaseName = testCaseFromPrevSession.getName();
     boolean testCaseFoundInRetry = testCasesFromRetry.containsKey(testCaseName);
     boolean testCaseNotRetried = false;
-    if (matchedRetryExcludeTestFilters.contains(testCaseName)) {
+    if (excludedTestNamesInTestCaseRetry.contains("")) {
       testCaseNotRetried = true;
     } else if (!testCaseFoundInRetry) {
       logger.atInfo().log(
@@ -443,14 +457,14 @@ public class RetryReportMerger {
         moduleId,
         testCaseFromPrevSession,
         testCasesFromRetry.get(testCaseName),
-        matchedRetryExcludeTestFilters);
+        excludedTestNamesInTestCaseRetry);
   }
 
   private TestCase doMergeTestCase(
       String moduleId,
       TestCase testCaseFromPrevSession,
       TestCase testCaseFromRetry,
-      Set<String> matchedRetryExcludeTestFilters) {
+      ImmutableSet<String> excludedTestNamesInTestCaseRetry) {
     String testCaseName = testCaseFromRetry.getName();
     TestCase.Builder mergedTestCaseBuilder = TestCase.newBuilder().setName(testCaseName);
 
@@ -469,9 +483,7 @@ public class RetryReportMerger {
               testCaseName,
               testFromPrevSession,
               testsFromRetry,
-              matchedRetryExcludeTestFilters.stream()
-                  .filter(filter -> filter.contains(testFromPrevSession.getName()))
-                  .collect(toImmutableSet())));
+              excludedTestNamesInTestCaseRetry.contains(testFromPrevSession.getName())));
     }
     if (!notCheckedTestsFromRetry.isEmpty()) {
       logger.atInfo().log(
@@ -490,11 +502,11 @@ public class RetryReportMerger {
       String testCaseName,
       Test testFromPrevSession,
       Map<String, Test> testsFromRetry,
-      Set<String> matchedRetryExcludeTestFilters) {
+      boolean excludedInRetry) {
     String testName = testFromPrevSession.getName();
     boolean testFoundInRetry = testsFromRetry.containsKey(testName);
     boolean testNotRetried = false;
-    if (matchedRetryExcludeTestFilters.stream().anyMatch(filter -> filter.contains(testName))) {
+    if (excludedInRetry) {
       testNotRetried = true;
     } else if (!testFoundInRetry) {
       logger.atInfo().log("Test %s %s#%s was not retried ", moduleId, testCaseName, testName);
@@ -539,5 +551,26 @@ public class RetryReportMerger {
         .setPassedTests(result.getSummary().getPassed())
         .setFailedTests(result.getSummary().getFailed())
         .build();
+  }
+
+  @AutoValue
+  abstract static class TestCaseNameAndTestName {
+
+    abstract String testCaseName();
+
+    abstract String testName();
+
+    private static TestCaseNameAndTestName parse(String originalString) {
+      int testCaseNameLength = originalString.indexOf('#');
+      if (testCaseNameLength == -1) {
+        testCaseNameLength = originalString.length();
+      }
+
+      String testCaseName = originalString.substring(0, testCaseNameLength);
+      String testName =
+          originalString.substring(min(testCaseNameLength + 1, originalString.length()));
+
+      return new AutoValue_RetryReportMerger_TestCaseNameAndTestName(testCaseName, testName);
+    }
   }
 }
