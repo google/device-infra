@@ -1441,6 +1441,20 @@ public class AndroidPackageManagerUtil {
    * Gets package names of packages on the device.
    *
    * @param serial serial number of the device.
+   * @param nameFilter filter to only those whose name contains this string.
+   * @return a set of package names; will never be null but could be empty
+   * @throws MobileHarnessException if fail getting package info from the device
+   * @throws InterruptedException if current thread is interrupted during this method
+   */
+  public Set<String> listPackages(String serial, String nameFilter)
+      throws MobileHarnessException, InterruptedException {
+    return listPackages(serial, StatusFilter.NONE, nameFilter);
+  }
+
+  /**
+   * Gets package names of packages on the device.
+   *
+   * @param serial serial number of the device.
    * @param statusFilter status filter.
    * @param nameFilter filter to only those whose name contains this string.
    * @return a set of package names; will never be null but could be empty
