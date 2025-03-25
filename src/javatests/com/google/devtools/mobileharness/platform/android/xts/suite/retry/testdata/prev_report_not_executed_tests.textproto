@@ -1,0 +1,81 @@
+# proto-file: third_party/deviceinfra/src/devtools/mobileharness/infra/ats/console/result/proto/report.proto
+# proto-message: mobileharness.infra.ats.console.result.Result
+
+build {
+  build_fingerprint: "google/redfin/redfin:12/SQ3A.220705.003.A1/8672226:userdebug/dev-keys"
+  attribute {
+    key: "adb_version"
+    value: "1.0.41 subVersion: 33.0.1-eng.vincen.20220331.113409 install path: /android/sdktool/binary/platform-tools/adb"
+  }
+  attribute {
+    key: "command_line_args"
+    value: "cts --subplan 123 -s 0A031FDD4004FA"
+  }
+  attribute {
+    key: "device_kernel_info"
+    value: "Linux localhost 4.19.224-g9e23c2625924-ab8577203 #1 SMP PREEMPT Thu May 12 05:21:57 UTC 2022 aarch64"
+  }
+  attribute {
+    key: "java_version"
+    value: "21.0.2"
+  }
+  attribute {
+    key: "system_img_info"
+    value: "google/redfin/redfin:12/SQ3A.220705.003.A1/8672226:userdebug/dev-keys"
+  }
+  attribute {
+    key: "vendor_img_info"
+    value: "google/redfin/redfin:12/SQ3A.220705.003.A1/8672226:userdebug/dev-keys"
+  }
+}
+summary: {
+  passed: 0
+  failed: 1
+  modules_done: 0
+  modules_total: 1
+}
+module_info: {
+  name: "CtsPackageSettingHostTestCases"
+  abi: "arm64-v8a"
+  runtime_millis: 268049
+  done: false
+  passed: 0
+  total_tests: 1
+  reason: {
+    msg: "com.android.tradefed.device.DeviceNotAvailableException[DEVICE_UNAVAILABLE|520750|LOST_SYSTEM_UNDER_TEST]: Could not find device fdf97de2"
+    error_name: "DEVICE_UNAVAILABLE"
+    error_code: "520750"
+  }
+  test_case: {
+    name: "com.android.tests.packagesetting.host.PackageSettingTest"
+    test: {
+      result: "fail"
+      name: "testFirstInstallTimeWithReboot"
+      failure: {
+        msg: "MultipleFailureException, There were 3 errors:"
+        stack_trace: {
+          content: "MultipleFailureException, There were 3 errors:\n  com.android.tradefed.device.DeviceNotAvailableException[DEVICE_UNAVAILABLE|520750|LOST_SYSTEM_UNDER_TEST]: Could not find device"
+        }
+      }
+    }
+  }
+  failed_tests: 1
+  prep_time_millis: 0
+  teardown_time_millis: 0
+}
+attribute: {
+  key: "start"
+  value: "1742380110824"
+}
+attribute: {
+  key: "end"
+  value: "1742380459836"
+}
+attribute: {
+  key: "start_display"
+  value: "Wed Mar 19 19:28:30 CST 2025"
+}
+attribute: {
+  key: "end_display"
+  value: "Wed Mar 19 19:34:19 CST 2025"
+}

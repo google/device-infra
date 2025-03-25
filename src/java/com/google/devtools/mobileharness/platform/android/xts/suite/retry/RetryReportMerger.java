@@ -459,7 +459,10 @@ public class RetryReportMerger {
         testCaseFromRetry.getTestList().stream()
             .collect(toImmutableMap(Test::getName, Function.identity()));
 
+    HashSet<String> notCheckedTestsFromRetry =
+        testsFromRetry.keySet().stream().collect(toCollection(HashSet::new));
     for (Test testFromPrevSession : testCaseFromPrevSession.getTestList()) {
+      notCheckedTestsFromRetry.remove(testFromPrevSession.getName());
       mergedTestCaseBuilder.addTest(
           createMergedTest(
               moduleId,
@@ -469,6 +472,14 @@ public class RetryReportMerger {
               matchedRetryExcludeTestFilters.stream()
                   .filter(filter -> filter.contains(testFromPrevSession.getName()))
                   .collect(toImmutableSet())));
+    }
+    if (!notCheckedTestsFromRetry.isEmpty()) {
+      logger.atInfo().log(
+          "Found %d tests in retry result (module %s, test case %s) but not in previous result",
+          notCheckedTestsFromRetry.size(), moduleId, testCaseName);
+      for (String testName : notCheckedTestsFromRetry) {
+        mergedTestCaseBuilder.addTest(testsFromRetry.get(testName));
+      }
     }
 
     return mergedTestCaseBuilder.build();

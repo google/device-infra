@@ -89,6 +89,15 @@ public final class RetryReportMergerTest {
       RunfilesUtil.getRunfilesLocation(
           TEST_DATA_DIR + "merged_report_module_failure_fixed.textproto");
 
+  private static final String PREV_REPORT_NOT_EXECUTED_TESTS_TEXTPROTO =
+      RunfilesUtil.getRunfilesLocation(TEST_DATA_DIR + "prev_report_not_executed_tests.textproto");
+  private static final String RETRY_REPORT_NOT_EXECUTED_TESTS_FIXED_TEXTPROTO =
+      RunfilesUtil.getRunfilesLocation(
+          TEST_DATA_DIR + "retry_report_not_executed_tests_fixed.textproto");
+  private static final String MERGED_REPORT_NOT_EXECUTED_TESTS_FIXED_TEXTPROTO =
+      RunfilesUtil.getRunfilesLocation(
+          TEST_DATA_DIR + "merged_report_not_executed_tests_fixed.textproto");
+
   private static final Path RESULTS_DIR_PATH = Path.of("/path/to/xts-root/android-cts/results");
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
@@ -302,6 +311,50 @@ public final class RetryReportMergerTest {
             /* retryType= */ null,
             retryReport,
             /* passedInModules= */ ImmutableList.of("CtsVcnTestCases"));
+
+    assertThat(mergedReport).isEqualTo(expectedMergedReport);
+  }
+
+  @Test
+  public void mergeReports_prevReportHasNotExecutedTests_testPassedInRetry() throws Exception {
+    Result prevReport =
+        TextFormat.parse(
+            localFileUtil.readFile(PREV_REPORT_NOT_EXECUTED_TESTS_TEXTPROTO), Result.class);
+    Result retryReport =
+        TextFormat.parse(
+            localFileUtil.readFile(RETRY_REPORT_NOT_EXECUTED_TESTS_FIXED_TEXTPROTO), Result.class);
+    Result expectedMergedReport =
+        TextFormat.parse(
+            localFileUtil.readFile(MERGED_REPORT_NOT_EXECUTED_TESTS_FIXED_TEXTPROTO), Result.class);
+    when(previousResultLoader.loadPreviousResult(
+            RESULTS_DIR_PATH, 0, /* previousSessionResultDirName= */ null))
+        .thenReturn(prevReport);
+
+    SubPlan subPlan =
+        SubPlanHelper.createSubPlanForPreviousResult(
+            prevReport,
+            ImmutableSet.of("not_executed"),
+            /* addSubPlanCmd= */ false,
+            // Previous run ran with a subplan that has include filters.
+            /* prevResultIncludeFilters= */ ImmutableSet.of(
+                SuiteTestFilter.create(
+                    "arm64-v8a CtsPackageSettingHostTestCases"
+                        + " com.android.tests.packagesetting.host.PackageSettingTest#testAppInstallsWithReboot"),
+                SuiteTestFilter.create(
+                    "arm64-v8a CtsPackageSettingHostTestCases"
+                        + " com.android.tests.packagesetting.host.PackageSettingTest#testFirstInstallTimeWithReboot")),
+            /* prevResultExcludeFilters= */ ImmutableSet.of(),
+            /* passedInModules= */ ImmutableSet.of());
+    when(retryGenerator.generateRetrySubPlan(any())).thenReturn(subPlan);
+
+    Result mergedReport =
+        retryReportMerger.mergeReports(
+            RESULTS_DIR_PATH,
+            0,
+            /* previousSessionResultDirName= */ null,
+            /* retryType= */ null,
+            retryReport,
+            /* passedInModules= */ ImmutableList.of(""));
 
     assertThat(mergedReport).isEqualTo(expectedMergedReport);
   }
