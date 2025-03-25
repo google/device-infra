@@ -16,11 +16,21 @@
 
 package com.google.devtools.mobileharness.infra.controller.device.config;
 
+import com.google.devtools.mobileharness.shared.util.concurrent.ServiceModule;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
+import com.google.inject.multibindings.Multibinder;
+import java.util.Observer;
 
 /** Module for providing {@link ApiConfig}. */
 public final class ApiConfigModule extends AbstractModule {
+  @SuppressWarnings("deprecation") // Observer is used by ApiConfig.
+  @Override
+  protected void configure() {
+    install(ServiceModule.forService(ApiConfigService.class));
+    Multibinder.newSetBinder(binder(), Observer.class, ApiConfigObserver.class);
+  }
+
   @Provides
   ApiConfig provideApiConfig() {
     return ApiConfig.getInstance();

@@ -103,7 +103,38 @@ java_library(
         "//:deviceinfra_all_pkg",
     ],
     deps = [
+        ":api_config_observer",
+        ":api_config_service",
         ":config",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:service_module",
+        "@maven//:com_google_inject_guice",
+    ],
+)
+
+java_library(
+    name = "api_config_service",
+    srcs = ["ApiConfigService.java"],
+    deps = [
+        ":api_config_observer",
+        ":config",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
+        "//src/java/com/google/devtools/mobileharness/shared/util/system",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/util:device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/util:net_util",
+        "@maven//:com_google_guava_guava",
+        "@maven//:com_google_inject_guice",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "api_config_observer",
+    srcs = ["ApiConfigObserver.java"],
+    visibility = [
+        "//:deviceinfra_all_pkg",
+    ],
+    deps = [
         "@maven//:com_google_inject_guice",
     ],
 )
