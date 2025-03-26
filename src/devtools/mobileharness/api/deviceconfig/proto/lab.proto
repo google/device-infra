@@ -36,9 +36,6 @@ message LabConfig {
   // by default, in the format of "ip, username, password".
   repeated OverSshDevice over_ssh = 6;
 
-  // The USB device IDs the lab will try to detect by default.
-  repeated UsbDevice usb_device = 7 [deprecated = true];
-
   // The UUID of devices which will be monitored by the lab.
   repeated string monitored_device_uuid = 3;
 
@@ -49,18 +46,16 @@ message LabConfig {
   // The UUID of testbed configs of this lab.
   repeated string testbed_uuid = 5;
 
-  reserved 8;
-
   // The host properties of this lab.
   mobileharness.api.model.HostProperties host_properties = 9;
-
-  reserved 10;
 
   // The UUID of devices which should be MiscDevice.
   repeated string misc_device_uuid = 11;
 
   // The SSH groups of this lab.
   repeated SshGroup ssh_group = 12;
+
+  reserved 7, 8, 10;
 }
 
 // The configuration of a SSH group to define users/groups that can ssh to this
