@@ -51,6 +51,12 @@ public class Annotations {
   @BindingAnnotation
   public @interface GlobalEventBusSubscriber {}
 
+  /** Annotation for binding the hostname to a String. */
+  @Retention(RetentionPolicy.RUNTIME)
+  @Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER})
+  @BindingAnnotation
+  public @interface HostName {}
+
   /** Annotation for binding cloud rpc DNS address. */
   @Retention(RetentionPolicy.RUNTIME)
   @Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER})
