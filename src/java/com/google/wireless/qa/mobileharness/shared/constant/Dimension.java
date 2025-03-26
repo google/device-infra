@@ -302,6 +302,9 @@ public final class Dimension {
     /** Whether the device is locked with the device admin. */
     DEVICE_ADMIN_LOCKED,
 
+    /** Whether the device WIFI configuration is restricted by the device admin. */
+    DEVICE_ADMIN_WIFI_RESTRICTED,
+
     // iOS
     /** Whether the device has blocked the iOS version upgrade successfully. */
     BLOCKED_IOS_VERSION_UPGRADE,

@@ -1706,7 +1706,7 @@ public abstract class AndroidRealDeviceDelegate {
    * @return whether there is any dimension changed
    */
   @VisibleForTesting
-  boolean checkNetwork() throws InterruptedException {
+  boolean checkNetwork() throws MobileHarnessException, InterruptedException {
     if (needToInstallWifiApk()) {
       if (Flags.instance().disableWifiUtilFunc.getNonNull()) {
         logger.atInfo().log(
@@ -1753,12 +1753,23 @@ public abstract class AndroidRealDeviceDelegate {
    *
    * @return the ssid.
    */
-  private Optional<String> bestEffortConnectNetworkSsid() throws InterruptedException {
-    Optional<String> currentSsid = checkNetworkSsid();
-    if (currentSsid.isEmpty()) {
-      currentSsid = recoverWifiConnectionIfRequired();
+  private Optional<String> bestEffortConnectNetworkSsid()
+      throws MobileHarnessException, InterruptedException {
+    // When the device is locked with device admin, the wifi connection will be blocked. Temporarily
+    // disable the WIFI restriction to avoid blocking the wifi re-connection.
+    // If togglling on/off device admin wifi restriction fails, will throw an exception and kill the
+    // current device runner. This is intended to avoid the device is in a risk state that the user
+    // has permission to operate the wifi.
+    toggleDeviceAdminWifiRestrictionIfLocked(/* enable= */ false);
+    try {
+      Optional<String> currentSsid = checkNetworkSsid();
+      if (currentSsid.isEmpty()) {
+        currentSsid = recoverWifiConnectionIfRequired();
+      }
+      return currentSsid;
+    } finally {
+      toggleDeviceAdminWifiRestrictionIfLocked(/* enable= */ true);
     }
-    return currentSsid;
   }
 
   /**
@@ -2613,12 +2624,34 @@ public abstract class AndroidRealDeviceDelegate {
     logger.atInfo().log("Start to setup and lock device %s", deviceId);
     deviceAdminUtil.setupAndLock(deviceId);
     device.updateDimension(Dimension.Name.DEVICE_ADMIN_LOCKED, Dimension.Value.TRUE);
+    device.updateDimension(Dimension.Name.DEVICE_ADMIN_WIFI_RESTRICTED, Dimension.Value.TRUE);
   }
 
   private void unlockWithDeviceAdmin() throws MobileHarnessException, InterruptedException {
     logger.atInfo().log("Start to unlock device %s", deviceId);
     deviceAdminUtil.unlock(deviceId);
     device.removeDimension(Dimension.Name.DEVICE_ADMIN_LOCKED);
+    device.removeDimension(Dimension.Name.DEVICE_ADMIN_WIFI_RESTRICTED);
+  }
+
+  /**
+   * Toggles the wifi restriction on/off with device admin.
+   *
+   * @param enable whether to enable the wifi restriction
+   */
+  private void toggleDeviceAdminWifiRestrictionIfLocked(boolean enable)
+      throws MobileHarnessException, InterruptedException {
+    // Only toggle wifi restriction when the device is locked with device admin.
+    if (device.getDimension(Dimension.Name.DEVICE_ADMIN_LOCKED).contains(Dimension.Value.TRUE)) {
+      logger.atInfo().log("Toggling wifi restriction on device %s to status %s", deviceId, enable);
+      deviceAdminUtil.toggleRestrictions(
+          deviceId, ImmutableList.of("no_config_wifi"), /* enable= */ enable);
+      if (enable) {
+        device.updateDimension(Dimension.Name.DEVICE_ADMIN_WIFI_RESTRICTED, Dimension.Value.TRUE);
+      } else {
+        device.removeDimension(Dimension.Name.DEVICE_ADMIN_WIFI_RESTRICTED);
+      }
+    }
   }
 
   /**
