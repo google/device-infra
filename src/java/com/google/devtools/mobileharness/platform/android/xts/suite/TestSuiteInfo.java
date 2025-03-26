@@ -111,7 +111,15 @@ public class TestSuiteInfo {
         }
       }
     }
-    return instance;
+    // To adapt to ATS UI usage where xtsRootDir can change in lifetime of the program.
+    if (xtsRootDir.equals(instance.xtsRootDir) && xtsType.equals(instance.xtsTypeStr)) {
+      return instance;
+    } else {
+      logger.atInfo().log(
+          "Creating %s instance with params [xts root dir: %s, xts type: %s]",
+          TestSuiteInfo.class.getSimpleName(), xtsRootDir, xtsType);
+      return new TestSuiteInfo(xtsRootDir, xtsType, new JarFileUtil());
+    }
   }
 
   /** Gets the build number of the test suite. */
