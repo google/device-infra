@@ -23,6 +23,7 @@ import com.android.tradefed.metrics.proto.MetricMeasurement.Measurements;
 import com.android.tradefed.metrics.proto.MetricMeasurement.Metric;
 import com.android.tradefed.result.proto.TestRecordProto.TestRecord;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Attribute;
@@ -62,6 +63,10 @@ public final class CompatibilityReportMergerTest {
 
   private static final String CTS_TEST_RECORD_PB_FILE =
       TestRunfilesUtil.getRunfilesLocation("result/report/testdata/xml/cts_test_record.pb");
+
+  private static final String CTS_SKIPPED_MODULES_TEST_RECORD_PB_FILE =
+      TestRunfilesUtil.getRunfilesLocation(
+          "result/report/testdata/xml/skipped_modules_test_record.pb");
 
   private static final String MOBLY_TEST_SUMMARY_FILE_1 =
       TestRunfilesUtil.getRunfilesLocation("result/report/testdata/mobly/pass/test_summary.yaml");
@@ -395,6 +400,21 @@ public final class CompatibilityReportMergerTest {
                     () -> CompatibilityReportMerger.validateReportsWithSameBuildFingerprint(res2))
                 .getErrorId())
         .isEqualTo(ExtErrorId.REPORT_MERGER_DIFF_DEVICE_BUILD_FINGERPRINT_FOUND);
+  }
+
+  @Test
+  public void getSkippedModules_success() throws Exception {
+    Optional<TestRecord> testRecord =
+        CompatibilityReportMerger.readTestRecord(Path.of(CTS_SKIPPED_MODULES_TEST_RECORD_PB_FILE));
+    ImmutableSet<String> skippedModules =
+        CompatibilityReportMerger.getSkippedModules(testRecord.get());
+
+    assertThat(skippedModules)
+        .containsExactly(
+            "arm64-v8a CtsCarBuiltinApiTestCases",
+            "armeabi-v7a CtsCarBuiltinApiTestCases",
+            "arm64-v8a CtsCarTestCases",
+            "armeabi-v7a CtsCarTestCases");
   }
 
   private Metric createBasicMetric(long value) {

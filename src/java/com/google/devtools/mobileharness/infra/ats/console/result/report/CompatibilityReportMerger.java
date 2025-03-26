@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.infra.ats.console.result.report;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.concurrent.TimeUnit.HOURS;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toMap;
@@ -104,10 +105,11 @@ public class CompatibilityReportMerger {
   public Optional<Result> mergeXmlReports(List<Path> reportXmlFiles, boolean skipDeviceInfo)
       throws MobileHarnessException, InterruptedException {
     return mergeResultBundles(
-        reportXmlFiles.stream()
-            .map(file -> TradefedResultBundle.of(file, Optional.empty()))
-            .collect(toImmutableList()),
-        skipDeviceInfo);
+            reportXmlFiles.stream()
+                .map(file -> TradefedResultBundle.of(file, Optional.empty()))
+                .collect(toImmutableList()),
+            skipDeviceInfo)
+        .report();
   }
 
   /**
@@ -117,10 +119,16 @@ public class CompatibilityReportMerger {
    * <p>Note: the XML report files must have the same device build fingerprint info, otherwise the
    * merge won't proceed.
    */
-  public Optional<Result> mergeResultBundles(
+  public ParseResult mergeResultBundles(
       List<TradefedResultBundle> resultBundles, boolean skipDeviceInfo)
       throws MobileHarnessException, InterruptedException {
-    return mergeParsedReports(parseResultBundles(resultBundles), skipDeviceInfo);
+    List<ParseResult> parseResults = parseResultBundles(resultBundles);
+    return ParseResult.of(
+        /* originalReportFile= */ Optional.empty(),
+        mergeParsedReports(parseResults, skipDeviceInfo),
+        parseResults.stream()
+            .flatMap(parseResult -> parseResult.skippedModules().stream())
+            .collect(toImmutableSet()));
   }
 
   /**
@@ -562,26 +570,27 @@ public class CompatibilityReportMerger {
       throws MobileHarnessException {
     Path xmlReportFile = resultBundle.xmlReportFile();
     Optional<Result> report = reportParser.parse(xmlReportFile, /* shallow= */ false);
+    ImmutableSet<String> skippedModules = ImmutableSet.of();
     if (resultBundle.testRecordFile().isPresent() && report.isPresent()) {
-      report =
-          Optional.of(
-              insertMetadataFromTestRecord(report.get(), resultBundle.testRecordFile().get()));
+      Optional<TestRecord> testRecord = readTestRecord(resultBundle.testRecordFile().get());
+      if (testRecord.isPresent()) {
+        report = Optional.of(insertMetadataFromTestRecord(report.get(), testRecord.get()));
+        skippedModules = getSkippedModules(testRecord.get());
+      }
     }
 
-    return ParseResult.of(Optional.of(xmlReportFile), report);
+    return ParseResult.of(Optional.of(xmlReportFile), report, skippedModules);
   }
 
-  private Result insertMetadataFromTestRecord(Result report, Path testRecordPath) {
-    TestRecord testRecord = null;
+  @VisibleForTesting
+  static Optional<TestRecord> readTestRecord(Path testRecordPath) {
     try {
-      testRecord = TestRecordProtoUtil.readFromFile(new File(testRecordPath.toString()));
+      return Optional.of(TestRecordProtoUtil.readFromFile(new File(testRecordPath.toString())));
     } catch (IOException e) {
       logger.atWarning().withCause(e).log(
           "Failed to read test record file from path: %s.", testRecordPath);
-      return report;
+      return Optional.empty();
     }
-
-    return insertMetadataFromTestRecord(report, testRecord);
   }
 
   @VisibleForTesting
@@ -613,8 +622,23 @@ public class CompatibilityReportMerger {
     return reportBuilder.build();
   }
 
+  /** Gets the skipped modules from the test record. */
+  @VisibleForTesting
+  static ImmutableSet<String> getSkippedModules(TestRecord testRecord) {
+    return testRecord.getChildrenList().stream()
+        .map(ChildReference::getInlineTestRecord)
+        .filter(
+            moduleRecord ->
+                !moduleRecord.getTestRecordId().isEmpty()
+                    // Module is skipped if it has no children and no failure.
+                    && moduleRecord.getChildrenList().isEmpty()
+                    && !moduleRecord.hasDebugInfo())
+        .map(TestRecord::getTestRecordId)
+        .collect(toImmutableSet());
+  }
+
   /**
-   * Goes though all TestRecord instances including children TestRecord and maps the test record id
+   * Goes through all TestRecord instances including children TestRecord and maps the test record id
    * to its metrics.
    */
   @VisibleForTesting
@@ -687,14 +711,25 @@ public class CompatibilityReportMerger {
 
     /** Creates a {@link ParseResult}. */
     public static ParseResult of(Optional<Path> originalReportFile, Optional<Result> report) {
-      return new AutoValue_CompatibilityReportMerger_ParseResult(originalReportFile, report);
+      return new AutoValue_CompatibilityReportMerger_ParseResult(
+          originalReportFile, report, ImmutableSet.of());
     }
 
-    /** The original report file being parsed. */
+    public static ParseResult of(
+        Optional<Path> originalReportFile,
+        Optional<Result> report,
+        ImmutableSet<String> skippedModules) {
+      return new AutoValue_CompatibilityReportMerger_ParseResult(
+          originalReportFile, report, skippedModules);
+    }
+
     public abstract Optional<Path> originalReportFile();
 
     /** The parsed report. */
     public abstract Optional<Result> report();
+
+    /** Skipped modules in the report. */
+    public abstract ImmutableSet<String> skippedModules();
   }
 
   /** A bundle of a Tradefed result including the XML file and the test record file. */

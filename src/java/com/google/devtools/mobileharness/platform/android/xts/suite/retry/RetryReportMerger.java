@@ -94,7 +94,8 @@ public class RetryReportMerger {
       @Nullable String previousSessionResultDirName,
       @Nullable RetryType retryType,
       @Nullable Result retryResult,
-      ImmutableList<String> passedInModules)
+      ImmutableList<String> passedInModules,
+      ImmutableSet<String> skippedModules)
       throws MobileHarnessException {
     Preconditions.checkState(previousSessionIndex != null || previousSessionResultDirName != null);
     // Loads the previous session result and its subplan used for the retry
@@ -115,7 +116,7 @@ public class RetryReportMerger {
       retryArgs.setPassedInModules(ImmutableSet.copyOf(passedInModules));
     }
     SubPlan subPlan = retryGenerator.generateRetrySubPlan(retryArgs.build());
-    return mergeReports(previousResult, subPlan, retryResult);
+    return mergeReports(previousResult, subPlan, retryResult, skippedModules);
   }
 
   /**
@@ -134,7 +135,8 @@ public class RetryReportMerger {
       String previousSessionId,
       @Nullable RetryType retryType,
       @Nullable Result retryResult,
-      ImmutableList<String> passedInModules)
+      ImmutableList<String> passedInModules,
+      ImmutableSet<String> skippedModules)
       throws MobileHarnessException {
     // Loads the previous session result and its subplan used for the retry
     Result previousResult = previousResultLoader.loadPreviousResult(resultsDir, previousSessionId);
@@ -147,11 +149,14 @@ public class RetryReportMerger {
       retryArgs.setPassedInModules(ImmutableSet.copyOf(passedInModules));
     }
     SubPlan subPlan = retryGenerator.generateRetrySubPlan(retryArgs.build());
-    return mergeReports(previousResult, subPlan, retryResult);
+    return mergeReports(previousResult, subPlan, retryResult, skippedModules);
   }
 
   private Result mergeReports(
-      Result previousResult, SubPlan retrySubPlan, @Nullable Result retryResult) {
+      Result previousResult,
+      SubPlan retrySubPlan,
+      @Nullable Result retryResult,
+      ImmutableSet<String> skippedModules) {
     Result.Builder mergedResult = Result.newBuilder();
     // If the previous result was ran with some filters given by the user command, reflect them in
     // the merged report too.
@@ -202,9 +207,7 @@ public class RetryReportMerger {
         previousResult.getAttributeList().stream()
             .filter(attribute -> attribute.getKey().equals(XmlConstants.COMMAND_LINE_ARGS))
             .findFirst();
-    if (commandLineArgs.isPresent()) {
-      attributes.add(commandLineArgs.get());
-    }
+    commandLineArgs.ifPresent(attributes::add);
     mergedResult
         .setIsRetryResult(true)
         .setBuild(retryResult.toBuilder().getBuildBuilder())
@@ -220,6 +223,12 @@ public class RetryReportMerger {
                     Function.identity()));
 
     for (Module moduleFromPrevSession : previousResult.getModuleInfoList()) {
+      // If the module is in the previous result but skipped in the retry session, remove it from
+      // the merged result.
+      if (!modulesFromRetry.containsKey(moduleFromPrevSession.getName())
+          && skippedModules.contains(moduleFromPrevSession.getName())) {
+        continue;
+      }
       mergedResult.addModuleInfo(
           createMergedModule(
               moduleFromPrevSession,

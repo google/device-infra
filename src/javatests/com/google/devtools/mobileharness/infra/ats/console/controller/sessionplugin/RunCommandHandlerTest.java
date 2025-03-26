@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.infra.ats.console.controller.sessionpl
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.doNothing;
@@ -27,6 +28,7 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.SessionHandlerHelper;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
@@ -40,6 +42,7 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.proto.Sess
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportCreator;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportMerger;
+import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportMerger.ParseResult;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportParser;
 import com.google.devtools.mobileharness.infra.ats.console.util.verifier.VerifierResultHelper;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
@@ -137,6 +140,9 @@ public final class RunCommandHandlerTest {
 
     when(sessionInfo.getSessionProperty(SESSION_PROPERTY_NAME_TIMESTAMP_DIR_NAME))
         .thenReturn(Optional.of(TIMESTAMP_DIR_NAME));
+
+    when(compatibilityReportMerger.mergeResultBundles(anyList(), anyBoolean()))
+        .thenReturn(ParseResult.of(Optional.empty(), Optional.empty(), ImmutableSet.of()));
 
     runCommandHandler =
         new RunCommandHandler(
