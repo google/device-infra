@@ -106,6 +106,7 @@ java_library(
         ":api_config_observer",
         ":api_config_service",
         ":config",
+        ":has_default_synced",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:service_module",
         "@maven//:com_google_inject_guice",
     ],
@@ -117,6 +118,7 @@ java_library(
     deps = [
         ":api_config_observer",
         ":config",
+        ":has_default_synced",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/system",
@@ -134,6 +136,14 @@ java_library(
     visibility = [
         "//:deviceinfra_all_pkg",
     ],
+    deps = [
+        "@maven//:com_google_inject_guice",
+    ],
+)
+
+java_library(
+    name = "has_default_synced",
+    srcs = ["HasDefaultSynced.java"],
     deps = [
         "@maven//:com_google_inject_guice",
     ],

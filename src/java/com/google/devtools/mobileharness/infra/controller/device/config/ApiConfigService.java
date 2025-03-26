@@ -36,17 +36,20 @@ final class ApiConfigService extends AbstractIdleService {
   private final Set<Observer> observers;
   private final NetUtil netUtil;
   private final SystemUtil systemUtil;
+  private final boolean hasDefaultSynced;
 
   @Inject
   ApiConfigService(
       ApiConfig apiConfig,
       @ApiConfigObserver Set<Observer> observers,
       NetUtil netUtil,
-      SystemUtil systemUtil) {
+      SystemUtil systemUtil,
+      @HasDefaultSynced boolean hasDefaultSynced) {
     this.apiConfig = apiConfig;
     this.observers = observers;
     this.netUtil = netUtil;
     this.systemUtil = systemUtil;
+    this.hasDefaultSynced = hasDefaultSynced;
   }
 
   @Override
@@ -55,7 +58,9 @@ final class ApiConfigService extends AbstractIdleService {
       apiConfig.addObserver(observer);
     }
     apiConfig.initialize(
-        /* isDefaultPublic= */ true, /* isDefaultSynced= */ false, netUtil.getLocalHostName());
+        /* isDefaultPublic= */ true,
+        /* isDefaultSynced= */ hasDefaultSynced,
+        netUtil.getLocalHostName());
   }
 
   @Override

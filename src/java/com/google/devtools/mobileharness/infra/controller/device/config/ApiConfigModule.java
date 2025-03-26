@@ -24,11 +24,19 @@ import java.util.Observer;
 
 /** Module for providing {@link ApiConfig}. */
 public final class ApiConfigModule extends AbstractModule {
+  private final boolean hasDefaultSynced;
+
+  /** Constructs an {@link ApiConfigModule} with the given {@code hasDefaultSynced} value. */
+  public ApiConfigModule(boolean hasDefaultSynced) {
+    this.hasDefaultSynced = hasDefaultSynced;
+  }
+
   @SuppressWarnings("deprecation") // Observer is used by ApiConfig.
   @Override
   protected void configure() {
     install(ServiceModule.forService(ApiConfigService.class));
     Multibinder.newSetBinder(binder(), Observer.class, ApiConfigObserver.class);
+    bind(Boolean.class).annotatedWith(HasDefaultSynced.class).toInstance(hasDefaultSynced);
   }
 
   @Provides
