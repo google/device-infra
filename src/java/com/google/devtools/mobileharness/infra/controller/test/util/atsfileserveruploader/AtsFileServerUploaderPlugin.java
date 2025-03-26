@@ -27,13 +27,11 @@ import com.google.devtools.mobileharness.shared.util.command.CommandException;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandFailureException;
 import com.google.devtools.mobileharness.shared.util.command.CommandResult;
-import com.google.devtools.mobileharness.shared.util.concurrent.Callables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.wireless.qa.mobileharness.shared.controller.event.TestEndingEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.plugin.Plugin;
-import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.Duration;
@@ -60,19 +58,15 @@ public class AtsFileServerUploaderPlugin {
   @Subscribe
   public void onTestEnding(TestEndingEvent event)
       throws MobileHarnessException, SkipTestException, InterruptedException {
-    try {
-      String genFileDir = event.getTest().getGenFileDir();
-      List<String> genFiles = localFileUtil.listFilePaths(genFileDir, true);
-      for (String genFile : genFiles) {
-        if (genFile.contains(",")) {
-          logger.atInfo().log("genFile contains comma: %s", genFile);
-          localFileUtil.moveFileOrDir(genFile, genFile.replace(',', '_'));
-          genFile = genFile.replace(',', '_');
-        }
-        updateGenFile(genFileDir, genFile, event.getTest().locator().getId());
+    String genFileDir = event.getTest().getGenFileDir();
+    List<String> genFiles = localFileUtil.listFilePaths(genFileDir, true);
+    for (String genFile : genFiles) {
+      if (genFile.contains(",")) {
+        logger.atInfo().log("genFile contains comma: %s", genFile);
+        localFileUtil.moveFileOrDir(genFile, genFile.replace(',', '_'));
+        genFile = genFile.replace(',', '_');
       }
-    } finally {
-      cleanFiles(event.getTest());
+      updateGenFile(genFileDir, genFile, event.getTest().locator().getId());
     }
   }
 
@@ -115,43 +109,6 @@ public class AtsFileServerUploaderPlugin {
       }
       logger.atWarning().withCause(e).log(
           "Failed to upload file %s to %s in ATS file server.", genFile, atsFileServer);
-    }
-  }
-
-  private void cleanFiles(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
-    if (Flags.instance().atsFileServerUploaderFileCleanup.getNonNull()) {
-      Callables.callAll(
-          () -> {
-            try {
-              localFileUtil.removeFileOrDir(testInfo.getGenFileDir());
-            } catch (MobileHarnessException e) {
-              logger.atWarning().withCause(e).log(
-                  "Failed to clean up gen file dir for test %s.", testInfo.locator().getId());
-            }
-            return null;
-          },
-          () -> {
-            try {
-              localFileUtil.removeFileOrDir(testInfo.getTmpFileDir());
-            } catch (MobileHarnessException e) {
-              logger.atWarning().withCause(e).log(
-                  "Failed to clean up tmp file dir for test %s.", testInfo.locator().getId());
-            }
-            return null;
-          },
-
-          // TODO: Make sure there are only one test for one job in the same lab server.
-          () -> {
-            try {
-              if (testInfo.jobInfo().setting().hasRunFileDir()) {
-                localFileUtil.removeFileOrDir(testInfo.jobInfo().setting().getRunFileDir());
-              }
-            } catch (MobileHarnessException e) {
-              logger.atWarning().withCause(e).log(
-                  "Failed to clean up run file dir for test %s.", testInfo.locator().getId());
-            }
-            return null;
-          });
     }
   }
 

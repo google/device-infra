@@ -379,16 +379,6 @@ public class Flags {
       converter = Flag.StringConverter.class)
   public Flag<String> atsFileServer = atsFileServerDefault;
 
-  private static final Flag<Boolean> atsFileServerUploaderFileCleanupDefault = Flag.value(true);
-
-  @com.beust.jcommander.Parameter(
-      names = "--ats_file_server_uploader_file_cleanup",
-      description =
-          "Whether to remove test/job files in AtsFileServerUploader lab plugin when a test ends."
-              + " Default is true.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> atsFileServerUploaderFileCleanup = atsFileServerUploaderFileCleanupDefault;
-
   private static final Flag<Boolean> atsRunTfOnAndroidRealDeviceDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(

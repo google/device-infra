@@ -63,13 +63,10 @@ public class AtsFileServerUploaderPluginTest {
         };
     when(testEndingEvent.getTest()).thenReturn(testInfo);
     when(testInfo.getGenFileDir()).thenReturn("/var");
-    when(testInfo.getTmpFileDir()).thenReturn("/tmp");
     when(testInfo.jobInfo()).thenReturn(jobInfo);
     when(testInfo.locator())
         .thenReturn(new TestLocator("test_id", "test_name", new JobLocator("job_id", "job_name")));
     when(jobInfo.setting()).thenReturn(jobSetting);
-    when(jobSetting.getRunFileDir()).thenReturn("/run");
-    when(jobSetting.hasRunFileDir()).thenReturn(true);
   }
 
   @Test
@@ -113,8 +110,5 @@ public class AtsFileServerUploaderPluginTest {
                 "--fail",
                 "--location",
                 "www.example.com:8006/file/genfiles/test_id/file_with_comma.txt"));
-    verify(localFileUtil).removeFileOrDir("/var");
-    verify(localFileUtil).removeFileOrDir("/tmp");
-    verify(localFileUtil).removeFileOrDir("/run");
   }
 }
