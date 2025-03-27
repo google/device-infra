@@ -56,6 +56,7 @@ import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryT
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.junit.rule.SetFlagsOss;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
+import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
@@ -66,6 +67,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
 import java.io.File;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.util.Optional;
 import javax.inject.Inject;
 import org.junit.Before;
@@ -131,7 +133,15 @@ public final class RunCommandHandlerTest {
     File tmpDir = folder.newFolder("lab_server_tmp_dir");
     flags.setAllFlags(ImmutableMap.of("tmp_dir_root", tmpDir.getAbsolutePath()));
 
-    Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
+    Guice.createInjector(
+            BoundFieldModule.of(this),
+            new AbstractModule() {
+              @Override
+              protected void configure() {
+                bind(Clock.class).toInstance(Clock.systemUTC());
+              }
+            })
+        .injectMembers(this);
 
     // Disable sessionResultHandlerUtil.cleanUpJobGenDirs(...), or we will get "Permission denied"
     // when removing testdata files.

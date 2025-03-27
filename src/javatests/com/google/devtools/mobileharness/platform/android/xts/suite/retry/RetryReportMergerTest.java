@@ -30,11 +30,13 @@ import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubP
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.junit.rule.SetFlagsOss;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
+import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import com.google.protobuf.TextFormat;
 import java.nio.file.Path;
+import java.time.Clock;
 import javax.inject.Inject;
 import org.junit.Before;
 import org.junit.Rule;
@@ -119,7 +121,15 @@ public final class RetryReportMergerTest {
   @Before
   public void setUp() {
     flags.setAllFlags(ImmutableMap.of("use_tf_retry", "false"));
-    Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
+    Guice.createInjector(
+            BoundFieldModule.of(this),
+            new AbstractModule() {
+              @Override
+              protected void configure() {
+                bind(Clock.class).toInstance(Clock.systemUTC());
+              }
+            })
+        .injectMembers(this);
     this.localFileUtil = new LocalFileUtil();
   }
 
@@ -145,7 +155,7 @@ public final class RetryReportMergerTest {
             /* retryType= */ null,
             /* retryResult= */ null,
             /* passedInModules= */ ImmutableList.of(),
-            /* skippedModules= */ ImmutableSet.of());
+            /* skippedModuleIds= */ ImmutableSet.of());
 
     assertThat(mergedReport).isEqualTo(expectedMergedReport);
   }
@@ -208,7 +218,7 @@ public final class RetryReportMergerTest {
             /* retryType= */ null,
             retryReport,
             /* passedInModules= */ ImmutableList.of(),
-            /* skippedModules= */ ImmutableSet.of());
+            /* skippedModuleIds= */ ImmutableSet.of());
 
     assertThat(mergedReport).isEqualTo(expectedMergedReport);
   }
@@ -239,7 +249,7 @@ public final class RetryReportMergerTest {
             /* retryType= */ null,
             retryReport,
             /* passedInModules= */ ImmutableList.of(),
-            /* skippedModules= */ ImmutableSet.of());
+            /* skippedModuleIds= */ ImmutableSet.of());
 
     assertThat(mergedReport).isEqualTo(expectedMergedReport);
   }
@@ -279,7 +289,7 @@ public final class RetryReportMergerTest {
             RetryType.NOT_EXECUTED,
             retryReport,
             /* passedInModules= */ ImmutableList.of(),
-            /* skippedModules= */ ImmutableSet.of());
+            /* skippedModuleIds= */ ImmutableSet.of());
 
     assertThat(mergedReport).isEqualTo(expectedMergedReport);
   }
@@ -322,7 +332,7 @@ public final class RetryReportMergerTest {
             /* retryType= */ null,
             retryReport,
             /* passedInModules= */ ImmutableList.of("CtsVcnTestCases"),
-            /* skippedModules= */ ImmutableSet.of());
+            /* skippedModuleIds= */ ImmutableSet.of());
 
     assertThat(mergedReport).isEqualTo(expectedMergedReport);
   }
@@ -365,7 +375,7 @@ public final class RetryReportMergerTest {
             /* retryType= */ null,
             retryReport,
             /* passedInModules= */ ImmutableList.of("CtsVcnTestCases"),
-            /* skippedModules= */ ImmutableSet.of("arm64-v8a CtsVcnTestCases"));
+            /* skippedModuleIds= */ ImmutableSet.of("arm64-v8a CtsVcnTestCases"));
 
     assertThat(mergedReport).isEqualTo(expectedMergedReport);
   }
@@ -410,7 +420,7 @@ public final class RetryReportMergerTest {
             /* retryType= */ null,
             retryReport,
             /* passedInModules= */ ImmutableList.of(""),
-            /* skippedModules= */ ImmutableSet.of());
+            /* skippedModuleIds= */ ImmutableSet.of());
 
     assertThat(mergedReport).isEqualTo(expectedMergedReport);
   }

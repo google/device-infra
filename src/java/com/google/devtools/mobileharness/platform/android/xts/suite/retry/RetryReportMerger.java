@@ -49,6 +49,9 @@ import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommonU
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import java.nio.file.Path;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -67,11 +70,14 @@ public class RetryReportMerger {
 
   private final PreviousResultLoader previousResultLoader;
   private final RetryGenerator retryGenerator;
+  private final Clock clock;
 
   @Inject
-  RetryReportMerger(PreviousResultLoader previousResultLoader, RetryGenerator retryGenerator) {
+  RetryReportMerger(
+      PreviousResultLoader previousResultLoader, RetryGenerator retryGenerator, Clock clock) {
     this.previousResultLoader = previousResultLoader;
     this.retryGenerator = retryGenerator;
+    this.clock = clock;
   }
 
   /**
@@ -95,7 +101,7 @@ public class RetryReportMerger {
       @Nullable RetryType retryType,
       @Nullable Result retryResult,
       ImmutableList<String> passedInModules,
-      ImmutableSet<String> skippedModules)
+      ImmutableSet<String> skippedModuleIds)
       throws MobileHarnessException {
     Preconditions.checkState(previousSessionIndex != null || previousSessionResultDirName != null);
     // Loads the previous session result and its subplan used for the retry
@@ -115,8 +121,7 @@ public class RetryReportMerger {
     if (!passedInModules.isEmpty()) {
       retryArgs.setPassedInModules(ImmutableSet.copyOf(passedInModules));
     }
-    SubPlan subPlan = retryGenerator.generateRetrySubPlan(retryArgs.build());
-    return mergeReports(previousResult, subPlan, retryResult, skippedModules);
+    return mergeReportsHelper(retryArgs.build(), previousResult, retryResult, skippedModuleIds);
   }
 
   /**
@@ -148,11 +153,28 @@ public class RetryReportMerger {
     if (!passedInModules.isEmpty()) {
       retryArgs.setPassedInModules(ImmutableSet.copyOf(passedInModules));
     }
-    SubPlan subPlan = retryGenerator.generateRetrySubPlan(retryArgs.build());
-    return mergeReports(previousResult, subPlan, retryResult, skippedModuleIds);
+    return mergeReportsHelper(retryArgs.build(), previousResult, retryResult, skippedModuleIds);
   }
 
-  private Result mergeReports(
+  private Result mergeReportsHelper(
+      RetryArgs retryArgs,
+      Result previousResult,
+      @Nullable Result retryResult,
+      ImmutableSet<String> skippedModuleIds)
+      throws MobileHarnessException {
+    SubPlan subPlan = retryGenerator.generateRetrySubPlan(retryArgs);
+    logger.atInfo().log("Merging previous result and retry result [RetryArgs: %s]", retryArgs);
+    long startTime = clock.instant().toEpochMilli();
+    try {
+      return doMergeReports(previousResult, subPlan, retryResult, skippedModuleIds);
+    } finally {
+      logger.atInfo().log(
+          "Done merging previous result and retry result, took %s [RetryArgs: %s]",
+          Duration.between(Instant.ofEpochMilli(startTime), clock.instant()), retryArgs);
+    }
+  }
+
+  private Result doMergeReports(
       Result previousResult,
       SubPlan retrySubPlan,
       @Nullable Result retryResult,
@@ -439,7 +461,7 @@ public class RetryReportMerger {
     if (excludedTestNamesInTestCaseRetry.contains("")) {
       testCaseNotRetried = true;
     } else if (!testCaseFoundInRetry) {
-      logger.atInfo().log(
+      logger.atFine().log(
           "TestCase %s %s was not retried", moduleId, testCaseFromPrevSession.getName());
       testCaseNotRetried = true;
     }
@@ -519,7 +541,7 @@ public class RetryReportMerger {
     if (excludedInRetry) {
       testNotRetried = true;
     } else if (!testFoundInRetry) {
-      logger.atInfo().log("Test %s %s#%s was not retried ", moduleId, testCaseName, testName);
+      logger.atFine().log("Test %s %s#%s was not retried ", moduleId, testCaseName, testName);
       testNotRetried = true;
     }
     if (testNotRetried) {
