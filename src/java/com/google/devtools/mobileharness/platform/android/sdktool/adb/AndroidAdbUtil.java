@@ -1371,7 +1371,7 @@ public class AndroidAdbUtil {
 
   /**
    * A thin wrapper around {@link
-   * com.gogole.devtools.deviceinfra.shared.util.shell.ShellUtils#tokenize} to split options by
+   * com.google.devtools.deviceinfra.shared.util.shell.ShellUtils#tokenize} to split options by
    * whitespace to shell arguments.
    *
    * @param options Shell options
