@@ -156,8 +156,9 @@ public class JobInfo extends JobScheduleUnit {
   @ParamAnnotation(
       required = false,
       help =
-          "The controller endpoint of master server for gRPC router. This param is only used when"
-              + " use_grpc_router is true.")
+          "The controller endpoint of master server on the cloud. It requires several other params"
+              + " to be set correctly to run jobs on these endpoints. Mobile Harness client will"
+              + " set them automatically if they are not set by users.")
   public static final String PARAM_MASTER_CLOUD_ENDPOINT = "master_cloud_endpoint";
 
   @ParamAnnotation(

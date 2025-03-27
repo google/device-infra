@@ -581,10 +581,10 @@ public enum InfraErrorId implements ErrorId {
   MORETO_CREATE_JOB_INFO_ERROR(53_402, ErrorType.INFRA_ISSUE),
   MORETO_SIGNAL_INVALID_REMOTE_SIGNAL(53_403, ErrorType.INFRA_ISSUE),
 
-  // Nezha ERROR: 53_451 ~ 53_460
+  // Nezha ERROR: 53_451 ~ 53_600
   NEZHA_LEGACY_ERROR(53_501, ErrorType.UNDETERMINED),
 
-  // ID space here: 53_461 ~ 60_000
+  // ID space here: 53_701 ~ 60_000
   PLACE_HOLDER_TO_BE_RENAMED(60_000, ErrorType.UNDETERMINED);
 
   public static final int MIN_CODE = BasicErrorId.MAX_CODE + 1;
