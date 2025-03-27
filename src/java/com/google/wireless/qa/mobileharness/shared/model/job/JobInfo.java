@@ -112,7 +112,11 @@ public class JobInfo extends JobScheduleUnit {
   /** Param name of the canonical class names of the client plugin module. */
   public static final String PARAM_CLIENT_PLUGIN_MODULES = "client_plugin_module_classes";
 
-  @ParamAnnotation(required = false, help = "The gcs bucket for cloud file transfer.")
+  @ParamAnnotation(
+      required = false,
+      help =
+          "The gcs bucket for cloud file transfer. If master_cloud_endpoint is set and this param"
+              + " is not set, it will be set automatically.")
   public static final String PARAM_CLOUD_FILE_TRANSFER_BUCKET = "cloud_file_transfer_bucket";
 
   @ParamAnnotation(
@@ -123,7 +127,11 @@ public class JobInfo extends JobScheduleUnit {
               + "ContainerModePreference.NON_CONTAINER.\n")
   public static final String PARAM_CONTAINER_MODE_PREFERENCE = "container_mode_preference";
 
-  @ParamAnnotation(required = false, help = "Whether to disable device querier in client.")
+  @ParamAnnotation(
+      required = false,
+      help =
+          "Whether to disable device querier in client. The default value is false. But it will be"
+              + " set true if master_cloud_endpoint is set.")
   public static final String PARAM_DISABLE_DEVICE_QUERIER = "disable_device_querier";
 
   @ParamAnnotation(
@@ -200,7 +208,9 @@ public class JobInfo extends JobScheduleUnit {
 
   @ParamAnnotation(
       required = false,
-      help = "If this flag is true, the job will use gRPC router to connect to cloud servers.")
+      help =
+          "If this flag is true, the job will use gRPC router to connect to cloud servers. The"
+              + " default value is false. But it will be set true if master_cloud_endpoint is set.")
   public static final String PARAM_USE_GRPC_ROUTER = "use_grpc_router";
 
   /** Input files of the job. */
