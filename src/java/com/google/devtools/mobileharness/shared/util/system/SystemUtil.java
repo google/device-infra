@@ -42,6 +42,7 @@ import com.google.errorprone.annotations.DoNotCall;
 import com.google.wireless.qa.mobileharness.shared.constant.ExitCode;
 import com.sun.management.OperatingSystemMXBean;
 import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryMXBean;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -1226,7 +1227,9 @@ public class SystemUtil {
         /* jvmFreeMemory= */ runtime.freeMemory(),
         /* jvmTotalMemory= */ runtime.totalMemory(),
         /* jvmMaxMemory= */ runtime.maxMemory(),
-        /* heapUsedMemory= */ ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getUsed(),
+        /* heapUsedMemory= */ getMemoryMxBean()
+            .map(bean -> bean.getHeapMemoryUsage().getUsed())
+            .orElse(0L),
         /* freeMemory= */ getFreeMemory(),
         /* totalMemory= */ getTotalMemory());
   }
@@ -1234,17 +1237,33 @@ public class SystemUtil {
   /** Gets the total amount of physical memory in bytes on the local system. */
   public long getTotalMemory() {
     // TODO: Use getTotalMemorySize() after JDK21.
-    return getOperatingSystemMxBean().getTotalPhysicalMemorySize();
+    return getOperatingSystemMxBean()
+        .map(OperatingSystemMXBean::getTotalPhysicalMemorySize)
+        .orElse(1L);
   }
 
   /** Gets the total amount of free physical memory in bytes on the local system. */
   public long getFreeMemory() {
     // TODO: Use getTotalMemorySize() after JDK21.
-    return getOperatingSystemMxBean().getFreePhysicalMemorySize();
+    return getOperatingSystemMxBean()
+        .map(OperatingSystemMXBean::getFreePhysicalMemorySize)
+        .orElse(0L);
   }
 
-  private static OperatingSystemMXBean getOperatingSystemMxBean() {
-    return (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
+  private static Optional<OperatingSystemMXBean> getOperatingSystemMxBean() {
+    try {
+      return Optional.of((OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean());
+    } catch (RuntimeException | Error e) {
+      return Optional.empty();
+    }
+  }
+
+  private static Optional<MemoryMXBean> getMemoryMxBean() {
+    try {
+      return Optional.of(ManagementFactory.getMemoryMXBean());
+    } catch (RuntimeException | Error e) {
+      return Optional.empty();
+    }
   }
 
   /** A simple data structure for tree traversal in {@link #killDescendantAndZombieProcesses}. */
