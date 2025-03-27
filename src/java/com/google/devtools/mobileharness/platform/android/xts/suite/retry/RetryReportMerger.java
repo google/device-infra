@@ -136,7 +136,7 @@ public class RetryReportMerger {
       @Nullable RetryType retryType,
       @Nullable Result retryResult,
       ImmutableList<String> passedInModules,
-      ImmutableSet<String> skippedModules)
+      ImmutableSet<String> skippedModuleIds)
       throws MobileHarnessException {
     // Loads the previous session result and its subplan used for the retry
     Result previousResult = previousResultLoader.loadPreviousResult(resultsDir, previousSessionId);
@@ -149,14 +149,14 @@ public class RetryReportMerger {
       retryArgs.setPassedInModules(ImmutableSet.copyOf(passedInModules));
     }
     SubPlan subPlan = retryGenerator.generateRetrySubPlan(retryArgs.build());
-    return mergeReports(previousResult, subPlan, retryResult, skippedModules);
+    return mergeReports(previousResult, subPlan, retryResult, skippedModuleIds);
   }
 
   private Result mergeReports(
       Result previousResult,
       SubPlan retrySubPlan,
       @Nullable Result retryResult,
-      ImmutableSet<String> skippedModules) {
+      ImmutableSet<String> skippedModuleIds) {
     Result.Builder mergedResult = Result.newBuilder();
     // If the previous result was ran with some filters given by the user command, reflect them in
     // the merged report too.
@@ -225,8 +225,9 @@ public class RetryReportMerger {
     for (Module moduleFromPrevSession : previousResult.getModuleInfoList()) {
       // If the module is in the previous result but skipped in the retry session, remove it from
       // the merged result.
-      if (!modulesFromRetry.containsKey(moduleFromPrevSession.getName())
-          && skippedModules.contains(moduleFromPrevSession.getName())) {
+      String moduleId =
+          AbiUtil.createId(moduleFromPrevSession.getAbi(), moduleFromPrevSession.getName());
+      if (!modulesFromRetry.containsKey(moduleId) && skippedModuleIds.contains(moduleId)) {
         continue;
       }
       mergedResult.addModuleInfo(

@@ -39,6 +39,7 @@ import com.google.devtools.mobileharness.infra.ats.console.result.report.MoblyRe
 import com.google.devtools.mobileharness.infra.ats.console.result.xml.XmlConstants;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
+import com.google.devtools.mobileharness.platform.android.xts.common.util.AbiUtil;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
@@ -308,7 +309,7 @@ public class SessionResultHandlerUtil {
     ImmutableList<TradefedResultBundle> tradefedResultBundles =
         tradefedResultBundlesBuilder.build();
 
-    ImmutableSet.Builder<String> skippedModulesBuilder = ImmutableSet.builder();
+    ImmutableSet.Builder<String> skippedModuleIdsBuilder = ImmutableSet.builder();
     List<MoblyReportInfo> moblyReportInfos = new ArrayList<>();
     // Copies non-tradefed test relevant log and result files to dedicated locations
     for (Entry<JobInfo, Optional<TestInfo>> testEntry : nonTradefedTests.entrySet()) {
@@ -325,12 +326,11 @@ public class SessionResultHandlerUtil {
       JobInfo jobInfo = testEntry.getKey();
       if (jobInfo.resultWithCause().get().type() == TestResult.SKIP
           && !jobInfo.properties().getBoolean(Job.SKIP_COLLECTING_NON_TF_REPORTS).orElse(false)) {
-        String moduleName =
-            String.format(
-                "%s %s",
+        String moduleId =
+            AbiUtil.createId(
                 jobInfo.properties().get(SessionHandlerHelper.XTS_MODULE_ABI_PROP),
                 jobInfo.properties().get(SessionHandlerHelper.XTS_MODULE_NAME_PROP));
-        skippedModulesBuilder.add(moduleName);
+        skippedModuleIdsBuilder.add(moduleId);
       }
 
       if (!previousSessionHasTfModule) {
@@ -391,9 +391,9 @@ public class SessionResultHandlerUtil {
           compatibilityReportMerger.mergeResultBundles(
               tradefedResultBundles, sessionRequestInfo.skipDeviceInfo().orElse(false));
       mergedTradefedReport = parseResult.report();
-      skippedModulesBuilder.addAll(parseResult.skippedModules());
+      skippedModuleIdsBuilder.addAll(parseResult.skippedModuleIds());
     }
-    ImmutableSet<String> skippedModules = skippedModulesBuilder.build();
+    ImmutableSet<String> skippedModuleIds = skippedModuleIdsBuilder.build();
 
     Optional<Result> mergedNonTradefedReport = Optional.empty();
     if (!moblyReportInfos.isEmpty()) {
@@ -507,7 +507,7 @@ public class SessionResultHandlerUtil {
                   sessionRequestInfo.retryType().orElse(null),
                   mergedReport.orElse(null),
                   sessionRequestInfo.moduleNames(),
-                  skippedModules);
+                  skippedModuleIds);
         } else {
           finalReport =
               retryReportMerger.mergeReports(
@@ -518,7 +518,7 @@ public class SessionResultHandlerUtil {
                   sessionRequestInfo.retryType().orElse(null),
                   mergedReport.orElse(null),
                   sessionRequestInfo.moduleNames(),
-                  skippedModules);
+                  skippedModuleIds);
         }
       } else {
         finalReport = mergedReport.orElse(null);

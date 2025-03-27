@@ -407,7 +407,7 @@ public final class CompatibilityReportMergerTest {
     Optional<TestRecord> testRecord =
         CompatibilityReportMerger.readTestRecord(Path.of(CTS_SKIPPED_MODULES_TEST_RECORD_PB_FILE));
     ImmutableSet<String> skippedModules =
-        CompatibilityReportMerger.getSkippedModules(testRecord.get());
+        CompatibilityReportMerger.getSkippedModuleIds(testRecord.get());
 
     assertThat(skippedModules)
         .containsExactly(

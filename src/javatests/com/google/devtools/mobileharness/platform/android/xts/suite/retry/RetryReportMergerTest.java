@@ -365,7 +365,7 @@ public final class RetryReportMergerTest {
             /* retryType= */ null,
             retryReport,
             /* passedInModules= */ ImmutableList.of("CtsVcnTestCases"),
-            /* skippedModules= */ ImmutableSet.of("CtsVcnTestCases"));
+            /* skippedModules= */ ImmutableSet.of("arm64-v8a CtsVcnTestCases"));
 
     assertThat(mergedReport).isEqualTo(expectedMergedReport);
   }

@@ -127,7 +127,7 @@ public class CompatibilityReportMerger {
         /* originalReportFile= */ Optional.empty(),
         mergeParsedReports(parseResults, skipDeviceInfo),
         parseResults.stream()
-            .flatMap(parseResult -> parseResult.skippedModules().stream())
+            .flatMap(parseResult -> parseResult.skippedModuleIds().stream())
             .collect(toImmutableSet()));
   }
 
@@ -570,16 +570,16 @@ public class CompatibilityReportMerger {
       throws MobileHarnessException {
     Path xmlReportFile = resultBundle.xmlReportFile();
     Optional<Result> report = reportParser.parse(xmlReportFile, /* shallow= */ false);
-    ImmutableSet<String> skippedModules = ImmutableSet.of();
+    ImmutableSet<String> skippedModuleIds = ImmutableSet.of();
     if (resultBundle.testRecordFile().isPresent() && report.isPresent()) {
       Optional<TestRecord> testRecord = readTestRecord(resultBundle.testRecordFile().get());
       if (testRecord.isPresent()) {
         report = Optional.of(insertMetadataFromTestRecord(report.get(), testRecord.get()));
-        skippedModules = getSkippedModules(testRecord.get());
+        skippedModuleIds = getSkippedModuleIds(testRecord.get());
       }
     }
 
-    return ParseResult.of(Optional.of(xmlReportFile), report, skippedModules);
+    return ParseResult.of(Optional.of(xmlReportFile), report, skippedModuleIds);
   }
 
   @VisibleForTesting
@@ -622,9 +622,9 @@ public class CompatibilityReportMerger {
     return reportBuilder.build();
   }
 
-  /** Gets the skipped modules from the test record. */
+  /** Gets the skipped module ids (abi module_name) from the test record. */
   @VisibleForTesting
-  static ImmutableSet<String> getSkippedModules(TestRecord testRecord) {
+  static ImmutableSet<String> getSkippedModuleIds(TestRecord testRecord) {
     return testRecord.getChildrenList().stream()
         .map(ChildReference::getInlineTestRecord)
         .filter(
@@ -718,9 +718,9 @@ public class CompatibilityReportMerger {
     public static ParseResult of(
         Optional<Path> originalReportFile,
         Optional<Result> report,
-        ImmutableSet<String> skippedModules) {
+        ImmutableSet<String> skippedModuleIds) {
       return new AutoValue_CompatibilityReportMerger_ParseResult(
-          originalReportFile, report, skippedModules);
+          originalReportFile, report, skippedModuleIds);
     }
 
     public abstract Optional<Path> originalReportFile();
@@ -728,8 +728,8 @@ public class CompatibilityReportMerger {
     /** The parsed report. */
     public abstract Optional<Result> report();
 
-    /** Skipped modules in the report. */
-    public abstract ImmutableSet<String> skippedModules();
+    /** Skipped module ids in the report. */
+    public abstract ImmutableSet<String> skippedModuleIds();
   }
 
   /** A bundle of a Tradefed result including the XML file and the test record file. */
