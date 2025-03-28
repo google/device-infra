@@ -28,6 +28,7 @@ import static com.google.devtools.mobileharness.shared.util.filter.FilterUtils.c
 
 import com.google.auto.value.AutoValue;
 import com.google.auto.value.extension.memoized.Memoized;
+import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
@@ -82,6 +83,7 @@ import com.google.devtools.mobileharness.shared.version.Version;
 import com.google.devtools.mobileharness.shared.version.checker.ServiceSideVersionChecker;
 import com.google.devtools.mobileharness.shared.version.proto.Version.VersionCheckResponse;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.controller.event.AllocationEvent;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.Dimension;
@@ -115,6 +117,9 @@ class RemoteDeviceManager implements LabInfoProvider {
   private static final Duration LAB_AND_DEVICE_CLEANUP_INTERVAL = Duration.ofMinutes(2L);
   private static final Duration LAB_REMOVAL_TIME = Duration.ofHours(1L);
   private static final Duration DEVICE_REMOVAL_TIME = Duration.ofMinutes(10L);
+
+  private static final String HOST_IP_DIMENSION_NAME = Ascii.toLowerCase(Name.HOST_IP.name());
+  private static final String HOST_NAME_DIMENSION_NAME = Ascii.toLowerCase(Name.HOST_NAME.name());
 
   private final ServiceSideVersionChecker versionChecker =
       new ServiceSideVersionChecker(Version.MASTER_V5_VERSION, Version.MIN_LAB_VERSION);
@@ -807,6 +812,23 @@ class RemoteDeviceManager implements LabInfoProvider {
     }
 
     private DeviceQuery.DeviceInfo toDeviceQueryDeviceInfo() {
+      List<Dimension> addtionalHostDimensions = new ArrayList<>();
+      if (!dataFromLab.dimensions().required().getAll().containsKey(HOST_IP_DIMENSION_NAME)
+          && !dataFromLab.dimensions().supported().getAll().containsKey(HOST_IP_DIMENSION_NAME)) {
+        addtionalHostDimensions.add(
+            Dimension.newBuilder()
+                .setName(HOST_IP_DIMENSION_NAME)
+                .setValue(dataFromLab.locator().labLocator().ip())
+                .build());
+      }
+      if (!dataFromLab.dimensions().required().getAll().containsKey(HOST_NAME_DIMENSION_NAME)
+          && !dataFromLab.dimensions().supported().getAll().containsKey(HOST_NAME_DIMENSION_NAME)) {
+        addtionalHostDimensions.add(
+            Dimension.newBuilder()
+                .setName(HOST_NAME_DIMENSION_NAME)
+                .setValue(dataFromLab.locator().labLocator().hostName())
+                .build());
+      }
       DeviceQuery.DeviceInfo.Builder deviceInfo =
           DeviceQuery.DeviceInfo.newBuilder()
               .setId(dataFromLab.locator().id())
@@ -816,7 +838,7 @@ class RemoteDeviceManager implements LabInfoProvider {
               .addAllDriver(dataFromLab.drivers().getAll())
               .addAllDecorator(dataFromLab.decorators().getAll())
               .addAllDimension(
-                  Stream.concat(
+                  Stream.of(
                           dataFromLab.dimensions().supported().getAll().entries().stream()
                               .map(
                                   entry ->
@@ -831,7 +853,9 @@ class RemoteDeviceManager implements LabInfoProvider {
                                           .setRequired(true)
                                           .setName(entry.getKey())
                                           .setValue(entry.getValue())
-                                          .build()))
+                                          .build()),
+                          addtionalHostDimensions.stream())
+                      .flatMap(stream -> stream)
                       .collect(toImmutableList()));
 
       if (statusFromLab.equals(DeviceStatus.BUSY) && latestAllocationFromScheduler != null) {
