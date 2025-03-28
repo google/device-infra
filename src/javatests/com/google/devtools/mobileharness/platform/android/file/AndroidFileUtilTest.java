@@ -60,7 +60,7 @@ public final class AndroidFileUtilTest {
   @Mock private AndroidSystemSettingUtil androidSystemSettingUtil;
   @Mock private AndroidSystemSpecUtil androidSystemSpecUtil;
 
-  private static final String SERIAL = "363005dc750400ec";
+  private static final String SERIAL = "emulator-363005dc750400ec";
   private static final String APK_PATH = "/usr/local/google/AndroidTranslateTest-debug.apk";
   private static final String PACKAGE_NAME = "com.google.package";
   private static final String FILE_NAME = "shared_prefs.xml";
@@ -1334,5 +1334,15 @@ public final class AndroidFileUtilTest {
             () -> androidFileUtil.createSymlink(SERIAL, srcFileOrDirPath, desFileOrDirPath));
     assertThat(e.getErrorId()).isEqualTo(AndroidErrorId.ANDROID_FILE_UTIL_CREATE_SYMLINK_ERROR);
     assertThat(e).hasMessageThat().contains("Error");
+  }
+
+  @Test
+  public void setFileSecurityContext_succeeds() throws Exception {
+    String securityContext = "u:object_r:system_file:s0";
+    String filePath = "/sdcard/test_file";
+    when(adb.runShellWithRetry(SERIAL, String.format("chcon -R %s %s", securityContext, filePath)))
+        .thenReturn("something");
+    assertThat(androidFileUtil.setFileSecurityContext(SERIAL, filePath, securityContext))
+        .isEqualTo("something");
   }
 }
