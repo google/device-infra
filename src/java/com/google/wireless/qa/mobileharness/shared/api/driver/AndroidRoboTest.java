@@ -16,6 +16,7 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.driver;
 
+
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;

@@ -516,6 +516,14 @@ public interface PropertyName {
       ANDROID_HD_VIDEO_DECORATOR_VIDEO_START_EPOCH_MS,
     }
 
+    /** AndroidRoboTest property name constants. */
+    public enum AndroidRoboTest implements PropertyName {
+      /** Start time of the Robo test. */
+      ANDROID_ROBO_TEST_TEST_START_EPOCH_MS,
+      /** End time of the Robo test. */
+      ANDROID_ROBO_TEST_TEST_END_EPOCH_MS,
+    }
+
     /** IosGoogleAccountDecorator property name constants. */
     public enum IosGoogleAccountDecorator implements PropertyName {
 

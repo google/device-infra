@@ -47,12 +47,10 @@ public class AndroidRoboTestTest {
 
   @Rule public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
-  @Mock Adb adb;
-
-  @Mock Aapt aapt;
+  @Mock private Adb adb;
+  @Mock private Aapt aapt;
 
   private JobInfo jobInfo;
-
   private Device device;
   private Path genFilesDir;
 
