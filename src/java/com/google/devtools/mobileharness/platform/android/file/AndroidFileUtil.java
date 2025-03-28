@@ -1026,9 +1026,9 @@ public class AndroidFileUtil {
       throws MobileHarnessException, InterruptedException {
     String output = "";
     try {
+      String result = null;
       if (androidSystemSpecUtil.isEmulator(serial)) {
         int sdkVersion = androidSystemSettingUtil.getDeviceSdkVersion(serial);
-        String result = "";
         if (sdkVersion >= AndroidVersion.ANDROID_16.getStartSdkVersion()) {
           result = adb.run(serial, new String[] {"shell", "remount", "/"});
         } else if (sdkVersion >= AndroidVersion.ANDROID_13.getStartSdkVersion()) {
@@ -1036,9 +1036,12 @@ public class AndroidFileUtil {
         } else if (sdkVersion >= AndroidVersion.ANDROID_11.getStartSdkVersion()) {
           result = adb.run(serial, new String[] {"shell", "mount", "-o", "rw,remount", "/"});
         }
-        if (remountSuccess(result)) {
-          return;
-        }
+      } else {
+        // For real devices, we just need to mount the system partition with read/write capability.
+        result = adb.run(serial, new String[] {"shell", "mount", "-o", "rw,remount", "/system"});
+      }
+      if (result != null && remountSuccess(result)) {
+        return;
       }
       output = adb.run(serial, new String[] {ADB_ARG_REMOUNT});
       if (checkResults && !remountSuccess(output)) {
@@ -1268,5 +1271,21 @@ public class AndroidFileUtil {
                 })
             .findFirst();
     return matchTargetLine;
+  }
+
+  /**
+   * Changes the file SELinux security context.
+   *
+   * @param serial serial number of the device
+   * @param filePath path of the file to change the security context
+   * @param securityContext the security context to set
+   * @throws MobileHarnessException if fails to execute the command or timeout
+   * @throws InterruptedException if the thread executing the command is interrupted
+   */
+  @CanIgnoreReturnValue
+  public String setFileSecurityContext(String serial, String filePath, String securityContext)
+      throws MobileHarnessException, InterruptedException {
+    String command = String.format("chcon -R %s %s", securityContext, filePath);
+    return adb.runShellWithRetry(serial, command);
   }
 }
