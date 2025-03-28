@@ -1040,11 +1040,14 @@ public class AndroidFileUtil {
           return;
         }
       }
+      // "adb remount" puts the /system partition in writable mode (by default, /system is only
+      // readable). It can only be done on rooted device. It is similar to
+      // "adb shell mount -o rw,remount /system".
       output = adb.run(serial, new String[] {ADB_ARG_REMOUNT});
       if (checkResults && !remountSuccess(output)) {
         throw new MobileHarnessException(
             AndroidErrorId.ANDROID_FILE_UTIL_REMOUNT_ERROR,
-            "The output of adb remount doesn't indicate the success: " + output);
+            "The output of adb remount doesn't indicate success: " + output);
       }
     } catch (MobileHarnessException e) {
       // b/296730927, sometimes the exit code is 11 instead of 0, which is also an indication
@@ -1268,5 +1271,22 @@ public class AndroidFileUtil {
                 })
             .findFirst();
     return matchTargetLine;
+  }
+
+  /**
+   * Changes the file SELinux security context.
+   *
+   * @param serial serial number of the device
+   * @param filePath path of the file to change the security context
+   * @param securityContext the security context to set
+   * @return the output of the command
+   * @throws MobileHarnessException if fails to execute the command or timeout
+   * @throws InterruptedException if the thread executing the command is interrupted
+   */
+  @CanIgnoreReturnValue
+  public String setFileSecurityContext(String serial, String filePath, String securityContext)
+      throws MobileHarnessException, InterruptedException {
+    String command = "chcon -R %s %s".formatted(securityContext, filePath);
+    return adb.runShellWithRetry(serial, command);
   }
 }
