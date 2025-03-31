@@ -47,6 +47,7 @@ public abstract class DetectionResult {
     AAOS_HYPERVISOR,
     ADB,
     CROS,
+    SDV_OSPREY,
     DHCP,
     EMBEDDED_LINUX,
     EMULATOR,
