@@ -159,16 +159,7 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
     // Add the Lorry download link url of MCTS file for preloaded mainline modules. For example:
     // https://dl.google.com/dl/android/xts/mcts/YYYY-MM/arm64/android-mcts-<module_name>.zip
     if (mctsNamesOfPreloadedMainlineModules.containsKey(PRELOADED_KEY)) {
-      String versioncode =
-          preloadedMainlineModules.contains(MAINLINE_TVP_PKG)
-              ? Integer.toString(
-                  androidPackageManagerUtil.getAppVersionCode(deviceId, MAINLINE_TVP_PKG))
-              : "310000000";
-      // if the TVP version is 310000000, that means all the mainline modules were built
-      // from source, rather than prebuilt dropped. 310000000 is just the default value in
-      // http://ac/vendor/unbundled_google/modules/ModuleMetadataGoogle/Primary_AndroidManifest.xml
-      // We will only support Android V train for downloading train MCTS, otherwise will download
-      // from aosp.
+      String versioncode = getTvpVersion(deviceId, preloadedMainlineModules);
       String preloadedMainlineVersion =
           processModuleVersion(versioncode, MAINLINE_TVP_PKG, aospVersion, aospVersion);
       // Add the MCTS exclude file link url to the front of the list.
@@ -282,10 +273,13 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
       logger.atInfo().log("%s", testModule);
     }
     // Download the JDK file.
-    String aospVersion = getAospVersion(deviceId);
-    String jdkFileTargetPath = TMP_MCTS_TOOL_PATH + "/" + aospVersion + "/jdk.zip";
+    ImmutableList<String> preloadedMainlineModules = getPreloadedMainlineModules(deviceId);
+    // Use train version to match JDK version.
+    String jdkVersion = getTvpVersion(deviceId, preloadedMainlineModules).substring(0, 2);
+    String jdkFileTargetPath = TMP_MCTS_TOOL_PATH + "/" + jdkVersion + "/jdk.zip";
     String jdkFilePath =
         downloadPublicUrlFiles("https://dl.google.com/dl" + jdkFileTargetPath, MCTS_JDK_PATH);
+    logger.atInfo().log("Start to download JDK files: %s", jdkFileTargetPath);
     if (jdkFilePath != null) {
       fileUtil.unzipFile(jdkFilePath, testInfo.getTmpFileDir() + TMP_MCTS_TOOL_PATH);
       testInfo
@@ -529,5 +523,17 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
     } else {
       return defaultVersion;
     }
+  }
+
+  private String getTvpVersion(String deviceId, ImmutableList<String> preloadedMainlineModules)
+      throws MobileHarnessException, InterruptedException {
+    // if the TVP version is 310000000, that means all the mainline modules were built
+    // from source, rather than prebuilt dropped. 310000000 is just the default value in
+    // http://ac/vendor/unbundled_google/modules/ModuleMetadataGoogle/Primary_AndroidManifest.xml
+    // We will only support Android V train for downloading train MCTS, otherwise will download
+    // from aosp.
+    return preloadedMainlineModules.contains(MAINLINE_TVP_PKG)
+        ? Integer.toString(androidPackageManagerUtil.getAppVersionCode(deviceId, MAINLINE_TVP_PKG))
+        : "310000000";
   }
 }
