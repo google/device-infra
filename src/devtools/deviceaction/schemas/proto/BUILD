@@ -15,6 +15,9 @@
 
 # Config protos for devices and actions.
 
+load("//third_party/protobuf/bazel:java_proto_library.bzl", "java_proto_library")
+load("//third_party/protobuf/bazel:proto_library.bzl", "proto_library")
+
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = ["//visibility:public"],
