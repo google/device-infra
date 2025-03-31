@@ -180,7 +180,7 @@ public class LongevityTestHelper {
       logger.atInfo().log("Start to persist job info to %s", jobPersistentPath);
       Stopwatch stopwatch = Stopwatch.createStarted();
       JobInfoProto jobInfoProto = JobInfoConverter.toProto(jobInfo);
-      storageBackend.write(jobPersistentPath, jobInfoProto.toString());
+      storageBackend.write(jobPersistentPath, TextFormat.printer().printToString(jobInfoProto));
       stopwatch.stop();
       logger.atInfo().log("Stop persisting job info after %s", stopwatch.elapsed());
     } catch (MobileHarnessException e) {
