@@ -153,6 +153,9 @@ public abstract class AdbInitializeTemplate {
 
   /** Gets the adb server port being used along with the adb. */
   protected int getAdbServerPort() {
+    if (!Strings.isNullOrEmpty(getAdbServerPortFromUser())) {
+      return Integer.parseInt(getAdbServerPortFromUser());
+    }
     String systemEnv = System.getenv(ANDROID_ADB_SERVER_PORT_ENV_VAR);
     if (!Strings.isNullOrEmpty(systemEnv)) {
       return Integer.parseInt(systemEnv);
@@ -195,6 +198,11 @@ public abstract class AdbInitializeTemplate {
   /** Gets the value of flag {@link Flags#adbPathFromUser}. */
   protected String getAdbPathFromUser() {
     return Flags.instance().adbPathFromUser.getNonNull();
+  }
+
+  /** Gets the value of flag {@link Flags#adbServerPortFromUser}. */
+  protected String getAdbServerPortFromUser() {
+    return Flags.instance().adbServerPortFromUser.getNonNull();
   }
 
   /** Gets the value of flag {@link Flags#adbKeyPathsFromUser}. */
