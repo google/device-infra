@@ -14,6 +14,7 @@
 #
 
 load("@com_google_protobuf//:protobuf.bzl", "py_proto_library")
+load("//tools/build_defs/go:go_proto_library.bzl", "go_proto_library")
 
 package(
     default_applicable_licenses = ["//:license"],
