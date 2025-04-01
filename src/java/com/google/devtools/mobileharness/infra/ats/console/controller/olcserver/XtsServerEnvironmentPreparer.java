@@ -92,26 +92,10 @@ public class XtsServerEnvironmentPreparer implements ServerEnvironmentPreparer {
       localFileUtil.copyFileOrDir(initialServerBinary, serverResDir);
       serverBinary = serverResDir.resolve(initialServerBinary.getFileName());
       grantFileOrDirFullAccess(serverBinary);
-
-      boolean useXtsJavaBinary = XtsCommandUtil.useXtsJavaBinary(xtsType, xtsRootDir);
-      if (useXtsJavaBinary) {
-        // Copies JDK dir into server resource dir and grants access.
-        Path xtsJdkDir = XtsDirUtil.getXtsJdkDir(xtsRootDir, xtsType);
-        logger
-            .atInfo()
-            .with(IMPORTANCE, DEBUG)
-            .log("Copying xTS JDK dir [%s] into xTS resource dir [%s]", xtsJdkDir, serverResDir);
-        localFileUtil.checkDir(xtsJdkDir);
-        localFileUtil.copyFileOrDir(xtsJdkDir, serverResDir);
-        Path jdkDir = serverResDir.resolve(xtsJdkDir.getFileName());
-        javaBinary = jdkDir.resolve("bin/java");
-        grantFileOrDirFullAccess(jdkDir);
-      } else {
-        javaBinary = XtsCommandUtil.getJavaBinary(xtsType, xtsRootDir);
-      }
+      javaBinary = getJavaBinaryPath(xtsType, xtsRootDir, serverResDir);
     } else {
       serverBinary = initialServerBinary;
-      javaBinary = XtsCommandUtil.getJavaBinary(xtsType, xtsRootDir);
+      javaBinary = getJavaBinaryPath(xtsType, xtsRootDir, /* serverResDir= */ null);
     }
 
     // Checks files.
@@ -130,6 +114,42 @@ public class XtsServerEnvironmentPreparer implements ServerEnvironmentPreparer {
           .with(IMPORTANCE, DEBUG)
           .withCause(e)
           .log("Failed to grant access to [%s]", path);
+    }
+  }
+
+  /**
+   * Gets the Java binary path. If the flag --xts_jdk_dir is set, use the JDK files from the flag
+   * value. Otherwise, if the flag --ats_console_olc_server_copy_server_resource is unset, use the
+   * JDK files from the xTS root dir. Otherwise, use the JDK files from the system.
+   */
+  private Path getJavaBinaryPath(String xtsType, Path xtsRootDir, Path serverResDir)
+      throws MobileHarnessException, InterruptedException {
+    if (!Flags.instance().xtsJdkDir.getNonNull().isEmpty()) {
+      logger.atInfo().log(
+          "Use the JDK files from %s passed in via the flag --xts_jdk_dir for the server",
+          Flags.instance().xtsJdkDir.getNonNull());
+      Path jdkDir = Path.of(Flags.instance().xtsJdkDir.getNonNull());
+      grantFileOrDirFullAccess(jdkDir);
+      return jdkDir.resolve("bin/java");
+    }
+    if (!Flags.instance().atsConsoleOlcServerCopyServerResource.getNonNull()) {
+      return XtsCommandUtil.getJavaBinary(xtsType, xtsRootDir);
+    }
+    boolean useXtsJavaBinary = XtsCommandUtil.useXtsJavaBinary(xtsType, xtsRootDir);
+    if (useXtsJavaBinary && serverResDir != null) {
+      // Copies JDK dir into server resource dir and grants access.
+      Path xtsJdkDir = XtsDirUtil.getXtsJdkDir(xtsRootDir, xtsType);
+      logger
+          .atInfo()
+          .with(IMPORTANCE, DEBUG)
+          .log("Copying xTS JDK dir [%s] into xTS resource dir [%s]", xtsJdkDir, serverResDir);
+      localFileUtil.checkDir(xtsJdkDir);
+      localFileUtil.copyFileOrDir(xtsJdkDir, serverResDir);
+      Path jdkDir = serverResDir.resolve(xtsJdkDir.getFileName());
+      grantFileOrDirFullAccess(jdkDir);
+      return jdkDir.resolve("bin/java");
+    } else {
+      return XtsCommandUtil.getJavaBinary(xtsType, xtsRootDir);
     }
   }
 }

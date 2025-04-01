@@ -1887,6 +1887,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> xtsDisableTfResultLog = xtsDisableTfResultLogDefault;
 
+  private static final Flag<String> xtsJdkDirDefault = Flag.value("");
+
+  @com.beust.jcommander.Parameter(
+      names = "--xts_jdk_dir",
+      description = "The xTS JDK directory.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> xtsJdkDir = xtsJdkDirDefault;
+
   private static final Flag<String> xtsResDirRootDefault = Flag.value(getXtsResDirRootDefaultOss());
 
   @com.beust.jcommander.Parameter(
