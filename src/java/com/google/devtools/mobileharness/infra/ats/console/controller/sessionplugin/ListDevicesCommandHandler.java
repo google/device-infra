@@ -255,15 +255,16 @@ class ListDevicesCommandHandler {
       Duration remainingQueryDuration =
           listDeviceTimeout.minus(Duration.between(queryInstant, clock.instant()));
       remainingQueryDuration = max(remainingQueryDuration, Duration.ZERO);
-      DeviceProperties properties;
-      try {
-        properties =
-            propertiesFutureMap.get(serial).get(remainingQueryDuration.toMillis(), MILLISECONDS);
+      DeviceProperties properties = DEFAULT_DEVICE_PROPERTIES;
+      if (propertiesFutureMap.containsKey(serial)) {
+        try {
+          properties =
+              propertiesFutureMap.get(serial).get(remainingQueryDuration.toMillis(), MILLISECONDS);
 
-      } catch (ExecutionException | TimeoutException e) {
-        logger.atWarning().withCause(e).log(
-            "Failed to query properties of device [%s] via ADB", serial);
-        properties = DEFAULT_DEVICE_PROPERTIES;
+        } catch (ExecutionException | TimeoutException e) {
+          logger.atWarning().withCause(e).log(
+              "Failed to query properties of device [%s] via ADB", serial);
+        }
       }
       DeviceDescriptor builder =
           entry.getValue().toBuilder()

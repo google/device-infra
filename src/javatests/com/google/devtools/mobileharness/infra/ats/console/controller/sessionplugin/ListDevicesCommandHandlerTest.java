@@ -118,6 +118,26 @@ public class ListDevicesCommandHandlerTest {
   }
 
   @Test
+  public void handleWithUnauthorizedDevice() throws Exception {
+    when(deviceQuerier.queryDevice(any())).thenReturn(DeviceQueryResult.getDefaultInstance());
+    when(androidAdbInternalUtil.getDeviceSerialsAsMap(any()))
+        .thenReturn(ImmutableMap.of("abc", DeviceState.UNAUTHORIZED));
+    when(androidAdbUtil.getProperty(eq("abc"), any(AndroidProperty.class))).thenReturn("n/a");
+    Instant now = Instant.now();
+    when(clock.instant()).thenReturn(now);
+
+    assertThat(listDevicesCommandHandler.handle(ListDevicesCommand.getDefaultInstance()))
+        .isEqualTo(
+            AtsSessionPluginOutput.newBuilder()
+                .setSuccess(
+                    Success.newBuilder()
+                        .setOutputMessage(
+                            "Serial  State         Allocation  Product  Variant  Build  Battery\n"
+                                + "abc     UNAUTHORIZED  n/a         n/a      n/a      n/a    n/a"))
+                .build());
+  }
+
+  @Test
   public void convertDeviceInfo_success() {
     DeviceInfo deviceInfo =
         DeviceInfo.newBuilder()
