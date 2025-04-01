@@ -18,6 +18,8 @@ package com.google.devtools.mobileharness.infra.client.api.controller.job;
 
 import static com.google.common.collect.Comparators.min;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 import static java.util.stream.Collectors.joining;
 
@@ -906,6 +908,14 @@ public class JobRunner implements Runnable {
             .result()
             .toNewResult()
             .setNonPassing(Result.upgradeTestResult(result), (MobileHarnessException) e);
+        testInfo.status().set(TestStatus.DONE);
+        logger
+            .atSevere()
+            .with(IMPORTANCE, IMPORTANT)
+            .log(
+                "Test failed to start on the devices. It is likely that one or more necessary"
+                    + " devices from %s are not currently available.",
+                deviceLocators);
         testInfo
             .log()
             .atWarning()
