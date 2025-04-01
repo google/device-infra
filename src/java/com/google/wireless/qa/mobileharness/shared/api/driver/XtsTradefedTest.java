@@ -926,9 +926,12 @@ public class XtsTradefedTest extends BaseDriver
           config.replace(
               TradefedConfigGenerator.OUTPUT_DIR_TEMPLATE, "file://" + testInfo.getGenFileDir());
       logger.atInfo().log("Run xTS cluster command with config:\n%s", config);
-      localFileUtil.writeToFile(spec.getXtsTestPlanFile(), config);
-      localFileUtil.copyFileOrDir(spec.getXtsTestPlanFile(), testInfo.getGenFileDir());
-      xtsRunCommand.add(spec.getXtsTestPlanFile());
+      String testPlanFile =
+          Path.of(testInfo.getGenFileDir())
+              .resolve(Path.of(spec.getXtsTestPlanFile()).getFileName())
+              .toString();
+      localFileUtil.writeToFile(testPlanFile, config);
+      xtsRunCommand.add(testPlanFile);
     }
 
     // Appends allocated device(s) serial
