@@ -154,9 +154,6 @@ public class DeviceStat {
       case ABORT:
         testResultCounterBuilder.setAbort(testResultCounterBuilder.getAbort() + 1);
         break;
-      case INFRA_ERROR:
-        testResultCounterBuilder.setInfraError(testResultCounterBuilder.getInfraError() + 1);
-        break;
       case SKIP:
         testResultCounterBuilder.setSkipped(testResultCounterBuilder.getSkipped() + 1);
         break;

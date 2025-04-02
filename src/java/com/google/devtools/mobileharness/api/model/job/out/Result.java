@@ -172,7 +172,7 @@ public class Result {
 
       if ((this.result.equals(TestResult.PASS)
           && ((!params.isTrue(PARAM_ALLOW_OVERRIDE_PASS_TO_ERROR)
-                  && (result.equals(TestResult.ERROR) || result.equals(TestResult.INFRA_ERROR)))
+                  && result.equals(TestResult.ERROR))
               || (!params.isTrue(PARAM_ALLOW_OVERRIDE_PASS_TO_TIMEOUT)
                   && result.equals(TestResult.TIMEOUT))))) {
         logger.atWarning().withStackTrace(StackSize.FULL).log(
@@ -181,9 +181,7 @@ public class Result {
       }
 
       if ((this.result.equals(TestResult.FAIL) || this.result.equals(TestResult.SKIP))
-          && (result.equals(TestResult.ERROR)
-              || result.equals(TestResult.INFRA_ERROR)
-              || result.equals(TestResult.TIMEOUT))) {
+          && (result.equals(TestResult.ERROR) || result.equals(TestResult.TIMEOUT))) {
         logger.atWarning().withStackTrace(StackSize.FULL).log(
             "Prevent overriding %s result to %s", this, formatResultWithCause(result, cause));
         this.cause =

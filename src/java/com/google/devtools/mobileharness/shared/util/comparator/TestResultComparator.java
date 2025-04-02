@@ -32,9 +32,6 @@ public class TestResultComparator implements Comparator<TestResult> {
   private int getPriority(TestResult testResult) {
     int priority;
     switch (testResult) {
-      case INFRA_ERROR:
-        priority = 0;
-        break;
       case ERROR:
         priority = 1;
         break;
