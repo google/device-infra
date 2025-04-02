@@ -1397,6 +1397,17 @@ public class Flags {
   public Flag<Duration> maxConsecutiveGetTestStatusErrorDuration =
       maxConsecutiveGetTestStatusErrorDurationDefault;
 
+  private static final Flag<Duration> maxDrainTimeoutDefault =
+      DurationFlag.value(Duration.ofDays(3L));
+
+  @com.beust.jcommander.Parameter(
+      names = "--max_drain_timeout",
+      description =
+          "Maximum timeout for releases to be drained. The release will be marked as DRAINED if it"
+              + " execeeds the timeout. Default is 3 days.",
+      converter = DurationFlag.DurationConverter.class)
+  public Flag<Duration> maxDrainTimeout = maxDrainTimeoutDefault;
+
   private static final Flag<Boolean> defaultAdbCommandRedirectStderrDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(
