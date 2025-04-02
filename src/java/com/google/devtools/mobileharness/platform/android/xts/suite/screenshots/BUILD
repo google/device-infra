@@ -21,6 +21,7 @@ java_library(
     name = "screenshots_metadata_util",
     srcs = ["ScreenshotsMetadataUtil.java"],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/suite/screenshots:__pkg__",
     ],
     runtime_deps = [

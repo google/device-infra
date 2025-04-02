@@ -736,6 +736,9 @@ public final class NewMultiCommandRequestHandlerTest {
         .copyRetryFiles(
             eq(outputUploadPath.resolve("prev_session_id").resolve(commandId).toString()),
             eq(outputUploadPath.resolve("session_id").resolve(commandId).toString()));
+    verify(sessionResultHandlerUtil)
+        .generateScreenshotsMetadataFile(
+            any(), eq(outputUploadPath.resolve("session_id").resolve(commandId)));
 
     // Verify command detail.
     assertThat(handleResultProcessingResult.commandDetails()).hasSize(1);

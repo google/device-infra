@@ -45,6 +45,7 @@ import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDir
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryReportMerger;
+import com.google.devtools.mobileharness.platform.android.xts.suite.screenshots.ScreenshotsMetadataUtil;
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
 import com.google.devtools.mobileharness.shared.util.concurrent.Callables;
 import com.google.devtools.mobileharness.shared.util.concurrent.MobileHarnessCallable;
@@ -113,6 +114,7 @@ public class SessionResultHandlerUtil {
   private final RetryReportMerger retryReportMerger;
   private final PreviousResultLoader previousResultLoader;
   private final SessionInfo sessionInfo;
+  private final ScreenshotsMetadataUtil screenshotsMetadataUtil;
 
   @Inject
   SessionResultHandlerUtil(
@@ -121,13 +123,15 @@ public class SessionResultHandlerUtil {
       CompatibilityReportCreator reportCreator,
       RetryReportMerger retryReportMerger,
       PreviousResultLoader previousResultLoader,
-      SessionInfo sessionInfo) {
+      SessionInfo sessionInfo,
+      ScreenshotsMetadataUtil screenshotsMetadataUtil) {
     this.localFileUtil = localFileUtil;
     this.compatibilityReportMerger = compatibilityReportMerger;
     this.reportCreator = reportCreator;
     this.retryReportMerger = retryReportMerger;
     this.previousResultLoader = previousResultLoader;
     this.sessionInfo = sessionInfo;
+    this.screenshotsMetadataUtil = screenshotsMetadataUtil;
   }
 
   /**
@@ -526,13 +530,22 @@ public class SessionResultHandlerUtil {
       if (finalReport != null) {
         // For console, before creating the report and zipping result folder, copy previous session
         // result files into final result folder.
-        callAndLogException(
-            () -> {
-              copyRetryFilesForConsole(sessionRequestInfo, resultDir);
-              return null;
-            },
-            String.format(
-                "Failed to copy files from previsou session to result dir [%s].", resultDir));
+        if (isConsoleRetry(sessionRequestInfo)) {
+          callAndLogException(
+              () -> {
+                copyRetryFilesForConsole(sessionRequestInfo, resultDir);
+                return null;
+              },
+              String.format(
+                  "Failed to copy files from previsou session to result dir [%s].", resultDir));
+          callAndLogException(
+              () -> {
+                generateScreenshotsMetadataFile(sessionRequestInfo, resultDir);
+                return null;
+              },
+              String.format(
+                  "Failed to generate screenshots metadata file for result dir [%s].", resultDir));
+        }
         reportCreator.createReport(
             finalReport,
             resultDir,
@@ -1070,9 +1083,7 @@ public class SessionResultHandlerUtil {
 
   private void copyRetryFilesForConsole(SessionRequestInfo sessionRequestInfo, Path resultDir)
       throws MobileHarnessException, InterruptedException {
-    if ((sessionRequestInfo.retrySessionIndex().isPresent()
-            || sessionRequestInfo.retrySessionResultDirName().isPresent())
-        && localFileUtil.isDirExist(resultDir)) {
+    if (localFileUtil.isDirExist(resultDir)) {
       Path prevResultDir =
           previousResultLoader.getPrevSessionResultDir(
               XtsDirUtil.getXtsResultsDir(
@@ -1087,6 +1098,26 @@ public class SessionResultHandlerUtil {
             prevResultDir, resultDir);
       }
     }
+  }
+
+  /** Re-generates the screenshots metadata file after retry for the given result directory. */
+  public void generateScreenshotsMetadataFile(SessionRequestInfo sessionRequestInfo, Path resultDir)
+      throws MobileHarnessException {
+    if (localFileUtil.isDirExist(resultDir)) {
+      Optional<Path> screenshotsMetadataFile =
+          screenshotsMetadataUtil.genScreenshotsMetadataFile(resultDir);
+      if (screenshotsMetadataFile.isPresent()) {
+        logger.atInfo().log(
+            "Successfully generated the screenshots metadata file for retry: %s",
+            screenshotsMetadataFile.get());
+      }
+    }
+  }
+
+  private boolean isConsoleRetry(SessionRequestInfo sessionRequestInfo) {
+    return SessionHandlerHelper.isRunRetry(sessionRequestInfo.testPlan())
+        && (sessionRequestInfo.retrySessionIndex().isPresent()
+            || sessionRequestInfo.retrySessionResultDirName().isPresent());
   }
 
   private void addExtraFilesToResultDir(List<Path> extraFilesOrDirsToZip, TestInfo testInfo) {

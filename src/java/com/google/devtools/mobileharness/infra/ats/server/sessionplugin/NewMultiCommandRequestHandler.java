@@ -724,6 +724,9 @@ final class NewMultiCommandRequestHandler {
                   .resolve(commandId);
           sessionResultHandlerUtil.copyRetryFiles(
               prevResultDir.toString(), outputDirPath.toString());
+          // After copying the retry files, regenerate the screenshots metadata file if needed.
+          sessionResultHandlerUtil.generateScreenshotsMetadataFile(
+              sessionRequestInfo, outputDirPath);
         }
       } catch (MobileHarnessException e) {
         logger.atWarning().withCause(e).log(
