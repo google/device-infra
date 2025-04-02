@@ -106,6 +106,7 @@ enum ConverterIncompatibleReason {
   // IosFilePullerDecorator (IDFPULL = IOS_DECORATOR_FILE_PULLER)
   // Range: 20_201 ~ 20_300
   IDFPULL_NOT_REAL_DEVICE = 20201;
+  IDFPULL_NOT_SUPPORT_NATIVE_XCTEST = 20202;
 
   // IosFilePusherDecorator (IDFPUSH = IOS_DECORATOR_FILE_PUSHER)
   // Range: 20_301 ~ 20_400
