@@ -248,7 +248,13 @@ public class AtsModeTest {
                         .addDimension(
                             Dimension.newBuilder()
                                 .setName("fake_dimension_name")
-                                .setValue("fake_dimension_value")))
+                                .setValue("fake_dimension_value"))
+                        .addDimension(
+                            Dimension.newBuilder().setName("host_ip").setValue("fake_lab_ip"))
+                        .addDimension(
+                            Dimension.newBuilder()
+                                .setName("host_name")
+                                .setValue("fake_lab_host_name")))
                 .build());
 
     deviceQueryResult =

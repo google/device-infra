@@ -189,6 +189,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/version",
         "//src/java/com/google/devtools/mobileharness/shared/version/checker",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event:allocation",
         "@io_grpc_grpc_java//core",
         "@io_grpc_grpc_java//stub",

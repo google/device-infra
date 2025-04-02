@@ -20,6 +20,7 @@ import static com.google.common.truth.extensions.proto.ProtoTruth.assertThat;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static org.mockito.Mockito.verify;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
@@ -80,6 +81,8 @@ import com.google.devtools.mobileharness.shared.version.proto.Version.VersionChe
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
+import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery;
+import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.Dimension;
 import io.grpc.netty.NettyServerBuilder;
 import java.util.concurrent.Executors;
 import javax.inject.Inject;
@@ -191,7 +194,15 @@ public class RemoteDeviceManagerTest {
                           .addSupportedDimension(
                               DeviceDimension.newBuilder()
                                   .setName("fake_dimension_name")
-                                  .setValue("fake_dimension_value"))))
+                                  .setValue("fake_dimension_value"))
+                          .addSupportedDimension(
+                              DeviceDimension.newBuilder()
+                                  .setName("host_ip")
+                                  .setValue("fake_lab_ip"))
+                          .addSupportedDimension(
+                              DeviceDimension.newBuilder()
+                                  .setName("host_name")
+                                  .setValue("fake_lab_host_name"))))
           .build();
   private static final LabView LAB_VIEW =
       LabView.newBuilder()
@@ -647,5 +658,25 @@ public class RemoteDeviceManagerTest {
 
     verify(labRecordManager).addDeviceRecordIfDeviceInfoChanged(deviceRecordData2.capture());
     assertThat(deviceRecordData2.getValue().toRecordProto().getDeviceInfo()).isEqualTo(DEVICE_INFO);
+  }
+
+  @Test
+  public void getDeviceInfos() throws Exception {
+    labSyncGrpcStub.signUpLab(SIGN_UP_LAB_REQUEST);
+    ImmutableList<DeviceQuery.DeviceInfo> deviceInfos = remoteDeviceManager.getDeviceInfos();
+    assertThat(deviceInfos).hasSize(1);
+    DeviceQuery.DeviceInfo deviceInfo = deviceInfos.get(0);
+    assertThat(deviceInfo.getDimensionList())
+        .contains(
+            Dimension.newBuilder()
+                .setName("host_ip")
+                .setValue(SIGN_UP_LAB_REQUEST.getLabIp())
+                .build());
+    assertThat(deviceInfo.getDimensionList())
+        .contains(
+            Dimension.newBuilder()
+                .setName("host_name")
+                .setValue(SIGN_UP_LAB_REQUEST.getLabHostName())
+                .build());
   }
 }
