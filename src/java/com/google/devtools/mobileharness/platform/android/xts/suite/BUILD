@@ -29,7 +29,7 @@ java_library(
     deps = [
         ":abi",
         ":suite_module_loader",
-        ":test_suite_info",
+        ":test_suite_info_provider",
         "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/error:exception_factory",
@@ -84,6 +84,7 @@ java_library(
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/version:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/suite:__pkg__",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/plan:jar_file_util",
@@ -182,5 +183,22 @@ java_library(
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "test_suite_info_provider",
+    srcs = ["TestSuiteInfoProvider.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/version:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/suite:__pkg__",
+    ],
+    deps = [
+        ":test_suite_info",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common/plan:jar_file_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "@maven//:com_google_guava_guava",
     ],
 )

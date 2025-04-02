@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.infra.ats.console.util.version;
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
 import com.google.devtools.mobileharness.infra.ats.console.util.command.CommandHelper;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteInfo;
+import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteInfoProvider;
 import com.google.devtools.mobileharness.shared.version.Version;
 import com.google.devtools.mobileharness.shared.version.VersionUtil;
 import java.nio.file.Path;
@@ -51,7 +52,8 @@ public class VersionMessageUtil {
   public String getVersionMessage() {
     Path xtsRootDir = consoleInfo.getXtsRootDirectoryNonEmpty();
     String xtsType = commandHelper.getXtsType();
-    TestSuiteInfo testSuiteInfo = TestSuiteInfo.getInstance(xtsRootDir.toString(), xtsType);
+    TestSuiteInfo testSuiteInfo =
+        TestSuiteInfoProvider.getTestSuiteInfo(xtsRootDir.toString(), xtsType);
     String buildNumber =
         versionParser.fetchVersion(testSuiteInfo).orElseGet(testSuiteInfo::getBuildNumber);
     String labVersion = Version.LAB_VERSION.toString();

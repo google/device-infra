@@ -201,6 +201,7 @@ java_library(
         ":certification_suite_info",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:suite_common",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:test_suite_info",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:test_suite_info_provider",
     ],
 )
 

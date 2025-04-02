@@ -47,15 +47,12 @@ public class TestSuiteInfo {
   private static final String FULLNAME = "fullname";
   private static final String VERSION = "version";
 
-  @SuppressWarnings("NonFinalStaticField")
-  private static volatile TestSuiteInfo instance;
-
   private Properties testSuiteInfoProps;
   private final JarFileUtil jarFileUtil;
   private final String xtsRootDir;
   private final String xtsTypeStr;
 
-  private TestSuiteInfo(String xtsRootDir, String xtsType, JarFileUtil jarFileUtil) {
+  TestSuiteInfo(String xtsRootDir, String xtsType, JarFileUtil jarFileUtil) {
     this.jarFileUtil = jarFileUtil;
     this.xtsRootDir = xtsRootDir;
     this.xtsTypeStr = xtsType;
@@ -94,24 +91,6 @@ public class TestSuiteInfo {
     Properties props = new Properties();
     props.load(testSuiteInfoPropsInputStream);
     return props;
-  }
-
-  /**
-   * Retrieves the singleton instance, which also triggers loading of the related test suite info
-   * from embedded resource files
-   */
-  public static TestSuiteInfo getInstance(String xtsRootDir, String xtsType) {
-    if (instance == null) {
-      synchronized (TestSuiteInfo.class) {
-        if (instance == null) {
-          logger.atFine().log(
-              "Creating %s instance with params [xts root dir: %s, xts type: %s]",
-              TestSuiteInfo.class.getSimpleName(), xtsRootDir, xtsType);
-          instance = new TestSuiteInfo(xtsRootDir, xtsType, new JarFileUtil());
-        }
-      }
-    }
-    return instance;
   }
 
   /** Gets the build number of the test suite. */
