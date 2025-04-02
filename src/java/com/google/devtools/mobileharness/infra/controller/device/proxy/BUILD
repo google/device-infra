@@ -71,7 +71,7 @@ java_library(
 java_library(
     name = "proxy_device_runner",
     srcs = ["ProxyDeviceRunner.java"],
-    visibility = ["//src/javatests/com/google/devtools/mobileharness/infra/controller/device/proxy:__pkg__"],
+    visibility = ["//visibility:private"],
     deps = [
         ":proxy_device_requirement",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/proxy:device_proxy",
