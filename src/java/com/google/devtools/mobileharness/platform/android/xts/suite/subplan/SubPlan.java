@@ -194,8 +194,8 @@ public class SubPlan extends AbstractXmlParser {
   public ImmutableList<String> getAllIncludeFilters() {
     ImmutableList.Builder<String> includeFilters = ImmutableList.builder();
     return includeFilters
-        .addAll(getFiltersFromMap(includeFiltersMultimap))
-        .addAll(getFiltersFromMap(nonTfIncludeFiltersMultimap))
+        .addAll(getFiltersFromMap(includeFiltersMultimap, /* isIncludeFilter= */ true))
+        .addAll(getFiltersFromMap(nonTfIncludeFiltersMultimap, /* isIncludeFilter= */ true))
         .build();
   }
 
@@ -203,8 +203,8 @@ public class SubPlan extends AbstractXmlParser {
   public ImmutableList<String> getAllExcludeFilters() {
     ImmutableList.Builder<String> excludeFilters = ImmutableList.builder();
     return excludeFilters
-        .addAll(getFiltersFromMap(excludeFiltersMultimap))
-        .addAll(getFiltersFromMap(nonTfExcludeFiltersMultimap))
+        .addAll(getFiltersFromMap(excludeFiltersMultimap, /* isIncludeFilter= */ false))
+        .addAll(getFiltersFromMap(nonTfExcludeFiltersMultimap, /* isIncludeFilter= */ false))
         .build();
   }
 
@@ -260,46 +260,68 @@ public class SubPlan extends AbstractXmlParser {
       boolean isIncludeFilter,
       boolean isNonTf)
       throws IOException {
+    processFiltersFromFiltersMultimap(
+        filtersMultimap,
+        isIncludeFilter,
+        (String filter) -> serializeOneEntry(serializer, filter, isIncludeFilter, isNonTf));
+  }
+
+  private void serializeOneEntry(
+      XmlSerializer serializer, String filter, boolean isIncludeFilter, boolean isNonTf)
+      throws IOException {
+    serializer.startTag(NS, ENTRY_TAG);
+    serializer.attribute(NS, isIncludeFilter ? INCLUDE_ATTR : EXCLUDE_ATTR, filter);
+    if (isNonTf) {
+      serializer.attribute(NS, IS_NON_TF_ATTR, "true");
+    }
+    serializer.endTag(NS, ENTRY_TAG);
+  }
+
+  private static ImmutableList<String> getFiltersFromMap(
+      TreeMultimap<String, String> map, boolean isIncludeFilter) {
+    ImmutableList.Builder<String> filters = ImmutableList.builder();
+    try {
+      processFiltersFromFiltersMultimap(map, isIncludeFilter, filters::add);
+    } catch (IOException e) {
+      throw new IllegalStateException(e);
+    }
+    return filters.build();
+  }
+
+  private static void processFiltersFromFiltersMultimap(
+      TreeMultimap<String, String> filtersMultimap,
+      boolean isIncludeFilter,
+      FilterHandler filterHandler)
+      throws IOException {
     for (Entry<String, SortedSet<String>> entry : Multimaps.asMap(filtersMultimap).entrySet()) {
-      if (entry.getValue().contains(ALL_TESTS_IN_MODULE) && entry.getValue().size() == 1) {
-        serializer.startTag(NS, ENTRY_TAG);
-        serializer.attribute(NS, isIncludeFilter ? INCLUDE_ATTR : EXCLUDE_ATTR, entry.getKey());
-        if (isNonTf) {
-          serializer.attribute(NS, IS_NON_TF_ATTR, "true");
-        }
-        serializer.endTag(NS, ENTRY_TAG);
+      boolean includeOrExcludeWholeModule = entry.getValue().contains(ALL_TESTS_IN_MODULE);
+      if (!isIncludeFilter && includeOrExcludeWholeModule) {
+        // If they're exclude filters, and it excludes the whole module, only add the entry of
+        // excluding the whole module.
+        filterHandler.handleOneFilter(entry.getKey());
       } else {
-        for (String testName : entry.getValue()) {
-          if (testName.equals(ALL_TESTS_IN_MODULE)) {
-            continue;
+        // 1. If they're include filters:
+        // 1.1. Only add the entry of including the whole module if there is only one filter
+        // ALL_TESTS_IN_MODULE.
+        // 1.2. Or add the entries of including the explicit tests in the module.
+        // 2. If they're exclude filters, and it doesn't exclude the whole module.
+        if (includeOrExcludeWholeModule && entry.getValue().size() == 1) {
+          filterHandler.handleOneFilter(entry.getKey());
+        } else {
+          for (String testName : entry.getValue()) {
+            if (testName.equals(ALL_TESTS_IN_MODULE)) {
+              continue;
+            }
+            filterHandler.handleOneFilter(entry.getKey() + " " + testName);
           }
-          serializer.startTag(NS, ENTRY_TAG);
-          serializer.attribute(
-              NS, isIncludeFilter ? INCLUDE_ATTR : EXCLUDE_ATTR, entry.getKey() + " " + testName);
-          if (isNonTf) {
-            serializer.attribute(NS, IS_NON_TF_ATTR, "true");
-          }
-          serializer.endTag(NS, ENTRY_TAG);
         }
       }
     }
   }
 
-  private static ImmutableList<String> getFiltersFromMap(TreeMultimap<String, String> map) {
-    ImmutableList.Builder<String> filters = ImmutableList.builder();
-    for (Entry<String, SortedSet<String>> entry : Multimaps.asMap(map).entrySet()) {
-      if (entry.getValue().contains(ALL_TESTS_IN_MODULE) && entry.getValue().size() == 1) {
-        filters.add(entry.getKey());
-      } else {
-        for (String testName : entry.getValue()) {
-          if (testName.equals(ALL_TESTS_IN_MODULE)) {
-            continue;
-          }
-          filters.add(entry.getKey() + " " + testName);
-        }
-      }
-    }
-    return filters.build();
+  @FunctionalInterface
+  private interface FilterHandler {
+    void handleOneFilter(String filter) throws IOException;
   }
 
   /** Creates a {@link DefaultHandler} to process the xml. */

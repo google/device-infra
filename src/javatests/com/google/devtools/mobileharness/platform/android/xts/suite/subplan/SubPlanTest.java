@@ -43,6 +43,7 @@ public final class SubPlanTest {
   private static final String ABI = "armeabi-v7a";
   private static final String MODULE_A = "ModuleA";
   private static final String MODULE_B = "ModuleB";
+  private static final String MODULE_D = "ModuleD";
   private static final String NON_TF_MODULE_C = "ModuleC";
   private static final String TEST_1 = "android.test.Foo#test1";
   private static final String TEST_2 = "android.test.Foo#test2";
@@ -68,6 +69,10 @@ public final class SubPlanTest {
     excludeFilterSet.add(MODULE_B + " " + TEST_2);
     excludeFilterSet.add(MODULE_B + " " + TEST_3);
     subPlan.addAllExcludeFilters(excludeFilterSet);
+    subPlan.addIncludeFilter(MODULE_D);
+    subPlan.addIncludeFilter(MODULE_D + " " + TEST_1);
+    subPlan.addExcludeFilter(MODULE_D);
+    subPlan.addExcludeFilter(MODULE_D + " " + TEST_2);
 
     subPlan.addNonTfIncludeFilter(
         String.format(FILTER_STRING_TEMPLATE, ABI, NON_TF_MODULE_C, TEST_1));
@@ -79,7 +84,7 @@ public final class SubPlanTest {
       subPlan.serialize(subPlanOutputStream, /* tfFiltersOnly= */ false);
     }
     // Parse subPlan and assert correctness
-    checkSubPlan(subPlanFile);
+    checkSubPlan(subPlanFile, /* isSubPlanFileFromSerialization= */ true);
   }
 
   @Test
@@ -101,6 +106,10 @@ public final class SubPlanTest {
       entries.add(generateEntryXml(null, null, MODULE_B + " " + TEST_1, false, false));
       entries.add(generateEntryXml(null, null, MODULE_B + " " + TEST_2, false, false));
       entries.add(generateEntryXml(null, null, MODULE_B + " " + TEST_3, false, false));
+      entries.add(generateEntryXml(null, null, MODULE_D, true, false));
+      entries.add(generateEntryXml(null, null, MODULE_D + " " + TEST_1, true, false));
+      entries.add(generateEntryXml(null, null, MODULE_D, false, false));
+      entries.add(generateEntryXml(null, null, MODULE_D + " " + TEST_2, false, false));
 
       entries.add(generateEntryXml(ABI, NON_TF_MODULE_C, TEST_1, true, true));
       entries.add(generateEntryXml(ABI, NON_TF_MODULE_C, TEST_2, false, true));
@@ -115,13 +124,14 @@ public final class SubPlanTest {
       writer.write(xml);
       writer.flush();
 
-      checkSubPlan(planFile);
+      checkSubPlan(planFile, /* isSubPlanFileFromSerialization= */ false);
     } finally {
       writer.close();
     }
   }
 
-  private void checkSubPlan(File subPlanFile) throws Exception {
+  private void checkSubPlan(File subPlanFile, boolean isSubPlanFileFromSerialization)
+      throws Exception {
     InputStream subPlanInputStream = new FileInputStream(subPlanFile);
     SubPlan subPlan = new SubPlan();
     subPlan.parse(subPlanInputStream);
@@ -134,9 +144,19 @@ public final class SubPlanTest {
             ABI + " " + MODULE_A,
             ImmutableSet.of(TEST_1, TEST_2, TEST_3),
             MODULE_B,
-            ImmutableSet.of(SubPlan.ALL_TESTS_IN_MODULE));
+            ImmutableSet.of(SubPlan.ALL_TESTS_IN_MODULE),
+            MODULE_D,
+            isSubPlanFileFromSerialization
+                ? ImmutableSet.of(TEST_1)
+                : ImmutableSet.of(SubPlan.ALL_TESTS_IN_MODULE, TEST_1));
     assertThat(Multimaps.asMap(subPlanExcludeFiltersMultimap))
-        .containsExactly(MODULE_B, ImmutableSet.of(TEST_1, TEST_2, TEST_3));
+        .containsExactly(
+            MODULE_B,
+            ImmutableSet.of(TEST_1, TEST_2, TEST_3),
+            MODULE_D,
+            isSubPlanFileFromSerialization
+                ? ImmutableSet.of(SubPlan.ALL_TESTS_IN_MODULE)
+                : ImmutableSet.of(SubPlan.ALL_TESTS_IN_MODULE, TEST_2));
 
     SetMultimap<String, String> subPlanNonTfIncludeFiltersMultimap =
         subPlan.getNonTfIncludeFiltersMultimap();
