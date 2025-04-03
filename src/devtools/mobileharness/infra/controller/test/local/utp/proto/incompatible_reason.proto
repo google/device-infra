@@ -111,6 +111,7 @@ enum ConverterIncompatibleReason {
   // IosFilePusherDecorator (IDFPUSH = IOS_DECORATOR_FILE_PUSHER)
   // Range: 20_301 ~ 20_400
   IDFPUSH_NOT_REAL_DEVICE = 20301;
+  IDFPUSH_NOT_SUPPORT_NATIVE_XCTEST = 20302;
 
   // IosGoogleAccountDecorator (IDGA = IOS_DECORATOR_GOOGLE_ACCOUNT)
   // Range: 20_401 ~ 20_500
