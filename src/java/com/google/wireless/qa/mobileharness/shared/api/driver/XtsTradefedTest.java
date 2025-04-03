@@ -152,7 +152,11 @@ public class XtsTradefedTest extends BaseDriver
 
   private static final Duration KILL_TF_AFTER_FINISH_TIME = Duration.ofMinutes(4L);
 
-  private static final Duration ANDROID_XTS_ZIP_UNCOMPRESS_TIMEOUT = Duration.ofMinutes(15L);
+  // The max zip file is around 20GB, disk write speed is 100MB/s, and normally no more than 10
+  // tests are doing unzip operation at the same time, therefore each test can unzip at 10MB/s speed
+  // on average, and each test takes on average 34 minutes to finish unzipping. Adding some buffer
+  // so that most tests can finish within timeout limit.
+  private static final Duration ANDROID_XTS_ZIP_UNCOMPRESS_TIMEOUT = Duration.ofHours(2L);
 
   private static final String TF_AGENT_RESOURCE_PATH =
       "/com/google/devtools/mobileharness/platform/android/xts/agent/tradefed_invocation_agent_deploy.jar";
