@@ -38,7 +38,6 @@ message AndroidLtpFlashDecoratorSpec {
           "'sailfish-userdebug'."
   }];
 
-  optional string prepare_device_par = 3 [
-    (file_detail) = { help: "The python binary .par file to prepare device" }
-  ];
+  repeated string prepare_device_apk = 3
+      [(file_detail) = { help: "Apks to be installed to prepare device." }];
 }
