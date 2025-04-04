@@ -91,8 +91,6 @@ proto_library(
     srcs = ["lab_record.proto"],
     deps = [
         ":lab_query_proto",
-        "//src/devtools/mobileharness/api/model/proto:device_proto",
-        "//src/devtools/mobileharness/api/model/proto:lab_proto",
         "@com_google_protobuf//:timestamp_proto",
     ],
 )
