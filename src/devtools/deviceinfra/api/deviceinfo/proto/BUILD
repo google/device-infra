@@ -56,6 +56,8 @@ proto_library(
 proto_library(
     name = "device_locator_proto",
     srcs = ["device_locator.proto"],
+    deps = [
+    ],
 )
 
 proto_library(
