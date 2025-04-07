@@ -94,7 +94,9 @@ import java.io.IOException;
 import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -152,7 +154,11 @@ public class XtsTradefedTest extends BaseDriver
 
   private static final Duration KILL_TF_AFTER_FINISH_TIME = Duration.ofMinutes(4L);
 
-  private static final Duration ANDROID_XTS_ZIP_UNCOMPRESS_TIMEOUT = Duration.ofMinutes(15L);
+  // The max zip file is around 20GB, disk write speed is 100MB/s, and normally no more than 10
+  // tests are doing unzip operation at the same time, therefore each test can unzip at 10MB/s speed
+  // on average, and each test takes on average 34 minutes to finish unzipping. Adding some buffer
+  // so that most tests can finish within timeout limit.
+  private static final Duration ANDROID_XTS_ZIP_UNCOMPRESS_TIMEOUT = Duration.ofHours(2L);
 
   private static final String TF_AGENT_RESOURCE_PATH =
       "/com/google/devtools/mobileharness/platform/android/xts/agent/tradefed_invocation_agent_deploy.jar";
@@ -170,6 +176,7 @@ public class XtsTradefedTest extends BaseDriver
   private final ListeningScheduledExecutorService scheduledThreadPool;
   private final Sleeper sleeper;
   private final ResUtil resUtil;
+  private final Clock clock;
 
   private final Object tfProcessLock = new Object();
 
@@ -194,7 +201,8 @@ public class XtsTradefedTest extends BaseDriver
       Aapt aapt,
       ListeningExecutorService threadPool,
       Sleeper sleeper,
-      ResUtil resUtil) {
+      ResUtil resUtil,
+      Clock clock) {
     super(device, testInfo);
     this.cmdExecutor = cmdExecutor;
     this.localFileUtil = localFileUtil;
@@ -208,6 +216,7 @@ public class XtsTradefedTest extends BaseDriver
         ThreadPools.createStandardScheduledThreadPool(
             "xts-tradefed-test-" + testInfo.locator().getId(), /* corePoolSize= */ 2);
     this.resUtil = resUtil;
+    this.clock = clock;
   }
 
   @Override
@@ -757,6 +766,7 @@ public class XtsTradefedTest extends BaseDriver
     } else if (spec.hasAndroidXtsZip()) {
       // Unzip android-xts zip file and return the xts root dir
       Path androidXtsZip = Path.of(spec.getAndroidXtsZip());
+      long startTime = clock.instant().toEpochMilli();
       try {
         String unzippedPath =
             PathUtil.join(
@@ -774,6 +784,11 @@ public class XtsTradefedTest extends BaseDriver
             AndroidErrorId.XTS_TRADEFED_GET_XTS_ROOT_DIR_ERROR,
             "Failed to unzip " + androidXtsZip,
             e);
+      } finally {
+        logger.atInfo().log(
+            "Unzipping %s took %d seconds",
+            androidXtsZip,
+            Duration.between(Instant.ofEpochMilli(startTime), clock.instant()).toSeconds());
       }
     }
     throw new MobileHarnessException(
