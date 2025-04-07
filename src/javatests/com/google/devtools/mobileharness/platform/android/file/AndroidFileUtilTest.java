@@ -1335,4 +1335,14 @@ public final class AndroidFileUtilTest {
     assertThat(e.getErrorId()).isEqualTo(AndroidErrorId.ANDROID_FILE_UTIL_CREATE_SYMLINK_ERROR);
     assertThat(e).hasMessageThat().contains("Error");
   }
+
+  @Test
+  public void setFileSecurityContext_succeeds() throws Exception {
+    String securityContext = "u:object_r:system_file:s0";
+    String filePath = "/sdcard/test_file";
+    when(adb.runShellWithRetry(SERIAL, String.format("chcon -R %s %s", securityContext, filePath)))
+        .thenReturn("something");
+    assertThat(androidFileUtil.setFileSecurityContext(SERIAL, filePath, securityContext))
+        .isEqualTo("something");
+  }
 }
