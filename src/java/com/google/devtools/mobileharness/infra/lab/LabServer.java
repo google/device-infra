@@ -30,6 +30,9 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.SettableFuture;
+import com.google.devtools.deviceinfra.host.daemon.health.HealthStatusManager;
+import com.google.devtools.deviceinfra.host.daemon.health.HealthStatusManagerModule;
+import com.google.devtools.deviceinfra.host.daemon.health.proto.HealthGrpc;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperties;
@@ -53,6 +56,12 @@ import com.google.devtools.mobileharness.infra.lab.controller.LabDimensionManage
 import com.google.devtools.mobileharness.infra.lab.controller.LocalFileBasedDeviceConfigManager;
 import com.google.devtools.mobileharness.infra.lab.controller.MasterSyncerForDevice;
 import com.google.devtools.mobileharness.infra.lab.controller.MasterSyncerForJob;
+import com.google.devtools.mobileharness.infra.lab.controller.handler.DeviceManagerDrainHandler;
+import com.google.devtools.mobileharness.infra.lab.controller.handler.ExecTestServiceDrainHandler;
+import com.google.devtools.mobileharness.infra.lab.controller.handler.JobManagerDrainHandler;
+import com.google.devtools.mobileharness.infra.lab.controller.handler.MasterSyncerForDeviceDrainHandler;
+import com.google.devtools.mobileharness.infra.lab.controller.handler.MasterSyncerForJobDrainHandler;
+import com.google.devtools.mobileharness.infra.lab.controller.handler.TestManagerDrainHandler;
 import com.google.devtools.mobileharness.infra.lab.rpc.service.ExecTestServiceImpl;
 import com.google.devtools.mobileharness.infra.lab.rpc.service.PrepareTestServiceImpl;
 import com.google.devtools.mobileharness.infra.lab.rpc.service.grpc.ExecTestGrpcImpl;
@@ -84,6 +93,7 @@ import com.google.devtools.mobileharness.shared.version.rpc.service.VersionServi
 import com.google.devtools.mobileharness.shared.version.rpc.service.grpc.VersionGrpcImpl;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
+import com.google.inject.Injector;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessLogger;
 import com.google.wireless.qa.mobileharness.shared.api.device.BaseDevice;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
@@ -235,6 +245,22 @@ public class LabServer {
       VersionServiceImpl versionService =
           new VersionServiceImpl(Version.LAB_VERSION, VersionUtil.getGitHubVersion().orElse(null));
 
+      Injector healthInjector = Guice.createInjector(new HealthStatusManagerModule());
+      HealthStatusManager healthStatusManager =
+          healthInjector.getInstance(HealthStatusManager.class);
+      healthStatusManager.addDrainHandler(new DeviceManagerDrainHandler(deviceManager));
+      healthStatusManager.addDrainHandler(new JobManagerDrainHandler(jobManager));
+      healthStatusManager.addDrainHandler(new TestManagerDrainHandler(testManager));
+      healthStatusManager.addDrainHandler(new ExecTestServiceDrainHandler(execTestService));
+
+      if (masterSyncerForDevice != null) {
+        healthStatusManager.addDrainHandler(
+            new MasterSyncerForDeviceDrainHandler(masterSyncerForDevice));
+      }
+      if (masterSyncerForJob != null) {
+        healthStatusManager.addDrainHandler(new MasterSyncerForJobDrainHandler(masterSyncerForJob));
+      }
+
       logger.atInfo().log("Lab server %s starts.", Version.LAB_VERSION);
       logger.atInfo().log(
           "Lab server starts with hostname: %s, version: %s, Github version: %s",
@@ -286,6 +312,8 @@ public class LabServer {
                     new TaggedFileHandler(new FileClassifier(jobManager)));
         localGrpcServices.add(cloudFileTransferService);
       }
+
+      localGrpcServices.add(healthInjector.getInstance(HealthGrpc.HealthImplBase.class));
 
       localGrpcServices.add(ProtoReflectionService.newInstance());
       localGrpcServices.add(

@@ -47,9 +47,12 @@ java_library(
     deps = [
         ":annotations",
         ":lab_server_constants_module",
+        "//src/devtools/deviceinfra/host/daemon/proto:health_java_grpc",
         "//src/devtools/mobileharness/api/model/proto:lab_java_proto",
         "//src/devtools/mobileharness/shared/trace/proto:span_java_proto",
         "//src/devtools/mobileharness/shared/util/comm/filetransfer/common/proto:tagged_file_metadata_java_proto",
+        "//src/java/com/google/devtools/deviceinfra/host/daemon/health:health_status_manager",
+        "//src/java/com/google/devtools/deviceinfra/host/daemon/health:health_status_manager_module",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:device_helper_factory",
