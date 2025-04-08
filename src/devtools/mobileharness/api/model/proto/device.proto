@@ -51,6 +51,10 @@ enum DeviceStatus {
   // If no heartbeat for >= 4 weeks, the device will be actually removed from
   // the Master DB.
   MISSING = 7;
+  // The device is failed to prepare. This indicates that there may be an issue
+  // with the device that was not able to be recovered automatically.
+  // NOTE: Used in Fusion only.
+  FAILED = 8;
 }
 
 // Status of a device, with the timestamp of the status.
