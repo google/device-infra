@@ -72,6 +72,10 @@ java_library(
     srcs = ["AndroidHdVideoDecoratorEnvValidator.java"],
     deps = [
         ":android_device_version_env_validator",
+        "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
         "@maven//:com_google_guava_guava",
     ],
 )
