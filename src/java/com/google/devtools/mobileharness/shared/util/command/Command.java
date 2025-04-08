@@ -850,7 +850,8 @@ public abstract class Command {
 
   /**
    * Returns a command that behaves equivalently to this command, but with the specified extra
-   * environment in place of the current extra environment.
+   * environment in place of the current extra environment. This method overrides the previously set
+   * environment.
    *
    * <p>The environment of this command is the union of 3 sets and the following one will override
    * the previous one:
@@ -877,7 +878,8 @@ public abstract class Command {
 
   /**
    * Returns a command that behaves equivalently to this command, but with the specified extra
-   * environment in place of the current extra environment.
+   * environment in place of the current extra environment. This method overrides the previously set
+   * environment.
    *
    * <p>The environment of this command is the union of 3 sets and the following one will override
    * the previous one:
