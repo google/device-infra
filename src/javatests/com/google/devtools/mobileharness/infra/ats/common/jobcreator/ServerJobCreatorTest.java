@@ -426,7 +426,7 @@ public final class ServerJobCreatorTest {
             "xts_test_plan",
             "cts");
     assertThat(driverParamsMap.get("subplan_xml"))
-        .isEqualTo(subPlansDir.resolve("subplan1_tf_auto_gen.xml").toString());
+        .containsMatch(subPlansDir.resolve("subplan1_tf_auto_gen_\\d+\\.xml").toString());
   }
 
   @SuppressWarnings("unchecked")

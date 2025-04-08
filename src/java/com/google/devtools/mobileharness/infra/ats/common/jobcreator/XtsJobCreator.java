@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Streams;
+import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.ErrorId;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -54,6 +55,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Path;
 import java.time.Clock;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -63,6 +65,9 @@ import javax.annotation.Nullable;
 
 /** A creator to create XTS tradefed jobs and non tradefed jobs. */
 public abstract class XtsJobCreator {
+
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
   private static final ImmutableSet<ErrorId> SKIPPABLE_ERROR_IDS =
       ImmutableSet.of(
           InfraErrorId.ATSC_TF_RETRY_WITHOUT_TF_MODULE,
@@ -177,7 +182,10 @@ public abstract class XtsJobCreator {
     } else if (sessionRequestInfo.subPlanName().isPresent()) {
       Path tfSubPlan =
           prepareTfSubPlan(
-              xtsRootDir, sessionRequestInfo.xtsType(), sessionRequestInfo.subPlanName().get());
+              xtsRootDir,
+              sessionRequestInfo.xtsType(),
+              sessionRequestInfo.subPlanName().get(),
+              sessionRequestInfo);
       driverParams.put("subplan_xml", tfSubPlan.toAbsolutePath().toString());
     }
 
@@ -314,10 +322,27 @@ public abstract class XtsJobCreator {
   }
 
   /** Prepares a sub plan file for a tradefed job. */
-  private Path prepareTfSubPlan(Path xtsRootDir, String xtsType, String subPlanName)
+  private Path prepareTfSubPlan(
+      Path xtsRootDir, String xtsType, String subPlanName, SessionRequestInfo sessionRequestInfo)
       throws MobileHarnessException, InterruptedException {
-    Path subPlansDir = XtsDirUtil.getXtsSubPlansDir(xtsRootDir, xtsType);
-    Path subPlanPath = subPlansDir.resolve(subPlanName + ".xml");
+    Path subPlanPath = SessionHandlerHelper.getSubPlanFilePath(xtsRootDir, xtsType, subPlanName);
+    SessionHandlerHelper.checkSubPlanFileExist(subPlanPath.toFile());
+    Path subPlanBackupPath = null;
+    // Prepares and uses the subplan backup file in case the original subplan file is modified
+    // during the test.
+    if (sessionRequestInfo.subPlanNameBackup().isPresent()) {
+      subPlanBackupPath =
+          SessionHandlerHelper.getSubPlanFilePath(
+              xtsRootDir, xtsType, sessionRequestInfo.subPlanNameBackup().get());
+      if (!subPlanBackupPath.toFile().exists()) {
+        logger.atInfo().log("Creating subplan backup file %s", subPlanBackupPath);
+        localFileUtil.copyFileOrDirWithOverridingCopyOptions(
+            subPlanPath, subPlanBackupPath, ImmutableList.of("-rf"));
+      } else {
+        logger.atInfo().log("Uses existing subplan backup file %s", subPlanBackupPath);
+      }
+    }
+    subPlanPath = subPlanBackupPath == null ? subPlanPath : subPlanBackupPath;
     SubPlan subPlan = SessionHandlerHelper.loadSubPlan(subPlanPath.toFile());
 
     if (subPlan.getIncludeFiltersMultimap().isEmpty()
@@ -334,7 +359,10 @@ public abstract class XtsJobCreator {
       return subPlanPath;
     }
 
-    Path tfOnlySubPlanPath = subPlansDir.resolve(String.format("%s_tf_auto_gen.xml", subPlanName));
+    Path tfOnlySubPlanPath =
+        XtsDirUtil.getXtsSubPlansDir(xtsRootDir, xtsType)
+            .resolve(
+                String.format("%s_tf_auto_gen_%s.xml", subPlanName, Instant.now().toEpochMilli()));
     if (localFileUtil.isFileExist(tfOnlySubPlanPath)) {
       localFileUtil.removeFileOrDir(tfOnlySubPlanPath);
     }
@@ -418,7 +446,10 @@ public abstract class XtsJobCreator {
     } else if (sessionRequestInfo.subPlanName().isPresent()) {
       subPlan =
           prepareNonTfSubPlan(
-              xtsRootDir, sessionRequestInfo.xtsType(), sessionRequestInfo.subPlanName().get());
+              xtsRootDir,
+              sessionRequestInfo.xtsType(),
+              sessionRequestInfo.subPlanName().get(),
+              sessionRequestInfo);
     }
 
     return sessionRequestHandlerUtil.createXtsNonTradefedJobs(
@@ -426,9 +457,28 @@ public abstract class XtsJobCreator {
   }
 
   /** Prepares a sub plan file for a non-tradefed job. */
-  private SubPlan prepareNonTfSubPlan(Path xtsRootDir, String xtsType, String subPlanName)
-      throws MobileHarnessException {
-    SubPlan subPlan = SessionHandlerHelper.loadSubPlan(xtsRootDir, xtsType, subPlanName);
+  private SubPlan prepareNonTfSubPlan(
+      Path xtsRootDir, String xtsType, String subPlanName, SessionRequestInfo sessionRequestInfo)
+      throws MobileHarnessException, InterruptedException {
+    Path subPlanPath = SessionHandlerHelper.getSubPlanFilePath(xtsRootDir, xtsType, subPlanName);
+    SessionHandlerHelper.checkSubPlanFileExist(subPlanPath.toFile());
+    Path subPlanBackupPath = null;
+    // Prepares and uses the subplan backup file in case the original subplan file is modified
+    // during the test.
+    if (sessionRequestInfo.subPlanNameBackup().isPresent()) {
+      subPlanBackupPath =
+          SessionHandlerHelper.getSubPlanFilePath(
+              xtsRootDir, xtsType, sessionRequestInfo.subPlanNameBackup().get());
+      if (!subPlanBackupPath.toFile().exists()) {
+        logger.atInfo().log("Creating subplan backup file %s", subPlanBackupPath);
+        localFileUtil.copyFileOrDirWithOverridingCopyOptions(
+            subPlanPath, subPlanBackupPath, ImmutableList.of("-rf"));
+      } else {
+        logger.atInfo().log("Uses existing subplan backup file %s", subPlanBackupPath);
+      }
+    }
+    subPlanPath = subPlanBackupPath == null ? subPlanPath : subPlanBackupPath;
+    SubPlan subPlan = SessionHandlerHelper.loadSubPlan(subPlanPath.toFile());
     if (subPlan.getNonTfIncludeFiltersMultimap().isEmpty()
         && subPlan.getNonTfExcludeFiltersMultimap().isEmpty()) {
       throw MobileHarnessExceptionFactory.createUserFacingException(

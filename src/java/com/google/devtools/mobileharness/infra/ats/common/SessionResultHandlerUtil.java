@@ -454,11 +454,15 @@ public class SessionResultHandlerUtil {
       }
       if (sessionRequestInfo.subPlanName().isPresent()) {
         // Add all filters in the sub-plan so these filters are loaded in retry
-        SubPlan subPlan =
-            SessionHandlerHelper.loadSubPlan(
+        Path subPlanPath =
+            SessionHandlerHelper.getSubPlanFilePath(
                 Path.of(sessionRequestInfo.xtsRootDir()),
                 sessionRequestInfo.xtsType(),
-                sessionRequestInfo.subPlanName().get());
+                sessionRequestInfo.subPlanNameBackup().isPresent()
+                    ? sessionRequestInfo.subPlanNameBackup().get()
+                    : sessionRequestInfo.subPlanName().get());
+        logger.atInfo().log("Loading subplan file from %s", subPlanPath);
+        SubPlan subPlan = SessionHandlerHelper.loadSubPlan(subPlanPath.toFile());
         includeFilters.addAll(subPlan.getAllIncludeFilters());
         excludeFilters.addAll(subPlan.getAllExcludeFilters());
       }

@@ -271,6 +271,13 @@ class RunCommandHandler {
       }
     } finally {
       sessionResultHandlerUtil.cleanUpJobGenDirs(allJobs);
+      if (sessionRequestInfo.subPlanNameBackup().isPresent()) {
+        Path subPlanBackupPath =
+            SessionHandlerHelper.getSubPlanFilePath(
+                xtsRootDir, xtsType, sessionRequestInfo.subPlanNameBackup().get());
+        logger.atInfo().log("Deleting subplan backup file %s", subPlanBackupPath);
+        localFileUtil.removeFileOrDir(subPlanBackupPath);
+      }
 
       Result previousResult = null;
       if (SessionRequestHandlerUtil.isRunRetry(sessionRequestInfo.testPlan())) {
@@ -387,6 +394,8 @@ class RunCommandHandler {
     }
     if (runCommand.hasSubPlanName()) {
       builder.setSubPlanName(runCommand.getSubPlanName());
+      builder.setSubPlanNameBackup(
+          String.format("%s_backup_%s", runCommand.getSubPlanName(), Instant.now().toEpochMilli()));
     }
     if (runCommand.getDeviceType() != DeviceType.DEVICE_TYPE_UNSPECIFIED) {
       builder.setDeviceType(

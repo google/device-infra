@@ -47,20 +47,20 @@ public class SessionHandlerHelper {
     return Flags.instance().useTfRetry.getNonNull();
   }
 
-  public static SubPlan loadSubPlan(Path xtsRootDir, String xtsType, String subPlanName)
-      throws MobileHarnessException {
-    File subPlanFile =
-        XtsDirUtil.getXtsSubPlansDir(xtsRootDir, xtsType).resolve(subPlanName + ".xml").toFile();
-    return loadSubPlan(subPlanFile);
+  public static Path getSubPlanFilePath(Path xtsRootDir, String xtsType, String subPlanName) {
+    return XtsDirUtil.getXtsSubPlansDir(xtsRootDir, xtsType).resolve(subPlanName + ".xml");
   }
 
-  public static SubPlan loadSubPlan(File subPlanFile) throws MobileHarnessException {
+  public static void checkSubPlanFileExist(File subPlanFile) throws MobileHarnessException {
     if (!subPlanFile.exists() || !subPlanFile.isFile()) {
       throw new MobileHarnessException(
           InfraErrorId.ATSC_RUN_SUBPLAN_COMMAND_SUBPLAN_XML_NOT_FOUND,
           String.format("Subplan xml file %s doesn't exist", subPlanFile));
     }
+  }
 
+  public static SubPlan loadSubPlan(File subPlanFile) throws MobileHarnessException {
+    checkSubPlanFileExist(subPlanFile);
     SubPlan subPlan = new SubPlan();
     try (InputStream inputStream = new FileInputStream(subPlanFile)) {
       subPlan.parse(inputStream);

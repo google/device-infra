@@ -116,6 +116,12 @@ public abstract class SessionRequestInfo {
 
   public abstract Optional<String> subPlanName();
 
+  /**
+   * The backup subplan name for {@link #subPlanName()} in case the subplan file is modified during
+   * test run.
+   */
+  public abstract Optional<String> subPlanNameBackup();
+
   public abstract boolean htmlInZip();
 
   public abstract Optional<String> testPlanFile();
@@ -250,6 +256,8 @@ public abstract class SessionRequestInfo {
     public abstract Builder setStartTimeout(Duration startTimeout);
 
     public abstract Builder setSubPlanName(String subPlanName);
+
+    public abstract Builder setSubPlanNameBackup(String subPlanNameBackup);
 
     public abstract Builder setHtmlInZip(boolean htmlInZip);
 

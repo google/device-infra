@@ -910,8 +910,9 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
             sessionRequestInfo, testPlanFilter, subPlan, ImmutableMap.of());
     assertThat(jobInfos).hasSize(2);
-    assertThat(jobInfos.get(0).params().get(MOBLY_TEST_SELECTOR_KEY))
-        .isEqualTo("FooTest.test1 FooTest.test2");
+    assertThat(jobInfos.get(0).params().get(MOBLY_TEST_SELECTOR_KEY).split(" "))
+        .asList()
+        .containsExactly("FooTest.test1", "FooTest.test2");
     assertThat(jobInfos.get(0).params().get(PARAM_XTS_SUITE_INFO)).contains("suite_plan=cts");
     assertThat(jobInfos.get(1).params().get(MOBLY_TEST_SELECTOR_KEY)).isNull();
     assertThat(jobInfos.get(1).params().get(PARAM_XTS_SUITE_INFO)).contains("suite_plan=cts");
