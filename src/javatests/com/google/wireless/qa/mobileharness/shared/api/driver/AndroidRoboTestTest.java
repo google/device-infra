@@ -16,9 +16,12 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.driver;
 
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
+import com.google.devtools.mobileharness.platform.android.appcrawler.PostProcessor;
+import com.google.devtools.mobileharness.platform.android.appcrawler.PreProcessor;
 import com.google.wireless.qa.mobileharness.shared.android.Aapt;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.device.NoOpDevice;
@@ -30,6 +33,8 @@ import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.AndroidRoboTestSpec;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.AndroidRoboTestSpec.ControllerEndpoint;
 import java.nio.file.Path;
+import java.time.Clock;
+import java.time.Instant;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -49,6 +54,9 @@ public class AndroidRoboTestTest {
 
   @Mock private Adb adb;
   @Mock private Aapt aapt;
+  @Mock private Clock clock;
+  @Mock private PreProcessor preProcessor;
+  @Mock private PostProcessor postProcessor;
 
   private JobInfo jobInfo;
   private Device device;
@@ -70,6 +78,7 @@ public class AndroidRoboTestTest {
     when(adb.getAdbServerPort()).thenReturn(5037);
     when(adb.getAdbPath()).thenReturn("adb");
     when(aapt.getAaptPath()).thenReturn("aapt");
+    when(clock.instant()).thenReturn(Instant.ofEpochMilli(1));
   }
 
   @Test
@@ -85,11 +94,14 @@ public class AndroidRoboTestTest {
     jobInfo.scopedSpecs().add("AndroidRoboTestSpec", spec);
     TestInfo testInfo = jobInfo.tests().add("fake test");
     AndroidRoboTest roboTest = createAndroidRoboTest(testInfo);
+    when(clock.instant()).thenReturn(Instant.ofEpochMilli(2)).thenReturn(Instant.ofEpochMilli(3));
 
     roboTest.run(testInfo);
+    verify(preProcessor).installApks(testInfo, device, spec);
+    verify(postProcessor).uninstallApks(testInfo, device, spec);
   }
 
   private AndroidRoboTest createAndroidRoboTest(TestInfo testInfo) {
-    return new AndroidRoboTest(device, testInfo, adb, aapt);
+    return new AndroidRoboTest(device, testInfo, adb, aapt, clock, preProcessor, postProcessor);
   }
 }

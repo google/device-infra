@@ -19,7 +19,11 @@ package com.google.wireless.qa.mobileharness.shared.api.driver;
 
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
+import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.platform.android.appcrawler.PostProcessor;
+import com.google.devtools.mobileharness.platform.android.appcrawler.PreProcessor;
+import com.google.devtools.mobileharness.shared.util.port.PortProber;
 import com.google.wireless.qa.mobileharness.shared.android.Aapt;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DriverAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.TestAnnotation;
@@ -27,6 +31,8 @@ import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.AndroidRoboTestSpec;
+import java.io.IOException;
+import java.time.Clock;
 import javax.inject.Inject;
 
 /** Driver for running Android Robo Tests using the UTP Android Robo Driver. */
@@ -39,12 +45,25 @@ public class AndroidRoboTest extends BaseDriver implements SpecConfigable<Androi
 
   private final Aapt aapt;
   private final Adb adb;
+  private final PreProcessor preProcessor;
+  private final PostProcessor postProcessor;
+  private final Clock clock;
 
   @Inject
-  AndroidRoboTest(Device device, TestInfo testInfo, Adb adb, Aapt aapt) {
+  AndroidRoboTest(
+      Device device,
+      TestInfo testInfo,
+      Adb adb,
+      Aapt aapt,
+      Clock clock,
+      PreProcessor preProcessor,
+      PostProcessor postProcessor) {
     super(device, testInfo);
     this.aapt = aapt;
     this.adb = adb;
+    this.clock = clock;
+    this.preProcessor = preProcessor;
+    this.postProcessor = postProcessor;
   }
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
@@ -57,5 +76,20 @@ public class AndroidRoboTest extends BaseDriver implements SpecConfigable<Androi
         .alsoTo(logger)
         .log("Running Android Robo Driver on %s.", this.getDevice().getDeviceId());
     testInfo.log().atInfo().alsoTo(logger).log("Job Info: %s", this.getTest().jobInfo());
+
+    AndroidRoboTestSpec spec = testInfo.jobInfo().combinedSpec(this);
+    testInfo.log().atInfo().alsoTo(logger).log("\n\nAndroid Robo Test Spec: \n\n%s", spec);
+    preProcessor.installApks(testInfo, getDevice(), spec);
+
+    postProcessor.uninstallApks(testInfo, getDevice(), spec);
+  }
+
+  private static int pickUnusedPort() throws InterruptedException, MobileHarnessException {
+    try {
+      return PortProber.pickUnusedPort();
+    } catch (IOException e) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_ROBO_TEST_FREE_PORT_UNAVAILABLE, "Unable to find unused port", e);
+    }
   }
 }
