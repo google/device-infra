@@ -38,11 +38,11 @@ enum TestResult {
   ERROR = 3;
   // Test timeout.
   TIMEOUT = 4;
+  // Test is aborted by user.
+  ABORT = 5;
   // Test is marked as skipped.
   SKIP = 7;
-
   // The following types are deprecated and shouldn't be used.
-  ABORT = 5 [deprecated = true];
   INFRA_ERROR = 6 [deprecated = true];
   ALLOC_FAIL = 8 [deprecated = true];
   ALLOC_ERROR = 9 [deprecated = true];

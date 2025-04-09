@@ -1296,7 +1296,6 @@ public class JobRunner implements Runnable {
               hasFailTests = true;
               testIdForDisplayMhfeLink = testInfo.locator().getId();
               break;
-            case INFRA_ERROR:
             case ERROR:
             case TIMEOUT:
             case UNKNOWN:

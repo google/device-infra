@@ -134,7 +134,6 @@ public final class ResultUtil {
         .setPassed(resultCount.get(TestResult.PASS))
         .setFailed(resultCount.get(TestResult.FAIL))
         .setError(resultCount.get(TestResult.ERROR))
-        .setInfraError(resultCount.get(TestResult.INFRA_ERROR))
         .setTimeout(resultCount.get(TestResult.TIMEOUT))
         .setUnknown(pending + resultCount.get(TestResult.UNKNOWN))
         .setAbort(resultCount.get(TestResult.ABORT))
