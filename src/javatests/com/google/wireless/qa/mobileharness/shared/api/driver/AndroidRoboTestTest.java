@@ -80,6 +80,7 @@ public class AndroidRoboTestTest {
             .setCrawlerStubApk("/path/to/stub.apk")
             .setAppPackageId("com.some.app")
             .setControllerEndpoint(ControllerEndpoint.AUTOPUSH)
+            .setCrawlTimeoutSecs(60)
             .build();
     jobInfo.scopedSpecs().add("AndroidRoboTestSpec", spec);
     TestInfo testInfo = jobInfo.tests().add("fake test");
