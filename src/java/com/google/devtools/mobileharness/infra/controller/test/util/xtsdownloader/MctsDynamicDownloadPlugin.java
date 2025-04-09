@@ -417,7 +417,10 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
         connection = url.openConnection();
         long urlLastModified = connection.getLastModified();
         // check the file exists and the last modified time.
-        if (fileUtil.isFileExist(filePath)) {
+        if (urlLastModified == 0) {
+          logger.atInfo().log("Url %s not exist.", downloadUrl);
+          return null;
+        } else if (fileUtil.isFileExist(filePath)) {
           long fileLastModified = fileUtil.getFileLastModifiedTime(filePath).toEpochMilli();
           // check if the zip file is valid and up to date.
           if (urlLastModified < fileLastModified && fileUtil.isZipFileValid(filePath)) {
@@ -428,9 +431,6 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
                 "File %s is out of date or broken, need to download again.", filePath);
             fileUtil.removeFileOrDir(filePath);
           }
-        } else if (urlLastModified == 0) {
-          logger.atInfo().log("Url %s not exist.", downloadUrl);
-          return null;
         } else {
           logger.atInfo().log("File %s does not exist, needs to download the file.", filePath);
         }
