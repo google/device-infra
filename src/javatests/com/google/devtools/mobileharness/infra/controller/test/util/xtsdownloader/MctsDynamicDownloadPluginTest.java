@@ -222,6 +222,11 @@ public final class MctsDynamicDownloadPluginTest {
         .downloadPublicUrlFiles(
             "https://dl.google.com/dl/android/xts/mcts/2024-10/arm64/mcts_test_list.txt",
             "/android/xts/mcts/2024-10/arm64/mcts_test_list.txt");
+    Mockito.doReturn(null)
+        .when(spyMctsDynamicDownloadPlugin)
+        .downloadPublicUrlFiles(
+            "https://dl.google.com/dl/android/xts/mcts/tool/35/jdk.zip",
+            "/android/xts/mcts/tool/jdk.zip");
   }
 
   @Test

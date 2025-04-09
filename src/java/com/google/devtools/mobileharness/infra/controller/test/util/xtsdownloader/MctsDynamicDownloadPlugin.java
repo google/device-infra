@@ -277,9 +277,9 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
     // Use train version to match JDK version.
     String jdkVersion = getTvpVersion(deviceId, preloadedMainlineModules).substring(0, 2);
     String jdkFileTargetPath = TMP_MCTS_TOOL_PATH + "/" + jdkVersion + "/jdk.zip";
+    logger.atInfo().log("Start to download JDK files: %s", jdkFileTargetPath);
     String jdkFilePath =
         downloadPublicUrlFiles("https://dl.google.com/dl" + jdkFileTargetPath, MCTS_JDK_PATH);
-    logger.atInfo().log("Start to download JDK files: %s", jdkFileTargetPath);
     if (jdkFilePath != null) {
       fileUtil.unzipFile(jdkFilePath, testInfo.getTmpFileDir() + TMP_MCTS_TOOL_PATH);
       testInfo
