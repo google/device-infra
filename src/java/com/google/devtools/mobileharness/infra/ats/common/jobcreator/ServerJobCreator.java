@@ -68,8 +68,13 @@ public class ServerJobCreator extends XtsJobCreator {
 
   @Override
   protected void injectEnvSpecificProperties(
-      SessionRequestInfo sessionRequestInfo, Map<String, String> driverParams) {
-    driverParams.put("android_xts_zip", sessionRequestInfo.androidXtsZip().get());
+      SessionRequestInfo sessionRequestInfo, Map<String, String> driverParams)
+      throws InterruptedException {
+    if (this.sessionRequestHandlerUtil.isLocalMode()) {
+      driverParams.put("xts_root_dir", sessionRequestInfo.xtsRootDir());
+    } else {
+      driverParams.put("android_xts_zip", sessionRequestInfo.androidXtsZip().get());
+    }
     if (sessionRequestInfo.remoteRunnerFilePathPrefix().isPresent()
         && driverParams.containsKey("subplan_xml")) {
       driverParams.put(

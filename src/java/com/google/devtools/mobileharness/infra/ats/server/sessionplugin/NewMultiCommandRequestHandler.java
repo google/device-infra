@@ -114,6 +114,8 @@ final class NewMultiCommandRequestHandler {
   /** Timeout setting for slow commands. */
   private static final Duration SLOW_CMD_TIMEOUT = Duration.ofMinutes(10);
 
+  private static final Duration UNZIP_TIMEOUT = Duration.ofHours(1);
+
   private static final DateTimeFormatter TIMESTAMP_DIR_NAME_FORMATTER =
       DateTimeFormatter.ofPattern("uuuu.MM.dd_HH.mm.ss.SSS").withZone(ZoneId.systemDefault());
   private static final String OUTPUT_MANIFEST_FILE_NAME = "FILES";
@@ -980,6 +982,9 @@ final class NewMultiCommandRequestHandler {
   @CanIgnoreReturnValue
   private String mountOrUnzipXtsZip(String zipFilePath, String targetDirPath)
       throws MobileHarnessException, InterruptedException {
+    if (sessionRequestHandlerUtil.isLocalMode()) {
+      return localFileUtil.unzipFile(zipFilePath, targetDirPath, UNZIP_TIMEOUT);
+    }
     Command command =
         Command.of("fuse-zip", "-r", zipFilePath, targetDirPath).timeout(SLOW_CMD_TIMEOUT);
     try {
@@ -996,13 +1001,17 @@ final class NewMultiCommandRequestHandler {
         logger.atWarning().withCause(e).log(
             "Failed to mount XTS zip file %s to %s. Trying to unzip it instead.",
             zipFilePath, targetDirPath);
-        return localFileUtil.unzipFile(zipFilePath, targetDirPath, SLOW_CMD_TIMEOUT);
+        return localFileUtil.unzipFile(zipFilePath, targetDirPath, UNZIP_TIMEOUT);
       }
     }
   }
 
   private void unmountOrRemoveZipDir(String targetDirPath)
       throws MobileHarnessException, InterruptedException {
+    if (sessionRequestHandlerUtil.isLocalMode()) {
+      localFileUtil.removeFileOrDir(targetDirPath);
+      return;
+    }
     Command command = Command.of("fusermount", "-u", targetDirPath).timeout(SLOW_CMD_TIMEOUT);
     try {
       // Add a 5 seconds delay before unmounting the zip file to avoid race condition and unmount

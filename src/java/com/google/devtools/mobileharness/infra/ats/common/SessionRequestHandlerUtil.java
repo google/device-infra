@@ -77,9 +77,11 @@ import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.jobconfig.JobInfoCreator;
+import com.google.devtools.mobileharness.shared.util.network.NetworkUtil;
 import com.google.gson.Gson;
 import com.google.inject.Provider;
 import com.google.protobuf.TextFormat.ParseException;
+import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Value;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -174,6 +176,7 @@ public class SessionRequestHandlerUtil {
   private final Provider<ResUtil> resUtilProvider;
   private final DeviceDetailsRetriever deviceDetailsRetriever;
   private final MoblyTestLoader moblyTestLoader;
+  private final NetworkUtil networkUtil;
 
   @Inject
   SessionRequestHandlerUtil(
@@ -187,7 +190,8 @@ public class SessionRequestHandlerUtil {
       @SessionTempDir Path sessionTempDir,
       Provider<ResUtil> resUtilProvider,
       DeviceDetailsRetriever deviceDetailsRetriever,
-      MoblyTestLoader moblyTestLoader) {
+      MoblyTestLoader moblyTestLoader,
+      NetworkUtil networkUtil) {
     this.deviceQuerier = deviceQuerier;
     this.localFileUtil = localFileUtil;
     this.configurationUtil = configurationUtil;
@@ -199,6 +203,7 @@ public class SessionRequestHandlerUtil {
     this.resUtilProvider = resUtilProvider;
     this.deviceDetailsRetriever = deviceDetailsRetriever;
     this.moblyTestLoader = moblyTestLoader;
+    this.networkUtil = networkUtil;
   }
 
   /** Information used to create the Tradefed job. */
@@ -579,6 +584,47 @@ public class SessionRequestHandlerUtil {
 
     logger.atInfo().log("Obtained device info: %s", deviceInfo.orElse(null));
     return deviceInfo;
+  }
+
+  /**
+   * Checks if the current OLCS instance is running on the same host as the lab.
+   *
+   * @return true if the current OLCS instance is running on the same host as the lab.
+   */
+  public boolean isLocalMode() throws InterruptedException {
+    DeviceQueryResult queryResult;
+    try {
+      queryResult = deviceQuerier.queryDevice(DeviceQueryFilter.getDefaultInstance());
+    } catch (MobileHarnessException e) {
+      logger.atWarning().withCause(e).log("Failed to query device");
+      return false;
+    }
+    String olcsHostName = "";
+    try {
+      olcsHostName = networkUtil.getLocalHostName();
+    } catch (MobileHarnessException ignored) {
+      return false;
+    }
+    if (olcsHostName.isEmpty()) {
+      return false;
+    }
+    for (com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo deviceInfo :
+        queryResult.getDeviceInfoList()) {
+      String labHostName =
+          deviceInfo.getDimensionList().stream()
+              .filter(
+                  dimension ->
+                      dimension
+                          .getName()
+                          .equals(Ascii.toLowerCase(Dimension.Name.HOST_NAME.name())))
+              .findFirst()
+              .map(DeviceQuery.Dimension::getValue)
+              .orElse("");
+      if (!labHostName.equals(olcsHostName)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   private Optional<DeviceInfo> getDeviceInfoFromMaster(SessionRequestInfo sessionRequestInfo)
