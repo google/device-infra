@@ -155,6 +155,7 @@ public final class RetryReportMergerTest {
             /* retryType= */ null,
             /* retryResult= */ null,
             /* passedInModules= */ ImmutableList.of(),
+            /* passedInExcludeFilters= */ ImmutableSet.of("arm64-v8a CtsAccelerationTestCases"),
             /* skippedModuleIds= */ ImmutableSet.of());
 
     assertThat(mergedReport).isEqualTo(expectedMergedReport);
@@ -180,7 +181,8 @@ public final class RetryReportMergerTest {
             /* retryType= */ null,
             /* retryResult= */ null,
             /* passedInModules= */ ImmutableList.of(),
-            ImmutableSet.of());
+            /* passedInExcludeFilters= */ ImmutableSet.of("arm64-v8a CtsAccelerationTestCases"),
+            /* skippedModuleIds= */ ImmutableSet.of());
 
     assertThat(mergedReport).isEqualTo(expectedMergedReport);
   }
@@ -218,6 +220,7 @@ public final class RetryReportMergerTest {
             /* retryType= */ null,
             retryReport,
             /* passedInModules= */ ImmutableList.of(),
+            /* passedInExcludeFilters= */ ImmutableSet.of(),
             /* skippedModuleIds= */ ImmutableSet.of());
 
     assertThat(mergedReport).isEqualTo(expectedMergedReport);
@@ -249,6 +252,7 @@ public final class RetryReportMergerTest {
             /* retryType= */ null,
             retryReport,
             /* passedInModules= */ ImmutableList.of(),
+            /* passedInExcludeFilters= */ ImmutableSet.of(),
             /* skippedModuleIds= */ ImmutableSet.of());
 
     assertThat(mergedReport).isEqualTo(expectedMergedReport);
@@ -289,6 +293,7 @@ public final class RetryReportMergerTest {
             RetryType.NOT_EXECUTED,
             retryReport,
             /* passedInModules= */ ImmutableList.of(),
+            /* passedInExcludeFilters= */ ImmutableSet.of(),
             /* skippedModuleIds= */ ImmutableSet.of());
 
     assertThat(mergedReport).isEqualTo(expectedMergedReport);
@@ -332,6 +337,7 @@ public final class RetryReportMergerTest {
             /* retryType= */ null,
             retryReport,
             /* passedInModules= */ ImmutableList.of("CtsVcnTestCases"),
+            /* passedInExcludeFilters= */ ImmutableSet.of(),
             /* skippedModuleIds= */ ImmutableSet.of());
 
     assertThat(mergedReport).isEqualTo(expectedMergedReport);
@@ -375,6 +381,7 @@ public final class RetryReportMergerTest {
             /* retryType= */ null,
             retryReport,
             /* passedInModules= */ ImmutableList.of("CtsVcnTestCases"),
+            /* passedInExcludeFilters= */ ImmutableSet.of(),
             /* skippedModuleIds= */ ImmutableSet.of("arm64-v8a CtsVcnTestCases"));
 
     assertThat(mergedReport).isEqualTo(expectedMergedReport);
@@ -420,6 +427,7 @@ public final class RetryReportMergerTest {
             /* retryType= */ null,
             retryReport,
             /* passedInModules= */ ImmutableList.of(""),
+            /* passedInExcludeFilters= */ ImmutableSet.of(),
             /* skippedModuleIds= */ ImmutableSet.of());
 
     assertThat(mergedReport).isEqualTo(expectedMergedReport);
