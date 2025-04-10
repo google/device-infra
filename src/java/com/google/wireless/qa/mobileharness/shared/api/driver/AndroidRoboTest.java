@@ -18,20 +18,26 @@ package com.google.wireless.qa.mobileharness.shared.api.driver;
 
 
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.ExceptionDetail;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.proto.Test;
 import com.google.devtools.mobileharness.platform.android.appcrawler.PostProcessor;
 import com.google.devtools.mobileharness.platform.android.appcrawler.PreProcessor;
 import com.google.devtools.mobileharness.shared.util.port.PortProber;
+import com.google.protobuf.ExtensionRegistry;
 import com.google.wireless.qa.mobileharness.shared.android.Aapt;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DriverAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.TestAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
+import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.AndroidRoboTestSpec;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Clock;
 import javax.inject.Inject;
 
@@ -43,6 +49,7 @@ import javax.inject.Inject;
 @TestAnnotation(required = false, help = "Crawls the app. No specific test to execute.")
 public class AndroidRoboTest extends BaseDriver implements SpecConfigable<AndroidRoboTestSpec> {
 
+  private static final String MH_EXCEPTION_DETAIL_PROTO_FILE_NAME = "exception-detail.pb";
   private final Aapt aapt;
   private final Adb adb;
   private final PreProcessor preProcessor;
@@ -90,6 +97,27 @@ public class AndroidRoboTest extends BaseDriver implements SpecConfigable<Androi
     } catch (IOException e) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_ROBO_TEST_FREE_PORT_UNAVAILABLE, "Unable to find unused port", e);
+    }
+  }
+
+  private void setResult(TestInfo testInfo, TestResult result) throws MobileHarnessException {
+    if (!result.equals(TestResult.ERROR)) {
+      testInfo.result().set(result);
+      return;
+    }
+    // If Error, read the exception detail proto.
+    Path exceptionDetailProtoPath =
+        Path.of(testInfo.getGenFileDir(), MH_EXCEPTION_DETAIL_PROTO_FILE_NAME);
+    try {
+      var exceptionDetail =
+          ExceptionDetail.parseFrom(
+              Files.readAllBytes(exceptionDetailProtoPath), ExtensionRegistry.getEmptyRegistry());
+      testInfo.resultWithCause().setNonPassing(Test.TestResult.ERROR, exceptionDetail);
+    } catch (IOException ex) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_ROBO_TEST_MH_EXCEPTION_DETAIL_READ_ERROR,
+          "Unable to exception detail proto.",
+          ex);
     }
   }
 }

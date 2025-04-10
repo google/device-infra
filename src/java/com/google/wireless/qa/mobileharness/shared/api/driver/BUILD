@@ -306,6 +306,8 @@ java_library(
     tags = ["avoid_dep"],
     deps = [
         ":base_driver",
+        "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
+        "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/android/appcrawler",
@@ -317,7 +319,9 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:android_robo_test_spec_java_proto",
+        "@com_google_protobuf//:protobuf_java",
         "@maven//:com_google_inject_guice",
         "@maven//:javax_inject_jsr330_api",
     ],
