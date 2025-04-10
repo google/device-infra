@@ -65,7 +65,7 @@ java_library(
     ],
 )
 
-# Client side runtime_deps for xTS tests.
+# Client-side runtime_deps for xTS tests.
 java_library(
     name = "xts_test_client",
     runtime_deps = [
@@ -96,12 +96,13 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:android_instrumentation",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:android_native_bin",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:android_robo_test",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:mobly_generic_test",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/env:android_hd_video_decorator_env_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/env:android_native_bin_env_validator",
     ],
 )
 
-# Client side runtime_deps for partner tests.
+# Client-side runtime_deps for partner tests.
 java_library(
     name = "partner_test_client",
     runtime_deps = [
@@ -128,7 +129,7 @@ java_library(
     ],
 )
 
-# Client side runtime_deps for no-op tests.
+# Client-side runtime_deps for no-op tests.
 java_library(
     name = "no_op_test_client",
     runtime_deps = [
