@@ -118,9 +118,17 @@ public final class SessionRequestHandlerUtilTest {
         .thenReturn(
             DeviceQueryResult.newBuilder()
                 .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
+                    DeviceInfo.newBuilder()
+                        .setId("device_id_1")
+                        .addDimension(
+                            Dimension.newBuilder().setName("uuid").setValue("device_id_1"))
+                        .addType("AndroidOnlineDevice"))
                 .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
+                    DeviceInfo.newBuilder()
+                        .setId("device_id_2")
+                        .addDimension(
+                            Dimension.newBuilder().setName("uuid").setValue("device_id_1"))
+                        .addType("AndroidOnlineDevice"))
                 .build());
   }
 
@@ -208,9 +216,27 @@ public final class SessionRequestHandlerUtilTest {
   }
 
   @Test
-  public void initializeJobConfig_atsServerSpecifyNotAvailableDevice_createJobWithThatDevice()
+  public void initializeJobConfig_atsServerSpecifyNotAvailableDevice_createJobWithLeftDevice()
       throws Exception {
-    when(deviceQuerier.queryDevice(any())).thenReturn(DeviceQueryResult.getDefaultInstance());
+    when(deviceQuerier.queryDevice(any()))
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder()
+                        .setId("device_id_1")
+                        .addDimension(
+                            Dimension.newBuilder().setName("uuid").setValue("device_id_1"))
+                        .addType("AndroidOnlineDevice"))
+                .build());
+    JobConfig jobConfig =
+        sessionRequestHandlerUtil.initializeJobConfig(
+            defaultSessionRequestInfoBuilder()
+                .setIsAtsServerRequest(true)
+                .setDeviceSerials(ImmutableList.of("device_id_1", "device_id_2"))
+                .build(),
+            ImmutableMap.of());
+    assertThat(jobConfig.getDevice().getSubDeviceSpecList())
+        .containsExactly(subDeviceSpecWithDimension("uuid", "device_id_1"));
 
     initializeJobConfig_atsServerSpecifyOneDevice_createJobWithThatDevice();
   }
