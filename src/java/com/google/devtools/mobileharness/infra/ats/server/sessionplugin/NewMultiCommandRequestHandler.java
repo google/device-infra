@@ -19,7 +19,6 @@ package com.google.devtools.mobileharness.infra.ats.server.sessionplugin;
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.base.Throwables.getStackTraceAsString;
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.devtools.mobileharness.shared.util.error.MoreThrowables.shortDebugString;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toJavaDuration;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -93,9 +92,11 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
@@ -118,6 +119,7 @@ final class NewMultiCommandRequestHandler {
   private static final Pattern ANDROID_XTS_ZIP_FILENAME_REGEX =
       Pattern.compile("android-[a-z]+\\.zip");
   @VisibleForTesting static final String XTS_TF_JOB_PROP = "xts-tradefed-job";
+  private static final String ACLOUD_FILENAME = "acloud_prebuilt";
 
   @VisibleForTesting
   static final String REQUEST_ERROR_MESSAGE_FOR_TRADEFED_INVOCATION_ERROR =
@@ -327,14 +329,15 @@ final class NewMultiCommandRequestHandler {
   }
 
   private void reformatResourcePathForNonTradefedJob(JobInfo jobInfo)
-      throws MobileHarnessException {
+      throws MobileHarnessException, InterruptedException {
     ImmutableMultimap<String, String> resources = jobInfo.files().getAll();
     for (String tag : resources.keySet()) {
       ImmutableCollection<String> files = resources.get(tag);
-      jobInfo
-          .files()
-          .replaceAll(
-              tag, files.stream().map(this::replacePathForRemoteRunner).collect(toImmutableSet()));
+      Set<String> newFiles = new HashSet<>();
+      for (String file : files) {
+        newFiles.add(replacePathForRemoteRunner(file));
+      }
+      jobInfo.files().replaceAll(tag, newFiles);
     }
   }
 
@@ -406,7 +409,7 @@ final class NewMultiCommandRequestHandler {
   }
 
   private void insertAdditionalTestResource(JobInfo jobInfo, NewMultiCommandRequest request)
-      throws MobileHarnessException {
+      throws MobileHarnessException, InterruptedException {
     for (TestResource testResource : request.getTestResourcesList()) {
       URL testResourceUrl = getTestResourceUrl(testResource);
 
@@ -438,9 +441,21 @@ final class NewMultiCommandRequestHandler {
     return UUID.nameUUIDFromBytes(mergedId.getBytes(UTF_8)).toString();
   }
 
-  private String replacePathForRemoteRunner(String path) {
+  private String replacePathForRemoteRunner(String path)
+      throws MobileHarnessException, InterruptedException {
     if (path.startsWith(RemoteFileType.ATS_FILE_SERVER.prefix())) {
       return path;
+    }
+    if (PathUtil.basename(path).equals(ACLOUD_FILENAME)
+        && !path.startsWith(Flags.instance().atsStoragePath.getNonNull())) {
+      String acloudPath =
+          PathUtil.join(
+              Flags.instance().atsStoragePath.getNonNull(), "mh_resources", ACLOUD_FILENAME);
+      if (!localFileUtil.isFileOrDirExist(acloudPath)) {
+        localFileUtil.prepareDir(Path.of(acloudPath).getParent().toString());
+        localFileUtil.copyFileOrDir(path, acloudPath);
+      }
+      path = acloudPath;
     }
     return PathUtil.join(
         RemoteFileType.ATS_FILE_SERVER.prefix(),

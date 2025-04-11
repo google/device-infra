@@ -20,6 +20,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoDuration;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.endsWith;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isA;
@@ -199,12 +200,12 @@ public final class NewMultiCommandRequestHandlerTest {
                     .build())
             .addTestResources(
                 TestResource.newBuilder()
-                    .setUrl("file://data/path/to/file1")
+                    .setUrl("file:///data/path/to/file1")
                     .setName("test-name-1")
                     .build())
             .addTestResources(
                 TestResource.newBuilder()
-                    .setUrl("file://data/path/to/file2")
+                    .setUrl("file:///data/path/to/file2")
                     .setName("test-name-2")
                     .build())
             .setTestEnvironment(
@@ -325,6 +326,69 @@ public final class NewMultiCommandRequestHandlerTest {
     verify(commandExecutor).run(mountCommand);
     verify(files).add(eq("test-name-1"), eq("ats-file-server::/path/to/file1"));
     verify(files).add(eq("test-name-2"), eq("ats-file-server::/path/to/file2"));
+  }
+
+  @Test
+  public void createTradefedJobs_withAcloud_success() throws Exception {
+    when(clock.millis()).thenReturn(1000L).thenReturn(2000L).thenReturn(3000L);
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+
+    request =
+        request.toBuilder()
+            .addTestResources(
+                TestResource.newBuilder()
+                    .setUrl("file:///bin/acloud_prebuilt")
+                    .setName("acloud_prebuilt")
+                    .build())
+            .build();
+    doReturn(false).when(localFileUtil).isFileOrDirExist(eq("/data/mh_resources/acloud_prebuilt"));
+    Mockito.doNothing().when(localFileUtil).prepareDir(eq("/data/mh_resources"));
+    Mockito.doNothing().when(localFileUtil).copyFileOrDir(eq("/bin/acloud_prebuilt"), anyString());
+
+    // Trigger the handler.
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+
+    assertThat(createJobsResult.jobInfos()).containsExactly(jobInfo);
+    assertThat(createJobsResult.commandDetails()).hasSize(1);
+    String commandId = createJobsResult.commandDetails().keySet().iterator().next();
+    assertThat(commandId)
+        .isEqualTo(UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString());
+    CommandDetail commandDetail = createJobsResult.commandDetails().values().iterator().next();
+    assertThat(commandDetail.getCommandLine()).isEqualTo(commandInfo.getCommandLine());
+    assertThat(commandDetail.getId()).isEqualTo(commandId);
+    assertThat(properties.get("xts-tradefed-job")).isEqualTo("true");
+    assertThat(properties.get("xts_command_id")).isEqualTo(commandId);
+    verify(xtsJobCreator).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
+
+    // Verify sessionRequestInfo has been correctly generated.
+    SessionRequestInfo sessionRequestInfo = sessionRequestInfoCaptor.getValue();
+    assertThat(sessionRequestInfo.testPlan()).isEqualTo("cts-plan");
+    assertThat(sessionRequestInfo.moduleNames()).containsExactly("module1");
+    assertThat(sessionRequestInfo.testName()).hasValue("test1");
+    String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
+    String zipFile = "/path/to/xts/zip/file.zip";
+    String testPlanFile = DirUtil.getPublicGenDir() + "/session_session_id/command.xml";
+    assertThat(sessionRequestInfo.xtsRootDir()).isEqualTo(xtsRootDir);
+    assertThat(sessionRequestInfo.xtsType()).isEqualTo("cts");
+    assertThat(sessionRequestInfo.androidXtsZip()).hasValue("ats-file-server::" + zipFile);
+    assertThat(sessionRequestInfo.startTimeout()).isEqualTo(Duration.ofSeconds(1000));
+    assertThat(sessionRequestInfo.jobTimeout()).isEqualTo(Duration.ofSeconds(2000));
+    assertThat(sessionRequestInfo.deviceSerials()).containsExactly(DEVICE_ID_1, DEVICE_ID_2);
+    assertThat(sessionRequestInfo.shardCount()).hasValue(2);
+    assertThat(sessionRequestInfo.envVars()).containsExactly("env_key1", "env_value1");
+    assertThat(sessionRequestInfo.testPlanFile()).hasValue("ats-file-server::" + testPlanFile);
+    assertThat(sessionRequestInfo.remoteRunnerFilePathPrefix()).hasValue("ats-file-server::");
+
+    // Verify that handler has mounted the zip file.
+    Command mountCommand =
+        Command.of("fuse-zip", "-r", zipFile, xtsRootDir).timeout(Duration.ofMinutes(10));
+    verify(commandExecutor).run(mountCommand);
+    verify(files).add(eq("test-name-1"), eq("ats-file-server::/path/to/file1"));
+    verify(files).add(eq("test-name-2"), eq("ats-file-server::/path/to/file2"));
+    verify(localFileUtil).copyFileOrDir(eq("/bin/acloud_prebuilt"), anyString());
+    verify(files).add(eq("acloud_prebuilt"), eq("ats-file-server::/mh_resources/acloud_prebuilt"));
   }
 
   @Test
