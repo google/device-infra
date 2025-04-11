@@ -307,6 +307,24 @@ java_library(
 )
 
 java_library(
+    name = "android_lab_test_support_settings_decorator",
+    srcs = ["AndroidLabTestSupportSettingsDecorator.java"],
+    deps = [
+        ":base_decorator",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/platform/android/instrumentation:android_instrumentation_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/lightning/apkinstaller",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:android_lab_test_support_settings_decorator_spec_java_proto",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
     name = "android_logcat_decorator",
     srcs = ["AndroidLogCatDecorator.java"],
     deps = [

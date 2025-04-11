@@ -33,6 +33,7 @@ proto_library(
         ":android_device_setting_decorator_spec_proto",
         ":android_file_puller_decorator_spec_proto",
         ":android_instrumentation_spec_proto",
+        ":android_lab_test_support_settings_decorator_spec_proto",
         ":android_mainline_modules_check_decorator_spec_proto",
         ":android_min_sdk_version_check_decorator_spec_proto",
         ":android_robo_test_spec_proto",
@@ -194,6 +195,19 @@ proto_library(
 java_proto_library(
     name = "android_instrumentation_spec_java_proto",
     deps = [":android_instrumentation_spec_proto"],
+)
+
+proto_library(
+    name = "android_lab_test_support_settings_decorator_spec_proto",
+    srcs = ["decorator/android_lab_test_support_settings_decorator_spec.proto"],
+    deps = [
+        ":base_spec_proto",
+    ],
+)
+
+java_proto_library(
+    name = "android_lab_test_support_settings_decorator_spec_java_proto",
+    deps = [":android_lab_test_support_settings_decorator_spec_proto"],
 )
 
 proto_library(

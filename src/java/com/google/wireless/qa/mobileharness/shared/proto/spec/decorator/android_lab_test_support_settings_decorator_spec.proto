@@ -1,0 +1,48 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto2";
+
+package mobileharness.shared.spec;
+
+import "src/java/com/google/wireless/qa/mobileharness/shared/proto/spec/base_spec.proto";
+
+option java_package = "com.google.wireless.qa.mobileharness.shared.proto.spec.decorator";
+option java_multiple_files = true;
+
+// Specs for AndroidLabTestSupportSettingsDecorator.
+// Next tag: 3
+message AndroidLabTestSupportSettingsDecoratorSpec {
+  extend DecoratorSpec {
+    optional AndroidLabTestSupportSettingsDecoratorSpec ext = 1011;
+  }
+
+  optional bool disable_smart_lock_for_passwords = 1 [
+    default = false,
+    (field_detail) = {
+      help: "If set to 'true', disables the feature of 'smart lock for "
+            "passwords' on the device."
+    }
+  ];
+
+  optional bool disable_fast_pair = 2 [
+    default = false,
+    (field_detail) = {
+      help: "If set to 'true', disables the feature of 'fast pair with "
+            "smartwatches/headphones' on the device."
+    }
+  ];
+}

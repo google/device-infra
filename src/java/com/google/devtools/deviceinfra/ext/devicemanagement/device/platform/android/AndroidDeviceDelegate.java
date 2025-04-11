@@ -465,6 +465,7 @@ public abstract class AndroidDeviceDelegate {
     device.addSupportedDecorator("AndroidFilePullerDecorator");
     device.addSupportedDecorator("AndroidFilePusherDecorator");
     device.addSupportedDecorator("AndroidInstallAppsDecorator");
+    device.addSupportedDecorator("AndroidLabTestSupportSettingsDecorator");
     device.addSupportedDecorator("AndroidLogCatDecorator");
     device.addSupportedDecorator("AndroidMainlineModulesCheckDecorator");
     device.addSupportedDecorator("AndroidMinSdkVersionCheckDecorator");
