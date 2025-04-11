@@ -742,7 +742,16 @@ public abstract class AndroidRealDeviceDelegate {
     enableTestPropertiesAndDisablePackages();
     // Tries to keep device awake.
     logger.atInfo().log("Device %s stays awake", deviceId);
-    systemSettingUtil.keepAwake(deviceId, /* alwaysAwake= */ true);
+    try {
+      systemSettingUtil.keepAwake(deviceId, /* alwaysAwake= */ true);
+    } catch (MobileHarnessException e) {
+      if (e.getMessage().contains("exit_code=137")) {
+        logger.atInfo().log(
+            "Ignore the failure of keeping device %s awake: %s", deviceId, e.getMessage());
+      } else {
+        throw e;
+      }
+    }
 
     // Forces USB to 'adb' mode only.
     logger.atInfo().log("Check device %s USB mode", deviceId);
