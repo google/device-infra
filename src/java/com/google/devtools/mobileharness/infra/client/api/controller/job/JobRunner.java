@@ -904,10 +904,7 @@ public class JobRunner implements Runnable {
         testManager.startTest(testRunner);
       } catch (MobileHarnessException e) {
         TestResult result = ResultUtil.getResultByException(e);
-        testInfo
-            .result()
-            .toNewResult()
-            .setNonPassing(Result.upgradeTestResult(result), (MobileHarnessException) e);
+        testInfo.result().toNewResult().setNonPassing(Result.upgradeTestResult(result), e);
         testInfo.status().set(TestStatus.DONE);
         logger
             .atSevere()
