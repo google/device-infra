@@ -131,6 +131,15 @@ public final class RunCommandTest {
   }
 
   @Test
+  public void validateCommandParameters_retryCommandNotSupportIncludeFilter() {
+    commandLine.parseArgs("retry", "--retry", "0", "--include-filter", "moduleA");
+
+    assertThat(assertThrows(ParameterException.class, () -> runCommand.validateCommandParameters()))
+        .hasMessageThat()
+        .contains("Option '--include-filter' is not supported in retry command");
+  }
+
+  @Test
   public void validateCommandParameters_cannotSpecifyIncludeFilterAndModuleAtTheSameTime() {
     commandLine.parseArgs("cts", "--module", "module_a", "--include-filter", "module_b");
 
