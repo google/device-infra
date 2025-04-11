@@ -759,6 +759,9 @@ public enum AndroidErrorId implements ErrorId {
   // Android Video Analyzer: 176_241 ~ 176_250
   ANDROID_FFPROBE_FILE_NOT_FOUND(176_241, ErrorType.UNDETERMINED),
 
+  // Mtaas Tools: 176_251 ~ 176_260
+  ANDROID_MTAAS_TOOLS_APK_NOT_FOUND(176_251, ErrorType.UNDETERMINED),
+
   ANDROID_ERROR_ID_PLACE_HOLDER_TO_BE_RENAMED(200_000, ErrorType.UNDETERMINED);
 
   public static final int MIN_CODE = ExtErrorId.MAX_CODE + 1;
