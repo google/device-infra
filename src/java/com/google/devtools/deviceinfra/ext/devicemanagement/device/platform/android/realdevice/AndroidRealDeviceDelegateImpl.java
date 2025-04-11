@@ -27,6 +27,7 @@ import com.google.devtools.mobileharness.api.model.lab.LabLocator;
 import com.google.devtools.mobileharness.infra.container.sandbox.device.DeviceSandboxController;
 import com.google.devtools.mobileharness.infra.container.sandbox.device.NoOpDeviceSandboxController;
 import com.google.devtools.mobileharness.platform.android.app.devicedaemon.DeviceDaemonHelper;
+import com.google.devtools.mobileharness.platform.android.app.mtaastools.MtaasToolsInstantiator;
 import com.google.devtools.mobileharness.platform.android.connectivity.AndroidConnectivityUtil;
 import com.google.devtools.mobileharness.platform.android.deviceadmin.DeviceAdminUtil;
 import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
@@ -92,7 +93,8 @@ public class AndroidRealDeviceDelegateImpl extends AndroidRealDeviceDelegate {
         new DeviceDaemonHelper(),
         new Fastboot(),
         new LocalFileUtil(),
-        new DeviceAdminUtil());
+        new DeviceAdminUtil(),
+        new MtaasToolsInstantiator());
   }
 
   @VisibleForTesting
@@ -119,7 +121,8 @@ public class AndroidRealDeviceDelegateImpl extends AndroidRealDeviceDelegate {
       DeviceDaemonHelper deviceDaemonHelper,
       Fastboot fastboot,
       LocalFileUtil localFileUtil,
-      DeviceAdminUtil deviceAdminUtil) {
+      DeviceAdminUtil deviceAdminUtil,
+      MtaasToolsInstantiator mtaasToolsInstantiator) {
     super(
         device,
         androidDeviceDelegate,
@@ -143,7 +146,8 @@ public class AndroidRealDeviceDelegateImpl extends AndroidRealDeviceDelegate {
         deviceDaemonHelper,
         fastboot,
         localFileUtil,
-        deviceAdminUtil);
+        deviceAdminUtil,
+        mtaasToolsInstantiator);
     this.androidAdbInternalUtil = androidAdbInternalUtil;
     this.connectivityUtil = connectivityUtil;
     this.noOpDeviceSandboxController = new NoOpDeviceSandboxController(device);
