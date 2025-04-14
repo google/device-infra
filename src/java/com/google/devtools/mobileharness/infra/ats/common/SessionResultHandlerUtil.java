@@ -425,6 +425,14 @@ public class SessionResultHandlerUtil {
         .put(SuiteCommon.TEST_REPORT_PROPERTY_HAS_TF_MODULE, String.valueOf(testReportHasTfModule));
 
     boolean isRunRetry = SessionHandlerHelper.isRunRetry(sessionRequestInfo.testPlan());
+    ImmutableSet.Builder<String> includeFilters = ImmutableSet.builder();
+    ImmutableSet.Builder<String> excludeFilters = ImmutableSet.builder();
+    if (!sessionRequestInfo.includeFilters().isEmpty()) {
+      includeFilters.addAll(sessionRequestInfo.includeFilters());
+    }
+    if (!sessionRequestInfo.excludeFilters().isEmpty()) {
+      excludeFilters.addAll(sessionRequestInfo.excludeFilters());
+    }
     if (!isRunRetry && mergedReport.isPresent()) {
       Result.Builder finalReportBuilder = mergedReport.get().toBuilder();
       List<Attribute> attributes =
@@ -443,14 +451,6 @@ public class SessionResultHandlerUtil {
       if (sessionRequestInfo.testName().isPresent()
           && !sessionRequestInfo.testName().get().isEmpty()) {
         finalReportBuilder.setTestFilter(sessionRequestInfo.testName().get());
-      }
-      ImmutableSet.Builder<String> includeFilters = ImmutableSet.builder();
-      ImmutableSet.Builder<String> excludeFilters = ImmutableSet.builder();
-      if (!sessionRequestInfo.includeFilters().isEmpty()) {
-        includeFilters.addAll(sessionRequestInfo.includeFilters());
-      }
-      if (!sessionRequestInfo.excludeFilters().isEmpty()) {
-        excludeFilters.addAll(sessionRequestInfo.excludeFilters());
       }
       if (sessionRequestInfo.subPlanName().isPresent()) {
         // Add all filters in the sub-plan so these filters are loaded in retry
@@ -515,6 +515,7 @@ public class SessionResultHandlerUtil {
                   sessionRequestInfo.retryType().orElse(null),
                   mergedReport.orElse(null),
                   sessionRequestInfo.moduleNames(),
+                  excludeFilters.build(),
                   skippedModuleIds);
         } else {
           finalReport =
@@ -526,6 +527,7 @@ public class SessionResultHandlerUtil {
                   sessionRequestInfo.retryType().orElse(null),
                   mergedReport.orElse(null),
                   sessionRequestInfo.moduleNames(),
+                  excludeFilters.build(),
                   skippedModuleIds);
         }
       } else {

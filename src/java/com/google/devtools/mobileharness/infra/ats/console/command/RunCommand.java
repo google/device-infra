@@ -572,6 +572,11 @@ public final class RunCommand implements Callable<Integer> {
           Ansi.AUTO.string(
               "Option '--subplan <subplan_name>' is not supported in retry command.\n"));
     }
+    if (includeFilters != null && !includeFilters.isEmpty()) {
+      throw new ParameterException(
+          spec.commandLine(),
+          Ansi.AUTO.string("Option '--include-filter' is not supported in retry command.\n"));
+    }
   }
 
   private void validateRunCommandExtraArgs() {
