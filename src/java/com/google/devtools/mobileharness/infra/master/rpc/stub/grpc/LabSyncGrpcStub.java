@@ -23,32 +23,46 @@ import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceGrpc;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.HeartbeatLabRequest;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.HeartbeatLabResponse;
+import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.RemoveMissingDeviceRequest;
+import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.RemoveMissingDeviceResponse;
+import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.RemoveMissingDevicesRequest;
+import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.RemoveMissingDevicesResponse;
+import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.RemoveMissingHostRequest;
+import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.RemoveMissingHostResponse;
+import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.RemoveMissingHostsRequest;
+import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.RemoveMissingHostsResponse;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignOutDeviceRequest;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignOutDeviceResponse;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignUpLabRequest;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignUpLabResponse;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.LabSyncStub;
+import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
+import com.google.devtools.mobileharness.shared.util.comm.stub.GrpcDirectTargetConfigures;
 import com.google.devtools.mobileharness.shared.util.comm.stub.MasterGrpcStubHelper;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
-import io.grpc.ClientInterceptors;
+import io.grpc.Channel;
 import javax.inject.Inject;
 
 /** GRPC stub for talking to Master LabSyncService via OnePlatform API. */
 public class LabSyncGrpcStub implements LabSyncStub {
 
-  private final MasterGrpcStubHelper helper;
-  private final LabSyncServiceGrpc.LabSyncServiceBlockingStub stub;
-  private final LabSyncServiceGrpc.LabSyncServiceFutureStub asyncStub;
+  private final NonThrowingAutoCloseable closeable;
+  private final BlockingInterface stub;
+  private final FutureInterface asyncStub;
 
   @Inject
   public LabSyncGrpcStub(MasterGrpcStubHelper helper) {
-    this.helper = helper;
-    this.stub =
-        LabSyncServiceGrpc.newBlockingStub(
-            ClientInterceptors.intercept(helper.getChannel(), helper.getInterceptors()));
-    this.asyncStub =
-        LabSyncServiceGrpc.newFutureStub(
-            ClientInterceptors.intercept(helper.getChannel(), helper.getInterceptors()));
+    this(
+        helper,
+        newBlockingInterface(helper.getChannelWithInterceptors()),
+        newFutureInterface(helper.getChannelWithInterceptors()));
+  }
+
+  public LabSyncGrpcStub(
+      NonThrowingAutoCloseable closeable, BlockingInterface stub, FutureInterface asyncStub) {
+    this.closeable = closeable;
+    this.stub = stub;
+    this.asyncStub = asyncStub;
   }
 
   @CanIgnoreReturnValue
@@ -79,6 +93,71 @@ public class LabSyncGrpcStub implements LabSyncStub {
 
   @Override
   public void close() {
-    helper.closeChannel();
+    closeable.close();
+  }
+
+  /**
+   * Blocking interface for LabSyncService.
+   *
+   * <p>It has the same methods as LabSyncServiceGrpc.LabSyncServiceBlockingStub.
+   */
+  public static interface BlockingInterface {
+
+    SignUpLabResponse signUpLab(SignUpLabRequest request);
+
+    HeartbeatLabResponse heartbeatLab(HeartbeatLabRequest request);
+
+    SignOutDeviceResponse signOutDevice(SignOutDeviceRequest request);
+
+    RemoveMissingDeviceResponse removeMissingDevice(RemoveMissingDeviceRequest request);
+
+    RemoveMissingDevicesResponse removeMissingDevices(RemoveMissingDevicesRequest request);
+
+    RemoveMissingHostResponse removeMissingHost(RemoveMissingHostRequest request);
+
+    RemoveMissingHostsResponse removeMissingHosts(RemoveMissingHostsRequest request);
+  }
+
+  public static BlockingInterface newBlockingInterface(
+      LabSyncServiceGrpc.LabSyncServiceBlockingStub blockingStub) {
+    return GrpcDirectTargetConfigures.newBlockingInterface(blockingStub, BlockingInterface.class);
+  }
+
+  public static BlockingInterface newBlockingInterface(Channel channel) {
+    return newBlockingInterface(LabSyncServiceGrpc.newBlockingStub(channel));
+  }
+
+  /**
+   * Future interface for LabSyncService.
+   *
+   * <p>It has the same methods as LabSyncServiceGrpc.LabSyncServiceFutureStub.
+   */
+  public static interface FutureInterface {
+
+    ListenableFuture<SignUpLabResponse> signUpLab(SignUpLabRequest request);
+
+    ListenableFuture<HeartbeatLabResponse> heartbeatLab(HeartbeatLabRequest request);
+
+    ListenableFuture<SignOutDeviceResponse> signOutDevice(SignOutDeviceRequest request);
+
+    ListenableFuture<RemoveMissingDeviceResponse> removeMissingDevice(
+        RemoveMissingDeviceRequest request);
+
+    ListenableFuture<RemoveMissingDevicesResponse> removeMissingDevices(
+        RemoveMissingDevicesRequest request);
+
+    ListenableFuture<RemoveMissingHostResponse> removeMissingHost(RemoveMissingHostRequest request);
+
+    ListenableFuture<RemoveMissingHostsResponse> removeMissingHosts(
+        RemoveMissingHostsRequest request);
+  }
+
+  public static FutureInterface newFutureInterface(
+      LabSyncServiceGrpc.LabSyncServiceFutureStub futureStub) {
+    return GrpcDirectTargetConfigures.newBlockingInterface(futureStub, FutureInterface.class);
+  }
+
+  public static FutureInterface newFutureInterface(Channel channel) {
+    return newFutureInterface(LabSyncServiceGrpc.newFutureStub(channel));
   }
 }

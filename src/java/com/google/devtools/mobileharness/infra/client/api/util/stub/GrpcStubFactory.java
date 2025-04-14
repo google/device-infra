@@ -23,7 +23,9 @@ import com.google.devtools.mobileharness.infra.lab.rpc.stub.PrepareTestStub;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.grpc.ExecTestGrpcStub;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.grpc.PrepareTestGrpcStub;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.JobSyncStub;
+import com.google.devtools.mobileharness.infra.master.rpc.stub.LabSyncStub;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.grpc.JobSyncGrpcStub;
+import com.google.devtools.mobileharness.infra.master.rpc.stub.grpc.LabSyncGrpcStub;
 import com.google.devtools.mobileharness.shared.constant.closeable.NoOpAutoCloseable;
 import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.rpc.stub.CloudFileTransferGrpcStub;
@@ -91,6 +93,16 @@ final class GrpcStubFactory implements StubFactory {
             .createJobSyncBlockingInterface(stubConfiguration),
         getFutureInterfaceFactory(stubConfiguration)
             .createJobSyncFutureInterface(stubConfiguration));
+  }
+
+  @Override
+  public LabSyncStub createLabSyncStub(StubConfiguration stubConfiguration) {
+    return new LabSyncGrpcStub(
+        NO_OP_AUTO_CLOSEABLE_INSTANCE,
+        getBlockingInterfaceFactory(stubConfiguration)
+            .createLabSyncBlockingInterface(stubConfiguration),
+        getFutureInterfaceFactory(stubConfiguration)
+            .createLabSyncFutureInterface(stubConfiguration));
   }
 
   private BlockingInterfaceFactory getBlockingInterfaceFactory(
