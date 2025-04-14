@@ -218,6 +218,19 @@ public interface AndroidInstrumentationDriverSpec {
               + " is false.")
   String PARAM_ENABLE_COVERAGE = "enable_coverage";
 
+  @ParamAnnotation(
+      required = false,
+      help =
+          "Whether to use TestStorage service when running the test. By default it is true. When"
+              + " set to false, the test args will be passed to the test via the command line in"
+              + " key-value paris. We still recommend to use TestStorage service, but if you"
+              + " encounter some issues on multi-user scenario, you can try to disable TestStorage"
+              + " service and give it a try. And based on"
+              + " https://developer.android.com/studio/test/command-line#am-instrument-flags, only"
+              + " limited number of test runners support it. The args can then be fetched by"
+              + " InstrumentationRegistry.getArguments().keySet() in the test apk.")
+  String PARAM_USE_TEST_STORAGE_SERVICE = "use_test_storage_service";
+
   /** Resource path of the Android basic_services.apk which is needed for reading test_args. */
   String BASIC_SERVICE_APK_PATH =
       "/com/google/android/apps/common/testing/services/basic_services.apk";
