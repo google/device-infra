@@ -22,6 +22,7 @@ java_library(
     srcs = ["Fastboot.java"],
     visibility = [
         "//:deviceinfra_all_pkg",
+        "//devtools/mobileharness/project:nest_app_test_infra",
         "//src/javatests/com/google/devtools/deviceinfra/platform/android/sdk/fastboot:__pkg__",
     ],
     exports = [":enums"],
