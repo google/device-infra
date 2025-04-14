@@ -16,12 +16,22 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.driver;
 
+import static com.google.common.truth.Truth.assertThat;
+import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidRoboTest.ANDROID_ROBO_TEST_TEST_END_EPOCH_MS;
+import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidRoboTest.ANDROID_ROBO_TEST_TEST_START_EPOCH_MS;
+import static org.junit.Assert.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
+import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.appcrawler.PostProcessor;
 import com.google.devtools.mobileharness.platform.android.appcrawler.PreProcessor;
+import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
+import com.google.devtools.mobileharness.shared.util.command.testing.FakeCommandResult;
+import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.wireless.qa.mobileharness.shared.android.Aapt;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.device.NoOpDevice;
@@ -30,6 +40,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobSetting;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
+import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.AndroidRoboTestSpec;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.AndroidRoboTestSpec.ControllerEndpoint;
 import java.nio.file.Path;
@@ -56,6 +67,8 @@ public class AndroidRoboTestTest {
   @Mock private Aapt aapt;
   @Mock private Clock clock;
   @Mock private PreProcessor preProcessor;
+  @Mock private ResUtil resUtil;
+  @Mock private CommandExecutor commandExecutor;
   @Mock private PostProcessor postProcessor;
 
   private JobInfo jobInfo;
@@ -79,6 +92,7 @@ public class AndroidRoboTestTest {
     when(adb.getAdbPath()).thenReturn("adb");
     when(aapt.getAaptPath()).thenReturn("aapt");
     when(clock.instant()).thenReturn(Instant.ofEpochMilli(1));
+    when(resUtil.getExternalResourceFile(any())).thenReturn("cli.jar");
   }
 
   @Test
@@ -95,13 +109,88 @@ public class AndroidRoboTestTest {
     TestInfo testInfo = jobInfo.tests().add("fake test");
     AndroidRoboTest roboTest = createAndroidRoboTest(testInfo);
     when(clock.instant()).thenReturn(Instant.ofEpochMilli(2)).thenReturn(Instant.ofEpochMilli(3));
+    when(commandExecutor.exec(any())).thenReturn(FakeCommandResult.of("", "", 0));
 
     roboTest.run(testInfo);
     verify(preProcessor).installApks(testInfo, device, spec);
+
+    resUtil.getExternalResourceFile(any());
+    assertThat(testInfo.properties().get(ANDROID_ROBO_TEST_TEST_START_EPOCH_MS)).isEqualTo("2");
+
+    verify(commandExecutor).exec(any());
+
+    assertThat(testInfo.properties().get(ANDROID_ROBO_TEST_TEST_END_EPOCH_MS)).isEqualTo("3");
+    assertThat(testInfo.result().get()).isEqualTo(TestResult.PASS);
     verify(postProcessor).uninstallApks(testInfo, device, spec);
   }
 
+  @Test
+  public void run_skip() throws Exception {
+    AndroidRoboTestSpec spec =
+        AndroidRoboTestSpec.newBuilder()
+            .setCrawlerApk("/path/to/crawler.apk")
+            .setCrawlerStubApk("/path/to/stub.apk")
+            .setAppPackageId("com.some.app")
+            .setControllerEndpoint(ControllerEndpoint.AUTOPUSH)
+            .setCrawlTimeoutSecs(60)
+            .build();
+    jobInfo.scopedSpecs().add("AndroidRoboTestSpec", spec);
+    TestInfo testInfo = jobInfo.tests().add("fake test");
+    AndroidRoboTest roboTest = createAndroidRoboTest(testInfo);
+    when(clock.instant()).thenReturn(Instant.ofEpochMilli(2)).thenReturn(Instant.ofEpochMilli(3));
+    when(commandExecutor.exec(any())).thenReturn(FakeCommandResult.of("", "", 1));
+
+    roboTest.run(testInfo);
+
+    assertThat(testInfo.result().get()).isEqualTo(TestResult.SKIP);
+  }
+
+  @Test
+  public void run_errorAbsentExceptionDetail() throws Exception {
+    AndroidRoboTestSpec spec =
+        AndroidRoboTestSpec.newBuilder()
+            .setCrawlerApk("/path/to/crawler.apk")
+            .setCrawlerStubApk("/path/to/stub.apk")
+            .setAppPackageId("com.some.app")
+            .setControllerEndpoint(ControllerEndpoint.AUTOPUSH)
+            .setCrawlTimeoutSecs(60)
+            .build();
+    jobInfo.scopedSpecs().add("AndroidRoboTestSpec", spec);
+    TestInfo testInfo = jobInfo.tests().add("fake test");
+    AndroidRoboTest roboTest = createAndroidRoboTest(testInfo);
+    when(clock.instant()).thenReturn(Instant.ofEpochMilli(2)).thenReturn(Instant.ofEpochMilli(3));
+    when(commandExecutor.exec(any())).thenReturn(FakeCommandResult.of("", "", 3));
+
+    var exception = assertThrows(MobileHarnessException.class, () -> roboTest.run(testInfo));
+    assertThat(exception.getErrorId())
+        .isEqualTo(AndroidErrorId.ANDROID_ROBO_TEST_MH_EXCEPTION_DETAIL_READ_ERROR);
+  }
+
+  @Test
+  public void run_errorCliResourceAbsent() throws Exception {
+    when(resUtil.getExternalResourceFile(any())).thenReturn("");
+
+    AndroidRoboTestSpec spec =
+        AndroidRoboTestSpec.newBuilder()
+            .setCrawlerApk("/path/to/crawler.apk")
+            .setCrawlerStubApk("/path/to/stub.apk")
+            .setAppPackageId("com.some.app")
+            .setControllerEndpoint(ControllerEndpoint.AUTOPUSH)
+            .setCrawlTimeoutSecs(60)
+            .build();
+    jobInfo.scopedSpecs().add("AndroidRoboTestSpec", spec);
+    TestInfo testInfo = jobInfo.tests().add("fake test");
+    AndroidRoboTest roboTest = createAndroidRoboTest(testInfo);
+    when(clock.instant()).thenReturn(Instant.ofEpochMilli(2)).thenReturn(Instant.ofEpochMilli(3));
+    when(commandExecutor.exec(any())).thenReturn(FakeCommandResult.of("", "", 3));
+
+    var exception = assertThrows(MobileHarnessException.class, () -> roboTest.run(testInfo));
+    assertThat(exception.getErrorId())
+        .isEqualTo(AndroidErrorId.ANDROID_ROBO_TEST_MH_ROBO_CLI_EXTRACTION_ERROR);
+  }
+
   private AndroidRoboTest createAndroidRoboTest(TestInfo testInfo) {
-    return new AndroidRoboTest(device, testInfo, adb, aapt, clock, preProcessor, postProcessor);
+    return new AndroidRoboTest(
+        device, testInfo, adb, aapt, clock, preProcessor, resUtil, commandExecutor, postProcessor);
   }
 }
