@@ -26,6 +26,8 @@ public abstract class DeviceDetails {
 
   public abstract String id();
 
+  public abstract Optional<String> uuid();
+
   public abstract Optional<String> productType();
 
   public abstract Optional<String> productVariant();
@@ -59,6 +61,8 @@ public abstract class DeviceDetails {
     public abstract Builder setBatteryTemperature(int batteryTemperature);
 
     public abstract Builder setSdkVersion(int sdkVersion);
+
+    public abstract Builder setUuid(String uuid);
 
     public abstract DeviceDetails build();
   }

@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.infra.ats.common;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.function.Function.identity;
 
+import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
@@ -33,6 +34,7 @@ import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidS
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.inject.Provider;
+import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryFilter;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryResult;
 import java.util.Optional;
@@ -240,7 +242,17 @@ public class DeviceDetailsRetriever {
             deviceInfo ->
                 deviceInfo.getTypeList().stream()
                     .anyMatch(deviceType -> deviceType.startsWith("Android")))
-        .map(deviceInfo -> DeviceDetails.builder().setId(deviceInfo.getId()).build())
+        .map(
+            deviceInfo -> {
+              DeviceDetails.Builder deviceDetails =
+                  DeviceDetails.builder().setId(deviceInfo.getId());
+              deviceInfo.getDimensionList().stream()
+                  .filter(
+                      dimension -> dimension.getName().equals(Ascii.toLowerCase(Name.UUID.name())))
+                  .findFirst()
+                  .ifPresent(dimension -> deviceDetails.setUuid(dimension.getValue()));
+              return deviceDetails.build();
+            })
         // TODO: add more device info to the DeviceDetails for ATS 2.0
         .collect(toImmutableMap(DeviceDetails::id, identity()));
   }

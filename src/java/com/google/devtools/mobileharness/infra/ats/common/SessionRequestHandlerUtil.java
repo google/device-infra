@@ -225,6 +225,7 @@ public class SessionRequestHandlerUtil {
   private ImmutableList<SubDeviceSpec> getSubDeviceSpecListForTradefed(
       SessionRequestInfo sessionRequestInfo, int shardCount)
       throws MobileHarnessException, InterruptedException {
+    ImmutableSet<DeviceDetails> availableDevices = getAvailableDevices(sessionRequestInfo);
     if (sessionRequestInfo.isAtsServerRequest() && !sessionRequestInfo.deviceSerials().isEmpty()) {
       if (shouldEnableModuleSharding(sessionRequestInfo)) {
         StringMap dimensions =
@@ -242,7 +243,15 @@ public class SessionRequestHandlerUtil {
                 .setDimensions(dimensions)
                 .build());
       } else {
+        // Use UUID instead of id because the id is not unique for virtual devices on different
+        // hosts, but UUID is for them. Example: the id is 0.0.0.0:6520 and is same for those from
+        // different hosts, and UUID is hostname:6520 which is unique.
+        ImmutableSet<String> availableDeviceUuids =
+            availableDevices.stream()
+                .map(device -> device.uuid().orElse(""))
+                .collect(toImmutableSet());
         return sessionRequestInfo.deviceSerials().stream()
+            .filter(availableDeviceUuids::contains)
             .map(
                 deviceSerial ->
                     SubDeviceSpec.newBuilder()
@@ -254,8 +263,6 @@ public class SessionRequestHandlerUtil {
             .collect(toImmutableList());
       }
     }
-
-    ImmutableSet<DeviceDetails> availableDevices = getAvailableDevices(sessionRequestInfo);
 
     if (sessionRequestInfo.deviceSerials().isEmpty()) {
       return pickAndroidOnlineDevices(
