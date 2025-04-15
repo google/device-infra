@@ -18,16 +18,6 @@ load("@rules_java//java:defs.bzl", "java_library")
 package(default_applicable_licenses = ["//:license"])
 
 java_library(
-    name = "rpc_exception",
-    srcs = ["MobileHarnessRpcException.java"],
-    visibility = ["//:deviceinfra_all_pkg"],
-    deps = [
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "@maven//:com_google_code_findbugs_jsr305",
-    ],
-)
-
-java_library(
     name = "unknown_error",
     srcs = ["UnknownErrorId.java"],
     visibility = [
