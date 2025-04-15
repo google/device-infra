@@ -33,6 +33,7 @@ import com.google.devtools.mobileharness.platform.android.packagemanager.Android
 import com.google.devtools.mobileharness.platform.android.process.AndroidProcessUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceConnectionState;
 import com.google.devtools.mobileharness.platform.android.shared.autovalue.UtilArgs;
 import com.google.devtools.mobileharness.platform.android.shared.constant.PackageConstants;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
@@ -135,7 +136,8 @@ public abstract class AndroidDeviceDelegate {
   public void ensureDeviceReady() throws MobileHarnessException, InterruptedException {
     try {
       DeviceCache.getInstance().cache(deviceId, device.getClass().getSimpleName(), CACHE_TIMEOUT);
-      androidSystemStateUtil.waitForDevice(deviceId, WAIT_FOR_DEVICE_TIMEOUT);
+      androidSystemStateUtil.waitForState(
+          deviceId, DeviceConnectionState.DEVICE, WAIT_FOR_DEVICE_TIMEOUT);
       androidSystemStateUtil.waitUntilReady(deviceId);
     } finally {
       DeviceCache.getInstance().invalidateCache(deviceId);

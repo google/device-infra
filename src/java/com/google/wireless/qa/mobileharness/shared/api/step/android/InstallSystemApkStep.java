@@ -24,6 +24,7 @@ import com.google.devtools.mobileharness.api.testrunner.device.cache.DeviceCache
 import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
 import com.google.devtools.mobileharness.platform.android.packagemanager.AndroidPackageManagerUtil;
 import com.google.devtools.mobileharness.platform.android.process.AndroidProcessUtil;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceConnectionState;
 import com.google.devtools.mobileharness.platform.android.shared.autovalue.UtilArgs;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.devtools.mobileharness.platform.android.systemsetting.PostSetDmVerityDeviceOp;
@@ -247,7 +248,8 @@ public class InstallSystemApkStep {
           DeviceCache.getInstance().cache(deviceId, deviceClassName, WAIT_FOR_REBOOT_TIMEOUT);
           systemStateUtil.reboot(deviceId);
           // Wait for adb connect to device.
-          systemStateUtil.waitForDevice(deviceId, Duration.ofMillis(WAIT_FOR_REBOOT_MS));
+          systemStateUtil.waitForState(
+              deviceId, DeviceConnectionState.DEVICE, Duration.ofMillis(WAIT_FOR_REBOOT_MS));
           // Wait for device is online.
           systemStateUtil.waitUntilReady(deviceId);
           systemStateUtil.becomeRoot(deviceId);

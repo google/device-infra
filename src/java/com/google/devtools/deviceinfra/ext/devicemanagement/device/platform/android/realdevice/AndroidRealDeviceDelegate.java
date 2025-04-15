@@ -270,7 +270,10 @@ public abstract class AndroidRealDeviceDelegate {
 
         fastboot.reboot(deviceId);
         // Wait for device ready.
-        systemStateUtil.waitForDevice(deviceId, AndroidRealDeviceConstants.WAIT_FOR_REBOOT_TIMEOUT);
+        systemStateUtil.waitForState(
+            deviceId,
+            DeviceConnectionState.DEVICE,
+            AndroidRealDeviceConstants.WAIT_FOR_REBOOT_TIMEOUT);
         systemStateUtil.waitUntilReady(deviceId);
         logger.atInfo().log("Reboot the wiped device %s successfully.", deviceId);
 
@@ -282,8 +285,10 @@ public abstract class AndroidRealDeviceDelegate {
         if (systemSettingUtil.disableSetupWizard(deviceId) == PostSettingDeviceOp.REBOOT) {
           logger.atInfo().log("Device %s will reboot after skip setup wizard", deviceId);
           systemStateUtil.reboot(deviceId);
-          systemStateUtil.waitForDevice(
-              deviceId, AndroidRealDeviceConstants.WAIT_FOR_REBOOT_TIMEOUT);
+          systemStateUtil.waitForState(
+              deviceId,
+              DeviceConnectionState.DEVICE,
+              AndroidRealDeviceConstants.WAIT_FOR_REBOOT_TIMEOUT);
           systemStateUtil.waitUntilReady(deviceId);
         }
         logger.atInfo().log("Disable setup wizard and reboot device %s successfully.", deviceId);

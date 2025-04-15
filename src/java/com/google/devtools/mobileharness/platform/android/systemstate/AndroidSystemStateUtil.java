@@ -571,20 +571,6 @@ public class AndroidSystemStateUtil {
   }
 
   /**
-   * Reboots the device into recovery.
-   *
-   * @param serial serial number of the device
-   * @throws MobileHarnessException if fails to execute the commands or timeout
-   * @throws InterruptedException if the thread executing the commands is interrupted
-   * @deprecated Prefer {@code reboot(serial, RebootMode.RECOVERY)}.
-   */
-  // TODO: b/307912207 - Inline the method.
-  @Deprecated
-  public void rebootToRecovery(String serial) throws MobileHarnessException, InterruptedException {
-    reboot(serial, RebootMode.RECOVERY);
-  }
-
-  /**
    * Restarts the Zygote process.
    *
    * <p>Should only be called when device is managed by Mobile Harness.

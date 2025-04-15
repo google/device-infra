@@ -23,6 +23,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.testrunner.device.cache.DeviceCache;
 import com.google.devtools.mobileharness.platform.android.lightning.shared.SharedLogUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceConnectionState;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceState;
 import com.google.devtools.mobileharness.platform.android.systemstate.AndroidSystemStateUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
@@ -189,7 +190,7 @@ public class SystemStateManager {
       // `adb wait-for-device` exits with error code when using a proxied device. Therefore, we wait
       // for the device ready by using `systemStateUtil.waitUntilReady` instead.
       if (!DeviceUtil.isOverTcpDevice(deviceId)) {
-        systemStateUtil.waitForDevice(deviceId, deviceReadyTimeout);
+        systemStateUtil.waitForState(deviceId, DeviceConnectionState.DEVICE, deviceReadyTimeout);
       }
       systemStateUtil.waitUntilReady(deviceId, deviceReadyTimeout);
     } catch (MobileHarnessException e) {
