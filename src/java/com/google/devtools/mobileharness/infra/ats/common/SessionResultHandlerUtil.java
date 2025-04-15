@@ -43,8 +43,10 @@ import com.google.devtools.mobileharness.platform.android.xts.common.util.AbiUti
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
+import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteResultReporter;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryReportMerger;
+import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryReportMerger.MergedResult;
 import com.google.devtools.mobileharness.platform.android.xts.suite.screenshots.ScreenshotsMetadataUtil;
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
 import com.google.devtools.mobileharness.shared.util.concurrent.Callables;
@@ -115,6 +117,7 @@ public class SessionResultHandlerUtil {
   private final PreviousResultLoader previousResultLoader;
   private final SessionInfo sessionInfo;
   private final ScreenshotsMetadataUtil screenshotsMetadataUtil;
+  private final SuiteResultReporter suiteResultReporter;
 
   @Inject
   SessionResultHandlerUtil(
@@ -124,7 +127,8 @@ public class SessionResultHandlerUtil {
       RetryReportMerger retryReportMerger,
       PreviousResultLoader previousResultLoader,
       SessionInfo sessionInfo,
-      ScreenshotsMetadataUtil screenshotsMetadataUtil) {
+      ScreenshotsMetadataUtil screenshotsMetadataUtil,
+      SuiteResultReporter suiteResultReporter) {
     this.localFileUtil = localFileUtil;
     this.compatibilityReportMerger = compatibilityReportMerger;
     this.reportCreator = reportCreator;
@@ -132,6 +136,7 @@ public class SessionResultHandlerUtil {
     this.previousResultLoader = previousResultLoader;
     this.sessionInfo = sessionInfo;
     this.screenshotsMetadataUtil = screenshotsMetadataUtil;
+    this.suiteResultReporter = suiteResultReporter;
   }
 
   /**
@@ -196,6 +201,7 @@ public class SessionResultHandlerUtil {
         }
         return processResultHelper(
             sessionRequestInfo,
+            jobs,
             tradefedTests,
             nonTradefedTests,
             resultDir,
@@ -254,10 +260,11 @@ public class SessionResultHandlerUtil {
 
   private Optional<Result> processResultHelper(
       SessionRequestInfo sessionRequestInfo,
+      List<JobInfo> sessionAllJobs,
       ImmutableMap<JobInfo, Optional<TestInfo>> tradefedTests,
       ImmutableMap<JobInfo, Optional<TestInfo>> nonTradefedTests,
       Path resultDir,
-      Path logsRootDir,
+      Path logDir,
       Path nonTradefedTestLogsDir,
       Path tmpTradefedTestResultsDir,
       Path nonTradefedTestResultsDir)
@@ -292,12 +299,12 @@ public class SessionResultHandlerUtil {
 
       callAndLogException(
           () -> {
-            copyTradefedTestLogFiles(test, logsRootDir);
+            copyTradefedTestLogFiles(test, logDir);
             return null;
           },
           String.format(
               "Failed to copy tradefed test [%s]'s log files to log dir [%s].",
-              test.locator().getId(), logsRootDir));
+              test.locator().getId(), logDir));
       callAndLogException(
           () -> {
             Optional<TradefedResultBundle> bundle =
@@ -471,6 +478,10 @@ public class SessionResultHandlerUtil {
               .addAllIncludeFilter(includeFilters.build())
               .addAllExcludeFilter(excludeFilters.build())
               .build();
+      // Generates the invocation summary file before creating the report and zipping result
+      // folder.
+      generateInvocationSummaryFile(
+          sessionAllJobs, finalReport, resultDir, logDir, /* previousResult= */ null);
       reportCreator.createReport(
           finalReport,
           resultDir,
@@ -506,30 +517,30 @@ public class SessionResultHandlerUtil {
         }
       }
 
+      Result previousResult = null;
       if (testReportHasNonTfModule || !SessionHandlerHelper.useTfRetry()) {
-        if (sessionRequestInfo.retrySessionId().isPresent()) {
-          finalReport =
-              retryReportMerger.mergeReports(
-                  Path.of(sessionRequestInfo.retryResultDir().orElseThrow()),
-                  sessionRequestInfo.retrySessionId().get(),
-                  sessionRequestInfo.retryType().orElse(null),
-                  mergedReport.orElse(null),
-                  sessionRequestInfo.moduleNames(),
-                  excludeFilters.build(),
-                  skippedModuleIds);
-        } else {
-          finalReport =
-              retryReportMerger.mergeReports(
-                  XtsDirUtil.getXtsResultsDir(
-                      Path.of(sessionRequestInfo.xtsRootDir()), sessionRequestInfo.xtsType()),
-                  sessionRequestInfo.retrySessionIndex().orElse(null),
-                  sessionRequestInfo.retrySessionResultDirName().orElse(null),
-                  sessionRequestInfo.retryType().orElse(null),
-                  mergedReport.orElse(null),
-                  sessionRequestInfo.moduleNames(),
-                  excludeFilters.build(),
-                  skippedModuleIds);
-        }
+        MergedResult mergedResult =
+            sessionRequestInfo.retrySessionId().isPresent()
+                ? retryReportMerger.mergeReports(
+                    Path.of(sessionRequestInfo.retryResultDir().orElseThrow()),
+                    sessionRequestInfo.retrySessionId().get(),
+                    sessionRequestInfo.retryType().orElse(null),
+                    mergedReport.orElse(null),
+                    sessionRequestInfo.moduleNames(),
+                    excludeFilters.build(),
+                    skippedModuleIds)
+                : retryReportMerger.mergeReports(
+                    XtsDirUtil.getXtsResultsDir(
+                        Path.of(sessionRequestInfo.xtsRootDir()), sessionRequestInfo.xtsType()),
+                    sessionRequestInfo.retrySessionIndex().orElse(null),
+                    sessionRequestInfo.retrySessionResultDirName().orElse(null),
+                    sessionRequestInfo.retryType().orElse(null),
+                    mergedReport.orElse(null),
+                    sessionRequestInfo.moduleNames(),
+                    excludeFilters.build(),
+                    skippedModuleIds);
+        finalReport = mergedResult.mergedResult();
+        previousResult = mergedResult.previousResult();
       } else {
         finalReport = mergedReport.orElse(null);
       }
@@ -552,6 +563,10 @@ public class SessionResultHandlerUtil {
               String.format(
                   "Failed to generate screenshots metadata file for result dir [%s].", resultDir));
         }
+        // Generates the invocation summary file before creating the report and zipping result
+        // folder.
+        generateInvocationSummaryFile(
+            sessionAllJobs, finalReport, resultDir, logDir, previousResult);
         reportCreator.createReport(
             finalReport,
             resultDir,
@@ -1135,5 +1150,89 @@ public class SessionResultHandlerUtil {
         extraFilesOrDirsToZip.add(testListPath);
       }
     }
+  }
+
+  private void generateInvocationSummaryFile(
+      List<JobInfo> sessionAllJobs,
+      Result result,
+      Path resultDir,
+      Path logDir,
+      @Nullable Result previousResult)
+      throws MobileHarnessException, InterruptedException {
+    if (!localFileUtil.isDirExist(resultDir)) {
+      logger.atInfo().log(
+          "Result dir [%s] doesn't exist, skip generating invocation summary file.", resultDir);
+      return;
+    }
+    if (SessionHandlerHelper.useTfRetry()) {
+      // For TF retry, the invocation summary file is generated by TF.
+      return;
+    }
+    // Only create the invocation_summary.txt when the result dir has been created by the previous
+    // result processing steps.
+    String invocationSummaryFile =
+        resultDir.resolve(XtsConstants.INVOCATION_SUMMARY_FILE_NAME).toAbsolutePath().toString();
+    String xtsTestResultSummary =
+        createXtsInvocationSummaryText(sessionAllJobs, result, resultDir, logDir, previousResult);
+    if (localFileUtil.isFileExist(invocationSummaryFile)) {
+      logger.atInfo().log(
+          "Invocation summary file [%s] exists, overriding it.", invocationSummaryFile);
+      localFileUtil.removeFileOrDir(invocationSummaryFile);
+    }
+    localFileUtil.writeToFile(
+        invocationSummaryFile, String.format("TEXT:\n%s", xtsTestResultSummary));
+  }
+
+  /** Creates the xTS invocation summary text. */
+  public String createXtsInvocationSummaryText(
+      List<JobInfo> allJobs,
+      @Nullable Result result,
+      @Nullable Path resultDir,
+      @Nullable Path logDir,
+      @Nullable Result previousResult) {
+    return String.format(
+            "%s=========== Result/Log Location ============\n%s",
+            suiteResultReporter.getSummary(result, previousResult), getNonTfModuleLogPath(allJobs))
+        + (logDir != null && localFileUtil.isDirExist(logDir)
+            ? String.format("LOG DIRECTORY               : %s\n", logDir)
+            : "")
+        + (resultDir != null && localFileUtil.isDirExist(resultDir)
+            ? String.format("RESULT DIRECTORY            : %s\n", resultDir)
+            : "")
+        + "=================== End ====================\n";
+  }
+
+  private String getNonTfModuleLogPath(List<JobInfo> jobInfos) {
+    StringBuilder builder = new StringBuilder();
+    builder.append("Failed standalone module log locations:\n");
+    ImmutableMap<String, String> failedNonTfTestLogDirs =
+        jobInfos.stream()
+            .filter(
+                jobInfo ->
+                    jobInfo.resultWithCause().get().type() == TestResult.FAIL
+                        && jobInfo.properties().getBoolean(Job.IS_XTS_NON_TF_JOB).orElse(false)
+                        && jobInfo.properties().has(SessionHandlerHelper.XTS_MODULE_NAME_PROP))
+            .flatMap(jobInfo -> jobInfo.tests().getAll().values().stream())
+            .filter(
+                testInfo ->
+                    testInfo.properties().has(XtsConstants.XTS_FINAL_TEST_LOG_DIR_PROPERTY_KEY))
+            .collect(
+                toImmutableMap(
+                    testInfo ->
+                        testInfo
+                            .jobInfo()
+                            .properties()
+                            .get(SessionHandlerHelper.XTS_MODULE_NAME_PROP),
+                    testInfo ->
+                        testInfo
+                            .properties()
+                            .get(XtsConstants.XTS_FINAL_TEST_LOG_DIR_PROPERTY_KEY)));
+    for (Entry<String, String> entry : failedNonTfTestLogDirs.entrySet()) {
+      if (localFileUtil.isDirExist(entry.getValue())) {
+        builder.append(String.format("%s\t: %s\n", entry.getKey(), entry.getValue()));
+      }
+    }
+    builder.append("============================================\n");
+    return builder.toString();
   }
 }

@@ -50,7 +50,6 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotat
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.SessionTempDir;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
-import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteResultReporter;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryType;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -58,6 +57,7 @@ import com.google.devtools.mobileharness.shared.util.junit.rule.SetFlagsOss;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
+import com.google.inject.Injector;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -115,14 +115,13 @@ public final class RunCommandHandlerTest {
   @Bind @SessionGenDir private Path sessionGenDir;
   @Bind @SessionTempDir private Path sessionTempDir;
   @Bind @Mock private SessionInfo sessionInfo;
-  @Bind @Mock private SuiteResultReporter suiteResultReporter;
   @Bind @Mock private XtsJobCreator xtsJobCreator;
   @Bind @Mock private PreviousResultLoader previousResultLoader;
   @Bind @Mock private VerifierResultHelper verifierResultHelper;
 
   private RunCommandHandler runCommandHandler;
   @Inject private SessionRequestHandlerUtil sessionRequestHandlerUtil;
-  @Inject private SessionResultHandlerUtil sessionResultHandlerUtil;
+  private SessionResultHandlerUtil sessionResultHandlerUtil;
 
   @Before
   public void setUp() throws Exception {
@@ -133,19 +132,20 @@ public final class RunCommandHandlerTest {
     File tmpDir = folder.newFolder("lab_server_tmp_dir");
     flags.setAllFlags(ImmutableMap.of("tmp_dir_root", tmpDir.getAbsolutePath()));
 
-    Guice.createInjector(
+    Injector injector =
+        Guice.createInjector(
             BoundFieldModule.of(this),
             new AbstractModule() {
               @Override
               protected void configure() {
                 bind(Clock.class).toInstance(Clock.systemUTC());
               }
-            })
-        .injectMembers(this);
+            });
+    injector.injectMembers(this);
 
     // Disable sessionResultHandlerUtil.cleanUpJobGenDirs(...), or we will get "Permission denied"
     // when removing testdata files.
-    sessionResultHandlerUtil = spy(sessionResultHandlerUtil);
+    sessionResultHandlerUtil = spy(injector.getInstance(SessionResultHandlerUtil.class));
     doNothing().when(sessionResultHandlerUtil).cleanUpJobGenDirs(any());
 
     when(sessionInfo.getSessionProperty(SESSION_PROPERTY_NAME_TIMESTAMP_DIR_NAME))
@@ -160,9 +160,7 @@ public final class RunCommandHandlerTest {
             sessionRequestHandlerUtil,
             sessionResultHandlerUtil,
             sessionInfo,
-            suiteResultReporter,
             xtsJobCreator,
-            previousResultLoader,
             verifierResultHelper);
   }
 

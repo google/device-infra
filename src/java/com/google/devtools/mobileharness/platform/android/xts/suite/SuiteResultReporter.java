@@ -163,7 +163,7 @@ public class SuiteResultReporter {
       }
     }
     // print a short report summary
-    invocationSummary.append("\n============================================\n");
+    invocationSummary.append("============================================\n");
     invocationSummary.append("================= Results ==================\n");
     if (result != null) {
       printModuleTestTime(result.getModuleInfoList(), invocationSummary);

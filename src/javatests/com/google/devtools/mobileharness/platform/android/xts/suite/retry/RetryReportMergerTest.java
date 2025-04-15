@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteTestFilter;
+import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryReportMerger.MergedResult;
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlanHelper;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -147,7 +148,7 @@ public final class RetryReportMergerTest {
     SubPlan subPlan = new SubPlan();
     when(retryGenerator.generateRetrySubPlan(any())).thenReturn(subPlan);
 
-    Result mergedReport =
+    MergedResult mergedResult =
         retryReportMerger.mergeReports(
             RESULTS_DIR_PATH,
             0,
@@ -158,7 +159,7 @@ public final class RetryReportMergerTest {
             /* passedInExcludeFilters= */ ImmutableSet.of("arm64-v8a CtsAccelerationTestCases"),
             /* skippedModuleIds= */ ImmutableSet.of());
 
-    assertThat(mergedReport).isEqualTo(expectedMergedReport);
+    assertThat(mergedResult.mergedResult()).isEqualTo(expectedMergedReport);
   }
 
   @Test
@@ -174,7 +175,7 @@ public final class RetryReportMergerTest {
     SubPlan subPlan = new SubPlan();
     when(retryGenerator.generateRetrySubPlan(any())).thenReturn(subPlan);
 
-    Result mergedReport =
+    MergedResult mergedResult =
         retryReportMerger.mergeReports(
             RESULTS_DIR_PATH,
             "session_id",
@@ -184,7 +185,7 @@ public final class RetryReportMergerTest {
             /* passedInExcludeFilters= */ ImmutableSet.of("arm64-v8a CtsAccelerationTestCases"),
             /* skippedModuleIds= */ ImmutableSet.of());
 
-    assertThat(mergedReport).isEqualTo(expectedMergedReport);
+    assertThat(mergedResult.mergedResult()).isEqualTo(expectedMergedReport);
   }
 
   @Test
@@ -212,7 +213,7 @@ public final class RetryReportMergerTest {
             + " android.acceleration.cts.SoftwareAccelerationTest#testNotAttachedView");
     when(retryGenerator.generateRetrySubPlan(any())).thenReturn(subPlan);
 
-    Result mergedReport =
+    MergedResult mergedResult =
         retryReportMerger.mergeReports(
             RESULTS_DIR_PATH,
             0,
@@ -223,7 +224,7 @@ public final class RetryReportMergerTest {
             /* passedInExcludeFilters= */ ImmutableSet.of(),
             /* skippedModuleIds= */ ImmutableSet.of());
 
-    assertThat(mergedReport).isEqualTo(expectedMergedReport);
+    assertThat(mergedResult.mergedResult()).isEqualTo(expectedMergedReport);
   }
 
   @Test
@@ -244,7 +245,7 @@ public final class RetryReportMergerTest {
     subPlan.addIncludeFilter("arm64-v8a CtsAccelerationTestCases[instant]");
     when(retryGenerator.generateRetrySubPlan(any())).thenReturn(subPlan);
 
-    Result mergedReport =
+    MergedResult mergedResult =
         retryReportMerger.mergeReports(
             RESULTS_DIR_PATH,
             0,
@@ -255,7 +256,7 @@ public final class RetryReportMergerTest {
             /* passedInExcludeFilters= */ ImmutableSet.of(),
             /* skippedModuleIds= */ ImmutableSet.of());
 
-    assertThat(mergedReport).isEqualTo(expectedMergedReport);
+    assertThat(mergedResult.mergedResult()).isEqualTo(expectedMergedReport);
   }
 
   @Test
@@ -285,7 +286,7 @@ public final class RetryReportMergerTest {
             /* passedInModules= */ ImmutableSet.of());
     when(retryGenerator.generateRetrySubPlan(any())).thenReturn(subPlan);
 
-    Result mergedReport =
+    MergedResult mergedResult =
         retryReportMerger.mergeReports(
             RESULTS_DIR_PATH,
             0,
@@ -296,7 +297,7 @@ public final class RetryReportMergerTest {
             /* passedInExcludeFilters= */ ImmutableSet.of(),
             /* skippedModuleIds= */ ImmutableSet.of());
 
-    assertThat(mergedReport).isEqualTo(expectedMergedReport);
+    assertThat(mergedResult.mergedResult()).isEqualTo(expectedMergedReport);
   }
 
   @Test
@@ -329,7 +330,7 @@ public final class RetryReportMergerTest {
             /* passedInModules= */ ImmutableSet.of("CtsVcnTestCases"));
     when(retryGenerator.generateRetrySubPlan(any())).thenReturn(subPlan);
 
-    Result mergedReport =
+    MergedResult mergedResult =
         retryReportMerger.mergeReports(
             RESULTS_DIR_PATH,
             0,
@@ -340,7 +341,7 @@ public final class RetryReportMergerTest {
             /* passedInExcludeFilters= */ ImmutableSet.of(),
             /* skippedModuleIds= */ ImmutableSet.of());
 
-    assertThat(mergedReport).isEqualTo(expectedMergedReport);
+    assertThat(mergedResult.mergedResult()).isEqualTo(expectedMergedReport);
   }
 
   @Test
@@ -373,7 +374,7 @@ public final class RetryReportMergerTest {
             /* passedInModules= */ ImmutableSet.of("CtsVcnTestCases"));
     when(retryGenerator.generateRetrySubPlan(any())).thenReturn(subPlan);
 
-    Result mergedReport =
+    MergedResult mergedResult =
         retryReportMerger.mergeReports(
             RESULTS_DIR_PATH,
             0,
@@ -384,7 +385,7 @@ public final class RetryReportMergerTest {
             /* passedInExcludeFilters= */ ImmutableSet.of(),
             /* skippedModuleIds= */ ImmutableSet.of("arm64-v8a CtsVcnTestCases"));
 
-    assertThat(mergedReport).isEqualTo(expectedMergedReport);
+    assertThat(mergedResult.mergedResult()).isEqualTo(expectedMergedReport);
   }
 
   @Test
@@ -419,7 +420,7 @@ public final class RetryReportMergerTest {
             /* passedInModules= */ ImmutableSet.of());
     when(retryGenerator.generateRetrySubPlan(any())).thenReturn(subPlan);
 
-    Result mergedReport =
+    MergedResult mergedResult =
         retryReportMerger.mergeReports(
             RESULTS_DIR_PATH,
             0,
@@ -430,6 +431,6 @@ public final class RetryReportMergerTest {
             /* passedInExcludeFilters= */ ImmutableSet.of(),
             /* skippedModuleIds= */ ImmutableSet.of());
 
-    assertThat(mergedReport).isEqualTo(expectedMergedReport);
+    assertThat(mergedResult.mergedResult()).isEqualTo(expectedMergedReport);
   }
 }

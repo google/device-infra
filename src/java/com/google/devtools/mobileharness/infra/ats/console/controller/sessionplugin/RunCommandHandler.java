@@ -17,7 +17,6 @@
 package com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin;
 
 import static com.google.common.base.Ascii.toUpperCase;
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
@@ -52,8 +51,6 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.constan
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
-import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteResultReporter;
-import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryType;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
@@ -64,10 +61,8 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
-import javax.annotation.Nullable;
 import javax.inject.Inject;
 
 /** Handler for "run" commands. */
@@ -83,9 +78,7 @@ class RunCommandHandler {
   private final SessionResultHandlerUtil sessionResultHandlerUtil;
   private final LocalFileUtil localFileUtil;
   private final SessionInfo sessionInfo;
-  private final SuiteResultReporter suiteResultReporter;
   private final XtsJobCreator xtsJobCreator;
-  private final PreviousResultLoader previousResultLoader;
   private final VerifierResultHelper verifierResultHelper;
 
   /** Set in {@link #initialize}. */
@@ -100,17 +93,13 @@ class RunCommandHandler {
       SessionRequestHandlerUtil sessionRequestHandlerUtil,
       SessionResultHandlerUtil sessionResultHandlerUtil,
       SessionInfo sessionInfo,
-      SuiteResultReporter suiteResultReporter,
       XtsJobCreator xtsJobCreator,
-      PreviousResultLoader previousResultLoader,
       VerifierResultHelper verifierResultHelper) {
     this.localFileUtil = localFileUtil;
     this.sessionRequestHandlerUtil = sessionRequestHandlerUtil;
     this.sessionResultHandlerUtil = sessionResultHandlerUtil;
     this.sessionInfo = sessionInfo;
-    this.suiteResultReporter = suiteResultReporter;
     this.xtsJobCreator = xtsJobCreator;
-    this.previousResultLoader = previousResultLoader;
     this.verifierResultHelper = verifierResultHelper;
   }
 
@@ -279,47 +268,40 @@ class RunCommandHandler {
         localFileUtil.removeFileOrDir(subPlanBackupPath);
       }
 
-      Result previousResult = null;
-      if (SessionRequestHandlerUtil.isRunRetry(sessionRequestInfo.testPlan())) {
-        Optional<Integer> previousSessionIndex = sessionRequestInfo.retrySessionIndex();
-        Optional<String> previousSessionResultDirName =
-            sessionRequestInfo.retrySessionResultDirName();
-        if (previousSessionIndex.isPresent() || previousSessionResultDirName.isPresent()) {
-          previousResult =
-              previousResultLoader.loadPreviousResult(
-                  resultsDir,
-                  previousSessionIndex.orElse(null),
-                  previousSessionResultDirName.orElse(null));
-        }
-      }
-      String xtsTestResultSummary =
-          createXtsTestResultSummary(allJobs, result, resultDir, logDir, previousResult);
+      String invocationSummaryText = "";
+      boolean foundInvocationSummaryFile = false;
       if (resultDir != null && localFileUtil.isDirExist(resultDir)) {
-        // Only create the invocation_summary.txt when the result dir has been created by the result
-        // processing.
         String invocationSummaryFile =
             resultDir
                 .resolve(XtsConstants.INVOCATION_SUMMARY_FILE_NAME)
                 .toAbsolutePath()
                 .toString();
         if (localFileUtil.isFileExist(invocationSummaryFile)) {
-          logger.atInfo().log(
-              "Invocation summary file [%s] exists, overriding it.", invocationSummaryFile);
-          localFileUtil.removeFileOrDir(invocationSummaryFile);
+          foundInvocationSummaryFile = true;
+          invocationSummaryText = localFileUtil.readFile(invocationSummaryFile);
+          int startIndex = invocationSummaryText.indexOf("==");
+          if (startIndex > -1) {
+            invocationSummaryText = invocationSummaryText.substring(startIndex);
+          }
         }
-        localFileUtil.writeToFile(
-            invocationSummaryFile, String.format("TEXT:%s", xtsTestResultSummary));
+      }
+      if (!foundInvocationSummaryFile) {
+        logger.atInfo().log(
+            "Not found existing invocation summary file under result dir [%s]", resultDir);
+        invocationSummaryText =
+            sessionResultHandlerUtil.createXtsInvocationSummaryText(
+                allJobs, result, resultDir, logDir, /* previousResult= */ null);
       }
       boolean isSessionCompleted = sessionResultHandlerUtil.isSessionCompleted(allJobs);
       String sessionSummary =
           String.format(
               "run_command session_id: [%s], command_id: [%s], result: %s.\n"
-                  + "command_line_args: %s\n%s",
+                  + "command_line_args: %s\n\n%s",
               sessionInfo.getSessionId(),
               runCommandState.getCommandId(),
               isSessionCompleted ? "COMPLETED" : "ERROR",
               command.getInitialState().getCommandLineArgs(),
-              xtsTestResultSummary);
+              invocationSummaryText);
 
       sessionInfo.setSessionPluginOutput(
           oldOutput -> {
@@ -426,57 +408,5 @@ class RunCommandHandler {
         .getSessionProperty(SessionProperties.PROPERTY_KEY_SESSION_CLIENT_ID)
         .ifPresent(builder::setSessionClientId);
     return sessionRequestHandlerUtil.addNonTradefedModuleInfo(builder.build());
-  }
-
-  private String createXtsTestResultSummary(
-      List<JobInfo> allJobs,
-      @Nullable Result result,
-      @Nullable Path resultDir,
-      @Nullable Path logDir,
-      @Nullable Result previousResult) {
-    return String.format(
-            "%s=========== Result/Log Location ============\n%s",
-            suiteResultReporter.getSummary(result, previousResult), getNonTfModuleLogPath(allJobs))
-        + (logDir != null && localFileUtil.isDirExist(logDir)
-            ? String.format("LOG DIRECTORY               : %s\n", logDir)
-            : "")
-        + (resultDir != null && localFileUtil.isDirExist(resultDir)
-            ? String.format("RESULT DIRECTORY            : %s\n", resultDir)
-            : "")
-        + "=================== End ====================\n";
-  }
-
-  private String getNonTfModuleLogPath(List<JobInfo> jobInfos) {
-    StringBuilder builder = new StringBuilder();
-    builder.append("Failed standalone module log locations:\n");
-    ImmutableMap<String, String> failedNonTfTestLogDirs =
-        jobInfos.stream()
-            .filter(
-                jobInfo ->
-                    jobInfo.resultWithCause().get().type() == TestResult.FAIL
-                        && jobInfo.properties().getBoolean(Job.IS_XTS_NON_TF_JOB).orElse(false)
-                        && jobInfo.properties().has(SessionHandlerHelper.XTS_MODULE_NAME_PROP))
-            .flatMap(jobInfo -> jobInfo.tests().getAll().values().stream())
-            .filter(
-                testInfo ->
-                    testInfo.properties().has(XtsConstants.XTS_FINAL_TEST_LOG_DIR_PROPERTY_KEY))
-            .collect(
-                toImmutableMap(
-                    testInfo ->
-                        testInfo
-                            .jobInfo()
-                            .properties()
-                            .get(SessionHandlerHelper.XTS_MODULE_NAME_PROP),
-                    testInfo ->
-                        testInfo
-                            .properties()
-                            .get(XtsConstants.XTS_FINAL_TEST_LOG_DIR_PROPERTY_KEY)));
-    for (Entry<String, String> entry : failedNonTfTestLogDirs.entrySet()) {
-      if (localFileUtil.isDirExist(entry.getValue())) {
-        builder.append(String.format("%s\t: %s\n", entry.getKey(), entry.getValue()));
-      }
-    }
-    builder.append("============================================\n");
-    return builder.toString();
   }
 }

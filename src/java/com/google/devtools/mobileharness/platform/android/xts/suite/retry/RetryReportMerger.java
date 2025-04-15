@@ -81,6 +81,27 @@ public class RetryReportMerger {
     this.clock = clock;
   }
 
+  /** The merged result. */
+  @AutoValue
+  public abstract static class MergedResult {
+
+    /** Creates a {@link MergedResult}. */
+    public static MergedResult of(
+        Result mergedResult, Result previousResult, @Nullable Result retryResult) {
+      return new AutoValue_RetryReportMerger_MergedResult(
+          mergedResult, previousResult, Optional.ofNullable(retryResult));
+    }
+
+    /** The merged result. */
+    public abstract Result mergedResult();
+
+    /** The previous result. */
+    public abstract Result previousResult();
+
+    /** The retry result. */
+    public abstract Optional<Result> retryResult();
+  }
+
   /**
    * Merges result from the previous session and the result from the retry.
    *
@@ -96,7 +117,7 @@ public class RetryReportMerger {
    * @param passedInModules passed in module names from the command
    * @param passedInExcludeFilters passed in exclude filters from the command
    */
-  public Result mergeReports(
+  public MergedResult mergeReports(
       Path resultsDir,
       @Nullable Integer previousSessionIndex,
       @Nullable String previousSessionResultDirName,
@@ -144,7 +165,7 @@ public class RetryReportMerger {
    * @param passedInModules passed in module names from the command
    * @param passedInExcludeFilters passed in exclude filters from the command
    */
-  public Result mergeReports(
+  public MergedResult mergeReports(
       Path resultsDir,
       String previousSessionId,
       @Nullable RetryType retryType,
@@ -171,7 +192,7 @@ public class RetryReportMerger {
         retryArgs.build(), previousResult, retryResult, passedInExcludeFilters, skippedModuleIds);
   }
 
-  private Result mergeReportsHelper(
+  private MergedResult mergeReportsHelper(
       RetryArgs retryArgs,
       Result previousResult,
       @Nullable Result retryResult,
@@ -182,8 +203,11 @@ public class RetryReportMerger {
     logger.atInfo().log("Merging previous result and retry result [RetryArgs: %s]", retryArgs);
     long startTime = clock.instant().toEpochMilli();
     try {
-      return doMergeReports(
-          previousResult, subPlan, retryResult, passedInExcludeFilters, skippedModuleIds);
+      return MergedResult.of(
+          doMergeReports(
+              previousResult, subPlan, retryResult, passedInExcludeFilters, skippedModuleIds),
+          previousResult,
+          retryResult);
     } finally {
       logger.atInfo().log(
           "Done merging previous result and retry result, took %s [RetryArgs: %s]",
