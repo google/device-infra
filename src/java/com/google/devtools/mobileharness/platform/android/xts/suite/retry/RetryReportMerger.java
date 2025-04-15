@@ -428,10 +428,13 @@ public class RetryReportMerger {
                     HashMap::new,
                     mapping(TestCaseNameAndTestName::testName, toImmutableSet())));
 
-    HashSet<String> notCheckedTestCasesFromRetry =
-        testCasesFromRetry.keySet().stream().collect(toCollection(HashSet::new));
+    // Gets test cases that are only in retry.
+    HashSet<String> notCheckedTestCasesFromRetry = new HashSet<>(testCasesFromRetry.keySet());
     for (TestCase testCaseFromPrevSession : moduleFromPrevSession.getTestCaseList()) {
       notCheckedTestCasesFromRetry.remove(testCaseFromPrevSession.getName());
+    }
+
+    for (TestCase testCaseFromPrevSession : moduleFromPrevSession.getTestCaseList()) {
       mergedModuleBuilder.addTestCase(
           createMergedTestCase(
               moduleId,
