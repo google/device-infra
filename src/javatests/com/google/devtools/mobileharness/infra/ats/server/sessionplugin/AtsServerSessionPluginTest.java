@@ -67,10 +67,13 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.CreateSessionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.LocalSessionStub;
 import com.google.devtools.mobileharness.infra.controller.scheduler.model.job.in.DeviceRequirement;
+import com.google.devtools.mobileharness.infra.lab.common.dir.DirUtil;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
+import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.junit.rule.SetFlagsOss;
+import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
@@ -101,6 +104,7 @@ import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.Devic
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryResult;
 import java.nio.file.Path;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
@@ -143,6 +147,7 @@ public final class AtsServerSessionPluginTest {
   @Bind @Mock private XtsTypeLoader xtsTypeLoader;
   @Bind @Mock private LocalSessionStub localSessionStub;
   @Bind @Mock private TestMessageUtil testMessageUtil;
+  @Bind @Mock private Sleeper sleeper;
   @Bind @Spy private LocalFileUtil localFileUtil = new LocalFileUtil();
 
   @Mock private JobInfo jobInfo;
@@ -771,6 +776,7 @@ public final class AtsServerSessionPluginTest {
     CommandDetail commandDetail = requestDetail.getCommandDetailsMap().values().iterator().next();
     assertThat(commandDetail.getState()).isEqualTo(CommandState.COMPLETED);
     assertThat(requestDetail.getState()).isEqualTo(RequestState.COMPLETED);
+    verifyResourceCleanup(testInfo, jobInfo);
   }
 
   @Test
@@ -854,6 +860,7 @@ public final class AtsServerSessionPluginTest {
     assertThat(requestDetail.getState()).isEqualTo(RequestState.COMPLETED);
     assertThat(requestDetail.getTestContextMap().get(commandId))
         .isEqualTo(newMultiCommandRequest.getPrevTestContext());
+    verifyResourceCleanup(testInfo, jobInfo);
   }
 
   @Test
@@ -922,6 +929,7 @@ public final class AtsServerSessionPluginTest {
     assertThat(newMultiCommandRequest.getCommandsCount()).isEqualTo(1);
     assertThat(newMultiCommandRequest.getCommandsList().get(0).getCommandLine())
         .isEqualTo("retry --retry 0");
+    verifyResourceCleanup(testInfo, jobInfo);
   }
 
   @Test
@@ -1004,6 +1012,7 @@ public final class AtsServerSessionPluginTest {
     CommandDetail commandDetail = requestDetail.getCommandDetailsMap().values().iterator().next();
     assertThat(commandDetail.getState()).isEqualTo(CommandState.COMPLETED);
     assertThat(requestDetail.getState()).isEqualTo(RequestState.COMPLETED);
+    verifyResourceCleanup(testInfo, jobInfo);
   }
 
   @Test
@@ -1067,6 +1076,7 @@ public final class AtsServerSessionPluginTest {
     CommandDetail commandDetail = requestDetail.getCommandDetailsMap().values().iterator().next();
     assertThat(commandDetail.getState()).isEqualTo(CommandState.COMPLETED);
     assertThat(requestDetail.getState()).isEqualTo(RequestState.COMPLETED);
+    verifyResourceCleanup(testInfo, jobInfo);
   }
 
   @Test
@@ -1120,6 +1130,7 @@ public final class AtsServerSessionPluginTest {
     CommandDetail commandDetail = requestDetail.getCommandDetailsMap().values().iterator().next();
     assertThat(commandDetail.getState()).isEqualTo(CommandState.COMPLETED);
     assertThat(requestDetail.getState()).isEqualTo(RequestState.COMPLETED);
+    verifyResourceCleanup(testInfo, jobInfo);
   }
 
   @Test
@@ -1173,6 +1184,7 @@ public final class AtsServerSessionPluginTest {
     CommandDetail commandDetail = requestDetail.getCommandDetailsMap().values().iterator().next();
     assertThat(commandDetail.getState()).isEqualTo(CommandState.ERROR);
     assertThat(requestDetail.getState()).isEqualTo(RequestState.ERROR);
+    verifyResourceCleanup(testInfo, jobInfo);
   }
 
   @Test
@@ -1214,6 +1226,7 @@ public final class AtsServerSessionPluginTest {
         .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
     assertThat(Iterables.getLast(unaryOperatorCaptor.getAllValues()).apply(null).getState())
         .isEqualTo(RequestState.ERROR);
+    verifyResourceCleanup(testInfo, jobInfo);
   }
 
   @Test
@@ -1248,6 +1261,7 @@ public final class AtsServerSessionPluginTest {
     RequestDetail finalRequestDetail =
         Iterables.getLast(unaryOperatorCaptor.getAllValues()).apply(null);
     assertThat(finalRequestDetail.getState()).isEqualTo(RequestState.ERROR);
+    verifyResourceCleanup(testInfo, jobInfo);
   }
 
   private static boolean isValidUuid(String uuid) {
@@ -1257,5 +1271,19 @@ public final class AtsServerSessionPluginTest {
     } catch (IllegalArgumentException e) {
       return false;
     }
+  }
+
+  private void verifyResourceCleanup(TestInfo testInfo, JobInfo jobInfo) throws Exception {
+    verify(sessionResultHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
+    verify(sessionResultHandlerUtil).cleanUpLabGenFileDir(testInfo);
+    verifyUnmountRootDir(DirUtil.getPublicGenDir() + "/session_session_id/file");
+  }
+
+  private void verifyUnmountRootDir(String xtsRootDir) throws Exception {
+    // Verify that handler has unmounted the zip file after calling cleanup().
+    Command unmountCommand =
+        Command.of("fusermount", "-u", xtsRootDir).timeout(Duration.ofMinutes(10));
+    verify(commandExecutor).run(unmountCommand);
+    verify(sleeper).sleep(Duration.ofSeconds(5));
   }
 }

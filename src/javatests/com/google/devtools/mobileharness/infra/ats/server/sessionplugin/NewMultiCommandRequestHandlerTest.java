@@ -73,6 +73,7 @@ import com.google.devtools.mobileharness.shared.util.command.CommandException;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.junit.rule.SetFlagsOss;
+import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
@@ -136,6 +137,7 @@ public final class NewMultiCommandRequestHandlerTest {
   @Bind @Mock private XtsTypeLoader xtsTypeLoader;
   @Bind @Spy private LocalFileUtil localFileUtil = new LocalFileUtil();
   @Bind @Mock private XtsTradefedRuntimeInfoFileUtil xtsTradefedRuntimeInfoFileUtil;
+  @Bind @Mock private Sleeper sleeper;
 
   @Mock private SessionInfo sessionInfo;
   @Mock private JobInfo jobInfo;
@@ -890,9 +892,6 @@ public final class NewMultiCommandRequestHandlerTest {
         .isEqualTo(ErrorReason.RESULT_PROCESSING_ERROR);
     verify(sessionResultHandlerUtil, never())
         .processResult(any(), any(), any(), any(), any(), any());
-    verifyUnmountRootDir(DirUtil.getPublicGenDir() + "/session_session_id/file");
-    verify(sessionResultHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
-    verify(sessionResultHandlerUtil).cleanUpLabGenFileDir(testInfo);
   }
 
   @Test
@@ -921,9 +920,6 @@ public final class NewMultiCommandRequestHandlerTest {
             SessionProperties.PROPERTY_KEY_SERVER_SESSION_LOG_PATH,
             outputFileUploadPath
                 + "/session_id/olc_server_session_logs/olc_server_session_log.txt");
-    verifyUnmountRootDir(DirUtil.getPublicGenDir() + "/session_session_id/file");
-    verify(sessionResultHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
-    verify(sessionResultHandlerUtil).cleanUpLabGenFileDir(testInfo);
   }
 
   @Test
@@ -949,9 +945,6 @@ public final class NewMultiCommandRequestHandlerTest {
             sessionInfo, request, createJobsResult.commandDetails().values());
     verify(sessionResultHandlerUtil, never())
         .processResult(any(), any(), any(), any(), any(), any());
-    verifyUnmountRootDir(DirUtil.getPublicGenDir() + "/session_session_id/file");
-    verify(sessionResultHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
-    verify(sessionResultHandlerUtil).cleanUpLabGenFileDir(testInfo);
   }
 
   @Test
@@ -1139,6 +1132,7 @@ public final class NewMultiCommandRequestHandlerTest {
     Command unmountCommand =
         Command.of("fusermount", "-u", xtsRootDir).timeout(Duration.ofMinutes(10));
     verify(commandExecutor).run(unmountCommand);
+    verify(sleeper).sleep(Duration.ofSeconds(5));
   }
 
   private void mockProcessResult(Result result) throws Exception {
@@ -1187,9 +1181,6 @@ public final class NewMultiCommandRequestHandlerTest {
             eq(ImmutableList.of(jobInfo)),
             eq(sessionRequestInfoCaptor.getValue()));
 
-    verify(sessionResultHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
-    verify(sessionResultHandlerUtil).cleanUpLabGenFileDir(testInfo);
-    verifyUnmountRootDir(DirUtil.getPublicGenDir() + "/session_session_id/file");
     String path1 = pathCaptor1.getValue().toString();
     Instant now = Instant.now();
     DateTimeFormatter dateTimeFormatter =

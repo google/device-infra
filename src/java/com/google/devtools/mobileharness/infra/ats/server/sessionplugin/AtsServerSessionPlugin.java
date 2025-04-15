@@ -356,6 +356,7 @@ final class AtsServerSessionPlugin {
         throw e;
       } finally {
         updateSessionPluginOutput(requestDetail);
+        newMultiCommandRequestHandler.cleanup(sessionInfo);
       }
     }
   }
