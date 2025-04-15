@@ -16,18 +16,22 @@
 
 package com.google.devtools.mobileharness.platform.android.xts.suite.subplan;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static java.util.Map.Entry.comparingByKey;
+
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
-import com.google.common.collect.TreeMultimap;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteTestFilter;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.AbstractMap;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.SortedSet;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
@@ -38,11 +42,11 @@ import org.xmlpull.v1.XmlSerializer;
 /** Container, parser, and generator of SubPlan info. */
 public class SubPlan extends AbstractXmlParser {
 
-  private final TreeMultimap<String, String> includeFiltersMultimap;
-  private final TreeMultimap<String, String> excludeFiltersMultimap;
+  private final HashMultimap<String, String> includeFiltersMultimap;
+  private final HashMultimap<String, String> excludeFiltersMultimap;
 
-  private final TreeMultimap<String, String> nonTfIncludeFiltersMultimap;
-  private final TreeMultimap<String, String> nonTfExcludeFiltersMultimap;
+  private final HashMultimap<String, String> nonTfIncludeFiltersMultimap;
+  private final HashMultimap<String, String> nonTfExcludeFiltersMultimap;
 
   private static final String ENCODING = "UTF-8";
   private static final String NS = null; // namespace used for XML serializer
@@ -65,11 +69,11 @@ public class SubPlan extends AbstractXmlParser {
   private String prevSessionDeviceVendorBuildFingerprint;
 
   public SubPlan() {
-    includeFiltersMultimap = TreeMultimap.create();
-    excludeFiltersMultimap = TreeMultimap.create();
+    includeFiltersMultimap = HashMultimap.create();
+    excludeFiltersMultimap = HashMultimap.create();
 
-    nonTfIncludeFiltersMultimap = TreeMultimap.create();
-    nonTfExcludeFiltersMultimap = TreeMultimap.create();
+    nonTfIncludeFiltersMultimap = HashMultimap.create();
+    nonTfExcludeFiltersMultimap = HashMultimap.create();
 
     prevSessionXtsTestPlan = "";
   }
@@ -108,7 +112,7 @@ public class SubPlan extends AbstractXmlParser {
     addFilterHelper(nonTfExcludeFiltersMultimap, filter);
   }
 
-  private static void addFilterHelper(TreeMultimap<String, String> multiMap, String filter) {
+  private static void addFilterHelper(HashMultimap<String, String> multiMap, String filter) {
     SuiteTestFilter suiteTestFilter = SuiteTestFilter.create(filter);
     multiMap.put(
         (suiteTestFilter.abi().isPresent() ? suiteTestFilter.abi().get() + " " : "")
@@ -118,22 +122,22 @@ public class SubPlan extends AbstractXmlParser {
 
   /** Gets the current {@link SetMultimap} of include filters for TF tests. */
   public SetMultimap<String, String> getIncludeFiltersMultimap() {
-    return TreeMultimap.create(includeFiltersMultimap);
+    return HashMultimap.create(includeFiltersMultimap);
   }
 
   /** Gets the current {@link SetMultimap} of include filters for non-TF tests. */
   public SetMultimap<String, String> getNonTfIncludeFiltersMultimap() {
-    return TreeMultimap.create(nonTfIncludeFiltersMultimap);
+    return HashMultimap.create(nonTfIncludeFiltersMultimap);
   }
 
   /** Gets the current {@link SetMultimap} of exclude filters for TF tests. */
   public SetMultimap<String, String> getExcludeFiltersMultimap() {
-    return TreeMultimap.create(excludeFiltersMultimap);
+    return HashMultimap.create(excludeFiltersMultimap);
   }
 
   /** Gets the current {@link SetMultimap} of exclude filters for non-TF tests. */
   public SetMultimap<String, String> getNonTfExcludeFiltersMultimap() {
-    return TreeMultimap.create(nonTfExcludeFiltersMultimap);
+    return HashMultimap.create(nonTfExcludeFiltersMultimap);
   }
 
   /** Deletes all the include filters currently tracked. */
@@ -194,8 +198,16 @@ public class SubPlan extends AbstractXmlParser {
   public ImmutableList<String> getAllIncludeFilters() {
     ImmutableList.Builder<String> includeFilters = ImmutableList.builder();
     return includeFilters
-        .addAll(getFiltersFromMap(includeFiltersMultimap, /* isIncludeFilter= */ true))
-        .addAll(getFiltersFromMap(nonTfIncludeFiltersMultimap, /* isIncludeFilter= */ true))
+        .addAll(
+            getFiltersFromMap(
+                includeFiltersMultimap,
+                /* isIncludeFilter= */ true,
+                /* sortFiltersByNaturalOrder= */ false))
+        .addAll(
+            getFiltersFromMap(
+                nonTfIncludeFiltersMultimap,
+                /* isIncludeFilter= */ true,
+                /* sortFiltersByNaturalOrder= */ false))
         .build();
   }
 
@@ -203,8 +215,16 @@ public class SubPlan extends AbstractXmlParser {
   public ImmutableList<String> getAllExcludeFilters() {
     ImmutableList.Builder<String> excludeFilters = ImmutableList.builder();
     return excludeFilters
-        .addAll(getFiltersFromMap(excludeFiltersMultimap, /* isIncludeFilter= */ false))
-        .addAll(getFiltersFromMap(nonTfExcludeFiltersMultimap, /* isIncludeFilter= */ false))
+        .addAll(
+            getFiltersFromMap(
+                excludeFiltersMultimap,
+                /* isIncludeFilter= */ false,
+                /* sortFiltersByNaturalOrder= */ false))
+        .addAll(
+            getFiltersFromMap(
+                nonTfExcludeFiltersMultimap,
+                /* isIncludeFilter= */ false,
+                /* sortFiltersByNaturalOrder= */ false))
         .build();
   }
 
@@ -212,8 +232,23 @@ public class SubPlan extends AbstractXmlParser {
    * Serializes the existing filters into a stream of XML, and write to an output stream.
    *
    * @param xmlOutputStream the {@link OutputStream} to receive subplan XML
+   * @param tfFiltersOnly if true, only serialize TF filters, otherwise serialize all filters
    */
   public void serialize(OutputStream xmlOutputStream, boolean tfFiltersOnly) throws IOException {
+    serialize(xmlOutputStream, tfFiltersOnly, /* sortFiltersByNaturalOrder= */ false);
+  }
+
+  /**
+   * Serializes the existing filters into a stream of XML, and write to an output stream.
+   *
+   * @param xmlOutputStream the {@link OutputStream} to receive subplan XML
+   * @param tfFiltersOnly if true, only serialize TF filters, otherwise serialize all filters
+   * @param sortFiltersByNaturalOrder if true, sort the filters by natural order (based on module ID
+   *     and test name), otherwise sort by the module ID only
+   */
+  public void serialize(
+      OutputStream xmlOutputStream, boolean tfFiltersOnly, boolean sortFiltersByNaturalOrder)
+      throws IOException {
     XmlSerializer serializer = null;
     try {
       serializer = XmlPullParserFactory.newInstance().newSerializer();
@@ -233,21 +268,31 @@ public class SubPlan extends AbstractXmlParser {
     serializer.attribute(NS, VERSION_ATTR, SUBPLAN_VERSION);
 
     serializeFiltersMultimap(
-        serializer, includeFiltersMultimap, /* isIncludeFilter= */ true, /* isNonTf= */ false);
+        serializer,
+        includeFiltersMultimap,
+        /* isIncludeFilter= */ true,
+        /* isNonTf= */ false,
+        sortFiltersByNaturalOrder);
     serializeFiltersMultimap(
-        serializer, excludeFiltersMultimap, /* isIncludeFilter= */ false, /* isNonTf= */ false);
+        serializer,
+        excludeFiltersMultimap,
+        /* isIncludeFilter= */ false,
+        /* isNonTf= */ false,
+        sortFiltersByNaturalOrder);
 
     if (!tfFiltersOnly) {
       serializeFiltersMultimap(
           serializer,
           nonTfIncludeFiltersMultimap,
           /* isIncludeFilter= */ true,
-          /* isNonTf= */ true);
+          /* isNonTf= */ true,
+          sortFiltersByNaturalOrder);
       serializeFiltersMultimap(
           serializer,
           nonTfExcludeFiltersMultimap,
           /* isIncludeFilter= */ false,
-          /* isNonTf= */ true);
+          /* isNonTf= */ true,
+          sortFiltersByNaturalOrder);
     }
 
     serializer.endTag(NS, SUBPLAN_TAG);
@@ -256,14 +301,16 @@ public class SubPlan extends AbstractXmlParser {
 
   private void serializeFiltersMultimap(
       XmlSerializer serializer,
-      TreeMultimap<String, String> filtersMultimap,
+      HashMultimap<String, String> filtersMultimap,
       boolean isIncludeFilter,
-      boolean isNonTf)
+      boolean isNonTf,
+      boolean sortFiltersByNaturalOrder)
       throws IOException {
     processFiltersFromFiltersMultimap(
         filtersMultimap,
         isIncludeFilter,
-        (String filter) -> serializeOneEntry(serializer, filter, isIncludeFilter, isNonTf));
+        (String filter) -> serializeOneEntry(serializer, filter, isIncludeFilter, isNonTf),
+        sortFiltersByNaturalOrder);
   }
 
   private void serializeOneEntry(
@@ -278,10 +325,13 @@ public class SubPlan extends AbstractXmlParser {
   }
 
   private static ImmutableList<String> getFiltersFromMap(
-      TreeMultimap<String, String> map, boolean isIncludeFilter) {
+      HashMultimap<String, String> map,
+      boolean isIncludeFilter,
+      boolean sortFiltersByNaturalOrder) {
     ImmutableList.Builder<String> filters = ImmutableList.builder();
     try {
-      processFiltersFromFiltersMultimap(map, isIncludeFilter, filters::add);
+      processFiltersFromFiltersMultimap(
+          map, isIncludeFilter, filters::add, sortFiltersByNaturalOrder);
     } catch (IOException e) {
       throw new IllegalStateException(e);
     }
@@ -289,11 +339,25 @@ public class SubPlan extends AbstractXmlParser {
   }
 
   private static void processFiltersFromFiltersMultimap(
-      TreeMultimap<String, String> filtersMultimap,
+      HashMultimap<String, String> filtersMultimap,
       boolean isIncludeFilter,
-      FilterHandler filterHandler)
+      FilterHandler filterHandler,
+      boolean sortFiltersByNaturalOrder)
       throws IOException {
-    for (Entry<String, SortedSet<String>> entry : Multimaps.asMap(filtersMultimap).entrySet()) {
+    ImmutableList<Entry<String, Set<String>>> listOfSetFilters =
+        Multimaps.asMap(filtersMultimap).entrySet().stream()
+            .sorted(comparingByKey()) // Sort by the module ID first
+            .map(
+                entry -> {
+                  Set<String> valueSet =
+                      sortFiltersByNaturalOrder
+                          ? entry.getValue().stream().sorted().collect(toImmutableSet())
+                          : entry.getValue();
+                  return new AbstractMap.SimpleEntry<>(entry.getKey(), valueSet);
+                })
+            .collect(toImmutableList());
+
+    for (Entry<String, Set<String>> entry : listOfSetFilters) {
       boolean includeOrExcludeWholeModule = entry.getValue().contains(ALL_TESTS_IN_MODULE);
       if (!isIncludeFilter && includeOrExcludeWholeModule) {
         // If they're exclude filters, and it excludes the whole module, only add the entry of
@@ -364,7 +428,7 @@ public class SubPlan extends AbstractXmlParser {
     }
 
     private void parseFilter(
-        String abi, String name, String filter, TreeMultimap<String, String> filtersMultimap) {
+        String abi, String name, String filter, HashMultimap<String, String> filtersMultimap) {
       if (name == null) {
         // ignore name and abi attributes, 'filter' should contain all necessary parts
         addFilterHelper(filtersMultimap, filter);

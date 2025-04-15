@@ -164,7 +164,9 @@ public class SubPlanCreator {
 
     try {
       subPlan.serialize(
-          new BufferedOutputStream(new FileOutputStream(subPlanFile)), /* tfFiltersOnly= */ false);
+          new BufferedOutputStream(new FileOutputStream(subPlanFile)),
+          /* tfFiltersOnly= */ false,
+          /* sortFiltersByNaturalOrder= */ true);
       logger.atInfo().log("Created subplan at %s", subPlanFile.getAbsolutePath());
       return Optional.of(subPlanFile);
     } catch (IOException e) {
