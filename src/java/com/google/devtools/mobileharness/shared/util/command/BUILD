@@ -28,6 +28,7 @@ java_library(
     ),
     visibility = [
         "//:deviceinfra_all_pkg",
+        "//devtools/mobileharness/project:sophont",
     ],
     exports = [
         ":command_result",

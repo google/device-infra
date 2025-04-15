@@ -20,7 +20,10 @@ package(default_applicable_licenses = ["//:license"])
 java_library(
     name = "stub",
     srcs = ["StubManager.java"],
-    visibility = ["//:deviceinfra_all_pkg"],
+    visibility = [
+        "//:deviceinfra_all_pkg",
+        "//devtools/mobileharness/project:sophont",
+    ],
     deps = [
         "//src/devtools/mobileharness/infra/client/api/proto:resource_federation_java_proto",
         "//src/devtools/mobileharness/infra/client/api/proto:server_locator_java_proto",
