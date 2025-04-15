@@ -650,6 +650,15 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> deviceAdminLockRequired = deviceAdminLockRequiredDefault;
 
+  private static final Flag<Boolean> enforceMtaasDeviceCheckinGroupDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enforce_mtaas_device_checkin_group",
+      description =
+          "Whether to enforce the mtaas device checkin group on the device. Default is false.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enforceMtaasDeviceCheckinGroup = enforceMtaasDeviceCheckinGroupDefault;
+
   private static final Flag<Boolean> pingGoogleDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(

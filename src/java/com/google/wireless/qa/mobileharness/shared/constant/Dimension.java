@@ -37,6 +37,8 @@ public final class Dimension {
     BATTERY_TEMPERATURE,
     /** The mac address of Bluetooth. */
     BLUETOOTH_MAC_ADDRESS,
+    /** Whether a device is in checkin group. */
+    MTAAS_DEVICE_CHECKIN_GROUP,
     /** The health of CloudRpc2. */
     CLOUDRPC_FAILURE,
     /**
@@ -434,6 +436,9 @@ public final class Dimension {
 
     /** Dimension value for "true" boolean. */
     public static final String TRUE = "true";
+
+    /** Dimension value for "false" boolean. */
+    public static final String FALSE = "false";
 
     /** Dimension value prefix which indicates it is a ChromeOS device. */
     public static final String PREFIX_CHROME_OS_BOARD = "cros-";

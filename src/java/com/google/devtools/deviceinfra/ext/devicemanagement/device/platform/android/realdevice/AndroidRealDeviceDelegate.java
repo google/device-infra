@@ -27,6 +27,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Multimap;
 import com.google.common.flogger.FluentLogger;
@@ -49,6 +50,7 @@ import com.google.devtools.mobileharness.infra.container.sandbox.device.DeviceSa
 import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
 import com.google.devtools.mobileharness.platform.android.app.devicedaemon.DeviceDaemonApkInfoProvider;
 import com.google.devtools.mobileharness.platform.android.app.devicedaemon.DeviceDaemonHelper;
+import com.google.devtools.mobileharness.platform.android.app.mtaastools.MtaasToolsInstantiator;
 import com.google.devtools.mobileharness.platform.android.connectivity.AndroidConnectivityUtil;
 import com.google.devtools.mobileharness.platform.android.connectivity.ConnectToWifiArgs;
 import com.google.devtools.mobileharness.platform.android.device.AndroidDeviceHelper;
@@ -68,8 +70,10 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidPro
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidVersion;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceConnectionState;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceState;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.IntentArgs;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.RebootMode;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.UsbDeviceLocator;
+import com.google.devtools.mobileharness.platform.android.shared.autovalue.UtilArgs;
 import com.google.devtools.mobileharness.platform.android.shared.constant.PackageConstants;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.devtools.mobileharness.platform.android.systemsetting.PostSettingDeviceOp;
@@ -160,6 +164,7 @@ public abstract class AndroidRealDeviceDelegate {
   private final Fastboot fastboot;
   private final LocalFileUtil fileUtil;
   private final AndroidDeviceHelper androidDeviceHelper;
+  private final MtaasToolsInstantiator mtaasToolsInstantiator;
 
   private final DeviceAdminUtil deviceAdminUtil;
 
@@ -186,7 +191,8 @@ public abstract class AndroidRealDeviceDelegate {
       DeviceDaemonHelper deviceDaemonHelper,
       Fastboot fastboot,
       LocalFileUtil fileUtil,
-      DeviceAdminUtil deviceAdminUtil) {
+      DeviceAdminUtil deviceAdminUtil,
+      MtaasToolsInstantiator mtaasToolsInstantiator) {
     this.device = device;
     this.androidDeviceDelegate = androidDeviceDelegate;
     this.deviceStat = deviceStat;
@@ -210,6 +216,7 @@ public abstract class AndroidRealDeviceDelegate {
     this.fastboot = fastboot;
     this.fileUtil = fileUtil;
     this.deviceAdminUtil = deviceAdminUtil;
+    this.mtaasToolsInstantiator = mtaasToolsInstantiator;
 
     this.deviceId = device.getDeviceId();
     device.setProperty(
@@ -426,6 +433,9 @@ public abstract class AndroidRealDeviceDelegate {
 
     // Switch the user to default user before setting and apk installation.
     clearMultiUsers(deviceId, device.getSdkVersion() == null ? 0 : device.getSdkVersion());
+
+    // Trigger checkin.
+    installMtaasToolsAndTriggerCheckin();
 
     // The periodical check also applies to device initialization.
     checkOnlineModeDevice();
@@ -1008,6 +1018,8 @@ public abstract class AndroidRealDeviceDelegate {
 
     enforceSafeDischargeLevelIfNeeded();
 
+    isDimensionChanged |= updateCheckinGroupStatus();
+
     return isDimensionChanged;
   }
 
@@ -1022,6 +1034,30 @@ public abstract class AndroidRealDeviceDelegate {
 
   /** Returns {@code true} if any dimensions changed after the device checks. */
   protected abstract boolean extraChecksForOnlineModeDevice() throws InterruptedException;
+
+  /**
+   * Checks and updates the device's checkin group dimension.
+   *
+   * @return whether the device's checkin group dimension changed.
+   */
+  boolean updateCheckinGroupStatus() throws MobileHarnessException, InterruptedException {
+    if (Flags.instance().enforceMtaasDeviceCheckinGroup.getNonNull()) {
+      if (device
+          .getDimension(Dimension.Name.MTAAS_DEVICE_CHECKIN_GROUP)
+          .contains(Dimension.Value.TRUE)) {
+        return false;
+      }
+      if (mtaasToolsInstantiator.isMemberOfCheckinGroup(device)) {
+        return device.updateDimension(
+            Dimension.Name.MTAAS_DEVICE_CHECKIN_GROUP, Dimension.Value.TRUE);
+      } else {
+        triggerCheckin();
+        return device.updateDimension(
+            Dimension.Name.MTAAS_DEVICE_CHECKIN_GROUP, Dimension.Value.FALSE);
+      }
+    }
+    return false;
+  }
 
   /** Gets the sandbox controller. */
   public DeviceSandboxController getSandboxController() {
@@ -2647,6 +2683,39 @@ public abstract class AndroidRealDeviceDelegate {
     deviceAdminUtil.unlock(deviceId);
     device.removeDimension(Dimension.Name.DEVICE_ADMIN_LOCKED);
     device.removeDimension(Dimension.Name.DEVICE_ADMIN_WIFI_RESTRICTED);
+  }
+
+  void installMtaasToolsAndTriggerCheckin() throws MobileHarnessException, InterruptedException {
+    if (Flags.instance().enforceMtaasDeviceCheckinGroup.getNonNull()) {
+      mtaasToolsInstantiator.install(device);
+      triggerCheckin();
+    }
+  }
+
+  private void triggerCheckin() throws MobileHarnessException, InterruptedException {
+    if (device
+        .getDimension(Ascii.toLowerCase(AndroidProperty.BUILD_TYPE.name()))
+        .contains("userdebug")) {
+      logger.atInfo().log("Using userdebug checkin method.");
+      androidAdbUtil.broadcast(
+          UtilArgs.builder().setSerial(deviceId).build(),
+          IntentArgs.builder()
+              .setAction("android.server.checkin.CHECKIN_NOW")
+              .setComponent("com.google.android.gms")
+              .build());
+    } else {
+      logger.atInfo().log("Using user checkin method.");
+      androidAdbUtil.broadcast(
+          UtilArgs.builder().setSerial(deviceId).build(),
+          IntentArgs.builder().setAction("android.server.checkin.CHECKIN").build());
+    }
+    androidAdbUtil.broadcast(
+        UtilArgs.builder().setSerial(deviceId).build(),
+        IntentArgs.builder()
+            .setAction("com.google.android.gms.gcm.ACTION_TRIGGER_TASK")
+            .setComponent("com.google.android.gms/.phenotype.service.sync.PhenotypeConfigurator")
+            .setExtras(ImmutableMap.of("tag", "oneoff"))
+            .build());
   }
 
   /**
