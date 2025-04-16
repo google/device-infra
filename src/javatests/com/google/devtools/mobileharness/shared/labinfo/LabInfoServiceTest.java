@@ -36,6 +36,8 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceGro
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceGroupKey;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceGroupKey.HasDimensionValue;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceGroupKey.HasDimensionValue.NoDimensionValue;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceGroupKey.HasDimensionValueList;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceGroupKey.HasDimensionValueList.DimensionValues;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceGroupResult;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceList;
@@ -45,6 +47,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.DeviceViewRequest;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.DeviceViewRequest.DeviceGroupCondition;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.DeviceViewRequest.DeviceGroupCondition.DimensionValueList;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.DeviceViewRequest.DeviceGroupCondition.SingleDimensionValue;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.DeviceViewRequest.DeviceGroupOperation;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Filter;
@@ -241,7 +244,7 @@ public class LabInfoServiceTest {
   }
 
   @Test
-  public void getLabInfo_deviceView_group() throws Exception {
+  public void getLabInfo_deviceView_group_singleDimensionValue() throws Exception {
     DeviceGroupOperation deviceGroupOperation =
         DeviceGroupOperation.newBuilder()
             .setDeviceGroupCondition(
@@ -305,6 +308,75 @@ public class LabInfoServiceTest {
                                 DeviceList.newBuilder()
                                     .setDeviceTotalCount(1)
                                     .addDeviceInfo(DEVICE_INFO_1))))
+            .build();
+    assertThat(response)
+        .withPartialScope(FIELD_SCOPE)
+        .isEqualTo(
+            GetLabInfoResponse.newBuilder()
+                .setLabQueryResult(
+                    LabQueryResult.newBuilder()
+                        .setDeviceView(
+                            DeviceView.newBuilder()
+                                .setGroupedDevices(
+                                    GroupedDevices.newBuilder()
+                                        .setDeviceGroupResult(deviceGroupResult))))
+                .build());
+  }
+
+  @Test
+  public void getLabInfo_deviceView_group_dimensionValuesList() throws Exception {
+    DeviceGroupOperation deviceGroupOperation =
+        DeviceGroupOperation.newBuilder()
+            .setDeviceGroupCondition(
+                DeviceGroupCondition.newBuilder()
+                    .setDimensionValueList(
+                        DimensionValueList.newBuilder().setDimensionName("fake_dimension_name")))
+            .build();
+    GetLabInfoResponse response =
+        labInfoService.doGetLabInfo(
+            GetLabInfoRequest.newBuilder()
+                .setLabQuery(
+                    LabQuery.newBuilder()
+                        .setDeviceViewRequest(
+                            DeviceViewRequest.newBuilder()
+                                .addDeviceGroupOperation(deviceGroupOperation)))
+                .build());
+
+    DeviceGroupResult deviceGroupResult =
+        DeviceGroupResult.newBuilder()
+            .setDeviceGroupOperation(deviceGroupOperation)
+            .setDeviceGroupTotalCount(2)
+            .addDeviceGroup(
+                DeviceGroup.newBuilder()
+                    .setDeviceGroupKey(
+                        DeviceGroupKey.newBuilder()
+                            .setHasDimensionValueList(
+                                HasDimensionValueList.newBuilder()
+                                    .setDimensionName("fake_dimension_name")
+                                    .setDimensionValues(
+                                        DimensionValues.newBuilder()
+                                            .addDimensionValues("fake_dimension_value_1")
+                                            .addDimensionValues("fake_dimension_value_2"))))
+                    .setGroupedDevices(
+                        GroupedDevices.newBuilder()
+                            .setDeviceList(
+                                DeviceList.newBuilder()
+                                    .setDeviceTotalCount(1)
+                                    .addDeviceInfo(DEVICE_INFO_1))))
+            .addDeviceGroup(
+                DeviceGroup.newBuilder()
+                    .setDeviceGroupKey(
+                        DeviceGroupKey.newBuilder()
+                            .setHasDimensionValueList(
+                                HasDimensionValueList.newBuilder()
+                                    .setDimensionName("fake_dimension_name")
+                                    .setDimensionValues(DimensionValues.getDefaultInstance())))
+                    .setGroupedDevices(
+                        GroupedDevices.newBuilder()
+                            .setDeviceList(
+                                DeviceList.newBuilder()
+                                    .setDeviceTotalCount(1)
+                                    .addDeviceInfo(DEVICE_INFO_2))))
             .build();
     assertThat(response)
         .withPartialScope(FIELD_SCOPE)
