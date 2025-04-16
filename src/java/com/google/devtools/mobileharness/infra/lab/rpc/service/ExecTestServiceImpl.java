@@ -324,9 +324,6 @@ public class ExecTestServiceImpl {
             .setResult(TestResult.valueOf(testResult.type().name()))
             .setCreateTime(testInfo.timing().getCreateTime().toEpochMilli())
             .setModifyTime(testInfo.timing().getModifyTime().toEpochMilli());
-    // TODO: stop writing to deprecated_test_result_cause when client version >
-    // 4.188.0.
-    testResult.cause().ifPresent(testProto::setDeprecatedResultCause);
     testResult.causeProto().ifPresent(testProto::setResultCause);
     testProto.setLog(testInfo.log().get(0));
     testInfo.warnings().getAll().stream()

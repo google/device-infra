@@ -64,9 +64,6 @@ message Test {
   optional mobileharness.shared.TestStatus status = 3;  // required.
   // Result of this test.
   optional mobileharness.shared.TestResult result = 4;  // required.
-  // Cause of a non-passing test result.
-  optional mobileharness.api.model.ExceptionDetail deprecated_result_cause = 11
-      [deprecated = true];
   optional stability.model.ExceptionDetail result_cause = 12;
   // Test output logs.
   optional string log = 5;
@@ -78,6 +75,8 @@ message Test {
   optional int64 create_time = 6;  // required.
   // Time in milliseconds when the test is last modified.
   optional int64 modify_time = 7;  // required.
+
+  reserved 11;
 }
 
 // Statistic of a device.
