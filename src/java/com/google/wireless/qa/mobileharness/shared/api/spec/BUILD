@@ -74,6 +74,12 @@ java_library(
 )
 
 java_library(
+    name = "android_lab_test_support_settings_spec",
+    srcs = ["AndroidLabTestSupportSettingsSpec.java"],
+    deps = ["//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation:basic_annotation"],
+)
+
+java_library(
     name = "android_logcat_spec",
     srcs = ["AndroidLogCatSpec.java"],
     deps = [

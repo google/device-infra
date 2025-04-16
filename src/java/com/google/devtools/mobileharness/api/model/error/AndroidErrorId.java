@@ -636,6 +636,11 @@ public enum AndroidErrorId implements ErrorId {
 
   /** Plugins: 135_001 ~ 140_000 */
 
+  // AndroidLabTestSupportResolvePlugin.java: 135_491 ~ 135_500
+  ANDROID_LAB_TEST_SUPPORT_RESOLVE_PLUGIN_RESOLVE_LTS_ERROR(135_491, ErrorType.INFRA_ISSUE),
+
+  // (Free): 135_501 ~ 135_520
+
   // XtsDeviceCompatibilityChecker.java: 135_521 ~ 135_540
   XTS_DEVICE_COMPAT_CHECKER_DEVICE_BUILD_NOT_MATCH_RETRY_PREV_SESSION(
       135_521, ErrorType.CUSTOMER_ISSUE),

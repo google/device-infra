@@ -22,6 +22,7 @@ import com.google.devtools.mobileharness.platform.android.instrumentation.Androi
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstaller;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
+import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidLabTestSupportSettingsSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.AndroidLabTestSupportSettingsDecoratorSpec;
@@ -36,7 +37,8 @@ import javax.inject.Inject;
         "Decorator to set phenotype flags to turn on/off specific features on the device via"
             + " LabTestSupport.")
 public class AndroidLabTestSupportSettingsDecorator extends BaseDecorator
-    implements SpecConfigable<AndroidLabTestSupportSettingsDecoratorSpec> {
+    implements AndroidLabTestSupportSettingsSpec,
+        SpecConfigable<AndroidLabTestSupportSettingsDecoratorSpec> {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -61,6 +63,9 @@ public class AndroidLabTestSupportSettingsDecorator extends BaseDecorator
     AndroidLabTestSupportSettingsDecoratorSpec spec =
         testInfo.jobInfo().combinedSpec(this, deviceId);
     logger.atInfo().log("AndroidLabTestSupportSettingsDecoratorSpec: %s", spec);
+
+    String labTestSupportApkPath = testInfo.jobInfo().files().getSingle(TAG_LAB_TEST_SUPPORT_APK);
+    logger.atInfo().log("LabTestSupport APK path: %s", labTestSupportApkPath);
 
     getDecorated().run(testInfo);
   }

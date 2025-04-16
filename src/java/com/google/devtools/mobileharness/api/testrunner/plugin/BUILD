@@ -24,10 +24,12 @@ java_library(
     ],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/util:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/platform/android/labtestsupport/plugin:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/plugin:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event/util:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/util:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/labtestsupport/plugin:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/config:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/plugin:__subpackages__",
     ],
