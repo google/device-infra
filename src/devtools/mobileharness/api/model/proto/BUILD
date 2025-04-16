@@ -19,6 +19,7 @@ package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
         "//:deviceinfra_api_users",
+        "//google/internal/alkali/applications/arsenal:__subpackages__",
     ],
 )
 
