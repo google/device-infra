@@ -63,4 +63,8 @@ message DeviceConfig {
   // The customized configuration of a device in case any configuration could
   // not be covered in BasicDeviceConfig, e.g. testbed config.
   google.protobuf.Any customized_config = 3;
+
+  // Hardware description of the device for configs which may apply to a broad
+  // range of devices.
+  HardwareFingerprint hardware_fingerprint = 4;
 }
