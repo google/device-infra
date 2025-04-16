@@ -345,8 +345,7 @@ public abstract class XtsJobCreator {
     subPlanPath = subPlanBackupPath == null ? subPlanPath : subPlanBackupPath;
     SubPlan subPlan = SessionHandlerHelper.loadSubPlan(subPlanPath.toFile());
 
-    if (subPlan.getIncludeFiltersMultimap().isEmpty()
-        && subPlan.getExcludeFiltersMultimap().isEmpty()) {
+    if (!subPlan.hasAnyTfIncludeFilters() && !subPlan.hasAnyTfExcludeFilters()) {
       throw MobileHarnessExceptionFactory.createUserFacingException(
           InfraErrorId.OLCS_NO_CORRESPONDING_FILTER_FOUND_IN_SUBPLAN,
           "No include or exclude filters found for TF modules and tests",
@@ -354,8 +353,7 @@ public abstract class XtsJobCreator {
     }
 
     // If the subplan only includes TF modules and tests, use the subplan file directly
-    if (subPlan.getNonTfIncludeFiltersMultimap().isEmpty()
-        && subPlan.getNonTfExcludeFiltersMultimap().isEmpty()) {
+    if (!subPlan.hasAnyNonTfIncludeFilters() && !subPlan.hasAnyNonTfExcludeFilters()) {
       return subPlanPath;
     }
 
@@ -479,8 +477,7 @@ public abstract class XtsJobCreator {
     }
     subPlanPath = subPlanBackupPath == null ? subPlanPath : subPlanBackupPath;
     SubPlan subPlan = SessionHandlerHelper.loadSubPlan(subPlanPath.toFile());
-    if (subPlan.getNonTfIncludeFiltersMultimap().isEmpty()
-        && subPlan.getNonTfExcludeFiltersMultimap().isEmpty()) {
+    if (!subPlan.hasAnyNonTfIncludeFilters() && !subPlan.hasAnyNonTfExcludeFilters()) {
       throw MobileHarnessExceptionFactory.createUserFacingException(
           InfraErrorId.OLCS_NO_CORRESPONDING_FILTER_FOUND_IN_SUBPLAN,
           "No include or exclude filters found for non-TF modules and tests",
@@ -597,12 +594,10 @@ public abstract class XtsJobCreator {
       @Nullable String previousSessionResultDirName)
       throws MobileHarnessException {
     SubPlan subPlan = retryGenerator.generateRetrySubPlan(retryArgs);
-    if ((forTf
-            && subPlan.getIncludeFiltersMultimap().isEmpty()
-            && subPlan.getExcludeFiltersMultimap().isEmpty())
+    if ((forTf && !subPlan.hasAnyTfIncludeFilters() && !subPlan.hasAnyTfExcludeFilters())
         || (!forTf
-            && subPlan.getNonTfIncludeFiltersMultimap().isEmpty()
-            && subPlan.getNonTfExcludeFiltersMultimap().isEmpty())) {
+            && !subPlan.hasAnyNonTfIncludeFilters()
+            && !subPlan.hasAnyNonTfExcludeFilters())) {
       throw MobileHarnessExceptionFactory.createUserFacingException(
           InfraErrorId.OLCS_NO_FILTER_FOUND_IN_RETRY_SUBPLAN,
           String.format(

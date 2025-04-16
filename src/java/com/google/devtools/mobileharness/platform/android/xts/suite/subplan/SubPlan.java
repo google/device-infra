@@ -120,24 +120,64 @@ public class SubPlan extends AbstractXmlParser {
         suiteTestFilter.testName().orElse(ALL_TESTS_IN_MODULE));
   }
 
-  /** Gets the current {@link SetMultimap} of include filters for TF tests. */
+  /**
+   * Gets the current {@link SetMultimap} of include filters for TF tests.
+   *
+   * <p>Note: the returned map is a copy of the original map, so it will have extra performance
+   * cost. If just want to check if the subplan has any TF include filters, use {@link
+   * hasAnyTfIncludeFilters} instead.
+   */
   public SetMultimap<String, String> getIncludeFiltersMultimap() {
     return HashMultimap.create(includeFiltersMultimap);
   }
 
-  /** Gets the current {@link SetMultimap} of include filters for non-TF tests. */
+  /**
+   * Gets the current {@link SetMultimap} of include filters for non-TF tests.
+   *
+   * <p>Note: the returned map is a copy of the original map, so it will have extra performance
+   * cost. If just want to check if the subplan has any non-TF include filters, use {@link
+   * hasAnyNonTfIncludeFilters} instead.
+   */
   public SetMultimap<String, String> getNonTfIncludeFiltersMultimap() {
     return HashMultimap.create(nonTfIncludeFiltersMultimap);
   }
 
-  /** Gets the current {@link SetMultimap} of exclude filters for TF tests. */
+  public boolean hasAnyTfIncludeFilters() {
+    return !includeFiltersMultimap.isEmpty();
+  }
+
+  public boolean hasAnyNonTfIncludeFilters() {
+    return !nonTfIncludeFiltersMultimap.isEmpty();
+  }
+
+  /**
+   * Gets the current {@link SetMultimap} of exclude filters for TF tests.
+   *
+   * <p>Note: the returned map is a copy of the original map, so it will have extra performance
+   * cost. If just want to check if the subplan has any TF exclude filters, use {@link
+   * hasAnyTfExcludeFilters} instead.
+   */
   public SetMultimap<String, String> getExcludeFiltersMultimap() {
     return HashMultimap.create(excludeFiltersMultimap);
   }
 
-  /** Gets the current {@link SetMultimap} of exclude filters for non-TF tests. */
+  /**
+   * Gets the current {@link SetMultimap} of exclude filters for non-TF tests.
+   *
+   * <p>Note: the returned map is a copy of the original map, so it will have extra performance
+   * cost. If just want to check if the subplan has any non-TF exclude filters, use {@link
+   * hasAnyNonTfExcludeFilters} instead.
+   */
   public SetMultimap<String, String> getNonTfExcludeFiltersMultimap() {
     return HashMultimap.create(nonTfExcludeFiltersMultimap);
+  }
+
+  public boolean hasAnyTfExcludeFilters() {
+    return !excludeFiltersMultimap.isEmpty();
+  }
+
+  public boolean hasAnyNonTfExcludeFilters() {
+    return !nonTfExcludeFiltersMultimap.isEmpty();
   }
 
   /** Deletes all the include filters currently tracked. */
