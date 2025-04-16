@@ -58,12 +58,10 @@ message SignUpLabRequest {
     // Required.
     string uuid = 5;
 
-    // TODO: remove after all lab server is newer than 4.201.0.
-    // Optional: Device errors on the Lab Server side.
-    stability.model.ExceptionDetail exception_detail = 6 [deprecated = true];
-
     // Optional: Flattened device errors on the Lab Server side.
     stability.model.FlattenedExceptionDetail flattened_exception_detail = 7;
+
+    reserved 6;
   }
   repeated Device device = 5;
 
