@@ -47,8 +47,19 @@ public class ErrorModelConverter {
    * gRPC exception payload.
    */
   public static ExceptionDetail toExceptionDetail(Throwable throwable) {
+    return toExceptionDetail(throwable, /* addStackTrace= */ true);
+  }
+
+  /**
+   * Converts a {@link Throwable} to a {@link ExceptionDetail} and optionally adds stack trace
+   * information.
+   *
+   * <p>Note if {@code addStackTrace} is set to true to contains full stack trace information, it
+   * may not work for gRPC exception payload.
+   */
+  public static ExceptionDetail toExceptionDetail(Throwable throwable, boolean addStackTrace) {
     ExceptionDetail.Builder result = ExceptionDetail.newBuilder();
-    result.setSummary(getExceptionSummary(throwable));
+    result.setSummary(getExceptionSummary(throwable, addStackTrace));
     if (throwable.getCause() != null) {
       result.setCause(toExceptionDetail(throwable.getCause()));
     }
@@ -82,12 +93,14 @@ public class ErrorModelConverter {
         .build();
   }
 
-  private static ExceptionSummary getExceptionSummary(Throwable throwable) {
+  private static ExceptionSummary getExceptionSummary(Throwable throwable, boolean addStackTrace) {
     ExceptionSummary.Builder result = ExceptionSummary.newBuilder();
     result.setErrorId(toErrorIdProto(finalizeErrorId(throwable)));
     result.setMessage(nullToEmpty(throwable.getMessage()));
     result.setClassType(getExceptionClassType(throwable));
-    result.setStackTrace(getStackTrace(throwable));
+    if (addStackTrace) {
+      result.setStackTrace(getStackTrace(throwable));
+    }
     return result.build();
   }
 
