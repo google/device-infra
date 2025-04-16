@@ -240,10 +240,15 @@ public class RetryReportMerger {
     // Also add the filters passed in by the command.
     mergedResult.addAllExcludeFilter(passedInExcludeFilters);
 
+    // Gets retry subplan include/exclude filters multimap ahead to avoid duplicated works.
+    SetMultimap<String, String> retrySubPlanIncludeFiltersMultimap =
+        retrySubPlan.getIncludeFiltersMultimap();
+    SetMultimap<String, String> retrySubPlanNonTfIncludeFiltersMultimap =
+        retrySubPlan.getNonTfIncludeFiltersMultimap();
     // If no tests were retried, mark tests as cached, and inherit some info from previous result
     if (retryResult == null
-        || (retrySubPlan.getIncludeFiltersMultimap().isEmpty()
-            && retrySubPlan.getNonTfIncludeFiltersMultimap().isEmpty())) {
+        || (retrySubPlanIncludeFiltersMultimap.isEmpty()
+            && retrySubPlanNonTfIncludeFiltersMultimap.isEmpty())) {
       logger.atInfo().log("No tests were retried, marking all tests as cached");
       List<Module.Builder> moduleBuildersFromPrevSession =
           previousResult.toBuilder().getModuleInfoBuilderList();
@@ -289,6 +294,11 @@ public class RetryReportMerger {
                     module -> AbiUtil.createId(module.getAbi(), module.getName()),
                     Function.identity()));
 
+    SetMultimap<String, String> retrySubPlanExcludeFiltersMultimap =
+        retrySubPlan.getExcludeFiltersMultimap();
+    SetMultimap<String, String> retrySubPlanNonTfExcludeFiltersMultimap =
+        retrySubPlan.getNonTfExcludeFiltersMultimap();
+
     for (Module moduleFromPrevSession : previousResult.getModuleInfoList()) {
       // If the module is in the previous result but skipped in the retry session, remove it from
       // the merged result.
@@ -302,11 +312,11 @@ public class RetryReportMerger {
               moduleFromPrevSession,
               modulesFromRetry,
               moduleFromPrevSession.getIsNonTfModule()
-                  ? retrySubPlan.getNonTfIncludeFiltersMultimap()
-                  : retrySubPlan.getIncludeFiltersMultimap(),
+                  ? retrySubPlanNonTfIncludeFiltersMultimap
+                  : retrySubPlanIncludeFiltersMultimap,
               moduleFromPrevSession.getIsNonTfModule()
-                  ? retrySubPlan.getNonTfExcludeFiltersMultimap()
-                  : retrySubPlan.getExcludeFiltersMultimap()));
+                  ? retrySubPlanNonTfExcludeFiltersMultimap
+                  : retrySubPlanExcludeFiltersMultimap));
     }
 
     // Prepare the Summary
