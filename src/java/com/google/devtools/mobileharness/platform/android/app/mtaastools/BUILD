@@ -22,6 +22,7 @@ java_library(
     srcs = glob(["*.java"]),
     visibility = [
         "//:deviceinfra_all_pkg",
+        "//java/com/google/search/next/servers/mars/flows/entitysummarization:__pkg__",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
