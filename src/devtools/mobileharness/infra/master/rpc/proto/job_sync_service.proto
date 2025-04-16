@@ -143,9 +143,6 @@ message CloseTestRequest {
   string test_id = 2;
   // Required: test result.
   .mobileharness.api.model.TestResult test_result = 3;
-  // Optional: Lab IP of the devices to release. If not specified,
-  // Master will auto detect the IP of the RPC client and use it as the lab IP.
-  string lab_ip = 4 [deprecated = true];
   // Optional: the lab the devices are allocated to for this test.
   .mobileharness.api.model.LabLocator lab_locator = 9;
   // Optional: devices to be released from this test.
@@ -156,7 +153,7 @@ message CloseTestRequest {
   // Optional: The time in Lab Server when this RPC is sent.
   int64 timestamp_ms_from_lab = 7;
 
-  reserved 8;
+  reserved 4, 8;
 }
 
 message CloseTestResponse {

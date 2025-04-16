@@ -74,7 +74,6 @@ public class JobSyncHelper {
             .addDeviceId(deviceLocator.id())
             .setDeviceDirty(deviceDirty)
             .setLabLocator(deviceLocator.labLocator().toProto())
-            .setLabIp(deviceLocator.labLocator().ip())
             .setTimestampMsFromLab(Instant.now().toEpochMilli())
             .build();
     try {
