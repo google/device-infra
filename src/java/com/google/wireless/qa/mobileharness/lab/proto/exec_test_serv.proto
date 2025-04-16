@@ -154,9 +154,6 @@ message GetTestStatusResponse {
   // the test is finished. The lab server may do some addition work like dumping
   // device logs.
   required mobileharness.shared.TestResult test_result = 2;
-  // Cause of a non-passing test result.
-  optional mobileharness.api.model.ExceptionDetail
-      deprecated_test_result_cause = 6 [deprecated = true];
   optional stability.model.ExceptionDetail test_result_cause = 8;
   // Output log from the specified offset.
   required string test_log = 3;
@@ -172,6 +169,8 @@ message GetTestStatusResponse {
   // This field is only set / valid for top-level tests. For sub-tests, this
   // field will not be set.
   repeated mobileharness.api.model.DeviceFeature device_feature = 7;
+
+  reserved 6;
 }
 
 message GetTestDetailRequest {

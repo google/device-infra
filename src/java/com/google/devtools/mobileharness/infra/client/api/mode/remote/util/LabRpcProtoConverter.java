@@ -174,13 +174,7 @@ public class LabRpcProtoConverter {
       GetTestStatusResponse resp, TestInfo testInfo, Result testResult) {
     TestResult resultType = TestResult.valueOf(resp.getTestResult().name());
     ExceptionProto.ExceptionDetail resultCause =
-        resp.hasTestResultCause()
-            ? resp.getTestResultCause()
-            // TODO: stop fetching data from deprecated_test_result_cause when lab
-            // server version > 4.188.0.
-            : resp.hasDeprecatedTestResultCause()
-                ? ErrorModelConverter.toCommonExceptionDetail(resp.getDeprecatedTestResultCause())
-                : null;
+        resp.hasTestResultCause() ? resp.getTestResultCause() : null;
     setTestResultByResultCause(resultType, resultCause, testInfo, testResult);
   }
 

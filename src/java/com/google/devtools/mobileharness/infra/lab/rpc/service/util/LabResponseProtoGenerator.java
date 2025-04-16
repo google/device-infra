@@ -190,9 +190,6 @@ public class LabResponseProtoGenerator {
             .setTestStatus(testStatus)
             .setTestResult(TestResult.valueOf(testResult.type().name()))
             .addAllTestMessage(bufferedTestMessages);
-    // TODO: stop writing to deprecated_test_result_cause when client version >
-    // 4.188.0.
-    testResult.cause().ifPresent(builder::setDeprecatedTestResultCause);
     testResult.causeProto().ifPresent(builder::setTestResultCause);
     if (req != null) {
       // Received testLogOffset for this testInfo in {@link GetTestStatusRequest}.
