@@ -467,15 +467,29 @@ public class RetryReportMerger {
       notCheckedTestCasesFromRetry.remove(testCaseFromPrevSession.getName());
     }
 
-    for (TestCase testCaseFromPrevSession : moduleFromPrevSession.getTestCaseList()) {
-      mergedModuleBuilder.addTestCase(
-          createMergedTestCase(
-              moduleId,
-              testCaseFromPrevSession,
-              testCasesFromRetry,
-              excludedTestCaseNamesAndTestNamesInRetry.getOrDefault(
-                  testCaseFromPrevSession.getName(), ImmutableSet.of())));
+    if (Flags.instance().xtsRetryReportMergerParallelTestCaseMerge.getNonNull()) {
+      moduleFromPrevSession.getTestCaseList().parallelStream()
+          .map(
+              testCaseFromPrevSession ->
+                  createMergedTestCase(
+                      moduleId,
+                      testCaseFromPrevSession,
+                      testCasesFromRetry,
+                      excludedTestCaseNamesAndTestNamesInRetry.getOrDefault(
+                          testCaseFromPrevSession.getName(), ImmutableSet.of())))
+          .forEachOrdered(mergedModuleBuilder::addTestCase);
+    } else {
+      for (TestCase testCaseFromPrevSession : moduleFromPrevSession.getTestCaseList()) {
+        mergedModuleBuilder.addTestCase(
+            createMergedTestCase(
+                moduleId,
+                testCaseFromPrevSession,
+                testCasesFromRetry,
+                excludedTestCaseNamesAndTestNamesInRetry.getOrDefault(
+                    testCaseFromPrevSession.getName(), ImmutableSet.of())));
+      }
     }
+
     if (!notCheckedTestCasesFromRetry.isEmpty()) {
       logger.atInfo().log(
           "Found %d test cases in retry result (module %s) but not in previous result",

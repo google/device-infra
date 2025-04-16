@@ -1927,6 +1927,18 @@ public class Flags {
     return Strings.nullToEmpty(System.getenv("HOME")) + "/xts";
   }
 
+  private static final Flag<Boolean> xtsRetryReportMergerParallelTestCaseMergeDefault =
+      Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--xts_retry_report_merger_parallel_test_case_merge",
+      description =
+          "Whether to merge test cases in parallel in the xTS retry report merger. "
+              + "Default is false.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> xtsRetryReportMergerParallelTestCaseMerge =
+      xtsRetryReportMergerParallelTestCaseMergeDefault;
+
   private static final Flag<String> xtsServerResDirRootDefault =
       Flag.value(getXtsServerResDirRootDefaultOss());
 
