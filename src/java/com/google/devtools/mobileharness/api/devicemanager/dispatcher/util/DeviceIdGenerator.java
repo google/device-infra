@@ -81,6 +81,9 @@ public class DeviceIdGenerator {
       }
       if (AndroidEmulatorIds.isAndroidEmulator(deviceControlId)) {
         List<String> word = Splitter.on(':').splitToList(deviceControlId);
+        logger.atInfo().log("word: %s", word);
+        logger.atInfo().log("deviceControlId: %s", deviceControlId);
+        logger.atInfo().log("enable ats mode: %s", Flags.instance().enableAtsMode.getNonNull());
         if (word.size() > 1) {
           return DeviceId.of(
               deviceControlId, deviceControlId.replaceFirst(word.get(0), prefix), true);
@@ -89,6 +92,7 @@ public class DeviceIdGenerator {
           return DeviceId.of(deviceControlId, prefix + ":" + deviceControlId, true);
         } else {
           // should not happen.
+          logger.atWarning().log("Failed to generate AndroidDevice uuid, use random uuid instead.");
           return DeviceId.of(deviceControlId, UUID.randomUUID().toString(), true);
         }
       } else {
