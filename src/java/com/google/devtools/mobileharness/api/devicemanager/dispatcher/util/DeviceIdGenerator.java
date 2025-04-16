@@ -24,6 +24,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.lab.DeviceId;
 import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
 import com.google.devtools.mobileharness.platform.android.shared.emulator.AndroidEmulatorIds;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.network.NetworkUtil;
 import java.util.List;
 import java.util.UUID;
@@ -83,6 +84,9 @@ public class DeviceIdGenerator {
         if (word.size() > 1) {
           return DeviceId.of(
               deviceControlId, deviceControlId.replaceFirst(word.get(0), prefix), true);
+        } else if (Flags.instance().enableAtsMode.getNonNull()
+            && deviceControlId.startsWith("emulator-")) {
+          return DeviceId.of(deviceControlId, prefix + ":" + deviceControlId, true);
         } else {
           // should not happen.
           return DeviceId.of(deviceControlId, UUID.randomUUID().toString(), true);

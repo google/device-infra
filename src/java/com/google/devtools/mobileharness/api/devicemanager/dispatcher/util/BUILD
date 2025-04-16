@@ -28,6 +28,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/lab:device_id_descriptor",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device/config",
         "//src/java/com/google/devtools/mobileharness/platform/android/shared/emulator:emulator_id",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/network",
         "@maven//:com_google_guava_guava",
