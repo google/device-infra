@@ -148,6 +148,46 @@ public final class ServerJobCreatorTest {
         .containsExactly(Job.XTS_TEST_PLAN, "cts");
   }
 
+  @SuppressWarnings("unchecked")
+  @Test
+  public void createXtsTradefedTestJob_localMode() throws Exception {
+
+    when(sessionRequestHandlerUtil.isLocalMode()).thenReturn(true);
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfo.builder()
+            .setTestPlan("cts")
+            .setCommandLineArgs("cts")
+            .setXtsType("cts")
+            .setXtsRootDir(XTS_ROOT_DIR_PATH)
+            .setAndroidXtsZip(ANDROID_XTS_ZIP_PATH)
+            .setModuleNames(ImmutableList.of("mock_module"))
+            .build();
+    ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
+
+    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any()))
+        .thenReturn(JobConfig.getDefaultInstance());
+
+    ImmutableList<TradefedJobInfo> tradefedJobInfoList =
+        jobCreator.createXtsTradefedTestJobInfo(
+            sessionRequestInfo, ImmutableList.of("mock_module"));
+
+    assertThat(tradefedJobInfoList).hasSize(1);
+    verify(sessionRequestHandlerUtil)
+        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture());
+    assertThat(driverParamsCaptor.getValue())
+        .containsExactly(
+            "run_command_args",
+            "-m mock_module",
+            "xts_type",
+            "cts",
+            "xts_root_dir",
+            XTS_ROOT_DIR_PATH,
+            "xts_test_plan",
+            "cts");
+    assertThat(tradefedJobInfoList.get(0).extraJobProperties())
+        .containsExactly(Job.XTS_TEST_PLAN, "cts");
+  }
+
   @Test
   public void createXtsTradefedTestJob_moduleSharding() throws Exception {
     SessionRequestInfo sessionRequestInfo =

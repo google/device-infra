@@ -79,7 +79,7 @@ public abstract class XtsJobCreator {
 
   private static final ImmutableSet<String> CTS_TEST_PLANS = ImmutableSet.of("cts", "cts-system");
 
-  private final SessionRequestHandlerUtil sessionRequestHandlerUtil;
+  protected final SessionRequestHandlerUtil sessionRequestHandlerUtil;
   private final LocalFileUtil localFileUtil;
   private final TestPlanParser testPlanParser;
   private final RetryGenerator retryGenerator;
@@ -630,7 +630,8 @@ public abstract class XtsJobCreator {
       SessionRequestInfo sessionRequestInfo) throws MobileHarnessException;
 
   protected abstract void injectEnvSpecificProperties(
-      SessionRequestInfo sessionRequestInfo, Map<String, String> driverParams);
+      SessionRequestInfo sessionRequestInfo, Map<String, String> driverParams)
+      throws InterruptedException;
 
   protected abstract Path prepareRunRetryTfSubPlanXmlFile(
       SessionRequestInfo sessionRequestInfo, SubPlan subPlan) throws MobileHarnessException;

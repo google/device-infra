@@ -52,6 +52,7 @@ import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHel
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.junit.rule.SetFlagsOss;
+import com.google.devtools.mobileharness.shared.util.network.NetworkUtil;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.google.inject.Guice;
@@ -98,6 +99,7 @@ public final class SessionRequestHandlerUtilTest {
   @Bind @SessionTempDir private Path sessionTempDir;
   @Bind @Mock private SessionInfo sessionInfo;
   @Bind @Mock private MoblyTestLoader moblyTestLoader;
+  @Bind @Mock private NetworkUtil networkUtil;
 
   @Inject private SessionRequestHandlerUtil sessionRequestHandlerUtil;
 
@@ -1094,6 +1096,44 @@ public final class SessionRequestHandlerUtilTest {
         () ->
             sessionRequestHandlerUtil.createXtsNonTradefedJobs(
                 sessionRequestInfo, testPlanFilter, null, ImmutableMap.of()));
+  }
+
+  @Test
+  public void isLocalMode_sameHost() throws Exception {
+    when(networkUtil.getLocalHostName()).thenReturn("host_name");
+    when(deviceQuerier.queryDevice(any()))
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder()
+                        .setId("device_id_1")
+                        .addType("AndroidOnlineDevice")
+                        .addDimension(
+                            Dimension.newBuilder().setName("host_name").setValue("host_name")))
+                .build());
+    assertThat(sessionRequestHandlerUtil.isLocalMode()).isTrue();
+  }
+
+  @Test
+  public void isLocalMode_differentHost() throws Exception {
+    when(networkUtil.getLocalHostName()).thenReturn("host_name");
+    when(deviceQuerier.queryDevice(any()))
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder()
+                        .setId("device_id_1")
+                        .addType("AndroidOnlineDevice")
+                        .addDimension(
+                            Dimension.newBuilder().setName("host_name").setValue("host_name2")))
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder()
+                        .setId("device_id_2")
+                        .addType("AndroidOnlineDevice")
+                        .addDimension(
+                            Dimension.newBuilder().setName("host_name").setValue("host_name")))
+                .build());
+    assertThat(sessionRequestHandlerUtil.isLocalMode()).isFalse();
   }
 
   @Test
