@@ -40,6 +40,7 @@ proto_library(
     name = "prepare_test_service_proto",
     srcs = ["prepare_test_service.proto"],
     deps = [
+        "//src/devtools/common/metrics/stability/model/proto:error_proto",
         "//src/devtools/mobileharness/api/model/proto:device_proto",
         "//src/devtools/mobileharness/api/model/proto:error_proto",
         "//src/devtools/mobileharness/api/model/proto:job_proto",

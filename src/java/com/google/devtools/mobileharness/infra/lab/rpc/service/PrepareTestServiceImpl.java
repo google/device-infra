@@ -608,6 +608,11 @@ public class PrepareTestServiceImpl {
     testEngineErrorInResponse
         .map(ErrorModelConverter::toExceptionDetail)
         .ifPresent(response::setError);
+    testEngineErrorInResponse
+        .map(
+            com.google.devtools.common.metrics.stability.converter.ErrorModelConverter
+                ::toExceptionDetail)
+        .ifPresent(response::setExceptionDetail);
     return response.build();
   }
 }

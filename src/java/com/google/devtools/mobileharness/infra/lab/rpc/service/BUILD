@@ -36,6 +36,7 @@ java_library(
         "//src/devtools/mobileharness/infra/container/proto:test_engine_java_proto",
         "//src/devtools/mobileharness/infra/lab/proto:prepare_test_service_java_proto",
         "//src/devtools/mobileharness/shared/version/proto:version_java_proto",
+        "//src/java/com/google/devtools/common/metrics/stability/converter",
         "//src/java/com/google/devtools/mobileharness/api/model/allocation",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/job:locator",

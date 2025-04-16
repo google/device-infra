@@ -20,6 +20,7 @@ package mobileharness.infra.lab;
 
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
+import "src/devtools/common/metrics/stability/model/proto/exception.proto";
 import "src/devtools/mobileharness/api/model/proto/device.proto";
 import "src/devtools/mobileharness/api/model/proto/error.proto";
 import "src/devtools/mobileharness/api/model/proto/job.proto";
@@ -150,10 +151,11 @@ message GetTestEngineStatusResponse {
   bool has_test_engine_locator = 2;
   mobileharness.infra.container.TestEngineLocator test_engine_locator = 3;
   // Present if status is FAILED.
-  mobileharness.api.model.ExceptionDetail error = 4;
+  mobileharness.api.model.ExceptionDetail error = 4 [deprecated = true];
 
-  // Indicates the test runner start/execute timing, etc.
-  TestRunnerTiming test_timing = 5 [deprecated = true];
+  stability.model.ExceptionDetail exception_detail = 6;
+
+  reserved 5;
 }
 
 message TestRunnerTiming {
