@@ -86,6 +86,7 @@ public class LabResponseProtoGenerator {
         testInfo.warnings().getAll().stream()
             .map(ErrorModelConverter::toExceptionDetailWithoutNamespace)
             .collect(toImmutableList()));
+    builder.addAllTestWarningExceptionDetail(testInfo.warnings().getAll());
 
     // Generated files.
     if (testInfo.hasGenFileDir()) {
@@ -106,7 +107,7 @@ public class LabResponseProtoGenerator {
           "Get gen data of test %s: %d properties, %d warnings, %d gen files",
           testId,
           builder.getTestPropertyCount(),
-          builder.getTestWarningCount(),
+          builder.getTestWarningExceptionDetailCount(),
           builder.getGenFileRelatedPathCount());
     }
 

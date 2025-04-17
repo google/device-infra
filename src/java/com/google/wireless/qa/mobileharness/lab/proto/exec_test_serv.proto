@@ -218,7 +218,10 @@ message GetTestGenDataResponse {
   // Gen data of the sub tests.
   repeated SubTestGenDataResponse sub_test = 8;
   // Test warnings.
-  repeated mobileharness.api.model.ExceptionDetail test_warning = 9;
+  repeated mobileharness.api.model.ExceptionDetail test_warning = 9
+      [deprecated = true];
+
+  repeated stability.model.ExceptionDetail test_warning_exception_detail = 10;
 }
 
 message SubTestGenDataResponse {
