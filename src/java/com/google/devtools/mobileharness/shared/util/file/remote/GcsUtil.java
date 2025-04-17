@@ -473,7 +473,7 @@ public class GcsUtil {
             "file gs://%s/%s [%s, %s) to %s",
             storageParams.bucketName, gcsFile, from, from + size, localFile);
 
-    retryIfMeetQuotaIssue(
+    retryIfMeetQuotaOrNetworkIssue(
         () -> {
           try (BufferedOutputStream bufferedOutputStream = getOutputStream(localFile)) {
             Storage.Objects.Get get =
@@ -844,7 +844,7 @@ public class GcsUtil {
     String fileInfo =
         String.format("local %s to gs://%s/%s", localFile, storageParams.bucketName, gcsFile);
     logger.atInfo().log("Uploading %s", fileInfo);
-    retryIfMeetQuotaIssue(
+    retryIfMeetQuotaOrNetworkIssue(
         () -> {
           StorageObject metadata =
               new StorageObject().setName(gcsFile.toString()).setContentType(contentType);
@@ -879,7 +879,7 @@ public class GcsUtil {
             "%s [%s, %s) to gs://%s/%s",
             localFile, from, from + size, storageParams.bucketName, gcsFile);
     logger.atInfo().log("Uploading %s", fileInfo);
-    retryIfMeetQuotaIssue(
+    retryIfMeetQuotaOrNetworkIssue(
         () -> {
           StorageObject metadata = new StorageObject();
           metadata.setName(gcsFile.toString());
@@ -940,7 +940,7 @@ public class GcsUtil {
     try {
       String actionInfo =
           String.format("Composes gcs file %s from source files: %s", dstGcsFile, srcGcsFiles);
-      retryIfMeetQuotaIssue(
+      retryIfMeetQuotaOrNetworkIssue(
           () -> {
             try {
               StorageObject metadata =
@@ -1124,7 +1124,7 @@ public class GcsUtil {
   private Optional<StorageObject> getMetadata(GcsApiObject gcsFile)
       throws MobileHarnessException, InterruptedException {
     String actionInfo = "get metadata of Google Cloud Storage File: " + gcsFile;
-    return retryIfMeetQuotaIssue(
+    return retryIfMeetQuotaOrNetworkIssue(
         () -> {
           try {
             Storage.Objects.Get getRequest =
@@ -1147,7 +1147,7 @@ public class GcsUtil {
   }
 
   /**
-   * Runs {@code func} with retry if it failed on Quota issue.
+   * Runs {@code func} with retry if it failed on Quota or Network issue.
    *
    * <p>{@code https://cloud.google.com/storage/docs/request-rate#ramp-up}
    *
@@ -1158,16 +1158,17 @@ public class GcsUtil {
    * @return attempts that is taken to run {@code func}
    */
   @CanIgnoreReturnValue
-  private <R> R retryIfMeetQuotaIssue(GcsMethod<R> m, String actionInfo)
+  private <R> R retryIfMeetQuotaOrNetworkIssue(GcsMethod<R> m, String actionInfo)
       throws MobileHarnessException, InterruptedException {
-    return retryIfMeetQuotaIssue(m, actionInfo, Sleeper.defaultSleeper());
+    return retryIfMeetQuotaOrNetworkIssue(m, actionInfo, Sleeper.defaultSleeper());
   }
 
   @VisibleForTesting
-  <R> R retryIfMeetQuotaIssue(GcsMethod<R> m, String actionInfo, Sleeper sleeper)
+  <R> R retryIfMeetQuotaOrNetworkIssue(GcsMethod<R> m, String actionInfo, Sleeper sleeper)
       throws MobileHarnessException, InterruptedException {
     ArrayList<String> exceptions = new ArrayList<>();
     int sleepSecond = 1;
+    MobileHarnessException lastException = null;
     for (int i = 0; i < MAX_ATTEMPTS; i++) {
       try {
         R response = m.call();
@@ -1176,8 +1177,9 @@ public class GcsUtil {
         }
         return response;
       } catch (MobileHarnessException e) {
-        if (causedByQuotaIssue(e)) {
-          logger.atWarning().log("Failed on quota issue, will retry: %s", actionInfo);
+        if (causedByQuotaIssue(e) || causedByNetworkIssue(e)) {
+          logger.atWarning().log("Failed on quota or network issue, will retry: %s", actionInfo);
+          lastException = e;
           exceptions.add(
               String.format(
                   "attempt #%s [%s]: %s",
@@ -1191,11 +1193,19 @@ public class GcsUtil {
       sleeper.sleep(Duration.ofMillis(sleepSecond * 1000 + random.nextInt(10)));
       sleepSecond *= 2;
     }
-    throw new MobileHarnessException(
-        BasicErrorId.GCS_MEET_QUOTA_ISSUE,
-        String.format(
-            "Failed in %s attempts. Exceptions from all tries:\n%s",
-            MAX_ATTEMPTS, String.join(",", exceptions)));
+    if (lastException != null && causedByQuotaIssue(lastException)) {
+      throw new MobileHarnessException(
+          BasicErrorId.GCS_MEET_QUOTA_ISSUE,
+          String.format(
+              "Failed in %s attempts. Exceptions from all tries:\n%s",
+              MAX_ATTEMPTS, String.join(",", exceptions)));
+    } else {
+      throw new MobileHarnessException(
+          BasicErrorId.GCS_MEET_NETWORK_ISSUE,
+          String.format(
+              "Failed in %s attempts. Exceptions from all tries:\n%s",
+              MAX_ATTEMPTS, String.join(",", exceptions)));
+    }
   }
 
   @VisibleForTesting
@@ -1219,39 +1229,29 @@ public class GcsUtil {
       return false;
     }
     IOException cause = (IOException) e.getCause();
-    return isQuotaIssue(cause) || isSlowNetworkIssue(cause);
-  }
-
-  /**
-   * Returns true if {@code e} is an issue about slow network. It is usually because slow network or
-   * request is lost.
-   */
-  private static boolean isSlowNetworkIssue(IOException e) {
-    return (e instanceof SocketTimeoutException)
-        || (e instanceof UnknownHostException)
-        || (e instanceof SocketException) /* b/140559689 */
-        || (e instanceof SSLException) /* b/113663972 */;
-  }
-
-  /**
-   * Returns true if {@code e} is about a GCS quota issue.
-   *
-   * <p>{@code https://cloud.google.com/storage/docs/request-rate#ramp-up}
-   */
-  private static boolean isQuotaIssue(IOException e) {
-    Optional<Integer> errorCode = getGcsServerErrorCode(e);
+    Optional<Integer> errorCode = getGcsServerErrorCode(cause);
     if (errorCode.isPresent()) {
       if ((errorCode.get() / 100) == 5 || errorCode.get() == 429) {
         return true;
       }
     }
-    String errorMessage = Strings.nullToEmpty(e.getMessage());
-    if (errorMessage.contains("Remote host closed connection during handshake") /* b/111562372 */
-        || errorMessage.contains("Error writing request body to server") /* b/111561615 */
-        || errorMessage.contains("Connection closed prematurely") /* b/123259718 */) {
-      return true;
-    }
     return false;
+  }
+
+  /** Returns true if {@code e} is caused by GCS network issue. */
+  private static boolean causedByNetworkIssue(MobileHarnessException e) {
+    if (!(e.getCause() instanceof IOException)) {
+      return false;
+    }
+    IOException cause = (IOException) e.getCause();
+    String errorMessage = Strings.nullToEmpty(cause.getMessage());
+    return (cause instanceof SocketTimeoutException)
+        || (cause instanceof UnknownHostException)
+        || (cause instanceof SocketException) /* b/140559689 */
+        || (cause instanceof SSLException) /* b/113663972 */
+        || errorMessage.contains("Remote host closed connection during handshake") /* b/111562372 */
+        || errorMessage.contains("Error writing request body to server") /* b/111561615 */
+        || errorMessage.contains("Connection closed prematurely") /* b/123259718 */;
   }
 
   /** Gets error code if {@code e} is a valid GCS server exception; otherwise returns empty. */
