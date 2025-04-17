@@ -171,7 +171,7 @@ message LabQuery {
       // A device appears in the group if the list of its dimension values for
       // the dimension name is equal to the list.
       //
-      // A device only appears in one groups.
+      // A device only appears in one group.
       message DimensionValueList {
         // Required.
         string dimension_name = 1;
@@ -370,20 +370,15 @@ message DeviceGroupKey {
   message HasDimensionValueList {
     // Required.
     string dimension_name = 1;
-
-    message DimensionValues {
-      repeated string dimension_values = 1;
-    }
-
-    oneof type {
-      DimensionValues dimension_values = 2;
-    }
+    // If empty, Devices in the group do not have the specified dimension name
+    // or have empty dimension values list.
+    repeated string dimension_values = 2;
   }
 
   oneof key {
     // Required if single_dimension_value is present.
     HasDimensionValue has_dimension_value = 1;
     // Required if dimension_value_list is present.
-    HasDimensionValueList has_dimension_value_list = 3;
+    HasDimensionValueList has_dimension_value_list = 2;
   }
 }

@@ -39,7 +39,6 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceGro
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceGroupKey.HasDimensionValue;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceGroupKey.HasDimensionValue.NoDimensionValue;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceGroupKey.HasDimensionValueList;
-import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceGroupKey.HasDimensionValueList.DimensionValues;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceGroupResult;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceList;
@@ -365,9 +364,7 @@ public class LabQueryUtils {
                                     .setHasDimensionValueList(
                                         HasDimensionValueList.newBuilder()
                                             .setDimensionName(dimensionName)
-                                            .setDimensionValues(
-                                                DimensionValues.newBuilder()
-                                                    .addAllDimensionValues(dimensionValueList))));
+                                            .addAllDimensionValues(dimensionValueList)));
                       },
                       (group1, group2) -> group1));
       int deviceGroupTotalCount = allDeviceGroupsByDimensionValueList.size();

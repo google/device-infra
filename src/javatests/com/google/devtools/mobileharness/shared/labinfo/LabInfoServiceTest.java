@@ -37,7 +37,6 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceGro
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceGroupKey.HasDimensionValue;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceGroupKey.HasDimensionValue.NoDimensionValue;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceGroupKey.HasDimensionValueList;
-import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceGroupKey.HasDimensionValueList.DimensionValues;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceGroupResult;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceList;
@@ -353,10 +352,8 @@ public class LabInfoServiceTest {
                             .setHasDimensionValueList(
                                 HasDimensionValueList.newBuilder()
                                     .setDimensionName("fake_dimension_name")
-                                    .setDimensionValues(
-                                        DimensionValues.newBuilder()
-                                            .addDimensionValues("fake_dimension_value_1")
-                                            .addDimensionValues("fake_dimension_value_2"))))
+                                    .addDimensionValues("fake_dimension_value_1")
+                                    .addDimensionValues("fake_dimension_value_2")))
                     .setGroupedDevices(
                         GroupedDevices.newBuilder()
                             .setDeviceList(
@@ -369,8 +366,7 @@ public class LabInfoServiceTest {
                         DeviceGroupKey.newBuilder()
                             .setHasDimensionValueList(
                                 HasDimensionValueList.newBuilder()
-                                    .setDimensionName("fake_dimension_name")
-                                    .setDimensionValues(DimensionValues.getDefaultInstance())))
+                                    .setDimensionName("fake_dimension_name")))
                     .setGroupedDevices(
                         GroupedDevices.newBuilder()
                             .setDeviceList(
