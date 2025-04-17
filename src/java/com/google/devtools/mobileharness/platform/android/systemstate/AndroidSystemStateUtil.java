@@ -720,22 +720,6 @@ public class AndroidSystemStateUtil {
   }
 
   /**
-   * Waits until adb connects to android device.
-   *
-   * @param serial serial number of the device
-   * @param timeout max wait and retry time
-   * @throws MobileHarnessException if fails to execute the commands or timeout
-   * @throws InterruptedException if current thread is interrupted during this method
-   * @deprecated Prefer {@code waitForState(serial, DeviceConnectionState.DEVICE, timeout)}.
-   */
-  // TODO: b/307912207 - Inline the method.
-  @Deprecated
-  public void waitForDevice(String serial, Duration timeout)
-      throws MobileHarnessException, InterruptedException {
-    waitForState(serial, DeviceConnectionState.DEVICE, timeout);
-  }
-
-  /**
    * Waits until the device/emulator is online.
    *
    * @param serial the serial number of the device
