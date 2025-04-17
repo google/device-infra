@@ -75,6 +75,7 @@ proto_library(
     name = "job_sync_service_proto",
     srcs = ["job_sync_service.proto"],
     deps = [
+        "//src/devtools/common/metrics/stability/model/proto:error_proto",
         "//src/devtools/mobileharness/api/model/proto:device_proto",
         "//src/devtools/mobileharness/api/model/proto:error_proto",
         "//src/devtools/mobileharness/api/model/proto:job_proto",

@@ -19,6 +19,7 @@ syntax = "proto3";
 package mobileharness.infra.master.rpc;
 
 import "google/protobuf/duration.proto";
+import "src/devtools/common/metrics/stability/model/proto/exception.proto";
 import "src/devtools/mobileharness/api/model/proto/device.proto";
 import "src/devtools/mobileharness/api/model/proto/error.proto";
 import "src/devtools/mobileharness/api/model/proto/job.proto";
@@ -58,7 +59,9 @@ message OpenJobResponse {
   // Whether the job should be failed fast.
   // When it is fulfilled, the job is not aranged for scheduling,
   // |JobSyncService.GetAllocations| will return bad_test_id.
-  .mobileharness.api.model.ExceptionDetail fail_fast = 2;
+  .mobileharness.api.model.ExceptionDetail fail_fast = 2 [deprecated = true];
+
+  stability.model.ExceptionDetail fail_fast_exception_detail = 3;
 }
 
 message AddExtraTestsRequest {
