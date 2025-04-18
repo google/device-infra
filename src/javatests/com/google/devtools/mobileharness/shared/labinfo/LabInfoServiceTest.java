@@ -37,6 +37,9 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceGro
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceGroupKey.HasDimensionValue;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceGroupKey.HasDimensionValue.NoDimensionValue;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceGroupKey.HasDimensionValueList;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceGroupKey.HasExecutorList;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceGroupKey.HasOwnerList;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceGroupKey.HasTypeList;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceGroupResult;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceList;
@@ -47,7 +50,10 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.DeviceViewRequest;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.DeviceViewRequest.DeviceGroupCondition;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.DeviceViewRequest.DeviceGroupCondition.DimensionValueList;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.DeviceViewRequest.DeviceGroupCondition.ExecutorList;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.DeviceViewRequest.DeviceGroupCondition.OwnerList;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.DeviceViewRequest.DeviceGroupCondition.SingleDimensionValue;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.DeviceViewRequest.DeviceGroupCondition.TypeList;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.DeviceViewRequest.DeviceGroupOperation;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Filter;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
@@ -98,8 +104,11 @@ public class LabInfoServiceTest {
           .setDeviceStatus(DeviceStatus.BUSY)
           .setDeviceFeature(
               DeviceFeature.newBuilder()
-                  .addOwner("fake_owner")
+                  .addOwner("fake_owner_1")
+                  .addExecutor("fake_executor_2")
+                  .addExecutor("fake_executor_1")
                   .addType("NoOpDevice")
+                  .addType("AndroidRealDevice")
                   .addDriver("NoOpDriver")
                   .addDecorator("NoOpDecorator")
                   .setCompositeDimension(
@@ -120,7 +129,10 @@ public class LabInfoServiceTest {
           .setDeviceStatus(DeviceStatus.IDLE)
           .setDeviceFeature(
               DeviceFeature.newBuilder()
-                  .addOwner("fake_owner")
+                  .addOwner("fake_owner_1")
+                  .addOwner("fake_owner_2")
+                  .addExecutor("fake_executor_1")
+                  .addExecutor("fake_executor_2")
                   .addType("NoOpDevice")
                   .addDriver("NoOpDriver")
                   .addDecorator("NoOpDecorator")
@@ -323,7 +335,7 @@ public class LabInfoServiceTest {
   }
 
   @Test
-  public void getLabInfo_deviceView_group_dimensionValuesList() throws Exception {
+  public void getLabInfo_deviceView_group_dimensionValueList() throws Exception {
     DeviceGroupOperation deviceGroupOperation =
         DeviceGroupOperation.newBuilder()
             .setDeviceGroupCondition(
@@ -372,6 +384,180 @@ public class LabInfoServiceTest {
                             .setDeviceList(
                                 DeviceList.newBuilder()
                                     .setDeviceTotalCount(1)
+                                    .addDeviceInfo(DEVICE_INFO_2))))
+            .build();
+    assertThat(response)
+        .withPartialScope(FIELD_SCOPE)
+        .isEqualTo(
+            GetLabInfoResponse.newBuilder()
+                .setLabQueryResult(
+                    LabQueryResult.newBuilder()
+                        .setDeviceView(
+                            DeviceView.newBuilder()
+                                .setGroupedDevices(
+                                    GroupedDevices.newBuilder()
+                                        .setDeviceGroupResult(deviceGroupResult))))
+                .build());
+  }
+
+  @Test
+  public void getLabInfo_deviceView_group_typeList() throws Exception {
+    DeviceGroupOperation deviceGroupOperation =
+        DeviceGroupOperation.newBuilder()
+            .setDeviceGroupCondition(
+                DeviceGroupCondition.newBuilder().setTypeList(TypeList.getDefaultInstance()))
+            .build();
+    GetLabInfoResponse response =
+        labInfoService.doGetLabInfo(
+            GetLabInfoRequest.newBuilder()
+                .setLabQuery(
+                    LabQuery.newBuilder()
+                        .setDeviceViewRequest(
+                            DeviceViewRequest.newBuilder()
+                                .addDeviceGroupOperation(deviceGroupOperation)))
+                .build());
+
+    DeviceGroupResult deviceGroupResult =
+        DeviceGroupResult.newBuilder()
+            .setDeviceGroupOperation(deviceGroupOperation)
+            .setDeviceGroupTotalCount(2)
+            .addDeviceGroup(
+                DeviceGroup.newBuilder()
+                    .setDeviceGroupKey(
+                        DeviceGroupKey.newBuilder()
+                            .setHasTypeList(
+                                HasTypeList.newBuilder()
+                                    .addTypes("AndroidRealDevice")
+                                    .addTypes("NoOpDevice")))
+                    .setGroupedDevices(
+                        GroupedDevices.newBuilder()
+                            .setDeviceList(
+                                DeviceList.newBuilder()
+                                    .setDeviceTotalCount(1)
+                                    .addDeviceInfo(DEVICE_INFO_1))))
+            .addDeviceGroup(
+                DeviceGroup.newBuilder()
+                    .setDeviceGroupKey(
+                        DeviceGroupKey.newBuilder()
+                            .setHasTypeList(HasTypeList.newBuilder().addTypes("NoOpDevice")))
+                    .setGroupedDevices(
+                        GroupedDevices.newBuilder()
+                            .setDeviceList(
+                                DeviceList.newBuilder()
+                                    .setDeviceTotalCount(1)
+                                    .addDeviceInfo(DEVICE_INFO_2))))
+            .build();
+    assertThat(response)
+        .withPartialScope(FIELD_SCOPE)
+        .isEqualTo(
+            GetLabInfoResponse.newBuilder()
+                .setLabQueryResult(
+                    LabQueryResult.newBuilder()
+                        .setDeviceView(
+                            DeviceView.newBuilder()
+                                .setGroupedDevices(
+                                    GroupedDevices.newBuilder()
+                                        .setDeviceGroupResult(deviceGroupResult))))
+                .build());
+  }
+
+  @Test
+  public void getLabInfo_deviceView_group_ownerList() throws Exception {
+    DeviceGroupOperation deviceGroupOperation =
+        DeviceGroupOperation.newBuilder()
+            .setDeviceGroupCondition(
+                DeviceGroupCondition.newBuilder().setOwnerList(OwnerList.getDefaultInstance()))
+            .build();
+    GetLabInfoResponse response =
+        labInfoService.doGetLabInfo(
+            GetLabInfoRequest.newBuilder()
+                .setLabQuery(
+                    LabQuery.newBuilder()
+                        .setDeviceViewRequest(
+                            DeviceViewRequest.newBuilder()
+                                .addDeviceGroupOperation(deviceGroupOperation)))
+                .build());
+
+    DeviceGroupResult deviceGroupResult =
+        DeviceGroupResult.newBuilder()
+            .setDeviceGroupOperation(deviceGroupOperation)
+            .setDeviceGroupTotalCount(2)
+            .addDeviceGroup(
+                DeviceGroup.newBuilder()
+                    .setDeviceGroupKey(
+                        DeviceGroupKey.newBuilder()
+                            .setHasOwnerList(HasOwnerList.newBuilder().addOwners("fake_owner_1")))
+                    .setGroupedDevices(
+                        GroupedDevices.newBuilder()
+                            .setDeviceList(
+                                DeviceList.newBuilder()
+                                    .setDeviceTotalCount(1)
+                                    .addDeviceInfo(DEVICE_INFO_1))))
+            .addDeviceGroup(
+                DeviceGroup.newBuilder()
+                    .setDeviceGroupKey(
+                        DeviceGroupKey.newBuilder()
+                            .setHasOwnerList(
+                                HasOwnerList.newBuilder()
+                                    .addOwners("fake_owner_1")
+                                    .addOwners("fake_owner_2")))
+                    .setGroupedDevices(
+                        GroupedDevices.newBuilder()
+                            .setDeviceList(
+                                DeviceList.newBuilder()
+                                    .setDeviceTotalCount(1)
+                                    .addDeviceInfo(DEVICE_INFO_2))))
+            .build();
+    assertThat(response)
+        .withPartialScope(FIELD_SCOPE)
+        .isEqualTo(
+            GetLabInfoResponse.newBuilder()
+                .setLabQueryResult(
+                    LabQueryResult.newBuilder()
+                        .setDeviceView(
+                            DeviceView.newBuilder()
+                                .setGroupedDevices(
+                                    GroupedDevices.newBuilder()
+                                        .setDeviceGroupResult(deviceGroupResult))))
+                .build());
+  }
+
+  @Test
+  public void getLabInfo_deviceView_group_executorList() throws Exception {
+    DeviceGroupOperation deviceGroupOperation =
+        DeviceGroupOperation.newBuilder()
+            .setDeviceGroupCondition(
+                DeviceGroupCondition.newBuilder()
+                    .setExecutorList(ExecutorList.getDefaultInstance()))
+            .build();
+    GetLabInfoResponse response =
+        labInfoService.doGetLabInfo(
+            GetLabInfoRequest.newBuilder()
+                .setLabQuery(
+                    LabQuery.newBuilder()
+                        .setDeviceViewRequest(
+                            DeviceViewRequest.newBuilder()
+                                .addDeviceGroupOperation(deviceGroupOperation)))
+                .build());
+
+    DeviceGroupResult deviceGroupResult =
+        DeviceGroupResult.newBuilder()
+            .setDeviceGroupOperation(deviceGroupOperation)
+            .setDeviceGroupTotalCount(1)
+            .addDeviceGroup(
+                DeviceGroup.newBuilder()
+                    .setDeviceGroupKey(
+                        DeviceGroupKey.newBuilder()
+                            .setHasExecutorList(
+                                HasExecutorList.newBuilder()
+                                    .addExecutors("fake_executor_1")
+                                    .addExecutors("fake_executor_2")))
+                    .setGroupedDevices(
+                        GroupedDevices.newBuilder()
+                            .setDeviceList(
+                                DeviceList.newBuilder()
+                                    .setDeviceTotalCount(2)
+                                    .addDeviceInfo(DEVICE_INFO_1)
                                     .addDeviceInfo(DEVICE_INFO_2))))
             .build();
     assertThat(response)

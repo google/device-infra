@@ -169,7 +169,7 @@ message LabQuery {
 
       // Each group represents a list of dimension values for a dimension name.
       // A device appears in the group if the list of its dimension values for
-      // the dimension name is equal to the list.
+      // the dimension name is equal to the list (order-insensitive).
       //
       // A device only appears in one group.
       message DimensionValueList {
@@ -177,9 +177,33 @@ message LabQuery {
         string dimension_name = 1;
       }
 
+      // Each group represents a list of types.
+      // A device appears in the group if the list of its types is equal to the
+      // list (order-insensitive).
+      //
+      // A device only appears in one group.
+      message TypeList {}
+
+      // Each group represents a list of owners.
+      // A device appears in the group if the list of its owners is equal to the
+      // list (order-insensitive).
+      //
+      // A device only appears in one group.
+      message OwnerList {}
+
+      // Each group represents a list of executors.
+      // A device appears in the group if the list of its executors is equal to
+      // the list (order-insensitive).
+      //
+      // A device only appears in one group.
+      message ExecutorList {}
+
       oneof condition {
         SingleDimensionValue single_dimension_value = 1;
         DimensionValueList dimension_value_list = 2;
+        TypeList type_list = 3;
+        OwnerList owner_list = 4;
+        ExecutorList executor_list = 5;
       }
     }
 
@@ -375,10 +399,35 @@ message DeviceGroupKey {
     repeated string dimension_values = 2;
   }
 
+  // Devices in the group have a list of types.
+  // If a device does not have any type, its corresponding type list is empty.
+  message HasTypeList {
+    repeated string types = 1;
+  }
+
+  // Devices in the group have a list of owners.
+  // If a device does not have any owner, its corresponding owner list is empty.
+  message HasOwnerList {
+    repeated string owners = 1;
+  }
+
+  // Devices in the group have a list of executors.
+  // If a device does not have any executor, its corresponding executor list is
+  // empty.
+  message HasExecutorList {
+    repeated string executors = 1;
+  }
+
   oneof key {
     // Required if single_dimension_value is present.
     HasDimensionValue has_dimension_value = 1;
     // Required if dimension_value_list is present.
     HasDimensionValueList has_dimension_value_list = 2;
+    // Required if type_list is present.
+    HasTypeList has_type_list = 3;
+    // Required if owner_list is present.
+    HasOwnerList has_owner_list = 4;
+    // Required if executor_list is present.
+    HasExecutorList has_executor_list = 5;
   }
 }
