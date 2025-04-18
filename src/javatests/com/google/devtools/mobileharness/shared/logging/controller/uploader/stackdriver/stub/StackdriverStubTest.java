@@ -21,6 +21,7 @@ import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 
 import com.google.devtools.mobileharness.shared.util.comm.server.ServerBuilderFactory;
 import com.google.devtools.mobileharness.shared.util.comm.stub.ChannelFactory;
+import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.logging.v2.LoggingServiceV2Grpc;
 import com.google.logging.v2.WriteLogEntriesRequest;
 import com.google.logging.v2.WriteLogEntriesResponse;
@@ -31,6 +32,9 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+import org.mockito.Mock;
+import org.mockito.junit.MockitoJUnit;
+import org.mockito.junit.MockitoRule;
 
 /** Unit tests for {@link StackdriverStub}. */
 @RunWith(JUnit4.class)
@@ -38,6 +42,9 @@ public class StackdriverStubTest {
   private static final String SECRET_FILE_NAME = "fake_secret.json";
 
   @Rule public final GrpcCleanupRule grpcCleanup = new GrpcCleanupRule();
+
+  @Rule public final MockitoRule mocks = MockitoJUnit.rule();
+  @Mock private ResUtil resUtil;
 
   @Test
   public void writeLogEntries_success() throws Exception {
@@ -47,7 +54,7 @@ public class StackdriverStubTest {
                 .addService(getServiceImpl())
                 .build());
     server.start();
-    StackdriverStub stackdriverStub = new StackdriverStub(SECRET_FILE_NAME);
+    StackdriverStub stackdriverStub = new StackdriverStub(resUtil, SECRET_FILE_NAME);
     stackdriverStub.loggingServiceV2BlockingStub =
         LoggingServiceV2Grpc.newBlockingStub(
             grpcCleanup.register(

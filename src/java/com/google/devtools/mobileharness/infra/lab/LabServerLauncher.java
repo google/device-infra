@@ -72,8 +72,6 @@ public class LabServerLauncher {
   public static void main(String[] args) throws InterruptedException, IOException {
     // Adds extra flags.
     List<String> extraArgs = new ArrayList<>();
-    // Make sure the new ResUtil runs in a different directory.
-    extraArgs.add("--udcluster_res_dir_name=mobileharness_res_files");
     String[] allLabArgs = ArrayUtil.join(extraArgs.toArray(new String[0]), args);
 
     // Parses flags.
