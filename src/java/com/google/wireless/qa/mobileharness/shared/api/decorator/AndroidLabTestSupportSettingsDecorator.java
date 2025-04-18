@@ -16,10 +16,12 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.decorator;
 
-import com.google.common.flogger.FluentLogger;
+import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.platform.android.instrumentation.AndroidInstrumentationUtil;
+import com.google.devtools.mobileharness.platform.android.labtestsupport.util.LabTestSupportHelper;
+import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstallArgs;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstaller;
+import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidLabTestSupportSettingsSpec;
@@ -40,32 +42,50 @@ public class AndroidLabTestSupportSettingsDecorator extends BaseDecorator
     implements AndroidLabTestSupportSettingsSpec,
         SpecConfigable<AndroidLabTestSupportSettingsDecoratorSpec> {
 
-  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
-
-  private final ApkInstaller unusedApkInstaller;
-  private final AndroidInstrumentationUtil unusedAndroidInstrumentationUtil;
+  private final ApkInstaller apkInstaller;
+  private final AndroidSystemSettingUtil androidSystemSettingUtil;
+  private final LabTestSupportHelper labTestSupportHelper;
 
   @Inject
   AndroidLabTestSupportSettingsDecorator(
       Driver decorated,
       TestInfo testInfo,
       ApkInstaller apkInstaller,
-      AndroidInstrumentationUtil androidInstrumentationUtil) {
+      AndroidSystemSettingUtil androidSystemSettingUtil,
+      LabTestSupportHelper labTestSupportHelper) {
     super(decorated, testInfo);
-    this.unusedApkInstaller = apkInstaller;
-    this.unusedAndroidInstrumentationUtil = androidInstrumentationUtil;
+    this.apkInstaller = apkInstaller;
+    this.androidSystemSettingUtil = androidSystemSettingUtil;
+    this.labTestSupportHelper = labTestSupportHelper;
   }
 
   @Override
   public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
-    logger.atInfo().log("Running AndroidLabTestSupportSettingsDecorator...");
     String deviceId = getDevice().getDeviceId();
     AndroidLabTestSupportSettingsDecoratorSpec spec =
         testInfo.jobInfo().combinedSpec(this, deviceId);
-    logger.atInfo().log("AndroidLabTestSupportSettingsDecoratorSpec: %s", spec);
-
     String labTestSupportApkPath = testInfo.jobInfo().files().getSingle(TAG_LAB_TEST_SUPPORT_APK);
-    logger.atInfo().log("LabTestSupport APK path: %s", labTestSupportApkPath);
+
+    apkInstaller.installApkIfNotExist(
+        getDevice(),
+        ApkInstallArgs.builder()
+            .setApkPath(labTestSupportApkPath)
+            .setGrantPermissions(true)
+            .build(),
+        testInfo.log());
+
+    int deviceSdkVersion = androidSystemSettingUtil.getDeviceSdkVersion(deviceId);
+    if (spec.getDisableSmartLockForPasswordsAndFastPair()
+        && !labTestSupportHelper.disableSmartLockForPasswordsAndFastPair(
+            deviceId, deviceSdkVersion)) {
+      throw new MobileHarnessException(
+          AndroidErrorId
+              .ANDROID_LAB_TEST_SUPPORT_SETTINGS_DECORATOR_DISABLE_SMART_LOCK_FOR_PASSWORDS_AND_FAST_PAIR_ERROR,
+          String.format(
+              "Failed to disable the features of \"smart lock for passwords\" and \"fast pair with"
+                  + " smartwatches/headphones\" on device %s",
+              deviceId));
+    }
 
     getDecorated().run(testInfo);
   }

@@ -312,9 +312,9 @@ java_library(
     deps = [
         ":base_decorator",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/devtools/mobileharness/platform/android/instrumentation:android_instrumentation_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/labtestsupport/util:lab_test_support_helper",
         "//src/java/com/google/devtools/mobileharness/platform/android/lightning/apkinstaller",
-        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/platform/android/systemsetting:system_setting_util",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:android_lab_test_support_settings_spec",

@@ -24,25 +24,18 @@ option java_package = "com.google.wireless.qa.mobileharness.shared.proto.spec.de
 option java_multiple_files = true;
 
 // Specs for AndroidLabTestSupportSettingsDecorator.
-// Next tag: 3
+// Next tag: 2
 message AndroidLabTestSupportSettingsDecoratorSpec {
   extend DecoratorSpec {
     optional AndroidLabTestSupportSettingsDecoratorSpec ext = 1011;
   }
 
-  optional bool disable_smart_lock_for_passwords = 1 [
+  optional bool disable_smart_lock_for_passwords_and_fast_pair = 1 [
     default = false,
     (field_detail) = {
-      help: "If set to 'true', disables the feature of 'smart lock for "
-            "passwords' on the device."
-    }
-  ];
-
-  optional bool disable_fast_pair = 2 [
-    default = false,
-    (field_detail) = {
-      help: "If set to 'true', disables the feature of 'fast pair with "
-            "smartwatches/headphones' on the device."
+      help: "If set to 'true', disables the features of 'smart lock for "
+            "passwords' and 'fast pair with smartwatches/headphones' on the "
+            "device."
     }
   ];
 }
