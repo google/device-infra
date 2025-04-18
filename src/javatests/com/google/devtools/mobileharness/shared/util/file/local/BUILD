@@ -13,7 +13,7 @@
 # limitations under the License.
 #
 
-load("@rules_java//java:defs.bzl", "java_library")
+load("@rules_java//java:defs.bzl", "java_library", "java_test")
 
 package(
     default_applicable_licenses = ["//:license"],
@@ -31,5 +31,16 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_test(
+    name = "UnzipFileNameTest",
+    srcs = ["UnzipFileNameTest.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local:unzip_file_name",
+        "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
+        "@maven//:com_google_testparameterinjector_test_parameter_injector",
+        "@maven//:junit_junit",
     ],
 )

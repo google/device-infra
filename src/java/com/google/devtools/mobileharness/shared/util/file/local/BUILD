@@ -54,3 +54,9 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+java_library(
+    name = "unzip_file_name",
+    srcs = ["UnzipFileName.java"],
+    deps = ["@maven//:com_google_guava_guava"],
+)
