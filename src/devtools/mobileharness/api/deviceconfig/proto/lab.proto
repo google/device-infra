@@ -36,6 +36,9 @@ message LabConfig {
   // by default, in the format of "ip, username, password".
   repeated OverSshDevice over_ssh = 6;
 
+  // The device type of the lab.
+  repeated DeviceType device_type = 13;
+
   // The UUID of devices which will be monitored by the lab.
   repeated string monitored_device_uuid = 3;
 
@@ -78,6 +81,18 @@ message OverSshDevice {
   string password = 3;
   // The device type of ssh device, Required
   string ssh_device_type = 4;
+}
+
+// The configuration of a device type.
+message DeviceType {
+  oneof device_type {
+    LivingRoomAndroidNetworkDevice living_room_android_via_network_device = 1;
+  }
+}
+
+// The configuration of a living room android via network device.
+message LivingRoomAndroidNetworkDevice {
+  string mac_address = 2;
 }
 
 // The configuration of an USB device.
