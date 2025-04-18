@@ -42,7 +42,7 @@ message AndroidDesktopOtaUpdateDecoratorSpec {
     is_required: true,
     help: "The otatools.zip file containing the update_device script."
           "Example: "
-          "'ota_tools': ['android-build::branch=git_main-al-dev,"
+          "'ota_tools': ['android-build::branch=git_main-throttled,"
           "target=brya-trunk_staging-userdebug, file=otatools.zip,"
           "build_id=LATEST']"
   }];
@@ -51,7 +51,7 @@ message AndroidDesktopOtaUpdateDecoratorSpec {
     is_required: true,
     help: "The ota package file."
           "Example: "
-          "'ota_package': ['android-build::branch=git_main-al-dev,"
+          "'ota_package': ['android-build::branch=git_main-throttled,"
           "target=brya-trunk_staging-userdebug, file=*-ota-*.zip,"
           "build_id=LATEST']"
   }];
