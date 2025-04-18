@@ -93,6 +93,18 @@ public class JobInfo extends JobScheduleUnit {
       "allow_gateway_use_standard_sponge_layout";
 
   /**
+   * Param name to allow the users to specify a cns address that gateway uploads all the artifacts
+   * to.
+   */
+  @ParamAnnotation(
+      required = false,
+      help =
+          "The cns dir for gateawy to upload sponge artifacts. Make sure to grant mdb"
+              + " mobileharness-gateway the write permission.")
+  public static final String PARAM_CNS_DIR_FOR_GATEWAY_TO_UPLOAD_SPONGE_ARTIFACTS =
+      "cns_dir_for_gateway_to_upload_sponge_artifacts";
+
+  /**
    * Param name of the canonical class names (split by ",") of the plugin handlers for job/test
    * start/end events. The handlers are executed on client side.
    */
