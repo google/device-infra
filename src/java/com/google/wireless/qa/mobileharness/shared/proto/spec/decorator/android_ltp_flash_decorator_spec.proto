@@ -24,7 +24,7 @@ option java_package = "com.google.wireless.qa.mobileharness.shared.proto.spec.de
 option java_multiple_files = true;
 
 // Specs for {@link AndroidLtpFlashDecoratorSpec}
-// Next tag: 3
+// Next tag: 4
 message AndroidLtpFlashDecoratorSpec {
   extend DecoratorSpec {
     optional AndroidLtpFlashDecoratorSpec ext = 1012;
@@ -37,4 +37,7 @@ message AndroidLtpFlashDecoratorSpec {
     help: "Specifies the build target of the build to flash. eg "
           "'sailfish-userdebug'."
   }];
+
+  repeated string prepare_device_apk = 3
+      [(file_detail) = { help: "Apks to be installed to prepare device." }];
 }

@@ -25,6 +25,7 @@ import com.google.devtools.mobileharness.platform.android.lightning.shared.Share
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceConnectionState;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceState;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.RebootMode;
 import com.google.devtools.mobileharness.platform.android.systemstate.AndroidSystemStateUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
@@ -171,6 +172,27 @@ public class SystemStateManager {
   public void reboot(
       Device device, @Nullable LogCollector<?> log, @Nullable Duration deviceReadyTimeout)
       throws MobileHarnessException, InterruptedException {
+    reboot(device, RebootMode.SYSTEM_IMAGE, log, deviceReadyTimeout);
+  }
+
+  /**
+   * Reboots the device and waits until device is ready for accepting operations.
+   *
+   * @param device the device being rebooted
+   * @param mode mode of reboot
+   * @param log log of the currently running test, usually from {@code TestInfo}
+   * @param deviceReadyTimeout max wait time for checking the readiness of the device, uses {@link
+   *     #DEVICE_READY_TIMEOUT} if it's {@code null}
+   * @throws MobileHarnessException if device is not ready after waiting for {@code
+   *     deviceReadyTimeout}, or fails to execute commands or timeout
+   * @throws InterruptedException if current thread is interrupted during this method
+   */
+  public void reboot(
+      Device device,
+      RebootMode mode,
+      @Nullable LogCollector<?> log,
+      @Nullable Duration deviceReadyTimeout)
+      throws MobileHarnessException, InterruptedException {
     String deviceId = device.getDeviceId();
     if (!device.canReboot()) {
       SharedLogUtil.logMsg(
@@ -186,7 +208,7 @@ public class SystemStateManager {
     try {
       // Don't use Device#reboot as it has more complex logic while here we just need a simple
       // device reboot
-      systemStateUtil.reboot(deviceId);
+      systemStateUtil.reboot(deviceId, mode);
       // `adb wait-for-device` exits with error code when using a proxied device. Therefore, we wait
       // for the device ready by using `systemStateUtil.waitUntilReady` instead.
       if (!DeviceUtil.isOverTcpDevice(deviceId)) {
