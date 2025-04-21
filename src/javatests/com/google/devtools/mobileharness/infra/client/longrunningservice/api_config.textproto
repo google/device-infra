@@ -6,4 +6,8 @@ composite_dimension {
     name: "fake_dimension_name"
     value: "fake_dimension_value"
   }
+  required_dimension: {
+    name: "fake_required_dimension_name"
+    value: "fake_required_dimension_value"
+  }
 }

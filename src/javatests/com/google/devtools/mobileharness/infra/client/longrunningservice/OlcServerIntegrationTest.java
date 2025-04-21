@@ -349,6 +349,8 @@ public class OlcServerIntegrationTest {
                 .putExtraJobFiles("fake_job_file_tag", fakeJobFilePath)
                 .putJobDeviceDimensions("control_id", deviceControlId)
                 .putJobDeviceDimensions("fake_dimension_name", "fake_dimension_value")
+                .putJobDeviceDimensions(
+                    "fake_required_dimension_name", "fake_required_dimension_value")
                 .build());
     CreateSessionResponse createSessionResponse = sessionStub.createSession(createSessionRequest);
     SessionId sessionId = createSessionResponse.getSessionId();
@@ -392,6 +394,92 @@ public class OlcServerIntegrationTest {
     assertWithMessage(errorMessagePrefix + "lab server stderr")
         .that(labServerStderr)
         .doesNotContain("\tat ");
+
+    // Checks the session log.
+    String sessionLog = localFileUtil.readFile(sessionLogFile);
+    assertThat(sessionLog).contains("Starting session runner " + sessionId.getId());
+    assertThat(sessionLog).contains("Session finished, session_id=" + sessionId.getId());
+
+    // Verifies the server is killed.
+    ControlStub controlStub = new ControlStub(olcServerChannel);
+    assertThat(olcServerProcess.isAlive()).isTrue();
+    KillServerResponse killServerResponse =
+        controlStub.killServer(KillServerRequest.getDefaultInstance());
+    assertThat(killServerResponse)
+        .comparingExpectedFieldsOnly()
+        .isEqualTo(
+            KillServerResponse.newBuilder().setSuccess(Success.getDefaultInstance()).build());
+    Sleeper.defaultSleeper().sleep(Duration.ofSeconds(6L));
+    assertThat(olcServerProcess.isAlive()).isFalse();
+  }
+
+  @Test
+  public void noOpTest_failedToAllocate_atsMode() throws Exception {
+    startServers(/* enableAtsMode= */ true, /* enableSchedulerShuffle= */ true);
+
+    // Checks the server version.
+    VersionStub versionStub = new VersionStub(olcServerChannel);
+    assertThat(versionStub.getVersion())
+        .comparingExpectedFieldsOnly()
+        .isEqualTo(
+            GetVersionResponse.newBuilder().setLabVersion(Version.LAB_VERSION.toString()).build());
+
+    // Checks the lab info service.
+    GetLabInfoResponse getLabInfoResponse =
+        labInfoGrpcStub.getLabInfo(GetLabInfoRequest.getDefaultInstance());
+    List<LabData> labDataList =
+        getLabInfoResponse.getLabQueryResult().getLabView().getLabDataList();
+    assertWithMessage("getLabInfoResponse=[%s]", getLabInfoResponse).that(labDataList).hasSize(1);
+    assertWithMessage("getLabInfoResponse=[%s]", getLabInfoResponse)
+        .that(labDataList.get(0).getDeviceList().getDeviceInfoList())
+        .comparingElementsUsing(
+            Correspondence.from(
+                (DeviceInfo deviceInfo, String uuidSuffix) ->
+                    requireNonNull(deviceInfo)
+                        .getDeviceLocator()
+                        .getId()
+                        .endsWith(requireNonNull(uuidSuffix)),
+                "has a device UUID ending with"))
+        .containsExactly(
+            "NoOpDevice-0", "NoOpDevice-1", "NoOpDevice-2", "NoOpDevice-3", "NoOpDevice-4");
+
+    // Creates a session.
+    SessionStub sessionStub = new SessionStub(olcServerChannel);
+    String fakeJobFilePath = tmpFolder.newFile().getAbsolutePath();
+    CreateSessionRequest createSessionRequest =
+        createCreateSessionRequest(
+            SessionPluginForTestingConfig.newBuilder()
+                .setNoOpDriverSleepTimeSec(2)
+                .putExtraJobFiles("fake_job_file_tag", fakeJobFilePath)
+                .putJobDeviceDimensions("fake_dimension_name", "fake_dimension_value")
+                .setStartTimeoutSec(5)
+                .build());
+    CreateSessionResponse createSessionResponse = sessionStub.createSession(createSessionRequest);
+    SessionId sessionId = createSessionResponse.getSessionId();
+
+    // Waits until the session finishes.
+    GetSessionResponse getSessionResponse =
+        waitUntilSessionFinish(sessionStub, sessionId, Duration.ofSeconds(8L));
+
+    // Checks the session output.
+    assertThat(getSessionResponse)
+        .comparingExpectedFieldsOnly()
+        .ignoringExtraRepeatedFieldElements()
+        .isEqualTo(createGetSessionResponseWithError());
+
+    String olcServerStderr = stringBuilders.getOrCreate("olc_server_stderr").toString();
+    // Verifies allocation timeout.
+    assertWithMessage("olc server stderr")
+        .that(olcServerStderr)
+        .containsMatch("Timeout because no device is allocated after start_timeout 5 seconds.");
+
+    // Verifies the required dimension is not satisfied.
+    assertWithMessage("olc server stderr")
+        .that(olcServerStderr)
+        .containsMatch(
+            "Job does not satisfy the required dimensions "
+                + "of any NoOpDevice"
+                + " \\{fake_required_dimension_name=\\[fake_required_dimension_value\\]\\}.");
 
     // Checks the session log.
     String sessionLog = localFileUtil.readFile(sessionLogFile);
@@ -709,6 +797,26 @@ public class OlcServerIntegrationTest {
         .getSessionOutputBuilder()
         .putSessionProperty("allocated_device_control_id", deviceControlId);
     return builder.build();
+  }
+
+  private static GetSessionResponse createGetSessionResponseWithError() {
+    return GetSessionResponse.newBuilder()
+        .setSessionDetail(
+            SessionDetail.newBuilder()
+                .setSessionOutput(
+                    SessionOutput.newBuilder()
+                        .putSessionProperty("job_result", "ERROR")
+                        .putSessionProperty("job_result_from_job_event", "ERROR")
+                        .putSessionPluginOutput(
+                            PLUGIN_CLASS_NAME,
+                            SessionPluginOutput.newBuilder()
+                                .setOutput(
+                                    Any.pack(
+                                        SessionPluginForTestingOutput.newBuilder()
+                                            .setJobResultTypeName("ERROR")
+                                            .build()))
+                                .build())))
+        .build();
   }
 
   private static class OlcServerLogCollector implements StreamObserver<GetLogResponse> {

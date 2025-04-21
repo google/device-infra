@@ -25,6 +25,7 @@ message SessionPluginForTestingConfig {
   int32 no_op_driver_sleep_time_sec = 1;
   map<string, string> extra_job_files = 2;
   map<string, string> job_device_dimensions = 3;
+  optional int32 start_timeout_sec = 4;
 }
 
 message SessionPluginForTestingOutput {

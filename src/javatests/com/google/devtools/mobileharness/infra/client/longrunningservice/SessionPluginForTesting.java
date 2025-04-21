@@ -73,7 +73,12 @@ public class SessionPluginForTesting {
                     .setRetry(Retry.newBuilder().setTestAttempts(1).build())
                     .setTimeout(
                         Timeout.newBuilder()
-                            .setStartTimeoutMs(Duration.ofSeconds(15L).toMillis())
+                            .setStartTimeoutMs(
+                                Duration.ofSeconds(
+                                        config.hasStartTimeoutSec()
+                                            ? config.getStartTimeoutSec()
+                                            : 15L)
+                                    .toMillis())
                             .build())
                     .build())
             .build();
