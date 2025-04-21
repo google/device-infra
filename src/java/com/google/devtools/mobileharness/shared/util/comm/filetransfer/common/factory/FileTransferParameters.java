@@ -42,7 +42,7 @@ public abstract class FileTransferParameters {
   /** Size of shard during file downloading. */
   public abstract long downloadShardSize();
 
-  /** Timeout of zipping a file. It is 5 minutes by default. */
+  /** Timeout of zipping a file. It is {@link #DEFAULT_ZIP_TIMEOUT} by default. */
   public abstract Duration zipTimeout();
 
   /** Size limitation of a *small* file, which will be transferred between server and client. */
