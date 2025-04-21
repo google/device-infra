@@ -25,7 +25,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/error:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/job:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/util:__pkg__",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job:__subpackages__",
     ],
     deps = [
         "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
