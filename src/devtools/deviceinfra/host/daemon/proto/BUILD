@@ -24,6 +24,13 @@ package(
     ],
 )
 
+# exports_files(
+#     ["health.proto"],
+#     visibility = [
+#         "//third_party/py/multitest_transport:__subpackages__",
+#     ],
+# )
+
 proto_library(
     name = "health_proto",
     srcs = ["health.proto"],
