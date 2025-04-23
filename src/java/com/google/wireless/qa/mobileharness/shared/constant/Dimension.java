@@ -76,6 +76,8 @@ public final class Dimension {
     DEVKEY_ALLOW,
     /** The disk type. The value can be one of [SSD, HDD, UNKNOWN]. */
     DISK_TYPE,
+    /** The type of the DeviceManager. The value can be one of [fusion, mh, mtaas]. */
+    DM_TYPE,
     /** The id of the device. */
     ID,
     /** Hinge angle of the foldable device. */
