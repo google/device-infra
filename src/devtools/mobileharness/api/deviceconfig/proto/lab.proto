@@ -36,6 +36,9 @@ message LabConfig {
   // by default, in the format of "ip, username, password".
   repeated OverSshDevice over_ssh = 6;
 
+  // The detector specifications of the lab.
+  DetectorSpecs detector_specs = 13;
+
   // The UUID of devices which will be monitored by the lab.
   repeated string monitored_device_uuid = 3;
 
@@ -78,6 +81,26 @@ message OverSshDevice {
   string password = 3;
   // The device type of ssh device, Required
   string ssh_device_type = 4;
+}
+
+// The configuration of a device type.
+message DetectorSpecs {
+  ManekiDetectorSpecs maneki_detector_specs = 1;
+
+  message ManekiDetectorSpecs {
+    repeated ManekiAndroidDeviceDiscoverySpec
+        maneki_android_device_discovery_spec = 1;
+    repeated ManekiRokuDeviceDiscoverySpec maneki_roku_device_discovery_spec =
+        2;
+
+    message ManekiAndroidDeviceDiscoverySpec {
+      string mac_address = 1;
+    }
+
+    message ManekiRokuDeviceDiscoverySpec {
+      string mac_address = 1;
+    }
+  }
 }
 
 // The configuration of an USB device.
