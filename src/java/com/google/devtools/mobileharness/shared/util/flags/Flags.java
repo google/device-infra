@@ -1269,6 +1269,14 @@ public class Flags {
       converter = Flag.IntegerConverter.class)
   public Flag<Integer> internalStorageAlert = internalStorageAlertDefault;
 
+  private static final Flag<Boolean> isOmniModeDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--is_omni_mode",
+      description = "Whether the controller is in Omni mode. Default is false.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> isOmniMode = isOmniModeDefault;
+
   private static final Flag<String> javaCommandPathDefault = Flag.value("java");
 
   @com.beust.jcommander.Parameter(

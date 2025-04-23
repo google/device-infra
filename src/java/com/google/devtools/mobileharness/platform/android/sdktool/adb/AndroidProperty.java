@@ -68,6 +68,8 @@ public enum AndroidProperty {
   MODEL("ro.product.model"),
   NATIVE_BRIDGE("ro.dalvik.vm.native.bridge"),
   NONSEC_AR("ro.boot.hw.soc.nonsec-ar"),
+  @DoNotAddToDimension
+  PERSIST_TEST_HARNESS("persist.sys.test_harness"),
   PREVIEW_SDK_VERSION("ro.build.version.preview_sdk"),
   @DoNotAddToDimension
   PRODUCT("ro.build.product"),

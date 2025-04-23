@@ -1160,4 +1160,24 @@ public final class SessionRequestHandlerUtilTest {
                 config, ImmutableMultimap.of(), ImmutableMultimap.of("key2", "value5")))
         .isTrue();
   }
+
+  @Test
+  public void needTestHarnessPropertyFalse_expected() {
+    assertThat(
+            SessionRequestHandlerUtil.needTestHarnessPropertyFalse(
+                defaultSessionRequestInfoBuilder().setXtsType("cts").build()))
+        .isTrue();
+    assertThat(
+            SessionRequestHandlerUtil.needTestHarnessPropertyFalse(
+                defaultSessionRequestInfoBuilder().setXtsType("cts-on-gts-on-s").build()))
+        .isTrue();
+    assertThat(
+            SessionRequestHandlerUtil.needTestHarnessPropertyFalse(
+                defaultSessionRequestInfoBuilder().setXtsType("mcts").build()))
+        .isTrue();
+    assertThat(
+            SessionRequestHandlerUtil.needTestHarnessPropertyFalse(
+                defaultSessionRequestInfoBuilder().setXtsType("gts").build()))
+        .isFalse();
+  }
 }

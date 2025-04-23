@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.ats.common;
 
+import static com.google.common.base.Ascii.toLowerCase;
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableListMultimap.toImmutableListMultimap;
@@ -163,6 +164,9 @@ public class SessionRequestHandlerUtil {
   private static final Duration DEFAULT_NON_TRADEFED_JOB_TIMEOUT = Duration.ofDays(5L);
   private static final Duration DEFAULT_NON_TRADEFED_START_TIMEOUT = Duration.ofDays(4L);
 
+  private static final ImmutableList<String> XTS_TYPE_THAT_NEED_TEST_HARNESS_PROPERTY_FALSE =
+      ImmutableList.of("cts", "mcts");
+
   private final DeviceQuerier deviceQuerier;
   private final LocalFileUtil localFileUtil;
   private final ConfigurationUtil configurationUtil;
@@ -226,6 +230,11 @@ public class SessionRequestHandlerUtil {
       SessionRequestInfo sessionRequestInfo, int shardCount)
       throws MobileHarnessException, InterruptedException {
     ImmutableSet<DeviceDetails> availableDevices = getAvailableDevices(sessionRequestInfo);
+    Map<String, String> extraDimensions = new HashMap<>();
+    if (Flags.instance().isOmniMode.getNonNull()
+        && needTestHarnessPropertyFalse(sessionRequestInfo)) {
+      extraDimensions.put(toLowerCase(AndroidProperty.PERSIST_TEST_HARNESS.name()), Value.FALSE);
+    }
     if (sessionRequestInfo.isAtsServerRequest() && !sessionRequestInfo.deviceSerials().isEmpty()) {
       if (shouldEnableModuleSharding(sessionRequestInfo)) {
         StringMap dimensions =
@@ -236,6 +245,7 @@ public class SessionRequestHandlerUtil {
                         "%s(%s)",
                         Value.PREFIX_REGEX,
                         Joiner.on('|').join(sessionRequestInfo.deviceSerials())))
+                .putAllContent(extraDimensions)
                 .build();
         return ImmutableList.of(
             SubDeviceSpec.newBuilder()
@@ -258,7 +268,8 @@ public class SessionRequestHandlerUtil {
                         .setType(getTradefedRequiredDeviceType(sessionRequestInfo))
                         .setDimensions(
                             StringMap.newBuilder()
-                                .putContent(Name.UUID.lowerCaseName(), deviceSerial))
+                                .putContent(Name.UUID.lowerCaseName(), deviceSerial)
+                                .putAllContent(extraDimensions))
                         .build())
             .collect(toImmutableList());
       }
@@ -278,7 +289,8 @@ public class SessionRequestHandlerUtil {
                     .setType(getTradefedRequiredDeviceType(sessionRequestInfo))
                     .setDimensions(
                         StringMap.newBuilder()
-                            .putContent(Name.ID.lowerCaseName(), deviceDetails.id()))
+                            .putContent(Name.ID.lowerCaseName(), deviceDetails.id())
+                            .putAllContent(extraDimensions))
                     .build())
         .collect(toImmutableList());
   }
@@ -1405,5 +1417,11 @@ public class SessionRequestHandlerUtil {
         params.put(moduleArg.argName(), moduleArg.argValue());
       }
     }
+  }
+
+  @VisibleForTesting
+  static boolean needTestHarnessPropertyFalse(SessionRequestInfo sessionRequestInfo) {
+    return XTS_TYPE_THAT_NEED_TEST_HARNESS_PROPERTY_FALSE.stream()
+        .anyMatch(xtsType -> sessionRequestInfo.xtsType().startsWith(xtsType));
   }
 }
