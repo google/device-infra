@@ -53,6 +53,7 @@ import com.google.devtools.mobileharness.shared.util.command.LineCallbackExcepti
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
+import com.google.devtools.mobileharness.shared.util.testcomponents.TestComponentsDirUtil;
 import com.google.wireless.qa.mobileharness.shared.api.CompositeDeviceUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DriverAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.FileAnnotation;
@@ -138,6 +139,7 @@ public class MoblyGenericTest extends BaseDriver {
   private final SystemUtil systemUtil;
   private final MoblyYamlParser parser;
   private final MoblyTestInfoMapHelper mapper;
+  private final TestComponentsDirUtil testComponentsDirUtil;
   private final CommandExecutor executor;
 
   @Nullable protected String testbedName;
@@ -154,6 +156,7 @@ public class MoblyGenericTest extends BaseDriver {
     this.systemUtil = new SystemUtil();
     this.parser = parser;
     this.mapper = mapper;
+    this.testComponentsDirUtil = new TestComponentsDirUtil();
     this.executor = executor;
   }
 
@@ -406,13 +409,22 @@ public class MoblyGenericTest extends BaseDriver {
     // that may be used in a Mobly test (e.g., multiprocessing). Therefore we alias the long
     // pathname using a symbolic link that points to MH test tempfiles.
     Path tempDir;
+    Path testComponentsDir;
     try {
       String tmpFileDir = testInfo.getTmpFileDir();
+      String testId = testInfo.locator().getId();
+      String testComponentsDirHard = testComponentsDirUtil.prepareAndGetTestComponentsDir(testInfo);
       tempDir =
           localFileUtil.linkDir(
               /* linkBaseDirPath= */ JAVA_IO_TMPDIR.value(),
               /* linkPrefixName= */ String.format("%05d-", new Random().nextInt(10000)),
               /* targetDirPath= */ tmpFileDir);
+      testComponentsDir =
+          localFileUtil.checkDir(
+              localFileUtil.linkDir(
+                  /* linkBaseDirPath= */ JAVA_IO_TMPDIR.value(),
+                  /* linkPrefixName= */ String.format("testComponents-%s-", testId),
+                  /* targetDirPath= */ testComponentsDirHard));
     } catch (MobileHarnessException e) {
       throw new MobileHarnessException(
           ExtErrorId.MOBLY_FAILED_TO_CREATE_TEMP_DIRECTORY_ERROR,
@@ -441,6 +453,7 @@ public class MoblyGenericTest extends BaseDriver {
              */
             .put("TMPDIR", tempDir.toString())
             .put(ENV_MOBLY_LOGPATH, getLogDir(testInfo).getPath())
+            .put(SystemUtil.ENV_TEST_COMPONENTS_DIR, testComponentsDir.toString())
             .buildOrThrow();
 
     // Run! :)
