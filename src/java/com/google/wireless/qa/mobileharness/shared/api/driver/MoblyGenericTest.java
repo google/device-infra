@@ -102,6 +102,7 @@ public class MoblyGenericTest extends BaseDriver {
   private static final String RAW_MOBLY_LOG_ALL_IN_ONE = "mobly_command_output.log";
 
   private static final String MOBLY_LOG_DIR = "mobly_logs";
+  private static final String ENV_MOBLY_LOGPATH = "MOBLY_LOGPATH";
 
   public static final String TEST_SELECTOR_ALL = "all";
 
@@ -439,6 +440,7 @@ public class MoblyGenericTest extends BaseDriver {
              * MH will cleanup this dir.
              */
             .put("TMPDIR", tempDir.toString())
+            .put(ENV_MOBLY_LOGPATH, getLogDir(testInfo).getPath())
             .buildOrThrow();
 
     // Run! :)
