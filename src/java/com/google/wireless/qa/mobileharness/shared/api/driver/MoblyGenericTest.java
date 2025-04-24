@@ -409,6 +409,7 @@ public class MoblyGenericTest extends BaseDriver {
     // that may be used in a Mobly test (e.g., multiprocessing). Therefore we alias the long
     // pathname using a symbolic link that points to MH test tempfiles.
     Path tempDir;
+    Path spongeXmlPath;
     Path testComponentsDir;
     try {
       String tmpFileDir = testInfo.getTmpFileDir();
@@ -425,6 +426,7 @@ public class MoblyGenericTest extends BaseDriver {
                   /* linkBaseDirPath= */ JAVA_IO_TMPDIR.value(),
                   /* linkPrefixName= */ String.format("testComponents-%s-", testId),
                   /* targetDirPath= */ testComponentsDirHard));
+      spongeXmlPath = getSpongeXmlPath(testInfo);
     } catch (MobileHarnessException e) {
       throw new MobileHarnessException(
           ExtErrorId.MOBLY_FAILED_TO_CREATE_TEMP_DIRECTORY_ERROR,
@@ -452,8 +454,9 @@ public class MoblyGenericTest extends BaseDriver {
              * MH will cleanup this dir.
              */
             .put("TMPDIR", tempDir.toString())
-            .put(ENV_MOBLY_LOGPATH, getLogDir(testInfo).getPath())
             .put(SystemUtil.ENV_TEST_COMPONENTS_DIR, testComponentsDir.toString())
+            .put(SystemUtil.ENV_XML_OUTPUT_FILE_NAME, spongeXmlPath.toString())
+            .put(ENV_MOBLY_LOGPATH, getLogDir(testInfo).getPath())
             .buildOrThrow();
 
     // Run! :)
@@ -748,5 +751,9 @@ public class MoblyGenericTest extends BaseDriver {
     }
 
     return Optional.ofNullable(sdkFile.getParent());
+  }
+
+  protected Path getSpongeXmlPath(TestInfo testInfo) throws MobileHarnessException {
+    return Path.of(testInfo.getGenFileDir(), "test.xml");
   }
 }
