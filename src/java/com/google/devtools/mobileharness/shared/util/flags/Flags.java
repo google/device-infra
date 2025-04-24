@@ -756,6 +756,15 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> disableWifiUtilFunc = disableWifiUtilFuncDefault;
 
+  private static final Flag<Duration> dispatchDeviceIntervalDefault =
+      DurationFlag.value(Duration.ofSeconds(1L));
+
+  @com.beust.jcommander.Parameter(
+      names = "--dispatch_device_interval_sec",
+      description = "Interval for dispatching the current active devices",
+      converter = DurationFlag.DurationConverter.class)
+  public Flag<Duration> dispatchDeviceInterval = dispatchDeviceIntervalDefault;
+
   private static final Flag<Boolean> enableAndroidDeviceReadyCheckDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(

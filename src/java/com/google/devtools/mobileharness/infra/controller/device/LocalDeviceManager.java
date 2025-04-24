@@ -58,8 +58,6 @@ public class LocalDeviceManager extends BaseDeviceStatusProvider
     implements Runnable, DeviceHelperFactory, DeviceStateChecker, TestExecutorProvider {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  private static final int DISPATCH_DEVICE_INTERVAL_SEC = 1;
-
   /**
    * The max consecutive rounds of detection when detector meets exception. If reached, will clear
    * the detection result from cache.
@@ -191,7 +189,7 @@ public class LocalDeviceManager extends BaseDeviceStatusProvider
         });
     while (!Thread.currentThread().isInterrupted()) {
       try {
-        Sleeper.defaultSleeper().sleep(Duration.ofSeconds(DISPATCH_DEVICE_INTERVAL_SEC));
+        Sleeper.defaultSleeper().sleep(Flags.instance().dispatchDeviceInterval.getNonNull());
         DetectionResults detectionResults = getCachedDetectionResults();
         localDeviceDispatch.dispatchDevices(detectionResults);
       } catch (InterruptedException e) {
