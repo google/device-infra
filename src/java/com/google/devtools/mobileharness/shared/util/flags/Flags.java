@@ -660,6 +660,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> deviceAdminLockRequired = deviceAdminLockRequiredDefault;
 
+  private static final Flag<List<String>> deviceListToDebugAllocationDefault = Flag.stringList();
+
+  @com.beust.jcommander.Parameter(
+      names = "--device_list_to_debug_allocation",
+      description = "The list of serial ids of the devices to debug allocation.",
+      converter = Flag.StringListConverter.class)
+  public Flag<List<String>> deviceListToDebugAllocation = deviceListToDebugAllocationDefault;
+
   private static final Flag<Boolean> enforceMtaasDeviceCheckinGroupDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(

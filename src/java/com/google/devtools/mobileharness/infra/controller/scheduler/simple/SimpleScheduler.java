@@ -465,12 +465,22 @@ public class SimpleScheduler extends AbstractScheduler implements Runnable {
   /** Checks whether the device can meet the job requirement. If so, allocates it to the test. */
   private boolean checkAndAllocateSingleDevice(
       JobScheduleUnit job, TestLocator test, DeviceScheduleUnit device, boolean fireEvent) {
+    List<String> deviceList = Flags.instance().deviceListToDebugAllocation.getNonNull();
+    if (matchDeviceList(deviceList, device.locator().id())) {
+      logger.atWarning().log(
+          "Print out the info for device %s to debug allocation.\nDevice: %s\nJob: %s",
+          device.locator().id(), device, job);
+    }
     if (!allocations.containsDevice(device.locator().universalId())
         && ifDeviceSupports(device, job)) {
       // Found a suitable and idle device for the new test.
       return allocate(test, device, fireEvent);
     }
     return false;
+  }
+
+  private static boolean matchDeviceList(List<String> deviceList, String deviceId) {
+    return deviceList.stream().anyMatch(deviceId::equalsIgnoreCase);
   }
 
   /** Goes through all labs to allocate devices for the given adhoc testbed test. */
