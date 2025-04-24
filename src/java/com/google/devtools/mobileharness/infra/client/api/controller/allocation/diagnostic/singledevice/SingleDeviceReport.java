@@ -238,7 +238,7 @@ public class SingleDeviceReport implements Report {
         report
             .append("Your job should be able to allocate the following ")
             .append(goodIds.size())
-            .append(" devices but MH somehow failed to allocate them. Please try again.")
+            .append(" devices but MH somehow failed to allocate them. Please try again. ")
             .append(Joiner.on("\n - ").join(goodIds.stream().limit(maxCandidateType).iterator()));
         if (goodIds.size() > maxCandidateType) {
           report
