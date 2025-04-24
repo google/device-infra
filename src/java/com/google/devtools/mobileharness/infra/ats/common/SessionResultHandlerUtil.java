@@ -1203,8 +1203,6 @@ public class SessionResultHandlerUtil {
   }
 
   private String getNonTfModuleLogPath(List<JobInfo> jobInfos) {
-    StringBuilder builder = new StringBuilder();
-    builder.append("Failed standalone module log locations:\n");
     ImmutableMap<String, String> failedNonTfTestLogDirs =
         jobInfos.stream()
             .filter(
@@ -1215,7 +1213,11 @@ public class SessionResultHandlerUtil {
             .flatMap(jobInfo -> jobInfo.tests().getAll().values().stream())
             .filter(
                 testInfo ->
-                    testInfo.properties().has(XtsConstants.XTS_FINAL_TEST_LOG_DIR_PROPERTY_KEY))
+                    testInfo.properties().has(XtsConstants.XTS_FINAL_TEST_LOG_DIR_PROPERTY_KEY)
+                        && localFileUtil.isDirExist(
+                            testInfo
+                                .properties()
+                                .get(XtsConstants.XTS_FINAL_TEST_LOG_DIR_PROPERTY_KEY)))
             .collect(
                 toImmutableMap(
                     testInfo ->
@@ -1227,10 +1229,13 @@ public class SessionResultHandlerUtil {
                         testInfo
                             .properties()
                             .get(XtsConstants.XTS_FINAL_TEST_LOG_DIR_PROPERTY_KEY)));
+    if (failedNonTfTestLogDirs.isEmpty()) {
+      return "";
+    }
+    StringBuilder builder = new StringBuilder();
+    builder.insert(0, "Failed standalone module log locations:\n");
     for (Entry<String, String> entry : failedNonTfTestLogDirs.entrySet()) {
-      if (localFileUtil.isDirExist(entry.getValue())) {
-        builder.append(String.format("%s\t: %s\n", entry.getKey(), entry.getValue()));
-      }
+      builder.append(String.format("%s\t: %s\n", entry.getKey(), entry.getValue()));
     }
     builder.append("============================================\n");
     return builder.toString();
