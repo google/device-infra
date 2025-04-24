@@ -454,6 +454,12 @@ public class LabServer {
 
     HostProperties.Builder hostProperties = HostProperties.newBuilder();
 
+    if (Flags.instance().addRequiredDimensionForPartnerSharedPool.getNonNull()) {
+      LabDimensionManager.getInstance()
+          .getRequiredLocalDimensions()
+          .add(Name.POOL, Value.POOL_PARTNER_SHARED);
+    }
+
     // Supported dimensions
     if (systemUtil.isOnLinux()) {
       // By default, all newly upgraded Linux labs will support container-mode tests.

@@ -119,6 +119,16 @@ public class Flags {
       converter = Flag.IntegerConverter.class)
   public Flag<Integer> adbMaxNoDeviceDetectionRounds = adbMaxNoDeviceDetectionRoundsDefault;
 
+  private static final Flag<Boolean> addRequiredDimensionForPartnerSharedPoolDefault =
+      Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--add_required_dimension_for_partner_shared_pool",
+      description = "Add the required dimension pool:partner_shared",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> addRequiredDimensionForPartnerSharedPool =
+      addRequiredDimensionForPartnerSharedPoolDefault;
+
   private static final Flag<List<String>> alrArtifactsDefault = Flag.stringList();
 
   @com.beust.jcommander.Parameter(

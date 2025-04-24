@@ -137,7 +137,10 @@ public final class Dimension {
     PING_GOOGLE_STABILITY,
     /** The average ping time of the device. */
     /** The max ping time of the device. */
-    /** Device pool name. Values include: shared/shared_without_recovery/group_shared/dedicated. */
+    /**
+     * Device pool name. Values include:
+     * shared/shared_without_recovery/group_shared/partner_shared/dedicated.
+     */
     POOL,
     /** Whether the device is reachable from the host. */
     /** Whether the device has the YouTube app installed. */
@@ -414,6 +417,9 @@ public final class Dimension {
 
     /** Dimension value suffix which represents a Chinese or Mac host name. */
     public static final String SUFFIX_CHINA_HOST_NAME = ".*\\.(bej|sha|roam)\\..*";
+
+    /** Dimension value for partner shared pool. */
+    public static final String POOL_PARTNER_SHARED = "partner_shared";
 
     /** Dimension value for public shared pool. */
     public static final String POOL_SHARED = "shared";
