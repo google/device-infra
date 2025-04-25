@@ -239,6 +239,9 @@ message RequestDetail {
   optional ErrorReason error_reason = 24;
   // Required if cancel_reason or error_reason is present.
   optional string error_message = 25;
+
+  optional string working_job_id = 26;
+  optional string working_test_id = 27;
 }
 
 message TestContext {

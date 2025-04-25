@@ -85,6 +85,7 @@ import com.google.wireless.qa.mobileharness.shared.api.device.CompositeDevice;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.comm.message.event.TestMessageEvent;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
+import com.google.wireless.qa.mobileharness.shared.constant.DirCommon;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.XtsTradefedTestDriverSpec;
@@ -177,6 +178,7 @@ public class XtsTradefedTest extends BaseDriver
   private final Sleeper sleeper;
   private final ResUtil resUtil;
   private final Clock clock;
+  private final String testId;
 
   private final Object tfProcessLock = new Object();
 
@@ -212,6 +214,7 @@ public class XtsTradefedTest extends BaseDriver
     this.threadPool = threadPool;
     this.sleeper = sleeper;
     this.logRecorder = LogRecorder.getInstance();
+    this.testId = testInfo.locator().getId();
     this.scheduledThreadPool =
         ThreadPools.createStandardScheduledThreadPool(
             "xts-tradefed-test-" + testInfo.locator().getId(), /* corePoolSize= */ 2);
@@ -450,6 +453,7 @@ public class XtsTradefedTest extends BaseDriver
 
     CommandProcess process = null;
     try (BufferedWriter outputFileWriter = Files.newBufferedWriter(tfOutputPath)) {
+      logger.atInfo().log("tfOutputPath: %s", tfOutputPath);
       synchronized (tfProcessLock) {
         if (xtsTradefedRunCancellation != null) {
           testInfo
@@ -1010,8 +1014,12 @@ public class XtsTradefedTest extends BaseDriver
     try {
       Path dir =
           Path.of(
-              requireNonNull(JAVA_IO_TMPDIR.value()),
-              String.format("xts-root-dir-%s", UUID.randomUUID()),
+              Flags.instance().enableAtsMode.getNonNull()
+                  ? DirCommon.getTempDirRoot()
+                  : requireNonNull(JAVA_IO_TMPDIR.value()),
+              String.format(
+                  "xts-root-dir-%s",
+                  Flags.instance().enableAtsMode.getNonNull() ? this.testId : UUID.randomUUID()),
               String.format("android-%s", xtsType));
       // We need to preparer /xts-root-dir/android-xts/testcases since we create symlink to all the
       // sub test case directories.
