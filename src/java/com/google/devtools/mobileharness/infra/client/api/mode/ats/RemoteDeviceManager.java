@@ -711,6 +711,10 @@ class RemoteDeviceManager implements LabInfoProvider {
       this.dataFromLabTimestamp = timestamp;
       setStatusFromLab(device.getStatus(), timestamp);
       this.updateFromLabLocalTimestamp = Instant.now();
+      addHostIpAndHostNameDimensionsIfMissing(labLocator);
+    }
+
+    private void addHostIpAndHostNameDimensionsIfMissing(LabLocator labLocator) {
       if (!this.dataFromLab.dimensions().required().getAll().containsKey(HOST_IP_DIMENSION_NAME)
           && !this.dataFromLab
               .dimensions()
@@ -755,6 +759,7 @@ class RemoteDeviceManager implements LabInfoProvider {
         dataFromLab = new DeviceScheduleUnit(DeviceLocator.of(device.getUuid(), labLocator));
         dataFromLab.addFeature(device.getFeature());
         dataFromLabTimestamp = timestamp;
+        addHostIpAndHostNameDimensionsIfMissing(labLocator);
       } else {
         logger.atWarning().log(
             "SignUpLabRequest.Device timestamp is older than current data timestamp [%s], ignore"

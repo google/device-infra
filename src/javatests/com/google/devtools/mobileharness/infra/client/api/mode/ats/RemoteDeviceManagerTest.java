@@ -634,7 +634,7 @@ public class RemoteDeviceManagerTest {
   }
 
   @Test
-  public void singUpLab_heartbeatLab_addLabAndDeviceRecord() throws Exception {
+  public void signUpLab_heartbeatLab_addLabAndDeviceRecord() throws Exception {
     ArgumentCaptor<DeviceRecordData> deviceRecordData1 =
         ArgumentCaptor.forClass(DeviceRecordData.class);
     ArgumentCaptor<LabRecordData> labRecordData1 = ArgumentCaptor.forClass(LabRecordData.class);
@@ -663,6 +663,30 @@ public class RemoteDeviceManagerTest {
   @Test
   public void getDeviceInfos() throws Exception {
     labSyncGrpcStub.signUpLab(SIGN_UP_LAB_REQUEST);
+    ImmutableList<DeviceQuery.DeviceInfo> deviceInfos = remoteDeviceManager.getDeviceInfos();
+    assertThat(deviceInfos).hasSize(1);
+    DeviceQuery.DeviceInfo deviceInfo = deviceInfos.get(0);
+    assertThat(deviceInfo.getDimensionList())
+        .contains(
+            Dimension.newBuilder()
+                .setName("host_ip")
+                .setValue(SIGN_UP_LAB_REQUEST.getLabIp())
+                .build());
+    assertThat(deviceInfo.getDimensionList())
+        .contains(
+            Dimension.newBuilder()
+                .setName("host_name")
+                .setValue(SIGN_UP_LAB_REQUEST.getLabHostName())
+                .build());
+  }
+
+  @Test
+  public void getDeviceInfos_updateLabAndDevice() throws Exception {
+    labSyncGrpcStub.signUpLab(SIGN_UP_LAB_REQUEST);
+    labSyncGrpcStub.signUpLab(
+        SIGN_UP_LAB_REQUEST.toBuilder()
+            .setDevice(0, SIGN_UP_LAB_REQUEST.getDevice(0).toBuilder().setTimestampMs(12345L))
+            .build());
     ImmutableList<DeviceQuery.DeviceInfo> deviceInfos = remoteDeviceManager.getDeviceInfos();
     assertThat(deviceInfos).hasSize(1);
     DeviceQuery.DeviceInfo deviceInfo = deviceInfos.get(0);
