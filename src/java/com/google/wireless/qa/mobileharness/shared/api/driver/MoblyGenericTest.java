@@ -102,7 +102,7 @@ public class MoblyGenericTest extends BaseDriver {
   /** Name of file that catches stdout & stderr output of Mobly process. */
   private static final String RAW_MOBLY_LOG_ALL_IN_ONE = "mobly_command_output.log";
 
-  private static final String MOBLY_LOG_DIR = "mobly_logs";
+  protected static final String MOBLY_LOG_DIR = "mobly_logs";
   private static final String ENV_MOBLY_LOGPATH = "MOBLY_LOGPATH";
 
   public static final String TEST_SELECTOR_ALL = "all";
@@ -501,18 +501,8 @@ public class MoblyGenericTest extends BaseDriver {
 
   /** Massages Mobly log output structure into a format convenient for Sponge. */
   protected void handleOutput(TestInfo testInfo) throws IOException, MobileHarnessException {
-    // Mobly creates a timestamped folder for the results and symlinks it to 'latest'. To avoid
-    // Sponge getting two copies of the file, we will delete the symlink and move the files to the
-    // root of the log folder.
-    if (testbedName == null) {
-      throw new MobileHarnessException(
-          ExtErrorId.MOBLY_TESTBED_NAME_EMPTY_ERROR, "Testbed name was not set.");
-    }
-    Path logDirLatest = Path.of(getLogDir(testInfo).getPath(), testbedName, "latest");
-    Path logDirTimestamped = Files.readSymbolicLink(logDirLatest);
-    Path logDirFinal = Path.of(testInfo.getGenFileDir(), MOBLY_LOG_DIR);
-    Files.delete(logDirLatest);
-    Files.move(logDirTimestamped, logDirFinal);
+    // Not needed for the MoblyGenericTest driver, in which case the Mobly binary will have already
+    // handled the necessary log output massaging.
   }
 
   /** Generates the test execution command. */

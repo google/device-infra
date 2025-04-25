@@ -17,6 +17,7 @@
 package com.google.wireless.qa.mobileharness.shared.api.driver;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.console.result.mobly.MoblyYamlParser;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.InstallMoblyTestDepsArgs;
@@ -29,6 +30,8 @@ import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.spec.MoblyAospPackageTestSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Iterator;
@@ -103,6 +106,23 @@ public class MoblyAospPackageTest extends MoblyGenericTest {
     JSONObject moblyJson = convertMoblyConfig(generateMoblyConfig(testInfo, getDevice()));
     testbedName = MoblyGenericTest.getTestbedName(moblyJson);
     return prepareMoblyConfig(testInfo, moblyJson);
+  }
+
+  /** Massages Mobly log output structure into a format convenient for Sponge. */
+  @Override
+  protected void handleOutput(TestInfo testInfo) throws IOException, MobileHarnessException {
+    // Mobly creates a timestamped folder for the results and symlinks it to 'latest'. To avoid
+    // Sponge getting two copies of the file, we will delete the symlink and move the files to the
+    // root of the log folder.
+    if (testbedName == null) {
+      throw new MobileHarnessException(
+          ExtErrorId.MOBLY_TESTBED_NAME_EMPTY_ERROR, "Testbed name was not set.");
+    }
+    Path logDirLatest = Path.of(getLogDir(testInfo).getPath(), testbedName, "latest");
+    Path logDirTimestamped = Files.readSymbolicLink(logDirLatest);
+    Path logDirFinal = Path.of(testInfo.getGenFileDir(), MOBLY_LOG_DIR);
+    Files.delete(logDirLatest);
+    Files.move(logDirTimestamped, logDirFinal);
   }
 
   /** Generates the test execution command. */
