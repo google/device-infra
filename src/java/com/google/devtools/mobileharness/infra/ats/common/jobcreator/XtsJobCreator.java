@@ -630,7 +630,8 @@ public abstract class XtsJobCreator {
       SessionRequestInfo sessionRequestInfo) throws MobileHarnessException;
 
   protected abstract void injectEnvSpecificProperties(
-      SessionRequestInfo sessionRequestInfo, Map<String, String> driverParams);
+      SessionRequestInfo sessionRequestInfo, Map<String, String> driverParams)
+      throws InterruptedException;
 
   protected abstract Path prepareRunRetryTfSubPlanXmlFile(
       SessionRequestInfo sessionRequestInfo, SubPlan subPlan) throws MobileHarnessException;

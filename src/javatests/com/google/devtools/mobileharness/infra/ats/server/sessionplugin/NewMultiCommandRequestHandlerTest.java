@@ -25,6 +25,7 @@ import static org.mockito.ArgumentMatchers.endsWith;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
@@ -59,6 +60,7 @@ import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.Tes
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestResource;
 import com.google.devtools.mobileharness.infra.ats.server.sessionplugin.NewMultiCommandRequestHandler.CreateJobsResult;
 import com.google.devtools.mobileharness.infra.ats.server.sessionplugin.NewMultiCommandRequestHandler.HandleResultProcessingResult;
+import com.google.devtools.mobileharness.infra.ats.server.util.AtsServerSessionUtil;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
@@ -138,6 +140,7 @@ public final class NewMultiCommandRequestHandlerTest {
   @Bind @Spy private LocalFileUtil localFileUtil = new LocalFileUtil();
   @Bind @Mock private XtsTradefedRuntimeInfoFileUtil xtsTradefedRuntimeInfoFileUtil;
   @Bind @Mock private Sleeper sleeper;
+  @Bind @Mock private AtsServerSessionUtil atsServerSessionUtil;
 
   @Mock private SessionInfo sessionInfo;
   @Mock private JobInfo jobInfo;
@@ -391,6 +394,56 @@ public final class NewMultiCommandRequestHandlerTest {
     verify(files).add(eq("test-name-2"), eq("ats-file-server::/path/to/file2"));
     verify(localFileUtil).copyFileOrDir(eq("/bin/acloud_prebuilt"), anyString());
     verify(files).add(eq("acloud_prebuilt"), eq("ats-file-server::/mh_resources/acloud_prebuilt"));
+  }
+
+  @Test
+  public void createTradefedJobs_localMode_success() throws Exception {
+    when(atsServerSessionUtil.isLocalMode()).thenReturn(true);
+    doReturn("output").when(localFileUtil).unzipFile(anyString(), anyString(), any(Duration.class));
+    when(clock.millis()).thenReturn(1000L).thenReturn(2000L).thenReturn(3000L);
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+
+    // Trigger the handler.
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+
+    assertThat(createJobsResult.jobInfos()).containsExactly(jobInfo);
+    assertThat(createJobsResult.commandDetails()).hasSize(1);
+    String commandId = createJobsResult.commandDetails().keySet().iterator().next();
+    assertThat(commandId)
+        .isEqualTo(UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString());
+    CommandDetail commandDetail = createJobsResult.commandDetails().values().iterator().next();
+    assertThat(commandDetail.getCommandLine()).isEqualTo(commandInfo.getCommandLine());
+    assertThat(commandDetail.getId()).isEqualTo(commandId);
+    assertThat(properties.get("xts-tradefed-job")).isEqualTo("true");
+    assertThat(properties.get("xts_command_id")).isEqualTo(commandId);
+    verify(xtsJobCreator).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
+
+    // Verify sessionRequestInfo has been correctly generated.
+    SessionRequestInfo sessionRequestInfo = sessionRequestInfoCaptor.getValue();
+    assertThat(sessionRequestInfo.testPlan()).isEqualTo("cts-plan");
+    assertThat(sessionRequestInfo.moduleNames()).containsExactly("module1");
+    assertThat(sessionRequestInfo.testName()).hasValue("test1");
+    String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
+    String zipFile = "/path/to/xts/zip/file.zip";
+    String testPlanFile = DirUtil.getPublicGenDir() + "/session_session_id/command.xml";
+    assertThat(sessionRequestInfo.xtsRootDir()).isEqualTo(xtsRootDir);
+    assertThat(sessionRequestInfo.xtsType()).isEqualTo("cts");
+    assertThat(sessionRequestInfo.androidXtsZip()).hasValue("ats-file-server::" + zipFile);
+    assertThat(sessionRequestInfo.startTimeout()).isEqualTo(Duration.ofSeconds(1000));
+    assertThat(sessionRequestInfo.jobTimeout()).isEqualTo(Duration.ofSeconds(2000));
+    assertThat(sessionRequestInfo.deviceSerials()).containsExactly(DEVICE_ID_1, DEVICE_ID_2);
+    assertThat(sessionRequestInfo.shardCount()).hasValue(2);
+    assertThat(sessionRequestInfo.envVars()).containsExactly("env_key1", "env_value1");
+    assertThat(sessionRequestInfo.testPlanFile()).hasValue("ats-file-server::" + testPlanFile);
+    assertThat(sessionRequestInfo.remoteRunnerFilePathPrefix()).hasValue("ats-file-server::");
+
+    // Verify that handler has unzipped the zip file.
+    verify(localFileUtil).unzipFile(zipFile, xtsRootDir, Duration.ofHours(1));
+
+    verify(files).add(eq("test-name-1"), eq("ats-file-server::/path/to/file1"));
+    verify(files).add(eq("test-name-2"), eq("ats-file-server::/path/to/file2"));
   }
 
   @Test
@@ -1082,6 +1135,24 @@ public final class NewMultiCommandRequestHandlerTest {
     // Verify that handler has unmounted the zip file after calling cleanup().
     newMultiCommandRequestHandler.cleanup(sessionInfo);
     verifyUnmountRootDir(xtsRootDir);
+  }
+
+  @Test
+  public void cleanup_noXtsZip_success() throws Exception {
+    when(atsServerSessionUtil.isLocalMode()).thenReturn(true);
+    doReturn("output").when(localFileUtil).unzipFile(anyString(), anyString(), any(Duration.class));
+    doNothing().when(localFileUtil).removeFileOrDir(anyString());
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+
+    // Trigger the handler.
+    var unused = newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+
+    // Verify that handler has mounted the zip file.
+    String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
+    verify(localFileUtil).unzipFile("/path/to/xts/zip/file.zip", xtsRootDir, Duration.ofHours(1));
+    newMultiCommandRequestHandler.cleanup(sessionInfo);
+    verify(localFileUtil).removeFileOrDir(xtsRootDir);
   }
 
   @Test

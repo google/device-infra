@@ -37,6 +37,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/jobcreator:module_sharding_args_generator",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/jobcreator:server_job_creator",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/plan:test_plan_parser",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/server/util:ats_server_session_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:suite_test_filter",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:previous_result_loader",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:retry_args",

@@ -28,6 +28,7 @@ import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerU
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName;
 import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser;
+import com.google.devtools.mobileharness.infra.ats.server.util.AtsServerSessionUtil;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteTestFilter;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryArgs;
@@ -47,6 +48,7 @@ import javax.inject.Inject;
 public class ServerJobCreator extends XtsJobCreator {
 
   private final PreviousResultLoader previousResultLoader;
+  private final AtsServerSessionUtil atsServerSessionUtil;
 
   @Inject
   ServerJobCreator(
@@ -55,7 +57,8 @@ public class ServerJobCreator extends XtsJobCreator {
       TestPlanParser testPlanParser,
       PreviousResultLoader previousResultLoader,
       RetryGenerator retryGenerator,
-      ModuleShardingArgsGenerator moduleShardingArgsGenerator) {
+      ModuleShardingArgsGenerator moduleShardingArgsGenerator,
+      AtsServerSessionUtil atsServerSessionUtil) {
     super(
         sessionRequestHandlerUtil,
         localFileUtil,
@@ -64,12 +67,18 @@ public class ServerJobCreator extends XtsJobCreator {
         moduleShardingArgsGenerator);
 
     this.previousResultLoader = previousResultLoader;
+    this.atsServerSessionUtil = atsServerSessionUtil;
   }
 
   @Override
   protected void injectEnvSpecificProperties(
-      SessionRequestInfo sessionRequestInfo, Map<String, String> driverParams) {
-    driverParams.put("android_xts_zip", sessionRequestInfo.androidXtsZip().get());
+      SessionRequestInfo sessionRequestInfo, Map<String, String> driverParams)
+      throws InterruptedException {
+    if (atsServerSessionUtil.isLocalMode()) {
+      driverParams.put("xts_root_dir", sessionRequestInfo.xtsRootDir());
+    } else {
+      driverParams.put("android_xts_zip", sessionRequestInfo.androidXtsZip().get());
+    }
     if (sessionRequestInfo.remoteRunnerFilePathPrefix().isPresent()
         && driverParams.containsKey("subplan_xml")) {
       driverParams.put(

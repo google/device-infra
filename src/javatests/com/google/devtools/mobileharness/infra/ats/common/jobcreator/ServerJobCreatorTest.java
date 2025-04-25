@@ -37,6 +37,7 @@ import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.ShardingMode;
+import com.google.devtools.mobileharness.infra.ats.server.util.AtsServerSessionUtil;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryArgs;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryGenerator;
@@ -88,6 +89,7 @@ public final class ServerJobCreatorTest {
   @Rule public final SetFlagsOss flags = new SetFlagsOss();
 
   @Bind @Mock private SessionRequestHandlerUtil sessionRequestHandlerUtil;
+  @Bind @Mock private AtsServerSessionUtil atsServerSessionUtil;
   @Bind @Mock private LocalFileUtil localFileUtil;
   @Bind @Mock private TestPlanParser testPlanParser;
   @Bind @Mock private PreviousResultLoader previousResultLoader;
@@ -142,6 +144,45 @@ public final class ServerJobCreatorTest {
             "cts",
             "android_xts_zip",
             ANDROID_XTS_ZIP_PATH,
+            "xts_test_plan",
+            "cts");
+    assertThat(tradefedJobInfoList.get(0).extraJobProperties())
+        .containsExactly(Job.XTS_TEST_PLAN, "cts");
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test
+  public void createXtsTradefedTestJob_localMode() throws Exception {
+    when(atsServerSessionUtil.isLocalMode()).thenReturn(true);
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfo.builder()
+            .setTestPlan("cts")
+            .setCommandLineArgs("cts")
+            .setXtsType("cts")
+            .setXtsRootDir(XTS_ROOT_DIR_PATH)
+            .setAndroidXtsZip(ANDROID_XTS_ZIP_PATH)
+            .setModuleNames(ImmutableList.of("mock_module"))
+            .build();
+    ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
+
+    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any()))
+        .thenReturn(JobConfig.getDefaultInstance());
+
+    ImmutableList<TradefedJobInfo> tradefedJobInfoList =
+        jobCreator.createXtsTradefedTestJobInfo(
+            sessionRequestInfo, ImmutableList.of("mock_module"));
+
+    assertThat(tradefedJobInfoList).hasSize(1);
+    verify(sessionRequestHandlerUtil)
+        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture());
+    assertThat(driverParamsCaptor.getValue())
+        .containsExactly(
+            "run_command_args",
+            "-m mock_module",
+            "xts_type",
+            "cts",
+            "xts_root_dir",
+            XTS_ROOT_DIR_PATH,
             "xts_test_plan",
             "cts");
     assertThat(tradefedJobInfoList.get(0).extraJobProperties())

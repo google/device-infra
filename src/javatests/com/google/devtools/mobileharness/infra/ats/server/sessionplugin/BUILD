@@ -53,6 +53,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:ats_server_session_plugin_lib",
         "//src/java/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:new_multi_command_request_handler",
         "//src/java/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:tradefed_config_generator",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/server/util:ats_server_session_util",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/device:querier",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/constant:session_properties",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_event",

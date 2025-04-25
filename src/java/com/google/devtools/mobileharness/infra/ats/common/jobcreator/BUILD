@@ -103,6 +103,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_info",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:xts_property_name",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/plan:test_plan_parser",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/server/util:ats_server_session_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:suite_test_filter",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:previous_result_loader",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:retry_args",
