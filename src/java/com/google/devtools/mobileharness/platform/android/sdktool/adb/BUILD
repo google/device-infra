@@ -135,6 +135,11 @@ java_library(
 )
 
 java_library(
+    name = "adb_output_util",
+    srcs = ["AndroidAdbOutputUtil.java"],
+)
+
+java_library(
     name = "usb_device_locator",
     srcs = ["UsbDeviceLocator.java"],
     visibility = [

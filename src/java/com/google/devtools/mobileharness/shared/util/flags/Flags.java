@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.shared.util.flags;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Arrays.stream;
 
 import com.google.common.base.Strings;
@@ -1332,6 +1333,17 @@ public class Flags {
       converter = DurationFlag.DurationConverter.class)
   public Flag<Duration> jobGenFileExpiredTime = jobGenFileExpiredTimeDefault;
 
+  private static final Flag<Boolean> keepTestHarnessFalseDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--keep_test_harness_false",
+      description =
+          "If true, keep the device property persist.sys.test_harness false by adding required"
+              + " dimension. Moreover reset_device_in_android_real_device_setup flag can't be true"
+              + " in this case. Only turn on the flag in omni mode for CTS device pool.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> keepTestHarnessFalse = keepTestHarnessFalseDefault;
+
   private static final Flag<String> labDeviceConfigFileDefault = Flag.value("");
 
   @com.beust.jcommander.Parameter(
@@ -1684,8 +1696,8 @@ public class Flags {
   @com.beust.jcommander.Parameter(
       names = "--reset_device_in_android_real_device_setup",
       description =
-          "If this flag is true, Android real device will be reset first in setup process. Default"
-              + " is false.",
+          "If this flag is true, Android real device will be reset first in setup process. The flag"
+              + " can't be set to true if keep_test_harness_false is true. Default is false.",
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> resetDeviceInAndroidRealDeviceSetup =
       resetDeviceInAndroidRealDeviceSetupDefault;
@@ -2007,6 +2019,12 @@ public class Flags {
     commander.setAcceptUnknownOptions(true);
     commander.setAllowParameterOverwriting(true);
     commander.parse(args);
+    // Check constraints on flags.
+    checkArgument(
+        !Flags.instance().resetDeviceInAndroidRealDeviceSetup.getNonNull()
+            || !Flags.instance().keepTestHarnessFalse.getNonNull(),
+        "--reset_device_in_android_real_device_setup and --keep_test_harness_false cannot be both"
+            + " true.");
   }
 
   /**

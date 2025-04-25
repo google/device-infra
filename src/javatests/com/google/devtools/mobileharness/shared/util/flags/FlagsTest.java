@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.shared.util.flags;
 
 import static com.google.common.truth.Truth.assertThat;
+import static org.junit.Assert.assertThrows;
 
 import java.time.Duration;
 import org.junit.After;
@@ -50,6 +51,15 @@ public class FlagsTest {
     assertThat(Flags.instance().supplementalResDir.getNonNull()).isEqualTo("foo");
     assertThat(Flags.instance().extraAdbCommandTimeout.getNonNull())
         .isEqualTo(Duration.ofSeconds(123L));
+
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            Flags.parse(
+                new String[] {
+                  "--reset_device_in_android_real_device_setup=true",
+                  "--keep_test_harness_false=true",
+                }));
 
     Flags.resetToDefault();
 

@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.platform.android.device;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbOutputUtil.convertPropertyValueToBoolean;
 import static java.util.Arrays.stream;
 import static java.util.stream.Collectors.joining;
 
@@ -30,9 +31,11 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidPro
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty.KeepDimensionValueCase;
 import com.google.devtools.mobileharness.platform.android.shared.constant.Splitters;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.api.device.BaseDevice;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
+import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Value;
 import java.lang.annotation.Annotation;
 
 /** Helper class for Android Device. */
@@ -131,7 +134,50 @@ public class AndroidDeviceHelper {
           break;
       }
     }
+    isDimensionChanged |= updatePersistTestHarnessRequiredDimension(device);
+    return isDimensionChanged;
+  }
 
+  /**
+   * Updates the required dimension persist_test_harness:false based on the device property
+   * persist.sys.test_harness.
+   *
+   * <p>The value for the required dimension persist_test_harness can only be set to false.
+   *
+   * <p>If the persist_test_harness:false required dimension is not set, and the
+   * persist.sys.test_harness property not true, then the persist_test_harness:false required
+   * dimension will be added to prevent the device from tests to enable the test harness.
+   *
+   * <p>If the persist_test_harness:false required dimension is set, and the
+   * persist.sys.test_harness property is true, then the persist_test_harness:false required
+   * dimension will be removed.
+   */
+  @CanIgnoreReturnValue
+  public boolean updatePersistTestHarnessRequiredDimension(BaseDevice device)
+      throws InterruptedException, MobileHarnessException {
+    boolean isDimensionChanged = false;
+    if (Flags.instance().keepTestHarnessFalse.getNonNull()) {
+      String deviceId = device.getDeviceId();
+
+      String key = Ascii.toLowerCase(AndroidProperty.PERSIST_TEST_HARNESS.name());
+      ImmutableSet<String> oldValues = ImmutableSet.copyOf(device.getRequiredDimension(key));
+      boolean value =
+          convertPropertyValueToBoolean(
+                  getPropertyValue(deviceId, AndroidProperty.PERSIST_TEST_HARNESS))
+              .orElse(false);
+      if (value) {
+        if (!oldValues.isEmpty()) {
+          device.info().dimensions().required().remove(key);
+          isDimensionChanged = true;
+          logger.atInfo().log(
+              "Required dimension %s=%s removed, device_id=%s", key, oldValues, deviceId);
+        }
+      } else if (oldValues.isEmpty()) {
+        device.updateRequiredDimension(key, Value.FALSE);
+        isDimensionChanged = true;
+        logger.atInfo().log("Required dimension %s=%s added, device_id=%s", key, "false", deviceId);
+      }
+    }
     return isDimensionChanged;
   }
 
