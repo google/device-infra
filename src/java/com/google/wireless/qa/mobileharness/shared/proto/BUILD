@@ -71,6 +71,23 @@ java_proto_library(
 )
 
 proto_library(
+    name = "device_model_proto",
+    srcs = ["device_model.proto"],
+    visibility = [
+    ],
+    deps = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:common_proto",
+    ],
+)
+
+java_proto_library(
+    name = "device_model_java_proto",
+    visibility = [
+    ],
+    deps = [":device_model_proto"],
+)
+
+proto_library(
     name = "job_proto",
     srcs = ["job.proto"],
 )
