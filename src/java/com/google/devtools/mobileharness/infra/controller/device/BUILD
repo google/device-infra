@@ -114,6 +114,17 @@ java_library(
 )
 
 java_library(
+    name = "device_id_manager_shim",
+    srcs = ["DeviceIdManagerShim.java"],
+    # DO NOT change this. This is a hack to allow code in an allowlist to access the DeviceIdManager's package private methods.
+    visibility = ["//src/java/com/google/devtools/omnilab/device/lab/server/framework/internal/device:__pkg__"],
+    deps = [
+        ":device_id_manager",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab:device_id_descriptor",
+    ],
+)
+
+java_library(
     name = "device_info_manager",
     srcs = ["DeviceInfoManager.java"],
     deps = [
@@ -127,6 +138,19 @@ java_library(
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "device_info_manager_shim",
+    srcs = ["DeviceInfoManagerShim.java"],
+    # DO NOT change this. This is a hack to allow code in an allowlist to access the DeviceInfoManager's package private methods.
+    visibility = ["//src/java/com/google/devtools/omnilab/device/lab/server/framework/internal/device:__pkg__"],
+    deps = [
+        ":device_info_manager",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab:device_id_descriptor",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device/config",
+        "@maven//:com_google_code_findbugs_jsr305",
     ],
 )
 
