@@ -240,12 +240,27 @@ public abstract class Command {
   /**
    * Returns a command that behaves equivalently to this command, but with the current environment
    * updated by the specified environment.
+   *
+   * @param environment The environment to update the current environment with. The environment
+   *     variables with blank values will be ignored.
    */
   public final Command withEnvironmentUpdated(Map<String, String> environment) {
+    // Defensive coding: remove blank environment variables from the input (which may be an
+    // immutable collection).
+    ImmutableMap.Builder<String, String> nonBlankEnvironmentBuilder = ImmutableMap.builder();
+    environment.forEach(
+        (key, value) -> {
+          if (!value.isBlank()) {
+            nonBlankEnvironmentBuilder.put(key, value);
+          } else {
+            logger.atInfo().log(
+                "Ignoring environment variable overwrite with blank value for key: %s", key);
+          }
+        });
     return withEnvironment(
         ImmutableMap.<String, String>builder()
             .putAll(environment())
-            .putAll(environment)
+            .putAll(nonBlankEnvironmentBuilder.buildOrThrow())
             .buildKeepingLast());
   }
 
@@ -259,7 +274,7 @@ public abstract class Command {
     return withEnvironmentUpdated(mapFromVarArgs(firstKey, firstValue, rest));
   }
 
-  private static Map<String, String> mapFromVarArgs(
+  private static ImmutableMap<String, String> mapFromVarArgs(
       String firstKey, String firstValue, String... rest) {
     checkArgument(rest.length % 2 == 0, "odd number of key/value arguments");
     ImmutableMap.Builder<String, String> builder = ImmutableMap.builder();
