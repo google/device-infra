@@ -23,7 +23,6 @@ java_library(
     visibility = [
         # This lib is for MH Infra internal user only. DO NOT add non-MH code path here.
         "//src/java/com/google/devtools/mobileharness/shared/util/error:__pkg__",
-        "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/job:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/util:__pkg__",
     ],
     deps = [
