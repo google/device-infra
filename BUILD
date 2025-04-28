@@ -59,3 +59,11 @@ package_group(
         "//src/javatests/com/google/devtools/mobileharness/infra/controller/device/...",
     ],
 )
+
+package_group(
+    name = "omnilab_fusion",
+    packages = [
+        "//src/java/com/google/devtools/omnilab/device/lab/server/...",
+        "//src/javatests/com/google/devtools/omnilab/device/lab/server/...",
+    ],
+)
