@@ -24,6 +24,7 @@ java_library(
     srcs = ["LogRecordImportance.java"],
     visibility = [
         "//:deviceinfra_all_pkg",
+        "//:omnilab_fusion",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/shared/constant/closeable",

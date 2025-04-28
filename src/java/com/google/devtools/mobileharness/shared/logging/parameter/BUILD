@@ -44,6 +44,7 @@ java_library(
     name = "parameter",
     srcs = glob(["*.java"]),
     visibility = [
+        "//:omnilab_fusion",
         "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/shared/logging:__subpackages__",
     ],

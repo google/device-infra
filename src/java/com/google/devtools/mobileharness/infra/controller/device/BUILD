@@ -21,6 +21,7 @@ load("@rules_java//java:defs.bzl", "java_library")
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
+        "//:omnilab_fusion",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/dispatcher:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:__subpackages__",
@@ -95,6 +96,7 @@ java_library(
     name = "device_helper_factory",
     srcs = ["DeviceHelperFactory.java"],
     visibility = [
+        "//:omnilab_fusion",
         "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/service:__subpackages__",
     ],
@@ -158,6 +160,7 @@ java_library(
     name = "device_state_checker",
     srcs = ["DeviceStateChecker.java"],
     visibility = [
+        "//:omnilab_fusion",
         "//src/java/com/google/devtools/mobileharness/infra/lab/controller:__pkg__",
     ],
     deps = ["//src/java/com/google/devtools/mobileharness/api/model/error"],

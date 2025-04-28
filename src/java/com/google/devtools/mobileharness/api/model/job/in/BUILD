@@ -24,6 +24,7 @@ java_library(
     name = "in",
     visibility = [
         "//:deviceinfra_all_pkg",
+        "//:omnilab_fusion",
     ],
     exports = [
         ":decorators",
@@ -134,6 +135,7 @@ java_library(
     name = "timeout",
     srcs = ["Timeout.java"],
     visibility = [
+        "//:omnilab_fusion",
         "//java/com/google/devtools/mobileharness/infra/lab/rpc/service:__pkg__",
     ],
     deps = [

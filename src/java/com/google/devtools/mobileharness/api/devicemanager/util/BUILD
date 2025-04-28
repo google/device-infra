@@ -23,6 +23,7 @@ java_library(
         "ClassUtil.java",
     ],
     visibility = [
+        "//:omnilab_fusion",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:__subpackages__",
     ],
     deps = [

@@ -21,6 +21,7 @@ java_library(
     name = "android_media_util",
     srcs = ["AndroidMediaUtil.java"],
     visibility = [
+        "//:omnilab_fusion",
         "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:__pkg__",
         "//src/javatests/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",

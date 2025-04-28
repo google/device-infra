@@ -21,6 +21,7 @@ java_library(
     name = "device_daemon_apk_info",
     visibility = [
         "//:deviceinfra_all_pkg",
+        "//:omnilab_fusion",
     ],
     exports = [
         ":device_daemon_apk_info_interface",
@@ -60,6 +61,7 @@ java_library(
         "DeviceDaemonHelper.java",
     ],
     visibility = [
+        "//:omnilab_fusion",
         "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:__pkg__",
         "//src/javatests/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",

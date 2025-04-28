@@ -18,6 +18,7 @@ load("@rules_java//java:defs.bzl", "java_library")
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
+        "//:omnilab_fusion",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/api/mode/ats:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/lab:__subpackages__",
     ],

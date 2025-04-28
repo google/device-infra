@@ -16,6 +16,7 @@
 load("@rules_java//java:defs.bzl", "java_library")
 
 DEFAULT_VISIBILITY = [
+    "//:omnilab_fusion",
     "//:deviceinfra_all_pkg",
 ]
 
@@ -72,6 +73,7 @@ java_library(
     ],
     visibility = [
         "//:deviceinfra_devicemanagement_pkg",
+        "//:omnilab_fusion",
         "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
@@ -143,6 +145,7 @@ java_library(
     name = "usb_device_locator",
     srcs = ["UsbDeviceLocator.java"],
     visibility = [
+        "//:omnilab_fusion",
         "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/container:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/platform/android/systemspec:__pkg__",

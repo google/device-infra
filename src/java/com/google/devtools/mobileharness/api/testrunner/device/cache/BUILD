@@ -18,9 +18,10 @@ load("@rules_java//java:defs.bzl", "java_library")
 java_library(
     name = "device_cache_manager",
     srcs = ["DeviceCacheManager.java"],
+    # Do NOT add visibility here.
     visibility = [
-        # Do NOT add visibility here.
         "//:deviceinfra_devicemanagement_pkg",
+        "//:omnilab_fusion",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
@@ -73,6 +74,7 @@ java_library(
     name = "device_cache",
     visibility = [
         "//:deviceinfra_all_pkg",
+        "//:omnilab_fusion",
     ],
     exports = [":device_cache_interface"],
     runtime_deps = [

@@ -31,6 +31,7 @@ java_library(
     srcs = ["SystemUtil.java"],
     visibility = [
         "//:deviceinfra_pkg",
+        "//:omnilab_fusion",
     ],
     deps = [
         ":memory_info",

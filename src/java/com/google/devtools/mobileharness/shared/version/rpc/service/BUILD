@@ -19,6 +19,7 @@ java_library(
     name = "service",
     srcs = ["VersionServiceImpl.java"],
     visibility = [
+        "//:omnilab_fusion",
         "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/shared/version/rpc/service/grpc:__subpackages__",
     ],

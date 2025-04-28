@@ -22,6 +22,7 @@ java_library(
     srcs = ["AndroidSystemStateUtil.java"],
     visibility = [
         "//:deviceinfra_all_pkg",
+        "//:omnilab_fusion",
     ],
     deps = [
         "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",

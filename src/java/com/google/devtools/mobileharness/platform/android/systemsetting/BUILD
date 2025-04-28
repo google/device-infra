@@ -22,6 +22,7 @@ java_library(
     srcs = ["AndroidSystemSettingUtil.java"],
     visibility = [
         "//:deviceinfra_all_pkg",
+        "//:omnilab_fusion",
     ],
     exports = [
         ":enums",

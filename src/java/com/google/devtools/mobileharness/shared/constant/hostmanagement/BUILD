@@ -22,6 +22,7 @@ package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
         "//:deviceinfra_all_pkg",
+        "//:omnilab_fusion",
         "//java/com/google/alkali/boq/arsenal:__subpackages__",
         "//javatests/com/google/alkali/boq/arsenal:__subpackages__",
     ],

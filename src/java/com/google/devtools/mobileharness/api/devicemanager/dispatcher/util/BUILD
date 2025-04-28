@@ -22,6 +22,7 @@ java_library(
     srcs = ["DeviceIdGenerator.java"],
     visibility = [
         "//:deviceinfra_devicemanagement_pkg",
+        "//:omnilab_fusion",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",

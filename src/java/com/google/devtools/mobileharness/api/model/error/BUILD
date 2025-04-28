@@ -27,6 +27,7 @@ java_library(
     ),
     visibility = [
         "//:deviceinfra_api_users",
+        "//:omnilab_fusion",
     ],
     deps = [
         "//src/devtools/common/metrics/stability/model/proto:error_java_proto",

@@ -21,6 +21,7 @@ java_library(
     name = "android_real_device_delegate",
     srcs = ["AndroidRealDeviceDelegate.java"],
     visibility = [
+        "//:omnilab_fusion",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
         "//src/javatests/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android/realdevice:__pkg__",
     ],
@@ -91,6 +92,7 @@ java_library(
     name = "android_real_device_constants",
     srcs = ["AndroidRealDeviceConstants.java"],
     visibility = [
+        "//:omnilab_fusion",
         "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__subpackages__",
         "//src/javatests/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android/realdevice:__subpackages__",

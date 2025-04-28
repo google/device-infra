@@ -21,6 +21,7 @@ java_library(
     name = "android_device_helper",
     srcs = ["AndroidDeviceHelper.java"],
     visibility = [
+        "//:omnilab_fusion",
         "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
         "//src/javatests/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/device:__pkg__",

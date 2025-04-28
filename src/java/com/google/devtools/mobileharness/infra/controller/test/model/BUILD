@@ -22,6 +22,7 @@ java_library(
         "TestExecutionUnit.java",
     ],
     visibility = [
+        "//:omnilab_fusion",
         "//src/java/com/google/devtools/mobileharness/infra/container/controller:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/container/sandbox:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:__subpackages__",
@@ -46,6 +47,7 @@ java_library(
         "TestExecutionResult.java",
     ],
     visibility = [
+        "//:omnilab_fusion",
         "//src/java/com/google/devtools/mobileharness/infra/container:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:__subpackages__",

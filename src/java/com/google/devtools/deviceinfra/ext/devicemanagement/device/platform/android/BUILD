@@ -22,6 +22,7 @@ java_library(
     srcs = ["AndroidDeviceDelegate.java"],
     visibility = [
         "//:deviceinfra_all_pkg",
+        "//:omnilab_fusion",
     ],
     deps = [
         "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device:base_device_helper",
@@ -77,6 +78,7 @@ java_library(
     name = "android_device_delegate_helper",
     srcs = ["AndroidDeviceDelegateHelper.java"],
     visibility = [
+        "//:omnilab_fusion",
         "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android/realdevice:__pkg__",
     ],
     deps = [

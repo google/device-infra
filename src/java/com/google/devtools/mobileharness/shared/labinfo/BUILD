@@ -21,6 +21,7 @@ java_library(
     name = "lab_info_provider",
     srcs = ["LabInfoProvider.java"],
     visibility = [
+        "//:omnilab_fusion",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/lab:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/monitoring:__pkg__",

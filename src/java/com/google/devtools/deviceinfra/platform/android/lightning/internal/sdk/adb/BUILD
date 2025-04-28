@@ -54,6 +54,7 @@ java_library(
     name = "constants",
     srcs = ["Constants.java"],
     visibility = [
+        "//:omnilab_fusion",
         "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android/realdevice:__pkg__",
     ],
 )

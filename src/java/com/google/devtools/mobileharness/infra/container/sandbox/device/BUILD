@@ -19,6 +19,7 @@ java_library(
     name = "device_sandbox_controller",
     srcs = ["DeviceSandboxController.java"],
     visibility = [
+        "//:omnilab_fusion",
         "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
     ],
@@ -44,6 +45,7 @@ java_library(
     name = "no_op_device",
     srcs = ["NoOpDeviceSandboxController.java"],
     visibility = [
+        "//:omnilab_fusion",
         "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
     ],

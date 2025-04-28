@@ -21,6 +21,7 @@ java_library(
     name = "test_info_creator",
     srcs = ["TestInfoCreator.java"],
     visibility = [
+        "//:omnilab_fusion",
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/service:__pkg__",
     ],
     deps = [

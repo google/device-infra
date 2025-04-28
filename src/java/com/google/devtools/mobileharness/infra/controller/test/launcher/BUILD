@@ -19,6 +19,7 @@ java_library(
     name = "local_device_test_runner_launcher",
     srcs = ["LocalDeviceTestRunnerLauncher.java"],
     visibility = [
+        "//:omnilab_fusion",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/service:__pkg__",
     ],

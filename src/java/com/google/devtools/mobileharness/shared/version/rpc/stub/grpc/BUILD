@@ -27,6 +27,7 @@ java_library(
     ],
     visibility = [
         "//:deviceinfra_all_pkg",
+        "//:omnilab_fusion",
     ],
     deps = [
         "//src/devtools/mobileharness/shared/version/proto:version_service_grpc",

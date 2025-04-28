@@ -82,6 +82,7 @@ java_library(
     name = "runtime_charging_util",
     srcs = ["RuntimeChargingUtil.java"],
     visibility = [
+        "//:omnilab_fusion",
         "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
         "//src/javatests/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
     ],
@@ -111,6 +112,7 @@ java_library(
     ],
     visibility = [
         "//:deviceinfra_all_pkg",
+        "//:omnilab_fusion",
     ],
     deps = [
         ":aapt",

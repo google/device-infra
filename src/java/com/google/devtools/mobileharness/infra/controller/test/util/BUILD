@@ -69,6 +69,7 @@ java_library(
     srcs = ["SubscriberExceptionLoggingHandler.java"],
     visibility = [
         "//:deviceinfra_all_pkg",
+        "//:omnilab_fusion",
     ],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",

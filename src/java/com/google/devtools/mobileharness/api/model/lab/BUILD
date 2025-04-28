@@ -22,6 +22,7 @@ package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
         "//:deviceinfra_all_pkg",
+        "//:omnilab_fusion",
     ],
 )
 
@@ -119,6 +120,7 @@ java_library(
         "LiteDeviceInfoFactory.java",
     ],
     visibility = [
+        "//:omnilab_fusion",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/proxy:__pkg__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/device:__pkg__",

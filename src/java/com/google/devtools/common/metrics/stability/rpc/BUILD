@@ -17,6 +17,7 @@ load("@rules_java//java:defs.bzl", "java_library")
 
 DEFAULT_VISIBILITY = [
     "//:deviceinfra_pkg",
+    "//:omnilab_fusion",
 ]
 
 package(

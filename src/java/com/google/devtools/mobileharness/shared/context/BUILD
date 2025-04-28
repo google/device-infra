@@ -21,6 +21,7 @@ java_library(
     name = "invocation_context",
     srcs = ["InvocationContext.java"],
     visibility = [
+        "//:omnilab_fusion",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/launcher:__pkg__",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:__pkg__",

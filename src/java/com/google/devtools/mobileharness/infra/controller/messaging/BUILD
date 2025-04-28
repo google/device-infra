@@ -63,6 +63,7 @@ java_library(
     name = "message_sender_finder",
     srcs = ["MessageSenderFinder.java"],
     visibility = [
+        "//:omnilab_fusion",
         "//java/com/google/devtools/mobileharness/infra/container/testengine/controller:__pkg__",
         "//java/com/google/wireless/qa/mobileharness/client/api:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/job:__pkg__",
@@ -106,6 +107,7 @@ java_library(
     name = "messaging_manager",
     srcs = ["MessagingManager.java"],
     visibility = [
+        "//:omnilab_fusion",
         "//src/java/com/google/devtools/mobileharness/infra/lab:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/api:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/controller/messaging:__subpackages__",
@@ -128,6 +130,7 @@ java_library(
     name = "messaging_manager_holder",
     srcs = ["MessagingManagerHolder.java"],
     visibility = [
+        "//:omnilab_fusion",
         "//java/com/google/devtools/mobileharness/infra/container/testengine:__pkg__",
         "//java/com/google/devtools/mobileharness/service/gateway/modules:__pkg__",
         "//src/java/com/google/devtools/mobileharness/api/messaging:__pkg__",
@@ -146,6 +149,7 @@ java_library(
     name = "messaging_service",
     srcs = ["MessagingService.java"],
     visibility = [
+        "//:omnilab_fusion",
         "//src/java/com/google/devtools/mobileharness/infra/lab:__pkg__",
     ],
     deps = [

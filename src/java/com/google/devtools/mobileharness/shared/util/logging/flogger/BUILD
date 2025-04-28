@@ -21,6 +21,7 @@ java_library(
     name = "flogger_formatter",
     srcs = ["FloggerFormatter.java"],
     visibility = [
+        "//:omnilab_fusion",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/lab:__pkg__",

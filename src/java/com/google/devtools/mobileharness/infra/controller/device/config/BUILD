@@ -46,6 +46,7 @@ java_library(
     name = "api_config_file_processor",
     srcs = ["ApiConfigFileProcessor.java"],
     visibility = [
+        "//:omnilab_fusion",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/lab:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/lab/controller:__pkg__",
@@ -75,6 +76,7 @@ java_library(
     ],
     visibility = [
         "//:deviceinfra_all_pkg",
+        "//:omnilab_fusion",
     ],
     deps = [
         "//src/devtools/mobileharness/api/deviceconfig/proto:basic_java_proto",
@@ -101,6 +103,7 @@ java_library(
     srcs = ["ApiConfigModule.java"],
     visibility = [
         "//:deviceinfra_all_pkg",
+        "//:omnilab_fusion",
     ],
     deps = [
         ":api_config_observer",
@@ -135,6 +138,7 @@ java_library(
     srcs = ["ApiConfigObserver.java"],
     visibility = [
         "//:deviceinfra_all_pkg",
+        "//:omnilab_fusion",
     ],
     deps = [
         "@maven//:com_google_inject_guice",

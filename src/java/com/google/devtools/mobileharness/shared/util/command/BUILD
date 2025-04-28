@@ -28,6 +28,7 @@ java_library(
     ),
     visibility = [
         "//:deviceinfra_all_pkg",
+        "//:omnilab_fusion",
     ],
     exports = [
         ":command_result",

@@ -21,6 +21,7 @@ java_library(
         "TestManager.java",
     ],
     visibility = [
+        "//:omnilab_fusion",
         "//src/java/com/google/devtools/mobileharness/infra/client:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
     ],
@@ -62,6 +63,7 @@ java_library(
     name = "lab_direct_test_runner_util",
     srcs = ["LabDirectTestRunnerUtil.java"],
     visibility = [
+        "//:omnilab_fusion",
         "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
     ],
     deps = [
@@ -82,6 +84,7 @@ java_library(
     name = "proxy_test_manager",
     srcs = ["ProxyTestManager.java"],
     visibility = [
+        "//:omnilab_fusion",
         "//java/com/google/devtools/deviceinfra/host/utrs:__subpackages__",
         "//java/com/google/devtools/mobileharness/infra/lab/rpc/service:__subpackages__",
         "//javatests/com/google/devtools/deviceinfra/host/utrs:__subpackages__",
