@@ -134,3 +134,10 @@ java_library(
     name = "split_method_spec",
     srcs = ["SplitMethodSpec.java"],
 )
+
+java_library(
+    name = "testbed_device_spec",
+    srcs = ["TestbedDeviceSpec.java"],
+    visibility = [
+    ],
+)
