@@ -47,10 +47,11 @@ public class AdhocTestbedConfig extends BaseTestbedConfig {
         name,
         devices,
         /* dimensions= */ ImmutableMap.of(),
+        /* requiredDimensions= */ ImmutableMap.of(),
         /* properties= */ ImmutableMap.of(ADHOC_TESTBED_PROPERTY_KEY, "true"));
   }
 
-  /** Creates an testbed config from a set of devices. */
+  /** Creates a testbed config from a set of devices. */
   public static AdhocTestbedConfig create(String name, List<Device> subdevices)
       throws MobileHarnessException {
     // TODO: Add dimension and property expansion for subdevices that are
@@ -62,7 +63,6 @@ public class AdhocTestbedConfig extends BaseTestbedConfig {
       throws MobileHarnessException {
     ImmutableMap.Builder<SubDeviceKey, SubDeviceInfo> deviceInfos = new ImmutableMap.Builder<>();
     for (Device device : devices) {
-
       String deviceId = device.getDeviceId();
       SubDeviceKey key = SubDeviceKey.create(deviceId, device.getClass());
       ImmutableSet<StrPair> allDimensions =

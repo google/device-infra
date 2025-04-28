@@ -45,6 +45,7 @@ public abstract class BaseTestbedConfig implements TestbedConfig {
   private final ImmutableMap<SubDeviceKey, SubDeviceInfo> devices;
 
   private final ImmutableMap<String, String> dimensions;
+  private final ImmutableMap<String, String> requiredDimensions;
   private final ImmutableMap<String, Object> properties;
 
   private static final Yaml yaml = createYaml();
@@ -53,11 +54,13 @@ public abstract class BaseTestbedConfig implements TestbedConfig {
       String name,
       Map<SubDeviceKey, SubDeviceInfo> devices,
       Map<String, String> dimensions,
+      Map<String, String> requiredDimensions,
       Map<String, Object> properties)
       throws MobileHarnessException {
     this.name = name;
     this.devices = ImmutableMap.copyOf(devices);
     this.dimensions = ImmutableMap.copyOf(dimensions);
+    this.requiredDimensions = ImmutableMap.copyOf(requiredDimensions);
     this.properties = ImmutableMap.copyOf(properties);
     validate();
   }
@@ -78,6 +81,11 @@ public abstract class BaseTestbedConfig implements TestbedConfig {
   }
 
   @Override
+  public final ImmutableMap<String, String> getRequiredDimensions() {
+    return requiredDimensions;
+  }
+
+  @Override
   public final ImmutableMap<String, Object> getProperties() {
     return properties;
   }
@@ -92,6 +100,7 @@ public abstract class BaseTestbedConfig implements TestbedConfig {
     TestbedConfig otherConfig = (TestbedConfig) other;
     return getName().equals(otherConfig.getName())
         && getDimensions().equals(otherConfig.getDimensions())
+        && getRequiredDimensions().equals(otherConfig.getRequiredDimensions())
         && getProperties().equals(otherConfig.getProperties())
         && compareDevices(getDevices(), otherConfig.getDevices());
   }

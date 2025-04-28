@@ -59,6 +59,9 @@ final class TestbedConfigYamlRepresenter extends Representer {
       if (!config.getDimensions().isEmpty()) {
         configMap.put("dimensions", config.getDimensions());
       }
+      if (!config.getRequiredDimensions().isEmpty()) {
+        configMap.put("required_dimensions", config.getRequiredDimensions());
+      }
       if (!config.getProperties().isEmpty()) {
         configMap.put("properties", config.getProperties());
       }

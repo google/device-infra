@@ -46,6 +46,13 @@ public interface TestbedConfig {
   ImmutableMap<String, String> getDimensions();
 
   /**
+   * Gets all required dimensions for this testbed.
+   *
+   * @return A mapping of dimension name to value.
+   */
+  ImmutableMap<String, String> getRequiredDimensions();
+
+  /**
    * Gets all properties for this testbed. Values can be any value represented in a JSONObject.
    *
    * @return A mapping of property name to property value.

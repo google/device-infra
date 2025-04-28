@@ -26,6 +26,7 @@ java_library(
         "SubDeviceKey.java",
         "TestbedConfig.java",
         "TestbedConfigYamlRepresenter.java",
+        "TestbedLoader.java",
     ],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/platform/testbed:__subpackages__",
