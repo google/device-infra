@@ -20,8 +20,6 @@ package(
     default_visibility = ["//visibility:public"],
 )
 
-PYTHON_API_VERSION = 2
-
 # If you are adding a new spec, please add it as a dependency here. If your spec is
 # not in the deps list here, it may not be included in the lab server build and will
 # fail to be populated.
@@ -288,6 +286,20 @@ cc_proto_library(
 )
 
 proto_library(
+    name = "mobly_decorator_adapter_spec_proto",
+    srcs = ["decorator/mobly_decorator_adapter_spec.proto"],
+    deps = [
+        ":base_spec_proto",
+        ":testbed_decorator_adapter_spec_proto",
+    ],
+)
+
+java_proto_library(
+    name = "mobly_decorator_adapter_spec_java_proto",
+    deps = [":mobly_decorator_adapter_spec_proto"],
+)
+
+proto_library(
     name = "no_op_decorator_spec_proto",
     srcs = ["decorator/no_op_decorator_spec.proto"],
     deps = [
@@ -323,6 +335,20 @@ cc_proto_library(
 java_proto_library(
     name = "no_op_driver_spec_java_proto",
     deps = [":no_op_driver_spec_proto"],
+)
+
+proto_library(
+    name = "testbed_decorator_adapter_spec_proto",
+    srcs = ["decorator/testbed_decorator_adapter_spec.proto"],
+    deps = [
+        ":base_spec_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:common_proto",
+    ],
+)
+
+java_proto_library(
+    name = "testbed_decorator_adapter_spec_java_proto",
+    deps = [":testbed_decorator_adapter_spec_proto"],
 )
 
 proto_library(
