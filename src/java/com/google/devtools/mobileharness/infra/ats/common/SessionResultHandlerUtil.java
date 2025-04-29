@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.ats.common;
 
+import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
@@ -337,10 +338,7 @@ public class SessionResultHandlerUtil {
       JobInfo jobInfo = testEntry.getKey();
       if (jobInfo.resultWithCause().get().type() == TestResult.SKIP
           && !jobInfo.properties().getBoolean(Job.SKIP_COLLECTING_NON_TF_REPORTS).orElse(false)) {
-        String moduleId =
-            AbiUtil.createId(
-                jobInfo.properties().get(SessionHandlerHelper.XTS_MODULE_ABI_PROP),
-                jobInfo.properties().get(SessionHandlerHelper.XTS_MODULE_NAME_PROP));
+        String moduleId = getExpandedNonTfModuleId(jobInfo);
         skippedModuleIdsBuilder.add(moduleId);
       }
 
@@ -1220,24 +1218,35 @@ public class SessionResultHandlerUtil {
                                 .get(XtsConstants.XTS_FINAL_TEST_LOG_DIR_PROPERTY_KEY)))
             .collect(
                 toImmutableMap(
+                    testInfo -> getExpandedNonTfModuleId(testInfo.jobInfo()),
                     testInfo ->
-                        testInfo
-                            .jobInfo()
-                            .properties()
-                            .get(SessionHandlerHelper.XTS_MODULE_NAME_PROP),
-                    testInfo ->
-                        testInfo
-                            .properties()
-                            .get(XtsConstants.XTS_FINAL_TEST_LOG_DIR_PROPERTY_KEY)));
+                        testInfo.properties().get(XtsConstants.XTS_FINAL_TEST_LOG_DIR_PROPERTY_KEY),
+                    // If there are multiple tests for a module, use the latest one.
+                    (first, second) -> second));
     if (failedNonTfTestLogDirs.isEmpty()) {
       return "";
     }
     StringBuilder builder = new StringBuilder();
-    builder.insert(0, "Failed standalone module log locations:\n");
+    builder.append("Failed standalone module log locations:\n");
     for (Entry<String, String> entry : failedNonTfTestLogDirs.entrySet()) {
       builder.append(String.format("%s\t: %s\n", entry.getKey(), entry.getValue()));
     }
     builder.append("============================================\n");
     return builder.toString();
+  }
+
+  /** Returns the expanded non-tradefed module id of the given non-tradefed job. */
+  private static String getExpandedNonTfModuleId(JobInfo jobInfo) {
+    String moduleName =
+        jobInfo.properties().getOptional(SessionHandlerHelper.XTS_MODULE_NAME_PROP).orElse("");
+    String abi = jobInfo.properties().get(SessionHandlerHelper.XTS_MODULE_ABI_PROP);
+    String parameter = jobInfo.properties().get(SessionHandlerHelper.XTS_MODULE_PARAMETER_PROP);
+    if (!isNullOrEmpty(parameter)) {
+      moduleName = String.format("%s[%s]", moduleName, parameter);
+    }
+    if (!isNullOrEmpty(abi)) {
+      moduleName = AbiUtil.createId(abi, moduleName);
+    }
+    return moduleName;
   }
 }
