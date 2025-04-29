@@ -180,7 +180,14 @@ public final class JobInfoCreator {
       }
     } else {
       jobInfo =
-          createJobInfo(jobId, actualUser, jobConfig, jobSetting, localFileUtil, sessionTmpDir);
+          createJobInfo(
+              jobId,
+              actualUser,
+              jobAccessAccount,
+              jobConfig,
+              jobSetting,
+              localFileUtil,
+              sessionTmpDir);
     }
     return jobInfo;
   }
@@ -340,6 +347,7 @@ public final class JobInfoCreator {
   private static JobInfo createJobInfo(
       String jobId,
       String actualUser,
+      String jobAccessAccount,
       com.google.devtools.mobileharness.api.gateway.proto.Setting.JobConfig jobConfig,
       JobSetting jobSetting,
       LocalFileUtil localFileUtil,
@@ -352,6 +360,7 @@ public final class JobInfoCreator {
                 JobUser.newBuilder()
                     .setRunAs(jobConfig.getUser())
                     .setActualUser(actualUser)
+                    .setJobAccessAccount(jobAccessAccount)
                     .build())
             .setType(mayAppendDecorator(jobConfig.getType(), jobConfig))
             .setSetting(jobSetting)
