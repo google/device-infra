@@ -92,6 +92,7 @@ message DetectorSpecs {
         maneki_android_device_discovery_spec = 1;
     repeated ManekiRokuDeviceDiscoverySpec maneki_roku_device_discovery_spec =
         2;
+    repeated ManekiRdkDeviceDiscoverySpec maneki_rdk_device_discovery_spec = 3;
 
     message ManekiAndroidDeviceDiscoverySpec {
       string mac_address = 1;
@@ -99,6 +100,11 @@ message DetectorSpecs {
 
     message ManekiRokuDeviceDiscoverySpec {
       string mac_address = 1;
+    }
+
+    message ManekiRdkDeviceDiscoverySpec {
+      string device_id = 1;
+      string mac_address = 2;
     }
   }
 }
