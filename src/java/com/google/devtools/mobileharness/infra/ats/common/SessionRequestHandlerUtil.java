@@ -226,7 +226,7 @@ public class SessionRequestHandlerUtil {
    * Gets a list of SubDeviceSpec for the job. One SubDeviceSpec maps to one sub device used for
    * running the job as the job may need multiple devices to run the test.
    */
-  private ImmutableList<SubDeviceSpec> getSubDeviceSpecListForTradefed(
+  public ImmutableList<SubDeviceSpec> getSubDeviceSpecListForTradefed(
       SessionRequestInfo sessionRequestInfo, int shardCount)
       throws MobileHarnessException, InterruptedException {
     ImmutableSet<DeviceDetails> availableDevices = getAvailableDevices(sessionRequestInfo);
