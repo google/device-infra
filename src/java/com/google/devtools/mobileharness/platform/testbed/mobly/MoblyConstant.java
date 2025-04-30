@@ -19,7 +19,7 @@ package com.google.devtools.mobileharness.platform.testbed.mobly;
 /** Values shared across Mobly related tasks. */
 public final class MoblyConstant {
 
-  /** Private constructor to prevent instatiation. */
+  /** Private constructor to prevent instantiation. */
   private MoblyConstant() {}
 
   /** Mobly test-generated output files/paths. */
@@ -80,8 +80,8 @@ public final class MoblyConstant {
     /** Key for property designating an error/failure message from a test case. */
     public static final String MOBLY_ERROR_MESSAGE_KEY = "mobly_error_message";
 
-    /** Key for property designating an test fission link for a test case. */
-    public static final String MOBLY_TEST_FISSION = "test_fission";
+    /** Key for setting logging level of Mobly test to verbose. */
+    public static final String MOBLY_TEST_VERBOSE = "mobly_test_verbose";
 
     private TestProperty() {}
   }
