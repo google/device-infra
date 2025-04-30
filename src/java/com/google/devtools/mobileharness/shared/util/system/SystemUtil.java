@@ -67,7 +67,7 @@ public class SystemUtil {
   /** The JVM environment variable which specifies the test output directory. */
   public static final String ENV_TEST_UNDECLARED_OUTPUTS_DIR = "TEST_UNDECLARED_OUTPUTS_DIR";
 
-  /** The JVM environment variable which specifies the test output directory. */
+  /** The JVM environment variable which specifies the test output annotations directory. */
   public static final String ENV_TEST_UNDECLARED_OUTPUTS_ANNOTATIONS_DIR =
       "TEST_UNDECLARED_OUTPUTS_ANNOTATIONS_DIR";
 
