@@ -41,3 +41,21 @@ java_library(
         "@maven//:org_yaml_snakeyaml",
     ],
 )
+
+java_library(
+    name = "json_config_lib",
+    srcs = glob(["json/*.java"]),
+    visibility = [
+    ],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/platform/testbed/config:base",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api:class_util",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
+        "@maven//:com_google_code_gson_gson",
+        "@maven//:com_google_guava_guava",
+        "@maven//:org_json_json",
+        "@maven//:org_yaml_snakeyaml",
+    ],
+)
