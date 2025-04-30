@@ -15,17 +15,23 @@
 
 load("@rules_java//java:defs.bzl", "java_library")
 
+package(default_applicable_licenses = ["//:license"])
+
 java_library(
     name = "adhoc",
     srcs = [
         "AdhocSubDeviceInfo.java",
         "AdhocTestbedConfig.java",
+        "AdhocTestbedLoader.java",
     ],
-    visibility = ["//src/java/com/google/devtools/mobileharness/platform/testbed:__subpackages__"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/platform/testbed:__subpackages__",
+    ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/testbed/config:base",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:common_java_proto",
         "@maven//:com_google_guava_guava",
