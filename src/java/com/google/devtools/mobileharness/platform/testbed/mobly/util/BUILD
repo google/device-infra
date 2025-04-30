@@ -37,10 +37,20 @@ java_library(
     ],
 )
 
+# TODO - Remove this target once the new target "subdevice_type" is used.
 java_library(
     name = "mobly_sub_device_type",
     srcs = [
         "MoblySubDeviceType.java",
+    ],
+)
+
+java_library(
+    name = "subdevice_type",
+    srcs = [
+        "MoblySubdeviceType.java",
+    ],
+    visibility = [
     ],
 )
 
