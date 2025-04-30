@@ -2227,11 +2227,18 @@ public class LocalFileUtil {
       // `listFilePaths(Path dir, boolean recursively)` because the later one does not follow
       // symbolic links.
       List<String> files = listFilePaths(absSourceDirPath.toString(), true);
-      arguments.addAll(
-          files.stream()
-              .sorted()
-              .map(file -> absSourceDirPath.relativize(Paths.get(file).toAbsolutePath()).toString())
-              .collect(toImmutableList()));
+
+      // If there are too many files in the command line, the command will fail with "Argument list
+      // too long" b/414412730
+      if (files.size() < 1000) {
+        arguments.addAll(
+            files.stream()
+                .sorted()
+                .map(file -> absSourceDirPath.relativize(Path.of(file).toAbsolutePath()).toString())
+                .collect(toImmutableList()));
+      } else {
+        arguments.add(".");
+      }
     } else {
       arguments.add(".");
     }
