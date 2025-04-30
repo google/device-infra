@@ -24,6 +24,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Basic;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.BasicDeviceConfig;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.DetectorSpecs;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.OverSshDevice;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -366,6 +367,11 @@ public class ApiConfigV5 extends Observable implements ApiConfig {
         deviceConfigIsSyncedLock.notifyAll();
       }
     }
+  }
+
+  @Override
+  public DetectorSpecs getDetectorSpecs() {
+    return labConfig.getDetectorSpecs();
   }
 
   @Override

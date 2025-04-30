@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.infra.controller.device.config;
 
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.WifiConfig;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.DetectorSpecs;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperties;
@@ -81,6 +82,9 @@ public interface ApiConfig {
   LabConfig getLabConfigToStore();
 
   List<String> getTestbedUuidList();
+
+  /** Gets the detector specs of the lab. This is used to fetch the devices from the lab config. */
+  DetectorSpecs getDetectorSpecs();
 
   /** Gets the host properties. */
   HostProperties getHostProperties();
