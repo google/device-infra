@@ -21,8 +21,6 @@ public final class HostPropertyConstants {
 
   /** Keys of host properties. */
   public enum HostPropertyKey {
-    /** The DeviceManager type of the host, whose value should be "fusion", "mh", "mtaas". */
-    DM_TYPE,
     /** The host name of the host. */
     HOST_NAME,
     /** The IP address of the host. */
@@ -37,7 +35,7 @@ public final class HostPropertyConstants {
     JAVA_VERSION,
     /** the location of the host. */
     LAB_LOCATION,
-    /** The lab type of the host, whose value should be "core", "satellite", "slaas". */
+    /** The lab type of the host, whose value should be "Core", "Satellite", "SLaaS" or "Fusion". */
     LAB_TYPE,
     /** The type of the location of the host. */
     LOCATION_TYPE,
