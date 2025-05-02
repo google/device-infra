@@ -94,6 +94,9 @@ message DetectorSpecs {
         2;
     repeated ManekiRdkDeviceDiscoverySpec maneki_rdk_device_discovery_spec = 3;
 
+    repeated ManekiRaspberryPiDeviceDiscoverySpec
+        maneki_raspberry_pi_device_discovery_spec = 4;
+
     message ManekiAndroidDeviceDiscoverySpec {
       string mac_address = 1;
     }
@@ -103,6 +106,11 @@ message DetectorSpecs {
     }
 
     message ManekiRdkDeviceDiscoverySpec {
+      string device_id = 1;
+      string mac_address = 2;
+    }
+
+    message ManekiRaspberryPiDeviceDiscoverySpec {
       string device_id = 1;
       string mac_address = 2;
     }
