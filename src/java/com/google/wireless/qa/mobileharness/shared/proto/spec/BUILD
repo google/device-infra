@@ -15,6 +15,8 @@
 
 # Mobile Harness shared spec proto files.
 
+load("//third_party/protobuf/bazel:java_lite_proto_library.bzl", "java_lite_proto_library")
+
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = ["//visibility:public"],
