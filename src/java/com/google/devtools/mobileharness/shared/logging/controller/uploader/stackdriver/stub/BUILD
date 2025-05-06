@@ -37,6 +37,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/logging/annotation",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:client_interceptor_factory",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local:res_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/path",
         "@io_grpc_grpc_java//core",
