@@ -236,6 +236,18 @@ public class ListCommandTest {
   }
 
   @Test
+  public void listCommands() throws Exception {
+    when(lineReader.readLine(anyString()))
+        .thenReturn("run cts")
+        .thenReturn("list commands")
+        .thenReturn("exit");
+
+    atsConsole.run();
+
+    verify(lineReader).printAbove("Command n/a: [0m:00] cts");
+  }
+
+  @Test
   public void listSubPlans() throws Exception {
     String subPlanFilePath1 =
         PathUtil.join(xtsRootDirPath, "android-cts", "subplans", "subplan1.xml");
