@@ -85,10 +85,11 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
 
   private static final String NON_PRELOADED_KEY = "non-preloaded";
 
-  // Only consider the Module released in Android V+ , the month digits (3,4 index) should not be 00
-  // or 99.
+  // Only consider the Module released in Android V+ and not beta version, 5th digit >= 4 indicates
+  // platform beta (or mainline beta if >=8 or daily if => 9), refer to b/413266608 for more
+  // details.
   private static final Pattern VERSIONCODE_PATTERN =
-      Pattern.compile("(3[5-9]|[4-9][0-9])(?!(00|99))\\d{2}(?!99999)\\d{5}");
+      Pattern.compile("(3[5-9]|[4-9][0-9])(?!(00|99))\\d{2}[0-3]\\d{4}");
 
   // Add the versioncode from
   // android/platform/superproject/main/+/main:build/release/flag_declarations/RELEASE_DEFAULT_UPDATABLE_MODULE_VERSION.textproto

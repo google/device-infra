@@ -84,10 +84,10 @@ public final class MctsDynamicDownloadPluginTest {
         .thenReturn(XtsConstants.DYNAMIC_MCTS_JOB_NAME);
     when(mockAndroidPackageManagerUtil.getAppVersionCode(
             any(), eq("com.google.android.modulemetadata")))
-        .thenReturn(351050004);
+        .thenReturn(351030004);
     when(mockAndroidPackageManagerUtil.getAppVersionCode(
             any(), eq("com.google.android.captiveportallogin")))
-        .thenReturn(351050004);
+        .thenReturn(351030004);
     when(mockAndroidPackageManagerUtil.getAppVersionCode(any(), eq("com.google.android.conscrypt")))
         .thenReturn(350050004);
     when(mockAndroidPackageManagerUtil.getAppVersionCode(
@@ -95,7 +95,7 @@ public final class MctsDynamicDownloadPluginTest {
         .thenReturn(341050004);
     when(mockAndroidPackageManagerUtil.getAppVersionCode(
             any(), eq("com.google.android.documentsui")))
-        .thenReturn(359999999);
+        .thenReturn(351059999);
     when(mockAdbUtil.getProperty(any(), eq(AndroidProperty.ABI))).thenReturn("arm64-v8a");
     when(mockAdbUtil.getProperty(any(), eq(AndroidProperty.SDK_VERSION))).thenReturn("30");
     when(mockAdbUtil.getProperty(any(), eq(AndroidProperty.CODENAME))).thenReturn("fake_codename");
