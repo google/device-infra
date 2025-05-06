@@ -7,17 +7,17 @@ Suite (CTS).
 
 ## Build locally
 
-Install Java 17 if it’s not already installed:
+Install Java 11 if it’s not already installed:
 
 ```
-sudo apt-get install openjdk-17-jdk
+sudo apt-get install openjdk-11-jdk
 ```
 
-Set Java 17 to be used (by Bazel):
+Set Java 11 to be used (by Bazel):
 
 ```
-sudo update-java-alternatives --set java-1.17.0-openjdk-amd64
-export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64/
+sudo update-java-alternatives --set java-1.11.0-openjdk-amd64
+export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64/
 ```
 
 Install [Bazelisk](https://github.com/bazelbuild/bazelisk):
