@@ -59,3 +59,23 @@ java_library(
         "@maven//:org_yaml_snakeyaml",
     ],
 )
+
+java_library(
+    name = "global_testbed_loader",
+    srcs = [
+        "GlobalTestbedLoader.java",
+    ],
+    visibility = [
+    ],
+    deps = [
+        ":base",
+        ":json_config_lib",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:misc_testbed_sub_device",
+        "@maven//:com_google_guava_guava",
+    ],
+)

@@ -1901,6 +1901,15 @@ public class Flags {
       converter = Flag.StringConverter.class)
   public Flag<String> supplementalResDir = supplementalResDirDefault;
 
+  private static final Flag<List<String>> testbedConfigPathsDefault =
+      Flag.stringList(getTmpDirRootDefaultOss() + "/testbeds");
+
+  @com.beust.jcommander.Parameter(
+      names = "--testbed_config_paths",
+      description = "The source to load the local testbed configurations from.",
+      converter = Flag.StringListConverter.class)
+  public Flag<List<String>> testbedConfigPaths = testbedConfigPathsDefault;
+
   private static final Flag<String> tmpDirRootDefault = Flag.value(getTmpDirRootDefaultOss());
 
   @com.beust.jcommander.Parameter(
