@@ -184,7 +184,6 @@ public class LocalTestRunner extends BaseTestRunner<LocalTestRunner> {
                     decoratorClass));
 
     // Lets the driver, decorators and their steps subscribe messages of the test.
-    // TODO: Supports multiple devices for test message.
     Set<Object> subscribers = ClassUtil.getAllSubscribersOfDriver(driver);
     for (Object subscriber : subscribers) {
       logger.atInfo().log(

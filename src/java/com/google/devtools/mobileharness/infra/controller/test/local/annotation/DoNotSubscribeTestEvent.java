@@ -31,6 +31,8 @@ import java.lang.annotation.Target;
  * LocalTestRunner} which need to inherit from {@linkplain
  * com.google.wireless.qa.mobileharness.shared.api.decorator.Decorator Decorator} but actually they
  * are not MH decorators.
+ *
+ * <p>Note that the steps of the annotated driver/decorator will still subscribe events.
  */
 @Retention(RUNTIME)
 @Target(TYPE)

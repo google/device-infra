@@ -38,6 +38,7 @@ import com.google.devtools.mobileharness.shared.util.concurrent.ConcurrencyUtil;
 import com.google.devtools.mobileharness.shared.util.concurrent.ConcurrencyUtil.SubTask;
 import com.google.devtools.mobileharness.shared.util.logging.MobileHarnessLogTag;
 import com.google.wireless.qa.mobileharness.shared.api.ClassUtil;
+import com.google.wireless.qa.mobileharness.shared.api.annotation.StepAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.BaseDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.Decorator;
 import com.google.wireless.qa.mobileharness.shared.api.device.CompositeDevice;
@@ -126,6 +127,9 @@ public class AdhocTestbedDriver extends BaseDriver {
   /** For posting decorator events. */
   @Nullable
   private final BiFunction<Driver, Class<? extends Decorator>, Decorator> decoratorExtender;
+
+  /** Set by {@link #createMainDriver(Device)} in the constructor. */
+  @StepAnnotation private volatile Driver mainDriver;
 
   private volatile boolean mainDriverSkipped = false;
 
@@ -399,7 +403,8 @@ public class AdhocTestbedDriver extends BaseDriver {
     // Because the device of the main driver is a TestbedDevice, but the decorators of it should
     // have the first sub-device, we create a wrapper here to replace the device that the outer
     // decorators can see/get.
-    return new DriverDeviceReplacer(driver, primaryDevice);
+    mainDriver = new DriverDeviceReplacer(driver, primaryDevice);
+    return mainDriver;
   }
 
   private Driver decorateDriver(Driver driver, List<String> decoratorNamesInExecutingOrder)

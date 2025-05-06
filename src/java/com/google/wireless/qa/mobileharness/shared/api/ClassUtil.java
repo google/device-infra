@@ -16,6 +16,7 @@
 
 package com.google.wireless.qa.mobileharness.shared.api;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -187,8 +188,8 @@ public final class ClassUtil {
   }
 
   /**
-   * Adds the given object and all of its STEPs to the result which only contains the objects that
-   * have been added by this method.
+   * Adds the given object and its decorated driver (if any) and all of its STEPs to the result
+   * which only contains the objects that have been added by this method.
    *
    * <p>A step of a class is a field of the class with {@link StepAnnotation}. The field could be
    * inherited from the superclass or composited indirectly. The field could have any visibility.
@@ -196,11 +197,14 @@ public final class ClassUtil {
    * @throws MobileHarnessException if failed to get a step of the object
    * @see StepAnnotation
    */
-  public static void getObjectsWithAllSteps(Object object, Set<Object> result)
+  @VisibleForTesting
+  static void getObjectsWithDecoratedAndAllSteps(Object object, Set<Object> result)
       throws MobileHarnessException {
     if (object != null && !result.contains(object)) {
       // Adds the given object itself to the result.
-      result.add(object);
+      if (!object.getClass().isAnnotationPresent(DoNotSubscribeTestEvent.class)) {
+        result.add(object);
+      }
 
       // Adds all steps to the result.
       Class<?> clazz = object.getClass();
@@ -210,7 +214,7 @@ public final class ClassUtil {
             field.setAccessible(true);
             try {
               Object step = field.get(object);
-              getObjectsWithAllSteps(step, result);
+              getObjectsWithDecoratedAndAllSteps(step, result);
             } catch (IllegalAccessException e) {
               throw new MobileHarnessException(
                   BasicErrorId.CLASS_STEP_FIELD_ACCESS_ERROR,
@@ -221,21 +225,18 @@ public final class ClassUtil {
         }
         clazz = clazz.getSuperclass();
       } while (clazz != null);
+
+      // Handles the decorated driver if any.
+      if (object instanceof Decorator) {
+        getObjectsWithDecoratedAndAllSteps(((Decorator) object).getDecorated(), result);
+      }
     }
   }
 
   /** Gets all event subscribers of a driver (e.g., itself, its decorators, its steps). */
   public static Set<Object> getAllSubscribersOfDriver(Driver driver) throws MobileHarnessException {
     Set<Object> result = new HashSet<>();
-    while (true) {
-      if (driver.getClass().getAnnotation(DoNotSubscribeTestEvent.class) == null) {
-        getObjectsWithAllSteps(driver, result);
-      }
-      if (!(driver instanceof Decorator)) {
-        break;
-      }
-      driver = ((Decorator) driver).getDecorated();
-    }
+    getObjectsWithDecoratedAndAllSteps(driver, result);
     return result;
   }
 
