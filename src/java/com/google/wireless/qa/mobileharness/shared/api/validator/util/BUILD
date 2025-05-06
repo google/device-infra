@@ -48,3 +48,25 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+java_library(
+    name = "composite_device_adapter_validator_util",
+    srcs = [
+        "CompositeDeviceAdapterValidatorUtil.java",
+    ],
+    visibility = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:__pkg__",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/reflection:client_class_util",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/job:job_type_util",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator:validator_factory",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:job_validator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:base_spec_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:testbed_decorator_adapter_spec_java_proto",
+        "@maven//:com_google_guava_guava",
+    ],
+)

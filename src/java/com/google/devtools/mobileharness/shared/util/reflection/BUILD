@@ -29,6 +29,7 @@ java_library(
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/client/api/util/lister:__pkg__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator:__pkg__",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/util:__pkg__",
     ],
     deps = [
         ":class_constants",

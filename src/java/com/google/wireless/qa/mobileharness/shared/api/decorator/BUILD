@@ -492,6 +492,31 @@ java_library(
 )
 
 java_library(
+    name = "composite_device_decorator",
+    srcs = [
+        "CompositeDeviceAdapterBase.java",
+        "CompositeDeviceDecoratorAdapter.java",
+    ],
+    deps = [
+        ":base_decorator",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test/util:exception_handler",
+        "//src/java/com/google/devtools/mobileharness/platform/testbed:runner_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:composite_device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/job:job_type_util",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:composite_device_decorator_adapter_spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/comm/message/event",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "no_op_decorator",
     srcs = ["NoOpDecorator.java"],
     deps = [

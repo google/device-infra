@@ -105,6 +105,12 @@ java_library(
 )
 
 java_library(
+    name = "composite_device_decorator_adapter_spec",
+    srcs = ["CompositeDeviceDecoratorAdapterSpec.java"],
+    deps = ["//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation:basic_annotation"],
+)
+
+java_library(
     name = "entry_delimiter_spec",
     srcs = ["EntryDelimiterSpec.java"],
     deps = [

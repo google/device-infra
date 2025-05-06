@@ -91,6 +91,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_hd_video_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_logcat_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_switch_language_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:composite_device_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_local_emulator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_real_device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:failed_device",
@@ -117,6 +118,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:android_native_bin_job_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:android_robo_test_job_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:android_switch_language_decorator_job_validator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:composite_device_decorator_adapter_job_validator",
     ],
 )
 
