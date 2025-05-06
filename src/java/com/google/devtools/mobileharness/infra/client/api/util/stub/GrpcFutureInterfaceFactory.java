@@ -17,10 +17,13 @@
 package com.google.devtools.mobileharness.infra.client.api.util.stub;
 
 import com.google.devtools.mobileharness.infra.master.rpc.stub.grpc.JobSyncGrpcStub;
+import com.google.devtools.mobileharness.infra.master.rpc.stub.grpc.LabSyncGrpcStub;
 import com.google.devtools.mobileharness.shared.util.comm.stub.StubConfigurationProto.StubConfiguration;
 
 /** Interface to create future interface for different services. */
 interface GrpcFutureInterfaceFactory {
 
   JobSyncGrpcStub.FutureInterface createJobSyncFutureInterface(StubConfiguration stubConfiguration);
+
+  LabSyncGrpcStub.FutureInterface createLabSyncFutureInterface(StubConfiguration stubConfiguration);
 }
