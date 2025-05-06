@@ -335,6 +335,12 @@ public class AndroidInstrumentationUtil {
 
     if (useTestStorageService) {
       command.append(" -e useTestStorageService true");
+    } else {
+      if (instrumentationSetting.testArgs() != null) {
+        for (Entry<String, String> entry : instrumentationSetting.testArgs().entrySet()) {
+          command.append(" -e ").append(entry.getKey()).append(' ').append(entry.getValue());
+        }
+      }
     }
 
     if (enableCoverage) {

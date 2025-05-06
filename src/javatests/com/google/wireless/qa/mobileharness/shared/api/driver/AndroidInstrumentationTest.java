@@ -108,6 +108,8 @@ public class AndroidInstrumentationTest {
   // NOTICE: the map entries here should match the `OPTIONS` value above.
   private static final ImmutableMap<String, String> OPTION_MAP =
       ImmutableMap.of("key1", "value1", "key2", "value2");
+  private static final ImmutableMap<String, String> TEST_ARGS_MAP =
+      ImmutableMap.of("key1", "value1", "key2", "value2");
 
   private static final String[] BUILD_PACKAGES =
       new String[] {"com.google.spinner", "com.google.dependency"};
@@ -371,6 +373,43 @@ public class AndroidInstrumentationTest {
         .writeToFile(
             PathUtil.join(GEN_FILE_DIR_PATH, DEFAULT_INSTRUMENTATION_LOG_FILE_NAME),
             instrumentationLog);
+  }
+
+  @Test
+  public void run_instrument_noUseTestStorageService_pass() throws Exception {
+    mockRunTestBasicSteps(TEST_NAME, OPTIONS, false, false);
+    jobInfo.params().add(AndroidInstrumentationDriverSpec.PARAM_PREFIX_ANDROID_TEST, "true");
+    jobInfo.params().add(AndroidInstrumentationDriverSpec.PARAM_USE_TEST_STORAGE_SERVICE, "false");
+    String instrumentationLog =
+        "com.google.codelab.mobileharness.android.hellomobileharness"
+            + ".HelloMobileHarnessTest:.......\n\nTime: 31.281\n\nOK (7 tests)";
+
+    AndroidInstrumentationSetting setting =
+        mockInstrumentSetting(
+            TEST_NAME,
+            OPTION_MAP,
+            /* async= */ false,
+            /* showRawResults= */ false,
+            /* prefixAndroidTest= */ true,
+            /* noIsolatedStorage= */ false,
+            /* useTestStorageService= */ false,
+            /* enableCoverage= */ false,
+            TEST_ARGS_MAP);
+    when(androidInstrumentationUtil.instrument(
+            DEVICE_ID, DEFAULT_SDK_VERSION, setting, TEST_TIMEOUT))
+        .thenReturn(instrumentationLog);
+    when(androidInstrumentationUtil.getTestArgs(testInfo)).thenReturn(TEST_ARGS_MAP);
+
+    driver.run(testInfo);
+
+    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
+    verify(fileUtil)
+        .writeToFile(
+            PathUtil.join(GEN_FILE_DIR_PATH, DEFAULT_INSTRUMENTATION_LOG_FILE_NAME),
+            instrumentationLog);
+    verify(androidInstrumentationUtil)
+        .prepareServicesApks(eq(testInfo), eq(device), eq(DEFAULT_SDK_VERSION), any(), any());
+    verify(androidInstrumentationUtil).enableLegacyStorageForApk(DEVICE_ID, TEST_PACKAGE);
   }
 
   @Test
@@ -676,6 +715,28 @@ public class AndroidInstrumentationTest {
       boolean noIsolatedStorage,
       boolean useTestStorageService,
       boolean enableCoverage) {
+    return mockInstrumentSetting(
+        className,
+        otherOptions,
+        async,
+        showRawResults,
+        prefixAndroidTest,
+        noIsolatedStorage,
+        useTestStorageService,
+        enableCoverage,
+        /* testArgs= */ null);
+  }
+
+  private AndroidInstrumentationSetting mockInstrumentSetting(
+      @Nullable String className,
+      @Nullable Map<String, String> otherOptions,
+      boolean async,
+      boolean showRawResults,
+      boolean prefixAndroidTest,
+      boolean noIsolatedStorage,
+      boolean useTestStorageService,
+      boolean enableCoverage,
+      @Nullable Map<String, String> testArgs) {
     return AndroidInstrumentationSetting.create(
         TEST_PACKAGE,
         RUNNER,
@@ -686,6 +747,7 @@ public class AndroidInstrumentationTest {
         prefixAndroidTest,
         noIsolatedStorage,
         useTestStorageService,
+        testArgs,
         enableCoverage);
   }
 }

@@ -199,7 +199,11 @@ public class AndroidInstrumentation extends BaseDriver
         externalStoragePath.orElse(null));
 
     // Prepares the test arg.
-    prepareTestArgs(testInfo, externalStoragePath.orElse(null));
+    boolean useTestStorageService =
+        job.params().getBool(AndroidInstrumentationDriverSpec.PARAM_USE_TEST_STORAGE_SERVICE, true);
+    if (useTestStorageService) {
+      prepareTestArgs(testInfo, externalStoragePath.orElse(null));
+    }
 
     // Finalizes the test target.
     String testTarget = getTestTarget(testInfo, optionMaps);
@@ -264,7 +268,8 @@ public class AndroidInstrumentation extends BaseDriver
           deviceSdkVersion,
           instrumentTimeoutMs,
           showRawResults,
-          noIsolatedStorage);
+          noIsolatedStorage,
+          useTestStorageService);
     } else {
       try {
         syncRun(
@@ -277,7 +282,8 @@ public class AndroidInstrumentation extends BaseDriver
             instrumentTimeoutMs,
             buildPackageNames,
             showRawResults,
-            noIsolatedStorage);
+            noIsolatedStorage,
+            useTestStorageService);
       } finally {
         androidInstrumentationUtil.pullInstrumentationFilesFromDevice(
             deviceId, testInfo, externalStoragePath.orElse(null));
@@ -308,7 +314,8 @@ public class AndroidInstrumentation extends BaseDriver
       @Nullable Integer deviceSdkVersion,
       @Nullable Long instrumentTimeoutMs,
       boolean showRawResults,
-      boolean noIsolatedStorage)
+      boolean noIsolatedStorage,
+      boolean useTestStorageService)
       throws MobileHarnessException, InterruptedException {
     JobInfo job = testInfo.jobInfo();
     // When async is enable, only one option map is allowed.
@@ -354,7 +361,8 @@ public class AndroidInstrumentation extends BaseDriver
               job.params()
                   .getBool(AndroidInstrumentationDriverSpec.PARAM_PREFIX_ANDROID_TEST, false),
               noIsolatedStorage,
-              /* useTestStorageService= */ true,
+              useTestStorageService,
+              useTestStorageService ? null : androidInstrumentationUtil.getTestArgs(testInfo),
               job.params().getBool(AndroidInstrumentationDriverSpec.PARAM_ENABLE_COVERAGE, false)),
           Duration.ofMillis(testTimeoutMs));
     } catch (MobileHarnessException e) {
@@ -380,7 +388,8 @@ public class AndroidInstrumentation extends BaseDriver
       @Nullable Long instrumentTimeoutMs,
       List<String> buildPackageNames,
       boolean showRawResults,
-      boolean noIsolatedStorage)
+      boolean noIsolatedStorage,
+      boolean useTestStorageService)
       throws MobileHarnessException, InterruptedException {
     JobInfo job = testInfo.jobInfo();
     Properties properties = testInfo.properties();
@@ -472,7 +481,8 @@ public class AndroidInstrumentation extends BaseDriver
                     job.params()
                         .getBool(AndroidInstrumentationDriverSpec.PARAM_PREFIX_ANDROID_TEST, false),
                     noIsolatedStorage,
-                    /* useTestStorageService= */ true,
+                    useTestStorageService,
+                    useTestStorageService ? null : androidInstrumentationUtil.getTestArgs(testInfo),
                     job.params()
                         .getBool(AndroidInstrumentationDriverSpec.PARAM_ENABLE_COVERAGE, false)),
                 Duration.ofMillis(testTimeoutMs));
