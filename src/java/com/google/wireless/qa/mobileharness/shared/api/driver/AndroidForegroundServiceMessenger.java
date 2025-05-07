@@ -44,7 +44,8 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.net.InetAddress;
+import java.net.Inet4Address;
+import java.net.Inet6Address;
 import java.net.Socket;
 import java.time.Clock;
 import java.time.Duration;
@@ -195,7 +196,7 @@ public class AndroidForegroundServiceMessenger extends BaseDriver
       Sleeper.defaultSleeper().sleep(Duration.ofSeconds(3));
 
       testInfo.log().atInfo().alsoTo(logger).log("Creating client socket...");
-      clientSocket = createSocket(port);
+      clientSocket = createSocket(testInfo, port);
       fromDevice = new DataInputStream(new BufferedInputStream(clientSocket.getInputStream()));
       toDevice = new DataOutputStream(new BufferedOutputStream(clientSocket.getOutputStream()));
       testInfo.log().atInfo().alsoTo(logger).log("Client socket created and ready to be used!");
@@ -436,8 +437,18 @@ public class AndroidForegroundServiceMessenger extends BaseDriver
    * @return The new socket.
    */
   @VisibleForTesting
-  Socket createSocket(int port) throws IOException {
-    return new Socket(InetAddress.getLoopbackAddress(), port);
+  Socket createSocket(TestInfo testInfo, int port) throws IOException {
+    try {
+      return new Socket(Inet4Address.getByName("127.0.0.1"), port);
+    } catch (IOException e) {
+      testInfo
+          .log()
+          .atInfo()
+          .withCause(e)
+          .alsoTo(logger)
+          .log("Failed to create socket with IPv4. Trying IPv6...");
+      return new Socket(Inet6Address.getByName("::1"), port);
+    }
   }
 
   private void closeSilently(TestInfo testInfo, Closeable closeable) {
