@@ -97,6 +97,10 @@ message DetectorSpecs {
     repeated ManekiRaspberryPiDeviceDiscoverySpec
         maneki_raspberry_pi_device_discovery_spec = 4;
 
+    repeated ManekiPs4DeviceDiscoverySpec maneki_ps4_device_discovery_spec = 5;
+
+    repeated ManekiPs5DeviceDiscoverySpec maneki_ps5_device_discovery_spec = 6;
+
     message ManekiAndroidDeviceDiscoverySpec {
       string mac_address = 1;
     }
@@ -113,6 +117,16 @@ message DetectorSpecs {
     message ManekiRaspberryPiDeviceDiscoverySpec {
       string device_id = 1;
       string mac_address = 2;
+    }
+
+    message ManekiPs4DeviceDiscoverySpec {
+      string device_id = 1;
+      string win_mac_address = 2;
+    }
+
+    message ManekiPs5DeviceDiscoverySpec {
+      string device_id = 1;
+      string win_mac_address = 2;
     }
   }
 }
