@@ -45,8 +45,8 @@ rules_proto_dependencies()
 rules_proto_toolchains()
 
 # Kotlin rules.
-rules_kotlin_version = "1.9.0"
-rules_kotlin_sha = "5766f1e599acf551aa56f49dab9ab9108269b03c557496c54acaf41f98e2b8d6"
+rules_kotlin_version = "2.1.0"
+rules_kotlin_sha = "dd32f19e73c70f32ccb9a166c615c0ca4aed8e27e72c4a6330c3523eafa1aa55"
 http_archive(
     name = "rules_kotlin",
     urls = ["https://github.com/bazelbuild/rules_kotlin/releases/download/v%s/rules_kotlin-v%s.tar.gz" % (rules_kotlin_version, rules_kotlin_version)],
@@ -56,8 +56,7 @@ http_archive(
 load("@rules_kotlin//kotlin:repositories.bzl", "kotlin_repositories")
 kotlin_repositories()
 
-load("@rules_kotlin//kotlin:core.bzl", "kt_register_toolchains")
-kt_register_toolchains()
+register_toolchains("//:kotlin_toolchain")
 
 # Python rules.
 http_archive(
@@ -297,6 +296,8 @@ maven_install(
         "org.apache.commons:commons-compress:1.25.0",
         "org.apache.commons:commons-lang3:3.14.0",
         "org.apache.commons:commons-text:1.10.0",
+        "org.jetbrains.kotlinx:atomicfu:0.27.0",
+        "org.jetbrains.kotlinx:atomicfu-jvm:0.27.0",
         "org.jline:jline:3.25.1",
         "org.json:json:20231013",
         "org.mockito:mockito-core:4.11.0",

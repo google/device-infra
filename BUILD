@@ -13,6 +13,7 @@
 # limitations under the License.
 #
 
+load("@rules_kotlin//kotlin:core.bzl", "define_kt_toolchain")
 load("@rules_license//rules:license.bzl", "license")
 
 package(default_applicable_licenses = ["//:license"])
@@ -66,4 +67,11 @@ package_group(
         "//src/java/com/google/devtools/omnilab/device/lab/server/...",
         "//src/javatests/com/google/devtools/omnilab/device/lab/server/...",
     ],
+)
+
+define_kt_toolchain(
+    name = "kotlin_toolchain",
+    api_version = "1.9",
+    jvm_target = "17",
+    language_version = "1.9",
 )
