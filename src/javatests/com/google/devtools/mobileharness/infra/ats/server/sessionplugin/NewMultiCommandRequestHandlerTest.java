@@ -20,6 +20,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoDuration;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.endsWith;
 import static org.mockito.ArgumentMatchers.eq;
@@ -86,6 +87,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.TestInfos;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Files;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
+import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.SubDeviceSpec;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryResult;
 import java.io.File;
@@ -239,6 +241,10 @@ public final class NewMultiCommandRequestHandlerTest {
                     new XtsTradefedRuntimeInfo(
                         /* invocations= */ ImmutableList.of(), /* timestamp= */ Instant.now()),
                     /* lastModifiedTime= */ Instant.now())));
+    when(sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(any(), anyInt()))
+        .thenReturn(
+            ImmutableList.of(
+                SubDeviceSpec.newBuilder().build(), SubDeviceSpec.newBuilder().build()));
   }
 
   @Test

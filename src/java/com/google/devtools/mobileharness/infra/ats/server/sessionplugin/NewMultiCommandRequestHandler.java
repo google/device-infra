@@ -78,6 +78,7 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.protobuf.util.Timestamps;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
+import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.SubDeviceSpec;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -598,6 +599,13 @@ final class NewMultiCommandRequestHandler {
 
     // Generate XML test config template for ClusterCommandLauncher.
     Path commandPath = Path.of(xtsRootDir).resolveSibling("command.xml");
+
+    // The requested devices in command info may not be available. We need to call master to get the
+    // available devices, and command.xml file should contain the exact number of devices that will
+    // actually be allocated.
+    ImmutableList<SubDeviceSpec> requestedAndAvailableDevices =
+        sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(
+            sessionRequestInfoBuilder.build(), deviceSerials.size());
     try (OutputStream outputStream = new FileOutputStream(commandPath.toFile())) {
       TradefedConfigGenerator.generateXml(
           outputStream,
@@ -605,7 +613,7 @@ final class NewMultiCommandRequestHandler {
           fileTestResources.build(),
           SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfoBuilder.build())
               ? 1
-              : deviceSerials.size());
+              : requestedAndAvailableDevices.size());
     } catch (IOException | XmlPullParserException e) {
       throw new MobileHarnessException(
           InfraErrorId.ATS_SERVER_FAILED_TO_GENERATE_XML_TEST_CONFIG,
