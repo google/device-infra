@@ -84,6 +84,11 @@ proto_library(
     ],
 )
 
+cc_proto_library(
+    name = "lab_cc_proto",
+    deps = [":lab_proto"],
+)
+
 java_proto_library(
     name = "lab_java_proto",
     deps = [":lab_proto"],
