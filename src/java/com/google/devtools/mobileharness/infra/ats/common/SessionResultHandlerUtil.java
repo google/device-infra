@@ -99,6 +99,7 @@ public class SessionResultHandlerUtil {
           XtsConstants.INVOCATION_SUMMARY_FILE_NAME,
           "checksum-suite.data",
           "diffs",
+          "module_reports",
           "proto",
           "logs");
 

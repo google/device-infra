@@ -88,6 +88,7 @@ public final class SessionResultHandlerUtilTest {
     oldDir.resolve("dir1").resolve("file4.txt").toFile().createNewFile();
     oldDir.resolve("dir2").toFile().mkdir();
     oldDir.resolve("dir2").resolve("file5.txt").toFile().createNewFile();
+    oldDir.resolve("module_reports").toFile().mkdir();
 
     newDir.resolve("file1.txt").toFile().createNewFile();
     newDir.resolve("dir1").toFile().mkdir();
@@ -103,6 +104,8 @@ public final class SessionResultHandlerUtilTest {
     assertThat(newDir.resolve("dir1").resolve("file4.txt").toFile().exists()).isTrue();
     assertThat(newDir.resolve("dir2").toFile().exists()).isTrue();
     assertThat(newDir.resolve("dir2").resolve("file5.txt").toFile().exists()).isTrue();
+    // The "module_reports" directory is not copied.
+    assertThat(newDir.resolve("module_reports").toFile().exists()).isFalse();
   }
 
   @Test
