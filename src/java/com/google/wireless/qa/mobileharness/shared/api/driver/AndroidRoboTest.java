@@ -32,6 +32,8 @@ import com.google.devtools.mobileharness.platform.android.appcrawler.PreProcesso
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandException;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
+import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
+import com.google.devtools.mobileharness.shared.util.command.CommandTimeoutException;
 import com.google.devtools.mobileharness.shared.util.command.LineCallback;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.devtools.mobileharness.shared.util.port.PortProber;
@@ -52,6 +54,7 @@ import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.Optional;
+import java.util.concurrent.TimeoutException;
 import javax.inject.Inject;
 
 /** Driver for running Android Robo Tests using the UTP Android Robo Driver. */
@@ -168,6 +171,7 @@ public class AndroidRoboTest extends BaseDriver implements SpecConfigable<Androi
 
   private TestResult runCli(TestInfo testInfo, String cliJarPath, AndroidRoboTestSpec spec)
       throws MobileHarnessException, InterruptedException {
+    CommandProcess commandProcess = null;
     try {
       SystemUtil systemUtil = new SystemUtil();
       String javaBinary = systemUtil.getJavaBin();
@@ -198,33 +202,36 @@ public class AndroidRoboTest extends BaseDriver implements SpecConfigable<Androi
           "--robo-spec-path",
           setUpAndroidRoboTestSpecProtoFile(testInfo, spec));
       Path outputDir = Path.of(testInfo.getGenFileDir());
-      BufferedWriter stdoutWriter = Files.newBufferedWriter(outputDir.resolve("cli-stdout.log"));
-      Command command =
-          Command.of(javaBinary, argsBuilder.build())
-              // Allowed Exit codes for CLI.
-              // 0 -> PASS, 1 -> SKIP, 2 -> FAIL, 3 -> ERROR
-              .successExitCodes(0, 1, 2, 3)
-              .redirectStderr(true)
-              .onStdout(LineCallback.writeTo(stdoutWriter))
-              .timeout(
-                  Duration.ofSeconds(spec.getCrawlTimeoutSecs())
-                      .plus(CLI_EXECUTION_PADDING_TIMEOUT))
-              .onExit(
-                  unused -> {
-                    try {
-                      stdoutWriter.close();
-                    } catch (IOException e) {
-                      logger.atWarning().withCause(e).log("Failed to close file writer.");
-                    }
-                  });
-      logger.atInfo().log("Command: %s", command);
+      try (BufferedWriter stdoutWriter =
+          Files.newBufferedWriter(outputDir.resolve("cli-stdout.log"))) {
+        Command command =
+            Command.of(javaBinary, argsBuilder.build())
+                // Allowed Exit codes for CLI.
+                // 0 -> PASS, 1 -> SKIP, 2 -> FAIL, 3 -> ERROR
+                .successExitCodes(0, 1, 2, 3)
+                .redirectStderr(true)
+                .onStdout(LineCallback.writeTo(stdoutWriter));
+        logger.atInfo().log("Command: %s", command);
+        testInfo
+            .properties()
+            .add(
+                ANDROID_ROBO_TEST_TEST_START_EPOCH_MS,
+                Long.toString(clock.instant().toEpochMilli()));
+        var timeout =
+            Duration.ofSeconds(spec.getCrawlTimeoutSecs()).plus(CLI_EXECUTION_PADDING_TIMEOUT);
 
-      testInfo
-          .properties()
-          .add(
-              ANDROID_ROBO_TEST_TEST_START_EPOCH_MS, Long.toString(clock.instant().toEpochMilli()));
-      var commandResult = commandExecutor.exec(command);
-      return EXIT_CODE_TO_TEST_RESULT_MAP.getOrDefault(commandResult.exitCode(), TestResult.ERROR);
+        commandProcess = commandExecutor.start(command);
+        var commandResult = commandProcess.await(timeout);
+        return EXIT_CODE_TO_TEST_RESULT_MAP.getOrDefault(
+            commandResult.exitCode(), TestResult.ERROR);
+      }
+    } catch (TimeoutException | CommandTimeoutException tex) {
+      // Explicitly kill the process if command times out.
+      if (commandProcess != null) {
+        commandProcess.killAndThenKillForcibly(Duration.ofSeconds(30));
+      }
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_ROBO_TEST_COMMAND_EXECUTION_ERROR, "Robo Cli timed out.", tex);
     } catch (CommandException cex) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_ROBO_TEST_COMMAND_EXECUTION_ERROR, "Failed to run Robo Cli.", cex);
@@ -233,6 +240,13 @@ public class AndroidRoboTest extends BaseDriver implements SpecConfigable<Androi
           AndroidErrorId.ANDROID_ROBO_TEST_UTP_LOG_WRITER_ERROR,
           "Failed to write output files while running CLI.",
           ioex);
+    } catch (InterruptedException iex) {
+      Thread.currentThread().interrupt();
+      // Explicitly kill the process if thread interrupted.
+      if (commandProcess != null) {
+        commandProcess.killAndThenKillForcibly(Duration.ofSeconds(30));
+      }
+      throw iex;
     } finally {
       testInfo
           .properties()

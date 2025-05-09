@@ -30,6 +30,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.appcrawler.PostProcessor;
 import com.google.devtools.mobileharness.platform.android.appcrawler.PreProcessor;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
+import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
 import com.google.devtools.mobileharness.shared.util.command.testing.FakeCommandResult;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.wireless.qa.mobileharness.shared.android.Aapt;
@@ -69,6 +70,7 @@ public class AndroidRoboTestTest {
   @Mock private PreProcessor preProcessor;
   @Mock private ResUtil resUtil;
   @Mock private CommandExecutor commandExecutor;
+  @Mock private CommandProcess commandProcess;
   @Mock private PostProcessor postProcessor;
 
   private JobInfo jobInfo;
@@ -109,7 +111,8 @@ public class AndroidRoboTestTest {
     TestInfo testInfo = jobInfo.tests().add("fake test");
     AndroidRoboTest roboTest = createAndroidRoboTest(testInfo);
     when(clock.instant()).thenReturn(Instant.ofEpochMilli(2)).thenReturn(Instant.ofEpochMilli(3));
-    when(commandExecutor.exec(any())).thenReturn(FakeCommandResult.of("", "", 0));
+    when(commandExecutor.start(any())).thenReturn(commandProcess);
+    when(commandProcess.await(any())).thenReturn(FakeCommandResult.of("", "", 0));
 
     roboTest.run(testInfo);
     verify(preProcessor).installApks(testInfo, device, spec);
@@ -117,7 +120,8 @@ public class AndroidRoboTestTest {
     resUtil.getExternalResourceFile(any());
     assertThat(testInfo.properties().get(ANDROID_ROBO_TEST_TEST_START_EPOCH_MS)).isEqualTo("2");
 
-    verify(commandExecutor).exec(any());
+    verify(commandExecutor).start(any());
+    verify(commandProcess).await(any());
 
     assertThat(testInfo.properties().get(ANDROID_ROBO_TEST_TEST_END_EPOCH_MS)).isEqualTo("3");
     assertThat(testInfo.result().get()).isEqualTo(TestResult.PASS);
@@ -138,7 +142,8 @@ public class AndroidRoboTestTest {
     TestInfo testInfo = jobInfo.tests().add("fake test");
     AndroidRoboTest roboTest = createAndroidRoboTest(testInfo);
     when(clock.instant()).thenReturn(Instant.ofEpochMilli(2)).thenReturn(Instant.ofEpochMilli(3));
-    when(commandExecutor.exec(any())).thenReturn(FakeCommandResult.of("", "", 1));
+    when(commandExecutor.start(any())).thenReturn(commandProcess);
+    when(commandProcess.await(any())).thenReturn(FakeCommandResult.of("", "", 1));
 
     roboTest.run(testInfo);
 
@@ -159,7 +164,8 @@ public class AndroidRoboTestTest {
     TestInfo testInfo = jobInfo.tests().add("fake test");
     AndroidRoboTest roboTest = createAndroidRoboTest(testInfo);
     when(clock.instant()).thenReturn(Instant.ofEpochMilli(2)).thenReturn(Instant.ofEpochMilli(3));
-    when(commandExecutor.exec(any())).thenReturn(FakeCommandResult.of("", "", 3));
+    when(commandExecutor.start(any())).thenReturn(commandProcess);
+    when(commandProcess.await(any())).thenReturn(FakeCommandResult.of("", "", 3));
 
     var exception = assertThrows(MobileHarnessException.class, () -> roboTest.run(testInfo));
     assertThat(exception.getErrorId())
@@ -182,7 +188,6 @@ public class AndroidRoboTestTest {
     TestInfo testInfo = jobInfo.tests().add("fake test");
     AndroidRoboTest roboTest = createAndroidRoboTest(testInfo);
     when(clock.instant()).thenReturn(Instant.ofEpochMilli(2)).thenReturn(Instant.ofEpochMilli(3));
-    when(commandExecutor.exec(any())).thenReturn(FakeCommandResult.of("", "", 3));
 
     var exception = assertThrows(MobileHarnessException.class, () -> roboTest.run(testInfo));
     assertThat(exception.getErrorId())
