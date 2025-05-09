@@ -29,7 +29,6 @@ import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerU
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName;
 import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName.Job;
-import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteTestFilter;
@@ -57,16 +56,10 @@ public class ConsoleJobCreator extends XtsJobCreator {
   ConsoleJobCreator(
       SessionRequestHandlerUtil sessionRequestHandlerUtil,
       LocalFileUtil localFileUtil,
-      TestPlanParser testPlanParser,
       PreviousResultLoader previousResultLoader,
       RetryGenerator retryGenerator,
       ModuleShardingArgsGenerator moduleShardingArgsGenerator) {
-    super(
-        sessionRequestHandlerUtil,
-        localFileUtil,
-        testPlanParser,
-        retryGenerator,
-        moduleShardingArgsGenerator);
+    super(sessionRequestHandlerUtil, localFileUtil, retryGenerator, moduleShardingArgsGenerator);
 
     this.previousResultLoader = previousResultLoader;
   }

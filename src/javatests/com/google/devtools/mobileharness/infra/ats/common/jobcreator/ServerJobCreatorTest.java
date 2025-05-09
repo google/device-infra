@@ -21,13 +21,12 @@ import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doCallRealMethod;
-import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.SessionHandlerHelper;
@@ -97,7 +96,6 @@ public final class ServerJobCreatorTest {
   @Bind @Mock private ModuleShardingArgsGenerator moduleShardingArgsGenerator;
 
   private LocalFileUtil realLocalFileUtil;
-  private TestPlanParser.TestPlanFilter testPlanFilter;
 
   @Inject private ServerJobCreator jobCreator;
 
@@ -106,9 +104,6 @@ public final class ServerJobCreatorTest {
     flags.setAllFlags(ImmutableMap.of("enable_ats_mode", "true", "use_tf_retry", "false"));
 
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
-    testPlanFilter =
-        TestPlanParser.TestPlanFilter.create(
-            ImmutableSet.of(), ImmutableSet.of(), ImmutableMultimap.of(), ImmutableMultimap.of());
     realLocalFileUtil = new LocalFileUtil();
   }
 
@@ -542,7 +537,7 @@ public final class ServerJobCreatorTest {
 
     assertThrows(
         MobileHarnessException.class,
-        () -> jobCreator.createXtsNonTradefedJobs(sessionRequestInfo, testPlanFilter));
+        () -> jobCreator.createXtsNonTradefedJobs(sessionRequestInfo));
 
     ArgumentCaptor<RetryArgs> retryArgsCaptor = ArgumentCaptor.forClass(RetryArgs.class);
     verify(retryGenerator).generateRetrySubPlan(retryArgsCaptor.capture());
@@ -576,11 +571,10 @@ public final class ServerJobCreatorTest {
         .when(sessionRequestHandlerUtil)
         .canCreateNonTradefedJobs(eq(sessionRequestInfo));
 
-    ImmutableList<JobInfo> unused =
-        jobCreator.createXtsNonTradefedJobs(sessionRequestInfo, testPlanFilter);
+    ImmutableList<JobInfo> unused = jobCreator.createXtsNonTradefedJobs(sessionRequestInfo);
 
     verify(sessionRequestHandlerUtil)
-        .createXtsNonTradefedJobs(eq(sessionRequestInfo), any(), subPlanCaptor.capture(), any());
+        .createXtsNonTradefedJobs(eq(sessionRequestInfo), subPlanCaptor.capture(), any());
 
     assertThat(subPlanCaptor.getValue().getAllIncludeFilters())
         .isEqualTo(subPlan.getAllIncludeFilters());
@@ -612,11 +606,10 @@ public final class ServerJobCreatorTest {
         .when(sessionRequestHandlerUtil)
         .canCreateNonTradefedJobs(eq(sessionRequestInfo));
 
-    ImmutableList<JobInfo> unused =
-        jobCreator.createXtsNonTradefedJobs(sessionRequestInfo, testPlanFilter);
+    ImmutableList<JobInfo> unused = jobCreator.createXtsNonTradefedJobs(sessionRequestInfo);
 
     verify(sessionRequestHandlerUtil)
-        .createXtsNonTradefedJobs(eq(sessionRequestInfo), any(), subPlanCaptor.capture(), any());
+        .createXtsNonTradefedJobs(eq(sessionRequestInfo), subPlanCaptor.capture(), any());
 
     assertThat(subPlanCaptor.getValue().getAllIncludeFilters())
         .isEqualTo(subPlan.getAllIncludeFilters());
@@ -649,9 +642,8 @@ public final class ServerJobCreatorTest {
 
     assertThrows(
         MobileHarnessException.class,
-        () -> jobCreator.createXtsNonTradefedJobs(sessionRequestInfo, testPlanFilter));
+        () -> jobCreator.createXtsNonTradefedJobs(sessionRequestInfo));
 
-    verify(sessionRequestHandlerUtil, times(0))
-        .createXtsNonTradefedJobs(any(), any(), any(), any());
+    verify(sessionRequestHandlerUtil, never()).createXtsNonTradefedJobs(any(), any(), any());
   }
 }

@@ -21,6 +21,8 @@ import static com.google.devtools.mobileharness.infra.ats.common.SessionRequestH
 import static com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil.PARAM_XTS_SUITE_INFO;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
@@ -34,6 +36,7 @@ import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser;
 import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser.TestPlanFilter;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfoFactory;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
@@ -98,6 +101,7 @@ public final class SessionRequestHandlerUtilTest {
   @Bind @SessionTempDir private Path sessionTempDir;
   @Bind @Mock private SessionInfo sessionInfo;
   @Bind @Mock private MoblyTestLoader moblyTestLoader;
+  @Bind @Mock private TestPlanParser testPlanParser;
 
   @Inject private SessionRequestHandlerUtil sessionRequestHandlerUtil;
 
@@ -130,6 +134,7 @@ public final class SessionRequestHandlerUtilTest {
                             Dimension.newBuilder().setName("uuid").setValue("device_id_1"))
                         .addType("AndroidOnlineDevice"))
                 .build());
+    when(testPlanParser.parseFilters(any(), anyString(), anyString())).thenReturn(testPlanFilter);
   }
 
   private SessionRequestInfo.Builder defaultSessionRequestInfoBuilder() {
@@ -595,7 +600,7 @@ public final class SessionRequestHandlerUtilTest {
             defaultSessionRequestInfoBuilder().build());
     ImmutableList<JobInfo> jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
-            sessionRequestInfo, testPlanFilter, null, ImmutableMap.of());
+            sessionRequestInfo, null, ImmutableMap.of());
 
     assertThat(jobInfos).hasSize(2);
     verify(moduleConfigurationHelper, times(2)).updateJobInfo(any(), any(), any(), any());
@@ -623,7 +628,7 @@ public final class SessionRequestHandlerUtilTest {
                 .build());
     ImmutableList<JobInfo> jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
-            sessionRequestInfo, testPlanFilter, null, ImmutableMap.of());
+            sessionRequestInfo, null, ImmutableMap.of());
 
     assertThat(jobInfos).hasSize(1);
   }
@@ -650,7 +655,7 @@ public final class SessionRequestHandlerUtilTest {
                 .build());
     ImmutableList<JobInfo> jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
-            sessionRequestInfo, testPlanFilter, null, ImmutableMap.of());
+            sessionRequestInfo, null, ImmutableMap.of());
 
     assertThat(jobInfos).hasSize(2);
     assertThat(getJobInfoDeviceDimensionValue(jobInfos.get(0), "id"))
@@ -665,7 +670,7 @@ public final class SessionRequestHandlerUtilTest {
                 .build());
     jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
-            sessionRequestInfo, testPlanFilter, null, ImmutableMap.of());
+            sessionRequestInfo, null, ImmutableMap.of());
 
     assertThat(jobInfos).hasSize(2);
     assertThat(getJobInfoDeviceDimensionValue(jobInfos.get(0), "id"))
@@ -767,7 +772,7 @@ public final class SessionRequestHandlerUtilTest {
                 .build());
     ImmutableList<JobInfo> jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
-            sessionRequestInfo, testPlanFilter, null, ImmutableMap.of());
+            sessionRequestInfo, null, ImmutableMap.of());
 
     assertThat(jobInfos).hasSize(3);
     assertThat(jobInfos.get(0).params().get(MOBLY_TEST_SELECTOR_KEY)).isNull();
@@ -811,7 +816,7 @@ public final class SessionRequestHandlerUtilTest {
                 .build());
     ImmutableList<JobInfo> jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
-            sessionRequestInfo, testPlanFilter, null, ImmutableMap.of());
+            sessionRequestInfo, null, ImmutableMap.of());
     assertThat(jobInfos).hasSize(1);
     assertThat(jobInfos.get(0).params().get(MOBLY_TEST_SELECTOR_KEY).split(" "))
         .asList()
@@ -829,7 +834,7 @@ public final class SessionRequestHandlerUtilTest {
                 .build());
     jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
-            sessionRequestInfo, testPlanFilter, null, ImmutableMap.of());
+            sessionRequestInfo, null, ImmutableMap.of());
     assertThat(jobInfos).isEmpty();
 
     // Exclude filters have higher priority than include filters
@@ -843,7 +848,7 @@ public final class SessionRequestHandlerUtilTest {
                 .build());
     jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
-            sessionRequestInfo, testPlanFilter, null, ImmutableMap.of());
+            sessionRequestInfo, null, ImmutableMap.of());
     assertThat(jobInfos).isEmpty();
   }
 
@@ -869,7 +874,7 @@ public final class SessionRequestHandlerUtilTest {
                 .build());
     ImmutableList<JobInfo> jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
-            sessionRequestInfo, testPlanFilter, null, ImmutableMap.of());
+            sessionRequestInfo, null, ImmutableMap.of());
     assertThat(jobInfos).hasSize(1);
     assertThat(jobInfos.get(0).params().get(MOBLY_TEST_SELECTOR_KEY))
         .isEqualTo("test_class1.test1");
@@ -883,7 +888,7 @@ public final class SessionRequestHandlerUtilTest {
                 .build());
     jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
-            sessionRequestInfo, testPlanFilter, null, ImmutableMap.of());
+            sessionRequestInfo, null, ImmutableMap.of());
     assertThat(jobInfos).isEmpty();
   }
 
@@ -915,7 +920,7 @@ public final class SessionRequestHandlerUtilTest {
                 .build());
     ImmutableList<JobInfo> jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
-            sessionRequestInfo, testPlanFilter, subPlan, ImmutableMap.of());
+            sessionRequestInfo, subPlan, ImmutableMap.of());
     assertThat(jobInfos).hasSize(2);
     assertThat(jobInfos.get(0).params().get(MOBLY_TEST_SELECTOR_KEY).split(" "))
         .asList()
@@ -934,7 +939,7 @@ public final class SessionRequestHandlerUtilTest {
                 .build());
     jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
-            sessionRequestInfo, testPlanFilter, subPlan, ImmutableMap.of());
+            sessionRequestInfo, subPlan, ImmutableMap.of());
     assertThat(jobInfos).hasSize(2);
     assertThat(jobInfos.get(0).params().get(MOBLY_TEST_SELECTOR_KEY).split(" "))
         .asList()
@@ -974,7 +979,7 @@ public final class SessionRequestHandlerUtilTest {
                 .build());
     ImmutableList<JobInfo> jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
-            sessionRequestInfo, testPlanFilter, subPlan, ImmutableMap.of());
+            sessionRequestInfo, subPlan, ImmutableMap.of());
 
     assertThat(jobInfos).hasSize(2);
     assertThat(jobInfos.get(0).locator().getName()).endsWith("HelloWorldTest");
@@ -1012,7 +1017,7 @@ public final class SessionRequestHandlerUtilTest {
                 .build());
     ImmutableList<JobInfo> jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
-            sessionRequestInfo, testPlanFilter, subPlan, ImmutableMap.of());
+            sessionRequestInfo, subPlan, ImmutableMap.of());
 
     assertThat(jobInfos).hasSize(1);
 
@@ -1049,7 +1054,7 @@ public final class SessionRequestHandlerUtilTest {
                 .build());
     ImmutableList<JobInfo> jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
-            sessionRequestInfo, testPlanFilter, subPlan, ImmutableMap.of());
+            sessionRequestInfo, subPlan, ImmutableMap.of());
 
     assertThat(jobInfos).hasSize(1);
     assertThat(jobInfos.get(0).params().get(MOBLY_TEST_SELECTOR_KEY))
@@ -1072,7 +1077,7 @@ public final class SessionRequestHandlerUtilTest {
                 .build());
     ImmutableList<JobInfo> jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
-            sessionRequestInfo, testPlanFilter, null, ImmutableMap.of());
+            sessionRequestInfo, null, ImmutableMap.of());
 
     assertThat(jobInfos).hasSize(2);
     assertThat(jobInfos.get(0).params().get("option")).isEqualTo("value");
@@ -1093,7 +1098,59 @@ public final class SessionRequestHandlerUtilTest {
         MobileHarnessException.class,
         () ->
             sessionRequestHandlerUtil.createXtsNonTradefedJobs(
-                sessionRequestInfo, testPlanFilter, null, ImmutableMap.of()));
+                sessionRequestInfo, null, ImmutableMap.of()));
+  }
+
+  @Test
+  public void createXtsNonTradefedJobs_retry_loadTestPlanFilters() throws Exception {
+    setUpForCreateXtsNonTradefedJobs();
+    Configuration[] unused = setUpForCreateXtsNonTradefedJobsCreate3Config();
+
+    SubPlan subPlan = new SubPlan();
+    subPlan.setPreviousSessionXtsTestPlan("cts");
+    subPlan.addNonTfIncludeFilter("arm64-v8a module1 FooTest#test1");
+    subPlan.addNonTfIncludeFilter("arm64-v8a module1 FooTest#test2");
+    subPlan.addNonTfIncludeFilter("arm64-v8a module2"); // retry entire module
+    doCallRealMethod()
+        .when(certificationSuiteInfoFactory)
+        .generateSuiteInfoMap(any(), any(), any());
+    doCallRealMethod().when(certificationSuiteInfoFactory).getSuiteVariant(any(), any());
+    when(moblyTestLoader.getTestNamesInModule(any(), any()))
+        .thenReturn(
+            ImmutableSetMultimap.of(
+                "FooTest",
+                "FooTest.test1",
+                "FooTest",
+                "FooTest.test2",
+                "FooTest",
+                "FooTest.test3"));
+    when(testPlanParser.parseFilters(any(), any(), eq("cts")))
+        .thenReturn(
+            TestPlanFilter.create(
+                ImmutableSet.of(),
+                ImmutableSet.of("module1 FooTest#test1", "module2 FooTest#test2"),
+                ImmutableMultimap.of(),
+                ImmutableMultimap.of()));
+
+    SessionRequestInfo sessionRequestInfo =
+        sessionRequestHandlerUtil.addNonTradefedModuleInfo(
+            defaultSessionRequestInfoBuilder()
+                .setTestPlan("retry")
+                .setCommandLineArgs("retry")
+                .setRetrySessionIndex(0)
+                .build());
+    ImmutableList<JobInfo> jobInfos =
+        sessionRequestHandlerUtil.createXtsNonTradefedJobs(
+            sessionRequestInfo, subPlan, ImmutableMap.of());
+    assertThat(jobInfos).hasSize(2);
+    assertThat(jobInfos.get(0).params().get(MOBLY_TEST_SELECTOR_KEY).split(" "))
+        .asList()
+        .containsExactly("FooTest.test2");
+    assertThat(jobInfos.get(0).params().get(PARAM_XTS_SUITE_INFO)).contains("suite_plan=cts");
+    assertThat(jobInfos.get(1).params().get(MOBLY_TEST_SELECTOR_KEY).split(" "))
+        .asList()
+        .containsExactly("FooTest.test1", "FooTest.test3");
+    assertThat(jobInfos.get(1).params().get(PARAM_XTS_SUITE_INFO)).contains("suite_plan=cts");
   }
 
   @Test

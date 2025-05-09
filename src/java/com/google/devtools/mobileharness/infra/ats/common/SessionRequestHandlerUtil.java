@@ -51,6 +51,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
 import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser;
+import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser.TestPlanFilter;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.ShardingMode;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfoFactory;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
@@ -178,6 +179,7 @@ public class SessionRequestHandlerUtil {
   private final Provider<ResUtil> resUtilProvider;
   private final DeviceDetailsRetriever deviceDetailsRetriever;
   private final MoblyTestLoader moblyTestLoader;
+  private final TestPlanParser testPlanParser;
 
   @Inject
   SessionRequestHandlerUtil(
@@ -191,7 +193,8 @@ public class SessionRequestHandlerUtil {
       @SessionTempDir Path sessionTempDir,
       Provider<ResUtil> resUtilProvider,
       DeviceDetailsRetriever deviceDetailsRetriever,
-      MoblyTestLoader moblyTestLoader) {
+      MoblyTestLoader moblyTestLoader,
+      TestPlanParser testPlanParser) {
     this.deviceQuerier = deviceQuerier;
     this.localFileUtil = localFileUtil;
     this.configurationUtil = configurationUtil;
@@ -203,6 +206,7 @@ public class SessionRequestHandlerUtil {
     this.resUtilProvider = resUtilProvider;
     this.deviceDetailsRetriever = deviceDetailsRetriever;
     this.moblyTestLoader = moblyTestLoader;
+    this.testPlanParser = testPlanParser;
   }
 
   /** Information used to create the Tradefed job. */
@@ -716,7 +720,6 @@ public class SessionRequestHandlerUtil {
    */
   public ImmutableList<JobInfo> createXtsNonTradefedJobs(
       SessionRequestInfo sessionRequestInfo,
-      TestPlanParser.TestPlanFilter testPlanFilter,
       @Nullable SubPlan subPlan,
       Map<XtsPropertyName, String> extraJobProperties)
       throws MobileHarnessException, InterruptedException {
@@ -741,6 +744,21 @@ public class SessionRequestHandlerUtil {
     ImmutableMap<String, String> moduleNameToConfigFilePathMap =
         sessionRequestInfo.v2ConfigsMap().entrySet().stream()
             .collect(toImmutableMap(e -> e.getValue().getMetadata().getXtsModule(), Entry::getKey));
+
+    TestPlanFilter testPlanFilter;
+    if (SessionRequestHandlerUtil.isRunRetry(sessionRequestInfo.testPlan()) && subPlan != null) {
+      testPlanFilter =
+          testPlanParser.parseFilters(
+              Path.of(sessionRequestInfo.xtsRootDir()),
+              sessionRequestInfo.xtsType(),
+              subPlan.getPreviousSessionXtsTestPlan());
+    } else {
+      testPlanFilter =
+          testPlanParser.parseFilters(
+              Path.of(sessionRequestInfo.xtsRootDir()),
+              sessionRequestInfo.xtsType(),
+              sessionRequestInfo.testPlan());
+    }
 
     ImmutableList<SuiteTestFilter> includeFilters;
     if (subPlan == null) {
@@ -785,6 +803,7 @@ public class SessionRequestHandlerUtil {
           Stream.concat(excludeFilters.stream(), subplanExcludeFilters.stream())
               .collect(toImmutableList());
     }
+    logger.atInfo().log("Exclude filters for Non-TF run: %s", excludeFilters);
 
     ImmutableMultimap<String, String> moduleMetadataIncludeFilters =
         ImmutableMultimap.<String, String>builder()

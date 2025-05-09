@@ -36,7 +36,6 @@ import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerU
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName;
 import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName.Job;
-import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
@@ -81,19 +80,16 @@ public abstract class XtsJobCreator {
 
   private final SessionRequestHandlerUtil sessionRequestHandlerUtil;
   private final LocalFileUtil localFileUtil;
-  private final TestPlanParser testPlanParser;
   private final RetryGenerator retryGenerator;
   private final ModuleShardingArgsGenerator moduleShardingArgsGenerator;
 
   protected XtsJobCreator(
       SessionRequestHandlerUtil sessionRequestHandlerUtil,
       LocalFileUtil localFileUtil,
-      TestPlanParser testPlanParser,
       RetryGenerator retryGenerator,
       ModuleShardingArgsGenerator moduleShardingArgsGenerator) {
     this.sessionRequestHandlerUtil = sessionRequestHandlerUtil;
     this.localFileUtil = localFileUtil;
-    this.testPlanParser = testPlanParser;
     this.retryGenerator = retryGenerator;
     this.moduleShardingArgsGenerator = moduleShardingArgsGenerator;
   }
@@ -383,18 +379,6 @@ public abstract class XtsJobCreator {
    */
   public ImmutableList<JobInfo> createXtsNonTradefedJobs(SessionRequestInfo sessionRequestInfo)
       throws MobileHarnessException, InterruptedException {
-    return createXtsNonTradefedJobs(
-        sessionRequestInfo,
-        testPlanParser.parseFilters(
-            Path.of(sessionRequestInfo.xtsRootDir()),
-            sessionRequestInfo.xtsType(),
-            sessionRequestInfo.testPlan()));
-  }
-
-  @VisibleForTesting
-  ImmutableList<JobInfo> createXtsNonTradefedJobs(
-      SessionRequestInfo sessionRequestInfo, TestPlanParser.TestPlanFilter testPlanFilter)
-      throws MobileHarnessException, InterruptedException {
     if (!sessionRequestHandlerUtil.canCreateNonTradefedJobs(sessionRequestInfo)) {
       throw MobileHarnessExceptionFactory.createUserFacingException(
           InfraErrorId.XTS_NO_MATCHED_NON_TRADEFED_MODULES,
@@ -451,7 +435,7 @@ public abstract class XtsJobCreator {
     }
 
     return sessionRequestHandlerUtil.createXtsNonTradefedJobs(
-        sessionRequestInfo, testPlanFilter, subPlan, extraJobProperties.buildOrThrow());
+        sessionRequestInfo, subPlan, extraJobProperties.buildOrThrow());
   }
 
   /** Prepares a sub plan file for a non-tradefed job. */

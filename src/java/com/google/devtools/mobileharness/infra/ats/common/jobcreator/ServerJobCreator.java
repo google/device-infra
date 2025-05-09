@@ -27,7 +27,6 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionF
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName;
-import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser;
 import com.google.devtools.mobileharness.infra.ats.server.util.AtsServerSessionUtil;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteTestFilter;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader;
@@ -54,17 +53,11 @@ public class ServerJobCreator extends XtsJobCreator {
   ServerJobCreator(
       SessionRequestHandlerUtil sessionRequestHandlerUtil,
       LocalFileUtil localFileUtil,
-      TestPlanParser testPlanParser,
       PreviousResultLoader previousResultLoader,
       RetryGenerator retryGenerator,
       ModuleShardingArgsGenerator moduleShardingArgsGenerator,
       AtsServerSessionUtil atsServerSessionUtil) {
-    super(
-        sessionRequestHandlerUtil,
-        localFileUtil,
-        testPlanParser,
-        retryGenerator,
-        moduleShardingArgsGenerator);
+    super(sessionRequestHandlerUtil, localFileUtil, retryGenerator, moduleShardingArgsGenerator);
 
     this.previousResultLoader = previousResultLoader;
     this.atsServerSessionUtil = atsServerSessionUtil;
