@@ -24,7 +24,7 @@ option java_package = "com.google.wireless.qa.mobileharness.shared.proto.spec.de
 option java_multiple_files = true;
 
 // Specs for {@link AndroidLtpFlashDecoratorSpec}
-// Next tag: 6
+// Next tag: 7
 message AndroidLtpFlashDecoratorSpec {
   extend DecoratorSpec {
     optional AndroidLtpFlashDecoratorSpec ext = 1012;
@@ -47,4 +47,7 @@ message AndroidLtpFlashDecoratorSpec {
   repeated string radio_img_confpack_file = 5 [(file_detail) = {
     help: "Confpack files to sideload when flashing the radio."
   }];
+
+  optional string carrier_confpack_file = 6
+      [(file_detail) = { help: "Carrier confpack file to sideload." }];
 }
