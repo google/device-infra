@@ -26,4 +26,5 @@ java_library(
     name = "xml_constants",
     testonly = 0,
     srcs = ["XMLConstants.java"],
+    tags = ["nofixdeps"],
 )

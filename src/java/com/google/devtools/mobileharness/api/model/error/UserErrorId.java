@@ -25,6 +25,10 @@ import com.google.devtools.common.metrics.stability.util.ErrorIdFormatter;
  * Client/Lab/Gateway plugin.
  */
 public enum UserErrorId implements ErrorId {
+
+  /** TestXmlParser: 201_001 - 201_050 */
+  UNABLE_TO_EXTRACT_TEST_NAME_FROM_FILE_NAME(201_001, ErrorType.CUSTOMER_ISSUE),
+
   USER_ERROR_ID_PLACE_HOLDER_TO_BE_RENAMED(600_000, ErrorType.CUSTOMER_ISSUE);
 
   public static final int MIN_CODE = AndroidErrorId.MAX_CODE + 1;

@@ -37,3 +37,31 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+java_library(
+    name = "test_xml_parser",
+    srcs = ["TestXmlParser.java"],
+    visibility = [
+    ],
+    deps = [
+        ":base_generator",
+        ":xml_constants_helper",
+        "//src/devtools/mobileharness/api/model/proto:test_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/api/model/job/out",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/path",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "xml_constants_helper",
+    srcs = ["XmlConstantsHelper.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/xml:xml_constants",
+    ],
+)
