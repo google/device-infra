@@ -3,6 +3,7 @@ package chunkerutil
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -54,6 +55,11 @@ func CreateIndexFile(inDir string, chunksIndex []ChunksIndex) error {
 		return fmt.Errorf("failed to write chunk index file: %v", err)
 	}
 
+	linkedPath := filepath.Join(inDir, ChunksDirName, ChunksIndexFileName)
+	if err := os.Link(indexPath, linkedPath); err != nil {
+		log.Errorf("failed to hardlink chunk index file: %v", err)
+	}
+
 	return nil
 }
 
@@ -94,18 +100,23 @@ func RestoreFiles(srcDir string, dstDir string) error {
 
 // FindChunksIndex returns the path of ChunksIndex file in the dir.
 func FindChunksIndex(dir string) (string, error) {
-	indexPath := filepath.Join(dir, ChunksIndexFileName)
-	if _, err := os.Stat(indexPath); os.IsNotExist(err) {
-		return "", fmt.Errorf("chunk index file not found in %s", dir)
+	indexPath := filepath.Join(dir, ChunksDirName, ChunksIndexFileName)
+	if _, err := os.Stat(indexPath); err != nil {
+		indexPath := filepath.Join(dir, ChunksIndexFileName)
+		if _, err := os.Stat(indexPath); os.IsNotExist(err) {
+			return "", fmt.Errorf("chunk index file not found in %s", dir)
+		}
 	}
 	return indexPath, nil
 }
 
-// DeleteChunkFilesAndIndex deletes chunk files dir and the chunk index file in the dir.
+// DeleteChunkFilesAndIndex deletes chunk files dir and the chunk index file.
 func DeleteChunkFilesAndIndex(dir string) error {
 	// Delete chunk index file and chunks dir
 	if err := os.Remove(filepath.Join(dir, ChunksIndexFileName)); err != nil {
-		return fmt.Errorf("error deleting chunk index file: %v", err)
+		if !errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("error deleting chunk index file: %v", err)
+		}
 	}
 	if err := os.RemoveAll(filepath.Join(dir, ChunksDirName)); err != nil {
 		return fmt.Errorf("error deleting chunks dir: %v", err)
