@@ -46,6 +46,9 @@ import com.google.devtools.mobileharness.shared.util.base.StrUtil;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandException;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
+import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryException;
+import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryStrategy;
+import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryingCallable;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
@@ -176,6 +179,11 @@ public class AndroidInstrumentationUtil {
   /** The name of the test arg which contains the relative path of the test gen file dir. */
   private static final String TEST_ARG_GEN_FILE_DIR_RELATIVE_PATH =
       DirCommon.KEY_NAME_OF_TEST_GEN_FILE_DIR_RELATIVE_PATH;
+
+  /* Device reconnect configuration parameters. */
+  private static final int DEVICE_RECONNECT_MAX_RETRIES = 3;
+  private static final Duration DEVICE_RECONNECT_INITIAL_DELAY = Duration.ofSeconds(5);
+  private static final int DEVICE_RECONNECT_DELAY_MULTIPLIER = 3;
 
   /** Android SDK ADB command line tools executor. */
   private final Adb adb;
@@ -1029,14 +1037,34 @@ public class AndroidInstrumentationUtil {
       throws InterruptedException {
     // b/132998532. Device may be disconnected within instrumentation test, so ensure device is
     // online before pulling files from it.
+    boolean isDeviceOnline = false;
     try {
-      boolean isDeviceOnline;
-      try {
-        isDeviceOnline = systemStateManager.isOnline(deviceId);
-      } catch (MobileHarnessException e) {
-        throw new MobileHarnessException(
-            AndroidErrorId.ANDROID_INSTRUMENTATION_GET_ONLINE_DEVICES_ERROR, e.getMessage(), e);
-      }
+      isDeviceOnline =
+          RetryingCallable.newBuilder(
+                  () -> {
+                    boolean isOnline = false;
+                    try {
+                      isOnline = systemStateManager.isOnline(deviceId);
+                    } catch (MobileHarnessException e) {
+                      throw new MobileHarnessException(
+                          AndroidErrorId.ANDROID_INSTRUMENTATION_GET_ONLINE_DEVICES_ERROR,
+                          e.getMessage(),
+                          e);
+                    }
+                    if (!isOnline) {
+                      throw new MobileHarnessException(
+                          AndroidErrorId.ANDROID_INSTRUMENTATION_GET_ONLINE_DEVICES_ERROR,
+                          String.format("Device %s is not online", deviceId));
+                    }
+                    return true;
+                  },
+                  RetryStrategy.exponentialBackoff(
+                      DEVICE_RECONNECT_INITIAL_DELAY,
+                      DEVICE_RECONNECT_DELAY_MULTIPLIER,
+                      DEVICE_RECONNECT_MAX_RETRIES))
+              .setPredicate(e -> e instanceof MobileHarnessException)
+              .build()
+              .call();
       if (isDeviceOnline) {
         processInstrumentOutputFiles(testInfo, deviceId, externalStoragePath);
         processInstrumentPropertyFiles(testInfo, deviceId, externalStoragePath);
@@ -1053,14 +1081,21 @@ public class AndroidInstrumentationUtil {
             .log()
             .atInfo()
             .alsoTo(logger)
-            .log("Device %s is not online, skip pulling instrumentation files from it", deviceId);
+            .log(
+                "Device %s is not online after %d retries, skip pulling instrumentation files from"
+                    + " it",
+                deviceId, DEVICE_RECONNECT_MAX_RETRIES);
       }
-    } catch (MobileHarnessException e) {
+    } catch (RetryException | MobileHarnessException e) {
       testInfo
           .warnings()
           .addAndLog(
               new MobileHarnessException(
-                  AndroidErrorId.ANDROID_INSTRUMENTATION_PULL_FILE_ERROR, e.getMessage(), e),
+                  AndroidErrorId.ANDROID_INSTRUMENTATION_PULL_FILE_ERROR,
+                  String.format(
+                      "Failed to check if device %s is online after %d retries",
+                      deviceId, DEVICE_RECONNECT_MAX_RETRIES),
+                  e),
               logger);
     }
   }
