@@ -110,13 +110,15 @@ message DetectorSpecs {
     }
 
     message ManekiRdkDeviceDiscoverySpec {
-      string device_id = 1;
       string mac_address = 2;
+
+      reserved 1;
     }
 
     message ManekiRaspberryPiDeviceDiscoverySpec {
-      string device_id = 1;
       string mac_address = 2;
+
+      reserved 1;
     }
 
     message ManekiPs4DeviceDiscoverySpec {
