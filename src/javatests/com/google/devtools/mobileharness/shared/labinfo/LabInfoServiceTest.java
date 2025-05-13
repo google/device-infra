@@ -41,6 +41,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceGro
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceGroupKey.HasOwnerList;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceGroupKey.HasStatus;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceGroupKey.HasTypeList;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceGroupKey.HasVersionValue;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceGroupResult;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceList;
@@ -56,6 +57,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.DeviceViewRequest.DeviceGroupCondition.SingleDimensionValue;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.DeviceViewRequest.DeviceGroupCondition.SingleStatus;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.DeviceViewRequest.DeviceGroupCondition.TypeList;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.DeviceViewRequest.DeviceGroupCondition.VersionValue;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.DeviceViewRequest.DeviceGroupOperation;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Filter;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
@@ -119,6 +121,12 @@ public class LabInfoServiceTest {
                               DeviceDimension.newBuilder()
                                   .setName("fake_dimension_name")
                                   .setValue("fake_dimension_value_2"))
+                          .addSupportedDimension(
+                              DeviceDimension.newBuilder().setName("os").setValue("android"))
+                          .addSupportedDimension(
+                              DeviceDimension.newBuilder().setName("sdk_version").setValue("19"))
+                          .addSupportedDimension(
+                              DeviceDimension.newBuilder().setName("sdk_version").setValue("18"))
                           .addRequiredDimension(
                               DeviceDimension.newBuilder()
                                   .setName("fake_dimension_name")
@@ -676,6 +684,65 @@ public class LabInfoServiceTest {
                     .setGroupedDevices(
                         GroupedDevices.newBuilder()
                             .setDeviceList(DeviceList.newBuilder().setDeviceTotalCount(0))))
+            .build();
+    assertThat(response)
+        .withPartialScope(FIELD_SCOPE)
+        .isEqualTo(
+            GetLabInfoResponse.newBuilder()
+                .setLabQueryResult(
+                    LabQueryResult.newBuilder()
+                        .setDeviceView(
+                            DeviceView.newBuilder()
+                                .setGroupedDevices(
+                                    GroupedDevices.newBuilder()
+                                        .setDeviceGroupResult(deviceGroupResult))))
+                .build());
+  }
+
+  @Test
+  public void getLabInfo_deviceView_group_versionValue() throws Exception {
+    DeviceGroupOperation deviceGroupOperation =
+        DeviceGroupOperation.newBuilder()
+            .setDeviceGroupCondition(
+                DeviceGroupCondition.newBuilder()
+                    .setVersionValue(VersionValue.getDefaultInstance()))
+            .build();
+    GetLabInfoResponse response =
+        labInfoService.doGetLabInfo(
+            GetLabInfoRequest.newBuilder()
+                .setLabQuery(
+                    LabQuery.newBuilder()
+                        .setDeviceViewRequest(
+                            DeviceViewRequest.newBuilder()
+                                .addDeviceGroupOperation(deviceGroupOperation)))
+                .build());
+
+    DeviceGroupResult deviceGroupResult =
+        DeviceGroupResult.newBuilder()
+            .setDeviceGroupOperation(deviceGroupOperation)
+            .setDeviceGroupTotalCount(2)
+            .addDeviceGroup(
+                DeviceGroup.newBuilder()
+                    .setDeviceGroupKey(
+                        DeviceGroupKey.newBuilder()
+                            .setHasVersionValue(HasVersionValue.newBuilder().setVersion("18,19")))
+                    .setGroupedDevices(
+                        GroupedDevices.newBuilder()
+                            .setDeviceList(
+                                DeviceList.newBuilder()
+                                    .setDeviceTotalCount(1)
+                                    .addDeviceInfo(DEVICE_INFO_1))))
+            .addDeviceGroup(
+                DeviceGroup.newBuilder()
+                    .setDeviceGroupKey(
+                        DeviceGroupKey.newBuilder()
+                            .setHasVersionValue(HasVersionValue.getDefaultInstance()))
+                    .setGroupedDevices(
+                        GroupedDevices.newBuilder()
+                            .setDeviceList(
+                                DeviceList.newBuilder()
+                                    .setDeviceTotalCount(1)
+                                    .addDeviceInfo(DEVICE_INFO_2))))
             .build();
     assertThat(response)
         .withPartialScope(FIELD_SCOPE)

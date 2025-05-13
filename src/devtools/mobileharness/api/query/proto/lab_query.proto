@@ -204,6 +204,23 @@ message LabQuery {
       // A device only has one status so only appears in one group.
       message SingleStatus {}
 
+      // Each group represents a version value.
+      //
+      // For Android devices, the version is the value of the "sdk_version"
+      // dimension. For iOS devices, the version is the value of the
+      // "software_version" dimension. The "os" dimension can be used to
+      // distinguish between Android and iOS devices.
+      //
+      // If a device has multiple version values, which is usually unexpected,
+      // They will be concatenated into a comma-separated string (e.g.,
+      // "version1,version2").
+      //
+      // A device appears in the group if its version matches the specified
+      // version.
+      //
+      // A device only appears in one group.
+      message VersionValue {}
+
       oneof condition {
         SingleDimensionValue single_dimension_value = 1;
         DimensionValueList dimension_value_list = 2;
@@ -211,6 +228,7 @@ message LabQuery {
         OwnerList owner_list = 4;
         ExecutorList executor_list = 5;
         SingleStatus single_status = 6;
+        VersionValue version_value = 7;
       }
     }
 
@@ -430,6 +448,13 @@ message DeviceGroupKey {
     mobileharness.api.model.DeviceStatus status = 1;
   }
 
+  // Devices in the group have a list of versions.
+  // If a device has an empty version or the corresponding dimension does not
+  // exist, its corresponding version is empty.
+  message HasVersionValue {
+    string version = 1;
+  }
+
   oneof key {
     // Required if single_dimension_value is present.
     HasDimensionValue has_dimension_value = 1;
@@ -443,5 +468,7 @@ message DeviceGroupKey {
     HasExecutorList has_executor_list = 5;
     // Required if single_status_value is present.
     HasStatus has_status = 6;
+    // Required if version_value is present.
+    HasVersionValue has_version_value = 7;
   }
 }
