@@ -81,7 +81,9 @@ public class MoblyYamlParser {
 
   // Special names for Mobly test stages, reported in the same way as a test case record
   private static final String STAGE_SETUP_CLASS = "setup_class";
+  private static final String STAGE_PRE_RUN = "pre_run";
   private static final String STAGE_TEARDOWN_CLASS = "teardown_class";
+  private static final String STAGE_CLEAN_UP = "clean_up";
 
   /**
    * Takes in the path to the test_summary.yaml file and parses the result into a list of
@@ -122,12 +124,13 @@ public class MoblyYamlParser {
             hasSetupClassError = false;
             currentTestClass = newTestClass;
           }
-          if (String.valueOf(documentMap.get(RESULT_TESTNAME)).equals(STAGE_SETUP_CLASS)
+          String testName = String.valueOf(documentMap.get(RESULT_TESTNAME));
+          if ((testName.equals(STAGE_SETUP_CLASS) || testName.equals(STAGE_PRE_RUN))
               && String.valueOf(documentMap.get(RESULT_RESULT)).equals(RESULT_ERROR)) {
             hasSetupClassError = true;
             continue;
           }
-          if (String.valueOf(documentMap.get(RESULT_TESTNAME)).equals(STAGE_TEARDOWN_CLASS)) {
+          if (testName.equals(STAGE_TEARDOWN_CLASS) || testName.equals(STAGE_CLEAN_UP)) {
             continue;
           }
           MoblyTestEntry testEntry = parseRecord(documentMap, hasSetupClassError);
