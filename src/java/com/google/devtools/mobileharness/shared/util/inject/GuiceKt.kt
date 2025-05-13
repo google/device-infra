@@ -275,6 +275,7 @@ inline fun <reified T> AbstractModule.bind(
  * @sample [AbstractModuleExtensionsTest.testSetBinder]
  * @sample [AbstractModuleExtensionsTest.testSetBinderPassingAnnotation]
  */
+@CanIgnoreReturnValue
 inline fun <reified T : Any> AbstractModule.setBinder(
   annotation: KClass<out Annotation>? = null
 ): Multibinder<T> = Multibinder.newSetBinder(`access$binder`(), key<T>(annotation))
@@ -288,6 +289,7 @@ inline fun <reified T : Any> AbstractModule.setBinder(
  * @param annotation the [Multibinder]'s annotation instance
  * @sample [AbstractModuleExtensionsTest.testSetBinderPassingAnnotationInstance]
  */
+@CanIgnoreReturnValue
 inline fun <reified T : Any> AbstractModule.setBinder(annotation: Annotation): Multibinder<T> =
   Multibinder.newSetBinder(`access$binder`(), key<T>(annotation))
 
