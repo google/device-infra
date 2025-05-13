@@ -225,6 +225,8 @@ final class AtsServerSessionPlugin {
         if (shouldSendCancellationMessage) {
           sendCancellationMessageToStartedTest(testInfo);
         }
+        requestDetail.setWorkingJobId(testInfo.jobInfo().locator().getId());
+        requestDetail.setWorkingTestId(testInfo.locator().getId());
       } finally {
         updateSessionPluginOutput(requestDetail);
       }
