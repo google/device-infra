@@ -164,13 +164,16 @@ public final class SessionRequestHandlerUtilTest {
 
   @Test
   public void initializeJobConfig_calculateTimeout() throws Exception {
+    SessionRequestInfo sessionRequestInfo =
+        defaultSessionRequestInfoBuilder()
+            .setJobTimeout(Duration.ofSeconds(3000L))
+            .setStartTimeout(Duration.ofSeconds(1000L))
+            .build();
+    ImmutableList<SubDeviceSpec> subDeviceSpecs =
+        sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
     JobConfig jobConfig =
         sessionRequestHandlerUtil.initializeJobConfig(
-            defaultSessionRequestInfoBuilder()
-                .setJobTimeout(Duration.ofSeconds(3000L))
-                .setStartTimeout(Duration.ofSeconds(1000L))
-                .build(),
-            ImmutableMap.of());
+            sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs);
 
     assertThat(jobConfig.getJobTimeoutSec()).isEqualTo(3000L);
     assertThat(jobConfig.getTestTimeoutSec()).isEqualTo(2940L);
@@ -182,9 +185,12 @@ public final class SessionRequestHandlerUtilTest {
     ImmutableMap<String, String> driverParams =
         ImmutableMap.of(
             "xts_type", "cts", "xts_root_dir", XTS_ROOT_DIR_PATH, "xts_test_plan", "cts");
+    SessionRequestInfo sessionRequestInfo = defaultSessionRequestInfoBuilder().build();
+    ImmutableList<SubDeviceSpec> subDeviceSpecs =
+        sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
     JobConfig jobConfig =
         sessionRequestHandlerUtil.initializeJobConfig(
-            defaultSessionRequestInfoBuilder().build(), driverParams);
+            sessionRequestInfo, driverParams, subDeviceSpecs);
 
     assertThat(jobConfig.getDevice().getSubDeviceSpecList())
         .containsExactly(subDeviceSpecWithDimension("id", "regex:(device_id_1|device_id_2)"));
@@ -198,10 +204,13 @@ public final class SessionRequestHandlerUtilTest {
 
   @Test
   public void initializeJobConfig_atsServerNoDeviceRequirement_pickOneDevice() throws Exception {
+    SessionRequestInfo sessionRequestInfo =
+        defaultSessionRequestInfoBuilder().setIsAtsServerRequest(true).build();
+    ImmutableList<SubDeviceSpec> subDeviceSpecs =
+        sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
     JobConfig jobConfig =
         sessionRequestHandlerUtil.initializeJobConfig(
-            defaultSessionRequestInfoBuilder().setIsAtsServerRequest(true).build(),
-            ImmutableMap.of());
+            sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs);
     assertThat(jobConfig.getDevice().getSubDeviceSpecList())
         .containsExactly(subDeviceSpecWithDimension("id", "regex:(device_id_1|device_id_2)"));
   }
@@ -209,13 +218,16 @@ public final class SessionRequestHandlerUtilTest {
   @Test
   public void initializeJobConfig_atsServerSpecifyOneDevice_createJobWithThatDevice()
       throws Exception {
+    SessionRequestInfo sessionRequestInfo =
+        defaultSessionRequestInfoBuilder()
+            .setIsAtsServerRequest(true)
+            .setDeviceSerials(ImmutableList.of("device_id_1"))
+            .build();
+    ImmutableList<SubDeviceSpec> subDeviceSpecs =
+        sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
     JobConfig jobConfig =
         sessionRequestHandlerUtil.initializeJobConfig(
-            defaultSessionRequestInfoBuilder()
-                .setIsAtsServerRequest(true)
-                .setDeviceSerials(ImmutableList.of("device_id_1"))
-                .build(),
-            ImmutableMap.of());
+            sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs);
     assertThat(jobConfig.getDevice().getSubDeviceSpecList())
         .containsExactly(subDeviceSpecWithDimension("uuid", "device_id_1"));
   }
@@ -233,13 +245,16 @@ public final class SessionRequestHandlerUtilTest {
                             Dimension.newBuilder().setName("uuid").setValue("device_id_1"))
                         .addType("AndroidOnlineDevice"))
                 .build());
+    SessionRequestInfo sessionRequestInfo =
+        defaultSessionRequestInfoBuilder()
+            .setIsAtsServerRequest(true)
+            .setDeviceSerials(ImmutableList.of("device_id_1", "device_id_2"))
+            .build();
+    ImmutableList<SubDeviceSpec> subDeviceSpecs =
+        sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
     JobConfig jobConfig =
         sessionRequestHandlerUtil.initializeJobConfig(
-            defaultSessionRequestInfoBuilder()
-                .setIsAtsServerRequest(true)
-                .setDeviceSerials(ImmutableList.of("device_id_1", "device_id_2"))
-                .build(),
-            ImmutableMap.of());
+            sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs);
     assertThat(jobConfig.getDevice().getSubDeviceSpecList())
         .containsExactly(subDeviceSpecWithDimension("uuid", "device_id_1"));
 
@@ -251,12 +266,15 @@ public final class SessionRequestHandlerUtilTest {
     ImmutableMap<String, String> driverParams =
         ImmutableMap.of(
             "xts_type", "cts", "xts_root_dir", XTS_ROOT_DIR_PATH, "xts_test_plan", "cts");
+    SessionRequestInfo sessionRequestInfo =
+        defaultSessionRequestInfoBuilder()
+            .setDeviceType(SessionRequestHandlerUtil.ANDROID_REAL_DEVICE_TYPE)
+            .build();
+    ImmutableList<SubDeviceSpec> subDeviceSpecs =
+        sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
     JobConfig jobConfig =
         sessionRequestHandlerUtil.initializeJobConfig(
-            defaultSessionRequestInfoBuilder()
-                .setDeviceType(SessionRequestHandlerUtil.ANDROID_REAL_DEVICE_TYPE)
-                .build(),
-            driverParams);
+            sessionRequestInfo, driverParams, subDeviceSpecs);
 
     // subDeviceSpecWithDimension uses "AndroidDevice" type, and cannot be used here.
     assertThat(jobConfig.getDevice().getSubDeviceSpecList())
@@ -276,12 +294,15 @@ public final class SessionRequestHandlerUtilTest {
 
   @Test
   public void initializeJobConfig_excludeDevice() throws Exception {
+    SessionRequestInfo sessionRequestInfo =
+        defaultSessionRequestInfoBuilder()
+            .setExcludeDeviceSerials(ImmutableList.of("device_id_1"))
+            .build();
+    ImmutableList<SubDeviceSpec> subDeviceSpecs =
+        sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
     JobConfig jobConfig =
         sessionRequestHandlerUtil.initializeJobConfig(
-            defaultSessionRequestInfoBuilder()
-                .setExcludeDeviceSerials(ImmutableList.of("device_id_1"))
-                .build(),
-            ImmutableMap.of());
+            sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs);
 
     assertThat(jobConfig.getDevice().getSubDeviceSpecList())
         .containsExactly(subDeviceSpecWithDimension("id", "regex:(device_id_2)"));
@@ -289,11 +310,13 @@ public final class SessionRequestHandlerUtilTest {
 
   @Test
   public void initializeJobConfig_multiDevice_pick2Devices() throws Exception {
+    SessionRequestInfo sessionRequestInfo =
+        defaultSessionRequestInfoBuilder().setTestPlan("cts-multidevice").build();
+    ImmutableList<SubDeviceSpec> subDeviceSpecs =
+        sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
     JobConfig jobConfig =
         sessionRequestHandlerUtil.initializeJobConfig(
-            defaultSessionRequestInfoBuilder().setTestPlan("cts-multidevice").build(),
-            ImmutableMap.of());
-
+            sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs);
     SubDeviceSpec subDeviceSpec =
         subDeviceSpecWithDimension("id", "regex:(device_id_1|device_id_2)");
     assertThat(jobConfig.getDevice().getSubDeviceSpecList())
@@ -302,13 +325,16 @@ public final class SessionRequestHandlerUtilTest {
 
   @Test
   public void initializeJobConfig_multiDevice_pick2Emulators() throws Exception {
+    SessionRequestInfo sessionRequestInfo =
+        defaultSessionRequestInfoBuilder()
+            .setTestPlan("cts-multidevice")
+            .setDeviceType(SessionRequestHandlerUtil.ANDROID_LOCAL_EMULATOR_TYPE)
+            .build();
+    ImmutableList<SubDeviceSpec> subDeviceSpecs =
+        sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
     JobConfig jobConfig =
         sessionRequestHandlerUtil.initializeJobConfig(
-            defaultSessionRequestInfoBuilder()
-                .setTestPlan("cts-multidevice")
-                .setDeviceType(SessionRequestHandlerUtil.ANDROID_LOCAL_EMULATOR_TYPE)
-                .build(),
-            ImmutableMap.of());
+            sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs);
 
     // subDeviceSpecWithDimension uses "AndroidDevice" type, and cannot be used here.
     SubDeviceSpec subDeviceSpec =
@@ -329,24 +355,30 @@ public final class SessionRequestHandlerUtilTest {
                 .addDeviceInfo(
                     DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
                 .build());
-
+    SessionRequestInfo sessionRequestInfo =
+        defaultSessionRequestInfoBuilder().setTestPlan("cts-multi-device").build();
+    ImmutableList<SubDeviceSpec> subDeviceSpecs =
+        sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
     assertThrows(
         MobileHarnessException.class,
-        () ->
-            sessionRequestHandlerUtil.initializeJobConfig(
-                defaultSessionRequestInfoBuilder().setTestPlan("cts-multi-device").build(),
-                ImmutableMap.of()));
+        () -> {
+          sessionRequestHandlerUtil.initializeJobConfig(
+              sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs);
+        });
   }
 
   @Test
   public void initializeJobConfig_shardCount2_pick2Devices() throws Exception {
+    SessionRequestInfo sessionRequestInfo =
+        defaultSessionRequestInfoBuilder()
+            .setCommandLineArgs("cts --shard-count 2")
+            .setShardCount(2)
+            .build();
+    ImmutableList<SubDeviceSpec> subDeviceSpecs =
+        sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
     JobConfig jobConfig =
         sessionRequestHandlerUtil.initializeJobConfig(
-            defaultSessionRequestInfoBuilder()
-                .setCommandLineArgs("cts --shard-count 2")
-                .setShardCount(2)
-                .build(),
-            ImmutableMap.of());
+            sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs);
 
     SubDeviceSpec subDeviceSpec =
         subDeviceSpecWithDimension("id", "regex:(device_id_1|device_id_2)");
@@ -356,13 +388,16 @@ public final class SessionRequestHandlerUtilTest {
 
   @Test
   public void initializeJobConfig_shardCount3_only2OnlineDevices_pick2Devices() throws Exception {
+    SessionRequestInfo sessionRequestInfo =
+        defaultSessionRequestInfoBuilder()
+            .setCommandLineArgs("cts --shard-count 3")
+            .setShardCount(3)
+            .build();
+    ImmutableList<SubDeviceSpec> subDeviceSpecs =
+        sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
     JobConfig jobConfig =
         sessionRequestHandlerUtil.initializeJobConfig(
-            defaultSessionRequestInfoBuilder()
-                .setCommandLineArgs("cts --shard-count 3")
-                .setShardCount(3)
-                .build(),
-            ImmutableMap.of());
+            sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs);
 
     SubDeviceSpec subDeviceSpec =
         subDeviceSpecWithDimension("id", "regex:(device_id_1|device_id_2)");
@@ -373,26 +408,27 @@ public final class SessionRequestHandlerUtilTest {
   @Test
   public void initializeJobConfig_noOnlineDevices_noJobConfig() throws Exception {
     when(deviceQuerier.queryDevice(any())).thenReturn(DeviceQueryResult.getDefaultInstance());
-
+    SessionRequestInfo sessionRequestInfo = defaultSessionRequestInfoBuilder().build();
     assertThrows(
         MobileHarnessException.class,
-        () ->
-            sessionRequestHandlerUtil.initializeJobConfig(
-                defaultSessionRequestInfoBuilder().build(), ImmutableMap.of()));
+        () -> sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo));
   }
 
   @Test
   public void initializeJobConfig_withGivenSerial() throws Exception {
+    SessionRequestInfo sessionRequestInfo =
+        defaultSessionRequestInfoBuilder()
+            .setEnvVars(ImmutableMap.of("env_key1", "env_value1"))
+            .setDeviceSerials(ImmutableList.of("device_id_1"))
+            .setModuleNames(ImmutableList.of("module1"))
+            .setShardCount(2)
+            .setExtraArgs(ImmutableList.of("--logcat-on-failure"))
+            .build();
+    ImmutableList<SubDeviceSpec> subDeviceSpecs =
+        sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
     JobConfig jobConfig =
         sessionRequestHandlerUtil.initializeJobConfig(
-            defaultSessionRequestInfoBuilder()
-                .setEnvVars(ImmutableMap.of("env_key1", "env_value1"))
-                .setDeviceSerials(ImmutableList.of("device_id_1"))
-                .setModuleNames(ImmutableList.of("module1"))
-                .setShardCount(2)
-                .setExtraArgs(ImmutableList.of("--logcat-on-failure"))
-                .build(),
-            ImmutableMap.of());
+            sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs);
 
     assertThat(jobConfig.getDevice().getSubDeviceSpecList())
         .containsExactly(subDeviceSpecWithDimension("id", "device_id_1"));
@@ -401,13 +437,15 @@ public final class SessionRequestHandlerUtilTest {
   @Test
   public void initializeJobConfig_someGivenSerialsNotExist_pickExistingDevicesOnly()
       throws Exception {
+    SessionRequestInfo sessionRequestInfo =
+        defaultSessionRequestInfoBuilder()
+            .setDeviceSerials(ImmutableList.of("device_id_1", "not_exist_device", "device_id_2"))
+            .build();
+    ImmutableList<SubDeviceSpec> subDeviceSpecs =
+        sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
     JobConfig jobConfig =
         sessionRequestHandlerUtil.initializeJobConfig(
-            defaultSessionRequestInfoBuilder()
-                .setDeviceSerials(
-                    ImmutableList.of("device_id_1", "not_exist_device", "device_id_2"))
-                .build(),
-            ImmutableMap.of());
+            sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs);
 
     assertThat(jobConfig.getDevice().getSubDeviceSpecList())
         .containsExactly(
@@ -416,15 +454,15 @@ public final class SessionRequestHandlerUtilTest {
   }
 
   @Test
-  public void initializeJobConfig_allGivenSerialsNotExist_noJobConfig() {
+  public void getSubDeviceSpecListForTradefed_allGivenSerialsNotExist_noJobConfig()
+      throws Exception {
+    SessionRequestInfo sessionRequestInfo =
+        defaultSessionRequestInfoBuilder()
+            .setDeviceSerials(ImmutableList.of("device_id_4", "device_id_5"))
+            .build();
     assertThrows(
         MobileHarnessException.class,
-        () ->
-            sessionRequestHandlerUtil.initializeJobConfig(
-                defaultSessionRequestInfoBuilder()
-                    .setDeviceSerials(ImmutableList.of("device_id_4", "device_id_5"))
-                    .build(),
-                ImmutableMap.of()));
+        () -> sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo));
   }
 
   @Test

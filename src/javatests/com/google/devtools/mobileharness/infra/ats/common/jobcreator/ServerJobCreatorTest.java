@@ -28,6 +28,7 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.SessionHandlerHelper;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
@@ -36,6 +37,7 @@ import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.ShardingMode;
+import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestEnvironment;
 import com.google.devtools.mobileharness.infra.ats.server.util.AtsServerSessionUtil;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryArgs;
@@ -49,6 +51,7 @@ import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
+import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.SubDeviceSpec;
 import java.io.File;
 import java.nio.file.Path;
 import java.util.Map;
@@ -79,13 +82,12 @@ public final class ServerJobCreatorTest {
 
   private static final String SUBPLAN3_XML =
       RunfilesUtil.getRunfilesLocation(TEST_DATA_PREFIX + "subplan3.xml");
-
-  private static final String XTS_ROOT_DIR_PATH = "/path/to/xts_root_dir";
   private static final String ANDROID_XTS_ZIP_PATH = "ats-file-server::/path/to/android_xts.zip";
 
   @Rule public MockitoRule mockito = MockitoJUnit.rule();
   @Rule public TemporaryFolder folder = new TemporaryFolder();
   @Rule public final SetFlagsOss flags = new SetFlagsOss();
+  @Rule public final TemporaryFolder tmpFolder = new TemporaryFolder();
 
   @Bind @Mock private SessionRequestHandlerUtil sessionRequestHandlerUtil;
   @Bind @Mock private AtsServerSessionUtil atsServerSessionUtil;
@@ -96,92 +98,53 @@ public final class ServerJobCreatorTest {
   @Bind @Mock private ModuleShardingArgsGenerator moduleShardingArgsGenerator;
 
   private LocalFileUtil realLocalFileUtil;
+  private String publicDir;
+  private String xtsRootDir;
 
   @Inject private ServerJobCreator jobCreator;
 
   @Before
   public void setUp() throws Exception {
-    flags.setAllFlags(ImmutableMap.of("enable_ats_mode", "true", "use_tf_retry", "false"));
-
+    publicDir = tmpFolder.newFolder("public_dir").getAbsolutePath();
+    flags.setAllFlags(
+        ImmutableMap.of(
+            "enable_ats_mode",
+            "true",
+            "use_tf_retry",
+            "false",
+            "ats_storage_path",
+            tmpFolder.getRoot().getAbsolutePath()));
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
     realLocalFileUtil = new LocalFileUtil();
+    when(sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(any()))
+        .thenReturn(
+            ImmutableList.of(
+                SubDeviceSpec.getDefaultInstance(), SubDeviceSpec.getDefaultInstance()));
+    xtsRootDir = publicDir + "/session_session_id/file";
+    realLocalFileUtil.prepareParentDir(xtsRootDir);
   }
 
-  @SuppressWarnings("unchecked")
   @Test
-  public void createXtsTradefedTestJob() throws Exception {
+  public void createXtsTradefedTestJob_missingTestEnvironment_throwException() throws Exception {
     SessionRequestInfo sessionRequestInfo =
         SessionRequestInfo.builder()
             .setTestPlan("cts")
             .setCommandLineArgs("cts")
             .setXtsType("cts")
-            .setXtsRootDir(XTS_ROOT_DIR_PATH)
+            .setXtsRootDir(xtsRootDir)
             .setAndroidXtsZip(ANDROID_XTS_ZIP_PATH)
             .setModuleNames(ImmutableList.of("mock_module"))
             .build();
-    ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
-
-    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any()))
+    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any()))
         .thenReturn(JobConfig.getDefaultInstance());
-
-    ImmutableList<TradefedJobInfo> tradefedJobInfoList =
-        jobCreator.createXtsTradefedTestJobInfo(
-            sessionRequestInfo, ImmutableList.of("mock_module"));
-
-    assertThat(tradefedJobInfoList).hasSize(1);
-    verify(sessionRequestHandlerUtil)
-        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture());
-    assertThat(driverParamsCaptor.getValue())
-        .containsExactly(
-            "run_command_args",
-            "-m mock_module",
-            "xts_type",
-            "cts",
-            "android_xts_zip",
-            ANDROID_XTS_ZIP_PATH,
-            "xts_test_plan",
-            "cts");
-    assertThat(tradefedJobInfoList.get(0).extraJobProperties())
-        .containsExactly(Job.XTS_TEST_PLAN, "cts");
-  }
-
-  @SuppressWarnings("unchecked")
-  @Test
-  public void createXtsTradefedTestJob_localMode() throws Exception {
-    when(atsServerSessionUtil.isLocalMode()).thenReturn(true);
-    SessionRequestInfo sessionRequestInfo =
-        SessionRequestInfo.builder()
-            .setTestPlan("cts")
-            .setCommandLineArgs("cts")
-            .setXtsType("cts")
-            .setXtsRootDir(XTS_ROOT_DIR_PATH)
-            .setAndroidXtsZip(ANDROID_XTS_ZIP_PATH)
-            .setModuleNames(ImmutableList.of("mock_module"))
-            .build();
-    ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
-
-    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any()))
-        .thenReturn(JobConfig.getDefaultInstance());
-
-    ImmutableList<TradefedJobInfo> tradefedJobInfoList =
-        jobCreator.createXtsTradefedTestJobInfo(
-            sessionRequestInfo, ImmutableList.of("mock_module"));
-
-    assertThat(tradefedJobInfoList).hasSize(1);
-    verify(sessionRequestHandlerUtil)
-        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture());
-    assertThat(driverParamsCaptor.getValue())
-        .containsExactly(
-            "run_command_args",
-            "-m mock_module",
-            "xts_type",
-            "cts",
-            "xts_root_dir",
-            XTS_ROOT_DIR_PATH,
-            "xts_test_plan",
-            "cts");
-    assertThat(tradefedJobInfoList.get(0).extraJobProperties())
-        .containsExactly(Job.XTS_TEST_PLAN, "cts");
+    MobileHarnessException thrown =
+        assertThrows(
+            MobileHarnessException.class,
+            () ->
+                jobCreator.createXtsTradefedTestJobInfo(
+                    sessionRequestInfo, ImmutableList.of("mock_module")));
+    assertThat(thrown.getErrorId())
+        .isEqualTo(InfraErrorId.ATS_SERVER_MISSING_TEST_ENVIRONMENT_ERROR);
   }
 
   @Test
@@ -191,12 +154,13 @@ public final class ServerJobCreatorTest {
             .setTestPlan("cts")
             .setCommandLineArgs("cts")
             .setXtsType("cts")
-            .setXtsRootDir(XTS_ROOT_DIR_PATH)
+            .setXtsRootDir(xtsRootDir)
+            .setAtsServerTestEnvironment(TestEnvironment.getDefaultInstance())
             .setAndroidXtsZip(ANDROID_XTS_ZIP_PATH)
             .setShardingMode(ShardingMode.MODULE)
             .build();
 
-    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any()))
+    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any()))
         .thenReturn(JobConfig.getDefaultInstance());
     when(moduleShardingArgsGenerator.generateShardingArgs(eq(sessionRequestInfo), any()))
         .thenReturn(ImmutableSet.of("arg1", "arg2", "arg3"));
@@ -210,20 +174,23 @@ public final class ServerJobCreatorTest {
 
   @SuppressWarnings("unchecked")
   @Test
-  public void createXtsTradefedTestJob_hasTestPlanFile() throws Exception {
+  public void createXtsTradefedTestJob() throws Exception {
+    String xtsRootDir = publicDir + "/session_session_id/file";
+    realLocalFileUtil.prepareParentDir(xtsRootDir);
     SessionRequestInfo sessionRequestInfo =
         SessionRequestInfo.builder()
             .setTestPlan("cts")
             .setCommandLineArgs("cts")
             .setXtsType("cts")
-            .setXtsRootDir(XTS_ROOT_DIR_PATH)
+            .setAtsServerTestEnvironment(TestEnvironment.getDefaultInstance())
+            .setXtsRootDir(xtsRootDir)
             .setAndroidXtsZip(ANDROID_XTS_ZIP_PATH)
-            .setTestPlanFile("ats-file-server::/path/to/test_plan")
+            .setRemoteRunnerFilePathPrefix("ats-file-server::")
             .setModuleNames(ImmutableList.of("mock_module"))
             .build();
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
 
-    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any()))
+    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any()))
         .thenReturn(JobConfig.getDefaultInstance());
 
     ImmutableList<TradefedJobInfo> tradefedJobInfoList =
@@ -232,7 +199,7 @@ public final class ServerJobCreatorTest {
 
     assertThat(tradefedJobInfoList).hasSize(1);
     verify(sessionRequestHandlerUtil)
-        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture());
+        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any());
     assertThat(driverParamsCaptor.getValue())
         .containsExactly(
             "run_command_args",
@@ -244,9 +211,62 @@ public final class ServerJobCreatorTest {
             "xts_test_plan",
             "cts",
             "xts_test_plan_file",
-            "ats-file-server::/path/to/test_plan");
+            "ats-file-server::/public_dir/session_session_id/command.xml");
     assertThat(tradefedJobInfoList.get(0).extraJobProperties())
         .containsExactly(Job.XTS_TEST_PLAN, "cts");
+    String commandXmlContent =
+        realLocalFileUtil.readFile(Path.of(publicDir, "session_session_id/command.xml"));
+    assertThat(commandXmlContent).contains("TF_DEVICE_0");
+    assertThat(commandXmlContent).contains("TF_DEVICE_1");
+    assertThat(countOccurrences(commandXmlContent, "TF_DEVICE_")).isEqualTo(2);
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test
+  public void createXtsTradefedTestJob_hasTestPlanFileAndLocalMode() throws Exception {
+    String xtsRootDir = publicDir + "/session_session_id/file";
+    realLocalFileUtil.prepareParentDir(xtsRootDir);
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfo.builder()
+            .setTestPlan("cts")
+            .setCommandLineArgs("cts")
+            .setXtsType("cts")
+            .setAtsServerTestEnvironment(TestEnvironment.getDefaultInstance())
+            .setXtsRootDir(xtsRootDir)
+            .setAndroidXtsZip(ANDROID_XTS_ZIP_PATH)
+            .setModuleNames(ImmutableList.of("mock_module"))
+            .build();
+    ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
+
+    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any()))
+        .thenReturn(JobConfig.getDefaultInstance());
+
+    ImmutableList<TradefedJobInfo> tradefedJobInfoList =
+        jobCreator.createXtsTradefedTestJobInfo(
+            sessionRequestInfo, ImmutableList.of("mock_module"));
+
+    assertThat(tradefedJobInfoList).hasSize(1);
+    verify(sessionRequestHandlerUtil)
+        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any());
+    assertThat(driverParamsCaptor.getValue())
+        .containsExactly(
+            "run_command_args",
+            "-m mock_module",
+            "xts_type",
+            "cts",
+            "android_xts_zip",
+            ANDROID_XTS_ZIP_PATH,
+            "xts_test_plan",
+            "cts",
+            "xts_test_plan_file",
+            publicDir + "/session_session_id/command.xml");
+    assertThat(tradefedJobInfoList.get(0).extraJobProperties())
+        .containsExactly(Job.XTS_TEST_PLAN, "cts");
+    String commandXmlContent =
+        realLocalFileUtil.readFile(Path.of(publicDir, "session_session_id/command.xml"));
+    assertThat(commandXmlContent).contains("TF_DEVICE_0");
+    assertThat(commandXmlContent).contains("TF_DEVICE_1");
+    assertThat(countOccurrences(commandXmlContent, "TF_DEVICE_")).isEqualTo(2);
   }
 
   @SuppressWarnings("unchecked")
@@ -257,7 +277,6 @@ public final class ServerJobCreatorTest {
     subPlan.setPreviousSessionXtsTestPlan("cts");
     subPlan.setPreviousSessionDeviceBuildFingerprint("[fake device build fingerprint]");
     subPlan.addIncludeFilter("armeabi-v7a ModuleA android.test.Foo#test1");
-    File xtsRootDir = folder.newFolder("xts_root_dir");
     File xtsZipPath = folder.newFile("xts_zip.zip");
     File retryResultDir = folder.newFolder("retry_result_dir");
     SessionRequestInfo sessionRequestInfo =
@@ -265,15 +284,16 @@ public final class ServerJobCreatorTest {
             .setTestPlan("retry")
             .setCommandLineArgs("retry --retry 0")
             .setXtsType("cts")
-            .setXtsRootDir(xtsRootDir.getAbsolutePath())
+            .setXtsRootDir(xtsRootDir)
             .setAndroidXtsZip(xtsZipPath.getAbsolutePath())
+            .setAtsServerTestEnvironment(TestEnvironment.getDefaultInstance())
             .setRemoteRunnerFilePathPrefix("ats-file-server::")
             .setRetrySessionId("0")
             .setRetryResultDir(retryResultDir.getAbsolutePath())
             .build();
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
 
-    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any()))
+    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any()))
         .thenReturn(JobConfig.getDefaultInstance());
     when(retryGenerator.generateRetrySubPlan(any())).thenReturn(subPlan);
     doCallRealMethod().when(localFileUtil).prepareDir(any(Path.class));
@@ -284,10 +304,10 @@ public final class ServerJobCreatorTest {
 
     assertThat(tradefedJobInfoList).hasSize(1);
     verify(sessionRequestHandlerUtil)
-        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture());
+        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any());
 
     Map<String, String> driverParamsMap = driverParamsCaptor.getValue();
-    assertThat(driverParamsMap).hasSize(5);
+    assertThat(driverParamsMap).hasSize(6);
     assertThat(driverParamsMap)
         .containsAtLeast(
             "xts_type",
@@ -297,7 +317,9 @@ public final class ServerJobCreatorTest {
             "xts_test_plan",
             "retry",
             "prev_session_xts_test_plan",
-            "cts");
+            "cts",
+            "xts_test_plan_file",
+            "ats-file-server::/public_dir/session_session_id/command.xml");
     assertThat(driverParamsMap.get("subplan_xml")).startsWith("ats-file-server::");
   }
 
@@ -309,14 +331,14 @@ public final class ServerJobCreatorTest {
     subPlan.setPreviousSessionDeviceBuildFingerprint("[fake device build fingerprint]");
     subPlan.addIncludeFilter("armeabi-v7a ModuleA android.test.Foo#test1");
     subPlan.addExcludeFilter("armeabi-v7a ModuleB android.test.Foo#test1");
-    File xtsRootDir = folder.newFolder("xts_root_dir");
     File xtsZipPath = folder.newFile("xts_zip.zip");
     SessionRequestInfo sessionRequestInfo =
         SessionRequestInfo.builder()
             .setTestPlan("retry")
             .setCommandLineArgs("retry --retry 0")
             .setXtsType("cts")
-            .setXtsRootDir(xtsRootDir.getAbsolutePath())
+            .setXtsRootDir(xtsRootDir)
+            .setAtsServerTestEnvironment(TestEnvironment.getDefaultInstance())
             .setAndroidXtsZip(xtsZipPath.getAbsolutePath())
             .setRetrySessionId("previous_session_id")
             .setRetryResultDir("/retry/result/dir")
@@ -328,7 +350,7 @@ public final class ServerJobCreatorTest {
 
     when(retryGenerator.generateRetrySubPlan(any())).thenReturn(subPlan);
     doCallRealMethod().when(localFileUtil).prepareDir(any(Path.class));
-    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any()))
+    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any()))
         .thenReturn(JobConfig.getDefaultInstance());
 
     ImmutableList<TradefedJobInfo> tradefedJobInfoList =
@@ -346,9 +368,9 @@ public final class ServerJobCreatorTest {
         .isEqualTo("armeabi-v7a ModuleB android.test.Foo#test1");
 
     verify(sessionRequestHandlerUtil)
-        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture());
+        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any());
     Map<String, String> driverParamsMap = driverParamsCaptor.getValue();
-    assertThat(driverParamsMap).hasSize(5);
+    assertThat(driverParamsMap).hasSize(6);
     assertThat(driverParamsMap)
         .containsAtLeast(
             "xts_type",
@@ -358,8 +380,11 @@ public final class ServerJobCreatorTest {
             "xts_test_plan",
             "retry",
             "prev_session_xts_test_plan",
-            "cts");
-    assertThat(driverParamsMap.get("subplan_xml")).startsWith(xtsRootDir.getParent());
+            "cts",
+            "xts_test_plan_file",
+            publicDir + "/session_session_id/command.xml");
+    assertThat(driverParamsMap.get("subplan_xml"))
+        .startsWith(Path.of(xtsRootDir).getParent().toString());
   }
 
   @SuppressWarnings("unchecked")
@@ -369,15 +394,15 @@ public final class ServerJobCreatorTest {
     subPlan.setPreviousSessionXtsTestPlan("cts");
     subPlan.setPreviousSessionDeviceBuildFingerprint("[fake device build fingerprint]");
     subPlan.addIncludeFilter("armeabi-v7a ModuleA android.test.Foo#test1");
-    File xtsRootDir = folder.newFolder("xts_root_dir");
     File xtsZipPath = folder.newFile("xts_zip.zip");
     SessionRequestInfo sessionRequestInfo =
         SessionRequestInfo.builder()
             .setTestPlan("retry")
             .setCommandLineArgs("cts")
             .setXtsType("cts")
-            .setXtsRootDir(xtsRootDir.getAbsolutePath())
+            .setXtsRootDir(xtsRootDir)
             .setAndroidXtsZip(xtsZipPath.getAbsolutePath())
+            .setAtsServerTestEnvironment(TestEnvironment.getDefaultInstance())
             .setRetrySessionId("previous_session_id")
             .setRetryResultDir("/retry/result/dir")
             .build();
@@ -386,7 +411,7 @@ public final class ServerJobCreatorTest {
 
     when(retryGenerator.generateRetrySubPlan(any())).thenReturn(subPlan);
     doCallRealMethod().when(localFileUtil).prepareDir(any(Path.class));
-    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any()))
+    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any()))
         .thenReturn(JobConfig.getDefaultInstance());
 
     ImmutableList<TradefedJobInfo> tradefedJobInfoList =
@@ -402,9 +427,9 @@ public final class ServerJobCreatorTest {
     assertThat(retryArgs.previousSessionIndex().isEmpty()).isTrue();
 
     verify(sessionRequestHandlerUtil)
-        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture());
+        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any());
     Map<String, String> driverParamsMap = driverParamsCaptor.getValue();
-    assertThat(driverParamsMap).hasSize(5);
+    assertThat(driverParamsMap).hasSize(6);
     assertThat(driverParamsMap)
         .containsAtLeast(
             "xts_type",
@@ -414,8 +439,11 @@ public final class ServerJobCreatorTest {
             "xts_test_plan",
             "retry",
             "prev_session_xts_test_plan",
-            "cts");
-    assertThat(driverParamsMap.get("subplan_xml")).startsWith(xtsRootDir.getParent());
+            "cts",
+            "xts_test_plan_file",
+            publicDir + "/session_session_id/command.xml");
+    assertThat(driverParamsMap.get("subplan_xml"))
+        .startsWith(Path.of(xtsRootDir).getParent().toString());
   }
 
   @SuppressWarnings("unchecked")
@@ -432,6 +460,7 @@ public final class ServerJobCreatorTest {
             .setCommandLineArgs("cts --subplan subplan1")
             .setXtsType("cts")
             .setXtsRootDir(xtsRootDir.getAbsolutePath())
+            .setAtsServerTestEnvironment(TestEnvironment.getDefaultInstance())
             .setAndroidXtsZip(xtsZipPath.getAbsolutePath())
             .setSubPlanName("subplan1")
             .setModuleNames(ImmutableList.of("mock_module"))
@@ -440,7 +469,7 @@ public final class ServerJobCreatorTest {
 
     doCallRealMethod().when(localFileUtil).isFileExist(any(Path.class));
     doCallRealMethod().when(localFileUtil).removeFileOrDir(any(Path.class));
-    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any()))
+    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any()))
         .thenReturn(JobConfig.getDefaultInstance());
 
     ImmutableList<TradefedJobInfo> tradefedJobInfoList =
@@ -449,7 +478,7 @@ public final class ServerJobCreatorTest {
 
     assertThat(tradefedJobInfoList).hasSize(1);
     verify(sessionRequestHandlerUtil)
-        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture());
+        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any());
     Map<String, String> driverParamsMap = driverParamsCaptor.getValue();
     assertThat(driverParamsMap)
         .containsAtLeast(
@@ -481,6 +510,7 @@ public final class ServerJobCreatorTest {
             .setCommandLineArgs("cts --subplan subplan2")
             .setXtsType("cts")
             .setXtsRootDir(xtsRootDir.getAbsolutePath())
+            .setAtsServerTestEnvironment(TestEnvironment.getDefaultInstance())
             .setAndroidXtsZip(xtsZipPath.getAbsolutePath())
             .setSubPlanName("subplan2")
             .setModuleNames(ImmutableList.of("mock_module"))
@@ -489,7 +519,7 @@ public final class ServerJobCreatorTest {
 
     doCallRealMethod().when(localFileUtil).isFileExist(any(Path.class));
     doCallRealMethod().when(localFileUtil).removeFileOrDir(any(Path.class));
-    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any()))
+    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any()))
         .thenReturn(JobConfig.getDefaultInstance());
 
     ImmutableList<TradefedJobInfo> tradefedJobInfoList =
@@ -499,7 +529,7 @@ public final class ServerJobCreatorTest {
     assertThat(tradefedJobInfoList).hasSize(1);
 
     verify(sessionRequestHandlerUtil)
-        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture());
+        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any());
     Map<String, String> driverParamsMap = driverParamsCaptor.getValue();
     assertThat(driverParamsMap)
         .containsAtLeast(
@@ -522,14 +552,14 @@ public final class ServerJobCreatorTest {
             .setTestPlan("retry")
             .setCommandLineArgs("retry")
             .setXtsType("cts")
-            .setXtsRootDir(XTS_ROOT_DIR_PATH)
+            .setXtsRootDir(xtsRootDir)
             .setRetrySessionId("previous_session_id")
             .setRetryResultDir("/retry/result/dir")
             .build();
 
     when(previousResultLoader.getPrevSessionTestReportProperties(any(Path.class)))
         .thenReturn(Optional.empty());
-    when(localFileUtil.isDirExist(Path.of(XTS_ROOT_DIR_PATH))).thenReturn(true);
+    when(localFileUtil.isDirExist(Path.of(xtsRootDir))).thenReturn(true);
     when(retryGenerator.generateRetrySubPlan(any())).thenReturn(new SubPlan());
     doCallRealMethod()
         .when(sessionRequestHandlerUtil)
@@ -645,5 +675,15 @@ public final class ServerJobCreatorTest {
         () -> jobCreator.createXtsNonTradefedJobs(sessionRequestInfo));
 
     verify(sessionRequestHandlerUtil, never()).createXtsNonTradefedJobs(any(), any(), any());
+  }
+
+  private int countOccurrences(String text, String pattern) {
+    int count = 0;
+    int index = text.indexOf(pattern);
+    while (index != -1) {
+      count++;
+      index = text.indexOf(pattern, index + 1);
+    }
+    return count;
   }
 }

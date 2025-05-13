@@ -230,9 +230,13 @@ public class SessionRequestHandlerUtil {
    * Gets a list of SubDeviceSpec for the job. One SubDeviceSpec maps to one sub device used for
    * running the job as the job may need multiple devices to run the test.
    */
-  private ImmutableList<SubDeviceSpec> getSubDeviceSpecListForTradefed(
-      SessionRequestInfo sessionRequestInfo, int shardCount)
-      throws MobileHarnessException, InterruptedException {
+  public ImmutableList<SubDeviceSpec> getSubDeviceSpecListForTradefed(
+      SessionRequestInfo sessionRequestInfo) throws MobileHarnessException, InterruptedException {
+    String testPlan = sessionRequestInfo.testPlan();
+    String xtsType = sessionRequestInfo.xtsType();
+    int requestedShardCount = sessionRequestInfo.shardCount().orElse(0);
+    int minDeviceCount = testPlan.matches(xtsType + "-multi-?device") ? 2 : 1;
+    int shardCount = max(requestedShardCount, minDeviceCount);
     ImmutableSet<DeviceDetails> availableDevices = getAvailableDevices(sessionRequestInfo);
     Map<String, String> extraDimensions = new HashMap<>();
     if (Flags.instance().isOmniMode.getNonNull()
@@ -493,16 +497,15 @@ public class SessionRequestHandlerUtil {
 
   /** Initializes a {@link JobConfig} for a tradefed job. */
   public JobConfig initializeJobConfig(
-      SessionRequestInfo sessionRequestInfo, Map<String, String> driverParams)
+      SessionRequestInfo sessionRequestInfo,
+      Map<String, String> driverParams,
+      ImmutableList<SubDeviceSpec> subDeviceSpecList)
       throws InterruptedException, MobileHarnessException {
     String testPlan = sessionRequestInfo.testPlan();
     String xtsType = sessionRequestInfo.xtsType();
-    int shardCount = sessionRequestInfo.shardCount().orElse(0);
 
     // TODO: migrate multi-device tests to non-TF
     int minDeviceCount = testPlan.matches(xtsType + "-multi-?device") ? 2 : 1;
-    ImmutableList<SubDeviceSpec> subDeviceSpecList =
-        getSubDeviceSpecListForTradefed(sessionRequestInfo, max(shardCount, minDeviceCount));
     if (subDeviceSpecList.size() < minDeviceCount) {
       throw MobileHarnessExceptionFactory.createUserFacingException(
           InfraErrorId.OLCS_NO_ENOUGH_MATCHED_DEVICES,

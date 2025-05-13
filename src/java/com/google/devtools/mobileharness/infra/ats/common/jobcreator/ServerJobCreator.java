@@ -21,12 +21,14 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName;
+import com.google.devtools.mobileharness.infra.ats.server.sessionplugin.TradefedConfigGenerator;
 import com.google.devtools.mobileharness.infra.ats.server.util.AtsServerSessionUtil;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteTestFilter;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader;
@@ -37,14 +39,19 @@ import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubP
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
+import org.xmlpull.v1.XmlPullParserException;
 
 /** A creator to create XTS jobs for ATS server only. */
 public class ServerJobCreator extends XtsJobCreator {
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private final PreviousResultLoader previousResultLoader;
   private final AtsServerSessionUtil atsServerSessionUtil;
@@ -65,8 +72,8 @@ public class ServerJobCreator extends XtsJobCreator {
 
   @Override
   protected void injectEnvSpecificProperties(
-      SessionRequestInfo sessionRequestInfo, Map<String, String> driverParams)
-      throws InterruptedException {
+      SessionRequestInfo sessionRequestInfo, Map<String, String> driverParams, int jobDeviceCount)
+      throws InterruptedException, MobileHarnessException {
     if (atsServerSessionUtil.isLocalMode()) {
       driverParams.put("xts_root_dir", sessionRequestInfo.xtsRootDir());
     } else {
@@ -80,6 +87,47 @@ public class ServerJobCreator extends XtsJobCreator {
               sessionRequestInfo.remoteRunnerFilePathPrefix().get(),
               PathUtil.makeRelative(
                   Flags.instance().atsStoragePath.getNonNull(), driverParams.get("subplan_xml"))));
+    }
+    if (sessionRequestInfo.atsServerTestEnvironment().isPresent()) {
+      generateTradefedTestConfigFile(sessionRequestInfo, driverParams, jobDeviceCount);
+    } else {
+      throw MobileHarnessExceptionFactory.createUserFacingException(
+          InfraErrorId.ATS_SERVER_MISSING_TEST_ENVIRONMENT_ERROR,
+          "Test environment is missing in request. ATS server needs test environment to generate TF"
+              + " test config.",
+          /* cause= */ null);
+    }
+  }
+
+  private void generateTradefedTestConfigFile(
+      SessionRequestInfo sessionRequestInfo, Map<String, String> driverParams, int jobDeviceCount)
+      throws MobileHarnessException {
+    // Generate XML test config template for ClusterCommandLauncher.
+    Path commandPath = Path.of(sessionRequestInfo.xtsRootDir()).resolveSibling("command.xml");
+    try (OutputStream outputStream = new FileOutputStream(commandPath.toFile())) {
+      TradefedConfigGenerator.generateXml(
+          outputStream,
+          sessionRequestInfo.atsServerTestEnvironment().get(),
+          sessionRequestInfo.atsServerTestResources(),
+          SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo)
+              ? 1
+              : jobDeviceCount);
+    } catch (IOException | XmlPullParserException e) {
+      throw new MobileHarnessException(
+          InfraErrorId.ATS_SERVER_FAILED_TO_GENERATE_XML_TEST_CONFIG,
+          "Failed to create XML test config for session",
+          e);
+    }
+    logger.atInfo().log("Generate TF config:\n%s", localFileUtil.readFile(commandPath));
+    if (sessionRequestInfo.remoteRunnerFilePathPrefix().isPresent()) {
+      driverParams.put(
+          "xts_test_plan_file",
+          PathUtil.join(
+              sessionRequestInfo.remoteRunnerFilePathPrefix().get(),
+              PathUtil.makeRelative(
+                  Flags.instance().atsStoragePath.getNonNull(), commandPath.toString())));
+    } else {
+      driverParams.put("xts_test_plan_file", commandPath.toString());
     }
   }
 

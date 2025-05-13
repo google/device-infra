@@ -66,7 +66,7 @@ public class ConsoleJobCreator extends XtsJobCreator {
 
   @Override
   protected void injectEnvSpecificProperties(
-      SessionRequestInfo sessionRequestInfo, Map<String, String> driverParams) {
+      SessionRequestInfo sessionRequestInfo, Map<String, String> driverParams, int jobDeviceCount) {
     driverParams.put("xts_root_dir", sessionRequestInfo.xtsRootDir());
   }
 

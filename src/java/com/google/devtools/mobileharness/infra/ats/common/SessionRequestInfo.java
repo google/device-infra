@@ -23,6 +23,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.ShardingMode;
+import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestEnvironment;
+import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestResource;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryType;
 import java.time.Duration;
@@ -124,8 +126,6 @@ public abstract class SessionRequestInfo {
 
   public abstract boolean htmlInZip();
 
-  public abstract Optional<String> testPlanFile();
-
   public abstract Optional<String> sessionClientId();
 
   public abstract Optional<String> deviceType();
@@ -154,6 +154,12 @@ public abstract class SessionRequestInfo {
 
   public abstract ImmutableMap<String, String> xtsSuiteInfo();
 
+  // The test resources passed in from ATS server. Used for building command.xml file.
+  public abstract ImmutableList<TestResource> atsServerTestResources();
+
+  // The test environment passed in from ATS server. Used for building command.xml file.
+  public abstract Optional<TestEnvironment> atsServerTestEnvironment();
+
   public static Builder builder() {
     return new AutoValue_SessionRequestInfo.Builder()
         .setModuleNames(ImmutableList.of())
@@ -179,7 +185,8 @@ public abstract class SessionRequestInfo {
         .setReportSystemCheckers(false)
         .setIsAtsServerRequest(false)
         .setShardingMode(ShardingMode.RUNNER)
-        .setXtsSuiteInfo(ImmutableMap.of());
+        .setXtsSuiteInfo(ImmutableMap.of())
+        .setAtsServerTestResources(ImmutableList.of());
   }
 
   public abstract Builder toBuilder();
@@ -261,8 +268,6 @@ public abstract class SessionRequestInfo {
 
     public abstract Builder setHtmlInZip(boolean htmlInZip);
 
-    public abstract Builder setTestPlanFile(String testPlanFile);
-
     public abstract Builder setSessionClientId(String sessionClientId);
 
     public abstract Builder setDeviceType(String deviceType);
@@ -290,6 +295,11 @@ public abstract class SessionRequestInfo {
     public abstract Builder setIsXtsDynamicDownloadEnabled(boolean isXtsDynamicDownloadEnabled);
 
     public abstract Builder setXtsSuiteInfo(ImmutableMap<String, String> xtsSuiteInfo);
+
+    public abstract Builder setAtsServerTestResources(
+        ImmutableList<TestResource> atsServerTestResources);
+
+    public abstract Builder setAtsServerTestEnvironment(TestEnvironment atsServerTestEnvironment);
 
     protected abstract SessionRequestInfo autoBuild();
 

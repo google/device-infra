@@ -66,7 +66,6 @@ java_library(
     srcs = ["NewMultiCommandRequestHandler.java"],
     visibility = ["//src/javatests/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__"],
     deps = [
-        ":tradefed_config_generator",
         "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",
         "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
         "//src/devtools/mobileharness/infra/ats/server/proto:service_java_proto",
@@ -102,7 +101,6 @@ java_library(
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
-        "@maven//:xmlpull_xmlpull",
     ],
 )
 
@@ -122,6 +120,7 @@ java_library(
     name = "tradefed_config_generator",
     srcs = ["TradefedConfigGenerator.java"],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common/jobcreator:__pkg__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__",
     ],

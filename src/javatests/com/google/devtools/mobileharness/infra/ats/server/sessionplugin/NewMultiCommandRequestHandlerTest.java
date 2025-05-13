@@ -86,6 +86,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.TestInfos;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Files;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
+import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.SubDeviceSpec;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryResult;
 import java.io.File;
@@ -239,6 +240,10 @@ public final class NewMultiCommandRequestHandlerTest {
                     new XtsTradefedRuntimeInfo(
                         /* invocations= */ ImmutableList.of(), /* timestamp= */ Instant.now()),
                     /* lastModifiedTime= */ Instant.now())));
+    when(sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(any()))
+        .thenReturn(
+            ImmutableList.of(
+                SubDeviceSpec.getDefaultInstance(), SubDeviceSpec.getDefaultInstance()));
   }
 
   @Test
@@ -313,7 +318,6 @@ public final class NewMultiCommandRequestHandlerTest {
     assertThat(sessionRequestInfo.testName()).hasValue("test1");
     String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
     String zipFile = "/path/to/xts/zip/file.zip";
-    String testPlanFile = DirUtil.getPublicGenDir() + "/session_session_id/command.xml";
     assertThat(sessionRequestInfo.xtsRootDir()).isEqualTo(xtsRootDir);
     assertThat(sessionRequestInfo.xtsType()).isEqualTo("cts");
     assertThat(sessionRequestInfo.androidXtsZip()).hasValue("ats-file-server::" + zipFile);
@@ -322,7 +326,6 @@ public final class NewMultiCommandRequestHandlerTest {
     assertThat(sessionRequestInfo.deviceSerials()).containsExactly(DEVICE_ID_1, DEVICE_ID_2);
     assertThat(sessionRequestInfo.shardCount()).hasValue(2);
     assertThat(sessionRequestInfo.envVars()).containsExactly("env_key1", "env_value1");
-    assertThat(sessionRequestInfo.testPlanFile()).hasValue("ats-file-server::" + testPlanFile);
     assertThat(sessionRequestInfo.remoteRunnerFilePathPrefix()).hasValue("ats-file-server::");
 
     // Verify that handler has mounted the zip file.
@@ -374,7 +377,6 @@ public final class NewMultiCommandRequestHandlerTest {
     assertThat(sessionRequestInfo.testName()).hasValue("test1");
     String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
     String zipFile = "/path/to/xts/zip/file.zip";
-    String testPlanFile = DirUtil.getPublicGenDir() + "/session_session_id/command.xml";
     assertThat(sessionRequestInfo.xtsRootDir()).isEqualTo(xtsRootDir);
     assertThat(sessionRequestInfo.xtsType()).isEqualTo("cts");
     assertThat(sessionRequestInfo.androidXtsZip()).hasValue("ats-file-server::" + zipFile);
@@ -383,7 +385,6 @@ public final class NewMultiCommandRequestHandlerTest {
     assertThat(sessionRequestInfo.deviceSerials()).containsExactly(DEVICE_ID_1, DEVICE_ID_2);
     assertThat(sessionRequestInfo.shardCount()).hasValue(2);
     assertThat(sessionRequestInfo.envVars()).containsExactly("env_key1", "env_value1");
-    assertThat(sessionRequestInfo.testPlanFile()).hasValue("ats-file-server::" + testPlanFile);
     assertThat(sessionRequestInfo.remoteRunnerFilePathPrefix()).hasValue("ats-file-server::");
 
     // Verify that handler has mounted the zip file.
@@ -427,7 +428,6 @@ public final class NewMultiCommandRequestHandlerTest {
     assertThat(sessionRequestInfo.testName()).hasValue("test1");
     String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
     String zipFile = "/path/to/xts/zip/file.zip";
-    String testPlanFile = DirUtil.getPublicGenDir() + "/session_session_id/command.xml";
     assertThat(sessionRequestInfo.xtsRootDir()).isEqualTo(xtsRootDir);
     assertThat(sessionRequestInfo.xtsType()).isEqualTo("cts");
     assertThat(sessionRequestInfo.androidXtsZip()).hasValue("ats-file-server::" + zipFile);
@@ -436,7 +436,6 @@ public final class NewMultiCommandRequestHandlerTest {
     assertThat(sessionRequestInfo.deviceSerials()).containsExactly(DEVICE_ID_1, DEVICE_ID_2);
     assertThat(sessionRequestInfo.shardCount()).hasValue(2);
     assertThat(sessionRequestInfo.envVars()).containsExactly("env_key1", "env_value1");
-    assertThat(sessionRequestInfo.testPlanFile()).hasValue("ats-file-server::" + testPlanFile);
     assertThat(sessionRequestInfo.remoteRunnerFilePathPrefix()).hasValue("ats-file-server::");
 
     // Verify that handler has unzipped the zip file.

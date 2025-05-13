@@ -47,6 +47,7 @@ import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.gson.Gson;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
+import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.SubDeviceSpec;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -79,7 +80,7 @@ public abstract class XtsJobCreator {
   private static final ImmutableSet<String> CTS_TEST_PLANS = ImmutableSet.of("cts", "cts-system");
 
   private final SessionRequestHandlerUtil sessionRequestHandlerUtil;
-  private final LocalFileUtil localFileUtil;
+  protected final LocalFileUtil localFileUtil;
   private final RetryGenerator retryGenerator;
   private final ModuleShardingArgsGenerator moduleShardingArgsGenerator;
 
@@ -188,11 +189,11 @@ public abstract class XtsJobCreator {
     if (!sessionRequestInfo.envVars().isEmpty()) {
       driverParams.put("env_vars", new Gson().toJson(sessionRequestInfo.envVars()));
     }
-    if (sessionRequestInfo.testPlanFile().isPresent()) {
-      driverParams.put("xts_test_plan_file", sessionRequestInfo.testPlanFile().get());
-    }
 
-    injectEnvSpecificProperties(sessionRequestInfo, driverParams);
+    ImmutableList<SubDeviceSpec> subDeviceSpecList =
+        sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
+
+    injectEnvSpecificProperties(sessionRequestInfo, driverParams, subDeviceSpecList.size());
 
     ImmutableList<String> shardCountArg =
         shardCount > 0
@@ -310,7 +311,8 @@ public abstract class XtsJobCreator {
         driverParamsCopy.put("run_command_args", runCommandArgs);
       }
       JobConfig jobConfig =
-          sessionRequestHandlerUtil.initializeJobConfig(sessionRequestInfo, driverParamsCopy);
+          sessionRequestHandlerUtil.initializeJobConfig(
+              sessionRequestInfo, driverParamsCopy, subDeviceSpecList);
       tradefedJobInfos.add(TradefedJobInfo.of(jobConfig, extraJobProperties.buildOrThrow()));
     }
 
@@ -614,8 +616,8 @@ public abstract class XtsJobCreator {
       SessionRequestInfo sessionRequestInfo) throws MobileHarnessException;
 
   protected abstract void injectEnvSpecificProperties(
-      SessionRequestInfo sessionRequestInfo, Map<String, String> driverParams)
-      throws InterruptedException;
+      SessionRequestInfo sessionRequestInfo, Map<String, String> driverParams, int jobDeviceCount)
+      throws InterruptedException, MobileHarnessException;
 
   protected abstract Path prepareRunRetryTfSubPlanXmlFile(
       SessionRequestInfo sessionRequestInfo, SubPlan subPlan) throws MobileHarnessException;

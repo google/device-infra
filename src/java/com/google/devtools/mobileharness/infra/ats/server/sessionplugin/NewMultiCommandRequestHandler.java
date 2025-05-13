@@ -79,9 +79,7 @@ import com.google.protobuf.util.Timestamps;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
@@ -105,7 +103,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
-import org.xmlpull.v1.XmlPullParserException;
 
 /** Handler for ATS server's create test jobs request. */
 final class NewMultiCommandRequestHandler {
@@ -596,29 +593,12 @@ final class NewMultiCommandRequestHandler {
       sessionRequestInfoBuilder.setShardingMode(commandInfo.getShardingMode());
     }
 
-    // Generate XML test config template for ClusterCommandLauncher.
-    Path commandPath = Path.of(xtsRootDir).resolveSibling("command.xml");
-    try (OutputStream outputStream = new FileOutputStream(commandPath.toFile())) {
-      TradefedConfigGenerator.generateXml(
-          outputStream,
-          request.getTestEnvironment(),
-          fileTestResources.build(),
-          SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfoBuilder.build())
-              ? 1
-              : deviceSerials.size());
-    } catch (IOException | XmlPullParserException e) {
-      throw new MobileHarnessException(
-          InfraErrorId.ATS_SERVER_FAILED_TO_GENERATE_XML_TEST_CONFIG,
-          String.format(
-              "Failed to create XML test config for session %s ", sessionInfo.getSessionId()),
-          e);
-    }
-    logger.atInfo().log(
-        "Generate TF config for session %s:\n%s",
-        sessionInfo.getSessionId(), localFileUtil.readFile(commandPath));
-    sessionRequestInfoBuilder.setTestPlanFile(
-        replacePathForRemoteRunner(commandPath.toAbsolutePath().toString()));
-    return sessionRequestInfoBuilder.build();
+    // TODO: Add consolidate the test environment and existing session request info
+    // fields.
+    return sessionRequestInfoBuilder
+        .setAtsServerTestResources(fileTestResources.build())
+        .setAtsServerTestEnvironment(request.getTestEnvironment())
+        .build();
   }
 
   /**

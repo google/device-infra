@@ -27,6 +27,7 @@ java_library(
     ],
     deps = [
         "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",
+        "//src/devtools/mobileharness/infra/ats/server/proto:service_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_handler_helper",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_handler_util",

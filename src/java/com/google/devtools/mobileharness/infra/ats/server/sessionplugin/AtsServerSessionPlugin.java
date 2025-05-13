@@ -147,6 +147,7 @@ final class AtsServerSessionPlugin {
           } else {
             requestDetail.setState(RequestState.RUNNING);
           }
+          updateSessionPluginOutput(requestDetail);
 
           CreateJobsResult createTradefedJobsResult =
               newMultiCommandRequestHandler.createTradefedJobs(newMultiCommandRequest, sessionInfo);
