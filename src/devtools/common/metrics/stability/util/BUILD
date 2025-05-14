@@ -29,7 +29,6 @@ py_library(
     deps = [
         "//src/devtools/common/metrics/stability/model/proto:error_py_proto",
         "//src/devtools/common/metrics/stability/rpc/proto:rpc_error_payload_py_proto",
-        "//src/devtools/common/metrics/stability/rpc/proto:rpc_error_py_proto",
         "@com_github_grpc_grpc//src/python/grpcio/grpc:grpcio",
     ],
 )

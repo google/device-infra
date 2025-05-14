@@ -44,4 +44,8 @@ def to_exception_detail(
           )
       )
       return exception_detail
+    elif e.details():
+      exception_detail = exception_pb2.ExceptionDetail()
+      exception_detail.summary.message = e.details()
+      return exception_detail
   return None

@@ -34,25 +34,42 @@ _TEST_TRAILING_METADATA = (
 class _GrpcError(grpc.RpcError, grpc.Call):
   """Helper class that emulates a gRPC error."""
 
-  def __init__(self, code: int):
+  def __init__(
+      self,
+      code: int = 500,
+      details: str = '_GrpcError',
+      trailing_metadata: list[_Metadata] | None = None,
+  ):
     self._code = code
+    self._details = details
+    self._trailing_metadata = trailing_metadata if trailing_metadata else []
 
   def code(self) -> int:
     return self._code
 
   def details(self):
-    return '_GrpcError'
+    return self._details
 
   def trailing_metadata(self):
-    return _TEST_TRAILING_METADATA
+    return self._trailing_metadata
 
 
 class GrpcErrorUtilTest(absltest.TestCase):
 
-  def testCreateSession(self):
-    rpc_error = _GrpcError(500)
+  def testGrpcErrorWithTrailingMetadata(self):
+    rpc_error = _GrpcError(trailing_metadata=_TEST_TRAILING_METADATA)
+
     exception_detail = grpc_error_util.to_exception_detail(rpc_error)
+
     self.assertEqual(52209, exception_detail.summary.error_id.code)
+
+  def testGrpcErrorWithNoTrailingMetadata(self):
+    grpc_error_details = 'failed to connect to all addresses;'
+    rpc_error = _GrpcError(details=grpc_error_details)
+
+    exception_detail = grpc_error_util.to_exception_detail(rpc_error)
+
+    self.assertEqual(grpc_error_details, exception_detail.summary.message)
 
 
 if __name__ == '__main__':
