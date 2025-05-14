@@ -27,10 +27,13 @@ java_library(
     srcs = [
         "PostProcessor.java",
         "PreProcessor.java",
+        "UtpBinariesExtractor.java",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/android/lightning/apkinstaller",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local:res_util",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:android_robo_test_spec_java_proto",

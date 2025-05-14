@@ -29,13 +29,14 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Test;
 import com.google.devtools.mobileharness.platform.android.appcrawler.PostProcessor;
 import com.google.devtools.mobileharness.platform.android.appcrawler.PreProcessor;
+import com.google.devtools.mobileharness.platform.android.appcrawler.UtpBinariesExtractor;
+import com.google.devtools.mobileharness.platform.android.appcrawler.UtpBinariesExtractor.UtpBinaries;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandException;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
 import com.google.devtools.mobileharness.shared.util.command.CommandTimeoutException;
 import com.google.devtools.mobileharness.shared.util.command.LineCallback;
-import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.devtools.mobileharness.shared.util.port.PortProber;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.protobuf.ExtensionRegistry;
@@ -53,7 +54,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
-import java.util.Optional;
 import java.util.concurrent.TimeoutException;
 import javax.inject.Inject;
 
@@ -71,9 +71,6 @@ public class AndroidRoboTest extends BaseDriver implements SpecConfigable<Androi
 
   private static final Duration CLI_EXECUTION_PADDING_TIMEOUT = Duration.ofMinutes(6);
 
-  private static final String CLI_RESOURCE_PATH =
-      "/com/google/devtools/mobileharness/platform/android/appcrawler/cli/UtpRoboCli_deploy.jar";
-
   private static final ImmutableMap<Integer, TestResult> EXIT_CODE_TO_TEST_RESULT_MAP =
       ImmutableMap.of(
           0, TestResult.PASS,
@@ -84,7 +81,7 @@ public class AndroidRoboTest extends BaseDriver implements SpecConfigable<Androi
   private final Adb adb;
   private final PreProcessor preProcessor;
 
-  private final ResUtil resourceUtil;
+  private final UtpBinariesExtractor utpBinariesExtractor;
   private final CommandExecutor commandExecutor;
   private final PostProcessor postProcessor;
   private final Clock clock;
@@ -97,7 +94,7 @@ public class AndroidRoboTest extends BaseDriver implements SpecConfigable<Androi
       Aapt aapt,
       Clock clock,
       PreProcessor preProcessor,
-      ResUtil resUtil,
+      UtpBinariesExtractor utpBinariesExtractor,
       CommandExecutor commandExecutor,
       PostProcessor postProcessor) {
     super(device, testInfo);
@@ -105,7 +102,7 @@ public class AndroidRoboTest extends BaseDriver implements SpecConfigable<Androi
     this.adb = adb;
     this.clock = clock;
     this.preProcessor = preProcessor;
-    this.resourceUtil = resUtil;
+    this.utpBinariesExtractor = utpBinariesExtractor;
     this.commandExecutor = commandExecutor;
     this.postProcessor = postProcessor;
   }
@@ -124,26 +121,12 @@ public class AndroidRoboTest extends BaseDriver implements SpecConfigable<Androi
     AndroidRoboTestSpec spec = testInfo.jobInfo().combinedSpec(this);
     testInfo.log().atInfo().alsoTo(logger).log("\n\nAndroid Robo Test Spec: \n\n%s", spec);
     preProcessor.installApks(testInfo, getDevice(), spec);
+    UtpBinaries utpBinaries = utpBinariesExtractor.setUpUtpBinaries();
 
-    // Extract robo cli
-    String cliJarPath = getResourceFile(CLI_RESOURCE_PATH);
-    if (cliJarPath.isEmpty()) {
-      throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_ROBO_TEST_MH_ROBO_CLI_EXTRACTION_ERROR, "Robo Cli jar absent.");
-    }
-
-    TestResult result = runCli(testInfo, cliJarPath, spec);
+    TestResult result = runCli(testInfo, utpBinaries, spec);
 
     setResult(testInfo, result);
     postProcessor.uninstallApks(testInfo, getDevice(), spec);
-  }
-
-  private String getResourceFile(String resPath) throws MobileHarnessException {
-    Optional<String> externalResFile = resourceUtil.getExternalResourceFile(resPath);
-    if (externalResFile.isPresent()) {
-      return externalResFile.get();
-    }
-    return resourceUtil.getResourceFile(this.getClass(), resPath);
   }
 
   private static int pickUnusedPort() throws InterruptedException, MobileHarnessException {
@@ -169,7 +152,7 @@ public class AndroidRoboTest extends BaseDriver implements SpecConfigable<Androi
     }
   }
 
-  private TestResult runCli(TestInfo testInfo, String cliJarPath, AndroidRoboTestSpec spec)
+  private TestResult runCli(TestInfo testInfo, UtpBinaries utpBinaries, AndroidRoboTestSpec spec)
       throws MobileHarnessException, InterruptedException {
     CommandProcess commandProcess = null;
     try {
@@ -178,11 +161,17 @@ public class AndroidRoboTest extends BaseDriver implements SpecConfigable<Androi
       ImmutableList.Builder<String> argsBuilder = ImmutableList.builder();
       argsBuilder.add(
           "-jar",
-          cliJarPath,
+          utpBinaries.cliPath(),
           "--test-id",
           testInfo.locator().getId(),
-          "--res-dir",
-          ResUtil.getResDir(),
+          "--utp-launcher-path",
+          utpBinaries.launcherPath(),
+          "--utp-main-path",
+          utpBinaries.mainPath(),
+          "--utp-device-provider-path",
+          utpBinaries.providerPath(),
+          "--utp-robo-driver-path",
+          utpBinaries.driverPath(),
           "--gen-files-dir",
           testInfo.getGenFileDir(),
           "--tmp-dir",

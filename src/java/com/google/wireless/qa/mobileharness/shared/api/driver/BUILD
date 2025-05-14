@@ -313,7 +313,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/android/appcrawler",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
-        "//src/java/com/google/devtools/mobileharness/shared/util/file/local:res_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/port:portprober",
         "//src/java/com/google/devtools/mobileharness/shared/util/system",
