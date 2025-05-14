@@ -26,6 +26,7 @@ java_library(
     ],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/platform/testbed:__subpackages__",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:__pkg__",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",

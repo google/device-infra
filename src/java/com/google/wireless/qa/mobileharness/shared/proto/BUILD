@@ -84,6 +84,7 @@ java_proto_library(
     name = "device_model_java_proto",
     visibility = [
         "//src/java/com/google/devtools/mobileharness/platform/testbed:__pkg__",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:__pkg__",
     ],
     deps = [":device_model_proto"],
 )

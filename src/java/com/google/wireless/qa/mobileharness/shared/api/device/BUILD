@@ -197,21 +197,6 @@ java_library(
 )
 
 java_library(
-    name = "misc_device",
-    srcs = ["MiscDevice.java"],
-    deps = [
-        ":base_device",
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
-    ],
-)
-
-java_library(
-    name = "misc_testbed_sub_device",
-    srcs = ["MiscTestbedSubDevice.java"],
-    deps = [":misc_device"],
-)
-
-java_library(
     name = "failed_device",
     srcs = ["FailedDevice.java"],
     deps = [
@@ -225,6 +210,21 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "@maven//:com_google_guava_guava",
     ],
+)
+
+java_library(
+    name = "misc_device",
+    srcs = ["MiscDevice.java"],
+    deps = [
+        ":base_device",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+    ],
+)
+
+java_library(
+    name = "misc_testbed_sub_device",
+    srcs = ["MiscTestbedSubDevice.java"],
+    deps = [":misc_device"],
 )
 
 java_library(
@@ -245,6 +245,41 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "testbed_device",
+    srcs = ["TestbedDevice.java"],
+    deps = [
+        ":android_device",
+        ":android_local_emulator",
+        ":android_real_device",
+        ":base_device",
+        ":composite_device",
+        ":device",
+        ":misc_testbed_sub_device",
+        "//src/devtools/mobileharness/api/model/proto:device_java_proto",
+        "//src/devtools/mobileharness/api/model/proto:test_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/container/annotation",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device/config",
+        "//src/java/com/google/devtools/mobileharness/platform/android/systemspec",
+        "//src/java/com/google/devtools/mobileharness/platform/testbed:util",
+        "//src/java/com/google/devtools/mobileharness/platform/testbed/adhoc",
+        "//src/java/com/google/devtools/mobileharness/platform/testbed/config:base",
+        "//src/java/com/google/devtools/mobileharness/platform/testbed/config:global_testbed_loader",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:concurrency_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api:base",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:testbed_device_spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:common_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:device_model_java_proto",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
     ],
 )

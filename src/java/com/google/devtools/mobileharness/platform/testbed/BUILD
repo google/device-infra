@@ -23,6 +23,7 @@ java_library(
         "TestbedUtil.java",
     ],
     visibility = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:__pkg__",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/platform/testbed/config:base",
