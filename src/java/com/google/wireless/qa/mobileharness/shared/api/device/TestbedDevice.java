@@ -96,7 +96,8 @@ public class TestbedDevice extends BaseDevice implements CompositeDevice {
           Ascii.toLowerCase(Name.LAB_SUPPORTS_CONTAINER.name()),
           Ascii.toLowerCase(Name.DEVICE_SUPPORTS_CONTAINER.name()),
           Ascii.toLowerCase(Name.LAB_SUPPORTS_SANDBOX.name()),
-          Ascii.toLowerCase(Name.DEVICE_SUPPORTS_SANDBOX.name()));
+          Ascii.toLowerCase(Name.DEVICE_SUPPORTS_SANDBOX.name()),
+          Ascii.toLowerCase(Name.SCREENSHOT_ABLE.name()));
 
   /**
    * Device ID -> Post run test result. This is used to track which sub-devices should be rebooted
