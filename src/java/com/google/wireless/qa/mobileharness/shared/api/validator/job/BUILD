@@ -198,6 +198,23 @@ java_library(
 )
 
 java_library(
+    name = "composite_device_decorator_adapter_job_validator",
+    srcs = ["CompositeDeviceDecoratorAdapterJobValidator.java"],
+    deps = [
+        ":job_validator",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/base",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/job:job_type_util",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:composite_device_decorator_adapter_spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/util:composite_device_adapter_validator_util",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "mobly_aosp_package_test_job_validator",
     srcs = ["MoblyAospPackageTestJobValidator.java"],
     deps = [
