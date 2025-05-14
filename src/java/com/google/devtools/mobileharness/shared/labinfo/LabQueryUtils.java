@@ -27,6 +27,7 @@ import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.collectingAndThen;
 
 import com.google.auto.value.AutoValue;
+import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -44,6 +45,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceGro
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceGroupKey.HasOwnerList;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceGroupKey.HasStatus;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceGroupKey.HasTypeList;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceGroupKey.HasVersionValue;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceGroupResult;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceList;
@@ -63,6 +65,8 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryR
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.Page;
 import com.google.devtools.mobileharness.shared.util.filter.MaskUtils;
 import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
+import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
+import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Value;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.Comparator;
@@ -305,10 +309,53 @@ public class LabQueryUtils {
     } else if (deviceGroupCondition.hasSingleStatus()) {
       // Groups devices by "has single status".
       return groupDevicesByStatus(deviceInfoList, deviceGroupOperation);
+    } else if (deviceGroupCondition.hasVersionValue()) {
+      // Groups devices by "has version list".
+      return groupDevicesByList(
+          deviceInfoList,
+          LabQueryUtils::getDeviceVersions,
+          versionList ->
+              DeviceGroupKey.newBuilder()
+                  .setHasVersionValue(
+                      HasVersionValue.newBuilder().setVersion(String.join(",", versionList))),
+          deviceGroupOperation);
     } else {
       // In all other unhandled cases, returns a failure.
       return Optional.empty();
     }
+  }
+
+  /**
+   * Returns the versions of the device.
+   *
+   * <p>For Android devices, the version is the value of the "sdk_version" dimension. For iOS
+   * devices, the version is the value of the "software_version" dimension. The "os" dimension can
+   * be used to distinguish between Android and iOS devices.
+   */
+  private static ImmutableList<String> getDeviceVersions(DeviceInfo deviceInfo) {
+    List<DeviceDimension> supportedDimensions =
+        deviceInfo.getDeviceFeature().getCompositeDimension().getSupportedDimensionList();
+    boolean isAndroid =
+        supportedDimensions.stream()
+            .anyMatch(
+                d ->
+                    Ascii.equalsIgnoreCase(d.getName(), Name.OS.name())
+                        && Ascii.equalsIgnoreCase(d.getValue(), Value.ANDROID));
+    boolean isIos =
+        supportedDimensions.stream()
+            .anyMatch(
+                d ->
+                    Ascii.equalsIgnoreCase(d.getName(), Name.OS.name())
+                        && Ascii.equalsIgnoreCase(d.getValue(), Value.IOS));
+
+    return supportedDimensions.stream()
+        .filter(
+            dimension ->
+                (Ascii.equalsIgnoreCase(dimension.getName(), Name.SDK_VERSION.name()) && isAndroid)
+                    || (Ascii.equalsIgnoreCase(dimension.getName(), Name.SOFTWARE_VERSION.name())
+                        && isIos))
+        .map(DeviceDimension::getValue)
+        .collect(toImmutableList());
   }
 
   /**

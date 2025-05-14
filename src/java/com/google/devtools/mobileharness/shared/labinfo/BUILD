@@ -86,6 +86,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/filter:mask_utils",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
         "@maven//:com_google_guava_guava",
     ],
 )
