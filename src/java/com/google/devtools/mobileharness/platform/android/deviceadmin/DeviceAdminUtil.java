@@ -212,7 +212,7 @@ public class DeviceAdminUtil {
     String commandId = UUID.randomUUID().toString();
     logger.atInfo().log(
         "Device admin util is running command [CID=%s] on %s: %s", commandId, deviceId, command);
-    String output = commandExecutor.run(command);
+    String output = commandExecutor.run(command.showFullResultInException(true));
     logger.atInfo().log(
         "Device admin command output [CID=%s, DEVICE=%s]: %s", commandId, deviceId, output);
   }
