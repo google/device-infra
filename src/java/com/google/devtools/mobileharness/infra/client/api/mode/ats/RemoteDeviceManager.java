@@ -115,6 +115,7 @@ class RemoteDeviceManager implements LabInfoProvider {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private static final Duration LAB_AND_DEVICE_CLEANUP_INTERVAL = Duration.ofMinutes(2L);
+  private static final Duration LAB_AND_DEVICE_MISSING_TIME = Duration.ofMinutes(5L);
   private static final Duration LAB_REMOVAL_TIME = Duration.ofHours(1L);
   private static final Duration DEVICE_REMOVAL_TIME = Duration.ofMinutes(10L);
 
@@ -178,6 +179,17 @@ class RemoteDeviceManager implements LabInfoProvider {
             Duration.ofSeconds(10L)),
         Level.WARNING,
         "Error when marking timeout for awaiting first device");
+
+    // Starts lab/device missing checker.
+    logFailure(
+        scheduledThreadPool.scheduleWithFixedDelay(
+            threadRenaming(
+                this::checkMissingLabsAndDevices,
+                () -> "remote-device-manager-lab-and-device-missing-checker"),
+            LAB_AND_DEVICE_CLEANUP_INTERVAL,
+            LAB_AND_DEVICE_CLEANUP_INTERVAL),
+        Level.WARNING,
+        "Error when checking missing labs and devices");
   }
 
   ImmutableList<DeviceQuery.DeviceInfo> getDeviceInfos() {
@@ -598,6 +610,55 @@ class RemoteDeviceManager implements LabInfoProvider {
     logger.atInfo().log("Labs/devices cleanup finished, time_used=%s", cleanupTime);
   }
 
+  /**
+   * Check labs and devices that have no heartbeat for a while and mark them as MISSING.
+   *
+   * @throws IllegalStateException if interrupted
+   */
+  private void checkMissingLabsAndDevices() {
+    logger.atInfo().log("Checking missing lab and devices");
+    Instant timestamp = Instant.now();
+    // TODO: Uses fine-grained lock.
+    synchronized (lock) {
+      // Checks missing devices.
+      for (Map.Entry<DeviceKey, DeviceData> entry : devices.entrySet()) {
+        DeviceKey deviceKey = entry.getKey();
+        DeviceData deviceData = entry.getValue();
+
+        if (!deviceData.statusFromLab.equals(DeviceStatus.MISSING)
+            && deviceData
+                .updateFromLabLocalTimestamp
+                .plus(LAB_AND_DEVICE_MISSING_TIME)
+                .isBefore(timestamp)) {
+          logger.atInfo().log(
+              "Mark device as MISSING, device=%s, last_update_from_lab=%s",
+              deviceKey, deviceData.updateFromLabLocalTimestamp);
+          deviceData.markMissing();
+          updateScheduler(deviceData);
+        }
+      }
+
+      // Checks missing labs.
+      for (Map.Entry<LabKey, LabData> entry : labs.entrySet()) {
+        LabKey labKey = entry.getKey();
+        LabData labData = entry.getValue();
+
+        if (!labData.labStatus.equals(LabStatus.LAB_MISSING)
+            && labData
+                .updateFromLabLocalTimestamp
+                .plus(LAB_AND_DEVICE_MISSING_TIME)
+                .isBefore(timestamp)) {
+          logger.atInfo().log(
+              "Mark lab as MISSING, lab=%s, last_update_from_lab=%s",
+              labKey, labData.updateFromLabLocalTimestamp);
+          labData.markMissing();
+        }
+      }
+    }
+    Duration checkTime = Duration.between(timestamp, Instant.now());
+    logger.atInfo().log("Labs/devices missing check finished, time_used=%s", checkTime);
+  }
+
   /** Devices are indexed by host_name. */
   @AutoValue
   abstract static class LabKey {
@@ -636,6 +697,8 @@ class RemoteDeviceManager implements LabInfoProvider {
 
     private LabServerFeature labServerFeature;
 
+    private LabStatus labStatus;
+
     /**
      * Latest local timestamp that the lab sent any rpc to update this lab (even if the update was
      * rejected).
@@ -650,6 +713,7 @@ class RemoteDeviceManager implements LabInfoProvider {
       this.labLocator = labLocator;
       labServerSetting = lab.getLabServerSetting();
       labServerFeature = lab.getLabServerFeature();
+      labStatus = LabStatus.LAB_RUNNING;
       updateFromLabLocalTimestamp = Instant.now();
     }
 
@@ -662,17 +726,17 @@ class RemoteDeviceManager implements LabInfoProvider {
           .setLabLocator(labLocator.toProto())
           .setLabServerSetting(labServerSetting)
           .setLabServerFeature(labServerFeature)
-          .setLabStatus(LabStatus.LAB_RUNNING)
+          .setLabStatus(labStatus)
           .build();
     }
 
     private LabRecordManager.LabRecordData createLabRecordData() {
       return LabRecordManager.LabRecordData.create(
-          updateFromLabLocalTimestamp,
-          labLocator,
-          labServerSetting,
-          labServerFeature,
-          LabStatus.LAB_RUNNING);
+          updateFromLabLocalTimestamp, labLocator, labServerSetting, labServerFeature, labStatus);
+    }
+
+    private void markMissing() {
+      this.labStatus = LabStatus.LAB_MISSING;
     }
   }
 
@@ -816,6 +880,10 @@ class RemoteDeviceManager implements LabInfoProvider {
     /** Updates latest allocation info. */
     private void updateByAllocationEvent(Allocation allocation) {
       latestAllocationFromScheduler = allocation;
+    }
+
+    private void markMissing() {
+      this.statusFromLab = DeviceStatus.MISSING;
     }
 
     private LabRecordManager.DeviceRecordData createDeviceRecordData() {
@@ -979,9 +1047,8 @@ class RemoteDeviceManager implements LabInfoProvider {
   }
 
   private static Optional<String> getIp(SocketAddress address) {
-    if (address instanceof InetSocketAddress) {
-      return Optional.ofNullable(((InetSocketAddress) address).getAddress())
-          .map(InetAddress::getHostAddress);
+    if (address instanceof InetSocketAddress inetSocketAddress) {
+      return Optional.ofNullable(inetSocketAddress.getAddress()).map(InetAddress::getHostAddress);
     } else {
       return Optional.empty();
     }
