@@ -120,8 +120,8 @@ public class AndroidRoboTest extends BaseDriver implements SpecConfigable<Androi
 
     AndroidRoboTestSpec spec = testInfo.jobInfo().combinedSpec(this);
     testInfo.log().atInfo().alsoTo(logger).log("\n\nAndroid Robo Test Spec: \n\n%s", spec);
-    preProcessor.installApks(testInfo, getDevice(), spec);
     UtpBinaries utpBinaries = utpBinariesExtractor.setUpUtpBinaries();
+    preProcessor.installApks(testInfo, getDevice(), spec, utpBinaries.stubAppPath());
 
     TestResult result = runCli(testInfo, utpBinaries, spec);
 

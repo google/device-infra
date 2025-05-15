@@ -97,7 +97,12 @@ public class AndroidRoboTestTest {
 
     var utpBinaries =
         UtpBinariesExtractor.UtpBinaries.create(
-            "cli.jar", "launcher.jar", "main.jar", "device_provider.jar", "driver.jar");
+            "cli.jar",
+            "launcher.jar",
+            "main.jar",
+            "device_provider.jar",
+            "driver.jar",
+            "stubapp.apk");
     when(utpBinariesExtractor.setUpUtpBinaries()).thenReturn(utpBinaries);
   }
 
@@ -106,7 +111,6 @@ public class AndroidRoboTestTest {
     AndroidRoboTestSpec spec =
         AndroidRoboTestSpec.newBuilder()
             .setCrawlerApk("/path/to/crawler.apk")
-            .setCrawlerStubApk("/path/to/stub.apk")
             .setAppPackageId("com.some.app")
             .setControllerEndpoint(ControllerEndpoint.AUTOPUSH)
             .setCrawlTimeoutSecs(60)
@@ -119,7 +123,7 @@ public class AndroidRoboTestTest {
     when(commandProcess.await(any())).thenReturn(FakeCommandResult.of("", "", 0));
 
     roboTest.run(testInfo);
-    verify(preProcessor).installApks(testInfo, device, spec);
+    verify(preProcessor).installApks(testInfo, device, spec, "stubapp.apk");
 
     assertThat(testInfo.properties().get(ANDROID_ROBO_TEST_TEST_START_EPOCH_MS)).isEqualTo("2");
 
@@ -136,7 +140,6 @@ public class AndroidRoboTestTest {
     AndroidRoboTestSpec spec =
         AndroidRoboTestSpec.newBuilder()
             .setCrawlerApk("/path/to/crawler.apk")
-            .setCrawlerStubApk("/path/to/stub.apk")
             .setAppPackageId("com.some.app")
             .setControllerEndpoint(ControllerEndpoint.AUTOPUSH)
             .setCrawlTimeoutSecs(60)
@@ -158,7 +161,6 @@ public class AndroidRoboTestTest {
     AndroidRoboTestSpec spec =
         AndroidRoboTestSpec.newBuilder()
             .setCrawlerApk("/path/to/crawler.apk")
-            .setCrawlerStubApk("/path/to/stub.apk")
             .setAppPackageId("com.some.app")
             .setControllerEndpoint(ControllerEndpoint.AUTOPUSH)
             .setCrawlTimeoutSecs(60)

@@ -38,9 +38,7 @@ public class PostProcessor {
   public void uninstallApks(TestInfo testInfo, Device device, AndroidRoboTestSpec spec)
       throws InterruptedException {
     var crawlerPackageId = spec.hasCrawlerPackageId() ? spec.getCrawlerPackageId() : CRAWLER_PKG;
-    var crawlerStubPackageId =
-        spec.hasStubAppPackageId() ? spec.getStubAppPackageId() : STUB_CRAWLER_PKG;
     apkInstaller.uninstallApk(device, crawlerPackageId, true, testInfo.log());
-    apkInstaller.uninstallApk(device, crawlerStubPackageId, true, testInfo.log());
+    apkInstaller.uninstallApk(device, STUB_CRAWLER_PKG, true, testInfo.log());
   }
 }

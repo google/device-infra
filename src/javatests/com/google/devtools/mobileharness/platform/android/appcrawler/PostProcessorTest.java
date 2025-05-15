@@ -54,10 +54,7 @@ public class PostProcessorTest {
     Device device = new NoOpDevice("device_name");
 
     AndroidRoboTestSpec spec =
-        AndroidRoboTestSpec.newBuilder()
-            .setCrawlerPackageId("androidx.test.tools.crawler")
-            .setStubAppPackageId("androidx.test.tools.crawler.stubapp")
-            .build();
+        AndroidRoboTestSpec.newBuilder().setCrawlerPackageId("androidx.test.tools.crawler").build();
     postProcessor.uninstallApks(testInfo, device, spec);
 
     verify(apkInstaller).uninstallApk(device, "androidx.test.tools.crawler", true, testInfo.log());

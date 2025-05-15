@@ -44,7 +44,6 @@ public class AndroidRoboTestJobValidatorTest {
     AndroidRoboTestSpec spec =
         AndroidRoboTestSpec.newBuilder()
             .setCrawlerApk("crawlerPath")
-            .setCrawlerStubApk("stubPath")
             .setAppPackageId("com.some.app")
             .setCrawlTimeoutSecs(60)
             .setControllerEndpoint(ControllerEndpoint.AUTOPUSH)
@@ -60,7 +59,6 @@ public class AndroidRoboTestJobValidatorTest {
     AndroidRoboTestSpec spec =
         AndroidRoboTestSpec.newBuilder()
             .setCrawlerApk("crawlerPath")
-            .setCrawlerStubApk("stubPath")
             .setControllerEndpoint(ControllerEndpoint.AUTOPUSH)
             .setCrawlTimeoutSecs(60)
             .build();
@@ -75,7 +73,6 @@ public class AndroidRoboTestJobValidatorTest {
     AndroidRoboTestSpec spec =
         AndroidRoboTestSpec.newBuilder()
             .setCrawlerApk("crawlerPath")
-            .setCrawlerStubApk("stubPath")
             .setAppPackageId("com.some.app")
             .setCrawlTimeoutSecs(60)
             .build();
@@ -90,7 +87,6 @@ public class AndroidRoboTestJobValidatorTest {
     AndroidRoboTestSpec spec =
         AndroidRoboTestSpec.newBuilder()
             .setCrawlerApk("crawlerPath")
-            .setCrawlerStubApk("stubPath")
             .setAppPackageId("com.some.app")
             .setControllerEndpoint(ControllerEndpoint.AUTOPUSH)
             .setCrawlTimeoutSecs(0)
@@ -106,7 +102,6 @@ public class AndroidRoboTestJobValidatorTest {
     AndroidRoboTestSpec spec =
         AndroidRoboTestSpec.newBuilder()
             .setCrawlerApk("crawlerPath")
-            .setCrawlerStubApk("stubPath")
             .setAppPackageId("com.some.app")
             .setControllerEndpoint(ControllerEndpoint.AUTOPUSH)
             .addCrawlerFlags("flag1=value1")

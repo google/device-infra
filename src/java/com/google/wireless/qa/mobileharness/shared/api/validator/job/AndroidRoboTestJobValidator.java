@@ -50,9 +50,6 @@ public class AndroidRoboTestJobValidator
     if (spec.getCrawlerApk().isEmpty()) {
       errorsBuilder.add("Crawler apk cannot be empty.");
     }
-    if (spec.getCrawlerStubApk().isEmpty()) {
-      errorsBuilder.add("Crawler stub apk cannot be empty.");
-    }
     if (spec.getAppPackageId().isEmpty()) {
       errorsBuilder.add("App package Id cannot be empty.");
     }

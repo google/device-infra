@@ -35,7 +35,6 @@ message AndroidRoboTestSpec {
   }];
 
   optional string crawler_stub_apk = 3 [(file_detail) = {
-    is_required: true
     help: "The crawler stub apk, which is necessary for UI Automator mode based crawling."
   }];
 

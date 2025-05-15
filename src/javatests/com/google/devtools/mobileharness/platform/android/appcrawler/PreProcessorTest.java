@@ -60,18 +60,13 @@ public class PreProcessorTest {
   public void installApks_completes() throws Exception {
     TestInfo testInfo = setUpJobInfo().tests().add("some test");
     Device device = new NoOpDevice("device_name");
+    AndroidRoboTestSpec spec = AndroidRoboTestSpec.newBuilder().setCrawlerApk(crawlerPath).build();
 
-    AndroidRoboTestSpec spec =
-        AndroidRoboTestSpec.newBuilder()
-            .setCrawlerApk(crawlerPath)
-            .setCrawlerStubApk(stubPath)
-            .build();
-    preProcessor.installApks(testInfo, device, spec);
+    preProcessor.installApks(testInfo, device, spec, stubPath);
 
     verify(apkInstaller)
         .installApk(device, setupInstallable(spec.getCrawlerApk(), true), testInfo.log());
-    verify(apkInstaller)
-        .installApk(device, setupInstallable(spec.getCrawlerStubApk(), true), testInfo.log());
+    verify(apkInstaller).installApk(device, setupInstallable(stubPath, true), testInfo.log());
   }
 
   private JobInfo setUpJobInfo() {

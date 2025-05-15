@@ -35,6 +35,8 @@ public class UtpBinariesExtractor {
       "/com/google/testing/platform/runtime/android/provider/local/local_android_device_provider_java_binary_deploy.jar";
   private static final String UTP_ANDROID_ROBO_DRIVER_RESOURCE_PATH =
       "/com/google/testing/helium/utp/android/driver/robo/android_robo_driver_deploy.jar";
+  private static final String STUB_APP_RESOURCE_PATH =
+      "/androidx/test/tools/crawler/stubapp/crawler_stubapp_androidx.apk";
 
   private final ResUtil resourcesUtil;
 
@@ -50,7 +52,9 @@ public class UtpBinariesExtractor {
     String mainPath = getResourceFile(UTP_MAIN_RESOURCE_PATH);
     String driverPath = getResourceFile(UTP_ANDROID_ROBO_DRIVER_RESOURCE_PATH);
     String providerPath = getResourceFile(UTP_DEVICE_PROVIDER_RESOURCE_PATH);
-    return UtpBinaries.create(cliPath, launcherPath, mainPath, providerPath, driverPath);
+    String stubAppPath = getResourceFile(STUB_APP_RESOURCE_PATH);
+    return UtpBinaries.create(
+        cliPath, launcherPath, mainPath, providerPath, driverPath, stubAppPath);
   }
 
   private String getResourceFile(String resPath) throws MobileHarnessException {
@@ -80,14 +84,17 @@ public class UtpBinariesExtractor {
 
     public abstract String driverPath();
 
+    public abstract String stubAppPath();
+
     public static UtpBinaries create(
         String cliPath,
         String launcherPath,
         String mainPath,
         String providerPath,
-        String driverPath) {
+        String driverPath,
+        String stubAppPath) {
       return new AutoValue_UtpBinariesExtractor_UtpBinaries(
-          cliPath, launcherPath, mainPath, providerPath, driverPath);
+          cliPath, launcherPath, mainPath, providerPath, driverPath, stubAppPath);
     }
   }
 }

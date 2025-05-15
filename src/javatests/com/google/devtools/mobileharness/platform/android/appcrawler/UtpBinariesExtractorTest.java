@@ -47,7 +47,7 @@ public class UtpBinariesExtractorTest {
 
     var unused = new UtpBinariesExtractor(resourcesUtil).setUpUtpBinaries();
 
-    verify(resourcesUtil, times(5)).getResourceFile(any(), any());
+    verify(resourcesUtil, times(6)).getResourceFile(any(), any());
   }
 
   @Test
@@ -57,7 +57,7 @@ public class UtpBinariesExtractorTest {
 
     var unused = new UtpBinariesExtractor(resourcesUtil).setUpUtpBinaries();
 
-    verify(resourcesUtil, times(5)).getExternalResourceFile(any());
+    verify(resourcesUtil, times(6)).getExternalResourceFile(any());
   }
 
   @Test

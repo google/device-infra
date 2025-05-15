@@ -34,11 +34,11 @@ public class PreProcessor {
   }
 
   /** Install apks needed for the test. */
-  public void installApks(TestInfo testInfo, Device device, AndroidRoboTestSpec spec)
+  public void installApks(
+      TestInfo testInfo, Device device, AndroidRoboTestSpec spec, String stubAppPath)
       throws MobileHarnessException, InterruptedException {
     apkInstaller.installApk(device, setupInstallable(spec.getCrawlerApk(), true), testInfo.log());
-    apkInstaller.installApk(
-        device, setupInstallable(spec.getCrawlerStubApk(), true), testInfo.log());
+    apkInstaller.installApk(device, setupInstallable(stubAppPath, true), testInfo.log());
   }
 
   private ApkInstallArgs setupInstallable(String path, boolean grantRuntimePermissions) {
