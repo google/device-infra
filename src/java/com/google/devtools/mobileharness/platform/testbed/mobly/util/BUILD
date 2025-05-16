@@ -82,6 +82,29 @@ java_library(
 )
 
 java_library(
+    name = "config_generator",
+    srcs = [
+        "MoblyConfigGenerator.java",
+    ],
+    visibility = [
+    ],
+    deps = [
+        ":subdevice_type",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/platform/testbed/adhoc",
+        "//src/java/com/google/devtools/mobileharness/platform/testbed/config:base",
+        "//src/java/com/google/devtools/mobileharness/platform/testbed/mobly:mobly_constant",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api:class_util",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:testbed_device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:common_java_proto",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+        "@maven//:org_json_json",
+    ],
+)
+
+java_library(
     name = "install_mobly_test_deps_args",
     srcs = ["InstallMoblyTestDepsArgs.java"],
     visibility = [
