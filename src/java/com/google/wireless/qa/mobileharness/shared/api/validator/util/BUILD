@@ -36,6 +36,8 @@ java_library(
     name = "mobly_decorator_adapter_job_validator_util",
     srcs = ["MoblyDecoratorAdapterJobValidatorUtil.java"],
     visibility = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:__pkg__",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:__pkg__",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",

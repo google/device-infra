@@ -92,6 +92,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_logcat_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_switch_language_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:composite_device_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:mobly_decorator_adapter",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_local_emulator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_real_device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:failed_device",
@@ -119,6 +120,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:android_robo_test_job_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:android_switch_language_decorator_job_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:composite_device_decorator_adapter_job_validator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:mobly_decorator_adapter_job_validator",
     ],
 )
 
@@ -158,6 +160,8 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_show_instruction_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_switch_language_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_switch_user_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:composite_device_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:mobly_decorator_adapter",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:no_op_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:android_instrumentation",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:android_robo_test",

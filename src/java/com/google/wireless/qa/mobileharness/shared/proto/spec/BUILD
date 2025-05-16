@@ -41,6 +41,7 @@ proto_library(
         ":base_spec_proto",
         ":install_apk_step_spec_proto",
         ":job_spec_proto",
+        ":mobly_decorator_adapter_spec_proto",
         ":no_op_decorator_spec_proto",
         ":no_op_driver_spec_proto",
     ],

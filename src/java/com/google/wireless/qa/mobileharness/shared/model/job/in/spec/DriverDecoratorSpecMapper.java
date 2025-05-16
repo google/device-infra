@@ -80,6 +80,7 @@ public final class DriverDecoratorSpecMapper {
     builder.put("AndroidShowInstructionDecorator", "AndroidShowInstructionDecoratorSpec");
     builder.put("AndroidSwitchLanguageDecorator", "AndroidSwitchLanguageDecoratorSpec");
     builder.put("AndroidSwitchUserDecorator", "AndroidSwitchUserDecoratorSpec");
+    builder.put("MoblyDecoratorAdapter", "MoblyDecoratorAdapterSpec");
     builder.put("NoOpDecorator", "NoOpDecoratorSpec");
 
     DRIVER_DECORATOR_SPEC_MAP = builder.buildOrThrow();

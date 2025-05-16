@@ -533,3 +533,32 @@ java_library(
         "@maven//:javax_inject_jsr330_api",
     ],
 )
+
+java_library(
+    name = "mobly_decorator_adapter",
+    srcs = ["MoblyDecoratorAdapter.java"],
+    deps = [
+        ":composite_device_decorator",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/platform/testbed:runner_util",
+        "//src/java/com/google/devtools/mobileharness/platform/testbed/config:base",
+        "//src/java/com/google/devtools/mobileharness/platform/testbed/mobly:mobly_constant",
+        "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_text_format",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/message:str_pair",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:testbed_device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/util:mobly_decorator_adapter_job_validator_util",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/lab/in",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:common_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:mobly_decorator_adapter_spec_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:testbed_decorator_adapter_spec_java_proto",
+        "@maven//:com_google_guava_guava",
+    ],
+)
