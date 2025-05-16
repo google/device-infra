@@ -21,6 +21,7 @@ java_library(
     name = "test_diagnostics_helper",
     srcs = ["TestDiagnosticsHelper.java"],
     visibility = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
