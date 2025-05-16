@@ -87,6 +87,7 @@ java_library(
         "MoblyConfigGenerator.java",
     ],
     visibility = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
     ],
     deps = [
         ":subdevice_type",
