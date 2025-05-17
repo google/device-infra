@@ -63,6 +63,7 @@ import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.An
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Log;
+import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.AndroidInstrumentationSpec;
 import java.io.File;
 import java.io.FileInputStream;
@@ -1213,40 +1214,51 @@ public class AndroidInstrumentationUtil {
    *     /sdcard/Download/test_results.xml)
    * @param exception returns the exception after parsing the gtest XML files
    */
-  public void processGtestResult(
+  public TestResult processGtestResult(
       String deviceId,
       TestInfo testInfo,
+      StringBuilder errorMessage,
       String gtestXmlFile,
       @Nullable MobileHarnessException exception)
       throws InterruptedException {
     // Handle the CommandException exception first
     if (exception != null) {
       if (exception.getErrorId() == AndroidErrorId.ANDROID_INSTRUMENTATION_COMMAND_EXEC_TIMEOUT) {
-        testInfo.resultWithCause().setNonPassing(Test.TestResult.TIMEOUT, exception);
+        errorMessage.append(exception.getMessage());
+        return TestResult.TIMEOUT;
       } else {
-        testInfo.resultWithCause().setNonPassing(Test.TestResult.ERROR, exception);
+        errorMessage.append(exception.getMessage());
+        return TestResult.ERROR;
       }
-      return;
     }
 
     // Ensure device is online before pulling files from it.
     try {
       boolean isDeviceOnline = systemStateManager.isOnline(deviceId);
       if (!isDeviceOnline) {
-        MobileHarnessException cause =
-            new MobileHarnessException(
-                AndroidErrorId.ANDROID_INSTRUMENTATION_GET_ONLINE_DEVICES_ERROR,
-                String.format("Device %s is not online", deviceId));
-        testInfo.resultWithCause().setNonPassing(Test.TestResult.ERROR, cause);
-        return;
+        errorMessage.append(String.format("Device %s is not online", deviceId));
+        return TestResult.ERROR;
       }
     } catch (MobileHarnessException e) {
-      testInfo.resultWithCause().setNonPassing(Test.TestResult.ERROR, e);
-      return;
+      errorMessage.append(e.getMessage());
+      return TestResult.ERROR;
+    }
+
+    boolean hasTestFailures =
+        testInfo.subTests().getAll().values().stream()
+            .anyMatch(AndroidInstrumentationUtil::isTestFailedOrError);
+    if (hasTestFailures) {
+      errorMessage.append("Test cases failed.");
+      return TestResult.FAIL;
     }
 
     // The tests passed.
-    testInfo.resultWithCause().setPass();
+    return TestResult.PASS;
+  }
+
+  private static boolean isTestFailedOrError(TestInfo subTest) {
+    return subTest.resultWithCause().get().type() == Test.TestResult.FAIL
+        || subTest.resultWithCause().get().type() == Test.TestResult.ERROR;
   }
 
   /** Check the external storage path is not null. */
