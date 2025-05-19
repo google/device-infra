@@ -19,8 +19,8 @@ package com.google.devtools.mobileharness.shared.version.checker;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.version.Version;
-import com.google.devtools.mobileharness.shared.version.proto.Version.VersionCheckRequest;
-import com.google.devtools.mobileharness.shared.version.proto.Version.VersionCheckResponse;
+import com.google.devtools.mobileharness.shared.version.proto.VersionProto.VersionCheckRequest;
+import com.google.devtools.mobileharness.shared.version.proto.VersionProto.VersionCheckResponse;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
 /** Utility for checking the versions on RPC service side. */

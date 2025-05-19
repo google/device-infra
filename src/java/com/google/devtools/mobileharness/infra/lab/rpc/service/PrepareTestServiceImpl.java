@@ -94,7 +94,7 @@ import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.shared.version.Version;
 import com.google.devtools.mobileharness.shared.version.checker.ServiceSideVersionChecker;
-import com.google.devtools.mobileharness.shared.version.proto.Version.VersionCheckResponse;
+import com.google.devtools.mobileharness.shared.version.proto.VersionProto.VersionCheckResponse;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;

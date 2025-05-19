@@ -81,7 +81,7 @@ import com.google.devtools.mobileharness.shared.labinfo.LabInfoProvider;
 import com.google.devtools.mobileharness.shared.util.comm.server.GrpcContexts;
 import com.google.devtools.mobileharness.shared.version.Version;
 import com.google.devtools.mobileharness.shared.version.checker.ServiceSideVersionChecker;
-import com.google.devtools.mobileharness.shared.version.proto.Version.VersionCheckResponse;
+import com.google.devtools.mobileharness.shared.version.proto.VersionProto.VersionCheckResponse;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.controller.event.AllocationEvent;

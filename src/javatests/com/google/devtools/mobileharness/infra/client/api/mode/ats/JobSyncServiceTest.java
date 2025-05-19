@@ -46,8 +46,8 @@ import com.google.devtools.mobileharness.infra.master.rpc.proto.JobSyncServicePr
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.shared.version.Version;
-import com.google.devtools.mobileharness.shared.version.proto.Version.VersionCheckRequest;
-import com.google.devtools.mobileharness.shared.version.proto.Version.VersionCheckResponse;
+import com.google.devtools.mobileharness.shared.version.proto.VersionProto.VersionCheckRequest;
+import com.google.devtools.mobileharness.shared.version.proto.VersionProto.VersionCheckResponse;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;

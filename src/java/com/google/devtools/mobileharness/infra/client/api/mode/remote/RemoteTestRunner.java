@@ -70,7 +70,7 @@ import com.google.devtools.mobileharness.shared.util.sharedpool.SharedPoolJobUti
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.shared.util.time.TimeoutUtil;
 import com.google.devtools.mobileharness.shared.version.Version;
-import com.google.devtools.mobileharness.shared.version.proto.Version.VersionCheckRequest;
+import com.google.devtools.mobileharness.shared.version.proto.VersionProto.VersionCheckRequest;
 import com.google.devtools.mobileharness.shared.version.proto.VersionServiceProto.GetVersionRequest;
 import com.google.devtools.mobileharness.shared.version.proto.VersionServiceProto.GetVersionResponse;
 import com.google.devtools.mobileharness.shared.version.rpc.stub.VersionStub;

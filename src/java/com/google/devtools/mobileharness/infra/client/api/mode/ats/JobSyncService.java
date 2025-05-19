@@ -67,7 +67,7 @@ import com.google.devtools.mobileharness.infra.master.rpc.proto.JobSyncServicePr
 import com.google.devtools.mobileharness.infra.master.rpc.proto.JobSyncServiceProto.UpsertDeviceTempRequiredDimensionsResponse;
 import com.google.devtools.mobileharness.shared.version.Version;
 import com.google.devtools.mobileharness.shared.version.checker.ServiceSideVersionChecker;
-import com.google.devtools.mobileharness.shared.version.proto.Version.VersionCheckResponse;
+import com.google.devtools.mobileharness.shared.version.proto.VersionProto.VersionCheckResponse;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobScheduleUnit;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobSetting;

@@ -19,7 +19,7 @@ syntax = "proto3";
 package mobileharness.shared.version;
 
 option java_package = "com.google.devtools.mobileharness.shared.version.proto";
-option java_outer_classname = "Version";
+option java_outer_classname = "VersionProto";
 
 // Request for checking version compatibility of the RPC service and stub.
 message VersionCheckRequest {
