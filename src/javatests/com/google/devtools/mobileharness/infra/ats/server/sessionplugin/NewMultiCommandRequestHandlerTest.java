@@ -656,9 +656,9 @@ public final class NewMultiCommandRequestHandlerTest {
   public void createTradefedJobs_mountOrUnzipAndroidXtsZipFailed_errorWithInvalidResourceError()
       throws Exception {
     when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
-    MobileHarnessException commandExecutorException = Mockito.mock(CommandException.class);
-    when(commandExecutorException.getMessage()).thenReturn("");
-    when(commandExecutor.run(any())).thenThrow(commandExecutorException);
+    CommandException commandException = Mockito.mock(CommandException.class);
+    when(commandException.getMessage()).thenReturn("");
+    when(commandExecutor.run(any())).thenThrow(commandException);
 
     CreateJobsResult createJobsResult =
         newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
