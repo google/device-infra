@@ -34,3 +34,28 @@ message VersionCheckResponse {
   // Required: the version of the service.
   string service_version = 1;
 }
+
+// Proto representation of a Version.java instance.
+// (com.google.devtools.mobileharness.shared.version.Version.java)
+message Version {
+  // Required.
+  //
+  // Version.toString(). E.g., "2.34.5"
+  string version = 1;
+
+  // Required.
+  //
+  // The field name. E.g., "LAB_VERSION".
+  string type = 2;
+}
+
+// Version information of a component (e.g., lab server).
+message Versions {
+  repeated Version versions = 1;
+
+  // GitHub commit ID from which the component was built, if any.
+  optional string github_version = 2;
+
+  // Google CL number from which the component was built, if any.
+  optional int64 google_version = 3;
+}
