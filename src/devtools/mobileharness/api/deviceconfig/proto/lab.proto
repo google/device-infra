@@ -101,6 +101,9 @@ message DetectorSpecs {
 
     repeated ManekiPs5DeviceDiscoverySpec maneki_ps5_device_discovery_spec = 6;
 
+    repeated ManekiGenericDeviceDiscoverySpec
+        maneki_generic_device_discovery_spec = 7;
+
     message ManekiAndroidDeviceDiscoverySpec {
       string mac_address = 1;
     }
@@ -129,6 +132,10 @@ message DetectorSpecs {
     message ManekiPs5DeviceDiscoverySpec {
       string device_id = 1;
       string win_mac_address = 2;
+    }
+
+    message ManekiGenericDeviceDiscoverySpec {
+      string mac_address = 1;
     }
   }
 }
