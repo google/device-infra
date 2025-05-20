@@ -54,6 +54,7 @@ import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.Com
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandState;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.ErrorReason;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.NewMultiCommandRequest;
+import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.RequestDetail;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.RequestDetail.RequestState;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestContext;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestEnvironment;
@@ -933,12 +934,14 @@ public final class NewMultiCommandRequestHandlerTest {
             .build();
     CreateJobsResult createJobsResult =
         newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
-
+    RequestDetail.Builder requestDetail =
+        RequestDetail.newBuilder()
+            .setOriginalRequest(request)
+            .putAllCommandDetails(createJobsResult.commandDetails());
     when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
     when(files.getAll()).thenReturn(ImmutableMultimap.of());
     HandleResultProcessingResult handleResultProcessingResult =
-        newMultiCommandRequestHandler.handleResultProcessing(
-            sessionInfo, request, createJobsResult.commandDetails().values());
+        newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail);
     assertThat(handleResultProcessingResult.state()).isEqualTo(RequestState.ERROR);
     assertThat(handleResultProcessingResult.errorReason().get())
         .isEqualTo(ErrorReason.RESULT_PROCESSING_ERROR);
@@ -964,9 +967,11 @@ public final class NewMultiCommandRequestHandlerTest {
         .when(sessionResultHandlerUtil)
         .processResult(any(), any(), any(), any(), any(), any());
     Mockito.doNothing().when(localFileUtil).prepareDir(any(Path.class));
-    var unused =
-        newMultiCommandRequestHandler.handleResultProcessing(
-            sessionInfo, request, createJobsResult.commandDetails().values());
+    RequestDetail.Builder requestDetail =
+        RequestDetail.newBuilder()
+            .setOriginalRequest(request)
+            .putAllCommandDetails(createJobsResult.commandDetails());
+    var unused = newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail);
     verify(sessionInfo)
         .putSessionProperty(
             SessionProperties.PROPERTY_KEY_SERVER_SESSION_LOG_PATH,
@@ -990,11 +995,12 @@ public final class NewMultiCommandRequestHandlerTest {
             .build();
     CreateJobsResult createJobsResult =
         newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
-
+    RequestDetail.Builder requestDetail =
+        RequestDetail.newBuilder()
+            .setOriginalRequest(request)
+            .putAllCommandDetails(createJobsResult.commandDetails());
     when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
-    var unused =
-        newMultiCommandRequestHandler.handleResultProcessing(
-            sessionInfo, request, createJobsResult.commandDetails().values());
+    var unused = newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail);
     verify(sessionResultHandlerUtil, never())
         .processResult(any(), any(), any(), any(), any(), any());
   }
@@ -1228,13 +1234,15 @@ public final class NewMultiCommandRequestHandlerTest {
     // Add TF job.
     CreateJobsResult createJobsResult =
         newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
-
     assertThat(createJobsResult.jobInfos()).containsExactly(jobInfo);
 
+    RequestDetail.Builder requestDetail =
+        RequestDetail.newBuilder()
+            .setOriginalRequest(request)
+            .putAllCommandDetails(createJobsResult.commandDetails());
     when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
     HandleResultProcessingResult handleResultProcessingResult =
-        newMultiCommandRequestHandler.handleResultProcessing(
-            sessionInfo, request, createJobsResult.commandDetails().values());
+        newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail);
 
     String commandId =
         UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();

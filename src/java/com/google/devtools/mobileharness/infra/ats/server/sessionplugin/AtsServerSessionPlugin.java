@@ -314,10 +314,7 @@ final class AtsServerSessionPlugin {
 
       try {
         HandleResultProcessingResult handleResultProcessingResult =
-            newMultiCommandRequestHandler.handleResultProcessing(
-                sessionInfo,
-                requestDetail.getOriginalRequest(),
-                requestDetail.getCommandDetailsMap().values());
+            newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail);
         // Set final state if not in terminal state.
         if (handleResultProcessingResult.state().equals(RequestState.RUNNING)
             || handleResultProcessingResult.state().equals(RequestState.UNKNOWN)) {
@@ -520,6 +517,9 @@ final class AtsServerSessionPlugin {
       return newMessage;
     }
     if (newMessage.isBlank()) {
+      return existingMessage;
+    }
+    if (newMessage.equals(existingMessage)) {
       return existingMessage;
     }
     return existingMessage + " //--// " + newMessage;

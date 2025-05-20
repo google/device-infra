@@ -57,6 +57,7 @@ import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.Com
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandState;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.ErrorReason;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.NewMultiCommandRequest;
+import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.RequestDetail;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.RequestDetail.RequestState;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestContext;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestResource;
@@ -607,20 +608,14 @@ final class NewMultiCommandRequestHandler {
    */
   @VisibleForTesting
   HandleResultProcessingResult handleResultProcessing(
-      SessionInfo sessionInfo,
-      NewMultiCommandRequest request,
-      Collection<CommandDetail> commandDetails)
-      throws InterruptedException {
-    HandleResultProcessingResult result =
-        handleResultProcessingInternal(sessionInfo, request, commandDetails);
-    return result;
+      SessionInfo sessionInfo, RequestDetail.Builder requestDetail) throws InterruptedException {
+    return handleResultProcessingInternal(sessionInfo, requestDetail);
   }
 
   private HandleResultProcessingResult handleResultProcessingInternal(
-      SessionInfo sessionInfo,
-      NewMultiCommandRequest request,
-      Collection<CommandDetail> commandDetails)
-      throws InterruptedException {
+      SessionInfo sessionInfo, RequestDetail.Builder requestDetail) throws InterruptedException {
+    NewMultiCommandRequest request = requestDetail.getOriginalRequest();
+    Collection<CommandDetail> commandDetails = requestDetail.getCommandDetailsMap().values();
     URL outputUrl = null;
     String outputFileUploadUrl = request.getTestEnvironment().getOutputFileUploadUrl();
     Map<String, JobInfo> jobIdToJobMap = new HashMap<>();
@@ -785,21 +780,19 @@ final class NewMultiCommandRequestHandler {
     // error message from commands.
     ImmutableMap<String, CommandDetail> commandDetailsMap =
         commandDetailMapBuilder.buildKeepingLast();
-    ErrorReason errorReason;
-    String errorMessage;
+    ErrorReason errorReason = requestDetail.getErrorReason();
+    String errorMessage = requestDetail.getErrorMessage();
     Optional<CommandDetail> commandDetailWithError =
         commandDetailsMap.values().stream()
             .filter(commandDetail -> commandDetail.getState() == CommandState.ERROR)
             .findFirst();
-    if (commandDetailWithError.isPresent()) {
+    if (commandDetailWithError.isPresent()
+        && commandDetailWithError.get().getErrorReason() != ErrorReason.UNKNOWN_REASON) {
       errorReason = commandDetailWithError.get().getErrorReason();
       errorMessage =
           errorReason == ErrorReason.TRADEFED_INVOCATION_ERROR
               ? REQUEST_ERROR_MESSAGE_FOR_TRADEFED_INVOCATION_ERROR
               : commandDetailWithError.get().getErrorMessage();
-    } else {
-      errorReason = null;
-      errorMessage = null;
     }
 
     return HandleResultProcessingResult.of(
