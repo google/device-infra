@@ -101,6 +101,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:android_native_bin",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:android_robo_test",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:mobly_generic_test",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:mobly_test",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/env:android_hd_video_decorator_env_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/env:android_native_bin_env_validator",
     ],
@@ -121,6 +122,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:android_switch_language_decorator_job_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:composite_device_decorator_adapter_job_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:mobly_decorator_adapter_job_validator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:mobly_test_job_validator",
     ],
 )
 
@@ -167,6 +169,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:android_robo_test",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:mobly_aosp_package_test",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:mobly_generic_test",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:mobly_test",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:no_op_driver",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:xts_tradefed_test",
     ],

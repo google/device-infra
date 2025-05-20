@@ -42,6 +42,7 @@ java_library(
     name = "test_xml_parser",
     srcs = ["TestXmlParser.java"],
     visibility = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
     ],
     deps = [
         ":base_generator",

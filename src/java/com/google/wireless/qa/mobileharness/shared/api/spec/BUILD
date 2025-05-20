@@ -137,6 +137,14 @@ java_library(
 )
 
 java_library(
+    name = "mobly_test_spec",
+    srcs = ["MoblyTestSpec.java"],
+    deps = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation:basic_annotation",
+    ],
+)
+
+java_library(
     name = "split_method_spec",
     srcs = ["SplitMethodSpec.java"],
 )

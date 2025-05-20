@@ -241,6 +241,19 @@ java_library(
 )
 
 java_library(
+    name = "mobly_test_job_validator",
+    srcs = ["MoblyTestJobValidator.java"],
+    deps = [
+        ":job_validator",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:mobly_test_spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@maven//:com_google_errorprone_error_prone_annotations",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "xts_tradefed_test_job_validator",
     srcs = ["XtsTradefedTestJobValidator.java"],
     deps = [

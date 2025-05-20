@@ -218,6 +218,38 @@ java_library(
 )
 
 java_library(
+    name = "mobly_test",
+    srcs = ["MoblyTest.java"],
+    deps = [
+        ":base_driver",
+        "//src/devtools/mobileharness/api/model/proto:test_java_proto",
+        "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
+        "//src/java/com/google/devtools/deviceinfra/platform/android/sdk/fastboot",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/platform/testbed/mobly:mobly_constant",
+        "//src/java/com/google/devtools/mobileharness/platform/testbed/mobly/util:config_generator",
+        "//src/java/com/google/devtools/mobileharness/shared/util/command",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/path",
+        "//src/java/com/google/devtools/mobileharness/shared/util/system",
+        "//src/java/com/google/devtools/mobileharness/shared/util/testcomponents:testcomponents_dir_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/testdiagnostics:test_diagnostics_helper",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api:composite_device_util",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:mobly_test_spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/sponge:test_xml_parser",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+        "@maven//:org_json_json",
+        "@maven//:org_yaml_snakeyaml",
+    ],
+)
+
+java_library(
     name = "no_op_driver",
     srcs = ["NoOpDriver.java"],
     deps = [
