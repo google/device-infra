@@ -31,6 +31,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/logging/controller/uploader/stackdriver/stub",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/server:sever_builder_factory",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:channel_factory",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local:res_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/path",
         "@io_grpc_grpc_java//core",
@@ -41,6 +42,7 @@ java_library(
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_truth_extensions_truth_proto_extension",
         "@maven//:junit_junit",
+        "@maven//:org_mockito_mockito_core",
     ],
 )
 

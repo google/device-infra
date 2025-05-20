@@ -29,6 +29,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.logging.annotation.Annotations.StackdriverSecretFileName;
 import com.google.devtools.mobileharness.shared.util.comm.stub.ClientInterceptorFactory;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.inject.Inject;
@@ -55,16 +56,19 @@ public class StackdriverStub {
 
   private final String secretFileName;
 
+  private final ResUtil resUtil;
+
   private final LocalFileUtil fileUtil;
 
   @VisibleForTesting volatile LoggingServiceV2BlockingStub loggingServiceV2BlockingStub;
 
   @Inject
-  StackdriverStub(@StackdriverSecretFileName String secretFileName) {
-    this(secretFileName, new LocalFileUtil());
+  StackdriverStub(ResUtil resUtil, @StackdriverSecretFileName String secretFileName) {
+    this(resUtil, secretFileName, new LocalFileUtil());
   }
 
-  StackdriverStub(String secretFileName, LocalFileUtil fileUtil) {
+  StackdriverStub(ResUtil resUtil, String secretFileName, LocalFileUtil fileUtil) {
+    this.resUtil = resUtil;
     this.secretFileName = secretFileName;
     this.fileUtil = fileUtil;
   }
