@@ -78,7 +78,6 @@ public final class LabInfoPullerImpl implements DataPuller<MonitoredRecord> {
 
         addAttribute(deviceEntry, "status", Optional.of(deviceInfo.getDeviceStatus().toString()));
         addAttribute(deviceEntry, "device_type", deviceInfo.getDeviceFeature().getTypeList());
-        addAttribute(deviceEntry, "model", getDimension(dimensionList, "model"));
         addAttribute(
             deviceEntry,
             "version",
@@ -87,8 +86,9 @@ public final class LabInfoPullerImpl implements DataPuller<MonitoredRecord> {
                     getDimension(dimensionList, "software_version"))
                 .flatMap(Optional::stream)
                 .findFirst());
-        addAttribute(deviceEntry, "hardware", getDimension(dimensionList, "hardware"));
-        addAttribute(deviceEntry, "build_type", getDimension(dimensionList, "build_type"));
+        dimensionList.forEach(
+            dimension ->
+                addAttribute(deviceEntry, dimension.getName(), Optional.of(dimension.getValue())));
 
         record.addDeviceEntry(deviceEntry.build());
       }

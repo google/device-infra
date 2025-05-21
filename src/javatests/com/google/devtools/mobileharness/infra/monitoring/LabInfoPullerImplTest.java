@@ -195,21 +195,35 @@ public final class LabInfoPullerImplTest {
                 .putIdentifier("device_id", DEVICE_ID_1)
                 .addAttribute(Attribute.newBuilder().setName("status").setValue("BUSY"))
                 .addAttribute(Attribute.newBuilder().setName("device_type").setValue(DEVICE_TYPE_1))
-                .addAttribute(Attribute.newBuilder().setName("model").setValue(DEVICE_MODEL_1))
                 .addAttribute(
                     Attribute.newBuilder().setName("version").setValue(DEVICE_SDK_VERSION_1))
+                .addAttribute(Attribute.newBuilder().setName("model").setValue(DEVICE_MODEL_1))
+                .addAttribute(
+                    Attribute.newBuilder().setName("sdk_version").setValue(DEVICE_SDK_VERSION_1))
                 .addAttribute(
                     Attribute.newBuilder().setName("hardware").setValue(DEVICE_HARDWARE_1))
                 .addAttribute(
                     Attribute.newBuilder().setName("build_type").setValue(DEVICE_BUILD_TYPE_1))
+                .addAttribute(
+                    Attribute.newBuilder()
+                        .setName(DEVICE_SUPPORTED_DIMENSION_NAME)
+                        .setValue(DEVICE_SUPPORTED_DIMENSION_VALUE))
+                .addAttribute(
+                    Attribute.newBuilder()
+                        .setName(DEVICE_REQUIRED_DIMENSION_NAME)
+                        .setValue(DEVICE_REQUIRED_DIMENSION_VALUE))
                 .build(),
             MonitoredEntry.newBuilder()
                 .putIdentifier("device_id", DEVICE_ID_2)
                 .addAttribute(Attribute.newBuilder().setName("status").setValue("IDLE"))
                 .addAttribute(Attribute.newBuilder().setName("device_type").setValue(DEVICE_TYPE_2))
-                .addAttribute(Attribute.newBuilder().setName("model").setValue(DEVICE_MODEL_2))
                 .addAttribute(
                     Attribute.newBuilder().setName("version").setValue(DEVICE_SOFTWARE_VERSION_2))
+                .addAttribute(Attribute.newBuilder().setName("model").setValue(DEVICE_MODEL_2))
+                .addAttribute(
+                    Attribute.newBuilder()
+                        .setName("software_version")
+                        .setValue(DEVICE_SOFTWARE_VERSION_2))
                 .build());
   }
 }
