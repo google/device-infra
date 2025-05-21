@@ -56,6 +56,12 @@ message BuildVersion {
 
   // Google CL number from which the component was built, if any.
   optional int64 google_version = 2;
+
+  // GitHub branch name from which the component was built, if any.
+  optional string github_branch = 3;
+
+  // Kokoro build number from which the component was built, if any.
+  optional int64 kokoro_build = 4;
 }
 
 // Version information of a component (e.g., lab server).

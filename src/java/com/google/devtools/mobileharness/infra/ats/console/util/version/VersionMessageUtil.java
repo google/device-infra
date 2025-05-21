@@ -48,7 +48,7 @@ public class VersionMessageUtil {
    *
    * <pre>{@code
    * Android Compatibility Test Suite 14_r2 (11179914)
-   * OmniLab lab-4.268.0 cl-761411824 github-fece030c657cddecc2cf7a122aa1fc4976dfed9c
+   * OmniLab lab-4.268.0 cl-761411824 kokoro-1148 github-fece030c657cddecc2cf7a122aa1fc4976dfed9c
    * }</pre>
    */
   public String getVersionMessage() {
@@ -62,7 +62,7 @@ public class VersionMessageUtil {
 
     Optional<BuildVersion> buildVersion = VersionUtil.getBuildVersion();
     return String.format(
-        "Android %s %s (%s)\nOmniLab lab-%s%s%s",
+        "Android %s %s (%s)\nOmniLab lab-%s%s%s%s",
         testSuiteInfo.getFullName(),
         testSuiteInfo.getVersion(),
         buildNumber,
@@ -74,6 +74,14 @@ public class VersionMessageUtil {
                         ? Optional.empty()
                         : Optional.of(version.getGoogleVersion()))
             .map(googleVersion -> String.format(" cl-%s", googleVersion))
+            .orElse(""),
+        buildVersion
+            .flatMap(
+                version ->
+                    version.getKokoroBuild() == 0L
+                        ? Optional.empty()
+                        : Optional.of(version.getKokoroBuild()))
+            .map(kokoroBuildNumber -> String.format(" kokoro-%s", kokoroBuildNumber))
             .orElse(""),
         buildVersion
             .flatMap(
