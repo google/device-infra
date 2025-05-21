@@ -16,12 +16,14 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.util.version;
 
+import com.google.common.base.Strings;
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
 import com.google.devtools.mobileharness.infra.ats.console.util.command.CommandHelper;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteInfo;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteInfoProvider;
 import com.google.devtools.mobileharness.shared.version.Version;
 import com.google.devtools.mobileharness.shared.version.VersionUtil;
+import com.google.devtools.mobileharness.shared.version.proto.VersionProto.BuildVersion;
 import java.nio.file.Path;
 import java.util.Optional;
 import javax.inject.Inject;
@@ -46,7 +48,7 @@ public class VersionMessageUtil {
    *
    * <pre>{@code
    * Android Compatibility Test Suite 14_r2 (11179914)
-   * OmniLab lab-4.268.0 github-fece030c657cddecc2cf7a122aa1fc4976dfed9c
+   * OmniLab lab-4.268.0 cl-761411824 github-fece030c657cddecc2cf7a122aa1fc4976dfed9c
    * }</pre>
    */
   public String getVersionMessage() {
@@ -57,13 +59,26 @@ public class VersionMessageUtil {
     String buildNumber =
         versionParser.fetchVersion(testSuiteInfo).orElseGet(testSuiteInfo::getBuildNumber);
     String labVersion = Version.LAB_VERSION.toString();
-    Optional<String> gitHubVersion = VersionUtil.getGitHubVersion();
+
+    Optional<BuildVersion> buildVersion = VersionUtil.getBuildVersion();
     return String.format(
-        "Android %s %s (%s)\nOmniLab lab-%s%s",
+        "Android %s %s (%s)\nOmniLab lab-%s%s%s",
         testSuiteInfo.getFullName(),
         testSuiteInfo.getVersion(),
         buildNumber,
         labVersion,
-        gitHubVersion.map(version -> String.format(" github-%s", version)).orElse(""));
+        buildVersion
+            .flatMap(
+                version ->
+                    version.getGoogleVersion() == 0L
+                        ? Optional.empty()
+                        : Optional.of(version.getGoogleVersion()))
+            .map(googleVersion -> String.format(" cl-%s", googleVersion))
+            .orElse(""),
+        buildVersion
+            .flatMap(
+                version -> Optional.ofNullable(Strings.emptyToNull(version.getGithubVersion())))
+            .map(githubVersion -> String.format(" github-%s", githubVersion))
+            .orElse(""));
   }
 }
