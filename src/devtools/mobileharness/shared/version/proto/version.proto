@@ -49,13 +49,18 @@ message Version {
   string type = 2;
 }
 
+// Build version information of a component.
+message BuildVersion {
+  // GitHub commit ID from which the component was built, if any.
+  optional string github_version = 1;
+
+  // Google CL number from which the component was built, if any.
+  optional int64 google_version = 2;
+}
+
 // Version information of a component (e.g., lab server).
 message Versions {
   repeated Version versions = 1;
 
-  // GitHub commit ID from which the component was built, if any.
-  optional string github_version = 2;
-
-  // Google CL number from which the component was built, if any.
-  optional int64 google_version = 3;
+  BuildVersion build_version = 2;
 }

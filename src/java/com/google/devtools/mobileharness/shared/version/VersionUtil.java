@@ -22,7 +22,7 @@ import com.google.common.base.Suppliers;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.io.CharStreams;
 import com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat;
-import com.google.devtools.mobileharness.shared.version.proto.VersionProto.Versions;
+import com.google.devtools.mobileharness.shared.version.proto.VersionProto.BuildVersion;
 import com.google.protobuf.TextFormat.ParseException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -37,32 +37,33 @@ public class VersionUtil {
 
   private static final String GITHUB_VERSION_RESOURCE_FILE_PATH = "/deviceinfra_github_version.txt";
 
-  private static final String VERSIONS_RESOURCE_FILE_PATH = "/deviceinfra_versions.textproto";
+  private static final String BUILD_VERSION_RESOURCE_FILE_PATH =
+      "/deviceinfra_build_version.textproto";
 
   private static final Supplier<Optional<String>> GITHUB_VERSION_SUPPLIER =
       Suppliers.memoize(VersionUtil::doGetGitHubVersion);
 
-  private static final Supplier<Optional<Versions>> VERSIONS_SUPPLIER =
-      Suppliers.memoize(VersionUtil::doGetVersions);
+  private static final Supplier<Optional<BuildVersion>> BUILD_VERSION_SUPPLIER =
+      Suppliers.memoize(VersionUtil::doGetBuildVersion);
 
   /**
-   * Gets {@link Versions} of the jar, if any.
+   * Gets {@link BuildVersion} of the jar, if any.
    *
-   * @implSpec reads Versions textproto from {@link #VERSIONS_RESOURCE_FILE_PATH}
+   * @implSpec reads BuildVersion textproto from {@link #BUILD_VERSION_RESOURCE_FILE_PATH}
    */
-  public static Optional<Versions> getVersions() {
-    return VERSIONS_SUPPLIER.get();
+  public static Optional<BuildVersion> getBuildVersion() {
+    return BUILD_VERSION_SUPPLIER.get();
   }
 
-  private static Optional<Versions> doGetVersions() {
-    return readResource(VERSIONS_RESOURCE_FILE_PATH)
+  private static Optional<BuildVersion> doGetBuildVersion() {
+    return readResource(BUILD_VERSION_RESOURCE_FILE_PATH)
         .flatMap(
             textproto -> {
               try {
-                return Optional.of(ProtoTextFormat.parse(textproto, Versions.class));
+                return Optional.of(ProtoTextFormat.parse(textproto, BuildVersion.class));
               } catch (ParseException e) {
                 logger.atWarning().withCause(e).log(
-                    "Failed to parse Versions textproto [%s]", textproto);
+                    "Failed to parse BuildVersion textproto [%s]", textproto);
                 return Optional.empty();
               }
             });
