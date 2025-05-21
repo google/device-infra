@@ -21,6 +21,9 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import com.google.common.base.Suppliers;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.io.CharStreams;
+import com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat;
+import com.google.devtools.mobileharness.shared.version.proto.VersionProto.Versions;
+import com.google.protobuf.TextFormat.ParseException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -34,8 +37,36 @@ public class VersionUtil {
 
   private static final String GITHUB_VERSION_RESOURCE_FILE_PATH = "/deviceinfra_github_version.txt";
 
+  private static final String VERSIONS_RESOURCE_FILE_PATH = "/deviceinfra_versions.textproto";
+
   private static final Supplier<Optional<String>> GITHUB_VERSION_SUPPLIER =
       Suppliers.memoize(VersionUtil::doGetGitHubVersion);
+
+  private static final Supplier<Optional<Versions>> VERSIONS_SUPPLIER =
+      Suppliers.memoize(VersionUtil::doGetVersions);
+
+  /**
+   * Gets {@link Versions} of the jar, if any.
+   *
+   * @implSpec reads Versions textproto from {@link #VERSIONS_RESOURCE_FILE_PATH}
+   */
+  public static Optional<Versions> getVersions() {
+    return VERSIONS_SUPPLIER.get();
+  }
+
+  private static Optional<Versions> doGetVersions() {
+    return readResource(VERSIONS_RESOURCE_FILE_PATH)
+        .flatMap(
+            textproto -> {
+              try {
+                return Optional.of(ProtoTextFormat.parse(textproto, Versions.class));
+              } catch (ParseException e) {
+                logger.atWarning().withCause(e).log(
+                    "Failed to parse Versions textproto [%s]", textproto);
+                return Optional.empty();
+              }
+            });
+  }
 
   /**
    * Gets the GitHub latest commit ID from which the jar of the current process was built, if any.
@@ -47,14 +78,17 @@ public class VersionUtil {
   }
 
   private static Optional<String> doGetGitHubVersion() {
-    try (InputStream inputStream =
-        VersionUtil.class.getResourceAsStream(GITHUB_VERSION_RESOURCE_FILE_PATH)) {
+    return readResource(GITHUB_VERSION_RESOURCE_FILE_PATH);
+  }
+
+  private static Optional<String> readResource(String resourcePath) {
+    try (InputStream inputStream = VersionUtil.class.getResourceAsStream(resourcePath)) {
       if (inputStream == null) {
         return Optional.empty();
       }
       return Optional.of(CharStreams.toString(new InputStreamReader(inputStream, UTF_8)).trim());
     } catch (IOException e) {
-      logger.atWarning().withCause(e).log("Failed to get GitHub version");
+      logger.atWarning().withCause(e).log("Failed to read resource [%s]", resourcePath);
       return Optional.empty();
     }
   }
