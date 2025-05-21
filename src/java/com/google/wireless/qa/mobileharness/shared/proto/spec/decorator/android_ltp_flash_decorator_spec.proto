@@ -24,7 +24,7 @@ option java_package = "com.google.wireless.qa.mobileharness.shared.proto.spec.de
 option java_multiple_files = true;
 
 // Specs for {@link AndroidLtpFlashDecoratorSpec}
-// Next tag: 9
+// Next tag: 12
 message AndroidLtpFlashDecoratorSpec {
   extend DecoratorSpec {
     optional AndroidLtpFlashDecoratorSpec ext = 1012;
@@ -57,4 +57,15 @@ message AndroidLtpFlashDecoratorSpec {
   optional string carrier_confpack_version = 8 [(field_detail) = {
     help: "The string version to identify the carrier confpack."
   }];
+
+  optional string ntn_radio_img_file = 9
+      [(file_detail) = { help: "Img file to flash the NTN radio." }];
+
+  optional string ntn_radio_hw_config_file = 10 [
+    (file_detail) = { help: "Hardware config file to flash the NTN radio." }
+  ];
+
+  optional string ntn_radio_img_version = 11 [
+    (field_detail) = { help: "The string version to identify the NTN radio." }
+  ];
 }
