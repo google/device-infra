@@ -76,6 +76,7 @@ import com.google.devtools.mobileharness.infra.master.rpc.stub.grpc.LabSyncGrpcS
 import com.google.devtools.mobileharness.shared.constant.hostmanagement.HostPropertyConstants.HostPropertyKey;
 import com.google.devtools.mobileharness.shared.labinfo.LabInfoProvider;
 import com.google.devtools.mobileharness.shared.labinfo.LocalLabInfoProvider;
+import com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.rpc.service.CloudFileTransferServiceGrpcImpl;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.rpc.service.CloudFileTransferServiceImpl;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.common.TaggedFileHandler;
@@ -89,6 +90,7 @@ import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil.KillSignal;
 import com.google.devtools.mobileharness.shared.version.Version;
 import com.google.devtools.mobileharness.shared.version.VersionUtil;
+import com.google.devtools.mobileharness.shared.version.proto.VersionProto;
 import com.google.devtools.mobileharness.shared.version.rpc.service.VersionServiceImpl;
 import com.google.devtools.mobileharness.shared.version.rpc.service.grpc.VersionGrpcImpl;
 import com.google.inject.AbstractModule;
@@ -243,7 +245,11 @@ public class LabServer {
       }
 
       VersionServiceImpl versionService =
-          new VersionServiceImpl(Version.LAB_VERSION, VersionUtil.getGitHubVersion().orElse(null));
+          new VersionServiceImpl(
+              VersionProto.Version.newBuilder()
+                  .setVersion(Version.LAB_VERSION.toString())
+                  .setType("LAB_VERSION")
+                  .build());
 
       Injector healthInjector = Guice.createInjector(new HealthStatusManagerModule());
       HealthStatusManager healthStatusManager =
@@ -263,8 +269,10 @@ public class LabServer {
 
       logger.atInfo().log("Lab server %s starts.", Version.LAB_VERSION);
       logger.atInfo().log(
-          "Lab server starts with hostname: %s, version: %s, Github version: %s",
-          hostName, Version.LAB_VERSION, VersionUtil.getGitHubVersion().orElse("n/a"));
+          "Lab server starts with hostname: %s, version: %s, build version: [%s]",
+          hostName,
+          Version.LAB_VERSION,
+          VersionUtil.getBuildVersion().map(ProtoTextFormat::shortDebugString).orElse("n/a"));
 
       // Starts controllers. The file cleaner should be the first one to start.
       // TODO: Start fileCleaner.

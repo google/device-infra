@@ -16,22 +16,31 @@
 
 package com.google.devtools.mobileharness.shared.version.rpc.service;
 
-import com.google.devtools.mobileharness.shared.version.Version;
+import com.google.devtools.mobileharness.shared.version.VersionUtil;
+import com.google.devtools.mobileharness.shared.version.proto.VersionProto.BuildVersion;
+import com.google.devtools.mobileharness.shared.version.proto.VersionProto.Version;
+import com.google.devtools.mobileharness.shared.version.proto.VersionProto.Versions;
 import com.google.devtools.mobileharness.shared.version.proto.VersionServiceProto.GetVersionRequest;
 import com.google.devtools.mobileharness.shared.version.proto.VersionServiceProto.GetVersionResponse;
-import javax.annotation.Nullable;
+import java.util.Optional;
 
 /** Implementation of {@code VersionService}. */
 public class VersionServiceImpl {
 
   private final GetVersionResponse response;
 
-  public VersionServiceImpl(Version version, @Nullable String gitHubVersion) {
+  public VersionServiceImpl(Version version) {
+    Versions.Builder versions = Versions.newBuilder().addVersions(version);
     GetVersionResponse.Builder response =
-        GetVersionResponse.newBuilder().setVersion(version.toString());
-    if (gitHubVersion != null) {
-      response.setGithubVersion(gitHubVersion);
+        GetVersionResponse.newBuilder().setVersion(version.getVersion()).setVersions(versions);
+
+    // Gets build version.
+    Optional<BuildVersion> buildVersion = VersionUtil.getBuildVersion();
+    if (buildVersion.isPresent()) {
+      versions.setBuildVersion(buildVersion.get());
+      response.setGithubVersion(buildVersion.get().getGithubVersion());
     }
+
     this.response = response.build();
   }
 

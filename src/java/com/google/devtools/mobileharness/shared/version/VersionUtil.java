@@ -35,13 +35,8 @@ public class VersionUtil {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  private static final String GITHUB_VERSION_RESOURCE_FILE_PATH = "/deviceinfra_github_version.txt";
-
   private static final String BUILD_VERSION_RESOURCE_FILE_PATH =
       "/deviceinfra_build_version.textproto";
-
-  private static final Supplier<Optional<String>> GITHUB_VERSION_SUPPLIER =
-      Suppliers.memoize(VersionUtil::doGetGitHubVersion);
 
   private static final Supplier<Optional<BuildVersion>> BUILD_VERSION_SUPPLIER =
       Suppliers.memoize(VersionUtil::doGetBuildVersion);
@@ -67,19 +62,6 @@ public class VersionUtil {
                 return Optional.empty();
               }
             });
-  }
-
-  /**
-   * Gets the GitHub latest commit ID from which the jar of the current process was built, if any.
-   *
-   * @implSpec reads the commit ID from {@link #GITHUB_VERSION_RESOURCE_FILE_PATH}
-   */
-  public static Optional<String> getGitHubVersion() {
-    return GITHUB_VERSION_SUPPLIER.get();
-  }
-
-  private static Optional<String> doGetGitHubVersion() {
-    return readResource(GITHUB_VERSION_RESOURCE_FILE_PATH);
   }
 
   private static Optional<String> readResource(String resourcePath) {

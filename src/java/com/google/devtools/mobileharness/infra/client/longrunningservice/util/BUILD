@@ -38,6 +38,7 @@ java_library(
     srcs = ["VersionProtoUtil.java"],
     deps = [
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:version_service_java_proto",
+        "//src/devtools/mobileharness/shared/version/proto:version_java_proto",
         "//src/java/com/google/devtools/mobileharness/shared/version",
         "//src/java/com/google/devtools/mobileharness/shared/version:version_util",
     ],

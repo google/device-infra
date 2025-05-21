@@ -44,6 +44,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.ser
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.SessionService;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.VersionService;
 import com.google.devtools.mobileharness.infra.monitoring.MonitorPipelineLauncher;
+import com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat;
 import com.google.devtools.mobileharness.shared.util.comm.relay.service.ServerUtils;
 import com.google.devtools.mobileharness.shared.util.comm.server.ClientAddressServerInterceptor;
 import com.google.devtools.mobileharness.shared.util.comm.server.LifecycleManager;
@@ -192,8 +193,10 @@ public class OlcServer {
     logger.atInfo().log(
         "Version: lab-%s%s",
         Version.LAB_VERSION,
-        VersionUtil.getGitHubVersion()
-            .map(version -> String.format(" github-%s", version))
+        VersionUtil.getBuildVersion()
+            .map(
+                buildVersion ->
+                    String.format(" %s", ProtoTextFormat.shortDebugString(buildVersion)))
             .orElse(""));
     systemInfoPrinter.printSystemInfo(DEBUG);
 
