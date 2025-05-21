@@ -107,7 +107,6 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
@@ -177,6 +176,7 @@ public class XtsTradefedTest extends BaseDriver
   private final Sleeper sleeper;
   private final ResUtil resUtil;
   private final Clock clock;
+  private final String testId;
 
   private final Object tfProcessLock = new Object();
 
@@ -212,6 +212,7 @@ public class XtsTradefedTest extends BaseDriver
     this.threadPool = threadPool;
     this.sleeper = sleeper;
     this.logRecorder = LogRecorder.getInstance();
+    this.testId = testInfo.locator().getId();
     this.scheduledThreadPool =
         ThreadPools.createStandardScheduledThreadPool(
             "xts-tradefed-test-" + testInfo.locator().getId(), /* corePoolSize= */ 2);
@@ -1010,8 +1011,10 @@ public class XtsTradefedTest extends BaseDriver
     try {
       Path dir =
           Path.of(
-              requireNonNull(JAVA_IO_TMPDIR.value()),
-              String.format("xts-root-dir-%s", UUID.randomUUID()),
+              Flags.instance().atsXtsWorkDir.getNonNull().isEmpty()
+                  ? requireNonNull(JAVA_IO_TMPDIR.value())
+                  : Flags.instance().atsXtsWorkDir.getNonNull(),
+              String.format("xts-root-dir-%s", this.testId),
               String.format("android-%s", xtsType));
       // We need to preparer /xts-root-dir/android-xts/testcases since we create symlink to all the
       // sub test case directories.

@@ -416,6 +416,14 @@ public class Flags {
       converter = Flag.IntegerConverter.class)
   public Flag<Integer> atsWorkerGrpcPort = atsWorkerGrpcPortDefault;
 
+  private static final Flag<String> atsXtsWorkDirDefault = Flag.value("");
+
+  @com.beust.jcommander.Parameter(
+      names = "--ats_xts_work_dir",
+      description = "The work directory of ATS xTS process.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> atsXtsWorkDir = atsXtsWorkDirDefault;
+
   private static final Flag<Boolean> cacheInstalledApksDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(
