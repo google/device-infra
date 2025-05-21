@@ -142,13 +142,21 @@ public final class JobInfoCreator {
       // exist, so we need to manually set it to avoid inconsistency.
       jobSettingBuilder.setRetry(JobSetting.getDefaultRetryInstance());
     }
-    logger.atInfo().log("Input gateway JobConfig.hasRetry=%b", jobConfig.hasRetry());
-    logger.atInfo().log("Output MH JobSetting.getRetry=%s", jobSettingBuilder.build().getRetry());
+    if (jobConfig.hasRepeat()) {
+      jobSettingBuilder.setRepeat(jobConfig.getRepeat());
+    }
+    logger.atInfo().log(
+        "Input gateway JobConfig.hasRetry=%b, jobConfig.hasRepeat=%b",
+        jobConfig.hasRetry(), jobConfig.hasRepeat());
+
     if (jobConfig.hasPriority()) {
       jobSettingBuilder.setPriority(jobConfig.getPriority());
     }
 
     JobSetting jobSetting = jobSettingBuilder.build();
+    logger.atInfo().log(
+        "Output jobSetting retry=%s, jobSetting repeat=%s",
+        jobSetting.getRetry(), jobSetting.getRepeat());
 
     JobInfo jobInfo;
     if (jobConfig.hasJobConfigFromTarget()) {
