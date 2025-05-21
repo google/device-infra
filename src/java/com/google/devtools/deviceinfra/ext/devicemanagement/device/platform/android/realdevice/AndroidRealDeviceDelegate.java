@@ -309,6 +309,7 @@ public abstract class AndroidRealDeviceDelegate {
       setUpOnlineModeDevice();
     } else {
       device.addSupportedDriver(AndroidRealDeviceConstants.NO_OP_DRIVER);
+      device.addSupportedDriver(AndroidRealDeviceConstants.MOBLY_TEST_DRIVER);
       String hardware = fastboot.getVar(deviceId, FastbootProperty.PRODUCT);
       if (!Strings.isNullOrEmpty(hardware)) {
         device.updateDimension(Dimension.Name.HARDWARE, hardware);
