@@ -36,6 +36,7 @@ java_proto_library(
 proto_library(
     name = "version_service_proto",
     srcs = ["version_service.proto"],
+    deps = [":version_proto"],
 )
 
 java_proto_library(

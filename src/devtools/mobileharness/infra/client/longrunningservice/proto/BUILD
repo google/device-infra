@@ -126,6 +126,7 @@ py_grpc_library(
 proto_library(
     name = "version_service_proto",
     srcs = ["version_service.proto"],
+    deps = ["//src/devtools/mobileharness/shared/version/proto:version_proto"],
 )
 
 java_proto_library(
