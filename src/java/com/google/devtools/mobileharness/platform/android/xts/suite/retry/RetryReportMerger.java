@@ -46,7 +46,6 @@ import com.google.devtools.mobileharness.infra.ats.console.result.xml.XmlConstan
 import com.google.devtools.mobileharness.platform.android.xts.common.TestStatus;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.AbiUtil;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommonUtil;
-import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteTestFilter;
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import java.nio.file.Path;
@@ -115,7 +114,6 @@ public class RetryReportMerger {
    * @param retryType test statuses for retry
    * @param retryResult the result report for the "retry" run
    * @param passedInModules passed in module names from the command
-   * @param passedInExcludeFilters passed in exclude filters from the command
    */
   public MergedResult mergeReports(
       Path resultsDir,
@@ -124,7 +122,6 @@ public class RetryReportMerger {
       @Nullable RetryType retryType,
       @Nullable Result retryResult,
       ImmutableList<String> passedInModules,
-      ImmutableSet<String> passedInExcludeFilters,
       ImmutableSet<String> skippedModuleIds)
       throws MobileHarnessException {
     Preconditions.checkState(previousSessionIndex != null || previousSessionResultDirName != null);
@@ -145,12 +142,7 @@ public class RetryReportMerger {
     if (!passedInModules.isEmpty()) {
       retryArgs.setPassedInModules(ImmutableSet.copyOf(passedInModules));
     }
-    if (!passedInExcludeFilters.isEmpty()) {
-      retryArgs.setPassedInExcludeFilters(
-          passedInExcludeFilters.stream().map(SuiteTestFilter::create).collect(toImmutableSet()));
-    }
-    return mergeReportsHelper(
-        retryArgs.build(), previousResult, retryResult, passedInExcludeFilters, skippedModuleIds);
+    return mergeReportsHelper(retryArgs.build(), previousResult, retryResult, skippedModuleIds);
   }
 
   /**
@@ -163,7 +155,6 @@ public class RetryReportMerger {
    * @param retryType test statuses for retry
    * @param retryResult the result report for the "retry" run
    * @param passedInModules passed in module names from the command
-   * @param passedInExcludeFilters passed in exclude filters from the command
    */
   public MergedResult mergeReports(
       Path resultsDir,
@@ -171,7 +162,6 @@ public class RetryReportMerger {
       @Nullable RetryType retryType,
       @Nullable Result retryResult,
       ImmutableList<String> passedInModules,
-      ImmutableSet<String> passedInExcludeFilters,
       ImmutableSet<String> skippedModuleIds)
       throws MobileHarnessException {
     // Loads the previous session result and its subplan used for the retry
@@ -184,19 +174,13 @@ public class RetryReportMerger {
     if (!passedInModules.isEmpty()) {
       retryArgs.setPassedInModules(ImmutableSet.copyOf(passedInModules));
     }
-    if (!passedInExcludeFilters.isEmpty()) {
-      retryArgs.setPassedInExcludeFilters(
-          passedInExcludeFilters.stream().map(SuiteTestFilter::create).collect(toImmutableSet()));
-    }
-    return mergeReportsHelper(
-        retryArgs.build(), previousResult, retryResult, passedInExcludeFilters, skippedModuleIds);
+    return mergeReportsHelper(retryArgs.build(), previousResult, retryResult, skippedModuleIds);
   }
 
   private MergedResult mergeReportsHelper(
       RetryArgs retryArgs,
       Result previousResult,
       @Nullable Result retryResult,
-      ImmutableSet<String> passedInExcludeFilters,
       ImmutableSet<String> skippedModuleIds)
       throws MobileHarnessException {
     SubPlan subPlan = retryGenerator.generateRetrySubPlan(retryArgs);
@@ -204,8 +188,7 @@ public class RetryReportMerger {
     long startTime = clock.instant().toEpochMilli();
     try {
       return MergedResult.of(
-          doMergeReports(
-              previousResult, subPlan, retryResult, passedInExcludeFilters, skippedModuleIds),
+          doMergeReports(previousResult, subPlan, retryResult, skippedModuleIds),
           previousResult,
           retryResult);
     } finally {
@@ -219,7 +202,6 @@ public class RetryReportMerger {
       Result previousResult,
       SubPlan retrySubPlan,
       @Nullable Result retryResult,
-      ImmutableSet<String> passedInExcludeFilters,
       ImmutableSet<String> skippedModuleIds) {
     Result.Builder mergedResult = Result.newBuilder();
     // If the previous result was ran with some filters given by the user command, reflect them in
@@ -237,8 +219,6 @@ public class RetryReportMerger {
     if (!previousResult.getExcludeFilterList().isEmpty()) {
       mergedResult.addAllExcludeFilter(previousResult.getExcludeFilterList());
     }
-    // Also add the filters passed in by the command.
-    mergedResult.addAllExcludeFilter(passedInExcludeFilters);
 
     // If no tests were retried, mark tests as cached, and inherit some info from previous result
     if (retryResult == null
@@ -259,7 +239,7 @@ public class RetryReportMerger {
                           })
                       .collect(toImmutableList()));
       addRunHistoryForRetry(mergedResult, previousResult);
-      return mergedResult.addAllExcludeFilter(passedInExcludeFilters).build();
+      return mergedResult.build();
     }
 
     // Update result attributes if needed

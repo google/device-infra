@@ -260,5 +260,4 @@ attribute {
   key: "suite_version"
   value: "12.1_r7"
 }
-exclude_filter: "arm64-v8a CtsAccelerationTestCases"
 is_retry_result: true
