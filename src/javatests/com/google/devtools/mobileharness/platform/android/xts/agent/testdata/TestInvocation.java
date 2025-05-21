@@ -42,7 +42,7 @@ public class TestInvocation {
 
     // Briefly sleeps to make sure the monitoring agent will be reading (and writing to file) the
     // "init" status to avoid flaky tests.
-    Thread.sleep(1_000L);
+    Thread.sleep(2_000L);
     status = "running";
     status = "finished";
   }
