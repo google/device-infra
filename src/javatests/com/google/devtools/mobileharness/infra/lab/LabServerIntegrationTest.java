@@ -165,6 +165,7 @@ public class LabServerIntegrationTest {
                             "--enable_file_cleaner=false",
                             "--enable_root_device=false",
                             "--enable_stubby_rpc_server=false",
+                            "--enable_wrangler_device_syncer=false",
                             "--external_adb_initializer_template=true",
                             "--grpc_port=" + labServerGrpcPort,
                             "--master_grpc_target=localhost:" + masterPort,
