@@ -92,10 +92,15 @@ public final class MctsDynamicDownloadPluginTest {
         .thenReturn(350050004);
     when(mockAndroidPackageManagerUtil.getAppVersionCode(
             any(), eq("com.google.android.go.configinfrastructure")))
-        .thenReturn(341050004);
+        .thenReturn(341080004);
     when(mockAndroidPackageManagerUtil.getAppVersionCode(
             any(), eq("com.google.android.documentsui")))
-        .thenReturn(351059999);
+        .thenReturn(351089999);
+    when(mockAndroidPackageManagerUtil.getAppVersionCode(any(), eq("com.google.android.appsearch")))
+        .thenReturn(361040000);
+    when(mockAndroidPackageManagerUtil.getAppVersionCode(
+            any(), eq("com.google.android.extservices")))
+        .thenReturn(370130004);
     when(mockAdbUtil.getProperty(any(), eq(AndroidProperty.ABI))).thenReturn("arm64-v8a");
     when(mockAdbUtil.getProperty(any(), eq(AndroidProperty.SDK_VERSION))).thenReturn("30");
     when(mockAdbUtil.getProperty(any(), eq(AndroidProperty.CODENAME))).thenReturn("fake_codename");

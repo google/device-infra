@@ -85,11 +85,13 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
 
   private static final String NON_PRELOADED_KEY = "non-preloaded";
 
-  // Only consider the Module released in Android V+ and not beta version, 5th digit >= 4 indicates
-  // platform beta (or mainline beta if >=8 or daily if => 9), refer to b/413266608 for more
-  // details.
+  // Only consider the Module released in Android V+ and not beta version. For the month of platform
+  // initial release ONLY, 5th digit >= 4 indicates platform beta (or mainline beta if >=8 or daily
+  // if => 9), refer to b/413266608 for more details.
   private static final Pattern VERSIONCODE_PATTERN =
-      Pattern.compile("(3[5-9]|[4-9][0-9])(?!(00|99))\\d{2}[0-3]\\d{4}");
+      Pattern.compile("(3[5-9]|[4-9][0-9])(?!(00|99))\\d{2}[0-7]\\d{4}");
+  private static final Pattern PLATFORM_BETA_VERSIONCODE_PATTERN =
+      Pattern.compile("(3610|3704|3710)[4-9]\\d{6}");
 
   // Add the versioncode from
   // android/platform/superproject/main/+/main:build/release/flag_declarations/RELEASE_DEFAULT_UPDATABLE_MODULE_VERSION.textproto
@@ -99,7 +101,8 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
   // the MCTS files.
   private static final ImmutableMap<String, ImmutableList<String>> INITIAL_RELEASE_VERSIONCODE_MAP =
       ImmutableMap.of(
-          "36", ImmutableList.of("2025-01", "2025-02", "2025-03", "2025-04", "2025-05"));
+          "36", ImmutableList.of("2025-01", "2025-02", "2025-03", "2025-04", "2025-05"),
+          "37", ImmutableList.of("2026-01", "2026-02", "2026-03", "2026-04"));
 
   private static final String MAINLINE_AOSP_VERSION_KEY = "AOSP";
 
@@ -111,7 +114,8 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
           "33", 2022,
           "34", 2023,
           "35", 2024,
-          "36", 2025);
+          "36", 2025,
+          "37", 2026);
   // For CTS, there's no diff between arm64 and arm.
   private static final ImmutableMap<String, String> DEVICE_ABI_MAP =
       ImmutableMap.of(
@@ -511,6 +515,7 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
       String moduleVersionNumber, String moduleName, String defaultVersion, String aospVersion)
       throws MobileHarnessException {
     if (VERSIONCODE_PATTERN.matcher(moduleVersionNumber).matches()
+        && !PLATFORM_BETA_VERSIONCODE_PATTERN.matcher(moduleVersionNumber).matches()
         && !AOSP_VERSIONCODE_LIST.contains(moduleVersionNumber)) {
       String preloadVersion = getPreloadedMainlineVersion(moduleVersionNumber, moduleName);
       ImmutableList<String> versionCodes = INITIAL_RELEASE_VERSIONCODE_MAP.get(aospVersion);
