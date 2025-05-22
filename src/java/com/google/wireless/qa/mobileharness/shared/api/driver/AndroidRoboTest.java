@@ -193,21 +193,23 @@ public class AndroidRoboTest extends BaseDriver implements SpecConfigable<Androi
       Path outputDir = Path.of(testInfo.getGenFileDir());
       try (BufferedWriter stdoutWriter =
           Files.newBufferedWriter(outputDir.resolve("cli-stdout.log"))) {
+        var timeout =
+            Duration.ofSeconds(spec.getCrawlTimeoutSecs()).plus(CLI_EXECUTION_PADDING_TIMEOUT);
         Command command =
             Command.of(javaBinary, argsBuilder.build())
                 // Allowed Exit codes for CLI.
                 // 0 -> PASS, 1 -> SKIP, 2 -> FAIL, 3 -> ERROR
                 .successExitCodes(0, 1, 2, 3)
                 .redirectStderr(true)
-                .onStdout(LineCallback.writeTo(stdoutWriter));
+                .onStdout(LineCallback.writeTo(stdoutWriter))
+                .timeout(timeout); // Set it here explicitly otherwise the default in the command
+        // executor will be used which is 5 minutes.
         logger.atInfo().log("Command: %s", command);
         testInfo
             .properties()
             .add(
                 ANDROID_ROBO_TEST_TEST_START_EPOCH_MS,
                 Long.toString(clock.instant().toEpochMilli()));
-        var timeout =
-            Duration.ofSeconds(spec.getCrawlTimeoutSecs()).plus(CLI_EXECUTION_PADDING_TIMEOUT);
 
         commandProcess = commandExecutor.start(command);
         var commandResult = commandProcess.await(timeout);
