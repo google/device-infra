@@ -126,6 +126,7 @@ java_library(
     ],
     deps = [
         "//src/devtools/mobileharness/infra/ats/server/proto:service_java_proto",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
         "@com_google_protobuf//:protobuf_java",
         "@com_google_protobuf//:protobuf_java_util",
