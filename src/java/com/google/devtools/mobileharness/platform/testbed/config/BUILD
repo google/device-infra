@@ -29,6 +29,7 @@ java_library(
         "TestbedLoader.java",
     ],
     visibility = [
+        "//:omnilab_fusion",
         "//src/java/com/google/devtools/mobileharness/platform/testbed:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:__pkg__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:__pkg__",
@@ -68,6 +69,7 @@ java_library(
         "GlobalTestbedLoader.java",
     ],
     visibility = [
+        "//:omnilab_fusion",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:__pkg__",
     ],
     deps = [

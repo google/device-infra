@@ -23,6 +23,7 @@ java_library(
         "TestbedUtil.java",
     ],
     visibility = [
+        "//:omnilab_fusion",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:__pkg__",
     ],
     deps = [
