@@ -530,13 +530,13 @@ public class JobRunner implements Runnable {
       }
     } catch (JobCancelledException e) {
       // Job is killed by user from FE. It only happens in remote mode.
-      jobInfo.resultWithCause().setNonPassing(Test.TestResult.ERROR, e);
+      jobInfo.resultWithCause().setNonPassing(Test.TestResult.ABORT, e);
       jobInfo.tests().getAll().values().stream()
           .filter(testInfo -> testInfo.status().get() != TestStatus.DONE)
           .forEach(
               testInfo -> {
                 testInfo.status().set(TestStatus.DONE);
-                testInfo.resultWithCause().setNonPassing(Test.TestResult.ERROR, e);
+                testInfo.resultWithCause().setNonPassing(Test.TestResult.ABORT, e);
               });
     } catch (MobileHarnessException e) {
       jobError = e;
@@ -1174,7 +1174,7 @@ public class JobRunner implements Runnable {
       jobInfo
           .resultWithCause()
           .setNonPassing(
-              com.google.devtools.mobileharness.api.model.proto.Test.TestResult.ERROR, e);
+              com.google.devtools.mobileharness.api.model.proto.Test.TestResult.ABORT, e);
       // For tests that already have allocated device, it depends on the test runner to set the test
       // result.
       jobInfo.tests().getAll().values().stream()
@@ -1182,7 +1182,7 @@ public class JobRunner implements Runnable {
           .forEach(
               testInfo -> {
                 testInfo.status().set(TestStatus.DONE);
-                testInfo.resultWithCause().setNonPassing(Test.TestResult.ERROR, e);
+                testInfo.resultWithCause().setNonPassing(Test.TestResult.ABORT, e);
               });
       return;
     }
