@@ -20,8 +20,8 @@ import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import java.util.Comparator;
 
 /**
- * Creates a comparator to be used to sort test results. The priority order: ERROR > TIMEOUT > ABORT
- * > FAIL > PASS > SKIP
+ * Creates a comparator to be used to sort test results. The priority order: INFRA_ERROR > ERROR >
+ * TIMEOUT > ALLOC_ERROR > ALLOC_FAIL > ABORT > FAIL > PASS > SKIP
  */
 public class TestResultComparator implements Comparator<TestResult> {
   @Override
