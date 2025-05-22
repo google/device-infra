@@ -72,7 +72,7 @@ public class AtsDdaSessionPlugin {
   private static final String JOB_USER = "ats-dda";
   private static final String TEST_NAME = "ats_dda_test";
   private static final String DRIVER_NAME = "NoOpDriver";
-  private static final Duration MAX_DRIVER_SLEEP_TIME = Duration.ofHours(2L);
+  private static final Duration MAX_DRIVER_SLEEP_TIME = Duration.ofMinutes(210L); // 3.5 hours
   private static final Duration START_TIMEOUT = Duration.ofMinutes(1L);
   private static final String TEST_MESSAGE_NAMESPACE = "mobileharness:driver:NoOpDriver";
   private static final ImmutableMap<String, String> CANCEL_TEST_MESSAGE =
@@ -163,7 +163,7 @@ public class AtsDdaSessionPlugin {
                             .setStartTimeoutMs(START_TIMEOUT.toMillis())
                             .setTestTimeoutMs(testTimeout.toMillis())
                             .build())
-                    .setRetry(Retry.newBuilder().setTestAttempts(1).build())
+                    .setRetry(Retry.newBuilder().setTestAttempts(3).build())
                     .setPriority(Priority.MAX)
                     .setAllocationExitStrategy(AllocationExitStrategy.FAIL_FAST_NO_IDLE)
                     .build())
