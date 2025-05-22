@@ -22,6 +22,7 @@ import com.google.devtools.mobileharness.infra.master.rpc.proto.DeviceAllocation
 import com.google.devtools.mobileharness.infra.master.rpc.proto.DeviceAllocationServiceProto.AllocationResponse;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.DeviceAllocationServiceProto.DeallocationRequest;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.DeviceAllocationServiceProto.DeallocationResponse;
+import com.google.devtools.mobileharness.infra.master.rpc.proto.DeviceAllocationServiceProto.GetAllDevicesResponse;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.DeviceAllocationServiceProto.GetAvailableDevicesResponse;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
@@ -36,4 +37,7 @@ public interface DeviceAllocationStub extends AutoCloseable {
 
   /** Gets the available devices. */
   GetAvailableDevicesResponse getAvailableDevices() throws RpcExceptionWithErrorId;
+
+  /** Gets all non-missing devices. */
+  GetAllDevicesResponse getAllDevices() throws RpcExceptionWithErrorId;
 }

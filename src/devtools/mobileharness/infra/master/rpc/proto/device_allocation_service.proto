@@ -99,6 +99,14 @@ message GetAvailableDevicesResponse {
   repeated .mobileharness.shared.query.DeviceInfo device_info = 1;
 }
 
+// An empty request message.
+message GetAllDevicesRequest {}
+
+// The information of all satellite devices.
+message GetAllDevicesResponse {
+  repeated .mobileharness.shared.query.DeviceInfo device_info = 1;
+}
+
 // Service for allocating/deallocating devices from Master>
 service DeviceAllocationService {
   // Allocates devices. This call blocks until devices are successfully
@@ -108,7 +116,10 @@ service DeviceAllocationService {
   // Deallocates devices. This call should always be succeed.
   rpc Deallocate(DeallocationRequest) returns (DeallocationResponse) {}
 
-  // Gets the available devices(IDLE + satellite lab).
+  // Gets the available devices (IDLE + satellite lab).
   rpc GetAvailableDevices(GetAvailableDevicesRequest)
       returns (GetAvailableDevicesResponse) {}
+
+  // Gets all satellite lab devices excluding MISSING devices.
+  rpc GetAllDevices(GetAllDevicesRequest) returns (GetAllDevicesResponse) {}
 }
