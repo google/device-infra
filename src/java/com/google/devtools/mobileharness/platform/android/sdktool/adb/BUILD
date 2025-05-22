@@ -65,6 +65,18 @@ java_library(
     ],
 )
 
+java_library(
+    name = "android_real_device_proxy_manager",
+    srcs = ["AndroidRealDeviceProxyManager.java"],
+    visibility = [
+        "//:omnilab_fusion",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "@maven//:com_google_errorprone_error_prone_annotations",
+    ],
+)
+
 # For internal use only, driver/decorator/plugin should NOT use it directly
 java_library(
     name = "adb_internal_util",
@@ -77,9 +89,7 @@ java_library(
         "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
-        "//src/java/com/google/devtools/mobileharness/platform/android/lightning/systemstate:__pkg__",
-        "//src/java/com/google/devtools/mobileharness/platform/android/systemspec:__pkg__",
-        "//src/java/com/google/devtools/mobileharness/platform/android/xts/plugin:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/platform/android:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:__pkg__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
         "//src/javatests/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
