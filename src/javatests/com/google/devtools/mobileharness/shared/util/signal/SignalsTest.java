@@ -80,7 +80,7 @@ public class SignalsTest {
                 .onStdout(does(line -> stdout.append(line).append('\n')))
                 .onStderr(does(line -> stderr.append(line).append('\n'))));
 
-    Sleeper.defaultSleeper().sleep(Duration.ofSeconds(1L));
+    Sleeper.defaultSleeper().sleep(Duration.ofSeconds(3L));
 
     commandProcess.killWithSignal(KillSignal.SIGINT.value());
 
