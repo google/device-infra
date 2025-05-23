@@ -16,13 +16,19 @@
 
 package com.google.devtools.mobileharness.shared.size;
 
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.google.common.truth.Truth.assertWithMessage;
+
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.shared.util.file.local.BinarySizeChecker;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
+import java.util.Map.Entry;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
+@SuppressWarnings("DataFlowIssue")
 @RunWith(JUnit4.class)
 public class BinarySizeTest {
 
@@ -44,12 +50,20 @@ public class BinarySizeTest {
   // ================================================================================
   // Please keep all binary sizes below in the precision "xxx_x50_000L" bytes.
   // ================================================================================
-  private static final long MAX_BASE_OLC_SERVER_BINARY_SIZE_BYTE = 31_650_000L;
-  private static final long MAX_ATS_OLC_SERVER_BINARY_SIZE_BYTE = 41_850_000L;
-  private static final long MAX_ATS_OLC_SERVER_LOCAL_MODE_BINARY_SIZE_BYTE = 42_050_000L;
-  private static final long MAX_LAB_SERVER_BINARY_SIZE_BYTE = 40_550_000L;
-  private static final long MAX_ATS_CONSOLE_BINARY_SIZE_BYTE = 23_850_000L;
-  private static final long MAX_XTS_TRADEFED_AGENT_BINARY_SIZE_BYTE = 4_550_000L;
+  private static final ImmutableMap<String, Long> BINARIES_MAX_SIZE_BYTE =
+      ImmutableMap.of(
+          "base_olc_server",
+          31_650_000L,
+          "ats_olc_server",
+          41_850_000L,
+          "ats_olc_server_local_mode",
+          42_050_000L,
+          "lab_server",
+          40_550_000L,
+          "ats_console",
+          23_850_000L,
+          "xts_tradefed_agent",
+          4_550_000L);
 
   private static final long MAX_RESOURCE_FILE_SIZE_BYTE = 800_000L;
 
@@ -106,7 +120,7 @@ public class BinarySizeTest {
   public void checkBaseOlcServerBinarySize() throws Exception {
     BinarySizeChecker.checkBinarySize(
         "base_olc_server_deploy.jar",
-        MAX_BASE_OLC_SERVER_BINARY_SIZE_BYTE,
+        BINARIES_MAX_SIZE_BYTE.get("base_olc_server"),
         BASE_OLC_SERVER_BINARY_FILE_PATH,
         BASE_OLC_SERVER_BINARY_SOURCE_PATH);
   }
@@ -114,7 +128,7 @@ public class BinarySizeTest {
   @Test
   public void checkBaseOlcServerBinaryLargeResources() throws Exception {
     BinarySizeChecker.checkBinaryLargeResourceFiles(
-        "olc_server_for_testing_deploy.jar",
+        "base_olc_server_deploy.jar",
         BASE_OLC_SERVER_BINARY_FILE_PATH,
         MAX_RESOURCE_FILE_SIZE_BYTE,
         BASE_OLC_SERVER_LARGE_RESOURCE_PATH_ALLOWLIST,
@@ -126,7 +140,7 @@ public class BinarySizeTest {
   public void checkAtsOlcServerBinarySize() throws Exception {
     BinarySizeChecker.checkBinarySize(
         "ats_olc_server_deploy.jar",
-        MAX_ATS_OLC_SERVER_BINARY_SIZE_BYTE,
+        BINARIES_MAX_SIZE_BYTE.get("ats_olc_server"),
         ATS_OLC_SERVER_BINARY_FILE_PATH,
         ATS_OLC_SERVER_BINARY_SOURCE_PATH);
   }
@@ -146,7 +160,7 @@ public class BinarySizeTest {
   public void checkAtsOlcServerLocalModeBinarySize() throws Exception {
     BinarySizeChecker.checkBinarySize(
         "ats_olc_server_local_mode_deploy.jar",
-        MAX_ATS_OLC_SERVER_LOCAL_MODE_BINARY_SIZE_BYTE,
+        BINARIES_MAX_SIZE_BYTE.get("ats_olc_server_local_mode"),
         ATS_OLC_SERVER_LOCAL_MODE_BINARY_FILE_PATH,
         ATS_OLC_SERVER_LOCAL_MODE_BINARY_SOURCE_PATH);
   }
@@ -166,7 +180,7 @@ public class BinarySizeTest {
   public void checkLabServerBinarySize() throws Exception {
     BinarySizeChecker.checkBinarySize(
         "lab_server_oss_deploy.jar",
-        MAX_LAB_SERVER_BINARY_SIZE_BYTE,
+        BINARIES_MAX_SIZE_BYTE.get("lab_server"),
         LAB_SERVER_BINARY_FILE_PATH,
         LAB_SERVER_BINARY_SOURCE_PATH);
   }
@@ -186,7 +200,7 @@ public class BinarySizeTest {
   public void checkAtsConsoleBinarySize() throws Exception {
     BinarySizeChecker.checkBinarySize(
         "ats_console_deploy.jar",
-        MAX_ATS_CONSOLE_BINARY_SIZE_BYTE,
+        BINARIES_MAX_SIZE_BYTE.get("ats_console"),
         ATS_CONSOLE_BINARY_FILE_PATH,
         ATS_CONSOLE_BINARY_SOURCE_PATH);
   }
@@ -206,8 +220,22 @@ public class BinarySizeTest {
   public void checkXtsTradefedAgentBinarySize() throws Exception {
     BinarySizeChecker.checkBinarySize(
         "xts_tradefed_agent_deploy.jar",
-        MAX_XTS_TRADEFED_AGENT_BINARY_SIZE_BYTE,
+        BINARIES_MAX_SIZE_BYTE.get("xts_tradefed_agent"),
         XTS_TRADEFED_AGENT_PATH,
         XTS_TRADEFED_AGENT_SOURCE_PATH);
+  }
+
+  @Test
+  public void checkBinaryMaxSizePrecision() {
+    assertWithMessage(
+"""
+Binary max size must end with xxx_x50_000L.
+Illegal binary max size\
+""")
+        .that(
+            BINARIES_MAX_SIZE_BYTE.entrySet().stream()
+                .filter(e -> e.getValue() % 100_000L != 50_000L)
+                .collect(toImmutableMap(Entry::getKey, Entry::getValue)))
+        .isEmpty();
   }
 }
