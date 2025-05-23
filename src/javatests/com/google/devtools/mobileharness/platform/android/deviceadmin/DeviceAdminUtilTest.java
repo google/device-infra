@@ -202,6 +202,17 @@ public final class DeviceAdminUtilTest {
                 JAVA_BIN,
                 "-jar",
                 DEVICE_ADMIN_CLI_PATH,
+                "--action=HIDE_PACKAGES",
+                "--serial=" + DEVICE_ID,
+                "--kms_key_name=" + KMS_KEY_NAME,
+                "--credentials_path=" + CRED_PATH));
+
+    verify(commandExecutor)
+        .run(
+            Command.of(
+                JAVA_BIN,
+                "-jar",
+                DEVICE_ADMIN_CLI_PATH,
                 "--action=LOCK",
                 "--serial=" + DEVICE_ID,
                 "--kms_key_name=" + KMS_KEY_NAME,
@@ -242,5 +253,30 @@ public final class DeviceAdminUtilTest {
                 "--kms_key_name=" + KMS_KEY_NAME,
                 "--credentials_path=" + CRED_PATH,
                 "--restrictions=restriction1,restriction2"));
+  }
+
+  @Test
+  public void hidePackages_success_commandExecuted() throws Exception {
+    deviceAdminUtil.hidePackages(DEVICE_ID);
+
+    verify(commandExecutor)
+        .run(
+            Command.of(
+                JAVA_BIN,
+                "-jar",
+                DEVICE_ADMIN_CLI_PATH,
+                "--action=HIDE_PACKAGES",
+                "--serial=" + DEVICE_ID,
+                "--kms_key_name=" + KMS_KEY_NAME,
+                "--credentials_path=" + CRED_PATH));
+  }
+
+  @Test
+  public void hidePackages_commandFail_throwException() throws Exception {
+    when(commandExecutor.run(any())).thenThrow(CommandException.class);
+
+    MobileHarnessException e =
+        assertThrows(MobileHarnessException.class, () -> deviceAdminUtil.hidePackages(DEVICE_ID));
+    assertThat(e.getErrorId()).isEqualTo(AndroidErrorId.DEVICE_ADMIN_UTIL_HIDE_PACKAGES_ERROR);
   }
 }

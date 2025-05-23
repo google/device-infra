@@ -45,6 +45,7 @@ public class DeviceAdminUtil {
   private static final String ACTION_UNLOCK = "UNLOCK";
   private static final String ACTION_TOGGLE_ON = "TOGGLE_ON";
   private static final String ACTION_TOGGLE_OFF = "TOGGLE_OFF";
+  private static final String ACTION_HIDE_PACKAGES = "HIDE_PACKAGES";
 
   public DeviceAdminUtil() {
     this(
@@ -164,6 +165,7 @@ public class DeviceAdminUtil {
     logger.atInfo().log("Setup and lock device %s", deviceId);
     install(deviceId);
     enable(deviceId);
+    hidePackages(deviceId);
     lock(deviceId);
   }
 
@@ -192,6 +194,26 @@ public class DeviceAdminUtil {
       throw new MobileHarnessException(
           AndroidErrorId.DEVICE_ADMIN_UTIL_TOGGLE_RESTRICTIONS_ERROR,
           "Fail to toggle device restrictions, " + logMessage,
+          e);
+    }
+  }
+
+  /**
+   * Hides a known list of packages that can cause device issue.
+   *
+   * @param deviceId the serial number of the device
+   */
+  public void hidePackages(String deviceId) throws MobileHarnessException, InterruptedException {
+    String logMessage = String.format("device: %s", deviceId);
+    logger.atInfo().log("Hiding packages, %s", logMessage);
+    try {
+      Command command = createBasicCommand(deviceId, ACTION_HIDE_PACKAGES);
+      exec(deviceId, command);
+    } catch (CommandException e) {
+      logger.atWarning().log("Fail to hide packages, %s", logMessage);
+      throw new MobileHarnessException(
+          AndroidErrorId.DEVICE_ADMIN_UTIL_HIDE_PACKAGES_ERROR,
+          "Fail to hide packages, " + logMessage,
           e);
     }
   }
