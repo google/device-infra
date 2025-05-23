@@ -255,8 +255,11 @@ class RunCommandHandler {
                 .flatMap(ids -> stream(ids.get().split(",")))
                 .collect(toImmutableSet());
         logger.atInfo().with(IMPORTANCE, IMPORTANT).log("Push cts-v-host results to %s", serials);
-        verifierResultHelper.broadcastResults(
-            result.toBuilder().addAllModuleInfo(skippedModules).build(), serials, xtsRootDir);
+        verifierResultHelper.pushResults(
+            serials,
+            result.toBuilder().addAllModuleInfo(skippedModules).build(),
+            xtsRootDir,
+            resultDir);
       }
     } finally {
       sessionResultHandlerUtil.cleanUpJobGenDirs(allJobs);

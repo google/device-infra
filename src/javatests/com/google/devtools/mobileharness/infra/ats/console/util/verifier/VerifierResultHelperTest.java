@@ -17,16 +17,17 @@
 package com.google.devtools.mobileharness.infra.ats.console.util.verifier;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
-import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
-import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Reason;
@@ -34,7 +35,11 @@ import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportPr
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.TestCase;
 import com.google.devtools.mobileharness.platform.android.packagemanager.AndroidPackageManagerUtil;
 import com.google.devtools.mobileharness.platform.android.process.AndroidProcessUtil;
+import com.google.devtools.mobileharness.platform.android.shared.autovalue.UtilArgs;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
+import com.google.devtools.mobileharness.platform.android.user.AndroidUserUtil;
+import com.google.devtools.mobileharness.shared.util.command.Command;
+import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
@@ -63,7 +68,9 @@ public class VerifierResultHelperTest {
   @Bind @Mock private Adb adb;
   @Bind @Mock private AndroidPackageManagerUtil androidPackageManagerUtil;
   @Bind @Mock private AndroidProcessUtil androidProcessUtil;
-  @Bind @Mock private AndroidSystemSettingUtil systemSettingUtil;
+  @Bind @Mock private AndroidSystemSettingUtil androidSystemSettingUtil;
+  @Bind @Mock private AndroidUserUtil androidUserUtil;
+  @Bind @Mock private CommandExecutor commandExecutor;
 
   @Inject private VerifierResultHelper verifierResultHelper;
 
@@ -71,7 +78,10 @@ public class VerifierResultHelperTest {
   public void setUp() throws Exception {
     when(adb.runShellWithRetry(anyString(), eq("date '+%Y-%m-%d %H:%M:%S.%3N'")))
         .thenReturn(CURRENT_TIME);
-    when(systemSettingUtil.getDeviceSdkVersion(anyString())).thenReturn(SDK_VERSION);
+    when(adb.getAdbPath()).thenReturn("/path/to/adb");
+    when(androidSystemSettingUtil.getDeviceSdkVersion(anyString())).thenReturn(SDK_VERSION);
+    when(androidPackageManagerUtil.listPackages(any(UtilArgs.class), any(), any()))
+        .thenReturn(ImmutableSet.of("com.android.cts.verifier"));
     when(androidPackageManagerUtil.getAppVersionName(anyString(), anyString())).thenReturn("16_r1");
     when(androidPackageManagerUtil.getApkVersionName(anyString())).thenReturn("16_r1");
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
@@ -119,8 +129,11 @@ public class VerifierResultHelperTest {
                                     + " earlier logs will point to the root cause")))
             .build();
 
-    verifierResultHelper.broadcastResults(
-        result, ImmutableList.of("device1", "device2"), folder.newFolder("xts_root").toPath());
+    verifierResultHelper.pushResults(
+        ImmutableList.of("device1", "device2"),
+        result,
+        folder.newFolder("xts_root").toPath(),
+        folder.newFolder("result").toPath());
 
     verifyCommandsOnDevice("device1");
     verifyCommandsOnDevice("device2");
@@ -131,15 +144,17 @@ public class VerifierResultHelperTest {
     Path xtsRoot = folder.newFolder("xts_root").toPath();
     File apk = xtsRoot.resolve(VerifierResultHelper.CTS_VERIFIER_APK).toFile();
     apk.createNewFile();
-    when(androidPackageManagerUtil.getAppVersionName(anyString(), anyString()))
-        .thenThrow(
-            new MobileHarnessException(
-                AndroidErrorId.ANDROID_PKG_MNGR_UTIL_GET_APK_VERSION_NAME_ERROR, ""));
+    when(androidPackageManagerUtil.listPackages(any(UtilArgs.class), any(), any()))
+        .thenReturn(ImmutableSet.of());
 
-    verifierResultHelper.broadcastResults(
-        Result.getDefaultInstance(), ImmutableList.of("device"), xtsRoot);
+    verifierResultHelper.pushResults(
+        ImmutableList.of("device"),
+        Result.getDefaultInstance(),
+        xtsRoot,
+        folder.newFolder("result").toPath());
 
     verifyInstallCtsVerifierApk(apk.getPath());
+    verifySetUpVerifier();
   }
 
   @Test
@@ -149,10 +164,14 @@ public class VerifierResultHelperTest {
     apk.createNewFile();
     when(androidPackageManagerUtil.getAppVersionName(anyString(), anyString())).thenReturn("16_r2");
 
-    verifierResultHelper.broadcastResults(
-        Result.getDefaultInstance(), ImmutableList.of("device"), xtsRoot);
+    verifierResultHelper.pushResults(
+        ImmutableList.of("device"),
+        Result.getDefaultInstance(),
+        xtsRoot,
+        folder.newFolder("result").toPath());
 
     verifyInstallCtsVerifierApk(apk.getPath());
+    verifySetUpVerifier();
   }
 
   @Test
@@ -161,10 +180,82 @@ public class VerifierResultHelperTest {
     File apk = xtsRoot.resolve(VerifierResultHelper.CTS_VERIFIER_APK).toFile();
     apk.createNewFile();
 
-    verifierResultHelper.broadcastResults(
-        Result.getDefaultInstance(), ImmutableList.of("device"), xtsRoot);
+    verifierResultHelper.pushResults(
+        ImmutableList.of("device"),
+        Result.getDefaultInstance(),
+        xtsRoot,
+        folder.newFolder("result").toPath());
 
     verify(androidPackageManagerUtil, never()).installApk("device", SDK_VERSION, apk.getPath());
+    verifySetUpVerifier();
+  }
+
+  @Test
+  public void testPushReportLogs_success() throws Exception {
+    Path resultPath = folder.newFolder("result").toPath();
+    Path config = resultPath.resolve("config");
+    config.toFile().createNewFile();
+    resultPath.resolve("result.xml").toFile().createNewFile(); // not included
+    resultPath.resolve("device-info-files").toFile().mkdirs();
+    Path deviceInfo1 = resultPath.resolve("device-info-files/1.json");
+    deviceInfo1.toFile().createNewFile();
+    Path deviceInfo2 = resultPath.resolve("device-info-files/2.json");
+    deviceInfo2.toFile().createNewFile();
+    resultPath.resolve("report-log-files").toFile().mkdirs();
+    Path reportLog = resultPath.resolve("report-log-files/1.json");
+    reportLog.toFile().createNewFile();
+    resultPath.resolve("module_reports").toFile().mkdirs();
+    resultPath.resolve("module_reports/1.html").toFile().createNewFile(); // not included
+    resultPath.resolve("vintf-files").toFile().mkdirs(); // empty dir
+    when(androidUserUtil.getCurrentUser(anyString(), anyInt())).thenReturn(10);
+
+    verifierResultHelper.pushResults(
+        ImmutableList.of("device"),
+        Result.getDefaultInstance(),
+        folder.newFolder("xts_root").toPath(),
+        resultPath);
+
+    verify(commandExecutor, times(4)).run(any());
+    verify(commandExecutor)
+        .run(
+            Command.of(
+                "bash",
+                "-c",
+                String.format(
+                    "/path/to/adb -s device shell content write --user 10 --uri"
+                        + " content://com.android.cts.verifier.testresultsprovider/logs/config <"
+                        + " %s",
+                    config.toAbsolutePath())));
+    verify(commandExecutor)
+        .run(
+            Command.of(
+                "bash",
+                "-c",
+                String.format(
+                    "/path/to/adb -s device shell content write --user 10 --uri"
+                        + " content://com.android.cts.verifier.testresultsprovider/logs/device-info-files/1.json"
+                        + " < %s",
+                    deviceInfo1.toAbsolutePath())));
+    verify(commandExecutor)
+        .run(
+            Command.of(
+                "bash",
+                "-c",
+                String.format(
+                    "/path/to/adb -s device shell content write --user 10 --uri"
+                        + " content://com.android.cts.verifier.testresultsprovider/logs/device-info-files/2.json"
+                        + " < %s",
+                    deviceInfo2.toAbsolutePath())));
+    verify(commandExecutor)
+        .run(
+            Command.of(
+                "bash",
+                "-c",
+                String.format(
+                    "/path/to/adb -s device shell content write --user 10 --uri"
+                        + " content://com.android.cts.verifier.testresultsprovider/logs/report-log-files/1.json"
+                        + " < %s",
+                    reportLog.toAbsolutePath())));
   }
 
   private void verifyCommandsOnDevice(String serial) throws Exception {
@@ -213,6 +304,9 @@ public class VerifierResultHelperTest {
   private void verifyInstallCtsVerifierApk(String apkPath) throws Exception {
     verify(adb).runShellWithRetry("device", "settings put global hidden_api_policy 1");
     verify(androidPackageManagerUtil).installApk("device", SDK_VERSION, apkPath);
+  }
+
+  private void verifySetUpVerifier() throws Exception {
     for (String command : VerifierResultHelper.CTS_VERIFIER_SETTING_SHELL_COMMANDS) {
       verify(adb).runShellWithRetry("device", command);
     }
