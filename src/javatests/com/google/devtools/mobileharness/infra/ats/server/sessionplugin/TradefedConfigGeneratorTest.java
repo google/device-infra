@@ -118,4 +118,20 @@ public class TradefedConfigGeneratorTest {
       assertThat(config).isEqualTo(localFileUtil.readFile(COMMAND_PATH).trim());
     }
   }
+
+  @Test
+  public void checkLimitRateValue_success() {
+    assertThat(TradefedConfigGenerator.isLimitRateValue("100")).isFalse();
+    assertThat(TradefedConfigGenerator.isLimitRateValue("100K")).isTrue();
+    assertThat(TradefedConfigGenerator.isLimitRateValue("100M")).isTrue();
+    assertThat(TradefedConfigGenerator.isLimitRateValue("100G")).isTrue();
+    assertThat(TradefedConfigGenerator.isLimitRateValue("100k")).isFalse();
+    assertThat(TradefedConfigGenerator.isLimitRateValue("100m")).isFalse();
+    assertThat(TradefedConfigGenerator.isLimitRateValue("100g")).isFalse();
+    assertThat(TradefedConfigGenerator.isLimitRateValue("100Ks")).isFalse();
+    assertThat(TradefedConfigGenerator.isLimitRateValue("K")).isFalse();
+    assertThat(TradefedConfigGenerator.isLimitRateValue("M")).isFalse();
+    assertThat(TradefedConfigGenerator.isLimitRateValue("G")).isFalse();
+    assertThat(TradefedConfigGenerator.isLimitRateValue("100K100K")).isFalse();
+  }
 }
