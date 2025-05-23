@@ -310,7 +310,7 @@ public final class RunCommandHandlerTest {
     // Lists non-tradefed test result/log files
     assertThat(
             listFilePathsForNames(
-                resultDir.resolve("non-tradefed_results/MoblyAospPackageTest_test_2")))
+                resultDir.resolve("non-tradefed_results/mobly_test_module_name_test_2")))
         .containsExactly(
             "ats_module_run_result.textproto",
             "device_build_fingerprint.txt",
@@ -318,7 +318,8 @@ public final class RunCommandHandlerTest {
             "mobly_run_result_attributes.textproto",
             "test_summary.yaml");
     assertThat(
-            listFilePathsForNames(logDir.resolve("non-tradefed_logs/MoblyAospPackageTest_test_2")))
+            listFilePathsForNames(
+                logDir.resolve("non-tradefed_logs/mobly_test_module_name_test_2")))
         .containsExactly(
             "ats_module_run_result.textproto",
             "command_history.txt",
@@ -328,7 +329,7 @@ public final class RunCommandHandlerTest {
             "mobly_run_result_attributes.textproto");
     assertThat(
             listFilePathsForNames(
-                logDir.resolve("non-tradefed_logs/MoblyAospPackageTest_test_2/raw_mobly_logs")))
+                logDir.resolve("non-tradefed_logs/mobly_test_module_name_test_2/raw_mobly_logs")))
         .containsExactly("test_summary.yaml");
   }
 
