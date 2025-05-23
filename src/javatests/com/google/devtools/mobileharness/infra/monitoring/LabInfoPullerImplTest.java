@@ -25,6 +25,8 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeD
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLocator;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceProperties;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceProperty;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabLocator;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
@@ -66,6 +68,8 @@ public final class LabInfoPullerImplTest {
   private static final String DEVICE_BUILD_TYPE_1 = "fake_device_build_type_1";
   private static final String DEVICE_SUPPORTED_DIMENSION_NAME = "fake_dimension_name_1";
   private static final String DEVICE_SUPPORTED_DIMENSION_VALUE = "fake_dimension_value_1";
+  private static final String DEVICE_PROPERTY_NAME = "fake_device_property_name";
+  private static final String DEVICE_PROPERTY_VALUE = "fake_device_property_value";
   private static final String DEVICE_REQUIRED_DIMENSION_NAME = "fake_dimension_name_2";
   private static final String DEVICE_REQUIRED_DIMENSION_VALUE = "fake_dimension_value__2";
   private static final String DEVICE_ID_2 = "fake_uuid_2";
@@ -116,7 +120,13 @@ public final class LabInfoPullerImplTest {
                           .addRequiredDimension(
                               DeviceDimension.newBuilder()
                                   .setName(DEVICE_REQUIRED_DIMENSION_NAME)
-                                  .setValue(DEVICE_REQUIRED_DIMENSION_VALUE))))
+                                  .setValue(DEVICE_REQUIRED_DIMENSION_VALUE)))
+                  .setProperties(
+                      DeviceProperties.newBuilder()
+                          .addProperty(
+                              DeviceProperty.newBuilder()
+                                  .setName(DEVICE_PROPERTY_NAME)
+                                  .setValue(DEVICE_PROPERTY_VALUE))))
           .build();
   private static final DeviceInfo DEVICE_INFO_2 =
       DeviceInfo.newBuilder()
@@ -195,6 +205,9 @@ public final class LabInfoPullerImplTest {
                 .putIdentifier("device_id", DEVICE_ID_1)
                 .addAttribute(Attribute.newBuilder().setName("status").setValue("BUSY"))
                 .addAttribute(Attribute.newBuilder().setName("device_type").setValue(DEVICE_TYPE_1))
+                .addAttribute(Attribute.newBuilder().setName("driver").setValue(DEVICE_DRIVER_1))
+                .addAttribute(
+                    Attribute.newBuilder().setName("decorator").setValue(DEVICE_DECORATOR_1))
                 .addAttribute(
                     Attribute.newBuilder().setName("version").setValue(DEVICE_SDK_VERSION_1))
                 .addAttribute(Attribute.newBuilder().setName("model").setValue(DEVICE_MODEL_1))
@@ -212,11 +225,18 @@ public final class LabInfoPullerImplTest {
                     Attribute.newBuilder()
                         .setName(DEVICE_REQUIRED_DIMENSION_NAME)
                         .setValue(DEVICE_REQUIRED_DIMENSION_VALUE))
+                .addAttribute(
+                    Attribute.newBuilder()
+                        .setName(DEVICE_PROPERTY_NAME)
+                        .setValue(DEVICE_PROPERTY_VALUE))
                 .build(),
             MonitoredEntry.newBuilder()
                 .putIdentifier("device_id", DEVICE_ID_2)
                 .addAttribute(Attribute.newBuilder().setName("status").setValue("IDLE"))
                 .addAttribute(Attribute.newBuilder().setName("device_type").setValue(DEVICE_TYPE_2))
+                .addAttribute(Attribute.newBuilder().setName("driver").setValue(DEVICE_DRIVER_2))
+                .addAttribute(
+                    Attribute.newBuilder().setName("decorator").setValue(DEVICE_DECORATOR_2))
                 .addAttribute(
                     Attribute.newBuilder().setName("version").setValue(DEVICE_SOFTWARE_VERSION_2))
                 .addAttribute(Attribute.newBuilder().setName("model").setValue(DEVICE_MODEL_2))

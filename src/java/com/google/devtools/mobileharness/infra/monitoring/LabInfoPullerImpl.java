@@ -20,6 +20,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceProperties;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Filter;
@@ -71,13 +72,15 @@ public final class LabInfoPullerImpl implements DataPuller<MonitoredRecord> {
                 .addAll(compositeDimension.getSupportedDimensionList())
                 .addAll(compositeDimension.getRequiredDimensionList())
                 .build();
-
+        DeviceProperties deviceProperties = deviceInfo.getDeviceFeature().getProperties();
         MonitoredEntry.Builder deviceEntry =
             MonitoredEntry.newBuilder()
                 .putIdentifier("device_id", deviceInfo.getDeviceLocator().getId());
 
         addAttribute(deviceEntry, "status", Optional.of(deviceInfo.getDeviceStatus().toString()));
         addAttribute(deviceEntry, "device_type", deviceInfo.getDeviceFeature().getTypeList());
+        addAttribute(deviceEntry, "driver", deviceInfo.getDeviceFeature().getDriverList());
+        addAttribute(deviceEntry, "decorator", deviceInfo.getDeviceFeature().getDecoratorList());
         addAttribute(
             deviceEntry,
             "version",
@@ -89,6 +92,12 @@ public final class LabInfoPullerImpl implements DataPuller<MonitoredRecord> {
         dimensionList.forEach(
             dimension ->
                 addAttribute(deviceEntry, dimension.getName(), Optional.of(dimension.getValue())));
+        deviceProperties
+            .getPropertyList()
+            .forEach(
+                property ->
+                    addAttribute(
+                        deviceEntry, property.getName(), Optional.of(property.getValue())));
 
         record.addDeviceEntry(deviceEntry.build());
       }
