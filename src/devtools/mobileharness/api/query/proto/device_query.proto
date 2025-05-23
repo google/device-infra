@@ -89,7 +89,8 @@ message DimensionFilter {
 
 // Device info queried from the omni lab.
 message DeviceInfo {
-  // Device id.
+  // Device uuid. It could be different from the value defined in dimension
+  // whose key is 'id'.
   string id = 1;
   // Device status.
   // String converted from mobileharness.api.model.DeviceStatus. Note it may be
