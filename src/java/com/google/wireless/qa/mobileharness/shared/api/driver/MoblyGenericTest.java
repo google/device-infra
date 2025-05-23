@@ -39,7 +39,7 @@ import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.ats.console.result.mobly.MoblyYamlDocEntry;
 import com.google.devtools.mobileharness.infra.ats.console.result.mobly.MoblyYamlParser;
 import com.google.devtools.mobileharness.platform.testbed.mobly.MoblyConstant;
-import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyConfigCreator;
+import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyConfigGenerator;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyTestInfoMapHelper;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
@@ -313,14 +313,14 @@ public class MoblyGenericTest extends BaseDriver {
     JSONObject moblyParams = new JSONObject();
     moblyParams.put("LogPath", logDir);
     config.put(MoblyConstant.ConfigKey.MOBLY_PARAMS, moblyParams);
-    JSONObject testbedConfig = MoblyConfigCreator.getLocalMoblyConfig(device);
+    JSONObject testbedConfig = MoblyConfigGenerator.getLocalMoblyConfig(device);
 
     // Overwrite the testbed config with the user-provided custom Mobly config, if it exists.
     if (testInfo.jobInfo().files().isTagNotEmpty(FILE_MOBLY_CONFIG)) {
       JSONObject customMoblyConfig =
-          MoblyConfigCreator.getMoblyConfigFromYaml(
+          MoblyConfigGenerator.getMoblyConfigFromYaml(
               localFileUtil.readFile(testInfo.jobInfo().files().getSingle(FILE_MOBLY_CONFIG)));
-      MoblyConfigCreator.concatMoblyConfig(
+      MoblyConfigGenerator.concatMoblyConfig(
           testbedConfig, customMoblyConfig, /* overwriteOriginal= */ true);
       logger.atInfo().log("Config after loading custom Mobly YAML: %s", config);
     }

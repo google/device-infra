@@ -97,17 +97,6 @@ java_library(
     ],
 )
 
-java_library(
-    name = "simple_composite_device",
-    srcs = ["SimpleCompositeDevice.java"],
-    deps = [
-        ":base_device",
-        ":composite_device",
-        ":device",
-        "@maven//:com_google_guava_guava",
-    ],
-)
-
 ################################################################################
 # Device libraries in alphabetical order
 ################################################################################

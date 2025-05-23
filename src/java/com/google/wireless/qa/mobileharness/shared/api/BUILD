@@ -243,8 +243,10 @@ java_library(
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/testrunner/device/cache:device_cache",
+        "//src/java/com/google/devtools/mobileharness/platform/testbed/adhoc",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:composite_device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:testbed_device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
     ],
 )

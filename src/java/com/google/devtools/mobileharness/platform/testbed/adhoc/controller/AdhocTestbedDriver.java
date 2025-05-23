@@ -43,6 +43,7 @@ import com.google.wireless.qa.mobileharness.shared.api.decorator.BaseDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.Decorator;
 import com.google.wireless.qa.mobileharness.shared.api.device.CompositeDevice;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
+import com.google.wireless.qa.mobileharness.shared.api.device.TestbedDevice;
 import com.google.wireless.qa.mobileharness.shared.api.driver.BaseDriver;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.driver.DriverFactory;
@@ -434,8 +435,7 @@ public class AdhocTestbedDriver extends BaseDriver {
       }
     }
 
-    return new com.google.wireless.qa.mobileharness.shared.api.device.SimpleCompositeDevice(
-        testbedDeviceId, allSubDevices);
+    return new TestbedDevice(testbedDeviceId, allSubDevices);
   }
 
   @DoNotSubscribeTestEvent

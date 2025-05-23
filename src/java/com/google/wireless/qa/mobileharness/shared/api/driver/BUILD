@@ -195,7 +195,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/mobly:mobly_doc_entry",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/mobly:parser",
         "//src/java/com/google/devtools/mobileharness/platform/testbed/mobly:mobly_constant",
-        "//src/java/com/google/devtools/mobileharness/platform/testbed/mobly/util:mobly_config_creator",
+        "//src/java/com/google/devtools/mobileharness/platform/testbed/mobly/util:config_generator",
         "//src/java/com/google/devtools/mobileharness/platform/testbed/mobly/util:mobly_test_info_map_helper",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",

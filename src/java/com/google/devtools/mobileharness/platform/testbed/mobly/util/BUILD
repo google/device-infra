@@ -55,33 +55,6 @@ java_library(
 )
 
 java_library(
-    name = "mobly_config_creator",
-    srcs = [
-        "MoblyConfigCreator.java",
-    ],
-    visibility = ["//src/java/com/google/wireless/qa/mobileharness/shared:__subpackages__"],
-    runtime_deps = [
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_device",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:misc_testbed_sub_device",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:no_op_device",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:simple_composite_device",
-    ],
-    deps = [
-        ":mobly_sub_device_type",
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/devtools/mobileharness/platform/testbed/adhoc",
-        "//src/java/com/google/devtools/mobileharness/platform/testbed/config:base",
-        "//src/java/com/google/devtools/mobileharness/platform/testbed/mobly:mobly_constant",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:simple_composite_device",
-        "@maven//:com_google_code_findbugs_jsr305",
-        "@maven//:com_google_guava_guava",
-        "@maven//:org_json_json",
-        "@maven//:org_yaml_snakeyaml",
-    ],
-)
-
-java_library(
     name = "config_generator",
     srcs = [
         "MoblyConfigGenerator.java",
