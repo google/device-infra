@@ -587,13 +587,13 @@ public class SessionResultHandlerUtil {
    *
    * <pre>
    * .../android-<xts>/logs/YYYY.MM.DD_HH.mm.ss/
-   *    tradefed_logs/
+   *    inv_<invocation_id>/
+   *      raw tradefed logs
    *      <driver>_test_<test_id>/
    *        command_history.txt
    *        xts_tf_output.log
-   *        raw_tradefed_log/
    *    non-tradefed_logs/
-   *      <driver>_test_<test_id>/
+   *      <module_id>_test_<test_id>/
    *        command_history.txt
    *        mobly_command_output.log
    *        mobly_run_build_attributes.textproto
@@ -672,7 +672,7 @@ public class SessionResultHandlerUtil {
    *    report-log-files/
    *    vintf-files/
    *    non-tradefed_results/
-   *      <driver>_test_<test_id>/
+   *      <module_id>_test_<test_id>/
    *        test_summary.yaml
    *        mobly_run_build_attributes.textproto
    *        mobly_run_result_attributes.textproto
@@ -767,13 +767,13 @@ public class SessionResultHandlerUtil {
    *
    * <pre>
    * .../android-<xts>/logs/YYYY.MM.DD_HH.mm.ss/
-   *    tradefed_logs/
+   *    inv_<invocation_id>/
+   *      raw tradefed logs
    *      <driver>_test_<test_id>/
    *        command_history.txt
    *        xts_tf_output.log
-   *        raw_tradefed_log/
    *    non-tradefed_logs/
-   *      <driver>_test_<test_id>/
+   *      <module_id>_test_<test_id>/
    *        command_history.txt
    *        mobly_command_output.log
    *        mobly_run_build_attributes.textproto
@@ -807,13 +807,13 @@ public class SessionResultHandlerUtil {
    * <pre>
    * .../android-<xts>/results/YYYY.MM.DD_HH.mm.ss/
    *    the merged report relevant files (test_result.xml, html, checksum-suite.data, etc)
-   *    tradefed_results/
-   *      <driver>_test_<test_id>/
-   *        test_result.xml
-   *        test_result.html
-   *        ...
+   *    config/
+   *    device-info-files/
+   *    invocation_summary.txt
+   *    report-log-files/
+   *    vintf-files/
    *    non-tradefed_results/
-   *      <driver>_test_<test_id>/
+   *      <module_id>_test_<test_id>/
    *        test_summary.yaml
    *        mobly_run_build_attributes.textproto
    *        mobly_run_result_attributes.textproto
@@ -923,9 +923,11 @@ public class SessionResultHandlerUtil {
 
   private Path prepareLogOrResultDirForTest(TestInfo test, Path parentDir)
       throws MobileHarnessException {
-    Path targetDir =
-        parentDir.resolve(
-            String.format("%s_test_%s", test.jobInfo().type().getDriver(), test.locator().getId()));
+    String prefix = test.jobInfo().type().getDriver();
+    if (test.jobInfo().properties().getBoolean(Job.IS_XTS_NON_TF_JOB).orElse(false)) {
+      prefix = getExpandedNonTfModuleId(test.jobInfo()).replace(' ', '_');
+    }
+    Path targetDir = parentDir.resolve(String.format("%s_test_%s", prefix, test.locator().getId()));
     localFileUtil.prepareDir(targetDir);
     return targetDir;
   }
