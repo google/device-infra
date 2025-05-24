@@ -63,6 +63,7 @@ java_library(
     visibility = [
         "//:omnilab_fusion",
         "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/api/testrunner/step/android:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:__pkg__",
         "//src/javatests/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
     ],
