@@ -23,6 +23,7 @@ java_library(
         "MoblyConstant.java",
     ],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/platform/testbed:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared:__subpackages__",
     ],
