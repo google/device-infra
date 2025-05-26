@@ -1167,7 +1167,7 @@ public abstract class AndroidRealDeviceDelegate {
             "Skip factory reset device %s since it‘s invalid for non-rooted devices.", deviceId);
         return Optional.empty();
       }
-    } else if (isTestHarnessRecoveryDevice()) {
+    } else if (shouldFactoryResetViaTestHarness()) {
       // add the dimension before checking sdk version to avoid device failing checking the sdk
       // version is regarded as a recoveried device (i.e., without recovery_status dimension).
       device.addDimension(Dimension.Name.RECOVERY_STATUS, "dirty");
@@ -1327,7 +1327,7 @@ public abstract class AndroidRealDeviceDelegate {
       switch (DeviceState.valueOf(
           device.getProperty(AndroidRealDeviceConstants.PROPERTY_NAME_REBOOT_TO_STATE))) {
         case DEVICE:
-          if (isTestHarnessRecoveryDevice()) {
+          if (shouldFactoryResetViaTestHarness()) {
             logger.atInfo().log("Factory reset device %s via Test Harness Mode.", deviceId);
             systemStateUtil.factoryResetViaTestHarness(deviceId, /* waitTime= */ null);
             device.removeDimension(Dimension.Name.RECOVERY_STATUS);
@@ -2557,6 +2557,10 @@ public abstract class AndroidRealDeviceDelegate {
     return (dimensionList.size() == 1
         && Ascii.equalsIgnoreCase(
             dimensionList.get(0), AndroidRealDeviceConstants.RECOVERY_TYPE_WIPE));
+  }
+
+  private boolean shouldFactoryResetViaTestHarness() {
+    return !Flags.instance().keepTestHarnessFalse.getNonNull() && isTestHarnessRecoveryDevice();
   }
 
   /** Checks whether the device support test harness recovering. */
