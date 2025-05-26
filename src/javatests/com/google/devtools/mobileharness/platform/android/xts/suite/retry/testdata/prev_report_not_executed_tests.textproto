@@ -31,6 +31,7 @@ build {
 summary: {
   passed: 0
   failed: 1
+  warning: 0
   modules_done: 0
   modules_total: 1
 }
@@ -60,6 +61,7 @@ module_info: {
     }
   }
   failed_tests: 1
+  warning_tests: 0
   prep_time_millis: 0
   teardown_time_millis: 0
 }

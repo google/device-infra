@@ -34,6 +34,7 @@ run_history {
     end_time_millis: 1711350582012
     passed_tests: 0
     failed_tests: 12
+    warning_tests: 0
     command_line_args: "cts -m CtsAccelerationTestCases -s 12241FDD4002Z6"
     host_name: "baishengz.bej.host.name"
   }
@@ -41,6 +42,7 @@ run_history {
 summary {
   passed: 0
   failed: 12
+  warning: 0
   modules_done: 2
   modules_total: 2
 }
@@ -87,6 +89,7 @@ module_info {
     }
   }
   failed_tests: 6
+  warning_tests: 0
 }
 module_info {
   name: "CtsAccelerationTestCases[instant]"
@@ -131,6 +134,7 @@ module_info {
     }
   }
   failed_tests: 6
+  warning_tests: 0
 }
 attribute {
   key: "start"

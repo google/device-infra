@@ -107,6 +107,7 @@ public final class XmlConstants {
   public static final String ERROR_CODE_ATTR = "error_code";
   public static final String ERROR_NAME_ATTR = "error_name";
   public static final String FAILED_ATTR = "failed";
+  public static final String WARNING_ATTR = "warning";
   public static final String HOST_NAME_ATTR = "host_name";
   public static final String LOG_FILE_NAME_ATTR = "file_name";
   public static final String MESSAGE_ATTR = "message";
