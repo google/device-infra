@@ -1930,6 +1930,16 @@ public class Flags {
     return Strings.nullToEmpty(System.getenv("HOME")) + "/mobileharness";
   }
 
+  private static final Flag<String> tradefedCurlDownloadLimitRateDefault = Flag.value(null);
+
+  @com.beust.jcommander.Parameter(
+      names = "--tradefed_curl_download_limit_rate",
+      description =
+          "The limit rate of curl download for Tradefed. Default is null and curl will try to"
+              + " saturate all available network connections.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> tradefedCurlDownloadLimitRate = tradefedCurlDownloadLimitRateDefault;
+
   private static final Flag<Boolean> useAltsDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(

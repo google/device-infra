@@ -16,9 +16,11 @@
 
 package com.google.devtools.mobileharness.infra.ats.server.sessionplugin;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -26,6 +28,7 @@ import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.Dev
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.Option;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestEnvironment;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestResource;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
@@ -68,6 +71,7 @@ public class TradefedConfigGenerator {
   private static final String TEST_CLASS = "com.android.tradefed.cluster.ClusterCommandLauncher";
 
   private static final Pattern BOOL_PATTERN = Pattern.compile("(?<prefix>no-)?(?<name>.+)");
+  private static final Pattern LIMIT_RATE_PATTERN = Pattern.compile("^\\d+[KMG]$");
 
   private static final Printer JSON_PRINTER =
       JsonFormat.printer().omittingInsignificantWhitespace().preservingProtoFieldNames();
@@ -232,6 +236,11 @@ public class TradefedConfigGenerator {
     for (TestResource testResource : testResources) {
       serializeOption(serializer, "test-resource", serializeTestResource(testResource));
     }
+    if (Flags.instance().tradefedCurlDownloadLimitRate.get() != null) {
+      String limitRate = Flags.instance().tradefedCurlDownloadLimitRate.get();
+      checkArgument(isLimitRateValue(limitRate), "Invalid curl download rate limit: %s", limitRate);
+      serializeOption(serializer, "curl-limit-rate", limitRate);
+    }
     serializer.endTag(NULL_NS, BUILD_PROVIDER_TAG);
   }
 
@@ -283,5 +292,10 @@ public class TradefedConfigGenerator {
             // Replace the url with the template. Resolve it on the lab side.
             .setUrl(String.format(FILE_TEMPLATE, testResource.getName()))
             .build());
+  }
+
+  @VisibleForTesting
+  static boolean isLimitRateValue(String value) {
+    return LIMIT_RATE_PATTERN.matcher(value).matches();
   }
 }
