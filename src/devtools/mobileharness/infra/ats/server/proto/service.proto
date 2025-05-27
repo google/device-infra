@@ -129,7 +129,7 @@ message DeviceActionConfigObject {
 }
 
 // Command detail returned by session service.
-// Next ID: 20
+// Next ID: 21
 message CommandDetail {
   string id = 1;
   string request_id = 2;
@@ -165,6 +165,7 @@ message CommandDetail {
   repeated string device_serials = 18;
   // Only useful to frontend for generating command attempt message.
   optional string command_attempt_id = 19;
+  optional string host_ip = 20;
 }
 
 enum CommandState {

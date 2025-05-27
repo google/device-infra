@@ -289,11 +289,16 @@ final class NewMultiCommandRequestHandler {
 
     Optional<CommandDetail.Builder> commandDetail;
     String commandId = getCommandId(commandInfo, request);
+    String hostIp = "";
+    if (!sessionRequestInfo.deviceSerials().isEmpty()) {
+      hostIp = sessionRequestHandlerUtil.getHostIp(sessionRequestInfo.deviceSerials().get(0));
+    }
     if (!commandToJobsMap.containsKey(commandId)) {
       commandDetail =
           Optional.of(
               CommandDetail.newBuilder()
                   .addAllDeviceSerials(sessionRequestInfo.deviceSerials())
+                  .setHostIp(hostIp)
                   .setCommandLine(commandInfo.getCommandLine())
                   .setOriginalCommandInfo(commandInfo)
                   .setCreateTime(Timestamps.fromMillis(clock.millis()))
@@ -379,7 +384,10 @@ final class NewMultiCommandRequestHandler {
       throw e;
     }
     commandDetailBuilder.addAllDeviceSerials(sessionRequestInfo.deviceSerials());
-
+    if (!sessionRequestInfo.deviceSerials().isEmpty()) {
+      commandDetailBuilder.setHostIp(
+          sessionRequestHandlerUtil.getHostIp(sessionRequestInfo.deviceSerials().get(0)));
+    }
     ImmutableList<JobInfo> jobInfoList;
     try {
       jobInfoList = xtsJobCreator.createXtsTradefedTestJob(sessionRequestInfo);

@@ -245,6 +245,7 @@ public final class NewMultiCommandRequestHandlerTest {
         .thenReturn(
             ImmutableList.of(
                 SubDeviceSpec.getDefaultInstance(), SubDeviceSpec.getDefaultInstance()));
+    when(sessionRequestHandlerUtil.getHostIp(any())).thenReturn("127.0.0.1");
   }
 
   @Test

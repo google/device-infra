@@ -298,6 +298,7 @@ public final class AtsServerSessionPluginTest {
                     .getDefaultInstance(),
                 com.google.wireless.qa.mobileharness.shared.proto.JobConfig.SubDeviceSpec
                     .getDefaultInstance()));
+    when(sessionRequestHandlerUtil.getHostIp(any())).thenReturn("127.0.0.1");
   }
 
   @Test

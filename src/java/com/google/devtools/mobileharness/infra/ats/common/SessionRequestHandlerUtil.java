@@ -1315,6 +1315,36 @@ public class SessionRequestHandlerUtil {
         jobConfig, ImmutableList.of(), jobGenDir.toString(), jobTmpDir.toString());
   }
 
+  public String getHostIp(String deviceSerial) throws MobileHarnessException, InterruptedException {
+    DeviceQueryResult queryResult;
+    try {
+      queryResult = deviceQuerier.queryDevice(DeviceQueryFilter.getDefaultInstance());
+    } catch (MobileHarnessException e) {
+      throw new MobileHarnessException(
+          InfraErrorId.ATSC_RUN_COMMAND_QUERY_DEVICE_ERROR, "Failed to query device", e);
+    }
+    Optional<com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo>
+        queryDeviceInfo =
+            queryResult.getDeviceInfoList().stream()
+                .filter(deviceInfo -> deviceInfo.getId().equals(deviceSerial))
+                .findFirst();
+    if (queryDeviceInfo.isEmpty()) {
+      logger.atWarning().log(
+          "Cannot find device info from master for device serial: %s", deviceSerial);
+      return "";
+    }
+    Optional<String> hostIp =
+        queryDeviceInfo.get().getDimensionList().stream()
+            .filter(dimension -> dimension.getName().equals(Ascii.toLowerCase(Name.HOST_IP.name())))
+            .findFirst()
+            .map(DeviceQuery.Dimension::getValue);
+    if (hostIp.isEmpty() || hostIp.get().isEmpty()) {
+      logger.atWarning().log("Cannot find host ip from master for device serial: %s", deviceSerial);
+      return "";
+    }
+    return hostIp.get();
+  }
+
   private Path createJobGenDir(String jobName) {
     return sessionGenDir.resolve(
         String.format("job_gen_%s_%s", encodeJobName(jobName), UUID.randomUUID()));

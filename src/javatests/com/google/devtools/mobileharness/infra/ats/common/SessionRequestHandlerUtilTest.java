@@ -1275,4 +1275,45 @@ public final class SessionRequestHandlerUtilTest {
                 defaultSessionRequestInfoBuilder().setXtsType("gts").build()))
         .isFalse();
   }
+
+  @Test
+  public void getHostIp_success() throws Exception {
+    when(deviceQuerier.queryDevice(any()))
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder()
+                        .setId("device_id_1")
+                        .addDimension(
+                            Dimension.newBuilder().setName("host_ip").setValue("192.168.1.1")))
+                .build());
+
+    assertThat(sessionRequestHandlerUtil.getHostIp("device_id_1")).isEqualTo("192.168.1.1");
+  }
+
+  @Test
+  public void getHostIp_deviceNotFound() throws Exception {
+    when(deviceQuerier.queryDevice(any()))
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder()
+                        .setId("device_id_2")
+                        .addDimension(
+                            Dimension.newBuilder().setName("host_ip").setValue("192.168.1.1")))
+                .build());
+
+    assertThat(sessionRequestHandlerUtil.getHostIp("device_id_1")).isEmpty();
+  }
+
+  @Test
+  public void getHostIp_hostIpNotFound() throws Exception {
+    when(deviceQuerier.queryDevice(any()))
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(DeviceInfo.newBuilder().setId("device_id_1"))
+                .build());
+
+    assertThat(sessionRequestHandlerUtil.getHostIp("device_id_1")).isEmpty();
+  }
 }
