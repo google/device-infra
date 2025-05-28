@@ -110,6 +110,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/lab/in:local_dimension",
         "//src/java/com/google/devtools/mobileharness/api/model/lab/out:property_factory",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device/config",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/controller:lab_dimension_manager",
         "@maven//:com_google_code_findbugs_jsr305",
     ],
 )

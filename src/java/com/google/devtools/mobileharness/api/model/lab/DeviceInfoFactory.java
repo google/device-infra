@@ -26,8 +26,12 @@ import javax.annotation.Nullable;
 public class DeviceInfoFactory {
 
   public static DeviceInfo create(DeviceId deviceId, @Nullable ApiConfig apiConfig) {
-    LocalDimensions supportedLocalDimensions = new LocalDimensions();
-    LocalDimensions requiredLocalDimensions = new LocalDimensions();
+    LocalDimensions supportedLocalDimensions =
+        com.google.devtools.mobileharness.infra.lab.controller.LabDimensionManager.getInstance()
+            .getSupportedLocalDimensions();
+    LocalDimensions requiredLocalDimensions =
+        com.google.devtools.mobileharness.infra.lab.controller.LabDimensionManager.getInstance()
+            .getRequiredLocalDimensions();
     return DeviceInfo.create(
         deviceId,
         DimensionsFactory.createCompositeDimensions(
