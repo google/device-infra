@@ -13,6 +13,21 @@
 # limitations under the License.
 #
 
+# Copyright 2022 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
 """ Additional go dependencies for RBE go project """
 
 load("@bazel_gazelle//:deps.bzl", "go_repository")
@@ -159,15 +174,21 @@ def rbe_go_deps():
         version = "v2.11.0",
     )
     go_repository(
+        name = "com_github_hanwen_go_fuse_v2",
+        importpath = "github.com/hanwen/go-fuse/v2",
+        sum = "h1:SbJP1sUP+n1UF8NXBA14BuojmTez+mDgOk0bC057HQw=",
+        version = "v2.7.2",
+    )
+    go_repository(
         name = "com_github_jotfs_fastcdc_go",
         importpath = "github.com/jotfs/fastcdc-go",
-        sum = "h1:WHYIGk3k9NumGWfp4YMsemEcx/s4JKpGAa6tpCpHJOo=",
-        version = "v0.2.0",
         # Supports large files (size of int64)
         patch_cmds = [
             "sed -i '1 i // Package fastcdc implements the FastCDC content-defined chunking algorithm.' fastcdc.go",
             "sed -i -e 's/\\([oO]ffset\\) int/\\1 int64/' -e 's/c.offset += chunk.Length/c.offset += int64(chunk.Length)/' fastcdc.go",
         ],
+        sum = "h1:WHYIGk3k9NumGWfp4YMsemEcx/s4JKpGAa6tpCpHJOo=",
+        version = "v0.2.0",
     )
     go_repository(
         name = "com_github_klauspost_compress",
@@ -176,10 +197,22 @@ def rbe_go_deps():
         version = "v1.12.3",
     )
     go_repository(
+        name = "com_github_kylelemons_godebug",
+        importpath = "github.com/kylelemons/godebug",
+        sum = "h1:MtvEpTB6LX3vkb4ax0b5D2DHbNAUsen0Gx5wZoq3lV4=",
+        version = "v0.0.0-20170820004349-d65d576e9348",
+    )
+    go_repository(
         name = "com_github_mholt_archiver",
         importpath = "github.com/mholt/archiver",
         sum = "h1:1dCVxuqs0dJseYEhi5pl7MYPH9zDa1wBi7mF09cbNkU=",
         version = "v3.1.1+incompatible",
+    )
+    go_repository(
+        name = "com_github_moby_sys_mountinfo",
+        importpath = "github.com/moby/sys/mountinfo",
+        sum = "h1:BzJjoreD5BMFNmD9Rus6gdd1pLuecOFPt8wC+Vygl78=",
+        version = "v0.6.2",
     )
     go_repository(
         name = "com_github_mostynb_zstdpool_syncpool",

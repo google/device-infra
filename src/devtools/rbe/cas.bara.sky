@@ -34,6 +34,8 @@ def cas_build_file_replace(before_target, after_target):
 cas_blaze_to_bazel_transforms = [
     # Go lib mappings
     cas_build_file_replace("//third_party/fastcdc_go:fastcdc", "@com_github_jotfs_fastcdc_go//:fastcdc-go"),
+    cas_build_file_replace("//third_party/golang/gofuse/fuse", "@com_github_hanwen_go_fuse_v2//fuse:go_default_library"),
+    cas_build_file_replace("//third_party/golang/gofuse/fs", "@com_github_hanwen_go_fuse_v2//fs:go_default_library"),
 ]
 
 cas_go_imports_map = {
@@ -45,4 +47,6 @@ cas_go_imports_map = {
     "google3/third_party/bazel_remote_apis_sdks/go/pkg/filemetadata/filemetadata": "github.com/bazelbuild/remote-apis-sdks/go/pkg/filemetadata",
     "google3/third_party/bazel_remote_apis_sdks/go/pkg/uploadinfo/uploadinfo": "github.com/bazelbuild/remote-apis-sdks/go/pkg/uploadinfo",
     "google3/third_party/fastcdc_go/fastcdc": "github.com/jotfs/fastcdc-go",
+    "google3/third_party/golang/gofuse/fuse/fuse": "github.com/hanwen/go-fuse/v2/fuse",
+    "google3/third_party/golang/gofuse/fs/fs": "github.com/hanwen/go-fuse/v2/fs",
 }
