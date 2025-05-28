@@ -32,6 +32,7 @@ import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportPr
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.AttributeList;
 import com.google.devtools.mobileharness.infra.ats.console.result.xml.XmlConstants;
 import com.google.devtools.mobileharness.platform.android.xts.common.DeviceBuildInfo;
+import com.google.devtools.mobileharness.platform.testbed.mobly.MoblyConstant.TestGenOutput;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.protobuf.TextFormat;
@@ -253,5 +254,14 @@ public class MoblyReportHelper {
       props.add(deviceBuildInfo.getPropName());
     }
     return props.build();
+  }
+
+  /** Formats the log directory by moving the log files. */
+  public void formatLogDir(String logDir) throws MobileHarnessException, InterruptedException {
+    Path config = Path.of(logDir, TestGenOutput.CONFIG_FILE);
+    Path moblyLogDir = Path.of(logDir, TestGenOutput.MOBLY_LOG_DIR);
+    if (localFileUtil.isDirExist(moblyLogDir) && localFileUtil.isFileExist(config)) {
+      localFileUtil.moveFileOrDir(config, moblyLogDir);
+    }
   }
 }

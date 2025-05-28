@@ -134,14 +134,23 @@ public final class NonTradefedReportGenerator {
       Instant testEndTime)
       throws MobileHarnessException, InterruptedException {
     JobInfo jobInfo = testInfo.jobInfo();
-    if (jobInfo.properties().getBoolean(Job.SKIP_COLLECTING_NON_TF_REPORTS).orElse(false)) {
-      logger.atInfo().log("Skip collecting non tradefed reports.");
-      return;
-    }
 
     boolean runCertificationTestSuite =
         jobInfo.params().getBool(PARAM_RUN_CERTIFICATION_TEST_SUITE, false);
     if (!runCertificationTestSuite) {
+      return;
+    }
+
+    try {
+      moblyReportHelper.formatLogDir(testInfo.getGenFileDir());
+    } catch (MobileHarnessException e) {
+      logger.atWarning().withCause(e).log(
+          "Failed to format the log directory for xTS Mobly run: %s",
+          MoreThrowables.shortDebugString(e));
+    }
+
+    if (jobInfo.properties().getBoolean(Job.SKIP_COLLECTING_NON_TF_REPORTS).orElse(false)) {
+      logger.atInfo().log("Skip collecting non tradefed reports.");
       return;
     }
 

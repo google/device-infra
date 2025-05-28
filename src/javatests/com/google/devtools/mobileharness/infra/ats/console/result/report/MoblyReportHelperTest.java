@@ -32,6 +32,7 @@ import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.protobuf.TextFormat;
 import java.io.File;
+import java.nio.file.Path;
 import java.time.Instant;
 import org.junit.Before;
 import org.junit.Rule;
@@ -284,5 +285,16 @@ public final class MoblyReportHelperTest {
     assertThat(attributes.getAttributeList())
         .containsExactlyElementsIn(EXPECTED_BUILD_ATTRIBUTES)
         .inOrder();
+  }
+
+  @Test
+  public void formatLogDir_moveConfigSuccess() throws Exception {
+    Path tempDir = temporaryFolder.newFolder("temp").toPath().toAbsolutePath();
+    tempDir.resolve("mobly_logs").toFile().mkdirs();
+    tempDir.resolve("config.yaml").toFile().createNewFile();
+
+    new MoblyReportHelper(adb, localFileUtil).formatLogDir(tempDir.toString());
+
+    assertThat(tempDir.resolve("mobly_logs/config.yaml").toFile().exists()).isTrue();
   }
 }

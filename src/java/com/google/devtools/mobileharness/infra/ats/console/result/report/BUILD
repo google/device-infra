@@ -166,6 +166,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/xml:xml_constants",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common:device_build_info",
+        "//src/java/com/google/devtools/mobileharness/platform/testbed/mobly:mobly_constant",
         "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",

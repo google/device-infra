@@ -217,4 +217,16 @@ public final class NonTradefedReportGeneratorTest {
                     .toString()),
             anyString());
   }
+
+  @Test
+  public void postMoblyCommandExec_verifyLogDirFormatted() throws Exception {
+    params = new Params(null);
+    params.add(PARAM_RUN_CERTIFICATION_TEST_SUITE, "true");
+    when(jobInfo.params()).thenReturn(params);
+
+    generator.createTestReport(
+        testInfo, ImmutableList.of(), Instant.ofEpochSecond(1), Instant.ofEpochSecond(10));
+
+    verify(moblyReportHelper).formatLogDir("/gen");
+  }
 }
