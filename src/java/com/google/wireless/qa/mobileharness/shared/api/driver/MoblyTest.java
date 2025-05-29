@@ -17,6 +17,7 @@
 package com.google.wireless.qa.mobileharness.shared.api.driver;
 
 import static com.google.common.base.StandardSystemProperty.JAVA_IO_TMPDIR;
+import static com.google.common.base.Strings.isNullOrEmpty;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
@@ -392,22 +393,22 @@ public class MoblyTest extends BaseDriver implements MoblyTestSpec {
   @VisibleForTesting
   boolean runMoblyCommand(TestInfo testInfo, File configFile)
       throws MobileHarnessException, InterruptedException {
+    ImmutableSet.Builder<String> paths = new ImmutableSet.Builder<>();
 
-    // Use the adb and fastboot binaries that ship with Mobile Harness.
+    // Use the adb and fastboot binaries that ship with Mobile Harness
     Adb adb = new Adb();
-    File adbPath = new File(adb.getAdbPath());
+    getSdkToolDir(adb.getAdbPath(), "adb").ifPresent(paths::add);
     Fastboot fastboot = new Fastboot();
-    File fastbootPath = new File(fastboot.getFastbootPath());
-    String path =
-        Joiner.on(':')
-            .join(
-                adbPath.getParent(), // Android platform tools provided by Mobile Harness, including
-                // adb
-                // and aapt.
-                fastbootPath
-                    .getParent(), // Android build tools provided by Mobile Harness, including
-                // fastboot and mke2fs.
-                systemUtil.getEnv("PATH"));
+    // Android build tools provided by Mobile Harness, including fastboot and mke2fs.
+    getSdkToolDir(fastboot.getFastbootPath(), "fastboot").ifPresent(paths::add);
+
+    // System PATH
+    String systemPath = systemUtil.getEnv("PATH");
+    if (systemPath != null) {
+      paths.add(systemPath);
+    }
+
+    String path = Joiner.on(':').join(paths.build());
 
     /* Path to {@code genFileDir} for the test, these are fetched into undeclared outputs at the
      * client side by MH. */
@@ -704,6 +705,33 @@ public class MoblyTest extends BaseDriver implements MoblyTestSpec {
       throw new MobileHarnessException(
           ExtErrorId.MOBLY_EXECUTE_ERROR, "Failed to execute command " + debugString, e);
     }
+  }
+
+  private Optional<String> getSdkToolDir(String mhSdkToolPath, String sdkToolName)
+      throws MobileHarnessException, InterruptedException {
+    File sdkFile;
+    if (isNullOrEmpty(mhSdkToolPath) || Ascii.equalsIgnoreCase(mhSdkToolPath, sdkToolName)) {
+      CommandResult result = executor.exec(Command.of("which", sdkToolName).successExitCodes(0, 1));
+
+      if (result.exitCode() != 0) {
+        String possibleSdkTool = executor.run(Command.of("whereis", sdkToolName));
+        getTest()
+            .warnings()
+            .addAndLog(
+                new MobileHarnessException(
+                    ExtErrorId.MOBLY_SDK_TOOL_NOT_FOUND_ERROR,
+                    String.format(
+                        "Unable to find the sdk tool \"%s\". Executables found: %s",
+                        sdkToolName, possibleSdkTool)),
+                logger);
+        return Optional.empty();
+      }
+      sdkFile = new File(result.stdout().trim());
+    } else {
+      sdkFile = new File(mhSdkToolPath);
+    }
+
+    return Optional.ofNullable(sdkFile.getParent());
   }
 
   /** Folder where Mobly should write its output files. */
