@@ -250,3 +250,13 @@ message SessionPersistenceData {
   // The job id list in this session.
   repeated string job_id = 3;
 }
+
+enum SessionManagerStatus {
+  SESSION_MANAGER_STATUS_UNSPECIFIED = 0;
+
+  // Indicates that the session manager is initializing. For example, recovering
+  // sessions from database.
+  SESSION_MANAGER_STATUS_INITIALIZING = 10;
+
+  SESSION_MANAGER_STATUS_INITIALIZED = 20;
+}

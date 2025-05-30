@@ -62,6 +62,10 @@ service SessionService {
   // If all pending/running sessions have been aborted, then the server will
   // exit when it receives ControlService.KillServer() rpc.
   rpc AbortSessions(AbortSessionsRequest) returns (AbortSessionsResponse);
+
+  // Gets the status of the session manager.
+  rpc GetSessionManagerStatus(GetSessionManagerStatusRequest)
+      returns (GetSessionManagerStatusResponse);
 }
 
 message CreateSessionRequest {
@@ -252,4 +256,10 @@ message SessionFilter {
   // Matches a SessionDetail if the map is a sub map of
   // session_output.session_property.
   map<string, string> included_session_property = 5;
+}
+
+message GetSessionManagerStatusRequest {}
+
+message GetSessionManagerStatusResponse {
+  SessionManagerStatus session_manager_status = 1;
 }
