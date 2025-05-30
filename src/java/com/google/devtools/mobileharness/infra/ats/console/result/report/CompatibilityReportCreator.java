@@ -46,6 +46,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Path;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -89,13 +92,18 @@ public class CompatibilityReportCreator {
   private final LocalFileUtil localFileUtil;
   private final TestRecordWriter testRecordWriter;
   private final SystemUtil systemUtil;
+  private final Clock clock;
 
   @Inject
   CompatibilityReportCreator(
-      LocalFileUtil localFileUtil, TestRecordWriter testRecordWriter, SystemUtil systemUtil) {
+      LocalFileUtil localFileUtil,
+      TestRecordWriter testRecordWriter,
+      SystemUtil systemUtil,
+      Clock clock) {
     this.localFileUtil = localFileUtil;
     this.testRecordWriter = testRecordWriter;
     this.systemUtil = systemUtil;
+    this.clock = clock;
   }
 
   /**
@@ -152,6 +160,7 @@ public class CompatibilityReportCreator {
       Map<String, String> testReportProperties,
       List<Path> extraFilesOrDirsToZip)
       throws MobileHarnessException, InterruptedException {
+    long startTime = clock.instant().toEpochMilli();
     localFileUtil.prepareDir(resultDir);
     try {
       writeReportToXml(report, resultDir.toFile());
@@ -220,6 +229,10 @@ public class CompatibilityReportCreator {
     } else {
       logger.atInfo().log("Test result: %s", testResultXmlFile.getAbsolutePath());
     }
+
+    logger.atInfo().log(
+        "Done creating report. Took %s.",
+        Duration.between(Instant.ofEpochMilli(startTime), clock.instant()));
   }
 
   /**

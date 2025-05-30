@@ -38,6 +38,7 @@ import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import java.io.File;
 import java.nio.file.Path;
+import java.time.Clock;
 import javax.inject.Inject;
 import org.junit.Before;
 import org.junit.Rule;
@@ -76,7 +77,8 @@ public final class CompatibilityReportCreatorTest {
   public void setUp() {
     Guice.createInjector(new TestModule(), BoundFieldModule.of(this)).injectMembers(this);
     reportCreator =
-        new CompatibilityReportCreator(realLocalFileUtil, testRecordWriter, new SystemUtil());
+        new CompatibilityReportCreator(
+            realLocalFileUtil, testRecordWriter, new SystemUtil(), Clock.systemUTC());
   }
 
   @Test
