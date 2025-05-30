@@ -564,6 +564,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
   /**
    * Gets the lab version.
    *
+   * @apiNote this method generates the first RPC between client and lab server
    * @return the lab version or 0.0.0 if the lab does not have VersionService (meaning an old lab)
    * @throws MobileHarnessException if fails to connect to the lab or the result is illegal
    */
@@ -582,8 +583,8 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
         return new Version(0, 0, 0);
       } else {
         throw new MobileHarnessException(
-            InfraErrorId.CLIENT_REMOTE_MODE_GET_LAB_VERSION_ERROR,
-            String.format("Failed to get the LabServer version of [%s]", labServerLocator),
+            InfraErrorId.CLIENT_REMOTE_MODE_SEND_RPC_TO_LAB_SERVER_ERROR,
+            String.format("Failed to send RPC to lab server [%s]", labServerLocator),
             e);
       }
     }
