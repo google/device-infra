@@ -472,6 +472,12 @@ public interface PropertyName {
       ANDROID_INSTRUMENTATION_LOG_FILENAMES,
     }
 
+    /** AndroidFlashstationDecorator property name constants. */
+    public enum AndroidFlashstationDecorator implements PropertyName {
+      /** Whether the test is using the V4 Build API. */
+      ENABLE_V4_BUILD_API,
+    }
+
     /** AndroidSetPropDecorator property name constants. */
     public enum AndroidSetPropDecorator implements PropertyName {
 
