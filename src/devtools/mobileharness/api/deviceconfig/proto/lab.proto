@@ -125,13 +125,15 @@ message DetectorSpecs {
     }
 
     message ManekiPs4DeviceDiscoverySpec {
-      string device_id = 1;
       string win_mac_address = 2;
+
+      reserved 1;
     }
 
     message ManekiPs5DeviceDiscoverySpec {
-      string device_id = 1;
       string win_mac_address = 2;
+
+      reserved 1;
     }
 
     message ManekiGenericDeviceDiscoverySpec {
