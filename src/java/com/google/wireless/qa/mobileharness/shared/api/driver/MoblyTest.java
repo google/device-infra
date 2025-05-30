@@ -243,11 +243,10 @@ public class MoblyTest extends BaseDriver implements MoblyTestSpec {
       throws MobileHarnessException, InterruptedException {
     JSONObject moblyJson = generateMoblyConfig(testInfo, getDevice());
     testbedName = getTestbedName(moblyJson);
-    return prepareMoblyConfig(testInfo, moblyJson, localFileUtil);
+    return prepareMoblyConfig(testInfo, moblyJson);
   }
 
-  public static File prepareMoblyConfig(
-      TestInfo testInfo, JSONObject moblyJson, LocalFileUtil localFileUtil)
+  public File prepareMoblyConfig(TestInfo testInfo, JSONObject moblyJson)
       throws MobileHarnessException {
     File configFile = new File(testInfo.getGenFileDir(), MoblyConstant.TestGenOutput.CONFIG_FILE);
     LoaderOptions loaderConfig = new LoaderOptions();
@@ -292,7 +291,7 @@ public class MoblyTest extends BaseDriver implements MoblyTestSpec {
     }
   }
 
-  public static JSONObject generateMoblyConfig(TestInfo testInfo, Device device)
+  public JSONObject generateMoblyConfig(TestInfo testInfo, Device device)
       throws MobileHarnessException, InterruptedException {
     try {
       return generateMoblyConfigHelper(testInfo, device);
@@ -302,24 +301,35 @@ public class MoblyTest extends BaseDriver implements MoblyTestSpec {
     }
   }
 
-  private static JSONObject generateMoblyConfigHelper(TestInfo testInfo, Device device)
-      throws MobileHarnessException, InterruptedException, JSONException {
+  private JSONObject generateMoblyConfigHelper(TestInfo testInfo, Device device)
+      throws MobileHarnessException {
     JSONObject config = new JSONObject();
     // Set Framework params (logdir).
     File logDir = getLogDir(testInfo);
     JSONObject moblyParams = new JSONObject();
     moblyParams.put("LogPath", logDir);
     config.put(MoblyConstant.ConfigKey.MOBLY_PARAMS, moblyParams);
-    // Get params passed in from the build rule and merge them into local TestParams. In the event
-    // of merge conflict, local testbed parameter will take precedence.
-    JSONObject blazeParams = new JSONObject();
+    // Get MH job params(excluded private params if needed) and merge them into Mobly's local
+    // TestParams. In the event of merge conflict, local testbed parameter will take precedence.
+    JSONObject jobParamsExcludedPrivateParams = new JSONObject();
     ImmutableSet<String> privateParams = getPrivateParamNames(testInfo);
     for (Map.Entry<String, String> entry : testInfo.jobInfo().params().getAll().entrySet()) {
       if (!privateParams.contains(entry.getKey())) {
-        blazeParams.put(entry.getKey(), entry.getValue());
+        jobParamsExcludedPrivateParams.put(entry.getKey(), entry.getValue());
       }
     }
     JSONObject testbedConfig = MoblyConfigGenerator.getLocalMoblyConfig(device);
+
+    // Overwrite the testbed config with the user-provided custom Mobly config, if it exists.
+    if (testInfo.jobInfo().files().isTagNotEmpty(FILE_MOBLY_CONFIG)) {
+      JSONObject customMoblyConfig =
+          MoblyConfigGenerator.getMoblyConfigFromYaml(
+              localFileUtil.readFile(testInfo.jobInfo().files().getSingle(FILE_MOBLY_CONFIG)));
+      MoblyConfigGenerator.concatMoblyConfig(
+          testbedConfig, customMoblyConfig, /* overwriteOriginal= */ true);
+      logger.atInfo().log("Config after loading custom Mobly YAML: %s", config);
+    }
+
     JSONObject testParams;
     if (testbedConfig.isNull(MoblyConstant.ConfigKey.TEST_PARAMS)) {
       testParams = new JSONObject();
@@ -327,11 +337,12 @@ public class MoblyTest extends BaseDriver implements MoblyTestSpec {
     } else {
       testParams = testbedConfig.getJSONObject(MoblyConstant.ConfigKey.TEST_PARAMS);
     }
-    // Dump blazeParams into TestBed:TestParams part of the config.
-    if (blazeParams.length() > 0) {
-      for (String key : JSONObject.getNames(blazeParams)) {
+    // Dump job params (excluded private params) into TestBed:TestParams part of the config. In the
+    // event of merge conflict, local testbed parameter will take precedence.
+    if (jobParamsExcludedPrivateParams.length() > 0) {
+      for (String key : JSONObject.getNames(jobParamsExcludedPrivateParams)) {
         if (testParams.isNull(key)) {
-          testParams.put(key, blazeParams.get(key));
+          testParams.put(key, jobParamsExcludedPrivateParams.get(key));
         }
       }
     }

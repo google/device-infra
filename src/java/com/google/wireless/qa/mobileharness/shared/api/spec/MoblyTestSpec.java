@@ -26,6 +26,9 @@ public interface MoblyTestSpec {
   @FileAnnotation(required = true, help = "The .par file of your Mobly testcases.")
   public static final String FILE_TEST_LIB_PAR = "test_lib_par";
 
+  @FileAnnotation(required = false, help = "A custom Mobly YAML config file")
+  public static final String FILE_MOBLY_CONFIG = "mobly_config";
+
   @ParamAnnotation(
       required = false,
       help =
