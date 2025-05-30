@@ -78,6 +78,7 @@ import org.jline.reader.impl.history.DefaultHistory;
 import org.jline.terminal.TerminalBuilder;
 import picocli.CommandLine;
 
+// for testing
 /** ATS Console. */
 public class AtsConsole {
 
