@@ -107,7 +107,7 @@ func RestoreFiles(srcDir string, dstDir string, keepChunks bool) error {
 func FindChunksIndex(dir string) (string, error) {
 	indexPath := filepath.Join(dir, ChunksDirName, ChunksIndexFileName)
 	if _, err := os.Stat(indexPath); err != nil {
-		indexPath := filepath.Join(dir, ChunksIndexFileName)
+		indexPath = filepath.Join(dir, ChunksIndexFileName)
 		if _, err := os.Stat(indexPath); os.IsNotExist(err) {
 			return "", fmt.Errorf("chunk index file not found in %s", dir)
 		}
