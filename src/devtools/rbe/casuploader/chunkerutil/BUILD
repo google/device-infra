@@ -13,7 +13,7 @@
 # limitations under the License.
 #
 
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 package(
     default_applicable_licenses = ["//:license"],
@@ -30,4 +30,10 @@ go_library(
         "//src/devtools/rbe/casuploader/chunker",
         "@com_github_golang_glog//:glog",
     ],
+)
+
+go_test(
+    name = "chunkerutil_test",
+    srcs = ["chunkerutil_test.go"],
+    embed = [":chunkerutil"],
 )
