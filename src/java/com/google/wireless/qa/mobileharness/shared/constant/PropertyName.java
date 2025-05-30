@@ -210,6 +210,9 @@ public interface PropertyName {
     /** Whether the test attempt is the final one. */
     IS_FINAL_ATTEMPT,
 
+    /** Whether the Mobly command is successful. */
+    IS_MOBLY_COMMAND_SUCCESS,
+
     /** The local path of the test gen file dir of the lab side (local) test runner. */
     LAB_TEST_GEN_FILE_DIR,
 

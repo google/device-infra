@@ -138,7 +138,7 @@ public class MoblyTest extends BaseDriver implements MoblyTestSpec {
     File configFile = prepareMoblyConfig(testInfo);
 
     CompositeDeviceUtil.cacheTestbed(testInfo, getDevice());
-    boolean passed;
+    Boolean passed = null;
     try {
       passed = runMoblyCommand(testInfo, configFile);
       testInfo
@@ -154,6 +154,11 @@ public class MoblyTest extends BaseDriver implements MoblyTestSpec {
         testInfo.resultWithCause().setNonPassing(TestResult.ERROR, exception);
       }
     } finally {
+      if (passed != null) {
+        testInfo
+            .properties()
+            .add(PropertyName.Test.IS_MOBLY_COMMAND_SUCCESS, String.valueOf(passed));
+      }
       CompositeDeviceUtil.uncacheTestbed(getDevice());
     }
 
