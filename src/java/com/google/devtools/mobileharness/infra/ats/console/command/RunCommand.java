@@ -53,6 +53,7 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.sessionplu
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfoFactory;
 import com.google.devtools.mobileharness.infra.ats.console.util.command.CommandHelper;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
+import com.google.devtools.mobileharness.infra.ats.console.util.result.ResultListerHelper;
 import com.google.devtools.mobileharness.infra.ats.console.util.subplan.SubPlanLister;
 import com.google.devtools.mobileharness.platform.android.shared.constant.Splitters;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsCommandUtil;
@@ -63,6 +64,7 @@ import com.google.devtools.mobileharness.shared.util.command.CommandException;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.Timeout;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import java.io.File;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
@@ -383,6 +385,7 @@ public final class RunCommand implements Callable<Integer> {
   private final ConsoleUtil consoleUtil;
   private final CommandHelper commandHelper;
   private final SubPlanLister subPlanLister;
+  private final ResultListerHelper resultListerHelper;
 
   private final ServerPreparer serverPreparer;
   private final ServerLogPrinter serverLogPrinter;
@@ -398,6 +401,7 @@ public final class RunCommand implements Callable<Integer> {
       ConsoleUtil consoleUtil,
       CommandHelper commandHelper,
       SubPlanLister subPlanLister,
+      ResultListerHelper resultListerHelper,
       ServerPreparer serverPreparer,
       ServerLogPrinter serverLogPrinter,
       ListeningExecutorService executorService,
@@ -410,6 +414,7 @@ public final class RunCommand implements Callable<Integer> {
     this.consoleUtil = consoleUtil;
     this.commandHelper = commandHelper;
     this.subPlanLister = subPlanLister;
+    this.resultListerHelper = resultListerHelper;
     this.serverPreparer = serverPreparer;
     this.serverLogPrinter = serverLogPrinter;
     this.executorService = executorService;
@@ -755,7 +760,11 @@ public final class RunCommand implements Callable<Integer> {
       runCommand.setSubPlanName(subPlanName);
     }
     if (retrySessionIndex != null) {
-      runCommand.setRetrySessionIndex(retrySessionIndex);
+      // As the command parameters validation ensures only one of retrySessionIndex or
+      // retrySessionResultDirName is set, so at this point retrySessionResultDirName is empty. Now
+      // we get the retrySessionResultDirName by the retrySessionIndex and will use
+      // retrySessionResultDirName to locate the previous result later.
+      retrySessionResultDirName = getRetrySessionResultDirName(retrySessionIndex);
     }
     if (!isNullOrEmpty(retrySessionResultDirName)) {
       runCommand.setRetrySessionResultDirName(retrySessionResultDirName.trim());
@@ -817,6 +826,27 @@ public final class RunCommand implements Callable<Integer> {
         executorService);
     consoleUtil.printlnStdout("Command submitted.");
     return ExitCode.OK;
+  }
+
+  /**
+   * Gets the retry session result dir name for the given retry session index.
+   *
+   * @throws IllegalArgumentException if the retry session index is invalid.
+   * @throws MobileHarnessException if fails to find all result directories.
+   */
+  private String getRetrySessionResultDirName(int retrySessionIndex) throws MobileHarnessException {
+    Path xtsRootDir = consoleInfo.getXtsRootDirectoryNonEmpty();
+    String resultsDir =
+        XtsDirUtil.getXtsResultsDir(xtsRootDir, commandHelper.getXtsType()).toString();
+    ImmutableList<File> allResultDirs = resultListerHelper.listResultDirsInOrder(resultsDir);
+    if (retrySessionIndex < 0 || retrySessionIndex >= allResultDirs.size()) {
+      throw new IllegalArgumentException(
+          String.format(
+              "The given retry session index %s is out of index. The session index range is [%d,"
+                  + " %d)",
+              retrySessionIndex, 0, allResultDirs.size()));
+    }
+    return allResultDirs.get(retrySessionIndex).getName();
   }
 
   /** Future callback which prints {@code AtsSessionPluginOutput} to console. */

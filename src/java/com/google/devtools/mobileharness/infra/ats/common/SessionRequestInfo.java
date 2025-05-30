@@ -191,6 +191,18 @@ public abstract class SessionRequestInfo {
 
   public abstract Builder toBuilder();
 
+  /**
+   * Adds/Updates {@code retrySessionResultDirName} to existing arguments.
+   *
+   * <p>If {@code retrySessionIndex} is present, it will be cleared.
+   */
+  public SessionRequestInfo withRetrySessionResultDirName(String retrySessionResultDirName) {
+    return toBuilder()
+        .setRetrySessionIndex(Optional.empty())
+        .setRetrySessionResultDirName(retrySessionResultDirName)
+        .build();
+  }
+
   /** Builder to create SessionRequestInfo. */
   @AutoValue.Builder
   public abstract static class Builder {
@@ -226,6 +238,9 @@ public abstract class SessionRequestInfo {
         ImmutableMultimap<String, String> moduleMetadataExcludeFilters);
 
     public abstract Builder setRetrySessionIndex(Integer retrySessionIndex);
+
+    /** Used to clear retrySessionIndex. */
+    abstract Builder setRetrySessionIndex(Optional<Integer> retrySessionIndex);
 
     public abstract Builder setRetrySessionResultDirName(String retrySessionResultDirName);
 
