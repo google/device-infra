@@ -90,7 +90,7 @@ public class MoblyTest extends BaseDriver implements MoblyTestSpec {
   private static final String RAW_MOBLY_LOG_DIR = "raw_mobly_logs";
 
   /** Name of file that catches stdout & stderr output of Mobly process. */
-  private static final String RAW_MOBLY_LOG_ALL_IN_ONE = "mobly_command_output.log";
+  protected static final String RAW_MOBLY_LOG_ALL_IN_ONE = "mobly_command_output.log";
 
   private static final String ENV_MOBLY_LOGPATH = "MOBLY_LOGPATH";
 

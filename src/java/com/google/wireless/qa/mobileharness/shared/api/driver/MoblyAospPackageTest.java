@@ -20,6 +20,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import com.google.common.flogger.FluentLogger;
 import com.google.devtools.common.metrics.stability.converter.ErrorModelConverter;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -37,6 +38,7 @@ import com.google.wireless.qa.mobileharness.shared.api.annotation.DriverAnnotati
 import com.google.wireless.qa.mobileharness.shared.api.device.CompositeDevice;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.spec.MoblyAospPackageTestSpec;
+import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestStatus;
 import java.io.File;
@@ -45,6 +47,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Iterator;
+import java.util.Optional;
 import javax.inject.Inject;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -53,7 +56,9 @@ import org.yaml.snakeyaml.scanner.ScannerException;
 /** Driver for running Mobly tests packaged in AOSP and distributed via the Android Build. */
 @DriverAnnotation(
     help = "For running Mobly tests packaged in AOSP and distributed via the Android Build.")
-public class MoblyAospPackageTest extends MoblyGenericTest {
+public class MoblyAospPackageTest extends MoblyTest {
+
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private static final String MOBLY_CONFIG_KEY_PREFIX_MH = "mh_";
 
@@ -131,7 +136,7 @@ public class MoblyAospPackageTest extends MoblyGenericTest {
   protected File prepareMoblyConfig(TestInfo testInfo)
       throws MobileHarnessException, InterruptedException {
     JSONObject moblyJson = convertMoblyConfig(generateMoblyConfig(testInfo, getDevice()));
-    testbedName = MoblyGenericTest.getTestbedName(moblyJson);
+    testbedName = MoblyTest.getTestbedName(moblyJson);
     return prepareMoblyConfig(testInfo, moblyJson);
   }
 
@@ -200,12 +205,15 @@ public class MoblyAospPackageTest extends MoblyGenericTest {
    * @throws InterruptedException if the thread was interrupted while processing the output
    */
   @Override
-  protected void processTestOutput(TestInfo testInfo, boolean passed)
+  protected void processTestOutput(TestInfo testInfo)
       throws MobileHarnessException, InterruptedException {
+    Optional<Boolean> isMoblyCmdPassed =
+        testInfo.properties().getBoolean(PropertyName.Test.IS_MOBLY_COMMAND_SUCCESS);
+    logger.atInfo().log("Is Mobly command passed: %s", isMoblyCmdPassed);
     try {
       handleOutput(testInfo);
       parseResults(testInfo);
-      setTestResult(testInfo, passed);
+      setTestResult(testInfo, isMoblyCmdPassed.orElse(false));
     } catch (MobileHarnessException | IOException e) {
       String moblyCommandOutput;
       try {

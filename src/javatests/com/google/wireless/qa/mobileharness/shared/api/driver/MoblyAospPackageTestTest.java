@@ -91,7 +91,7 @@ public final class MoblyAospPackageTestTest {
     when(jobInfo.files()).thenReturn(files);
     params = new Params(null);
     params.add(MoblyAospPackageTestSpec.PARAM_TEST_PATH, "sample_test.py");
-    params.add(MoblyGenericTest.TEST_SELECTOR_KEY, "test1 test2");
+    params.add(MoblyTest.TEST_SELECTOR_KEY, "test1 test2");
     params.add(MoblyAospPackageTestSpec.PARAM_PYTHON_VERSION, "3.10");
     params.add(MoblyAospPackageTestSpec.PARAM_PY_PKG_INDEX_URL, PY_PKG_INDEX_URL);
     when(jobInfo.params()).thenReturn(params);
