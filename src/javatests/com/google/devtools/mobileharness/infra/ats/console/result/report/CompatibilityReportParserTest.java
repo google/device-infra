@@ -127,6 +127,7 @@ public final class CompatibilityReportParserTest {
             Summary.newBuilder()
                 .setPassed(9)
                 .setFailed(1)
+                .setWarning(0)
                 .setModulesDone(2)
                 .setModulesTotal(2)
                 .build());
@@ -200,6 +201,7 @@ public final class CompatibilityReportParserTest {
             Summary.newBuilder()
                 .setPassed(9)
                 .setFailed(1)
+                .setWarning(0)
                 .setModulesDone(2)
                 .setModulesTotal(2)
                 .build());
@@ -213,6 +215,7 @@ public final class CompatibilityReportParserTest {
                 .setDone(true)
                 .setPassed(3)
                 .setFailedTests(1)
+                .setWarningTests(0)
                 .setTotalTests(4)
                 .setReason(
                     Reason.newBuilder()
@@ -284,6 +287,7 @@ public final class CompatibilityReportParserTest {
                 .setDone(true)
                 .setPassed(6)
                 .setFailedTests(0)
+                .setWarningTests(0)
                 .setTotalTests(6)
                 .addTestCase(
                     TestCase.newBuilder()

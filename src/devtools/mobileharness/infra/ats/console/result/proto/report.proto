@@ -66,6 +66,7 @@ message Run {
   optional int64 end_time_millis = 2;
   optional int64 passed_tests = 3;
   optional int64 failed_tests = 4;
+  optional int64 warning_tests = 7;
   optional string command_line_args = 5;
   optional string host_name = 6;
 }
@@ -74,6 +75,7 @@ message Run {
 message Summary {
   optional int64 passed = 1;
   optional int64 failed = 2;
+  optional int64 warning = 5;
   optional int32 modules_done = 3;
   optional int32 modules_total = 4;
 }
@@ -100,6 +102,8 @@ message Module {
   optional bool is_non_tf_module = 9;
   // Optional. Number of failed tests in the module. Not showing in xml report.
   optional int32 failed_tests = 10;
+  // Optional. Number of warning tests in the module. Not showing in xml report.
+  optional int32 warning_tests = 13;
   // Optional. Preparation time of this module. Epoch milliseconds.
   optional int64 prep_time_millis = 11;
   // Optional. Teardown time of this module. Epoch milliseconds.

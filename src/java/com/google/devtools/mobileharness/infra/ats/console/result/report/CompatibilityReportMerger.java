@@ -180,6 +180,7 @@ public class CompatibilityReportMerger {
 
     long passedInSummary = 0L;
     long failedInSummary = 0L;
+    long warningInSummary = 0L;
     for (Result report : usableReports) {
       List<Run> runsInReport =
           report.hasRunHistory() ? report.getRunHistory().getRunList() : ImmutableList.of();
@@ -188,6 +189,7 @@ public class CompatibilityReportMerger {
       // Accumulates counts in Summary
       passedInSummary += report.getSummary().getPassed();
       failedInSummary += report.getSummary().getFailed();
+      warningInSummary += report.getSummary().getWarning();
     }
 
     ImmutableList<Module> mergedModuleList = mergeModules(modules.build());
@@ -204,6 +206,7 @@ public class CompatibilityReportMerger {
         Summary.newBuilder()
             .setPassed(passedInSummary)
             .setFailed(failedInSummary)
+            .setWarning(warningInSummary)
             .setModulesDone(modulesDoneInSummary)
             .setModulesTotal(modulesTotalInSummary)
             .build();
@@ -257,6 +260,7 @@ public class CompatibilityReportMerger {
     boolean mergedModuleDone = true;
     int mergedModulePassedTests = 0;
     int mergedModuleFailedTests = 0;
+    int mergedModuleWarningTests = 0;
     int mergedModuleTotalTests = 0;
     List<TestCase> testCases = new ArrayList<>();
     Reason moduleNotDoneReason = null;
@@ -277,6 +281,9 @@ public class CompatibilityReportMerger {
         } else if (test.getResult()
             .equals(TestStatus.convertToTestStatusCompatibilityString(TestStatus.FAILURE))) {
           mergedModuleFailedTests++;
+        } else if (test.getResult()
+            .equals(TestStatus.convertToTestStatusCompatibilityString(TestStatus.WARNING))) {
+          mergedModuleWarningTests++;
         }
         mergedModuleTotalTests++;
       }
@@ -286,6 +293,7 @@ public class CompatibilityReportMerger {
         .setDone(mergedModuleDone)
         .setPassed(mergedModulePassedTests)
         .setFailedTests(mergedModuleFailedTests)
+        .setWarningTests(mergedModuleWarningTests)
         .setTotalTests(mergedModuleTotalTests)
         .addAllTestCase(mergedtestCases);
     if (moduleNotDoneReason != null) {

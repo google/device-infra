@@ -387,6 +387,10 @@ public class CompatibilityReportParser {
     if (attributeMap.containsKey(XmlConstants.FAILED_ATTR)) {
       runBuilder.setFailedTests(Long.parseLong(attributeMap.get(XmlConstants.FAILED_ATTR).trim()));
     }
+    if (attributeMap.containsKey(XmlConstants.WARNING_ATTR)) {
+      runBuilder.setWarningTests(
+          Long.parseLong(attributeMap.get(XmlConstants.WARNING_ATTR).trim()));
+    }
 
     if (attributeMap.containsKey(XmlConstants.COMMAND_LINE_ARGS)) {
       runBuilder.setCommandLineArgs(attributeMap.get(XmlConstants.COMMAND_LINE_ARGS).trim());
@@ -409,6 +413,10 @@ public class CompatibilityReportParser {
     }
     if (attributeMap.containsKey(XmlConstants.FAILED_ATTR)) {
       summaryBuilder.setFailed(Integer.parseInt(attributeMap.get(XmlConstants.FAILED_ATTR).trim()));
+    }
+    if (attributeMap.containsKey(XmlConstants.WARNING_ATTR)) {
+      summaryBuilder.setWarning(
+          Integer.parseInt(attributeMap.get(XmlConstants.WARNING_ATTR).trim()));
     }
     if (attributeMap.containsKey(XmlConstants.MODULES_DONE_ATTR)) {
       summaryBuilder.setModulesDone(
@@ -559,8 +567,9 @@ public class CompatibilityReportParser {
   private static void handleEndModule(Context context) {
     if (context.currentModule != null) {
       Module.Builder currentModuleBuilder = context.currentModule;
-      // Calculate the number of failed tests
+      // Calculate the number of failed tests and warning tests.
       int failedTests = 0;
+      int warningTests = 0;
       for (TestCase testCase : currentModuleBuilder.getTestCaseList()) {
         for (Test test : testCase.getTestList()) {
           if (test.getResult()
@@ -569,10 +578,14 @@ public class CompatibilityReportParser {
             // tools/tradefederation/core/invocation_interfaces/com/android/tradefed/result/TestRunResult.java
             // #getNumAllFailedTests
             failedTests++;
+          } else if (test.getResult()
+              .equals(TestStatus.convertToTestStatusCompatibilityString(TestStatus.WARNING))) {
+            warningTests++;
           }
         }
       }
       currentModuleBuilder.setFailedTests(failedTests);
+      currentModuleBuilder.setWarningTests(warningTests);
       context.resultBuilder.addModuleInfo(context.currentModule.build());
       context.currentModule = null;
     }

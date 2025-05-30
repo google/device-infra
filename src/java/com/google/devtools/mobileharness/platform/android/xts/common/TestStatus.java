@@ -31,7 +31,9 @@ public enum TestStatus {
   /** Test ignored. */
   IGNORED,
   /** Test skipped, did not run for a reason. */
-  SKIPPED;
+  SKIPPED,
+  /** Test failed but being marked as warning. */
+  WARNING;
 
   /** Converts our test status to a format compatible with CTS backend. */
   public static String convertToTestStatusCompatibilityString(TestStatus status) {
