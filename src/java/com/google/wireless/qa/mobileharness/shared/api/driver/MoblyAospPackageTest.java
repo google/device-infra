@@ -208,7 +208,7 @@ public class MoblyAospPackageTest extends MoblyTest {
   protected void processTestOutput(TestInfo testInfo)
       throws MobileHarnessException, InterruptedException {
     Optional<Boolean> isMoblyCmdPassed =
-        testInfo.properties().getBoolean(PropertyName.Test.IS_MOBLY_COMMAND_SUCCESS);
+        testInfo.properties().getBoolean(PropertyName.Test.MoblyTest.IS_MOBLY_COMMAND_SUCCESS);
     logger.atInfo().log("Is Mobly command passed: %s", isMoblyCmdPassed);
     try {
       handleOutput(testInfo);

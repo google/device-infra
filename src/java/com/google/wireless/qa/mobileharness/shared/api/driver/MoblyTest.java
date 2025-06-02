@@ -157,7 +157,7 @@ public class MoblyTest extends BaseDriver implements MoblyTestSpec {
       if (passed != null) {
         testInfo
             .properties()
-            .add(PropertyName.Test.IS_MOBLY_COMMAND_SUCCESS, String.valueOf(passed));
+            .add(PropertyName.Test.MoblyTest.IS_MOBLY_COMMAND_SUCCESS, String.valueOf(passed));
       }
       CompositeDeviceUtil.uncacheTestbed(getDevice());
     }
