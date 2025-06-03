@@ -127,7 +127,7 @@ public class SessionRequestHandlerUtil {
 
   /**
    * The same as {@link
-   * com.google.wireless.qa.mobileharness.shared.api.driver.MoblyGenericTest#TEST_SELECTOR_KEY}.
+   * com.google.wireless.qa.mobileharness.shared.api.driver.MoblyTest#TEST_SELECTOR_KEY}.
    */
   public static final String MOBLY_TEST_SELECTOR_KEY = "test_case_selector";
 

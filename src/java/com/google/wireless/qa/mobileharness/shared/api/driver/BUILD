@@ -193,34 +193,6 @@ java_library(
 )
 
 java_library(
-    name = "mobly_generic_test",
-    srcs = ["MoblyGenericTest.java"],
-    deps = [
-        ":base_driver",
-        "//src/devtools/mobileharness/api/model/proto:test_java_proto",
-        "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
-        "//src/java/com/google/devtools/deviceinfra/platform/android/sdk/fastboot",
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/devtools/mobileharness/platform/testbed/mobly:mobly_constant",
-        "//src/java/com/google/devtools/mobileharness/platform/testbed/mobly/util:config_generator",
-        "//src/java/com/google/devtools/mobileharness/shared/util/command",
-        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
-        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "//src/java/com/google/devtools/mobileharness/shared/util/system",
-        "//src/java/com/google/devtools/mobileharness/shared/util/testcomponents:testcomponents_dir_util",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api:composite_device_util",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
-        "@maven//:com_google_code_findbugs_jsr305",
-        "@maven//:com_google_guava_guava",
-        "@maven//:javax_inject_jsr330_api",
-        "@maven//:org_json_json",
-        "@maven//:org_yaml_snakeyaml",
-    ],
-)
-
-java_library(
     name = "mobly_test",
     srcs = ["MoblyTest.java"],
     deps = [

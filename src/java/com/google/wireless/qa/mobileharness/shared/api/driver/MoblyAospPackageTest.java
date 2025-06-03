@@ -128,9 +128,9 @@ public class MoblyAospPackageTest extends MoblyTest {
   /**
    * Prepares the Mobly config.
    *
-   * <p>Invokes {@link MoblyGenericTest#generateMoblyConfig} to populate the config fields, but also
-   * strips any key names with a "mh_" prefix so that a test written in AOSP can avoid making
-   * explicit references to MH (e.g. "mh_files" becomes "files" in the config).
+   * <p>Invokes {@link MoblyTest#generateMoblyConfig} to populate the config fields, but also strips
+   * any key names with a "mh_" prefix so that a test written in AOSP can avoid making explicit
+   * references to MH (e.g. "mh_files" becomes "files" in the config).
    */
   @Override
   protected File prepareMoblyConfig(TestInfo testInfo)
