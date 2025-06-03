@@ -21,7 +21,6 @@ java_library(
     name = "unknown_error",
     srcs = ["UnknownErrorId.java"],
     visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/controller/test/util:__pkg__",
         "//src/java/com/google/devtools/mobileharness/shared/util/error:__pkg__",
     ],
     deps = [
