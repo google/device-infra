@@ -23,6 +23,7 @@ java_library(
     visibility = [
         "//:deviceinfra_all_pkg",
         "//:omnilab_fusion",
+        "//java/com/google/vr/androidxr/testing/mobileharness/plugins:__pkg__",
         "//src/javatests/com/google/devtools/deviceinfra/platform/android/sdk/fastboot:__pkg__",
     ],
     exports = [":enums"],
