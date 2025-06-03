@@ -350,6 +350,10 @@ public abstract class AndroidRealDeviceDelegate {
       if (!Strings.isNullOrEmpty(arS)) {
         device.updateDimension(Dimension.Name.AP_AR_S, Ascii.toLowerCase(arS));
       }
+      String socId = fastboot.getVar(deviceId, FastbootProperty.SOC_ID);
+      if (!Strings.isNullOrEmpty(socId)) {
+        device.updateDimension(Dimension.Name.SOC_ID, Ascii.toLowerCase(socId));
+      }
 
       try {
         String serialno = fastboot.getVar(deviceId, FastbootProperty.SERIALNO);
