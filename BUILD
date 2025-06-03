@@ -45,6 +45,8 @@ package_group(
     name = "deviceinfra_pkg",
     packages = [
         "//...",
+        "//java/com/google/vr/androidxr/testing/mobileharness/...",
+        "//javatests/com/google/vr/androidxr/testing/mobileharness/...",
     ],
 )
 
