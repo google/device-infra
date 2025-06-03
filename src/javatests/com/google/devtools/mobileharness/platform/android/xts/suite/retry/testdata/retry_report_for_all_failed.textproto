@@ -31,6 +31,7 @@ build {
 summary {
   passed: 11
   failed: 01
+  warning: 0
   modules_done: 2
   modules_total: 2
 }
@@ -77,6 +78,7 @@ module_info {
     }
   }
   failed_tests: 0
+  warning_tests: 0
 }
 module_info {
   name: "CtsAccelerationTestCases[instant]"
@@ -121,6 +123,7 @@ module_info {
     }
   }
   failed_tests: 1
+  warning_tests: 0
 }
 attribute {
   key: "start"

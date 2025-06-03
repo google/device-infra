@@ -301,6 +301,7 @@ public class RetryReportMerger {
     // Prepare the Summary
     long passedInSummary = 0;
     long failedInSummary = 0;
+    long warningInSummary = 0;
     int modulesDoneInSummary = 0;
     int modulesTotalInSummary = 0;
     for (Module module :
@@ -313,6 +314,7 @@ public class RetryReportMerger {
       modulesTotalInSummary++;
       passedInSummary += module.getPassed();
       failedInSummary += module.getFailedTests();
+      warningInSummary += module.getWarningTests();
     }
 
     return mergedResult
@@ -320,6 +322,7 @@ public class RetryReportMerger {
             Summary.newBuilder()
                 .setPassed(passedInSummary)
                 .setFailed(failedInSummary)
+                .setWarning(warningInSummary)
                 .setModulesDone(modulesDoneInSummary)
                 .setModulesTotal(modulesTotalInSummary))
         .build();
@@ -481,6 +484,7 @@ public class RetryReportMerger {
 
     int passedTests = 0;
     int failedTests = 0;
+    int warningTests = 0;
     int totalTests = 0;
     for (TestCase testCase : mergedModuleBuilder.getTestCaseList()) {
       for (Test test : testCase.getTestList()) {
@@ -490,6 +494,9 @@ public class RetryReportMerger {
         } else if (test.getResult()
             .equals(TestStatus.convertToTestStatusCompatibilityString(TestStatus.FAILURE))) {
           failedTests++;
+        } else if (test.getResult()
+            .equals(TestStatus.convertToTestStatusCompatibilityString(TestStatus.WARNING))) {
+          warningTests++;
         }
         totalTests++;
       }
@@ -497,6 +504,7 @@ public class RetryReportMerger {
     return mergedModuleBuilder
         .setPassed(passedTests)
         .setFailedTests(failedTests)
+        .setWarningTests(warningTests)
         .setTotalTests(totalTests)
         .build();
   }
@@ -633,6 +641,7 @@ public class RetryReportMerger {
     return runBuilder
         .setPassedTests(result.getSummary().getPassed())
         .setFailedTests(result.getSummary().getFailed())
+        .setWarningTests(result.getSummary().getWarning())
         .build();
   }
 

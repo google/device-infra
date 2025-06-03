@@ -485,7 +485,8 @@ public class SessionResultHandlerUtil {
           finalReport,
           resultDir,
           /* testRecord= */ null,
-          sessionRequestInfo.htmlInZip(),
+          /* includeHtmlInZip= */ sessionRequestInfo.htmlInZip(),
+          /* testPlan= */ sessionRequestInfo.testPlan(),
           testReportProperties.buildOrThrow(),
           extraFilesOrDirsToZip);
     } else if (isRunRetry) {
@@ -564,11 +565,18 @@ public class SessionResultHandlerUtil {
         // folder.
         generateInvocationSummaryFile(
             sessionAllJobs, finalReport, resultDir, logDir, previousResult);
+        String previousTestPlanForRetry =
+            finalReport.getAttributeList().stream()
+                .filter(attribute -> attribute.getKey().equals(XmlConstants.SUITE_PLAN_ATTR))
+                .findFirst()
+                .map(Attribute::getValue)
+                .orElse("");
         reportCreator.createReport(
             finalReport,
             resultDir,
             /* testRecord= */ null,
-            sessionRequestInfo.htmlInZip(),
+            /* includeHtmlInZip= */ sessionRequestInfo.htmlInZip(),
+            /* testPlan= */ previousTestPlanForRetry,
             testReportProperties.buildOrThrow(),
             extraFilesOrDirsToZip);
       }

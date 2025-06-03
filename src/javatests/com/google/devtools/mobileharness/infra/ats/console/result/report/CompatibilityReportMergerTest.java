@@ -204,17 +204,19 @@ public final class CompatibilityReportMergerTest {
             Summary.newBuilder()
                 .setPassed(20)
                 .setFailed(2)
+                .setWarning(0)
                 .setModulesDone(3)
                 .setModulesTotal(3)
                 .build());
     assertThat(result.getModuleInfoCount()).isEqualTo(3);
 
-    // Assert module mergion
+    // Assert module merging result.
     Module module1 = result.getModuleInfoList().get(0);
     assertThat(module1.getName()).isEqualTo("Module1");
     assertThat(module1.getRuntimeMillis()).isEqualTo(7495 + 7495);
     assertThat(module1.getPassed()).isEqualTo(3);
     assertThat(module1.getFailedTests()).isEqualTo(1);
+    assertThat(module1.getWarningTests()).isEqualTo(0);
     assertThat(module1.getTotalTests()).isEqualTo(4);
     assertThat(module1.getTestCaseCount()).isEqualTo(2);
     assertThat(module1.getTestCase(0).getTestCount()).isEqualTo(2);
@@ -224,6 +226,7 @@ public final class CompatibilityReportMergerTest {
     assertThat(module2.getRuntimeMillis()).isEqualTo(7495 + 7495);
     assertThat(module2.getPassed()).isEqualTo(6);
     assertThat(module2.getFailedTests()).isEqualTo(0);
+    assertThat(module2.getWarningTests()).isEqualTo(0);
     assertThat(module2.getTotalTests()).isEqualTo(6);
     assertThat(module2.getTestCaseCount()).isEqualTo(3);
     assertThat(module2.getTestCase(0).getTestCount()).isEqualTo(2);
@@ -233,6 +236,8 @@ public final class CompatibilityReportMergerTest {
     assertThat(module3.getName()).isEqualTo("Module3");
     assertThat(module3.getRuntimeMillis()).isEqualTo(7495);
     assertThat(module3.getPassed()).isEqualTo(2);
+    assertThat(module3.getFailedTests()).isEqualTo(0);
+    assertThat(module3.getWarningTests()).isEqualTo(0);
     assertThat(module3.getTotalTests()).isEqualTo(2);
     assertThat(module3.getTestCaseCount()).isEqualTo(1);
     assertThat(module3.getTestCase(0).getTestCount()).isEqualTo(2);
@@ -338,6 +343,7 @@ public final class CompatibilityReportMergerTest {
             Summary.newBuilder()
                 .setPassed(1)
                 .setFailed(3)
+                .setWarning(0)
                 .setModulesDone(2)
                 .setModulesTotal(2)
                 .build());

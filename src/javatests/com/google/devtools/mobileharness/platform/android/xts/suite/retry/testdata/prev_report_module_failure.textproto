@@ -34,6 +34,7 @@ run_history {
     end_time_millis: 1711350582012
     passed_tests: 0
     failed_tests: 0
+    warning_tests: 0
     command_line_args: "cts --subplan 123 -s 12241FDD4002Z6"
     host_name: "baishengz.bej.host.name"
   }
@@ -41,6 +42,7 @@ run_history {
 summary {
   passed: 0
   failed: 0
+  warning: 0
   modules_done: 0
   modules_total: 1
 }
@@ -55,6 +57,7 @@ module_info {
     msg: "com.android.tradefed.targetprep.TargetSetupError: Device setup checks failed."
   }
   failed_tests: 0
+  warning_tests: 0
 }
 attribute {
   key: "start"

@@ -31,6 +31,7 @@ build {
 summary {
   passed: 0
   failed: 0
+  warning: 0
   modules_done: 1
   modules_total: 1
 }
@@ -44,6 +45,7 @@ module_info {
   prep_time_millis: 3000
   teardown_time_millis: 2000
   failed_tests: 0
+  warning_tests: 0
 }
 attribute {
   key: "start"

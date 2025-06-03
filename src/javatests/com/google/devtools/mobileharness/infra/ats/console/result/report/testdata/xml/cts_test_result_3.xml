@@ -5,7 +5,7 @@
     <Run start="1680772434893" end="1680772480000" pass="11" failed="1" command_line_args="cts -s 12241FDD4002Z6" host_name="myhostname" />
     <Run start="1680772480001" end="1680772548260" pass="11" failed="1" command_line_args="cts -s 12241FDD4002Z6" host_name="myhostname" />
   </RunHistory>
-  <Summary pass="11" failed="1" modules_done="3" modules_total="3" />
+  <Summary pass="11" failed="1" warning="0" modules_done="3" modules_total="3" />
   <Module name="Module1" abi="arm64-v8a" runtime="7495" done="true" pass="3" total_tests="4">
     <Reason message="Module1 has test failure" error_name="TEST FAILURE" error_code="1" />
     <TestCase name="android.cts.Dummy1Test">

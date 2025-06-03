@@ -31,6 +31,7 @@ build {
 summary {
   passed: 3
   failed: 0
+  warning: 0
   modules_done: 1
   modules_total: 1
 }
@@ -62,6 +63,7 @@ module_info {
     }
   }
   failed_tests: 0
+  warning_tests: 0
 }
 attribute {
   key: "start"

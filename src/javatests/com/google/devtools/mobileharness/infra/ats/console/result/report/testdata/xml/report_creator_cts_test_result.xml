@@ -2,11 +2,11 @@
 <Result start="1678951330449" end="1678951395733" start_display="Thu Mar 16 00:22:10 PDT 2023" end_display="Thu Mar 16 00:23:15 PDT 2023" command_line_args="cts -s 12241FDD4002Z6" devices="12241FDD4002Z6" is_retry_result="false">
   <Build adb_version="1.0.41 install path: /usr/bin/adb" command_line_args="cts -s 12241FDD4002Z6" device_kernel_info="Linux localhost 5.10.149-android13-4-693040-g6422af733678-ab9739629 #1 SMP PREEMPT Fri Mar 10 01:44:38 UTC 2023 aarch64 Toybox" invocation-id="1" java_version="19.0.2" build_fingerprint="google/bramble/bramble:UpsideDownCake/UP1A.220722.002/8859461:userdebug/dev-keys" />
   <RunHistory>
-    <Run start="1678951330449" end="1678951360449" pass="9" failed="1" command_line_args="cts -s 12241FDD4002Z6" host_name="myhostname" />
-    <Run start="1678951361000" end="1678951395733" pass="9" failed="1" command_line_args="cts -s 12241FDD4002Z6" host_name="myhostname" />
+    <Run start="1678951330449" end="1678951360449" pass="8" failed="2" warning="1" command_line_args="cts -s 12241FDD4002Z6" host_name="myhostname" />
+    <Run start="1678951361000" end="1678951395733" pass="8" failed="2" warning="1" command_line_args="cts -s 12241FDD4002Z6" host_name="myhostname" />
   </RunHistory>
-  <Summary pass="9" failed="2" modules_done="3" modules_total="3" />
-  <Module name="Module1" abi="arm64-v8a" runtime="7495" done="true" pass="3" total_tests="4">
+  <Summary pass="8" failed="2" warning="1" modules_done="3" modules_total="3" />
+  <Module name="Module1" abi="arm64-v8a" runtime="7495" done="true" pass="2" total_tests="4">
     <Reason message="Module1 has test failure" error_name="TEST FAILURE" error_code="1" />
     <TestCase name="android.cts.Dummy1Test">
       <Test result="fail" name="testMethod1">
@@ -24,7 +24,7 @@
     </TestCase>
     <TestCase name="android.cts.Dummy2Test">
       <Test result="pass" name="testMethod1" />
-      <Test result="pass" name="testMethod2" />
+      <Test result="WARNING" name="testMethod2" />
     </TestCase>
   </Module>
   <Module name="Module2" abi="arm64-v8a" runtime="7495" done="true" pass="6" total_tests="6">

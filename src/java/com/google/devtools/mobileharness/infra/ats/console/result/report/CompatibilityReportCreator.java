@@ -35,6 +35,7 @@ import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportPr
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.TestFailure;
 import com.google.devtools.mobileharness.infra.ats.console.result.xml.XmlConstants;
 import com.google.devtools.mobileharness.infra.ats.console.util.tradefed.TestRecordWriter;
+import com.google.devtools.mobileharness.platform.android.xts.common.TestStatus;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -110,13 +111,15 @@ public class CompatibilityReportCreator {
    * Creates report and related files under directory {@code resultDir}, and a zip file for
    * directory {@code resultDir} and its contents later for upload.
    *
-   * <p>See more details in {@link #createReport(Result, Path, TestRecord, boolean, Map, List)}.
+   * <p>See more details in {@link #createReport(Result, Path, TestRecord, boolean, String, Map,
+   * List)}.
    */
   public void createReport(
       Result report,
       Path resultDir,
       @Nullable TestRecord testRecord,
       boolean includeHtmlInZip,
+      String testPlan,
       Map<String, String> testReportProperties)
       throws MobileHarnessException, InterruptedException {
     createReport(
@@ -124,6 +127,7 @@ public class CompatibilityReportCreator {
         resultDir,
         testRecord,
         includeHtmlInZip,
+        testPlan,
         testReportProperties,
         /* extraFilesOrDirsToZip= */ ImmutableList.of());
   }
@@ -147,6 +151,8 @@ public class CompatibilityReportCreator {
    * @param resultDir the directory where to store the generated report files
    * @param testRecord test record proto packed into the report if specified
    * @param includeHtmlInZip whether to include html reports in the zip file
+   * @param testPlan the test plan name e.g. cts, aqts etc. For a retry session, this should be the
+   *     previous/original test plan name (test plan name for a retry session is "retry").
    * @param testReportProperties the properties to be written to the test report properties file
    * @param extraFilesOrDirsToZip extra files or directories to be copied into directly under {@code
    *     resultDir} and included in the generated zip file
@@ -157,10 +163,12 @@ public class CompatibilityReportCreator {
       Path resultDir,
       @Nullable TestRecord testRecord,
       boolean includeHtmlInZip,
+      String testPlan,
       Map<String, String> testReportProperties,
       List<Path> extraFilesOrDirsToZip)
       throws MobileHarnessException, InterruptedException {
     long startTime = clock.instant().toEpochMilli();
+    report = preprocessReport(report, testPlan);
     localFileUtil.prepareDir(resultDir);
     try {
       writeReportToXml(report, resultDir.toFile());
@@ -236,6 +244,55 @@ public class CompatibilityReportCreator {
   }
 
   /**
+   * Preprocesses the {@code report} for the given {@code testPlan}.
+   *
+   * <p>For AQTS (Android Quality Test Suite), the failed tests will be marked as warning.
+   */
+  @VisibleForTesting
+  Result preprocessReport(Result report, String testPlan) {
+    if (!testPlan.equals("aqts")) {
+      return report;
+    }
+
+    Result.Builder resultBuilder = report.toBuilder();
+    // Update each Test element's result attribute to "warning" if it's "fail".
+    resultBuilder.getModuleInfoBuilderList().stream()
+        .flatMap(moduleBuilder -> moduleBuilder.getTestCaseBuilderList().stream())
+        .flatMap(testCaseBuilder -> testCaseBuilder.getTestBuilderList().stream())
+        .filter(
+            testBuilder ->
+                testBuilder
+                    .getResult()
+                    .equals(TestStatus.convertToTestStatusCompatibilityString(TestStatus.FAILURE)))
+        .forEach(
+            testBuilder ->
+                testBuilder.setResult(
+                    TestStatus.convertToTestStatusCompatibilityString(TestStatus.WARNING)));
+
+    // Update the Summary element's failed and warning attributes.
+    long failedCountInSummary = resultBuilder.getSummary().getFailed();
+    long warningCountInSummary = resultBuilder.getSummary().getWarning();
+    resultBuilder
+        .getSummaryBuilder()
+        .setWarning(warningCountInSummary + failedCountInSummary)
+        .setFailed(0);
+
+    // Update the Module element's failed and warning attributes.
+    resultBuilder
+        .getModuleInfoBuilderList()
+        .forEach(
+            moduleBuilder -> {
+              int failedCountInModule = moduleBuilder.getFailedTests();
+              int warningCountInModule = moduleBuilder.getWarningTests();
+              moduleBuilder
+                  .setWarningTests(warningCountInModule + failedCountInModule)
+                  .setFailedTests(0);
+            });
+
+    return resultBuilder.build();
+  }
+
+  /**
    * Converts the {@code report} to a compatibility test result XML, which is stored under the given
    * directory {@code parentDir} with the file name "test_result.xml".
    */
@@ -303,6 +360,9 @@ public class CompatibilityReportCreator {
         if (run.hasFailedTests()) {
           serializer.attribute(NS, XmlConstants.FAILED_ATTR, Long.toString(run.getFailedTests()));
         }
+        if (run.hasWarningTests()) {
+          serializer.attribute(NS, XmlConstants.WARNING_ATTR, Long.toString(run.getWarningTests()));
+        }
         if (run.hasCommandLineArgs()) {
           serializer.attribute(NS, XmlConstants.COMMAND_LINE_ARGS, run.getCommandLineArgs());
         }
@@ -320,6 +380,8 @@ public class CompatibilityReportCreator {
         NS, XmlConstants.PASS_ATTR, Long.toString(report.getSummary().getPassed()));
     serializer.attribute(
         NS, XmlConstants.FAILED_ATTR, Long.toString(report.getSummary().getFailed()));
+    serializer.attribute(
+        NS, XmlConstants.WARNING_ATTR, Long.toString(report.getSummary().getWarning()));
     serializer.attribute(
         NS, XmlConstants.MODULES_DONE_ATTR, Integer.toString(report.getSummary().getModulesDone()));
     serializer.attribute(
