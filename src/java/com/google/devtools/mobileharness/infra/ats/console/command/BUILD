@@ -105,6 +105,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:certification_suite_info_factory",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/command:command_helper",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/console:console_util",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/result:result_lister_helper",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/subplan:sub_plan_lister",
         "//src/java/com/google/devtools/mobileharness/platform/android/shared/constant:splitters",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_command_util",

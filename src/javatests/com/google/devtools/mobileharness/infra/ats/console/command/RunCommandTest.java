@@ -17,18 +17,26 @@
 package com.google.devtools.mobileharness.infra.ats.console.command;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerEnvironmentPreparer.ServerEnvironment;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleLineReader;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.SystemProperties;
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
 import com.google.devtools.mobileharness.infra.ats.console.GuiceFactory;
+import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.AtsSessionStub;
+import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
+import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
+import com.google.devtools.mobileharness.infra.ats.console.util.command.CommandHelper;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
+import com.google.devtools.mobileharness.infra.ats.console.util.result.ResultListerHelper;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -36,6 +44,7 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
+import java.io.File;
 import java.nio.file.Path;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
@@ -45,6 +54,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
@@ -55,15 +66,23 @@ import picocli.CommandLine.ParameterException;
 @RunWith(JUnit4.class)
 public final class RunCommandTest {
 
+  private static final String XTS_ROOT_DIR = "/fake_xts_root";
+
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
 
+  @Captor private ArgumentCaptor<AtsSessionPluginConfig> atsSessionPluginConfigCaptor;
+
   @Bind @SystemProperties
-  private static final ImmutableMap<String, String> SYSTEM_PROPERTIES = ImmutableMap.of();
+  private static final ImmutableMap<String, String> SYSTEM_PROPERTIES =
+      ImmutableMap.of("XTS_ROOT", XTS_ROOT_DIR);
 
   @Mock @Bind private LocalFileUtil localFileUtil;
   @Mock @Bind @Nullable @ConsoleLineReader private LineReader lineReader;
   @Mock @Bind private CommandExecutor commandExecutor;
   @Mock @Bind private ConsoleUtil consoleUtil;
+  @Mock @Bind private AtsSessionStub atsSessionStub;
+  @Mock @Bind private ResultListerHelper resultListerHelper;
+  @Mock @Bind private CommandHelper commandHelper;
 
   @Inject private ConsoleInfo consoleInfo;
   private CommandLine commandLine;
@@ -295,6 +314,29 @@ public final class RunCommandTest {
         .containsExactly("key3", "value3", "key4", "value4");
     assertThat(runCommand.getExtraRunCmdArgs())
         .containsExactly("tf-arg0", "tf-arg1", "-opt0", "-opt1", "opt1-value", "-opt2");
+  }
+
+  @Test
+  public void parseArgsThenRunWithCommand_retrySessionIdMappedToRetrySessionResultDirName()
+      throws Exception {
+    String retrySessionResultDirName = "2025.02.10_15.11.19.261_7233";
+    when(commandHelper.getXtsType()).thenReturn("cts");
+    when(resultListerHelper.listResultDirsInOrder(XTS_ROOT_DIR + "/android-cts/results"))
+        .thenReturn(ImmutableList.of(new File(retrySessionResultDirName)));
+    when(atsSessionStub.runSession(any(), any()))
+        .thenReturn(immediateFuture(AtsSessionPluginOutput.getDefaultInstance()));
+
+    commandLine.parseArgs("retry", "--retry", "0");
+    var unused = runCommand.runWithCommand(ImmutableList.of("run", "retry", "--retry", "0"));
+
+    verify(atsSessionStub)
+        .runSession(
+            eq(RunCommand.RUN_COMMAND_SESSION_NAME), atsSessionPluginConfigCaptor.capture());
+    com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto
+            .RunCommand
+        runCmd = atsSessionPluginConfigCaptor.getValue().getRunCommand();
+    assertThat(runCmd.hasRetrySessionIndex()).isFalse();
+    assertThat(runCmd.getRetrySessionResultDirName()).isEqualTo(retrySessionResultDirName);
   }
 
   @Test
