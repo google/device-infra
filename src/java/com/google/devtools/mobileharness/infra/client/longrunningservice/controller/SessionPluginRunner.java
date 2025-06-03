@@ -54,12 +54,20 @@ public class SessionPluginRunner {
 
   /** Posts {@link SessionStartingEvent} to session plugins. */
   public void onSessionStarting() {
-    postEvent(SessionStartingEvent::new, SessionStartingEvent.class, sessionPlugin -> true);
+    postEvent(
+        SessionStartingEvent::new,
+        SessionStartingEvent.class,
+        sessionPlugin -> true,
+        /* reversed= */ false);
   }
 
   /** Posts {@link SessionStartedEvent} to session plugins. */
   public void onSessionStarted() {
-    postEvent(SessionStartedEvent::new, SessionStartedEvent.class, sessionPlugin -> true);
+    postEvent(
+        SessionStartedEvent::new,
+        SessionStartedEvent.class,
+        sessionPlugin -> true,
+        /* reversed= */ false);
   }
 
   /** Posts {@link SessionEndedEvent} to session plugins. */
@@ -67,7 +75,8 @@ public class SessionPluginRunner {
     postEvent(
         sessionInfo -> new SessionEndedEvent(sessionInfo, error),
         SessionEndedEvent.class,
-        sessionPlugin -> true);
+        sessionPlugin -> true,
+        /* reversed= */ true);
   }
 
   /** Posts {@link SessionNotificationEvent} to session plugins with the given label. */
@@ -83,16 +92,18 @@ public class SessionPluginRunner {
                     .sessionInfo()
                     .getSessionPluginLabel()
                     .equals(sessionNotification.getPluginLabel())
-            : sessionPlugin -> true);
+            : sessionPlugin -> true,
+        /* reversed= */ false);
   }
 
   private <T> void postEvent(
       Function<SessionInfo, T> eventGenerator,
       Class<T> eventClass,
-      Predicate<SessionPlugin> sessionPluginFilter) {
+      Predicate<SessionPlugin> sessionPluginFilter,
+      boolean reversed) {
     logger.atInfo().log("Posting %s", eventClass.getSimpleName());
     // TODO: Supports skipping session.
-    for (SessionPlugin sessionPlugin : sessionPlugins) {
+    for (SessionPlugin sessionPlugin : reversed ? sessionPlugins.reverse() : sessionPlugins) {
       if (!sessionPluginFilter.test(sessionPlugin)) {
         continue;
       }
