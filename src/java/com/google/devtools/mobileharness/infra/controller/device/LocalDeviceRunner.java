@@ -191,7 +191,6 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
         .add(deviceId, apiConfig, type.isAnnotationPresent(RetainDeviceInfoAnnotation.class));
 
     this.device = new DeviceFactory().createDevice(type, deviceId.controlId());
-    DeviceIdUtil.addDeviceIdAndClassNameToDimension(deviceId, device);
     this.deviceStat = stat;
     deviceStat.onShowUp();
     clock = Clock.systemUTC();
@@ -214,7 +213,6 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
       Thread runningThread,
       ExternalDeviceManager externalDeviceManager) {
     this.device = device;
-    DeviceIdUtil.addDeviceIdAndClassNameToDimension(deviceId, device);
     this.deviceStat = stat;
     this.apiConfig = apiConfig;
     this.clock = clock;
@@ -614,6 +612,7 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
   void prepareDevice() throws InterruptedException, MobileHarnessException {
     // Initializes the device.
     logger.atInfo().log("Initializing...");
+    DeviceIdUtil.addDeviceIdAndClassNameToDimension(device.info().deviceId(), device);
     try {
       extendExpireTime(device.getSetupTimeout());
       device.prepare();
