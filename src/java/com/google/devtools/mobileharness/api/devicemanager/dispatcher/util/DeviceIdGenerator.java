@@ -84,7 +84,7 @@ public class DeviceIdGenerator {
         if (word.size() > 1) {
           return DeviceId.of(
               deviceControlId, deviceControlId.replaceFirst(word.get(0), prefix), true);
-        } else if (Flags.instance().enableAtsMode.getNonNull()
+        } else if (Flags.instance().useEmulatorNameInUuid.getNonNull()
             && deviceControlId.startsWith("emulator-")) {
           return DeviceId.of(deviceControlId, prefix + ":" + deviceControlId, true);
         } else {

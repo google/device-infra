@@ -1949,6 +1949,16 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> useAlts = useAltsDefault;
 
+  private static final Flag<Boolean> useEmulatorNameInUuidDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--use_emulator_name_in_uuid",
+      description =
+          "Whether to use the emulator name in the device UUID. This is to make Omnilab"
+              + " device naming scheme consistent with ATS server's. Default is false.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> useEmulatorNameInUuid = useEmulatorNameInUuidDefault;
+
   private static final Flag<Boolean> useTfRetryDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(
