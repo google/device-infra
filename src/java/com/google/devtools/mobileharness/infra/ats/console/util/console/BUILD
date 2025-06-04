@@ -45,3 +45,17 @@ java_library(
         "@maven//:org_jline_jline",
     ],
 )
+
+java_library(
+    name = "interruptible_line_reader",
+    srcs = ["InterruptibleLineReader.java"],
+    deps = [
+        ":console_util",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console:annotations",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/command:command_helper",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+        "@maven//:org_jline_jline",
+    ],
+)
