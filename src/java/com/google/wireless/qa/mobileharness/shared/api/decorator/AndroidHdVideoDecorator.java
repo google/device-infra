@@ -29,8 +29,8 @@ import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidS
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
-import com.google.wireless.qa.mobileharness.shared.api.annotation.ParamAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
+import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidHdVideoSpec;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -51,71 +51,7 @@ import java.util.Queue;
         "For recording screen video with high definition at the last few minutes of "
             + "the test. This decorator must be put in front of AndroidFilePullerDecorator, if "
             + "there is AndroidFilePullerDecorator.")
-public class AndroidHdVideoDecorator extends AsyncTimerDecorator {
-
-  @ParamAnnotation(
-      required = false,
-      help = "Whether to upload video when test pass. By default, it is true.")
-  public static final String PARAM_VIDEO_ON_PASS = "video_on_pass";
-
-  @ParamAnnotation(
-      required = false,
-      help =
-          "The number of video clips. If it equals x, records screen at the last"
-              + " (x*screenrecord_time_limit/60-screenrecord_time_limit/60,"
-              + " x*screenrecord_time_limit/60] minutes. By default, it is 3 (recording at the last"
-              + " 6-9 minutes). At least it's 2.")
-  public static final String PARAM_NUM_VIDEO_CLIPS = "video_clip_num";
-
-  @ParamAnnotation(
-      required = false,
-      help =
-          "The video bit rate. The acceptable range is [100000, 100000000]. "
-              + "By default, it is 4000000 (4Mbps).")
-  public static final String PARAM_VIDEO_BIT_RATE = "video_bit_rate";
-
-  @ParamAnnotation(required = false, help = "Custom prefix for video clip file names.")
-  public static final String PARAM_CLIP_FILE_NAME = "clip_filename";
-
-  @ParamAnnotation(
-      required = false,
-      help =
-          "Whether or not to use the device ID as prefix for the clip file names. True by default.")
-  public static final String PARAM_CLIP_FILENAME_USE_PREFIX = "clip_filename_use_prefix";
-
-  @ParamAnnotation(
-      required = false,
-      help =
-          "The video size: 1280x720. "
-              + "The default value is the device's native display resolution "
-              + "if supported, 1280x720 if not. "
-              + "For best results, "
-              + "use a size supported by your device's Advanced Video Coding (AVC) encoder.")
-  public static final String PARAM_VIDEO_SIZE = "video_size";
-
-  @ParamAnnotation(
-      required = false,
-      help = "Whether to add additional information on the video, such as timestamp overlay.")
-  public static final String PARAM_BUGREPORT = "enable_screenrecord_bugreport";
-
-  @ParamAnnotation(
-      required = false,
-      help =
-          "Whether to use VrCore RecorderService to record video. "
-              + "Defaults to false; "
-              + "set this to true if test runs in VR mode with VrCore as the compositor, "
-              + "since the Android default screen recording does not work in this situation.")
-  public static final String PARAM_RECORD_VR_VIDEO = "record_vr_video";
-
-  @ParamAnnotation(
-      required = false,
-      help =
-          "The maximum screen recording time for each video file, in seconds. If not set, it is 180"
-              + " seconds.Set to 0 will remove the time limit, and generate only one video file."
-              + " Only supported on API 34+. Use this param at your own risk of exhausting the"
-              + " device's storage.")
-  public static final String PARAM_SCREENRECORD_TIME_LIMIT_SECONDS =
-      "screenrecord_time_limit_seconds";
+public class AndroidHdVideoDecorator extends AsyncTimerDecorator implements AndroidHdVideoSpec {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -139,9 +75,6 @@ public class AndroidHdVideoDecorator extends AsyncTimerDecorator {
 
   /** The maximum recording time. */
   @VisibleForTesting static final long MAX_RECORDING_TIME_MS = Duration.ofMinutes(3L).toMillis();
-
-  /** The overlap recording time between two video clips. */
-  public static final long OVERLAP_RECORDING_TIME_MS = Duration.ofSeconds(5L).toMillis();
 
   /** The expected upper bound of post processing time of screenrecord. */
   @VisibleForTesting static final long POST_PROCESSING_TIME_MS = Duration.ofSeconds(10L).toMillis();

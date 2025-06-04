@@ -66,6 +66,12 @@ java_library(
 )
 
 java_library(
+    name = "android_hd_video_spec",
+    srcs = ["AndroidHdVideoSpec.java"],
+    deps = ["//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation:basic_annotation"],
+)
+
+java_library(
     name = "android_instrumentation_driver_spec",
     srcs = ["AndroidInstrumentationDriverSpec.java"],
     deps = [

@@ -18,7 +18,7 @@ package com.google.wireless.qa.mobileharness.shared.api.validator.job;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.AndroidHdVideoDecorator;
+import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidHdVideoSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
 import java.time.Duration;
@@ -35,26 +35,23 @@ public class AndroidHdVideoDecoratorJobValidator implements JobValidator {
   @Override
   public List<String> validate(JobInfo job) throws InterruptedException {
     List<String> errors = new ArrayList<>();
-    String videoSize = job.params().get(AndroidHdVideoDecorator.PARAM_VIDEO_SIZE, null);
+    String videoSize = job.params().get(AndroidHdVideoSpec.PARAM_VIDEO_SIZE, null);
     JobType type = job.type();
     if (videoSize != null && !videoSize.matches(VIDEO_SIZE_REGEX)) {
       errors.add(
           "video_size must be width x height. width & height should be valid 4 digit number. e.g. "
               + "1280x720");
     }
-    if (job.params().has(AndroidHdVideoDecorator.PARAM_SCREENRECORD_TIME_LIMIT_SECONDS)) {
+    if (job.params().has(AndroidHdVideoSpec.PARAM_SCREENRECORD_TIME_LIMIT_SECONDS)) {
       Duration timeLimit =
           Duration.ofSeconds(
-              job.params()
-                  .getLong(AndroidHdVideoDecorator.PARAM_SCREENRECORD_TIME_LIMIT_SECONDS, 0L));
+              job.params().getLong(AndroidHdVideoSpec.PARAM_SCREENRECORD_TIME_LIMIT_SECONDS, 0L));
       if (!timeLimit.isZero()
-          && timeLimit
-              .minusMillis(AndroidHdVideoDecorator.OVERLAP_RECORDING_TIME_MS)
-              .isNegative()) {
+          && timeLimit.minusMillis(AndroidHdVideoSpec.OVERLAP_RECORDING_TIME_MS).isNegative()) {
         errors.add(
             String.format(
                 "screenrecord_time_limit_seconds must be larger than %s. ",
-                Duration.ofMillis(AndroidHdVideoDecorator.OVERLAP_RECORDING_TIME_MS)));
+                Duration.ofMillis(AndroidHdVideoSpec.OVERLAP_RECORDING_TIME_MS)));
       }
     }
     boolean hasMetAndroidHdVideoDecorator = false;
@@ -64,7 +61,7 @@ public class AndroidHdVideoDecoratorJobValidator implements JobValidator {
               + "AndroidMonsoonVideoDecorator.");
     }
     for (String decoratorName : type.getDecoratorList()) {
-      if (decoratorName.equals(AndroidHdVideoDecorator.class.getSimpleName())) {
+      if (decoratorName.equals("AndroidHdVideoDecorator")) {
         hasMetAndroidHdVideoDecorator = true;
       } else if (decoratorName.equals("AndroidFilePullerDecorator")
           && !hasMetAndroidHdVideoDecorator) {
