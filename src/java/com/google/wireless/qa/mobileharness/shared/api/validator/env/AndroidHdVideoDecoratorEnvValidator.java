@@ -35,7 +35,7 @@ public class AndroidHdVideoDecoratorEnvValidator extends AndroidDeviceVersionEnv
    * Some devices do not come with the screenrecord command, despite using a higher API level, so we
    * do extra validation via `$ adb shell`.
    */
-  @VisibleForTesting static final String ADB_SHELL_VALIDATE = "screenrecord --version";
+  @VisibleForTesting static final String ADB_SHELL_VALIDATE = "screenrecord --help";
 
   private final Adb adb;
 
