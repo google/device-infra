@@ -1,0 +1,36 @@
+---
+Requested Tests: [test_hello, test_hi]
+Type: TestNameList
+---
+Begin Time: 1485396391375
+Details: null
+End Time: 1485396391386
+Extra Errors: {}
+Extras: foo
+Result: PASS
+Stacktrace: null
+Test Class: HelloWorldTest
+Test Name: test_hello
+Type: Record
+UID: bar
+---
+Begin Time: 1485396391387
+Details: null
+End Time: 1485396391394
+Extra Errors: {}
+Extras: null
+Result: PASS
+Stacktrace: null
+Test Class: AnotherHelloWorldTest
+Test Name: test_hi
+Type: Record
+UID: null
+---
+sponge_properties: {Cake: is a lie, Flight Time: 32.4}
+timestamp: 1524261513
+Type: UserData
+---
+AndroidDevice:
+- {build_id: N1234, build_type: userdebug, model: sailfish, serial: 1234567890}
+Type: ControllerInfo
+--- {Error: 0, Executed: 2, Failed: 0, Passed: 2, Requested: 2, Skipped: 0, Type: Summary}

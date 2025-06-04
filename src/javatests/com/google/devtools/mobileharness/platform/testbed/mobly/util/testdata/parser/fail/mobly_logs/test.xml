@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<testsuites errors="1" failures="1" name="__main__" tests="3" time="0">
+    <testsuite errors="1" failures="1" name="MoblyTest" tests="3" time="0">
+        <testsuite errors="1" failures="1" name="HelloWorldTest" tests="3" time="0">
+            <testcase classname="HelloWorldTest" name="test_hello" result="completed" status="run" time="11" timestamp="2017-01-26T02:06:31.375Z">
+                <failure message="Details: Test failure message&#10;">
+                    <![CDATA[Line 1\nLine 2\n]]>
+                </failure>
+                <properties>
+                    <property name="mobly_begin_time" value="1485396391375"/>
+                    <property name="mobly_end_time" value="1485396391386"/>
+                    <property name="mobly_test_class" value="HelloWorldTest"/>
+                    <property name="test_error" value="Error: Details: Test failure message&#10;"/>
+                    <property name="test_type" value="mobly_test"/>
+                </properties>
+            </testcase>
+            <testcase classname="HelloWorldTest" name="test_hello" result="completed" status="run" time="11" timestamp="2017-01-26T02:06:31.375Z">
+                <error message="&#10;======= EXTRA ERRORS FOUND =======&#10;------&gt; on_fail&#10;Details: Test error message&#10;Extras: {}&#10;Stacktrace: extra error stack line 1\nextra error stack line 2&#10;">
+                    <![CDATA[ERROR[cause=com.google.devtools.common.metrics.stability.converter.DeserializedException:
+======= EXTRA ERRORS FOUND =======
+------> on_fail
+Details: Test error message
+Extras: {}
+Stacktrace: extra error stack line 1\nextra error stack line 2
+ [MH|CUSTOMER_ISSUE|MOBLY_TEST_CASE_ERROR|81029] [MobileHarnessException]
+]]]>
+                </error>
+                <properties>
+                    <property name="mobly_begin_time" value="1485396391375"/>
+                    <property name="mobly_end_time" value="1485396391386"/>
+                    <property name="mobly_test_class" value="HelloWorldTest"/>
+                    <property name="test_error" value="Error: &#10;======= EXTRA ERRORS FOUND =======&#10;------&gt; on_fail&#10;Details: Test error message&#10;Extras: {}&#10;Stacktrace: extra error stack line 1\nextra error stack line 2&#10;"/>
+                    <property name="test_type" value="mobly_test"/>
+                </properties>
+            </testcase>
+            <testcase classname="HelloWorldTest" name="test_hi" result="completed" status="run" time="7" timestamp="2017-01-26T02:06:31.387Z">
+                <properties>
+                    <property name="mobly_begin_time" value="1485396391387"/>
+                    <property name="mobly_end_time" value="1485396391394"/>
+                    <property name="mobly_test_class" value="HelloWorldTest"/>
+                    <property name="test_type" value="mobly_test"/>
+                </properties>
+            </testcase>
+            <properties>
+                <property name="mobly_test_class" value="HelloWorldTest"/>
+                <property name="test_type" value="mobly_class"/>
+            </properties>
+        </testsuite>
+    </testsuite>
+</testsuites>

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<testsuites errors="0" failures="0" name="__main__" tests="2" time="0">
+    <testsuite errors="0" failures="0" name="MoblyTest" tests="2" time="0">
+        <testsuite errors="0" failures="0" name="HelloWorldTest" tests="1" time="0">
+            <testcase classname="HelloWorldTest" name="test_hello" result="completed" status="run" time="11" timestamp="2017-01-26T02:06:31.375Z">
+                <properties>
+                    <property name="mobly_begin_time" value="1485396391375"/>
+                    <property name="mobly_end_time" value="1485396391386"/>
+                    <property name="mobly_test_class" value="HelloWorldTest"/>
+                    <property name="mobly_uid" value="bar"/>
+                    <property name="test_type" value="mobly_test"/>
+                </properties>
+            </testcase>
+            <properties>
+                <property name="mobly_test_class" value="HelloWorldTest"/>
+                <property name="test_type" value="mobly_class"/>
+            </properties>
+        </testsuite>
+        <testsuite errors="0" failures="0" name="AnotherHelloWorldTest" tests="1" time="0">
+            <testcase classname="AnotherHelloWorldTest" name="test_hi" result="completed" status="run" time="7" timestamp="2017-01-26T02:06:31.387Z">
+                <properties>
+                    <property name="mobly_begin_time" value="1485396391387"/>
+                    <property name="mobly_end_time" value="1485396391394"/>
+                    <property name="mobly_test_class" value="AnotherHelloWorldTest"/>
+                    <property name="test_type" value="mobly_test"/>
+                </properties>
+            </testcase>
+            <properties>
+                <property name="mobly_test_class" value="AnotherHelloWorldTest"/>
+                <property name="test_type" value="mobly_class"/>
+            </properties>
+        </testsuite>
+        <properties>
+            <property name="Cake" value="is a lie"/>
+            <property name="Flight Time" value="32.4"/>
+        </properties>
+    </testsuite>
+</testsuites>
