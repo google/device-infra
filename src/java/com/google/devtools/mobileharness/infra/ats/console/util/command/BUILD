@@ -23,6 +23,7 @@ java_library(
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/command:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/util/console:__pkg__",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:xts_type_loader",
