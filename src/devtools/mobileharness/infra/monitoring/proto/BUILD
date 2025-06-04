@@ -22,17 +22,6 @@ package(
 )
 
 proto_library(
-    name = "monitor_entry_proto",
-    srcs = ["monitor_entry.proto"],
-    deps = ["@com_google_protobuf//:timestamp_proto"],
-)
-
-java_proto_library(
-    name = "monitor_entry_java_proto",
-    deps = [":monitor_entry_proto"],
-)
-
-proto_library(
     name = "monitored_record_proto",
     srcs = ["monitored_record.proto"],
     deps = ["@com_google_protobuf//:timestamp_proto"],
