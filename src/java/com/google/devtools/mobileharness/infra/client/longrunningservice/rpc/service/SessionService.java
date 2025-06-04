@@ -35,6 +35,8 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.CreateSessionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetAllSessionsRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetAllSessionsResponse;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionManagerStatusRequest;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionManagerStatusResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.NotifyAllSessionsRequest;
@@ -149,6 +151,18 @@ public class SessionService extends SessionServiceGrpc.SessionServiceImplBase {
         SessionServiceGrpc.getAbortSessionsMethod());
   }
 
+  @Override
+  public void getSessionManagerStatus(
+      GetSessionManagerStatusRequest request,
+      StreamObserver<GetSessionManagerStatusResponse> responseObserver) {
+    GrpcServiceUtil.invoke(
+        request,
+        responseObserver,
+        this::doGetSessionManagerStatus,
+        SessionServiceGrpc.getServiceDescriptor(),
+        SessionServiceGrpc.getGetSessionManagerStatusMethod());
+  }
+
   CreateSessionResponse doCreateSession(CreateSessionRequest request)
       throws MobileHarnessException {
     SessionDetail sessionDetail =
@@ -245,6 +259,13 @@ public class SessionService extends SessionServiceGrpc.SessionServiceImplBase {
         .build();
   }
 
+  private GetSessionManagerStatusResponse doGetSessionManagerStatus(
+      GetSessionManagerStatusRequest request) {
+    return GetSessionManagerStatusResponse.newBuilder()
+        .setSessionManagerStatus(sessionManager.getSessionManagerStatus())
+        .build();
+  }
+
   /**
    * Gets all session ids that match the given session ids and session filter. If the given session
    * ids is empty, other filters will filter all sessions instead of no sessions.
@@ -255,11 +276,11 @@ public class SessionService extends SessionServiceGrpc.SessionServiceImplBase {
       return ImmutableList.of();
     }
 
-    ArrayList<String> allSessionIds = new ArrayList<>();
-    allSessionIds.addAll(
-        sessionManager.getAllSessions(SessionQueryUtil.SESSION_ID_FIELD_MASK, null).stream()
-            .map(sessionDetail -> sessionDetail.getSessionId().getId())
-            .collect(toImmutableList()));
+    List<String> allSessionIds =
+        new ArrayList<>(
+            sessionManager.getAllSessions(SessionQueryUtil.SESSION_ID_FIELD_MASK, null).stream()
+                .map(sessionDetail -> sessionDetail.getSessionId().getId())
+                .collect(toImmutableList()));
     ImmutableList<String> givenSessionIds =
         sessionIds.stream().map(SessionId::getId).collect(toImmutableList());
     if (!givenSessionIds.isEmpty()) {
@@ -267,12 +288,11 @@ public class SessionService extends SessionServiceGrpc.SessionServiceImplBase {
     }
     if (!sessionFilter.equals(SessionFilter.getDefaultInstance())) {
       ImmutableList<String> filteredSessionIds =
-          filteredSessionIds =
-              sessionManager
-                  .getAllSessions(SessionQueryUtil.SESSION_ID_FIELD_MASK, sessionFilter)
-                  .stream()
-                  .map(sessionDetail -> sessionDetail.getSessionId().getId())
-                  .collect(toImmutableList());
+          sessionManager
+              .getAllSessions(SessionQueryUtil.SESSION_ID_FIELD_MASK, sessionFilter)
+              .stream()
+              .map(sessionDetail -> sessionDetail.getSessionId().getId())
+              .collect(toImmutableList());
       allSessionIds.retainAll(filteredSessionIds);
     }
     return ImmutableList.copyOf(allSessionIds);

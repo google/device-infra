@@ -45,6 +45,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.control
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionDetail;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionId;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionManagerStatus;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionNotification;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionOutput;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPersistenceData;
@@ -143,6 +144,9 @@ public class SessionManager {
         }
       };
 
+  private volatile SessionManagerStatus status =
+      SessionManagerStatus.SESSION_MANAGER_STATUS_INITIALIZING;
+
   @Inject
   SessionManager(
       SessionDetailCreator sessionDetailCreator,
@@ -239,39 +243,44 @@ public class SessionManager {
   /** Resumes all the unfinished sessions. */
   public void resumeSessions() {
     try {
-      ImmutableList<SessionPersistenceUtil.SessionPersistenceDataOrError> toBeResumedSessions =
-          sessionPersistenceUtil.getToBeResumedSessions();
-      for (SessionPersistenceUtil.SessionPersistenceDataOrError sessionPersistenceDataOrError :
-          toBeResumedSessions) {
-        if (sessionPersistenceDataOrError.data().isPresent()) {
-          try {
-            addSession(
-                sessionPersistenceDataOrError.data().get().getSessionDetail(),
-                sessionPersistenceDataOrError.data().get().getSessionPersistenceStatus(),
-                ImmutableList.copyOf(sessionPersistenceDataOrError.data().get().getJobIdList()));
-          } catch (MobileHarnessException e) {
-            logger.atWarning().withCause(e).log(
+      try {
+        ImmutableList<SessionPersistenceUtil.SessionPersistenceDataOrError> toBeResumedSessions =
+            sessionPersistenceUtil.getToBeResumedSessions();
+        for (SessionPersistenceUtil.SessionPersistenceDataOrError sessionPersistenceDataOrError :
+            toBeResumedSessions) {
+          if (sessionPersistenceDataOrError.data().isPresent()) {
+            try {
+              addSession(
+                  sessionPersistenceDataOrError.data().get().getSessionDetail(),
+                  sessionPersistenceDataOrError.data().get().getSessionPersistenceStatus(),
+                  ImmutableList.copyOf(sessionPersistenceDataOrError.data().get().getJobIdList()));
+            } catch (MobileHarnessException e) {
+              logger.atWarning().withCause(e).log(
+                  "Failed to resume session [%s]",
+                  sessionPersistenceDataOrError
+                      .data()
+                      .get()
+                      .getSessionDetail()
+                      .getSessionId()
+                      .getId());
+            }
+          } else if (sessionPersistenceDataOrError.error().isPresent()) {
+            logger.atWarning().withCause(sessionPersistenceDataOrError.error().get()).log(
                 "Failed to resume session [%s]",
-                sessionPersistenceDataOrError
-                    .data()
-                    .get()
-                    .getSessionDetail()
-                    .getSessionId()
-                    .getId());
+                sessionPersistenceDataOrError.error().get().getMessage());
           }
-        } else if (sessionPersistenceDataOrError.error().isPresent()) {
-          logger.atWarning().withCause(sessionPersistenceDataOrError.error().get()).log(
-              "Failed to resume session [%s]",
-              sessionPersistenceDataOrError.error().get().getMessage());
         }
+      } catch (MobileHarnessException e) {
+        logger.atWarning().withCause(e).log("Failed to resume sessions.");
       }
-    } catch (MobileHarnessException e) {
-      logger.atWarning().withCause(e).log("Failed to resume sessions.");
-    }
 
-    synchronized (sessionsLock) {
-      // Tries to start new sessions.
-      startSessions();
+      synchronized (sessionsLock) {
+        // Tries to start new sessions.
+        startSessions();
+      }
+    } finally {
+      status = SessionManagerStatus.SESSION_MANAGER_STATUS_INITIALIZED;
+      logger.atInfo().log("Session manager has been initialized");
     }
   }
 
@@ -485,6 +494,10 @@ public class SessionManager {
     for (PendingSession abortedPendingSession : abortedPendingSessions) {
       abortedPendingSession.finalResultFuture().set(abortedPendingSession.sessionDetail());
     }
+  }
+
+  public SessionManagerStatus getSessionManagerStatus() {
+    return status;
   }
 
   /** Tries to poll as many as sessions from the session queue and starts them. */
