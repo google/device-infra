@@ -62,8 +62,6 @@ class LocalQuotaManager extends QuotaManager {
                 Flags.instance().maxConcurrentAdbPushLargeFile.getNonNull(),
                 QuotaKey.UNZIP_LARGE_FILE,
                 Flags.instance().maxConcurrentUnzipLargeFile.getNonNull(),
-                QuotaKey.FASTBOOT_FLASH_DEVICE,
-                Flags.instance().maxConcurrentFlashDevice.getNonNull(),
                 QuotaKey.TF_CONTAINER_INSTANCE,
                 1));
   }

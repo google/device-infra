@@ -1428,19 +1428,6 @@ public class Flags {
       converter = Flag.IntegerConverter.class)
   public Flag<Integer> maxConcurrentAdbPushLargeFile = maxConcurrentAdbPushLargeFileDefault;
 
-  private static final Flag<Integer> maxConcurrentFlashDeviceDefault = Flag.value(2);
-
-  @com.beust.jcommander.Parameter(
-      names = "--max_concurrent_flash_device",
-      description =
-          "Maximum number of concurrent device flashing. "
-              + "Do not set this flag too larger than max_concurrent_adb_push_large_file, "
-              + "because flashing img to different partitions is controlled by that flag. "
-              + "Setting this flag too larger may cause cache device timeout if there are "
-              + "many devices on the lab to be flashed at the same time.",
-      converter = Flag.IntegerConverter.class)
-  public Flag<Integer> maxConcurrentFlashDevice = maxConcurrentFlashDeviceDefault;
-
   private static final Flag<Integer> maxConcurrentUnzipLargeFileDefault = Flag.value(2);
 
   @com.beust.jcommander.Parameter(

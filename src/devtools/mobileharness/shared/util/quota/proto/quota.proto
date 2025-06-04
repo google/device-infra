@@ -28,8 +28,9 @@ enum QuotaKey {
   ADB_PUSH_LARGE_FILE = 1;
   // Quota key for unzipping large files. See b/34956945.
   UNZIP_LARGE_FILE = 2;
+  // DEPRECATED: This quota key is limited to ADB_PUSH_LARGE_FILE.
   // Quota key for concurrent flash device number.
-  FASTBOOT_FLASH_DEVICE = 3;
+  FASTBOOT_FLASH_DEVICE = 3 [deprecated = true];
   // Quota key for concurrent tf container number.
   TF_CONTAINER_INSTANCE = 4;
 }
