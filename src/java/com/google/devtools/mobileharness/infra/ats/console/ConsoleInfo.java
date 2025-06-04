@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.SystemProperties;
 import java.nio.file.Path;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -38,7 +37,6 @@ public class ConsoleInfo {
   private static final String XTS_ROOT_DIR_PROPERTY_KEY = "XTS_ROOT";
   private static final String PYTHON_PACKAGE_INDEX_URL_PROPERTY_KEY = "PYTHON_PACKAGE_INDEX_URL";
 
-  private final AtomicBoolean shouldExitConsole = new AtomicBoolean(false);
   private final AtomicReference<String> pythonPackageIndexUrl = new AtomicReference<>();
 
   private final ImmutableMap<String, String> systemProperties;
@@ -58,16 +56,6 @@ public class ConsoleInfo {
 
   public ImmutableList<String> getLastCommand() {
     return lastCommand;
-  }
-
-  /** Sets whether exit the console. */
-  public void setShouldExitConsole(boolean shouldExit) {
-    shouldExitConsole.set(shouldExit);
-  }
-
-  /** Gets whether exit the console. */
-  public boolean getShouldExitConsole() {
-    return shouldExitConsole.get();
   }
 
   /** Gets the xTS root directory. */

@@ -56,6 +56,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/command:command_helper",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/command:exit_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/console:console_util",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/console:interruptible_line_reader",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/log:log_dumper",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/plan:plan_helper",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/result:result_lister",

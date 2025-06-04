@@ -16,10 +16,10 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.command;
 
-import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
 import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.AtsSessionStub;
 import com.google.devtools.mobileharness.infra.ats.console.util.command.ExitUtil;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
+import com.google.devtools.mobileharness.infra.ats.console.util.console.InterruptibleLineReader;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import java.util.concurrent.Callable;
 import javax.inject.Inject;
@@ -41,21 +41,21 @@ final class ExitCommand implements Callable<Integer> {
       description = "Whether to exit only after all commands have executed.")
   private boolean waitForCommand = false;
 
-  private final ConsoleInfo consoleInfo;
   private final ConsoleUtil consoleUtil;
   private final AtsSessionStub atsSessionStub;
   private final Sleeper sleeper;
+  private final InterruptibleLineReader interruptibleLineReader;
 
   @Inject
   ExitCommand(
-      ConsoleInfo consoleInfo,
       ConsoleUtil consoleUtil,
       AtsSessionStub atsSessionStub,
-      Sleeper sleeper) {
-    this.consoleInfo = consoleInfo;
+      Sleeper sleeper,
+      InterruptibleLineReader interruptibleLineReader) {
     this.consoleUtil = consoleUtil;
     this.atsSessionStub = atsSessionStub;
     this.sleeper = sleeper;
+    this.interruptibleLineReader = interruptibleLineReader;
   }
 
   @Override
@@ -69,9 +69,8 @@ final class ExitCommand implements Callable<Integer> {
       ExitUtil.waitUntilNoRunningSessions(consoleUtil, sleeper);
     } finally {
       consoleUtil.printlnStdout("Exiting...");
-
-      // Exits the console directly. Its shutdown hook will kill olc server.
-      consoleInfo.setShouldExitConsole(true);
+      // Makes the console exit, and the shutdown hook will kill the OLC server.
+      interruptibleLineReader.interrupt();
     }
 
     return ExitCode.OK;

@@ -47,8 +47,8 @@ import com.google.devtools.mobileharness.infra.ats.console.command.preprocessor.
 import com.google.devtools.mobileharness.infra.ats.console.command.preprocessor.CommandPreprocessor.PreprocessingResult;
 import com.google.devtools.mobileharness.infra.ats.console.constant.AtsConsoleDirs;
 import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.ServerLogPrinter;
-import com.google.devtools.mobileharness.infra.ats.console.util.command.CommandHelper;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
+import com.google.devtools.mobileharness.infra.ats.console.util.console.InterruptibleLineReader;
 import com.google.devtools.mobileharness.infra.ats.console.util.log.LogDumper;
 import com.google.devtools.mobileharness.infra.ats.console.util.notice.NoticeMessageUtil;
 import com.google.devtools.mobileharness.infra.ats.console.util.version.VersionMessageUtil;
@@ -70,10 +70,8 @@ import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
 import javax.inject.Inject;
-import org.jline.reader.EndOfFileException;
 import org.jline.reader.LineReader;
 import org.jline.reader.LineReaderBuilder;
-import org.jline.reader.UserInterruptException;
 import org.jline.reader.impl.history.DefaultHistory;
 import org.jline.terminal.TerminalBuilder;
 import picocli.CommandLine;
@@ -151,6 +149,7 @@ public class AtsConsole {
   private final ImmutableList<String> mainArgs;
   private final FlagsString deviceInfraServiceFlags;
   private final LineReader lineReader;
+  private final InterruptibleLineReader interruptibleLineReader;
   private final PrintWriter outWriter;
   private final PrintWriter errWriter;
   private final ControlStub controlStub;
@@ -164,7 +163,6 @@ public class AtsConsole {
   private final VersionMessageUtil versionMessageUtil;
   private final CommandCompleter commandCompleter;
   private final CommandPreprocessor commandPreprocessor;
-  private final CommandHelper commandHelper;
 
   /** Set before {@link #run}; */
   @VisibleForTesting public volatile Injector injector;
@@ -174,6 +172,7 @@ public class AtsConsole {
       @MainArgs ImmutableList<String> mainArgs,
       @DeviceInfraServiceFlags FlagsString deviceInfraServiceFlags,
       @ConsoleLineReader LineReader lineReader,
+      InterruptibleLineReader interruptibleLineReader,
       @ConsoleOutput(ConsoleOutput.Type.OUT_WRITER) PrintWriter outWriter,
       @ConsoleOutput(ConsoleOutput.Type.ERR_WRITER) PrintWriter errWriter,
       @ServerStub(ServerStub.Type.CONTROL_SERVICE) ControlStub controlStub,
@@ -186,11 +185,11 @@ public class AtsConsole {
       SystemInfoPrinter systemInfoPrinter,
       VersionMessageUtil versionMessageUtil,
       CommandCompleter commandCompleter,
-      CommandPreprocessor commandPreprocessor,
-      CommandHelper commandHelper) {
+      CommandPreprocessor commandPreprocessor) {
     this.mainArgs = mainArgs;
     this.deviceInfraServiceFlags = deviceInfraServiceFlags;
     this.lineReader = lineReader;
+    this.interruptibleLineReader = interruptibleLineReader;
     this.outWriter = outWriter;
     this.errWriter = errWriter;
     this.controlStub = controlStub;
@@ -204,7 +203,6 @@ public class AtsConsole {
     this.versionMessageUtil = versionMessageUtil;
     this.commandCompleter = commandCompleter;
     this.commandPreprocessor = commandPreprocessor;
-    this.commandHelper = commandHelper;
   }
 
   public void run() throws MobileHarnessException, InterruptedException {
@@ -245,22 +243,19 @@ public class AtsConsole {
 
     // Starts to read input from console.
     ImmutableList<String> args = mainArgs;
-    String commandPrompt = String.format("%s-console > ", commandHelper.getXtsType());
-    do {
-      String input;
+    while (true) {
+      // Reads a command.
       ImmutableList<String> tokens;
       if (args.isEmpty()) {
-        input = getConsoleInput(commandPrompt).orElse(null);
-        if (input == null) {
+        Optional<String> line = interruptibleLineReader.readLine();
+        if (line.isEmpty()) {
           consoleUtil.printlnStderr("Input interrupted; quitting...");
-          consoleInfo.setShouldExitConsole(true);
           break;
         }
-
         try {
-          tokens = tokenize(input);
+          tokens = tokenize(line.get());
         } catch (TokenizationException e) {
-          consoleUtil.printlnStderr("Invalid input: %s", input);
+          consoleUtil.printlnStderr("Invalid input: %s", line.get());
           continue;
         }
         if (tokens.isEmpty()) {
@@ -270,11 +265,11 @@ public class AtsConsole {
         consoleUtil.printlnStdout("Using commandline arguments as starting command: %s", args);
         lineReader.getHistory().add(Joiner.on(" ").join(args));
         tokens = args;
-        if (args.get(0).matches(HELP_PATTERN)) {
-          // If starts from command line with args "--help", "-h", returns to shell.
-          consoleInfo.setShouldExitConsole(true);
-        }
         args = ImmutableList.of();
+        if (tokens.get(0).matches(HELP_PATTERN)) {
+          // If starts from command line with args "--help", "-h", returns to shell.
+          interruptibleLineReader.interrupt();
+        }
       }
 
       // Preprocesses the command.
@@ -300,7 +295,7 @@ public class AtsConsole {
         commandLine.execute(command.toArray(new String[0]));
         sleeper.sleep(Duration.ofMillis(100L));
       }
-    } while (!consoleInfo.getShouldExitConsole());
+    }
   }
 
   private CommandLine createCommandLine() {
@@ -309,24 +304,6 @@ public class AtsConsole {
         .setOut(outWriter)
         .setErr(errWriter)
         .setUnmatchedOptionsArePositionalParams(true);
-  }
-
-  /**
-   * Gets input from the console.
-   *
-   * <p>Returns a {@link String} containing the input to parse and run. Will return {@code null} if
-   * console is not available, readLine was interrupted (for example Ctrl-C), or an EOF has been
-   * found (for example Ctrl-D).
-   */
-  private Optional<String> getConsoleInput(String commandPrompt) {
-    try {
-      return Optional.of(lineReader.readLine(commandPrompt));
-    } catch (UserInterruptException e) {
-      consoleUtil.printlnStderr("\nInterrupted by the user.");
-    } catch (EndOfFileException e) {
-      consoleUtil.printlnStderr("\nReceived EOF.");
-    }
-    return Optional.empty();
   }
 
   private static LineReader createLineReader() throws IOException {
