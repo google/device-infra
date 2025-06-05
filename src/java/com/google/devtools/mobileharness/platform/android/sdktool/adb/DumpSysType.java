@@ -43,6 +43,7 @@ public enum DumpSysType {
   PACKAGE("package"), // Package info of applications
   POWER("power"), // Power manager information
   PROCSTATS("procstats"), // statistics of app's runtime, PSS and USS
+  UIMODE("uimode"), // UI mode information
   WIFI("wifi"), // Available access points and current connection
   WIFISCANNER("wifiscanner"), // Scanned wifi information
   WINDOW("window"); // Display information
