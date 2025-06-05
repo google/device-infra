@@ -13,7 +13,7 @@
 # limitations under the License.
 #
 
-load("@rules_kotlin//kotlin:core.bzl", "define_kt_toolchain")
+load("@rules_kotlin//kotlin:core.bzl", "define_kt_toolchain", "kt_javac_options", "kt_kotlinc_options")
 load("@rules_license//rules:license.bzl", "license")
 
 package(default_applicable_licenses = ["//:license"])
@@ -69,9 +69,22 @@ package_group(
     ],
 )
 
+kt_kotlinc_options(
+    name = "kt_kotlinc_options",
+    jvm_target = "17",
+    x_jdk_release = "17",
+)
+
+kt_javac_options(
+    name = "kt_javac_options",
+    release = "17",
+)
+
 define_kt_toolchain(
     name = "kotlin_toolchain",
     api_version = "1.9",
+    javac_options = "//:kt_javac_options",
     jvm_target = "17",
+    kotlinc_options = "//:kt_kotlinc_options",
     language_version = "1.9",
 )
