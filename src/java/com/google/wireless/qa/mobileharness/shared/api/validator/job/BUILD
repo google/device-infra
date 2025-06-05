@@ -169,6 +169,16 @@ java_library(
 )
 
 java_library(
+    name = "android_start_apps_decorator_job_validator",
+    srcs = ["AndroidStartAppsDecoratorJobValidator.java"],
+    deps = [
+        ":job_validator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@maven//:com_google_code_gson_gson",
+    ],
+)
+
+java_library(
     name = "android_switch_language_decorator_job_validator",
     srcs = ["AndroidSwitchLanguageDecoratorJobValidator.java"],
     deps = [
