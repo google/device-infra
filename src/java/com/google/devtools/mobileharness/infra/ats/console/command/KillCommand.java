@@ -16,11 +16,9 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.command;
 
-import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.AtsSessionStub;
 import com.google.devtools.mobileharness.infra.ats.console.util.command.ExitUtil;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.InterruptibleLineReader;
-import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import java.util.concurrent.Callable;
 import javax.inject.Inject;
 import picocli.CommandLine.Command;
@@ -39,31 +37,25 @@ final class KillCommand implements Callable<Integer> {
   private boolean force = false;
 
   private final ConsoleUtil consoleUtil;
-  private final AtsSessionStub atsSessionStub;
-  private final Sleeper sleeper;
   private final InterruptibleLineReader interruptibleLineReader;
+  private final ExitUtil exitUtil;
 
   @Inject
   KillCommand(
-      ConsoleUtil consoleUtil,
-      AtsSessionStub atsSessionStub,
-      Sleeper sleeper,
-      InterruptibleLineReader interruptibleLineReader) {
+      ConsoleUtil consoleUtil, InterruptibleLineReader interruptibleLineReader, ExitUtil exitUtil) {
     this.consoleUtil = consoleUtil;
-    this.atsSessionStub = atsSessionStub;
-    this.sleeper = sleeper;
     this.interruptibleLineReader = interruptibleLineReader;
+    this.exitUtil = exitUtil;
   }
 
   @Override
   public Integer call() {
     try {
-      ExitUtil.cancelUnfinishedSessions(
-          atsSessionStub, consoleUtil, "User triggered Kill Command.", /* aggressive= */ true);
+      exitUtil.cancelUnfinishedSessions("User triggered Kill Command.", /* aggressive= */ true);
 
       if (!force) {
         // Wait until no running sessions.
-        ExitUtil.waitUntilNoRunningSessions(consoleUtil, sleeper);
+        exitUtil.waitUntilNoRunningSessions();
       }
     } finally {
       consoleUtil.printlnStdout("Exiting...");

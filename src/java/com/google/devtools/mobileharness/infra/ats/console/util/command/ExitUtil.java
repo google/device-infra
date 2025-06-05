@@ -30,8 +30,11 @@ import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleU
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import java.time.Duration;
+import javax.inject.Inject;
+import javax.inject.Singleton;
 
 /** A util class to perform exit/kill/quit operations. */
+@Singleton
 public final class ExitUtil {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
@@ -39,9 +42,19 @@ public final class ExitUtil {
   private static final Duration SHORT_SLEEP_INTERVAL = Duration.ofSeconds(3L);
   private static final Duration LONG_SLEEP_INTERVAL = Duration.ofSeconds(30L);
 
+  private final AtsSessionStub atsSessionStub;
+  private final ConsoleUtil consoleUtil;
+  private final Sleeper sleeper;
+
+  @Inject
+  ExitUtil(AtsSessionStub atsSessionStub, ConsoleUtil consoleUtil, Sleeper sleeper) {
+    this.atsSessionStub = atsSessionStub;
+    this.consoleUtil = consoleUtil;
+    this.sleeper = sleeper;
+  }
+
   /** Cancels all unfinished sessions from the current client. */
-  public static void cancelUnfinishedSessions(
-      AtsSessionStub atsSessionStub, ConsoleUtil consoleUtil, String reason, boolean aggressive) {
+  public void cancelUnfinishedSessions(String reason, boolean aggressive) {
     try {
       atsSessionStub.cancelUnfinishedNotAbortedSessions(
           /* fromCurrentClient= */ true,
@@ -56,7 +69,7 @@ public final class ExitUtil {
     }
   }
 
-  public static void waitUntilNoRunningSessions(ConsoleUtil consoleUtil, Sleeper sleeper) {
+  public void waitUntilNoRunningSessions() {
     consoleUtil.printlnStdout("Will exit the console after all commands have executed.");
     try {
       int sleepCount = 0;
@@ -83,6 +96,4 @@ public final class ExitUtil {
       Thread.currentThread().interrupt();
     }
   }
-
-  private ExitUtil() {}
 }
