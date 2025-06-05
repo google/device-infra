@@ -376,6 +376,8 @@ public class AtsDdaIntegrationTest {
                             "--enable_stubby_rpc_server=false",
                             "--enable_trace_span_processor=false",
                             "--enable_wrangler_device_syncer=false",
+                            "--enable_rdh=false",
+                            "--enable_control_service=false",
                             "--external_adb_initializer_template=true",
                             "--grpc_port=" + labServerGrpcPort,
                             "--master_grpc_target=localhost:" + atsWorkerGrpcPort,
