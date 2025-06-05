@@ -144,6 +144,17 @@ java_library(
 )
 
 java_library(
+    name = "android_orientation_decorator_job_validator",
+    srcs = ["AndroidOrientationDecoratorJobValidator.java"],
+    deps = [
+        ":job_validator",
+        "//src/java/com/google/devtools/mobileharness/platform/android/media:enums",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:android_orientation_decorator_spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+    ],
+)
+
+java_library(
     name = "android_perfetto_decorator_job_validator",
     srcs = ["AndroidPerfettoDecoratorJobValidator.java"],
     deps = [

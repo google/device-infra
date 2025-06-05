@@ -392,6 +392,24 @@ java_library(
 )
 
 java_library(
+    name = "android_orientation_decorator",
+    srcs = ["AndroidOrientationDecorator.java"],
+    deps = [
+        ":base_decorator",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/platform/android/media:android_media_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/media:enums",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:android_orientation_decorator_spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "android_perfetto_decorator",
     srcs = ["AndroidPerfettoDecorator.java"],
     deps = [

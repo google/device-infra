@@ -89,6 +89,12 @@ java_library(
 )
 
 java_library(
+    name = "android_orientation_decorator_env_validator",
+    srcs = ["AndroidOrientationDecoratorEnvValidator.java"],
+    deps = [":android_device_version_env_validator"],
+)
+
+java_library(
     name = "android_perfetto_decorator_env_validator",
     srcs = ["AndroidPerfettoDecoratorEnvValidator.java"],
     deps = [

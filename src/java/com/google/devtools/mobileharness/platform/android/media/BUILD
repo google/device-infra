@@ -53,6 +53,8 @@ java_library(
         "ScreenOrientation.java",
     ],
     visibility = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:__pkg__",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/media:__pkg__",
     ],
 )

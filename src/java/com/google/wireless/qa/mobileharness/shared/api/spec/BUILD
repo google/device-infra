@@ -103,6 +103,12 @@ java_library(
 )
 
 java_library(
+    name = "android_orientation_decorator_spec",
+    srcs = ["AndroidOrientationDecoratorSpec.java"],
+    deps = ["//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation:basic_annotation"],
+)
+
+java_library(
     name = "android_real_device_spec",
     srcs = ["AndroidRealDeviceSpec.java"],
     deps = [
