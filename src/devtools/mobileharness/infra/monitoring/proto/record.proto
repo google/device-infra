@@ -18,6 +18,8 @@ syntax = "proto3";
 
 package mobileharness.infra.monitoring;
 
+import "src/devtools/mobileharness/infra/monitoring/proto/monitored_record.proto";
+
 option java_package = "com.google.devtools.mobileharness.infra.monitoring.proto";
 option java_outer_classname = "RecordProto";
 
@@ -122,4 +124,7 @@ message DeviceRecord {
 
   // The teams this device belongs to.
   repeated string team = 17;
+
+  // The other attributes of the device.
+  repeated Attribute other_attributes = 18;
 }
