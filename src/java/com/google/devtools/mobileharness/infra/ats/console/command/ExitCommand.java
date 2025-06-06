@@ -16,8 +16,9 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.command;
 
+import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
+
 import com.google.devtools.mobileharness.infra.ats.console.util.command.ExitUtil;
-import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.InterruptibleLineReader;
 import java.util.concurrent.Callable;
 import javax.inject.Inject;
@@ -39,31 +40,25 @@ final class ExitCommand implements Callable<Integer> {
       description = "Whether to exit only after all commands have executed.")
   private boolean waitForCommand = false;
 
-  private final ConsoleUtil consoleUtil;
   private final InterruptibleLineReader interruptibleLineReader;
   private final ExitUtil exitUtil;
 
   @Inject
-  ExitCommand(
-      ConsoleUtil consoleUtil, InterruptibleLineReader interruptibleLineReader, ExitUtil exitUtil) {
-    this.consoleUtil = consoleUtil;
+  ExitCommand(InterruptibleLineReader interruptibleLineReader, ExitUtil exitUtil) {
     this.interruptibleLineReader = interruptibleLineReader;
     this.exitUtil = exitUtil;
   }
 
   @Override
   public Integer call() {
-    try {
-      if (!waitForCommand) {
-        exitUtil.cancelUnfinishedSessions("User triggered Exit Command.", /* aggressive= */ false);
-      }
-      // Wait until no running sessions.
-      exitUtil.waitUntilNoRunningSessions();
-    } finally {
-      consoleUtil.printlnStdout("Exiting...");
-      // Makes the console exit, and the shutdown hook will kill the OLC server.
-      interruptibleLineReader.interrupt();
+    if (!waitForCommand) {
+      exitUtil.cancelUnfinishedSessions("User triggered Exit Command.", /* aggressive= */ false);
     }
+
+    // Wait until no running sessions.
+    exitUtil
+        .waitUntilNoRunningSessions()
+        .addListener(interruptibleLineReader::interrupt, directExecutor());
 
     return ExitCode.OK;
   }
