@@ -45,6 +45,8 @@ java_library(
         "//src/devtools/deviceinfra/host/daemon/proto:health_java_grpc",
         "//src/java/com/google/devtools/deviceinfra/host/daemon/health/service:health_service_impl",
         "//src/java/com/google/devtools/mobileharness/infra/daemon/health/handler:drain_handler",
+        "//src/java/com/google/devtools/mobileharness/infra/lab:annotations",
+        "@io_grpc_grpc_java//core",
         "@maven//:com_google_inject_guice",
     ],
 )

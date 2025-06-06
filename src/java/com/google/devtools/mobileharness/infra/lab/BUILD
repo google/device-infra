@@ -20,6 +20,7 @@ package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
         "//:omnilab_fusion",
+        "//src/java/com/google/devtools/deviceinfra:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",

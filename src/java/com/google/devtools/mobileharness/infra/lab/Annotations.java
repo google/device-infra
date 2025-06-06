@@ -92,4 +92,10 @@ public class Annotations {
   @Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER})
   @BindingAnnotation
   public @interface ServViaCloudRpc {}
+
+  /** Annotation for BindableServices that are only served locally. */
+  @Retention(RetentionPolicy.RUNTIME)
+  @Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER})
+  @BindingAnnotation
+  public @interface LocalOnlyGrpcService {}
 }
