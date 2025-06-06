@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.lab;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.DEBUG;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -99,6 +100,7 @@ import com.google.inject.Injector;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessLogger;
 import com.google.wireless.qa.mobileharness.shared.api.device.BaseDevice;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
+import com.google.wireless.qa.mobileharness.shared.constant.Dimension.OmniModeUsageValue;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Value;
 import com.google.wireless.qa.mobileharness.shared.constant.DirCommon;
 import com.google.wireless.qa.mobileharness.shared.constant.ExitCode;
@@ -466,6 +468,19 @@ public class LabServer {
       LabDimensionManager.getInstance()
           .getRequiredLocalDimensions()
           .add(Name.POOL, Value.POOL_PARTNER_SHARED);
+    }
+
+    if (Flags.instance().addSupportedDimensionForOmniModeUsage.get() != null) {
+      Optional<OmniModeUsageValue> omniModeUsageValue =
+          OmniModeUsageValue.fromStringIgnoreCase(
+              Flags.instance().addSupportedDimensionForOmniModeUsage.get());
+      checkArgument(
+          omniModeUsageValue.isPresent(),
+          "Invalid value: %s for add_supported_dimension_for_omni_mode_usage",
+          Flags.instance().addSupportedDimensionForOmniModeUsage.get());
+      LabDimensionManager.getInstance()
+          .getSupportedLocalDimensions()
+          .add(Name.OMNI_MODE_USAGE, Ascii.toLowerCase(omniModeUsageValue.get().name()));
     }
 
     // Supported dimensions
