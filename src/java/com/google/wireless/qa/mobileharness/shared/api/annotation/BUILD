@@ -43,6 +43,10 @@ java_library(
         "FileAnnotation.java",
         "ParamAnnotation.java",
     ],
+    visibility = [
+        "//:deviceinfra_all_pkg",
+        "//java/com/google/vr/androidxr/testing/mobileharness/plugins:__pkg__",  # Added to allow moohan plugin to use basic annotations.
+    ],
 )
 
 java_library(
