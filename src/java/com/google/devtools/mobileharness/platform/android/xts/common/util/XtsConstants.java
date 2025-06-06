@@ -57,7 +57,7 @@ public class XtsConstants {
   public static final String DYNAMIC_MCTS_JOB_NAME = "MCTS";
 
   /** The job name of static xTS job. */
-  public static final String STATIC_XTS_JOB_NAME = "STATIC_XTS";
+  public static final String STATIC_XTS_JOB_NAME = "CTS";
 
   /** MH test property keys of path relative to the test temp dir. */
   public static final String XTS_DYNAMIC_DOWNLOAD_PATH_TEST_PROPERTY_KEY =
