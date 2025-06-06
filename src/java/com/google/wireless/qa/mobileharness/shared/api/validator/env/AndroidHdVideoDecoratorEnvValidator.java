@@ -50,6 +50,10 @@ public class AndroidHdVideoDecoratorEnvValidator extends AndroidDeviceVersionEnv
 
   @Override
   public void validate(Device device) throws MobileHarnessException, InterruptedException {
+    // Oxygen device is only a place hold, so it cannot run the adb command.
+    if (device.getClass().getSimpleName().equals("OxygenDevice")) {
+      return;
+    }
     super.validate(device);
     try {
       String output = adb.runShell(device.getDeviceId(), ADB_SHELL_VALIDATE);
