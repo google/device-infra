@@ -429,9 +429,16 @@ public class XtsTradefedTest extends BaseDriver
     if (spec.hasXtsLogRootPath()) {
       Path logRootPath = Path.of(spec.getXtsLogRootPath());
       localFileUtil.prepareDir(logRootPath);
+      String xtsJobType =
+          testInfo
+              .jobInfo()
+              .properties()
+              .getOptional(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME)
+              .map(s -> Ascii.toLowerCase(s) + "_")
+              .orElse("");
       Path innocationPath =
           localFileUtil.createTempDir(
-              logRootPath, XtsConstants.TRADEFED_INVOCATION_DIR_NAME_PREFIX);
+              logRootPath, XtsConstants.TRADEFED_INVOCATION_DIR_NAME_PREFIX + xtsJobType);
       localFileUtil.setFilePermission(innocationPath, "rwxr-xr-x");
       tfOutputPath =
           innocationPath
