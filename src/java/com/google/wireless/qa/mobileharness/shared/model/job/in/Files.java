@@ -99,21 +99,6 @@ public class Files {
    * Replaces the input file/dir with a new set of file/dir.
    *
    * @throws MobileHarnessException if the original/new input files/dirs doesn't exist
-   * @deprecated Use {@link #replaceFileInfos} instead.
-   */
-  @CanIgnoreReturnValue
-  @Deprecated
-  public Files replace(
-      String tag, String originalFileOrDirPath, Collection<String> newFileOrDirPaths)
-      throws MobileHarnessException {
-    newFiles.replace(tag, originalFileOrDirPath, newFileOrDirPaths);
-    return this;
-  }
-
-  /**
-   * Replaces the input file/dir with a new set of file/dir.
-   *
-   * @throws MobileHarnessException if the original/new input files/dirs doesn't exist
    */
   @CanIgnoreReturnValue
   public Files replaceFileInfos(

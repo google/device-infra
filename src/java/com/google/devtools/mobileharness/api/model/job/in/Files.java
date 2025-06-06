@@ -16,8 +16,6 @@
 
 package com.google.devtools.mobileharness.api.model.job.in;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
-
 import com.google.auto.value.AutoValue;
 import com.google.common.annotations.Beta;
 import com.google.common.collect.ImmutableMultimap;
@@ -216,25 +214,6 @@ public class Files {
       }
     }
     return this;
-  }
-
-  /**
-   * Replaces the input file/dir with a new set of file/dir.
-   *
-   * @throws MobileHarnessException if the original/new input files/dirs doesn't exist
-   * @deprecated Use {@link #replaceFileInfos} instead.
-   */
-  @CanIgnoreReturnValue
-  @Deprecated
-  public Files replace(
-      String tag, String originalFileOrDirPath, Collection<String> newFileOrDirPaths)
-      throws MobileHarnessException {
-    return replaceFileInfos(
-        tag,
-        originalFileOrDirPath,
-        newFileOrDirPaths.stream()
-            .map(path -> FileInfo.create(path, null))
-            .collect(toImmutableList()));
   }
 
   /**
