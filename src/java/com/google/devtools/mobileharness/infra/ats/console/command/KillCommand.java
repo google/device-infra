@@ -16,8 +16,10 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.command;
 
+import static com.google.common.util.concurrent.Futures.immediateVoidFuture;
+import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
+
 import com.google.devtools.mobileharness.infra.ats.console.util.command.ExitUtil;
-import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.InterruptibleLineReader;
 import java.util.concurrent.Callable;
 import javax.inject.Inject;
@@ -36,32 +38,23 @@ final class KillCommand implements Callable<Integer> {
       description = "Whether to quit the console immediately.")
   private boolean force = false;
 
-  private final ConsoleUtil consoleUtil;
   private final InterruptibleLineReader interruptibleLineReader;
   private final ExitUtil exitUtil;
 
   @Inject
-  KillCommand(
-      ConsoleUtil consoleUtil, InterruptibleLineReader interruptibleLineReader, ExitUtil exitUtil) {
-    this.consoleUtil = consoleUtil;
+  KillCommand(InterruptibleLineReader interruptibleLineReader, ExitUtil exitUtil) {
     this.interruptibleLineReader = interruptibleLineReader;
     this.exitUtil = exitUtil;
   }
 
   @Override
   public Integer call() {
-    try {
-      exitUtil.cancelUnfinishedSessions("User triggered Kill Command.", /* aggressive= */ true);
+    exitUtil.cancelUnfinishedSessions("User triggered Kill Command.", /* aggressive= */ true);
 
-      if (!force) {
-        // Wait until no running sessions.
-        exitUtil.waitUntilNoRunningSessions();
-      }
-    } finally {
-      consoleUtil.printlnStdout("Exiting...");
-      // Makes the console exit, and the shutdown hook will kill the OLC server.
-      interruptibleLineReader.interrupt();
-    }
+    // Wait until no running sessions if not forcibly.
+    (force ? immediateVoidFuture() : exitUtil.waitUntilNoRunningSessions())
+        .addListener(interruptibleLineReader::interrupt, directExecutor());
+
     return ExitCode.OK;
   }
 }
