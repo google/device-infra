@@ -17,6 +17,8 @@
 package com.google.wireless.qa.mobileharness.shared.constant;
 
 import com.google.common.base.Ascii;
+import java.util.Arrays;
+import java.util.Optional;
 
 /** Mobile Harness device dimension constants. */
 public final class Dimension {
@@ -134,6 +136,7 @@ public final class Dimension {
     NETWORK_SIMULATION_SSID,
     /** Customized dimension, SSID for network simulation. */
     NETWORK_SIMULATION_USE_NETTROL,
+    OMNI_MODE_USAGE,
     PING_GOOGLE_STABILITY,
     /** The average ping time of the device. */
     /** The max ping time of the device. */
@@ -402,6 +405,25 @@ public final class Dimension {
     USB,
     SSH,
     VIDEO,
+  }
+
+  /** Values for OMNI_MODE_USAGE */
+  public enum OmniModeUsageValue {
+    DDA,
+    PUBLIC_TESTING,
+    INTERNAL_TESTING,
+    CTS_TESTING,
+    PRIVATE_USAGE;
+
+    /**
+     * Returns an optional {@link OmniModeUsageValue} from the given string if the string matches
+     * any of the enum values ignored case.
+     */
+    public static Optional<OmniModeUsageValue> fromStringIgnoreCase(String value) {
+      return Arrays.stream(values())
+          .filter(v -> Ascii.equalsIgnoreCase(v.name(), value))
+          .findFirst();
+    }
   }
 
   /** Dimension values. */

@@ -130,6 +130,15 @@ public class Flags {
   public Flag<Boolean> addRequiredDimensionForPartnerSharedPool =
       addRequiredDimensionForPartnerSharedPoolDefault;
 
+  private static final Flag<String> addSupportedDimensionForOmniModeUsageDefault = Flag.value(null);
+
+  @com.beust.jcommander.Parameter(
+      names = "--add_supported_dimension_for_omni_mode_usage",
+      description = "Add the supported dimension for Omni mode usage.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> addSupportedDimensionForOmniModeUsage =
+      addSupportedDimensionForOmniModeUsageDefault;
+
   private static final Flag<List<String>> alrArtifactsDefault = Flag.stringList();
 
   @com.beust.jcommander.Parameter(
