@@ -24,10 +24,9 @@ go_binary(
     name = "casviewer",
     srcs = ["main.go"],
     deps = [
-        "//src/devtools/rbe/casuploader/chunkerutil",
         "//src/devtools/rbe/casviewer/chunkstore",
         "//src/devtools/rbe/casviewer/fuse",
-        "//src/devtools/rbe/casviewer/mountpoint",
+        "//src/devtools/rbe/casviewer/mountutil",
         "@com_github_golang_glog//:glog",
     ],
 )

@@ -21,13 +21,15 @@ package(
 )
 
 go_library(
-    name = "mountpoint",
-    srcs = ["mountpoint.go"],
-    importpath = "github.com/google/device-infra/src/devtools/rbe/casviewer/mountpoint",
+    name = "mountutil",
+    srcs = ["mountutil.go"],
+    importpath = "github.com/google/device-infra/src/devtools/rbe/casviewer/mountutil",
+    deps = ["//src/devtools/rbe/casuploader/chunkerutil"],
 )
 
 go_test(
-    name = "mountpoint_test",
-    srcs = ["mountpoint_test.go"],
-    embed = [":mountpoint"],
+    name = "mountutil_test",
+    srcs = ["mountutil_test.go"],
+    embed = [":mountutil"],
+    deps = ["//src/devtools/rbe/casuploader/chunkerutil"],
 )

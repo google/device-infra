@@ -10,19 +10,17 @@ import (
 	log "github.com/golang/glog"
 
 	"os"
-	"path/filepath"
 
 	"os/signal"
 	"syscall"
 
-	"github.com/google/device-infra/src/devtools/rbe/casuploader/chunkerutil"
 	"github.com/google/device-infra/src/devtools/rbe/casviewer/chunkstore"
 	"github.com/google/device-infra/src/devtools/rbe/casviewer/fuse"
-	"github.com/google/device-infra/src/devtools/rbe/casviewer/mountpoint"
+	"github.com/google/device-infra/src/devtools/rbe/casviewer/mountutil"
 )
 
 const (
-	version = "1.1"
+	version = "1.2"
 )
 
 var (
@@ -38,11 +36,18 @@ func checkFlags() error {
 	}
 
 	if *indexPath == "" {
-		*indexPath = filepath.Join(*chunkDir, chunkerutil.ChunksIndexFileName)
-		log.Infof("Index file not specified with --index, use default: %v", *indexPath)
+		defaultIndexPath, err := mountutil.DefaultIndexFile(*chunkDir)
+		if err != nil {
+			return err
+		}
+		if defaultIndexPath == "" {
+			return errors.New("Index file not specified with --index and no default found")
+		}
+		*indexPath = defaultIndexPath
+		log.Infof("Use default index file: %v", *indexPath)
 	}
 
-	if err := mountpoint.ValidateMountPoint(*mountPoint); err != nil {
+	if err := mountutil.ValidateMountPoint(*mountPoint); err != nil {
 		return err
 	}
 
