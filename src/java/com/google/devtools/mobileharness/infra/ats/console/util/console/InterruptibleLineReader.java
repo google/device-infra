@@ -93,9 +93,12 @@ public class InterruptibleLineReader {
   /**
    * Interrupts a running {@link #readLine()} call (if any), or makes the next call return empty
    * immediately.
+   *
+   * @apiNote this method will make the console exit, and the shutdown hook will kill the OLC server
    */
   @SuppressWarnings("Interruption")
   public void interrupt() {
+    consoleUtil.printlnStdout("Exiting...");
     synchronized (lock) {
       if (runningThread == null) {
         consoleUtil.printlnStderr("Stop line reader");
