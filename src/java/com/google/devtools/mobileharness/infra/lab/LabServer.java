@@ -468,6 +468,14 @@ public class LabServer {
           .add(Name.POOL, Value.POOL_PARTNER_SHARED);
     }
 
+    if (Flags.instance().addSupportedDimensionForOmniModeUsage.get() != null) {
+      LabDimensionManager.getInstance()
+          .getSupportedLocalDimensions()
+          .add(
+              Name.OMNI_MODE_USAGE,
+              Ascii.toLowerCase(Flags.instance().addSupportedDimensionForOmniModeUsage.get()));
+    }
+
     // Supported dimensions
     if (systemUtil.isOnLinux()) {
       // By default, all newly upgraded Linux labs will support container-mode tests.

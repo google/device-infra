@@ -134,6 +134,7 @@ public final class Dimension {
     NETWORK_SIMULATION_SSID,
     /** Customized dimension, SSID for network simulation. */
     NETWORK_SIMULATION_USE_NETTROL,
+    OMNI_MODE_USAGE,
     PING_GOOGLE_STABILITY,
     /** The average ping time of the device. */
     /** The max ping time of the device. */
