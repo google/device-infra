@@ -429,12 +429,19 @@ public class XtsTradefedTest extends BaseDriver
     if (spec.hasXtsLogRootPath()) {
       Path logRootPath = Path.of(spec.getXtsLogRootPath());
       localFileUtil.prepareDir(logRootPath);
-      Path innocationPath =
+      String xtsJobType =
+          testInfo
+              .jobInfo()
+              .properties()
+              .getOptional(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME)
+              .map(s -> Ascii.toLowerCase(s) + "_")
+              .orElse("");
+      Path invocationPath =
           localFileUtil.createTempDir(
-              logRootPath, XtsConstants.TRADEFED_INVOCATION_DIR_NAME_PREFIX);
-      localFileUtil.setFilePermission(innocationPath, "rwxr-xr-x");
+              logRootPath, XtsConstants.TRADEFED_INVOCATION_DIR_NAME_PREFIX + xtsJobType);
+      localFileUtil.setFilePermission(invocationPath, "rwxr-xr-x");
       tfOutputPath =
-          innocationPath
+          invocationPath
               .resolve(
                   String.format(
                       "%s_test_%s",
@@ -443,7 +450,7 @@ public class XtsTradefedTest extends BaseDriver
       localFileUtil.prepareParentDir(tfOutputPath);
       testInfo
           .properties()
-          .add(XtsConstants.TRADEFED_INVOCATION_DIR_NAME, innocationPath.getFileName().toString());
+          .add(XtsConstants.TRADEFED_INVOCATION_DIR_NAME, invocationPath.getFileName().toString());
     } else {
       tfOutputPath =
           Path.of(testInfo.getGenFileDir()).resolve(XtsConstants.TRADEFED_OUTPUT_FILE_NAME);
