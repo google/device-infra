@@ -170,6 +170,8 @@ public final class Dimension {
     SECURE_BOOT,
     /** Skip SUW by disabling the app. The value should be the package name of the SUW app. */
     SKIP_SUW_APP,
+    /** The SoC ID of the device. */
+    SOC_ID,
     /** Whether a lab/device supports running tests on ad hoc testbeds. */
     SUPPORTS_ADHOC,
     /** Whether a device is responsive on serial. */

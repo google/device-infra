@@ -61,7 +61,8 @@ public final class Enums {
     SBDP_AR_UPDATE,
     SECURE_BOOT,
     SERIALNO,
-    UNLOCKED
+    SOC_ID,
+    UNLOCKED,
   }
 
   /**
