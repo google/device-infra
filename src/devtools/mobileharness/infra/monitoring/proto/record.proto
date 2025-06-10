@@ -122,4 +122,12 @@ message DeviceRecord {
 
   // The teams this device belongs to.
   repeated string team = 17;
+
+  // The other dimensions of the device.
+  repeated Dimension extra_dimensions = 18;
+}
+
+message Dimension {
+  string name = 1;
+  string value = 2;
 }
