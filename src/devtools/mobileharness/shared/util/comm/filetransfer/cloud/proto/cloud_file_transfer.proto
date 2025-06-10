@@ -225,8 +225,8 @@ service CloudFileTransferService {
   rpc StartUploadingFile(StartUploadingFileRequest)
       returns (StartUploadingFileResponse) {}
 
-  // Starts uploading files that is specified in |UploadFileRequest| to GCS
-  // file.
+  // Starts downloading GCS files that is specified in |DownloadGcsFileRequest|
+  // to local.
   rpc StartDownloadingGcsFile(StartDownloadingGcsFileRequest)
       returns (StartDownloadingGcsFileResponse) {}
 
