@@ -42,6 +42,7 @@ public class ChannelFactory {
         .enableRetry()
         .negotiationType(NegotiationType.PLAINTEXT)
         .executor(executor)
+        .maxInboundMessageSize(32 * 1024 * 1024) // 32 MB
         .build();
   }
 
