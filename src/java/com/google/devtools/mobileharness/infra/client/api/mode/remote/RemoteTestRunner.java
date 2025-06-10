@@ -132,7 +132,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
   private static final int NUM_USE_REAL_TIME_RPC_CALL_INTERVAL = 20;
 
   /** Time range limits for getting test status. */
-  private static final Duration MIN_GET_TEST_STATUS_RPC_CALL_INTERVAL = Duration.ofSeconds(1L);
+  private static final Duration MIN_GET_TEST_STATUS_RPC_CALL_INTERVAL = Duration.ofMillis(200L);
 
   private static final Duration MAX_GET_TEST_STATUS_RPC_CALL_INTERVAL = Duration.ofSeconds(10L);
   private static final Duration MIN_CONSECUTIVE_GET_TEST_STATUS_ERROR_DURATION =
@@ -786,12 +786,9 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
     GetTestStatusResponse resp;
     @Nullable Instant consecutiveNonFatalRpcErrorStartingTime = null;
     ExecTestStub execTestStub = getTestEngineExecTestStub();
-    Duration rpcCallInterval = Flags.instance().getTestStatusRpcCallInterval.getNonNull();
-    if (rpcCallInterval.compareTo(MIN_GET_TEST_STATUS_RPC_CALL_INTERVAL) < 0) {
-      rpcCallInterval = MIN_GET_TEST_STATUS_RPC_CALL_INTERVAL;
-    } else if (rpcCallInterval.compareTo(MAX_GET_TEST_STATUS_RPC_CALL_INTERVAL) > 0) {
-      rpcCallInterval = MAX_GET_TEST_STATUS_RPC_CALL_INTERVAL;
-    }
+    Duration rpcCallInterval =
+        getGetTestStatusRpcCallInterval(
+            testInfo, Flags.instance().getTestStatusRpcCallInterval.getNonNull());
 
     Duration maxConsecutiveErrorDuration =
         Flags.instance().maxConsecutiveGetTestStatusErrorDuration.getNonNull();
@@ -902,6 +899,24 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
 
     // Update root testInfo.
     updateTestGenData(resp, testInfo);
+  }
+
+  @VisibleForTesting
+  Duration getGetTestStatusRpcCallInterval(TestInfo testInfo, Duration defaultInterval) {
+    Duration rpcCallInterval =
+        testInfo
+            .jobInfo()
+            .params()
+            .getOptional(JobInfo.PARAM_GET_TEST_STATUS_RPC_CALL_INTERVAL_MS)
+            .map(Long::valueOf)
+            .map(Duration::ofMillis)
+            .orElse(defaultInterval);
+    if (rpcCallInterval.compareTo(MIN_GET_TEST_STATUS_RPC_CALL_INTERVAL) < 0) {
+      rpcCallInterval = MIN_GET_TEST_STATUS_RPC_CALL_INTERVAL;
+    } else if (rpcCallInterval.compareTo(MAX_GET_TEST_STATUS_RPC_CALL_INTERVAL) > 0) {
+      rpcCallInterval = MAX_GET_TEST_STATUS_RPC_CALL_INTERVAL;
+    }
+    return rpcCallInterval;
   }
 
   /**

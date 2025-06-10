@@ -149,6 +149,14 @@ public class JobInfo extends JobScheduleUnit {
   @ParamAnnotation(
       required = false,
       help =
+          "The interval of the GetTestStatus RPC call in milliseconds. The default value is 5000,"
+              + " the min value is 200, and the max value is 600000.")
+  public static final String PARAM_GET_TEST_STATUS_RPC_CALL_INTERVAL_MS =
+      "get_test_status_rpc_call_interval_ms";
+
+  @ParamAnnotation(
+      required = false,
+      help =
           "If this flag is true, the not assigned tests will still show in sponge \"Test Method\" "
               + "but won't effect job result (target result).")
   public static final String PARAM_IGNORE_NOT_ASSIGNED_TESTS = "ignore_not_assigned_tests";
