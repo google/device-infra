@@ -1085,11 +1085,19 @@ public class XtsTradefedTest extends BaseDriver
       Set<String> missingTestList = new HashSet<>(DYNAMIC_JOB_TEST_DEPENDENCIES);
       String testListProperty =
           testInfo.properties().get(XtsConstants.XTS_DYNAMIC_DOWNLOAD_PATH_TEST_LIST_PROPERTY_KEY);
-      if (testListProperty != null) {
+      String preloadMainlineVersion =
+          testInfo.properties().get(XtsConstants.PRELOAD_MAINLINE_VERSION_TEST_PROPERTY_KEY);
+      if (testListProperty != null && preloadMainlineVersion != null) {
         if (localFileUtil.isFileOrDirExist(testListProperty)) {
           xtsDynamicDownloadTestList.addAll(getStringSetFromResourceFile(testListProperty));
           // Save the test list file to the test gen file dir and further in xts/logs.
-          localFileUtil.copyFileOrDir(testListProperty, testInfo.getGenFileDir());
+          localFileUtil.copyFileOrDir(
+              testListProperty,
+              testInfo.getGenFileDir()
+                  + "/"
+                  + preloadMainlineVersion
+                  + "_"
+                  + PathUtil.basename(testListProperty));
         }
       } else {
         xtsDynamicDownloadTestList.addAll(

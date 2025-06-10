@@ -59,16 +59,21 @@ public class XtsConstants {
   /** The job name of static xTS job. */
   public static final String STATIC_XTS_JOB_NAME = "STATIC_XTS";
 
-  /** MH test property keys of path relative to the test temp dir. */
+  /** MH test property keys of path relative to the xts dynamic download dir. */
   public static final String XTS_DYNAMIC_DOWNLOAD_PATH_TEST_PROPERTY_KEY =
       "xts_dynamic_download_path";
 
-  /** MH test property keys of path relative to the test temp dir. */
+  /** MH test property keys of the path of the test list file. */
   public static final String XTS_DYNAMIC_DOWNLOAD_PATH_TEST_LIST_PROPERTY_KEY =
       "xts_dynamic_download_test_list_path";
 
+  /** MH test property keys of the path of the downloaded JDK. */
   public static final String XTS_DYNAMIC_DOWNLOAD_PATH_JDK_PROPERTY_KEY =
       "xts_dynamic_download_jdk_path";
+
+  /** MH test property keys of the preloaded mainline version. */
+  public static final String PRELOAD_MAINLINE_VERSION_TEST_PROPERTY_KEY =
+      "preload_mainline_version";
 
   public static final Pattern RESULT_ZIP_FILENAME_PATTERN =
       Pattern.compile("^\\d{4}\\.\\d{2}\\.\\d{2}_\\d{2}\\.\\d{2}\\.\\d{2}\\.\\d{3}_\\d{4}\\.zip$");

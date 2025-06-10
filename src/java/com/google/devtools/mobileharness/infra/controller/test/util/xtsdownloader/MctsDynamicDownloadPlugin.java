@@ -167,6 +167,8 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
       String versioncode = getTvpVersion(deviceId, preloadedMainlineModules);
       String preloadedMainlineVersion =
           processModuleVersion(versioncode, MAINLINE_TVP_PKG, aospVersion, aospVersion);
+      test.properties()
+          .add(XtsConstants.PRELOAD_MAINLINE_VERSION_TEST_PROPERTY_KEY, preloadedMainlineVersion);
       // Add the MCTS exclude file link url to the front of the list.
       downloadLinkUrls.add(
           String.format(
