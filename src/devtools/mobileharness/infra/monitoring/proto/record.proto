@@ -64,6 +64,9 @@ message HostRecord {
 
   // The total memory of the host.
   string total_mem = 14;
+
+  // The extra properties of the host.
+  repeated StrPair extra_properties = 15;
 }
 
 // The record of a device of a certain timestamp.
@@ -123,11 +126,11 @@ message DeviceRecord {
   // The teams this device belongs to.
   repeated string team = 17;
 
-  // The other dimensions of the device.
-  repeated Dimension extra_dimensions = 18;
+  // The extra dimensions of the device.
+  repeated StrPair extra_dimensions = 18;
 }
 
-message Dimension {
+message StrPair {
   string name = 1;
   string value = 2;
 }
