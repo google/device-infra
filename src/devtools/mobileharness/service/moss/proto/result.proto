@@ -188,8 +188,6 @@ message JobSummary {
   optional mobileharness.shared.TestStatus status = 6;
   optional mobileharness.shared.TestResult result = 7;
   optional TimeDetail time_detail = 8;
-  repeated mobileharness.shared.ErrorInfo deprecated_error = 9
-      [deprecated = true];
   optional string log = 10;
   repeated mobileharness.shared.StrPair param = 11;
   repeated mobileharness.shared.StrPair dimension = 12;
@@ -200,4 +198,6 @@ message JobSummary {
   repeated ErrorInfo warning = 17;
   optional ErrorInfo result_cause = 18;
   optional DeviceRequirements device_requirements = 19;
+
+  reserved 9;
 }
