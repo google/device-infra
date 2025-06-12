@@ -61,6 +61,14 @@ proto_library(
     ],
 )
 
+py_proto_library(
+    name = "lab_py_pb2",
+    visibility = [
+        "//googledata/devtools/mobileharness/config/prod/lab/aluminium_ate:__pkg__",
+    ],
+    deps = [":lab_proto"],
+)
+
 java_proto_library(
     name = "lab_java_proto",
     deps = [":lab_proto"],
