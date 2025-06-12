@@ -426,8 +426,7 @@ class RemoteDeviceManager implements LabInfoProvider {
           scheduler.unallocate(
               deviceData.dataFromLab.locator(), /* removeDevices= */ true, /* closeTest= */ true);
 
-          devices.remove(deviceKey);
-          deviceUuids.remove(request.getDeviceId());
+          deviceData.markMissing();
         } else {
           logger.atWarning().log("Device to sign out not found, device=%s", deviceKey);
         }
