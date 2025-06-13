@@ -217,29 +217,6 @@ public abstract class RetryStrategy implements Serializable {
    * delay = retryStrategy.getDelayMillis() + randomWait;
    * }</pre>
    *
-   * <p>Example usage: exponentialBackoff(...).randomized(randomnessFactor);
-   *
-   * @param randomnessFactor Increases or decreases the randomness. Use a value between 0 and 1.0. 0
-   *     means no randomness and 1 means a factor of 0x to 2x delay.
-   * @deprecated Prefer {@link #withRandomization(double)}: When {@code randomized} is used on a
-   *     {@linkplain #timed(Duration, Duration) timed} strategy, it produces a strategy that retries
-   *     forever, rather than respecting the supplied timeout. (If you are <i>not</i> using a timed
-   *     strategy, you can switch to {@code withRandomization} with no change in behavior.)
-   */
-  @Deprecated
-  public RetryStrategy randomized(double randomnessFactor) {
-    return new RetryStrategyWithRandomWait(this, randomnessFactor);
-  }
-
-  /**
-   * Backoff with some randomness. This can avoid a <a
-   * href="http://en.wikipedia.org/wiki/Thundering_herd_problem">thundering herd problem</a>.
-   *
-   * <pre>{@code
-   * randomWait = ( Math.random() - 0.5 ) * 2 * retryStrategy.getDelayMillis() * randomnessFactor;
-   * delay = retryStrategy.getDelayMillis() + randomWait;
-   * }</pre>
-   *
    * <p>Example usage: exponentialBackoff(...).withRandomization(randomnessFactor);
    *
    * @param randomnessFactor Increases or decreases the randomness. Use a value between 0 and 1.0. 0
@@ -357,57 +334,6 @@ public abstract class RetryStrategy implements Serializable {
     @Override
     public int hashCode() {
       return Objects.hashCode(numAttempts, firstDelay, multiplier);
-    }
-  }
-
-  private static final class RetryStrategyWithRandomWait extends RetryStrategy {
-    private final RetryStrategy retryStrategy;
-    private final double randomnessFactor;
-
-    RetryStrategyWithRandomWait(RetryStrategy retryStrategy, double randomnessFactor) {
-      checkArgument(
-          randomnessFactor >= 0.0, "randomnessFactor (%s) must be >= 0.0", randomnessFactor);
-      checkArgument(
-          randomnessFactor <= 1.0, "randomnessFactor (%s) must be <= 1.0", randomnessFactor);
-      this.retryStrategy = retryStrategy;
-      this.randomnessFactor = randomnessFactor;
-    }
-
-    @Override
-    int getNumAttempts() {
-      return retryStrategy.getNumAttempts();
-    }
-
-    @Override
-    public Duration getDelay(int tries) {
-      Duration delay = retryStrategy.getDelay(tries);
-      if (delay.isNegative() || delay.isZero()) {
-        // A negative value for delayMillis means to stop trying. So don't add randomness.
-        return delay;
-      }
-      long delayMillis = toMillisSaturated(delay);
-      long randomWaitMillis = (long) ((Math.random() - 0.5) * 2 * delayMillis * randomnessFactor);
-      return Duration.ofMillis(saturatedAdd(delayMillis, randomWaitMillis));
-    }
-
-    @Override
-    public String toString() {
-      return retryStrategy + ".randomized(" + randomnessFactor + ')';
-    }
-
-    @Override
-    public boolean equals(@Nullable Object o) {
-      if (o instanceof RetryStrategyWithRandomWait) {
-        RetryStrategyWithRandomWait other = (RetryStrategyWithRandomWait) o;
-        return retryStrategy.equals(other.retryStrategy)
-            && randomnessFactor == other.randomnessFactor;
-      }
-      return false;
-    }
-
-    @Override
-    public int hashCode() {
-      return Objects.hashCode(retryStrategy, randomnessFactor);
     }
   }
 
