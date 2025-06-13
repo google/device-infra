@@ -40,8 +40,7 @@ import java.util.regex.Matcher;
 import javax.annotation.Nullable;
 
 /** Utility for running Mobly tests packaged in AOSP and distributed via the Android Build. */
-@Deprecated
-public class MoblyAospPackageTestSetupUtil {
+public class MoblyAospTestSetupUtil {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   public static final String TEST_SELECTOR_ALL = "all";
@@ -55,12 +54,12 @@ public class MoblyAospPackageTestSetupUtil {
   private final LocalFileUtil localFileUtil;
   private final CommandExecutor executor;
 
-  public MoblyAospPackageTestSetupUtil() {
+  public MoblyAospTestSetupUtil() {
     this(new LocalFileUtil(), new CommandExecutor());
   }
 
   @VisibleForTesting
-  MoblyAospPackageTestSetupUtil(LocalFileUtil localFileUtil, CommandExecutor executor) {
+  MoblyAospTestSetupUtil(LocalFileUtil localFileUtil, CommandExecutor executor) {
     this.localFileUtil = localFileUtil;
     this.executor = executor;
   }
@@ -118,6 +117,7 @@ public class MoblyAospPackageTestSetupUtil {
           "Encountered an error during test package unzip. See error message for details: %s",
           e.getMessage());
     }
+    localFileUtil.grantFileOrDirFullAccess(moblyPkg);
     localFileUtil.grantFileOrDirFullAccessRecursively(moblyUnzipDir);
     if (testPath == null) {
       logger.atInfo().log("No test path specified by user. Run the test package directly.");
