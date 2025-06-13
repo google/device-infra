@@ -18,6 +18,7 @@ package com.google.wireless.qa.mobileharness.shared.api.validator.job;
 
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.XtsTradefedTestDriverSpec;
@@ -62,7 +63,9 @@ public class XtsTradefedTestJobValidator
               + " 'prev_session_test_record_files'.");
     }
 
-    if (spec.getXtsRootDir().isEmpty() && spec.getAndroidXtsZip().isEmpty()) {
+    if (spec.getXtsRootDir().isEmpty()
+        && spec.getAndroidXtsZip().isEmpty()
+        && !spec.getXtsType().equals(XtsConstants.ATS_NO_OP_TEST_TYPE)) {
       errors.add(
           String.format(
               "At least one of the %s, %s must be specified.", "xts_root_dir", "android_xts_zip"));
