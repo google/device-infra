@@ -43,6 +43,9 @@ java_library(
         "FileAnnotation.java",
         "ParamAnnotation.java",
     ],
+    visibility = [
+        "//:deviceinfra_all_pkg",
+    ],
 )
 
 java_library(
