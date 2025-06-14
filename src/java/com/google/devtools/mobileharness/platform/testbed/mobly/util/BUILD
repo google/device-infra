@@ -17,6 +17,7 @@ load("@rules_java//java:defs.bzl", "java_library")
 
 package(default_applicable_licenses = ["//:license"])
 
+# TODO: Remove this target once all references are migrated to ":mobly_aosp_test_setup_util"
 java_library(
     name = "mobly_aosp_package_test_setup_util",
     srcs = ["MoblyAospPackageTestSetupUtil.java"],
@@ -24,6 +25,23 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/platform/testbed/mobly/util:__pkg__",
         "//src/javatests/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
+    ],
+    deps = [
+        ":install_mobly_test_deps_args",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_constants",
+        "//src/java/com/google/devtools/mobileharness/shared/util/command",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "mobly_aosp_test_setup_util",
+    srcs = ["MoblyAospTestSetupUtil.java"],
+    visibility = [
     ],
     deps = [
         ":install_mobly_test_deps_args",
