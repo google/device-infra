@@ -29,7 +29,7 @@ import com.google.devtools.mobileharness.infra.ats.console.result.mobly.MoblyYam
 import com.google.devtools.mobileharness.infra.ats.console.result.mobly.MoblyYamlParser;
 import com.google.devtools.mobileharness.platform.testbed.mobly.MoblyConstant;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.InstallMoblyTestDepsArgs;
-import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyAospPackageTestSetupUtil;
+import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyAospTestSetupUtil;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyTestInfoMapHelper;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -74,7 +74,7 @@ public class MoblyAospPackageTest extends MoblyTest {
           + "     ||                                                        ||\n"
           + "     ============================================================\n\n";
 
-  private final MoblyAospPackageTestSetupUtil setupUtil;
+  private final MoblyAospTestSetupUtil setupUtil;
   private final LocalFileUtil localFileUtil;
   private final MoblyYamlParser parser;
   private final MoblyTestInfoMapHelper mapper;
@@ -86,7 +86,7 @@ public class MoblyAospPackageTest extends MoblyTest {
       MoblyYamlParser parser,
       MoblyTestInfoMapHelper mapper,
       CommandExecutor executor,
-      MoblyAospPackageTestSetupUtil setupUtil,
+      MoblyAospTestSetupUtil setupUtil,
       LocalFileUtil localFileUtil) {
     super(device, testInfo, executor);
     this.setupUtil = setupUtil;

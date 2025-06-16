@@ -19,12 +19,11 @@ package(default_applicable_licenses = ["//:license"])
 
 # TODO: Remove this target once all references are migrated to ":mobly_aosp_test_setup_util"
 java_library(
-    name = "mobly_aosp_package_test_setup_util",
-    srcs = ["MoblyAospPackageTestSetupUtil.java"],
+    name = "mobly_aosp_test_setup_util",
+    srcs = ["MoblyAospTestSetupUtil.java"],
     visibility = [
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/platform/testbed/mobly/util:__pkg__",
-        "//src/javatests/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
+        "//src/javatests/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
     ],
     deps = [
         ":install_mobly_test_deps_args",

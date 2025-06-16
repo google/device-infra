@@ -172,7 +172,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/mobly:parser",
         "//src/java/com/google/devtools/mobileharness/platform/testbed/mobly:mobly_constant",
         "//src/java/com/google/devtools/mobileharness/platform/testbed/mobly/util:install_mobly_test_deps_args",
-        "//src/java/com/google/devtools/mobileharness/platform/testbed/mobly/util:mobly_aosp_package_test_setup_util",
+        "//src/java/com/google/devtools/mobileharness/platform/testbed/mobly/util:mobly_aosp_test_setup_util",
         "//src/java/com/google/devtools/mobileharness/platform/testbed/mobly/util:mobly_test_info_map_helper",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
