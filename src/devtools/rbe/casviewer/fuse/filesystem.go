@@ -59,6 +59,10 @@ func (f *FastCDCFS) Mount(mountPoint string) (*fuse.Server, error) {
 		AttrTimeout:     &attrTimeout,
 		EntryTimeout:    &entryTimeout,
 		NullPermissions: false, // since we are setting permissions
+		MountOptions: fuse.MountOptions{
+			FsName: "casviewer", // driver name, column "Filesystem" in "df -T"
+			Name:   "fast_cdc",  // fuse type, column "Type" in "df -T"
+		},
 	}
 
 	server, err := fs.Mount(mountPoint, f, opts)
