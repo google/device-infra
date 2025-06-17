@@ -24,7 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.infra.ats.console.result.mobly.MoblyYamlParser;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.InstallMoblyTestDepsArgs;
-import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyAospPackageTestSetupUtil;
+import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyAospTestSetupUtil;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyTestInfoMapHelper;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -60,7 +60,7 @@ public final class MoblyAospPackageTestTest {
   @Mock private Files files;
   @Mock private EmptyDevice emptyDevice;
   @Mock private File configFile;
-  @Mock private MoblyAospPackageTestSetupUtil setupUtil;
+  @Mock private MoblyAospTestSetupUtil setupUtil;
   @Mock private LocalFileUtil localFileUtil;
   @Mock private MoblyYamlParser moblyYamlParser;
   @Mock private MoblyTestInfoMapHelper moblyTestInfoMapHelper;
