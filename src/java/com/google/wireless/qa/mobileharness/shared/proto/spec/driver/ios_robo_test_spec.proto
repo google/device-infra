@@ -37,4 +37,11 @@ message IosRoboTestSpec {
 
   optional ControllerEndpoint controller_endpoint = 1
       [(field_detail) = { help: "Crawler service controller endpoint." }];
+
+  optional string robo_script = 23
+      [(file_detail) = { help: "Robo script to be used with crawl." }];
+
+  repeated string contextual_robo_scripts = 24 [(file_detail) = {
+    help: "Contextual robo scripts to be used with crawl. Order of the scripts supplied matters."
+  }];
 }
