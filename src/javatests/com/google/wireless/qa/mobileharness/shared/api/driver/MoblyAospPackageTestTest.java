@@ -22,13 +22,12 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.devtools.mobileharness.infra.ats.console.result.mobly.MoblyYamlParser;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.InstallMoblyTestDepsArgs;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyAospTestSetupUtil;
-import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyTestInfoMapHelper;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.wireless.qa.mobileharness.shared.api.device.EmptyDevice;
+import com.google.wireless.qa.mobileharness.shared.api.driver.util.MoblyPostTestProcessor;
 import com.google.wireless.qa.mobileharness.shared.api.spec.MoblyAospPackageTestSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -62,8 +61,7 @@ public final class MoblyAospPackageTestTest {
   @Mock private File configFile;
   @Mock private MoblyAospTestSetupUtil setupUtil;
   @Mock private LocalFileUtil localFileUtil;
-  @Mock private MoblyYamlParser moblyYamlParser;
-  @Mock private MoblyTestInfoMapHelper moblyTestInfoMapHelper;
+  @Mock private MoblyPostTestProcessor postTestProcessor;
 
   private Params params;
 
@@ -106,11 +104,10 @@ public final class MoblyAospPackageTestTest {
         new MoblyAospPackageTest(
             emptyDevice,
             testInfo,
-            moblyYamlParser,
-            moblyTestInfoMapHelper,
             new CommandExecutor(),
             setupUtil,
-            localFileUtil);
+            localFileUtil,
+            postTestProcessor);
 
     var unused = moblyAospPackageTest.generateTestCommand(testInfo, configFile);
 
