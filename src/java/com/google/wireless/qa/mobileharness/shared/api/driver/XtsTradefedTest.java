@@ -769,39 +769,44 @@ public class XtsTradefedTest extends BaseDriver
 
   private Path getXtsRootDir(XtsTradefedTestDriverSpec spec, TestInfo testInfo)
       throws MobileHarnessException {
-    if (spec.hasXtsRootDir()) {
+    if (spec.hasXtsRootDir() && !spec.getXtsRootDir().isEmpty()) {
       return Path.of(spec.getXtsRootDir());
-    } else if (spec.hasAndroidXtsZip()) {
+    } else if (spec.hasAndroidXtsZip() && !spec.getAndroidXtsZip().isEmpty()) {
       // Unzip android-xts zip file and return the xts root dir
-      Path androidXtsZip = Path.of(spec.getAndroidXtsZip());
-      long startTime = clock.instant().toEpochMilli();
-      try {
-        String unzippedPath =
-            PathUtil.join(
-                testInfo.getTmpFileDir(), androidXtsZip.toString().replace('.', '_') + "_unzipped");
-        localFileUtil.prepareDir(unzippedPath);
-        // TODO: cache the unzip result to reduce lab disk usage.
-        localFileUtil.unzipFile(
-            androidXtsZip.toString(), unzippedPath, ANDROID_XTS_ZIP_UNCOMPRESS_TIMEOUT);
-        return Path.of(unzippedPath);
-      } catch (MobileHarnessException | InterruptedException e) {
-        if (e instanceof InterruptedException) {
-          Thread.currentThread().interrupt();
-        }
-        throw new MobileHarnessException(
-            AndroidErrorId.XTS_TRADEFED_GET_XTS_ROOT_DIR_ERROR,
-            "Failed to unzip " + androidXtsZip,
-            e);
-      } finally {
-        logger.atInfo().log(
-            "Unzipping %s took %d seconds",
-            androidXtsZip,
-            Duration.between(Instant.ofEpochMilli(startTime), clock.instant()).toSeconds());
-      }
+      return unzipFile(testInfo, Path.of(spec.getAndroidXtsZip()));
+    } else if (spec.hasXtsType()
+        && spec.getXtsType().equals(XtsConstants.ATS_NO_OP_TEST_TYPE)
+        && !Flags.instance().defaultCtsZipPath.getNonNull().isEmpty()) {
+      // Unzip default cts zip file and return the xts root dir
+      return unzipFile(testInfo, Path.of(Flags.instance().defaultCtsZipPath.getNonNull()));
     }
     throw new MobileHarnessException(
         AndroidErrorId.XTS_TRADEFED_GET_XTS_ROOT_DIR_ERROR,
         "Failed to get the xts root dir. Full spec: " + shortDebugString(spec));
+  }
+
+  private Path unzipFile(TestInfo testInfo, Path zipFile) throws MobileHarnessException {
+    logger.atInfo().log("Unzipping %s", zipFile);
+    long startTime = clock.instant().toEpochMilli();
+    try {
+      String unzippedPath =
+          PathUtil.join(
+              testInfo.getTmpFileDir(), zipFile.toString().replace('.', '_') + "_unzipped");
+      localFileUtil.prepareDir(unzippedPath);
+      // TODO: cache the unzip result to reduce lab disk usage.
+      localFileUtil.unzipFile(zipFile.toString(), unzippedPath, ANDROID_XTS_ZIP_UNCOMPRESS_TIMEOUT);
+      return Path.of(unzippedPath);
+    } catch (MobileHarnessException | InterruptedException e) {
+      if (e instanceof InterruptedException) {
+        Thread.currentThread().interrupt();
+      }
+      throw new MobileHarnessException(
+          AndroidErrorId.XTS_TRADEFED_GET_XTS_ROOT_DIR_ERROR, "Failed to unzip " + zipFile, e);
+    } finally {
+      logger.atInfo().log(
+          "Unzipping %s took %d seconds",
+          zipFile, Duration.between(Instant.ofEpochMilli(startTime), clock.instant()).toSeconds());
+    }
   }
 
   private ImmutableMap<String, String> getEnvironmentToTradefedConsole(
@@ -893,7 +898,7 @@ public class XtsTradefedTest extends BaseDriver
 
   private ImmutableList<String> getXtsRunCommandArgs(
       XtsTradefedTestDriverSpec spec, Map<String, String> envVars, TestInfo testInfo)
-      throws MobileHarnessException, InterruptedException {
+      throws MobileHarnessException {
     ImmutableList.Builder<String> xtsRunCommand =
         ImmutableList.<String>builder().add("run", "commandAndExit");
 

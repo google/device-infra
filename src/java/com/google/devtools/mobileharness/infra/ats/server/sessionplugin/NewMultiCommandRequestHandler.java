@@ -79,6 +79,7 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.protobuf.util.Timestamps;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
+import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -270,6 +271,9 @@ final class NewMultiCommandRequestHandler {
       throws InterruptedException, MobileHarnessException {
     SessionRequestInfo sessionRequestInfo =
         getSessionRequestInfo(request, commandInfo, sessionInfo);
+    if (sessionRequestInfo.xtsType().equals(XtsConstants.ATS_NO_OP_TEST_TYPE)) {
+      return ImmutableList.of();
+    }
     sessionRequestInfo = sessionRequestHandlerUtil.addNonTradefedModuleInfo(sessionRequestInfo);
 
     SetMultimap<String, String> commandToJobsMap = getCommandToJobsMap(sessionInfo);
@@ -526,7 +530,7 @@ final class NewMultiCommandRequestHandler {
         }
       }
     }
-    if (androidXtsZipPath.isEmpty()) {
+    if (!isNoOpTest(commandInfo) && androidXtsZipPath.isEmpty()) {
       throw MobileHarnessExceptionFactory.createUserFacingException(
           InfraErrorId.ATS_SERVER_INVALID_REQUEST_ERROR,
           String.format(
@@ -534,31 +538,39 @@ final class NewMultiCommandRequestHandler {
               request.getTestResourcesList(), sessionInfo.getSessionId()),
           /* cause= */ null);
     }
-    String xtsRootDir =
-        PathUtil.join(
-            DirUtil.getPublicGenDir(),
-            "session_" + sessionInfo.getSessionId(),
-            Files.getNameWithoutExtension(androidXtsZipPath));
-    if (mountedXtsRootDir.isEmpty()) {
-      localFileUtil.prepareDir(xtsRootDir);
-      mountOrUnzipXtsZip(androidXtsZipPath, xtsRootDir);
-      mountedXtsRootDir = xtsRootDir;
+    String xtsRootDir = "";
+    String xtsType = "";
+    String sessionTempDir =
+        PathUtil.join(DirUtil.getPublicGenDir(), "session_" + sessionInfo.getSessionId());
+    localFileUtil.prepareDir(sessionTempDir);
+    if (isNoOpTest(commandInfo)) {
+      xtsType = XtsConstants.ATS_NO_OP_TEST_TYPE;
+    } else {
+      xtsRootDir = PathUtil.join(sessionTempDir, Files.getNameWithoutExtension(androidXtsZipPath));
+      if (mountedXtsRootDir.isEmpty()) {
+        localFileUtil.prepareDir(xtsRootDir);
+        mountOrUnzipXtsZip(androidXtsZipPath, xtsRootDir);
+        mountedXtsRootDir = xtsRootDir;
+      }
+      final String androidXtsZipPathCopy = androidXtsZipPath;
+      xtsType =
+          xtsTypeLoader.getXtsType(
+              xtsRootDir,
+              () ->
+                  String.format(
+                      "Please make sure your XTS zip file %s only contains one xts type.",
+                      androidXtsZipPathCopy));
     }
-    final String androidXtsZipPathCopy = androidXtsZipPath;
-    String xtsType =
-        xtsTypeLoader.getXtsType(
-            xtsRootDir,
-            () ->
-                String.format(
-                    "Please make sure your XTS zip file %s only contains one xts type.",
-                    androidXtsZipPathCopy));
 
     SessionRequestInfo.Builder sessionRequestInfoBuilder =
         CommandLineParser.getInstance().parseCommandLine(commandInfo.getCommandLine());
     sessionRequestInfoBuilder.setCommandLineArgs(commandInfo.getCommandLine());
     sessionRequestInfoBuilder.setXtsType(xtsType);
     sessionRequestInfoBuilder.setXtsRootDir(xtsRootDir);
-    sessionRequestInfoBuilder.setAndroidXtsZip(replacePathForRemoteRunner(androidXtsZipPath));
+    if (!isNoOpTest(commandInfo)) {
+      sessionRequestInfoBuilder.setAndroidXtsZip(replacePathForRemoteRunner(androidXtsZipPath));
+    }
+    sessionRequestInfoBuilder.setSessionTempDir(sessionTempDir);
     sessionRequestInfoBuilder.setDeviceSerials(deviceSerials);
     sessionRequestInfoBuilder.setEnvVars(
         ImmutableMap.copyOf(request.getTestEnvironment().getEnvVarsMap()));
@@ -608,6 +620,10 @@ final class NewMultiCommandRequestHandler {
         .setAtsServerTestResources(fileTestResources.build())
         .setAtsServerTestEnvironment(request.getTestEnvironment())
         .build();
+  }
+
+  private boolean isNoOpTest(CommandInfo commandInfo) {
+    return commandInfo.getCommandLine().contains("util/timewaster");
   }
 
   /**
@@ -745,6 +761,9 @@ final class NewMultiCommandRequestHandler {
           || commandDetailBuilder.getState() == CommandState.RUNNING) {
         if (hasCommandPassed(commandDetailBuilder.build())
             || hasCommandFailed(commandDetailBuilder.build())) {
+          commandDetailBuilder.setState(CommandState.COMPLETED);
+        } else if (request.getCommandsList().stream().anyMatch(command -> isNoOpTest(command))
+            && jobs.stream().allMatch(job -> job.result().get().equals(TestResult.PASS))) {
           commandDetailBuilder.setState(CommandState.COMPLETED);
         } else {
           setCommandError(

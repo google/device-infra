@@ -46,6 +46,9 @@ public abstract class SessionRequestInfo {
 
   public abstract Optional<String> androidXtsZip();
 
+  // This is the parent directory of xtsRootDir, which is unzipped or mounted from androidXtsZip.
+  public abstract Optional<String> sessionTempDir();
+
   public abstract ImmutableList<String> deviceSerials();
 
   public abstract ImmutableList<String> excludeDeviceSerials();
@@ -200,6 +203,8 @@ public abstract class SessionRequestInfo {
     public abstract Builder setCommandLineArgs(String commandLineArgs);
 
     public abstract Builder setXtsRootDir(String xtsRootDir);
+
+    public abstract Builder setSessionTempDir(String sessionTempDir);
 
     public abstract Builder setDeviceSerials(List<String> deviceSerials);
 

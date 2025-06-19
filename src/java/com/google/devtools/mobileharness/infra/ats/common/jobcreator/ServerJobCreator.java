@@ -103,7 +103,7 @@ public class ServerJobCreator extends XtsJobCreator {
       SessionRequestInfo sessionRequestInfo, Map<String, String> driverParams, int jobDeviceCount)
       throws MobileHarnessException {
     // Generate XML test config template for ClusterCommandLauncher.
-    Path commandPath = Path.of(sessionRequestInfo.xtsRootDir()).resolveSibling("command.xml");
+    Path commandPath = Path.of(sessionRequestInfo.sessionTempDir().get(), "command.xml");
     try (OutputStream outputStream = new FileOutputStream(commandPath.toFile())) {
       TradefedConfigGenerator.generateXml(
           outputStream,

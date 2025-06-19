@@ -84,5 +84,7 @@ public class XtsConstants {
 
   public static final String XTS_FINAL_TEST_LOG_DIR_PROPERTY_KEY = "xts_final_test_log_dir";
 
+  public static final String ATS_NO_OP_TEST_TYPE = "no_op";
+
   private XtsConstants() {}
 }
