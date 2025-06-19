@@ -597,6 +597,7 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
     } else {
       logger.atInfo().log("The device is doing checkDevice, skip preAllocationCheck");
     }
+    postDeviceChangeEvent("Device is allocated");
   }
 
   /** Gets the current running test. */
