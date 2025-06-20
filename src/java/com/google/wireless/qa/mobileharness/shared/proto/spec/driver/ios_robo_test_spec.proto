@@ -19,6 +19,7 @@ syntax = "proto2";
 package mobileharness.shared.spec;
 
 import "src/java/com/google/wireless/qa/mobileharness/shared/proto/spec/base_spec.proto";
+import "src/java/com/google/wireless/qa/mobileharness/shared/proto/spec/driver/robo_test_spec.proto";
 
 option java_package = "com.google.wireless.qa.mobileharness.shared.proto.spec.driver";
 option java_multiple_files = true;
@@ -37,6 +38,8 @@ message IosRoboTestSpec {
 
   optional ControllerEndpoint controller_endpoint = 1
       [(field_detail) = { help: "Crawler service controller endpoint." }];
+
+  optional RoboTestSpec robo_test_spec = 2;
 
   optional string robo_script = 23
       [(file_detail) = { help: "Robo script to be used with crawl." }];
