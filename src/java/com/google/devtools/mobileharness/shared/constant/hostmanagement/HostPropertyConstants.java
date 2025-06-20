@@ -45,6 +45,8 @@ public final class HostPropertyConstants {
     TOTAL_MEM,
     /** The total disk space of the host. */
     ROOT_DISK_SPACE,
+    /** The GitHub commit ID from which the ATS Lab Server was built. */
+    GITHUB_VERSION,
   }
 
   private HostPropertyConstants() {}
