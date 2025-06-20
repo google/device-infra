@@ -479,6 +479,12 @@ public interface PropertyName {
     public enum AndroidFlashstationDecorator implements PropertyName {
       /** Whether the test is using the V4 Build API. */
       ENABLE_V4_BUILD_API,
+
+      /** The project ID retrieved from the key file. */
+      FLASHSTATION_PROJECT_ID,
+
+      /** The client email retrieved from the key file. */
+      FLASHSTATION_CLIENT_EMAIL,
     }
 
     /** AndroidSetPropDecorator property name constants. */
