@@ -360,6 +360,26 @@ public abstract class AndroidRealDeviceDelegate {
             "Failed to get soc_id for fastboot device %s: %s",
             deviceId, MoreThrowables.shortDebugString(e));
       }
+      try {
+        String arForceUpdate = fastboot.getVar(deviceId, FastbootProperty.AR_FORCE_UPDATE);
+        if (!Strings.isNullOrEmpty(arForceUpdate)) {
+          device.updateDimension(Dimension.Name.AR_FORCE_UPDATE, Ascii.toLowerCase(arForceUpdate));
+        }
+      } catch (MobileHarnessException e) {
+        logger.atInfo().log(
+            "Failed to get ar_force_update for fastboot device %s: %s",
+            deviceId, MoreThrowables.shortDebugString(e));
+      }
+      try {
+        String arUpdateAllow = fastboot.getVar(deviceId, FastbootProperty.AR_UPDATE_ALLOW);
+        if (!Strings.isNullOrEmpty(arUpdateAllow)) {
+          device.updateDimension(Dimension.Name.AR_UPDATE_ALLOW, Ascii.toLowerCase(arUpdateAllow));
+        }
+      } catch (MobileHarnessException e) {
+        logger.atInfo().log(
+            "Failed to get ar_update_allow for fastboot device %s: %s",
+            deviceId, MoreThrowables.shortDebugString(e));
+      }
 
       try {
         String serialno = fastboot.getVar(deviceId, FastbootProperty.SERIALNO);
