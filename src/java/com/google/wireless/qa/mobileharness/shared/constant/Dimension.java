@@ -200,6 +200,10 @@ public final class Dimension {
     AP_AR_NS,
     /** The Pixel bootloader Secure AP Anti-Rollback counter */
     AP_AR_S,
+    /** The Pixel bootloader force update Anti-Rollback */
+    AR_FORCE_UPDATE,
+    /** The Pixel bootloader allow Anti-Rollback update via force_ar enabled */
+    AR_UPDATE_ALLOW,
     /** The brand of the device. */
     BRAND,
     /** The build name of the device. */

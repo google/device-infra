@@ -50,6 +50,8 @@ public final class Enums {
   public enum FastbootProperty {
     AP_AR_NS,
     AP_AR_S,
+    AR_FORCE_UPDATE,
+    AR_UPDATE_ALLOW,
     CURRENT_SLOT,
     DEVKEY_ALLOW,
     HARDWARE,
