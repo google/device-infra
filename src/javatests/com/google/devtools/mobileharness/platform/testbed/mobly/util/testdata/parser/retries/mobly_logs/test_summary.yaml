@@ -1,0 +1,93 @@
+---
+Requested Tests:
+- test_hello_mars
+- test_hello_world
+Type: TestNameList
+---
+Begin Time: 1621374550257
+Details: null
+End Time: 1621374550992
+Extra Errors: {}
+Extras: null
+Result: PASS
+Retry Parent: null
+Signature: test_hello_mars-1621374550257
+Stacktrace: null
+Test Class: HelloWorldTest
+Test Name: test_hello_mars
+Type: Record
+UID: null
+---
+Begin Time: 1621374550996
+Details: Failing test case for fun
+End Time: 1621374551722
+Extra Errors: {}
+Extras: null
+Result: FAIL
+Retry Parent: null
+Signature: test_hello_world-1621374550996
+Stacktrace: "Traceback (most recent call last):\n  File \"/build/work/224135d7ddb586a331cfd989133c1879df39/google3/runfiles/google3/third_party/py/mobly/base_test.py\"\
+    , line 756, in exec_one_test\n    test_method()\n  File \"/build/work/224135d7ddb586a331cfd989133c1879df39/google3/runfiles/google3/third_party/py/mobly/base_test.py\"\
+    , line 129, in _wrapper\n    func(*args)\n  File \"/build/work/224135d7ddb586a331cfd989133c1879df39/google3/runfiles/google3/experimental/users/nkprasad/mobly/dev/hello_world_test.py\"\
+    , line 45, in test_hello_world\n    asserts.fail('Failing test case for fun')\n\
+    \  File \"/build/work/224135d7ddb586a331cfd989133c1879df39/google3/runfiles/google3/third_party/py/mobly/asserts.py\"\
+    , line 232, in fail\n    raise signals.TestFailure(msg, extras)\nmobly.signals.TestFailure:\
+    \ Details=Failing test case for fun, Extras=None\n"
+Test Class: HelloWorldTest
+Test Name: test_hello_world
+Type: Record
+UID: null
+---
+Begin Time: 1621374551739
+Details: null
+End Time: 1621374552444
+Extra Errors: {}
+Extras: null
+Result: PASS
+Retry Parent: test_hello_world-1621374550996
+Signature: test_hello_world_retry_1-1621374551739
+Stacktrace: null
+Test Class: HelloWorldTest
+Test Name: test_hello_world_retry_1
+Type: Record
+UID: null
+---
+Controller Info:
+-   build_info:
+        build_characteristics: emulator
+        build_id: OSM1.171204.018
+        build_product: generic_x86
+        build_type: userdebug
+        build_version_codename: REL
+        build_version_sdk: '27'
+        debuggable: '1'
+        hardware: ranchu
+        product_name: sdk_goog3_x86
+    model: sdk_goog3_x86
+    serial: localhost:17202
+    user_added_info: {}
+-   build_info:
+        build_characteristics: emulator
+        build_id: OSM1.171204.018
+        build_product: generic_x86
+        build_type: userdebug
+        build_version_codename: REL
+        build_version_sdk: '27'
+        debuggable: '1'
+        hardware: ranchu
+        product_name: sdk_goog3_x86
+    model: sdk_goog3_x86
+    serial: localhost:17421
+    user_added_info: {}
+Controller Name: AndroidDevice
+Test Class: HelloWorldTest
+Timestamp: 1621374552.5307157
+Type: ControllerInfo
+---
+Error: 0
+Executed: 3
+Failed: 1
+Passed: 2
+Requested: 2
+Skipped: 0
+Type: Summary

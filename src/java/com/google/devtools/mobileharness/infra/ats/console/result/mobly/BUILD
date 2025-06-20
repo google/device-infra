@@ -27,6 +27,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/testbed/mobly/util:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/testbed/mobly/util:__subpackages__",
         "//src/javatests/com/google/wireless/qa/mobileharness/shared/api/driver:__subpackages__",
     ],
     deps = [
@@ -53,6 +54,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/testbed/mobly/util:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/testbed/mobly/util:__subpackages__",
     ],
     deps = [
         "//src/devtools/mobileharness/infra/ats/console/result/proto:result_java_proto",
