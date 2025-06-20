@@ -35,6 +35,7 @@ java_library(
         ":monitor_lib",
         ":monitor_pipeline_launcher",
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
+        "//src/devtools/mobileharness/api/model/proto:lab_java_proto",
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
         "//src/devtools/mobileharness/infra/monitoring/proto:monitored_record_java_proto",
         "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc",

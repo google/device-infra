@@ -28,7 +28,11 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceProperties;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceProperty;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
+import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperties;
+import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperty;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabLocator;
+import com.google.devtools.mobileharness.api.model.proto.Lab.LabServerFeature;
+import com.google.devtools.mobileharness.api.model.proto.Lab.LabStatus;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceList;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
@@ -57,6 +61,9 @@ public final class LabInfoPullerImplTest {
 
   private static final String HOST_NAME = "fake_lab_host_name";
   private static final String HOST_IP = "fake_lab_ip";
+  private static final LabStatus HOST_STATUS = LabStatus.LAB_RUNNING;
+  private static final String HOST_GITHUB_VERSION = "fake_lab_github_version";
+  private static final String HOST_TOTAL_MEM = "fake_lab_total_mem";
   private static final String DEVICE_ID_1 = "fake_uuid_1";
   private static final String DEVICE_OWNER_1 = "fake_owner_1";
   private static final String DEVICE_TYPE_1 = "fake_device_type_1";
@@ -82,7 +89,23 @@ public final class LabInfoPullerImplTest {
 
   private static final LabLocator LAB_LOCATOR =
       LabLocator.newBuilder().setIp(HOST_IP).setHostName(HOST_NAME).build();
-  private static final LabInfo LAB_INFO = LabInfo.newBuilder().setLabLocator(LAB_LOCATOR).build();
+  private static final LabInfo LAB_INFO =
+      LabInfo.newBuilder()
+          .setLabLocator(LAB_LOCATOR)
+          .setLabStatus(HOST_STATUS)
+          .setLabServerFeature(
+              LabServerFeature.newBuilder()
+                  .setHostProperties(
+                      HostProperties.newBuilder()
+                          .addHostProperty(
+                              HostProperty.newBuilder()
+                                  .setKey("github_version")
+                                  .setValue(HOST_GITHUB_VERSION))
+                          .addHostProperty(
+                              HostProperty.newBuilder()
+                                  .setKey("total_mem")
+                                  .setValue(HOST_TOTAL_MEM))))
+          .build();
 
   private static final DeviceInfo DEVICE_INFO_1 =
       DeviceInfo.newBuilder()
@@ -197,6 +220,10 @@ public final class LabInfoPullerImplTest {
             MonitoredEntry.newBuilder()
                 .putIdentifier("host_name", HOST_NAME)
                 .putIdentifier("host_ip", HOST_IP)
+                .addAttribute(Attribute.newBuilder().setName("status").setValue("LAB_RUNNING"))
+                .addAttribute(
+                    Attribute.newBuilder().setName("github_version").setValue(HOST_GITHUB_VERSION))
+                .addAttribute(Attribute.newBuilder().setName("total_mem").setValue(HOST_TOTAL_MEM))
                 .build());
     assertThat(monitoredRecord.getDeviceEntryList().size()).isEqualTo(2);
     assertThat(monitoredRecord.getDeviceEntryList())

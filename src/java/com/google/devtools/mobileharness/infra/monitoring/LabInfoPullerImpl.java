@@ -16,11 +16,13 @@
 
 package com.google.devtools.mobileharness.infra.monitoring;
 
+import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceProperties;
+import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperty;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Filter;
@@ -57,13 +59,18 @@ public final class LabInfoPullerImpl implements DataPuller<MonitoredRecord> {
     for (LabData labData :
         labInfoProvider.getLabInfos(Filter.getDefaultInstance()).getLabDataList()) {
       MonitoredRecord.Builder record =
-          MonitoredRecord.newBuilder()
-              .setTimestamp(TimeUtils.toProtoTimestamp(Instant.now()))
-              .setHostEntry(
-                  MonitoredEntry.newBuilder()
-                      .putIdentifier(
-                          "host_name", labData.getLabInfo().getLabLocator().getHostName())
-                      .putIdentifier("host_ip", labData.getLabInfo().getLabLocator().getIp()));
+          MonitoredRecord.newBuilder().setTimestamp(TimeUtils.toProtoTimestamp(Instant.now()));
+      List<HostProperty> hostPropertyList =
+          labData.getLabInfo().getLabServerFeature().getHostProperties().getHostPropertyList();
+      MonitoredEntry.Builder hostEntry =
+          MonitoredEntry.newBuilder()
+              .putIdentifier("host_name", labData.getLabInfo().getLabLocator().getHostName())
+              .putIdentifier("host_ip", labData.getLabInfo().getLabLocator().getIp());
+      addAttribute(
+          hostEntry, "status", Optional.of(labData.getLabInfo().getLabStatus().toString()));
+      addAttribute(hostEntry, "github_version", getProperty(hostPropertyList, "github_version"));
+      addAttribute(hostEntry, "total_mem", getProperty(hostPropertyList, "total_mem"));
+      record.setHostEntry(hostEntry.build());
       for (DeviceInfo deviceInfo : labData.getDeviceList().getDeviceInfoList()) {
         DeviceCompositeDimension compositeDimension =
             deviceInfo.getDeviceFeature().getCompositeDimension();
@@ -125,5 +132,12 @@ public final class LabInfoPullerImpl implements DataPuller<MonitoredRecord> {
         .filter(dimension -> dimension.getName().equals(name))
         .findAny()
         .map(DeviceDimension::getValue);
+  }
+
+  private Optional<String> getProperty(List<HostProperty> properties, String key) {
+    return properties.stream()
+        .filter(property -> Ascii.equalsIgnoreCase(property.getKey(), key))
+        .findAny()
+        .map(HostProperty::getValue);
   }
 }
