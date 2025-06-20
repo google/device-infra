@@ -443,7 +443,7 @@ final class NewMultiCommandRequestHandler {
   }
 
   // Hash commandId from command line.
-  private String getCommandId(CommandInfo commandInfo, NewMultiCommandRequest request) {
+  String getCommandId(CommandInfo commandInfo, NewMultiCommandRequest request) {
     if (request.getPrevTestContext().hasCommandLine()
         && !request.getPrevTestContext().getCommandLine().isEmpty()) {
       return UUID.nameUUIDFromBytes(request.getPrevTestContext().getCommandLine().getBytes(UTF_8))
