@@ -33,6 +33,7 @@ import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.logging.flogger.FloggerFormatter;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.version.Version;
+import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -111,7 +112,9 @@ public class LabServerLauncher {
 
   /** Initializes and runs lab server. */
   public void run() throws MobileHarnessException, InterruptedException, IOException {
-    Injector injector = Guice.createInjector(new LabServerModule(labArgs, globalInternalBus));
+    List<AbstractModule> modules = new ArrayList<>();
+    modules.add(new LabServerModule(labArgs, globalInternalBus));
+    Injector injector = Guice.createInjector(modules);
     initializeEnv(injector);
 
     ServiceManager externalServiceManager =
