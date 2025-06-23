@@ -31,6 +31,8 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.io.MoreFiles;
+import com.google.common.io.RecursiveDeleteOption;
 import com.google.devtools.deviceinfra.shared.util.file.remote.constant.RemoteFileType;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -1715,6 +1717,21 @@ public class LocalFileUtil {
   /**
    * Deletes a single file, or recursively deletes a directory.
    *
+   * <p>Note that this method does not support glob patterns. For example, if the directory
+   * structure is
+   *
+   * <pre>
+   *   - foo/
+   *     - bar.txt
+   *     - baz/
+   *       - qux.txt
+   * </pre>
+   *
+   * then {@code removeFileOrDir("foo")} will remove the directory "foo" and anything inside it,
+   * including the files "bar.txt" and "baz/qux.txt" and the directory "baz". However, {@code
+   * removeFileOrDir("foo/*")} will do nothing because the glob pattern cannot be parsed and there's
+   * no such file or directory named "*".
+   *
    * @throws MobileHarnessException if fails to delete
    */
   public void removeFileOrDir(String fileOrDirPath)
@@ -1731,6 +1748,38 @@ public class LocalFileUtil {
       throw new MobileHarnessException(
           BasicErrorId.LOCAL_FILE_OR_DIR_REMOVE_ERROR,
           "Failed to remove file/dir " + fileOrDirPath,
+          e);
+    }
+  }
+
+  /**
+   * Deletes all files within the directory recursively while keeping the directory itself.
+   *
+   * <p>For example, if the directory structure is
+   *
+   * <pre>
+   *   - foo/
+   *     - bar.txt
+   *     - baz/
+   *       - qux.txt
+   * </pre>
+   *
+   * then {@code removeDirectoryContents("foo")} will remove the files "bar.txt" and "baz/qux.txt"
+   * and the directory "baz" while keeping the directory "foo".
+   *
+   * <p>This method differs from {@link #removeFileOrDir(String)} which removes the directory
+   * itself, in addition to its contents.
+   *
+   * @throws MobileHarnessException if fails to delete
+   */
+  public void removeDirectoryContents(String dirPath)
+      throws MobileHarnessException, InterruptedException {
+    try {
+      MoreFiles.deleteDirectoryContents(Path.of(dirPath), RecursiveDeleteOption.ALLOW_INSECURE);
+    } catch (IOException e) {
+      throw new MobileHarnessException(
+          BasicErrorId.LOCAL_FILE_OR_DIR_REMOVE_ERROR,
+          "Failed to remove directory contents " + dirPath,
           e);
     }
   }
