@@ -76,6 +76,5 @@ java_library(
 android_library(
     name = "android_google_account_type",
     srcs = ["AndroidGoogleAccountType.java"],
-    visibility = [
-    ],
+    visibility = ["//visibility:private"],
 )
