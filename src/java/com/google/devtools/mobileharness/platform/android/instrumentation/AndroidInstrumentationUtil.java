@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.platform.android.instrumentation;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import androidx.test.services.storage.TestStorageConstants;
+import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
@@ -63,6 +64,7 @@ import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.An
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Log;
+import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.AndroidInstrumentationSpec;
 import java.io.File;
 import java.io.FileInputStream;
@@ -184,6 +186,20 @@ public class AndroidInstrumentationUtil {
   private static final int DEVICE_RECONNECT_MAX_RETRIES = 3;
   private static final Duration DEVICE_RECONNECT_INITIAL_DELAY = Duration.ofSeconds(5);
   private static final int DEVICE_RECONNECT_DELAY_MULTIPLIER = 3;
+
+  /** The result of the gtest process result. */
+  @AutoValue
+  public abstract static class GtestResult {
+    /** The result of the gtest process. */
+    public abstract TestResult testResult();
+
+    /** The error message of the gtest process. */
+    public abstract Optional<String> errorMessage();
+
+    public static GtestResult of(TestResult testResult, Optional<String> errorMessage) {
+      return new AutoValue_AndroidInstrumentationUtil_GtestResult(testResult, errorMessage);
+    }
+  }
 
   /** Android SDK ADB command line tools executor. */
   private final Adb adb;
@@ -1213,7 +1229,7 @@ public class AndroidInstrumentationUtil {
    *     /sdcard/Download/test_results.xml)
    * @param exception returns the exception after parsing the gtest XML files
    */
-  public void processGtestResult(
+  public GtestResult processGtestResult(
       String deviceId,
       TestInfo testInfo,
       String gtestXmlFile,
@@ -1222,31 +1238,37 @@ public class AndroidInstrumentationUtil {
     // Handle the CommandException exception first
     if (exception != null) {
       if (exception.getErrorId() == AndroidErrorId.ANDROID_INSTRUMENTATION_COMMAND_EXEC_TIMEOUT) {
-        testInfo.resultWithCause().setNonPassing(Test.TestResult.TIMEOUT, exception);
+        return GtestResult.of(TestResult.TIMEOUT, Optional.of(exception.getMessage()));
       } else {
-        testInfo.resultWithCause().setNonPassing(Test.TestResult.ERROR, exception);
+        return GtestResult.of(TestResult.ERROR, Optional.of(exception.getMessage()));
       }
-      return;
     }
 
     // Ensure device is online before pulling files from it.
     try {
       boolean isDeviceOnline = systemStateManager.isOnline(deviceId);
       if (!isDeviceOnline) {
-        MobileHarnessException cause =
-            new MobileHarnessException(
-                AndroidErrorId.ANDROID_INSTRUMENTATION_GET_ONLINE_DEVICES_ERROR,
-                String.format("Device %s is not online", deviceId));
-        testInfo.resultWithCause().setNonPassing(Test.TestResult.ERROR, cause);
-        return;
+        return GtestResult.of(
+            TestResult.ERROR, Optional.of(String.format("Device %s is not online", deviceId)));
       }
     } catch (MobileHarnessException e) {
-      testInfo.resultWithCause().setNonPassing(Test.TestResult.ERROR, e);
-      return;
+      return GtestResult.of(TestResult.ERROR, Optional.of(e.getMessage()));
+    }
+
+    boolean hasTestFailures =
+        testInfo.subTests().getAll().values().stream()
+            .anyMatch(AndroidInstrumentationUtil::isTestFailedOrError);
+    if (hasTestFailures) {
+      return GtestResult.of(TestResult.FAIL, Optional.of("Test cases failed."));
     }
 
     // The tests passed.
-    testInfo.resultWithCause().setPass();
+    return GtestResult.of(TestResult.PASS, Optional.empty());
+  }
+
+  private static boolean isTestFailedOrError(TestInfo subTest) {
+    return subTest.resultWithCause().get().type() == Test.TestResult.FAIL
+        || subTest.resultWithCause().get().type() == Test.TestResult.ERROR;
   }
 
   /** Check the external storage path is not null. */
