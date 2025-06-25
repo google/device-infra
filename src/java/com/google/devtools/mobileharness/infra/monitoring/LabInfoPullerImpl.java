@@ -29,9 +29,11 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.
 import com.google.devtools.mobileharness.infra.monitoring.proto.MonitoredRecordProto.Attribute;
 import com.google.devtools.mobileharness.infra.monitoring.proto.MonitoredRecordProto.MonitoredEntry;
 import com.google.devtools.mobileharness.infra.monitoring.proto.MonitoredRecordProto.MonitoredRecord;
+import com.google.devtools.mobileharness.shared.constant.hostmanagement.HostPropertyConstants.HostPropertyKey;
 import com.google.devtools.mobileharness.shared.labinfo.LabInfoProvider;
 import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
 import com.google.inject.Inject;
+import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -68,8 +70,18 @@ public final class LabInfoPullerImpl implements DataPuller<MonitoredRecord> {
               .putIdentifier("host_ip", labData.getLabInfo().getLabLocator().getIp());
       addAttribute(
           hostEntry, "status", Optional.of(labData.getLabInfo().getLabStatus().toString()));
-      addAttribute(hostEntry, "github_version", getProperty(hostPropertyList, "github_version"));
-      addAttribute(hostEntry, "total_mem", getProperty(hostPropertyList, "total_mem"));
+      addAttribute(
+          hostEntry,
+          "github_version",
+          getProperty(hostPropertyList, Ascii.toLowerCase(HostPropertyKey.GITHUB_VERSION.name())));
+      addAttribute(
+          hostEntry,
+          "total_mem",
+          getProperty(hostPropertyList, Ascii.toLowerCase(HostPropertyKey.TOTAL_MEM.name())));
+      addAttribute(
+          hostEntry,
+          "lab_server_version",
+          getProperty(hostPropertyList, Ascii.toLowerCase(HostPropertyKey.HOST_VERSION.name())));
       record.setHostEntry(hostEntry.build());
       for (DeviceInfo deviceInfo : labData.getDeviceList().getDeviceInfoList()) {
         DeviceCompositeDimension compositeDimension =
@@ -92,8 +104,10 @@ public final class LabInfoPullerImpl implements DataPuller<MonitoredRecord> {
             deviceEntry,
             "version",
             Stream.of(
-                    getDimension(dimensionList, "sdk_version"),
-                    getDimension(dimensionList, "software_version"))
+                    getDimension(
+                        dimensionList, Ascii.toLowerCase(Dimension.Name.SDK_VERSION.name())),
+                    getDimension(
+                        dimensionList, Ascii.toLowerCase(Dimension.Name.SOFTWARE_VERSION.name())))
                 .flatMap(Optional::stream)
                 .findFirst());
         dimensionList.forEach(
@@ -129,7 +143,7 @@ public final class LabInfoPullerImpl implements DataPuller<MonitoredRecord> {
 
   private Optional<String> getDimension(List<DeviceDimension> dimensions, String name) {
     return dimensions.stream()
-        .filter(dimension -> dimension.getName().equals(name))
+        .filter(dimension -> Ascii.equalsIgnoreCase(dimension.getName(), name))
         .findAny()
         .map(DeviceDimension::getValue);
   }

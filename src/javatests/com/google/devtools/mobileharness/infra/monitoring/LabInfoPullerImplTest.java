@@ -64,6 +64,7 @@ public final class LabInfoPullerImplTest {
   private static final LabStatus HOST_STATUS = LabStatus.LAB_RUNNING;
   private static final String HOST_GITHUB_VERSION = "fake_lab_github_version";
   private static final String HOST_TOTAL_MEM = "fake_lab_total_mem";
+  private static final String HOST_VERSION = "fake_lab_host_version";
   private static final String DEVICE_ID_1 = "fake_uuid_1";
   private static final String DEVICE_OWNER_1 = "fake_owner_1";
   private static final String DEVICE_TYPE_1 = "fake_device_type_1";
@@ -104,7 +105,11 @@ public final class LabInfoPullerImplTest {
                           .addHostProperty(
                               HostProperty.newBuilder()
                                   .setKey("total_mem")
-                                  .setValue(HOST_TOTAL_MEM))))
+                                  .setValue(HOST_TOTAL_MEM))
+                          .addHostProperty(
+                              HostProperty.newBuilder()
+                                  .setKey("host_version")
+                                  .setValue(HOST_VERSION))))
           .build();
 
   private static final DeviceInfo DEVICE_INFO_1 =
@@ -224,6 +229,8 @@ public final class LabInfoPullerImplTest {
                 .addAttribute(
                     Attribute.newBuilder().setName("github_version").setValue(HOST_GITHUB_VERSION))
                 .addAttribute(Attribute.newBuilder().setName("total_mem").setValue(HOST_TOTAL_MEM))
+                .addAttribute(
+                    Attribute.newBuilder().setName("lab_server_version").setValue(HOST_VERSION))
                 .build());
     assertThat(monitoredRecord.getDeviceEntryList().size()).isEqualTo(2);
     assertThat(monitoredRecord.getDeviceEntryList())
