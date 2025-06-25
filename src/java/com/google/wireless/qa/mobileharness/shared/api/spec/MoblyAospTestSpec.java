@@ -19,7 +19,7 @@ package com.google.wireless.qa.mobileharness.shared.api.spec;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.FileAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.ParamAnnotation;
 
-/** Specs for MoblyAospTest */
+/** Specs for MoblyAospTest. */
 @SuppressWarnings("InterfaceWithOnlyStatics") // This interface is implemented by some decorators
 public interface MoblyAospTestSpec {
   @FileAnnotation(
@@ -41,4 +41,7 @@ public interface MoblyAospTestSpec {
               + " supported. The expected format is ^(python)?3(\\.[4-9])?$. Note that the version"
               + " supplied here must match the executable name.")
   public static final String PARAM_PYTHON_VERSION = "python_version";
+
+  @ParamAnnotation(required = false, help = "Base URL of Python Package Index.")
+  public static final String PARAM_PY_PKG_INDEX_URL = "python_pkg_index_url";
 }

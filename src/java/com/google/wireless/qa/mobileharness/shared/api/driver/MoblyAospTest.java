@@ -20,8 +20,10 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.platform.testbed.mobly.util.InstallMoblyTestDepsArgs;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyAospTestSetupUtil;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
+import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.devtools.mobileharness.shared.util.testcomponents.TestComponentsDirUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DriverAnnotation;
@@ -32,6 +34,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.Iterator;
 import javax.inject.Inject;
 import org.json.JSONArray;
@@ -49,6 +52,7 @@ public class MoblyAospTest extends MoblyTest implements MoblyAospTestSpec {
   private final ResUtil resUtil;
   private final TestComponentsDirUtil testComponentsDirUtil;
   private final CommandExecutor commandExecutor;
+  private final LocalFileUtil localFileUtil;
   private final MoblyPostTestProcessor postTestProcessor;
 
   @Inject
@@ -59,12 +63,14 @@ public class MoblyAospTest extends MoblyTest implements MoblyAospTestSpec {
       ResUtil resUtil,
       TestComponentsDirUtil testComponentsDirUtil,
       CommandExecutor commandExecutor,
+      LocalFileUtil localFileUtil,
       MoblyPostTestProcessor postTestProcessor) {
     super(device, testInfo);
     this.setupUtil = setupUtil;
     this.resUtil = resUtil;
     this.testComponentsDirUtil = testComponentsDirUtil;
     this.commandExecutor = commandExecutor;
+    this.localFileUtil = localFileUtil;
     this.postTestProcessor = postTestProcessor;
   }
 
@@ -119,12 +125,26 @@ public class MoblyAospTest extends MoblyTest implements MoblyAospTestSpec {
   String[] generateTestCommand(TestInfo testInfo, File configFile)
       throws MobileHarnessException, InterruptedException {
     Path moblyPkg = Path.of(testInfo.jobInfo().files().getSingle(FILE_MOBLY_PKG));
+    localFileUtil.grantFileOrDirFullAccess(moblyPkg.toString());
     Path moblyUnzipDir = Path.of(testInfo.getTmpFileDir(), "mobly");
+    localFileUtil.prepareDir(moblyUnzipDir);
+    localFileUtil.grantFileOrDirFullAccess(moblyUnzipDir.toString());
     Path venvPath = Path.of(testInfo.getTmpFileDir(), "venv");
     Path configPath = Path.of(configFile.getPath());
     String testPath = testInfo.jobInfo().params().get(PARAM_TEST_PATH);
+    if (testPath != null && !testPath.isEmpty()) {
+      localFileUtil.grantFileOrDirFullAccess(testPath);
+    }
     String testCaseSelector = testInfo.jobInfo().params().get(TEST_SELECTOR_KEY);
     String pythonVersion = testInfo.jobInfo().params().get(PARAM_PYTHON_VERSION);
+
+    InstallMoblyTestDepsArgs.Builder installMoblyTestDepsArgsBuilder =
+        InstallMoblyTestDepsArgs.builder().setDefaultTimeout(Duration.ofMinutes(30));
+
+    if (testInfo.jobInfo().params().getOptional(PARAM_PY_PKG_INDEX_URL).isPresent()) {
+      installMoblyTestDepsArgsBuilder.setIndexUrl(
+          testInfo.jobInfo().params().getOptional(PARAM_PY_PKG_INDEX_URL).get());
+    }
 
     return setupUtil.setupEnvAndGenerateTestCommand(
         moblyPkg,
@@ -134,7 +154,7 @@ public class MoblyAospTest extends MoblyTest implements MoblyAospTestSpec {
         testPath,
         testCaseSelector,
         pythonVersion,
-        /* installMoblyTestDepsArgs= */ null);
+        installMoblyTestDepsArgsBuilder.build());
   }
 
   /**

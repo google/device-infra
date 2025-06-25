@@ -59,6 +59,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_real_device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:failed_device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:mobly_aosp_package_test",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:mobly_aosp_test",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:xts_tradefed_test",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/module:xts_tradefed_test_module",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/env:android_device_settings_decorator_env_validator",
@@ -75,6 +76,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:android_device_settings_decorator_job_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:android_switch_user_decorator_job_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:mobly_aosp_package_test_job_validator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:mobly_aosp_test_job_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:xts_tradefed_test_job_validator",
     ],
 )
@@ -174,6 +176,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:android_instrumentation",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:android_robo_test",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:mobly_aosp_package_test",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:mobly_aosp_test",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:mobly_test",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:no_op_driver",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:xts_tradefed_test",
