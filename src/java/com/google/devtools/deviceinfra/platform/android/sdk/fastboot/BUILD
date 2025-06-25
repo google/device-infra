@@ -21,6 +21,8 @@ java_library(
     name = "fastboot",
     srcs = ["Fastboot.java"],
     visibility = [
+        # "//devtools/mobileharness/project:xros_infra",
+        # "//java/com/google/vr/androidxr/testing/mobileharness/...", # it is invalid way of writing here
         "//:deviceinfra_all_pkg",
         "//:omnilab_fusion",
         "//src/javatests/com/google/devtools/deviceinfra/platform/android/sdk/fastboot:__pkg__",
