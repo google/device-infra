@@ -163,3 +163,18 @@ java_library(
         "@maven//:javax_inject_jsr330_api",
     ],
 )
+
+java_library(
+    name = "messaging_service_module",
+    srcs = ["MessagingServiceModule.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/lab:__pkg__",
+    ],
+    deps = [
+        ":messaging_service",
+        "//src/devtools/mobileharness/api/messaging:messaging_service_java_grpc",
+        "//src/java/com/google/devtools/mobileharness/infra/lab:annotations",
+        "@io_grpc_grpc_java//core",
+        "@maven//:com_google_inject_guice",
+    ],
+)

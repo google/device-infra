@@ -32,6 +32,7 @@ java_library(
         "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc:service_util",
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/service:prepare_test",
         "@io_grpc_grpc_java//stub",
+        "@maven//:javax_inject_jsr330_api",
     ],
 )
 
@@ -44,6 +45,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/lab/proto:exec_test_serv_grpc",
         "//src/java/com/google/wireless/qa/mobileharness/lab/proto:exec_test_serv_java_proto",
         "@io_grpc_grpc_java//stub",
+        "@maven//:javax_inject_jsr330_api",
     ],
 )
 
@@ -56,5 +58,17 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/lab/proto:stat_serv_grpc",
         "//src/java/com/google/wireless/qa/mobileharness/lab/proto:stat_serv_java_proto",
         "@io_grpc_grpc_java//stub",
+    ],
+)
+
+java_library(
+    name = "module",
+    srcs = ["GrpcServiceModule.java"],
+    deps = [
+        ":exec_test",
+        ":prepare_test",
+        ":stat",
+        "@io_grpc_grpc_java//core",
+        "@maven//:com_google_inject_guice",
     ],
 )

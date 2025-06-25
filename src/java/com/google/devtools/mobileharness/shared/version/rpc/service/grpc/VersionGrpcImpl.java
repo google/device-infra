@@ -21,12 +21,14 @@ import com.google.devtools.mobileharness.shared.version.proto.VersionServiceProt
 import com.google.devtools.mobileharness.shared.version.proto.VersionServiceProto.GetVersionResponse;
 import com.google.devtools.mobileharness.shared.version.rpc.service.VersionServiceImpl;
 import io.grpc.stub.StreamObserver;
+import javax.inject.Inject;
 
 /** gRPC service implementation of {@code VersionService}. */
 public class VersionGrpcImpl extends VersionServiceImplBase {
 
   private final VersionServiceImpl versionService;
 
+  @Inject
   public VersionGrpcImpl(VersionServiceImpl service) {
     this.versionService = service;
   }

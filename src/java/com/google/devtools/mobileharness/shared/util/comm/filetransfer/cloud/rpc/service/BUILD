@@ -62,3 +62,24 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+java_library(
+    name = "cloud_file_transfer_service_module",
+    srcs = ["CloudFileTransferServiceModule.java"],
+    deps = [
+        ":cloud_file_transfer_service_grpc_impl",
+        ":cloud_file_transfer_service_impl",
+        "//src/devtools/mobileharness/shared/util/comm/filetransfer/common/proto:tagged_file_metadata_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/lab:annotations",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/common/dir",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/controller:file_classifier",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/controller:job_manager",
+        "//src/java/com/google/devtools/mobileharness/shared/util/comm/filetransfer/common:tagged_file_handler",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dir",
+        "@io_grpc_grpc_java//core",
+        "@maven//:com_google_inject_guice",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)

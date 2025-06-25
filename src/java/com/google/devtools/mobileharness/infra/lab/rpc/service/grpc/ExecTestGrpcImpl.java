@@ -31,12 +31,14 @@ import com.google.wireless.qa.mobileharness.lab.proto.ExecTestServ.KickOffTestRe
 import com.google.wireless.qa.mobileharness.lab.proto.ExecTestServiceGrpc;
 import com.google.wireless.qa.mobileharness.lab.proto.ExecTestServiceGrpc.ExecTestServiceImplBase;
 import io.grpc.stub.StreamObserver;
+import javax.inject.Inject;
 
 /** gRPC implementation of Lab Server ExecTestService for RPC call via Bridge Server + CloudRPC. */
 public class ExecTestGrpcImpl extends ExecTestServiceImplBase {
 
   private final ExecTestServiceImpl base;
 
+  @Inject
   public ExecTestGrpcImpl(ExecTestServiceImpl service) {
     base = service;
   }

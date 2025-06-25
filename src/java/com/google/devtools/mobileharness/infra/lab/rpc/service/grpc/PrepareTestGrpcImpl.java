@@ -28,12 +28,14 @@ import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.StartTestEngineResponse;
 import com.google.devtools.mobileharness.infra.lab.rpc.service.PrepareTestServiceImpl;
 import io.grpc.stub.StreamObserver;
+import javax.inject.Inject;
 
 /** gRPC implementation for {@code PrepareTestService}. */
 public class PrepareTestGrpcImpl extends PrepareTestServiceGrpc.PrepareTestServiceImplBase {
 
   private final PrepareTestServiceImpl impl;
 
+  @Inject
   public PrepareTestGrpcImpl(PrepareTestServiceImpl impl) {
     this.impl = impl;
   }

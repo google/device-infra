@@ -29,3 +29,16 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/version:version_util",
     ],
 )
+
+java_library(
+    name = "module",
+    srcs = ["VersionServiceModule.java"],
+    visibility = [
+    ],
+    deps = [
+        ":service",
+        "//src/devtools/mobileharness/shared/version/proto:version_java_proto",
+        "//src/java/com/google/devtools/mobileharness/shared/version",
+        "@maven//:com_google_inject_guice",
+    ],
+)

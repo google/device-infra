@@ -27,5 +27,19 @@ java_library(
         "//src/devtools/mobileharness/shared/version/proto:version_service_java_proto",
         "//src/java/com/google/devtools/mobileharness/shared/version/rpc/service",
         "@io_grpc_grpc_java//stub",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "module",
+    srcs = ["VersionServiceGrpcModule.java"],
+    visibility = [
+    ],
+    deps = [
+        ":grpc",
+        "//src/devtools/mobileharness/shared/version/proto:version_service_grpc",
+        "@io_grpc_grpc_java//core",
+        "@maven//:com_google_inject_guice",
     ],
 )
