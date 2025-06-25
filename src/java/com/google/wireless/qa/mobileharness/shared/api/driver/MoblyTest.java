@@ -756,6 +756,6 @@ public class MoblyTest extends BaseDriver implements MoblyTestSpec {
   }
 
   protected Path getSpongeXmlPath(TestInfo testInfo) throws MobileHarnessException {
-    return Path.of(testInfo.getGenFileDir(), "test.xml");
+    return Path.of(testInfo.getGenFileDir(), MoblyConstant.TestGenOutput.MOBLY_LOG_DIR, "test.xml");
   }
 }
