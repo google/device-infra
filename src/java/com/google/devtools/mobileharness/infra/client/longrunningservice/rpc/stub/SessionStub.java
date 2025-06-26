@@ -30,6 +30,8 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.CreateSessionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetAllSessionsRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetAllSessionsResponse;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionManagerStatusRequest;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionManagerStatusResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.NotifyAllSessionsRequest;
@@ -119,5 +121,14 @@ public class SessionStub {
         request,
         InfraErrorId.OLCS_STUB_ABORT_SESSIONS_ERROR,
         "Failed to abort sessions");
+  }
+
+  public GetSessionManagerStatusResponse getSessionManagerStatus(
+      GetSessionManagerStatusRequest request) throws GrpcExceptionWithErrorId {
+    return GrpcStubUtil.invoke(
+        withDeadline(sessionServiceBlockingStub, Duration.ofSeconds(40L))::getSessionManagerStatus,
+        request,
+        InfraErrorId.OLCS_STUB_GET_SESSION_MANAGER_STATUS_ERROR,
+        "Failed to get session manager status");
   }
 }
