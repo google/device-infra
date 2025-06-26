@@ -1726,7 +1726,11 @@ public class LocalFileUtil {
     // 3) {@code com.google.common.io.Files#deleteRecursively(File)} is deprecated because it
     //    suffers from poor symbol link detection.
     try {
-      cmdExecutor.exec(Command.of("rm", "-rf", fileOrDirPath).timeout(fixed(SLOW_CMD_TIMEOUT)));
+      // Use bash to run the rm in order to parse glob patterns.
+      // For example `bash -c 'rm -rf /tmp/**'` to remove all directories and files under /tmp.
+      cmdExecutor.exec(
+          Command.of("bash", "-c", String.format("rm -rf %s", fileOrDirPath))
+              .timeout(fixed(SLOW_CMD_TIMEOUT)));
     } catch (MobileHarnessException e) {
       throw new MobileHarnessException(
           BasicErrorId.LOCAL_FILE_OR_DIR_REMOVE_ERROR,
