@@ -115,9 +115,10 @@ class RemoteDeviceManager implements LabInfoProvider {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private static final Duration LAB_AND_DEVICE_CLEANUP_INTERVAL = Duration.ofMinutes(2L);
+  private static final Duration LAB_AND_DEVICE_CHECK_MISSING_INTERVAL = Duration.ofMinutes(2L);
   private static final Duration LAB_AND_DEVICE_MISSING_TIME = Duration.ofMinutes(5L);
-  private static final Duration LAB_REMOVAL_TIME = Duration.ofHours(1L);
-  private static final Duration DEVICE_REMOVAL_TIME = Duration.ofHours(1L);
+  private static final Duration LAB_REMOVAL_TIME = Duration.ofDays(7L);
+  private static final Duration DEVICE_REMOVAL_TIME = Duration.ofDays(7L);
 
   private static final String HOST_IP_DIMENSION_NAME = Ascii.toLowerCase(Name.HOST_IP.name());
   private static final String HOST_NAME_DIMENSION_NAME = Ascii.toLowerCase(Name.HOST_NAME.name());
@@ -186,8 +187,8 @@ class RemoteDeviceManager implements LabInfoProvider {
             threadRenaming(
                 this::checkMissingLabsAndDevices,
                 () -> "remote-device-manager-lab-and-device-missing-checker"),
-            LAB_AND_DEVICE_CLEANUP_INTERVAL,
-            LAB_AND_DEVICE_CLEANUP_INTERVAL),
+            LAB_AND_DEVICE_CHECK_MISSING_INTERVAL,
+            LAB_AND_DEVICE_CHECK_MISSING_INTERVAL),
         Level.WARNING,
         "Error when checking missing labs and devices");
   }
