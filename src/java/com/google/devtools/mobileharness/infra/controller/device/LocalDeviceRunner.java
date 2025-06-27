@@ -700,6 +700,8 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
       TestExecutionResult testExecutionResult =
           TestExecutionResult.create(TestResult.UNKNOWN, PostTestDeviceOp.REBOOT);
       try {
+        logger.atInfo().log("Running test");
+        postDeviceChangeEvent("Device is allocated to run tests");
         testExecutionResult = test.executeTest();
       } finally {
         device.info().properties().remove(DEVICE_PROPERTY_RESERVATION_ID);
