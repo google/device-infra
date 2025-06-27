@@ -1713,7 +1713,10 @@ public class LocalFileUtil {
   }
 
   /**
-   * Deletes a single file, or recursively deletes a directory.
+   * Deletes a single file, or recursively deletes a directory. Note that the fileOrDirPath should
+   * not contain glob patterns. It do not do the parsing. If you want to clear a directory with glob
+   * patterns like "/directory/**", please use {@link #removeFilesOrDirs(String)} instead like
+   * removeFilesOrDirs("/directory").
    *
    * @throws MobileHarnessException if fails to delete
    */
