@@ -51,8 +51,8 @@ java_library(
     visibility = [
     ],
     deps = [
+        ":base",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/devtools/mobileharness/platform/testbed/config:base",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:class_util",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",

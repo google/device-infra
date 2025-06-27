@@ -167,8 +167,13 @@ public class MoblyConfigGenerator {
     }
 
     JSONObject testbedDimensions = new JSONObject();
-    for (Entry<String, String> dimension : testbedConfig.getDimensions().entrySet()) {
-      testbedDimensions.put(dimension.getKey(), dimension.getValue());
+    for (String key : testbedConfig.getDimensions().keySet()) {
+      if (testbedConfig.getDimensions().get(key).size() == 1) {
+        String value = testbedConfig.getDimensions().get(key).get(0);
+        testbedDimensions.put(key, value);
+      } else {
+        testbedDimensions.put(key, new JSONArray(testbedConfig.getDimensions().get(key)));
+      }
     }
     testParams.put(ConfigKey.TEST_PARAM_MH_DIMENSIONS, testbedDimensions);
     moblyLocalConfig.put(MoblyConstant.ConfigKey.TEST_PARAMS, testParams);
