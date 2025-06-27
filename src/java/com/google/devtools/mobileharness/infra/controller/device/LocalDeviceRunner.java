@@ -853,14 +853,19 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
   @VisibleForTesting
   void mayPrepareDeviceAfterTest(boolean needReboot)
       throws MobileHarnessException, InterruptedException {
-    if (!needReboot && prepareDeviceAfterTest()) {
-      logger.atWarning().log("Prepare the device after test.");
-      initialized = false;
-      // Clear the device info.
-      device.info().clearAll();
-      // Post the event to notify Master it's INIT
-      postDeviceChangeEvent("prepare the device after test");
-      prepareDevice();
+    if (!needReboot) {
+      if (prepareDeviceAfterTest()) {
+        logger.atWarning().log("Prepare the device after test.");
+        initialized = false;
+        // Clear the device info.
+        device.info().clearAll();
+        // Post the event to notify Master it's INIT
+        postDeviceChangeEvent("prepare the device after test");
+        prepareDevice();
+      } else {
+        // Post device status to sync the device status manually if no need to reboot.
+        postDeviceChangeEvent("Test finished, Device is idle");
+      }
     }
   }
 
