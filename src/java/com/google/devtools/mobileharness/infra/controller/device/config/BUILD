@@ -102,10 +102,7 @@ java_library(
 java_library(
     name = "config_module",
     srcs = ["ApiConfigModule.java"],
-    visibility = [
-        "//:deviceinfra_all_pkg",
-        "//:omnilab_fusion",
-    ],
+    visibility = ["//:omnilab_fusion"],
     deps = [
         ":api_config_observer",
         ":api_config_service",
