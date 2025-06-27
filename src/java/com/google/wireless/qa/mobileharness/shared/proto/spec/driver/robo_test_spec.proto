@@ -25,6 +25,20 @@ option java_multiple_files = true;
 
 // Spec for IosRoboTest driver.
 message RoboTestSpec {
+  enum RoboscriptRecorder {
+    NONE = 0;
+    TEXT = 1;
+    WEB = 2;
+  }
+
+  optional RoboscriptRecorder roboscript_recorder = 10
+      [(field_detail) = { help: "Roboscript recorder type." }, default = NONE];
+
+  optional bool record_crawl = 11 [(field_detail) = { help: "Record crawl." }];
+
+  repeated string crawler_flags = 12
+      [(field_detail) = { help: "Crawler flags. Example flag1=value1." }];
+
   optional string robo_config_proto = 13
       [(file_detail) = { help: "Robo config binary proto." }];
 
