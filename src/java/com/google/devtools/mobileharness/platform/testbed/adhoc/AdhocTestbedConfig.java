@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.platform.testbed.adhoc;
 
+import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
@@ -46,8 +47,8 @@ public class AdhocTestbedConfig extends BaseTestbedConfig {
     super(
         name,
         devices,
-        /* dimensions= */ ImmutableMap.of(),
-        /* requiredDimensions= */ ImmutableMap.of(),
+        /* dimensions= */ ImmutableListMultimap.of(),
+        /* requiredDimensions= */ ImmutableListMultimap.of(),
         /* properties= */ ImmutableMap.of(ADHOC_TESTBED_PROPERTY_KEY, "true"));
   }
 

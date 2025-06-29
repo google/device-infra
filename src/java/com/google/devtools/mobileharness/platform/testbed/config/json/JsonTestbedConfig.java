@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.platform.testbed.config.json;
 
+import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -43,8 +44,8 @@ public class JsonTestbedConfig extends BaseTestbedConfig {
   private JsonTestbedConfig(
       String name,
       Map<SubDeviceKey, SubDeviceInfo> devices,
-      Map<String, String> dimensions,
-      Map<String, String> requiredDimensions,
+      ImmutableListMultimap<String, String> dimensions,
+      ImmutableListMultimap<String, String> requiredDimensions,
       Map<String, Object> properties)
       throws MobileHarnessException {
     super(name, devices, dimensions, requiredDimensions, properties);
@@ -97,30 +98,46 @@ public class JsonTestbedConfig extends BaseTestbedConfig {
       }
     }
 
-    ImmutableMap.Builder<String, String> dimensions = new ImmutableMap.Builder<>();
+    ImmutableListMultimap.Builder<String, String> dimensions =
+        new ImmutableListMultimap.Builder<>();
     if (jsonObject.has(DIMENSIONS_KEY)) {
       JSONObject jsonDimensions = jsonObject.getJSONObject(DIMENSIONS_KEY);
       Iterator<?> keyIt = jsonDimensions.keys();
       while (keyIt.hasNext()) {
         String key = keyIt.next().toString();
-        dimensions.put(key, jsonDimensions.get(key).toString());
+        Object valueObj = jsonDimensions.get(key);
+        if (valueObj instanceof JSONArray valueArray) {
+          for (Object oneValue : valueArray) {
+            dimensions.put(key, oneValue.toString());
+          }
+        } else {
+          dimensions.put(key, valueObj.toString());
+        }
       }
     }
 
-    ImmutableMap.Builder<String, String> requiredDimensions = new ImmutableMap.Builder<>();
+    ImmutableListMultimap.Builder<String, String> requiredDimensions =
+        new ImmutableListMultimap.Builder<>();
     if (jsonObject.has(REQUIRED_DIMENSIONS_KEY)) {
       JSONObject jsonRequiredDimensions = jsonObject.getJSONObject(REQUIRED_DIMENSIONS_KEY);
       Iterator<?> keyIt = jsonRequiredDimensions.keys();
       while (keyIt.hasNext()) {
         String key = keyIt.next().toString();
-        requiredDimensions.put(key, jsonRequiredDimensions.get(key).toString());
+        Object valueObj = jsonRequiredDimensions.get(key);
+        if (valueObj instanceof JSONArray valueArray) {
+          for (Object oneValue : valueArray) {
+            requiredDimensions.put(key, oneValue.toString());
+          }
+        } else {
+          requiredDimensions.put(key, valueObj.toString());
+        }
       }
     }
     return new JsonTestbedConfig(
         name,
         devices.buildOrThrow(),
-        dimensions.buildOrThrow(),
-        requiredDimensions.buildOrThrow(),
+        dimensions.build(),
+        requiredDimensions.build(),
         properties.buildOrThrow());
   }
 }
