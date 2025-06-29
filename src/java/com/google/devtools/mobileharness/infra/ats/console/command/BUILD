@@ -20,6 +20,7 @@ package(default_applicable_licenses = ["//:license"])
 java_library(
     name = "command",
     srcs = [
+        "AliasCommand.java",
         "DumpCommand.java",
         "ExitCommand.java",
         "InvocationCommand.java",
@@ -38,6 +39,7 @@ java_library(
     ],
     deps = [
         ":add_command",
+        ":alias_manager",
         ":run_command",
         "//src/devtools/mobileharness/infra/ats/console/controller/proto:session_plugin_java_proto",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:control_service_java_proto",
@@ -134,6 +136,18 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/subplan:sub_plan_creator",
         "@maven//:com_google_guava_guava",
         "@maven//:info_picocli_picocli",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "alias_manager",
+    srcs = ["AliasManager.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/command/preprocessor:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/command:__subpackages__",
+    ],
+    deps = [
         "@maven//:javax_inject_jsr330_api",
     ],
 )
