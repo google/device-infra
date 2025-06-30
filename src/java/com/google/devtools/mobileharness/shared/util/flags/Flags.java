@@ -391,6 +391,15 @@ public class Flags {
       converter = DurationFlag.DurationConverter.class)
   public Flag<Duration> atsDdaLeaseExpirationTime = atsDdaLeaseExpirationTimeDefault;
 
+  private static final Flag<Duration> atsDeviceRemovalTimeDefault =
+      DurationFlag.value(Duration.ofDays(7L));
+
+  @com.beust.jcommander.Parameter(
+      names = "--ats_device_removal_time",
+      description = "The interval before removing a missing device. Default is 7 days.",
+      converter = DurationFlag.DurationConverter.class)
+  public Flag<Duration> atsDeviceRemovalTime = atsDeviceRemovalTimeDefault;
+
   private static final Flag<String> atsFileServerDefault = Flag.value("localhost:8006");
 
   @com.beust.jcommander.Parameter(
@@ -398,6 +407,15 @@ public class Flags {
       description = "The ATS file server address:port, Default is localhost:8006.",
       converter = Flag.StringConverter.class)
   public Flag<String> atsFileServer = atsFileServerDefault;
+
+  private static final Flag<Duration> atsLabRemovalTimeDefault =
+      DurationFlag.value(Duration.ofDays(7L));
+
+  @com.beust.jcommander.Parameter(
+      names = "--ats_lab_removal_time",
+      description = "The interval before removing a missing lab. Default is 7 days.",
+      converter = DurationFlag.DurationConverter.class)
+  public Flag<Duration> atsLabRemovalTime = atsLabRemovalTimeDefault;
 
   private static final Flag<Boolean> atsRunTfOnAndroidRealDeviceDefault = Flag.value(false);
 

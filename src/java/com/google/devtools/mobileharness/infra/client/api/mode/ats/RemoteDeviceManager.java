@@ -79,6 +79,7 @@ import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServicePr
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignUpLabResponse;
 import com.google.devtools.mobileharness.shared.labinfo.LabInfoProvider;
 import com.google.devtools.mobileharness.shared.util.comm.server.GrpcContexts;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.version.Version;
 import com.google.devtools.mobileharness.shared.version.checker.ServiceSideVersionChecker;
 import com.google.devtools.mobileharness.shared.version.proto.VersionProto.VersionCheckResponse;
@@ -117,8 +118,10 @@ class RemoteDeviceManager implements LabInfoProvider {
   private static final Duration LAB_AND_DEVICE_CLEANUP_INTERVAL = Duration.ofMinutes(2L);
   private static final Duration LAB_AND_DEVICE_CHECK_MISSING_INTERVAL = Duration.ofMinutes(2L);
   private static final Duration LAB_AND_DEVICE_MISSING_TIME = Duration.ofMinutes(5L);
-  private static final Duration LAB_REMOVAL_TIME = Duration.ofDays(7L);
-  private static final Duration DEVICE_REMOVAL_TIME = Duration.ofDays(7L);
+  private static final Duration LAB_REMOVAL_TIME =
+      Flags.instance().atsLabRemovalTime.getNonNull(); // Default is 7 days.
+  private static final Duration DEVICE_REMOVAL_TIME =
+      Flags.instance().atsDeviceRemovalTime.getNonNull(); // Default is 7 days.
 
   private static final String HOST_IP_DIMENSION_NAME = Ascii.toLowerCase(Name.HOST_IP.name());
   private static final String HOST_NAME_DIMENSION_NAME = Ascii.toLowerCase(Name.HOST_NAME.name());
