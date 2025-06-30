@@ -145,10 +145,10 @@ public class AtsSessionPlugin {
   private final Map<String, RunningTradefedTest> runningTradefedTests = new ConcurrentHashMap<>();
 
   @GuardedBy("testCancellationLock")
-  private final List<TestInfo> startedTestsBeforeCancellation = new ArrayList<>();
+  private final List<TestInfo> startedTests = new ArrayList<>();
 
   @GuardedBy("testCancellationLock")
-  private XtsTradefedRunCancellation cancellationTestMessage;
+  private XtsTradefedRunCancellation lastCancellationTestMessage;
 
   private final Object addingJobLock = new Object();
 
@@ -484,12 +484,13 @@ public class AtsSessionPlugin {
         SessionProperties.PROPERTY_KEY_SESSION_CONTAIN_STARTED_TEST, "true");
 
     // Sends cancellation test message if necessary.
+    XtsTradefedRunCancellation lastCancellationTestMessage;
     synchronized (testCancellationLock) {
-      if (cancellationTestMessage == null) {
-        startedTestsBeforeCancellation.add(testInfo);
-      } else {
-        sendCancellationMessageToStartedTest(testInfo, cancellationTestMessage);
-      }
+      startedTests.add(testInfo);
+      lastCancellationTestMessage = this.lastCancellationTestMessage;
+    }
+    if (lastCancellationTestMessage != null) {
+      sendCancellationMessageToStartedTest(testInfo, lastCancellationTestMessage);
     }
 
     // Caches devices (as a xTS type) used in the test.
@@ -668,20 +669,12 @@ public class AtsSessionPlugin {
             .build();
 
     // Sends test message to started tests.
-    ImmutableList<TestInfo> startedTestsBeforeCancellation;
+    ImmutableList<TestInfo> startedTests;
     synchronized (testCancellationLock) {
-      if (this.cancellationTestMessage != null) {
-        logger.atInfo().log(
-            "Session has been cancelled, current cancellation [%s], previous"
-                + " cancellation [%s]",
-            shortDebugString(cancellationTestMessage),
-            shortDebugString(this.cancellationTestMessage));
-      }
-      this.cancellationTestMessage = cancellationTestMessage;
-      startedTestsBeforeCancellation = ImmutableList.copyOf(this.startedTestsBeforeCancellation);
-      this.startedTestsBeforeCancellation.clear();
+      this.lastCancellationTestMessage = cancellationTestMessage;
+      startedTests = ImmutableList.copyOf(this.startedTests);
     }
-    for (TestInfo testInfo : startedTestsBeforeCancellation) {
+    for (TestInfo testInfo : startedTests) {
       sendCancellationMessageToStartedTest(testInfo, cancellationTestMessage);
     }
   }
@@ -689,9 +682,12 @@ public class AtsSessionPlugin {
   /** TODO: Don't send to non-TF tests. */
   private void sendCancellationMessageToStartedTest(
       TestInfo testInfo, XtsTradefedRunCancellation cancellationTestMessage) {
-    logger.atInfo().log(
-        "Send cancellation message to test [%s]: [%s]",
-        testInfo.locator().getId(), shortDebugString(cancellationTestMessage));
+    logger
+        .atInfo()
+        .with(IMPORTANCE, IMPORTANT)
+        .log(
+            "Send cancellation message to test [%s]: [%s]",
+            testInfo.locator().getId(), shortDebugString(cancellationTestMessage));
     try {
       testMessageUtil.sendProtoMessageToTest(testInfo, cancellationTestMessage);
     } catch (MobileHarnessException e) {
