@@ -38,7 +38,7 @@ java_library(
     ],
     deps = [
         ":grpc",
-        "//src/devtools/mobileharness/shared/version/proto:version_service_grpc",
+        "//src/java/com/google/devtools/mobileharness/infra/lab:annotations",
         "@io_grpc_grpc_java//core",
         "@maven//:com_google_inject_guice",
     ],

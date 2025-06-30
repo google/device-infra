@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.rpc.service;
 
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.lab.Annotations.CloudRpcGrpcService;
 import com.google.devtools.mobileharness.infra.lab.Annotations.LocalOnlyGrpcService;
 import com.google.devtools.mobileharness.infra.lab.common.dir.DirUtil;
 import com.google.devtools.mobileharness.infra.lab.controller.FileClassifier;
@@ -41,6 +42,9 @@ public final class CloudFileTransferServiceModule extends AbstractModule {
           .addBinding()
           .to(CloudFileTransferServiceGrpcImpl.class);
     }
+    Multibinder.newSetBinder(binder(), BindableService.class, CloudRpcGrpcService.class)
+        .addBinding()
+        .to(CloudFileTransferServiceGrpcImpl.class);
   }
 
   @Provides

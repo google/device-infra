@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.lab.rpc.service.grpc;
 
+import com.google.devtools.mobileharness.infra.lab.Annotations.CloudRpcGrpcService;
 import com.google.inject.AbstractModule;
 import com.google.inject.multibindings.Multibinder;
 import io.grpc.BindableService;
@@ -24,12 +25,14 @@ import io.grpc.BindableService;
 public final class GrpcServiceModule extends AbstractModule {
   @Override
   protected void configure() {
-    Multibinder.newSetBinder(binder(), BindableService.class)
+    Multibinder.newSetBinder(binder(), BindableService.class, CloudRpcGrpcService.class)
         .addBinding()
         .to(ExecTestGrpcImpl.class);
-    Multibinder.newSetBinder(binder(), BindableService.class)
+    Multibinder.newSetBinder(binder(), BindableService.class, CloudRpcGrpcService.class)
         .addBinding()
         .to(PrepareTestGrpcImpl.class);
-    Multibinder.newSetBinder(binder(), BindableService.class).addBinding().to(StatGrpcImpl.class);
+    Multibinder.newSetBinder(binder(), BindableService.class, CloudRpcGrpcService.class)
+        .addBinding()
+        .to(StatGrpcImpl.class);
   }
 }

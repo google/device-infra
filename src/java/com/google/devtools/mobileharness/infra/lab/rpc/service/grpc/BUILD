@@ -68,6 +68,7 @@ java_library(
         ":exec_test",
         ":prepare_test",
         ":stat",
+        "//src/java/com/google/devtools/mobileharness/infra/lab:annotations",
         "@io_grpc_grpc_java//core",
         "@maven//:com_google_inject_guice",
     ],
