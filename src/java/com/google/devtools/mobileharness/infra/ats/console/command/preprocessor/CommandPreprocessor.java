@@ -49,7 +49,7 @@ public class CommandPreprocessor {
     }
   }
 
-  private static final ImmutableList<String> EXIT_COMMAND = ImmutableList.of("exit", "-c");
+  private static final ImmutableList<String> EXIT_COMMAND = ImmutableList.of("exit", "-c", "-s");
 
   private final CommandFileParser commandFileParser;
 

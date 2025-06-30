@@ -32,6 +32,7 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionCancellation;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginNotification;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
+import com.google.devtools.mobileharness.infra.ats.console.util.console.InterruptibleLineReader;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import java.time.Duration;
@@ -51,17 +52,20 @@ public final class ExitUtil {
   private final ConsoleUtil consoleUtil;
   private final Sleeper sleeper;
   private final ListeningExecutorService threadPool;
+  private final InterruptibleLineReader interruptibleLineReader;
 
   @Inject
   ExitUtil(
       AtsSessionStub atsSessionStub,
       ConsoleUtil consoleUtil,
       Sleeper sleeper,
-      ListeningExecutorService threadPool) {
+      ListeningExecutorService threadPool,
+      InterruptibleLineReader interruptibleLineReader) {
     this.atsSessionStub = atsSessionStub;
     this.consoleUtil = consoleUtil;
     this.sleeper = sleeper;
     this.threadPool = threadPool;
+    this.interruptibleLineReader = interruptibleLineReader;
   }
 
   /** Cancels all unfinished sessions from the current client. */
@@ -80,8 +84,8 @@ public final class ExitUtil {
     }
   }
 
-  /** Asynchronously waits until no running sessions. */
-  public ListenableFuture<?> waitUntilNoRunningSessions() {
+  /** Asynchronously waits until no running sessions and then interrupts the line reader. */
+  public ListenableFuture<?> waitUntilNoRunningSessionsAndInterruptLineReader() {
     return logFailure(
         threadPool.submit(
             threadRenaming(
@@ -112,6 +116,8 @@ public final class ExitUtil {
                         "Interrupted while waiting until no running sessions. Going to exit the"
                             + " console directly.");
                     Thread.currentThread().interrupt();
+                  } finally {
+                    interruptibleLineReader.interrupt();
                   }
                 },
                 () -> "wait-until-no-running-session")),

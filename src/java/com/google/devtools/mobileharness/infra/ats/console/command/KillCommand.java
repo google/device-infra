@@ -16,9 +16,6 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.command;
 
-import static com.google.common.util.concurrent.Futures.immediateVoidFuture;
-import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
-
 import com.google.devtools.mobileharness.infra.ats.console.util.command.ExitUtil;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.InterruptibleLineReader;
 import java.util.concurrent.Callable;
@@ -52,8 +49,12 @@ final class KillCommand implements Callable<Integer> {
     exitUtil.cancelUnfinishedSessions("User triggered Kill Command.", /* aggressive= */ true);
 
     // Wait until no running sessions if not forcibly.
-    (force ? immediateVoidFuture() : exitUtil.waitUntilNoRunningSessions())
-        .addListener(interruptibleLineReader::interrupt, directExecutor());
+    if (force) {
+      interruptibleLineReader.interrupt();
+    } else {
+      @SuppressWarnings("unused")
+      var unused = exitUtil.waitUntilNoRunningSessionsAndInterruptLineReader();
+    }
 
     return ExitCode.OK;
   }

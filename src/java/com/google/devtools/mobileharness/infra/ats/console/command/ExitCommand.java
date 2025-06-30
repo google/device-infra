@@ -16,10 +16,10 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.command;
 
-import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
-
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.infra.ats.console.util.command.ExitUtil;
-import com.google.devtools.mobileharness.infra.ats.console.util.console.InterruptibleLineReader;
+import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
 import java.util.concurrent.Callable;
 import javax.inject.Inject;
 import picocli.CommandLine.Command;
@@ -37,16 +37,32 @@ final class ExitCommand implements Callable<Integer> {
       names = {"--wait-for-command", "-c"},
       required = false,
       paramLabel = "<wait_for_command>",
-      description = "Whether to exit only after all commands have executed.")
+      description =
+          """
+          Whether to exit only after all commands have executed. If false, will stop running\
+           commands, wait until they finish and then exit. If true, will directly wait until\
+           running commands finish and then exit. Default is false.\
+          """)
   private boolean waitForCommand = false;
 
-  private final InterruptibleLineReader interruptibleLineReader;
+  @Option(
+      names = {"--stop-reading-input", "-s"},
+      required = false,
+      paramLabel = "<stop_reading_input>",
+      description =
+          """
+          Whether to stop reading input when waiting until running commands finish. If true,\
+           the console will become not responsive immediately. Default is false.\
+          """)
+  private boolean stopReadingInput = false;
+
   private final ExitUtil exitUtil;
+  private final ConsoleUtil consoleUtil;
 
   @Inject
-  ExitCommand(InterruptibleLineReader interruptibleLineReader, ExitUtil exitUtil) {
-    this.interruptibleLineReader = interruptibleLineReader;
+  ExitCommand(ExitUtil exitUtil, ConsoleUtil consoleUtil) {
     this.exitUtil = exitUtil;
+    this.consoleUtil = consoleUtil;
   }
 
   @Override
@@ -56,9 +72,14 @@ final class ExitCommand implements Callable<Integer> {
     }
 
     // Wait until no running sessions.
-    exitUtil
-        .waitUntilNoRunningSessions()
-        .addListener(interruptibleLineReader::interrupt, directExecutor());
+    ListenableFuture<?> noRunningSessionsFuture =
+        exitUtil.waitUntilNoRunningSessionsAndInterruptLineReader();
+
+    // Stops reading input if necessary.
+    if (stopReadingInput) {
+      consoleUtil.printlnStdout("Stop reading input");
+      Futures.getUnchecked(noRunningSessionsFuture);
+    }
 
     return ExitCode.OK;
   }

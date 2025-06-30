@@ -61,7 +61,8 @@ public final class CommandPreprocessorTest {
     assertThat(result.modifiedCommands())
         .hasValue(
             ImmutableList.of(
-                ImmutableList.of("run", "cts", "-m", "CtsTest"), ImmutableList.of("exit", "-c")));
+                ImmutableList.of("run", "cts", "-m", "CtsTest"),
+                ImmutableList.of("exit", "-c", "-s")));
     assertThat(result.errorMessage()).isEmpty();
   }
 
@@ -100,7 +101,7 @@ public final class CommandPreprocessorTest {
             ImmutableList.of(
                 ImmutableList.of("run", "cts", "-m", "CtsTest1"),
                 ImmutableList.of("run", "cts", "-m", "CtsTest2"),
-                ImmutableList.of("exit", "-c")));
+                ImmutableList.of("exit", "-c", "-s")));
     assertThat(result.errorMessage()).isEmpty();
   }
 
