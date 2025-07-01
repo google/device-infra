@@ -77,6 +77,7 @@ import com.google.devtools.mobileharness.shared.constant.hostmanagement.HostProp
 import com.google.devtools.mobileharness.shared.labinfo.LabInfoProvider;
 import com.google.devtools.mobileharness.shared.labinfo.LocalLabInfoProvider;
 import com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat;
+import com.google.devtools.mobileharness.shared.util.base.StrUtil;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.rpc.service.CloudFileTransferServiceGrpcImpl;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.rpc.service.CloudFileTransferServiceImpl;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.common.TaggedFileHandler;
@@ -558,6 +559,26 @@ public class LabServer {
             .setKey(Ascii.toLowerCase(HostPropertyKey.LOCATION_TYPE.name()))
             .setValue(Ascii.toLowerCase(locationType))
             .build());
+
+    // Host total memory
+    hostProperties.addHostProperty(
+        HostProperty.newBuilder()
+            .setKey(Ascii.toLowerCase(HostPropertyKey.TOTAL_MEM.name()))
+            .setValue(StrUtil.getHumanReadableSize(systemUtil.getTotalMemory()))
+            .build());
+
+    // Add ATS GitHub version to host properties. Only ATS labs have this property.
+    VersionUtil.getBuildVersion()
+        .ifPresent(
+            version -> {
+              if (version.hasGithubVersion()) {
+                hostProperties.addHostProperty(
+                    HostProperty.newBuilder()
+                        .setKey(Ascii.toLowerCase(HostPropertyKey.GITHUB_VERSION.name()))
+                        .setValue(version.getGithubVersion())
+                        .build());
+              }
+            });
 
     return hostProperties.build();
   }
