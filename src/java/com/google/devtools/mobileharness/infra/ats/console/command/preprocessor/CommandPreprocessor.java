@@ -19,11 +19,14 @@ package com.google.devtools.mobileharness.infra.ats.console.command.preprocessor
 import static com.google.common.base.Ascii.equalsIgnoreCase;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.devtools.mobileharness.shared.util.error.MoreThrowables.shortDebugString;
+import static com.google.devtools.mobileharness.shared.util.shell.ShellUtils.tokenize;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.ats.console.command.alias.AliasManager;
 import com.google.devtools.mobileharness.infra.ats.console.command.preprocessor.CommandFileParser.CommandLine;
+import com.google.devtools.mobileharness.shared.util.shell.ShellUtils.TokenizationException;
 import java.io.File;
 import java.util.List;
 import java.util.Optional;
@@ -52,10 +55,12 @@ public class CommandPreprocessor {
   private static final ImmutableList<String> EXIT_COMMAND = ImmutableList.of("exit", "-c", "-s");
 
   private final CommandFileParser commandFileParser;
+  private final AliasManager aliasManager;
 
   @Inject
-  CommandPreprocessor(CommandFileParser commandFileParser) {
+  CommandPreprocessor(CommandFileParser commandFileParser, AliasManager aliasManager) {
     this.commandFileParser = commandFileParser;
+    this.aliasManager = aliasManager;
   }
 
   public PreprocessingResult preprocess(ImmutableList<String> tokens) {
@@ -65,18 +70,44 @@ public class CommandPreprocessor {
     if (!equalsIgnoreCase(tokens.get(0), "run")) {
       return PreprocessingResult.of(/* modifiedCommands= */ null, /* errorMessage= */ null);
     }
-    switch (tokens.get(1)) {
-      case "command":
-        return preprocessRunCommandCommand(tokens, /* exitAfterRun= */ false);
-      case "cmdfile":
-        return preprocessRunCmdfileCommand(tokens, /* exitAfterRun= */ false);
-      case "commandAndExit":
-        return preprocessRunCommandCommand(tokens, /* exitAfterRun= */ true);
-      case "cmdfileAndExit":
-        return preprocessRunCmdfileCommand(tokens, /* exitAfterRun= */ true);
-      default:
-        return PreprocessingResult.of(/* modifiedCommands= */ null, /* errorMessage= */ null);
+    return switch (tokens.get(1)) {
+      case "command" -> preprocessRunCommandCommand(tokens, /* exitAfterRun= */ false);
+      case "cmdfile" -> preprocessRunCmdfileCommand(tokens, /* exitAfterRun= */ false);
+      case "commandAndExit" -> preprocessRunCommandCommand(tokens, /* exitAfterRun= */ true);
+      case "cmdfileAndExit" -> preprocessRunCmdfileCommand(tokens, /* exitAfterRun= */ true);
+      default -> resolveAlias(tokens);
+    };
+  }
+
+  /**
+   * Resolves an alias if the second token is a predefined alias.
+   *
+   * <p>If the alias is not found, returns an empty result.
+   *
+   * <p>If the alias is found, it is tokenized and the rest of the tokens are appended to the
+   * command.
+   */
+  private PreprocessingResult resolveAlias(ImmutableList<String> tokens) {
+    // Check if the second token is a predefined alias.
+    Optional<String> alias = aliasManager.getAlias(tokens.get(1));
+    if (alias.isEmpty()) {
+      return PreprocessingResult.of(/* modifiedCommands= */ null, /* errorMessage= */ null);
     }
+
+    ImmutableList<String> aliasTokens;
+    try {
+      aliasTokens = tokenize(alias.get());
+    } catch (TokenizationException e) {
+      return PreprocessingResult.of(
+          /* modifiedCommands= */ null,
+          String.format("Failed to tokenize alias '%s': %s.", alias.get(), e.getMessage()));
+    }
+    ImmutableList.Builder<String> newTokens =
+        ImmutableList.<String>builder().add(tokens.get(0)).addAll(aliasTokens);
+    if (tokens.size() > 2) {
+      newTokens.addAll(tokens.subList(2, tokens.size()));
+    }
+    return PreprocessingResult.of(ImmutableList.of(newTokens.build()), /* errorMessage= */ null);
   }
 
   private static PreprocessingResult preprocessRunCommandCommand(

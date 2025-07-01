@@ -22,19 +22,14 @@ package(
 )
 
 java_library(
-    name = "command_preprocessor_test",
-    srcs = ["CommandPreprocessorTest.java"],
+    name = "alias",
+    srcs = glob(["*.java"]),
     deps = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/command/alias:alias_manager",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console/command/preprocessor:command_file_parser",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console/command/preprocessor:command_preprocessor",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
-        "@maven//:com_google_guava_guava",
-        "@maven//:com_google_inject_extensions_guice_testlib",
         "@maven//:com_google_inject_guice",
         "@maven//:javax_inject_jsr330_api",
         "@maven//:junit_junit",
-        "@maven//:org_mockito_mockito_core",
     ],
 )
 
@@ -43,5 +38,5 @@ junit_test_suites(
     sizes = [
         "small",
     ],
-    deps = [":command_preprocessor_test"],
+    deps = [":alias"],
 )

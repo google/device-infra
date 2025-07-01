@@ -21,14 +21,19 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
+import com.google.devtools.mobileharness.infra.ats.console.command.alias.AliasManager;
 import com.google.devtools.mobileharness.infra.ats.console.command.preprocessor.CommandFileParser.CommandLine;
 import com.google.devtools.mobileharness.infra.ats.console.command.preprocessor.CommandPreprocessor.PreprocessingResult;
+import com.google.inject.Guice;
+import com.google.inject.testing.fieldbinder.Bind;
+import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import java.io.File;
+import javax.inject.Inject;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
@@ -37,8 +42,14 @@ import org.mockito.junit.MockitoRule;
 public final class CommandPreprocessorTest {
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
-  @Mock private CommandFileParser commandFileParser;
-  @InjectMocks private CommandPreprocessor preprocessor;
+  @Bind @Mock private CommandFileParser commandFileParser;
+  @Inject private AliasManager aliasManager;
+  @Inject private CommandPreprocessor preprocessor;
+
+  @Before
+  public void setUp() {
+    Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
+  }
 
   @Test
   public void preprocess_runCommand() {
@@ -123,5 +134,53 @@ public final class CommandPreprocessorTest {
 
     assertThat(result.modifiedCommands()).isEmpty();
     assertThat(result.errorMessage()).isEmpty();
+  }
+
+  @Test
+  public void preprocess_runAlias() {
+    aliasManager.addAlias("usb_tests", "cts -m CtsUsbTests");
+    ImmutableList<String> tokens = ImmutableList.of("run", "usb_tests");
+
+    PreprocessingResult result = preprocessor.preprocess(tokens);
+
+    assertThat(result.modifiedCommands())
+        .hasValue(ImmutableList.of(ImmutableList.of("run", "cts", "-m", "CtsUsbTests")));
+    assertThat(result.errorMessage()).isEmpty();
+  }
+
+  @Test
+  public void preprocess_runAlias_withExtraArgs() {
+    aliasManager.addAlias("usb_tests", "cts -m CtsUsbTests");
+    ImmutableList<String> tokens = ImmutableList.of("run", "usb_tests", "--shard-count", "2");
+
+    PreprocessingResult result = preprocessor.preprocess(tokens);
+
+    assertThat(result.modifiedCommands())
+        .hasValue(
+            ImmutableList.of(
+                ImmutableList.of("run", "cts", "-m", "CtsUsbTests", "--shard-count", "2")));
+    assertThat(result.errorMessage()).isEmpty();
+  }
+
+  @Test
+  public void preprocess_runAlias_aliasNotFound() {
+    ImmutableList<String> tokens = ImmutableList.of("run", "nonexistent_alias");
+
+    PreprocessingResult result = preprocessor.preprocess(tokens);
+
+    assertThat(result.modifiedCommands()).isEmpty();
+    assertThat(result.errorMessage()).isEmpty();
+  }
+
+  @Test
+  public void preprocess_runAlias_invalidAliasCommand() {
+    aliasManager.addAlias("invalid_alias", "cts -m \"CtsUsbTests"); // Unterminated quote
+    ImmutableList<String> tokens = ImmutableList.of("run", "invalid_alias");
+
+    PreprocessingResult result = preprocessor.preprocess(tokens);
+
+    assertThat(result.modifiedCommands()).isEmpty();
+    assertThat(result.errorMessage())
+        .hasValue("Failed to tokenize alias 'cts -m \"CtsUsbTests': unterminated quotation.");
   }
 }

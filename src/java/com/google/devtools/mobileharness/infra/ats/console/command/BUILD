@@ -20,6 +20,7 @@ package(default_applicable_licenses = ["//:license"])
 java_library(
     name = "command",
     srcs = [
+        "AliasCommand.java",
         "DumpCommand.java",
         "ExitCommand.java",
         "InvocationCommand.java",
@@ -48,6 +49,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:server_preparer",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/plan:plan_config_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:console_info",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/command/alias:alias_manager",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/constant:dirs",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/olcserver:ats_session_stub",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/olcserver:server_log_printer",

@@ -42,6 +42,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:guice_factory",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/command",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/command:run_command",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/command/alias:alias_manager",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/olcserver:ats_session_stub",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/command:command_helper",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/console:console_util",
