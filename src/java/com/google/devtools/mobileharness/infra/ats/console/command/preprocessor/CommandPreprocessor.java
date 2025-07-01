@@ -80,34 +80,36 @@ public class CommandPreprocessor {
   }
 
   /**
-   * Resolves an alias if the second token is a predefined alias.
+   * Resolves an alias if any token is a predefined alias.
    *
-   * <p>If the alias is not found, returns an empty result.
-   *
-   * <p>If the alias is found, it is tokenized and the rest of the tokens are appended to the
-   * command.
+   * <p>If no alias is found, returns an empty result. For any alias found, it gets resolved and
+   * tokenized.
    */
   private PreprocessingResult resolveAlias(ImmutableList<String> tokens) {
-    // Check if the second token is a predefined alias.
-    Optional<String> alias = aliasManager.getAlias(tokens.get(1));
-    if (alias.isEmpty()) {
-      return PreprocessingResult.of(/* modifiedCommands= */ null, /* errorMessage= */ null);
+    boolean aliasFound = false;
+    ImmutableList.Builder<String> newTokens = ImmutableList.<String>builder();
+
+    for (String token : tokens) {
+      Optional<String> alias = aliasManager.getAlias(token);
+      if (alias.isEmpty()) {
+        newTokens.add(token);
+        continue;
+      }
+      aliasFound = true;
+      ImmutableList<String> aliasTokens;
+      try {
+        aliasTokens = tokenize(alias.get());
+      } catch (TokenizationException e) {
+        return PreprocessingResult.of(
+            /* modifiedCommands= */ null,
+            String.format("Failed to tokenize alias '%s': %s.", alias.get(), e.getMessage()));
+      }
+      newTokens.addAll(aliasTokens);
     }
 
-    ImmutableList<String> aliasTokens;
-    try {
-      aliasTokens = tokenize(alias.get());
-    } catch (TokenizationException e) {
-      return PreprocessingResult.of(
-          /* modifiedCommands= */ null,
-          String.format("Failed to tokenize alias '%s': %s.", alias.get(), e.getMessage()));
-    }
-    ImmutableList.Builder<String> newTokens =
-        ImmutableList.<String>builder().add(tokens.get(0)).addAll(aliasTokens);
-    if (tokens.size() > 2) {
-      newTokens.addAll(tokens.subList(2, tokens.size()));
-    }
-    return PreprocessingResult.of(ImmutableList.of(newTokens.build()), /* errorMessage= */ null);
+    return aliasFound
+        ? PreprocessingResult.of(ImmutableList.of(newTokens.build()), /* errorMessage= */ null)
+        : PreprocessingResult.of(/* modifiedCommands= */ null, /* errorMessage= */ null);
   }
 
   private static PreprocessingResult preprocessRunCommandCommand(

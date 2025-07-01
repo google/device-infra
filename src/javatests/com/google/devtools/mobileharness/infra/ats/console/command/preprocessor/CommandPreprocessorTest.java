@@ -183,4 +183,26 @@ public final class CommandPreprocessorTest {
     assertThat(result.errorMessage())
         .hasValue("Failed to tokenize alias 'cts -m \"CtsUsbTests': unterminated quotation.");
   }
+
+  @Test
+  public void preprocess_multipleAliases() {
+    aliasManager.addAlias("usb_module", "-m CtsUsbTests");
+    aliasManager.addAlias("with_sharding", "--enable-token-sharding --shard-count 2");
+    ImmutableList<String> tokens = ImmutableList.of("run", "cts", "usb_module", "with_sharding");
+
+    PreprocessingResult result = preprocessor.preprocess(tokens);
+
+    assertThat(result.modifiedCommands())
+        .hasValue(
+            ImmutableList.of(
+                ImmutableList.of(
+                    "run",
+                    "cts",
+                    "-m",
+                    "CtsUsbTests",
+                    "--enable-token-sharding",
+                    "--shard-count",
+                    "2")));
+    assertThat(result.errorMessage()).isEmpty();
+  }
 }
