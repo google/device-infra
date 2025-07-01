@@ -112,4 +112,16 @@ public final class AliasCommandTest {
     int exitCode = commandLine.execute(new String[] {"alias", "too_many", "arguments"});
     assertThat(exitCode).isEqualTo(ExitCode.USAGE);
   }
+
+  @Test
+  public void call_noArgument_printsAllAliases() {
+    aliasManager.addAlias("alias1", "alias1_value");
+    aliasManager.addAlias("alias2", "alias2_value");
+
+    int exitCode = commandLine.execute(new String[] {"alias"});
+
+    assertThat(exitCode).isEqualTo(ExitCode.OK);
+    verify(consoleUtil).printlnStdout("alias %s='%s'", "alias1", "alias1_value");
+    verify(consoleUtil).printlnStdout("alias %s='%s'", "alias2", "alias2_value");
+  }
 }

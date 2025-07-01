@@ -25,6 +25,7 @@ java_library(
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/command:__subpackages__",
     ],
     deps = [
+        "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
     ],
 )

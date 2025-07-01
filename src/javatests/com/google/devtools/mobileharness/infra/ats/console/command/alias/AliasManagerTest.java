@@ -52,4 +52,18 @@ public final class AliasManagerTest {
   public void getAlias_aliasNotFound() {
     assertThat(aliasManager.getAlias("a")).isEmpty();
   }
+
+  @Test
+  public void getAllAliases_empty() {
+    assertThat(aliasManager.getAll()).isEmpty();
+  }
+
+  @Test
+  public void getAllAliases_success() {
+    aliasManager.addAlias("alias1", "alias1_value");
+    aliasManager.addAlias("alias2", "alias2_value");
+
+    assertThat(aliasManager.getAll())
+        .containsExactly("alias1", "alias1_value", "alias2", "alias2_value");
+  }
 }

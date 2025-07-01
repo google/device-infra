@@ -39,6 +39,7 @@ class AliasCommand implements Callable<Integer> {
 
   @Parameters(
       index = "0",
+      arity = "0..1",
       paramLabel = "<alias_definition>",
       description = "The alias definition, e.g., my_alias='some command'")
   private String aliasDefinition;
@@ -54,6 +55,15 @@ class AliasCommand implements Callable<Integer> {
 
   @Override
   public Integer call() {
+    if (aliasDefinition == null) {
+      aliasManager
+          .getAll()
+          .forEach(
+              (aliasName, aliasValue) ->
+                  consoleUtil.printlnStdout("alias %s='%s'", aliasName, aliasValue));
+      return ExitCode.OK;
+    }
+
     List<String> parts = Splitter.on('=').splitToList(aliasDefinition);
 
     if (parts.size() != 2) {

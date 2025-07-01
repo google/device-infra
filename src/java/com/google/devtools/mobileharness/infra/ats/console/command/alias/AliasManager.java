@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.command.alias;
 
+import com.google.common.collect.ImmutableMap;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -44,5 +45,14 @@ public class AliasManager {
    */
   public Optional<String> getAlias(String name) {
     return Optional.ofNullable(aliases.get(name));
+  }
+
+  /**
+   * Gets all aliases.
+   *
+   * @return all aliases
+   */
+  public ImmutableMap<String, String> getAll() {
+    return ImmutableMap.copyOf(aliases);
   }
 }
