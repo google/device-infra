@@ -822,6 +822,12 @@ public interface PropertyName {
        * .test.local.utp.CommandStringProto.CommandString.
        */
       MH_UTP_DRIVER_UTP_COMMAND,
+
+      /** Start time of the UTP test. */
+      MH_UTP_DRIVER_TEST_START_EPOCH_MS,
+
+      /** End time of the UTP test. */
+      MH_UTP_DRIVER_TEST_END_EPOCH_MS,
     }
 
     /** AdhocTestbedDriver property name constants. */
