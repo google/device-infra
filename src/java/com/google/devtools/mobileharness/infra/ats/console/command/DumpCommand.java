@@ -20,6 +20,7 @@ import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat
 import static com.google.devtools.mobileharness.shared.util.error.MoreThrowables.shortDebugString;
 
 import com.google.common.base.Ascii;
+import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -45,6 +46,7 @@ import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.wireless.qa.mobileharness.shared.constant.DirCommon;
 import java.time.InstantSource;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 import javax.inject.Inject;
@@ -140,9 +142,20 @@ class DumpCommand implements Callable<Integer> {
         PathUtil.join(bugreportDirPath, String.format("olc_server_stack_trace_%s.txt", fileSuffix));
     createServerStackTraceFile(serverStackTraceFilePath);
 
-    String tradefedStackTraceFilePath =
-        PathUtil.join(bugreportDirPath, String.format("tradefed_stack_trace_%s.txt", fileSuffix));
-    createTradefedStackTraceFile(tradefedStackTraceFilePath);
+    // Dumps Tradefed stack traces.
+    List<String> tradefedPids = getTradefedPids();
+    if (tradefedPids.isEmpty()) {
+      logger.atWarning().log("No Tradefed process found. Skip dumping Tradefed stack trace.");
+    } else {
+      tradefedPids.forEach(
+          tradefedPid -> {
+            String tradefedStackTraceFilePath =
+                PathUtil.join(
+                    bugreportDirPath,
+                    String.format("tradefed_stack_trace_%s_pid_%s.txt", fileSuffix, tradefedPid));
+            createTradefedStackTraceFile(tradefedStackTraceFilePath, tradefedPid);
+          });
+    }
 
     // Zips files.
     String bugreportFilePath = PathUtil.join(baseDirPath, String.format("%s.zip", bugreportName));
@@ -267,20 +280,14 @@ class DumpCommand implements Callable<Integer> {
     }
   }
 
-  private void createTradefedStackTraceFile(String filePath) {
+  private void createTradefedStackTraceFile(String filePath, String tradefedPid) {
     try {
-      String tradefedPid = getTradefedPid();
-
-      if (tradefedPid.isEmpty()) {
-        logger.atWarning().log("No Tradefed process found. Skip dumping Tradefed stack trace.");
-        return;
-      }
-
       String tradefedStackTrace = getTradefedStackTrace(tradefedPid);
       localFileUtil.writeToFile(filePath, tradefedStackTrace);
     } catch (MobileHarnessException | InterruptedException | RuntimeException | Error e) {
       logger.atWarning().log(
-          "Failed to create Tradefed stack trace file: %s.", shortDebugString(e));
+          "Failed to create Tradefed stack trace file for pid [%s]: %s.",
+          tradefedPid, shortDebugString(e));
       if (e instanceof InterruptedException) {
         Thread.currentThread().interrupt();
       }
@@ -305,15 +312,19 @@ class DumpCommand implements Callable<Integer> {
 
   private int dumpTradefedStackTrace() {
     try {
-      String tradefedPid = getTradefedPid();
+      List<String> tradefedPids = getTradefedPids();
 
-      if (tradefedPid.isEmpty()) {
+      if (tradefedPids.isEmpty()) {
         consoleUtil.printlnStdout("No Tradefed process found.");
         return ExitCode.SOFTWARE;
       }
 
-      String tradefedStackTrace = getTradefedStackTrace(tradefedPid);
-      consoleUtil.printlnStdout(tradefedStackTrace);
+      for (String tradefedPid : tradefedPids) {
+        String tradefedStackTrace = getTradefedStackTrace(tradefedPid);
+        consoleUtil.printlnStdout("Tradefed stack trace for pid [%s]:", tradefedPid);
+        consoleUtil.printlnStdout(tradefedStackTrace);
+      }
+
       return ExitCode.OK;
     } catch (CommandException | RuntimeException | InterruptedException | Error e) {
       consoleUtil.printlnStdout("Failed to dump Tradefed stack trace: " + e.getMessage());
@@ -324,12 +335,16 @@ class DumpCommand implements Callable<Integer> {
     }
   }
 
-  private String getTradefedPid() throws CommandException, InterruptedException {
-    return cmdExecutor.run(
-        com.google.devtools.mobileharness.shared.util.command.Command.of(
-            "/bin/sh",
-            "-c",
-            String.format("jps | grep %s | awk '{print $1}'", TRADEFED_CLASS_NAME)));
+  private List<String> getTradefedPids() throws CommandException, InterruptedException {
+    String output =
+        cmdExecutor.run(
+            com.google.devtools.mobileharness.shared.util.command.Command.of(
+                "/bin/sh",
+                "-c",
+                String.format("jps | grep %s | awk '{print $1}'", TRADEFED_CLASS_NAME)));
+    return output.isEmpty()
+        ? ImmutableList.of()
+        : Splitter.on('\n').omitEmptyStrings().splitToList(output);
   }
 
   private String getTradefedStackTrace(String tradefedPid)

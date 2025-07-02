@@ -19,6 +19,8 @@ package com.google.devtools.mobileharness.infra.ats.console.command;
 import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -44,6 +46,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
@@ -107,7 +110,9 @@ public final class DumpCommandTest {
         .writeToFile(
             eq(
                 DirCommon.getTempDirRoot()
-                    + "/ats_bugreport/ats_bugreport_1000/tradefed_stack_trace_1000.txt"),
+                    + "/ats_bugreport/ats_bugreport_1000/tradefed_stack_trace_1000_pid_"
+                    + tradefedPid
+                    + ".txt"),
             eq(mockTradefedStackTrace));
     // Zipping files together:
     verify(localFileUtil)
@@ -142,5 +147,28 @@ public final class DumpCommandTest {
 
     assertThat(dumpCommand.stack("tradefed")).isEqualTo(ExitCode.OK);
     verify(consoleUtil).printlnStdout(mockTradefedStackTrace);
+  }
+
+  @Test
+  public void dumpStackTradefed_twoTradefedProcesses() throws Exception {
+    String tradefedPid1 = "12345";
+    String tradefedPid2 = "67890";
+    String mockTradefedStackTrace1 = "mock_tradefed_stack_trace1";
+    String mockTradefedStackTrace2 = "mock_tradefed_stack_trace2";
+    when(cmdExecutor.run(
+            eq(Command.of("/bin/sh", "-c", "jps | grep CompatibilityConsole | awk '{print $1}'"))))
+        .thenReturn(tradefedPid1 + "\n" + tradefedPid2 + "\n");
+    when(cmdExecutor.run(eq(Command.of("/bin/sh", "-c", "jstack " + tradefedPid1))))
+        .thenReturn(mockTradefedStackTrace1);
+    when(cmdExecutor.run(eq(Command.of("/bin/sh", "-c", "jstack " + tradefedPid2))))
+        .thenReturn(mockTradefedStackTrace2);
+
+    assertThat(dumpCommand.stack("tradefed")).isEqualTo(ExitCode.OK);
+    verify(consoleUtil, times(2)).printlnStdout(anyString());
+    InOrder inOrder = inOrder(consoleUtil);
+    inOrder.verify(consoleUtil).printlnStdout("Tradefed stack trace for pid [%s]:", tradefedPid1);
+    inOrder.verify(consoleUtil).printlnStdout(mockTradefedStackTrace1);
+    inOrder.verify(consoleUtil).printlnStdout("Tradefed stack trace for pid [%s]:", tradefedPid2);
+    inOrder.verify(consoleUtil).printlnStdout(mockTradefedStackTrace2);
   }
 }
