@@ -22,6 +22,7 @@ java_library(
     srcs = ["PlanHelper.java"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/command:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/command:__subpackages__",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/plan:plan_config_util",

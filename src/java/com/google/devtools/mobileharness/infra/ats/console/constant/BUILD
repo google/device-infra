@@ -26,7 +26,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/command:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/log:__pkg__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/integration/concord:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/shared/util/path",

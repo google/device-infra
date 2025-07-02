@@ -41,6 +41,7 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import java.io.PrintStream;
 import java.io.PrintWriter;
+import java.time.InstantSource;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -154,5 +155,10 @@ public class AtsConsoleModule extends AbstractModule {
   @Provides
   Sleeper provideSleeper() {
     return Sleeper.defaultSleeper();
+  }
+
+  @Provides
+  InstantSource provideInstantSource() {
+    return InstantSource.system();
   }
 }

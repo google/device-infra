@@ -43,7 +43,7 @@ import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.wireless.qa.mobileharness.shared.constant.DirCommon;
-import java.time.Instant;
+import java.time.InstantSource;
 import java.util.ArrayList;
 import java.util.Optional;
 import java.util.concurrent.Callable;
@@ -85,6 +85,7 @@ class DumpCommand implements Callable<Integer> {
   private final LocalFileUtil localFileUtil;
   private final PlanHelper planHelper;
   private final CommandExecutor cmdExecutor;
+  private final InstantSource instantSource;
 
   @Inject
   DumpCommand(
@@ -93,13 +94,15 @@ class DumpCommand implements Callable<Integer> {
       AtsSessionStub atsSessionStub,
       LocalFileUtil localFileUtil,
       PlanHelper planHelper,
-      CommandExecutor cmdExecutor) {
+      CommandExecutor cmdExecutor,
+      InstantSource instantSource) {
     this.consoleUtil = consoleUtil;
     this.serverPreparer = serverPreparer;
     this.atsSessionStub = atsSessionStub;
     this.localFileUtil = localFileUtil;
     this.planHelper = planHelper;
     this.cmdExecutor = cmdExecutor;
+    this.instantSource = instantSource;
   }
 
   @Override
@@ -116,7 +119,7 @@ class DumpCommand implements Callable<Integer> {
 
     // Copies files to bugreport dir.
     String baseDirPath = PathUtil.join(DirCommon.getTempDirRoot(), "ats_bugreport");
-    String fileSuffix = Long.toString(Instant.now().toEpochMilli());
+    String fileSuffix = Long.toString(instantSource.instant().toEpochMilli());
     String bugreportName = "ats_bugreport_" + fileSuffix;
     String bugreportDirPath = PathUtil.join(baseDirPath, bugreportName);
     consoleUtil.printlnStdout("Bugreport dir: %s", bugreportDirPath);
@@ -200,16 +203,14 @@ class DumpCommand implements Callable<Integer> {
               completionCandidates = ProcessCandidatesToDumpStackTrace.class)
           String processType)
       throws MobileHarnessException, InterruptedException {
-    switch (Ascii.toLowerCase(processType)) {
-      case "olc":
-        return runDumpCommandSessionAndPrint(
-            DUMP_STACK_TRACE_SESSION_NAME, DUMP_STACK_TRACE_COMMAND);
-      case "tradefed":
-        return dumpTradefedStackTrace();
-      default:
-        throw new ParameterException(
-            spec.commandLine(), "Unsupported process type: " + processType);
-    }
+    return switch (Ascii.toLowerCase(processType)) {
+      case "olc" ->
+          runDumpCommandSessionAndPrint(DUMP_STACK_TRACE_SESSION_NAME, DUMP_STACK_TRACE_COMMAND);
+      case "tradefed" -> dumpTradefedStackTrace();
+      default ->
+          throw new ParameterException(
+              spec.commandLine(), "Unsupported process type: " + processType);
+    };
   }
 
   @Command(

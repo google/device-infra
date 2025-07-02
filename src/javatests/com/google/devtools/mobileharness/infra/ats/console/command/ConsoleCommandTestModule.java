@@ -35,6 +35,7 @@ import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
+import java.time.InstantSource;
 import java.util.function.Consumer;
 
 /** Console command module for testing. */
@@ -92,5 +93,10 @@ public class ConsoleCommandTestModule extends AbstractModule {
   @ParseCommandOnly
   Boolean provideParseCommandOnly() {
     return false;
+  }
+
+  @Provides
+  InstantSource provideInstantSource() {
+    return InstantSource.system();
   }
 }
