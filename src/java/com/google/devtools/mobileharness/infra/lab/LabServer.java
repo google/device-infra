@@ -497,7 +497,7 @@ public class LabServer {
           .add(Ascii.toLowerCase(Name.HOST_IP.name()), hostIp.get());
       hostProperties.addHostProperty(
           HostProperty.newBuilder()
-              .setKey(HostPropertyKey.HOST_IP.name())
+              .setKey(Ascii.toLowerCase(HostPropertyKey.HOST_IP.name()))
               .setValue(hostIp.get())
               .build());
     }
