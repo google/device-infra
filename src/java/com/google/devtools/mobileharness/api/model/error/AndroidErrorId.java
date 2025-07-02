@@ -789,6 +789,9 @@ public enum AndroidErrorId implements ErrorId {
   // Mtaas Tools: 176_251 ~ 176_260
   ANDROID_MTAAS_TOOLS_APK_NOT_FOUND(176_251, ErrorType.UNDETERMINED),
 
+  // Android DriveSim Controller: 176_261 ~ 176_270
+  ANDROID_DRIVESIM_CONTROLLER_START_ERROR(176_261, ErrorType.DEPENDENCY_ISSUE),
+
   ANDROID_ERROR_ID_PLACE_HOLDER_TO_BE_RENAMED(200_000, ErrorType.UNDETERMINED);
 
   public static final int MIN_CODE = ExtErrorId.MAX_CODE + 1;
