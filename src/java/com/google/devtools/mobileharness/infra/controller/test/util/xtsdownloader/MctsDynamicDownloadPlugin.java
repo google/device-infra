@@ -315,10 +315,14 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
           xtsDynamicDownloadInfo, event.getTest(), event.getDeviceLocator().getSerial());
       logger.atInfo().with(IMPORTANCE, IMPORTANT).log("Finished MCTS test modules preparation.");
     } catch (MobileHarnessException e) {
+      String errorMessage =
+          "Failed to download Mainline CTS (MCTS). "
+              + ((e.getErrorId() == AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE)
+                  ? "At least one device is required to fetch Mainline info for download."
+                      + " Please check your device availability."
+                  : "Please check your network availability and the space of your host.");
       throw SkipTestException.create(
-          "Failed to download Mainline CTS (MCTS). Either the files are broken, or the disk is"
-              + " full, please reboot your PC to remove the outdated tmp files and check your"
-              + " network connection then restart the CTS to retry.",
+          errorMessage,
           DesiredTestResult.ERROR,
           AndroidErrorId.XTS_DYNAMIC_DOWNLOADER_FILE_NOT_FOUND,
           e);
