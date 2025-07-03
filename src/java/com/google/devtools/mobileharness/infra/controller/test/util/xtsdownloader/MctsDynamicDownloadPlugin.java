@@ -35,8 +35,10 @@ import com.google.devtools.mobileharness.api.testrunner.plugin.SkipTestException
 import com.google.devtools.mobileharness.api.testrunner.plugin.SkipTestException.DesiredTestResult;
 import com.google.devtools.mobileharness.platform.android.packagemanager.AndroidPackageManagerUtil;
 import com.google.devtools.mobileharness.platform.android.packagemanager.ModuleInfo;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceState;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
@@ -45,6 +47,7 @@ import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.protobuf.TextFormat;
 import com.google.wireless.qa.mobileharness.shared.controller.event.LocalTestStartingEvent;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
+import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator;
 import java.io.BufferedInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -129,19 +132,24 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
   private final AndroidAdbUtil adbUtil;
   private final LocalFileUtil fileUtil;
   private final ResUtil resUtil = new ResUtil();
+  private final AndroidAdbInternalUtil adbInternalUtil;
 
   public MctsDynamicDownloadPlugin() {
     this.adbUtil = new AndroidAdbUtil();
     this.fileUtil = new LocalFileUtil();
     this.androidPackageManagerUtil = new AndroidPackageManagerUtil();
+    this.adbInternalUtil = new AndroidAdbInternalUtil();
   }
 
   @VisibleForTesting
   MctsDynamicDownloadPlugin(
-      AndroidAdbUtil adbUtil, AndroidPackageManagerUtil androidPackageManagerUtil) {
+      AndroidAdbUtil adbUtil,
+      AndroidPackageManagerUtil androidPackageManagerUtil,
+      AndroidAdbInternalUtil adbInternalUtil) {
     this.adbUtil = adbUtil;
     this.androidPackageManagerUtil = androidPackageManagerUtil;
     this.fileUtil = new LocalFileUtil();
+    this.adbInternalUtil = adbInternalUtil;
   }
 
   @Override
@@ -309,10 +317,28 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
                   + " https://android.googlesource.com/platform/cts/+/main/tools/mcts/download_mcts.sh"
                   + " to use the script to manually download the files in advance to skip the"
                   + " downloading step)");
-      XtsDynamicDownloadInfo xtsDynamicDownloadInfo =
-          parse(event.getTest(), event.getDeviceLocator().getSerial());
-      downloadXtsFiles(
-          xtsDynamicDownloadInfo, event.getTest(), event.getDeviceLocator().getSerial());
+      // Get all online devices first, then check against requested locators.
+      Set<String> onlineDeviceSerials =
+          adbInternalUtil.getDeviceSerialsByState(DeviceState.DEVICE, /* timeout= */ null);
+
+      // Find the first online device of the allocation, or throw an exception if none are found.
+      // We need to ensure at least one device is online in this plugin to fetch the device build
+      // info, or it will cause the current job to fail then missing test modules in the final
+      // result.
+      String targetDeviceId =
+          event.getAllocation().getAllDeviceLocators().stream()
+              .map(DeviceLocator::getSerial)
+              .filter(onlineDeviceSerials::contains)
+              .findFirst()
+              .orElseThrow(
+                  () ->
+                      new MobileHarnessException(
+                          AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE,
+                          "No online device found for the current job."));
+
+      XtsDynamicDownloadInfo xtsDynamicDownloadInfo = parse(event.getTest(), targetDeviceId);
+      downloadXtsFiles(xtsDynamicDownloadInfo, event.getTest(), targetDeviceId);
+
       logger.atInfo().with(IMPORTANCE, IMPORTANT).log("Finished MCTS test modules preparation.");
     } catch (MobileHarnessException e) {
       String errorMessage =

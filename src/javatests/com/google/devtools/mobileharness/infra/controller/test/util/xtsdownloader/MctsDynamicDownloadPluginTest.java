@@ -25,16 +25,19 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.packagemanager.AndroidPackageManagerUtil;
 import com.google.devtools.mobileharness.platform.android.packagemanager.ModuleInfo;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.wireless.qa.mobileharness.shared.controller.event.LocalTestStartingEvent;
+import com.google.wireless.qa.mobileharness.shared.model.allocation.Allocation;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
@@ -62,10 +65,12 @@ public final class MctsDynamicDownloadPluginTest {
   @Mock private TestInfo mockTestInfo;
   @Mock private JobInfo mockJobInfo;
   @Mock private AndroidAdbUtil mockAdbUtil;
+  @Mock private AndroidAdbInternalUtil mockAdbInternalUtil;
   @Mock private AndroidPackageManagerUtil mockAndroidPackageManagerUtil;
   @Mock private Properties testProperties;
   @Mock private Properties jobProperties;
   @Mock private DeviceLocator mockDeviceLocator;
+  @Mock private Allocation mockAllocation;
 
   private MctsDynamicDownloadPlugin spyMctsDynamicDownloadPlugin;
   private final LocalFileUtil localFileUtil = new LocalFileUtil();
@@ -74,8 +79,11 @@ public final class MctsDynamicDownloadPluginTest {
   @Before
   public void setUp() throws MobileHarnessException, InterruptedException {
     when(mockEvent.getTest()).thenReturn(mockTestInfo);
-    when(mockEvent.getDeviceLocator()).thenReturn(mockDeviceLocator);
+    when(mockEvent.getAllocation()).thenReturn(mockAllocation);
+    when(mockAllocation.getAllDeviceLocators()).thenReturn(ImmutableList.of(mockDeviceLocator));
     when(mockDeviceLocator.getSerial()).thenReturn("device_id");
+    when(mockAdbInternalUtil.getDeviceSerialsByState(any(), any()))
+        .thenReturn(ImmutableSet.of("device_id"));
     when(mockTestInfo.jobInfo()).thenReturn(mockJobInfo);
     when(mockTestInfo.getTmpFileDir()).thenReturn("/tmp");
     when(mockTestInfo.properties()).thenReturn(testProperties);
@@ -128,7 +136,8 @@ public final class MctsDynamicDownloadPluginTest {
                     .setName("configinfrastructure")
                     .build()));
     MctsDynamicDownloadPlugin mctsDynamicDownloadPlugin =
-        new MctsDynamicDownloadPlugin(mockAdbUtil, mockAndroidPackageManagerUtil);
+        new MctsDynamicDownloadPlugin(
+            mockAdbUtil, mockAndroidPackageManagerUtil, mockAdbInternalUtil);
     spyMctsDynamicDownloadPlugin = Mockito.spy(mctsDynamicDownloadPlugin);
 
     mockDownloadPublicUrlFiles(
