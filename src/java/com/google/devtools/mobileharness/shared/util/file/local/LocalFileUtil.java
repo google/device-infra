@@ -1731,10 +1731,21 @@ public class LocalFileUtil {
     try {
       cmdExecutor.exec(Command.of("rm", "-rf", fileOrDirPath).timeout(fixed(SLOW_CMD_TIMEOUT)));
     } catch (MobileHarnessException e) {
-      throw new MobileHarnessException(
-          BasicErrorId.LOCAL_FILE_OR_DIR_REMOVE_ERROR,
-          "Failed to remove file/dir " + fileOrDirPath,
-          e);
+      if (e instanceof CommandException commandException
+          && commandException.getErrorId() == BasicErrorId.COMMAND_EXEC_TIMEOUT) {
+        throw new MobileHarnessException(
+            BasicErrorId.LOCAL_FILE_OR_DIR_REMOVE_ERROR,
+            String.format(
+                "Timeout when trying to remove file/dir %s in timeout=%s, it may not be cleaned"
+                    + " up completely.",
+                fileOrDirPath, SLOW_CMD_TIMEOUT),
+            e);
+      } else {
+        throw new MobileHarnessException(
+            BasicErrorId.LOCAL_FILE_OR_DIR_REMOVE_ERROR,
+            "Failed to remove file/dir " + fileOrDirPath,
+            e);
+      }
     }
   }
 
