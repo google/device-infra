@@ -29,6 +29,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_reflection_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_text_format",
         "//src/java/com/google/devtools/mobileharness/shared/util/base:stack_set",
+        "//src/java/com/google/devtools/mobileharness/shared/util/base:supplier",
         "//src/java/com/google/devtools/mobileharness/shared/util/base:table_formatter",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
