@@ -55,6 +55,7 @@ import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHel
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.junit.rule.SetFlagsOss;
+import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.google.inject.Guice;
@@ -102,6 +103,7 @@ public final class SessionRequestHandlerUtilTest {
   @Bind @Mock private SessionInfo sessionInfo;
   @Bind @Mock private MoblyTestLoader moblyTestLoader;
   @Bind @Mock private TestPlanParser testPlanParser;
+  @Bind @Mock private Sleeper sleeper;
 
   @Inject private SessionRequestHandlerUtil sessionRequestHandlerUtil;
 
@@ -259,6 +261,58 @@ public final class SessionRequestHandlerUtilTest {
         .containsExactly(subDeviceSpecWithDimension("uuid", "device_id_1"));
 
     initializeJobConfig_atsServerSpecifyOneDevice_createJobWithThatDevice();
+  }
+
+  @Test
+  public void
+      getSubDeviceSpecListForTradefed_atsServerRequestWithDeviceSerials_retryAndSucceedsOnThirdAttempt()
+          throws Exception {
+    when(deviceQuerier.queryDevice(any()))
+        .thenReturn(DeviceQueryResult.getDefaultInstance()) // First call, no devices
+        .thenReturn(DeviceQueryResult.getDefaultInstance()) // Second call, no devices
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder()
+                        .setId("device_id_1")
+                        .addDimension(
+                            Dimension.newBuilder().setName("uuid").setValue("device_id_1"))
+                        .addType("AndroidOnlineDevice"))
+                .build()); // Third call, one device
+
+    SessionRequestInfo sessionRequestInfo =
+        defaultSessionRequestInfoBuilder()
+            .setIsAtsServerRequest(true)
+            .setDeviceSerials(ImmutableList.of("device_id_1"))
+            .build();
+
+    ImmutableList<SubDeviceSpec> subDeviceSpecs =
+        sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
+
+    assertThat(subDeviceSpecs).hasSize(1);
+    assertThat(subDeviceSpecs.get(0).getDimensions().getContentMap())
+        .containsEntry("uuid", "device_id_1");
+    verify(sleeper, times(2)).sleep(Duration.ofSeconds(30));
+  }
+
+  @Test
+  public void getSubDeviceSpecListForTradefed_atsServerRequestWithDeviceSerials_retryAndFail()
+      throws Exception {
+    when(deviceQuerier.queryDevice(any())).thenReturn(DeviceQueryResult.getDefaultInstance());
+
+    SessionRequestInfo sessionRequestInfo =
+        defaultSessionRequestInfoBuilder()
+            .setIsAtsServerRequest(true)
+            .setDeviceSerials(ImmutableList.of("device_id_1"))
+            .build();
+
+    MobileHarnessException exception =
+        assertThrows(
+            MobileHarnessException.class,
+            () -> sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo));
+
+    assertThat(exception).hasMessageThat().contains("No available device is found.");
+    verify(sleeper, times(4)).sleep(Duration.ofSeconds(30));
   }
 
   @Test

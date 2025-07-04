@@ -55,6 +55,7 @@ import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryT
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.junit.rule.SetFlagsOss;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
+import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -118,6 +119,7 @@ public final class RunCommandHandlerTest {
   @Bind @Mock private XtsJobCreator xtsJobCreator;
   @Bind @Mock private PreviousResultLoader previousResultLoader;
   @Bind @Mock private VerifierResultHelper verifierResultHelper;
+  @Bind @Mock private Sleeper sleeper;
 
   private RunCommandHandler runCommandHandler;
   @Inject private SessionRequestHandlerUtil sessionRequestHandlerUtil;
