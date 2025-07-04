@@ -16,11 +16,11 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.command;
 
-import com.google.common.base.Splitter;
 import com.google.devtools.mobileharness.infra.ats.console.command.alias.AliasManager;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
-import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.inject.Inject;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.ExitCode;
@@ -46,6 +46,8 @@ class AliasCommand implements Callable<Integer> {
 
   private final AliasManager aliasManager;
   private final ConsoleUtil consoleUtil;
+  private static final Pattern ALIAS_DEFINITION_PATTERN =
+      Pattern.compile("(.+?)=['\"]?(.*?)['\"]?$");
 
   @Inject
   AliasCommand(AliasManager aliasManager, ConsoleUtil consoleUtil) {
@@ -64,22 +66,15 @@ class AliasCommand implements Callable<Integer> {
       return ExitCode.OK;
     }
 
-    List<String> parts = Splitter.on('=').splitToList(aliasDefinition);
+    Matcher matcher = ALIAS_DEFINITION_PATTERN.matcher(aliasDefinition);
 
-    if (parts.size() != 2) {
+    if (!matcher.matches()) {
       throw new ParameterException(
           spec.commandLine(), "Invalid alias format. Expected: <alias_name>='<command>'");
     }
 
-    String aliasName = parts.get(0).trim();
-    String aliasValue = parts.get(1).trim();
-
-    // Removes quotes that may or may not have been removed by the shell.
-    if (aliasValue.length() >= 2
-        && ((aliasValue.startsWith("'") && aliasValue.endsWith("'"))
-            || (aliasValue.startsWith("\"") && aliasValue.endsWith("\"")))) {
-      aliasValue = aliasValue.substring(1, aliasValue.length() - 1);
-    }
+    String aliasName = matcher.group(1).trim();
+    String aliasValue = matcher.group(2).trim();
 
     aliasManager.addAlias(aliasName, aliasValue);
     consoleUtil.printlnStdout("Alias '%s' created, value: [%s].", aliasName, aliasValue);
