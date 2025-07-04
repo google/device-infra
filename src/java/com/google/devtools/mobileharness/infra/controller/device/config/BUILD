@@ -134,10 +134,7 @@ java_library(
 java_library(
     name = "api_config_observer",
     srcs = ["ApiConfigObserver.java"],
-    visibility = [
-        "//:deviceinfra_all_pkg",
-        "//:omnilab_fusion",
-    ],
+    visibility = ["//:omnilab_fusion"],
     deps = [
         "@maven//:com_google_inject_guice",
     ],
