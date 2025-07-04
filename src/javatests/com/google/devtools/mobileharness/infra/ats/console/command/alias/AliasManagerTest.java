@@ -18,21 +18,58 @@ package com.google.devtools.mobileharness.infra.ats.console.command.alias;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.devtools.mobileharness.infra.ats.console.Annotations.SystemProperties;
+import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.inject.Guice;
+import com.google.inject.Injector;
+import com.google.inject.TypeLiteral;
 import javax.inject.Inject;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
 public final class AliasManagerTest {
+  @Rule public final TemporaryFolder tmpFolder = new TemporaryFolder();
+
+  private static final String PREDEFINED_ALIAS_NAME_1 = "predefined_alias_name_1";
+  private static final String PREDEFINED_ALIAS_VALUE_1 = "predefined_alias_value_1";
+  private static final String PREDEFINED_ALIAS_NAME_2 = "predefined_alias_name_2";
+  private static final String PREDEFINED_ALIAS_VALUE_2 = "predefined_alias_value_2";
+  private LocalFileUtil localFileUtil;
 
   @Inject private AliasManager aliasManager;
 
   @Before
-  public void setUp() {
-    Guice.createInjector().injectMembers(this);
+  public void setUp() throws Exception {
+    String xtsRoot = "xts_root_dir";
+    String xtsRootDirPath = tmpFolder.newFolder(xtsRoot).toString();
+    tmpFolder.newFolder(xtsRoot, "android-cts/tools");
+    ImmutableMap<String, String> systemProperties = ImmutableMap.of("XTS_ROOT", xtsRootDirPath);
+
+    Injector injector =
+        Guice.createInjector(
+            binder ->
+                binder
+                    .bind(new TypeLiteral<ImmutableMap<String, String>>() {})
+                    .annotatedWith(SystemProperties.class)
+                    .toInstance(systemProperties));
+
+    localFileUtil = injector.getInstance(LocalFileUtil.class);
+    localFileUtil.writeToFile(
+        xtsRootDirPath + "/android-cts/tools/aliases",
+        String.format(
+            "alias %s='%s'\nalias %s='%s'",
+            PREDEFINED_ALIAS_NAME_1,
+            PREDEFINED_ALIAS_VALUE_1,
+            PREDEFINED_ALIAS_NAME_2,
+            PREDEFINED_ALIAS_VALUE_2));
+
+    injector.injectMembers(this);
   }
 
   @Test
@@ -54,16 +91,29 @@ public final class AliasManagerTest {
   }
 
   @Test
-  public void getAllAliases_empty() {
-    assertThat(aliasManager.getAll()).isEmpty();
-  }
-
-  @Test
   public void getAllAliases_success() {
     aliasManager.addAlias("alias1", "alias1_value");
     aliasManager.addAlias("alias2", "alias2_value");
 
     assertThat(aliasManager.getAll())
-        .containsExactly("alias1", "alias1_value", "alias2", "alias2_value");
+        .containsExactly(
+            "alias1",
+            "alias1_value",
+            "alias2",
+            "alias2_value",
+            PREDEFINED_ALIAS_NAME_1,
+            PREDEFINED_ALIAS_VALUE_1,
+            PREDEFINED_ALIAS_NAME_2,
+            PREDEFINED_ALIAS_VALUE_2);
+  }
+
+  @Test
+  public void getAllAliases_loadPredefinedAliasesFromFile_success() throws Exception {
+    assertThat(aliasManager.getAll())
+        .containsExactly(
+            PREDEFINED_ALIAS_NAME_1,
+            PREDEFINED_ALIAS_VALUE_1,
+            PREDEFINED_ALIAS_NAME_2,
+            PREDEFINED_ALIAS_VALUE_2);
   }
 }
