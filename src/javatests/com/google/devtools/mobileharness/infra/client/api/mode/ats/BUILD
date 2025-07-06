@@ -64,6 +64,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job:job_schedule_unit",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/util:net_util",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "@com_google_protobuf_protobuf_java",
         "@io_grpc_grpc_java//core",

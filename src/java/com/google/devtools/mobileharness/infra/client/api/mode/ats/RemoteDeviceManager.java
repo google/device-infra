@@ -28,6 +28,7 @@ import static com.google.devtools.mobileharness.shared.util.filter.FilterUtils.c
 
 import com.google.auto.value.AutoValue;
 import com.google.auto.value.extension.memoized.Memoized;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
@@ -46,6 +47,7 @@ import com.google.devtools.mobileharness.api.model.lab.DeviceScheduleUnit;
 import com.google.devtools.mobileharness.api.model.lab.LabLocator;
 import com.google.devtools.mobileharness.api.model.lab.LabScheduleUnit;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
+import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperties;
 import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperty;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabServerFeature;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabServerSetting;
@@ -77,10 +79,12 @@ import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServicePr
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignOutDeviceResponse;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignUpLabRequest;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignUpLabResponse;
+import com.google.devtools.mobileharness.shared.constant.hostmanagement.HostPropertyConstants.HostPropertyKey;
 import com.google.devtools.mobileharness.shared.labinfo.LabInfoProvider;
 import com.google.devtools.mobileharness.shared.util.comm.server.GrpcContexts;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.version.Version;
+import com.google.devtools.mobileharness.shared.version.VersionUtil;
 import com.google.devtools.mobileharness.shared.version.checker.ServiceSideVersionChecker;
 import com.google.devtools.mobileharness.shared.version.proto.VersionProto.VersionCheckResponse;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
@@ -88,6 +92,7 @@ import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.controller.event.AllocationEvent;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.Dimension;
+import com.google.wireless.qa.mobileharness.shared.util.NetUtil;
 import io.grpc.BindableService;
 import io.grpc.stub.StreamObserver;
 import java.net.InetAddress;
@@ -132,8 +137,8 @@ class RemoteDeviceManager implements LabInfoProvider {
   private final AbstractScheduler scheduler;
   private final ListeningScheduledExecutorService scheduledThreadPool;
   private final LabRecordManager labRecordManager;
-
   private final Object lock = new Object();
+  private String olcHostName = "";
 
   @GuardedBy("lock")
   private final Map<LabKey, LabData> labs = new HashMap<>();
@@ -151,9 +156,23 @@ class RemoteDeviceManager implements LabInfoProvider {
       @AtsModeAbstractScheduler AbstractScheduler scheduler,
       ListeningScheduledExecutorService scheduledThreadPool,
       LabRecordManager labRecordManager) {
+    this(scheduler, scheduledThreadPool, labRecordManager, new NetUtil());
+  }
+
+  @VisibleForTesting
+  RemoteDeviceManager(
+      AbstractScheduler scheduler,
+      ListeningScheduledExecutorService scheduledThreadPool,
+      LabRecordManager labRecordManager,
+      NetUtil netUtil) {
     this.scheduler = scheduler;
     this.scheduledThreadPool = scheduledThreadPool;
     this.labRecordManager = labRecordManager;
+    try {
+      this.olcHostName = netUtil.getLocalHostName();
+    } catch (MobileHarnessException e) {
+      logger.atWarning().withCause(e).log("Failed to get olc host name");
+    }
   }
 
   BindableService getLabSyncService() {
@@ -161,6 +180,7 @@ class RemoteDeviceManager implements LabInfoProvider {
   }
 
   void start() {
+    signUpOlcLab();
     // Registers AllocationEventHandler.
     scheduler.registerEventHandler(new AllocationEventHandler());
 
@@ -194,6 +214,44 @@ class RemoteDeviceManager implements LabInfoProvider {
             LAB_AND_DEVICE_CHECK_MISSING_INTERVAL),
         Level.WARNING,
         "Error when checking missing labs and devices");
+  }
+
+  private void signUpOlcLab() {
+    synchronized (lock) {
+      if (labs.containsKey(LabKey.of(olcHostName))) {
+        return;
+      }
+      HostProperties.Builder hostProperties = HostProperties.newBuilder();
+      VersionUtil.getBuildVersion()
+          .ifPresent(
+              version -> {
+                if (version.hasGithubVersion()) {
+                  hostProperties.addHostProperty(
+                      HostProperty.newBuilder()
+                          .setKey(Ascii.toLowerCase(HostPropertyKey.GITHUB_VERSION.name()))
+                          .setValue(version.getGithubVersion())
+                          .build());
+                } else {
+                  logger.atWarning().log("Failed to get OLC github build version");
+                }
+              });
+      SignUpLabRequest mockOlcSignUpRequest =
+          SignUpLabRequest.newBuilder()
+              .setLabHostName(olcHostName)
+              .setLabServerFeature(LabServerFeature.newBuilder().setHostProperties(hostProperties))
+              .build();
+
+      logger.atInfo().log("Sign up OLC lab, req=[%s]", shortDebugString(mockOlcSignUpRequest));
+
+      // Creates lab locator.
+      LabLocator labLocator =
+          LabLocator.of(
+              mockOlcSignUpRequest.getLabIp(), mockOlcSignUpRequest.getLabHostName(), null);
+      // Handles information of the lab.
+      LabKey labKey = LabKey.of(labLocator.hostName());
+      LabData labData = new LabData(labLocator, mockOlcSignUpRequest);
+      labs.put(labKey, labData);
+    }
   }
 
   ImmutableList<DeviceQuery.DeviceInfo> getDeviceInfos() {
@@ -646,7 +704,8 @@ class RemoteDeviceManager implements LabInfoProvider {
         LabKey labKey = entry.getKey();
         LabData labData = entry.getValue();
 
-        if (!labData.labStatus.equals(LabStatus.LAB_MISSING)
+        if (!labKey.labHostName().equals(olcHostName)
+            && !labData.labStatus.equals(LabStatus.LAB_MISSING)
             && labData
                 .updateFromLabLocalTimestamp
                 .plus(LAB_AND_DEVICE_MISSING_TIME)

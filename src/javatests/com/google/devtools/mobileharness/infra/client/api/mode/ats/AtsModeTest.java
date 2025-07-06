@@ -43,8 +43,6 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceList;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
-import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
-import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.AllocationWithStats;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.DeviceAllocator;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignUpLabRequest;
@@ -269,30 +267,33 @@ public class AtsModeTest {
   public void labInfoService() throws Exception {
     labSyncGrpcStub.signUpLab(SIGN_UP_LAB_REQUEST);
 
-    assertThat(labInfoGrpcStub.getLabInfo(GetLabInfoRequest.getDefaultInstance()))
+    GetLabInfoResponse actualResponse =
+        labInfoGrpcStub.getLabInfo(GetLabInfoRequest.getDefaultInstance());
+    assertThat(actualResponse.getLabQueryResult().getLabView().getLabTotalCount()).isEqualTo(2);
+
+    LabData actualLabData =
+        actualResponse.getLabQueryResult().getLabView().getLabDataList().stream()
+            .filter(
+                labData ->
+                    labData.getLabInfo().getLabLocator().getHostName().equals("fake_lab_host_name"))
+            .findFirst()
+            .orElse(LabData.getDefaultInstance());
+
+    assertThat(actualLabData)
         .comparingExpectedFieldsOnly()
         .isEqualTo(
-            GetLabInfoResponse.newBuilder()
-                .setLabQueryResult(
-                    LabQueryResult.newBuilder()
-                        .setLabView(
-                            LabView.newBuilder()
-                                .setLabTotalCount(1)
-                                .addLabData(
-                                    LabData.newBuilder()
-                                        .setLabInfo(
-                                            LabInfo.newBuilder()
-                                                .setLabLocator(
-                                                    Lab.LabLocator.newBuilder()
-                                                        .setHostName("fake_lab_host_name")))
-                                        .setDeviceList(
-                                            DeviceList.newBuilder()
-                                                .setDeviceTotalCount(1)
-                                                .addDeviceInfo(
-                                                    LabQueryProto.DeviceInfo.newBuilder()
-                                                        .setDeviceLocator(
-                                                            Device.DeviceLocator.newBuilder()
-                                                                .setId("fake_uuid")))))))
+            LabData.newBuilder()
+                .setLabInfo(
+                    LabInfo.newBuilder()
+                        .setLabLocator(
+                            Lab.LabLocator.newBuilder().setHostName("fake_lab_host_name")))
+                .setDeviceList(
+                    DeviceList.newBuilder()
+                        .setDeviceTotalCount(1)
+                        .addDeviceInfo(
+                            LabQueryProto.DeviceInfo.newBuilder()
+                                .setDeviceLocator(
+                                    Device.DeviceLocator.newBuilder().setId("fake_uuid"))))
                 .build());
   }
 }
