@@ -28,6 +28,7 @@ import static java.util.Arrays.stream;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
@@ -1713,14 +1714,14 @@ public class LocalFileUtil {
   }
 
   /**
-   * Deletes a single file, or recursively deletes a directory. Note that the fileOrDirPath should
-   * not contain glob patterns. It do not do the parsing. If you want to clear a directory with glob
-   * patterns like "/directory/**", please use {@link #removeFilesOrDirs(String)} instead like
-   * removeFilesOrDirs("/directory").
+   * Deletes a single file, or recursively deletes a directory with timeout. Note that the
+   * fileOrDirPath should not contain glob patterns. It doesn't do the parsing. If you want to clear
+   * a directory with glob patterns like "/directory/**", please use {@link
+   * #removeFilesOrDirs(String)} instead like removeFilesOrDirs("/directory").
    *
    * @throws MobileHarnessException if fails to delete
    */
-  public void removeFileOrDir(String fileOrDirPath)
+  public void removeFileOrDir(String fileOrDirPath, Duration timeout)
       throws MobileHarnessException, InterruptedException {
     // Alternative solutions considered:
     // 1) Java APIs such as {@link com.google.io.file.AbstractFile#delete()}, {@link File#delete()}
@@ -1729,7 +1730,7 @@ public class LocalFileUtil {
     // 3) {@code com.google.common.io.Files#deleteRecursively(File)} is deprecated because it
     //    suffers from poor symbol link detection.
     try {
-      cmdExecutor.exec(Command.of("rm", "-rf", fileOrDirPath).timeout(fixed(SLOW_CMD_TIMEOUT)));
+      cmdExecutor.exec(Command.of("rm", "-rf", fileOrDirPath).timeout(fixed(timeout)));
     } catch (MobileHarnessException e) {
       if (e instanceof CommandException commandException
           && commandException.getErrorId() == BasicErrorId.COMMAND_EXEC_TIMEOUT) {
@@ -1738,7 +1739,7 @@ public class LocalFileUtil {
             String.format(
                 "Timeout when trying to remove file/dir %s in timeout=%s, it may not be cleaned"
                     + " up completely.",
-                fileOrDirPath, SLOW_CMD_TIMEOUT),
+                fileOrDirPath, timeout),
             e);
       } else {
         throw new MobileHarnessException(
@@ -1746,6 +1747,49 @@ public class LocalFileUtil {
             "Failed to remove file/dir " + fileOrDirPath,
             e);
       }
+    }
+  }
+
+  /**
+   * Deletes a single file, or recursively deletes a directory. Note that the fileOrDirPath should
+   * not contain glob patterns. It doesn't do the parsing. If you want to clear a directory with
+   * glob patterns like "/directory/**", please use {@link #removeFilesOrDirs(String)} instead like
+   * removeFilesOrDirs("/directory").
+   *
+   * @throws MobileHarnessException if fails to delete
+   */
+  public void removeFileOrDir(String fileOrDirPath)
+      throws MobileHarnessException, InterruptedException {
+    removeFileOrDir(fileOrDirPath, SLOW_CMD_TIMEOUT);
+  }
+
+  /**
+   * Cleans up the files or directories under the given directory with timeout.
+   *
+   * @param dirPath the directory under which you find the files or directories to delete
+   * @param timeout the timeout for total file or directory deletion
+   * @throws MobileHarnessException if the directory does not exist, or fails to delete files or
+   *     directories
+   */
+  public void removeFilesOrDirsWithTimeout(String dirPath, Duration timeout)
+      throws MobileHarnessException, InterruptedException {
+    removeFilesOrDirsWithTimeout(dirPath, timeout, Stopwatch.createStarted());
+  }
+
+  @VisibleForTesting
+  void removeFilesOrDirsWithTimeout(String dirPath, Duration timeout, Stopwatch stopwatch)
+      throws MobileHarnessException, InterruptedException {
+    File dir = checkDir(dirPath);
+    for (File fileOrDir : listFilesOrDirs(dir, /* filter= */ null)) {
+      Duration remainingTime = timeout.minus(stopwatch.elapsed());
+      if (remainingTime.isNegative() || remainingTime.isZero()) {
+        logger.atWarning().log(
+            "Timeout reached while removing files/dirs under %s. "
+                + "Stopped before processing all entries.",
+            dirPath);
+        return;
+      }
+      removeFileOrDir(fileOrDir.getAbsolutePath(), remainingTime);
     }
   }
 
