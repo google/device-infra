@@ -328,6 +328,9 @@ public interface PropertyName {
     /** Whether the test runs in MH sandbox mode. Value type is boolean. */
     SANDBOX_MODE,
 
+    /** Session id of the test. Value type is string. */
+    SESSION_ID,
+
     /** Delay time between start() and execute() of the test runner in milliseconds. */
     START_DELAY_MS,
 
