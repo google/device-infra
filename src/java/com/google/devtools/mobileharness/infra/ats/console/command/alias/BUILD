@@ -25,6 +25,12 @@ java_library(
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/command:__subpackages__",
     ],
     deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console:console_info",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/command:command_helper",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_dir_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
     ],

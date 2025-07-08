@@ -21,10 +21,13 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.devtools.mobileharness.infra.ats.console.Annotations.SystemProperties;
 import com.google.devtools.mobileharness.infra.ats.console.command.alias.AliasManager;
 import com.google.devtools.mobileharness.infra.ats.console.command.preprocessor.CommandFileParser.CommandLine;
 import com.google.devtools.mobileharness.infra.ats.console.command.preprocessor.CommandPreprocessor.PreprocessingResult;
 import com.google.inject.Guice;
+import com.google.inject.TypeLiteral;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import java.io.File;
@@ -32,6 +35,7 @@ import javax.inject.Inject;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.mockito.Mock;
@@ -42,13 +46,27 @@ import org.mockito.junit.MockitoRule;
 public final class CommandPreprocessorTest {
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
+  @Rule public final TemporaryFolder tmpFolder = new TemporaryFolder();
+
   @Bind @Mock private CommandFileParser commandFileParser;
   @Inject private AliasManager aliasManager;
   @Inject private CommandPreprocessor preprocessor;
 
   @Before
-  public void setUp() {
-    Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
+  public void setUp() throws Exception {
+    String xtsRoot = "xts_root_dir";
+    String xtsRootDirPath = tmpFolder.newFolder(xtsRoot).toString();
+    tmpFolder.newFolder(xtsRoot, "android-cts/tools");
+    ImmutableMap<String, String> systemProperties = ImmutableMap.of("XTS_ROOT", xtsRootDirPath);
+
+    Guice.createInjector(
+            BoundFieldModule.of(this),
+            binder ->
+                binder
+                    .bind(new TypeLiteral<ImmutableMap<String, String>>() {})
+                    .annotatedWith(SystemProperties.class)
+                    .toInstance(systemProperties))
+        .injectMembers(this);
   }
 
   @Test
