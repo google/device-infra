@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.platform.testbed.config;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -44,8 +45,8 @@ public abstract class BaseTestbedConfig implements TestbedConfig {
   // getDevices() the order of entries is deterministic and same as the insertion order.
   private final ImmutableMap<SubDeviceKey, SubDeviceInfo> devices;
 
-  private final ImmutableMap<String, String> dimensions;
-  private final ImmutableMap<String, String> requiredDimensions;
+  private final ImmutableListMultimap<String, String> dimensions;
+  private final ImmutableListMultimap<String, String> requiredDimensions;
   private final ImmutableMap<String, Object> properties;
 
   private static final Yaml yaml = createYaml();
@@ -53,14 +54,14 @@ public abstract class BaseTestbedConfig implements TestbedConfig {
   protected BaseTestbedConfig(
       String name,
       Map<SubDeviceKey, SubDeviceInfo> devices,
-      Map<String, String> dimensions,
-      Map<String, String> requiredDimensions,
+      ImmutableListMultimap<String, String> dimensions,
+      ImmutableListMultimap<String, String> requiredDimensions,
       Map<String, Object> properties)
       throws MobileHarnessException {
     this.name = name;
     this.devices = ImmutableMap.copyOf(devices);
-    this.dimensions = ImmutableMap.copyOf(dimensions);
-    this.requiredDimensions = ImmutableMap.copyOf(requiredDimensions);
+    this.dimensions = ImmutableListMultimap.copyOf(dimensions);
+    this.requiredDimensions = ImmutableListMultimap.copyOf(requiredDimensions);
     this.properties = ImmutableMap.copyOf(properties);
     validate();
   }
@@ -76,12 +77,12 @@ public abstract class BaseTestbedConfig implements TestbedConfig {
   }
 
   @Override
-  public final ImmutableMap<String, String> getDimensions() {
+  public final ImmutableListMultimap<String, String> getDimensions() {
     return dimensions;
   }
 
   @Override
-  public final ImmutableMap<String, String> getRequiredDimensions() {
+  public final ImmutableListMultimap<String, String> getRequiredDimensions() {
     return requiredDimensions;
   }
 

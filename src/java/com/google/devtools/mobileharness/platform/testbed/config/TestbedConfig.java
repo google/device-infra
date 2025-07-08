@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.platform.testbed.config;
 
+import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
 
 /** A config for a single testbed. */
@@ -43,14 +44,14 @@ public interface TestbedConfig {
    *
    * @return A mapping of dimension name to value.
    */
-  ImmutableMap<String, String> getDimensions();
+  ImmutableListMultimap<String, String> getDimensions();
 
   /**
    * Gets all required dimensions for this testbed.
    *
    * @return A mapping of dimension name to value.
    */
-  ImmutableMap<String, String> getRequiredDimensions();
+  ImmutableListMultimap<String, String> getRequiredDimensions();
 
   /**
    * Gets all properties for this testbed. Values can be any value represented in a JSONObject.

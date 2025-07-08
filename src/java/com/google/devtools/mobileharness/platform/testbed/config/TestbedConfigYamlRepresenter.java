@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.platform.testbed.config;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.flogger.FluentLogger;
@@ -29,6 +30,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.nodes.Node;
+import org.yaml.snakeyaml.nodes.Tag;
 import org.yaml.snakeyaml.representer.Represent;
 import org.yaml.snakeyaml.representer.Representer;
 
@@ -43,6 +45,7 @@ final class TestbedConfigYamlRepresenter extends Representer {
   public TestbedConfigYamlRepresenter() {
     super(new DumperOptions());
     this.multiRepresenters.put(TestbedConfig.class, new RepresentTestbedConfig());
+    this.multiRepresenters.put(ImmutableListMultimap.class, new RepresentImmutableListMultimap());
     this.multiRepresenters.put(SubDeviceInfo.class, new RepresentSubDeviceInfo());
     this.multiRepresenters.put(JSONObject.class, new RepresentJsonObject());
     this.multiRepresenters.put(JSONArray.class, new RepresentJsonArray());
@@ -67,6 +70,18 @@ final class TestbedConfigYamlRepresenter extends Representer {
       }
 
       return represent(ImmutableList.of(configMap.buildOrThrow()));
+    }
+  }
+
+  /**
+   * Represents {@link ImmutableListMultimap} as YAML strings using only native (i.e. safe) types.
+   */
+  private final class RepresentImmutableListMultimap implements Represent {
+    @Override
+    public Node representData(Object data) {
+      ImmutableListMultimap<?, ?> multimap = (ImmutableListMultimap<?, ?>) data;
+      // Converts the multimap to a standard Map<String, List> for representation
+      return representMapping(Tag.MAP, multimap.asMap(), DumperOptions.FlowStyle.BLOCK);
     }
   }
 

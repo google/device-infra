@@ -584,7 +584,7 @@ public class TestbedDevice extends BaseDevice implements CompositeDevice {
       }
     }
 
-    getConfig().getDimensions().entrySet().stream()
+    getConfig().getDimensions().entries().stream()
         .filter(dimension -> !NOT_OVERRIDE_DIMENSIONS.contains(dimension.getKey()))
         .forEach(
             dimension ->
@@ -685,8 +685,7 @@ public class TestbedDevice extends BaseDevice implements CompositeDevice {
 
   /** Update required dimensions with the required dimensions from the testbed config. */
   private void updateRequiredDimensions() {
-    ImmutableMap<String, String> requiredDimensions = getConfig().getRequiredDimensions();
-    for (Map.Entry<String, String> dimension : requiredDimensions.entrySet()) {
+    for (Map.Entry<String, String> dimension : getConfig().getRequiredDimensions().entries()) {
       if (!NOT_OVERRIDE_DIMENSIONS.contains(dimension.getKey())) {
         updateRequiredDimension(dimension.getKey(), dimension.getValue());
       }
