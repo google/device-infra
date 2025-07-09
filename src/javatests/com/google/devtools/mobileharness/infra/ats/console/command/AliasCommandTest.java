@@ -132,6 +132,21 @@ public final class AliasCommandTest {
   }
 
   @Test
+  public void call_validAliasWithEqualSignInAliasValue_success() {
+    int exitCode =
+        commandLine.execute(
+            new String[] {"alias", "foo='run gts --template:map preview-only-exclusion=empty'"});
+
+    assertThat(exitCode).isEqualTo(ExitCode.OK);
+    assertThat(aliasManager.getAlias("foo"))
+        .hasValue("run gts --template:map preview-only-exclusion=empty");
+    verify(consoleUtil)
+        .printlnStdout(
+            "Alias '%s' created, value: [%s].",
+            "foo", "run gts --template:map preview-only-exclusion=empty");
+  }
+
+  @Test
   public void call_emptyAlias_returnsErrorExitCode() {
     int exitCode = commandLine.execute(new String[] {"alias", ""});
     assertThat(exitCode).isEqualTo(ExitCode.USAGE);
