@@ -719,7 +719,7 @@ public class AndroidConnectivityUtil {
       }
       String output =
           adb.runShell(
-              serial, String.format(ADB_SHELL_TEMPLATE_PING_URL, targetUrl), LONG_PING_TIMEOUT);
+              serial, String.format(ADB_SHELL_TEMPLATE_PING_URL, targetUrl), SHORT_PING_TIMEOUT);
       if (!output.contains(PING_SUCCESS)) {
         logger.atWarning().log(
             "Device %s is not able to ping %s, output=[%s] ", serial, targetUrl, output);
