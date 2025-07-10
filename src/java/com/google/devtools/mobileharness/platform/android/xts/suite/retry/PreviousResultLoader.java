@@ -80,20 +80,30 @@ public class PreviousResultLoader {
         getPrevSessionTestResultProtoFile(
             resultsDir, previousSessionIndex, previousSessionResultDirName);
     if (localFileUtil.isFileExist(testResultProtoFile)) {
-      return loadResult(testResultProtoFile, String.valueOf(previousSessionIndex));
+      return loadResult(
+          testResultProtoFile,
+          previousSessionIndex != null
+              ? String.valueOf(previousSessionIndex)
+              : previousSessionResultDirName);
     } else {
       // TODO: Remove the legacy result support.
-      Optional<Result> result = getPrevLegacySessionTestResult(resultsDir, previousSessionIndex);
+      Optional<Result> result =
+          getPrevLegacySessionTestResult(
+              resultsDir, previousSessionIndex, previousSessionResultDirName);
       if (result.isPresent()) {
         logger.atInfo().log(
-            "Will retry legacy session result for session %s", previousSessionIndex);
+            "Will retry legacy session result for session %s",
+            previousSessionIndex != null ? previousSessionIndex : previousSessionResultDirName);
         return result.get();
       } else {
         throw new MobileHarnessException(
             ExtErrorId.PREV_RESULT_LOADER_MISSING_TEST_RESULT_PROTO_FILE_IN_SESSION,
             String.format(
                 "The test result proto file %s does not exist for session %s.",
-                testResultProtoFile.toAbsolutePath(), previousSessionIndex));
+                testResultProtoFile.toAbsolutePath(),
+                previousSessionIndex != null
+                    ? previousSessionIndex
+                    : previousSessionResultDirName));
       }
     }
   }
@@ -162,13 +172,17 @@ public class PreviousResultLoader {
   }
 
   /** Try to find the result with the legacy path. */
-  private Optional<Result> getPrevLegacySessionTestResult(Path resultsDir, int previousSessionIndex)
+  private Optional<Result> getPrevLegacySessionTestResult(
+      Path resultsDir,
+      @Nullable Integer previousSessionIndex,
+      @Nullable String previousSessionResultDirName)
       throws MobileHarnessException {
-    ImmutableList<File> results =
-        resultListerHelper.listResultDirsInOrder(resultsDir.toAbsolutePath().toString());
+    Preconditions.checkState(previousSessionIndex != null || previousSessionResultDirName != null);
+    Path prevSessionResultDir =
+        getPrevSessionResultDir(resultsDir, previousSessionIndex, previousSessionResultDirName);
     List<File> testResultXmlFiles =
         localFileUtil.listFiles(
-            results.get(previousSessionIndex).getPath(),
+            prevSessionResultDir.toAbsolutePath().toString(),
             /* recursively= */ true,
             p -> p.getName().equals(SuiteCommon.TEST_RESULT_XML_FILE_NAME));
     if (testResultXmlFiles.size() != 1) {
