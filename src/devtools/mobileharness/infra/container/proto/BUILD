@@ -64,8 +64,6 @@ proto_library(
 
 java_proto_library(
     name = "test_engine_java_proto",
-    visibility = [
-        "//:deviceinfra_all_pkg",
-    ],
+    visibility = ["//:deviceinfra_all_pkg"],
     deps = [":test_engine_proto"],
 )
