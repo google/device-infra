@@ -957,6 +957,10 @@ public class AndroidInstrumentationUtil {
                   "Failed to pull test output file from device: " + e.getMessage(),
                   e),
               logger);
+      // Fail the test if it's a coverage file pulling failure.
+      if (isCoverageFile) {
+        testInfo.result().set(TestResult.ERROR);
+      }
     }
   }
 
