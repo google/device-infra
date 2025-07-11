@@ -2715,6 +2715,8 @@ public abstract class AndroidRealDeviceDelegate {
 
   private void unlockWithDeviceAdmin() throws MobileHarnessException, InterruptedException {
     logger.atInfo().log("Start to unlock device %s", deviceId);
+    // If the current user is not the default user, unlock the device will fail. See b/406939285.
+    clearMultiUsers(deviceId, systemSettingUtil.getDeviceSdkVersion(deviceId));
     deviceAdminUtil.unlock(deviceId);
     device.removeDimension(Dimension.Name.DEVICE_ADMIN_LOCKED);
     device.removeDimension(Dimension.Name.DEVICE_ADMIN_WIFI_RESTRICTED);
