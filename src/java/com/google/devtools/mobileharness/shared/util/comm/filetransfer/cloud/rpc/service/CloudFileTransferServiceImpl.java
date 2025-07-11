@@ -103,8 +103,6 @@ public class CloudFileTransferServiceImpl {
 
   private final LocalFileUtil localFileUtil;
 
-  private final GcsFileManager gcsFileManager;
-
   /** Cache of process result. */
   private final Cache<String, ProcessResponseOrException> processStatusCache;
 
@@ -112,6 +110,8 @@ public class CloudFileTransferServiceImpl {
 
   /** Directory for temp file. */
   private final Path tmpDir;
+
+  private final Path gcsHomeDir;
 
   /**
    * Creates a file transfer service based on Google Cloud storage. Caches in {@code homeDir} is
@@ -124,26 +124,32 @@ public class CloudFileTransferServiceImpl {
       throws MobileHarnessException, InterruptedException {
     this(
         publicDir,
-        new GcsFileManager(
-            homeDir.resolve("gcs"),
-            FileTransferConstant.getBucket(),
-            Optional.of(FileTransferConstant.getCloudCacheTtl()),
-            FileTransferConstant.getLocalCacheTtl(),
-            Optional.of(FileTransferConstant.uploadShardSize()),
-            Optional.of(FileTransferConstant.downloadShardSize())),
+        homeDir.resolve("gcs"),
         new LocalFileUtil(),
         DEFAULT_PROCESS_STATUS_CACHE_TTL,
         homeDir.resolve("tmp"));
   }
 
   @VisibleForTesting
+  GcsFileManager createGcsFileManager(String bucket)
+      throws MobileHarnessException, InterruptedException {
+    return new GcsFileManager(
+        gcsHomeDir,
+        bucket.isEmpty() ? FileTransferConstant.getBucket() : bucket,
+        Optional.of(FileTransferConstant.getCloudCacheTtl()),
+        FileTransferConstant.getLocalCacheTtl(),
+        Optional.of(FileTransferConstant.uploadShardSize()),
+        Optional.of(FileTransferConstant.downloadShardSize()));
+  }
+
+  @VisibleForTesting
   CloudFileTransferServiceImpl(
       Path publicDir,
-      GcsFileManager gcsFileManager,
+      Path gcsHomeDir,
       LocalFileUtil localFileUtil,
       Duration processStatusCacheTtl,
       Path tmpDir) {
-    this.gcsFileManager = gcsFileManager;
+    this.gcsHomeDir = gcsHomeDir;
     this.localFileUtil = localFileUtil;
     this.publicDir = publicDir;
     this.processStatusCache =
@@ -175,8 +181,8 @@ public class CloudFileTransferServiceImpl {
         request.getOriginalPath(),
         request.getGcsFile(),
         TextFormat.printer().printToString(request));
-
     try {
+      GcsFileManager gcsFileManager = createGcsFileManager(request.getBucket());
       Path localCache =
           gcsFileManager.getGcsFileCache(
               GcsUtil.GcsApiObject.create(Path.of(request.getGcsFile())));
@@ -274,6 +280,7 @@ public class CloudFileTransferServiceImpl {
     String checksum;
 
     try {
+      GcsFileManager gcsFileManager = createGcsFileManager(request.getBucket());
       if (request.hasCompressOptions()) {
         CompressOptions compressOptions = request.getCompressOptions();
         checksum =
@@ -448,6 +455,7 @@ public class CloudFileTransferServiceImpl {
         "Saving file %s directly. File metadata: %s",
         request.getOriginalPath(), request.getMetadata());
     try {
+      GcsFileManager gcsFileManager = createGcsFileManager("");
       // Save the file to the cache of gcsFileManager, so that gcsFileManager can takes care of its
       // life cycle.
       handleReceivedFile(
