@@ -483,6 +483,9 @@ public interface PropertyName {
       /** Whether the test is using the V4 Build API. */
       ENABLE_V4_BUILD_API,
 
+      /** Whether the test is using the MH flashstation key. */
+      USE_MH_FLASHSTATION_KEY,
+
       /** The project ID retrieved from the key file. */
       FLASHSTATION_PROJECT_ID,
 
