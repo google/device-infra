@@ -1525,7 +1525,7 @@ public class JobRunner implements Runnable {
           .addAndLog(
               new MobileHarnessException(
                   InfraErrorId.CLIENT_JR_ALLOC_DIAGNOSTIC_ERROR,
-                  "Failed to diagnostic the allocation failure",
+                  "Failed to diagnose the allocation failure",
                   e),
               logger);
     }
