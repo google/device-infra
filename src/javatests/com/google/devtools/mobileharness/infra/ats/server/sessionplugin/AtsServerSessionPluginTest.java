@@ -303,7 +303,10 @@ public final class AtsServerSessionPluginTest {
 
   @Test
   public void onSessionStarting_success() throws Exception {
-    when(clock.millis()).thenReturn(1000L).thenReturn(2000L).thenReturn(3000L);
+    when(clock.instant())
+        .thenReturn(Instant.ofEpochMilli(1000L))
+        .thenReturn(Instant.ofEpochMilli(2000L))
+        .thenReturn(Instant.ofEpochMilli(3000L));
     when(sessionInfo.getSessionPluginExecutionConfig())
         .thenReturn(
             SessionPluginExecutionConfig.newBuilder()
@@ -327,6 +330,53 @@ public final class AtsServerSessionPluginTest {
         .isEqualTo(request.getMaxRetryOnTestFailures());
     assertThat(
             requestDetail.getCommandDetailsMap().values().iterator().next().getDeviceSerialsList())
+        .containsExactly("device_id_1", "device_id_2");
+  }
+
+  @Test
+  public void onSessionStarting_addDummyCommandDetail() throws Exception {
+    when(clock.instant())
+        .thenReturn(Instant.ofEpochMilli(1000L))
+        .thenReturn(Instant.ofEpochMilli(2000L))
+        .thenReturn(Instant.ofEpochMilli(3000L))
+        .thenReturn(Instant.ofEpochMilli(4000L))
+        .thenReturn(Instant.ofEpochMilli(5000L));
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(
+                        SessionRequest.newBuilder().setNewMultiCommandRequest(request).build()))
+                .build());
+    plugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+    verify(sessionInfo).addJob(jobInfo);
+    verify(sessionInfo, times(2))
+        .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
+
+    // Verify dummy command detail
+    RequestDetail requestDetail = unaryOperatorCaptor.getAllValues().get(0).apply(null);
+    assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
+    CommandDetail dummyCommandDetail =
+        requestDetail.getCommandDetailsMap().values().iterator().next();
+    String commandId =
+        UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
+    assertThat(dummyCommandDetail.getId()).isEqualTo(commandId);
+    assertThat(dummyCommandDetail.getRequestId()).isEqualTo("session_id");
+    assertThat(dummyCommandDetail.getState()).isEqualTo(CommandState.RUNNING);
+    assertThat(dummyCommandDetail.getStartTime()).isEqualTo(Timestamps.fromMillis(3000L));
+    assertThat(dummyCommandDetail.getCreateTime()).isEqualTo(Timestamps.fromMillis(4000L));
+    assertThat(dummyCommandDetail.getUpdateTime()).isEqualTo(Timestamps.fromMillis(5000L));
+    assertThat(dummyCommandDetail.getCommandLine()).isEqualTo(commandInfo.getCommandLine());
+
+    // Verify final command detail
+    RequestDetail finalRequestDetail = unaryOperatorCaptor.getAllValues().get(1).apply(null);
+    assertThat(
+            finalRequestDetail
+                .getCommandDetailsMap()
+                .values()
+                .iterator()
+                .next()
+                .getDeviceSerialsList())
         .containsExactly("device_id_1", "device_id_2");
   }
 
@@ -383,7 +433,10 @@ public final class AtsServerSessionPluginTest {
   @Test
   public void onSessionStarting_addTfJobsHadException_requestDetailContainBasicInfo()
       throws Exception {
-    when(clock.millis()).thenReturn(1000L).thenReturn(2000L).thenReturn(3000L);
+    when(clock.instant())
+        .thenReturn(Instant.ofEpochMilli(1000L))
+        .thenReturn(Instant.ofEpochMilli(2000L))
+        .thenReturn(Instant.ofEpochMilli(3000L));
     MobileHarnessException mhException =
         new MobileHarnessException(BasicErrorId.NON_MH_EXCEPTION, "error");
     when(xtsJobCreator.createXtsTradefedTestJob(any())).thenThrow(mhException);
@@ -412,7 +465,10 @@ public final class AtsServerSessionPluginTest {
   @Test
   public void onSessionStarting_addNonTfJobsHadException_requestDetailContainBasicInfo()
       throws Exception {
-    when(clock.millis()).thenReturn(1000L).thenReturn(2000L).thenReturn(3000L);
+    when(clock.instant())
+        .thenReturn(Instant.ofEpochMilli(1000L))
+        .thenReturn(Instant.ofEpochMilli(2000L))
+        .thenReturn(Instant.ofEpochMilli(3000L));
     MobileHarnessException mhException =
         new MobileHarnessException(BasicErrorId.NON_MH_EXCEPTION, "error");
     when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of());
@@ -442,7 +498,10 @@ public final class AtsServerSessionPluginTest {
 
   @Test
   public void onSessionStarting_manuallyCancelSession_noJobCreated() throws Exception {
-    when(clock.millis()).thenReturn(1000L).thenReturn(2000L).thenReturn(3000L);
+    when(clock.instant())
+        .thenReturn(Instant.ofEpochMilli(1000L))
+        .thenReturn(Instant.ofEpochMilli(2000L))
+        .thenReturn(Instant.ofEpochMilli(3000L));
     when(sessionInfo.getSessionPluginExecutionConfig())
         .thenReturn(
             SessionPluginExecutionConfig.newBuilder()
