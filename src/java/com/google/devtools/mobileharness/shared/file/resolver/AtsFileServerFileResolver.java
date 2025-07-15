@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.shared.file.resolver;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -38,11 +40,16 @@ import com.google.wireless.qa.mobileharness.shared.api.annotation.ParamAnnotatio
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 
 /** The resolver for files in ats file server. */
 public class AtsFileServerFileResolver extends AbstractFileResolver {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+  private static final Pattern LIMIT_RATE_PATTERN = Pattern.compile("^\\d+[KMG]$");
 
   @ParamAnnotation(
       required = false,
@@ -130,7 +137,7 @@ public class AtsFileServerFileResolver extends AbstractFileResolver {
       String output =
           createCommandExecutor()
               .run(
-                  Command.of("curl", "-C", "-", "-o", destination, "-fL", httpSourcePath)
+                  Command.of(createCurlCommand(destination, httpSourcePath))
                       .timeout(Duration.ofHours(2)));
       logger.atInfo().log(
           "Output of ats file server downloader for downloading file %s: %s",
@@ -153,5 +160,25 @@ public class AtsFileServerFileResolver extends AbstractFileResolver {
   @VisibleForTesting
   CommandExecutor createCommandExecutor() {
     return new CommandExecutor();
+  }
+
+  @VisibleForTesting
+  List<String> createCurlCommand(String destination, String httpSourcePath) {
+    // Add -C - to support download resume.
+    // Add -L to handle redirects.
+    List<String> command =
+        new ArrayList<>(Arrays.asList("curl", "-C", "-", "-o", destination, "-fL", httpSourcePath));
+    if (Flags.instance().tradefedCurlDownloadLimitRate.get() != null) {
+      String limitRate = Flags.instance().tradefedCurlDownloadLimitRate.get();
+      checkArgument(isLimitRateValue(limitRate), "Invalid curl download rate limit: %s", limitRate);
+      command.add("--limit-rate");
+      command.add(limitRate);
+    }
+    return command;
+  }
+
+  @VisibleForTesting
+  static boolean isLimitRateValue(String value) {
+    return LIMIT_RATE_PATTERN.matcher(value).matches();
   }
 }
