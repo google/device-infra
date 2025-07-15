@@ -79,6 +79,7 @@ public class AtsDdaSessionPlugin {
       ImmutableMap.of("namespace", TEST_MESSAGE_NAMESPACE, "type", "wake_up");
   private static final ImmutableMap<String, String> HEARTBEAT_TEST_MESSAGE =
       ImmutableMap.of("namespace", TEST_MESSAGE_NAMESPACE, "type", "extend_lease");
+  private static final String RUNNING_TEST_ID_PROPERTY_NAME = "dda_running_test_id";
 
   private final SessionInfo sessionInfo;
   private final TestMessageUtil testMessageUtil;
@@ -105,6 +106,11 @@ public class AtsDdaSessionPlugin {
   AtsDdaSessionPlugin(SessionInfo sessionInfo, TestMessageUtil testMessageUtil) {
     this.sessionInfo = sessionInfo;
     this.testMessageUtil = testMessageUtil;
+    // Recovers the running test id from the session property is this session is a resumed session.
+    this.startedTestId = sessionInfo.getSessionProperty(RUNNING_TEST_ID_PROPERTY_NAME).orElse(null);
+    if (startedTestId != null) {
+      logger.atInfo().log("Found running test id [%s] from the session property.", startedTestId);
+    }
   }
 
   @Subscribe
@@ -189,6 +195,7 @@ public class AtsDdaSessionPlugin {
     Optional<String> testIdToSendCancelTestMessage;
     synchronized (sessionLock) {
       startedTestId = event.getTest().locator().getId();
+      sessionInfo.putSessionProperty(RUNNING_TEST_ID_PROPERTY_NAME, startedTestId);
       testIdToSendCancelTestMessage = getTestIdToSendCancelTestMessage();
       if (testIdToSendCancelTestMessage.isPresent()) {
         cancelTestMessageSent = true;
