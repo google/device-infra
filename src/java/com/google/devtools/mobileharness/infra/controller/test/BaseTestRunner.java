@@ -300,7 +300,14 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
                   skipRunTest ? " and test running will be skipped" : "");
         }
       } else {
-        testInfo.log().atInfo().alsoTo(logger).log("Skip doPreRunTest because it is a resumed job");
+        testInfo
+            .log()
+            .atInfo()
+            .alsoTo(logger)
+            .log(
+                "Skip doPreRunTest because it is a resumed job, only initialize the test message"
+                    + " poster.");
+        initTestMessagePoster();
       }
 
       // Calls runTest().
@@ -620,27 +627,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
                 null));
 
     preRunTest(isTestSkipped, testInfo, allocation, newDeviceInfos, deviceFeatures);
-
-    // All subscribers have been registered now.
-    ImmutableList<MessageSubscribers> messageSubscribers = this.messageSubscribers.build();
-    testInfo
-        .log()
-        .atInfo()
-        .alsoTo(logger)
-        .log("Local test message subscribers: %s", messageSubscribers);
-    ImmutableList<InvalidMessageSubscriber> invalidMessageSubscribers =
-        messageSubscribers.stream()
-            .flatMap(subscribers -> subscribers.invalidMessageSubscribers().stream())
-            .collect(toImmutableList());
-    if (!invalidMessageSubscribers.isEmpty()) {
-      testInfo
-          .warnings()
-          .add(
-              InfraErrorId.TR_INVALID_TEST_MESSAGE_SUBSCRIBERS,
-              String.format("Invalid test message subscribers: %s", invalidMessageSubscribers));
-    }
-    messageSender.initializeLocalSubscribers(messageSubscribers);
-    testMessagePoster.asyncDisableAndHandleCache();
+    initTestMessagePoster();
 
     testInfo.log().atInfo().alsoTo(logger).log("Post TestStartedEvent to test %s", testLocator);
     // Event handlers in CLASS_INTERNAL:
@@ -686,6 +673,29 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
   @VisibleForTesting
   Allocation getOldAllocation() {
     return allocation;
+  }
+
+  private void initTestMessagePoster() {
+    // All subscribers have been registered now.
+    ImmutableList<MessageSubscribers> messageSubscribers = this.messageSubscribers.build();
+    testInfo
+        .log()
+        .atInfo()
+        .alsoTo(logger)
+        .log("Local test message subscribers: %s", messageSubscribers);
+    ImmutableList<InvalidMessageSubscriber> invalidMessageSubscribers =
+        messageSubscribers.stream()
+            .flatMap(subscribers -> subscribers.invalidMessageSubscribers().stream())
+            .collect(toImmutableList());
+    if (!invalidMessageSubscribers.isEmpty()) {
+      testInfo
+          .warnings()
+          .add(
+              InfraErrorId.TR_INVALID_TEST_MESSAGE_SUBSCRIBERS,
+              String.format("Invalid test message subscribers: %s", invalidMessageSubscribers));
+    }
+    messageSender.initializeLocalSubscribers(messageSubscribers);
+    testMessagePoster.asyncDisableAndHandleCache();
   }
 
   /**
@@ -1076,9 +1086,14 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
     @Override
     public void handleTestMessage(TestMessageInfo testMessageInfo) {
       // TODO: Supports multiple devices in test messages.
+      // TODO: Passes non-null deviceInfos here. It is not expected deviceInfos is
+      // null for the long-term.
       scopedEventBus.post(
           new TestMessageEvent(
-              testMessageInfo, testInfo, allocation, checkNotNull(deviceInfos).get(0)),
+              testMessageInfo,
+              testInfo,
+              allocation,
+              deviceInfos == null ? null : deviceInfos.get(0)),
           EventScope.TEST_MESSAGE);
     }
   }

@@ -16,8 +16,6 @@
 
 package com.google.wireless.qa.mobileharness.shared.comm.message.event;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
 import com.google.devtools.mobileharness.shared.util.comm.messaging.message.TestMessageInfo;
 import com.google.protobuf.ExtensionRegistry;
 import com.google.protobuf.Message;
@@ -40,7 +38,7 @@ public class TestMessageEvent extends TestEvent implements DeviceCheckedTestEven
       TestInfo testInfo,
       Allocation allocation,
       DeviceInfo deviceInfo) {
-    super(testInfo, allocation, checkNotNull(deviceInfo));
+    super(testInfo, allocation, deviceInfo);
     this.testMessageInfo = testMessageInfo;
   }
 

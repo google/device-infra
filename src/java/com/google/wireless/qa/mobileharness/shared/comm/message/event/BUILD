@@ -36,6 +36,5 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/allocation",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "@com_google_protobuf//:protobuf_java",
-        "@maven//:com_google_guava_guava",
     ],
 )
