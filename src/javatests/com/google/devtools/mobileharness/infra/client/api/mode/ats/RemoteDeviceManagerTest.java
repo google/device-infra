@@ -70,6 +70,7 @@ import com.google.devtools.mobileharness.infra.client.api.mode.ats.LabRecordMana
 import com.google.devtools.mobileharness.infra.client.api.mode.ats.LabRecordManager.LabRecordData;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.HeartbeatLabRequest;
+import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignOutDeviceRequest;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignUpLabRequest;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignUpLabRequest.Device;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.grpc.LabSyncGrpcStub;
@@ -702,5 +703,56 @@ public class RemoteDeviceManagerTest {
                 .setName("host_name")
                 .setValue(SIGN_UP_LAB_REQUEST.getLabHostName())
                 .build());
+  }
+
+  @Test
+  public void getDeviceInfos_updateDuplicatedDeviceUuidInMultipleLabs_theSecondLabIsRejected()
+      throws Exception {
+    SignUpLabRequest reqLab1 = SIGN_UP_LAB_REQUEST;
+    SignUpLabRequest reqLab2 =
+        SIGN_UP_LAB_REQUEST.toBuilder()
+            .setLabIp("fake_lab_ip2")
+            .setLabHostName("fake_lab_host_name2")
+            .build();
+
+    labSyncGrpcStub.signUpLab(reqLab1);
+    labSyncGrpcStub.signUpLab(reqLab2);
+
+    ImmutableList<DeviceQuery.DeviceInfo> deviceInfos = remoteDeviceManager.getDeviceInfos();
+    assertThat(deviceInfos).hasSize(1);
+    DeviceQuery.DeviceInfo deviceInfo = deviceInfos.get(0);
+    assertThat(deviceInfo.getDimensionList())
+        .contains(Dimension.newBuilder().setName("host_ip").setValue(reqLab1.getLabIp()).build());
+    assertThat(deviceInfo.getDimensionList())
+        .contains(
+            Dimension.newBuilder().setName("host_name").setValue(reqLab1.getLabHostName()).build());
+  }
+
+  @Test
+  public void getDeviceInfos_moveDeviceToAnotherLab_recordTheSecondLab() throws Exception {
+    SignUpLabRequest reqLab1 = SIGN_UP_LAB_REQUEST;
+    SignOutDeviceRequest signOutDeviceRequest =
+        SignOutDeviceRequest.newBuilder()
+            .setDeviceId(reqLab1.getDevice(0).getUuid())
+            .setLabHostName(reqLab1.getLabHostName())
+            .build();
+    SignUpLabRequest reqLab2 =
+        SIGN_UP_LAB_REQUEST.toBuilder()
+            .setLabIp("fake_lab_ip2")
+            .setLabHostName("fake_lab_host_name2")
+            .build();
+
+    labSyncGrpcStub.signUpLab(reqLab1);
+    labSyncGrpcStub.signOutDevice(signOutDeviceRequest).get();
+    labSyncGrpcStub.signUpLab(reqLab2);
+
+    ImmutableList<DeviceQuery.DeviceInfo> deviceInfos = remoteDeviceManager.getDeviceInfos();
+    assertThat(deviceInfos).hasSize(1);
+    DeviceQuery.DeviceInfo deviceInfo = deviceInfos.get(0);
+    assertThat(deviceInfo.getDimensionList())
+        .contains(Dimension.newBuilder().setName("host_ip").setValue(reqLab2.getLabIp()).build());
+    assertThat(deviceInfo.getDimensionList())
+        .contains(
+            Dimension.newBuilder().setName("host_name").setValue(reqLab2.getLabHostName()).build());
   }
 }

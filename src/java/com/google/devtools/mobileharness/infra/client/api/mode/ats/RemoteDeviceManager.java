@@ -331,16 +331,26 @@ class RemoteDeviceManager implements LabInfoProvider {
             duplicatedUuids.add(device.getUuid());
             continue;
           }
+
+          String uuid = device.getUuid();
           // Checks duplicated UUID.
-          // TODO: Handles DisconnectedDevice and MissingDevice with duplicated UUID.
-          if (deviceUuids.containsKey(device.getUuid())) {
-            DeviceKey otherDeviceKey = deviceUuids.get(device.getUuid());
+          if (deviceUuids.containsKey(uuid)) {
+            DeviceKey otherDeviceKey = deviceUuids.get(uuid);
             if (!otherDeviceKey.equals(deviceKey)) {
-              logger.atWarning().log(
-                  "Duplicated UUID, reject it, uuid=[%s], new_device=%s, existing_device=%s",
-                  device.getUuid(), deviceKey, otherDeviceKey);
-              duplicatedUuids.add(device.getUuid());
-              continue;
+              // If the old device is MISSING, remove it from cache and add the new device.
+              if (devices.containsKey(otherDeviceKey)
+                  && devices.get(otherDeviceKey).statusFromLab.equals(DeviceStatus.MISSING)) {
+                logger.atInfo().log(
+                    "The existing device is MISSING, remove it, device=%s", otherDeviceKey);
+                devices.remove(otherDeviceKey);
+                deviceUuids.remove(uuid);
+              } else {
+                logger.atWarning().log(
+                    "Duplicated UUID, reject it, uuid=[%s], new_device=%s, existing_device=%s",
+                    device.getUuid(), deviceKey, otherDeviceKey);
+                duplicatedUuids.add(uuid);
+                continue;
+              }
             }
           }
 
