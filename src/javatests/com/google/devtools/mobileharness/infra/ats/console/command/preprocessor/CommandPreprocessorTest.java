@@ -81,6 +81,18 @@ public final class CommandPreprocessorTest {
   }
 
   @Test
+  public void preprocess_runCommand_withAlias() {
+    aliasManager.addAlias("usb_tests", "cts -m CtsUsbTests");
+    ImmutableList<String> tokens = ImmutableList.of("run", "command", "usb_tests");
+
+    PreprocessingResult result = preprocessor.preprocess(tokens);
+
+    assertThat(result.modifiedCommands())
+        .hasValue(ImmutableList.of(ImmutableList.of("run", "cts", "-m", "CtsUsbTests")));
+    assertThat(result.errorMessage()).isEmpty();
+  }
+
+  @Test
   public void preprocess_runCommandAndExit() {
     ImmutableList<String> tokens =
         ImmutableList.of("run", "commandAndExit", "cts", "-m", "CtsTest");
@@ -91,6 +103,21 @@ public final class CommandPreprocessorTest {
         .hasValue(
             ImmutableList.of(
                 ImmutableList.of("run", "cts", "-m", "CtsTest"),
+                ImmutableList.of("exit", "-c", "-s")));
+    assertThat(result.errorMessage()).isEmpty();
+  }
+
+  @Test
+  public void preprocess_runCommandAndExit_withAlias() {
+    aliasManager.addAlias("usb_tests", "cts -m CtsUsbTests");
+    ImmutableList<String> tokens = ImmutableList.of("run", "commandAndExit", "usb_tests");
+
+    PreprocessingResult result = preprocessor.preprocess(tokens);
+
+    assertThat(result.modifiedCommands())
+        .hasValue(
+            ImmutableList.of(
+                ImmutableList.of("run", "cts", "-m", "CtsUsbTests"),
                 ImmutableList.of("exit", "-c", "-s")));
     assertThat(result.errorMessage()).isEmpty();
   }

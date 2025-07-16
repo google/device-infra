@@ -70,12 +70,24 @@ public class CommandPreprocessor {
     if (!equalsIgnoreCase(tokens.get(0), "run")) {
       return PreprocessingResult.of(/* modifiedCommands= */ null, /* errorMessage= */ null);
     }
+
+    // Try to resolve the alias (if any) first.
+    PreprocessingResult aliasResolutionResult = resolveAlias(tokens);
+    if (aliasResolutionResult.errorMessage().isPresent()) {
+      return aliasResolutionResult;
+    }
+    Optional<ImmutableList<ImmutableList<String>>> modifiedCommands =
+        aliasResolutionResult.modifiedCommands();
+    if (modifiedCommands.isPresent()) {
+      tokens = modifiedCommands.get().get(0);
+    }
+
     return switch (tokens.get(1)) {
       case "command" -> preprocessRunCommandCommand(tokens, /* exitAfterRun= */ false);
       case "cmdfile" -> preprocessRunCmdfileCommand(tokens, /* exitAfterRun= */ false);
       case "commandAndExit" -> preprocessRunCommandCommand(tokens, /* exitAfterRun= */ true);
       case "cmdfileAndExit" -> preprocessRunCmdfileCommand(tokens, /* exitAfterRun= */ true);
-      default -> resolveAlias(tokens);
+      default -> aliasResolutionResult;
     };
   }
 
