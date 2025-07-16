@@ -46,6 +46,8 @@ public class DeviceAdminUtil {
   private static final String ACTION_TOGGLE_ON = "TOGGLE_ON";
   private static final String ACTION_TOGGLE_OFF = "TOGGLE_OFF";
   private static final String ACTION_HIDE_PACKAGES = "HIDE_PACKAGES";
+  private static final String ACTION_SETUP_PASSWORD_TOKEN = "SETUP_PASSWORD_TOKEN";
+  private static final String ACTION_RESET_PASSWORD = "RESET_PASSWORD";
 
   public DeviceAdminUtil() {
     this(
@@ -155,6 +157,51 @@ public class DeviceAdminUtil {
   }
 
   /**
+   * Sets up the password token for resetting the password.
+   *
+   * <p>This action will set up the password token for resetting the password. The password token
+   * will be used to reset the password.
+   *
+   * @param deviceId the serial number of the device
+   */
+  public void setupPasswordToken(String deviceId)
+      throws MobileHarnessException, InterruptedException {
+    logger.atInfo().log("Setting up password token on device %s", deviceId);
+    try {
+      Command command = createBasicCommand(deviceId, ACTION_SETUP_PASSWORD_TOKEN);
+      exec(deviceId, command);
+    } catch (CommandException e) {
+      logger.atWarning().log(
+          "Fail to set up password token on device %s. Error message: %s",
+          deviceId, e.getMessage());
+      throw new MobileHarnessException(
+          AndroidErrorId.DEVICE_ADMIN_UTIL_SETUP_PASSWORD_TOKEN_ERROR,
+          "Fail to set up password token on device",
+          e);
+    }
+  }
+
+  /**
+   * Resets the password of the device.
+   *
+   * @param deviceId the serial number of the device
+   */
+  public void resetPassword(String deviceId) throws MobileHarnessException, InterruptedException {
+    logger.atInfo().log("Resetting password on device %s", deviceId);
+    try {
+      Command command = createBasicCommand(deviceId, ACTION_RESET_PASSWORD);
+      exec(deviceId, command);
+    } catch (CommandException e) {
+      logger.atWarning().log(
+          "Fail to reset password on device %s. Error message: %s", deviceId, e.getMessage());
+      throw new MobileHarnessException(
+          AndroidErrorId.DEVICE_ADMIN_UTIL_RESET_PASSWORD_ERROR,
+          "Fail to reset password on device",
+          e);
+    }
+  }
+
+  /**
    * Sets up and locks the device with device admin.
    *
    * <p>This action will install the device admin app and lock the device.
@@ -166,7 +213,22 @@ public class DeviceAdminUtil {
     install(deviceId);
     enable(deviceId);
     hidePackages(deviceId);
+    setupPasswordToken(deviceId);
     lock(deviceId);
+  }
+
+  /**
+   * Cleans up and unlocks the device with device admin for resetting the device.
+   *
+   * <p>This action will unlock the device and reset the password.
+   *
+   * @param deviceId the serial number of the device
+   */
+  public void cleanupAndUnlock(String deviceId)
+      throws MobileHarnessException, InterruptedException {
+    logger.atInfo().log("Cleanup and unlock device %s", deviceId);
+    unlock(deviceId);
+    resetPassword(deviceId);
   }
 
   /**

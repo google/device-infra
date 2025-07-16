@@ -213,6 +213,17 @@ public final class DeviceAdminUtilTest {
                 JAVA_BIN,
                 "-jar",
                 DEVICE_ADMIN_CLI_PATH,
+                "--action=SETUP_PASSWORD_TOKEN",
+                "--serial=" + DEVICE_ID,
+                "--kms_key_name=" + KMS_KEY_NAME,
+                "--credentials_path=" + CRED_PATH));
+
+    verify(commandExecutor)
+        .run(
+            Command.of(
+                JAVA_BIN,
+                "-jar",
+                DEVICE_ADMIN_CLI_PATH,
                 "--action=LOCK",
                 "--serial=" + DEVICE_ID,
                 "--kms_key_name=" + KMS_KEY_NAME,
@@ -278,5 +289,85 @@ public final class DeviceAdminUtilTest {
     MobileHarnessException e =
         assertThrows(MobileHarnessException.class, () -> deviceAdminUtil.hidePackages(DEVICE_ID));
     assertThat(e.getErrorId()).isEqualTo(AndroidErrorId.DEVICE_ADMIN_UTIL_HIDE_PACKAGES_ERROR);
+  }
+
+  @Test
+  public void setupPasswordToken_success_commandExecuted() throws Exception {
+    deviceAdminUtil.setupPasswordToken(DEVICE_ID);
+
+    verify(commandExecutor)
+        .run(
+            Command.of(
+                JAVA_BIN,
+                "-jar",
+                DEVICE_ADMIN_CLI_PATH,
+                "--action=SETUP_PASSWORD_TOKEN",
+                "--serial=" + DEVICE_ID,
+                "--kms_key_name=" + KMS_KEY_NAME,
+                "--credentials_path=" + CRED_PATH));
+  }
+
+  @Test
+  public void setupPasswordToken_commandFail_throwException() throws Exception {
+    when(commandExecutor.run(any())).thenThrow(CommandException.class);
+
+    MobileHarnessException e =
+        assertThrows(
+            MobileHarnessException.class, () -> deviceAdminUtil.setupPasswordToken(DEVICE_ID));
+    assertThat(e.getErrorId())
+        .isEqualTo(AndroidErrorId.DEVICE_ADMIN_UTIL_SETUP_PASSWORD_TOKEN_ERROR);
+  }
+
+  @Test
+  public void resetPassword_success_commandExecuted() throws Exception {
+    deviceAdminUtil.resetPassword(DEVICE_ID);
+
+    verify(commandExecutor)
+        .run(
+            Command.of(
+                JAVA_BIN,
+                "-jar",
+                DEVICE_ADMIN_CLI_PATH,
+                "--action=RESET_PASSWORD",
+                "--serial=" + DEVICE_ID,
+                "--kms_key_name=" + KMS_KEY_NAME,
+                "--credentials_path=" + CRED_PATH));
+  }
+
+  @Test
+  public void cleanupAndUnlock_success_commandExecuted() throws Exception {
+    deviceAdminUtil.cleanupAndUnlock(DEVICE_ID);
+
+    verify(commandExecutor)
+        .run(
+            Command.of(
+                JAVA_BIN,
+                "-jar",
+                DEVICE_ADMIN_CLI_PATH,
+                "--action=UNLOCK",
+                "--serial=" + DEVICE_ID,
+                "--kms_key_name=" + KMS_KEY_NAME,
+                "--credentials_path=" + CRED_PATH,
+                "--admin_app_path=" + ADMIN_APP_PATH));
+
+    verify(commandExecutor)
+        .run(
+            Command.of(
+                JAVA_BIN,
+                "-jar",
+                DEVICE_ADMIN_CLI_PATH,
+                "--action=RESET_PASSWORD",
+                "--serial=" + DEVICE_ID,
+                "--kms_key_name=" + KMS_KEY_NAME,
+                "--credentials_path=" + CRED_PATH));
+  }
+
+  @Test
+  public void resetPassword_commandFail_throwException() throws Exception {
+    when(commandExecutor.run(any())).thenThrow(CommandException.class);
+
+    MobileHarnessException e =
+        assertThrows(MobileHarnessException.class, () -> deviceAdminUtil.resetPassword(DEVICE_ID));
+    assertThat(e.getErrorId()).isEqualTo(AndroidErrorId.DEVICE_ADMIN_UTIL_RESET_PASSWORD_ERROR);
   }
 }
