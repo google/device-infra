@@ -354,6 +354,17 @@ public class Flags {
       converter = Flag.StringConverter.class)
   public Flag<String> atsConsoleOlcServerPath = atsConsoleOlcServerPathDefault;
 
+  private static final Flag<Boolean> atsConsoleOlcServerSingleProcessModeDefault =
+      Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--ats_console_olc_server_single_process_mode",
+      description =
+          "Whether ATS console and OLC server are in the single process. Default is false.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> atsConsoleOlcServerSingleProcessMode =
+      atsConsoleOlcServerSingleProcessModeDefault;
+
   private static final Flag<Duration> atsConsoleOlcServerStartingTimeoutDefault =
       DurationFlag.value(Duration.ofMinutes(1L));
 
