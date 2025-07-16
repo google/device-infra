@@ -22,6 +22,7 @@ import com.google.devtools.mobileharness.shared.util.sharedpool.SharedPoolJobUti
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Value;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobScheduleUnit;
+import com.google.wireless.qa.mobileharness.shared.model.job.in.SubDeviceSpec;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryFilter;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DimensionFilter;
 import java.util.List;
@@ -47,16 +48,17 @@ public class DeviceFilter {
   }
 
   public DeviceQueryFilter getFilter(JobScheduleUnit job) {
-    return getFilter(job, ImmutableList.of());
+    return getFilter(job, ImmutableList.of(), job.subDeviceSpecs().getAllSubDevices().get(0));
   }
 
   /**
-   * Gets the filters to pre-filtering the device candidates for diagnostic the allocation failures
-   * of a job.
+   * Gets the {@code DeviceQueryFilter} to pre-filter the device candidates for diagnosing the
+   * allocation failures of a job.
    */
-  public DeviceQueryFilter getFilter(JobScheduleUnit job, List<FilterType> filterTypes) {
+  public DeviceQueryFilter getFilter(
+      JobScheduleUnit job, List<FilterType> filterTypes, SubDeviceSpec subDeviceSpec) {
     DeviceQueryFilter.Builder filter = DeviceQueryFilter.newBuilder();
-    filter.addTypeRegex(job.type().getDevice());
+    filter.addTypeRegex(subDeviceSpec.type());
     if (SharedPoolJobUtil.isUsingSharedPool(job)) {
       filter.addDimensionFilter(
           DimensionFilter.newBuilder()
@@ -70,10 +72,11 @@ public class DeviceFilter {
               filter.addOwnerRegex("public|" + job.jobUser().getRunAs());
               break;
             case DECORATOR:
-              filter.addAllDecoratorRegex(job.type().getDecoratorList());
+              filter.addAllDecoratorRegex(subDeviceSpec.decorators().getAll());
               break;
             case DIMENSION:
-              job.dimensions()
+              subDeviceSpec
+                  .dimensions()
                   .getAll()
                   .forEach(
                       (name, value) ->
@@ -90,8 +93,6 @@ public class DeviceFilter {
               break;
             case STATUS:
               filter.addStatus("idle");
-              break;
-            default:
               break;
           }
         });

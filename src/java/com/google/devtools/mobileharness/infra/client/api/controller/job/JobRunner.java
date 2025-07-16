@@ -320,7 +320,8 @@ public class JobRunner implements Runnable {
                         FilterType.DRIVER,
                         FilterType.DECORATOR,
                         FilterType.DIMENSION,
-                        FilterType.STATUS));
+                        FilterType.STATUS),
+                    jobInfo.subDeviceSpecs().getAllSubDevices().get(0));
         startQueryDeviceLatency =
             execMode.getClass().getSimpleName().equals("LocalMode")
                 ? LOCAL_FAIL_FAST_START_QUERY_DEVICE_LATENCY
@@ -337,7 +338,8 @@ public class JobRunner implements Runnable {
                         FilterType.ACCESS,
                         FilterType.DRIVER,
                         FilterType.DECORATOR,
-                        FilterType.DIMENSION));
+                        FilterType.DIMENSION),
+                    jobInfo.subDeviceSpecs().getAllSubDevices().get(0));
         startQueryDeviceLatency =
             execMode.getClass().getSimpleName().equals("LocalMode")
                 ? LOCAL_FAIL_FAST_START_QUERY_DEVICE_LATENCY
@@ -354,7 +356,8 @@ public class JobRunner implements Runnable {
                         FilterType.ACCESS,
                         FilterType.DRIVER,
                         FilterType.DECORATOR,
-                        FilterType.DIMENSION));
+                        FilterType.DIMENSION),
+                    jobInfo.subDeviceSpecs().getAllSubDevices().get(0));
         startQueryDeviceLatency = NORMAL_START_QUERY_DEVICE_LATENCY;
         queryDeviceInterval = NORMAL_QUERY_DEVICE_INTERVAL;
         maxQueryDeviceTimes = NORMAL_MAX_QUERY_DEVICE_TIMES;
