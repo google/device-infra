@@ -47,7 +47,7 @@ public class DeviceFilter {
     STATUS,
   }
 
-  public DeviceQueryFilter getFilter(JobScheduleUnit job) {
+  public static DeviceQueryFilter getFilter(JobScheduleUnit job) {
     return getFilter(job, ImmutableList.of(), job.subDeviceSpecs().getAllSubDevices().get(0));
   }
 
@@ -55,7 +55,7 @@ public class DeviceFilter {
    * Gets the {@code DeviceQueryFilter} to pre-filter the device candidates for diagnosing the
    * allocation failures of a job.
    */
-  public DeviceQueryFilter getFilter(
+  public static DeviceQueryFilter getFilter(
       JobScheduleUnit job, List<FilterType> filterTypes, SubDeviceSpec subDeviceSpec) {
     DeviceQueryFilter.Builder filter = DeviceQueryFilter.newBuilder();
     filter.addTypeRegex(subDeviceSpec.type());
@@ -103,7 +103,7 @@ public class DeviceFilter {
   }
 
   /** Gets the filter from the device dimensions. */
-  public DeviceQueryFilter getFilter(Map<String, String> dimensions) {
+  public static DeviceQueryFilter getFilter(Map<String, String> dimensions) {
     DeviceQueryFilter.Builder filter = DeviceQueryFilter.newBuilder();
     dimensions
         .entrySet()
@@ -126,7 +126,7 @@ public class DeviceFilter {
    *   <li>Remove the "<code>regex:</code>" prefix.
    * </ol>
    */
-  private Optional<String> convertForDeviceQueryApi(String jobDimensionValue) {
+  private static Optional<String> convertForDeviceQueryApi(String jobDimensionValue) {
     switch (jobDimensionValue) {
       case Value.EXCLUDE:
         return Optional.empty();

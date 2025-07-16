@@ -32,24 +32,18 @@ import java.util.Optional;
 public final class MultiDeviceDiagnostician implements AllocationDiagnostician {
 
   private final LabAssessor assessor;
-  private final DeviceFilter deviceFilter;
   private final DeviceQuerier deviceQuerier;
   private final JobScheduleUnit job;
 
   private volatile LabReport lastReport;
 
   public MultiDeviceDiagnostician(JobScheduleUnit job, DeviceQuerier deviceQuerier) {
-    this(new LabAssessor(), new DeviceFilter(), deviceQuerier, job);
+    this(new LabAssessor(), deviceQuerier, job);
   }
 
   @VisibleForTesting
-  MultiDeviceDiagnostician(
-      LabAssessor assessor,
-      DeviceFilter deviceFilter,
-      DeviceQuerier deviceQuerier,
-      JobScheduleUnit job) {
+  MultiDeviceDiagnostician(LabAssessor assessor, DeviceQuerier deviceQuerier, JobScheduleUnit job) {
     this.assessor = assessor;
-    this.deviceFilter = deviceFilter;
     this.deviceQuerier = deviceQuerier;
     this.job = job;
   }
@@ -71,7 +65,7 @@ public final class MultiDeviceDiagnostician implements AllocationDiagnostician {
   @Override
   public LabReport diagnoseJob(boolean noPerfectCandidate)
       throws MobileHarnessException, InterruptedException {
-    DeviceQueryFilter filter = deviceFilter.getFilter(job);
+    DeviceQueryFilter filter = DeviceFilter.getFilter(job);
     List<LabQueryResult> labResults = deviceQuerier.queryDevicesByLab(filter);
 
     LabReport report;
