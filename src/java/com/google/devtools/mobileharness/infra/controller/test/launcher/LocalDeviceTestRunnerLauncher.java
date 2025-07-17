@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.controller.test.launcher;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.getUnchecked;
 
@@ -40,7 +41,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
-import java.util.stream.Collectors;
 
 /** Local device test runner launcher which uses {@code TestExecutor}s to launch the test. */
 public class LocalDeviceTestRunnerLauncher extends TestRunnerLauncher<TestRunner> {
@@ -56,8 +56,8 @@ public class LocalDeviceTestRunnerLauncher extends TestRunnerLauncher<TestRunner
    */
   private class PrimaryDeviceTestExecutor extends AbstractDeviceTestExecutor {
 
-    private PrimaryDeviceTestExecutor(TestExecutor deviceRunner) {
-      super(deviceRunner);
+    private PrimaryDeviceTestExecutor(TestExecutor testExecutor) {
+      super(testExecutor);
     }
 
     @Override
@@ -79,7 +79,7 @@ public class LocalDeviceTestRunnerLauncher extends TestRunnerLauncher<TestRunner
         logger.atInfo().log(
             "Executing test [%s] on its primary device runner [%s]",
             getTestRunner().getTestExecutionUnit().locator().id(),
-            getDeviceRunner().getDevice().getDeviceId());
+            getTestExecutor().getDevice().getDeviceId());
         TestExecutionResult result = LocalDeviceTestRunnerLauncher.this.executeTest();
         resultFuture.set(result);
         return result;
@@ -96,8 +96,8 @@ public class LocalDeviceTestRunnerLauncher extends TestRunnerLauncher<TestRunner
    */
   private class SecondaryDeviceTestExecutor extends AbstractDeviceTestExecutor {
 
-    private SecondaryDeviceTestExecutor(TestExecutor deviceRunner) {
-      super(deviceRunner);
+    private SecondaryDeviceTestExecutor(TestExecutor testExecutor) {
+      super(testExecutor);
     }
 
     @Override
@@ -113,7 +113,7 @@ public class LocalDeviceTestRunnerLauncher extends TestRunnerLauncher<TestRunner
       // Waits until the test finished.
       logger.atInfo().log(
           "Secondary device runner [%s] of test [%s] is waiting test execution result",
-          getDeviceRunner().getDevice().getDeviceId(),
+          getTestExecutor().getDevice().getDeviceId(),
           getTestRunner().getTestExecutionUnit().locator().id());
       return getUnchecked(resultFuture);
     }
@@ -122,14 +122,14 @@ public class LocalDeviceTestRunnerLauncher extends TestRunnerLauncher<TestRunner
   /** Base class of {@link LocalDeviceTestExecutor}. */
   private abstract class AbstractDeviceTestExecutor implements LocalDeviceTestExecutor {
 
-    private final TestExecutor deviceRunner;
+    private final TestExecutor testExecutor;
 
-    private AbstractDeviceTestExecutor(TestExecutor deviceRunner) {
-      this.deviceRunner = deviceRunner;
+    private AbstractDeviceTestExecutor(TestExecutor testExecutor) {
+      this.testExecutor = testExecutor;
     }
 
-    protected final TestExecutor getDeviceRunner() {
-      return deviceRunner;
+    protected final TestExecutor getTestExecutor() {
+      return testExecutor;
     }
 
     @Override
@@ -156,14 +156,14 @@ public class LocalDeviceTestRunnerLauncher extends TestRunnerLauncher<TestRunner
   private volatile boolean hasExecuted;
 
   public LocalDeviceTestRunnerLauncher(
-      TestExecutor primaryDeviceRunner, List<? extends TestExecutor> secondaryDeviceRunners) {
+      TestExecutor primaryTestExecutor, List<? extends TestExecutor> secondaryTestExecutors) {
     this.testExecutors =
         ImmutableList.<AbstractDeviceTestExecutor>builder()
-            .add(new PrimaryDeviceTestExecutor(primaryDeviceRunner))
+            .add(new PrimaryDeviceTestExecutor(primaryTestExecutor))
             .addAll(
-                secondaryDeviceRunners.stream()
+                secondaryTestExecutors.stream()
                     .map(SecondaryDeviceTestExecutor::new)
-                    .collect(Collectors.toList()))
+                    .collect(toImmutableList()))
             .build();
     this.barrier = new CyclicBarrier(testExecutors.size());
   }
@@ -173,14 +173,14 @@ public class LocalDeviceTestRunnerLauncher extends TestRunnerLauncher<TestRunner
     logger.atInfo().log(
         "Reserving devices %s for test [%s]",
         testExecutors.stream()
-            .map(AbstractDeviceTestExecutor::getDeviceRunner)
+            .map(AbstractDeviceTestExecutor::getTestExecutor)
             .map(TestExecutor::getDevice)
             .map(Device::getDeviceId)
-            .collect(Collectors.toList()),
+            .collect(toImmutableList()),
         getTestRunner().getTestExecutionUnit().locator().id());
     try {
       for (AbstractDeviceTestExecutor testExecutor : testExecutors) {
-        testExecutor.getDeviceRunner().reserve(testExecutor);
+        testExecutor.getTestExecutor().reserve(testExecutor);
       }
     } catch (MobileHarnessException e) {
       logger.atInfo().log("Failed to reserve all devices, cancel reservations");
@@ -192,7 +192,7 @@ public class LocalDeviceTestRunnerLauncher extends TestRunnerLauncher<TestRunner
 
   @Override
   protected void killTest() {
-    testExecutors.forEach(testExecutor -> testExecutor.getDeviceRunner().cancel(testExecutor));
+    testExecutors.forEach(testExecutor -> testExecutor.getTestExecutor().cancel(testExecutor));
   }
 
   @Override
@@ -207,10 +207,10 @@ public class LocalDeviceTestRunnerLauncher extends TestRunnerLauncher<TestRunner
     boolean allDeviceReserved = true;
     List<TestExecutor> disconnectedDevices = new ArrayList<>();
     for (AbstractDeviceTestExecutor testExecutor : testExecutors) {
-      if (!(testExecutor.getDeviceRunner().isAlive()
-          && testExecutor.getDeviceRunner().getTest() == testExecutor)) {
+      if (!(testExecutor.getTestExecutor().isAlive()
+          && testExecutor.getTestExecutor().getTest() == testExecutor)) {
         allDeviceReserved = false;
-        disconnectedDevices.add(testExecutor.getDeviceRunner());
+        disconnectedDevices.add(testExecutor.getTestExecutor());
       }
     }
     if (allDeviceReserved) {
@@ -226,7 +226,7 @@ public class LocalDeviceTestRunnerLauncher extends TestRunnerLauncher<TestRunner
                   disconnectedDevices.stream()
                       .map(TestExecutor::getDevice)
                       .map(Device::getDeviceId)
-                      .collect(Collectors.toList()))));
+                      .collect(toImmutableList()))));
     }
     return false;
   }

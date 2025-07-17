@@ -181,10 +181,10 @@ public class PrepareTestServiceImpl {
         versionChecker.checkStub(req.getVersionCheckRequest());
 
     // Gets TestExecutors.
-    List<TestExecutor> deviceRunners = getDeviceRunnersUntilReady(req.getDeviceIdList());
+    List<TestExecutor> testExecutors = getTestExecutorsUntilReady(req.getDeviceIdList());
 
     // Checks the job feature.
-    checkJobFeature(req.getJob().getJobFeature(), deviceRunners);
+    checkJobFeature(req.getJob().getJobFeature(), testExecutors);
 
     // Creates JobExecutionUnit if absent.
     JobExecutionUnit jobExecutionUnit = createAndAddJobIfAbsent(req.getJob());
@@ -193,12 +193,12 @@ public class PrepareTestServiceImpl {
     TestExecutionUnit testExecutionUnit = createTestExecutionUnit(req.getTest(), jobExecutionUnit);
 
     ImmutableList<Device> devices =
-        deviceRunners.stream().map(TestExecutor::getDevice).collect(toImmutableList());
+        testExecutors.stream().map(TestExecutor::getDevice).collect(toImmutableList());
 
     // Creates TestRunnerLauncher.
     TestRunnerLauncher<? super ProxyTestRunner> launcher =
         new LocalDeviceTestRunnerLauncher(
-            deviceRunners.get(0), deviceRunners.stream().skip(1L).collect(toImmutableList()));
+            testExecutors.get(0), testExecutors.stream().skip(1L).collect(toImmutableList()));
 
     // Creates Allocation.
     Allocation allocation =
@@ -208,7 +208,7 @@ public class PrepareTestServiceImpl {
                 .map(deviceId -> DeviceLocator.of(deviceId, LabLocator.LOCALHOST))
                 .collect(toImmutableList()));
 
-    List<String> decorators =
+    ImmutableList<String> decorators =
         req.getJob().getJobFeature().getDeviceRequirements().getDeviceRequirementList().stream()
             .flatMap(deviceRequirementList -> deviceRequirementList.getDecoratorList().stream())
             .collect(toImmutableList());
@@ -257,7 +257,7 @@ public class PrepareTestServiceImpl {
         CreateTestResponse.newBuilder()
             .setVersionCheckResponse(versionCheckResponse)
             .addAllDeviceFeature(
-                deviceRunners.stream()
+                testExecutors.stream()
                     .map(TestExecutor::getDevice)
                     .map(Device::toFeature)
                     .collect(toImmutableList()))
@@ -446,7 +446,7 @@ public class PrepareTestServiceImpl {
     return new TestExecutionUnit(testLocator, testTiming, job);
   }
 
-  private List<TestExecutor> getDeviceRunnersUntilReady(List<String> deviceIds)
+  private List<TestExecutor> getTestExecutorsUntilReady(List<String> deviceIds)
       throws MobileHarnessException, InterruptedException {
     // Waits for the device to be ready, since the device maybe INIT in LabServer.
     Clock clock = Clock.systemUTC();
@@ -455,7 +455,7 @@ public class PrepareTestServiceImpl {
     int attempts = 0;
     while (true) {
       try {
-        return getDeviceRunners(deviceIds);
+        return getTestExecutors(deviceIds);
       } catch (MobileHarnessException e) {
         if (clock.instant().isAfter(expireTime)
             || (e.getErrorId() != InfraErrorId.LAB_RPC_PREPARE_TEST_DEVICE_NOT_ALIVE
@@ -470,22 +470,22 @@ public class PrepareTestServiceImpl {
     }
   }
 
-  private List<TestExecutor> getDeviceRunners(List<String> deviceIds)
+  private List<TestExecutor> getTestExecutors(List<String> deviceIds)
       throws MobileHarnessException {
-    List<TestExecutor> deviceRunners = new ArrayList<>();
+    List<TestExecutor> testExecutors = new ArrayList<>();
     for (String deviceId : deviceIds) {
-      TestExecutor deviceRunner = testExecutorProvider.getTestExecutorForDeviceId(deviceId);
+      TestExecutor testExecutor = testExecutorProvider.getTestExecutorForDeviceId(deviceId);
       MobileHarnessExceptions.check(
-          deviceRunner != null,
+          testExecutor != null,
           InfraErrorId.LAB_RPC_PREPARE_TEST_DEVICE_NOT_FOUND,
           () -> String.format("Device [%s] does not exist", deviceId));
       MobileHarnessExceptions.check(
-          deviceRunner.isAlive(),
+          testExecutor.isAlive(),
           InfraErrorId.LAB_RPC_PREPARE_TEST_DEVICE_NOT_ALIVE,
           () -> String.format("Device [%s] is not alive when preparing test", deviceId));
-      deviceRunners.add(deviceRunner);
+      testExecutors.add(testExecutor);
     }
-    return deviceRunners;
+    return testExecutors;
   }
 
   private ProxyTestRunner createTestRunner(

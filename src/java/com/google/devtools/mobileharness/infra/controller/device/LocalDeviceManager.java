@@ -251,8 +251,9 @@ public class LocalDeviceManager extends BaseDeviceStatusProvider
   }
 
   @Override
+  @Nullable
   public TestExecutor getTestExecutorForDeviceId(String deviceId) {
-    return localDeviceDispatch.getDeviceRunner(deviceId);
+    return getLocalDeviceRunner(deviceId);
   }
 
   @Override

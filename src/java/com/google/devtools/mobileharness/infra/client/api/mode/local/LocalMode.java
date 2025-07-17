@@ -38,7 +38,7 @@ import com.google.devtools.mobileharness.infra.client.api.controller.device.Devi
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
 import com.google.devtools.mobileharness.infra.controller.device.DeviceIdManager;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceManager;
-import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceRunner;
+import com.google.devtools.mobileharness.infra.controller.device.TestExecutor;
 import com.google.devtools.mobileharness.infra.controller.device.bootstrap.DetectorDispatcherSelector;
 import com.google.devtools.mobileharness.infra.controller.device.bootstrap.DetectorDispatcherSelector.Component;
 import com.google.devtools.mobileharness.infra.controller.device.bootstrap.DetectorsAndDispatchers;
@@ -281,21 +281,21 @@ public class LocalMode implements ExecMode {
               .collect(toImmutableList());
       launcher = new ThreadPoolTestRunnerLauncher<>(threadPool, globalInternalBus);
     } else {
-      List<LocalDeviceRunner> deviceRunners = new ArrayList<>();
+      List<TestExecutor> testExecutors = new ArrayList<>();
       for (DeviceLocator deviceLocator : setting.allocation().getAllDeviceLocators()) {
         String deviceSerial = deviceLocator.getSerial();
-        LocalDeviceRunner deviceRunner =
+        TestExecutor testExecutor =
             MobileHarnessExceptions.checkNotNull(
-                localDeviceManager.getLocalDeviceRunner(deviceSerial),
+                localDeviceManager.getTestExecutorForDeviceId(deviceSerial),
                 InfraErrorId.CLIENT_LOCAL_MODE_ALLOCATED_DEVICE_NOT_FOUND,
                 String.format("Device %s not found", deviceSerial));
-        deviceRunners.add(deviceRunner);
+        testExecutors.add(testExecutor);
       }
-      LocalDeviceRunner primaryDeviceRunner = deviceRunners.get(0);
-      ImmutableList<LocalDeviceRunner> secondaryDeviceRunners =
-          deviceRunners.stream().skip(1L).collect(toImmutableList());
-      launcher = new LocalDeviceTestRunnerLauncher(primaryDeviceRunner, secondaryDeviceRunners);
-      devices = deviceRunners.stream().map(LocalDeviceRunner::getDevice).collect(toImmutableList());
+      TestExecutor primaryTestExecutor = testExecutors.get(0);
+      ImmutableList<TestExecutor> secondaryTestExecutors =
+          testExecutors.stream().skip(1L).collect(toImmutableList());
+      launcher = new LocalDeviceTestRunnerLauncher(primaryTestExecutor, secondaryTestExecutors);
+      devices = testExecutors.stream().map(TestExecutor::getDevice).collect(toImmutableList());
     }
     return doCreateTestRunner(launcher, setting, devices, threadPool);
   }

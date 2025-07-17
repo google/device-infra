@@ -51,6 +51,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:device_id_manager",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:device_status_info",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:local_device_runner",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device:test_executor",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device/bootstrap:detector_dispatcher_selector",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device/bootstrap:detectors_and_dispatchers",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device/config",
