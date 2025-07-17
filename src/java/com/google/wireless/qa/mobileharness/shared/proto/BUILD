@@ -140,7 +140,10 @@ cc_proto_library(
 
 java_proto_library(
     name = "android_device_spec_java_proto",
-    visibility = [":custom_apk_install_manifest_builder"],
+    visibility = [
+        ":custom_apk_install_manifest_builder",
+        "//:omnilab_fusion",
+    ],
     deps = [":android_device_spec"],
 )
 
