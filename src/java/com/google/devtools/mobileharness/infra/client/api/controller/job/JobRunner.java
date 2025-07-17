@@ -27,7 +27,9 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Joiner.MapJoiner;
 import com.google.common.base.Stopwatch;
+import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Streams;
@@ -67,6 +69,7 @@ import com.google.devtools.mobileharness.infra.controller.test.manager.DirectTes
 import com.google.devtools.mobileharness.infra.controller.test.manager.TestManager;
 import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberExceptionLoggingHandler;
 import com.google.devtools.mobileharness.shared.constant.closeable.MobileHarnessAutoCloseable;
+import com.google.devtools.mobileharness.shared.util.algorithm.GraphMatching;
 import com.google.devtools.mobileharness.shared.util.comm.messaging.poster.TestMessagePoster;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.error.ErrorModelConverter;
@@ -107,6 +110,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Level;
+import java.util.stream.IntStream;
 import javax.annotation.Nullable;
 
 /** Job runner for running a given job. */
@@ -230,7 +234,7 @@ public class JobRunner implements Runnable {
 
   @Nullable private final DeviceQuerier deviceQuerier;
 
-  private final DeviceQueryFilter deviceQueryFilter;
+  private final ImmutableList<DeviceQueryFilter> deviceQueryFilters;
 
   /** The first device query after job starts. */
   private final Duration startQueryDeviceLatency;
@@ -311,16 +315,20 @@ public class JobRunner implements Runnable {
     this.jobChecker = jobChecker;
     switch (jobInfo.setting().getAllocationExitStrategy()) {
       case FAIL_FAST_NO_IDLE:
-        deviceQueryFilter =
-            DeviceFilter.getFilter(
-                jobInfo,
-                ImmutableList.of(
-                    FilterType.ACCESS,
-                    FilterType.DRIVER,
-                    FilterType.DECORATOR,
-                    FilterType.DIMENSION,
-                    FilterType.STATUS),
-                jobInfo.subDeviceSpecs().getAllSubDevices().get(0));
+        deviceQueryFilters =
+            jobInfo.subDeviceSpecs().getAllSubDevices().stream()
+                .map(
+                    subDeviceSpec ->
+                        DeviceFilter.getFilter(
+                            jobInfo,
+                            ImmutableList.of(
+                                FilterType.ACCESS,
+                                FilterType.DRIVER,
+                                FilterType.DECORATOR,
+                                FilterType.DIMENSION,
+                                FilterType.STATUS),
+                            subDeviceSpec))
+                .collect(toImmutableList());
         startQueryDeviceLatency =
             execMode.getClass().getSimpleName().equals("LocalMode")
                 ? LOCAL_FAIL_FAST_START_QUERY_DEVICE_LATENCY
@@ -329,15 +337,19 @@ public class JobRunner implements Runnable {
         maxQueryDeviceTimes = 1;
         break;
       case FAIL_FAST_NO_MATCH:
-        deviceQueryFilter =
-            DeviceFilter.getFilter(
-                jobInfo,
-                ImmutableList.of(
-                    FilterType.ACCESS,
-                    FilterType.DRIVER,
-                    FilterType.DECORATOR,
-                    FilterType.DIMENSION),
-                jobInfo.subDeviceSpecs().getAllSubDevices().get(0));
+        deviceQueryFilters =
+            jobInfo.subDeviceSpecs().getAllSubDevices().stream()
+                .map(
+                    subDeviceSpec ->
+                        DeviceFilter.getFilter(
+                            jobInfo,
+                            ImmutableList.of(
+                                FilterType.ACCESS,
+                                FilterType.DRIVER,
+                                FilterType.DECORATOR,
+                                FilterType.DIMENSION),
+                            subDeviceSpec))
+                .collect(toImmutableList());
         startQueryDeviceLatency =
             execMode.getClass().getSimpleName().equals("LocalMode")
                 ? LOCAL_FAIL_FAST_START_QUERY_DEVICE_LATENCY
@@ -346,15 +358,19 @@ public class JobRunner implements Runnable {
         maxQueryDeviceTimes = 1;
         break;
       default:
-        deviceQueryFilter =
-            DeviceFilter.getFilter(
-                jobInfo,
-                ImmutableList.of(
-                    FilterType.ACCESS,
-                    FilterType.DRIVER,
-                    FilterType.DECORATOR,
-                    FilterType.DIMENSION),
-                jobInfo.subDeviceSpecs().getAllSubDevices().get(0));
+        deviceQueryFilters =
+            jobInfo.subDeviceSpecs().getAllSubDevices().stream()
+                .map(
+                    subDeviceSpec ->
+                        DeviceFilter.getFilter(
+                            jobInfo,
+                            ImmutableList.of(
+                                FilterType.ACCESS,
+                                FilterType.DRIVER,
+                                FilterType.DECORATOR,
+                                FilterType.DIMENSION),
+                            subDeviceSpec))
+                .collect(toImmutableList());
         startQueryDeviceLatency = NORMAL_START_QUERY_DEVICE_LATENCY;
         queryDeviceInterval = NORMAL_QUERY_DEVICE_INTERVAL;
         maxQueryDeviceTimes = NORMAL_MAX_QUERY_DEVICE_TIMES;
@@ -1641,32 +1657,61 @@ public class JobRunner implements Runnable {
     }
 
     private void check() throws MobileHarnessException, InterruptedException {
-      if (!hasFoundPotentialSuitableDevice && nextQueryDeviceTime.isBefore(clock.instant())) {
-        DeviceQueryResult deviceQueryResult = null;
-        try {
-          // Calculate next query time before query, and increase query times after query.
-          // So when query throws exception, it will still query again until reach max query
-          // times.
-          nextQueryDeviceTime = nextQueryDeviceTime.plus(queryDeviceInterval);
-          deviceQueryResult = deviceQuerier.queryDevice(deviceQueryFilter);
-          deviceQueryTimes++;
-        } catch (MobileHarnessException e) {
-          logger.atWarning().withCause(e).log(
-              "Failed to query potential suitable device. Ignore the exception.");
-        }
-        if (deviceQueryResult != null && deviceQueryResult.getDeviceInfoCount() > 0) {
-          hasFoundPotentialSuitableDevice = true;
-        } else if (deviceQueryTimes >= maxQueryDeviceTimes) {
-          jobInfo
-              .log()
-              .atWarning()
-              .alsoTo(logger)
-              .log(
-                  "Timeout after %s retries because there is no potential suitable devices",
-                  deviceQueryTimes);
-          onJobStartTimeout(true, false);
-        }
+      // Early return if we already found potential suitable device(s) or we haven't reached the
+      // next query device time yet.
+      if (hasFoundPotentialSuitableDevice || nextQueryDeviceTime.isAfter(clock.instant())) {
+        return;
       }
+      if (deviceQueryTimes >= maxQueryDeviceTimes) {
+        jobInfo
+            .log()
+            .atWarning()
+            .alsoTo(logger)
+            .log(
+                "Timeout after %s retries because there is no potential suitable devices",
+                deviceQueryTimes);
+        onJobStartTimeout(true, false);
+      }
+
+      ImmutableList.Builder<DeviceQueryResult> deviceQueryResultsBuilder = ImmutableList.builder();
+      // Calculate the next query time before querying to ensure that even if an exception occurs
+      // during the query, the query will be retried until the maximum number of attempts is
+      // reached.
+      nextQueryDeviceTime = nextQueryDeviceTime.plus(queryDeviceInterval);
+      try {
+        for (DeviceQueryFilter deviceQueryFilter : deviceQueryFilters) {
+          deviceQueryResultsBuilder.add(deviceQuerier.queryDevice(deviceQueryFilter));
+        }
+      } catch (MobileHarnessException e) {
+        logger.atWarning().withCause(e).log(
+            "Failed to query potential suitable devices. Ignoring the exception.");
+      }
+      deviceQueryTimes++;
+
+      ImmutableList<DeviceQueryResult> deviceQueryResults = deviceQueryResultsBuilder.build();
+      if (deviceQueryResults.size() != deviceQueryFilters.size()) {
+        // Some device query has failed.
+        return;
+      }
+
+      // A multipmap of (device query index, suitable device id).
+      ImmutableMultimap.Builder<String, String> suitableDevices = ImmutableMultimap.builder();
+      // Iterate over the device query results and their indices.
+      Streams.forEachPair(
+          IntStream.range(0, deviceQueryFilters.size()).boxed(),
+          deviceQueryResults.stream(),
+          (queryIndex, queryResult) ->
+              queryResult
+                  .getDeviceInfoList()
+                  .forEach(
+                      deviceInfo ->
+                          suitableDevices.put(String.valueOf(queryIndex), deviceInfo.getId())));
+
+      // Calculates maximum cardinality bipartite graph matching.
+      ImmutableBiMap<String, String> matchingResult =
+          GraphMatching.maximumCardinalityBipartiteMatching(suitableDevices.build());
+
+      hasFoundPotentialSuitableDevice = matchingResult.size() == deviceQueryFilters.size();
     }
   }
 }

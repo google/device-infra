@@ -63,6 +63,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/constant:log_record_importance",
         "//src/java/com/google/devtools/mobileharness/shared/constant/closeable:mobile_harness_auto_closeable",
         "//src/java/com/google/devtools/mobileharness/shared/file/resolver:local_file_resolver",
+        "//src/java/com/google/devtools/mobileharness/shared/util/algorithm:graph_matching",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_text_format",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/messaging/poster",
