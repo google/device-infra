@@ -45,6 +45,7 @@ import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.Dimen
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -335,7 +336,16 @@ public class SingleDeviceDiagnostician implements AllocationDiagnostician {
     return deviceInfoFields.build();
   }
 
+  private static boolean isUsingMaster(JobInfo job) {
+    return job.properties().getOptional(Job.MASTER_SPEC).orElse("").contains("master");
+  }
+
   private static boolean isUsingProdMaster(JobInfo job) {
-    return job.properties().getOptional(Job.MASTER_SPEC).orElse("").contains("PROD");
+    return isUsingMaster(job)
+        && job.properties()
+            .getOptional(Job.MASTER_SPEC)
+            .orElse("")
+            .toLowerCase(Locale.ROOT)
+            .contains("prod");
   }
 }
