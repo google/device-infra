@@ -158,7 +158,17 @@ public class AndroidDeviceInitializer {
     systemStateUtil.waitUntilReady(deviceId, Duration.ofMinutes(3));
     if (!isTestHarnessModeEnabled) {
       if (!DeviceUtil.inSharedLab()) {
-        systemSettingUtil.keepAwake(deviceId, /* alwaysAwake= */ true);
+        try {
+          systemSettingUtil.keepAwake(deviceId, /* alwaysAwake= */ true);
+        } catch (MobileHarnessException e) {
+          if (e.getMessage().contains("exit_code=137")) {
+            // Some Samsung devices return exit_code=137 when keep awake. See b/402566355.
+            logger.atInfo().log(
+                "Ignore the failure of keeping device %s awake: %s", deviceId, e.getMessage());
+          } else {
+            throw e;
+          }
+        }
       } else {
         logger.atSevere().log(
             "Ignoring attempt to keep awake device %s while not managing devices.", deviceId);
