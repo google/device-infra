@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.client.api.mode.ats;
 
+import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableListMultimap.toImmutableListMultimap;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
@@ -28,6 +29,7 @@ import static com.google.devtools.mobileharness.shared.util.filter.FilterUtils.c
 
 import com.google.auto.value.AutoValue;
 import com.google.auto.value.extension.memoized.Memoized;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
@@ -81,6 +83,7 @@ import com.google.devtools.mobileharness.shared.labinfo.LabInfoProvider;
 import com.google.devtools.mobileharness.shared.util.comm.server.GrpcContexts;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.version.Version;
+import com.google.devtools.mobileharness.shared.version.VersionUtil;
 import com.google.devtools.mobileharness.shared.version.checker.ServiceSideVersionChecker;
 import com.google.devtools.mobileharness.shared.version.proto.VersionProto.VersionCheckResponse;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
@@ -88,6 +91,7 @@ import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.controller.event.AllocationEvent;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.Dimension;
+import com.google.wireless.qa.mobileharness.shared.util.NetUtil;
 import io.grpc.BindableService;
 import io.grpc.stub.StreamObserver;
 import java.net.InetAddress;
@@ -125,6 +129,8 @@ class RemoteDeviceManager implements LabInfoProvider {
 
   private static final String HOST_IP_DIMENSION_NAME = Ascii.toLowerCase(Name.HOST_IP.name());
   private static final String HOST_NAME_DIMENSION_NAME = Ascii.toLowerCase(Name.HOST_NAME.name());
+  private static final String OLC_HOST_NAME_PROPERTY_KEY = "olc_host_name";
+  private static final String OLC_GITHUB_VERSION_PROPERTY_KEY = "olc_github_version";
 
   private final ServiceSideVersionChecker versionChecker =
       new ServiceSideVersionChecker(Version.MASTER_V5_VERSION, Version.MIN_LAB_VERSION);
@@ -146,14 +152,65 @@ class RemoteDeviceManager implements LabInfoProvider {
 
   private final SettableFuture<Void> firstDeviceOrTimeoutFuture = SettableFuture.create();
 
+  private final List<HostProperty> additionalHostProperties = new ArrayList<>();
+
   @Inject
   RemoteDeviceManager(
       @AtsModeAbstractScheduler AbstractScheduler scheduler,
       ListeningScheduledExecutorService scheduledThreadPool,
       LabRecordManager labRecordManager) {
+    this(scheduler, scheduledThreadPool, labRecordManager, new NetUtil());
+  }
+
+  @VisibleForTesting
+  RemoteDeviceManager(
+      AbstractScheduler scheduler,
+      ListeningScheduledExecutorService scheduledThreadPool,
+      LabRecordManager labRecordManager,
+      NetUtil netUtil) {
     this.scheduler = scheduler;
     this.scheduledThreadPool = scheduledThreadPool;
     this.labRecordManager = labRecordManager;
+    addOlcHostName(netUtil);
+    addOlcGithubVersion();
+  }
+
+  private void addOlcHostName(NetUtil netUtil) {
+    try {
+      String olcHostName = netUtil.getLocalHostName();
+      if (isNullOrEmpty(olcHostName)) {
+        logger.atWarning().log("Got empty OLC host name, skip adding OLC host name property");
+      } else {
+        logger.atInfo().log("Got OLC host name: %s", olcHostName);
+        additionalHostProperties.add(
+            HostProperty.newBuilder()
+                .setKey(OLC_HOST_NAME_PROPERTY_KEY)
+                .setValue(olcHostName)
+                .build());
+      }
+    } catch (MobileHarnessException e) {
+      logger.atWarning().withCause(e).log(
+          "Failed to get OLC host name, skip adding OLC host name property");
+    }
+  }
+
+  private void addOlcGithubVersion() {
+    VersionUtil.getBuildVersion()
+        .filter(version -> version.hasGithubVersion())
+        .map(
+            version ->
+                HostProperty.newBuilder()
+                    .setKey(OLC_GITHUB_VERSION_PROPERTY_KEY)
+                    .setValue(version.getGithubVersion())
+                    .build())
+        .ifPresentOrElse(
+            hostProperty -> {
+              additionalHostProperties.add(hostProperty);
+              logger.atInfo().log("Got OLC github build version: %s", hostProperty.getValue());
+            },
+            () ->
+                logger.atWarning().log(
+                    "Failed to get OLC github version, skip adding OLC github version property"));
   }
 
   BindableService getLabSyncService() {
@@ -229,6 +286,16 @@ class RemoteDeviceManager implements LabInfoProvider {
         }
       }
     }
+    // Adds olc host name and github version to lab server feature of each lab.
+    filteredLabs
+        .values()
+        .forEach(
+            labBuilder ->
+                labBuilder
+                    .getLabInfoBuilder()
+                    .getLabServerFeatureBuilder()
+                    .getHostPropertiesBuilder()
+                    .addAllHostProperty(additionalHostProperties));
     Duration queryTime = Duration.between(timestamp, Instant.now());
     logger.atInfo().log(
         "Get lab info, filter=[%s], time_used=%s", shortDebugString(filter), queryTime);
