@@ -35,6 +35,7 @@ import com.google.api.services.storage.model.ComposeRequest;
 import com.google.api.services.storage.model.ComposeRequest.SourceObjects;
 import com.google.api.services.storage.model.Objects;
 import com.google.api.services.storage.model.StorageObject;
+import com.google.auto.value.AutoOneOf;
 import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
@@ -138,6 +139,37 @@ public class GcsUtil {
   /** File attribute name to save file md5hash to. */
   private static final String MD5_ATTR_NAME = "md5hash";
 
+  /** Credential type for GCS. */
+  @AutoOneOf(CredentialType.Type.class)
+  public abstract static class CredentialType {
+    /** Type of credential. */
+    public enum Type {
+      NONE,
+      CREDENTIAL_FILE,
+      APP_DEFAULT,
+    }
+
+    public abstract Type getType();
+
+    public abstract void none();
+
+    public abstract String credentialFile();
+
+    public abstract void appDefault();
+
+    public static CredentialType ofNone() {
+      return AutoOneOf_GcsUtil_CredentialType.none();
+    }
+
+    public static CredentialType ofCredentialFile(String credentialFile) {
+      return AutoOneOf_GcsUtil_CredentialType.credentialFile(credentialFile);
+    }
+
+    public static CredentialType ofAppDefault() {
+      return AutoOneOf_GcsUtil_CredentialType.appDefault();
+    }
+  }
+
   /** Parameters about the Google Cloud Storage the client used. */
   public static class GcsParams {
     /**
@@ -163,9 +195,8 @@ public class GcsUtil {
 
     @VisibleForTesting final String applicationName;
     @VisibleForTesting final String bucketName;
-    @VisibleForTesting @Nullable final String cloudStorageConfigPath;
+    @VisibleForTesting final CredentialType credentialType;
     @VisibleForTesting final Scope scope;
-    private final boolean useAppDefault;
 
     /**
      * Constructs CloudStorage Params given parameters about the storage.
@@ -186,7 +217,9 @@ public class GcsUtil {
      * @param bucketName name of the bucket containing files
      * @param cloudStorageConfigPath path of the credential file for the service accounts
      * @param scope access scope of the service account
+     * @deprecated use {@link #GcsParams(String, String, Scope, CredentialType)} instead.
      */
+    @Deprecated
     public GcsParams(
         String applicationName,
         String bucketName,
@@ -194,18 +227,28 @@ public class GcsUtil {
         Scope scope) {
       this.applicationName = applicationName;
       this.bucketName = bucketName;
-      this.cloudStorageConfigPath = cloudStorageConfigPath;
+      this.credentialType =
+          cloudStorageConfigPath == null
+              ? CredentialType.ofNone()
+              : CredentialType.ofCredentialFile(cloudStorageConfigPath);
       this.scope = scope;
-      this.useAppDefault = false;
     }
 
+    /**
+     * Constructs CloudStorage Params given parameters about the storage.
+     *
+     * @param applicationName name of the Google Cloud application to send in the User-Agent header
+     *     of Google API requests.
+     * @param bucketName name of the bucket containing files
+     * @param scope access scope of the service account
+     * @param credentialType credential type of the service account
+     */
     public GcsParams(
-        String applicationName, String bucketName, Scope scope, boolean useAppDefault) {
+        String applicationName, String bucketName, Scope scope, CredentialType credentialType) {
       this.applicationName = applicationName;
       this.bucketName = bucketName;
-      this.cloudStorageConfigPath = null;
       this.scope = scope;
-      this.useAppDefault = useAppDefault;
+      this.credentialType = credentialType;
     }
   }
 
@@ -271,16 +314,18 @@ public class GcsUtil {
 
   private static HttpRequestInitializer getCredential(GcsParams storageParams)
       throws MobileHarnessException {
-    if (storageParams.cloudStorageConfigPath != null) {
-      return credentialFromJsonFile(storageParams.cloudStorageConfigPath, storageParams.scope);
-    } else if (storageParams.useAppDefault) {
-      return appDefaultCredential(storageParams.scope);
+    switch (storageParams.credentialType.getType()) {
+      case APP_DEFAULT:
+        return appDefaultCredential(storageParams.scope);
+      case CREDENTIAL_FILE:
+        return credentialFromJsonFile(
+            storageParams.credentialType.credentialFile(), storageParams.scope);
+      case NONE:
     }
     throw new MobileHarnessException(
         BasicErrorId.GCS_INVALID_PARAMS,
         String.format(
-            "Invalid GcsParams. Either provide a cloud storage config path or use app default:\n%s",
-            storageParams));
+            "Invalid GcsParams %s. Please provide a valid credential type.", storageParams));
   }
 
   private static HttpRequestInitializer credentialFromJsonFile(
