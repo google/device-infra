@@ -244,7 +244,7 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
     try {
 
       logger.atInfo().log("Started");
-
+      DeviceIdUtil.addDeviceIdAndClassNameToDimension(device.info().deviceId(), device);
       boolean isDeviceConfigSynced =
           apiConfig.waitUntilDeviceConfigSynced(device.getDeviceId(), Duration.ofMinutes(5));
       if (isDeviceConfigSynced) {
@@ -612,7 +612,6 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
   void prepareDevice() throws InterruptedException, MobileHarnessException {
     // Initializes the device.
     logger.atInfo().log("Initializing...");
-    DeviceIdUtil.addDeviceIdAndClassNameToDimension(device.info().deviceId(), device);
     try {
       extendExpireTime(device.getSetupTimeout());
       device.prepare();
@@ -861,6 +860,7 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
         device.info().clearAll();
         // Post the event to notify Master it's INIT
         postDeviceChangeEvent("prepare the device after test");
+        DeviceIdUtil.addDeviceIdAndClassNameToDimension(device.info().deviceId(), device);
         prepareDevice();
       } else {
         // Post device status to sync the device status manually if no need to reboot.
