@@ -22,6 +22,7 @@ import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcStubUtil;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.infra.monitoring.CloudPubsubMonitorModule.CloudPubsubTopic;
 import com.google.inject.Inject;
+import com.google.inject.Provider;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
@@ -39,13 +40,14 @@ public class PubsubClientImpl extends DataPusher {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private final String pubsubTopic;
-  private final PublisherGrpc.PublisherBlockingStub publisherStub;
+  private final Provider<PublisherGrpc.PublisherBlockingStub> publisherStubProvider;
 
   @Inject
   PubsubClientImpl(
-      @CloudPubsubTopic String pubsubTopic, PublisherGrpc.PublisherBlockingStub publisherStub) {
+      @CloudPubsubTopic String pubsubTopic,
+      Provider<PublisherGrpc.PublisherBlockingStub> publisherStubProvider) {
     this.pubsubTopic = pubsubTopic;
-    this.publisherStub = publisherStub;
+    this.publisherStubProvider = publisherStubProvider;
   }
 
   @Override
@@ -78,7 +80,7 @@ public class PubsubClientImpl extends DataPusher {
     try {
       response =
           GrpcStubUtil.invoke(
-              publisherStub::publish,
+              publisherStubProvider.get()::publish,
               request.build(),
               InfraErrorId.FAIL_TO_PUBLISH_MESSAGE_TO_CLOUD_PUB_SUB,
               "Failed to publish message to Cloud PubSub");
