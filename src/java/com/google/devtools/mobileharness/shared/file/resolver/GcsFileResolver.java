@@ -92,7 +92,12 @@ public class GcsFileResolver extends AbstractFileResolver {
       throws MobileHarnessException {
     return new GcsUtil(
         credentialFile != null
-            ? new GcsParams(project, bucket, credentialFile, GcsParams.Scope.READ_ONLY)
-            : new GcsParams(project, bucket, GcsParams.Scope.READ_ONLY, true));
+            ? new GcsParams(
+                project,
+                bucket,
+                GcsParams.Scope.READ_ONLY,
+                GcsUtil.CredentialType.ofCredentialFile(credentialFile))
+            : new GcsParams(
+                project, bucket, GcsParams.Scope.READ_ONLY, GcsUtil.CredentialType.ofAppDefault()));
   }
 }
