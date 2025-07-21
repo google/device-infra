@@ -166,6 +166,7 @@ public class GcsUtil {
     @VisibleForTesting @Nullable final String cloudStorageConfigPath;
     @VisibleForTesting final Scope scope;
     private final boolean useAppDefault;
+    private final boolean useServiceAccount;
 
     /**
      * Constructs CloudStorage Params given parameters about the storage.
@@ -175,7 +176,30 @@ public class GcsUtil {
      * @param scope access scope of the service account
      */
     public GcsParams(String bucketName, @Nullable String cloudStorageConfigPath, Scope scope) {
-      this(DEFAULT_APPLICATION_NAME, bucketName, cloudStorageConfigPath, scope);
+      this(bucketName, cloudStorageConfigPath, scope, false, false);
+    }
+
+    /**
+     * Constructs CloudStorage Params given parameters about the storage.
+     *
+     * @param bucketName name of the bucket containing files
+     * @param cloudStorageConfigPath path of the credential file for the service accounts
+     * @param scope access scope of the service account
+     * @param useAppDefault whether to use application default credential
+     * @param useServiceAccount whether to use service account credential
+     */
+    public GcsParams(
+        String bucketName,
+        @Nullable String cloudStorageConfigPath,
+        Scope scope,
+        boolean useAppDefault,
+        boolean useServiceAccount) {
+      this.applicationName = DEFAULT_APPLICATION_NAME;
+      this.bucketName = bucketName;
+      this.cloudStorageConfigPath = cloudStorageConfigPath;
+      this.scope = scope;
+      this.useAppDefault = useAppDefault;
+      this.useServiceAccount = useServiceAccount;
     }
 
     /**
@@ -197,6 +221,7 @@ public class GcsUtil {
       this.cloudStorageConfigPath = cloudStorageConfigPath;
       this.scope = scope;
       this.useAppDefault = false;
+      this.useServiceAccount = false;
     }
 
     public GcsParams(
@@ -206,6 +231,7 @@ public class GcsUtil {
       this.cloudStorageConfigPath = null;
       this.scope = scope;
       this.useAppDefault = useAppDefault;
+      this.useServiceAccount = false;
     }
   }
 
