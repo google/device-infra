@@ -22,6 +22,7 @@ import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 import com.google.auth.oauth2.GoogleCredentials;
+import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.infra.monitoring.proto.MonitoredRecordProto.MonitoredRecord;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.inject.AbstractModule;
@@ -36,6 +37,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.concurrent.ExecutionException;
 import javax.inject.Qualifier;
 import javax.inject.Singleton;
 
@@ -46,6 +48,8 @@ public final class CloudPubsubMonitorModule extends AbstractModule {
 
   /** SSL port of the Cloud Pub/Sub gRPC endpoint */
   private static final int SSL_PORT = 443;
+
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   /** Guice binding annotation for the Cloud Pub/Sub gRPC channel. */
   @Qualifier
@@ -82,10 +86,15 @@ public final class CloudPubsubMonitorModule extends AbstractModule {
 
   @Provides
   PublisherGrpc.PublisherBlockingStub providePublisherBlockingStub(
-      @CloudPubsubChannel Channel channel) throws IOException {
-    GoogleCredentials credentials =
-        GoogleCredentials.fromStream(
-            Files.newInputStream(Path.of(Flags.instance().cloudPubsubCredFile.getNonNull())));
+      @CloudPubsubChannel Channel channel)
+      throws IOException, InterruptedException, ExecutionException {
+
+    GoogleCredentials credentials = GoogleCredentials.getApplicationDefault();
+    if (Flags.instance().cloudPubsubCredFile.get() != null) {
+      credentials =
+          GoogleCredentials.fromStream(
+              Files.newInputStream(Path.of(Flags.instance().cloudPubsubCredFile.getNonNull())));
+    }
     return PublisherGrpc.newBlockingStub(channel)
         .withCallCredentials(MoreCallCredentials.from(credentials));
   }
