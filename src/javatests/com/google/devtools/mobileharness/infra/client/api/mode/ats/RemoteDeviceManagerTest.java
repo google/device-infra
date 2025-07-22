@@ -299,7 +299,7 @@ public class RemoteDeviceManagerTest {
 
     LabView labInfo = remoteDeviceManagerWithMockNetUtil.getLabInfos(Filter.getDefaultInstance());
 
-    assertThat(labInfo).comparingExpectedFieldsOnly().isEqualTo(LAB_VIEW_WITH_OLC);
+    assertThat(labInfo).isEqualTo(LAB_VIEW_WITH_OLC);
   }
 
   @Test

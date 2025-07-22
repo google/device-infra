@@ -154,6 +154,8 @@ class RemoteDeviceManager implements LabInfoProvider {
 
   private final List<HostProperty> additionalHostProperties = new ArrayList<>();
 
+  private final NetUtil netUtil;
+
   @Inject
   RemoteDeviceManager(
       @AtsModeAbstractScheduler AbstractScheduler scheduler,
@@ -171,11 +173,10 @@ class RemoteDeviceManager implements LabInfoProvider {
     this.scheduler = scheduler;
     this.scheduledThreadPool = scheduledThreadPool;
     this.labRecordManager = labRecordManager;
-    addOlcHostName(netUtil);
-    addOlcGithubVersion();
+    this.netUtil = netUtil;
   }
 
-  private void addOlcHostName(NetUtil netUtil) {
+  private void addOlcHostName() {
     try {
       String olcHostName = netUtil.getLocalHostName();
       if (isNullOrEmpty(olcHostName)) {
@@ -218,6 +219,9 @@ class RemoteDeviceManager implements LabInfoProvider {
   }
 
   void start() {
+    logger.atInfo().log("Starting RemoteDeviceManager");
+    addOlcHostName();
+    addOlcGithubVersion();
     // Registers AllocationEventHandler.
     scheduler.registerEventHandler(new AllocationEventHandler());
 
@@ -287,6 +291,10 @@ class RemoteDeviceManager implements LabInfoProvider {
       }
     }
     // Adds olc host name and github version to lab server feature of each lab.
+    additionalHostProperties.forEach(
+        hostProperty ->
+            logger.atInfo().log(
+                "Adding additional host property:  %s", shortDebugString(hostProperty)));
     filteredLabs
         .values()
         .forEach(
