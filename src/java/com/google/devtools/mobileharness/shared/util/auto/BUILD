@@ -24,9 +24,18 @@ java_plugin(
     deps = ["@maven//:com_google_auto_value_auto_value"],
 )
 
+java_plugin(
+    name = "auto_oneof_plugin",
+    processor_class = "com.google.auto.value.processor.AutoOneOfProcessor",
+    deps = ["@maven//:com_google_auto_value_auto_value"],
+)
+
 java_library(
     name = "auto_value",
-    exported_plugins = [":auto_value_plugin"],
+    exported_plugins = [
+        ":auto_value_plugin",
+        ":auto_oneof_plugin",
+    ],
     exports = [
         "@maven//:com_google_auto_value_auto_value",
         "@maven//:com_google_auto_value_auto_value_annotations",

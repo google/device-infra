@@ -45,7 +45,7 @@ final class GsUtil {
     }
 
     /** Returns the Command of the given command string if it is valid or null otherwise. */
-    public static Command of(String command) {
+    static Command of(String command) {
       for (Command c : Command.values()) {
         if (c.command.equals(command)) {
           return c;
@@ -119,7 +119,7 @@ final class GsUtil {
       GcsParams gcsParams = gcsClient.gcsParams();
       logger.atInfo().log(
           "gcsParams: %s, %s, %s",
-          gcsParams.applicationName, gcsParams.bucketName, gcsParams.cloudStorageConfigPath);
+          gcsParams.applicationName, gcsParams.bucketName, gcsParams.credentialType);
       return new GsUtil(new GcsUtil(gcsParams));
     }
   }
