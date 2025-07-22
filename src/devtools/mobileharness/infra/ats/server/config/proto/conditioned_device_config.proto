@@ -1,0 +1,55 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package mobileharness.infra.ats.server.config;
+
+option java_package = "com.google.devtools.mobileharness.infra.ats.server.config.proto";
+option java_outer_classname = "ConditionedDeviceConfigProto";
+
+// Configuration that depends on specific device attributes (such as size,
+// device type). ATS uses this configuration to set the actions to be performed
+// during the device manager lifecycle.
+message ConditionedDeviceConfigs {
+  repeated ConditionedConfig conditioned_configs = 1;
+}
+
+// Configuration that depends on specific device properties (e.g., dimensions,
+// device type).
+message ConditionedConfig {
+  // Conditions that the config is conditioned on. If all the conditions are
+  // matched, the config will be applied to the device.
+  repeated Condition condition = 1;
+
+  // The adb commands to execute after resetting the device in the setup stage.
+  repeated string after_reset_adb_shell_commands = 2;
+
+  // The adb commands to execute before the device is finished the setup.
+  repeated string before_finish_setup_adb_commands = 3;
+}
+
+message Condition {
+  oneof key {
+    // The dimension key of the condition. For example, "model", "version".
+    string dimension = 1;
+    // The device type of the condition.
+    string device_type = 2;
+  }
+
+  // The regex of the condition value.
+  string value_regex = 3;
+}
