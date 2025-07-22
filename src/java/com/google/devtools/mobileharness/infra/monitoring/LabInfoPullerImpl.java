@@ -72,17 +72,15 @@ public final class LabInfoPullerImpl implements DataPuller<MonitoredRecord> {
           hostEntry, "status", Optional.of(labData.getLabInfo().getLabStatus().toString()));
       addAttribute(
           hostEntry,
-          "github_version",
-          getProperty(hostPropertyList, Ascii.toLowerCase(HostPropertyKey.GITHUB_VERSION.name())));
-      addAttribute(
-          hostEntry,
-          "total_mem",
-          getProperty(hostPropertyList, Ascii.toLowerCase(HostPropertyKey.TOTAL_MEM.name())));
-      addAttribute(
-          hostEntry,
           "lab_server_version",
           getProperty(hostPropertyList, Ascii.toLowerCase(HostPropertyKey.HOST_VERSION.name())));
-      addAttribute(hostEntry, "host_group", getProperty(hostPropertyList, "host_group"));
+      hostPropertyList.stream()
+          .filter(
+              property ->
+                  !Ascii.equalsIgnoreCase(property.getKey(), HostPropertyKey.HOST_VERSION.name()))
+          .forEach(
+              property ->
+                  addAttribute(hostEntry, property.getKey(), Optional.of(property.getValue())));
       record.setHostEntry(hostEntry.build());
       for (DeviceInfo deviceInfo : labData.getDeviceList().getDeviceInfoList()) {
         DeviceCompositeDimension compositeDimension =
