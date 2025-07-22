@@ -82,4 +82,9 @@ public class DetectionResults implements Cloneable {
                     && detectorResult.detectionDetail().equals(Optional.ofNullable(detail)))
         .collect(Collectors.toList());
   }
+
+  /** Returns all {@link DetectionResult}s with the specified device control id. */
+  public synchronized Collection<DetectionResult> getByDeviceControlId(String deviceControlId) {
+    return results.get(deviceControlId);
+  }
 }

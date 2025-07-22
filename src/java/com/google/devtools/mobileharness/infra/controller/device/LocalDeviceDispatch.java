@@ -25,6 +25,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.EventBus;
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.mobileharness.api.devicemanager.detector.model.DetectionResult.DetectionType;
 import com.google.devtools.mobileharness.api.devicemanager.detector.model.DetectionResults;
 import com.google.devtools.mobileharness.api.devicemanager.dispatcher.Dispatcher;
 import com.google.devtools.mobileharness.api.devicemanager.dispatcher.model.DispatchResult;
@@ -420,8 +421,19 @@ public class LocalDeviceDispatch {
             dispatcher.dispatchDevices(detectionResults, dispatchResults);
         realtimeIds.forEach(
             (deviceControlId, dispatchType) -> {
-              // Removes the control id from detection results.
-              detectionResults.remove(deviceControlId);
+              // Usually, we need to remove the device from detection results to avoid the later
+              // consuming, but testbed device is special, we need to retain it to help we filter
+              // out the sub device.
+              if (!dispatcher.getClass().getSimpleName().equals("FailedDeviceDispatcher")
+                  || detectionResults.getByDeviceControlId(deviceControlId).stream()
+                      .anyMatch(
+                          detectionResult ->
+                              detectionResult
+                                  .detectionType()
+                                  .equals(DetectionType.STATIC_TESTBED))) {
+                detectionResults.remove(deviceControlId);
+              }
+
               if (dispatchType.equals(DispatchType.SUB_DEVICE)) {
                 // If the device dispatch as sub device by this dispatcher, force update the
                 // dispatch type since it has been  marked as other types by other dispatchers.
