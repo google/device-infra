@@ -227,6 +227,13 @@ public class AndroidSystemSettingUtil {
   private static final Pattern PATTERN_TIME_ZONE_OFFSET =
       Pattern.compile("^(\\+|-)((?:[0-1]\\d)|(?:2[0-3]))([0-5]\\d)$");
 
+  /** The pattern of battery level for the device. */
+  private static final Pattern PATTERN_BATTERY_LEVEL = Pattern.compile(" level: (\\d+)");
+
+  /** The pattern of battery temperature for the device. */
+  private static final Pattern PATTERN_BATTERY_TEMPERATURE =
+      Pattern.compile(" temperature: (\\d+)");
+
   /** Property name for setting dex pre-verification.. */
   @VisibleForTesting static final String PROPERTY_DEX_PRE_VERIFICATION = "dalvik.vm.dexopt-flags";
 
@@ -750,9 +757,9 @@ public class AndroidSystemSettingUtil {
                   AndroidSettings.NameSpace.SECURE,
                   String.format(ADB_SHELL_SETTINGS_SET_UNKNOWN_SOURCES_TEMPLATE, "1")),
               SHORT_COMMAND_TIMEOUT);
-        } else if ("1".equals(secureValue)) {
+        } else if (Objects.equals(secureValue, "1")) {
           logger.atInfo().log("Secure unknown source enabled, skipped");
-        } else if ("0".equals(globalValue)) {
+        } else if (Objects.equals(globalValue, "0")) {
           logger.atInfo().log("Enable global unknown source");
           adbUtil.settings(
               UtilArgs.builder().setSerial(serial).build(),
@@ -761,7 +768,7 @@ public class AndroidSystemSettingUtil {
                   AndroidSettings.NameSpace.GLOBAL,
                   String.format(ADB_SHELL_SETTINGS_SET_UNKNOWN_SOURCES_TEMPLATE, "1")),
               SHORT_COMMAND_TIMEOUT);
-        } else if ("1".equals(globalValue)) {
+        } else if (Objects.equals(globalValue, "1")) {
           logger.atInfo().log("Global unknown source enabled, skipped");
         } else {
           logger.atWarning().log("Failed to find secure/global unknown source options, aborted");
@@ -822,19 +829,15 @@ public class AndroidSystemSettingUtil {
         adbUtil
             .settings(UtilArgs.builder().setSerial(serial).build(), spec, SHORT_COMMAND_TIMEOUT)
             .trim();
-    boolean airplaneMode;
-    switch (output) {
-      case "0":
-        airplaneMode = false;
-        break;
-      case "1":
-        airplaneMode = true;
-        break;
-      default:
-        throw new MobileHarnessException(
-            AndroidErrorId.ANDROID_SYSTEM_SETTING_PARSE_AIRPLANE_MODE_ERROR,
-            "Failed to read airplane mode: " + output);
-    }
+    boolean airplaneMode =
+        switch (output) {
+          case "0" -> false;
+          case "1" -> true;
+          default ->
+              throw new MobileHarnessException(
+                  AndroidErrorId.ANDROID_SYSTEM_SETTING_PARSE_AIRPLANE_MODE_ERROR,
+                  "Failed to read airplane mode: " + output);
+        };
 
     // Makes sure the airplane mode setting has effect.
     try {
@@ -871,54 +874,77 @@ public class AndroidSystemSettingUtil {
   /**
    * Gets the battery level of the device.
    *
-   * @return battery level: 0~100
+   * <p>It executes "dumpsys battery" and parses the output to get the battery level.
+   *
+   * @param serial the serial number of the device
+   * @return battery level in percentage (0-100), or {@link Optional#empty()} if it failed to parse
+   *     the battery level from command output.
+   * @throws MobileHarnessException if some error occurs in executing system commands
+   * @throws InterruptedException if current thread is interrupted during this method
    */
-  public int getBatteryLevel(String serial) throws MobileHarnessException, InterruptedException {
-    Exception exception = null;
-    String errMsg = "";
-
+  public Optional<Integer> getBatteryLevel(String serial)
+      throws MobileHarnessException, InterruptedException {
+    // Run dumpSys adb command to get battery state. A sample output:
+    // Current Battery Service state:
+    //   AC powered: false
+    //   USB powered: true
+    //   status: 2
+    //   health: 2
+    //   present: true
+    //   level: 98
+    //   scale: 100
+    //   voltage:4083
+    //   temperature: 360
+    //   technology: Li-ion
+    String output;
     try {
-      String output = adbUtil.dumpSys(serial, DumpSysType.BATTERY);
-      Matcher matcher = Pattern.compile(" level: (\\d+)").matcher(output);
-      errMsg = String.format("Failed to parse battery level for device %s:\n%s", serial, output);
-      if (matcher.find()) {
-        String level = matcher.group(1);
-        try {
-          return Integer.parseInt(level);
-        } catch (NumberFormatException e) {
-          exception = e;
-        }
-      }
+      output = adbUtil.dumpSys(serial, DumpSysType.BATTERY);
     } catch (MobileHarnessException e) {
-      exception = e;
-      errMsg = e.getMessage();
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_SYSTEM_SETTING_GET_BATTERY_LEVEL_ERROR, e.getMessage(), e);
     }
 
-    throw new MobileHarnessException(
-        AndroidErrorId.ANDROID_SYSTEM_SETTING_GET_BATTERY_LEVEL_ERROR, errMsg, exception);
+    Matcher matcher = PATTERN_BATTERY_LEVEL.matcher(output);
+    if (!matcher.find()) {
+      logger.atWarning().log("Failed to parse battery level for device %s:\n%s", serial, output);
+      return Optional.empty();
+    }
+    String level = matcher.group(1);
+    try {
+      return Optional.of(Integer.parseInt(level));
+    } catch (NumberFormatException e) {
+      logger.atWarning().withCause(e).log(
+          "Failed to parse battery level for device %s, invalid level value: %s", serial, level);
+      return Optional.empty();
+    }
   }
 
   /**
    * Gets the battery temperature of the device. Tested on unrooted Android 7.1.2 and 4.4.4.
    *
-   * @return battery temperature in ℃
+   * <p>It executes "dumpsys battery" and parses the output to get the battery temperature.
+   *
+   * @param serial the serial number of the device
+   * @return battery temperature in Celsius, or {@link Optional#empty()} if it failed to parse the
+   *     battery temperature from command output.
+   * @throws MobileHarnessException if some error occurs in executing system commands
+   * @throws InterruptedException if current thread is interrupted during this method
    */
   public Optional<Integer> getBatteryTemperature(String serial)
       throws MobileHarnessException, InterruptedException {
     // Run dumpSys adb command to get battery state. A sample output:
     // Current Battery Service state:
-    // AC powered: false
-    // USB powered: true
-    // status: 2
-    // health: 2
-    // present: true
-    // level: 98
-    // scale: 100
-    // voltage:4083
-    // temperature: 360
-    // technology: Li-ion
-
-    String output = "";
+    //   AC powered: false
+    //   USB powered: true
+    //   status: 2
+    //   health: 2
+    //   present: true
+    //   level: 98
+    //   scale: 100
+    //   voltage:4083
+    //   temperature: 360
+    //   technology: Li-ion
+    String output;
     try {
       output = adbUtil.dumpSys(serial, DumpSysType.BATTERY);
     } catch (MobileHarnessException e) {
@@ -926,19 +952,20 @@ public class AndroidSystemSettingUtil {
           AndroidErrorId.ANDROID_SYSTEM_SETTING_GET_BATTERY_TEMP_ERROR, e.getMessage(), e);
     }
 
-    Matcher matcher = Pattern.compile(" temperature: (\\d+)").matcher(output);
-    String errMsg =
-        String.format("Failed to parse battery temperature for device %s:\n%s", serial, output);
-    if (matcher.find()) {
-      String temperature = matcher.group(1);
-      try {
-        return Optional.of(Integer.parseInt(temperature) / 10);
-      } catch (NumberFormatException e) {
-        logger.atWarning().log("%s", errMsg);
-        return Optional.empty();
-      }
-    } else {
-      logger.atWarning().log("%s", errMsg);
+    Matcher matcher = PATTERN_BATTERY_TEMPERATURE.matcher(output);
+    if (!matcher.find()) {
+      logger.atWarning().log(
+          "Failed to parse battery temperature for device %s:\n%s", serial, output);
+      return Optional.empty();
+    }
+    String temperature = matcher.group(1);
+    try {
+      // The temperature is in tenths of a degree Celsius.
+      return Optional.of(Integer.parseInt(temperature) / 10);
+    } catch (NumberFormatException e) {
+      logger.atWarning().withCause(e).log(
+          "Failed to parse battery temperature for device %s, invalid temperature value: %s",
+          serial, temperature);
       return Optional.empty();
     }
   }

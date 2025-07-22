@@ -2058,15 +2058,19 @@ public abstract class AndroidRealDeviceDelegate {
     // Checks battery. Skips battery check if dimension "characteristics" contains "tv".
     if (!device.getDimension("characteristics").contains("tv")) {
       logger.atInfo().log("Checking device %s battery level...", deviceId);
-      int batteryLevel = -1;
+      Optional<Integer> batteryLevel = Optional.empty();
       String batteryStatus = "unknown";
       try {
         batteryLevel = systemSettingUtil.getBatteryLevel(deviceId);
-        logger.atInfo().log("Device %s battery level: %d", deviceId, batteryLevel);
-        if (batteryLevel < 20) {
-          batteryStatus = "low";
+        if (batteryLevel.isPresent()) {
+          logger.atInfo().log("Device %s battery level: %d", deviceId, batteryLevel.get());
+          if (batteryLevel.map(level -> level < 20).orElse(false)) {
+            batteryStatus = "low";
+          } else {
+            batteryStatus = "ok";
+          }
         } else {
-          batteryStatus = "ok";
+          logger.atInfo().log("Device %s battery level is not available", deviceId);
         }
       } catch (MobileHarnessException e) {
         logger.atWarning().log(
@@ -2088,7 +2092,8 @@ public abstract class AndroidRealDeviceDelegate {
       }
       isDimensionChanged |= device.updateDimension(Dimension.Name.BATTERY_STATUS, batteryStatus);
       isDimensionChanged |=
-          device.updateDimension(Dimension.Name.BATTERY_LEVEL, String.valueOf(batteryLevel));
+          device.updateDimension(
+              Dimension.Name.BATTERY_LEVEL, batteryLevel.map(String::valueOf).orElse("-1"));
       isDimensionChanged |=
           device.updateDimension(
               Dimension.Name.BATTERY_TEMPERATURE, String.valueOf(batteryTemperature));
@@ -2609,11 +2614,16 @@ public abstract class AndroidRealDeviceDelegate {
    */
   private void toggleChargingForSafeDischarge(int stopChargeLevel, int startChargeLevel)
       throws MobileHarnessException, InterruptedException {
-    int batteryLevel = systemSettingUtil.getBatteryLevel(deviceId);
+    Optional<Integer> batteryLevel = systemSettingUtil.getBatteryLevel(deviceId);
+    if (batteryLevel.isEmpty()) {
+      logger.atWarning().log(
+          "Battery level is not available for device %s, skip toggling charging.", deviceId);
+      return;
+    }
     boolean enableCharging;
-    if (batteryLevel <= startChargeLevel) {
+    if (batteryLevel.get() <= startChargeLevel) {
       enableCharging = true;
-    } else if (batteryLevel >= stopChargeLevel) {
+    } else if (batteryLevel.get() >= stopChargeLevel) {
       enableCharging = false;
     } else {
       return;
@@ -2661,12 +2671,11 @@ public abstract class AndroidRealDeviceDelegate {
         || Ascii.equalsIgnoreCase(systemSettingUtil.getDeviceVersionCodeName(serial), "Q");
   }
 
-  /*
+  /**
    * Enable the device charge before test for supported devices. Tries to avoid the device get power
    * off during long running test. b/148306058.
    *
    * <p>See {@link RuntimeChargingUtil.SupportedDeviceModel} for supported device models.
-   *
    */
   private void enableDeviceChargeBeforeTest(TestInfo testInfo) throws InterruptedException {
     String testId = testInfo.locator().getId();

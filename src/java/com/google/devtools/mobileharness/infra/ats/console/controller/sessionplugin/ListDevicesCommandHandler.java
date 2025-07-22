@@ -281,22 +281,15 @@ class ListDevicesCommandHandler {
 
   // Converts device state from ADB to the one in DeviceDescriptor.
   private static String convertDeviceStateFromAdb(DeviceState state) {
-    switch (state) {
-      case BOOTLOADER:
-        return "BOOTLOADER";
-      case DEVICE:
-        return "ONLINE";
-      case OFFLINE:
-        return "OFFLINE";
-      case UNAUTHORIZED:
-        return "UNAUTHORIZED";
-      case RECOVERY:
-        return "RECOVERY";
-      case SIDELOAD:
-        return "SIDELOAD";
-      default:
-        return NOT_APPLICABLE;
-    }
+    return switch (state) {
+      case BOOTLOADER -> "BOOTLOADER";
+      case DEVICE -> "ONLINE";
+      case OFFLINE -> "OFFLINE";
+      case UNAUTHORIZED -> "UNAUTHORIZED";
+      case RECOVERY -> "RECOVERY";
+      case SIDELOAD -> "SIDELOAD";
+      default -> NOT_APPLICABLE;
+    };
   }
 
   private DeviceQueryResult queryDevice() throws MobileHarnessException, InterruptedException {
@@ -314,7 +307,7 @@ class ListDevicesCommandHandler {
         androidAdbUtil.getProperty(serial, AndroidProperty.PRODUCT_BOARD),
         androidAdbUtil.getProperty(serial, AndroidProperty.DEVICE),
         androidAdbUtil.getProperty(serial, AndroidProperty.BUILD_ALIAS),
-        Integer.toString(androidSystemSettingUtil.getBatteryLevel(serial)));
+        androidSystemSettingUtil.getBatteryLevel(serial).map(String::valueOf).orElse(""));
   }
 
   /** Combines {@link DeviceInfo} from DeviceManager and {@link DeviceDescriptor} from ADB. */

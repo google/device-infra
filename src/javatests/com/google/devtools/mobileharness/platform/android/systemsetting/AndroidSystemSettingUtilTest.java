@@ -402,7 +402,7 @@ public class AndroidSystemSettingUtilTest {
                 + "  temperature: 360\n"
                 + "  technology: Li-ion");
 
-    assertThat(settingUtil.getBatteryLevel(DEVICE_ID)).isEqualTo(98);
+    assertThat(settingUtil.getBatteryLevel(DEVICE_ID)).hasValue(98);
   }
 
   @Test

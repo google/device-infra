@@ -211,7 +211,7 @@ public class DeviceDetailsRetriever {
 
   private Optional<Integer> getDeviceBatteryLevel(String deviceId) {
     try {
-      return Optional.of(androidSystemSettingUtilProvider.get().getBatteryLevel(deviceId));
+      return androidSystemSettingUtilProvider.get().getBatteryLevel(deviceId);
     } catch (MobileHarnessException e) {
       logger.atWarning().log(
           "Failed to get battery level for device %s: %s",
