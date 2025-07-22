@@ -225,7 +225,7 @@ public class TestbedDevice extends BaseDevice implements CompositeDevice {
 
   @Override
   public void setUp() throws MobileHarnessException, InterruptedException {
-    super.setUp();
+    super.prepare();
     logger.atInfo().log("Setting up TestbedDevice: %s", getDeviceId());
 
     addManagedConfigDevices();

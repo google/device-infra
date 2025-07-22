@@ -308,7 +308,7 @@ public abstract class BaseDevice implements Device {
   }
 
   @Override
-  public void setUp() throws MobileHarnessException, InterruptedException {
+  public void prepare() throws MobileHarnessException, InterruptedException {
     ImmutableListMultimap<Dimension.Name, String> extraDimensions = null;
     if (supportsContainer()) {
       extraDimensions =
