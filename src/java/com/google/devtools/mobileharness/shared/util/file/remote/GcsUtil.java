@@ -202,11 +202,11 @@ public class GcsUtil {
      * Constructs CloudStorage Params given parameters about the storage.
      *
      * @param bucketName name of the bucket containing files
-     * @param cloudStorageConfigPath path of the credential file for the service accounts
      * @param scope access scope of the service account
+     * @param credentialType credential type of the service account
      */
-    public GcsParams(String bucketName, @Nullable String cloudStorageConfigPath, Scope scope) {
-      this(DEFAULT_APPLICATION_NAME, bucketName, cloudStorageConfigPath, scope);
+    public GcsParams(String bucketName, Scope scope, CredentialType credentialType) {
+      this(DEFAULT_APPLICATION_NAME, bucketName, scope, credentialType);
     }
 
     /**

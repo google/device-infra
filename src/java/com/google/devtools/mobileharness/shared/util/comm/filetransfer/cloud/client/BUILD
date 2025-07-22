@@ -50,6 +50,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/file/remote:dataclass",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/remote:gcs_file_manager",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/remote:gcs_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
         "@com_google_protobuf//:protobuf_java",

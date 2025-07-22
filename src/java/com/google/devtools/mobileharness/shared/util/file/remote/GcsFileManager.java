@@ -93,7 +93,14 @@ public class GcsFileManager {
    */
   public GcsFileManager(Path homeDir, String bucket)
       throws MobileHarnessException, InterruptedException {
-    this(homeDir, bucket, Optional.empty(), DEFAULT_CACHE_TTL, Optional.empty(), Optional.empty());
+    this(
+        homeDir,
+        bucket,
+        Optional.empty(),
+        DEFAULT_CACHE_TTL,
+        Optional.empty(),
+        Optional.empty(),
+        GcsUtil.CredentialType.ofCredentialFile(getCredentialFile()));
   }
 
   @SuppressWarnings("GoodTime") // TODO: fix GoodTime violation
@@ -103,11 +110,12 @@ public class GcsFileManager {
       Optional<Duration> cloudCacheTtl,
       Duration localCacheTtl,
       Optional<Long> uploadShardSize,
-      Optional<Long> downloadShardSize)
+      Optional<Long> downloadShardSize,
+      GcsUtil.CredentialType credentialType)
       throws MobileHarnessException, InterruptedException {
     this(
         homeDir,
-        new GcsUtil(new GcsParams(bucket, getCredentialFile(), Scope.READ_WRITE)),
+        new GcsUtil(new GcsParams(bucket, Scope.READ_WRITE, credentialType)),
         new LocalFileUtil(),
         cloudCacheTtl,
         localCacheTtl,
@@ -141,7 +149,7 @@ public class GcsFileManager {
             .build();
   }
 
-  private static String getCredentialFile() {
+  public static String getCredentialFile() {
     return Flags.instance().fileTransferCredFile.getNonNull();
   }
 

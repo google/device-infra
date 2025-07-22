@@ -54,6 +54,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/remote:gcs_file_manager",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/remote:gcs_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@com_google_protobuf//:protobuf_java",
         "@com_google_protobuf_protobuf_java",

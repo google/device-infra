@@ -22,6 +22,7 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.Iterables;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.shared.util.file.remote.GcsUtil.CredentialType;
 import com.google.devtools.mobileharness.shared.util.file.remote.GcsUtil.GcsParams;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -65,7 +66,10 @@ final class GsUtil {
 
     @Memoized
     GcsParams gcsParams() {
-      return new GcsParams(bucketName(), credentialFile(), GcsParams.Scope.READ_WRITE);
+      return new GcsParams(
+          bucketName(),
+          GcsParams.Scope.READ_WRITE,
+          CredentialType.ofCredentialFile(credentialFile()));
     }
 
     static Builder builder() {
