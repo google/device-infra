@@ -1973,8 +1973,9 @@ public class Flags {
   @com.beust.jcommander.Parameter(
       names = "--tradefed_curl_download_limit_rate",
       description =
-          "The limit rate of curl download for Tradefed. Default is null and curl will try to"
-              + " saturate all available network connections.",
+          "The limit rate of curl download for Tradefed. The value should be given with a letter"
+              + " suffix using one of K, M and G for kilobytes, megabytes and gigabytes per second."
+              + " Default is null and curl will try to saturate all available network connections.",
       converter = Flag.StringConverter.class)
   public Flag<String> tradefedCurlDownloadLimitRate = tradefedCurlDownloadLimitRateDefault;
 
