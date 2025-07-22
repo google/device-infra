@@ -134,8 +134,8 @@ final class AtsServerSessionPlugin {
       if (request.getRequestCase().equals(RequestCase.NEW_MULTI_COMMAND_REQUEST)) {
         NewMultiCommandRequest newMultiCommandRequest = request.getNewMultiCommandRequest();
         requestDetail
-            .setCreateTime(Timestamps.fromMillis(clock.millis()))
-            .setStartTime(Timestamps.fromMillis(clock.millis()))
+            .setCreateTime(Timestamps.fromMillis(clock.instant().toEpochMilli()))
+            .setStartTime(Timestamps.fromMillis(clock.instant().toEpochMilli()))
             .setId(sessionInfo.getSessionId())
             .setOriginalRequest(newMultiCommandRequest)
             .setMaxRetryOnTestFailures(newMultiCommandRequest.getMaxRetryOnTestFailures())
@@ -146,6 +146,25 @@ final class AtsServerSessionPlugin {
             return;
           } else {
             requestDetail.setState(RequestState.RUNNING);
+            // Add a dummy command detail that will be updated later. Need to flush the command
+            // detail info to UI before creating jobs because job creation can be time consuming and
+            // without command detail the UI will show no command is running before the first update
+            // from OLCS, which is a issue for retry that has previous attempt result that can
+            // temporarily disappear.
+            String commandId =
+                newMultiCommandRequestHandler.getCommandId(
+                    newMultiCommandRequest.getCommands(0), newMultiCommandRequest);
+            requestDetail.putCommandDetails(
+                commandId,
+                CommandDetail.newBuilder()
+                    .setId(commandId)
+                    .setRequestId(sessionInfo.getSessionId())
+                    .setState(CommandState.RUNNING)
+                    .setStartTime(Timestamps.fromMillis(clock.instant().toEpochMilli()))
+                    .setCreateTime(Timestamps.fromMillis(clock.instant().toEpochMilli()))
+                    .setUpdateTime(Timestamps.fromMillis(clock.instant().toEpochMilli()))
+                    .setCommandLine(newMultiCommandRequest.getCommands(0).getCommandLine())
+                    .build());
           }
           updateSessionPluginOutput(requestDetail);
 
@@ -190,7 +209,7 @@ final class AtsServerSessionPlugin {
             return;
           }
 
-          requestDetail.setUpdateTime(Timestamps.fromMillis(clock.millis()));
+          requestDetail.setUpdateTime(Timestamps.fromMillis(clock.instant().toEpochMilli()));
 
           // Ensure non-tradefed jobs are added only if no tradefed jobs exist or all tradefed jobs
           // have ended.
