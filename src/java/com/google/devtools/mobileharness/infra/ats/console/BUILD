@@ -33,6 +33,9 @@ java_library(
 
 java_binary(
     name = "ats_console",
+    deploy_manifest_lines = [
+        "Class-Path: ats_olc_server_local_mode_deploy.jar",
+    ],
     main_class = "com.google.devtools.mobileharness.infra.ats.console.AtsConsole",
     visibility = DEFAULT_VISIBILITY + [
         "//src/javatests/com/google/devtools/mobileharness/shared/size:__subpackages__",
