@@ -26,14 +26,11 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ClientId;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerStub;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer;
-import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleTextStyle;
-import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
+import com.google.devtools.mobileharness.infra.ats.console.util.log.LogRecordPrinter;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.GetLogRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.GetLogResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecord;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecord.SourceType;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.ControlStub;
-import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
@@ -51,14 +48,12 @@ public class ServerLogPrinter {
   private static final ImmutableSet<Code> NORMAL_CODES =
       ImmutableSet.of(Code.UNAVAILABLE, Code.CANCELLED);
 
-  private final ConsoleUtil consoleUtil;
+  private final LogRecordPrinter logRecordPrinter;
   private final Provider<ControlStub> controlStubProvider;
   private final ServerPreparer serverPreparer;
   private final String clientId;
 
   private final GetLogResponseObserver responseObserver = new GetLogResponseObserver();
-  private final int minLogRecordImportance =
-      Flags.instance().atsConsoleOlcServerMinLogRecordImportance.getNonNull();
 
   private final Object lock = new Object();
 
@@ -70,11 +65,11 @@ public class ServerLogPrinter {
 
   @Inject
   ServerLogPrinter(
-      ConsoleUtil consoleUtil,
+      LogRecordPrinter logRecordPrinter,
       @ServerStub(ServerStub.Type.CONTROL_SERVICE) Provider<ControlStub> controlStubProvider,
       ServerPreparer serverPreparer,
       @ClientId String clientId) {
-    this.consoleUtil = consoleUtil;
+    this.logRecordPrinter = logRecordPrinter;
     this.controlStubProvider = controlStubProvider;
     this.serverPreparer = serverPreparer;
     this.clientId = clientId;
@@ -117,10 +112,7 @@ public class ServerLogPrinter {
     @Override
     public void onNext(GetLogResponse response) {
       for (LogRecord logRecord : response.getLogRecords().getLogRecordList()) {
-        if (logRecord.getImportance() >= minLogRecordImportance) {
-          consoleUtil.printlnDirect(
-              logRecord.getFormattedLogRecord(), getLogRecordStyle(logRecord), System.err);
-        }
+        logRecordPrinter.printLogRecord(logRecord);
       }
     }
 
@@ -144,14 +136,6 @@ public class ServerLogPrinter {
       synchronized (lock) {
         requestObserver = null;
       }
-    }
-  }
-
-  private static ConsoleTextStyle getLogRecordStyle(LogRecord logRecord) {
-    if (logRecord.getSourceType() == SourceType.TF) {
-      return ConsoleTextStyle.TF_STDOUT;
-    } else {
-      return ConsoleTextStyle.OLC_SERVER_LOG;
     }
   }
 }
