@@ -236,7 +236,6 @@ public class ServerPreparer {
             .log("OLC server environment: %s", serverEnvironment);
 
         // Creates arguments.
-        FlagsString serverFlags = deviceInfraServiceFlags.addToHead(BuiltinOlcServerFlags.get());
         ImmutableList<String> serverNativeArguments =
             ImmutableList.of(
                 "-Xmx" + Flags.instance().atsConsoleOlcServerXmx.getNonNull(),
@@ -247,7 +246,7 @@ public class ServerPreparer {
             .with(IMPORTANCE, DEBUG)
             .log(
                 "OLC server flags: %s, native arguments: %s",
-                serverFlags.flags(), serverNativeArguments);
+                deviceInfraServiceFlags.flags(), serverNativeArguments);
 
         // Creates the command to start the server.
         String serverOutputPath = Flags.instance().atsConsoleOlcServerOutputPath.getNonNull();
@@ -260,7 +259,7 @@ public class ServerPreparer {
                 .createJavaCommand(
                     wrapPath(serverEnvironment.serverBinary().toString()),
                     // Treats all flags as one argument to keep escape chars.
-                    ImmutableList.of(serverFlags.flagsString()),
+                    ImmutableList.of(deviceInfraServiceFlags.flagsString()),
                     serverNativeArguments));
         startOlcServerCommandBuilder.add(">" + serverOutputPath).add("2>&1").add("&");
 

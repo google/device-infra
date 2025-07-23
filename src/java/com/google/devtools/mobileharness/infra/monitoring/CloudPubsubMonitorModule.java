@@ -89,7 +89,7 @@ public final class CloudPubsubMonitorModule extends AbstractModule {
       @CloudPubsubChannel Channel channel)
       throws IOException, InterruptedException, ExecutionException {
 
-    GoogleCredentials credentials = GoogleCredentials.getApplicationDefault();
+    GoogleCredentials credentials = null;
     if (Flags.instance().cloudPubsubCredFile.get() != null) {
       credentials =
           GoogleCredentials.fromStream(
