@@ -100,7 +100,6 @@ java_library(
     srcs = ["ServerPreparer.java"],
     deps = [
         ":annotations",
-        ":builtin_olc_server_flags",
         ":server_environment_preparer",
         ":server_heap_dump_file_detector",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:control_service_java_proto",
