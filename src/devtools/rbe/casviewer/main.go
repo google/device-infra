@@ -4,23 +4,20 @@ package main
 import (
 	"errors"
 	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"flag"
 	
 	log "github.com/golang/glog"
-
-	"os"
-
-	"os/signal"
-	"syscall"
-
 	"github.com/google/device-infra/src/devtools/rbe/casviewer/chunkstore"
 	"github.com/google/device-infra/src/devtools/rbe/casviewer/fuse"
 	"github.com/google/device-infra/src/devtools/rbe/casviewer/mountutil"
 )
 
 const (
-	version = "1.2"
+	version = "1.3"
 )
 
 var (
@@ -28,6 +25,7 @@ var (
 	indexPath    = flag.String("index", "", "Path to index JSON file (required)")
 	chunkDir     = flag.String("chunks", "", "Directory containing chunk files")
 	mountPoint   = flag.String("mount", "", "Mount point (required)")
+	logDir       = flag.String("log-dir", "", "Log directory path")
 )
 
 func checkFlags() error {
@@ -54,12 +52,33 @@ func checkFlags() error {
 	return nil
 }
 
+func logToDir(dir string) error {
+	// Create log directory if it doesn't exist.
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return err
+		}
+	} else if err != nil {
+		return err
+	}
+	return flag.Set("log_dir", dir)
+}
+
 func main() {
 	// Parse command line arguments
 	flag.Set("silent_init", "true")
-	flag.Set("logtostderr", "true")
+	flag.Set("logalsotostderr", "true")
 	flag.Set("stderrthreshold", "INFO")
-	flag.Parse() // flag.Parse()
+
+	flag.Parse()
+
+	if *logDir != "" {
+		if err := logToDir(*logDir); err != nil {
+			log.Exit(err)
+		} else {
+			log.Infof("Log directory: %s", *logDir)
+		}
+	}
 
 	if *printVersion {
 		fmt.Printf("version: %s\n", version)
