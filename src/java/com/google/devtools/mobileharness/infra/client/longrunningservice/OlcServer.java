@@ -52,7 +52,6 @@ import com.google.devtools.mobileharness.shared.util.comm.server.LifecycleManage
 import com.google.devtools.mobileharness.shared.util.comm.server.ServerBuilderFactory;
 import com.google.devtools.mobileharness.shared.util.database.DatabaseConnections;
 import com.google.devtools.mobileharness.shared.util.database.TablesLister;
-import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.logging.flogger.FloggerFormatter;
 import com.google.devtools.mobileharness.shared.util.signal.Signals;
@@ -62,7 +61,7 @@ import com.google.devtools.mobileharness.shared.version.Version;
 import com.google.devtools.mobileharness.shared.version.VersionUtil;
 import com.google.inject.Guice;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessLogger;
-import com.google.wireless.qa.mobileharness.shared.constant.DirCommon;
+import com.google.wireless.qa.mobileharness.shared.constant.DirPreparer;
 import io.grpc.BindableService;
 import io.grpc.ServerBuilder;
 import java.time.Duration;
@@ -91,7 +90,7 @@ public class OlcServer {
     // Parses flags.
     Flags.parse(args);
 
-    // Creates and runs the server.
+    // Creates the server.
     Instant serverStartTime = Instant.now();
     boolean enableDatabase = validateDatabase();
     OlcServer server =
@@ -103,6 +102,20 @@ public class OlcServer {
                     enableDatabase,
                     Flags.instance().enableGrpcRelay.getNonNull()))
             .getInstance(OlcServer.class);
+
+    // Prepares dirs.
+    DirPreparer.prepareDirRoots();
+
+    // Initializes logger.
+    MobileHarnessLogger.init(
+        OlcServerDirs.getLogDir(),
+        ImmutableList.of(server.logManager.getLogHandler()),
+        /* disableConsoleHandler= */ false);
+
+    // Adds shutdown hook.
+    Runtime.getRuntime().addShutdownHook(new Thread(server::onShutdown));
+
+    // Runs the server.
     server.run(Arrays.asList(args));
   }
 
@@ -117,7 +130,6 @@ public class OlcServer {
   private final EventBus globalInternalEventBus;
   private final LogManager<LogRecords> logManager;
   private final ClientApi clientApi;
-  private final LocalFileUtil localFileUtil;
   private final SystemUtil systemUtil;
   private final SystemInfoPrinter systemInfoPrinter;
   private final boolean enableDatabase;
@@ -138,7 +150,6 @@ public class OlcServer {
       @GlobalInternalEventBus EventBus globalInternalEventBus,
       LogManager<LogRecords> logManager,
       ClientApi clientApi,
-      LocalFileUtil localFileUtil,
       SystemUtil systemUtil,
       SystemInfoPrinter systemInfoPrinter,
       @EnableDatabase boolean enableDatabase,
@@ -156,7 +167,6 @@ public class OlcServer {
     this.globalInternalEventBus = globalInternalEventBus;
     this.logManager = logManager;
     this.clientApi = clientApi;
-    this.localFileUtil = localFileUtil;
     this.systemUtil = systemUtil;
     this.systemInfoPrinter = systemInfoPrinter;
     this.enableDatabase = enableDatabase;
@@ -166,21 +176,6 @@ public class OlcServer {
   }
 
   private void run(List<String> args) throws MobileHarnessException, InterruptedException {
-    // Prepares dirs.
-    localFileUtil.prepareDir(DirCommon.getPublicDirRoot());
-    localFileUtil.prepareDir(DirCommon.getTempDirRoot());
-    localFileUtil.grantFileOrDirFullAccess(DirCommon.getPublicDirRoot());
-    localFileUtil.grantFileOrDirFullAccess(DirCommon.getTempDirRoot());
-
-    // Initializes logger.
-    MobileHarnessLogger.init(
-        OlcServerDirs.getLogDir(),
-        ImmutableList.of(logManager.getLogHandler()),
-        /* disableConsoleHandler= */ false);
-
-    // Adds shutdown hook.
-    Runtime.getRuntime().addShutdownHook(new Thread(this::onShutdown));
-
     // Monitors known signals.
     if (Flags.instance().monitorSignals.getNonNull()) {
       Signals.monitorKnownSignals();
