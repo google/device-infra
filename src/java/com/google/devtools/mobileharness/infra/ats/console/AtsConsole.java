@@ -36,6 +36,7 @@ import com.google.devtools.mobileharness.infra.ats.common.FlagsString;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ClientId;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.DeviceInfraServiceFlags;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerStub;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.BuiltinOlcServerFlags;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleLineReader;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleOutput;
@@ -329,6 +330,11 @@ public class AtsConsole {
 
   private static FlagsString preprocessDeviceInfraServiceFlags(FlagsString deviceInfraServiceFlags)
       throws IOException, InterruptedException {
+    // Adds builtin flags to the head.
+    FlagsString flagsWithBuiltinFlags =
+        deviceInfraServiceFlags.addToHead(BuiltinOlcServerFlags.get());
+
+    // Adds extra flags from environment variables to the end.
     ImmutableList.Builder<String> extraFlags = ImmutableList.builder();
     if (Boolean.parseBoolean(System.getenv(USE_NEW_OLC_SERVER_ENV_VAR))) {
       // Generate random flags for a new OLC server
@@ -339,7 +345,7 @@ public class AtsConsole {
           String.format(
               "--use_tf_retry=%s", Boolean.parseBoolean(System.getenv(USE_TF_RETRY_ENV_VAR))));
     }
-    return deviceInfraServiceFlags.addToEnd(extraFlags.build());
+    return flagsWithBuiltinFlags.addToEnd(extraFlags.build());
   }
 
   private static ImmutableList<String> getRandomServerFlags()
