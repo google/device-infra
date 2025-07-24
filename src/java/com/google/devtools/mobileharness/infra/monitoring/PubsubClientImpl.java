@@ -16,10 +16,14 @@
 
 package com.google.devtools.mobileharness.infra.monitoring;
 
+import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
+import static java.util.concurrent.TimeUnit.SECONDS;
+
+import com.google.common.collect.Lists;
 import com.google.common.flogger.FluentLogger;
-import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
-import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcStubUtil;
-import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.infra.monitoring.CloudPubsubMonitorModule.CloudPubsubTopic;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
@@ -33,19 +37,23 @@ import com.google.pubsub.v1.PublisherGrpc;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
+import javax.annotation.Nullable;
 
 /** Publishes data to Cloud PubSub. */
 public class PubsubClientImpl extends DataPusher {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
+  private static final int MAX_DATASETS_IN_ONE_QUERY = 100;
+  private static final int PUBLISH_DEADLINE_SECONDS = 10;
+
   private final String pubsubTopic;
-  private final Provider<PublisherGrpc.PublisherBlockingStub> publisherStubProvider;
+  private final Provider<PublisherGrpc.PublisherFutureStub> publisherStubProvider;
 
   @Inject
   PubsubClientImpl(
       @CloudPubsubTopic String pubsubTopic,
-      Provider<PublisherGrpc.PublisherBlockingStub> publisherStubProvider) {
+      Provider<PublisherGrpc.PublisherFutureStub> publisherStubProvider) {
     this.pubsubTopic = pubsubTopic;
     this.publisherStubProvider = publisherStubProvider;
   }
@@ -59,9 +67,18 @@ public class PubsubClientImpl extends DataPusher {
   @Override
   public <T extends Message> void push(
       List<T> messageData, Consumer<String> successCallback, Consumer<Throwable> failureCallback) {
+    List<List<T>> batches = Lists.partition(messageData, MAX_DATASETS_IN_ONE_QUERY);
+
+    for (List<T> batch : batches) {
+      pushAsync(batch, successCallback, failureCallback);
+    }
+  }
+
+  private <T extends Message> void pushAsync(
+      List<T> batch, Consumer<String> successCallback, Consumer<Throwable> failureCallback) {
     PublishRequest.Builder request = PublishRequest.newBuilder().setTopic(pubsubTopic);
 
-    for (Message data : messageData) {
+    for (Message data : batch) {
       if (data != null) {
         Optional<ByteString> serializedData = serialize(data);
         if (serializedData.isEmpty()) {
@@ -72,28 +89,34 @@ public class PubsubClientImpl extends DataPusher {
     }
 
     if (request.getMessagesCount() == 0) {
-      logger.atWarning().log("No messages to publish.");
+      logger.atWarning().log("No messages to publish in the current batch.");
       return;
     }
 
-    PublishResponse response;
-    try {
-      response =
-          GrpcStubUtil.invoke(
-              publisherStubProvider.get()::publish,
-              request.build(),
-              InfraErrorId.FAIL_TO_PUBLISH_MESSAGE_TO_CLOUD_PUB_SUB,
-              "Failed to publish message to Cloud PubSub");
-      successCallback.accept(response.getMessageIdsList().toString());
-    } catch (GrpcExceptionWithErrorId e) {
-      failureCallback.accept(e);
-    }
+    ListenableFuture<PublishResponse> responseFuture =
+        publisherStubProvider
+            .get()
+            .withDeadlineAfter(PUBLISH_DEADLINE_SECONDS, SECONDS)
+            .publish(request.build());
+    Futures.addCallback(
+        responseFuture,
+        new FutureCallback<PublishResponse>() {
+          @Override
+          public void onSuccess(@Nullable PublishResponse result) {
+            successCallback.accept(result.getMessageIdsList().toString());
+          }
+
+          @Override
+          public void onFailure(Throwable t) {
+            failureCallback.accept(t);
+          }
+        },
+        directExecutor());
   }
 
   private static Optional<ByteString> serialize(Message data) {
     try {
-      return Optional.of(
-          ByteString.copyFromUtf8(JsonFormat.printer().preservingProtoFieldNames().print(data)));
+      return Optional.of(ByteString.copyFromUtf8(JsonFormat.printer().print(data)));
     } catch (InvalidProtocolBufferException e) {
       logger.atWarning().withCause(e).log(
           "Failed to convert proto message %s to byte string.", data);
