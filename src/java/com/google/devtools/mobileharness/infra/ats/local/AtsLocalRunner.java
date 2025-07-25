@@ -25,6 +25,7 @@ import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.ats.common.DeviceInfraServiceUtil;
 import com.google.devtools.mobileharness.infra.ats.common.FlagsString;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerStub;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.BuiltinOlcServerFlags;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer;
 import com.google.devtools.mobileharness.infra.ats.local.proto.AtsLocalSessionPluginProto.AtsLocalSessionPluginConfig;
 import com.google.devtools.mobileharness.infra.ats.local.proto.AtsLocalSessionPluginProto.AtsLocalSessionPluginOutput;
@@ -63,11 +64,12 @@ public class AtsLocalRunner {
   public static void main(String[] args) throws InterruptedException, MobileHarnessException {
     FlagsString deviceInfraServiceFlags =
         DeviceInfraServiceUtil.getDeviceInfraServiceFlagsFromSystemProperty();
-    // Parse the system property and args
-    ImmutableList<String> allFlags =
-        ImmutableList.<String>builder().addAll(deviceInfraServiceFlags.flags()).add(args).build();
-    logger.atInfo().log("Device infra service flags: %s", allFlags);
-    DeviceInfraServiceUtil.parseFlags(allFlags);
+    FlagsString finalFlags =
+        deviceInfraServiceFlags
+            .addToHead(BuiltinOlcServerFlags.get())
+            .addToEnd(ImmutableList.copyOf(args));
+    logger.atInfo().log("Device infra service flags: %s", finalFlags.flags());
+    DeviceInfraServiceUtil.parseFlags(finalFlags.flags());
 
     Injector injector =
         Guice.createInjector(
