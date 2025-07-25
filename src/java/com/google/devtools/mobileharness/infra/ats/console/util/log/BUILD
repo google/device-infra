@@ -30,3 +30,19 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+java_library(
+    name = "log_record_printer",
+    srcs = ["LogRecordPrinter.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/olcserver:__pkg__",
+    ],
+    deps = [
+        "//src/devtools/mobileharness/infra/client/longrunningservice/proto:log_java_proto",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/console:console_text_style",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/console:console_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
