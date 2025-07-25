@@ -123,6 +123,8 @@ message StringMultimapMatchCondition {
 message StringMatchCondition {
   // A string matches this condition if it is in the list of expected
   // values (case-insensitive).
+  //
+  // An empty list will match nothing.
   message Include {
     repeated string expected = 1;
   }

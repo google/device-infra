@@ -38,6 +38,7 @@ java_library(
     name = "log_manager",
     srcs = ["LogManager.java"],
     deps = [
+        ":log_recorder_backend",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:log_java_proto",
         "//src/java/com/google/devtools/mobileharness/shared/constant:log_record_importance",
         "//src/java/com/google/devtools/mobileharness/shared/context:invocation_context",
@@ -58,9 +59,15 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__subpackages__",
     ],
     deps = [
-        ":log_manager",
+        ":log_recorder_backend",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:log_java_proto",
     ],
+)
+
+java_library(
+    name = "log_recorder_backend",
+    srcs = ["LogRecorderBackend.java"],
+    deps = ["//src/devtools/mobileharness/infra/client/longrunningservice/proto:log_java_proto"],
 )
 
 java_library(

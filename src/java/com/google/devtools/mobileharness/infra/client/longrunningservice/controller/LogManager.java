@@ -72,6 +72,8 @@ public class LogManager<D> {
 
   private static final int CAPACITY = 100;
 
+  private final LogRecorderBackend logRecorderBackend = new LogManagerLogRecorderBackend();
+
   private final Handler logHandler;
 
   private final ListeningExecutorService threadPool;
@@ -109,6 +111,14 @@ public class LogManager<D> {
   /** The handler will not handle logs from {@link CommandOutputLogger}. */
   public Handler getLogHandler() {
     return logHandler;
+  }
+
+  /**
+   * Returns a {@link LogRecorderBackend} which handles external log records by adding them to this
+   * log manager.
+   */
+  public LogRecorderBackend getLogRecorderBackend() {
+    return logRecorderBackend;
   }
 
   public void addConsumer(LogRecordsConsumer<D> consumer) {
@@ -177,10 +187,6 @@ public class LogManager<D> {
       }
     }
     return null;
-  }
-
-  void addExternalLogRecord(LogProto.LogRecord logRecord) {
-    addLogRecordToBuffer(logRecord);
   }
 
   /**
@@ -276,6 +282,14 @@ public class LogManager<D> {
       result.setClientId(clientId);
     }
     return result.build();
+  }
+
+  private class LogManagerLogRecorderBackend implements LogRecorderBackend {
+
+    @Override
+    public void handleExternalLogRecord(LogProto.LogRecord logRecord) {
+      addLogRecordToBuffer(logRecord);
+    }
   }
 
   private static class LogRecordWithContext {
