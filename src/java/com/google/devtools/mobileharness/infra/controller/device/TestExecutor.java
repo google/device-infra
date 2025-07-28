@@ -35,6 +35,9 @@ public interface TestExecutor {
    */
   void cancel(LocalDeviceTestExecutor test);
 
+  /** Stops any ongoing test and makes it unavailable for reservations. */
+  default void tearDown() {}
+
   /** Get the Device associated with this TestExecutor. */
   Device getDevice();
 
