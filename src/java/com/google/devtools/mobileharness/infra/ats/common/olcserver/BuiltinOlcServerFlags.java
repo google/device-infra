@@ -19,11 +19,11 @@ package com.google.devtools.mobileharness.infra.ats.common.olcserver;
 import com.google.common.collect.ImmutableList;
 
 /**
- * Builtin flags of OLC server for ATS console / local runner.
+ * Built-in flags of OLC server/ATS console/ATS local runner for ATS console/ATS local runner.
  *
- * <p>ATS console / local runner can also override these flags.
+ * <p>ATS console/ATS local runner can also override these flags.
  */
-class BuiltinOlcServerFlags {
+public class BuiltinOlcServerFlags {
 
   private static final ImmutableList<String> VALUE =
       ImmutableList.of(
@@ -47,7 +47,7 @@ class BuiltinOlcServerFlags {
           "--set_test_harness_property=false",
           "--simplified_log_format=true");
 
-  static ImmutableList<String> get() {
+  public static ImmutableList<String> get() {
     return VALUE;
   }
 
