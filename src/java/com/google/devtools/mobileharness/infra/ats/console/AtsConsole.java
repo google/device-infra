@@ -36,6 +36,7 @@ import com.google.devtools.mobileharness.infra.ats.common.FlagsString;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ClientId;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.DeviceInfraServiceFlags;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerStub;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.BuiltinOlcServerFlags;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleLineReader;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleOutput;
@@ -64,6 +65,7 @@ import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessLogger;
+import com.google.wireless.qa.mobileharness.shared.constant.DirPreparer;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.time.Duration;
@@ -91,7 +93,8 @@ public class AtsConsole {
 
   private static final String USE_TF_RETRY_ENV_VAR = "USE_TF_RETRY";
 
-  public static void main(String[] args) throws IOException, InterruptedException {
+  public static void main(String[] args)
+      throws MobileHarnessException, IOException, InterruptedException {
     // Gets system properties.
     ImmutableMap<String, String> systemProperties =
         System.getProperties().entrySet().stream()
@@ -124,6 +127,9 @@ public class AtsConsole {
     // Creates ATS console.
     AtsConsole atsConsole = injector.getInstance(AtsConsole.class);
     atsConsole.injector = injector;
+
+    // Prepares dirs.
+    DirPreparer.prepareDirRoots();
 
     // Initializes logger.
     MobileHarnessLogger.init(
@@ -329,6 +335,11 @@ public class AtsConsole {
 
   private static FlagsString preprocessDeviceInfraServiceFlags(FlagsString deviceInfraServiceFlags)
       throws IOException, InterruptedException {
+    // Adds builtin flags to the head.
+    FlagsString flagsWithBuiltinFlags =
+        deviceInfraServiceFlags.addToHead(BuiltinOlcServerFlags.get());
+
+    // Adds extra flags from environment variables to the end.
     ImmutableList.Builder<String> extraFlags = ImmutableList.builder();
     if (Boolean.parseBoolean(System.getenv(USE_NEW_OLC_SERVER_ENV_VAR))) {
       // Generate random flags for a new OLC server
@@ -339,7 +350,7 @@ public class AtsConsole {
           String.format(
               "--use_tf_retry=%s", Boolean.parseBoolean(System.getenv(USE_TF_RETRY_ENV_VAR))));
     }
-    return deviceInfraServiceFlags.addToEnd(extraFlags.build());
+    return flagsWithBuiltinFlags.addToEnd(extraFlags.build());
   }
 
   private static ImmutableList<String> getRandomServerFlags()

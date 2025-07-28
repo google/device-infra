@@ -33,6 +33,9 @@ java_library(
 
 java_binary(
     name = "ats_console",
+    deploy_manifest_lines = [
+        "Class-Path: ats_olc_server_local_mode_deploy.jar",
+    ],
     main_class = "com.google.devtools.mobileharness.infra.ats.console.AtsConsole",
     visibility = DEFAULT_VISIBILITY + [
         "//src/javatests/com/google/devtools/mobileharness/shared/size:__subpackages__",
@@ -56,6 +59,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:device_infra_service_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:flags_string",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:annotations",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:builtin_olc_server_flags",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:server_preparer",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/command",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/command/completer:command_completer",
@@ -80,6 +84,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/system:system_info_printer",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
         "//src/java/com/google/wireless/qa/mobileharness/shared:log",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dir_preparer",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
         "@maven//:info_picocli_picocli",
