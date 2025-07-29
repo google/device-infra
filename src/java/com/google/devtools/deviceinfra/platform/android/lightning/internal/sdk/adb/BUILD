@@ -22,6 +22,7 @@ java_library(
     srcs = ["Adb.java"],
     visibility = [
         "//:deviceinfra_all_pkg",
+        "//:omnilab_fusion",
     ],
     deps = [
         ":annotations",

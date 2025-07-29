@@ -36,6 +36,7 @@ import com.google.devtools.mobileharness.infra.ats.common.FlagsString;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ClientId;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.DeviceInfraServiceFlags;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerStub;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.BuiltinOlcServerFlags;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleLineReader;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleOutput;
@@ -50,8 +51,10 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.
 import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.InterruptibleLineReader;
 import com.google.devtools.mobileharness.infra.ats.console.util.log.LogDumper;
+import com.google.devtools.mobileharness.infra.ats.console.util.log.LogRecordPrinter;
 import com.google.devtools.mobileharness.infra.ats.console.util.notice.NoticeMessageUtil;
 import com.google.devtools.mobileharness.infra.ats.console.util.version.VersionMessageUtil;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogRecorder;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.ControlStub;
 import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
@@ -64,6 +67,7 @@ import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessLogger;
+import com.google.wireless.qa.mobileharness.shared.constant.DirPreparer;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.time.Duration;
@@ -91,7 +95,8 @@ public class AtsConsole {
 
   private static final String USE_TF_RETRY_ENV_VAR = "USE_TF_RETRY";
 
-  public static void main(String[] args) throws IOException, InterruptedException {
+  public static void main(String[] args)
+      throws MobileHarnessException, IOException, InterruptedException {
     // Gets system properties.
     ImmutableMap<String, String> systemProperties =
         System.getProperties().entrySet().stream()
@@ -125,11 +130,17 @@ public class AtsConsole {
     AtsConsole atsConsole = injector.getInstance(AtsConsole.class);
     atsConsole.injector = injector;
 
+    // Prepares dirs.
+    DirPreparer.prepareDirRoots();
+
     // Initializes logger.
     MobileHarnessLogger.init(
         AtsConsoleDirs.getLogDir(),
         ImmutableList.of(atsConsole.consoleUtil.getLogHandler()),
         /* disableConsoleHandler= */ true);
+
+    // Initializes log recorder.
+    LogRecorder.getInstance().initialize(atsConsole.logRecordPrinter::printLogRecord);
 
     // Adds shutdown hook.
     Runtime.getRuntime()
@@ -157,6 +168,7 @@ public class AtsConsole {
   private final Sleeper sleeper;
   private final ConsoleUtil consoleUtil;
   private final ConsoleInfo consoleInfo;
+  private final LogRecordPrinter logRecordPrinter;
   private final ServerPreparer serverPreparer;
   private final ServerLogPrinter serverLogPrinter;
   private final SystemInfoPrinter systemInfoPrinter;
@@ -180,6 +192,7 @@ public class AtsConsole {
       Sleeper sleeper,
       ConsoleUtil consoleUtil,
       ConsoleInfo consoleInfo,
+      LogRecordPrinter logRecordPrinter,
       ServerPreparer serverPreparer,
       ServerLogPrinter serverLogPrinter,
       SystemInfoPrinter systemInfoPrinter,
@@ -197,6 +210,7 @@ public class AtsConsole {
     this.sleeper = sleeper;
     this.consoleUtil = consoleUtil;
     this.consoleInfo = consoleInfo;
+    this.logRecordPrinter = logRecordPrinter;
     this.serverPreparer = serverPreparer;
     this.serverLogPrinter = serverLogPrinter;
     this.systemInfoPrinter = systemInfoPrinter;
@@ -329,6 +343,11 @@ public class AtsConsole {
 
   private static FlagsString preprocessDeviceInfraServiceFlags(FlagsString deviceInfraServiceFlags)
       throws IOException, InterruptedException {
+    // Adds builtin flags to the head.
+    FlagsString flagsWithBuiltinFlags =
+        deviceInfraServiceFlags.addToHead(BuiltinOlcServerFlags.get());
+
+    // Adds extra flags from environment variables to the end.
     ImmutableList.Builder<String> extraFlags = ImmutableList.builder();
     if (Boolean.parseBoolean(System.getenv(USE_NEW_OLC_SERVER_ENV_VAR))) {
       // Generate random flags for a new OLC server
@@ -339,7 +358,7 @@ public class AtsConsole {
           String.format(
               "--use_tf_retry=%s", Boolean.parseBoolean(System.getenv(USE_TF_RETRY_ENV_VAR))));
     }
-    return deviceInfraServiceFlags.addToEnd(extraFlags.build());
+    return flagsWithBuiltinFlags.addToEnd(extraFlags.build());
   }
 
   private static ImmutableList<String> getRandomServerFlags()
