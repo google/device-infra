@@ -100,6 +100,7 @@ public class SessionManager {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
+  private static final Duration PRINT_SESSIONS_INITIAL_DELAY = Duration.ofSeconds(10L);
   private static final Duration PRINT_SESSIONS_INTERVAL = Duration.ofMinutes(2L);
 
   /** Queue capacity for submitted and non-started sessions. */
@@ -176,7 +177,7 @@ public class SessionManager {
                   }
                 },
                 () -> "running-sessions-printer"),
-            Duration.ZERO,
+            PRINT_SESSIONS_INITIAL_DELAY,
             PRINT_SESSIONS_INTERVAL),
         Level.WARNING,
         "Fatal error when printing running sessions");
