@@ -52,7 +52,6 @@ import com.google.devtools.mobileharness.shared.util.comm.server.LifecycleManage
 import com.google.devtools.mobileharness.shared.util.comm.server.ServerBuilderFactory;
 import com.google.devtools.mobileharness.shared.util.database.DatabaseConnections;
 import com.google.devtools.mobileharness.shared.util.database.TablesLister;
-import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.logging.flogger.FloggerFormatter;
 import com.google.devtools.mobileharness.shared.util.signal.Signals;
@@ -62,13 +61,12 @@ import com.google.devtools.mobileharness.shared.version.Version;
 import com.google.devtools.mobileharness.shared.version.VersionUtil;
 import com.google.inject.Guice;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessLogger;
-import com.google.wireless.qa.mobileharness.shared.constant.DirCommon;
+import com.google.wireless.qa.mobileharness.shared.constant.DirPreparer;
 import io.grpc.BindableService;
 import io.grpc.ServerBuilder;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.Callable;
@@ -91,7 +89,7 @@ public class OlcServer {
     // Parses flags.
     Flags.parse(args);
 
-    // Creates and runs the server.
+    // Creates the server.
     Instant serverStartTime = Instant.now();
     boolean enableDatabase = validateDatabase();
     OlcServer server =
@@ -103,7 +101,36 @@ public class OlcServer {
                     enableDatabase,
                     Flags.instance().enableGrpcRelay.getNonNull()))
             .getInstance(OlcServer.class);
-    server.run(Arrays.asList(args));
+
+    // Prepares dirs.
+    DirPreparer.prepareDirRoots();
+
+    // Initializes logger.
+    MobileHarnessLogger.init(
+        OlcServerDirs.getLogDir(),
+        ImmutableList.of(server.logManager.getLogHandler()),
+        /* disableConsoleHandler= */ false);
+
+    // Initializes log recorder.
+    LogRecorder.getInstance().initialize(server.logManager.getLogRecorderBackend());
+
+    // Logs arguments and system info.
+    if (args.length > 0) {
+      logger.atInfo().log("Args: %s", args);
+    }
+    server.systemInfoPrinter.printSystemInfo(DEBUG);
+
+    // Adds shutdown hook.
+    Runtime.getRuntime().addShutdownHook(new Thread(server::onShutdown));
+
+    // Monitors known signals.
+    if (Flags.instance().monitorSignals.getNonNull()) {
+      Signals.monitorKnownSignals();
+    }
+
+    // Runs the server in standalone mode.
+    server.runBasic();
+    server.runStandaloneMode();
   }
 
   private final SessionService sessionService;
@@ -117,7 +144,6 @@ public class OlcServer {
   private final EventBus globalInternalEventBus;
   private final LogManager<LogRecords> logManager;
   private final ClientApi clientApi;
-  private final LocalFileUtil localFileUtil;
   private final SystemUtil systemUtil;
   private final SystemInfoPrinter systemInfoPrinter;
   private final boolean enableDatabase;
@@ -138,7 +164,6 @@ public class OlcServer {
       @GlobalInternalEventBus EventBus globalInternalEventBus,
       LogManager<LogRecords> logManager,
       ClientApi clientApi,
-      LocalFileUtil localFileUtil,
       SystemUtil systemUtil,
       SystemInfoPrinter systemInfoPrinter,
       @EnableDatabase boolean enableDatabase,
@@ -156,7 +181,6 @@ public class OlcServer {
     this.globalInternalEventBus = globalInternalEventBus;
     this.logManager = logManager;
     this.clientApi = clientApi;
-    this.localFileUtil = localFileUtil;
     this.systemUtil = systemUtil;
     this.systemInfoPrinter = systemInfoPrinter;
     this.enableDatabase = enableDatabase;
@@ -165,47 +189,70 @@ public class OlcServer {
     this.serverUtils = serverUtils;
   }
 
-  private void run(List<String> args) throws MobileHarnessException, InterruptedException {
-    // Prepares dirs.
-    localFileUtil.prepareDir(DirCommon.getPublicDirRoot());
-    localFileUtil.prepareDir(DirCommon.getTempDirRoot());
-    localFileUtil.grantFileOrDirFullAccess(DirCommon.getPublicDirRoot());
-    localFileUtil.grantFileOrDirFullAccess(DirCommon.getTempDirRoot());
-
-    // Initializes logger.
-    MobileHarnessLogger.init(
-        OlcServerDirs.getLogDir(),
-        ImmutableList.of(logManager.getLogHandler()),
-        /* disableConsoleHandler= */ false);
-
-    // Adds shutdown hook.
-    Runtime.getRuntime().addShutdownHook(new Thread(this::onShutdown));
-
-    // Monitors known signals.
-    if (Flags.instance().monitorSignals.getNonNull()) {
-      Signals.monitorKnownSignals();
-    }
-
-    // Logs arguments and version.
-    if (!args.isEmpty()) {
-      logger.atInfo().log("Args: %s", args);
-    }
+  /**
+   * Runs basic logic for both standalone mode and embedded mode.
+   *
+   * <p>Major ones include:
+   *
+   * <ul>
+   *   <li>Initializes OmniLab client API.
+   *   <li>Initializes exec mode (e.g., local device manager).
+   *   <li>Starts session manager.
+   * </ul>
+   */
+  private void runBasic() {
+    // Logs version.
     logger.atInfo().log(
-        "Version: lab-%s%s",
+        "OLC version: lab-%s%s",
         Version.LAB_VERSION,
         VersionUtil.getBuildVersion()
             .map(
                 buildVersion ->
                     String.format(" %s", ProtoTextFormat.shortDebugString(buildVersion)))
             .orElse(""));
-    systemInfoPrinter.printSystemInfo(DEBUG);
 
     // Initializes ClientApi.
     clientApi.initializeSingleton();
 
+    // Starts exec mode.
+    logger.atInfo().log("Starting %s exec mode", execMode.getClass().getSimpleName());
+    logFailure(
+        threadPool.submit(threadRenaming(new ExecModeInitializer(), () -> "exec-mode-initializer")),
+        Level.SEVERE,
+        "Fatal error while initializing %s exec mode",
+        execMode.getClass().getSimpleName());
+
+    // Starts session manager.
+    sessionManager.start();
+
+    // Periodically prints memory usage info.
+    logFailure(
+        scheduledThreadPool.scheduleWithFixedDelay(
+            threadRenaming(
+                () -> logger.atInfo().log("OLC server memory info: %s", systemUtil.getMemoryInfo()),
+                () -> "memory-info-dumper"),
+            DUMP_MEMORY_INFO_INTERVAL,
+            DUMP_MEMORY_INFO_INTERVAL),
+        Level.SEVERE,
+        "Fatal error while dumping memory info.");
+  }
+
+  /**
+   * Runs logic for standalone mode, in which the server is not embedded in another component.
+   *
+   * <p>Major ones include:
+   *
+   * <ul>
+   *   <li>Starts streaming log manager.
+   *   <li>Connects to database.
+   *   <li>Starts gRPC servers.
+   *   <li>Starts monitoring.
+   *   <li>Resumes unfinished sessions.
+   * </ul>
+   */
+  private void runStandaloneMode() throws MobileHarnessException, InterruptedException {
     // Starts log manager.
     logManager.start();
-    LogRecorder.getInstance().initialize(logManager);
 
     // Connects to database.
     if (enableDatabase) {
@@ -231,14 +278,6 @@ public class OlcServer {
       monitorPipelineLauncher.start();
     }
 
-    // Starts exec mode.
-    logger.atInfo().log("Starting %s exec mode", execMode.getClass().getSimpleName());
-    logFailure(
-        threadPool.submit(threadRenaming(new ExecModeInitializer(), () -> "exec-mode-initializer")),
-        Level.SEVERE,
-        "Fatal error while initializing %s exec mode",
-        execMode.getClass().getSimpleName());
-
     // Resumes all the unfinished sessions.
     logger.atInfo().log("Resuming unfinished sessions.");
     logFailure(
@@ -246,25 +285,11 @@ public class OlcServer {
         Level.SEVERE,
         "Fatal error while resuming unfinished sessions.");
 
-    // Starts session manager.
-    sessionManager.start();
-
     // Prints signal.
     logger.atInfo().log("Servers have started: %s", SERVER_STARTED_SIGNAL);
     logger.atInfo().log(
         "Process info: pid=%s, memory_info=[%s]",
         ProcessHandle.current().pid(), systemUtil.getMemoryInfo());
-
-    // Periodically prints memory usage info.
-    logFailure(
-        scheduledThreadPool.scheduleWithFixedDelay(
-            threadRenaming(
-                () -> logger.atInfo().log("OLC server memory info: %s", systemUtil.getMemoryInfo()),
-                () -> "memory-info-dumper"),
-            DUMP_MEMORY_INFO_INTERVAL,
-            DUMP_MEMORY_INFO_INTERVAL),
-        Level.SEVERE,
-        "Fatal error while dumping memory info.");
 
     // Waits for termination.
     lifecycleManager.awaitTermination();
@@ -277,8 +302,7 @@ public class OlcServer {
     ImmutableList<BindableService> extraServicesForNonWorker;
     ImmutableList<BindableService> extraServicesForWorker;
     List<BindableService> dualModeServices = new ArrayList<>();
-    if (execMode instanceof ServiceProvider) {
-      ServiceProvider serviceProvider = (ServiceProvider) execMode;
+    if (execMode instanceof ServiceProvider serviceProvider) {
       extraServicesForNonWorker = serviceProvider.provideServices();
       extraServicesForWorker = serviceProvider.provideServicesForWorkers();
       dualModeServices.addAll(serviceProvider.provideDualModeServices());
