@@ -85,17 +85,16 @@ public final class CloudPubsubMonitorModule extends AbstractModule {
   }
 
   @Provides
-  PublisherGrpc.PublisherBlockingStub providePublisherBlockingStub(
-      @CloudPubsubChannel Channel channel)
+  PublisherGrpc.PublisherFutureStub providePublisherFutureStub(@CloudPubsubChannel Channel channel)
       throws IOException, InterruptedException, ExecutionException {
 
-    GoogleCredentials credentials = GoogleCredentials.getApplicationDefault();
+    GoogleCredentials credentials = null;
     if (Flags.instance().cloudPubsubCredFile.get() != null) {
       credentials =
           GoogleCredentials.fromStream(
               Files.newInputStream(Path.of(Flags.instance().cloudPubsubCredFile.getNonNull())));
     }
-    return PublisherGrpc.newBlockingStub(channel)
+    return PublisherGrpc.newFutureStub(channel)
         .withCallCredentials(MoreCallCredentials.from(credentials));
   }
 
