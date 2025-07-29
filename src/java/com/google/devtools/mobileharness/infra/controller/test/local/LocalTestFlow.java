@@ -298,7 +298,9 @@ public class LocalTestFlow {
           .log()
           .atInfo()
           .alsoTo(logger)
-          .log("--------- Device: RunTest (%s) ---------", testInfo.locator().getId());
+          .log(
+              "--------- Device: RunTest for %s (%s) ---------",
+              testInfo.locator().getName(), testInfo.locator().getId());
       driver.run(testInfo);
     }
   }
@@ -496,7 +498,9 @@ public class LocalTestFlow {
         .log()
         .atInfo()
         .alsoTo(logger)
-        .log("--------- Device: PreRunTest (%s) ---------", testInfo.locator().getId());
+        .log(
+            "--------- Device: PreRunTest for %s (%s) ---------",
+            testInfo.locator().getName(), testInfo.locator().getId());
     ImmutableList<String> deviceIds =
         devices.stream().map(Device::getDeviceId).collect(toImmutableList());
     testInfo.properties().add(PropertyName.Test.DEVICE_ID_LIST, String.join(",", deviceIds));
@@ -549,7 +553,9 @@ public class LocalTestFlow {
         .log()
         .atInfo()
         .alsoTo(logger)
-        .log("--------- Device: PostRunTest (%s) ---------", testInfo.locator().getId());
+        .log(
+            "--------- Device: PostRunTest for %s (%s) ---------",
+            testInfo.locator().getName(), testInfo.locator().getId());
 
     // Starts all devices' postRunTest().
     return ConcurrencyUtil.runInParallel(
@@ -656,7 +662,8 @@ public class LocalTestFlow {
         .atInfo()
         .alsoTo(logger)
         .log(
-            "Start test [%s] on device(s) %s:\n"
+            "------------------------- Starting new test -------------------------\n"
+                + "Start test [%s] on device(s) %s:\n"
                 + " + Test Name: %s\n"
                 + " + Test ID: %s\n"
                 + " + Job Name: %s\n"
