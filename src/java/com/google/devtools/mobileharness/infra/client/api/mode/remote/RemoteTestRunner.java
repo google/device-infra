@@ -29,6 +29,7 @@ import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.devtools.common.metrics.stability.converter.ErrorModelConverter;
 import com.google.devtools.common.metrics.stability.rpc.RpcExceptionWithErrorId;
 import com.google.devtools.common.metrics.stability.util.ErrorIdComparator;
 import com.google.devtools.deviceinfra.shared.util.file.remote.constant.RemoteFileType;
@@ -63,7 +64,6 @@ import com.google.devtools.mobileharness.infra.lab.rpc.stub.PrepareTestStub;
 import com.google.devtools.mobileharness.shared.file.resolver.FileResolver;
 import com.google.devtools.mobileharness.shared.trace.proto.SpanProto.ParentSpan;
 import com.google.devtools.mobileharness.shared.util.comm.messaging.message.TestMessageInfo;
-import com.google.devtools.mobileharness.shared.util.error.ErrorModelConverter;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.sharedpool.SharedPoolJobUtil;
@@ -711,14 +711,14 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
           throw new MobileHarnessException(
               InfraErrorId.TE_TEST_ENGINE_FAILURE_WHEN_CLIENT_WAITING_TEST_ENGINE_READY,
               "Test engine failed to start",
-              ErrorModelConverter.toMobileHarnessException(response.getError()));
+              ErrorModelConverter.toDeserializedException(response.getExceptionDetail()));
         case CLOSED:
           logger.atInfo().log("Test engine closed");
           throw new MobileHarnessException(
               InfraErrorId.TE_TEST_ENGINE_CLOSED_WHEN_CLIENT_WAITING_TEST_ENGINE_READY,
               "Test engine closed",
-              /* cause= */ response.hasError()
-                  ? ErrorModelConverter.toMobileHarnessException(response.getError())
+              /* cause= */ response.hasExceptionDetail()
+                  ? ErrorModelConverter.toDeserializedException(response.getExceptionDetail())
                   : null);
         default:
           logger.atInfo().log("Test engine status: [%s]", response.getTestEngineStatus());
@@ -753,7 +753,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
   private void kickOffTest(TestInfo testInfo, List<DeviceLocator> deviceLocators)
       throws MobileHarnessException, InterruptedException {
     String testId = testInfo.locator().getId();
-    logger.atInfo().log("Kick off test " + testId + " on device(s) %s", deviceLocators);
+    logger.atInfo().log("Kick off test %s on device(s) %s", testId, deviceLocators);
     KickOffTestRequest req =
         new LabRpcProtoConverter()
             .generateKickOffTestRequestFrom(testInfo, deviceLocators, getParentSpan());
