@@ -1148,13 +1148,23 @@ public class SessionResultHandlerUtil {
             || sessionRequestInfo.retrySessionResultDirName().isPresent());
   }
 
-  private void addExtraFilesToResultDir(List<Path> extraFilesOrDirsToZip, TestInfo testInfo) {
+  private void addExtraFilesToResultDir(List<Path> extraFilesOrDirsToZip, TestInfo testInfo)
+      throws MobileHarnessException, InterruptedException {
     String testListProperty =
         testInfo.properties().get(XtsConstants.XTS_DYNAMIC_DOWNLOAD_PATH_TEST_LIST_PROPERTY_KEY);
-    if (testListProperty != null) {
-      Path testListPath = Path.of(testListProperty);
-      if (localFileUtil.isFileOrDirExist(testListPath)) {
-        extraFilesOrDirsToZip.add(testListPath);
+    String preloadMainlineVersion =
+        testInfo.properties().get(XtsConstants.PRELOAD_MAINLINE_VERSION_TEST_PROPERTY_KEY);
+    if (testListProperty != null && preloadMainlineVersion != null) {
+      if (localFileUtil.isFileOrDirExist(testListProperty)) {
+        // Make a copy of the test list file with the preload mainline version as the prefix.
+        String testListPath =
+            PathUtil.dirname(testListProperty)
+                + "/"
+                + preloadMainlineVersion
+                + "_"
+                + PathUtil.basename(testListProperty);
+        localFileUtil.copyFileOrDir(testListProperty, testListPath);
+        extraFilesOrDirsToZip.add(Path.of(testListPath));
       }
     }
   }
