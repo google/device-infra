@@ -215,31 +215,6 @@ public class GcsUtil {
      * @param applicationName name of the Google Cloud application to send in the User-Agent header
      *     of Google API requests.
      * @param bucketName name of the bucket containing files
-     * @param cloudStorageConfigPath path of the credential file for the service accounts
-     * @param scope access scope of the service account
-     * @deprecated use {@link #GcsParams(String, String, Scope, CredentialType)} instead.
-     */
-    @Deprecated
-    public GcsParams(
-        String applicationName,
-        String bucketName,
-        @Nullable String cloudStorageConfigPath,
-        Scope scope) {
-      this.applicationName = applicationName;
-      this.bucketName = bucketName;
-      this.scope = scope;
-      this.credentialType =
-          cloudStorageConfigPath == null
-              ? CredentialType.ofNone()
-              : CredentialType.ofCredentialFile(cloudStorageConfigPath);
-    }
-
-    /**
-     * Constructs CloudStorage Params given parameters about the storage.
-     *
-     * @param applicationName name of the Google Cloud application to send in the User-Agent header
-     *     of Google API requests.
-     * @param bucketName name of the bucket containing files
      * @param scope access scope of the service account
      * @param credentialType credential type of the service account
      */

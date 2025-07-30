@@ -33,6 +33,16 @@ java_library(
 )
 
 java_library(
+    name = "dir_preparer",
+    srcs = ["DirPreparer.java"],
+    deps = [
+        ":dir",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+    ],
+)
+
+java_library(
     name = "gen_dir",
     srcs = ["GenDir.java"],
 )

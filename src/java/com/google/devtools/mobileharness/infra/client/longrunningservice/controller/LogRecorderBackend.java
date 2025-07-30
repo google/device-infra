@@ -18,28 +18,13 @@ package com.google.devtools.mobileharness.infra.client.longrunningservice.contro
 
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto;
 
-/** Recorder for recording logs from non-logger sources (e.g., from subprocesses). */
-public class LogRecorder {
+/** Backend of {@link LogRecorder}. */
+public interface LogRecorderBackend {
 
-  private static final LogRecorder INSTANCE = new LogRecorder();
-
-  public static LogRecorder getInstance() {
-    return INSTANCE;
-  }
-
-  private volatile LogRecorderBackend backend;
-
-  public void initialize(LogRecorderBackend backend) {
-    this.backend = backend;
-  }
-
-  /** Adds a log record proto. */
-  public void addLogRecord(LogProto.LogRecord logRecord) {
-    LogRecorderBackend backend = this.backend;
-    if (backend != null) {
-      backend.handleExternalLogRecord(logRecord);
-    }
-  }
-
-  private LogRecorder() {}
+  /**
+   * Handles an external {@link LogProto.LogRecord}.
+   *
+   * @implSpec the implementation should be light weight and not blocking.
+   */
+  void handleExternalLogRecord(LogProto.LogRecord logRecord);
 }
