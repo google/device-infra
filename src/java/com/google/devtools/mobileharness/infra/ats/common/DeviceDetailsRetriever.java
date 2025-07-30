@@ -76,9 +76,16 @@ public class DeviceDetailsRetriever {
    */
   public ImmutableMap<String, DeviceDetails> getAllAndroidDevicesWithNeededDetails(
       SessionRequestInfo sessionRequestInfo) throws MobileHarnessException, InterruptedException {
+    // TODO: Debug message for b/424703254. Remove after the bug is fixed.
+    logger.atInfo().log(
+        "getAllAndroidDevicesWithNeededDetails: %s\n"
+            + "Flags.instance().enableAtsMode.getNonNull(): %s",
+        sessionRequestInfo, Flags.instance().enableAtsMode.getNonNull());
     if (Flags.instance().enableAtsMode.getNonNull()) {
       if (sessionRequestInfo.isAtsServerRequest()
           && !sessionRequestInfo.deviceSerials().isEmpty()) {
+        // TODO: Debug message for b/424703254. Remove after the bug is fixed.
+        logger.atInfo().log("getAllAndroidDevicesFromMasterWithRetry");
         return getAllAndroidDevicesFromMasterWithRetry();
       } else {
         return getAllAndroidDevicesFromMaster();
@@ -274,6 +281,8 @@ public class DeviceDetailsRetriever {
       throws MobileHarnessException, InterruptedException {
     ImmutableMap<String, DeviceDetails> result = ImmutableMap.of();
     for (int i = 0; i < GET_DEVICE_FOR_ATS_SERVER_MAX_ATTEMPT; i++) {
+      // TODO: Debug message for b/424703254. Remove after the bug is fixed.
+      logger.atInfo().log("getAllAndroidDevicesFromMasterWithRetry: %s", i);
       result = getAllAndroidDevicesFromMaster();
       if (!result.isEmpty()) {
         break;
