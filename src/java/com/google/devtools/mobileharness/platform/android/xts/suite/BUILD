@@ -84,7 +84,6 @@ java_library(
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/version:__pkg__",
-        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/suite:__pkg__",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/plan:jar_file_util",
@@ -167,11 +166,7 @@ java_library(
 java_library(
     name = "suite_result_reporter",
     srcs = ["SuiteResultReporter.java"],
-    visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
-    ],
+    visibility = ["//src/java/com/google/devtools/mobileharness/infra/ats/common:__pkg__"],
     deps = [
         ":suite_common_util",
         "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
@@ -193,7 +188,6 @@ java_library(
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/version:__pkg__",
-        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/suite:__pkg__",
     ],
     deps = [
         ":test_suite_info",
