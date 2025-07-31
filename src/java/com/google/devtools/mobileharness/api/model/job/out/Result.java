@@ -28,7 +28,6 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.in.Params;
 import com.google.devtools.mobileharness.api.model.proto.Error.ExceptionDetail;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
-import com.google.devtools.mobileharness.api.model.proto.Test.TestStatus;
 import com.google.devtools.mobileharness.service.moss.proto.Slg.ResultProto;
 import com.google.devtools.mobileharness.shared.util.error.ErrorModelConverter;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
@@ -89,10 +88,19 @@ public class Result {
     this.params = params;
     synchronized (lock) {
       this.result = resultProto.getResult();
-      this.cause =
-          resultProto.getCause().equals(ExceptionDetail.getDefaultInstance())
-              ? null
-              : ErrorModelConverter.toCommonExceptionDetail(resultProto.getCause());
+      if (resultProto.hasExceptionDetail()) {
+        this.cause =
+            resultProto
+                    .getExceptionDetail()
+                    .equals(ExceptionProto.ExceptionDetail.getDefaultInstance())
+                ? null
+                : resultProto.getExceptionDetail();
+      } else {
+        this.cause =
+            resultProto.getCause().equals(ExceptionDetail.getDefaultInstance())
+                ? null
+                : ErrorModelConverter.toCommonExceptionDetail(resultProto.getCause());
+      }
     }
   }
 
