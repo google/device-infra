@@ -426,7 +426,7 @@ public class LocalDeviceDispatch {
               // out the sub device.
               if (!dispatcher.getClass().getSimpleName().equals("FailedDeviceDispatcher")
                   || detectionResults.getByDeviceControlId(deviceControlId).stream()
-                      .anyMatch(
+                      .noneMatch(
                           detectionResult ->
                               detectionResult
                                   .detectionType()
