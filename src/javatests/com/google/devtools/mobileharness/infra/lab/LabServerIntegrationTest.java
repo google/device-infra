@@ -30,9 +30,10 @@ import com.google.common.flogger.FluentLogger;
 import com.google.common.truth.Correspondence;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
+import com.google.devtools.common.metrics.stability.converter.ErrorModelConverter;
+import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.ExceptionDetail;
 import com.google.devtools.mobileharness.api.model.allocation.Allocation;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.api.model.proto.Error.ExceptionDetail;
 import com.google.devtools.mobileharness.api.model.proto.Job.JobUser;
 import com.google.devtools.mobileharness.api.model.proto.Lab.PortType;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.AllocationWithStats;
@@ -44,7 +45,6 @@ import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
-import com.google.devtools.mobileharness.shared.util.error.ErrorModelConverter;
 import com.google.devtools.mobileharness.shared.util.junit.rule.MonitoredStringBuilders;
 import com.google.devtools.mobileharness.shared.util.junit.rule.PrintTestName;
 import com.google.devtools.mobileharness.shared.util.port.PortProber;
@@ -265,7 +265,7 @@ public class LabServerIntegrationTest {
         atsMode.createDeviceAllocator(jobInfo, /* globalInternalBus= */ null);
     Optional<ExceptionDetail> setUpError = deviceAllocator.setUp();
     if (setUpError.isPresent()) {
-      throw ErrorModelConverter.toMobileHarnessException(setUpError.get());
+      throw ErrorModelConverter.toDeserializedException(setUpError.get());
     }
 
     // Polls allocations.

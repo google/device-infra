@@ -37,7 +37,7 @@ java_library(
         "DeviceAllocator.java",
     ],
     deps = [
-        "//src/devtools/mobileharness/api/model/proto:error_java_proto",
+        "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/allocation",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",

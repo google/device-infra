@@ -59,11 +59,11 @@ message OpenJobResponse {
   // Whether the job should be failed fast.
   // When it is fulfilled, the job is not aranged for scheduling,
   // |JobSyncService.GetAllocations| will return bad_test_id.
-  .mobileharness.api.model.ExceptionDetail fail_fast = 2 [deprecated = true];
-
   stability.model.ExceptionDetail fail_fast_exception_detail = 3;
 
   bool is_new_job = 4;
+
+  reserved 2;
 }
 
 message AddExtraTestsRequest {
