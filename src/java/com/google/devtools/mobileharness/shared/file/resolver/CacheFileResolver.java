@@ -30,9 +30,9 @@ import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
-import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.InstantSource;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -96,13 +96,15 @@ public class CacheFileResolver extends AbstractFileResolver {
 
   private final LocalFileUtil localFileUtil;
 
-  private final Clock clock;
+  private final InstantSource instantSource;
 
   public CacheFileResolver(
-      ListeningExecutorService executorService, LocalFileUtil localFileUtil, Clock clock) {
+      ListeningExecutorService executorService,
+      LocalFileUtil localFileUtil,
+      InstantSource instantSource) {
     super(executorService);
     this.localFileUtil = localFileUtil;
-    this.clock = clock;
+    this.instantSource = instantSource;
   }
 
   @Override
@@ -141,11 +143,11 @@ public class CacheFileResolver extends AbstractFileResolver {
       try {
         Optional<ResolveResult> result = super.resolve(resolveSource);
         resolveResultFuture.set(result);
-        cachedResolveResult.updateResolveTimestamp(clock.instant());
+        cachedResolveResult.updateResolveTimestamp(instantSource.instant());
         return result;
       } catch (MobileHarnessException | InterruptedException | Error | RuntimeException e) {
         resolveResultFuture.setException(e);
-        cachedResolveResult.updateResolveTimestamp(clock.instant());
+        cachedResolveResult.updateResolveTimestamp(instantSource.instant());
         throw e;
       }
     } else {
@@ -166,12 +168,12 @@ public class CacheFileResolver extends AbstractFileResolver {
               resolveSource);
           removeItemIfValueMatch(cachedResolveSource, previousCachedResolveResult);
           return internalResolve(resolveSource);
-        } else if (clock
+        } else if (instantSource
             .instant()
             .isAfter(
                 previousCachedResolveResult
                     .resolveTimestamp()
-                    .orElse(clock.instant())
+                    .orElse(instantSource.instant())
                     .plus(FAIL_CACHE_EXPIRATION_TIME))) {
           removeItemIfValueMatch(cachedResolveSource, previousCachedResolveResult);
           return internalResolve(resolveSource);
@@ -189,12 +191,12 @@ public class CacheFileResolver extends AbstractFileResolver {
             String.format("Timeout while resolving file %s", resolveSource),
             e);
       }
-      if (clock
+      if (instantSource
           .instant()
           .isAfter(
               previousCachedResolveResult
                   .resolveTimestamp()
-                  .orElse(clock.instant())
+                  .orElse(instantSource.instant())
                   .plus(SUCCEED_CACHE_EXPIRATION_TIME))) {
         removeItemIfValueMatch(cachedResolveSource, previousCachedResolveResult);
         return internalResolve(resolveSource);
@@ -288,7 +290,8 @@ public class CacheFileResolver extends AbstractFileResolver {
       resolvedResultsCache.putIfAbsent(
           CachedResolveSource.create(
               resolveResult.resolveSource().path(), resolveResult.resolveSource().parameters()),
-          new CachedResolveResult(immediateFuture(Optional.of(resolveResult)), clock.instant()));
+          new CachedResolveResult(
+              immediateFuture(Optional.of(resolveResult)), instantSource.instant()));
     }
     return resolveResults;
   }

@@ -61,6 +61,7 @@ import com.google.inject.multibindings.Multibinder;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageManager;
 import com.google.wireless.qa.mobileharness.shared.constant.ExitCode;
 import java.time.Clock;
+import java.time.InstantSource;
 import java.util.Set;
 import javax.inject.Inject;
 
@@ -100,6 +101,7 @@ public class LabServerModule extends AbstractModule {
     bind(ListeningScheduledExecutorService.class)
         .annotatedWith(DebugThreadPool.class)
         .toInstance(createStandardScheduledThreadPool("mh-lab-server-debug-random-exit-task", 1));
+    bind(InstantSource.class).toInstance(InstantSource.system());
   }
 
   @Provides
@@ -111,13 +113,15 @@ public class LabServerModule extends AbstractModule {
   @Provides
   @Singleton
   FileResolver provideFileResolver(
-      ListeningExecutorService threadPool, LocalFileUtil localFileUtil, Clock clock) {
+      ListeningExecutorService threadPool,
+      LocalFileUtil localFileUtil,
+      InstantSource instantSource) {
     // LocalFileResolver.
     AbstractFileResolver localFileResolver = new LocalFileResolver(threadPool, localFileUtil);
 
     // CacheFileResolver.
     AbstractFileResolver cacheFileResolver =
-        new CacheFileResolver(threadPool, localFileUtil, clock);
+        new CacheFileResolver(threadPool, localFileUtil, instantSource);
     localFileResolver.setSuccessor(cacheFileResolver);
 
     // AtsFileServerFileResolver.

@@ -22,14 +22,14 @@ import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
-import java.time.Clock;
+import java.time.InstantSource;
 
 /** Creates the chain of {@link FileResolver}. */
 public class FileResolverBuilder {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private final LocalFileUtil localFileUtil;
-  private final Clock clock;
+  private final InstantSource instantSource;
   private final boolean onlyResolveLocalFile;
 
   private ListeningExecutorService executorService;
@@ -42,10 +42,10 @@ public class FileResolverBuilder {
   @Inject
   public FileResolverBuilder(
       LocalFileUtil localFileUtil,
-      Clock clock,
+      InstantSource instantSource,
       @Assisted("onlyResolveLocalFile") boolean onlyResolveLocalFile) {
     this.localFileUtil = localFileUtil;
-    this.clock = clock;
+    this.instantSource = instantSource;
     this.onlyResolveLocalFile = onlyResolveLocalFile;
   }
 

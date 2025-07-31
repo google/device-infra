@@ -57,6 +57,7 @@ import com.google.inject.Scopes;
 import com.google.inject.util.Providers;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.InstantSource;
 import java.util.concurrent.ExecutorService;
 import javax.inject.Singleton;
 
@@ -112,6 +113,7 @@ class ServerModule extends AbstractModule {
     bind(ExecMode.class)
         .to(isAtsMode ? loadExecMode(ATS_MODE_CLASS_NAME) : loadExecMode(LOCAL_MODE_CLASS_NAME))
         .in(Scopes.SINGLETON);
+    bind(InstantSource.class).toInstance(InstantSource.system());
     bind(Clock.class).toInstance(Clock.systemUTC());
     bind(LocalSessionStub.class).to(LocalSessionStubImpl.class);
 
