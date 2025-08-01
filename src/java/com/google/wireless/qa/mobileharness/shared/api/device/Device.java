@@ -338,22 +338,8 @@ public interface Device {
     info().properties().clear();
   }
 
-  /** Gets the timeout value for {@link #setUp()}. */
-  Duration getSetupTimeout() throws MobileHarnessException, InterruptedException;
-
-  /**
-   * Initializes the device. Prepares the supported device types, dimensions, drivers/decorators. MH
-   * will assign task to this device only after it successfully pass this method.
-   *
-   * @throws MobileHarnessException If fails to initialize the device, you can throw out this
-   *     exception to prevent this device from being assigned to any task. The device instance will
-   *     go through the {@link #tearDown()} and get destroyed. If the device remains detectable, MH
-   *     Device Manager framework will create new Device object for the device and try this {@link
-   *     #setUp()} again, until it succeeds or device disconnected.
-   * @deprecated Use {@link #prepare()} instead.
-   */
-  @Deprecated
-  void setUp() throws MobileHarnessException, InterruptedException;
+  /** Gets the timeout value for {@link #prepare()}. */
+  Duration getPrepareTimeout() throws MobileHarnessException, InterruptedException;
 
   /**
    * Prepares the device for a test. This method will be invoked in two ways:
@@ -374,9 +360,7 @@ public interface Device {
    *     Device Manager framework will create new Device object for the device and try this {@link
    *     #prepare()} again, until it succeeds or device disconnected.
    */
-  default void prepare() throws MobileHarnessException, InterruptedException {
-    this.setUp();
-  }
+  void prepare() throws MobileHarnessException, InterruptedException;
 
   /**
    * Checks and update the device types, dimensions, and supported drivers/decorators.

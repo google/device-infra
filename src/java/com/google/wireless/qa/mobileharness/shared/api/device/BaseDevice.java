@@ -303,12 +303,12 @@ public abstract class BaseDevice implements Device {
   }
 
   @Override
-  public Duration getSetupTimeout() throws MobileHarnessException, InterruptedException {
+  public Duration getPrepareTimeout() throws MobileHarnessException, InterruptedException {
     return Duration.ofMinutes(5L);
   }
 
   @Override
-  public void setUp() throws MobileHarnessException, InterruptedException {
+  public void prepare() throws MobileHarnessException, InterruptedException {
     ImmutableListMultimap<Dimension.Name, String> extraDimensions = null;
     if (supportsContainer()) {
       extraDimensions =

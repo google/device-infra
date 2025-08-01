@@ -613,7 +613,7 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
     // Initializes the device.
     logger.atInfo().log("Initializing...");
     try {
-      extendExpireTime(device.getSetupTimeout());
+      extendExpireTime(device.getPrepareTimeout());
       device.prepare();
       updateExtraDimensions();
     } catch (MobileHarnessException | InterruptedException e) {

@@ -67,7 +67,7 @@ public class AndroidRealDevice extends AndroidDevice {
   }
 
   @Override
-  public void setUp() throws MobileHarnessException, InterruptedException {
+  public void prepare() throws MobileHarnessException, InterruptedException {
     delegate.setUp();
   }
 
@@ -130,7 +130,7 @@ public class AndroidRealDevice extends AndroidDevice {
   }
 
   @Override
-  public Duration getSetupTimeout() throws MobileHarnessException, InterruptedException {
+  public Duration getPrepareTimeout() throws MobileHarnessException, InterruptedException {
     return delegate.getSetupTimeout();
   }
 

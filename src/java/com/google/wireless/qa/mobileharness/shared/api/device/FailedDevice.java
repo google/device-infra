@@ -41,8 +41,8 @@ public class FailedDevice extends BaseDevice {
   }
 
   @Override
-  public void setUp() throws MobileHarnessException, InterruptedException {
-    super.setUp();
+  public void prepare() throws MobileHarnessException, InterruptedException {
+    super.prepare();
 
     // Allow no-op driver to run to facilitate custom job recovery.
     addSupportedDriver(NO_OP_DRIVER);
