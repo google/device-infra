@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	version = "1.3"
+	version = "1.4"
 )
 
 var (
@@ -80,8 +80,8 @@ func main() {
 		}
 	}
 
+	fmt.Printf("version: %s\n", version) // Always print version.
 	if *printVersion {
-		fmt.Printf("version: %s\n", version)
 		os.Exit(0)
 	}
 
@@ -89,13 +89,16 @@ func main() {
 		log.Exit(err)
 	}
 
+	log.Info("Creating new ChunkStore...")
 	store, err := chunkstore.NewChunkStore(*chunkDir, *indexPath)
 	if err != nil {
 		log.Exit(err)
 	}
 
-	// Create and mount filesystem
+	log.Info("Creating new FastCDCFS...")
 	fs := fuse.NewFastCDCFS(store)
+
+	log.Infof("Mounting filesystem at %s...", *mountPoint)
 	server, err := fs.Mount(*mountPoint)
 	if err != nil {
 		log.Exit(err)
