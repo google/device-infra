@@ -44,7 +44,8 @@ public class PubsubClientImpl extends DataPusher {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  private static final int MAX_DATASETS_IN_ONE_QUERY = 100;
+  // TODO: Make this depend on the size of each message to publish.
+  private static final int MAX_DATASETS_IN_ONE_QUERY = 20;
   private static final int PUBLISH_DEADLINE_SECONDS = 10;
 
   private final String pubsubTopic;
