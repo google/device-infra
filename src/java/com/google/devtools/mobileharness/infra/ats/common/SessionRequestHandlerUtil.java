@@ -1284,8 +1284,14 @@ public class SessionRequestHandlerUtil {
       }
     }
 
-    String name =
-        String.format("xts-mobly-aosp-package-job-%s", expandedModuleName.replace(' ', '_'));
+    String driverName = moduleConfig.getTest().getClazz();
+    if (isNullOrEmpty(driverName)) {
+      throw MobileHarnessExceptionFactory.createUserFacingException(
+          InfraErrorId.XTS_MODULE_CONFIG_MISSING_DRIVER_NAME,
+          String.format("Found no driver name in <test> in module '%s'.", expandedModuleName),
+          /* cause= */ null);
+    }
+    String name = String.format("xts-mobly-aosp-job-%s", expandedModuleName.replace(' ', '_'));
     Path jobGenDir = createJobGenDir(name);
     Path jobTmpDir = createJobTmpDir(name);
     JobConfig jobConfig =
@@ -1301,10 +1307,9 @@ public class SessionRequestHandlerUtil {
                 StringList.newBuilder()
                     .addContent(
                         String.format(
-                            "xts-mobly-aosp-package-test-%s",
-                            expandedModuleName.replace(' ', '_'))))
+                            "xts-mobly-aosp-test-%s", expandedModuleName.replace(' ', '_'))))
             .setDevice(DeviceList.newBuilder().addAllSubDeviceSpec(subDeviceSpecList))
-            .setDriver(Driver.newBuilder().setName("MoblyAospPackageTest"))
+            .setDriver(Driver.newBuilder().setName(driverName))
             .setGenFileDir(jobGenDir.toString())
             .build();
     logger.atInfo().log(
