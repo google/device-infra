@@ -21,6 +21,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.AbstractScheduledService;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.inject.Inject;
 import com.google.protobuf.Message;
 import java.time.Duration;
@@ -33,8 +34,6 @@ public class BatchPipelineService<T extends Message> extends AbstractScheduledSe
   private final DataPuller<T> puller;
   private final DataPusher pusher;
 
-  // The period duration between two publish actions.
-  private static final Duration PUBLISH_INTERVAL = Duration.ofMinutes(1);
   // Initial delay of publish actions.
   private static final Duration INITIAL_DELAY = Duration.ofMinutes(5);
 
@@ -68,6 +67,8 @@ public class BatchPipelineService<T extends Message> extends AbstractScheduledSe
   @Override
   protected Scheduler scheduler() {
     return Scheduler.newFixedRateSchedule(
-        INITIAL_DELAY.toSeconds(), PUBLISH_INTERVAL.toSeconds(), SECONDS);
+        INITIAL_DELAY.toSeconds(),
+        Flags.instance().cloudPubsubPublishInterval.get().toSeconds(),
+        SECONDS);
   }
 }

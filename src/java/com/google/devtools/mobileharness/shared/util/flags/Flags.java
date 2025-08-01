@@ -583,6 +583,15 @@ public class Flags {
       converter = Flag.StringConverter.class)
   public Flag<String> cloudPubsubTopicId = cloudPubsubTopicIdDefault;
 
+  private static final Flag<Duration> cloudPubsubPublishIntervalDefault =
+      DurationFlag.value(Duration.ofMinutes(1L));
+
+  @com.beust.jcommander.Parameter(
+      names = "--cloud_pubsub_publish_interval",
+      description = "The period duration between two publish actions.",
+      converter = DurationFlag.DurationConverter.class)
+  public Flag<Duration> cloudPubsubPublishInterval = cloudPubsubPublishIntervalDefault;
+
   private static final Flag<Integer> commandPortDefault = Flag.value(9995);
 
   @com.beust.jcommander.Parameter(
