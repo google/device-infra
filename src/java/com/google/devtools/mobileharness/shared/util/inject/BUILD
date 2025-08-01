@@ -13,9 +13,23 @@
 # limitations under the License.
 #
 
+load("@rules_java//java:defs.bzl", "java_library")
 load("@rules_kotlin//kotlin:jvm.bzl", "kt_jvm_library")
 
 package(default_applicable_licenses = ["//:license"])
+
+java_library(
+    name = "common_module",
+    srcs = ["CommonModule.java"],
+    visibility = ["//:deviceinfra_all_pkg"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
+        "@maven//:com_google_guava_guava",
+        "@maven//:com_google_inject_guice",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
 
 kt_jvm_library(
     name = "inject-kotlin",

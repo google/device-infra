@@ -53,6 +53,7 @@ import com.google.devtools.mobileharness.shared.util.comm.server.ServerBuilderFa
 import com.google.devtools.mobileharness.shared.util.database.DatabaseConnections;
 import com.google.devtools.mobileharness.shared.util.database.TablesLister;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.shared.util.inject.CommonModule;
 import com.google.devtools.mobileharness.shared.util.logging.flogger.FloggerFormatter;
 import com.google.devtools.mobileharness.shared.util.signal.Signals;
 import com.google.devtools.mobileharness.shared.util.system.SystemInfoPrinter;
@@ -99,7 +100,8 @@ public class OlcServer {
                     serverStartTime,
                     Flags.instance().enableCloudPubsubMonitoring.getNonNull(),
                     enableDatabase,
-                    Flags.instance().enableGrpcRelay.getNonNull()))
+                    Flags.instance().enableGrpcRelay.getNonNull()),
+                new CommonModule())
             .getInstance(OlcServer.class);
 
     // Prepares dirs.

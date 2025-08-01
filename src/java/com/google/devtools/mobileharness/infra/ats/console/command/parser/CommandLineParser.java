@@ -31,6 +31,7 @@ import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.console.AtsConsoleModule;
 import com.google.devtools.mobileharness.infra.ats.console.GuiceFactory;
 import com.google.devtools.mobileharness.infra.ats.console.command.RunCommand;
+import com.google.devtools.mobileharness.shared.util.inject.CommonModule;
 import com.google.devtools.mobileharness.shared.util.shell.ShellUtils.TokenizationException;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Guice;
@@ -115,7 +116,8 @@ public final class CommandLineParser {
                 System.out,
                 System.err,
                 runCommandParseResult,
-                /* parseCommandOnly= */ true));
+                /* parseCommandOnly= */ true),
+            new CommonModule());
   }
 
   /**

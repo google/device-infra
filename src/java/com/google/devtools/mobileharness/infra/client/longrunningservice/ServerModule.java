@@ -17,8 +17,6 @@
 package com.google.devtools.mobileharness.infra.client.longrunningservice;
 
 import com.google.common.eventbus.EventBus;
-import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.client.api.Annotations.GlobalInternalEventBus;
 import com.google.devtools.mobileharness.infra.client.api.ClientApi;
@@ -45,20 +43,15 @@ import com.google.devtools.mobileharness.infra.monitoring.CloudPubsubMonitorModu
 import com.google.devtools.mobileharness.infra.monitoring.MonitorPipelineLauncher;
 import com.google.devtools.mobileharness.shared.util.comm.relay.service.NoOpServerUtils;
 import com.google.devtools.mobileharness.shared.util.comm.relay.service.ServerUtils;
-import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.database.DatabaseConnections;
 import com.google.devtools.mobileharness.shared.util.reflection.ReflectionUtil;
-import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.AbstractModule;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.util.Providers;
-import java.time.Clock;
 import java.time.Instant;
-import java.time.InstantSource;
-import java.util.concurrent.ExecutorService;
 import javax.inject.Singleton;
 
 /** Module for OLC server. */
@@ -113,8 +106,6 @@ class ServerModule extends AbstractModule {
     bind(ExecMode.class)
         .to(isAtsMode ? loadExecMode(ATS_MODE_CLASS_NAME) : loadExecMode(LOCAL_MODE_CLASS_NAME))
         .in(Scopes.SINGLETON);
-    bind(InstantSource.class).toInstance(InstantSource.system());
-    bind(Clock.class).toInstance(Clock.systemUTC());
     bind(LocalSessionStub.class).to(LocalSessionStubImpl.class);
 
     // Binds database connections and persistence utils.
@@ -150,29 +141,6 @@ class ServerModule extends AbstractModule {
   @Singleton
   DeviceQuerier provideDeviceQuerier(ExecMode execMode) {
     return execMode.createDeviceQuerier();
-  }
-
-  @Provides
-  @Singleton
-  ListeningExecutorService provideThreadPool() {
-    return ThreadPools.createStandardThreadPool("main-thread");
-  }
-
-  @Provides
-  @Singleton
-  ListeningScheduledExecutorService provideScheduledThreadPool() {
-    return ThreadPools.createStandardScheduledThreadPool(
-        "main-scheduled-thread", /* corePoolSize= */ 10);
-  }
-
-  @Provides
-  ExecutorService provideExecutorService(ListeningExecutorService listeningExecutorService) {
-    return listeningExecutorService;
-  }
-
-  @Provides
-  Sleeper provideSleeper() {
-    return Sleeper.defaultSleeper();
   }
 
   @Provides

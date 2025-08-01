@@ -32,6 +32,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:ats_console_module",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:guice_factory",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/command:run_command",
+        "//src/java/com/google/devtools/mobileharness/shared/util/inject:common_module",
         "//src/java/com/google/devtools/mobileharness/shared/util/shell",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",

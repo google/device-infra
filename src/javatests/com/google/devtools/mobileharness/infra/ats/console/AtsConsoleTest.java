@@ -29,6 +29,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.infra.ats.common.FlagsString;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.inject.CommonModule;
 import com.google.devtools.mobileharness.shared.util.junit.rule.SetFlagsOss;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.shared.util.port.PortProber;
@@ -138,7 +139,8 @@ public final class AtsConsoleTest {
                 consoleOutPrintStream,
                 consoleErrPrintStream,
                 future -> {},
-                /* parseCommandOnly= */ false));
+                /* parseCommandOnly= */ false),
+            new CommonModule());
     injector.injectMembers(this);
     atsConsole.injector = injector;
   }
@@ -156,7 +158,8 @@ public final class AtsConsoleTest {
                 consoleOutPrintStream,
                 consoleErrPrintStream,
                 future -> {},
-                /* parseCommandOnly= */ false));
+                /* parseCommandOnly= */ false),
+            new CommonModule());
     injector.injectMembers(this);
     atsConsole.injector = injector;
 

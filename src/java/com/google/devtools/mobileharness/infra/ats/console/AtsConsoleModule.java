@@ -21,8 +21,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.mobileharness.infra.ats.common.FlagsString;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.OlcServerModule;
@@ -35,13 +33,10 @@ import com.google.devtools.mobileharness.infra.ats.console.Annotations.RunComman
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.SystemProperties;
 import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.XtsServerEnvironmentPreparer;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportModule;
-import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
-import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import java.io.PrintStream;
 import java.io.PrintWriter;
-import java.time.InstantSource;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -137,28 +132,5 @@ public class AtsConsoleModule extends AbstractModule {
   @ConsoleOutput(ConsoleOutput.Type.ERR_WRITER)
   PrintWriter provideConsoleOutputErrWriter() {
     return new PrintWriter(consoleOutputErr, /* autoFlush= */ true, UTF_8);
-  }
-
-  @Provides
-  @Singleton
-  ListeningExecutorService provideThreadPool() {
-    return ThreadPools.createStandardThreadPool("ats-console-thread-pool");
-  }
-
-  @Provides
-  @Singleton
-  ListeningScheduledExecutorService provideScheduledThreadPool() {
-    return ThreadPools.createStandardScheduledThreadPool(
-        "ats-console-scheduled-thread-pool", /* corePoolSize= */ 10);
-  }
-
-  @Provides
-  Sleeper provideSleeper() {
-    return Sleeper.defaultSleeper();
-  }
-
-  @Provides
-  InstantSource provideInstantSource() {
-    return InstantSource.system();
   }
 }

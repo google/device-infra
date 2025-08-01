@@ -53,6 +53,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/constant:dirs",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/inject:common_module",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/path",
         "//src/java/com/google/devtools/mobileharness/shared/util/port:portprober",

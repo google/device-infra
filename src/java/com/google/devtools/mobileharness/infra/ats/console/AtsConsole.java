@@ -59,6 +59,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.C
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.ControlStub;
 import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.shared.util.inject.CommonModule;
 import com.google.devtools.mobileharness.shared.util.logging.flogger.FloggerFormatter;
 import com.google.devtools.mobileharness.shared.util.port.PortProber;
 import com.google.devtools.mobileharness.shared.util.shell.ShellUtils.TokenizationException;
@@ -125,7 +126,8 @@ public class AtsConsole {
                 System.out,
                 System.err,
                 resultFuture -> {},
-                /* parseCommandOnly= */ false));
+                /* parseCommandOnly= */ false),
+            new CommonModule());
 
     // Creates ATS console.
     AtsConsole atsConsole = injector.getInstance(AtsConsole.class);
