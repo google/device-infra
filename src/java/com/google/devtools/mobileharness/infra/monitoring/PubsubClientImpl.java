@@ -19,7 +19,7 @@ package com.google.devtools.mobileharness.infra.monitoring;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
-import com.google.common.collect.Lists;
+import com.google.auto.value.AutoValue;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -34,6 +34,7 @@ import com.google.protobuf.util.JsonFormat;
 import com.google.pubsub.v1.PublishRequest;
 import com.google.pubsub.v1.PublishResponse;
 import com.google.pubsub.v1.PublisherGrpc;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -44,8 +45,8 @@ public class PubsubClientImpl extends DataPusher {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  // TODO: Make this depend on the size of each message to publish.
-  private static final int MAX_DATASETS_IN_ONE_QUERY = 20;
+  // The maximum batch size in bytes of a single Cloud PubSub message.
+  private static final int MAX_BATCH_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
   private static final int PUBLISH_DEADLINE_SECONDS = 10;
 
   private final String pubsubTopic;
@@ -68,24 +69,53 @@ public class PubsubClientImpl extends DataPusher {
   @Override
   public <T extends Message> void push(
       List<T> messageData, Consumer<String> successCallback, Consumer<Throwable> failureCallback) {
-    List<List<T>> batches = Lists.partition(messageData, MAX_DATASETS_IN_ONE_QUERY);
+    List<MessageWithSerializedData<T>> currentBatch = new ArrayList<>();
+    int currentBatchSizeBytes = 0;
 
-    for (List<T> batch : batches) {
-      pushAsync(batch, successCallback, failureCallback);
+    for (T message : messageData) {
+      if (message == null) {
+        continue;
+      }
+      Optional<ByteString> serializedDataOptional = serialize(message);
+      if (serializedDataOptional.isEmpty()) {
+        continue;
+      }
+      ByteString serializedData = serializedDataOptional.get();
+      int messageSize = serializedData.size();
+
+      if (messageSize > MAX_BATCH_SIZE_BYTES) {
+        logger.atWarning().log(
+            "Skipping message because it exceeds the maximum batch size (%d bytes): %s.",
+            MAX_BATCH_SIZE_BYTES, message);
+        continue;
+      }
+
+      if (currentBatchSizeBytes + messageSize > MAX_BATCH_SIZE_BYTES) {
+        // Current batch is full, add it to the list of batches and start a new one.
+        pushAsync(currentBatch, successCallback, failureCallback);
+        currentBatch = new ArrayList<>();
+        currentBatchSizeBytes = 0;
+      }
+
+      currentBatch.add(MessageWithSerializedData.create(message, serializedData));
+      currentBatchSizeBytes += messageSize;
+    }
+
+    // Add the last batch if it's not empty.
+    if (!currentBatch.isEmpty()) {
+      pushAsync(currentBatch, successCallback, failureCallback);
     }
   }
 
   private <T extends Message> void pushAsync(
-      List<T> batch, Consumer<String> successCallback, Consumer<Throwable> failureCallback) {
+      List<MessageWithSerializedData<T>> serializedBatch,
+      Consumer<String> successCallback,
+      Consumer<Throwable> failureCallback) {
     PublishRequest.Builder request = PublishRequest.newBuilder().setTopic(pubsubTopic);
 
-    for (Message data : batch) {
-      if (data != null) {
-        Optional<ByteString> serializedData = serialize(data);
-        if (serializedData.isEmpty()) {
-          continue;
-        }
-        request.addMessagesBuilder().setData(serializedData.get());
+    for (MessageWithSerializedData<T> messageWithSerializedData : serializedBatch) {
+      if (messageWithSerializedData.serializedData() != null) {
+        request.addMessagesBuilder().setData(messageWithSerializedData.serializedData());
       }
     }
 
@@ -122,6 +152,18 @@ public class PubsubClientImpl extends DataPusher {
       logger.atWarning().withCause(e).log(
           "Failed to convert proto message %s to byte string.", data);
       return Optional.empty();
+    }
+  }
+
+  @AutoValue
+  abstract static class MessageWithSerializedData<T extends Message> {
+    abstract T message();
+
+    abstract ByteString serializedData();
+
+    static <T extends Message> MessageWithSerializedData<T> create(
+        T message, ByteString serializedData) {
+      return new AutoValue_PubsubClientImpl_MessageWithSerializedData<>(message, serializedData);
     }
   }
 }
