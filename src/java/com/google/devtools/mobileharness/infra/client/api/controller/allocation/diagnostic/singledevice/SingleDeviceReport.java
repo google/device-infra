@@ -268,14 +268,14 @@ public class SingleDeviceReport implements Report {
           StringBuilder error = new StringBuilder();
           error.append("============ Score ").append(score).append(" ============\nErrors:");
           if (!assessment.isAccessible()) {
-            error
-                .append("\n - NO_ACCESS (current user: ")
-                .append(job.jobUser().getRunAs())
-                .append(")");
+            error.append(
+                String.format(
+                    "\n - %s (current user: %s)", Report.NO_ACCESS, job.jobUser().getRunAs()));
             if (cause == null) {
               String msg =
                   String.format(
-                      "NO_ACCESS (current user: %s) for device %s.", job.jobUser().getRunAs(), id);
+                      "%s (current user: %s) for device %s.",
+                      Report.NO_ACCESS, job.jobUser().getRunAs(), id);
               cause =
                   new MobileHarnessException(
                       InfraErrorId.CLIENT_JR_ALLOC_USER_CONFIG_ERROR_DEVICE_NO_ACCESS, msg);
@@ -299,38 +299,44 @@ public class SingleDeviceReport implements Report {
             }
           }
           if (!assessment.isDriverSupported()) {
-            error.append("\n - DRIVER_NOT_SUPPORTED: ").append(jobType.getDriver());
+            error.append(
+                String.format("\n - %s: %s", Report.DRIVER_NOT_SUPPORTED, jobType.getDriver()));
           }
           if (!assessment.isDeviceTypeSupported()) {
-            error.append("\n - DEVICE_TYPE_NOT_SUPPORTED: ").append(jobType.getDevice());
+            error.append(
+                String.format(
+                    "\n - %s: %s", Report.DEVICE_TYPE_NOT_SUPPORTED, jobType.getDevice()));
           }
           if (!assessment.isDecoratorsSupported()) {
-            error
-                .append("\n - DECORATORS_NOT_SUPPORTED: ")
-                .append(assessment.getUnsupportedDecorators());
+            error.append(
+                String.format(
+                    "\n - %s: %s",
+                    Report.DECORATORS_NOT_SUPPORTED, assessment.getUnsupportedDecorators()));
           }
           if (!assessment.isDimensionsSupported()) {
-            error
-                .append("\n - DIMENSIONS_NOT_SUPPORTED: ")
-                .append(assessment.getUnsupportedDimensions());
+            error.append(
+                String.format(
+                    "\n - %s: %s",
+                    Report.DIMENSIONS_NOT_SUPPORTED, assessment.getUnsupportedDimensions()));
           }
           if (!assessment.isDimensionsSatisfied()) {
-            error
-                .append("\n - DIMENSIONS_NOT_SATISFIED: ")
-                .append(assessment.getUnsatisfiedDimensions());
+            error.append(
+                String.format(
+                    "\n - %s: %s",
+                    Report.DIMENSIONS_NOT_SATISFIED, assessment.getUnsatisfiedDimensions()));
           }
           if (assessment.isMissing()) {
-            error.append("\n - DEVICE_IS_MISSING");
+            error.append(String.format("\n - %s", Report.MISSING));
             if (cause == null) {
-              String msg = String.format("DEVICE_IS_MISSING for device %s.", id);
+              String msg = String.format("%s for device %s.", Report.MISSING, id);
               cause =
                   new MobileHarnessException(
                       InfraErrorId.CLIENT_JR_ALLOC_USER_CONFIG_ERROR_DEVICE_MISSING, msg);
             }
           } else if (!assessment.isIdle()) {
-            error.append("\n - NOT_IDLE");
+            error.append(String.format("\n - %s", Report.NOT_IDLE));
             if (cause == null) {
-              String msg = String.format("NOT_IDLE for device %s.", id);
+              String msg = String.format("%s for device %s.", Report.NOT_IDLE, id);
               cause =
                   new MobileHarnessException(
                       InfraErrorId.CLIENT_JR_ALLOC_USER_CONFIG_ERROR_DEVICE_BUSY, msg);
