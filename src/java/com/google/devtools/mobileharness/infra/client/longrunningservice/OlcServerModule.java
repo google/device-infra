@@ -55,7 +55,7 @@ import java.time.Instant;
 import javax.inject.Singleton;
 
 /** Module for OLC server. */
-class ServerModule extends AbstractModule {
+class OlcServerModule extends AbstractModule {
 
   private static final ReflectionUtil REFLECTION_UTIL = new ReflectionUtil();
 
@@ -74,7 +74,7 @@ class ServerModule extends AbstractModule {
   private final boolean enableDatabase;
   private final boolean enableGrpcRelay;
 
-  ServerModule(
+  OlcServerModule(
       boolean isAtsMode,
       Instant serverStartTime,
       boolean enableCloudPubsubMonitoring,
@@ -178,7 +178,7 @@ class ServerModule extends AbstractModule {
   private static Class<? extends ExecMode> loadExecMode(String className) {
     try {
       return REFLECTION_UTIL.loadClass(
-          className, ExecMode.class, ServerModule.class.getClassLoader());
+          className, ExecMode.class, OlcServerModule.class.getClassLoader());
     } catch (MobileHarnessException | ClassNotFoundException e) {
       throw new IllegalStateException(e);
     }
@@ -188,7 +188,9 @@ class ServerModule extends AbstractModule {
     if (enableGrpcRelay) {
       try {
         return REFLECTION_UTIL.loadClass(
-            SERVER_UTILS_IMPL_CLASS_NAME, ServerUtils.class, ServerModule.class.getClassLoader());
+            SERVER_UTILS_IMPL_CLASS_NAME,
+            ServerUtils.class,
+            OlcServerModule.class.getClassLoader());
       } catch (MobileHarnessException | ClassNotFoundException e) {
         throw new IllegalStateException(
             "Please add the runtime dependency for"

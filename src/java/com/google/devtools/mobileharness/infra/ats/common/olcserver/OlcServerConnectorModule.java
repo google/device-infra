@@ -34,13 +34,13 @@ import io.grpc.ManagedChannel;
 import javax.inject.Singleton;
 
 /** Module for ATS console /local runner that connect to ATS OLC server. */
-public class OlcServerModule extends AbstractModule {
+public class OlcServerConnectorModule extends AbstractModule {
 
   private final FlagsString deviceInfraServiceFlags;
   private final String clientComponentName;
   private final String clientId;
 
-  public OlcServerModule(
+  public OlcServerConnectorModule(
       FlagsString deviceInfraServiceFlags, String clientComponentName, String clientId) {
     this.deviceInfraServiceFlags = deviceInfraServiceFlags;
     this.clientComponentName = clientComponentName;

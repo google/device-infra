@@ -19,7 +19,7 @@ package com.google.devtools.mobileharness.infra.ats.local;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.mobileharness.infra.ats.common.FlagsString;
-import com.google.devtools.mobileharness.infra.ats.common.olcserver.OlcServerModule;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.OlcServerConnectorModule;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerEnvironmentPreparer;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerEnvironmentPreparer.NoOpServerEnvironmentPreparer;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerEnvironmentPreparer.ServerEnvironment;
@@ -46,7 +46,7 @@ public final class AtsLocalRunnerModule extends AbstractModule {
 
   @Override
   protected void configure() {
-    install(new OlcServerModule(deviceInfraServiceFlags, "ATS local runner", runnerId));
+    install(new OlcServerConnectorModule(deviceInfraServiceFlags, "ATS local runner", runnerId));
   }
 
   @Provides

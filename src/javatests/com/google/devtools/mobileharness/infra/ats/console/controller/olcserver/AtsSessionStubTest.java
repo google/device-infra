@@ -31,7 +31,7 @@ import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithEr
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.infra.ats.common.FlagsString;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerStub;
-import com.google.devtools.mobileharness.infra.ats.common.olcserver.OlcServerModule;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.OlcServerConnectorModule;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerEnvironmentPreparer;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerEnvironmentPreparer.NoOpServerEnvironmentPreparer;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerEnvironmentPreparer.ServerEnvironment;
@@ -135,7 +135,7 @@ public class AtsSessionStubTest {
                 Path.of(System.getProperty("user.dir"))));
 
     Guice.createInjector(
-            new OlcServerModule(deviceInfraServiceFlags, "ATS console", "fake_client_id"),
+            new OlcServerConnectorModule(deviceInfraServiceFlags, "ATS console", "fake_client_id"),
             BoundFieldModule.of(this))
         .injectMembers(this);
   }

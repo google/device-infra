@@ -23,7 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.infra.ats.common.FlagsString;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
-import com.google.devtools.mobileharness.infra.ats.common.olcserver.OlcServerModule;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.OlcServerConnectorModule;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerEnvironmentPreparer;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleLineReader;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleOutput;
@@ -85,7 +85,7 @@ public class AtsConsoleModule extends AbstractModule {
         .to(XtsServerEnvironmentPreparer.class)
         .in(Singleton.class);
 
-    install(new OlcServerModule(deviceInfraServiceFlags, "ATS console", consoleId));
+    install(new OlcServerConnectorModule(deviceInfraServiceFlags, "ATS console", consoleId));
     install(new CompatibilityReportModule());
   }
 

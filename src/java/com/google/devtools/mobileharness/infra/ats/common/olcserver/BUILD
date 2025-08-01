@@ -70,7 +70,7 @@ java_library(
 
 java_library(
     name = "module",
-    srcs = ["OlcServerModule.java"],
+    srcs = ["OlcServerConnectorModule.java"],
     deps = [
         ":annotations",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:flags_string",

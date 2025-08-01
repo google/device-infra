@@ -22,7 +22,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.mobileharness.infra.ats.common.FlagsString;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
-import com.google.devtools.mobileharness.infra.ats.common.olcserver.OlcServerModule;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.OlcServerConnectorModule;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerEnvironmentPreparer;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerEnvironmentPreparer.NoOpServerEnvironmentPreparer;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerEnvironmentPreparer.ServerEnvironment;
@@ -52,7 +52,7 @@ public class ConsoleCommandTestModule extends AbstractModule {
   @Override
   protected void configure() {
     install(
-        new OlcServerModule(
+        new OlcServerConnectorModule(
             FlagsString.of("", ImmutableList.of()), "ATS console", "fake_client_id"));
     install(new CompatibilityReportModule());
   }

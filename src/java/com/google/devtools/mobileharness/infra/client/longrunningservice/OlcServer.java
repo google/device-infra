@@ -95,7 +95,7 @@ public class OlcServer {
     boolean enableDatabase = validateDatabase();
     OlcServer server =
         Guice.createInjector(
-                new ServerModule(
+                new OlcServerModule(
                     Flags.instance().enableAtsMode.getNonNull(),
                     serverStartTime,
                     Flags.instance().enableCloudPubsubMonitoring.getNonNull(),

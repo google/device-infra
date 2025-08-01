@@ -42,7 +42,7 @@ java_library(
     ],
     deps = [
         ":annotations",
-        ":server_module",
+        ":olc_server_module",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:log_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/client/api",
@@ -88,8 +88,8 @@ java_library(
 )
 
 java_library(
-    name = "server_module",
-    srcs = ["ServerModule.java"],
+    name = "olc_server_module",
+    srcs = ["OlcServerModule.java"],
     deps = [
         ":annotations",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:log_java_proto",
