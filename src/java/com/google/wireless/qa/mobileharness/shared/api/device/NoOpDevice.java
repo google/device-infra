@@ -55,8 +55,8 @@ public class NoOpDevice extends BaseDevice {
   }
 
   @Override
-  public void setUp() throws MobileHarnessException, InterruptedException {
-    super.setUp();
+  public void prepare() throws MobileHarnessException, InterruptedException {
+    super.prepare();
     addSupportedDriver("NoOpDriver");
     addSupportedDriver("MoblyTest");
 

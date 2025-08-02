@@ -80,7 +80,7 @@ public class AndroidJitEmulator extends AndroidDevice {
   }
 
   @Override
-  public void setUp() throws MobileHarnessException, InterruptedException {
+  public void prepare() throws MobileHarnessException, InterruptedException {
     logger.atInfo().log("JIT emulator start setup. %s", deviceId);
     addDimension(Ascii.toLowerCase(AndroidProperty.ABILIST.name()), "x86_64,arm64-v8a");
     addDimension(Ascii.toLowerCase(AndroidProperty.ABI.name()), "arm64-v8a");

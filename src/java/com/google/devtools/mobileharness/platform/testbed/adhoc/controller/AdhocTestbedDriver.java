@@ -154,7 +154,7 @@ public class AdhocTestbedDriver extends BaseDriver {
 
     // Sets up TestbedDevice.
     testInfo.log().atInfo().alsoTo(logger).log("Setting up TestbedDevice");
-    getDevice().setUp();
+    getDevice().prepare();
   }
 
   @Override
