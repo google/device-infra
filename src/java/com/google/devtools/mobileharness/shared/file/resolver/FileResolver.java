@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.errorprone.annotations.Immutable;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nullable;
@@ -54,6 +55,7 @@ public interface FileResolver {
   ListenableFuture<List<Optional<ResolveResult>>> resolveAsync(List<ResolveSource> resolveSources);
 
   /** Resolved file. */
+  @Immutable
   @AutoValue
   abstract class ResolvedFile {
 
@@ -67,6 +69,7 @@ public interface FileResolver {
   }
 
   /** Result of resolved file. */
+  @Immutable
   @AutoValue
   abstract class ResolveResult {
 
@@ -89,6 +92,7 @@ public interface FileResolver {
   }
 
   /** Source of files and parameters to be resolved. */
+  @Immutable
   @AutoValue
   abstract class ResolveSource {
     public static ResolveSource create(

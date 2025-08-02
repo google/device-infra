@@ -23,29 +23,33 @@ import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
-import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.shared.util.cache.FileCacheManager;
+import com.google.devtools.mobileharness.shared.util.cache.FileCacheManager.CacheStatus;
+import com.google.devtools.mobileharness.shared.util.cache.RecordedResult;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
+import com.google.errorprone.annotations.Immutable;
+import com.google.errorprone.annotations.ThreadSafe;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.InstantSource;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeoutException;
-import javax.annotation.Nullable;
-import javax.annotation.concurrent.ThreadSafe;
 
 /** The file resolver to cache the resolved files. */
-@ThreadSafe
+@javax.annotation.concurrent.ThreadSafe
 public class CacheFileResolver extends AbstractFileResolver {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -53,49 +57,76 @@ public class CacheFileResolver extends AbstractFileResolver {
   private static final Duration FAIL_CACHE_EXPIRATION_TIME = Duration.ofMinutes(3);
 
   /** The files and parameters to be resolved. */
+  @Immutable
   @AutoValue
-  public abstract static class CachedResolveSource {
-    public static CacheFileResolver.CachedResolveSource create(
-        String path, ImmutableMap<String, String> parameters) {
-      return new AutoValue_CacheFileResolver_CachedResolveSource(path, parameters);
+  abstract static class CachedResolveSource {
+    private static CachedResolveSource create(ResolveSource resolveSource) {
+      return new AutoValue_CacheFileResolver_CachedResolveSource(
+          resolveSource.path(), resolveSource.parameters());
     }
 
-    public abstract String path();
+    abstract String path();
 
-    public abstract ImmutableMap<String, String> parameters();
+    abstract ImmutableMap<String, String> parameters();
   }
 
-  /** The cached resolved result and the timestamp when it's resolved. */
-  private static class CachedResolveResult {
-    private final ListenableFuture<Optional<ResolveResult>> resolveResultFuture;
-    @Nullable private Instant resolveTimestamp;
+  @ThreadSafe
+  private static final class LocalCacheManager
+      implements FileCacheManager<ResolveSource, ResolveResult> {
 
-    CachedResolveResult(
-        ListenableFuture<Optional<ResolveResult>> resolveResultFuture,
-        @Nullable Instant resolveTimestamp) {
-      this.resolveResultFuture = resolveResultFuture;
-      this.resolveTimestamp = resolveTimestamp;
+    private final ConcurrentMap<CachedResolveSource, RecordedResult<ResolveResult>> cache =
+        new ConcurrentHashMap<>();
+    private final Executor executor;
+    private final InstantSource instantSource;
+
+    LocalCacheManager(Executor executor, InstantSource instantSource) {
+      this.executor = executor;
+      this.instantSource = instantSource;
     }
 
-    ListenableFuture<Optional<ResolveResult>> resolveResultFuture() {
-      return resolveResultFuture;
+    @Override
+    public CacheStatus<ResolveResult> getOrLoad(
+        ResolveSource resolveSource, CacheLoader<ResolveSource, ResolveResult> loader) {
+      CachedResolveSource key = CachedResolveSource.create(resolveSource);
+      SettableFuture<Optional<ResolveResult>> resolveResultFuture = SettableFuture.create();
+      RecordedResult<ResolveResult> cachedResolveResult =
+          RecordedResult.create(resolveResultFuture, executor, instantSource);
+      RecordedResult<ResolveResult> previousResult = cache.putIfAbsent(key, cachedResolveResult);
+      if (previousResult == null) {
+        logger.atInfo().log("%s has not been resolved before. Need to resolve.", key);
+        // If not cached, resolve and set the resolved result to future.
+        resolveResultFuture.setFuture(Futures.submit(() -> loader.load(resolveSource), executor));
+        return CacheStatus.create(cachedResolveResult, /* loadInvoked= */ true);
+      } else {
+        return CacheStatus.create(previousResult, /* loadInvoked= */ false);
+      }
     }
 
-    Optional<Instant> resolveTimestamp() {
-      return Optional.ofNullable(resolveTimestamp);
+    private void removeItemIfValueMatch(
+        ResolveSource key, RecordedResult<ResolveResult> expectedValue) {
+      cache.computeIfPresent(
+          CachedResolveSource.create(key),
+          (k, value) -> {
+            if (value == expectedValue) {
+              return null;
+            } else {
+              return value;
+            }
+          });
     }
 
-    void updateResolveTimestamp(Instant resolveTimestamp) {
-      this.resolveTimestamp = resolveTimestamp;
+    private void addResolveResult(ResolveResult resolveResult, Instant resolveTimestamp) {
+      cache.putIfAbsent(
+          CachedResolveSource.create(resolveResult.resolveSource()),
+          RecordedResult.create(
+              immediateFuture(Optional.of(resolveResult)),
+              executor,
+              InstantSource.fixed(resolveTimestamp)));
     }
   }
 
-  /** Cache of resolved result. */
-  private final Map<CachedResolveSource, CachedResolveResult> resolvedResultsCache =
-      new ConcurrentHashMap<>();
-
+  private final LocalCacheManager cacheManager;
   private final LocalFileUtil localFileUtil;
-
   private final InstantSource instantSource;
 
   public CacheFileResolver(
@@ -105,6 +136,7 @@ public class CacheFileResolver extends AbstractFileResolver {
     super(executorService);
     this.localFileUtil = localFileUtil;
     this.instantSource = instantSource;
+    this.cacheManager = new LocalCacheManager(executorService, instantSource);
   }
 
   @Override
@@ -129,26 +161,22 @@ public class CacheFileResolver extends AbstractFileResolver {
 
   private Optional<ResolveResult> internalResolve(ResolveSource resolveSource)
       throws MobileHarnessException, InterruptedException {
-    CachedResolveSource cachedResolveSource =
-        CachedResolveSource.create(resolveSource.path(), resolveSource.parameters());
-    SettableFuture<Optional<ResolveResult>> resolveResultFuture = SettableFuture.create();
-    CachedResolveResult cachedResolveResult = new CachedResolveResult(resolveResultFuture, null);
-    // ConcurrentHashMap.putIfAbsent guarantees only one future can be really executed for same
-    // ResolveSource.
-    CachedResolveResult previousCachedResolveResult =
-        resolvedResultsCache.putIfAbsent(cachedResolveSource, cachedResolveResult);
-    if (previousCachedResolveResult == null) {
-      logger.atInfo().log("%s has not been resolved before. Need to resolve.", resolveSource);
-      // If not cached, resolve and set the resolved result to future.
+    CacheStatus<ResolveResult> cacheStatus =
+        cacheManager.getOrLoad(resolveSource, (key) -> super.resolve(key));
+    if (cacheStatus.loadInvoked()) {
       try {
-        Optional<ResolveResult> result = super.resolve(resolveSource);
-        resolveResultFuture.set(result);
-        cachedResolveResult.updateResolveTimestamp(instantSource.instant());
-        return result;
-      } catch (MobileHarnessException | InterruptedException | Error | RuntimeException e) {
-        resolveResultFuture.setException(e);
-        cachedResolveResult.updateResolveTimestamp(instantSource.instant());
-        throw e;
+        return cacheStatus.cachedResult().valueFuture().get();
+      } catch (ExecutionException e) {
+        if (e.getCause() instanceof MobileHarnessException) {
+          throw (MobileHarnessException) e.getCause();
+        } else if (e.getCause() instanceof InterruptedException) {
+          throw (InterruptedException) e.getCause();
+        } else if (e.getCause() instanceof Error) {
+          throw (Error) e.getCause();
+        } else if (e.getCause() instanceof RuntimeException) {
+          throw (RuntimeException) e.getCause();
+        }
+        throw new AssertionError("Should not happen.", e);
       }
     } else {
       logger.atInfo().log("%s has been resolved before. Use the cached value.", resolveSource);
@@ -156,7 +184,7 @@ public class CacheFileResolver extends AbstractFileResolver {
       Optional<ResolveResult> optionalResolveResult;
       try {
         optionalResolveResult =
-            previousCachedResolveResult.resolveResultFuture().get(RESOLVE_TIMEOUT_IN_HOUR, HOURS);
+            cacheStatus.cachedResult().valueFuture().get(RESOLVE_TIMEOUT_IN_HOUR, HOURS);
       } catch (ExecutionException e) {
         if ((e.getCause() instanceof MobileHarnessException
                 && ((MobileHarnessException) e.getCause()).getErrorId()
@@ -166,16 +194,17 @@ public class CacheFileResolver extends AbstractFileResolver {
               "Previous resolve process for %s did not succeed because of timeout or interruption."
                   + " Need to re-resolve.",
               resolveSource);
-          removeItemIfValueMatch(cachedResolveSource, previousCachedResolveResult);
+          cacheManager.removeItemIfValueMatch(resolveSource, cacheStatus.cachedResult());
           return internalResolve(resolveSource);
         } else if (instantSource
             .instant()
             .isAfter(
-                previousCachedResolveResult
-                    .resolveTimestamp()
+                cacheStatus
+                    .cachedResult()
+                    .finishTimestamp()
                     .orElse(instantSource.instant())
                     .plus(FAIL_CACHE_EXPIRATION_TIME))) {
-          removeItemIfValueMatch(cachedResolveSource, previousCachedResolveResult);
+          cacheManager.removeItemIfValueMatch(resolveSource, cacheStatus.cachedResult());
           return internalResolve(resolveSource);
         } else {
           throw new MobileHarnessException(
@@ -194,11 +223,12 @@ public class CacheFileResolver extends AbstractFileResolver {
       if (instantSource
           .instant()
           .isAfter(
-              previousCachedResolveResult
-                  .resolveTimestamp()
+              cacheStatus
+                  .cachedResult()
+                  .finishTimestamp()
                   .orElse(instantSource.instant())
                   .plus(SUCCEED_CACHE_EXPIRATION_TIME))) {
-        removeItemIfValueMatch(cachedResolveSource, previousCachedResolveResult);
+        cacheManager.removeItemIfValueMatch(resolveSource, cacheStatus.cachedResult());
         return internalResolve(resolveSource);
       }
 
@@ -213,7 +243,7 @@ public class CacheFileResolver extends AbstractFileResolver {
                 resolvedFile.path(), resolveSource);
             // If any file in the cached result doesn't exist any more, retire cached value
             // and re-resolve.
-            removeItemIfValueMatch(cachedResolveSource, previousCachedResolveResult);
+            cacheManager.removeItemIfValueMatch(resolveSource, cacheStatus.cachedResult());
             return internalResolve(resolveSource);
           }
         }
@@ -245,7 +275,7 @@ public class CacheFileResolver extends AbstractFileResolver {
                       resolveSource);
                   // If any file in the cached result doesn't exist any more, retire cached value
                   // and re-resolve.
-                  removeItemIfValueMatch(cachedResolveSource, previousCachedResolveResult);
+                  cacheManager.removeItemIfValueMatch(resolveSource, cacheStatus.cachedResult());
                   // Remove already copied file.
                   for (ResolvedFile resolvedFile : thisResolvedFiles) {
                     localFileUtil.removeFileOrDir(resolvedFile.path());
@@ -270,28 +300,12 @@ public class CacheFileResolver extends AbstractFileResolver {
     }
   }
 
-  private void removeItemIfValueMatch(CachedResolveSource key, CachedResolveResult expectedValue) {
-    resolvedResultsCache.computeIfPresent(
-        key,
-        (k, value) -> {
-          if (value == expectedValue) {
-            return null;
-          } else {
-            return value;
-          }
-        });
-  }
-
   @Override
   protected Set<ResolveResult> preBatchProcess(List<ResolveSource> resolveSources)
       throws MobileHarnessException, InterruptedException {
     Set<ResolveResult> resolveResults = super.preBatchProcess(resolveSources);
     for (ResolveResult resolveResult : resolveResults) {
-      resolvedResultsCache.putIfAbsent(
-          CachedResolveSource.create(
-              resolveResult.resolveSource().path(), resolveResult.resolveSource().parameters()),
-          new CachedResolveResult(
-              immediateFuture(Optional.of(resolveResult)), instantSource.instant()));
+      cacheManager.addResolveResult(resolveResult, instantSource.instant());
     }
     return resolveResults;
   }
