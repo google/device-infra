@@ -45,9 +45,6 @@ java_library(
 java_library(
     name = "reflection_util",
     srcs = ["ReflectionUtil.java"],
-    visibility = [
-        "//:deviceinfra_all_pkg",
-        "//:omnilab_fusion",
-    ],
+    visibility = ["//:deviceinfra_all_pkg"],
     deps = ["//src/java/com/google/devtools/mobileharness/api/model/error"],
 )
