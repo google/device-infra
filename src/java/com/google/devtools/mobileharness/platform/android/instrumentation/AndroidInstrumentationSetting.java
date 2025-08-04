@@ -37,6 +37,7 @@ public abstract class AndroidInstrumentationSetting {
       boolean prefixAndroidTest,
       boolean noIsolatedStorage,
       boolean useTestStorageService,
+      @Nullable Map<String, String> testArgs,
       boolean enableCoverage) {
     return new AutoValue_AndroidInstrumentationSetting(
         checkNotNull(packageName),
@@ -48,6 +49,7 @@ public abstract class AndroidInstrumentationSetting {
         prefixAndroidTest,
         noIsolatedStorage,
         useTestStorageService,
+        testArgs,
         enableCoverage);
   }
 
@@ -82,6 +84,10 @@ public abstract class AndroidInstrumentationSetting {
 
   /** Whether to set useTestStorageService in instrumentation command */
   public abstract boolean useTestStorageService();
+
+  /** Test Args for am instrumentation, or null. */
+  @Nullable
+  public abstract Map<String, String> testArgs();
 
   /** Whether to enable coverage for the instrumentation command. */
   public abstract boolean enableCoverage();

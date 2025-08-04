@@ -284,6 +284,7 @@ public class AndroidSwitchLanguageDecorator extends BaseDecorator
                 /* prefixAndroidTest= */ false,
                 /* noIsolatedStorage= */ false,
                 /* useTestStorageService= */ false,
+                /* testArgs= */ null,
                 /* enableCoverage= */ false),
             /* timeout= */ Duration.ofMinutes(1));
     try {
