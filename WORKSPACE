@@ -32,6 +32,13 @@ http_archive(
 
 # Proto rules.
 http_archive(
+    name = "com_google_protobuf",
+    sha256 = "7c3ebd7aaedd86fa5dc479a0fda803f602caaf78d8aff7ce83b89e1b8ae7442a",
+    strip_prefix = "protobuf-28.3",
+    urls = ["https://github.com/protocolbuffers/protobuf/releases/download/v28.3/protobuf-28.3.tar.gz"],
+)
+
+http_archive(
     name = "rules_proto",
     sha256 = "dc3fb206a2cb3441b485eb1e423165b231235a1ea9b031b4433cf7bc1fa460dd",
     strip_prefix = "rules_proto-5.3.0-21.7",
@@ -108,16 +115,6 @@ load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_depe
 go_rules_dependencies()
 
 go_register_toolchains(version = "1.20.5")
-
-http_archive(
-    name = "com_google_absl",
-    sha256 = "81311c17599b3712069ded20cca09a62ab0bf2a89dfa16993786c8782b7ed145",
-    strip_prefix = "abseil-cpp-20230125.1",
-    # Committed on Jan 25, 2023.
-    urls = [
-        "https://github.com/abseil/abseil-cpp/archive/20230125.1.tar.gz",
-    ],
-)
 
 http_archive(
     name = "com_github_grpc_grpc",
