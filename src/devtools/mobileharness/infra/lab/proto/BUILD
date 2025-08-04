@@ -14,6 +14,8 @@
 #
 
 load("@io_grpc_grpc_java//:java_grpc_library.bzl", "java_grpc_library")
+load("//third_party/protobuf/bazel:java_proto_library.bzl", "java_proto_library")
+load("//third_party/protobuf/bazel:proto_library.bzl", "proto_library")
 
 package(
     default_applicable_licenses = ["//:license"],
