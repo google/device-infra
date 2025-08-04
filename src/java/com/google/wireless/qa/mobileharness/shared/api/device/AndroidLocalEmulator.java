@@ -75,8 +75,8 @@ public class AndroidLocalEmulator extends AndroidDevice {
   }
 
   @Override
-  public void setUp() throws MobileHarnessException, InterruptedException {
-    super.setUp();
+  public void prepare() throws MobileHarnessException, InterruptedException {
+    super.prepare();
     addSupportedDeviceType(AndroidLocalEmulator.class.getSimpleName());
     addDimension(DIMENSION_NAME_INTERNET, Dimension.Value.TRUE);
     addDimension(Dimension.Name.DEVICE_FORM, Dimension.Value.VIRTUAL);

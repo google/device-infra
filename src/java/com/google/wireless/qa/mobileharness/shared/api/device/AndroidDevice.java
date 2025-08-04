@@ -44,7 +44,7 @@ public abstract class AndroidDevice extends BaseDevice {
   }
 
   @Override
-  public void setUp() throws MobileHarnessException, InterruptedException {
+  public void prepare() throws MobileHarnessException, InterruptedException {
     delegate.ensureDeviceReady();
 
     ImmutableListMultimap<Dimension.Name, String> extraDimensions = null;

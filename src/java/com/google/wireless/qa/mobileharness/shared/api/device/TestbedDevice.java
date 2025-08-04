@@ -224,8 +224,8 @@ public class TestbedDevice extends BaseDevice implements CompositeDevice {
   }
 
   @Override
-  public void setUp() throws MobileHarnessException, InterruptedException {
-    super.setUp();
+  public void prepare() throws MobileHarnessException, InterruptedException {
+    super.prepare();
     logger.atInfo().log("Setting up TestbedDevice: %s", getDeviceId());
 
     addManagedConfigDevices();
@@ -464,7 +464,7 @@ public class TestbedDevice extends BaseDevice implements CompositeDevice {
   private void setUpSubDevices() throws MobileHarnessException, InterruptedException {
     if (preCreatedSubDevices == null) {
       try {
-        forEachManagedDevice(Device::setUp, "setUp()");
+        forEachManagedDevice(Device::prepare, "prepare()");
       } catch (MobileHarnessException e) {
         throw new MobileHarnessException(
             ExtErrorId.MOBLY_TESTBED_SET_UP_ERROR, "Failed to check device", e);
@@ -557,7 +557,7 @@ public class TestbedDevice extends BaseDevice implements CompositeDevice {
       }
     }
 
-    parallelForEachDevice(devicesToSetUp, Device::setUp, "updateManagedDevices()");
+    parallelForEachDevice(devicesToSetUp, Device::prepare, "updateManagedDevices()");
     parallelForEachDevice(devicesToTearDown, Device::tearDown, "updateManagedDevices()");
 
     managedDevices.clear();

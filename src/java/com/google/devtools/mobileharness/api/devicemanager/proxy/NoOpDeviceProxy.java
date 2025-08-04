@@ -71,7 +71,7 @@ public class NoOpDeviceProxy implements DeviceProxy {
 
     // Sets up the Device.
     logger.atInfo().log("Setting up device %s", device);
-    device.setUp();
+    device.prepare();
     logger.atInfo().log("Set up device %s", device);
     return device;
   }
