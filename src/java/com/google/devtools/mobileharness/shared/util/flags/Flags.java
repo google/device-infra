@@ -646,6 +646,14 @@ public class Flags {
       converter = Flag.StringConverter.class)
   public Flag<String> daGenFileDir = daGenFileDirDefault;
 
+  private static final Flag<String> defaultCtsZipPathDefault = Flag.value("");
+
+  @com.beust.jcommander.Parameter(
+      names = "--default_cts_zip_path",
+      description = "Default file path for the CTS zip file.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> defaultCtsZipPath = defaultCtsZipPathDefault;
+
   private static final Flag<Boolean> debugRandomExitDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(

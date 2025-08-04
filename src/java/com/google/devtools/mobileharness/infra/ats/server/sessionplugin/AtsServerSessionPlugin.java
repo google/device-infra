@@ -133,6 +133,16 @@ final class AtsServerSessionPlugin {
           sessionInfo.getSessionPluginExecutionConfig().getConfig().unpack(SessionRequest.class);
       if (request.getRequestCase().equals(RequestCase.NEW_MULTI_COMMAND_REQUEST)) {
         NewMultiCommandRequest newMultiCommandRequest = request.getNewMultiCommandRequest();
+        if (!newMultiCommandRequest.getTestEnvironment().getEnvVarsMap().containsKey("TF_PATH")) {
+          newMultiCommandRequest =
+              newMultiCommandRequest.toBuilder()
+                  .setTestEnvironment(
+                      newMultiCommandRequest.getTestEnvironment().toBuilder()
+                          .putEnvVars(
+                              "TF_PATH",
+                              "${TF_WORK_DIR}/android-cts/tools:${TF_WORK_DIR}/android-cts/testcases"))
+                  .build();
+        }
         requestDetail
             .setCreateTime(Timestamps.fromMillis(clock.instant().toEpochMilli()))
             .setStartTime(Timestamps.fromMillis(clock.instant().toEpochMilli()))

@@ -100,6 +100,7 @@ public final class ServerJobCreatorTest {
   private LocalFileUtil realLocalFileUtil;
   private String publicDir;
   private String xtsRootDir;
+  private String sessionTempDir;
 
   @Inject private ServerJobCreator jobCreator;
 
@@ -121,6 +122,7 @@ public final class ServerJobCreatorTest {
             ImmutableList.of(
                 SubDeviceSpec.getDefaultInstance(), SubDeviceSpec.getDefaultInstance()));
     xtsRootDir = publicDir + "/session_session_id/file";
+    sessionTempDir = publicDir + "/session_session_id";
     realLocalFileUtil.prepareParentDir(xtsRootDir);
   }
 
@@ -132,6 +134,7 @@ public final class ServerJobCreatorTest {
             .setCommandLineArgs("cts")
             .setXtsType("cts")
             .setXtsRootDir(xtsRootDir)
+            .setSessionTempDir(sessionTempDir)
             .setAndroidXtsZip(ANDROID_XTS_ZIP_PATH)
             .setModuleNames(ImmutableList.of("mock_module"))
             .build();
@@ -156,6 +159,7 @@ public final class ServerJobCreatorTest {
             .setXtsType("cts")
             .setXtsRootDir(xtsRootDir)
             .setAtsServerTestEnvironment(TestEnvironment.getDefaultInstance())
+            .setSessionTempDir(sessionTempDir)
             .setAndroidXtsZip(ANDROID_XTS_ZIP_PATH)
             .setShardingMode(ShardingMode.MODULE)
             .build();
@@ -175,7 +179,6 @@ public final class ServerJobCreatorTest {
   @SuppressWarnings("unchecked")
   @Test
   public void createXtsTradefedTestJob() throws Exception {
-    String xtsRootDir = publicDir + "/session_session_id/file";
     realLocalFileUtil.prepareParentDir(xtsRootDir);
     SessionRequestInfo sessionRequestInfo =
         SessionRequestInfo.builder()
@@ -184,6 +187,7 @@ public final class ServerJobCreatorTest {
             .setXtsType("cts")
             .setAtsServerTestEnvironment(TestEnvironment.getDefaultInstance())
             .setXtsRootDir(xtsRootDir)
+            .setSessionTempDir(sessionTempDir)
             .setAndroidXtsZip(ANDROID_XTS_ZIP_PATH)
             .setRemoteRunnerFilePathPrefix("ats-file-server::")
             .setModuleNames(ImmutableList.of("mock_module"))
@@ -224,13 +228,12 @@ public final class ServerJobCreatorTest {
   @SuppressWarnings("unchecked")
   @Test
   public void createXtsTradefedTestJob_hasTestPlanFileAndLocalMode() throws Exception {
-    String xtsRootDir = publicDir + "/session_session_id/file";
-    realLocalFileUtil.prepareParentDir(xtsRootDir);
     SessionRequestInfo sessionRequestInfo =
         SessionRequestInfo.builder()
             .setTestPlan("cts")
             .setCommandLineArgs("cts")
             .setXtsType("cts")
+            .setSessionTempDir(sessionTempDir)
             .setAtsServerTestEnvironment(TestEnvironment.getDefaultInstance())
             .setXtsRootDir(xtsRootDir)
             .setAndroidXtsZip(ANDROID_XTS_ZIP_PATH)
@@ -288,6 +291,7 @@ public final class ServerJobCreatorTest {
             .setAndroidXtsZip(xtsZipPath.getAbsolutePath())
             .setAtsServerTestEnvironment(TestEnvironment.getDefaultInstance())
             .setRemoteRunnerFilePathPrefix("ats-file-server::")
+            .setSessionTempDir(sessionTempDir)
             .setRetrySessionId("0")
             .setRetryResultDir(retryResultDir.getAbsolutePath())
             .build();
@@ -338,6 +342,7 @@ public final class ServerJobCreatorTest {
             .setCommandLineArgs("retry --retry 0")
             .setXtsType("cts")
             .setXtsRootDir(xtsRootDir)
+            .setSessionTempDir(sessionTempDir)
             .setAtsServerTestEnvironment(TestEnvironment.getDefaultInstance())
             .setAndroidXtsZip(xtsZipPath.getAbsolutePath())
             .setRetrySessionId("previous_session_id")
@@ -401,6 +406,7 @@ public final class ServerJobCreatorTest {
             .setCommandLineArgs("cts")
             .setXtsType("cts")
             .setXtsRootDir(xtsRootDir)
+            .setSessionTempDir(sessionTempDir)
             .setAndroidXtsZip(xtsZipPath.getAbsolutePath())
             .setAtsServerTestEnvironment(TestEnvironment.getDefaultInstance())
             .setRetrySessionId("previous_session_id")
@@ -451,6 +457,7 @@ public final class ServerJobCreatorTest {
   public void createXtsTradefedTestJobInfo_addSubPlanXmlPathForSubPlanCommand() throws Exception {
     File xtsRootDir = folder.newFolder("xts_root_dir");
     File xtsZipPath = folder.newFile("xts_zip.zip");
+    String sessionTempDir = xtsRootDir.getParent();
     Path subPlansDir = xtsRootDir.toPath().resolve("android-cts/subplans");
     realLocalFileUtil.prepareDir(subPlansDir);
     realLocalFileUtil.copyFileOrDir(SUBPLAN1_XML, subPlansDir.toAbsolutePath().toString());
@@ -460,6 +467,7 @@ public final class ServerJobCreatorTest {
             .setCommandLineArgs("cts --subplan subplan1")
             .setXtsType("cts")
             .setXtsRootDir(xtsRootDir.getAbsolutePath())
+            .setSessionTempDir(sessionTempDir)
             .setAtsServerTestEnvironment(TestEnvironment.getDefaultInstance())
             .setAndroidXtsZip(xtsZipPath.getAbsolutePath())
             .setSubPlanName("subplan1")
@@ -510,6 +518,7 @@ public final class ServerJobCreatorTest {
             .setCommandLineArgs("cts --subplan subplan2")
             .setXtsType("cts")
             .setXtsRootDir(xtsRootDir.getAbsolutePath())
+            .setSessionTempDir(xtsRootDir.getParent())
             .setAtsServerTestEnvironment(TestEnvironment.getDefaultInstance())
             .setAndroidXtsZip(xtsZipPath.getAbsolutePath())
             .setSubPlanName("subplan2")
@@ -553,6 +562,7 @@ public final class ServerJobCreatorTest {
             .setCommandLineArgs("retry")
             .setXtsType("cts")
             .setXtsRootDir(xtsRootDir)
+            .setSessionTempDir(sessionTempDir)
             .setRetrySessionId("previous_session_id")
             .setRetryResultDir("/retry/result/dir")
             .build();
@@ -589,6 +599,7 @@ public final class ServerJobCreatorTest {
             .setCommandLineArgs("cts --subplan subplan1")
             .setXtsType("cts")
             .setXtsRootDir(xtsRootDir.getAbsolutePath())
+            .setSessionTempDir(sessionTempDir)
             .setSubPlanName("subplan1")
             .build();
     ArgumentCaptor<SubPlan> subPlanCaptor = ArgumentCaptor.forClass(SubPlan.class);
@@ -624,6 +635,7 @@ public final class ServerJobCreatorTest {
             .setCommandLineArgs("cts --subplan subplan3")
             .setXtsType("cts")
             .setXtsRootDir(xtsRootDir.getAbsolutePath())
+            .setSessionTempDir(sessionTempDir)
             .setSubPlanName("subplan3")
             .build();
     ArgumentCaptor<SubPlan> subPlanCaptor = ArgumentCaptor.forClass(SubPlan.class);
@@ -660,6 +672,7 @@ public final class ServerJobCreatorTest {
             .setCommandLineArgs("cts --subplan subplan2")
             .setXtsType("cts")
             .setXtsRootDir(xtsRootDir.getAbsolutePath())
+            .setSessionTempDir(sessionTempDir)
             .setSubPlanName("subplan2")
             .build();
 

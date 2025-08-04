@@ -87,6 +87,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.TestInfos;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Files;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
+import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.SubDeviceSpec;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryResult;
@@ -329,6 +330,8 @@ public final class NewMultiCommandRequestHandlerTest {
     assertThat(sessionRequestInfo.shardCount()).hasValue(2);
     assertThat(sessionRequestInfo.envVars()).containsExactly("env_key1", "env_value1");
     assertThat(sessionRequestInfo.remoteRunnerFilePathPrefix()).hasValue("ats-file-server::");
+    assertThat(sessionRequestInfo.sessionTempDir().get())
+        .isEqualTo(DirUtil.getPublicGenDir() + "/session_session_id");
 
     // Verify that handler has mounted the zip file.
     Command mountCommand =
@@ -336,6 +339,47 @@ public final class NewMultiCommandRequestHandlerTest {
     verify(commandExecutor).run(mountCommand);
     verify(files).add(eq("test-name-1"), eq("ats-file-server::/path/to/file1"));
     verify(files).add(eq("test-name-2"), eq("ats-file-server::/path/to/file2"));
+  }
+
+  @Test
+  public void createTradefedJobs_noOpTest_success() throws Exception {
+    when(clock.millis()).thenReturn(1000L).thenReturn(2000L).thenReturn(3000L);
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
+    commandInfo = commandInfo.toBuilder().setCommandLine("util/timewaster").build();
+    request =
+        request.toBuilder().clearCommands().addCommands(commandInfo).clearTestResources().build();
+
+    // Trigger the handler.
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+
+    assertThat(createJobsResult.jobInfos()).containsExactly(jobInfo);
+    assertThat(createJobsResult.commandDetails()).hasSize(1);
+    String commandId = createJobsResult.commandDetails().keySet().iterator().next();
+    assertThat(commandId)
+        .isEqualTo(UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString());
+    CommandDetail commandDetail = createJobsResult.commandDetails().values().iterator().next();
+    assertThat(commandDetail.getCommandLine()).isEqualTo("util/timewaster");
+    assertThat(commandDetail.getId()).isEqualTo(commandId);
+
+    // Verify sessionRequestInfo has been correctly generated.
+    verify(xtsJobCreator).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
+    SessionRequestInfo sessionRequestInfo = sessionRequestInfoCaptor.getValue();
+    assertThat(sessionRequestInfo.testPlan()).isEqualTo("util/timewaster");
+    assertThat(sessionRequestInfo.xtsRootDir()).isEmpty();
+    assertThat(sessionRequestInfo.xtsType()).isEqualTo(XtsConstants.ATS_NO_OP_TEST_TYPE);
+    assertThat(sessionRequestInfo.androidXtsZip()).isEmpty();
+    assertThat(sessionRequestInfo.startTimeout()).isEqualTo(Duration.ofSeconds(1000));
+    assertThat(sessionRequestInfo.jobTimeout()).isEqualTo(Duration.ofSeconds(2000));
+    assertThat(sessionRequestInfo.deviceSerials()).containsExactly(DEVICE_ID_1, DEVICE_ID_2);
+    assertThat(sessionRequestInfo.envVars()).containsExactly("env_key1", "env_value1");
+    assertThat(sessionRequestInfo.remoteRunnerFilePathPrefix()).hasValue("ats-file-server::");
+    assertThat(sessionRequestInfo.sessionTempDir().get())
+        .isEqualTo(DirUtil.getPublicGenDir() + "/session_session_id");
+
+    // Verify that handler has not mounted the zip file.
+    verify(commandExecutor, never()).run(any());
+    verify(files, never()).add(any(), any());
   }
 
   @Test
@@ -388,6 +432,8 @@ public final class NewMultiCommandRequestHandlerTest {
     assertThat(sessionRequestInfo.shardCount()).hasValue(2);
     assertThat(sessionRequestInfo.envVars()).containsExactly("env_key1", "env_value1");
     assertThat(sessionRequestInfo.remoteRunnerFilePathPrefix()).hasValue("ats-file-server::");
+    assertThat(sessionRequestInfo.sessionTempDir().get())
+        .isEqualTo(DirUtil.getPublicGenDir() + "/session_session_id");
 
     // Verify that handler has mounted the zip file.
     Command mountCommand =
@@ -439,6 +485,8 @@ public final class NewMultiCommandRequestHandlerTest {
     assertThat(sessionRequestInfo.shardCount()).hasValue(2);
     assertThat(sessionRequestInfo.envVars()).containsExactly("env_key1", "env_value1");
     assertThat(sessionRequestInfo.remoteRunnerFilePathPrefix()).hasValue("ats-file-server::");
+    assertThat(sessionRequestInfo.sessionTempDir().get())
+        .isEqualTo(DirUtil.getPublicGenDir() + "/session_session_id");
 
     // Verify that handler has unzipped the zip file.
     verify(localFileUtil).unzipFile(zipFile, xtsRootDir, Duration.ofHours(1));
@@ -507,6 +555,8 @@ public final class NewMultiCommandRequestHandlerTest {
     String retryResultDir =
         "/path/retry_previous_test_run_id/output/retry_previous_session_id/" + expectedCommandId;
     assertThat(sessionRequestInfo.retryResultDir()).hasValue(retryResultDir);
+    assertThat(sessionRequestInfo.sessionTempDir().get())
+        .isEqualTo(DirUtil.getPublicGenDir() + "/session_session_id");
 
     // Verify that handler has mounted the zip file.
     Command mountCommand =
@@ -578,6 +628,8 @@ public final class NewMultiCommandRequestHandlerTest {
     assertThat(sessionRequestInfo.envVars()).containsExactly("env_key1", "env_value1");
     assertThat(sessionRequestInfo.retrySessionId()).isEmpty();
     assertThat(sessionRequestInfo.retryResultDir()).isEmpty();
+    assertThat(sessionRequestInfo.sessionTempDir().get())
+        .isEqualTo(DirUtil.getPublicGenDir() + "/session_session_id");
     // Verify that handler has mounted the zip file.
     Command mountCommand =
         Command.of("fuse-zip", "-r", zipFile, xtsRootDir).timeout(Duration.ofMinutes(10));
@@ -645,6 +697,8 @@ public final class NewMultiCommandRequestHandlerTest {
     String retryResultDir =
         "/path/retry_previous_test_run_id/output/retry_previous_session_id/" + commandId;
     assertThat(sessionRequestInfo.retryResultDir()).hasValue(retryResultDir);
+    assertThat(sessionRequestInfo.sessionTempDir().get())
+        .isEqualTo(DirUtil.getPublicGenDir() + "/session_session_id");
 
     // Verify that handler has mounted the zip file.
     Command mountCommand =
@@ -1121,6 +1175,28 @@ public final class NewMultiCommandRequestHandlerTest {
 
     verify(localFileUtil).removeFileOrDir(endsWith(logFile3));
     verify(localFileUtil).writeToFile(isA(String.class), eq(logFile1 + "\n" + logFile2));
+  }
+
+  @Test
+  public void handleResultProcessing_noOpTest_allJobsPass_setsCommandCompleted() throws Exception {
+    commandInfo = commandInfo.toBuilder().setCommandLine("util/timewaster").build();
+    request =
+        request.toBuilder().clearCommands().addCommands(commandInfo).clearTestResources().build();
+
+    com.google.wireless.qa.mobileharness.shared.model.job.out.Result jobResult =
+        Mockito.mock(com.google.wireless.qa.mobileharness.shared.model.job.out.Result.class);
+    when(jobResult.get()).thenReturn(TestResult.PASS);
+    when(jobInfo.result()).thenReturn(jobResult);
+    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
+    Result result =
+        Result.newBuilder()
+            .setSummary(Summary.newBuilder().setPassed(0).setFailed(0).build())
+            .build();
+    mockProcessResult(result);
+    HandleResultProcessingResult handleResultProcessingResult =
+        createJobAndHandleResultProcessing(request);
+    assertThat(handleResultProcessingResult.commandDetails().values().iterator().next().getState())
+        .isEqualTo(CommandState.COMPLETED);
   }
 
   @Test
