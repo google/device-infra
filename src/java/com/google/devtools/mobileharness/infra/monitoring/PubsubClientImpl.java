@@ -46,7 +46,7 @@ public class PubsubClientImpl extends DataPusher {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   // The maximum batch size in bytes of a single Cloud PubSub message.
-  private static final int MAX_BATCH_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
+  private static final int MAX_BATCH_SIZE_BYTES = 10000000;
   private static final int PUBLISH_DEADLINE_SECONDS = 10;
 
   private final String pubsubTopic;
