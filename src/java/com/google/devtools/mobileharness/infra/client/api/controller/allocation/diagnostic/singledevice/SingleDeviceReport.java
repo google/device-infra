@@ -217,7 +217,7 @@ public class SingleDeviceReport implements Report {
             report
                 .append(
                     String.format(
-                        "MH failed to allocate any devices within %d ms. "
+                        "OmniLab failed to allocate any devices within %d ms. "
                             + "Please increase your start_timeout setting "
                             + "to >60 seconds and try again",
                         job.setting().getTimeout().getStartTimeoutMs()))
@@ -229,7 +229,7 @@ public class SingleDeviceReport implements Report {
             report
                 .append(
                     String.format(
-                        "MH failed to find suitable device with allocation exit strategy %s."
+                        "OmniLab failed to find suitable device with allocation exit strategy %s."
                             + " Consider to use another allocation exit strategy.",
                         job.setting().getAllocationExitStrategy()))
                 .toString(),
@@ -238,7 +238,7 @@ public class SingleDeviceReport implements Report {
         report
             .append("Your job should be able to allocate the following ")
             .append(goodIds.size())
-            .append(" devices but MH somehow failed to allocate them. Please try again. ")
+            .append(" devices but OmniLab somehow failed to allocate them. Please try again. ")
             .append(Joiner.on("\n - ").join(goodIds.stream().limit(maxCandidateType).iterator()));
         if (goodIds.size() > maxCandidateType) {
           report
