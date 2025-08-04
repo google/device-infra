@@ -288,7 +288,7 @@ public class AdhocTestbedDriver extends BaseDriver {
             break;
           case ERROR:
             errorTestsTotalCnt++;
-            if (subTestInfo.resultWithCause().get().cause().isPresent()) {
+            if (subTestInfo.resultWithCause().get().causeProto().isPresent()) {
               ErrorType errorType =
                   ErrorModelConverter.getCriticalErrorId(
                           subTestInfo.resultWithCause().get().causeProto().get())
