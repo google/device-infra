@@ -70,7 +70,7 @@ public class XtsDirUtil {
 
   /** Gets the test cases directory for the given {@code xtsType}. */
   public static Path getXtsTestCasesDir(Path xtsRootDir, String xtsType) {
-    return xtsRootDir.resolve(String.format("android-%s/testcases", xtsType));
+    return xtsRootDir.resolve(String.format("android-%s/testcases", toLowerCase(xtsType)));
   }
 
   /** Gets the tools directory for the given {@code xtsType}. */
