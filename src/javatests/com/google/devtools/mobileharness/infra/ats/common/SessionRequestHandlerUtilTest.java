@@ -35,6 +35,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
+import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser;
 import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser.TestPlanFilter;
@@ -873,6 +874,38 @@ public final class SessionRequestHandlerUtilTest {
         .containsExactly("test_class1.test1", "test_class2.test2", "test_class2.test3");
     assertThat(jobInfos.get(2).params().get(MOBLY_TEST_SELECTOR_KEY))
         .isEqualTo("test_class2.test3");
+  }
+
+  @Test
+  public void createXtsNonTradefedJobs_configMissingDriverName_throwsException() throws Exception {
+    setUpForCreateXtsNonTradefedJobs();
+    Configuration config1 =
+        Configuration.newBuilder()
+            .addDevices(Device.newBuilder().setName("AndroidDevice"))
+            .setTest(
+                com.google.devtools.mobileharness.platform.android.xts.config.proto
+                    .ConfigurationProto.Test.getDefaultInstance())
+            .setMetadata(
+                ConfigurationMetadata.newBuilder().setXtsModule("module1").setIsConfigV2(true))
+            .build();
+    when(configurationUtil.getConfigsV2FromDirs(any()))
+        .thenReturn(ImmutableMap.of("/path/to/config1", config1));
+    when(testSuiteHelper.loadTests(any())).thenReturn(ImmutableMap.of("module1", config1));
+    when(moblyTestLoader.getTestNamesInModule(any(), any()))
+        .thenReturn(ImmutableSetMultimap.of("test_class1", "test_class1.test1"));
+
+    SessionRequestInfo sessionRequestInfo =
+        sessionRequestHandlerUtil.addNonTradefedModuleInfo(
+            defaultSessionRequestInfoBuilder().build());
+
+    assertThat(
+            assertThrows(
+                    MobileHarnessException.class,
+                    () ->
+                        sessionRequestHandlerUtil.createXtsNonTradefedJobs(
+                            sessionRequestInfo, null, ImmutableMap.of()))
+                .getErrorId())
+        .isEqualTo(InfraErrorId.XTS_MODULE_CONFIG_MISSING_DRIVER_NAME);
   }
 
   @Test
