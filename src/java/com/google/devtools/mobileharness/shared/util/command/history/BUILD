@@ -25,7 +25,6 @@ java_library(
         "CommandRecorderListener.java",
     ],
     visibility = [
-        "//:omnilab_fusion",
         "//src/java/com/google/devtools/deviceaction/common/utils:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/util:__pkg__",
         "//src/java/com/google/devtools/mobileharness/shared/util/command:__pkg__",
