@@ -22,7 +22,6 @@ java_library(
     name = "message",
     srcs = ["TestMessageInfo.java"],
     visibility = [
-        "//:omnilab_fusion",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/remote:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/remote/util:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:__subpackages__",
