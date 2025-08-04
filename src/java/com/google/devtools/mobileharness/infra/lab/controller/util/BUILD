@@ -23,7 +23,6 @@ java_library(
     name = "lab_file_notifier",
     srcs = ["LabFileNotifier.java"],
     visibility = [
-        "//:omnilab_fusion",
         "//src/java/com/google/devtools/mobileharness/infra/container:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/manager:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
