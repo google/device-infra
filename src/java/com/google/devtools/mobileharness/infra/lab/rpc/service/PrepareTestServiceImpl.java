@@ -34,6 +34,7 @@ import com.google.common.eventbus.EventBus;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.devtools.common.metrics.stability.converter.ErrorModelConverter;
 import com.google.devtools.mobileharness.api.model.allocation.Allocation;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
@@ -86,7 +87,6 @@ import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto
 import com.google.devtools.mobileharness.shared.file.resolver.FileResolver;
 import com.google.devtools.mobileharness.shared.file.resolver.FileResolver.ResolveResult;
 import com.google.devtools.mobileharness.shared.file.resolver.FileResolver.ResolveSource;
-import com.google.devtools.mobileharness.shared.util.error.ErrorModelConverter;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
@@ -607,11 +607,6 @@ public class PrepareTestServiceImpl {
     testEngineLocator.ifPresent(response::setTestEngineLocator);
     testEngineErrorInResponse
         .map(ErrorModelConverter::toExceptionDetail)
-        .ifPresent(response::setError);
-    testEngineErrorInResponse
-        .map(
-            com.google.devtools.common.metrics.stability.converter.ErrorModelConverter
-                ::toExceptionDetail)
         .ifPresent(response::setExceptionDetail);
     return response.build();
   }
