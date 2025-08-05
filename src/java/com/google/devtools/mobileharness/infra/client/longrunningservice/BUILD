@@ -40,6 +40,9 @@ java_library(
         "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/shared/size:__subpackages__",
     ],
+    runtime_deps = [
+        ":olc_server_module_factory_impl",
+    ],
     deps = [
         ":annotations",
         ":olc_server_module",
@@ -117,5 +120,24 @@ java_library(
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
         "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "olc_server_module_factory",
+    srcs = ["OlcServerModuleFactory.java"],
+    visibility = ["//src/java/com/google/devtools/mobileharness/infra/ats/console:__pkg__"],
+    deps = [
+        "@maven//:com_google_inject_guice",
+    ],
+)
+
+java_library(
+    name = "olc_server_module_factory_impl",
+    srcs = ["OlcServerModuleFactoryImpl.java"],
+    deps = [
+        ":olc_server_module",
+        ":olc_server_module_factory",
+        "@maven//:com_google_inject_guice",
     ],
 )

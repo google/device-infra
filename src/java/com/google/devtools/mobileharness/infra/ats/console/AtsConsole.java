@@ -30,7 +30,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
+import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
 import com.google.devtools.mobileharness.infra.ats.common.DeviceInfraServiceUtil;
 import com.google.devtools.mobileharness.infra.ats.common.FlagsString;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ClientId;
@@ -54,6 +56,7 @@ import com.google.devtools.mobileharness.infra.ats.console.util.log.LogDumper;
 import com.google.devtools.mobileharness.infra.ats.console.util.log.LogRecordPrinter;
 import com.google.devtools.mobileharness.infra.ats.console.util.notice.NoticeMessageUtil;
 import com.google.devtools.mobileharness.infra.ats.console.util.version.VersionMessageUtil;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.OlcServerModuleFactory;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogRecorder;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.ControlStub;
@@ -62,16 +65,24 @@ import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.inject.CommonModule;
 import com.google.devtools.mobileharness.shared.util.logging.flogger.FloggerFormatter;
 import com.google.devtools.mobileharness.shared.util.port.PortProber;
+import com.google.devtools.mobileharness.shared.util.reflection.ReflectionUtil;
 import com.google.devtools.mobileharness.shared.util.shell.ShellUtils.TokenizationException;
 import com.google.devtools.mobileharness.shared.util.system.SystemInfoPrinter;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.Module;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessLogger;
 import com.google.wireless.qa.mobileharness.shared.constant.DirPreparer;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.URISyntaxException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import javax.inject.Inject;
@@ -95,7 +106,12 @@ public class AtsConsole {
   private static final String USE_NEW_OLC_SERVER_ENV_VAR = "USE_NEW_OLC_SERVER";
   private static final String USE_TF_RETRY_ENV_VAR = "USE_TF_RETRY";
   private static final String EMBEDDED_MODE_ENV_VAR = "OLC_SERVER_EMBEDDED_MODE";
+
   private static final boolean DEFAULT_EMBEDDED_MODE = false;
+
+  private static final String OLC_SERVER_CLASS_PATH = "ats_olc_server_local_mode_deploy.jar";
+  private static final String OLC_SERVER_MODULE_FACTORY_IMPL_CLASS_NAME =
+      "com.google.devtools.mobileharness.infra.client.longrunningservice.OlcServerModuleFactoryImpl";
 
   public static void main(String[] args)
       throws MobileHarnessException, IOException, InterruptedException {
@@ -114,20 +130,38 @@ public class AtsConsole {
     // Initializes line reader.
     LineReader lineReader = createLineReader();
 
+    // Creates modules.
+    List<Module> modules = new ArrayList<>();
+    modules.add(
+        new AtsConsoleModule(
+            "ats-console-" + UUID.randomUUID(),
+            finalDeviceInfraServiceFlags,
+            asList(args),
+            systemProperties,
+            lineReader,
+            System.out,
+            System.err,
+            resultFuture -> {},
+            /* parseCommandOnly= */ false));
+    modules.add(new CommonModule());
+
+    // Creates OLC server module for embedded mode.
+    createOlcServerModuleFactory()
+        .ifPresent(
+            olcServerModuleFactory -> {
+              Instant serverStartTime = Instant.now();
+              Module olcServerModule =
+                  olcServerModuleFactory.create(
+                      Flags.instance().enableAtsMode.getNonNull(),
+                      serverStartTime,
+                      /* enableCloudPubsubMonitoring= */ false,
+                      /* enableDatabase= */ false,
+                      /* enableGrpcRelay= */ false);
+              modules.add(olcServerModule);
+            });
+
     // Creates Guice injector.
-    Injector injector =
-        Guice.createInjector(
-            new AtsConsoleModule(
-                "ats-console-" + UUID.randomUUID(),
-                finalDeviceInfraServiceFlags,
-                asList(args),
-                systemProperties,
-                lineReader,
-                System.out,
-                System.err,
-                resultFuture -> {},
-                /* parseCommandOnly= */ false),
-            new CommonModule());
+    Injector injector = Guice.createInjector(modules);
 
     // Creates ATS console.
     AtsConsole atsConsole = injector.getInstance(AtsConsole.class);
@@ -223,6 +257,11 @@ public class AtsConsole {
   }
 
   public void run() throws MobileHarnessException, InterruptedException {
+    // Logs flags.
+    logger.atInfo().with(IMPORTANCE, DEBUG).log("ATS console ID: %s", clientId);
+    logger.atInfo().with(IMPORTANCE, DEBUG).log("Flags: %s", deviceInfraServiceFlags.flags());
+    systemInfoPrinter.printSystemInfo(DEBUG);
+
     // Prints notice message.
     consoleUtil.printlnStdout(NoticeMessageUtil.getNoticeMessage());
 
@@ -239,9 +278,6 @@ public class AtsConsole {
     if (!mainArgs.isEmpty()) {
       consoleUtil.printlnStderr("Args: %s", mainArgs);
     }
-    logger.atInfo().with(IMPORTANCE, DEBUG).log("ATS console ID: %s", clientId);
-    logger.atInfo().with(IMPORTANCE, DEBUG).log("Flags: %s", deviceInfraServiceFlags.flags());
-    systemInfoPrinter.printSystemInfo(DEBUG);
 
     // Starts listing test plans.
     CommandCompleterHolder.getInstance().initialize(commandCompleter);
@@ -323,15 +359,6 @@ public class AtsConsole {
         .setUnmatchedOptionsArePositionalParams(true);
   }
 
-  private static LineReader createLineReader() throws IOException {
-    return LineReaderBuilder.builder()
-        .appName("AtsConsole")
-        .terminal(TerminalBuilder.builder().system(true).dumb(true).build())
-        .history(new DefaultHistory())
-        .completer(CommandCompleterHolder.getInstance())
-        .build();
-  }
-
   private void onShutdown() {
     // Dump logs.
     System.out.println(LogDumper.dumpLog());
@@ -342,6 +369,71 @@ public class AtsConsole {
     } catch (GrpcExceptionWithErrorId e) {
       // Does nothing.
     }
+  }
+
+  private static LineReader createLineReader() throws IOException {
+    return LineReaderBuilder.builder()
+        .appName("AtsConsole")
+        .terminal(TerminalBuilder.builder().system(true).dumb(true).build())
+        .history(new DefaultHistory())
+        .completer(CommandCompleterHolder.getInstance())
+        .build();
+  }
+
+  private static Optional<OlcServerModuleFactory> createOlcServerModuleFactory()
+      throws MobileHarnessException {
+    if (!Flags.instance().atsConsoleOlcServerEmbeddedMode.getNonNull()) {
+      return Optional.empty();
+    }
+
+    // Loads factory class from OLC server jar.
+    Class<? extends OlcServerModuleFactory> olcServerModuleFactoryClass;
+    try {
+      olcServerModuleFactoryClass =
+          new ReflectionUtil()
+              .loadClass(
+                  OLC_SERVER_MODULE_FACTORY_IMPL_CLASS_NAME,
+                  OlcServerModuleFactory.class,
+                  AtsConsole.class.getClassLoader());
+    } catch (ClassNotFoundException e) {
+      // Gets OLC server jar location.
+      Path olcServerFile;
+      try {
+        olcServerFile =
+            Path.of(AtsConsole.class.getProtectionDomain().getCodeSource().getLocation().toURI())
+                .getParent()
+                .resolve(OLC_SERVER_CLASS_PATH);
+      } catch (URISyntaxException | RuntimeException e2) {
+        e.addSuppressed(e2);
+        throw MobileHarnessExceptionFactory.createUserFacingException(
+            InfraErrorId.ATSC_EMBEDDED_MODE_OLC_SERVER_JAR_NOT_FOUND,
+            String.format(
+                "ATS console should have an OLC server jar [%s] in the same dir",
+                OLC_SERVER_CLASS_PATH),
+            e);
+      }
+      String olcServerFileAbsolutePath = olcServerFile.toAbsolutePath().toString();
+
+      // Checks if OLC server jar exists.
+      if (Files.exists(olcServerFile)) {
+        throw MobileHarnessExceptionFactory.createUserFacingException(
+            InfraErrorId.ATSC_EMBEDDED_MODE_INVALID_OLC_SERVER_JAR,
+            String.format("Invalid OLC server jar [%s]", olcServerFileAbsolutePath),
+            e);
+      } else {
+        throw MobileHarnessExceptionFactory.createUserFacingException(
+            InfraErrorId.ATSC_EMBEDDED_MODE_OLC_SERVER_JAR_NOT_FOUND,
+            String.format(
+                "OLC server jar [%s] is not found in the dir of ATS console (%s)",
+                OLC_SERVER_CLASS_PATH, olcServerFileAbsolutePath),
+            /* cause= */ null);
+      }
+    }
+
+    // Instantiates the factory.
+    OlcServerModuleFactory olcServerModuleFactory =
+        Guice.createInjector().getInstance(olcServerModuleFactoryClass);
+    return Optional.of(olcServerModuleFactory);
   }
 
   private static FlagsString preprocessDeviceInfraServiceFlags(FlagsString deviceInfraServiceFlags)
