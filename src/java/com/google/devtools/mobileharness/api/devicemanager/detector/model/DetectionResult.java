@@ -44,6 +44,7 @@ public abstract class DetectionResult {
 
   /** The detection type enum corresponding to each detector. */
   public enum DetectionType {
+    ALUMINIUM_EXECUTOR,
     AAOS_HYPERVISOR,
     ADB,
     CROS,
