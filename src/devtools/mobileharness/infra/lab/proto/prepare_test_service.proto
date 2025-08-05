@@ -132,11 +132,9 @@ message CreateTestResponse {
     // Since MH lab server 4.71.
     bool is_sandbox_mode = 2;
 
-    // If sandbox mode is requested but sandbox mode cannot be applied, we add
-    // detail to explain the reason.
-    mobileharness.api.model.ExceptionDetail detail = 3 [deprecated = true];
-
     stability.model.ExceptionDetail exception_detail = 4;
+
+    reserved 3;
   }
 }
 
@@ -152,12 +150,10 @@ message GetTestEngineStatusResponse {
   mobileharness.infra.container.TestEngineStatus test_engine_status = 1;
   bool has_test_engine_locator = 2;
   mobileharness.infra.container.TestEngineLocator test_engine_locator = 3;
-  // Present if status is FAILED.
-  mobileharness.api.model.ExceptionDetail error = 4 [deprecated = true];
 
   stability.model.ExceptionDetail exception_detail = 6;
 
-  reserved 5;
+  reserved 4, 5;
 }
 
 message TestRunnerTiming {
