@@ -77,7 +77,6 @@ java_library(
     visibility = [
         "//:deviceinfra_all_pkg",
         "//:omnilab_fusion",
-        "//src/java/com/google/devtools/mobileharness/platform/maneki:__pkg__",
     ],
     deps = [
         "//src/devtools/mobileharness/api/deviceconfig/proto:basic_java_proto",
