@@ -47,6 +47,8 @@ public class PubsubClientImpl extends DataPusher {
 
   // The maximum batch size in bytes of a single Cloud PubSub message.
   private static final int MAX_BATCH_SIZE_BYTES = 10000000;
+  // The maximum number of messages in a single Cloud PubSub message.
+  private static final int MAX_MESSAGES_PER_REQUEST = 1000;
   private static final int PUBLISH_DEADLINE_SECONDS = 10;
 
   private final String pubsubTopic;
@@ -90,7 +92,8 @@ public class PubsubClientImpl extends DataPusher {
         continue;
       }
 
-      if (currentBatchSizeBytes + messageSize > MAX_BATCH_SIZE_BYTES) {
+      if (currentBatchSizeBytes + messageSize > MAX_BATCH_SIZE_BYTES
+          || currentBatch.size() >= MAX_MESSAGES_PER_REQUEST) {
         // Current batch is full, add it to the list of batches and start a new one.
         pushAsync(currentBatch, successCallback, failureCallback);
         currentBatch = new ArrayList<>();
@@ -123,6 +126,9 @@ public class PubsubClientImpl extends DataPusher {
       logger.atWarning().log("No messages to publish in the current batch.");
       return;
     }
+
+    logger.atInfo().log(
+        "Publishing %d messages to topic %s", request.getMessagesCount(), pubsubTopic);
 
     ListenableFuture<PublishResponse> responseFuture =
         publisherStubProvider
