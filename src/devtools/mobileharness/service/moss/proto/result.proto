@@ -111,10 +111,14 @@ message TimeDetail {
 message ErrorInfo {
   // Required.
   // It does not contain stack traces.
+  optional mobileharness.api.model.ExceptionSummary deprecated_summary = 1
+      [deprecated = true];
   optional stability.model.ExceptionSummary summary = 9;
 
   // Cause chain.
   // It does not contain stack traces.
+  repeated mobileharness.api.model.ExceptionSummary deprecated_cause = 2
+      [deprecated = true];
   repeated stability.model.ExceptionSummary cause = 10;
 
   // Serialized stack trace which contains the cause & suppressed exception
@@ -131,6 +135,10 @@ message ErrorInfo {
   // cause. Error names are joined with '|'. Such as "2354|1254|789".
   optional string error_code_stack_trace = 6;
 
+  // Deprecated. Use critical_error_id.type instead.
+  optional stability.model.ErrorType aggregated_error_type = 7
+      [deprecated = true];
+
   // MH slo facing critical Error ID.
   // It is the same as the first non-(UNCLASSIFIED/UNDETERMINED) Error ID from
   // the summary to all causes in the cause chain, if any. Otherwise it is the
@@ -141,8 +149,6 @@ message ErrorInfo {
   // Critical Error ID in ALL namespaces (MH or user facing namespaces, e.g.,
   // VINSON).
   optional stability.model.ErrorId user_facing_critical_error_id = 11;
-
-  reserved 1, 2, 3, 7;
 }
 
 // A similar proto as mobileharness.api.model.DeviceRequirements, exception the
