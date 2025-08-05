@@ -102,6 +102,7 @@ class OlcServerModule extends AbstractModule {
       bind(MonitorPipelineLauncher.class).toProvider(Providers.of(null));
     }
 
+    bind(OlcServerRunner.class).to(OlcServerRunnerImpl.class);
     bind(ClientApi.class).in(Scopes.SINGLETON);
     bind(ExecMode.class)
         .to(isAtsMode ? loadExecMode(ATS_MODE_CLASS_NAME) : loadExecMode(LOCAL_MODE_CLASS_NAME))
