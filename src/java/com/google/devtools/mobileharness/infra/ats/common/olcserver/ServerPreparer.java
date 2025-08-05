@@ -21,6 +21,7 @@ import static com.google.devtools.mobileharness.shared.constant.LogRecordImporta
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.DEBUG;
 import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
+import static com.google.devtools.mobileharness.shared.util.error.MoreThrowables.shortDebugString;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MINUTES;
 
@@ -314,8 +315,9 @@ public class ServerPreparer {
             printServerStartingFailureInfo(
                 serverCommand, serverOutputPath, serverOutputLineCallback);
           } catch (MobileHarnessException | RuntimeException | Error e2) {
-            logger.atWarning().withCause(e2).log(
-                "Failed to print server starting log from the log file.");
+            logger.atWarning().log(
+                "Failed to print server starting log from the log file, cause=%s",
+                shortDebugString(e2));
           } catch (InterruptedException e2) {
             Thread.currentThread().interrupt();
           }
