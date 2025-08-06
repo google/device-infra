@@ -16,6 +16,9 @@
 
 package com.google.devtools.mobileharness.infra.ats.common.plan;
 
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
+
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
@@ -135,9 +138,12 @@ public class PlanConfigUtil {
             configName, loadPlanConfigInfo(configName, jarPath, document.get()));
       }
     } catch (MobileHarnessException e) {
-      logger.atWarning().log(
-          "Failed to load plan configs from JAR files in dir %s: %s",
-          dir, MoreThrowables.shortDebugString(e));
+      logger
+          .atWarning()
+          .with(IMPORTANCE, IMPORTANT)
+          .log(
+              "Failed to load plan configs from JAR files in dir %s: %s",
+              dir, MoreThrowables.shortDebugString(e));
     }
     return configNameToPlanConfigInfo.buildOrThrow();
   }
@@ -154,15 +160,21 @@ public class PlanConfigUtil {
         DocumentBuilder documentBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
         document = documentBuilder.parse(bufferedInputStream);
       } catch (ParserConfigurationException | SAXException | IOException e) {
-        logger.atWarning().log(
-            "Failed to load the config [%s] from %s: %s",
-            configName, jar, MoreThrowables.shortDebugString(e));
+        logger
+            .atWarning()
+            .with(IMPORTANCE, IMPORTANT)
+            .log(
+                "Failed to load the config [%s] from %s: %s",
+                configName, jar, MoreThrowables.shortDebugString(e));
         return Optional.empty();
       }
     } catch (IOException e) {
-      logger.atWarning().log(
-          "Failed to load the config [%s] from %s: %s",
-          configName, jar, MoreThrowables.shortDebugString(e));
+      logger
+          .atWarning()
+          .with(IMPORTANCE, IMPORTANT)
+          .log(
+              "Failed to load the config [%s] from %s: %s",
+              configName, jar, MoreThrowables.shortDebugString(e));
       return Optional.empty();
     }
     return Optional.of(document);

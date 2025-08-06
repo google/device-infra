@@ -16,6 +16,9 @@
 
 package com.google.devtools.mobileharness.infra.ats.common.plan;
 
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
+
 import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
@@ -66,8 +69,10 @@ public class JarFileUtil {
       try {
         entryNames.putAll(getEntriesFromJar(jar, filter));
       } catch (IOException e) {
-        logger.atWarning().log(
-            "Failed to get entries from jar %s: %s", jar, MoreThrowables.shortDebugString(e));
+        logger
+            .atWarning()
+            .with(IMPORTANCE, IMPORTANT)
+            .log("Failed to get entries from jar %s: %s", jar, MoreThrowables.shortDebugString(e));
       }
     }
     return ImmutableMap.copyOf(entryNames);
@@ -98,8 +103,10 @@ public class JarFileUtil {
     try {
       jarFile = new JarFile(jar.toFile());
     } catch (IOException e) {
-      logger.atWarning().log(
-          "Failed to open jar file %s: %s", jar, MoreThrowables.shortDebugString(e));
+      logger
+          .atWarning()
+          .with(IMPORTANCE, IMPORTANT)
+          .log("Failed to open jar file %s: %s", jar, MoreThrowables.shortDebugString(e));
       return Optional.empty();
     }
 
@@ -112,9 +119,12 @@ public class JarFileUtil {
     try {
       return Optional.of(jarFile.getInputStream(entry.get()));
     } catch (IOException e) {
-      logger.atWarning().log(
-          "Failed to get input stream for entry %s in jar file %s: %s",
-          entry, jar, MoreThrowables.shortDebugString(e));
+      logger
+          .atWarning()
+          .with(IMPORTANCE, IMPORTANT)
+          .log(
+              "Failed to get input stream for entry %s in jar file %s: %s",
+              entry, jar, MoreThrowables.shortDebugString(e));
     }
     return Optional.empty();
   }
