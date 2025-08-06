@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.infra.ats.common.olcserver;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.DEBUG;
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
 import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 import static com.google.devtools.mobileharness.shared.util.error.MoreThrowables.shortDebugString;
@@ -203,16 +204,19 @@ public class ServerPreparer {
         GetVersionResponse existingServerVersion = tryConnectToOlcServer().orElse(null);
         if (existingServerVersion != null) {
           if (firstPreparation) {
-            logger.atInfo().log(
-                "Connected to existing OLC server, version=[%s]",
-                shortDebugString(existingServerVersion));
+            logger
+                .atInfo()
+                .with(IMPORTANCE, IMPORTANT)
+                .log(
+                    "Connected to existing OLC server, version=[%s]",
+                    shortDebugString(existingServerVersion));
           }
 
           if (needKillExistingServer(firstPreparation, existingServerVersion)) {
             killExistingServer(/* forcibly= */ false);
           } else {
             if (firstPreparation) {
-              logger.atInfo().log("Using existing OLC server");
+              logger.atInfo().with(IMPORTANCE, IMPORTANT).log("Using existing OLC server");
               checkAndPrintServerVersionWarning(existingServerVersion);
               Optional<String> processWorkingDir =
                   systemUtil.getProcessWorkingDirectory(existingServerVersion.getProcessId());
@@ -227,7 +231,7 @@ public class ServerPreparer {
         }
 
         // Starts a new server.
-        logger.atInfo().log("Starting new OLC server...");
+        logger.atInfo().with(IMPORTANCE, IMPORTANT).log("Starting new OLC server...");
 
         // Prepares server environment.
         ServerEnvironment serverEnvironment = serverEnvironmentPreparer.prepareServerEnvironment();
@@ -298,16 +302,19 @@ public class ServerPreparer {
           GetVersionResponse serverVersion = connectWithRetry();
 
           // The server starts successfully.
-          logger.atInfo().log(
-              "OLC server started, port=%s, pid=%s",
-              Flags.instance().olcServerPort.getNonNull(), serverVersion.getProcessId());
+          logger
+              .atInfo()
+              .with(IMPORTANCE, IMPORTANT)
+              .log(
+                  "OLC server started, port=%s, pid=%s",
+                  Flags.instance().olcServerPort.getNonNull(), serverVersion.getProcessId());
           // Records the server information.
           serverHeapDumpFileDetector.setOlcServerInfo(
               serverVersion.getProcessId(), serverEnvironment.serverWorkingDir().toString());
         } catch (MobileHarnessException | InterruptedException | RuntimeException | Error e) {
           // Kills the wrapper process.
           if (serverProcess.isAlive()) {
-            logger.atInfo().log("Killing OLC server");
+            logger.atInfo().with(IMPORTANCE, IMPORTANT).log("Killing OLC server");
             serverProcess.kill();
           }
 
@@ -315,9 +322,12 @@ public class ServerPreparer {
             printServerStartingFailureInfo(
                 serverCommand, serverOutputPath, serverOutputLineCallback);
           } catch (MobileHarnessException | RuntimeException | Error e2) {
-            logger.atWarning().log(
-                "Failed to print server starting log from the log file, cause=%s",
-                shortDebugString(e2));
+            logger
+                .atWarning()
+                .with(IMPORTANCE, IMPORTANT)
+                .log(
+                    "Failed to print server starting log from the log file, cause=%s",
+                    shortDebugString(e2));
           } catch (InterruptedException e2) {
             Thread.currentThread().interrupt();
           }
@@ -339,7 +349,10 @@ public class ServerPreparer {
       StringBuilderLineCallback serverOutputLineCallback)
       throws MobileHarnessException, InterruptedException {
     // Prints server command.
-    logger.atInfo().log("olc_server_command=%s", serverCommand.getCommand());
+    logger
+        .atInfo()
+        .with(IMPORTANCE, IMPORTANT)
+        .log("olc_server_command=%s", serverCommand.getCommand());
 
     // Prints server starting log from stderr / redirected file / log files.
     String serverStartingLog;
@@ -366,13 +379,17 @@ public class ServerPreparer {
       }
       serverStartingLog = localFileUtil.readFile(logFile);
     }
-    logger.atInfo().log("OLC server log:\n%s", serverStartingLog);
+    logger.atInfo().with(IMPORTANCE, IMPORTANT).log("OLC server log:\n%s", serverStartingLog);
 
     // Prints command versions.
-    logger.atInfo().log(
-        "sh version:\n%s", commandExecutor.run(Command.of(SH_COMMAND, "--version")));
-    logger.atInfo().log(
-        "nohup version:\n%s", commandExecutor.run(Command.of(NOHUP_COMMAND, "--version")));
+    logger
+        .atInfo()
+        .with(IMPORTANCE, IMPORTANT)
+        .log("sh version:\n%s", commandExecutor.run(Command.of(SH_COMMAND, "--version")));
+    logger
+        .atInfo()
+        .with(IMPORTANCE, IMPORTANT)
+        .log("nohup version:\n%s", commandExecutor.run(Command.of(NOHUP_COMMAND, "--version")));
   }
 
   /**
@@ -382,7 +399,10 @@ public class ServerPreparer {
    */
   public void killExistingServer(boolean forcibly)
       throws MobileHarnessException, InterruptedException {
-    logger.atInfo().log("Killing existing OLC server...%s", forcibly ? " (forcibly)" : "");
+    logger
+        .atInfo()
+        .with(IMPORTANCE, IMPORTANT)
+        .log("Killing existing OLC server...%s", forcibly ? " (forcibly)" : "");
     KillServerResponse killServerResponse;
     try {
       killServerResponse =
@@ -403,7 +423,10 @@ public class ServerPreparer {
         try {
           requireNonNull(versionStub.get()).getVersion();
         } catch (GrpcExceptionWithErrorId e) {
-          logger.atInfo().log("Existing OLC server (pid=%s) killed", serverPid);
+          logger
+              .atInfo()
+              .with(IMPORTANCE, IMPORTANT)
+              .log("Existing OLC server (pid=%s) killed", serverPid);
           return;
         }
       }
@@ -411,7 +434,10 @@ public class ServerPreparer {
 
     if (forcibly) {
       killServerProcess(serverPid);
-      logger.atInfo().log("Existing OLC server (pid=%s) forcibly killed", serverPid);
+      logger
+          .atInfo()
+          .with(IMPORTANCE, IMPORTANT)
+          .log("Existing OLC server (pid=%s) forcibly killed", serverPid);
     } else {
       if (killServerResponse.getResultCase() == ResultCase.FAILURE) {
         throw MobileHarnessExceptionFactory.createUserFacingException(
@@ -435,7 +461,10 @@ public class ServerPreparer {
 
   private void killServerProcess(long serverPid)
       throws MobileHarnessException, InterruptedException {
-    logger.atInfo().log("Killing OLC server process (pid=%s)", serverPid);
+    logger
+        .atInfo()
+        .with(IMPORTANCE, IMPORTANT)
+        .log("Killing OLC server process (pid=%s)", serverPid);
     // Send SIGKILL to kill the OLC server.
     systemUtil.killProcess((int) serverPid);
   }
@@ -476,9 +505,12 @@ public class ServerPreparer {
     // Checks flag.
     if (firstPreparation) {
       if (Flags.instance().atsConsoleAlwaysRestartOlcServer.getNonNull()) {
-        logger.atInfo().log(
-            "Need to kill existing OLC server because"
-                + " --ats_console_always_restart_olc_server=true");
+        logger
+            .atInfo()
+            .with(IMPORTANCE, IMPORTANT)
+            .log(
+                "Need to kill existing OLC server because"
+                    + " --ats_console_always_restart_olc_server=true");
         return true;
       }
       String olcLabVersionString = getVersionResponse.getLabVersion();
@@ -488,10 +520,13 @@ public class ServerPreparer {
           Flags.instance().atsConsoleOlcServerMinLabVersion.getNonNull();
       Version minOlcLabVersion = new Version(minOlcLabVersionString);
       if (olcLabVersion.compareTo(minOlcLabVersion) < 0) {
-        logger.atInfo().log(
-            "Need to kill existing OLC server because the current OLC lab version [%s] is older"
-                + " than the minimum version [%s]",
-            olcLabVersionString, minOlcLabVersionString);
+        logger
+            .atInfo()
+            .with(IMPORTANCE, IMPORTANT)
+            .log(
+                "Need to kill existing OLC server because the current OLC lab version [%s] is older"
+                    + " than the minimum version [%s]",
+                olcLabVersionString, minOlcLabVersionString);
         return true;
       }
     }
@@ -534,12 +569,17 @@ public class ServerPreparer {
     GetVersionResponse clientVersion =
         VersionProtoUtil.createGetVersionResponse().toBuilder().clearProcessId().build();
     if (!clientVersion.equals(serverVersion)) {
-      logger.atWarning().log(
-          "Using existing OLC server in a different version, version of OLC server: [%s], version"
-              + " of %s: [%s]\n"
-              + "If necessary, run \"server restart\" command to restart a new OLC server"
-              + " instance using the same version of the current console",
-          shortDebugString(serverVersion), clientComponentName, shortDebugString(clientVersion));
+      logger
+          .atWarning()
+          .with(IMPORTANCE, IMPORTANT)
+          .log(
+              "Using existing OLC server in a different version, version of OLC server: [%s],"
+                  + " version of %s: [%s]\n"
+                  + "If necessary, run \"server restart\" command to restart a new OLC server"
+                  + " instance using the same version of the current console",
+              shortDebugString(serverVersion),
+              clientComponentName,
+              shortDebugString(clientVersion));
     }
   }
 
@@ -567,7 +607,10 @@ public class ServerPreparer {
       FileChannel channel = file.getChannel();
       FileLock lock = channel.tryLock();
       if (lock == null) {
-        logger.atInfo().log("Acquiring file lock [%s]...", LOCK_FILE_PATH);
+        logger
+            .atInfo()
+            .with(IMPORTANCE, IMPORTANT)
+            .log("Acquiring file lock [%s]...", LOCK_FILE_PATH);
         channel.lock();
       }
       logger.atInfo().with(IMPORTANCE, DEBUG).log("Locked file [%s]", LOCK_FILE_PATH);
@@ -578,7 +621,11 @@ public class ServerPreparer {
             logger.atInfo().with(IMPORTANCE, DEBUG).log("Released file lock [%s]", LOCK_FILE_PATH);
           });
     } catch (MobileHarnessException | IOException e) {
-      logger.atWarning().withCause(e).log("Failed to lock file [%s]", LOCK_FILE_PATH);
+      logger
+          .atWarning()
+          .with(IMPORTANCE, IMPORTANT)
+          .withCause(e)
+          .log("Failed to lock file [%s]", LOCK_FILE_PATH);
       if (file != null) {
         closeFile(file);
       }
@@ -590,7 +637,11 @@ public class ServerPreparer {
     try {
       file.close();
     } catch (IOException e) {
-      logger.atWarning().withCause(e).log("Failed to close file [%s]", LOCK_FILE_PATH);
+      logger
+          .atWarning()
+          .with(IMPORTANCE, IMPORTANT)
+          .withCause(e)
+          .log("Failed to close file [%s]", LOCK_FILE_PATH);
     }
   }
 

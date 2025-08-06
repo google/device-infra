@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.infra.ats.common.olcserver;
 
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.DEBUG;
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
 
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
@@ -78,10 +79,13 @@ public class ServerHeapDumpFileDetector {
 
       Path heapDumpPath = Path.of(olcServerWorkingDir, "java_pid" + olcProcessId + ".hprof");
       if (localFileUtil.isFileOrDirExist(heapDumpPath)) {
-        logger.atSevere().log(
-            "Detected OOM heap dump file from OLC server with pid [%s]. Please refer to the"
-                + " heap dump file [%s] and attach it when reporting the issue.",
-            olcProcessId, heapDumpPath);
+        logger
+            .atSevere()
+            .with(IMPORTANCE, IMPORTANT)
+            .log(
+                "Detected OOM heap dump file from OLC server with pid [%s]. Please refer to the"
+                    + " heap dump file [%s] and attach it when reporting the issue.",
+                olcProcessId, heapDumpPath);
 
         // Clears the recorded OLC server information.
         olcServerWorkingDir = null;
