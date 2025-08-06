@@ -57,6 +57,7 @@ import com.google.devtools.mobileharness.infra.ats.console.util.log.LogRecordPri
 import com.google.devtools.mobileharness.infra.ats.console.util.notice.NoticeMessageUtil;
 import com.google.devtools.mobileharness.infra.ats.console.util.version.VersionMessageUtil;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.OlcServerModuleFactory;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.OlcServerRunner;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogRecorder;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.ControlStub;
@@ -212,6 +213,7 @@ public class AtsConsole {
   private final VersionMessageUtil versionMessageUtil;
   private final CommandCompleter commandCompleter;
   private final CommandPreprocessor commandPreprocessor;
+  private final OlcServerRunner olcServerRunner;
 
   /** Set before {@link #run}; */
   @VisibleForTesting public volatile Injector injector;
@@ -235,7 +237,8 @@ public class AtsConsole {
       SystemInfoPrinter systemInfoPrinter,
       VersionMessageUtil versionMessageUtil,
       CommandCompleter commandCompleter,
-      CommandPreprocessor commandPreprocessor) {
+      CommandPreprocessor commandPreprocessor,
+      Optional<OlcServerRunner> olcServerRunner) {
     this.mainArgs = mainArgs;
     this.deviceInfraServiceFlags = deviceInfraServiceFlags;
     this.lineReader = lineReader;
@@ -254,6 +257,7 @@ public class AtsConsole {
     this.versionMessageUtil = versionMessageUtil;
     this.commandCompleter = commandCompleter;
     this.commandPreprocessor = commandPreprocessor;
+    this.olcServerRunner = olcServerRunner.orElse(null);
   }
 
   public void run() throws MobileHarnessException, InterruptedException {
@@ -283,15 +287,20 @@ public class AtsConsole {
     CommandCompleterHolder.getInstance().initialize(commandCompleter);
     commandCompleter.startListingTestPlans();
 
-    // Prepares OLC server.
-    if (Flags.instance().enableAtsConsoleOlcServer.getNonNull()) {
-      serverPreparer.prepareOlcServer();
-      serverPreparer.startSendingHeartbeats();
-    }
+    if (Flags.instance().atsConsoleOlcServerEmbeddedMode.getNonNull()) {
+      // Runs embedded mode OLC server.
+      olcServerRunner.runBasic();
+    } else {
+      // Prepares OLC server.
+      if (Flags.instance().enableAtsConsoleOlcServer.getNonNull()) {
+        serverPreparer.prepareOlcServer();
+        serverPreparer.startSendingHeartbeats();
+      }
 
-    // Prints OLC server streaming log.
-    if (Flags.instance().enableAtsConsoleOlcServerLog.getNonNull()) {
-      serverLogPrinter.enable(true);
+      // Prints OLC server streaming log.
+      if (Flags.instance().enableAtsConsoleOlcServerLog.getNonNull()) {
+        serverLogPrinter.enable(true);
+      }
     }
 
     // Starts to read input from console.
@@ -363,11 +372,15 @@ public class AtsConsole {
     // Dump logs.
     System.out.println(LogDumper.dumpLog());
 
-    // Aborts all sessions of the console and kills the OLC server.
-    try {
-      controlStub.killServer(KillServerRequest.newBuilder().setClientId(clientId).build());
-    } catch (GrpcExceptionWithErrorId e) {
-      // Does nothing.
+    if (Flags.instance().atsConsoleOlcServerEmbeddedMode.getNonNull()) {
+      olcServerRunner.onShutdown();
+    } else {
+      // Aborts all sessions of the console and kills the OLC server.
+      try {
+        controlStub.killServer(KillServerRequest.newBuilder().setClientId(clientId).build());
+      } catch (GrpcExceptionWithErrorId e) {
+        // Does nothing.
+      }
     }
   }
 

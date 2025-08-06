@@ -33,8 +33,10 @@ import com.google.devtools.mobileharness.infra.ats.console.Annotations.RunComman
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.SystemProperties;
 import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.XtsServerEnvironmentPreparer;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportModule;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.OlcServerRunner;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
+import com.google.inject.multibindings.OptionalBinder;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.util.List;
@@ -87,6 +89,8 @@ public class AtsConsoleModule extends AbstractModule {
 
     install(new OlcServerConnectorModule(deviceInfraServiceFlags, "ATS console", consoleId));
     install(new CompatibilityReportModule());
+
+    OptionalBinder.newOptionalBinder(binder(), OlcServerRunner.class);
   }
 
   @Provides
