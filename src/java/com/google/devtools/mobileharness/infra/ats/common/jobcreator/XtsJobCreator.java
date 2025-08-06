@@ -201,7 +201,7 @@ public abstract class XtsJobCreator {
             : ImmutableList.of();
 
     Optional<String> testNameArg =
-        sessionRequestInfo.testName().map((String value) -> String.format("-t %s", value));
+        sessionRequestInfo.testName().map((String value) -> String.format("-t \"%s\"", value));
     Optional<String> reportSystemCheckersArg =
         sessionRequestInfo.reportSystemCheckers()
             ? Optional.of("--report-system-checkers")

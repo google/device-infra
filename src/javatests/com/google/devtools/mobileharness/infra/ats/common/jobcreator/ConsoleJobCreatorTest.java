@@ -231,7 +231,7 @@ public final class ConsoleJobCreatorTest {
             "env_vars",
             "{\"env_key1\":\"env_value1\"}",
             "run_command_args",
-            "-m module1 -t test1 --shard-count 2 --logcat-on-failure");
+            "-m module1 -t \"test1\" --shard-count 2 --logcat-on-failure");
     assertThat(tradefedJobInfoList.get(0).extraJobProperties())
         .containsExactly(Job.XTS_TEST_PLAN, "cts");
   }
