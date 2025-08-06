@@ -29,7 +29,6 @@ import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.shared.trace.proto.SpanProto.ParentSpan;
 import com.google.devtools.mobileharness.shared.util.comm.messaging.message.TestMessageInfo;
 import com.google.devtools.mobileharness.shared.util.comm.messaging.poster.TestMessagePoster;
-import com.google.devtools.mobileharness.shared.util.error.ErrorModelConverter;
 import com.google.devtools.mobileharness.shared.util.message.StrPairUtil;
 import com.google.devtools.mobileharness.shared.util.time.TimeoutUtil;
 import com.google.devtools.mobileharness.shared.version.Version;
@@ -240,26 +239,25 @@ public class LabRpcProtoConverter {
     }
 
     // Copies the lab server side error.
-    if (resp.getTestWarningCount() != 0) {
+    if (resp.getTestWarningExceptionDetailCount() > 0) {
       testInfo
           .log()
           .atInfo()
           .alsoTo(logger)
-          .log("Lab Server side test warning count: %d", resp.getTestWarningCount());
-      resp.getTestWarningList()
+          .log("Lab Server side test warning count: %d", resp.getTestWarningExceptionDetailCount());
+      resp.getTestWarningExceptionDetailList()
           .forEach(
               exceptionDetail -> {
                 String errorMessage = exceptionDetail.getSummary().getMessage();
                 testInfo
                     .warnings()
                     .add(
-                        ErrorModelConverter.toCommonExceptionDetail(
-                            exceptionDetail.toBuilder()
-                                .setSummary(
-                                    exceptionDetail.getSummary().toBuilder()
-                                        .setMessage("(L)" + errorMessage)
-                                        .build())
-                                .build()));
+                        exceptionDetail.toBuilder()
+                            .setSummary(
+                                exceptionDetail.getSummary().toBuilder()
+                                    .setMessage("(L)" + errorMessage)
+                                    .build())
+                            .build());
               });
     } else {
       testInfo
