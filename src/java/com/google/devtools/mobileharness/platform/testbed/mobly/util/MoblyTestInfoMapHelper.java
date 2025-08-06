@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.platform.testbed.mobly.util;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.common.metrics.stability.converter.ErrorModelConverter;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
@@ -30,7 +31,6 @@ import com.google.devtools.mobileharness.infra.ats.console.result.mobly.MoblyYam
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ResultProto.MoblyResult;
 import com.google.devtools.mobileharness.platform.testbed.mobly.MoblyConstant;
 import com.google.devtools.mobileharness.platform.testbed.mobly.MoblyConstant.TestProperty;
-import com.google.devtools.mobileharness.shared.util.error.ErrorModelConverter;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestStatus;
 import java.util.HashMap;
@@ -127,10 +127,9 @@ public class MoblyTestInfoMapHelper {
               mhResult,
               // We do not need the Mobile Harness stacktrace here as this is on the Mobly test case
               // level.
-              ErrorModelConverter.toCommonExceptionDetail(
-                  ErrorModelConverter.toExceptionDetail(
-                      new MobileHarnessException(extErrorId, createSpongeDescription(moblyEntry)),
-                      /* addStackTrace= */ false)));
+              ErrorModelConverter.toExceptionDetail(
+                  new MobileHarnessException(extErrorId, createSpongeDescription(moblyEntry)),
+                  /* addStackTrace= */ false));
       if (moblyResult == MoblyResult.SKIP) {
         addSkipReason(subTest, moblyEntry);
       } else {
