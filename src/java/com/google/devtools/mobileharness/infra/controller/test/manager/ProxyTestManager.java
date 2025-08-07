@@ -34,7 +34,7 @@ import javax.inject.Singleton;
 
 /** {@link TestManager} for {@link ProxyTestRunner}s. */
 @Singleton
-public class ProxyTestManager extends TestManager<ProxyTestRunner>
+public class ProxyTestManager extends TestManagerImpl<ProxyTestRunner>
     implements LabDirectTestRunnerHolder {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();

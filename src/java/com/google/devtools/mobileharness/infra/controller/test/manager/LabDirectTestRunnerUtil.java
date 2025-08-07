@@ -36,13 +36,13 @@ public class LabDirectTestRunnerUtil {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   public static Optional<TestMessagePoster> getTestMessagePoster(
-      TestManager<ProxyTestRunner> testManager, String testId) {
+      TestManagerImpl<ProxyTestRunner> testManager, String testId) {
     return getDirectTestRunner(testManager, testId, "test message poster")
         .map(DirectTestRunner::getTestMessagePoster);
   }
 
   public static MessageSender getMessageSender(
-      TestManager<ProxyTestRunner> testManager, MessageSend messageSend)
+      TestManagerImpl<ProxyTestRunner> testManager, MessageSend messageSend)
       throws MessageDestinationNotFoundException {
     Optional<DirectTestRunner> directTestRunner =
         getDirectTestRunner(
@@ -58,7 +58,7 @@ public class LabDirectTestRunnerUtil {
   }
 
   private static Optional<DirectTestRunner> getDirectTestRunner(
-      TestManager<ProxyTestRunner> testManager, String testId, String moduleName) {
+      TestManagerImpl<ProxyTestRunner> testManager, String testId, String moduleName) {
     return testManager
         .getTestRunner(testId)
         .filter(

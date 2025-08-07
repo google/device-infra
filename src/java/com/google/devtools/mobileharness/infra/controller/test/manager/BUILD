@@ -19,6 +19,7 @@ java_library(
     name = "manager",
     srcs = [
         "TestManager.java",
+        "TestManagerImpl.java",
     ],
     visibility = [
         "//:omnilab_fusion",
@@ -109,6 +110,17 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "proxy_test_manager_module",
+    srcs = ["ProxyTestManagerModule.java"],
+    visibility = ["//:omnilab_fusion"],
+    deps = [
+        ":proxy_test_manager",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:service_module",
+        "@maven//:com_google_inject_guice",
     ],
 )
 

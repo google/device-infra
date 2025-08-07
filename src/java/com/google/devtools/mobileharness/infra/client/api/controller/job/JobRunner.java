@@ -67,7 +67,7 @@ import com.google.devtools.mobileharness.infra.controller.plugin.PluginCreator;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunner;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunnerSetting;
 import com.google.devtools.mobileharness.infra.controller.test.manager.DirectTestRunnerUtil;
-import com.google.devtools.mobileharness.infra.controller.test.manager.TestManager;
+import com.google.devtools.mobileharness.infra.controller.test.manager.TestManagerImpl;
 import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberExceptionLoggingHandler;
 import com.google.devtools.mobileharness.shared.constant.closeable.MobileHarnessAutoCloseable;
 import com.google.devtools.mobileharness.shared.util.algorithm.GraphMatching;
@@ -191,7 +191,7 @@ public class JobRunner implements Runnable {
   private final DeviceAllocator deviceAllocator;
 
   /** To manage all the test runner threads of this job. */
-  private final TestManager<DirectTestRunner> testManager;
+  private final TestManagerImpl<DirectTestRunner> testManager;
 
   /** Test manager and runner thread pool. */
   private final ListeningExecutorService threadPool;
@@ -254,7 +254,7 @@ public class JobRunner implements Runnable {
         jobInfo,
         deviceAllocator,
         execMode,
-        new TestManager<>(),
+        new TestManagerImpl<>(),
         ThreadPools.createStandardThreadPool("job-runner-thread-pool"),
         new LocalFileUtil(),
         Clock.systemUTC(),
@@ -268,7 +268,7 @@ public class JobRunner implements Runnable {
       JobInfo jobInfo,
       DeviceAllocator deviceAllocator,
       ExecMode execMode,
-      TestManager<DirectTestRunner> testManager,
+      TestManagerImpl<DirectTestRunner> testManager,
       ListeningExecutorService threadPool,
       LocalFileUtil fileUtil,
       Clock clock,
