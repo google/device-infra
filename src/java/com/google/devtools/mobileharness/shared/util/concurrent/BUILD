@@ -86,6 +86,16 @@ java_library(
 )
 
 java_library(
+    name = "timestamped_future",
+    srcs = ["TimestampedFuture.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "@maven//:com_google_errorprone_error_prone_annotations",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "service_module",
     srcs = ["ServiceModule.java"],
     deps = [

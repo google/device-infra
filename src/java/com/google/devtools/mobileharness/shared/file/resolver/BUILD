@@ -19,6 +19,7 @@
 load("@rules_java//java:defs.bzl", "java_library")
 
 package(
+    default_applicable_licenses = ["//:license"],
     default_visibility = [
         "//:omnilab_fusion",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/job:__pkg__",
@@ -26,6 +27,7 @@ package(
         "//src/java/com/google/devtools/mobileharness/infra/lab:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/lab/controller:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/service:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/shared/file/resolver:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/shared/file/resolver:__pkg__",
     ],
 )
@@ -63,7 +65,7 @@ java_library(
         ":abstract_file_resolver",
         ":file_resolver",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "//src/java/com/google/devtools/mobileharness/shared/file/resolver/cache",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/path",

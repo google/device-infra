@@ -46,14 +46,17 @@ rules_proto_toolchains()
 
 # Kotlin rules.
 rules_kotlin_version = "2.1.0"
+
 rules_kotlin_sha = "dd32f19e73c70f32ccb9a166c615c0ca4aed8e27e72c4a6330c3523eafa1aa55"
+
 http_archive(
     name = "rules_kotlin",
-    urls = ["https://github.com/bazelbuild/rules_kotlin/releases/download/v%s/rules_kotlin-v%s.tar.gz" % (rules_kotlin_version, rules_kotlin_version)],
     sha256 = rules_kotlin_sha,
+    urls = ["https://github.com/bazelbuild/rules_kotlin/releases/download/v%s/rules_kotlin-v%s.tar.gz" % (rules_kotlin_version, rules_kotlin_version)],
 )
 
 load("@rules_kotlin//kotlin:repositories.bzl", "kotlin_repositories")
+
 kotlin_repositories()
 
 register_toolchains("//:kotlin_toolchain")
@@ -268,7 +271,7 @@ maven_install(
         "com.google.auth:google-auth-library-oauth2-http:1.23.0",
         "com.google.code.findbugs:jsr305:3.0.2",
         "com.google.code.gson:gson:2.10.1",
-        "com.google.errorprone:error_prone_annotations:2.24.1",
+        "com.google.errorprone:error_prone_annotations:2.39.0",
         "com.google.flogger:flogger-system-backend:0.8",
         "com.google.flogger:flogger:0.8",
         "com.google.guava:guava:33.0.0-jre",
