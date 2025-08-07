@@ -502,6 +502,7 @@ public abstract class AndroidDeviceDelegate {
 
     // For OSS
     device.addSupportedDriver("MoblyAospPackageTest");
+    device.addSupportedDriver("MoblyAospTest");
 
     // Gets the current override size of the screen of the device.
     try {
