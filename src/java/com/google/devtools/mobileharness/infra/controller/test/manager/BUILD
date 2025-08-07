@@ -113,6 +113,22 @@ java_library(
 )
 
 java_library(
+    name = "test_manager_service_module",
+    srcs = [
+        "TestManagerService.java",
+        "TestManagerServiceModule.java",
+    ],
+    visibility = ["//:omnilab_fusion"],
+    deps = [
+        ":manager",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:service_module",
+        "@maven//:com_google_guava_guava",
+        "@maven//:com_google_inject_guice",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
     name = "exception",
     srcs = ["TestStartedException.java"],
     visibility = ["//visibility:private"],
