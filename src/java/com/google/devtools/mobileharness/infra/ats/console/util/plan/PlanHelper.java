@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.util.plan;
 
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.google.common.base.Suppliers;
@@ -60,14 +62,17 @@ public class PlanHelper {
   public String loadConfigContent(String configName) {
     ImmutableMap<String, PlanConfigInfo> configInfo = listPlans();
     if (!configInfo.containsKey(configName)) {
-      logger.atWarning().log("Config [%s] not found.", configName);
+      logger.atWarning().with(IMPORTANCE, IMPORTANT).log("Config [%s] not found.", configName);
       return "";
     }
     PlanConfigInfo planConfigInfo = configInfo.get(configName);
     Optional<InputStream> content =
         planConfigUtil.getBundledConfigStream(planConfigInfo.source(), configName);
     if (content.isEmpty()) {
-      logger.atWarning().log("Failed to load config [%s] content.", configName);
+      logger
+          .atWarning()
+          .with(IMPORTANCE, IMPORTANT)
+          .log("Failed to load config [%s] content.", configName);
       return "";
     }
     return convertPlanStreamToString(content.get());
@@ -81,7 +86,11 @@ public class PlanHelper {
         stringBuilder.append(line).append("\n"); // Add newline for readability
       }
     } catch (Exception e) {
-      logger.atWarning().withCause(e).log("Failed to convert config content to string");
+      logger
+          .atWarning()
+          .with(IMPORTANCE, IMPORTANT)
+          .withCause(e)
+          .log("Failed to convert config content to string");
       return "";
     }
     return stringBuilder.toString();

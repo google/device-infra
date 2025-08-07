@@ -17,6 +17,8 @@
 package com.google.devtools.mobileharness.infra.ats.console.util.result;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
 import static java.util.Arrays.stream;
 import static java.util.Comparator.comparing;
 
@@ -77,8 +79,11 @@ public class ResultListerHelper {
         }
         result.ifPresent(value -> resultsBuilder.add(ResultBundle.of(resultDir, value)));
       } catch (MobileHarnessException e) {
-        logger.atWarning().withCause(e).log(
-            "Failed to parse result file: %s", resultFile.getAbsolutePath());
+        logger
+            .atWarning()
+            .with(IMPORTANCE, IMPORTANT)
+            .withCause(e)
+            .log("Failed to parse result file: %s", resultFile.getAbsolutePath());
       }
     }
     return resultsBuilder.build();
