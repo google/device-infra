@@ -16,11 +16,8 @@
 
 package com.google.devtools.mobileharness.shared.util.error;
 
-import static com.google.common.base.Strings.nullToEmpty;
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static java.util.Arrays.stream;
 
-import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.devtools.common.metrics.stability.model.proto.ErrorIdProto;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto;
@@ -31,7 +28,6 @@ import com.google.devtools.common.metrics.stability.model.proto.NamespaceProto.N
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.ErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.api.model.proto.Error;
 import com.google.devtools.mobileharness.api.model.proto.Error.ExceptionDetail;
 import com.google.devtools.mobileharness.api.model.proto.Error.ExceptionSummary;
 import com.google.devtools.mobileharness.shared.model.error.UnknownErrorId;
@@ -43,94 +39,6 @@ import javax.annotation.Nullable;
 public class ErrorModelConverter {
 
   private ErrorModelConverter() {}
-
-  /**
-   * @deprecated This method will set the NON_MH_ERROR as the ErrorId for any
-   *     non-MobileHarnessException, including the {@linkplain
-   *     com.google.devtools.common.metrics.stability.converter.DeserializedException}. Use
-   *     {@linkplain
-   *     com.google.devtools.common.metrics.stability.converter.ErrorModelConverter#toExceptionDetail(Throwable)}
-   *     instead to preserve the real ErrorId.
-   */
-  @Deprecated
-  public static ExceptionDetail toExceptionDetail(Throwable throwable) {
-    return toExceptionDetail(throwable, null);
-  }
-
-  /**
-   * Ignores stack trace in the returned ExceptionDetail if {@code addStackTrace} is false.
-   *
-   * @deprecated This method will set the NON_MH_ERROR as the ErrorId for any
-   *     non-MobileHarnessException, including the {@linkplain
-   *     com.google.devtools.common.metrics.stability.converter.DeserializedException}. Use
-   *     {@linkplain
-   *     com.google.devtools.common.metrics.stability.converter.ErrorModelConverter#toExceptionDetail(Throwable)}
-   *     instead to preserve the real ErrorId.
-   */
-  @Deprecated
-  public static ExceptionDetail toExceptionDetail(Throwable throwable, boolean addStackTrace) {
-    return toExceptionDetail(throwable, null, addStackTrace);
-  }
-
-  /**
-   * @param errorId No effect for MobileHarnessException. If specified, overrides the ErrorId of the
-   *     given throwable only when it is NOT a MobileHarnessException.
-   * @deprecated If the errorId param is not specified, this method will set the NON_MH_ERROR as the
-   *     ErrorId for any non-MobileHarnessException, including the {@linkplain
-   *     com.google.devtools.common.metrics.stability.converter.DeserializedException}. Use
-   *     {@linkplain
-   *     com.google.devtools.common.metrics.stability.converter.ErrorModelConverter#toExceptionDetail(Throwable)}
-   *     instead to preserve the real ErrorId.
-   */
-  @Deprecated
-  public static ExceptionDetail toExceptionDetail(Throwable throwable, @Nullable ErrorId errorId) {
-    return toExceptionDetail(throwable, errorId, /* addStackTrace= */ true);
-  }
-
-  /**
-   * @param errorId No effect for MobileHarnessException. If specified, overrides the ErrorId of the
-   *     given throwable only when it is NOT a MobileHarnessException.
-   * @deprecated If the errorId param is not specified, this method will set the NON_MH_ERROR as the
-   *     ErrorId for any non-MobileHarnessException, including the {@linkplain
-   *     com.google.devtools.common.metrics.stability.converter.DeserializedException}. Use
-   *     {@linkplain
-   *     com.google.devtools.common.metrics.stability.converter.ErrorModelConverter#toExceptionDetail(Throwable)}
-   *     instead to preserve the real ErrorId.
-   */
-  @Deprecated
-  static ExceptionDetail toExceptionDetail(
-      Throwable throwable, @Nullable ErrorId errorId, boolean addStackTrace) {
-    errorId = finalizeErrorId(throwable, errorId);
-
-    ExceptionSummary.Builder summary =
-        ExceptionSummary.newBuilder()
-            .setErrorCode(errorId.code())
-            .setErrorName(errorId.name())
-            .setErrorType(errorId.type())
-            .setMessage(nullToEmpty(throwable.getMessage()))
-            .setClassName(throwable.getClass().getName());
-
-    if (addStackTrace) {
-      stream(throwable.getStackTrace())
-          .map(
-              stackTraceElement ->
-                  Error.StackTraceElement.newBuilder()
-                      .setDeclaringClass(stackTraceElement.getClassName())
-                      .setMethodName(stackTraceElement.getMethodName())
-                      .setFileName(Strings.nullToEmpty(stackTraceElement.getFileName()))
-                      .setLineNumber(stackTraceElement.getLineNumber()))
-          .forEach(summary::addStackTrace);
-    }
-
-    ExceptionDetail.Builder detail = ExceptionDetail.newBuilder().setSummary(summary);
-    if (throwable.getCause() != null) {
-      detail.setCause(toExceptionDetail(throwable.getCause(), null, addStackTrace));
-    }
-    for (Throwable suppressed : throwable.getSuppressed()) {
-      detail.addSuppressed(toExceptionDetail(suppressed, null, addStackTrace));
-    }
-    return detail.build();
-  }
 
   /**
    * Converts the ErrorId proto from the MH version to the devtools/common/metrics/stability
@@ -290,10 +198,6 @@ public class ErrorModelConverter {
       errorId = BasicErrorId.NON_MH_EXCEPTION;
     }
     return errorId;
-  }
-
-  public static String getCompleteStackTrace(ExceptionDetail detail) {
-    return Throwables.getStackTraceAsString(toMobileHarnessException(detail));
   }
 
   public static String getCompleteStackTrace(ExceptionProto.ExceptionDetail detail) {
