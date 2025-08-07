@@ -46,6 +46,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/util:net_util",
         "@com_google_protobuf//:protobuf_java",
         "@com_google_protobuf//:protobuf_java_util",
         "@io_grpc_grpc_java//auth",

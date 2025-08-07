@@ -68,6 +68,7 @@ public final class LabInfoPullerImpl implements DataPuller<MonitoredRecord> {
           MonitoredEntry.newBuilder()
               .putIdentifier("host_name", labData.getLabInfo().getLabLocator().getHostName())
               .putIdentifier("host_ip", labData.getLabInfo().getLabLocator().getIp());
+
       addAttribute(
           hostEntry, "status", Optional.of(labData.getLabInfo().getLabStatus().toString()));
       addAttribute(
