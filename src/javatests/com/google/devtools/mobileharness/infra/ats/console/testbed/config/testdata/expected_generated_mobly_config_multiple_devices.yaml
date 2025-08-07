@@ -1,6 +1,0 @@
-TestBeds:
-- Name: testbed_abc_xyz
-  Controllers:
-    AndroidDevice:
-    - {serial: abc}
-    - {serial: xyz}
