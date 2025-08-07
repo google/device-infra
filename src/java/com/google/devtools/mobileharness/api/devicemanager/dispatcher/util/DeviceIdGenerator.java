@@ -195,6 +195,21 @@ public class DeviceIdGenerator {
     }
   }
 
+  /**
+   * Generates the gem5 device id from device control id, adds the lab host name as the prefix of
+   * the uuid.
+   *
+   * @param deviceControlId the device control id from detector.
+   */
+  public DeviceId getGem5DeviceId(String deviceControlId) {
+    try {
+      return DeviceId.of(
+          deviceControlId, String.format("%s:%s", getLocalHostName(), deviceControlId), false);
+    } catch (MobileHarnessException e) {
+      throw new AssertionError("Failed to generate Gem5Device uuid.", e);
+    }
+  }
+
   private String getLocalHostName() throws MobileHarnessException {
     try {
       return netUtil.getLocalHostName();
