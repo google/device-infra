@@ -79,6 +79,7 @@ import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.jobconfig.JobInfoCreator;
+import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.gson.Gson;
 import com.google.inject.Provider;
 import com.google.protobuf.TextFormat.ParseException;
@@ -165,6 +166,9 @@ public class SessionRequestHandlerUtil {
   private static final Duration DEFAULT_NON_TRADEFED_JOB_TIMEOUT = Duration.ofDays(5L);
   private static final Duration DEFAULT_NON_TRADEFED_START_TIMEOUT = Duration.ofDays(4L);
 
+  private static final Duration GET_DEVICE_FOR_ATS_SERVER_RETRY_INTERVAL = Duration.ofSeconds(30);
+  private static final int GET_DEVICE_FOR_ATS_SERVER_MAX_RETRY_ATTEMPTS = 5;
+
   private static final ImmutableList<String> XTS_TYPE_THAT_NEED_TEST_HARNESS_PROPERTY_FALSE =
       ImmutableList.of("cts", "mcts");
 
@@ -180,6 +184,7 @@ public class SessionRequestHandlerUtil {
   private final DeviceDetailsRetriever deviceDetailsRetriever;
   private final MoblyTestLoader moblyTestLoader;
   private final TestPlanParser testPlanParser;
+  private final Sleeper sleeper;
 
   @Inject
   SessionRequestHandlerUtil(
@@ -194,7 +199,8 @@ public class SessionRequestHandlerUtil {
       Provider<ResUtil> resUtilProvider,
       DeviceDetailsRetriever deviceDetailsRetriever,
       MoblyTestLoader moblyTestLoader,
-      TestPlanParser testPlanParser) {
+      TestPlanParser testPlanParser,
+      Sleeper sleeper) {
     this.deviceQuerier = deviceQuerier;
     this.localFileUtil = localFileUtil;
     this.configurationUtil = configurationUtil;
@@ -207,6 +213,7 @@ public class SessionRequestHandlerUtil {
     this.deviceDetailsRetriever = deviceDetailsRetriever;
     this.moblyTestLoader = moblyTestLoader;
     this.testPlanParser = testPlanParser;
+    this.sleeper = sleeper;
   }
 
   /** Information used to create the Tradefed job. */
@@ -307,6 +314,27 @@ public class SessionRequestHandlerUtil {
       throws MobileHarnessException, InterruptedException {
     ImmutableMap<String, DeviceDetails> allAndroidDevices =
         deviceDetailsRetriever.getAllAndroidDevicesWithNeededDetails(sessionRequestInfo);
+    // Wait for devices to be ready for ATS server requests.
+    if (sessionRequestInfo.isAtsServerRequest() && !sessionRequestInfo.deviceSerials().isEmpty()) {
+      Set<String> missingSerials = new HashSet<>(sessionRequestInfo.deviceSerials());
+      missingSerials.removeAll(allAndroidDevices.keySet());
+      int attempt = 0;
+      while (!missingSerials.isEmpty() && attempt < GET_DEVICE_FOR_ATS_SERVER_MAX_RETRY_ATTEMPTS) {
+        attempt++;
+        logger.atWarning().log(
+            "Devices %s not found, retry attempt %d/%d in %s...",
+            missingSerials,
+            attempt,
+            GET_DEVICE_FOR_ATS_SERVER_MAX_RETRY_ATTEMPTS,
+            GET_DEVICE_FOR_ATS_SERVER_RETRY_INTERVAL);
+        sleeper.sleep(GET_DEVICE_FOR_ATS_SERVER_RETRY_INTERVAL);
+        allAndroidDevices =
+            deviceDetailsRetriever.getAllAndroidDevicesWithNeededDetails(sessionRequestInfo);
+        missingSerials.clear();
+        missingSerials.addAll(sessionRequestInfo.deviceSerials());
+        missingSerials.removeAll(allAndroidDevices.keySet());
+      }
+    }
     logger.atInfo().log("All android devices: %s", allAndroidDevices.keySet());
 
     DeviceSelectionOptions.Builder optionsBuilder =
