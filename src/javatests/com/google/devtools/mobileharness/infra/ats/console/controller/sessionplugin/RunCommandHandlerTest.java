@@ -256,7 +256,7 @@ public final class RunCommandHandlerTest {
             .setType(
                 JobType.newBuilder()
                     .setDevice("AndroidRealDevice")
-                    .setDriver("MoblyAospPackageTest")
+                    .setDriver("MoblyAospTest")
                     .build())
             .setSetting(
                 JobSetting.newBuilder()

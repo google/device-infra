@@ -141,14 +141,6 @@ java_library(
 )
 
 java_library(
-    name = "mobly_aosp_package_test_spec",
-    srcs = ["MoblyAospPackageTestSpec.java"],
-    deps = [
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
-    ],
-)
-
-java_library(
     name = "mobly_aosp_test_spec",
     srcs = ["MoblyAospTestSpec.java"],
     deps = [

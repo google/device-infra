@@ -161,24 +161,6 @@ java_library(
 )
 
 java_library(
-    name = "mobly_aosp_package_test",
-    srcs = ["MoblyAospPackageTest.java"],
-    deps = [
-        ":mobly_aosp_test",
-        "//src/java/com/google/devtools/mobileharness/platform/testbed/mobly/util:mobly_aosp_test_setup_util",
-        "//src/java/com/google/devtools/mobileharness/shared/util/command",
-        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
-        "//src/java/com/google/devtools/mobileharness/shared/util/file/local:res_util",
-        "//src/java/com/google/devtools/mobileharness/shared/util/testcomponents:testcomponents_dir_util",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver/util:mobly_post_test_processor",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
-        "@maven//:javax_inject_jsr330_api",
-    ],
-)
-
-java_library(
     name = "mobly_aosp_test",
     srcs = ["MoblyAospTest.java"],
     deps = [

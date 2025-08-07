@@ -60,8 +60,6 @@ public class ModuleConfigurationHelper {
   private static final String FILE_KEY = "file";
   private static final String DEVICE_DIMENSION_OPTION_NAME = "dimension";
 
-  private static final ImmutableMap<String, String> DRIVER_ALIAS_MAP =
-      ImmutableMap.of("MoblyAospPackageTest", "MoblyAospTest");
   private static final String ANY_DEVICE_ID = "*";
 
   private final ConfigurationUtil configurationUtil;
@@ -125,8 +123,7 @@ public class ModuleConfigurationHelper {
   private void updateDriverSpecs(Test config, JobInfo jobInfo, Visitor fileResolver)
       throws MobileHarnessException, InterruptedException {
     String driverName = ConfigurationUtil.getSimpleClassName(config.getClazz());
-    if (!jobInfo.type().getDriver().equals(driverName)
-        && !jobInfo.type().getDriver().equals(DRIVER_ALIAS_MAP.get(driverName))) {
+    if (!jobInfo.type().getDriver().equals(driverName)) {
       throw new MobileHarnessException(
           ExtErrorId.MODULE_CONFIG_DRIVER_NOT_MATCH,
           String.format(
