@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.infra.ats.console.controller.olcserver
 
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.DEBUG;
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
 
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -125,9 +126,12 @@ public class XtsServerEnvironmentPreparer implements ServerEnvironmentPreparer {
   private Path getJavaBinaryPath(String xtsType, Path xtsRootDir, Path serverResDir)
       throws MobileHarnessException, InterruptedException {
     if (!Flags.instance().xtsJdkDir.getNonNull().isEmpty()) {
-      logger.atInfo().log(
-          "Use the JDK files from %s passed in via the flag --xts_jdk_dir for the server",
-          Flags.instance().xtsJdkDir.getNonNull());
+      logger
+          .atInfo()
+          .with(IMPORTANCE, IMPORTANT)
+          .log(
+              "Use the JDK files from %s passed in via the flag --xts_jdk_dir for the server",
+              Flags.instance().xtsJdkDir.getNonNull());
       Path jdkDir = Path.of(Flags.instance().xtsJdkDir.getNonNull());
       grantFileOrDirFullAccess(jdkDir);
       return jdkDir.resolve("bin/java");

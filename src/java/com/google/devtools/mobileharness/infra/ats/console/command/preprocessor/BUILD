@@ -28,6 +28,7 @@ java_library(
     srcs = ["CommandFileParser.java"],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/constant:log_record_importance",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/shell",
         "@maven//:com_google_code_findbugs_jsr305",
@@ -40,6 +41,7 @@ java_library(
     srcs = ["CommandFileWatcher.java"],
     deps = [
         ":command_file_parser",
+        "//src/java/com/google/devtools/mobileharness/shared/constant:log_record_importance",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
         "@maven//:com_google_guava_guava",

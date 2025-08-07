@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.infra.ats.console.controller.olcserver
 
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.DEBUG;
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableSet;
@@ -120,9 +121,13 @@ public class ServerLogPrinter {
     public void onError(Throwable e) {
       if (e instanceof StatusRuntimeException
           && NORMAL_CODES.contains(((StatusRuntimeException) e).getStatus().getCode())) {
-        logger.atInfo().log("Stop getting from server since it stops");
+        logger.atInfo().with(IMPORTANCE, IMPORTANT).log("Stop getting from server since it stops");
       } else {
-        logger.atWarning().withCause(e).log("Failed to get log from server");
+        logger
+            .atWarning()
+            .with(IMPORTANCE, IMPORTANT)
+            .withCause(e)
+            .log("Failed to get log from server");
       }
       doOnCompleted();
     }

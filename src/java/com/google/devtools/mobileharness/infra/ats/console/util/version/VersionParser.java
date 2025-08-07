@@ -16,6 +16,9 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.util.version;
 
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
+
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteInfo;
@@ -55,12 +58,18 @@ class VersionParser {
         String version = localFileUtil.readFile(versionFile);
         return Optional.of(version.trim());
       } catch (MobileHarnessException e) {
-        logger.atWarning().withCause(e).log(
-            "Cannot read %s in directory: %s", VERSION_FILE, toolsDir);
+        logger
+            .atWarning()
+            .with(IMPORTANCE, IMPORTANT)
+            .withCause(e)
+            .log("Cannot read %s in directory: %s", VERSION_FILE, toolsDir);
         return Optional.empty();
       }
     } else {
-      logger.atWarning().log("Did not find %s in directory: %s", VERSION_FILE, toolsDir);
+      logger
+          .atWarning()
+          .with(IMPORTANCE, IMPORTANT)
+          .log("Did not find %s in directory: %s", VERSION_FILE, toolsDir);
       return Optional.empty();
     }
   }

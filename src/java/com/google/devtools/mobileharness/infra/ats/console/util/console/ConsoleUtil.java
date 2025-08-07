@@ -16,6 +16,9 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.util.console;
 
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
+
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleLineReader;
@@ -68,7 +71,7 @@ public class ConsoleUtil {
   public void printlnStdout(String format, Object... args) {
     String line = String.format(format, args);
     doPrintlnStdout(line);
-    logger.atInfo().logVarargs(format, args);
+    logger.atInfo().with(IMPORTANCE, IMPORTANT).logVarargs(format, args);
   }
 
   /**
@@ -84,7 +87,7 @@ public class ConsoleUtil {
    */
   public void printlnStdout(String text) {
     doPrintlnStdout(text);
-    logger.atInfo().log("%s", text);
+    logger.atInfo().with(IMPORTANCE, IMPORTANT).log("%s", text);
   }
 
   /**
@@ -101,7 +104,7 @@ public class ConsoleUtil {
   @FormatMethod
   public void printlnStderr(String format, Object... args) {
     doPrintlnStderr(String.format(format, args));
-    logger.atInfo().logVarargs(format, args);
+    logger.atInfo().with(IMPORTANCE, IMPORTANT).logVarargs(format, args);
   }
 
   /**
@@ -117,7 +120,7 @@ public class ConsoleUtil {
    */
   public void printlnStderr(String text) {
     doPrintlnStderr(text);
-    logger.atInfo().log("%s", text);
+    logger.atInfo().with(IMPORTANCE, IMPORTANT).log("%s", text);
   }
 
   /**

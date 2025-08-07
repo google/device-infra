@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.command.preprocessor;
 
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.google.common.collect.ImmutableList;
@@ -233,7 +235,10 @@ class CommandFileParser {
   private void scanFile(File file) throws MobileHarnessException {
     if (includedFiles.contains(file.getAbsolutePath())) {
       // Repeated include; ignore
-      logger.atFiner().log("Skipping repeated include of file %s.", file);
+      logger
+          .atFiner()
+          .with(IMPORTANCE, IMPORTANT)
+          .log("Skipping repeated include of file %s.", file);
       return;
     } else {
       includedFiles.add(file.getAbsolutePath());
@@ -254,9 +259,14 @@ class CommandFileParser {
             CommandLine expansion = new CommandLine(args.subList(3, args.size()), file, lineNumber);
             CommandLine prev = macros.put(name, expansion);
             if (prev != null) {
-              logger.atWarning().log(
-                  "Overwrote short macro '%s' while parsing file %s", name, file);
-              logger.atWarning().log("value '%s' replaced previous value '%s'", expansion, prev);
+              logger
+                  .atWarning()
+                  .with(IMPORTANCE, IMPORTANT)
+                  .log("Overwrote short macro '%s' while parsing file %s", name, file);
+              logger
+                  .atWarning()
+                  .with(IMPORTANCE, IMPORTANT)
+                  .log("value '%s' replaced previous value '%s'", expansion, prev);
             }
           } else if (isLineLongMacro(args)) {
             // Expected format: LONG MACRO <name>\n(multiline expansion)\nEND MACRO
@@ -286,26 +296,41 @@ class CommandFileParser {
               inputLine = fileReader.readLine();
               lineNumber++;
             }
-            logger.atFine().log(
-                "Parsed %d-line definition for long macro %s", expansion.size(), name);
+            logger
+                .atFine()
+                .with(IMPORTANCE, IMPORTANT)
+                .log("Parsed %d-line definition for long macro %s", expansion.size(), name);
 
             List<CommandLine> prev = longMacros.put(name, expansion);
             if (prev != null) {
-              logger.atWarning().log("Overwrote long macro %s while parsing file %s", name, file);
-              logger.atWarning().log(
-                  "%d-line definition replaced previous %d-line definition",
-                  expansion.size(), prev.size());
+              logger
+                  .atWarning()
+                  .with(IMPORTANCE, IMPORTANT)
+                  .log("Overwrote long macro %s while parsing file %s", name, file);
+              logger
+                  .atWarning()
+                  .with(IMPORTANCE, IMPORTANT)
+                  .log(
+                      "%d-line definition replaced previous %d-line definition",
+                      expansion.size(), prev.size());
             }
           } else if (isLineIncludeDirective(args)) {
             File toScan = new File(args.get(1));
             if (toScan.isAbsolute()) {
-              logger.atFine().log("Got an include directive for absolute path %s.", args.get(1));
+              logger
+                  .atFine()
+                  .with(IMPORTANCE, IMPORTANT)
+                  .log("Got an include directive for absolute path %s.", args.get(1));
             } else {
               File parent = file.getParentFile();
               toScan = new File(parent, args.get(1));
-              logger.atFine().log(
-                  "Got an include directive for relative path %s, using '%s' " + "for parent dir",
-                  args.get(1), parent);
+              logger
+                  .atFine()
+                  .with(IMPORTANCE, IMPORTANT)
+                  .log(
+                      "Got an include directive for relative path %s, using '%s' "
+                          + "for parent dir",
+                      args.get(1), parent);
             }
             scanFile(toScan);
           } else {
@@ -361,14 +386,17 @@ class CommandFileParser {
 
     // Do a maximum of 20 iterations of expansion
     for (int iCount = 0; iCount < 20 && inputBitmask.getSetCount() > 0; ++iCount) {
-      logger.atFine().log("### Expansion iteration %d", iCount);
+      logger.atFine().with(IMPORTANCE, IMPORTANT).log("### Expansion iteration %d", iCount);
 
       int inputIdx = 0;
       while (inputIdx < lines.size()) {
         if (!inputBitmask.get(inputIdx)) {
           // Skip this line; we've already determined that it doesn't contain any macro
           // calls to be expanded.
-          logger.atFine().log("skipping input line %s", lines.get(inputIdx));
+          logger
+              .atFine()
+              .with(IMPORTANCE, IMPORTANT)
+              .log("skipping input line %s", lines.get(inputIdx));
           ++inputIdx;
           continue;
         }
@@ -427,7 +455,10 @@ class CommandFileParser {
                 String.format("Macro call '%s' does not match any macro definitions.", name));
           } else {
             // At this point, it may just be a short macro
-            logger.atFine().log("Macro call '%s' doesn't match any long macro definitions.", name);
+            logger
+                .atFine()
+                .with(IMPORTANCE, IMPORTANT)
+                .log("Macro call '%s' doesn't match any long macro definitions.", name);
             return null;
           }
         }
@@ -467,7 +498,10 @@ class CommandFileParser {
         // we hit a macro; expand it
         String name = matchMacro.group(1);
         CommandLine macro = macros.get(name);
-        logger.atFine().log("Gotcha!  Expanding macro '%s' to '%s'", name, macro);
+        logger
+            .atFine()
+            .with(IMPORTANCE, IMPORTANT)
+            .log("Gotcha!  Expanding macro '%s' to '%s'", name, macro);
         line.remove(idx);
         line.addAll(idx, macro);
         idx += macro.size();

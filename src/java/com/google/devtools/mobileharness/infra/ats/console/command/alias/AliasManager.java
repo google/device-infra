@@ -16,6 +16,9 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.command.alias;
 
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
+
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
@@ -103,7 +106,11 @@ public class AliasManager {
     try {
       aliases = localFileUtil.readFile(aliasesFilePath);
     } catch (MobileHarnessException e) {
-      logger.atWarning().withCause(e).log("Failed to read aliases file: %s", aliasesFilePath);
+      logger
+          .atWarning()
+          .with(IMPORTANCE, IMPORTANT)
+          .withCause(e)
+          .log("Failed to read aliases file: %s", aliasesFilePath);
       return;
     }
 
@@ -116,9 +123,15 @@ public class AliasManager {
                 String aliasName = matcher.group(1).trim();
                 String aliasValue = matcher.group(2).trim();
                 addAlias(aliasName, aliasValue);
-                logger.atInfo().log("Alias '%s' loaded, value: [%s].", aliasName, aliasValue);
+                logger
+                    .atInfo()
+                    .with(IMPORTANCE, IMPORTANT)
+                    .log("Alias '%s' loaded, value: [%s].", aliasName, aliasValue);
               } else {
-                logger.atWarning().log("Invalid alias definition [%s] ignored.", alias);
+                logger
+                    .atWarning()
+                    .with(IMPORTANCE, IMPORTANT)
+                    .log("Invalid alias definition [%s] ignored.", alias);
               }
             });
   }

@@ -22,6 +22,8 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.util.concurrent.Futures.addCallback;
 import static com.google.common.util.concurrent.Futures.immediateFailedFuture;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
@@ -770,9 +772,12 @@ public final class RunCommand implements Callable<Integer> {
       // we get the retrySessionResultDirName by the retrySessionIndex and will use
       // retrySessionResultDirName to locate the previous result later.
       retrySessionResultDirName = getRetrySessionResultDirName(retrySessionIndex);
-      logger.atInfo().log(
-          "Retry session index [%s] mapped to retry session result dir name [%s]",
-          retrySessionIndex, retrySessionResultDirName);
+      logger
+          .atInfo()
+          .with(IMPORTANCE, IMPORTANT)
+          .log(
+              "Retry session index [%s] mapped to retry session result dir name [%s]",
+              retrySessionIndex, retrySessionResultDirName);
     }
     if (!isNullOrEmpty(retrySessionResultDirName)) {
       runCommand.setRetrySessionResultDirName(retrySessionResultDirName.trim());
@@ -859,7 +864,11 @@ public final class RunCommand implements Callable<Integer> {
     @Override
     public void onFailure(Throwable error) {
       try {
-        logger.atWarning().withCause(error).log("Failed to execute command");
+        logger
+            .atWarning()
+            .with(IMPORTANCE, IMPORTANT)
+            .withCause(error)
+            .log("Failed to execute command");
       } finally {
         disableServerLogPrinterIfNecessary();
       }
@@ -871,7 +880,11 @@ public final class RunCommand implements Callable<Integer> {
         try {
           serverLogPrinter.enable(false);
         } catch (MobileHarnessException | InterruptedException e) {
-          logger.atWarning().withCause(e).log("Failed to disable server log printer");
+          logger
+              .atWarning()
+              .with(IMPORTANCE, IMPORTANT)
+              .withCause(e)
+              .log("Failed to disable server log printer");
           if (e instanceof InterruptedException) {
             Thread.currentThread().interrupt();
           }

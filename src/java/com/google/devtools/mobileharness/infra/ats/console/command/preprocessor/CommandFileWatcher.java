@@ -16,6 +16,9 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.command.preprocessor;
 
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
@@ -121,7 +124,7 @@ class CommandFileWatcher extends Thread {
       try {
         Sleeper.defaultSleeper().sleep(POLL_TIME);
       } catch (InterruptedException e) {
-        logger.atFine().log("Sleep interrupted");
+        logger.atFine().with(IMPORTANCE, IMPORTANT).log("Sleep interrupted");
       }
     }
   }
@@ -199,8 +202,11 @@ class CommandFileWatcher extends Thread {
       // Note that we land on this case if the original mod time was 0 and the mod time is
       // now non-zero, so there's a race-condition if an IO error causes us to fail to
       // read the mod time initially.  This should be okay.
-      logger.atWarning().log(
-          "Found update in monitored cmdfile %s (%d -> %d)", cmd.file, cmd.modTime, curModTime);
+      logger
+          .atWarning()
+          .with(IMPORTANCE, IMPORTANT)
+          .log(
+              "Found update in monitored cmdfile %s (%d -> %d)", cmd.file, cmd.modTime, curModTime);
       return true;
     }
 
@@ -244,7 +250,7 @@ class CommandFileWatcher extends Thread {
     if (cmdFile != null) {
       return cmdFile.extraArgs;
     }
-    logger.atWarning().log("Could not find cmdfile %s", cmdPath);
+    logger.atWarning().with(IMPORTANCE, IMPORTANT).log("Could not find cmdfile %s", cmdPath);
     return ImmutableList.of();
   }
 }

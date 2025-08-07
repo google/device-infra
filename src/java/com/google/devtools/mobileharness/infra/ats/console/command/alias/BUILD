@@ -29,6 +29,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:console_info",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/command:command_helper",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_dir_util",
+        "//src/java/com/google/devtools/mobileharness/shared/constant:log_record_importance",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_guava_guava",

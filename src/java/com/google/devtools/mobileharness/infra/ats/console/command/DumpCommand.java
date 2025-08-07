@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.command;
 
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
 import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
 import static com.google.devtools.mobileharness.shared.util.error.MoreThrowables.shortDebugString;
 
@@ -145,7 +147,10 @@ class DumpCommand implements Callable<Integer> {
     // Dumps Tradefed stack traces.
     List<String> tradefedPids = getTradefedPids();
     if (tradefedPids.isEmpty()) {
-      logger.atWarning().log("No Tradefed process found. Skip dumping Tradefed stack trace.");
+      logger
+          .atWarning()
+          .with(IMPORTANCE, IMPORTANT)
+          .log("No Tradefed process found. Skip dumping Tradefed stack trace.");
     } else {
       tradefedPids.forEach(
           tradefedPid -> {
@@ -246,7 +251,10 @@ class DumpCommand implements Callable<Integer> {
     try {
       Optional<?> tryConnectResult = serverPreparer.tryConnectToOlcServer();
       if (tryConnectResult.isEmpty()) {
-        logger.atInfo().log("OLC server isn't running, skip dumping server stack trace");
+        logger
+            .atInfo()
+            .with(IMPORTANCE, IMPORTANT)
+            .log("OLC server isn't running, skip dumping server stack trace");
         return;
       }
 
@@ -259,21 +267,29 @@ class DumpCommand implements Callable<Integer> {
           serverStackTrace = output.getSuccess().getOutputMessage();
           break;
         case FAILURE:
-          logger.atWarning().log(
-              "Failed to get server stack trace, reason: %s",
-              output.getFailure().getErrorMessage());
+          logger
+              .atWarning()
+              .with(IMPORTANCE, IMPORTANT)
+              .log(
+                  "Failed to get server stack trace, reason: %s",
+                  output.getFailure().getErrorMessage());
           return;
         default:
-          logger.atWarning().log(
-              "Failed to get server stack trace, plugin_output=[%s]", shortDebugString(output));
+          logger
+              .atWarning()
+              .with(IMPORTANCE, IMPORTANT)
+              .log(
+                  "Failed to get server stack trace, plugin_output=[%s]", shortDebugString(output));
           return;
       }
 
       // Saves server stack trace to file.
       localFileUtil.writeToFile(filePath, serverStackTrace);
     } catch (MobileHarnessException | InterruptedException | RuntimeException | Error e) {
-      logger.atWarning().log(
-          "Failed to create server stack trace file, error=[%s]", shortDebugString(e));
+      logger
+          .atWarning()
+          .with(IMPORTANCE, IMPORTANT)
+          .log("Failed to create server stack trace file, error=[%s]", shortDebugString(e));
       if (e instanceof InterruptedException) {
         Thread.currentThread().interrupt();
       }
@@ -285,9 +301,12 @@ class DumpCommand implements Callable<Integer> {
       String tradefedStackTrace = getTradefedStackTrace(tradefedPid);
       localFileUtil.writeToFile(filePath, tradefedStackTrace);
     } catch (MobileHarnessException | InterruptedException | RuntimeException | Error e) {
-      logger.atWarning().log(
-          "Failed to create Tradefed stack trace file for pid [%s]: %s.",
-          tradefedPid, shortDebugString(e));
+      logger
+          .atWarning()
+          .with(IMPORTANCE, IMPORTANT)
+          .log(
+              "Failed to create Tradefed stack trace file for pid [%s]: %s.",
+              tradefedPid, shortDebugString(e));
       if (e instanceof InterruptedException) {
         Thread.currentThread().interrupt();
       }

@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.infra.ats.console.util.command;
 
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.DEBUG;
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 import static java.util.concurrent.TimeUnit.MINUTES;
@@ -78,9 +79,12 @@ public final class ExitUtil {
                   AtsSessionCancellation.newBuilder().setReason(reason).setAggressive(aggressive))
               .build());
     } catch (MobileHarnessException e) {
-      logger.atWarning().log(
-          "Failed to cancel unfinished sessions with error. Error=[%s]",
-          MoreThrowables.shortDebugString(e));
+      logger
+          .atWarning()
+          .with(IMPORTANCE, IMPORTANT)
+          .log(
+              "Failed to cancel unfinished sessions with error. Error=[%s]",
+              MoreThrowables.shortDebugString(e));
     }
   }
 

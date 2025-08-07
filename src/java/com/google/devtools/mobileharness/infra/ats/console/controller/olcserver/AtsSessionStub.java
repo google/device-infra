@@ -20,6 +20,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.util.concurrent.Futures.immediateFailedFuture;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.DEBUG;
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
 import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
 import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugStringWithPrinter;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
@@ -243,9 +244,13 @@ public class AtsSessionStub {
                     AtsSessionPluginConfigOutput.of(
                         sessionPluginConfig, sessionPluginOutput.orElse(null)));
               } catch (MobileHarnessException | RuntimeException e) {
-                logger.atWarning().withCause(e).log(
-                    "Failed to get session plugin config/output, session=[%s]",
-                    shortDebugStringWithPrinter(sessionDetail, PRINTER));
+                logger
+                    .atWarning()
+                    .with(IMPORTANCE, IMPORTANT)
+                    .withCause(e)
+                    .log(
+                        "Failed to get session plugin config/output, session=[%s]",
+                        shortDebugStringWithPrinter(sessionDetail, PRINTER));
                 return Stream.empty();
               }
             })
@@ -373,9 +378,12 @@ public class AtsSessionStub {
                   .getSessionStatus();
           if (!newSessionStatus.equals(sessionStatus)) {
             sessionStatus = newSessionStatus;
-            logger.atFine().log(
-                "Session status: [%s], session_id=[%s]",
-                sessionStatus, shortDebugString(sessionId));
+            logger
+                .atFine()
+                .with(IMPORTANCE, IMPORTANT)
+                .log(
+                    "Session status: [%s], session_id=[%s]",
+                    sessionStatus, shortDebugString(sessionId));
           }
         } while (!sessionStatus.equals(SessionStatus.SESSION_FINISHED));
       } catch (GrpcExceptionWithErrorId e) {
@@ -474,8 +482,11 @@ public class AtsSessionStub {
     if (result.isPresent()) {
       sessionError.ifPresent(
           e ->
-              logger.atWarning().withCause(e).log(
-                  "Warning of session %s:", sessionDetail.getSessionId().getId()));
+              logger
+                  .atWarning()
+                  .with(IMPORTANCE, IMPORTANT)
+                  .withCause(e)
+                  .log("Warning of session %s:", sessionDetail.getSessionId().getId()));
       return result.get();
     } else {
       throw sessionError.orElseGet(
