@@ -16,14 +16,9 @@
 
 package com.google.devtools.mobileharness.shared.util.error;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
-
 import com.google.common.base.Throwables;
 import com.google.devtools.common.metrics.stability.model.proto.ErrorIdProto;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto;
-import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.ExceptionClassType;
-import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.StackTrace;
-import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.StackTraceElement;
 import com.google.devtools.common.metrics.stability.model.proto.NamespaceProto.Namespace;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.ErrorId;
@@ -50,33 +45,6 @@ public class ErrorModelConverter {
         .setName(mhExceptionSummary.getErrorName())
         .setType(mhExceptionSummary.getErrorType())
         .setNamespace(Namespace.MH)
-        .build();
-  }
-
-  /**
-   * Converts the ErrorId proto from the MH version to the devtools/common/metrics/stability
-   * version. Will always set the namespace to MH.
-   */
-  public static ExceptionProto.ExceptionSummary toCommonExceptionSummary(
-      ExceptionSummary mhExceptionSummary) {
-    return ExceptionProto.ExceptionSummary.newBuilder()
-        .setErrorId(toCommonErrorId(mhExceptionSummary))
-        .setMessage(mhExceptionSummary.getMessage())
-        .setClassType(
-            ExceptionClassType.newBuilder().setClassName(mhExceptionSummary.getClassName()))
-        .setStackTrace(
-            StackTrace.newBuilder()
-                .addAllElement(
-                    mhExceptionSummary.getStackTraceList().stream()
-                        .map(
-                            mhStackTraceElement ->
-                                StackTraceElement.newBuilder()
-                                    .setClassName(mhStackTraceElement.getDeclaringClass())
-                                    .setMethodName(mhStackTraceElement.getMethodName())
-                                    .setFileName(mhStackTraceElement.getFileName())
-                                    .setLineNumber(mhStackTraceElement.getLineNumber())
-                                    .build())
-                        .collect(toImmutableList())))
         .build();
   }
 
@@ -110,28 +78,6 @@ public class ErrorModelConverter {
     }
 
     return summary.build();
-  }
-
-  /**
-   * Converts the ExceptionDetail proto from the MH version to the devtools/common/metrics/stability
-   * version. Will always set the error namespace to MH.
-   */
-  public static ExceptionProto.ExceptionDetail toCommonExceptionDetail(
-      ExceptionDetail mhExceptionDetail) {
-    ExceptionProto.ExceptionDetail.Builder commonExceptionDetail =
-        ExceptionProto.ExceptionDetail.newBuilder();
-    if (mhExceptionDetail.hasSummary()) {
-      commonExceptionDetail.setSummary(toCommonExceptionSummary(mhExceptionDetail.getSummary()));
-    }
-    if (mhExceptionDetail.hasCause()) {
-      commonExceptionDetail.setCause(toCommonExceptionDetail(mhExceptionDetail.getCause()));
-    }
-    mhExceptionDetail
-        .getSuppressedList()
-        .forEach(
-            mhSuppressed ->
-                commonExceptionDetail.addSuppressed(toCommonExceptionDetail(mhSuppressed)));
-    return commonExceptionDetail.build();
   }
 
   /**

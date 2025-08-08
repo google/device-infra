@@ -88,19 +88,12 @@ public class Result {
     this.params = params;
     synchronized (lock) {
       this.result = resultProto.getResult();
-      if (resultProto.hasExceptionDetail()) {
-        this.cause =
-            resultProto
-                    .getExceptionDetail()
-                    .equals(ExceptionProto.ExceptionDetail.getDefaultInstance())
-                ? null
-                : resultProto.getExceptionDetail();
-      } else {
-        this.cause =
-            resultProto.getCause().equals(ExceptionDetail.getDefaultInstance())
-                ? null
-                : ErrorModelConverter.toCommonExceptionDetail(resultProto.getCause());
-      }
+      this.cause =
+          resultProto
+                  .getExceptionDetail()
+                  .equals(ExceptionProto.ExceptionDetail.getDefaultInstance())
+              ? null
+              : resultProto.getExceptionDetail();
     }
   }
 
@@ -251,18 +244,6 @@ public class Result {
     @Deprecated
     public Optional<ExceptionDetail> cause() {
       return causeProto().map(ErrorModelConverter::toExceptionDetailWithoutNamespace);
-    }
-
-    /**
-     * The cause of the result.
-     *
-     * @throws NullPointerException if the result is PASS or UNKNOWN
-     * @deprecated Please use {@link #causeProtoNonEmpty()}
-     */
-    @Memoized
-    @Deprecated
-    public ExceptionDetail causeNonEmpty() {
-      return cause().orElseThrow(NullPointerException::new);
     }
 
     /** The cause of the result. Not empty if and only if the result is not PASS and not UNKNOWN. */
