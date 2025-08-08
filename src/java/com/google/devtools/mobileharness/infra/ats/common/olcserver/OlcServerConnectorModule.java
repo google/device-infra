@@ -23,9 +23,9 @@ import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.DeviceInfraServiceFlags;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerChannel;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerStub;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.ControlStub;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.SessionStub;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.VersionStub;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.grpc.ControlGrpcStub;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.grpc.SessionGrpcStub;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.grpc.VersionGrpcStub;
 import com.google.devtools.mobileharness.shared.util.comm.stub.ChannelFactory;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.inject.AbstractModule;
@@ -76,21 +76,21 @@ public class OlcServerConnectorModule extends AbstractModule {
   @Provides
   @Singleton
   @ServerStub(ServerStub.Type.CONTROL_SERVICE)
-  ControlStub provideServerControlStub(@ServerChannel ManagedChannel serverChannel) {
-    return new ControlStub(serverChannel);
+  ControlGrpcStub provideServerControlStub(@ServerChannel ManagedChannel serverChannel) {
+    return new ControlGrpcStub(serverChannel);
   }
 
   @Provides
   @Singleton
   @ServerStub(ServerStub.Type.SESSION_SERVICE)
-  SessionStub provideServerSessionStub(@ServerChannel ManagedChannel serverChannel) {
-    return new SessionStub(serverChannel);
+  SessionGrpcStub provideServerSessionStub(@ServerChannel ManagedChannel serverChannel) {
+    return new SessionGrpcStub(serverChannel);
   }
 
   @Provides
   @Singleton
   @ServerStub(ServerStub.Type.VERSION_SERVICE)
-  VersionStub provideServerVersionStub(@ServerChannel ManagedChannel serverChannel) {
-    return new VersionStub(serverChannel);
+  VersionGrpcStub provideServerVersionStub(@ServerChannel ManagedChannel serverChannel) {
+    return new VersionGrpcStub(serverChannel);
   }
 }

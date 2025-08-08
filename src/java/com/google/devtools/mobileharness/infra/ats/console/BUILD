@@ -77,7 +77,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:olc_server_module_factory",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:olc_server_runner",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:log_recorder",
-        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:control_stub",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub/grpc:control_grpc_stub",
         "//src/java/com/google/devtools/mobileharness/shared/constant:log_record_importance",
         "//src/java/com/google/devtools/mobileharness/shared/constant/closeable",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:callables",

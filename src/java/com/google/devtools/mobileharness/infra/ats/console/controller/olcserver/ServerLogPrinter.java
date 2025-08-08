@@ -31,7 +31,7 @@ import com.google.devtools.mobileharness.infra.ats.console.util.log.LogRecordPri
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.GetLogRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.GetLogResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecord;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.ControlStub;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.grpc.ControlGrpcStub;
 import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
@@ -50,7 +50,7 @@ public class ServerLogPrinter {
       ImmutableSet.of(Code.UNAVAILABLE, Code.CANCELLED);
 
   private final LogRecordPrinter logRecordPrinter;
-  private final Provider<ControlStub> controlStubProvider;
+  private final Provider<ControlGrpcStub> controlStubProvider;
   private final ServerPreparer serverPreparer;
   private final String clientId;
 
@@ -67,7 +67,7 @@ public class ServerLogPrinter {
   @Inject
   ServerLogPrinter(
       LogRecordPrinter logRecordPrinter,
-      @ServerStub(ServerStub.Type.CONTROL_SERVICE) Provider<ControlStub> controlStubProvider,
+      @ServerStub(ServerStub.Type.CONTROL_SERVICE) Provider<ControlGrpcStub> controlStubProvider,
       ServerPreparer serverPreparer,
       @ClientId String clientId) {
     this.logRecordPrinter = logRecordPrinter;

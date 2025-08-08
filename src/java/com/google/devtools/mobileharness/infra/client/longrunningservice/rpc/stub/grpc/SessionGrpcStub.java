@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub;
+package com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.grpc;
 
 import static com.google.devtools.mobileharness.shared.util.comm.stub.Stubs.withDeadline;
 
@@ -46,13 +46,13 @@ import io.grpc.Channel;
 import io.grpc.stub.StreamObserver;
 import java.time.Duration;
 
-/** Stub of {@link SessionServiceGrpc}. */
-public class SessionStub {
+/** gRPC stub of {@link SessionServiceGrpc}. */
+public class SessionGrpcStub {
 
   private final SessionServiceBlockingStub sessionServiceBlockingStub;
   private final SessionServiceStub sessionServiceStub;
 
-  public SessionStub(Channel channel) {
+  public SessionGrpcStub(Channel channel) {
     this.sessionServiceBlockingStub = SessionServiceGrpc.newBlockingStub(channel);
     this.sessionServiceStub = SessionServiceGrpc.newStub(channel);
   }

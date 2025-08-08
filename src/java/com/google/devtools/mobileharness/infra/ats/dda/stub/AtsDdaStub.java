@@ -50,7 +50,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.NotifySessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.NotifySessionResponse;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.SessionStub;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.grpc.SessionGrpcStub;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.util.SessionErrorUtil;
 import com.google.protobuf.Any;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -97,10 +97,10 @@ public class AtsDdaStub {
   private static final String SESSION_PLUGIN_CLASS_NAME =
       "com.google.devtools.mobileharness.infra.ats.dda.sessionplugin.AtsDdaSessionPlugin";
 
-  private final SessionStub sessionStub;
+  private final SessionGrpcStub sessionStub;
 
   public AtsDdaStub(Channel olcServerChannel) {
-    this.sessionStub = new SessionStub(olcServerChannel);
+    this.sessionStub = new SessionGrpcStub(olcServerChannel);
   }
 
   public String createSession(

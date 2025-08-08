@@ -61,7 +61,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.OlcServ
 import com.google.devtools.mobileharness.infra.client.longrunningservice.OlcServerRunner;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogRecorder;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerRequest;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.ControlStub;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.grpc.ControlGrpcStub;
 import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.inject.CommonModule;
@@ -202,7 +202,7 @@ public class AtsConsole {
   private final InterruptibleLineReader interruptibleLineReader;
   private final PrintWriter outWriter;
   private final PrintWriter errWriter;
-  private final ControlStub controlStub;
+  private final ControlGrpcStub controlStub;
   private final String clientId;
   private final Sleeper sleeper;
   private final ConsoleUtil consoleUtil;
@@ -227,7 +227,7 @@ public class AtsConsole {
       InterruptibleLineReader interruptibleLineReader,
       @ConsoleOutput(ConsoleOutput.Type.OUT_WRITER) PrintWriter outWriter,
       @ConsoleOutput(ConsoleOutput.Type.ERR_WRITER) PrintWriter errWriter,
-      @ServerStub(ServerStub.Type.CONTROL_SERVICE) ControlStub controlStub,
+      @ServerStub(ServerStub.Type.CONTROL_SERVICE) ControlGrpcStub controlStub,
       @ClientId String clientId,
       Sleeper sleeper,
       ConsoleUtil consoleUtil,

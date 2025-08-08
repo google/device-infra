@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub;
+package com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.grpc;
 
 import static com.google.devtools.mobileharness.shared.util.comm.stub.Stubs.withDeadline;
 
@@ -29,12 +29,12 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import io.grpc.Channel;
 import java.time.Duration;
 
-/** Stub of {@link VersionServiceGrpc}. */
-public class VersionStub {
+/** gRPC stub of {@link VersionServiceGrpc}. */
+public class VersionGrpcStub {
 
   private final VersionServiceBlockingStub versionServiceStub;
 
-  public VersionStub(Channel channel) {
+  public VersionGrpcStub(Channel channel) {
     this.versionServiceStub = VersionServiceGrpc.newBlockingStub(channel);
   }
 

@@ -47,8 +47,8 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.C
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerResponse.Failure;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerResponse.ResultCase;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.VersionServiceProto.GetVersionResponse;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.ControlStub;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.VersionStub;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.grpc.ControlGrpcStub;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.grpc.VersionGrpcStub;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.util.VersionProtoUtil;
 import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
 import com.google.devtools.mobileharness.shared.util.base.TableFormatter;
@@ -110,8 +110,8 @@ public class ServerPreparer {
   private final Sleeper sleeper;
   private final SystemUtil systemUtil;
   private final LocalFileUtil localFileUtil;
-  private final Provider<ControlStub> controlStub;
-  private final Provider<VersionStub> versionStub;
+  private final Provider<ControlGrpcStub> controlStub;
+  private final Provider<VersionGrpcStub> versionStub;
   private final ServerEnvironmentPreparer serverEnvironmentPreparer;
   private final FlagsString deviceInfraServiceFlags;
   private final ListeningScheduledExecutorService scheduledThreadPool;
@@ -130,8 +130,8 @@ public class ServerPreparer {
       Sleeper sleeper,
       SystemUtil systemUtil,
       LocalFileUtil localFileUtil,
-      @ServerStub(ServerStub.Type.CONTROL_SERVICE) Provider<ControlStub> controlStub,
-      @ServerStub(ServerStub.Type.VERSION_SERVICE) Provider<VersionStub> versionStub,
+      @ServerStub(ServerStub.Type.CONTROL_SERVICE) Provider<ControlGrpcStub> controlStub,
+      @ServerStub(ServerStub.Type.VERSION_SERVICE) Provider<VersionGrpcStub> versionStub,
       ServerEnvironmentPreparer serverEnvironmentPreparer,
       @DeviceInfraServiceFlags FlagsString deviceInfraServiceFlags,
       ListeningScheduledExecutorService scheduledThreadPool,

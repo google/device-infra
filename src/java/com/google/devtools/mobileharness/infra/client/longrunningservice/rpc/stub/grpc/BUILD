@@ -25,8 +25,8 @@ package(
 )
 
 java_library(
-    name = "control_stub",
-    srcs = ["ControlStub.java"],
+    name = "control_grpc_stub",
+    srcs = ["ControlGrpcStub.java"],
     deps = [
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:control_service_java_grpc",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:control_service_java_proto",
@@ -41,8 +41,8 @@ java_library(
 )
 
 java_library(
-    name = "session_stub",
-    srcs = ["SessionStub.java"],
+    name = "session_grpc_stub",
+    srcs = ["SessionGrpcStub.java"],
     deps = [
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_service_java_grpc",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_service_java_proto",
@@ -56,8 +56,8 @@ java_library(
 )
 
 java_library(
-    name = "version_stub",
-    srcs = ["VersionStub.java"],
+    name = "version_grpc_stub",
+    srcs = ["VersionGrpcStub.java"],
     deps = [
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:version_service_java_grpc",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:version_service_java_proto",

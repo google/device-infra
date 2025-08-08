@@ -64,9 +64,9 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.SubscribeSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.SubscribeSessionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.VersionServiceProto.GetVersionResponse;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.ControlStub;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.SessionStub;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.VersionStub;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.grpc.ControlGrpcStub;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.grpc.SessionGrpcStub;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.grpc.VersionGrpcStub;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.grpc.LabInfoGrpcStub;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
@@ -91,7 +91,6 @@ import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.shared.version.Version;
 import com.google.devtools.mobileharness.shared.version.proto.VersionServiceProto;
 import com.google.devtools.mobileharness.shared.version.proto.VersionServiceProto.GetVersionRequest;
-import com.google.devtools.mobileharness.shared.version.rpc.stub.grpc.VersionGrpcStub;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
@@ -216,7 +215,7 @@ public class OlcServerIntegrationTest {
     startServers(/* enableAtsMode= */ false, /* enableSchedulerShuffle= */ false);
 
     // Checks the server version.
-    VersionStub versionStub = new VersionStub(olcServerChannel);
+    VersionGrpcStub versionStub = new VersionGrpcStub(olcServerChannel);
     assertThat(versionStub.getVersion())
         .comparingExpectedFieldsOnly()
         .isEqualTo(
@@ -224,12 +223,12 @@ public class OlcServerIntegrationTest {
 
     // Gets the server log.
     OlcServerLogCollector olcServerLogCollector = new OlcServerLogCollector();
-    ControlStub controlStub = new ControlStub(olcServerChannel);
+    ControlGrpcStub controlStub = new ControlGrpcStub(olcServerChannel);
     StreamObserver<GetLogRequest> requestObserver = controlStub.getLog(olcServerLogCollector);
     requestObserver.onNext(GetLogRequest.newBuilder().setEnable(true).build());
 
     // Creates a session.
-    SessionStub sessionStub = new SessionStub(olcServerChannel);
+    SessionGrpcStub sessionStub = new SessionGrpcStub(olcServerChannel);
     CreateSessionRequest createSessionRequest =
         createCreateSessionRequest(
             SessionPluginForTestingConfig.newBuilder()
@@ -314,7 +313,7 @@ public class OlcServerIntegrationTest {
     startServers(/* enableAtsMode= */ true, /* enableSchedulerShuffle= */ true);
 
     // Checks the server version.
-    VersionStub versionStub = new VersionStub(olcServerChannel);
+    VersionGrpcStub versionStub = new VersionGrpcStub(olcServerChannel);
     assertThat(versionStub.getVersion())
         .comparingExpectedFieldsOnly()
         .isEqualTo(
@@ -340,7 +339,7 @@ public class OlcServerIntegrationTest {
             "NoOpDevice-0", "NoOpDevice-1", "NoOpDevice-2", "NoOpDevice-3", "NoOpDevice-4");
 
     // Creates a session.
-    SessionStub sessionStub = new SessionStub(olcServerChannel);
+    SessionGrpcStub sessionStub = new SessionGrpcStub(olcServerChannel);
     String fakeJobFilePath = tmpFolder.newFile().getAbsolutePath();
     CreateSessionRequest createSessionRequest =
         createCreateSessionRequest(
@@ -401,7 +400,7 @@ public class OlcServerIntegrationTest {
     assertThat(sessionLog).contains("Session finished, session_id=" + sessionId.getId());
 
     // Verifies the server is killed.
-    ControlStub controlStub = new ControlStub(olcServerChannel);
+    ControlGrpcStub controlStub = new ControlGrpcStub(olcServerChannel);
     assertThat(olcServerProcess.isAlive()).isTrue();
     KillServerResponse killServerResponse =
         controlStub.killServer(KillServerRequest.getDefaultInstance());
@@ -418,7 +417,7 @@ public class OlcServerIntegrationTest {
     startServers(/* enableAtsMode= */ true, /* enableSchedulerShuffle= */ true);
 
     // Checks the server version.
-    VersionStub versionStub = new VersionStub(olcServerChannel);
+    VersionGrpcStub versionStub = new VersionGrpcStub(olcServerChannel);
     assertThat(versionStub.getVersion())
         .comparingExpectedFieldsOnly()
         .isEqualTo(
@@ -444,7 +443,7 @@ public class OlcServerIntegrationTest {
             "NoOpDevice-0", "NoOpDevice-1", "NoOpDevice-2", "NoOpDevice-3", "NoOpDevice-4");
 
     // Creates a session.
-    SessionStub sessionStub = new SessionStub(olcServerChannel);
+    SessionGrpcStub sessionStub = new SessionGrpcStub(olcServerChannel);
     String fakeJobFilePath = tmpFolder.newFile().getAbsolutePath();
     CreateSessionRequest createSessionRequest =
         createCreateSessionRequest(
@@ -487,7 +486,7 @@ public class OlcServerIntegrationTest {
     assertThat(sessionLog).contains("Session finished, session_id=" + sessionId.getId());
 
     // Verifies the server is killed.
-    ControlStub controlStub = new ControlStub(olcServerChannel);
+    ControlGrpcStub controlStub = new ControlGrpcStub(olcServerChannel);
     assertThat(olcServerProcess.isAlive()).isTrue();
     KillServerResponse killServerResponse =
         controlStub.killServer(KillServerRequest.getDefaultInstance());
@@ -525,7 +524,9 @@ public class OlcServerIntegrationTest {
                         .setLabLocator(
                             DestinationProto.LabLocator.newBuilder().setLabLocator(labLocator)))
                 .build());
-    VersionGrpcStub versionStub = new VersionGrpcStub(relayChannel);
+    com.google.devtools.mobileharness.shared.version.rpc.stub.grpc.VersionGrpcStub versionStub =
+        new com.google.devtools.mobileharness.shared.version.rpc.stub.grpc.VersionGrpcStub(
+            relayChannel);
 
     // Gets lab server version.
     VersionServiceProto.GetVersionResponse getVersionResponse =
@@ -726,7 +727,7 @@ public class OlcServerIntegrationTest {
   }
 
   private static GetSessionResponse waitUntilSessionFinish(
-      SessionStub sessionStub, SessionId sessionId, Duration timeout)
+      SessionGrpcStub sessionStub, SessionId sessionId, Duration timeout)
       throws ExecutionException, TimeoutException, InterruptedException {
     SubscribeSessionResponseObserver subscribeSessionResponseObserver =
         new SubscribeSessionResponseObserver();
