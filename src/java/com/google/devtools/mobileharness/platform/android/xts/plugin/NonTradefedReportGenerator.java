@@ -102,8 +102,9 @@ public final class NonTradefedReportGenerator {
 
   @Subscribe
   public void onLocalDriverStarting(LocalDriverStartingEvent event) {
-    if (!event.getDriverName().equals("MoblyAospPackageTest")
-        && !event.getDriverName().equals("MoblyAospTest")) {
+    if (!event.getDriverName().equals("MoblyAospTest")) {
+      logger.atInfo().log(
+          "Driver %s is not supported by %s.", event.getDriverName(), getClass().getSimpleName());
       return;
     }
     startTime = clock.instant();

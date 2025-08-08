@@ -9,5 +9,5 @@
     <option name="python_version" value="3.10" />
     <option name="certification_suite_type" value="cts" />
     <option name="python_pkg_index_url" value="https://pypi.tuna.tsinghua.edu.cn/simple" />
-    <test class="MoblyAospPackageTest" />
+    <test class="MoblyAospTest" />
 </configuration>
