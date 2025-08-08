@@ -329,6 +329,7 @@ public class ExecTestServiceImpl {
     testInfo.warnings().getAll().stream()
         .map(exceptionDetail -> ErrorModelConverter.toLegacyErrorInfo(exceptionDetail))
         .forEach(testProto::addError);
+    testInfo.warnings().getAll().forEach(testProto::addWarning);
     testProto.addAllProperty(StrPairUtil.convertMapToList(testInfo.properties().getAll()));
     return testProto.build();
   }
