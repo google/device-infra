@@ -298,11 +298,11 @@ public class Flags {
       converter = DurationFlag.DurationConverter.class)
   public Flag<Duration> atsConsoleListDeviceTimeout = atsConsoleListDeviceTimeoutDefault;
 
-  private static final Flag<Integer> atsConsoleMinLogRecordImportanceDefault = Flag.value(100);
+  private static final Flag<Integer> atsConsoleMinLogRecordImportanceDefault = Flag.value(150);
 
   @com.beust.jcommander.Parameter(
       names = "--ats_console_min_log_record_importance",
-      description = "Minimum console log record importance shown in ATS console. Default is 100.",
+      description = "Minimum console log record importance shown in ATS console. Default is 150.",
       converter = Flag.IntegerConverter.class)
   public Flag<Integer> atsConsoleMinLogRecordImportance = atsConsoleMinLogRecordImportanceDefault;
 
