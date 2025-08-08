@@ -22,7 +22,6 @@ java_library(
         "PluginLoadingResult.java",
     ],
     visibility = [
-        "//:omnilab_fusion",
         "//src/java/com/google/devtools/mobileharness/infra/client:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/container/controller:__pkg__",
@@ -48,7 +47,6 @@ java_library(
         "DirectTestRunnerSetting.java",
     ],
     visibility = [
-        "//:omnilab_fusion",
         "//src/java/com/google/devtools/mobileharness/infra/client:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/local:__pkg__",
@@ -91,7 +89,6 @@ java_library(
         "TestRunnerLauncher.java",
     ],
     visibility = [
-        "//:omnilab_fusion",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/remote:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/container/controller:__pkg__",
