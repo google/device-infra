@@ -37,6 +37,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.proto.Job.AllocationExitStrategy;
 import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser;
 import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser.TestPlanFilter;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfoFactory;
@@ -151,6 +152,7 @@ public final class SessionRequestHandlerUtilTest {
   private Configuration.Builder defaultConfigurationBuilder() {
     return Configuration.newBuilder()
         .addDevices(Device.newBuilder().setName("AndroidDevice"))
+        .addDevices(Device.newBuilder().setName("AndroidDevice2"))
         .setTest(
             com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto
                 .Test.newBuilder()
@@ -697,6 +699,10 @@ public final class SessionRequestHandlerUtilTest {
 
     assertThat(jobInfos).hasSize(2);
     verify(moduleConfigurationHelper, times(2)).updateJobInfo(any(), any(), any(), any());
+    assertThat(jobInfos.get(0).setting().getAllocationExitStrategy())
+        .isEqualTo(AllocationExitStrategy.FAIL_FAST_NO_MATCH);
+    assertThat(jobInfos.get(1).setting().getAllocationExitStrategy())
+        .isEqualTo(AllocationExitStrategy.FAIL_FAST_NO_MATCH);
   }
 
   @Test
@@ -1212,7 +1218,7 @@ public final class SessionRequestHandlerUtilTest {
   }
 
   @Test
-  public void createXtsNonTradefedJobs_noEnoughDevices() throws Exception {
+  public void createXtsNonTradefedJobs_noAvailableDevices() throws Exception {
     setUpForCreateXtsNonTradefedJobs();
     SessionRequestInfo sessionRequestInfo =
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(
