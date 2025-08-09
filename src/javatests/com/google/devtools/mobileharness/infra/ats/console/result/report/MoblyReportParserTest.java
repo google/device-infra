@@ -72,11 +72,11 @@ public final class MoblyReportParserTest {
                 "mobly-package-name",
                 "module-abi",
                 "module-parameter",
-                Path.of(MOBLY_TEST_SUMMARY_FILE),
-                Path.of(RESULT_ATTR_FILE),
-                DEVICE_BUILD_FINGERPRINT,
-                Path.of(BUILD_ATTR_FILE),
-                Path.of(MODULE_RESULT_FILE)));
+                Optional.of(Path.of(MOBLY_TEST_SUMMARY_FILE)),
+                Optional.of(Path.of(RESULT_ATTR_FILE)),
+                Optional.of(DEVICE_BUILD_FINGERPRINT),
+                Optional.of(Path.of(BUILD_ATTR_FILE)),
+                Optional.of(Path.of(MODULE_RESULT_FILE))));
 
     assertThat(res).isPresent();
 
