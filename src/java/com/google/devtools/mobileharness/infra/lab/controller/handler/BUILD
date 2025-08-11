@@ -22,10 +22,7 @@ package(
 java_library(
     name = "drain_handler",
     srcs = glob(["*.java"]),
-    visibility = [
-        "//:omnilab_fusion",
-        "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
-    ],
+    visibility = ["//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__"],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
