@@ -47,7 +47,6 @@ final class ResultConverter {
     ResultTypeWithCause resultTypeWithCause = result.toNewResult().get();
     ResultProto.Builder resultProto =
         ResultProto.newBuilder().setResult(resultTypeWithCause.type());
-    resultTypeWithCause.cause().ifPresent(resultProto::setCause);
     resultTypeWithCause.causeProto().ifPresent(resultProto::setExceptionDetail);
 
     return resultProto.build();

@@ -26,7 +26,6 @@ import com.google.common.flogger.StackSize;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.in.Params;
-import com.google.devtools.mobileharness.api.model.proto.Error.ExceptionDetail;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.service.moss.proto.Slg.ResultProto;
 import com.google.devtools.mobileharness.shared.util.error.ErrorModelConverter;
@@ -234,17 +233,6 @@ public class Result {
 
     /** Gets the current result type. */
     public abstract TestResult type();
-
-    /**
-     * The cause of the result. Not empty if and only if the result is not PASS and not UNKNOWN.
-     *
-     * @deprecated Please use {@link #causeProto()}
-     */
-    @Memoized
-    @Deprecated
-    public Optional<ExceptionDetail> cause() {
-      return causeProto().map(ErrorModelConverter::toExceptionDetailWithoutNamespace);
-    }
 
     /** The cause of the result. Not empty if and only if the result is not PASS and not UNKNOWN. */
     @Memoized

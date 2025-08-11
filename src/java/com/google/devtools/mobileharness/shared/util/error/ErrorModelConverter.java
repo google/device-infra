@@ -146,7 +146,7 @@ public class ErrorModelConverter {
     return errorId;
   }
 
-  public static String getCompleteStackTrace(ExceptionProto.ExceptionDetail detail) {
+  private static String getCompleteStackTrace(ExceptionProto.ExceptionDetail detail) {
     return Throwables.getStackTraceAsString(
         com.google.devtools.common.metrics.stability.converter.ErrorModelConverter
             .toDeserializedException(detail));

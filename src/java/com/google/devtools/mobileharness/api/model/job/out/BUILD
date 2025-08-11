@@ -57,7 +57,6 @@ java_library(
     deps = [
         ":touchable_timing",
         "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
-        "//src/devtools/mobileharness/api/model/proto:error_java_proto",
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/devtools/mobileharness/service/moss/proto:slg_java_proto",
         "//src/java/com/google/devtools/common/metrics/stability/converter",

@@ -126,10 +126,10 @@ message RemoteFilesProto {
 message ResultProto {
   // The result of the job/test.
   mobileharness.api.model.TestResult result = 1;
-  // The exception if the result is an abnormal one.
-  mobileharness.api.model.ExceptionDetail cause = 2 [deprecated = true];
 
   stability.model.ExceptionDetail exception_detail = 3;
+
+  reserved 2;
 }
 
 // The proto implementation of a SubDeviceSpec java class.
