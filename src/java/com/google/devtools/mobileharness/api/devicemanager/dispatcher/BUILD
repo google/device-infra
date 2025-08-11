@@ -20,7 +20,6 @@ package(
     default_visibility = [
         "//:deviceinfra_all_pkg",
         "//:deviceinfra_devicemanagement_pkg",
-        "//:omnilab_fusion",
     ],
 )
 
