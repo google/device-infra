@@ -31,6 +31,9 @@ public final class DirCommon {
   public static final String KEY_NAME_OF_TEST_GEN_FILE_DIR_RELATIVE_PATH =
       GenDir.KEY_NAME_OF_TEST_GEN_FILE_DIR_RELATIVE_PATH;
 
+  /** The file name of the lab file metadata file. */
+  public static final String LAB_FILE_METADATA_FILE_NAME = "lab_file_metadata.txtpb";
+
   /** Returns the public directory. */
   public static String getPublicDirRoot() {
     return Flags.instance().publicDir.getNonNull();
