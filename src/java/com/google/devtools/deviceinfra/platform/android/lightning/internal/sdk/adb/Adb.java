@@ -504,11 +504,45 @@ public class Adb {
    * @param serial device serial number
    * @param command the shell command
    * @param timeout the shell command timeout
+   * @param lineCallback callback for each line of std/err output
+   * @return a {@link CommandProcess} representing pending completion of the command
+   * @throws MobileHarnessException if fails to execute the commands or timeout
+   * @throws InterruptedException if the thread executing the commands is interrupted
+   */
+  public CommandProcess runShellAsync(
+      String serial, String command, Duration timeout, LineCallback lineCallback)
+      throws MobileHarnessException, InterruptedException {
+    return runShellAsync(serial, new String[] {command}, timeout, lineCallback);
+  }
+
+  /**
+   * Runs an adb shell command asynchronously.
+   *
+   * @param serial device serial number
+   * @param command the shell command
+   * @param timeout the shell command timeout
    * @return a {@link CommandProcess} representing pending completion of the command
    * @throws MobileHarnessException if fails to execute the commands or timeout
    * @throws InterruptedException if the thread executing the commands is interrupted
    */
   public CommandProcess runShellAsync(String serial, String[] command, Duration timeout)
+      throws MobileHarnessException, InterruptedException {
+    return runShellAsync(serial, command, timeout, /* lineCallback= */ null);
+  }
+
+  /**
+   * Runs an adb shell command asynchronously.
+   *
+   * @param serial device serial number
+   * @param command the shell command
+   * @param timeout the shell command timeout
+   * @param lineCallback callback for each line of std/err output
+   * @return a {@link CommandProcess} representing pending completion of the command
+   * @throws MobileHarnessException if fails to execute the commands or timeout
+   * @throws InterruptedException if the thread executing the commands is interrupted
+   */
+  public CommandProcess runShellAsync(
+      String serial, String[] command, Duration timeout, @Nullable LineCallback lineCallback)
       throws MobileHarnessException, InterruptedException {
     ImmutableSet<Integer> successExitCodes = ImmutableSet.of(DEFAULT_ADB_SUCCESS_EXIT_CODE);
     String commandStr = String.join(" ", command);
@@ -532,7 +566,7 @@ public class Adb {
             logger.atWarning().log(
                 "Background command [%s] on device %s timeout.", commandStr, serial);
 
-    OutputCallbackImpl outputCallback =
+    LineCallback defaultOutputCallback =
         new OutputCallbackImpl(String.format("Command [%s] output:", commandStr));
 
     Command newCommand =
@@ -540,7 +574,7 @@ public class Adb {
             .args(ArrayUtils.addAll(new String[] {"-s", serial, "shell"}, command))
             .timeout(timeout)
             .onTimeout(timeoutCallback)
-            .onStdout(outputCallback)
+            .onStdout(lineCallback != null ? lineCallback : defaultOutputCallback)
             .onExit(exitCallback);
 
     return asyncCommand(newCommand);
