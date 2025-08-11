@@ -49,6 +49,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
+import com.google.devtools.mobileharness.api.model.proto.Job.AllocationExitStrategy;
 import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser;
 import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser.TestPlanFilter;
@@ -966,19 +967,6 @@ public class SessionRequestHandlerUtil {
           }
         }
 
-        // For console, if available devices < required devices, throw exception.
-        if (!sessionRequestInfo.isAtsServerRequest()
-            && entry.getValue().getDevicesCount() > availableDeviceSerials.size()) {
-          throw MobileHarnessExceptionFactory.createUserFacingException(
-              InfraErrorId.OLCS_NO_ENOUGH_MATCHED_DEVICES,
-              String.format(
-                  "Found no enough devices for %s. Require %d, available %d.",
-                  originalModuleName,
-                  entry.getValue().getDevicesCount(),
-                  availableDeviceSerials.size()),
-              /* cause= */ null);
-        }
-
         JobInfo jobInfo =
             createXtsNonTradefedJob(
                 xtsRootDir,
@@ -1311,6 +1299,7 @@ public class SessionRequestHandlerUtil {
             .setDevice(DeviceList.newBuilder().addAllSubDeviceSpec(subDeviceSpecList))
             .setDriver(Driver.newBuilder().setName(driverName))
             .setGenFileDir(jobGenDir.toString())
+            .setAllocationExitStrategy(AllocationExitStrategy.FAIL_FAST_NO_MATCH)
             .build();
     logger.atInfo().log(
         "Non-tradefed job base config for module '%s': %s",
