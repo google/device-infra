@@ -65,7 +65,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/subplan:sub_plan_lister",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/version:version_message_util",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/constant:dirs",
-        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub/grpc:control_grpc_stub",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:control_stub",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/params:module_parameters",
         "//src/java/com/google/devtools/mobileharness/shared/constant:log_record_importance",
         "//src/java/com/google/devtools/mobileharness/shared/util/base",

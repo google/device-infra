@@ -24,7 +24,7 @@ import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPrepar
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.SetLogLevelRequest;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.grpc.ControlGrpcStub;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.ControlStub;
 import com.google.devtools.mobileharness.shared.util.base.StrUtil;
 import javax.inject.Inject;
 import picocli.CommandLine.Command;
@@ -46,14 +46,14 @@ class SetCommand {
   private final ConsoleInfo consoleInfo;
   private final ConsoleUtil consoleUtil;
   private final ServerPreparer serverPreparer;
-  private final ControlGrpcStub controlStub;
+  private final ControlStub controlStub;
 
   @Inject
   SetCommand(
       ConsoleInfo consoleInfo,
       ConsoleUtil consoleUtil,
       ServerPreparer serverPreparer,
-      @ServerStub(ServerStub.Type.CONTROL_SERVICE) ControlGrpcStub controlStub) {
+      @ServerStub(ServerStub.Type.CONTROL_SERVICE) ControlStub controlStub) {
     this.consoleInfo = consoleInfo;
     this.consoleUtil = consoleUtil;
     this.serverPreparer = serverPreparer;

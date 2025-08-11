@@ -64,6 +64,9 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.SubscribeSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.SubscribeSessionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.VersionServiceProto.GetVersionResponse;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.ControlStub;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.SessionStub;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.VersionStub;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.grpc.ControlGrpcStub;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.grpc.SessionGrpcStub;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.grpc.VersionGrpcStub;
@@ -215,7 +218,7 @@ public class OlcServerIntegrationTest {
     startServers(/* enableAtsMode= */ false, /* enableSchedulerShuffle= */ false);
 
     // Checks the server version.
-    VersionGrpcStub versionStub = new VersionGrpcStub(olcServerChannel);
+    VersionStub versionStub = new VersionGrpcStub(olcServerChannel);
     assertThat(versionStub.getVersion())
         .comparingExpectedFieldsOnly()
         .isEqualTo(
@@ -223,12 +226,12 @@ public class OlcServerIntegrationTest {
 
     // Gets the server log.
     OlcServerLogCollector olcServerLogCollector = new OlcServerLogCollector();
-    ControlGrpcStub controlStub = new ControlGrpcStub(olcServerChannel);
+    ControlStub controlStub = new ControlGrpcStub(olcServerChannel);
     StreamObserver<GetLogRequest> requestObserver = controlStub.getLog(olcServerLogCollector);
     requestObserver.onNext(GetLogRequest.newBuilder().setEnable(true).build());
 
     // Creates a session.
-    SessionGrpcStub sessionStub = new SessionGrpcStub(olcServerChannel);
+    SessionStub sessionStub = new SessionGrpcStub(olcServerChannel);
     CreateSessionRequest createSessionRequest =
         createCreateSessionRequest(
             SessionPluginForTestingConfig.newBuilder()
@@ -313,7 +316,7 @@ public class OlcServerIntegrationTest {
     startServers(/* enableAtsMode= */ true, /* enableSchedulerShuffle= */ true);
 
     // Checks the server version.
-    VersionGrpcStub versionStub = new VersionGrpcStub(olcServerChannel);
+    VersionStub versionStub = new VersionGrpcStub(olcServerChannel);
     assertThat(versionStub.getVersion())
         .comparingExpectedFieldsOnly()
         .isEqualTo(
@@ -339,7 +342,7 @@ public class OlcServerIntegrationTest {
             "NoOpDevice-0", "NoOpDevice-1", "NoOpDevice-2", "NoOpDevice-3", "NoOpDevice-4");
 
     // Creates a session.
-    SessionGrpcStub sessionStub = new SessionGrpcStub(olcServerChannel);
+    SessionStub sessionStub = new SessionGrpcStub(olcServerChannel);
     String fakeJobFilePath = tmpFolder.newFile().getAbsolutePath();
     CreateSessionRequest createSessionRequest =
         createCreateSessionRequest(
@@ -400,7 +403,7 @@ public class OlcServerIntegrationTest {
     assertThat(sessionLog).contains("Session finished, session_id=" + sessionId.getId());
 
     // Verifies the server is killed.
-    ControlGrpcStub controlStub = new ControlGrpcStub(olcServerChannel);
+    ControlStub controlStub = new ControlGrpcStub(olcServerChannel);
     assertThat(olcServerProcess.isAlive()).isTrue();
     KillServerResponse killServerResponse =
         controlStub.killServer(KillServerRequest.getDefaultInstance());
@@ -417,7 +420,7 @@ public class OlcServerIntegrationTest {
     startServers(/* enableAtsMode= */ true, /* enableSchedulerShuffle= */ true);
 
     // Checks the server version.
-    VersionGrpcStub versionStub = new VersionGrpcStub(olcServerChannel);
+    VersionStub versionStub = new VersionGrpcStub(olcServerChannel);
     assertThat(versionStub.getVersion())
         .comparingExpectedFieldsOnly()
         .isEqualTo(
@@ -443,7 +446,7 @@ public class OlcServerIntegrationTest {
             "NoOpDevice-0", "NoOpDevice-1", "NoOpDevice-2", "NoOpDevice-3", "NoOpDevice-4");
 
     // Creates a session.
-    SessionGrpcStub sessionStub = new SessionGrpcStub(olcServerChannel);
+    SessionStub sessionStub = new SessionGrpcStub(olcServerChannel);
     String fakeJobFilePath = tmpFolder.newFile().getAbsolutePath();
     CreateSessionRequest createSessionRequest =
         createCreateSessionRequest(
@@ -486,7 +489,7 @@ public class OlcServerIntegrationTest {
     assertThat(sessionLog).contains("Session finished, session_id=" + sessionId.getId());
 
     // Verifies the server is killed.
-    ControlGrpcStub controlStub = new ControlGrpcStub(olcServerChannel);
+    ControlStub controlStub = new ControlGrpcStub(olcServerChannel);
     assertThat(olcServerProcess.isAlive()).isTrue();
     KillServerResponse killServerResponse =
         controlStub.killServer(KillServerRequest.getDefaultInstance());
@@ -727,7 +730,7 @@ public class OlcServerIntegrationTest {
   }
 
   private static GetSessionResponse waitUntilSessionFinish(
-      SessionGrpcStub sessionStub, SessionId sessionId, Duration timeout)
+      SessionStub sessionStub, SessionId sessionId, Duration timeout)
       throws ExecutionException, TimeoutException, InterruptedException {
     SubscribeSessionResponseObserver subscribeSessionResponseObserver =
         new SubscribeSessionResponseObserver();

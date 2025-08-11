@@ -70,7 +70,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.RunSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.RunSessionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.SessionFilter;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.grpc.SessionGrpcStub;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.SessionStub;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.util.SessionQueryUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
@@ -113,7 +113,7 @@ public class AtsSessionStub {
                           AtsSessionPluginOutput.getDescriptor()))
                   .build());
 
-  private final Provider<SessionGrpcStub> sessionStubProvider;
+  private final Provider<SessionStub> sessionStubProvider;
   private final String clientId;
   private final ListeningExecutorService threadPool;
   private final Sleeper sleeper;
@@ -121,7 +121,7 @@ public class AtsSessionStub {
 
   @Inject
   AtsSessionStub(
-      @ServerStub(ServerStub.Type.SESSION_SERVICE) Provider<SessionGrpcStub> sessionStubProvider,
+      @ServerStub(ServerStub.Type.SESSION_SERVICE) Provider<SessionStub> sessionStubProvider,
       @ClientId String clientId,
       ListeningExecutorService threadPool,
       Sleeper sleeper,

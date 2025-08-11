@@ -30,13 +30,13 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.C
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.SetLogLevelRequest;
-import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.ControlStub;
 import io.grpc.Channel;
 import io.grpc.stub.StreamObserver;
 import java.time.Duration;
 
 /** gRPC stub of {@link ControlServiceGrpc}. */
-public class ControlGrpcStub {
+public class ControlGrpcStub implements ControlStub {
 
   private final ControlServiceBlockingStub controlServiceBlockingStub;
   private final ControlServiceStub controlServiceStub;
@@ -46,7 +46,7 @@ public class ControlGrpcStub {
     this.controlServiceStub = ControlServiceGrpc.newStub(channel);
   }
 
-  @CanIgnoreReturnValue
+  @Override
   public KillServerResponse killServer(KillServerRequest request) throws GrpcExceptionWithErrorId {
     return GrpcStubUtil.invoke(
         withDeadline(controlServiceBlockingStub, Duration.ofSeconds(20L))::killServer,
@@ -55,10 +55,12 @@ public class ControlGrpcStub {
         "Failed to kill server");
   }
 
+  @Override
   public StreamObserver<GetLogRequest> getLog(StreamObserver<GetLogResponse> responseObserver) {
     return controlServiceStub.getLog(responseObserver);
   }
 
+  @Override
   public void setLogLevel(SetLogLevelRequest request) throws GrpcExceptionWithErrorId {
     GrpcStubUtil.invoke(
         withDeadline(controlServiceBlockingStub, Duration.ofSeconds(20L))::setLogLevel,
@@ -67,6 +69,7 @@ public class ControlGrpcStub {
         "Failed to set log level");
   }
 
+  @Override
   public void heartbeat(HeartbeatRequest request) throws GrpcExceptionWithErrorId {
     GrpcStubUtil.invoke(
         withDeadline(controlServiceBlockingStub, Duration.ofSeconds(20L))::heartbeat,

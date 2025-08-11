@@ -25,12 +25,12 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.V
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.VersionServiceGrpc.VersionServiceBlockingStub;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.VersionServiceProto.GetVersionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.VersionServiceProto.GetVersionResponse;
-import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.VersionStub;
 import io.grpc.Channel;
 import java.time.Duration;
 
 /** gRPC stub of {@link VersionServiceGrpc}. */
-public class VersionGrpcStub {
+public class VersionGrpcStub implements VersionStub {
 
   private final VersionServiceBlockingStub versionServiceStub;
 
@@ -38,7 +38,7 @@ public class VersionGrpcStub {
     this.versionServiceStub = VersionServiceGrpc.newBlockingStub(channel);
   }
 
-  @CanIgnoreReturnValue
+  @Override
   public GetVersionResponse getVersion() throws GrpcExceptionWithErrorId {
     return GrpcStubUtil.invoke(
         withDeadline(versionServiceStub, Duration.ofSeconds(10L))::getVersion,

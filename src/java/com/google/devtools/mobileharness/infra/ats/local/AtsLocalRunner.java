@@ -41,8 +41,8 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginOutput;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.RunSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.RunSessionResponse;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.grpc.ControlGrpcStub;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.grpc.SessionGrpcStub;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.ControlStub;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.SessionStub;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.inject.Guice;
@@ -82,14 +82,14 @@ public class AtsLocalRunner {
   }
 
   private final ServerPreparer serverPreparer;
-  private final ControlGrpcStub controlStub;
-  private final SessionGrpcStub sessionStub;
+  private final ControlStub controlStub;
+  private final SessionStub sessionStub;
 
   @Inject
   AtsLocalRunner(
       ServerPreparer serverPreparer,
-      @ServerStub(ServerStub.Type.CONTROL_SERVICE) ControlGrpcStub controlStub,
-      @ServerStub(ServerStub.Type.SESSION_SERVICE) SessionGrpcStub sessionStub) {
+      @ServerStub(ServerStub.Type.CONTROL_SERVICE) ControlStub controlStub,
+      @ServerStub(ServerStub.Type.SESSION_SERVICE) SessionStub sessionStub) {
     this.serverPreparer = serverPreparer;
     this.controlStub = controlStub;
     this.sessionStub = sessionStub;

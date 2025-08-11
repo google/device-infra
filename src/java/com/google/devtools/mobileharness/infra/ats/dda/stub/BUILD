@@ -33,6 +33,7 @@ java_library(
         "//src/java/com/google/devtools/common/metrics/stability/converter",
         "//src/java/com/google/devtools/common/metrics/stability/converter:deserialized_exception",
         "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:session_stub",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub/grpc:session_grpc_stub",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/util:session_error_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",

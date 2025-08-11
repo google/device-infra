@@ -42,12 +42,13 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.RunSessionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.SubscribeSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.SubscribeSessionResponse;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.SessionStub;
 import io.grpc.Channel;
 import io.grpc.stub.StreamObserver;
 import java.time.Duration;
 
 /** gRPC stub of {@link SessionServiceGrpc}. */
-public class SessionGrpcStub {
+public class SessionGrpcStub implements SessionStub {
 
   private final SessionServiceBlockingStub sessionServiceBlockingStub;
   private final SessionServiceStub sessionServiceStub;
@@ -57,6 +58,7 @@ public class SessionGrpcStub {
     this.sessionServiceStub = SessionServiceGrpc.newStub(channel);
   }
 
+  @Override
   public CreateSessionResponse createSession(CreateSessionRequest request)
       throws GrpcExceptionWithErrorId {
     return GrpcStubUtil.invoke(
@@ -66,6 +68,7 @@ public class SessionGrpcStub {
         "Failed to create session");
   }
 
+  @Override
   public RunSessionResponse runSession(RunSessionRequest request) throws GrpcExceptionWithErrorId {
     return GrpcStubUtil.invoke(
         withDeadline(sessionServiceBlockingStub, Duration.ofMinutes(2L))::runSession,
@@ -74,6 +77,7 @@ public class SessionGrpcStub {
         "Failed to run session");
   }
 
+  @Override
   public GetSessionResponse getSession(GetSessionRequest request) throws GrpcExceptionWithErrorId {
     return GrpcStubUtil.invoke(
         withDeadline(sessionServiceBlockingStub, Duration.ofSeconds(40L))::getSession,
@@ -82,6 +86,7 @@ public class SessionGrpcStub {
         "Failed to get session");
   }
 
+  @Override
   public GetAllSessionsResponse getAllSessions(GetAllSessionsRequest request)
       throws GrpcExceptionWithErrorId {
     return GrpcStubUtil.invoke(
@@ -91,11 +96,13 @@ public class SessionGrpcStub {
         "Failed to get all sessions");
   }
 
+  @Override
   public StreamObserver<SubscribeSessionRequest> subscribeSession(
       StreamObserver<SubscribeSessionResponse> responseObserver) {
     return sessionServiceStub.subscribeSession(responseObserver);
   }
 
+  @Override
   public NotifySessionResponse notifySession(NotifySessionRequest request)
       throws GrpcExceptionWithErrorId {
     return GrpcStubUtil.invoke(
@@ -105,6 +112,7 @@ public class SessionGrpcStub {
         "Failed to notify a specific session");
   }
 
+  @Override
   public NotifyAllSessionsResponse notifyAllSessions(NotifyAllSessionsRequest request)
       throws GrpcExceptionWithErrorId {
     return GrpcStubUtil.invoke(
@@ -114,6 +122,7 @@ public class SessionGrpcStub {
         "Failed to notify all sessions ");
   }
 
+  @Override
   public AbortSessionsResponse abortSessions(AbortSessionsRequest request)
       throws GrpcExceptionWithErrorId {
     return GrpcStubUtil.invoke(
@@ -123,6 +132,7 @@ public class SessionGrpcStub {
         "Failed to abort sessions");
   }
 
+  @Override
   public GetSessionManagerStatusResponse getSessionManagerStatus(
       GetSessionManagerStatusRequest request) throws GrpcExceptionWithErrorId {
     return GrpcStubUtil.invoke(
