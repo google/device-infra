@@ -24,7 +24,6 @@ import static java.util.concurrent.TimeUnit.MINUTES;
 import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.ListMultimap;
@@ -65,7 +64,7 @@ public class TestManager<T extends TestRunner> implements Runnable {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   /** Interval of checking the current active tests. */
-  private static final Duration CHECK_TEST_INTERVAL = Duration.ofSeconds(2);
+  static final Duration CHECK_TEST_INTERVAL = Duration.ofSeconds(2);
 
   /** Interval of zombie test alert. */
   private static final Duration ZOMBIE_TEST_ALERT_INTERVAL = Duration.ofMinutes(1);
@@ -85,6 +84,14 @@ public class TestManager<T extends TestRunner> implements Runnable {
 
   private final SystemUtil systemUtil;
   private final Sleeper sleeper;
+
+  /** The last has code of the running tests map, used for checking equality. */
+  private int lastHashCode = 0;
+
+  private final Object runLock = new Object();
+
+  @GuardedBy("runLock")
+  private boolean isRunning = false;
 
   public TestManager() {
     this(new SystemUtil(), Sleeper.defaultSleeper());
@@ -208,61 +215,85 @@ public class TestManager<T extends TestRunner> implements Runnable {
     }
   }
 
-  @Override
-  public void run() {
+  void startUp() {
+    synchronized (runLock) {
+      if (isRunning) {
+        throw new IllegalStateException("TestManager is already running, perhaps from Runnable?");
+      }
+      isRunning = true;
+    }
     logger.atInfo().log("Started");
-    int lastHashCode = 0;
-    while (!Thread.currentThread().isInterrupted()) {
-      try {
-        sleeper.sleep(CHECK_TEST_INTERVAL);
-        ListMultimap<JobExecutionUnit, ZombieTestInfo> zombieTests = LinkedListMultimap.create();
-        synchronized (testRunners) {
-          List<String> stoppedAndClosedTestIds = new ArrayList<>();
+  }
 
-          // Checks expired tests and tries to kill them.
-          for (TestRunner testRunner : testRunners.values()) {
-            TestExecutionUnit testExecutionUnit = testRunner.getTestExecutionUnit();
-            String testId = testExecutionUnit.locator().id();
-            boolean isTestExpired = testExecutionUnit.timer().isExpired();
-            int killCount = 0;
-            if (isTestExpired) {
-              killCount = killTimeoutTestRunner(testRunner);
-            }
-            boolean isTestRunning = testRunner.isRunning();
-            if (!isTestRunning && testRunner.isClosed()) {
-              stoppedAndClosedTestIds.add(testId);
-            }
-            if (isTestExpired && isTestRunning && killCount >= MAX_KILL_COUNT) {
-              zombieTests.put(
-                  testExecutionUnit.job(), ZombieTestInfo.create(testRunner, killCount));
-            }
+  void shutDown() {
+    logger.atInfo().log("Stopped!");
+  }
+
+  void runOneIteration() throws InterruptedException {
+    try {
+      ListMultimap<JobExecutionUnit, ZombieTestInfo> zombieTests = LinkedListMultimap.create();
+      synchronized (testRunners) {
+        List<String> stoppedAndClosedTestIds = new ArrayList<>();
+
+        // Checks expired tests and tries to kill them.
+        for (TestRunner testRunner : testRunners.values()) {
+          TestExecutionUnit testExecutionUnit = testRunner.getTestExecutionUnit();
+          String testId = testExecutionUnit.locator().id();
+          boolean isTestExpired = testExecutionUnit.timer().isExpired();
+          int killCount = 0;
+          if (isTestExpired) {
+            killCount = killTimeoutTestRunner(testRunner);
           }
-
-          // Removes stopped and closed tests.
-          // Can not used forEach here because @GuardedBy.
-          for (String testId : stoppedAndClosedTestIds) {
-            logger.atInfo().log("Remove stopped test: %s", testId);
-            testRunners.remove(testId);
+          boolean isTestRunning = testRunner.isRunning();
+          if (!isTestRunning && testRunner.isClosed()) {
+            stoppedAndClosedTestIds.add(testId);
           }
-
-          // Prints info of the running tests.
-          if (!testRunners.isEmpty() && testRunners.hashCode() != lastHashCode) {
-            logger.atInfo().log(
-                "(%d) Test Ids: %s",
-                testRunners.size(), Joiner.on(", ").join(testRunners.keySet()));
-            lastHashCode = testRunners.hashCode();
+          if (isTestExpired && isTestRunning && killCount >= MAX_KILL_COUNT) {
+            zombieTests.put(testExecutionUnit.job(), ZombieTestInfo.create(testRunner, killCount));
           }
         }
 
-        alertZombieTests(zombieTests);
+        // Removes stopped and closed tests.
+        // Can not used forEach here because @GuardedBy.
+        for (String testId : stoppedAndClosedTestIds) {
+          logger.atInfo().log("Remove stopped test: %s", testId);
+          testRunners.remove(testId);
+        }
+
+        // Prints info of the running tests.
+        if (!testRunners.isEmpty() && testRunners.hashCode() != lastHashCode) {
+          logger.atInfo().log(
+              "(%d) Test Ids: %s", testRunners.size(), Joiner.on(", ").join(testRunners.keySet()));
+          lastHashCode = testRunners.hashCode();
+        }
+      }
+
+      alertZombieTests(zombieTests);
+    } catch (InterruptedException e) {
+      throw e;
+    } catch (Exception e) {
+      // Catches all exception to keep this TestManager thread running.
+      logger.atSevere().withCause(e).log("FATAL ERROR");
+    }
+  }
+
+  @Override
+  public void run() {
+    synchronized (runLock) {
+      if (isRunning) {
+        throw new IllegalStateException(
+            "TestManager is already running, perhaps from AbstractScheduledService?");
+      }
+      isRunning = true;
+    }
+    logger.atInfo().log("Started");
+    while (!Thread.interrupted()) {
+      try {
+        runOneIteration();
+        sleeper.sleep(CHECK_TEST_INTERVAL);
       } catch (InterruptedException e) {
-        logger.atWarning().log(
-            "Interrupted %s", Strings.isNullOrEmpty(e.getMessage()) ? "" : e.getMessage());
         Thread.currentThread().interrupt();
         break;
-      } catch (Exception e) {
-        // Catches all exception to keep this TestManager thread running.
-        logger.atSevere().withCause(e).log("FATAL ERROR");
       }
     }
     logger.atInfo().log("Stopped!");
