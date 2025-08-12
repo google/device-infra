@@ -19,11 +19,13 @@ package com.google.wireless.qa.mobileharness.shared.api.validator.job;
 import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.wireless.qa.mobileharness.shared.api.spec.MoblyAospPackageTestSpec;
+import com.google.wireless.qa.mobileharness.shared.api.spec.MoblyAospTestSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Files;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
@@ -38,9 +40,9 @@ import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
 @RunWith(JUnit4.class)
-public final class MoblyAospPackageTestJobValidatorTest {
+public final class MoblyAospTestJobValidatorTest {
 
-  private MoblyAospPackageTestJobValidator validator;
+  private MoblyAospTestJobValidator validator;
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
   @Mock private JobInfo mockJobInfo;
@@ -49,14 +51,15 @@ public final class MoblyAospPackageTestJobValidatorTest {
 
   @Before
   public void setUp() {
-    validator = new MoblyAospPackageTestJobValidator();
+    validator = new MoblyAospTestJobValidator();
     when(mockJobInfo.files()).thenReturn(jobFiles);
     when(mockJobInfo.params()).thenReturn(jobParams);
+    when(jobParams.getBool("enable_mobly_aosp_test_validator", true)).thenReturn(true);
   }
 
   @Test
   public void validateJob_pass() throws Exception {
-    doNothing().when(jobFiles).checkUnique(MoblyAospPackageTestSpec.FILE_MOBLY_PKG);
+    doNothing().when(jobFiles).checkUnique(MoblyAospTestSpec.FILE_MOBLY_PKG);
 
     assertThat(validator.validate(mockJobInfo)).isEmpty();
   }
@@ -68,11 +71,19 @@ public final class MoblyAospPackageTestJobValidatorTest {
                 BasicErrorId.JOB_OR_TEST_FILE_MULTI_PATHS,
                 "More than one files/dirs marked for each tag(s)"))
         .when(jobFiles)
-        .checkUnique(MoblyAospPackageTestSpec.FILE_MOBLY_PKG);
+        .checkUnique(MoblyAospTestSpec.FILE_MOBLY_PKG);
 
     List<String> errors = validator.validate(mockJobInfo);
 
     assertThat(errors).hasSize(1);
     assertThat(errors.get(0)).contains("More than one files/dirs marked for each tag(s)");
+  }
+
+  @Test
+  public void validateJob_skipValidation() throws Exception {
+    when(jobParams.getBool("enable_mobly_aosp_test_validator", true)).thenReturn(false);
+
+    assertThat(validator.validate(mockJobInfo)).isEmpty();
+    verify(jobFiles, never()).checkUnique(MoblyAospTestSpec.FILE_MOBLY_PKG);
   }
 }
