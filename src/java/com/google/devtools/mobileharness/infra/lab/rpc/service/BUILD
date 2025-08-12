@@ -29,6 +29,13 @@ package(
 )
 
 java_library(
+    name = "annotations",
+    srcs = ["Annotations.java"],
+    visibility = ["//visibility:private"],
+    deps = ["@maven//:com_google_inject_guice"],
+)
+
+java_library(
     name = "prepare_test",
     srcs = ["PrepareTestServiceImpl.java"],
     deps = [
@@ -134,5 +141,31 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/lab/proto:stat_serv_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/stat",
         "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "test_service_module",
+    srcs = ["TestServiceModule.java"],
+    deps = [
+        ":annotations",
+        ":exec_test",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/messaging:message_sender_finder",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/messaging:messaging_manager",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/messaging:messaging_manager_holder",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test/manager:lab_direct_test_runner_util",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test/manager:proxy_test_manager",
+        "//src/java/com/google/devtools/mobileharness/shared/file/resolver:abstract_file_resolver",
+        "//src/java/com/google/devtools/mobileharness/shared/file/resolver:ats_file_server_file_resolver",
+        "//src/java/com/google/devtools/mobileharness/shared/file/resolver:cache_file_resolver",
+        "//src/java/com/google/devtools/mobileharness/shared/file/resolver:file_resolver",
+        "//src/java/com/google/devtools/mobileharness/shared/file/resolver:gcs_file_resolver",
+        "//src/java/com/google/devtools/mobileharness/shared/file/resolver:local_file_resolver",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/comm/message:test_message_manager",
+        "@maven//:com_google_guava_guava",
+        "@maven//:com_google_inject_extensions_guice_assistedinject",
+        "@maven//:com_google_inject_guice",
     ],
 )

@@ -68,6 +68,7 @@ java_library(
         "//java/com/google/wireless/qa/mobileharness/client/api:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/job:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/lab:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/service:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/api:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/controller/messaging:__subpackages__",
     ],
@@ -109,6 +110,7 @@ java_library(
     visibility = [
         "//:omnilab_fusion",
         "//src/java/com/google/devtools/mobileharness/infra/lab:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/service:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/api:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/controller/messaging:__subpackages__",
     ],
@@ -136,6 +138,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/messaging:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/client/api:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/lab:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/service:__pkg__",
     ],
     deps = [
         ":message_sender_finder",
