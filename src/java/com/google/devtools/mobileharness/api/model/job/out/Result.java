@@ -262,9 +262,7 @@ public class Result {
     @Memoized
     public Optional<MobileHarnessException> causeException() {
       return useProtoBackend()
-          ? protoBackend()
-              .map(ErrorModelConverter::toExceptionDetailWithoutNamespace)
-              .map(ErrorModelConverter::toMobileHarnessException)
+          ? protoBackend().map(ErrorModelConverter::toMobileHarnessException)
           : exceptionBackend();
     }
 

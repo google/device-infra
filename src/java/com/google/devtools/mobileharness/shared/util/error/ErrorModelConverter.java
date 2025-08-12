@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.shared.util.error;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
 import com.google.common.base.Throwables;
 import com.google.devtools.common.metrics.stability.model.proto.ErrorIdProto;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto;
@@ -23,11 +25,10 @@ import com.google.devtools.common.metrics.stability.model.proto.NamespaceProto.N
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.ErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.api.model.proto.Error.ExceptionDetail;
 import com.google.devtools.mobileharness.api.model.proto.Error.ExceptionSummary;
 import com.google.devtools.mobileharness.shared.model.error.UnknownErrorId;
 import com.google.wireless.qa.mobileharness.shared.proto.Common.ErrorInfo;
-import java.util.stream.Collectors;
+import java.util.Objects;
 import javax.annotation.Nullable;
 
 /** For converting between new and old data models of exceptions/errors. */
@@ -48,63 +49,8 @@ public class ErrorModelConverter {
         .build();
   }
 
-  /**
-   * Converts the ExceptionDetail proto from the devtools/common/metrics/stability version to the MH
-   * version.
-   *
-   * <p>Note this conversion will drop the error namespace info.
-   */
-  private static ExceptionSummary toExceptionSummaryWithoutNamespace(
-      ExceptionProto.ExceptionSummaryOrBuilder commonExceptionSummary) {
-    ErrorIdProto.ErrorId commonErrorId = commonExceptionSummary.getErrorId();
-    ExceptionSummary.Builder summary =
-        ExceptionSummary.newBuilder()
-            .setErrorCode(commonErrorId.getCode())
-            .setErrorName(commonErrorId.getName())
-            .setErrorType(commonErrorId.getType())
-            .setMessage(commonExceptionSummary.getMessage())
-            .setClassName(commonExceptionSummary.getClassType().getClassName());
-    if (commonExceptionSummary.hasStackTrace()) {
-      commonExceptionSummary.getStackTrace().getElementList().stream()
-          .map(
-              stackTraceElement ->
-                  com.google.devtools.mobileharness.api.model.proto.Error.StackTraceElement
-                      .newBuilder()
-                      .setDeclaringClass(stackTraceElement.getClassName())
-                      .setMethodName(stackTraceElement.getMethodName())
-                      .setFileName(stackTraceElement.getFileName())
-                      .setLineNumber(stackTraceElement.getLineNumber()))
-          .forEach(summary::addStackTrace);
-    }
-
-    return summary.build();
-  }
-
-  /**
-   * Converts the ExceptionDetail proto from the devtools/common/metrics/stability version to the MH
-   * version. This conversion will drop the error namespace.
-   */
-  public static ExceptionDetail toExceptionDetailWithoutNamespace(
-      ExceptionProto.ExceptionDetail commonExceptionDetail) {
-    ExceptionDetail.Builder mhExceptionDetail = ExceptionDetail.newBuilder();
-    if (commonExceptionDetail.hasSummary()) {
-      mhExceptionDetail.setSummary(
-          toExceptionSummaryWithoutNamespace(commonExceptionDetail.getSummary()));
-    }
-    if (commonExceptionDetail.hasCause()) {
-      mhExceptionDetail.setCause(
-          toExceptionDetailWithoutNamespace(commonExceptionDetail.getCause()));
-    }
-    commonExceptionDetail
-        .getSuppressedList()
-        .forEach(
-            commonSuppressed ->
-                mhExceptionDetail.addSuppressed(
-                    toExceptionDetailWithoutNamespace(commonSuppressed)));
-    return mhExceptionDetail.build();
-  }
-
-  public static MobileHarnessException toMobileHarnessException(ExceptionDetail detail) {
+  public static MobileHarnessException toMobileHarnessException(
+      ExceptionProto.ExceptionDetail detail) {
     ErrorId errorId = getErrorId(detail);
     String errorMessage = getErrorMessage(errorId, detail.getSummary());
     MobileHarnessException cause = null;
@@ -119,12 +65,15 @@ public class ErrorModelConverter {
     return result;
   }
 
-  private static ErrorId getErrorId(ExceptionDetail detail) {
+  private static ErrorId getErrorId(ExceptionProto.ExceptionDetail detail) {
     ErrorId errorId;
     if (detail.hasSummary()) {
-      ExceptionSummary summary = detail.getSummary();
+      ExceptionProto.ExceptionSummary summary = detail.getSummary();
       errorId =
-          UnknownErrorId.of(summary.getErrorCode(), summary.getErrorName(), summary.getErrorType());
+          UnknownErrorId.of(
+              summary.getErrorId().getCode(),
+              summary.getErrorId().getName(),
+              summary.getErrorId().getType());
     } else {
       errorId = BasicErrorId.NON_MH_EXCEPTION;
     }
@@ -171,22 +120,26 @@ public class ErrorModelConverter {
         .build();
   }
 
-  private static java.lang.StackTraceElement[] getStackTrace(ExceptionSummary summary) {
-    return summary.getStackTraceList().stream()
+  private static StackTraceElement[] getStackTrace(ExceptionProto.ExceptionSummary summary) {
+    return summary.getStackTrace().getElementList().stream()
         .map(
             stackTraceElement ->
-                new java.lang.StackTraceElement(
-                    stackTraceElement.getDeclaringClass(),
+                new StackTraceElement(
+                    stackTraceElement.getClassName(),
                     stackTraceElement.getMethodName(),
                     stackTraceElement.getFileName(),
                     stackTraceElement.getLineNumber()))
-        .collect(Collectors.toList())
-        .toArray(new java.lang.StackTraceElement[summary.getStackTraceCount()]);
+        .collect(toImmutableList())
+        .toArray(new StackTraceElement[summary.getStackTrace().getElementCount()]);
   }
 
-  private static String getErrorMessage(ErrorId errorId, ExceptionSummary exceptionSummary) {
-    return BasicErrorId.NON_MH_EXCEPTION.equals(errorId)
-        ? exceptionSummary.getMessage() + " (" + exceptionSummary.getClassName() + ")"
+  private static String getErrorMessage(
+      ErrorId errorId, ExceptionProto.ExceptionSummary exceptionSummary) {
+    return Objects.equals(errorId, BasicErrorId.NON_MH_EXCEPTION)
+        ? exceptionSummary.getMessage()
+            + " ("
+            + exceptionSummary.getClassType().getClassName()
+            + ")"
         : exceptionSummary.getMessage();
   }
 }
