@@ -33,14 +33,12 @@ import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.a
 import com.google.devtools.mobileharness.api.model.job.out.Result;
 import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
-import com.google.devtools.mobileharness.infra.ats.console.result.proto.ResultProto.ModuleRunResult;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfo;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfoFactory;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.MoblyReportHelper;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
-import com.google.protobuf.TextFormat;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
@@ -148,20 +146,6 @@ public final class NonTradefedReportGeneratorTest {
     verify(moblyReportHelper)
         .generateBuildAttributesFile(
             SERIAL, Path.of("/gen"), /* skipCollectBuildPrefixAttribute= */ false);
-    verify(localFileUtil)
-        .writeToFile(
-            eq(
-                Path.of("/gen")
-                    .resolve("ats_module_run_result.textproto")
-                    .toAbsolutePath()
-                    .toString()),
-            eq(
-                TextFormat.printer()
-                    .printToString(
-                        ModuleRunResult.newBuilder()
-                            .setResult(TestResult.PASS)
-                            .setCause("PASS")
-                            .build())));
   }
 
   @Test
@@ -208,14 +192,6 @@ public final class NonTradefedReportGeneratorTest {
     verify(moblyReportHelper, never())
         .generateResultAttributesFile(any(), any(), any(), any(), any());
     verify(moblyReportHelper, never()).generateBuildAttributesFile(any(), any(), anyBoolean());
-    verify(localFileUtil, never())
-        .writeToFile(
-            eq(
-                Path.of("/gen")
-                    .resolve("ats_module_run_result.textproto")
-                    .toAbsolutePath()
-                    .toString()),
-            anyString());
   }
 
   @Test
