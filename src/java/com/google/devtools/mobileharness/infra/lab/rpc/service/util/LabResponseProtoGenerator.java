@@ -27,7 +27,6 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.infra.lab.controller.FilePublisher;
 import com.google.devtools.mobileharness.infra.lab.controller.ForwardingTestMessageBuffer;
 import com.google.devtools.mobileharness.shared.util.comm.messaging.message.TestMessageInfo;
-import com.google.devtools.mobileharness.shared.util.error.ErrorModelConverter;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.message.StrPairUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
@@ -82,10 +81,6 @@ public class LabResponseProtoGenerator {
             .addAllTestProperty(StrPairUtil.convertMapToList(testInfo.properties().getAll()));
 
     // Test warnings.
-    builder.addAllTestWarning(
-        testInfo.warnings().getAll().stream()
-            .map(ErrorModelConverter::toExceptionDetailWithoutNamespace)
-            .collect(toImmutableList()));
     builder.addAllTestWarningExceptionDetail(testInfo.warnings().getAll());
 
     // Generated files.
