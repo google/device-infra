@@ -709,7 +709,7 @@ public class CompatibilityReportMerger {
   private ParseResult parseMoblyReport(MoblyReportInfo moblyReportInfo)
       throws MobileHarnessException {
     return ParseResult.of(
-        Optional.ofNullable(moblyReportInfo.moblySummaryFile()),
+        moblyReportInfo.moblySummaryFile(),
         moblyReportParser.parseMoblyTestResult(moblyReportInfo));
   }
 

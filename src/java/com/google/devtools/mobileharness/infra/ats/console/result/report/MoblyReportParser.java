@@ -85,49 +85,54 @@ public class MoblyReportParser {
   public Optional<Result> parseMoblyTestResult(MoblyReportInfo moblyReportInfo)
       throws MobileHarnessException {
     AttributeList resultAttributesList = AttributeList.getDefaultInstance();
-    if (localFileUtil.isFileExist(moblyReportInfo.resultAttributesFile())) {
+    if (moblyReportInfo.resultAttributesFile().isPresent()
+        && localFileUtil.isFileExist(moblyReportInfo.resultAttributesFile().get())) {
       try {
         resultAttributesList =
             TextFormat.parse(
-                localFileUtil.readFile(moblyReportInfo.resultAttributesFile()),
+                localFileUtil.readFile(moblyReportInfo.resultAttributesFile().get()),
                 AttributeList.class);
       } catch (MobileHarnessException | ParseException e) {
         logger.atWarning().log(
             "Failed to parse result attributes file [%s]: %s",
-            moblyReportInfo.resultAttributesFile(), MoreThrowables.shortDebugString(e));
+            moblyReportInfo.resultAttributesFile().get(), MoreThrowables.shortDebugString(e));
       }
     }
 
     AttributeList buildAttributesList = AttributeList.getDefaultInstance();
-    if (localFileUtil.isFileExist(moblyReportInfo.buildAttributesFile())) {
+    if (moblyReportInfo.buildAttributesFile().isPresent()
+        && localFileUtil.isFileExist(moblyReportInfo.buildAttributesFile().get())) {
       try {
         buildAttributesList =
             TextFormat.parse(
-                localFileUtil.readFile(moblyReportInfo.buildAttributesFile()), AttributeList.class);
+                localFileUtil.readFile(moblyReportInfo.buildAttributesFile().get()),
+                AttributeList.class);
       } catch (MobileHarnessException | ParseException e) {
         logger.atWarning().log(
             "Failed to parse build attributes file [%s]: %s",
-            moblyReportInfo.buildAttributesFile(), MoreThrowables.shortDebugString(e));
+            moblyReportInfo.buildAttributesFile().get(), MoreThrowables.shortDebugString(e));
       }
     }
 
     ModuleRunResult moduleRunResult = null;
-    if (localFileUtil.isFileExist(moblyReportInfo.moduleResultFile())) {
+    if (moblyReportInfo.moduleResultFile().isPresent()
+        && localFileUtil.isFileExist(moblyReportInfo.moduleResultFile().get())) {
       try {
         moduleRunResult =
             TextFormat.parse(
-                localFileUtil.readFile(moblyReportInfo.moduleResultFile()), ModuleRunResult.class);
+                localFileUtil.readFile(moblyReportInfo.moduleResultFile().get()),
+                ModuleRunResult.class);
       } catch (MobileHarnessException | ParseException e) {
         logger.atWarning().log(
             "Failed to parse ats module result file [%s]: %s",
-            moblyReportInfo.moduleResultFile(), MoreThrowables.shortDebugString(e));
+            moblyReportInfo.moduleResultFile().get(), MoreThrowables.shortDebugString(e));
       }
     }
 
     BuildInfo.Builder buildInfoBuilder =
         BuildInfo.newBuilder().addAllAttribute(buildAttributesList.getAttributeList());
-    if (moblyReportInfo.deviceBuildFingerprint() != null) {
-      buildInfoBuilder.setBuildFingerprint(moblyReportInfo.deviceBuildFingerprint());
+    if (moblyReportInfo.deviceBuildFingerprint().isPresent()) {
+      buildInfoBuilder.setBuildFingerprint(moblyReportInfo.deviceBuildFingerprint().get());
     }
 
     Result.Builder resultBuilder =
@@ -146,14 +151,16 @@ public class MoblyReportParser {
     }
 
     ImmutableList<MoblyYamlDocEntry> moblyDocEntries = ImmutableList.of();
-    if (moblyReportInfo.moblySummaryFile() != null) {
+    if (moblyReportInfo.moblySummaryFile().isPresent()) {
       try {
-        moblyDocEntries = moblyYamlParser.parse(moblyReportInfo.moblySummaryFile().toString());
+        moblyDocEntries =
+            moblyYamlParser.parse(moblyReportInfo.moblySummaryFile().get().toString());
       } catch (MobileHarnessException | IOException e) {
         throw new MobileHarnessException(
             ExtErrorId.MOBLY_REPORT_PARSER_PARSE_SUMMARY_FILE_ERROR,
             String.format(
-                "Failed to parse Mobly test summary file %s", moblyReportInfo.moblySummaryFile()),
+                "Failed to parse Mobly test summary file %s",
+                moblyReportInfo.moblySummaryFile().get()),
             e);
       }
 
@@ -260,11 +267,11 @@ public class MoblyReportParser {
         String moblyPackageName,
         @Nullable String moduleAbi,
         @Nullable String moduleParameter,
-        @Nullable Path moblySummaryFile,
-        Path resultAttributesFile,
-        @Nullable String deviceBuildFingerprint,
-        Path buildAttributesFile,
-        Path moduleResultFile) {
+        Optional<Path> moblySummaryFile,
+        Optional<Path> resultAttributesFile,
+        Optional<String> deviceBuildFingerprint,
+        Optional<Path> buildAttributesFile,
+        Optional<Path> moduleResultFile) {
       return new AutoValue_MoblyReportParser_MoblyReportInfo(
           moblyPackageName,
           moduleAbi,
@@ -291,33 +298,31 @@ public class MoblyReportParser {
      * The path of the Mobly test summary file being parsed. It could be empty in some cases like
      * the test is skipped.
      */
-    @Nullable
-    public abstract Path moblySummaryFile();
+    public abstract Optional<Path> moblySummaryFile();
 
     /**
      * The path of the text proto file that stores {@link AttributeList} which will be set in the
      * {@link Result}.{@code attribute}.
      */
-    public abstract Path resultAttributesFile();
+    public abstract Optional<Path> resultAttributesFile();
 
     /**
      * The build fingerprint for the major device on which the test run, it's used to identify the
      * generated report.
      */
-    @Nullable
-    public abstract String deviceBuildFingerprint();
+    public abstract Optional<String> deviceBuildFingerprint();
 
     /**
      * The path of the text proto file that stores {@link AttributeList} which will be set in the
      * {@link BuildInfo}.{@code attribute}.
      */
-    public abstract Path buildAttributesFile();
+    public abstract Optional<Path> buildAttributesFile();
 
     /**
      * The path of the text proto file that stores {@link
      * com.google.devtools.mobileharness.infra.ats.console.result.proto.ResultProto.ModuleRunResult}
      * which is used as a backup result from ATS if the Mobly result file wasn't created.
      */
-    public abstract Path moduleResultFile();
+    public abstract Optional<Path> moduleResultFile();
   }
 }

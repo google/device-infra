@@ -382,9 +382,9 @@ public class SessionResultHandlerUtil {
                               res.moduleName(),
                               res.moduleAbi().orElse(null),
                               res.moduleParameter().orElse(null),
-                              res.testSummaryFile().orElse(null),
+                              res.testSummaryFile(),
                               res.resultAttributesFile(),
-                              res.deviceBuildFingerprint().orElse(null),
+                              res.deviceBuildFingerprint(),
                               res.buildAttributesFile(),
                               res.moduleResultFile())));
               return null;
@@ -1004,7 +1004,7 @@ public class SessionResultHandlerUtil {
      * com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.AttributeList}
      * which will be set in the {@link Result}.{@code attribute}.
      */
-    public abstract Path resultAttributesFile();
+    public abstract Optional<Path> resultAttributesFile();
 
     /**
      * The path of the text proto file that stores {@link
@@ -1013,14 +1013,14 @@ public class SessionResultHandlerUtil {
      * com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.BuildInfo}.{@code
      * attribute}.
      */
-    public abstract Path buildAttributesFile();
+    public abstract Optional<Path> buildAttributesFile();
 
     /**
      * The path of the text proto file that stores {@link
      * com.google.devtools.mobileharness.infra.ats.console.result.proto.ResultProto.ModuleRunResult}
      * which is used as a backup result from ATS if the Mobly result file wasn't created.
      */
-    public abstract Path moduleResultFile();
+    public abstract Optional<Path> moduleResultFile();
 
     public static Builder builder() {
       return new AutoValue_SessionResultHandlerUtil_NonTradefedTestResult.Builder();

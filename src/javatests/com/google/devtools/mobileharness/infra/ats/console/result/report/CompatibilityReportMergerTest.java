@@ -266,20 +266,20 @@ public final class CompatibilityReportMergerTest {
                     "mobly-package-1",
                     "module-abi",
                     "module-parameter",
-                    Path.of(MOBLY_TEST_SUMMARY_FILE_1),
-                    Path.of(MOBLY_RESULT_ATTR_FILE_1),
-                    DEVICE_BUILD_FINGERPRINT,
-                    Path.of(MOBLY_BUILD_ATTR_FILE_1),
-                    Path.of(MODULE_RESULT_FILE_1)),
+                    Optional.of(Path.of(MOBLY_TEST_SUMMARY_FILE_1)),
+                    Optional.of(Path.of(MOBLY_RESULT_ATTR_FILE_1)),
+                    Optional.of(DEVICE_BUILD_FINGERPRINT),
+                    Optional.of(Path.of(MOBLY_BUILD_ATTR_FILE_1)),
+                    Optional.of(Path.of(MODULE_RESULT_FILE_1))),
                 MoblyReportInfo.of(
                     "mobly-package-2",
                     "module-abi",
                     "module-parameter",
-                    Path.of(MOBLY_TEST_SUMMARY_FILE_2),
-                    Path.of(MOBLY_RESULT_ATTR_FILE_2),
-                    DEVICE_BUILD_FINGERPRINT,
-                    Path.of(MOBLY_BUILD_ATTR_FILE_2),
-                    Path.of(MODULE_RESULT_FILE_2))));
+                    Optional.of(Path.of(MOBLY_TEST_SUMMARY_FILE_2)),
+                    Optional.of(Path.of(MOBLY_RESULT_ATTR_FILE_2)),
+                    Optional.of(DEVICE_BUILD_FINGERPRINT),
+                    Optional.of(Path.of(MOBLY_BUILD_ATTR_FILE_2)),
+                    Optional.of(Path.of(MODULE_RESULT_FILE_2)))));
 
     assertThat(res).hasSize(2);
     assertThat(res.get(0).report().get().getModuleInfoList()).hasSize(1);
@@ -295,20 +295,20 @@ public final class CompatibilityReportMergerTest {
                     "mobly-package-1",
                     "module-abi",
                     "module-parameter",
-                    Path.of(MOBLY_TEST_SUMMARY_FILE_1),
-                    Path.of(MOBLY_RESULT_ATTR_FILE_1),
-                    DEVICE_BUILD_FINGERPRINT,
-                    Path.of(MOBLY_BUILD_ATTR_FILE_1),
-                    Path.of(MODULE_RESULT_FILE_1)),
+                    Optional.of(Path.of(MOBLY_TEST_SUMMARY_FILE_1)),
+                    Optional.of(Path.of(MOBLY_RESULT_ATTR_FILE_1)),
+                    Optional.of(DEVICE_BUILD_FINGERPRINT),
+                    Optional.of(Path.of(MOBLY_BUILD_ATTR_FILE_1)),
+                    Optional.of(Path.of(MODULE_RESULT_FILE_1))),
                 MoblyReportInfo.of(
                     "mobly-package-2",
                     "module-abi",
                     "module-parameter",
-                    Path.of(MOBLY_TEST_SUMMARY_FILE_2),
-                    Path.of(MOBLY_RESULT_ATTR_FILE_2),
-                    DEVICE_BUILD_FINGERPRINT,
-                    Path.of(MOBLY_BUILD_ATTR_FILE_2),
-                    Path.of(MODULE_RESULT_FILE_2))),
+                    Optional.of(Path.of(MOBLY_TEST_SUMMARY_FILE_2)),
+                    Optional.of(Path.of(MOBLY_RESULT_ATTR_FILE_2)),
+                    Optional.of(DEVICE_BUILD_FINGERPRINT),
+                    Optional.of(Path.of(MOBLY_BUILD_ATTR_FILE_2)),
+                    Optional.of(Path.of(MODULE_RESULT_FILE_2)))),
             /* skipDeviceInfo= */ false);
 
     assertThat(res).isPresent();
