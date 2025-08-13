@@ -30,6 +30,7 @@ go_library(
     visibility = ["//src/devtools/rbe/casviewer:__subpackages__"],
     deps = [
         "//src/devtools/rbe/casuploader/chunker",
+        "@com_github_golang_glog//:glog",
         "@com_github_hanwen_go_fuse_v2//fuse",
     ],
 )

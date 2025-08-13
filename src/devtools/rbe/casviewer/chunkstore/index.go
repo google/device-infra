@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"time"
 
+	log "github.com/golang/glog"
 	"github.com/google/device-infra/src/devtools/rbe/casuploader/chunker"
 	"github.com/hanwen/go-fuse/v2/fuse"
 )
@@ -48,17 +49,20 @@ func getFileSize(filePath string) (int64, error) {
 
 // NewChunkStore creates a new ChunkStore from the given index path.
 func NewChunkStore(chunkDir, indexPath string) (*ChunkStore, error) {
+	log.Infof("Reading index file: %s", indexPath)
 	data, err := os.ReadFile(indexPath)
 	if err != nil {
 		return nil, err
 	}
 
+	log.Infof("Unmarshaling index file (size: %d)", len(data))
 	var files []FileInfo
 	if err := json.Unmarshal(data, &files); err != nil {
 		return nil, err
 	}
 
 	// Calculate file sizes -
+	log.Infof("Calculating file sizes for %d files...", len(files))
 	fileMap := map[string]*FileInfo{}
 	for i, file := range files {
 		fileMap[file.Path] = &files[i]
@@ -83,7 +87,11 @@ func NewChunkStore(chunkDir, indexPath string) (*ChunkStore, error) {
 			fileSize = chunk.Offset + int64(length)
 		}
 		files[i].Size = fileSize
+		// A device image typically has 2 dozen files and this is called once per mount, so this
+		// shouldn't be too spammy.
+		log.Infof("File %s: %d bytes", file.Path, fileSize)
 	}
+	log.Infof("Done calculating file sizes")
 
 	return &ChunkStore{
 		chunkDir: chunkDir,
