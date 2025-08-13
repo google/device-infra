@@ -43,8 +43,11 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import javax.inject.Inject;
+import javax.inject.Singleton;
 
 /** Sync job information to MH master. */
+@Singleton
 public class MasterSyncerForJob implements Runnable {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -71,6 +74,7 @@ public class MasterSyncerForJob implements Runnable {
   private final AtomicBoolean inDrainingMode = new AtomicBoolean(false);
 
   /** Sync local Lab Job information to MH master. */
+  @Inject
   public MasterSyncerForJob(
       JobManager jobManager, JobSyncHelper jobSyncHelper, DeviceStateChecker deviceStateChecker) {
     this(

@@ -31,6 +31,7 @@ import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
+import javax.inject.Inject;
 
 /** RPC stub helper for talking to MobileHarness Master V5 JobSyncService. */
 public class JobSyncHelper {
@@ -45,6 +46,7 @@ public class JobSyncHelper {
    *
    * @param jobSyncStub the master stub for syncing job
    */
+  @Inject
   public JobSyncHelper(JobSyncStub jobSyncStub) {
     this.jobSyncStub = jobSyncStub;
   }
