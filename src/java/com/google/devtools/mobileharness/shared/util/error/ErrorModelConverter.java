@@ -19,13 +19,10 @@ package com.google.devtools.mobileharness.shared.util.error;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.google.common.base.Throwables;
-import com.google.devtools.common.metrics.stability.model.proto.ErrorIdProto;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto;
-import com.google.devtools.common.metrics.stability.model.proto.NamespaceProto.Namespace;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.ErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.api.model.proto.Error.ExceptionSummary;
 import com.google.devtools.mobileharness.shared.model.error.UnknownErrorId;
 import com.google.wireless.qa.mobileharness.shared.proto.Common.ErrorInfo;
 import java.util.Objects;
@@ -35,19 +32,6 @@ import javax.annotation.Nullable;
 public class ErrorModelConverter {
 
   private ErrorModelConverter() {}
-
-  /**
-   * Converts the ErrorId proto from the MH version to the devtools/common/metrics/stability
-   * version. Will always set the namespace to MH.
-   */
-  public static ErrorIdProto.ErrorId toCommonErrorId(ExceptionSummary mhExceptionSummary) {
-    return ErrorIdProto.ErrorId.newBuilder()
-        .setCode(mhExceptionSummary.getErrorCode())
-        .setName(mhExceptionSummary.getErrorName())
-        .setType(mhExceptionSummary.getErrorType())
-        .setNamespace(Namespace.MH)
-        .build();
-  }
 
   public static MobileHarnessException toMobileHarnessException(
       ExceptionProto.ExceptionDetail detail) {

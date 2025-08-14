@@ -54,15 +54,3 @@ message ExceptionSummary {
 
   repeated StackTraceElement stack_trace = 6;
 }
-
-message ExceptionDetail {
-  option deprecated = true;
-
-  ExceptionSummary summary = 1;
-  // Optional.
-  ExceptionDetail cause = 2;
-  // Optional. See https://docs.oracle.com/javase/7/docs/api/java/lang/\
-  // Throwable.html#getSuppressed().
-  repeated ExceptionDetail suppressed = 3;
-  // NEXT FIELD TO USE = 5;
-}
