@@ -27,6 +27,7 @@ import com.google.devtools.mobileharness.api.messaging.MessageDestinationNotFoun
 import com.google.devtools.mobileharness.api.messaging.proto.MessagingProto;
 import com.google.devtools.mobileharness.api.messaging.proto.MessagingProto.MessageReceptions;
 import com.google.devtools.mobileharness.api.messaging.proto.MessagingProto.MessageSend;
+import com.google.devtools.mobileharness.infra.controller.messaging.Annotations.MessagingManagerThreadPool;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -47,7 +48,9 @@ public class MessagingManager {
   private final ListeningExecutorService threadPool;
 
   @Inject
-  MessagingManager(MessageSenderFinder messageSenderFinder, ListeningExecutorService threadPool) {
+  MessagingManager(
+      MessageSenderFinder messageSenderFinder,
+      @MessagingManagerThreadPool ListeningExecutorService threadPool) {
     this.messageSenderFinder = messageSenderFinder;
     this.threadPool = threadPool;
   }

@@ -39,6 +39,7 @@ import com.google.devtools.mobileharness.api.messaging.proto.MessagingProto.Mess
 import com.google.devtools.mobileharness.api.messaging.proto.MessagingProto.MessageReceptions;
 import com.google.devtools.mobileharness.api.messaging.proto.MessagingProto.MessageSend;
 import com.google.devtools.mobileharness.api.messaging.proto.MessagingProto.MessageSubscriberInfo;
+import com.google.devtools.mobileharness.infra.controller.messaging.Annotations.MessagingManagerThreadPool;
 import com.google.devtools.mobileharness.infra.controller.messaging.MessageSubscriberBackend.MessageSubscribers;
 import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
 import com.google.inject.Guice;
@@ -68,7 +69,8 @@ public class MessagingManagerTest {
 
   @Bind @Mock private MessageSenderFinder messageSenderFinder;
 
-  @Bind private final ListeningExecutorService threadPool = newDirectExecutorService();
+  @Bind @MessagingManagerThreadPool
+  private final ListeningExecutorService threadPool = newDirectExecutorService();
 
   @Inject private MessagingManager messagingManager;
   @Inject private MessageSender messageSender;

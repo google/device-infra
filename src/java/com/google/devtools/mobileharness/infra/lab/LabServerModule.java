@@ -34,6 +34,7 @@ import com.google.devtools.mobileharness.infra.controller.device.external.NoopEx
 import com.google.devtools.mobileharness.infra.controller.messaging.MessageSenderFinder;
 import com.google.devtools.mobileharness.infra.controller.messaging.MessagingManager;
 import com.google.devtools.mobileharness.infra.controller.messaging.MessagingManagerHolder;
+import com.google.devtools.mobileharness.infra.controller.messaging.MessagingServiceModule;
 import com.google.devtools.mobileharness.infra.controller.test.manager.LabDirectTestRunnerUtil;
 import com.google.devtools.mobileharness.infra.controller.test.manager.ProxyTestManager;
 import com.google.devtools.mobileharness.infra.controller.test.manager.TestManager;
@@ -84,6 +85,7 @@ public class LabServerModule extends AbstractModule {
   @Override
   protected void configure() {
     install(new LabServerConstantsModule());
+    install(new MessagingServiceModule());
     // Binds controllers.
     install(new FactoryModuleBuilder().build(ExecTestServiceImpl.ExecTestServiceImplFactory.class));
     bind(DeviceHelperFactory.class).to(LocalDeviceManager.class);

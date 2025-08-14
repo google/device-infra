@@ -115,6 +115,7 @@ java_library(
         "//src/javatests/com/google/devtools/mobileharness/infra/controller/messaging:__subpackages__",
     ],
     deps = [
+        ":annotations",
         ":message_sender",
         ":message_sender_finder",
         "//src/devtools/mobileharness/api/messaging:messaging_java_proto",
@@ -172,12 +173,27 @@ java_library(
     srcs = ["MessagingServiceModule.java"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/lab:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client/api:__pkg__",
     ],
     deps = [
+        ":annotations",
         ":messaging_service",
         "//src/devtools/mobileharness/api/messaging:messaging_service_java_grpc",
         "//src/java/com/google/devtools/mobileharness/infra/lab:annotations",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
         "@io_grpc_grpc_java//core",
+        "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
+    ],
+)
+
+java_library(
+    name = "annotations",
+    srcs = ["Annotations.java"],
+    visibility = [
+        "//src/javatests/com/google/devtools/mobileharness/infra/controller/messaging:__pkg__",
+    ],
+    deps = [
+        "@maven//:javax_inject_jsr330_api",
     ],
 )

@@ -41,6 +41,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local",
         "//src/java/com/google/devtools/mobileharness/infra/controller/messaging:message_sender_finder",
         "//src/java/com/google/devtools/mobileharness/infra/controller/messaging:messaging_manager",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/messaging:messaging_service_module",
         "//src/java/com/google/devtools/mobileharness/shared/context:invocation_context",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:more_futures",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",

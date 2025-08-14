@@ -33,6 +33,7 @@ java_library(
         ":foo",
         "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
         "//src/devtools/mobileharness/api/messaging:messaging_java_proto",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/messaging:annotations",
         "//src/java/com/google/devtools/mobileharness/infra/controller/messaging:message_receptions_handler",
         "//src/java/com/google/devtools/mobileharness/infra/controller/messaging:message_sender",
         "//src/java/com/google/devtools/mobileharness/infra/controller/messaging:message_sender_finder",

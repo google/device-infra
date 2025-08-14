@@ -74,6 +74,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/messaging:messaging_manager",
         "//src/java/com/google/devtools/mobileharness/infra/controller/messaging:messaging_manager_holder",
         "//src/java/com/google/devtools/mobileharness/infra/controller/messaging:messaging_service",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/messaging:messaging_service_module",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/manager",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/manager:lab_direct_test_runner_util",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/manager:proxy_test_manager",

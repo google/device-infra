@@ -30,7 +30,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
-import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.devtools.mobileharness.api.messaging.MessageDestinationNotFoundException;
@@ -54,6 +53,7 @@ import com.google.devtools.mobileharness.infra.client.api.Annotations.GlobalInte
 import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalMode;
 import com.google.devtools.mobileharness.infra.controller.messaging.MessageSenderFinder;
 import com.google.devtools.mobileharness.infra.controller.messaging.MessagingManager;
+import com.google.devtools.mobileharness.infra.controller.messaging.MessagingServiceModule;
 import com.google.devtools.mobileharness.shared.context.InvocationContext.ContextScope;
 import com.google.devtools.mobileharness.shared.context.InvocationContext.InvocationInfo;
 import com.google.devtools.mobileharness.shared.context.InvocationContext.InvocationType;
@@ -97,18 +97,13 @@ public class ClientApiTest {
   @Rule public final CaptureLogs captureLogs = new CaptureLogs();
   @Rule public final PrintTestName printTestName = new PrintTestName();
 
-  @Bind @GlobalInternalEventBus private EventBus globalInternalEventBus;
-
-  @Bind
-  private final ListeningExecutorService threadPool =
-      ThreadPools.createStandardThreadPool("testing-thread-pool");
+  @Bind @GlobalInternalEventBus private final EventBus globalInternalEventBus = new EventBus();
 
   private final ListeningScheduledExecutorService scheduledThreadPool =
       ThreadPools.createStandardScheduledThreadPool("testing-scheduled-thread-pool", 1);
 
   @Inject private ClientApi clientApi;
-
-  private MessagingManager messagingManager;
+  @Inject private MessagingManager messagingManager;
 
   private final List<MessageReception> receivingMessageReceptions = new ArrayList<>();
   private final SettableFuture<ImmutableList<MessageReception>> messageReceptions =
@@ -125,20 +120,17 @@ public class ClientApiTest {
             "no_op_device_num",
             "1"));
 
-    globalInternalEventBus = new EventBus();
-
-    Guice.createInjector(new ClientApiModule(), BoundFieldModule.of(this)).injectMembers(this);
-
-    messagingManager =
-        Guice.createInjector(
-                new AbstractModule() {
-                  @Provides
-                  MessageSenderFinder provideMessageSenderFinder() {
-                    return clientApi.getJobManager();
-                  }
-                },
-                BoundFieldModule.of(this))
-            .getInstance(MessagingManager.class);
+    Guice.createInjector(
+            new ClientApiModule(),
+            BoundFieldModule.of(this),
+            new MessagingServiceModule(),
+            new AbstractModule() {
+              @Provides
+              MessageSenderFinder provideMessageSenderFinder() {
+                return clientApi.getJobManager();
+              }
+            })
+        .injectMembers(this);
   }
 
   @Test

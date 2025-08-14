@@ -16,6 +16,10 @@
 
 package com.google.devtools.mobileharness.infra.controller.messaging;
 
+import static com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools.createStandardThreadPool;
+
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.devtools.mobileharness.infra.controller.messaging.Annotations.MessagingManagerThreadPool;
 import com.google.devtools.mobileharness.infra.lab.Annotations.LocalOnlyGrpcService;
 import com.google.inject.AbstractModule;
 import com.google.inject.multibindings.Multibinder;
@@ -28,5 +32,9 @@ public final class MessagingServiceModule extends AbstractModule {
     Multibinder.newSetBinder(binder(), BindableService.class, LocalOnlyGrpcService.class)
         .addBinding()
         .to(MessagingService.class);
+
+    bind(ListeningExecutorService.class)
+        .annotatedWith(MessagingManagerThreadPool.class)
+        .toInstance(createStandardThreadPool("messaging-manager-thread-pool"));
   }
 }
