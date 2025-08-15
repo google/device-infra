@@ -75,22 +75,24 @@ java_library(
         ":annotations",
         ":olc_server_grpc_stub_module",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:flags_string",
-        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
-        "@maven//:com_google_inject_guice",
-    ],
-)
-
-java_library(
-    name = "olc_server_grpc_stub_module",
-    srcs = ["OlcServerGrpcStubModule.java"],
-    deps = [
-        ":annotations",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:control_stub",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:session_stub",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:version_stub",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub/grpc:control_grpc_stub",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub/grpc:session_grpc_stub",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub/grpc:version_grpc_stub",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
+        "@io_grpc_grpc_java//core",
+        "@maven//:com_google_inject_guice",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "olc_server_grpc_stub_module",
+    srcs = ["OlcServerGrpcChannelModule.java"],
+    deps = [
+        ":annotations",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:channel_factory",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "@io_grpc_grpc_java//core",
