@@ -21,6 +21,7 @@ java_library(
     name = "backend",
     srcs = glob(["*.java"]),
     visibility = [
+        "//javatests/com/google/wireless/qa/mobileharness/shared/api/decorator:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/shared/util/command:__pkg__",
     ],
     deps = [
