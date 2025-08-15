@@ -41,8 +41,13 @@ public class DeviceInfoFilter implements Predicate<DeviceInfo> {
                     matchAttribute(
                         ownerRegex,
                         deviceInfo.getOwnerList().isEmpty()
+                                && deviceInfo.getExecutorList().isEmpty()
                             ? Stream.of("public")
-                            : deviceInfo.getOwnerList().stream()))
+                            // TODO: we should consider a better support for query with
+                            // executor.
+                            : Stream.concat(
+                                deviceInfo.getOwnerList().stream(),
+                                deviceInfo.getExecutorList().stream())))
         && deviceQueryFilter.getTypeRegexList().stream()
             .allMatch(typeRegex -> matchAttribute(typeRegex, deviceInfo.getTypeList().stream()))
         && deviceQueryFilter.getDriverRegexList().stream()

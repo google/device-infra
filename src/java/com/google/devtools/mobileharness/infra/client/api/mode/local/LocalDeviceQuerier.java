@@ -76,6 +76,7 @@ class LocalDeviceQuerier implements DeviceQuerier {
                                           .getStatus()
                                           .name()))
                               .addAllOwner(deviceEntry.getKey().getOwners())
+                              .addAllExecutor(deviceEntry.getKey().getExecutors())
                               .addAllType(deviceEntry.getKey().getDeviceTypes())
                               .addAllDriver(deviceEntry.getKey().getDriverTypes())
                               .addAllDecorator(deviceEntry.getKey().getDecoratorTypes())
