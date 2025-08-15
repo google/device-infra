@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.shared.util.flags;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.devtools.mobileharness.shared.util.flags.Flags.TenantConfigMode.NOOP;
 import static java.util.Arrays.stream;
 
 import com.google.common.base.Strings;
@@ -1405,6 +1406,21 @@ public class Flags {
       converter = Flag.StringConverter.class)
   public Flag<String> labDeviceConfigFile = labDeviceConfigFileDefault;
 
+  private static final Flag<String> localTenantDeviceConfigPathDefault = Flag.value("");
+
+  @com.beust.jcommander.Parameter(
+      names = "--local_tenant_device_config_path",
+      description = "Path of the text format protobuf for the local tenant device config file.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> localTenantDeviceConfigPath = localTenantDeviceConfigPathDefault;
+
+  /** Source for the tenant device config. */
+  public enum TenantConfigMode {
+    NOOP,
+    LOCAL,
+    REMOTE
+  }
+
   private static final Flag<Integer> logFileNumberDefault = Flag.value(100);
 
   @com.beust.jcommander.Parameter(
@@ -1953,6 +1969,13 @@ public class Flags {
               + " use it in production environment.",
       converter = Flag.StringConverter.class)
   public Flag<String> supplementalResDir = supplementalResDirDefault;
+
+  private static final Flag<TenantConfigMode> tenantConfigModeDefault = Flag.value(NOOP);
+
+  @com.beust.jcommander.Parameter(
+      names = "--tenant_device_config_mode",
+      description = "Source for the tenant device config. One of NOOP, LOCAL, or REMOTE.")
+  public Flag<TenantConfigMode> tenantConfigMode = tenantConfigModeDefault;
 
   private static final Flag<List<String>> testbedConfigPathsDefault =
       Flag.stringList(getTmpDirRootDefaultOss() + "/testbeds");
