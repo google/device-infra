@@ -16,16 +16,18 @@
 
 package com.google.devtools.mobileharness.shared.util.port;
 
-import javax.annotation.Nullable;
+/**
+ * Branched from {@code com.google.testing.serverutil.PortFinder}.
+ *
+ * <p>Finds unused ports.
+ */
+public interface PortFinder {
 
-/** Exception thrown when an attempt to find a free port fails. */
-public class UnableToFindPortException extends RuntimeException {
-
-  public UnableToFindPortException(String message) {
-    super(message);
-  }
-
-  public UnableToFindPortException(@Nullable Throwable cause) {
-    super(cause);
-  }
+  /**
+   * Gets an unused port on the local host.
+   *
+   * @throws UnableToPickPortException If there are any errors preventing this method from returning
+   *     an unused port
+   */
+  public int pickUnusedPort() throws UnableToFindPortException;
 }
