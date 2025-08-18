@@ -299,6 +299,52 @@ public final class SessionRequestHandlerUtilTest {
   }
 
   @Test
+  public void
+      getSubDeviceSpecListForTradefed_atsServerRequestWithDeviceSerials_retryUntilRequestedIsFound()
+          throws Exception {
+    when(deviceQuerier.queryDevice(any()))
+        .thenReturn(DeviceQueryResult.getDefaultInstance()) // First call, no devices
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder()
+                        .setId("device_id_2")
+                        .addDimension(
+                            Dimension.newBuilder().setName("uuid").setValue("device_id_2"))
+                        .addType("AndroidOnlineDevice"))
+                .build()) // Second call, one device that is not the one requested
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder()
+                        .setId("device_id_1")
+                        .addDimension(
+                            Dimension.newBuilder().setName("uuid").setValue("device_id_1"))
+                        .addType("AndroidOnlineDevice"))
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder()
+                        .setId("device_id_2")
+                        .addDimension(
+                            Dimension.newBuilder().setName("uuid").setValue("device_id_2"))
+                        .addType("AndroidOnlineDevice"))
+                .build()); // Third call, All devices are found
+
+    SessionRequestInfo sessionRequestInfo =
+        defaultSessionRequestInfoBuilder()
+            .setIsAtsServerRequest(true)
+            .setDeviceSerials(ImmutableList.of("device_id_1"))
+            .build();
+
+    ImmutableList<SubDeviceSpec> subDeviceSpecs =
+        sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
+
+    assertThat(subDeviceSpecs).hasSize(1);
+    assertThat(subDeviceSpecs.get(0).getDimensions().getContentMap())
+        .containsEntry("uuid", "device_id_1");
+    verify(sleeper, times(2)).sleep(Duration.ofSeconds(30));
+  }
+
+  @Test
   public void getSubDeviceSpecListForTradefed_atsServerRequestWithDeviceSerials_retryAndFail()
       throws Exception {
     when(deviceQuerier.queryDevice(any())).thenReturn(DeviceQueryResult.getDefaultInstance());

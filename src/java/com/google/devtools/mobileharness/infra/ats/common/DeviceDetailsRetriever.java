@@ -33,12 +33,10 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceStat
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
-import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.Provider;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryFilter;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryResult;
-import java.time.Duration;
 import java.util.Optional;
 import javax.inject.Inject;
 
@@ -47,27 +45,21 @@ public class DeviceDetailsRetriever {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  private static final int GET_DEVICE_FOR_ATS_SERVER_MAX_ATTEMPT = 5;
-  private static final Duration GET_DEVICE_FOR_ATS_SERVER_RETRY_INTERVAL = Duration.ofSeconds(30);
-
   private final DeviceQuerier deviceQuerier;
   private final Provider<AndroidAdbInternalUtil> androidAdbInternalUtilProvider;
   private final Provider<AndroidAdbUtil> androidAdbUtilProvider;
   private final Provider<AndroidSystemSettingUtil> androidSystemSettingUtilProvider;
-  private final Sleeper sleeper;
 
   @Inject
   DeviceDetailsRetriever(
       DeviceQuerier deviceQuerier,
       Provider<AndroidAdbInternalUtil> androidAdbInternalUtilProvider,
       Provider<AndroidAdbUtil> androidAdbUtilProvider,
-      Provider<AndroidSystemSettingUtil> androidSystemSettingUtilProvider,
-      Sleeper sleeper) {
+      Provider<AndroidSystemSettingUtil> androidSystemSettingUtilProvider) {
     this.deviceQuerier = deviceQuerier;
     this.androidAdbInternalUtilProvider = androidAdbInternalUtilProvider;
     this.androidAdbUtilProvider = androidAdbUtilProvider;
     this.androidSystemSettingUtilProvider = androidSystemSettingUtilProvider;
-    this.sleeper = sleeper;
   }
 
   /**
@@ -76,20 +68,8 @@ public class DeviceDetailsRetriever {
    */
   public ImmutableMap<String, DeviceDetails> getAllAndroidDevicesWithNeededDetails(
       SessionRequestInfo sessionRequestInfo) throws MobileHarnessException, InterruptedException {
-    // TODO: Debug message for b/424703254. Remove after the bug is fixed.
-    logger.atInfo().log(
-        "getAllAndroidDevicesWithNeededDetails: %s\n"
-            + "Flags.instance().enableAtsMode.getNonNull(): %s",
-        sessionRequestInfo, Flags.instance().enableAtsMode.getNonNull());
     if (Flags.instance().enableAtsMode.getNonNull()) {
-      if (sessionRequestInfo.isAtsServerRequest()
-          && !sessionRequestInfo.deviceSerials().isEmpty()) {
-        // TODO: Debug message for b/424703254. Remove after the bug is fixed.
-        logger.atInfo().log("getAllAndroidDevicesFromMasterWithRetry");
-        return getAllAndroidDevicesFromMasterWithRetry();
-      } else {
-        return getAllAndroidDevicesFromMaster();
-      }
+      return getAllAndroidDevicesFromMaster();
     } else {
       return getAllLocalAndroidDevicesWithNeededDetails(sessionRequestInfo);
     }
@@ -275,25 +255,5 @@ public class DeviceDetailsRetriever {
             })
         // TODO: add more device info to the DeviceDetails for ATS 2.0
         .collect(toImmutableMap(DeviceDetails::id, identity()));
-  }
-
-  private ImmutableMap<String, DeviceDetails> getAllAndroidDevicesFromMasterWithRetry()
-      throws MobileHarnessException, InterruptedException {
-    ImmutableMap<String, DeviceDetails> result = ImmutableMap.of();
-    for (int i = 0; i < GET_DEVICE_FOR_ATS_SERVER_MAX_ATTEMPT; i++) {
-      // TODO: Debug message for b/424703254. Remove after the bug is fixed.
-      logger.atInfo().log("getAllAndroidDevicesFromMasterWithRetry: %s", i);
-      result = getAllAndroidDevicesFromMaster();
-      if (!result.isEmpty()) {
-        break;
-      }
-      if (i < GET_DEVICE_FOR_ATS_SERVER_MAX_ATTEMPT - 1) {
-        logger.atInfo().log(
-            "No device found from master, will retry in %s.",
-            GET_DEVICE_FOR_ATS_SERVER_RETRY_INTERVAL);
-        sleeper.sleep(GET_DEVICE_FOR_ATS_SERVER_RETRY_INTERVAL);
-      }
-    }
-    return result;
   }
 }
