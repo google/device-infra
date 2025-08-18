@@ -92,8 +92,14 @@ public class AndroidRealDeviceDispatcher extends CacheableDispatcher {
     }
     resultList.addAll(
         detectionResults.getByTypeAndDetail(DetectionType.FASTBOOT, FastbootDeviceState.FASTBOOT));
+
+    // Handle duplicate device IDs when collecting dispatch results(b/438644277).
     return resultList.stream()
-        .collect(toImmutableMap(DetectionResult::deviceControlId, v -> DispatchType.LIVE));
+        .collect(
+            toImmutableMap(
+                DetectionResult::deviceControlId,
+                v -> DispatchType.LIVE,
+                (oldValue, newValue) -> newValue));
   }
 
   @Override
