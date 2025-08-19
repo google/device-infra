@@ -48,5 +48,10 @@ public class Annotations {
   @Retention(RetentionPolicy.RUNTIME)
   public @interface SessionTempDir {}
 
+  /** gRPC service list of an OLC server. */
+  @Qualifier
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface OlcServices {}
+
   private Annotations() {}
 }

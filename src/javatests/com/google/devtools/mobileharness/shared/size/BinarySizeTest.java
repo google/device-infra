@@ -61,7 +61,7 @@ public class BinarySizeTest {
           "lab_server",
           40_550_000L,
           "ats_console",
-          23_850_000L,
+          23_950_000L,
           "xts_tradefed_agent",
           4_550_000L);
 

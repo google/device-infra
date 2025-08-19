@@ -73,7 +73,7 @@ java_library(
     srcs = ["OlcServerConnectorModule.java"],
     deps = [
         ":annotations",
-        ":olc_server_grpc_stub_module",
+        ":olc_server_grpc_channel_module",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:flags_string",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:control_stub",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:session_stub",
@@ -89,13 +89,27 @@ java_library(
 )
 
 java_library(
-    name = "olc_server_grpc_stub_module",
+    name = "olc_server_grpc_channel_module",
     srcs = ["OlcServerGrpcChannelModule.java"],
     deps = [
         ":annotations",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:channel_factory",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "@io_grpc_grpc_java//core",
+        "@maven//:com_google_guava_guava",
+        "@maven//:com_google_inject_guice",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "olc_server_grpc_in_process_channel_module",
+    srcs = ["OlcServerGrpcInProcessChannelModule.java"],
+    deps = [
+        ":annotations",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:annotations",
+        "@io_grpc_grpc_java//core",
+        "@io_grpc_grpc_java//core:inprocess",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
         "@maven//:javax_inject_jsr330_api",

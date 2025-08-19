@@ -40,6 +40,7 @@ import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.DeviceInfraServiceFlags;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerStub;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.BuiltinOlcServerFlags;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.OlcServerGrpcInProcessChannelModule;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleLineReader;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleOutput;
@@ -160,6 +161,7 @@ public class AtsConsole {
                       /* enableDatabase= */ false,
                       /* enableGrpcRelay= */ false);
               modules.add(olcServerModule);
+              modules.add(new OlcServerGrpcInProcessChannelModule());
             });
 
     // Creates Guice injector.

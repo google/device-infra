@@ -61,6 +61,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:flags_string",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:annotations",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:builtin_olc_server_flags",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:olc_server_grpc_in_process_channel_module",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:server_preparer",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/command",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/command/completer:command_completer",

@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.client.longrunningservice;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.EventBus;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.client.api.Annotations.GlobalInternalEventBus;
@@ -25,12 +26,16 @@ import com.google.devtools.mobileharness.infra.client.api.controller.device.Devi
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.EnableDatabase;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.OlcDatabaseConnections;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.OlcServices;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.ServerStartTime;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.ControllerModule;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogManager.LogRecordsCollector;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecords;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.ControlService;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.LocalSessionStub;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.LocalSessionStubImpl;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.SessionService;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.VersionService;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.util.persistence.JdbcBasedSessionPersistenceUtil;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.util.persistence.SessionPersistenceUtil;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.util.persistence.SessionPersistenceUtil.NoOpSessionPersistenceUtil;
@@ -51,6 +56,7 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import com.google.inject.util.Providers;
+import io.grpc.BindableService;
 import java.time.Instant;
 import javax.inject.Singleton;
 
@@ -149,6 +155,14 @@ class OlcServerModule extends AbstractModule {
   @GlobalInternalEventBus
   EventBus provideGlobalInternalEventBus() {
     return new EventBus(new SubscriberExceptionLoggingHandler());
+  }
+
+  @Provides
+  @Singleton
+  @OlcServices
+  ImmutableList<BindableService> provideOlcServices(
+      SessionService sessionService, VersionService versionService, ControlService controlService) {
+    return ImmutableList.of(sessionService, versionService, controlService);
   }
 
   @Provides
