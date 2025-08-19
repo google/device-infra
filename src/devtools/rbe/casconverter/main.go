@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	version = "1.0"
+	version = "1.1"
 )
 
 var (
@@ -52,6 +52,7 @@ func main() {
 		}
 	}
 
+	log.Infof("Restoring files from %q to %q", *srcPath, dst)
 	start := time.Now()
 	if err := chunkerutil.RestoreFiles(*srcPath, dst, *keepChunks); err != nil {
 		log.Exitf("Failed to restore directory %q: %v", *srcPath, err)
@@ -60,9 +61,9 @@ func main() {
 }
 
 func summary(src, dst string, keepChunks bool, duration time.Duration) string {
-	msg := fmt.Sprintf("Successfully restored '%s'", src)
+	msg := fmt.Sprintf("Successfully restored %q", src)
 	if dst != src {
-		msg += fmt.Sprintf(" to '%s'", dst)
+		msg += fmt.Sprintf(" to %q", dst)
 	}
 	if keepChunks {
 		msg += " and kept chunk files"
