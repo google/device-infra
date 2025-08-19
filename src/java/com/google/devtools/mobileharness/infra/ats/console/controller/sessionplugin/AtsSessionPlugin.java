@@ -55,6 +55,7 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.proto.Sess
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommandState;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommandState.Invocation;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommandState.Invocations;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ResultProto.ModuleRunResult;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionEndedEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
@@ -75,6 +76,7 @@ import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil.KillSignal;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.TextFormat;
 import com.google.protobuf.Timestamp;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
 import com.google.wireless.qa.mobileharness.client.api.event.JobStartEvent;
@@ -393,6 +395,23 @@ public class AtsSessionPlugin {
   @Subscribe
   public void onJobEnd(JobEndEvent jobEndEvent)
       throws MobileHarnessException, InterruptedException {
+    if (jobEndEvent.getJob().properties().getBoolean(Job.IS_XTS_NON_TF_JOB).orElse(false)) {
+      for (TestInfo testInfo : jobEndEvent.getJob().tests().getAll().values()) {
+        ResultTypeWithCause resultWithCause = testInfo.resultWithCause().get();
+        ModuleRunResult.Builder resultBuilder =
+            ModuleRunResult.newBuilder().setResult(resultWithCause.type());
+        if (resultWithCause.causeProto().isPresent()) {
+          resultBuilder.setCause(resultWithCause.toStringWithDetail());
+        }
+        localFileUtil.writeToFile(
+            Path.of(testInfo.getGenFileDir())
+                .resolve("ats_module_run_result.textproto")
+                .toAbsolutePath()
+                .toString(),
+            TextFormat.printer().printToString(resultBuilder.build()));
+      }
+    }
+
     synchronized (runningTradefedJobs) {
       String jobId = jobEndEvent.getJob().locator().getId();
       if (!runningTradefedJobs.containsKey(jobId)) {

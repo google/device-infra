@@ -27,7 +27,6 @@ java_library(
     deps = [
         "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
-        "//src/devtools/mobileharness/infra/ats/console/result/proto:result_java_proto",
         "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/job/out",
@@ -49,7 +48,6 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/lab",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
-        "@com_google_protobuf//:protobuf_java",
         "@maven//:com_google_guava_guava",
         "@maven//:junit_junit",
         "@maven//:org_mockito_mockito_core",

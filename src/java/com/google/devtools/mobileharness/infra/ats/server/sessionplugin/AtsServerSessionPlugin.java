@@ -26,6 +26,9 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
+import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName.Job;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ResultProto.ModuleRunResult;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.AtsServerSessionNotification;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.AtsServerSessionNotification.NotificationCase;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CancelReason;
@@ -53,9 +56,11 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.CreateSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.LocalSessionStub;
 import com.google.devtools.mobileharness.platform.android.xts.message.proto.TestMessageProto.XtsTradefedRunCancellation;
+import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.protobuf.Any;
 import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.TextFormat;
 import com.google.protobuf.util.Timestamps;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageUtil;
@@ -63,6 +68,7 @@ import com.google.wireless.qa.mobileharness.shared.controller.event.TestStarting
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestStatus;
+import java.nio.file.Path;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -109,6 +115,7 @@ final class AtsServerSessionPlugin {
   private final LocalSessionStub localSessionStub;
   private final Clock clock;
   private final TestMessageUtil testMessageUtil;
+  private final LocalFileUtil localFileUtil;
 
   @Inject
   AtsServerSessionPlugin(
@@ -116,12 +123,14 @@ final class AtsServerSessionPlugin {
       NewMultiCommandRequestHandler newMultiCommandRequestHandler,
       LocalSessionStub localSessionStub,
       Clock clock,
-      TestMessageUtil testMessageUtil) {
+      TestMessageUtil testMessageUtil,
+      LocalFileUtil localFileUtil) {
     this.sessionInfo = sessionInfo;
     this.newMultiCommandRequestHandler = newMultiCommandRequestHandler;
     this.localSessionStub = localSessionStub;
     this.clock = clock;
     this.testMessageUtil = testMessageUtil;
+    this.localFileUtil = localFileUtil;
   }
 
   @Subscribe
@@ -253,11 +262,30 @@ final class AtsServerSessionPlugin {
   }
 
   @Subscribe
-  public void onJobEnded(JobEndEvent jobEndEvent) throws InterruptedException {
+  public void onJobEnded(JobEndEvent jobEndEvent)
+      throws InterruptedException, MobileHarnessException {
     synchronized (sessionLock) {
       RequestDetail.Builder requestDetail = requestDetailSupplier.get();
 
       JobInfo jobInfo = jobEndEvent.getJob();
+
+      if (jobInfo.properties().getBoolean(Job.IS_XTS_NON_TF_JOB).orElse(false)) {
+        for (TestInfo testInfo : jobEndEvent.getJob().tests().getAll().values()) {
+          ResultTypeWithCause resultWithCause = testInfo.resultWithCause().get();
+          ModuleRunResult.Builder resultBuilder =
+              ModuleRunResult.newBuilder().setResult(resultWithCause.type());
+          if (resultWithCause.causeProto().isPresent()) {
+            resultBuilder.setCause(resultWithCause.toStringWithDetail());
+          }
+          localFileUtil.writeToFile(
+              Path.of(testInfo.getGenFileDir())
+                  .resolve("ats_module_run_result.textproto")
+                  .toAbsolutePath()
+                  .toString(),
+              TextFormat.printer().printToString(resultBuilder.build()));
+        }
+      }
+
       // If all tradefed jobs have ended, create non tradefed jobs.
       try {
         // Tradefed jobs might be lost in the resumed sessions. Re-initialize them to ensure

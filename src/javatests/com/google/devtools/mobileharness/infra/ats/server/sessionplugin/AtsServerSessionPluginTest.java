@@ -22,6 +22,7 @@ import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -37,8 +38,10 @@ import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.in.Decorators;
 import com.google.devtools.mobileharness.api.model.job.in.Dimensions;
+import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionResultHandlerUtil;
+import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.infra.ats.common.XtsTypeLoader;
 import com.google.devtools.mobileharness.infra.ats.common.jobcreator.XtsJobCreator;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Summary;
@@ -770,6 +773,41 @@ public final class AtsServerSessionPluginTest {
         UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
     assertThat(requestDetail.getCommandDetailsMap().keySet().iterator().next())
         .isEqualTo(commandId);
+  }
+
+  @Test
+  public void onJobEnded_nonTradefedJobEnded_atsModuleRunResultFileWritten() throws Exception {
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(
+                        SessionRequest.newBuilder().setNewMultiCommandRequest(request).build()))
+                .build());
+    plugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+
+    Timing timing = new Timing();
+    when(jobInfo.timing()).thenReturn(timing);
+    when(jobInfo.status()).thenReturn(new Status(timing).set(TestStatus.DONE));
+    when(jobInfo.type()).thenReturn(JobType.newBuilder().setDriver("MoblyDriver").build());
+    Properties jobProperties = new Properties(timing);
+    jobProperties.add(Job.IS_XTS_NON_TF_JOB, "true");
+    when(jobInfo.properties()).thenReturn(jobProperties);
+
+    com.google.devtools.mobileharness.api.model.job.out.Result result =
+        mock(com.google.devtools.mobileharness.api.model.job.out.Result.class);
+    when(result.get())
+        .thenReturn(
+            ResultTypeWithCause.create(
+                com.google.devtools.mobileharness.api.model.proto.Test.TestResult.PASS,
+                /* cause= */ null));
+    when(testInfo.resultWithCause()).thenReturn(result);
+    when(testInfo.getGenFileDir()).thenReturn("/tmp/test_gen_file_dir");
+
+    plugin.onJobEnded(new JobEndEvent(jobInfo, null));
+
+    verify(localFileUtil)
+        .writeToFile("/tmp/test_gen_file_dir/ats_module_run_result.textproto", "result: PASS\n");
   }
 
   @Test

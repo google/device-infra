@@ -43,6 +43,7 @@ java_library(
         ":run_command_handler",
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/devtools/mobileharness/infra/ats/console/controller/proto:session_plugin_java_proto",
+        "//src/devtools/mobileharness/infra/ats/console/result/proto:result_java_proto",
         "//src/devtools/mobileharness/platform/android/xts/proto:test_message_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/error:exception_factory",

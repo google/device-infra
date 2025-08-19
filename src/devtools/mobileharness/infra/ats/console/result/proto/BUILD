@@ -16,7 +16,9 @@
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common:__pkg__",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/plugin:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/platform/testbed/mobly/util:__subpackages__",

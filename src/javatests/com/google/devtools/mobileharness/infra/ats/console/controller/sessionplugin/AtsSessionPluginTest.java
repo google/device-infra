@@ -16,10 +16,16 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin;
 
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableListMultimap;
+import com.google.devtools.mobileharness.api.model.job.out.Result;
+import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
+import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.api.testrunner.device.cache.XtsDeviceCache;
+import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommand;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
@@ -32,7 +38,14 @@ import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import com.google.protobuf.Any;
+import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageUtil;
+import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
+import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
+import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
+import com.google.wireless.qa.mobileharness.shared.model.job.TestInfos;
+import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
+import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
 import javax.inject.Inject;
 import org.junit.Before;
 import org.junit.Rule;
@@ -79,5 +92,30 @@ public final class AtsSessionPluginTest {
     atsSessionPlugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
 
     verify(sessionInfo).putSessionProperty(SessionProperties.PROPERTY_KEY_COMMAND_ID, "1");
+  }
+
+  @Test
+  public void onJobEnd_nonTradefedJob_atsModuleRunResultFileWritten() throws Exception {
+    JobInfo jobInfo = mock(JobInfo.class);
+    TestInfos testInfos = mock(TestInfos.class);
+    TestInfo testInfo = mock(TestInfo.class);
+    Result result = mock(Result.class);
+
+    when(jobInfo.locator()).thenReturn(new JobLocator("job_id", "job_name"));
+    Properties jobProperties = new Properties(new Timing());
+    jobProperties.add(Job.IS_XTS_NON_TF_JOB, "true");
+    when(jobInfo.properties()).thenReturn(jobProperties);
+    when(jobInfo.tests()).thenReturn(testInfos);
+    when(testInfos.getAll()).thenReturn(ImmutableListMultimap.of("test_id", testInfo));
+    when(testInfo.resultWithCause()).thenReturn(result);
+    when(result.get()).thenReturn(ResultTypeWithCause.create(TestResult.PASS, /* cause= */ null));
+    when(testInfo.getGenFileDir()).thenReturn("/tmp/test_gen_file_dir");
+
+    JobEndEvent event = new JobEndEvent(jobInfo, /* jobError= */ null);
+
+    atsSessionPlugin.onJobEnd(event);
+
+    verify(localFileUtil)
+        .writeToFile("/tmp/test_gen_file_dir/ats_module_run_result.textproto", "result: PASS\n");
   }
 }
