@@ -63,6 +63,7 @@ java_library(
     srcs = ["XtsDeviceCache.java"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
     ],
     deps = [
         ":device_cache_interface",

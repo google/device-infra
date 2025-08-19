@@ -15,7 +15,14 @@
 
 load("@rules_java//java:defs.bzl", "java_library")
 
-package(default_applicable_licenses = ["//:license"])
+DEFAULT_VISIBILITY = [
+    "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__subpackages__",
+]
+
+package(
+    default_applicable_licenses = ["//:license"],
+    default_visibility = DEFAULT_VISIBILITY,
+)
 
 java_library(
     name = "ats_session_plugin",
@@ -23,7 +30,7 @@ java_library(
         "AtsSessionPlugin.java",
         "AtsSessionPluginModule.java",
     ],
-    visibility = [
+    visibility = DEFAULT_VISIBILITY + [
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller:__subpackages__",
     ],
