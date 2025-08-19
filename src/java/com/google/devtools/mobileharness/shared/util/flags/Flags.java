@@ -1460,6 +1460,15 @@ public class Flags {
   public Flag<Integer> loggerConsoleHandlerMinLogRecordImportance =
       loggerConsoleHandlerMinLogRecordImportanceDefault;
 
+  private static final Flag<Duration> longPingTimeoutDefault =
+      DurationFlag.value(Duration.ofMinutes(1L));
+
+  @com.beust.jcommander.Parameter(
+      names = "--long_ping_timeout",
+      description = "Set the default timeout for long ping commands.",
+      converter = DurationFlag.DurationConverter.class)
+  public Flag<Duration> longPingTimeout = longPingTimeoutDefault;
+
   private static final Flag<Long> lowerLimitOfJvmMaxMemoryAllowForAllocationDiagnosticDefault =
       Flag.value(512L * 1024 * 1024);
 

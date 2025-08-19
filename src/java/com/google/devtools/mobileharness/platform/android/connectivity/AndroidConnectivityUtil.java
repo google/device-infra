@@ -188,8 +188,6 @@ public class AndroidConnectivityUtil {
    */
   @VisibleForTesting static final Duration SHORT_PING_TIMEOUT = Duration.ofSeconds(6);
 
-  @VisibleForTesting static final Duration LONG_PING_TIMEOUT = Duration.ofMinutes(1);
-
   /** Intercal second(s) between ping command. */
   @VisibleForTesting static final Duration CHECK_PING_INTERVAL = Duration.ofSeconds(1);
 
@@ -719,7 +717,7 @@ public class AndroidConnectivityUtil {
       }
       String output =
           adb.runShell(
-              serial, String.format(ADB_SHELL_TEMPLATE_PING_URL, targetUrl), LONG_PING_TIMEOUT);
+              serial, String.format(ADB_SHELL_TEMPLATE_PING_URL, targetUrl), getLongPingTimeout());
       if (!output.contains(PING_SUCCESS)) {
         logger.atWarning().log(
             "Device %s is not able to ping %s, output=[%s] ", serial, targetUrl, output);
@@ -1368,6 +1366,11 @@ public class AndroidConnectivityUtil {
       }
     }
     return "";
+  }
+
+  @VisibleForTesting
+  static Duration getLongPingTimeout() {
+    return Flags.instance().longPingTimeout.get();
   }
 
   /*
