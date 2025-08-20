@@ -268,6 +268,7 @@ public class LabServer {
         healthStatusManager.addDrainHandler(new MasterSyncerForJobDrainHandler(masterSyncerForJob));
       }
 
+      logger.atInfo().log("This is a debug version for CL/797203311");
       logger.atInfo().log("Lab server %s starts.", Version.LAB_VERSION);
       logger.atInfo().log(
           "Lab server starts with hostname: %s, version: %s, build version: [%s]",
