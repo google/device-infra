@@ -61,6 +61,8 @@ public class AndroidInstrumentationParser {
   /** Signal of a passed test case. */
   private static final String SIGNAL_TEST_PASS = "OK (";
 
+  private static final String SIGNAL_NO_TEST_RAN = "OK (0";
+
   /** Instrumentation Status Code return value */
   private static class InstrumentStatusCode {
     private static final String OK = "0";
@@ -83,7 +85,10 @@ public class AndroidInstrumentationParser {
    *     java/com/google/wireless/qa/mobileharness/shared/api/driver/AndroidInstrumentation.java
    */
   public TestResult parseOutput(
-      String instrumentationOutput, StringBuilder errorMsg, @Nullable MobileHarnessException e) {
+      String instrumentationOutput,
+      StringBuilder errorMsg,
+      @Nullable MobileHarnessException e,
+      boolean failIfNoTestsRan) {
     String output = instrumentationOutput;
     TestResult result;
 
@@ -120,6 +125,12 @@ public class AndroidInstrumentationParser {
      */
     if (output.contains(SIGNAL_TEST_FAIL) || output.contains(SIGNAL_INSTRUMENT_FAIL)) {
       errorMsg.append(output);
+      return TestResult.FAIL;
+    }
+    // Returns TestResult.FAIL if no tests ran. For example, user specified test methods do not
+    // exist, or using Parameterized runner with ShardLevel.METHOD
+    if (failIfNoTestsRan && output.contains(SIGNAL_NO_TEST_RAN)) {
+      errorMsg.append("No tests ran. Set test result to FAIL as configured.");
       return TestResult.FAIL;
     }
     /*

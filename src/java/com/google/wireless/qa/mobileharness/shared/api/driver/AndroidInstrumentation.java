@@ -507,9 +507,7 @@ public class AndroidInstrumentation extends BaseDriver
 
       // Checks the result.
       boolean useAndroidInstrumentationParser =
-          testInfo
-              .jobInfo()
-              .params()
+          job.params()
               .getBool(
                   AndroidInstrumentationDriverSpec.PARAM_USE_ANDROIDINSTRUMENTATION_PARSER, true);
       TestResult result;
@@ -517,13 +515,15 @@ public class AndroidInstrumentation extends BaseDriver
 
       if (useAndroidInstrumentationParser) {
         AndroidInstrumentationParser parser = new AndroidInstrumentationParser();
-        result = parser.parseOutput(output, errorMsg, mhException);
+        result =
+            parser.parseOutput(
+                output,
+                errorMsg,
+                mhException,
+                job.params().getBool(PARAM_FAIL_IF_NO_TESTS_RAN, false));
       } else {
         String filePathOnDevice =
-            testInfo
-                .jobInfo()
-                .params()
-                .get(AndroidInstrumentationDriverSpec.PARAM_GTEST_XML_FILE_ON_DEVICE);
+            job.params().get(AndroidInstrumentationDriverSpec.PARAM_GTEST_XML_FILE_ON_DEVICE);
         if (filePathOnDevice == null) {
           // TODO: Move this check to AndroidInstrumentationJobValidator class.
           throw new MobileHarnessException(
