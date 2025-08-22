@@ -242,7 +242,7 @@ public class LabServer {
                 nonConfigurableHostProperties);
         masterSyncerForDevice = new MasterSyncerForDevice(deviceManager, labSyncHelper);
         globalInternalBus.register(masterSyncerForDevice);
-        apiConfig.addObserver(masterSyncerForDevice);
+        apiConfig.addListener(masterSyncerForDevice);
       }
 
       VersionServiceImpl versionService =

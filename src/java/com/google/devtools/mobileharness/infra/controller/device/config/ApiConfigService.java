@@ -20,7 +20,6 @@ import com.google.common.util.concurrent.AbstractIdleService;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.wireless.qa.mobileharness.shared.util.NetUtil;
-import java.util.Observer;
 import java.util.Set;
 import javax.inject.Inject;
 
@@ -30,10 +29,9 @@ import javax.inject.Inject;
  * <p>ApiConfig is managed outside of Guice, so this uses a Service to inject it and add its
  * registered observers and initialize it.
  */
-@SuppressWarnings("deprecation") // Observer is used by ApiConfig.
 final class ApiConfigService extends AbstractIdleService {
   private final ApiConfig apiConfig;
-  private final Set<Observer> observers;
+  private final Set<ApiConfigListener> listeners;
   private final NetUtil netUtil;
   private final SystemUtil systemUtil;
   private final boolean hasDefaultSynced;
@@ -41,12 +39,12 @@ final class ApiConfigService extends AbstractIdleService {
   @Inject
   ApiConfigService(
       ApiConfig apiConfig,
-      @ApiConfigObserver Set<Observer> observers,
+      Set<ApiConfigListener> listeners,
       NetUtil netUtil,
       SystemUtil systemUtil,
       @HasDefaultSynced boolean hasDefaultSynced) {
     this.apiConfig = apiConfig;
-    this.observers = observers;
+    this.listeners = listeners;
     this.netUtil = netUtil;
     this.systemUtil = systemUtil;
     this.hasDefaultSynced = hasDefaultSynced;
@@ -54,8 +52,8 @@ final class ApiConfigService extends AbstractIdleService {
 
   @Override
   protected void startUp() throws MobileHarnessException {
-    for (Observer observer : observers) {
-      apiConfig.addObserver(observer);
+    for (ApiConfigListener listener : listeners) {
+      apiConfig.addListener(listener);
     }
     apiConfig.initialize(
         /* isDefaultPublic= */ true,

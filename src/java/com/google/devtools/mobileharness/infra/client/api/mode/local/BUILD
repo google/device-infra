@@ -56,6 +56,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/device/bootstrap:detectors_and_dispatchers",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device/config",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device/config:api_config_file_processor",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device/config:api_config_listener",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device/external:noop_external_device_manager",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device/proxy:proxy_device_manager",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device/proxy:proxy_device_manager_module",

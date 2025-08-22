@@ -20,7 +20,6 @@ import com.google.devtools.mobileharness.shared.util.concurrent.ServiceModule;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.multibindings.Multibinder;
-import java.util.Observer;
 
 /** Module for providing {@link ApiConfig}. */
 public final class ApiConfigModule extends AbstractModule {
@@ -31,11 +30,10 @@ public final class ApiConfigModule extends AbstractModule {
     this.hasDefaultSynced = hasDefaultSynced;
   }
 
-  @SuppressWarnings("deprecation") // Observer is used by ApiConfig.
   @Override
   protected void configure() {
     install(ServiceModule.forService(ApiConfigService.class));
-    Multibinder.newSetBinder(binder(), Observer.class, ApiConfigObserver.class);
+    Multibinder.newSetBinder(binder(), ApiConfigListener.class);
     bind(Boolean.class).annotatedWith(HasDefaultSynced.class).toInstance(hasDefaultSynced);
   }
 

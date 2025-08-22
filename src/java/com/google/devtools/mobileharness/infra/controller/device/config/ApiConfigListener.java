@@ -16,14 +16,17 @@
 
 package com.google.devtools.mobileharness.infra.controller.device.config;
 
-import com.google.inject.BindingAnnotation;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import com.google.common.collect.ImmutableSet;
 
-/** Multibinder of Observers for {@link ApiConfig}. */
-@Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER})
-@BindingAnnotation
-public @interface ApiConfigObserver {}
+/** An interface that listens to changes in the API config. */
+public interface ApiConfigListener {
+  /**
+   * Notifies the listener that the device config has changed for the given device control IDs.
+   *
+   * @param deviceControlIds the list of device IDs that have a change
+   */
+  void onDeviceConfigChange(ImmutableSet<String> deviceControlIds);
+
+  /** Notifies the listener that the lab config has changed. */
+  void onLabConfigChange();
+}

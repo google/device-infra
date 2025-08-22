@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.infra.client.api.mode.local;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.lab.DeviceLocator;
@@ -28,20 +29,19 @@ import com.google.devtools.mobileharness.infra.controller.device.DeviceStatusInf
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceManager;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceRunner;
 import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
+import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfigListener;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.controller.event.LocalDeviceChangeEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.event.LocalDeviceDownEvent;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Observable;
-import java.util.Observer;
 
 /**
  * Event handler to sync the local device/test change between {@link LocalDeviceManager} and local
  * {@link AbstractScheduler}.
  */
-class LocalDeviceManagerSchedulerSyncer implements Observer {
+class LocalDeviceManagerSchedulerSyncer implements ApiConfigListener {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
   private static final LabScheduleUnit LOCAL_LAB_UNIT = new LabScheduleUnit(LabLocator.LOCALHOST);
   private final LocalDeviceManager deviceManager;
@@ -114,7 +114,12 @@ class LocalDeviceManagerSchedulerSyncer implements Observer {
   }
 
   @Override
-  public void update(Observable o, Object arg) {
+  public void onDeviceConfigChange(ImmutableSet<String> deviceControlIds) {
+    onLabConfigChange();
+  }
+
+  @Override
+  public void onLabConfigChange() {
     try {
       Map<Device, DeviceStatusInfo> deviceStatusMap = deviceManager.getAllDeviceStatus(true);
       for (Entry<Device, DeviceStatusInfo> entry : deviceStatusMap.entrySet()) {

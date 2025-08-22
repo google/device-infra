@@ -79,6 +79,7 @@ java_library(
         "//:omnilab_fusion",
     ],
     deps = [
+        ":api_config_listener",
         "//src/devtools/mobileharness/api/deviceconfig/proto:basic_java_proto",
         "//src/devtools/mobileharness/api/deviceconfig/proto:device_java_proto",
         "//src/devtools/mobileharness/api/deviceconfig/proto:lab_java_proto",
@@ -103,7 +104,7 @@ java_library(
     srcs = ["ApiConfigModule.java"],
     visibility = ["//:omnilab_fusion"],
     deps = [
-        ":api_config_observer",
+        ":api_config_listener",
         ":api_config_service",
         ":config",
         ":has_default_synced",
@@ -116,7 +117,7 @@ java_library(
     name = "api_config_service",
     srcs = ["ApiConfigService.java"],
     deps = [
-        ":api_config_observer",
+        ":api_config_listener",
         ":config",
         ":has_default_synced",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
@@ -125,17 +126,21 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/util:device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/util:net_util",
         "@maven//:com_google_guava_guava",
-        "@maven//:com_google_inject_guice",
         "@maven//:javax_inject_jsr330_api",
     ],
 )
 
 java_library(
-    name = "api_config_observer",
-    srcs = ["ApiConfigObserver.java"],
-    visibility = ["//:omnilab_fusion"],
+    name = "api_config_listener",
+    srcs = ["ApiConfigListener.java"],
+    visibility = [
+        "//:omnilab_fusion",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/lab:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/controller:__pkg__",
+    ],
     deps = [
-        "@maven//:com_google_inject_guice",
+        "@maven//:com_google_guava_guava",
     ],
 )
 

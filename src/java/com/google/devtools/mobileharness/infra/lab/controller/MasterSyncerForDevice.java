@@ -21,6 +21,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.ExceptionDetail;
@@ -30,6 +31,7 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatusWith
 import com.google.devtools.mobileharness.infra.controller.device.DeviceStatusInfo;
 import com.google.devtools.mobileharness.infra.controller.device.DeviceStatusProvider;
 import com.google.devtools.mobileharness.infra.controller.device.DeviceStatusProvider.DeviceWithStatusInfo;
+import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfigListener;
 import com.google.devtools.mobileharness.infra.controller.device.util.DeviceStatusInfoPrinter;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.helper.LabSyncHelper;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.HeartbeatLabResponse;
@@ -43,8 +45,6 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Observable;
-import java.util.Observer;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Condition;
@@ -52,7 +52,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 /** For syncing the information of the Mobile Harness lab server with the Mobile Harness master. */
-public class MasterSyncerForDevice implements Runnable, Observer {
+public class MasterSyncerForDevice implements Runnable, ApiConfigListener {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   /** Interval of regular synchronization with master server. */
@@ -191,11 +191,17 @@ public class MasterSyncerForDevice implements Runnable, Observer {
   }
 
   /**
-   * Notified when the lab config is changed. Needs to re-sign-up all the devices to update the
-   * device config.
+   * Notifies when the device config has changed.
+   *
+   * <p>This implementation ignores the changed control IDs and re-signs-up all the devices.
    */
   @Override
-  public void update(Observable observable, Object arg) {
+  public void onDeviceConfigChange(ImmutableSet<String> deviceControlIds) {
+    onLabConfigChange();
+  }
+
+  @Override
+  public void onLabConfigChange() {
     logger.atInfo().log(
         "Re-sign-up all devices according to the config update or force update device status upon "
             + "entering lameduck mode.");

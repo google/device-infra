@@ -203,6 +203,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:device_status_info",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:device_status_provider",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device/config:api_config_listener",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device/util:device_status_info_printer",
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/stub/helper:lab_sync",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",

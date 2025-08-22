@@ -20,6 +20,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Basic;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.BasicDeviceConfig;
@@ -46,7 +47,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Observable;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -54,7 +54,7 @@ import java.util.stream.Stream;
 import javax.annotation.concurrent.GuardedBy;
 
 /** The class which contains the user configured DeviceConfig/LabConfig. */
-public class ApiConfigV5 extends Observable implements ApiConfig {
+public class ApiConfigV5 implements ApiConfig {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -100,6 +100,8 @@ public class ApiConfigV5 extends Observable implements ApiConfig {
 
   /** <DeviceControlId, DeviceConfig> map. */
   private final Map<String, DeviceConfig> deviceConfigs = new ConcurrentHashMap<>();
+
+  private final Set<ApiConfigListener> listeners = ConcurrentHashMap.newKeySet();
 
   private boolean isDefaultPublic;
 
@@ -263,7 +265,7 @@ public class ApiConfigV5 extends Observable implements ApiConfig {
    */
   @Override
   public void setDeviceConfigs(Map<String, DeviceConfig> deviceConfigList) {
-    boolean needNotifyObservers = false;
+    ImmutableSet.Builder<String> changedControlIdsBuilder = ImmutableSet.builder();
     for (Entry<String, DeviceConfig> deviceConfig : deviceConfigList.entrySet()) {
       String deviceControlId = deviceConfig.getKey();
       DeviceConfig newDeviceConfig = deviceConfig.getValue();
@@ -272,12 +274,14 @@ public class ApiConfigV5 extends Observable implements ApiConfig {
         logger.atInfo().log(
             "Set device %s's DeviceConfig to %s ", deviceControlId, newDeviceConfig);
         deviceConfigs.put(deviceConfig.getKey(), deviceConfig.getValue());
-        needNotifyObservers = true;
+        changedControlIdsBuilder.add(deviceControlId);
       }
     }
-    if (needNotifyObservers) {
-      setChanged();
-      notifyObservers();
+    ImmutableSet<String> changedControlIdsList = changedControlIdsBuilder.build();
+    if (!changedControlIdsList.isEmpty()) {
+      for (ApiConfigListener listener : listeners) {
+        listener.onDeviceConfigChange(changedControlIdsList);
+      }
     }
   }
 
@@ -289,8 +293,9 @@ public class ApiConfigV5 extends Observable implements ApiConfig {
     }
     logger.atInfo().log("Set LabConfig to %s", labConfig);
     this.labConfig = labConfig;
-    setChanged();
-    notifyObservers();
+    for (ApiConfigListener listener : listeners) {
+      listener.onLabConfigChange();
+    }
   }
 
   @Override
@@ -404,6 +409,11 @@ public class ApiConfigV5 extends Observable implements ApiConfig {
         .map(property -> property.getValue().equals("host"))
         .findFirst()
         .orElse(false);
+  }
+
+  @Override
+  public void addListener(ApiConfigListener listener) {
+    listeners.add(listener);
   }
 
   private BasicDeviceConfig getBasicDeviceConfig(String deviceControlId) {

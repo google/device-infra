@@ -27,7 +27,6 @@ import com.google.wireless.qa.mobileharness.shared.proto.Common.StrPair;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
-import java.util.Observer;
 import java.util.Optional;
 
 /** The class to operate lab and device config. */
@@ -91,8 +90,8 @@ public interface ApiConfig {
 
   List<String> getMiscDeviceUuids();
 
-  /** Adds the observer to listen to config change. */
-  void addObserver(Observer observer);
+  /** Adds the listener that will be notified on config changes. */
+  void addListener(ApiConfigListener listener);
 
   /** Gets whether the device config is synced between local and remote. */
   boolean isDeviceConfigSynced(String deviceControlId);
