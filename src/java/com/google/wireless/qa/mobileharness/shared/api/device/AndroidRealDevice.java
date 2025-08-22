@@ -68,6 +68,8 @@ public class AndroidRealDevice extends AndroidDevice {
 
   @Override
   public void prepare() throws MobileHarnessException, InterruptedException {
+    this.addSupportedDecorator("CrosLsNexusDecorator");
+    this.addSupportedDecorator("CrosDutTopologyDecorator");
     delegate.setUp();
   }
 
