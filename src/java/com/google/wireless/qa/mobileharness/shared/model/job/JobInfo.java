@@ -450,6 +450,7 @@ public class JobInfo extends JobScheduleUnit {
    *
    * <p>Execution result.
    */
+  @Deprecated
   public Result result() {
     return result;
   }

@@ -38,6 +38,8 @@ message JobType {
 // //src/devtools/mobileharness/api/model/proto/test.proto
 // instead.
 enum TestResult {
+  option deprecated = true;
+
   // Test not finished.
   UNKNOWN = 0;
   // Test passed.
