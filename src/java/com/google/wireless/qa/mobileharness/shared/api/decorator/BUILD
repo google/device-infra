@@ -269,6 +269,7 @@ java_library(
     srcs = ["AndroidHdVideoDecorator.java"],
     deps = [
         ":async_timer_decorator",
+        "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/android/file:android_file_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/media:android_media_util",
@@ -282,7 +283,6 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:android_hd_video_spec",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
         "@maven//:com_google_guava_guava",
     ],
 )
@@ -331,6 +331,7 @@ java_library(
     srcs = ["AndroidLogCatDecorator.java"],
     deps = [
         ":base_decorator",
+        "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/android/lightning/systemstate",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_util",
@@ -346,7 +347,6 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:android_logcat_spec",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/util:device",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",

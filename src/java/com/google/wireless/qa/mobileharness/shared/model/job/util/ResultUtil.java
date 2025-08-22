@@ -18,9 +18,9 @@ package com.google.wireless.qa.mobileharness.shared.model.job.util;
 
 import com.google.devtools.mobileharness.api.model.error.ErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.api.testrunner.plugin.SkipTestException.DesiredTestResult;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.ResultCounter;
-import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestStatus;
 import java.util.ArrayList;
 import java.util.Collection;

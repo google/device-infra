@@ -34,6 +34,7 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.model.proto.Device.PostTestDeviceOp;
 import com.google.devtools.mobileharness.api.model.proto.Test;
+import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto;
 import com.google.devtools.mobileharness.infra.controller.messaging.MessageSender;
 import com.google.devtools.mobileharness.infra.controller.messaging.MessageSubscriberBackend;
@@ -69,9 +70,7 @@ import com.google.wireless.qa.mobileharness.shared.log.InfoLogImportanceScope;
 import com.google.wireless.qa.mobileharness.shared.model.allocation.Allocation;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestLocator;
-import com.google.wireless.qa.mobileharness.shared.model.job.out.Result;
 import com.google.wireless.qa.mobileharness.shared.model.job.util.ResultUtil;
-import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestStatus;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo;
 import com.google.wireless.qa.mobileharness.shared.util.DeviceInfoUtil;
@@ -259,7 +258,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
       // the test doesn't have a chance to get started. In this case, it is important to finalize
       // it here. Also see b/19134904.
       test.status().set(TestStatus.DONE);
-      if (test.result().get() == TestResult.UNKNOWN) {
+      if (test.resultWithCause().get().type() == TestResult.UNKNOWN) {
         test.resultWithCause().setNonPassing(Test.TestResult.ERROR, error);
         test.log().atWarning().alsoTo(logger).log("%s", error.getMessage());
       }
@@ -404,9 +403,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
     } catch (MobileHarnessException e) {
       // Marks this to {@link TestResult#ERROR} in case the driver has already changed the
       // {@link TestResult}.
-      testInfo
-          .resultWithCause()
-          .setNonPassing(Result.upgradeTestResult(ResultUtil.getResultByException(e)), e);
+      testInfo.resultWithCause().setNonPassing(ResultUtil.getResultByException(e), e);
       testInfo
           .log()
           .atWarning()
@@ -443,7 +440,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
       // Post-runs the test.
       try (MobileHarnessAutoCloseable ignored = new MobileHarnessAutoCloseable()) {
         // Makes sure we finalize the test result.
-        if (testInfo.result().get() == TestResult.UNKNOWN) {
+        if (testInfo.resultWithCause().get().type() == TestResult.UNKNOWN) {
           String errMsg = "Test result not found when test finished normally. Mark as ERROR.";
           testInfo
               .resultWithCause()
@@ -473,8 +470,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
               "End test %s on devices(s) %s",
               testInfo.locator().getName(), allocation.getAllDeviceLocators());
     }
-    return TestExecutionResult.create(
-        Result.upgradeTestResult(testInfo.result().get()), postTestDeviceOp);
+    return TestExecutionResult.create(testInfo.resultWithCause().get().type(), postTestDeviceOp);
   }
 
   /**
@@ -740,7 +736,9 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
     testInfo.status().set(TestStatus.DONE);
     logger.atInfo().log(
         "Finish [%s:%s] : %s",
-        testInfo.jobInfo().locator(), testInfo.locator().getName(), testInfo.result().get());
+        testInfo.jobInfo().locator(),
+        testInfo.locator().getName(),
+        testInfo.resultWithCause().get().type());
     try {
       postTestDeviceOp = postRunTest(testInfo, allocation);
     } catch (InterruptedException e) {

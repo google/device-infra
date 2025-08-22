@@ -31,6 +31,7 @@ import com.google.devtools.mobileharness.api.messaging.MessageDestinationNotFoun
 import com.google.devtools.mobileharness.api.messaging.proto.MessagingProto.MessageSend;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.DeviceAllocator;
 import com.google.devtools.mobileharness.infra.client.api.controller.job.JobRunner.EventScope;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
@@ -43,7 +44,6 @@ import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
-import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;

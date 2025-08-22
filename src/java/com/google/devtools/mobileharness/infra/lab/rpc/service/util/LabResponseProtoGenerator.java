@@ -144,7 +144,7 @@ public class LabResponseProtoGenerator {
       boolean forceCleanUpForDrainTimeout) {
     String testId = testInfo.locator().getId();
     TestStatus testStatus = testInfo.status().get();
-    ResultTypeWithCause testResult = testInfo.result().toNewResult().get();
+    ResultTypeWithCause testResult = testInfo.resultWithCause().get();
     List<TestMessageInfo> bufferedMessages = ImmutableList.of();
     if (forwardingTestMessageBuffer.isPresent()) {
       bufferedMessages = forwardingTestMessageBuffer.get().pollForwardingTestMessages(testId);
@@ -171,8 +171,7 @@ public class LabResponseProtoGenerator {
       testStatus = TestStatus.DONE;
       testResult =
           testInfo
-              .result()
-              .toNewResult()
+              .resultWithCause()
               .setNonPassing(
                   com.google.devtools.mobileharness.api.model.proto.Test.TestResult.ERROR,
                   new MobileHarnessException(

@@ -26,12 +26,12 @@ import com.google.common.collect.ListMultimap;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Job.Retry;
+import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
 import com.google.wireless.qa.mobileharness.shared.model.job.util.ResultComparator;
-import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestStatus;
 import java.time.Instant;
 import java.util.Collection;
@@ -357,8 +357,8 @@ public class TestInfos {
 
           @Override
           public int compare(TestInfo left, TestInfo right) {
-            TestResult leftResult = left.result().get();
-            TestResult rightResult = right.result().get();
+            TestResult leftResult = left.resultWithCause().get().type();
+            TestResult rightResult = right.resultWithCause().get().type();
             int resultComparism = resultComparator.compare(leftResult, rightResult);
             if (resultComparism != 0) {
               return resultComparism;

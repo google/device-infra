@@ -71,10 +71,12 @@ java_library(
     deps = [
         "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
         "//src/devtools/mobileharness/api/model/proto:job_java_proto",
+        "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/devtools/mobileharness/infra/container/proto:mode_setting_java_proto",
         "//src/devtools/mobileharness/infra/controller/test/local/utp/proto:incompatible_reason_java_proto",
         "//src/java/com/google/devtools/common/metrics/stability/converter",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/api/model/job/out",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/allocation/allocator",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/util/result:client_alloc_error_util",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/local/utp/common:utp_mode",
@@ -83,7 +85,6 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event:client_test_events",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
         "@maven//:com_google_guava_guava",
     ],
 )

@@ -110,6 +110,7 @@ java_library(
     visibility = ["//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats:__pkg__"],
     deps = [
         "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
+        "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/allocation",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/job:locator",

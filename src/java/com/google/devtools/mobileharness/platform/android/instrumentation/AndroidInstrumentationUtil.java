@@ -31,6 +31,7 @@ import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.out.Warnings;
 import com.google.devtools.mobileharness.api.model.proto.Test;
+import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
 import com.google.devtools.mobileharness.platform.android.lightning.apkfile.ApkAnalyzer;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstallArgs;
@@ -64,7 +65,6 @@ import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.An
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Log;
-import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.AndroidInstrumentationSpec;
 import java.io.File;
 import java.io.FileInputStream;
@@ -959,7 +959,7 @@ public class AndroidInstrumentationUtil {
               logger);
       // Fail the test if it's a coverage file pulling failure.
       if (isCoverageFile) {
-        testInfo.result().set(TestResult.ERROR);
+        testInfo.resultWithCause().setNonPassing(TestResult.ERROR, e);
       }
     }
   }

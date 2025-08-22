@@ -867,8 +867,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
 
       if (resp.getTestStatus().equals(TestStatus.DONE)) {
         logger.atInfo().log(
-            "Finished on device(s) %s with result %s!",
-            deviceLocators, testInfo.result().toNewResult());
+            "Finished on device(s) %s with result %s!", deviceLocators, testInfo.resultWithCause());
         return;
       }
     }

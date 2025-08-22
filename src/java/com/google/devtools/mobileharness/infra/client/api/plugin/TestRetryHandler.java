@@ -29,7 +29,10 @@ import com.google.devtools.common.metrics.stability.model.proto.NamespaceProto.N
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.job.out.Result;
+import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
 import com.google.devtools.mobileharness.api.model.proto.Job.Retry;
+import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.DeviceAllocator;
 import com.google.devtools.mobileharness.infra.client.api.util.result.ClientAllocErrorUtil;
 import com.google.devtools.mobileharness.infra.container.proto.ModeSettingProto.ContainerModePreference;
@@ -42,8 +45,6 @@ import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test;
 import com.google.wireless.qa.mobileharness.shared.controller.event.TestEndedEvent;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
-import com.google.wireless.qa.mobileharness.shared.model.job.out.Result;
-import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.Map;
@@ -137,8 +138,12 @@ public class TestRetryHandler {
     Optional<TestInfo> foregoingTest = getForegoingTest(currentTestInfo);
     Optional<UtpMode> currentUtpMode = getUtpMode(currentTestInfo);
 
-    TestResult currentTestResult = currentTestInfo.result().get();
-    Optional<TestResult> foregoingTestResult = foregoingTest.map(TestInfo::result).map(Result::get);
+    TestResult currentTestResult = currentTestInfo.resultWithCause().get().type();
+    Optional<TestResult> foregoingTestResult =
+        foregoingTest
+            .map(TestInfo::resultWithCause)
+            .map(Result::get)
+            .map(ResultTypeWithCause::type);
 
     boolean isPassAfterRetry =
         foregoingTestResult.isPresent()
@@ -211,7 +216,7 @@ public class TestRetryHandler {
     }
 
     String testName = currentTestInfo.locator().getName();
-    TestResult testResult = currentTestInfo.result().get();
+    TestResult testResult = currentTestInfo.resultWithCause().get().type();
     Optional<ExceptionDetail> cause = currentTestInfo.resultWithCause().get().causeProto();
     ErrorId criticalErrorId =
         cause.isPresent() ? ErrorModelConverter.getCriticalErrorId(cause.get()) : null;
@@ -377,7 +382,9 @@ public class TestRetryHandler {
 
     String currentTestId = currentTestInfo.locator().getId();
     newTestInfo.properties().add(Test.FOREGOING_TEST_ID, currentTestId);
-    newTestInfo.properties().add(Test.FOREGOING_TEST_RESULT, currentTestInfo.result().get().name());
+    newTestInfo
+        .properties()
+        .add(Test.FOREGOING_TEST_RESULT, currentTestInfo.resultWithCause().get().type().name());
     if (validAttemptNum > 0) {
       // If there have been valid attempts, set the index for the retry
       newTestInfo.properties().add(Test.RETRY_INDEX, Long.toString(validAttemptNum));
@@ -451,7 +458,7 @@ public class TestRetryHandler {
    * </ol>
    */
   private static boolean isPotentialContainerError(TestInfo testInfo) {
-    TestResult testResult = testInfo.result().get();
+    TestResult testResult = testInfo.resultWithCause().get().type();
     return !isMandatorySandboxOrContainerMode(testInfo.jobInfo())
         && testInfo.properties().getBoolean(Test.CONTAINER_MODE).orElse(false)
         && testResult != TestResult.PASS
@@ -478,7 +485,7 @@ public class TestRetryHandler {
    * </ol>
    */
   private static boolean isPotentialUtpError(TestInfo currentTestInfo) {
-    TestResult currentTestResult = currentTestInfo.result().get();
+    TestResult currentTestResult = currentTestInfo.resultWithCause().get().type();
     Optional<UtpMode> currentUtpMode = getUtpMode(currentTestInfo);
     return !isForcedHybridUtpMode(currentTestInfo)
         && currentUtpMode.isPresent()

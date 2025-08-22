@@ -36,7 +36,6 @@ import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidForegroundSer
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageUtil;
 import com.google.wireless.qa.mobileharness.shared.comm.message.event.TestMessageEvent;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
-import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.Closeable;
@@ -262,7 +261,7 @@ public class AndroidForegroundServiceMessenger extends BaseDriver
 
     // This always passes as it's not really a test but a communication channel between device and
     // client/users.
-    testInfo.result().set(TestResult.PASS);
+    testInfo.resultWithCause().setPass();
   }
 
   @Subscribe

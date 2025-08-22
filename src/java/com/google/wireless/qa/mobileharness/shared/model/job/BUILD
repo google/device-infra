@@ -107,6 +107,7 @@ java_library(
         ":locator",
         ":test_schedule_unit",
         "//src/devtools/mobileharness/api/model/proto:job_java_proto",
+        "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/devtools/mobileharness/service/moss/proto:slg_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/job/in",

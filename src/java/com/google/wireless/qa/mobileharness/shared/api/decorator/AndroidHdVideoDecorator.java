@@ -22,6 +22,7 @@ import com.google.common.base.Stopwatch;
 import com.google.common.collect.Comparators;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
 import com.google.devtools.mobileharness.platform.android.media.AndroidMediaUtil;
 import com.google.devtools.mobileharness.platform.android.media.ScreenRecordArgs;
@@ -36,7 +37,6 @@ import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobSetting;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
-import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.LinkedList;
@@ -366,14 +366,14 @@ public class AndroidHdVideoDecorator extends AsyncTimerDecorator implements Andr
       // Waits for post processing completed, or the video files will be incomplete.
       Thread.sleep(POST_PROCESSING_TIME_MS);
       // TODO: Uploads the video to test result even if the test result is TIMEOUT.
-      if (testInfo.result().get() == TestResult.TIMEOUT) {
+      if (testInfo.resultWithCause().get().type() == TestResult.TIMEOUT) {
         testInfo
             .log()
             .atInfo()
             .alsoTo(logger)
             .log("Skip Pulling video files, because test has been timeout.");
       } else {
-        if (videoOnPass || testInfo.result().get() != TestResult.PASS) {
+        if (videoOnPass || testInfo.resultWithCause().get().type() != TestResult.PASS) {
           // Pulls video files.
           testInfo.log().atInfo().alsoTo(logger).log("Pulling video files");
           for (int clipId = currentClipId - 1;

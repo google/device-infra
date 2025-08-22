@@ -27,7 +27,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.api.model.proto.Test;
+import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.platform.android.event.util.AppInstallEventUtil;
 import com.google.devtools.mobileharness.platform.android.instrumentation.AndroidInstrumentationSetting;
 import com.google.devtools.mobileharness.platform.android.instrumentation.AndroidInstrumentationUtil;
@@ -53,7 +53,6 @@ import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
-import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.AndroidInstrumentationSpec;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -360,7 +359,7 @@ public class AndroidInstrumentation extends BaseDriver
           Duration.ofMillis(testTimeoutMs));
     } catch (MobileHarnessException e) {
       if (e.getErrorId() == AndroidErrorId.ANDROID_INSTRUMENTATION_COMMAND_EXEC_TIMEOUT) {
-        testInfo.result().set(TestResult.TIMEOUT);
+        testInfo.resultWithCause().setNonPassing(TestResult.TIMEOUT, e);
       }
       throw e;
     }
@@ -572,14 +571,16 @@ public class AndroidInstrumentation extends BaseDriver
                           + ", or instrument_timeout_sec if it has been set.]:%n%s",
                       errorMsg),
                   mhException);
-          testInfo.resultWithCause().setNonPassing(Test.TestResult.TIMEOUT, timeoutCause);
+          testInfo.resultWithCause().setNonPassing(TestResult.TIMEOUT, timeoutCause);
           throw timeoutCause;
         default:
-          testInfo.result().set(TestResult.ERROR);
-          throw new MobileHarnessException(
-              AndroidErrorId.ANDROID_INSTRUMENTATION_TEST_RESULT_NOT_FOUND,
-              "Unexpected Test Result Found",
-              mhException);
+          MobileHarnessException errorCause =
+              new MobileHarnessException(
+                  AndroidErrorId.ANDROID_INSTRUMENTATION_TEST_RESULT_NOT_FOUND,
+                  "Unexpected Test Result Found",
+                  mhException);
+          testInfo.resultWithCause().setNonPassing(TestResult.ERROR, errorCause);
+          throw errorCause;
       }
 
       // Extra adb shell commands or clean up after instrument.
@@ -654,9 +655,9 @@ public class AndroidInstrumentation extends BaseDriver
 
     // Uses the worse case as the final result.
     if (hasError) {
-      testInfo.resultWithCause().setNonPassing(Test.TestResult.ERROR, errorResultCause);
+      testInfo.resultWithCause().setNonPassing(TestResult.ERROR, errorResultCause);
     } else if (hasFail) {
-      testInfo.resultWithCause().setNonPassing(Test.TestResult.FAIL, failResultCause);
+      testInfo.resultWithCause().setNonPassing(TestResult.FAIL, failResultCause);
     } else if (hasPass) {
       testInfo.resultWithCause().setPass();
     }

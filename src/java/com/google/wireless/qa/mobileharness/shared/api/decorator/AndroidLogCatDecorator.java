@@ -25,6 +25,7 @@ import com.google.common.base.Strings;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.platform.android.lightning.systemstate.SystemStateManager;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidVersion;
@@ -40,7 +41,6 @@ import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidLogCatSpec;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
-import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import com.google.wireless.qa.mobileharness.shared.util.DeviceUtil;
 import java.io.File;
 import java.io.IOException;
@@ -277,7 +277,7 @@ public class AndroidLogCatDecorator extends BaseDecorator implements AndroidLogC
       TestInfo testInfo, String filterSpecs, String options, @Nullable String logFilePath)
       throws InterruptedException {
     // Skips logcat when test pass and doesn't require log to file.
-    if (logFilePath == null && testInfo.result().get() == TestResult.PASS) {
+    if (logFilePath == null && testInfo.resultWithCause().get().type() == TestResult.PASS) {
       testInfo
           .log()
           .atInfo()
@@ -353,7 +353,7 @@ public class AndroidLogCatDecorator extends BaseDecorator implements AndroidLogC
                     writeToFileException),
                 logger);
       }
-    } else if (testInfo.result().get() != TestResult.PASS) {
+    } else if (testInfo.resultWithCause().get().type() != TestResult.PASS) {
       // Logs in TestInfo only.
       testInfo.log().atInfo().log(LOG_TEMPLATE_HEADER, filterSpecs);
       testInfo.log().atInfo().log("%s", rawLog);

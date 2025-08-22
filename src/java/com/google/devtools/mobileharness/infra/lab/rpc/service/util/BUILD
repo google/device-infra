@@ -62,7 +62,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/lab/controller:file_publisher",
         "//src/java/com/google/devtools/mobileharness/infra/lab/controller:forwarding_test_message_buffer",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/messaging/message",
-        "//src/java/com/google/devtools/mobileharness/shared/util/error:error_model_converter",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/message:str_pair",

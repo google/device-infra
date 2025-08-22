@@ -17,7 +17,7 @@
 package com.google.wireless.qa.mobileharness.shared.model.job.util;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
+import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import java.util.Comparator;
 
 /**

@@ -49,6 +49,7 @@ import com.google.devtools.mobileharness.api.model.job.TestLocator;
 import com.google.devtools.mobileharness.api.model.lab.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.proto.Job.AllocationExitStrategy;
 import com.google.devtools.mobileharness.api.model.proto.Test;
+import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.AllocationWithStats;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.DeviceAllocator;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.diagnostic.AllocationDiagnostician;
@@ -94,9 +95,7 @@ import com.google.wireless.qa.mobileharness.shared.controller.plugin.Plugin.Plug
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobSetting;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
-import com.google.wireless.qa.mobileharness.shared.model.job.out.Result;
 import com.google.wireless.qa.mobileharness.shared.model.job.util.ResultUtil;
-import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestStatus;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryFilter;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryResult;
@@ -489,8 +488,7 @@ public class JobRunner implements Runnable {
             if (jobInfo.timer().isExpired()) {
               jobInfo.log().atWarning().alsoTo(logger).log("Job expired");
               jobInfo
-                  .result()
-                  .toNewResult()
+                  .resultWithCause()
                   .setNonPassing(
                       Test.TestResult.TIMEOUT,
                       new MobileHarnessException(
@@ -920,7 +918,7 @@ public class JobRunner implements Runnable {
         testManager.startTest(testRunner);
       } catch (MobileHarnessException e) {
         TestResult result = ResultUtil.getResultByException(e);
-        testInfo.result().toNewResult().setNonPassing(Result.upgradeTestResult(result), e);
+        testInfo.resultWithCause().setNonPassing(result, e);
         testInfo.status().set(TestStatus.DONE);
         logger
             .atSevere()
@@ -1178,7 +1176,7 @@ public class JobRunner implements Runnable {
       boolean noPerfectCandidate,
       @Nullable Throwable jobError)
       throws MobileHarnessException, InterruptedException {
-    if (jobInfo.result().get() != TestResult.UNKNOWN) {
+    if (jobInfo.resultWithCause().get().type() != TestResult.UNKNOWN) {
       // Don't override the existing result, like TIMEOUT.
       return;
     }
@@ -1257,8 +1255,7 @@ public class JobRunner implements Runnable {
                   .addAndLog(errorId, jobInfo.locator().getId() + ": " + errMsg, logger);
               hasAllocErrorTests = !hasAllocFailTests;
               testInfo
-                  .result()
-                  .toNewResult()
+                  .resultWithCause()
                   .setNonPassing(
                       Test.TestResult.ERROR, new MobileHarnessException(errorId, errMsg, cause));
               logAllocUserConfigErrorCauseToProperty(testInfo, errorId, cause);
@@ -1266,8 +1263,7 @@ public class JobRunner implements Runnable {
           } else if (failFastError != null) {
             hasAllocFailTests = true;
             testInfo
-                .result()
-                .toNewResult()
+                .resultWithCause()
                 .setNonPassing(
                     Test.TestResult.ERROR,
                     new MobileHarnessException(
@@ -1275,10 +1271,9 @@ public class JobRunner implements Runnable {
                         "Job has fail fast error.",
                         ErrorModelConverter.toDeserializedException(failFastError)));
           } else {
-            if (!jobInfo.result().get().equals(TestResult.PASS)) {
+            if (!jobInfo.resultWithCause().get().type().equals(TestResult.PASS)) {
               testInfo
-                  .result()
-                  .toNewResult()
+                  .resultWithCause()
                   .setNonPassing(
                       Test.TestResult.ERROR,
                       new MobileHarnessException(
@@ -1294,15 +1289,14 @@ public class JobRunner implements Runnable {
           String errMsg = "Test is suspended for quota issues. ";
           testInfo.warnings().addAndLog(errorId, jobInfo.locator().getId() + ": " + errMsg, logger);
           testInfo
-              .result()
-              .toNewResult()
+              .resultWithCause()
               .setNonPassing(Test.TestResult.ERROR, new MobileHarnessException(errorId, errMsg));
           hasSuspendedTests = true;
           break;
         case ASSIGNED:
         case RUNNING:
         case DONE:
-          switch (testInfo.result().get()) {
+          switch (testInfo.resultWithCause().get().type()) {
             case PASS:
               break;
             case SKIP:
@@ -1321,7 +1315,7 @@ public class JobRunner implements Runnable {
             default:
               throw new MobileHarnessException(
                   InfraErrorId.CLIENT_JR_TEST_HAS_UNKNOWN_RESULT,
-                  "Unknown test result " + testInfo.result().get());
+                  "Unknown test result " + testInfo.resultWithCause().get().type());
           }
           break;
       }
@@ -1343,8 +1337,7 @@ public class JobRunner implements Runnable {
                     jobError));
       } else {
         jobInfo
-            .result()
-            .toNewResult()
+            .resultWithCause()
             .setNonPassing(
                 Test.TestResult.ERROR,
                 new MobileHarnessException(
@@ -1355,8 +1348,7 @@ public class JobRunner implements Runnable {
       }
     } else if (hasFailTests) {
       jobInfo
-          .result()
-          .toNewResult()
+          .resultWithCause()
           .setNonPassing(
               Test.TestResult.FAIL,
               new MobileHarnessException(
@@ -1365,8 +1357,7 @@ public class JobRunner implements Runnable {
                       + " level."));
     } else if (hasAllocErrorTests) {
       jobInfo
-          .result()
-          .toNewResult()
+          .resultWithCause()
           .setNonPassing(
               Test.TestResult.ERROR,
               new MobileHarnessException(
@@ -1375,8 +1366,7 @@ public class JobRunner implements Runnable {
                       + " the test level."));
     } else if (hasAllocFailTests) {
       jobInfo
-          .result()
-          .toNewResult()
+          .resultWithCause()
           .setNonPassing(
               Test.TestResult.ERROR,
               new MobileHarnessException(
@@ -1385,8 +1375,7 @@ public class JobRunner implements Runnable {
                       + " test level."));
     } else if (hasSuspendedTests) {
       jobInfo
-          .result()
-          .toNewResult()
+          .resultWithCause()
           .setNonPassing(
               Test.TestResult.ERROR,
               new MobileHarnessException(
@@ -1409,20 +1398,18 @@ public class JobRunner implements Runnable {
     } else if (testCount > 0) {
       if (testCount == skipTestCount) {
         jobInfo
-            .result()
-            .toNewResult()
+            .resultWithCause()
             .setNonPassing(
                 Test.TestResult.SKIP,
                 new MobileHarnessException(
                     InfraErrorId.CLIENT_JR_JOB_HAS_ALL_SKIPPED_TESTS,
                     "All tests of the job are skipped"));
       } else {
-        jobInfo.result().toNewResult().setPass();
+        jobInfo.resultWithCause().setPass();
       }
     } else {
       jobInfo
-          .result()
-          .toNewResult()
+          .resultWithCause()
           .setNonPassing(
               Test.TestResult.ERROR,
               new MobileHarnessException(
@@ -1595,11 +1582,12 @@ public class JobRunner implements Runnable {
                 new MobileHarnessException(
                     InfraErrorId.TR_PLUGIN_INVALID_SKIP_EXCEPTION_ERROR,
                     String.format(
-                        "Plugins want to skip job and set job result but it is ignored "
-                            + "because the job has run. The job result will NOT be changed as "
-                            + "the desired job result in the exceptions. SkipJobException only "
-                            + "works in JobStartEvent. If you just want to change job result"
-                            + ", please call jobInfo.result().set() directly in your plugin. "
+                        "Plugins want to skip job and set job result but it is ignored because the"
+                            + " job has run. The job result will NOT be changed as the desired job"
+                            + " result in the exceptions. SkipJobException only works in"
+                            + " JobStartEvent. If you just want to change job result, please call"
+                            + " jobInfo.resultWithCause().setPass/setNonPass() directly in your"
+                            + " plugin. "
                             + " Detail: %s",
                         skipResultWithCause.report())),
                 logger);

@@ -18,8 +18,8 @@ package com.google.wireless.qa.mobileharness.shared.android.parser;
 
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.wireless.qa.mobileharness.shared.model.job.util.ResultUtil;
-import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;

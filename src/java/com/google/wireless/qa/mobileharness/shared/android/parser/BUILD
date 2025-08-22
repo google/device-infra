@@ -24,9 +24,9 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__subpackages__",
     ],
     deps = [
+        "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/util:result_util",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
         "@maven//:com_google_code_findbugs_jsr305",
     ],
 )

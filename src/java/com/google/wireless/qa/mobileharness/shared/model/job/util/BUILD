@@ -33,6 +33,7 @@ java_library(
     visibility = DEFAULT_VISIBILITY,
     deps = [
         ":result_comparator",
+        "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/testrunner/plugin:exception",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
@@ -45,7 +46,7 @@ java_library(
         "ResultComparator.java",
     ],
     deps = [
-        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
+        "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "@maven//:com_google_guava_guava",
     ],
 )

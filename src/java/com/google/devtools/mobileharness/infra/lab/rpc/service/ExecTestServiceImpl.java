@@ -314,7 +314,7 @@ public class ExecTestServiceImpl {
    * stats.
    */
   private Test convertTestInfoToTestDetail(TestInfo testInfo) {
-    ResultTypeWithCause testResult = testInfo.result().toNewResult().get();
+    ResultTypeWithCause testResult = testInfo.resultWithCause().get();
     Test.Builder testProto =
         Test.newBuilder()
             .setId(testInfo.locator().getId())
