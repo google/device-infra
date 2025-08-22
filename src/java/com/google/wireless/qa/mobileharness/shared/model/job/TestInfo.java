@@ -268,6 +268,7 @@ public class TestInfo extends TestScheduleUnit implements Cloneable {
    *
    * <p>Execution result.
    */
+  @Deprecated
   public Result result() {
     return result;
   }

@@ -32,6 +32,7 @@ import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
  *
  * <p>Result of a job/test.
  */
+@Deprecated
 public class Result {
   private static class NewResult
       extends com.google.devtools.mobileharness.api.model.job.out.Result {
