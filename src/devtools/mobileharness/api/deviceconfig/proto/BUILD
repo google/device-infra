@@ -16,6 +16,8 @@
 # Description:
 #   Proto definitions for Mobile Harness config service.
 
+load("//third_party/protobuf/build_defs:kt_jvm_proto_library.bzl", "kt_jvm_proto_library")
+
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
