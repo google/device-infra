@@ -321,10 +321,17 @@ public class MoblyTest extends BaseDriver implements MoblyTestSpec {
     JSONObject testbedConfig = MoblyConfigGenerator.getLocalMoblyConfig(device);
 
     // Overwrite the testbed config with the user-provided custom Mobly config, if it exists.
-    if (testInfo.jobInfo().files().isTagNotEmpty(FILE_MOBLY_CONFIG)) {
+    String customConfigPath = null;
+    if (testInfo.properties().has(FILE_MOBLY_CONFIG)) {
+      customConfigPath = testInfo.properties().get(FILE_MOBLY_CONFIG);
+      logger.atInfo().log("Detected custom Mobly path from test properties: %s.", customConfigPath);
+    } else if (testInfo.jobInfo().files().isTagNotEmpty(FILE_MOBLY_CONFIG)) {
+      customConfigPath = testInfo.jobInfo().files().getSingle(FILE_MOBLY_CONFIG);
+      logger.atInfo().log("Detected custom Mobly path from job-info: %s.", customConfigPath);
+    }
+    if (!isNullOrEmpty(customConfigPath)) {
       JSONObject customMoblyConfig =
-          MoblyConfigGenerator.getMoblyConfigFromYaml(
-              localFileUtil.readFile(testInfo.jobInfo().files().getSingle(FILE_MOBLY_CONFIG)));
+          MoblyConfigGenerator.getMoblyConfigFromYaml(localFileUtil.readFile(customConfigPath));
       MoblyConfigGenerator.concatMoblyConfig(
           testbedConfig, customMoblyConfig, /* overwriteOriginal= */ true);
       logger.atInfo().log("Config after loading custom Mobly YAML: %s", config);
