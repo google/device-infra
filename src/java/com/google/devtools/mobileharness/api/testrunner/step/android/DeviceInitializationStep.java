@@ -120,7 +120,8 @@ public class DeviceInitializationStep {
         device,
         testInfo,
         /* skipUpdateDevicePropertiesAndDimensions= */ false,
-        /* skipCacheDevice= */ false);
+        /* skipCacheDevice= */ false,
+        /* initializationArgs= */ null);
   }
 
   /**
@@ -133,7 +134,8 @@ public class DeviceInitializationStep {
         device,
         /* testInfo= */ null,
         /* skipUpdateDevicePropertiesAndDimensions= */ false,
-        /* skipCacheDevice= */ false);
+        /* skipCacheDevice= */ false,
+        /* initializationArgs= */ null);
   }
 
   /**
@@ -146,7 +148,11 @@ public class DeviceInitializationStep {
       Device device, TestInfo testInfo, boolean skipUpdateDevicePropertiesAndDimensions)
       throws MobileHarnessException, InterruptedException {
     initializeDevice(
-        device, testInfo, skipUpdateDevicePropertiesAndDimensions, /* skipCacheDevice= */ false);
+        device,
+        testInfo,
+        skipUpdateDevicePropertiesAndDimensions,
+        /* skipCacheDevice= */ false,
+        /* initializationArgs= */ null);
   }
 
   /**
@@ -160,9 +166,10 @@ public class DeviceInitializationStep {
       Device device,
       @Nullable TestInfo testInfo,
       boolean skipUpdateDevicePropertiesAndDimensions,
-      boolean skipCacheDevice)
+      boolean skipCacheDevice,
+      @Nullable InitializationArgs initializationArgs)
       throws MobileHarnessException, InterruptedException {
-    waitForDeviceInitializedWithRetry(device, testInfo, skipCacheDevice);
+    waitForDeviceInitializedWithRetry(device, testInfo, skipCacheDevice, initializationArgs);
     if (!skipUpdateDevicePropertiesAndDimensions) {
       updateDevicePropertiesAndDimensions(device);
     }
@@ -170,7 +177,10 @@ public class DeviceInitializationStep {
   }
 
   private void waitForDeviceInitializedWithRetry(
-      Device device, @Nullable TestInfo testInfo, boolean skipCacheDevice)
+      Device device,
+      @Nullable TestInfo testInfo,
+      boolean skipCacheDevice,
+      @Nullable InitializationArgs initializationArgs)
       throws MobileHarnessException, InterruptedException {
     Log log = testInfo != null ? testInfo.log() : null;
     String deviceId = device.getDeviceId();
@@ -208,7 +218,7 @@ public class DeviceInitializationStep {
         try {
           androidDeviceInitializer.initialize(
               deviceId,
-              testInfo != null && testInfo.jobInfo().params().isTrue(PARAM_SKIP_SETUP_WIZARD),
+              ifSkipSetupWizard(testInfo, initializationArgs),
               testInfo != null && testInfo.jobInfo().params().isTrue(PARAM_DISABLE_VERITY),
               deviceReadyTimeout);
           break;
@@ -315,5 +325,16 @@ public class DeviceInitializationStep {
           AndroidErrorId.ANDROID_DEVICE_INIT_STEP_GET_JOB_PARAM_ERROR, e.getMessage(), e);
     }
     return Optional.of(deviceReadyTimeout);
+  }
+
+  private boolean ifSkipSetupWizard(
+      @Nullable TestInfo testInfo, @Nullable InitializationArgs initializationArgs) {
+    if (testInfo != null && testInfo.jobInfo().params().isTrue(PARAM_SKIP_SETUP_WIZARD)) {
+      return true;
+    }
+    if (initializationArgs != null && initializationArgs.skipSetupWizard().isPresent()) {
+      return initializationArgs.skipSetupWizard().get();
+    }
+    return false;
   }
 }

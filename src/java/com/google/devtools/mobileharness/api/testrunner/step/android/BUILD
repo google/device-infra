@@ -25,7 +25,9 @@ java_library(
     visibility = [
         "//:omnilab_fusion",
     ],
+    exports = [":initialization_args"],
     deps = [
+        ":initialization_args",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/testrunner/device/cache:device_cache",
         "//src/java/com/google/devtools/mobileharness/platform/android/app/devicedaemon:device_daemon_helper",
@@ -43,4 +45,10 @@ java_library(
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
     ],
+)
+
+java_library(
+    name = "initialization_args",
+    srcs = ["InitializationArgs.java"],
+    deps = ["//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value"],
 )
