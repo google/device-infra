@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.shared.util.file.local;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.Maps;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
@@ -34,6 +35,7 @@ import java.net.URLConnection;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Supplier;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import javax.annotation.Nullable;
@@ -51,54 +53,54 @@ public class ResUtil {
   private final LocalFileUtil fileUtil;
   private static final SystemUtil systemUtil = new SystemUtil();
 
-  private final String resDir;
+  private final Supplier<String> resDir;
   // Use external directory to avoid conflict with the internal resource directory.
   // One may use resources in extResDir to override the internal resources in resDir.
-  private final String extResDir;
+  private final Supplier<String> extResDir;
   @Nullable private final String externalResJar;
 
-  /** Holder of {@link #RES_DIR} for lazy initialization. */
-  private static class ResDirHolder {
-    /** Target directory for placing the unpacked resource files. */
-    private static final String RES_DIR;
+  private static final Supplier<String> DEFAULT_RES_DIR =
+      Suppliers.memoize(ResUtil::initializeResDir);
 
-    static {
-      if (systemUtil.isBlazeTest()) {
-        RES_DIR = PathUtil.join(getBazelTestTmpDir(), Flags.instance().resDirName.getNonNull());
-        String location = "Bazel test";
-        logger.atInfo().log("Running on %s, use %s as RES_DIR.", location, RES_DIR);
-      } else {
-        RES_DIR =
-            PathUtil.join(DirCommon.getTempDirRoot(), Flags.instance().resDirName.getNonNull());
-        logger.atInfo().log("Running on Lab server, use %s as RES_DIR.", RES_DIR);
-        LocalFileUtil fileUtil = new LocalFileUtil();
-        // Cleans up the res dir. Otherwise, the lab server may fail to extract the adb binary
-        // because it failed to overwrite adb under use. See b/11909086.
-        logger.atInfo().log("Clean res dir: %s", RES_DIR);
-        try {
-          fileUtil.removeFileOrDir(RES_DIR);
-        } catch (MobileHarnessException e) {
-          logger.atWarning().withCause(e).log("Failed to clean up res dir: %s", RES_DIR);
-        } catch (InterruptedException e) {
-          Thread.currentThread().interrupt();
-          logger.atWarning().log("Interrupted: %s", e.getMessage());
-        }
+  /** This method should only be called by {@link #DEFAULT_RES_DIR}. */
+  private static String initializeResDir() {
+    if (systemUtil.isBlazeTest()) {
+      String result = PathUtil.join(getBazelTestTmpDir(), Flags.instance().resDirName.getNonNull());
+      String location = "Bazel test";
+      logger.atInfo().log("Running on %s, use %s as RES_DIR.", location, result);
+      return result;
+    } else {
+      String result =
+          PathUtil.join(DirCommon.getTempDirRoot(), Flags.instance().resDirName.getNonNull());
+      logger.atInfo().log("Running on Lab server, use %s as RES_DIR.", result);
+      LocalFileUtil fileUtil = new LocalFileUtil();
+      // Cleans up the res dir. Otherwise, the lab server may fail to extract the adb binary
+      // because it failed to overwrite adb under use. See b/11909086.
+      logger.atInfo().log("Clean res dir: %s", result);
+      try {
+        fileUtil.removeFileOrDir(result);
+      } catch (MobileHarnessException | RuntimeException | Error e) {
+        logger.atWarning().withCause(e).log("Failed to clean up res dir: %s", result);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        logger.atWarning().log("Interrupted: %s", e.getMessage());
       }
+      return result;
     }
   }
 
   public ResUtil() {
-    this(ResDirHolder.RES_DIR, new LocalFileUtil());
+    this(DEFAULT_RES_DIR, new LocalFileUtil());
   }
 
   public ResUtil(String resDir) {
-    this(resDir, new LocalFileUtil());
+    this(() -> resDir, new LocalFileUtil());
   }
 
   @VisibleForTesting
-  ResUtil(String resDir, LocalFileUtil fileUtil) {
+  ResUtil(Supplier<String> resDir, LocalFileUtil fileUtil) {
     this.resDir = resDir;
-    this.extResDir = PathUtil.join(resDir, "external");
+    this.extResDir = Suppliers.memoize(() -> PathUtil.join(resDir.get(), "external"));
     this.fileUtil = fileUtil;
     String jarPath = Flags.instance().externalResJar.getNonNull();
     if (!Strings.isNullOrEmpty(jarPath)
@@ -124,6 +126,7 @@ public class ResUtil {
   @CanIgnoreReturnValue
   public String getResourceFile(Class<?> relativeClass, String resPathInJar)
       throws MobileHarnessException {
+    String resDir = this.resDir.get();
     synchronized (resFiles) {
       String key = relativeClass.getSimpleName() + "_" + resPathInJar;
       String filePath = resFiles.get(key);
@@ -206,6 +209,7 @@ public class ResUtil {
     if (externalResJar == null) {
       return Optional.empty();
     }
+    String extResDir = this.extResDir.get();
     String key = externalResJar + "_" + resPathInJar;
     synchronized (resFiles) {
       String filePath = resFiles.get(key);
@@ -219,13 +223,15 @@ public class ResUtil {
           resFiles.put(key, null);
         }
       }
-      Optional<String> extractedFilePath = extractResourceFile(externalResJar, resPathInJar);
+      Optional<String> extractedFilePath =
+          extractResourceFile(externalResJar, resPathInJar, extResDir);
       extractedFilePath.ifPresent(f -> resFiles.put(key, f));
       return extractedFilePath;
     }
   }
 
-  private Optional<String> extractResourceFile(String jarPath, String resPathInJar) {
+  private Optional<String> extractResourceFile(
+      String jarPath, String resPathInJar, String extResDir) {
     String relativePath = getRelativePath(resPathInJar);
     try (JarFile jarFile = new JarFile(jarPath)) {
       JarEntry jarEntry = jarFile.getJarEntry(relativePath);
@@ -276,7 +282,7 @@ public class ResUtil {
 
   /** Gets path of default resource directory. */
   public static String getResDir() {
-    return ResDirHolder.RES_DIR;
+    return DEFAULT_RES_DIR.get();
   }
 
   private static String getBazelTestTmpDir() {
