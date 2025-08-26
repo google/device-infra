@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.shared.logging.controller.handler;
 import com.google.common.base.Strings;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.shared.logging.controller.handler.Annotations.LoggerHandler;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.logging.MobileHarnessLogFormatter;
@@ -26,6 +27,7 @@ import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.inject.AbstractModule;
 import com.google.inject.Singleton;
+import com.google.inject.multibindings.Multibinder;
 import com.google.inject.throwingproviders.CheckedProvider;
 import com.google.inject.throwingproviders.CheckedProvides;
 import com.google.inject.throwingproviders.ThrowingProviderBinder;
@@ -33,6 +35,7 @@ import com.google.wireless.qa.mobileharness.shared.constant.DirCommon;
 import java.io.IOException;
 import java.util.Optional;
 import java.util.logging.FileHandler;
+import java.util.logging.Handler;
 import java.util.logging.Level;
 import javax.annotation.Nullable;
 
@@ -57,6 +60,14 @@ public final class LocalFileHandlerModule extends AbstractModule {
   @Override
   protected void configure() {
     install(ThrowingProviderBinder.forModule(this));
+
+    if (logFileDir != null) {
+      // Only add the multibinding if logFileDir is non-null, since provideFileHandler provides a
+      // FileHandler only when logFileDir is present.
+      Multibinder.newSetBinder(binder(), Handler.class, LoggerHandler.class)
+          .addBinding()
+          .to(FileHandler.class);
+    }
   }
 
   @CanIgnoreReturnValue

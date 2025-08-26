@@ -14,30 +14,24 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.shared.logging.controller.handler;
+package com.google.devtools.mobileharness.shared.logging;
 
+import com.google.devtools.mobileharness.shared.logging.controller.LogEntryUploadManager;
 import com.google.devtools.mobileharness.shared.logging.controller.handler.Annotations.LoggerHandler;
-import com.google.devtools.mobileharness.shared.logging.controller.queue.LogEntryQueue;
-import com.google.devtools.mobileharness.shared.logging.util.LogEntryUtil;
+import com.google.devtools.mobileharness.shared.logging.controller.handler.MobileHarnessLogHandler;
+import com.google.devtools.mobileharness.shared.util.concurrent.ServiceModule;
 import com.google.inject.AbstractModule;
 import com.google.inject.multibindings.Multibinder;
 import java.util.logging.Handler;
-import javax.annotation.Nullable;
 
-/** Module for providing all related log {@link java.util.logging.Handler}s. */
-public class LogHandlerModule extends AbstractModule {
-
-  @Nullable private final String logFileDir;
-
-  public LogHandlerModule(@Nullable String logFileDir) {
-    this.logFileDir = logFileDir;
-  }
-
+/** Module for starting the Mobile Harness host log service. */
+public final class MobileHarnessHostLogServiceModule extends AbstractModule {
   @Override
-  public void configure() {
-    requireBinding(LogEntryUtil.class);
-    requireBinding(LogEntryQueue.class);
-    install(new LocalFileHandlerModule(logFileDir));
-    Multibinder.newSetBinder(binder(), Handler.class, LoggerHandler.class);
+  protected void configure() {
+    install(ServiceModule.forService(LogEntryUploadManager.class));
+
+    Multibinder.newSetBinder(binder(), Handler.class, LoggerHandler.class)
+        .addBinding()
+        .to(MobileHarnessLogHandler.class);
   }
 }

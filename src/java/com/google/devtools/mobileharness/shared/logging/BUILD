@@ -39,3 +39,14 @@ java_library(
         "@maven//:com_google_inject_guice",
     ],
 )
+
+java_library(
+    name = "mobileharness_host_log_service_module",
+    srcs = ["MobileHarnessHostLogServiceModule.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/logging/controller:log_entry_uploader_manager",
+        "//src/java/com/google/devtools/mobileharness/shared/logging/controller/handler",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:service_module",
+        "@maven//:com_google_inject_guice",
+    ],
+)
