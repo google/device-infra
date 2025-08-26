@@ -190,6 +190,7 @@ public class AtsConsole {
     // Starts ATS console.
     try (NonThrowingAutoCloseable ignored = threadRenaming("ats-console-main-thread")) {
       atsConsole.run();
+      System.exit(0);
     } catch (MobileHarnessException | InterruptedException | RuntimeException | Error e) {
       atsConsole.consoleUtil.printlnStderr(
           "Console received an unexpected exception (shown below); shutting down ATS Console.\n%s",
@@ -293,17 +294,17 @@ public class AtsConsole {
     if (Flags.instance().atsConsoleOlcServerEmbeddedMode.getNonNull()) {
       // Runs embedded mode OLC server.
       olcServerRunner.runBasic();
-    } else {
-      // Prepares OLC server.
-      if (Flags.instance().enableAtsConsoleOlcServer.getNonNull()) {
-        serverPreparer.prepareOlcServer();
-        serverPreparer.startSendingHeartbeats();
-      }
+    }
 
-      // Prints OLC server streaming log.
-      if (Flags.instance().enableAtsConsoleOlcServerLog.getNonNull()) {
-        serverLogPrinter.enable(true);
-      }
+    // Prepares OLC server.
+    if (Flags.instance().enableAtsConsoleOlcServer.getNonNull()) {
+      serverPreparer.prepareOlcServer();
+      serverPreparer.startSendingHeartbeats();
+    }
+
+    // Prints OLC server streaming log.
+    if (Flags.instance().enableAtsConsoleOlcServerLog.getNonNull()) {
+      serverLogPrinter.enable(true);
     }
 
     // Starts to read input from console.
