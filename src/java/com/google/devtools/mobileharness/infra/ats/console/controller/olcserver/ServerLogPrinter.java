@@ -32,6 +32,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.C
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.GetLogResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecord;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.ControlStub;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
@@ -85,6 +86,9 @@ public class ServerLogPrinter {
 
   /** Enables/disables the printer. */
   public void enable(boolean enable) throws MobileHarnessException, InterruptedException {
+    if (Flags.instance().atsConsoleOlcServerEmbeddedMode.getNonNull()) {
+      return;
+    }
     synchronized (lock) {
       this.enable = enable;
       logger

@@ -39,6 +39,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/util:session_query_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_text_format",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/server:lifecycle",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@io_grpc_grpc_java//core",
         "@io_grpc_grpc_java//stub",

@@ -151,6 +151,9 @@ public class ServerPreparer {
   }
 
   public void startSendingHeartbeats() {
+    if (Flags.instance().atsConsoleOlcServerEmbeddedMode.getNonNull()) {
+      return;
+    }
     HeartbeatRequest request = HeartbeatRequest.newBuilder().setClientId(clientId).build();
     logFailure(
         scheduledThreadPool.scheduleWithFixedDelay(
@@ -193,6 +196,9 @@ public class ServerPreparer {
    *     the machine at any given time (if no error occurs when acquiring the lock)
    */
   public void prepareOlcServer() throws MobileHarnessException, InterruptedException {
+    if (Flags.instance().atsConsoleOlcServerEmbeddedMode.getNonNull()) {
+      return;
+    }
     synchronized (prepareServerLock) {
       boolean firstPreparation = !hasPrepared;
       hasPrepared = true;
@@ -399,6 +405,9 @@ public class ServerPreparer {
    */
   public void killExistingServer(boolean forcibly)
       throws MobileHarnessException, InterruptedException {
+    if (Flags.instance().atsConsoleOlcServerEmbeddedMode.getNonNull()) {
+      return;
+    }
     logger
         .atInfo()
         .with(IMPORTANCE, IMPORTANT)

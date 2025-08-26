@@ -46,6 +46,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionId;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.util.SessionQueryUtil;
 import com.google.devtools.mobileharness.shared.util.comm.server.LifecycleManager;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
@@ -133,6 +134,11 @@ public class ControlService extends ControlServiceGrpc.ControlServiceImplBase {
     logger.atInfo().log("KillServerRequest: [%s]", shortDebugString(request));
     KillServerResponse.Builder responseBuilder =
         KillServerResponse.newBuilder().setServerPid(ProcessHandle.current().pid());
+
+    // In embedded mode the OLC server won't be actually killed.
+    if (Flags.instance().atsConsoleOlcServerEmbeddedMode.getNonNull()) {
+      return responseBuilder.setSuccess(Success.getDefaultInstance()).build();
+    }
 
     String clientId = request.getClientId();
     ImmutableList<String> unfinishedSessionIdsFromClient =
