@@ -471,7 +471,8 @@ public class AtsConsole {
     boolean useNewOlcServer = Boolean.parseBoolean(System.getenv(USE_NEW_OLC_SERVER_ENV_VAR));
     if (useNewOlcServer || embeddedMode) {
       // Generate random flags for new OLC server or embedded mode.
-      extraFlags.addAll(getRandomServerFlags());
+      extraFlags.addAll(
+          getRandomServerFlags(embeddedMode ? RandomServerType.PID : RandomServerType.PORT));
     }
     // Always overrides the embedded mode flag to keep it consistent with random server flags.
     extraFlags.add(String.format("--ats_console_olc_server_embedded_mode=%s", embeddedMode));
@@ -483,13 +484,27 @@ public class AtsConsole {
     return flagsWithBuiltinFlags.addToEnd(extraFlags.build());
   }
 
-  private static ImmutableList<String> getRandomServerFlags()
+  private enum RandomServerType {
+    PORT,
+    PID,
+  }
+
+  private static ImmutableList<String> getRandomServerFlags(RandomServerType type)
       throws IOException, InterruptedException {
-    int olcPort = PortProber.pickUnusedPort();
-    return ImmutableList.of(
-        String.format("--olc_server_port=%d", olcPort),
-        String.format("--public_dir=/tmp/xts_console/server_%d", olcPort),
-        String.format("--tmp_dir_root=/tmp/xts_console/server_%d", olcPort),
-        "--ats_console_olc_server_copy_server_resource=false");
+    ImmutableList.Builder<String> result = ImmutableList.builder();
+    String serverId;
+    if (type == RandomServerType.PORT) {
+      int olcPort = PortProber.pickUnusedPort();
+      result.add(String.format("--olc_server_port=%s", olcPort));
+      serverId = Integer.toString(olcPort);
+    } else {
+      serverId = String.format("p%s", ProcessHandle.current().pid());
+    }
+    return result
+        .add(
+            String.format("--public_dir=/tmp/xts_console/server_%s", serverId),
+            String.format("--tmp_dir_root=/tmp/xts_console/server_%s", serverId),
+            "--ats_console_olc_server_copy_server_resource=false")
+        .build();
   }
 }
