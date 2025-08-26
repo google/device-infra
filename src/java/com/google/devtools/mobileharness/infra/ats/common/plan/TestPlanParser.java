@@ -22,8 +22,9 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ListMultimap;
-import com.google.common.flogger.FluentLogger;
+import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import java.nio.file.Path;
 import java.util.ArrayDeque;
@@ -39,8 +40,6 @@ import org.w3c.dom.NodeList;
 
 /** A parser to parse test plans from the xts-tradefed.jar file only. */
 public class TestPlanParser {
-
-  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private static final String CONFIGURATION_NODE_NAME = "configuration";
   private static final String OPTION_NODE_NAME = "option";
@@ -98,10 +97,14 @@ public class TestPlanParser {
       parsedTestPlans.add(testPlanName);
 
       if (testPlan.isEmpty()) {
-        // Skip the test plan since it is not valid.
-        logger.atWarning().log(
-            "Skip parsing the test plan: %s since it is not a valid test plan.", testPlanName);
-        continue;
+        String errorMessage =
+            String.format(
+                "Failed to parse test plan %s since it is not a valid test plan.",
+                testPlanName.equals(rootTestPlan)
+                    ? rootTestPlan
+                    : String.format("%s in %s", testPlanName, rootTestPlan));
+        throw MobileHarnessExceptionFactory.createUserFacingException(
+            InfraErrorId.XTS_CONFIG_XML_PARSE_ERROR, errorMessage, /* cause= */ null);
       }
       pendingNodes.offer(testPlan.get().getDocumentElement());
       while (pendingNodes.peek() != null) {

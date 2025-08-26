@@ -151,6 +151,10 @@ public class PlanConfigUtil {
   public Optional<Document> loadConfig(String configName, Path jar) {
     Optional<InputStream> configStream = getBundledConfigStream(jar, configName);
     if (configStream.isEmpty()) {
+      logger
+          .atWarning()
+          .with(IMPORTANCE, IMPORTANT)
+          .log("Failed to load the config [%s] from %s: config not found", configName, jar);
       return Optional.empty();
     }
 
