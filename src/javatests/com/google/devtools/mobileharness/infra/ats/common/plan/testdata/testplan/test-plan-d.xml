@@ -15,11 +15,7 @@
 -->
 <configuration description="mock-test-plan">
 
-    <include name="test-plan-b" />
-
-    <!-- Mock Comment -->
-    <option name="compatibility:include-filter" value="CtsAppSecurityHostTestCases android.appsecurity.cts.ExternalStorageHostTest#testSystemGalleryExists" />
-    <option name="compatibility:include-filter" value="CtsOsTestCases android.os.cts.StrictModeTest#testFileUriExposure" />
-    <option name="compatibility:module-metadata-exclude-filter" key="mock_key" value="mock_value" />
+    <include name="test-plan-e" />
 
 </configuration>
+

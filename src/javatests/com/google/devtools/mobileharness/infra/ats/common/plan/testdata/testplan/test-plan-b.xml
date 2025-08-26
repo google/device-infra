@@ -16,7 +16,6 @@
 <configuration description="mock-test-plan">
 
     <include name="test-plan-c" />
-    <include name="test-plan-d" />
 
     <option name="compatibility:test-arg" value="com.android.tradefed.testtype.AndroidJUnitTest:exclude-annotation:com.android.xts.root.annotations.RequireAdbRoot" />
     <option name="compatibility:test-arg" value="com.android.tradefed.testtype.HostTest:exclude-annotation:com.android.xts.root.annotations.RequireAdbRoot" />

@@ -33,6 +33,7 @@ java_library(
         ":testdata",
     ],
     deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/plan:jar_file_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/plan:plan_config_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/plan:test_plan_parser",

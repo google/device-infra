@@ -17,12 +17,14 @@
 package com.google.devtools.mobileharness.infra.ats.common.plan;
 
 import static com.google.common.truth.Truth.assertThat;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser.TestPlanFilter;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
 import java.io.FileInputStream;
@@ -51,6 +53,8 @@ public final class TestPlanParserTest {
       RunfilesUtil.getRunfilesLocation(TEST_DATA_PREFIX + "test-plan-b.xml");
   private static final String TEST_PLAN_C_XML =
       RunfilesUtil.getRunfilesLocation(TEST_DATA_PREFIX + "test-plan-c.xml");
+  private static final String TEST_PLAN_D_XML =
+      RunfilesUtil.getRunfilesLocation(TEST_DATA_PREFIX + "test-plan-d.xml");
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
   @Mock private PlanConfigUtil planConfigUtil;
@@ -63,10 +67,12 @@ public final class TestPlanParserTest {
     Document testPlanA = documentBuilder.parse(new FileInputStream(TEST_PLAN_A_XML));
     Document testPlanB = documentBuilder.parse(new FileInputStream(TEST_PLAN_B_XML));
     Document testPlanC = documentBuilder.parse(new FileInputStream(TEST_PLAN_C_XML));
+    Document testPlanD = documentBuilder.parse(new FileInputStream(TEST_PLAN_D_XML));
 
     when(planConfigUtil.loadConfig(eq("test-plan-a"), any())).thenReturn(Optional.of(testPlanA));
     when(planConfigUtil.loadConfig(eq("test-plan-b"), any())).thenReturn(Optional.of(testPlanB));
     when(planConfigUtil.loadConfig(eq("test-plan-c"), any())).thenReturn(Optional.of(testPlanC));
+    when(planConfigUtil.loadConfig(eq("test-plan-d"), any())).thenReturn(Optional.of(testPlanD));
 
     testPlanParser = new TestPlanParser(planConfigUtil);
   }
@@ -91,6 +97,24 @@ public final class TestPlanParserTest {
     assertThat(filter.moduleMetadataExcludeFilters())
         .containsExactly(
             "component", "pts-root", "mock_key", "mock_value", "component", "gts-root");
+  }
+
+  @Test
+  public void parseFilters_invalidPlan() throws Exception {
+    assertThat(
+            assertThrows(
+                MobileHarnessException.class,
+                () -> testPlanParser.parseFilters(Path.of("android-cts"), "test-plan-d")))
+        .hasMessageThat()
+        .isEqualTo(
+            "Failed to parse test plan test-plan-e in test-plan-d since it is not a valid test"
+                + " plan.");
+    assertThat(
+            assertThrows(
+                MobileHarnessException.class,
+                () -> testPlanParser.parseFilters(Path.of("android-cts"), "test-plan-e")))
+        .hasMessageThat()
+        .isEqualTo("Failed to parse test plan test-plan-e since it is not a valid test plan.");
   }
 
   @Test

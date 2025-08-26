@@ -113,6 +113,10 @@ public class JarFileUtil {
     Optional<? extends ZipEntry> entry =
         jarFile.stream().filter(ze -> ze.getName().equals(entryName)).findFirst();
     if (entry.isEmpty()) {
+      logger
+          .atWarning()
+          .with(IMPORTANCE, IMPORTANT)
+          .log("Failed to load the entry [%s] from %s: file not found", entryName, jar);
       return Optional.empty();
     }
 

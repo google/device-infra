@@ -15,8 +15,6 @@
 -->
 <configuration description="mock-test-plan">
 
-    <include name="test-plan-e" />
-
     <option name="compatibility:include-filter" value="CtsAppSecurityHostTestCases android.appsecurity.cts.ExternalStorageHostTest#testSystemGalleryExists" />
     <option name="compatibility:exclude-filter" value="CtsNetTestCases android.net.cts.NetworkStatsManagerTest#testUserSummary" />
     <option name="compatibility:module-metadata-exclude-filter" key="component" value="gts-root" />
@@ -25,4 +23,5 @@
     <option name="compatibility:module-metadata-include-filter" key="component" value="mcts-root" />
     <option name="compatibility:module-metadata-include-filter" key="mock_flag" value="none" />
     <option name="compatibility:include-filter" value="CtsOsTestCases android.os.cts.BuildTest#testIsSecureUserBuild" />
+
 </configuration>
