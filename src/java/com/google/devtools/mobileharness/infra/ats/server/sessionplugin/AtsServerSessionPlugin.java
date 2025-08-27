@@ -269,6 +269,14 @@ final class AtsServerSessionPlugin {
 
       JobInfo jobInfo = jobEndEvent.getJob();
 
+      String jobName = jobInfo.locator().getName();
+      if (jobName.startsWith("xts-mobly-aosp-job-")) {
+        String moduleName = jobName.substring("xts-mobly-aosp-job-".length());
+        for (TestInfo testInfo : jobInfo.tests().getAll().values()) {
+          requestDetail.addMoblyLogDirNames(moduleName + "_test_" + testInfo.locator().getId());
+        }
+      }
+
       if (jobInfo.properties().getBoolean(Job.IS_XTS_NON_TF_JOB).orElse(false)) {
         for (TestInfo testInfo : jobEndEvent.getJob().tests().getAll().values()) {
           ResultTypeWithCause resultWithCause = testInfo.resultWithCause().get();
