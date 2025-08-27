@@ -54,6 +54,7 @@ import java.util.Optional;
 public class TestRetryHandler {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
+  private static final String PARAM_RETRY_ON_TIMEOUT = "retry_on_timeout";
   private static final String PROPERTY_REPEAT_INDEX = Ascii.toLowerCase(Test.REPEAT_INDEX.name());
 
   private static final ImmutableSet<String> INHERITED_TEST_PROPERTIES =
@@ -235,7 +236,10 @@ public class TestRetryHandler {
           || (retryLevel == Retry.Level.FAIL
               && testResult != TestResult.PASS
               && testResult != TestResult.SKIP)) {
-        retryReason = "TEST_" + testResult;
+        boolean retryOnTimeout = jobInfo.params().getBool(PARAM_RETRY_ON_TIMEOUT, true);
+        if (retryOnTimeout || testResult != TestResult.TIMEOUT) {
+          retryReason = "TEST_" + testResult;
+        }
       }
     } else if (validAttemptNum == retrySetting.getTestAttempts()
         && !DRIVER_BLOCK_LIST_FOR_INFRA_ERROR_EXTRA_RETRY.contains(jobInfo.type().getDriver())
