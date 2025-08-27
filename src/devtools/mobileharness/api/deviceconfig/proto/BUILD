@@ -67,6 +67,17 @@ java_proto_library(
 )
 
 proto_library(
+    name = "conditioned_device_config_proto",
+    srcs = ["conditioned_device_config.proto"],
+    deps = [],
+)
+
+java_proto_library(
+    name = "conditioned_device_config_java_proto",
+    deps = [":conditioned_device_config_proto"],
+)
+
+proto_library(
     name = "lab_device_proto",
     srcs = ["lab_device.proto"],
     deps = [
