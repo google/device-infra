@@ -656,6 +656,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> debugRandomExit = debugRandomExitDefault;
 
+  private static final Flag<Boolean> detectDeviceSimCardTypeDimensionDefault = Flag.value(true);
+
+  @com.beust.jcommander.Parameter(
+      names = "--detect_device_sim_card_type_dimension",
+      description = "Whether to detect sim card type device dimension. Default is true.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> detectDeviceSimCardTypeDimension = detectDeviceSimCardTypeDimensionDefault;
+
   private static final Flag<Boolean> detectAdbDeviceDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(
