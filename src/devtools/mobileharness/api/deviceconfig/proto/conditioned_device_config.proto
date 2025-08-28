@@ -21,21 +21,49 @@ package mobileharness.api.deviceconfig;
 option java_package = "com.google.devtools.mobileharness.api.deviceconfig.proto";
 option java_outer_classname = "ConditionedDeviceConfigProto";
 
+// A list of conditioned device configs, which will be used to match the current
+// device and execute conditioned commands at the end of the device setup phase.
+//
+// The conditioned device configs will be independent of each other, which means
+// we do not do deduplication or dependency check among them, though the order
+// of the commands to run will be preserved.
 message ConditionedDeviceConfigs {
   repeated ConditionedDeviceConfig conditioned_device_configs = 1;
 }
 
-// The device locator and config pair.
+// A single conditioned device config, which contains a list of conditions and
+// a list of adb commands.
+//
+// The list of adb commands will be run at the end of the device setup phase if
+// all the specified conditions are matched for the current device.
 message ConditionedDeviceConfig {
-  // The locator of the device.
+  // The specified conditions of the device.
   repeated Condition condition = 1;
   // The shell commands to execute after the device is finished the setup.
   repeated string before_finish_setup_adb_commands = 2;
 }
 
+// A single condition of the conditioned device config.
+//
+// If the key is "type_device", the condition is considered a match if one of
+// device types matches the value regex. For example, a device with types
+// ["AndroidRealDevice", "AndroidDevice"] will match the condition with key
+// "type_device" and value regex "AndroidRealDevice".
+//
+// If the key is prefixed with "dimension_", the condition is considered a match
+// if one of the device dimensions has a key matching the condition key (after
+// striping the "dimension_" prefix) and the dimension value matches the value
+// regex. For example, a device with dimension "model": "Pixel 9" will match the
+// condition with key: "dimension_model" and value regex "Pixel 9.*".
+//
+// NOTE: If the value regex is invalid, the condition will be considered as
+// mismatched, leading to the conditioned commands not being run.
 message Condition {
-  // The key of the condition, prefixed with "dimension_", "type_" etc. For
-  // example, "dimension_model", "dimension_version".
+  // The key of the condition, could be "type_device" or prefixed with
+  // "dimension_" (e.g., "dimension_model", "dimension_version").
   string key = 1;
+
+  // The value of the condition, it should be a valid regex. If the regex is
+  // invalid, the condition will be considered as mismatched.
   string value_regex = 2;
 }

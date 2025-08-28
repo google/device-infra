@@ -66,3 +66,15 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+java_library(
+    name = "conditioned_device_config_util",
+    srcs = ["ConditionedDeviceConfigUtil.java"],
+    visibility = [
+    ],
+    deps = [
+        "//src/devtools/mobileharness/api/deviceconfig/proto:conditioned_device_config_java_proto",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
+    ],
+)
