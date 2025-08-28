@@ -154,6 +154,8 @@ public abstract class SessionRequestInfo {
 
   public abstract ImmutableMap<String, String> xtsSuiteInfo();
 
+  public abstract ImmutableSet<String> excludeRunners();
+
   // The test resources passed in from ATS server. Used for building command.xml file.
   public abstract ImmutableList<TestResource> atsServerTestResources();
 
@@ -186,7 +188,8 @@ public abstract class SessionRequestInfo {
         .setIsAtsServerRequest(false)
         .setShardingMode(ShardingMode.RUNNER)
         .setXtsSuiteInfo(ImmutableMap.of())
-        .setAtsServerTestResources(ImmutableList.of());
+        .setAtsServerTestResources(ImmutableList.of())
+        .setExcludeRunners(ImmutableSet.of());
   }
 
   public abstract Builder toBuilder();
@@ -295,6 +298,8 @@ public abstract class SessionRequestInfo {
     public abstract Builder setIsXtsDynamicDownloadEnabled(boolean isXtsDynamicDownloadEnabled);
 
     public abstract Builder setXtsSuiteInfo(ImmutableMap<String, String> xtsSuiteInfo);
+
+    public abstract Builder setExcludeRunners(ImmutableSet<String> excludeRunners);
 
     public abstract Builder setAtsServerTestResources(
         ImmutableList<TestResource> atsServerTestResources);

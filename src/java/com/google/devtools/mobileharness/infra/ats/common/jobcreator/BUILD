@@ -40,6 +40,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:xts_property_name",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_constants",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_dir_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:configuration_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:suite_common",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:retry_args",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:retry_generator",

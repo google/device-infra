@@ -30,6 +30,7 @@ import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Multimap;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.FutureCallback;
@@ -353,6 +354,9 @@ public final class RunCommand implements Callable<Integer> {
           "Test retry type for 'run retry' command. Supported values: ${COMPLETION-CANDIDATES}")
   private RetryType retryType;
 
+  @Option(names = "--exclude-runner", description = "Exclude tests by test runners.")
+  private List<String> excludeRunnerOpt;
+
   @ArgGroup(exclusive = true, multiplicity = "0..1")
   private DeviceTypeOptionsGroup deviceTypeOptionsGroup;
 
@@ -490,6 +494,8 @@ public final class RunCommand implements Callable<Integer> {
         moduleCmdArgs != null ? ImmutableList.copyOf(moduleCmdArgs) : ImmutableList.of();
     ImmutableList<String> extraArgs =
         extraRunCmdArgs != null ? ImmutableList.copyOf(extraRunCmdArgs) : ImmutableList.of();
+    ImmutableSet<String> excludeRunners =
+        excludeRunnerOpt != null ? ImmutableSet.copyOf(excludeRunnerOpt) : ImmutableSet.of();
     if (this.retryType != null) {
       sessionRequestBuilder.setRetryType(
           RetryType.valueOf(Ascii.toUpperCase(this.retryType.name())));
@@ -497,7 +503,11 @@ public final class RunCommand implements Callable<Integer> {
     if (isSkipDeviceInfo().isPresent()) {
       sessionRequestBuilder.setSkipDeviceInfo(isSkipDeviceInfo().get());
     }
-    return sessionRequestBuilder.setModuleArgs(moduleArgs).setExtraArgs(extraArgs);
+
+    return sessionRequestBuilder
+        .setModuleArgs(moduleArgs)
+        .setExtraArgs(extraArgs)
+        .setExcludeRunners(excludeRunners);
   }
 
   @VisibleForTesting
@@ -720,6 +730,8 @@ public final class RunCommand implements Callable<Integer> {
         moduleCmdArgs != null ? ImmutableList.copyOf(moduleCmdArgs) : ImmutableList.of();
     ImmutableList<String> extraArgs =
         extraRunCmdArgs != null ? ImmutableList.copyOf(extraRunCmdArgs) : ImmutableList.of();
+    ImmutableSet<String> excludeRunners =
+        excludeRunnerOpt != null ? ImmutableSet.copyOf(excludeRunnerOpt) : ImmutableSet.of();
 
     Path xtsRootDirectory = consoleInfo.getXtsRootDirectoryNonEmpty();
     String xtsType = commandHelper.getXtsType();
@@ -759,7 +771,8 @@ public final class RunCommand implements Callable<Integer> {
         .setTestPlan(config)
         .addAllModuleName(modules)
         .addAllModuleArg(moduleArgs)
-        .addAllExtraArg(extraArgs);
+        .addAllExtraArg(extraArgs)
+        .addAllExcludeRunner(excludeRunners);
     if (!test.isEmpty()) {
       runCommand.setTestName(test);
     }

@@ -179,6 +179,9 @@ message RunCommand {
 
   // xTS suite info from console.
   map<string, string> xts_suite_info = 34;
+
+  // Optional. Exclude tests by test runners.
+  repeated string exclude_runner = 35;
 }
 
 message RunCommandState {

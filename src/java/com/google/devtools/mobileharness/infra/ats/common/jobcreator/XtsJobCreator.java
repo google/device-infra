@@ -38,6 +38,7 @@ import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName;
 import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
+import com.google.devtools.mobileharness.platform.android.xts.config.ConfigurationUtil;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryArgs;
@@ -106,6 +107,12 @@ public abstract class XtsJobCreator {
    */
   public ImmutableList<JobInfo> createXtsTradefedTestJob(SessionRequestInfo sessionRequestInfo)
       throws MobileHarnessException, InterruptedException {
+    if (sessionRequestInfo.excludeRunners().stream()
+        .anyMatch(
+            runner -> ConfigurationUtil.getSimpleClassName(runner).equals("XtsTradefedTest"))) {
+      return ImmutableList.of();
+    }
+
     // This static lists are currently not used anymore.
     ImmutableSet<String> staticMctsModules = sessionRequestHandlerUtil.getStaticMctsModules();
     ImmutableList<String> tfModules =

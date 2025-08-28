@@ -1396,6 +1396,36 @@ public final class SessionRequestHandlerUtilTest {
   }
 
   @Test
+  public void excludeNonTfModuleByRunner_simpleClassName() throws Exception {
+    setUpForCreateXtsNonTradefedJobs();
+    SessionRequestInfo sessionRequestInfo =
+        sessionRequestHandlerUtil.addNonTradefedModuleInfo(
+            defaultSessionRequestInfoBuilder()
+                .setExcludeRunners(ImmutableSet.of("Driver"))
+                .build());
+    ImmutableList<JobInfo> jobInfos =
+        sessionRequestHandlerUtil.createXtsNonTradefedJobs(
+            sessionRequestInfo, null, ImmutableMap.of());
+
+    assertThat(jobInfos).isEmpty();
+  }
+
+  @Test
+  public void excludeNonTfModuleByRunner_fullClassName() throws Exception {
+    setUpForCreateXtsNonTradefedJobs();
+    SessionRequestInfo sessionRequestInfo =
+        sessionRequestHandlerUtil.addNonTradefedModuleInfo(
+            defaultSessionRequestInfoBuilder()
+                .setExcludeRunners(ImmutableSet.of("com.google.Driver"))
+                .build());
+    ImmutableList<JobInfo> jobInfos =
+        sessionRequestHandlerUtil.createXtsNonTradefedJobs(
+            sessionRequestInfo, null, ImmutableMap.of());
+
+    assertThat(jobInfos).isEmpty();
+  }
+
+  @Test
   public void needTestHarnessPropertyFalse_expected() {
     assertThat(
             SessionRequestHandlerUtil.needTestHarnessPropertyFalse(

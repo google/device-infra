@@ -910,6 +910,10 @@ public class SessionRequestHandlerUtil {
       moduleArgMapBuilder.put(moduleArg.moduleName(), moduleArg);
     }
     ImmutableListMultimap<String, ModuleArg> moduleArgMap = moduleArgMapBuilder.build();
+    ImmutableSet<String> simpleExcludeRunners =
+        sessionRequestInfo.excludeRunners().stream()
+            .map(ConfigurationUtil::getSimpleClassName)
+            .collect(toImmutableSet());
 
     for (Entry<String, Configuration> entry :
         sessionRequestInfo.expandedModules().entrySet().stream()
@@ -917,6 +921,14 @@ public class SessionRequestHandlerUtil {
             .collect(toImmutableList())) {
       String originalModuleName = entry.getValue().getMetadata().getXtsModule();
       String expandedModuleName = entry.getKey();
+
+      String runner = entry.getValue().getTest().getClazz();
+      // Skip the module if the runner is excluded
+      if (simpleExcludeRunners.contains(ConfigurationUtil.getSimpleClassName(runner))) {
+        logger.atInfo().log(
+            "Skipping module %s because the runner %s is excluded", expandedModuleName, runner);
+        continue;
+      }
 
       // If it has a subplan(either from the retry command or the subplan command), do a early check
       // for whether the module should be run
