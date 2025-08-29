@@ -165,3 +165,11 @@ java_library(
     name = "testbed_device_spec",
     srcs = ["TestbedDeviceSpec.java"],
 )
+
+java_library(
+    name = "cros_decorator_spec",
+    srcs = ["CrosDecoratorSpec.java"],
+    deps = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+    ],
+)
