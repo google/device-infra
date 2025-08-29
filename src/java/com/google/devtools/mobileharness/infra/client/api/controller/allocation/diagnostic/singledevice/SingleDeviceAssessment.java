@@ -143,7 +143,7 @@ public class SingleDeviceAssessment implements Assessment<DeviceInfo> {
   @Override
   public SingleDeviceAssessment addResource(DeviceInfo device) {
     // A device can only be potentially accessible when it's not accessible.
-    if (device.owners().support(user)) {
+    if (device.owners().support(user) || device.executors().support(user)) {
       accessible = true;
       potentialAccessible = false;
     } else if (!accessible) {
