@@ -190,6 +190,14 @@ public final class Dimension {
     UUID_VOLATILE,
     /** IMEI of the device. */
     IMEI,
+    /** Type of the power switch supplying power to the device. */
+    POWER_SWITCH_TYPE,
+    /** IP Address of the power switch supplying power to the device. */
+    POWER_SWITCH_IP_ADDRESS,
+    /** MAC Address of the power switch supplying power to the device. */
+    POWER_SWITCH_MAC_ADDRESS,
+    /** Port number/load number of the outlet of the power switch supplying power to the device. */
+    POWER_SWITCH_PORT,
 
     // Android
     /** Customized dimension: Android Application Binary Interface. */
