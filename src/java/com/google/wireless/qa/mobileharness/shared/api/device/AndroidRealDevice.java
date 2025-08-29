@@ -19,6 +19,7 @@ package com.google.wireless.qa.mobileharness.shared.api.device;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.ext.devicemanagement.device.platform.android.realdevice.AndroidRealDeviceDelegate;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.lab.DeviceInfo;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLogType;
 import com.google.devtools.mobileharness.api.model.proto.Device.PostTestDeviceOp;
 import com.google.devtools.mobileharness.infra.container.sandbox.device.DeviceSandboxController;
@@ -53,6 +54,11 @@ public class AndroidRealDevice extends AndroidDevice {
    */
   public AndroidRealDevice(String deviceId) {
     this(deviceId, ApiConfig.getInstance(), new ValidatorFactory());
+  }
+
+  public AndroidRealDevice(ValidatorFactory validatorFactory, DeviceInfo deviceInfo) {
+    super(validatorFactory, deviceInfo);
+    this.delegate = getAndroidRealDeviceDelegate();
   }
 
   protected AndroidRealDevice(
