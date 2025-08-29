@@ -20,6 +20,7 @@ import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.devtools.deviceinfra.ext.devicemanagement.device.platform.android.AndroidDeviceDelegate;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.lab.DeviceInfo;
 import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
@@ -40,6 +41,11 @@ public abstract class AndroidDevice extends BaseDevice {
   protected AndroidDevice(
       String deviceId, @Nullable ApiConfig apiConfig, @Nullable ValidatorFactory validatorFactory) {
     super(deviceId, apiConfig, validatorFactory);
+    this.delegate = getAndroidDeviceDelegate();
+  }
+
+  protected AndroidDevice(ValidatorFactory validatorFactory, DeviceInfo deviceInfo) {
+    super(/* apiConfig= */ null, validatorFactory, deviceInfo);
     this.delegate = getAndroidDeviceDelegate();
   }
 

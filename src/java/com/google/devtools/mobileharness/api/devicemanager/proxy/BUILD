@@ -20,7 +20,9 @@ package(default_applicable_licenses = ["//:license"])
 java_library(
     name = "device_proxy",
     srcs = ["DeviceProxy.java"],
-    visibility = ["//src/java/com/google/devtools/mobileharness/infra/controller/device/proxy:__pkg__"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device/proxy:__pkg__",
+    ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",

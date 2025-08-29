@@ -60,6 +60,7 @@ java_library(
     visibility = [
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/proxy:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/api/devicemanager/proxy:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/controller/device/proxy:__pkg__",
     ],
     deps = [
