@@ -19,7 +19,6 @@ package com.google.wireless.qa.mobileharness.shared;
 import static com.google.common.base.Preconditions.checkState;
 
 import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -33,6 +32,7 @@ import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.wireless.qa.mobileharness.shared.constant.DirCommon;
 import java.io.IOException;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -89,11 +89,6 @@ public class MobileHarnessLogger {
     init(null /* logFileDirPattern */);
   }
 
-  /** Initializes the root logger. */
-  public static void init(@Nullable String logFileDirName) {
-    init(logFileDirName, ImmutableList.of(), /* disableConsoleHandler= */ false);
-  }
-
   /**
    * Initializes the root logger. Logs to file according to the log file dir pattern and {@link
    * DirCommon#DEFAULT_LOG_FILE_NAME} if the log file dir pattern is not empty or null.
@@ -102,10 +97,7 @@ public class MobileHarnessLogger {
    *
    * @see FileHandler
    */
-  public static void init(
-      @Nullable String logFileDirName,
-      ImmutableList<Handler> otherHandlers,
-      boolean disableConsoleHandler) {
+  public static void init(@Nullable String logFileDirName) {
     checkState(
         !isInitialized.getAndSet(true), "Mobile Harness logger has already been initialized");
     MobileHarnessLogger.logFileDirName = logFileDirName;
@@ -123,18 +115,13 @@ public class MobileHarnessLogger {
     } catch (MobileHarnessException e) {
       throw new IllegalArgumentException(e);
     }
-    otherHandlers.forEach(rootLogger::addHandler);
 
     for (Handler handler : rootLogger.getHandlers()) {
-      // Removes ConsoleHandler if necessary.
-      if (disableConsoleHandler && handler instanceof ConsoleHandler) {
-        rootLogger.removeHandler(handler);
-      }
-
       // Sets formatter/filter/level.
       configureHandler(handler);
 
-      if (!disableConsoleHandler && handler instanceof ConsoleHandler) {
+      // Sets min importance for ConsoleHandler.
+      if (handler instanceof ConsoleHandler) {
         int loggerConsoleHandlerMinLogRecordImportance =
             Flags.instance().loggerConsoleHandlerMinLogRecordImportance.getNonNull();
         addFilter(
@@ -144,6 +131,23 @@ public class MobileHarnessLogger {
                             record, LogImportanceScope.getCurrentScope())
                         .value()
                     >= loggerConsoleHandlerMinLogRecordImportance);
+      }
+    }
+  }
+
+  public static void addHandlers(List<Handler> handlers) {
+    Logger rootLogger = getLoggerByName("");
+    for (Handler handler : handlers) {
+      configureHandler(handler);
+      rootLogger.addHandler(handler);
+    }
+  }
+
+  public static void removeConsoleHandler() {
+    Logger rootLogger = getLoggerByName("");
+    for (Handler handler : rootLogger.getHandlers()) {
+      if (handler instanceof ConsoleHandler) {
+        rootLogger.removeHandler(handler);
       }
     }
   }

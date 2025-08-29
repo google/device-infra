@@ -51,6 +51,12 @@ public class OlcServer {
     // Parses flags.
     Flags.parse(args);
 
+    // Prepares dirs.
+    DirPreparer.prepareDirRoots();
+
+    // Initializes logger.
+    MobileHarnessLogger.init(OlcServerDirs.getLogDir());
+
     // Creates the server runner.
     Instant serverStartTime = Instant.now();
     boolean enableDatabase = validateDatabase();
@@ -67,14 +73,8 @@ public class OlcServer {
     LogManager<LogRecords> logManager = injector.getInstance(new Key<>() {});
     SystemInfoPrinter systemInfoPrinter = injector.getInstance(SystemInfoPrinter.class);
 
-    // Prepares dirs.
-    DirPreparer.prepareDirRoots();
-
-    // Initializes logger.
-    MobileHarnessLogger.init(
-        OlcServerDirs.getLogDir(),
-        ImmutableList.of(logManager.getLogHandler()),
-        /* disableConsoleHandler= */ false);
+    // Adds log handlers.
+    MobileHarnessLogger.addHandlers(ImmutableList.of(logManager.getLogHandler()));
 
     // Initializes log recorder.
     LogRecorder.getInstance().initialize(logManager.getLogRecorderBackend());

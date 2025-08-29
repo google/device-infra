@@ -130,6 +130,12 @@ public class AtsConsole {
         preprocessDeviceInfraServiceFlags(deviceInfraServiceFlags);
     DeviceInfraServiceUtil.parseFlags(finalDeviceInfraServiceFlags.flags());
 
+    // Prepares dirs.
+    DirPreparer.prepareDirRoots();
+
+    // Initializes logger.
+    MobileHarnessLogger.init(AtsConsoleDirs.getLogDir());
+
     // Initializes line reader.
     LineReader lineReader = createLineReader();
 
@@ -171,14 +177,9 @@ public class AtsConsole {
     AtsConsole atsConsole = injector.getInstance(AtsConsole.class);
     atsConsole.injector = injector;
 
-    // Prepares dirs.
-    DirPreparer.prepareDirRoots();
-
-    // Initializes logger.
-    MobileHarnessLogger.init(
-        AtsConsoleDirs.getLogDir(),
-        ImmutableList.of(atsConsole.consoleUtil.getLogHandler()),
-        /* disableConsoleHandler= */ true);
+    // Adds line reader log handler and removes console handler.
+    MobileHarnessLogger.addHandlers(ImmutableList.of(atsConsole.consoleUtil.getLogHandler()));
+    MobileHarnessLogger.removeConsoleHandler();
 
     // Initializes log recorder.
     LogRecorder.getInstance().initialize(atsConsole.logRecordPrinter::printLogRecord);
