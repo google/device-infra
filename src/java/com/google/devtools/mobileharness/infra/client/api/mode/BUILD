@@ -45,9 +45,24 @@ java_library(
         ":mode",
         "//src/devtools/mobileharness/infra/client/api/proto:resource_federation_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/util:reflection",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "creator",
+    srcs = ["ExecModeCreator.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/client/api:__pkg__",
+    ],
+    deps = [
+        ":mode",
+        ":util",
+        "//src/devtools/mobileharness/infra/client/api/proto:resource_federation_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/util/resourcefederation:util",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/util:reflection",
         "@maven//:com_google_guava_guava",
     ],
 )

@@ -16,17 +16,11 @@
 
 package com.google.devtools.mobileharness.infra.client.api.mode;
 
-import static com.google.common.base.Ascii.equalsIgnoreCase;
-
 import com.google.common.annotations.VisibleForTesting;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.client.api.proto.ResourceFederationProto.ResourceFederation;
-import com.google.devtools.mobileharness.infra.client.api.util.resourcefederation.ResourceFederationUtil;
-import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.util.ReflectionUtil;
-import java.util.Collection;
-import java.util.Optional;
 
 /**
  * Utility methods for exec modes.
@@ -42,23 +36,6 @@ public final class ExecModeUtil {
 
   private static final String EXEC_MODE_PACKAGE_NAME_SECONDARY =
       "com.google.devtools.mobileharness.infra.client.api.mode";
-
-  /**
-   * Creates {@code ExecMode} instance according to the exec mode name and a collection of {@code
-   * JobInfo}.
-   *
-   * @throws MobileHarnessException if {@code ExecMode} instance cannot be created.
-   */
-  public static ExecMode createInstance(String modeName, Collection<JobInfo> jobInfos)
-      throws MobileHarnessException {
-    Optional<ResourceFederation> resourceFederation =
-        ResourceFederationUtil.findResourceFederation(jobInfos);
-    if (resourceFederation.isPresent() && equalsIgnoreCase(modeName, "REMOTE")) {
-      return createRemoteModeInstance(modeName, resourceFederation.get());
-    } else {
-      return createInstance(modeName);
-    }
-  }
 
   /**
    * Creates {@code ExecMode} instance according to the exec mode name. Supposes exec mode name is
