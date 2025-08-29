@@ -16,8 +16,12 @@
 
 package com.google.devtools.mobileharness.infra.controller.device.util;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
+import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.ConditionedDeviceConfigProto.ConditionedDeviceConfig;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.ConditionedDeviceConfigProto.ConditionedDeviceConfigs;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
@@ -27,10 +31,19 @@ final class ConditionedDeviceConfigUtil {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
+  /** Get a list of adb commands for the current device to run by the conditioned device configs. */
+  public static ImmutableList<String> getBeforeFinishSetupAdbCommandsByDevice(
+      ConditionedDeviceConfigs conditionedDeviceConfigs, Device device) {
+    return conditionedDeviceConfigs.getConditionedDeviceConfigsList().stream()
+        .filter(config -> matchesConditionedDeviceConfig(config, device))
+        .flatMap(config -> config.getBeforeFinishSetupAdbCommandsList().stream())
+        .collect(toImmutableList());
+  }
+
   /** Returns whether the current device matches all conditions in the conditioned device config. */
   public static boolean matchesConditionedDeviceConfig(
       ConditionedDeviceConfig conditionedDeviceConfig, Device device) {
-    return conditionedDeviceConfig.getConditionList().stream()
+    return conditionedDeviceConfig.getConditionsList().stream()
         .allMatch(
             condition -> {
               String conditionKey = condition.getKey();

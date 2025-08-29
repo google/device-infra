@@ -38,7 +38,7 @@ message ConditionedDeviceConfigs {
 // all the specified conditions are matched for the current device.
 message ConditionedDeviceConfig {
   // The specified conditions of the device.
-  repeated Condition condition = 1;
+  repeated Condition conditions = 1;
   // The shell commands to execute after the device is finished the setup.
   repeated string before_finish_setup_adb_commands = 2;
 }

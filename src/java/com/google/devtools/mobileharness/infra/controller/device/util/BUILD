@@ -76,5 +76,6 @@ java_library(
         "//src/devtools/mobileharness/api/deviceconfig/proto:conditioned_device_config_java_proto",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
+        "@maven//:com_google_guava_guava",
     ],
 )
