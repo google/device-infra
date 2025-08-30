@@ -22,6 +22,7 @@ java_library(
     srcs = ["AndroidRealDeviceDelegate.java"],
     visibility = [
         "//:omnilab_fusion",
+        "//javatests/com/google/wireless/qa/mobileharness/shared/api/device:__pkg__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
         "//src/javatests/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android/realdevice:__pkg__",
     ],

@@ -320,15 +320,7 @@ public class MoblyTest extends BaseDriver implements MoblyTestSpec {
     }
     JSONObject testbedConfig = MoblyConfigGenerator.getLocalMoblyConfig(device);
 
-    // Overwrite the testbed config with the user-provided custom Mobly config, if it exists.
-    if (testInfo.jobInfo().files().isTagNotEmpty(FILE_MOBLY_CONFIG)) {
-      JSONObject customMoblyConfig =
-          MoblyConfigGenerator.getMoblyConfigFromYaml(
-              localFileUtil.readFile(testInfo.jobInfo().files().getSingle(FILE_MOBLY_CONFIG)));
-      MoblyConfigGenerator.concatMoblyConfig(
-          testbedConfig, customMoblyConfig, /* overwriteOriginal= */ true);
-      logger.atInfo().log("Config after loading custom Mobly YAML: %s", config);
-    }
+    useCustomConfigIfProvided(testInfo, testbedConfig);
 
     JSONObject testParams;
     if (testbedConfig.isNull(MoblyConstant.ConfigKey.TEST_PARAMS)) {
@@ -388,6 +380,39 @@ public class MoblyTest extends BaseDriver implements MoblyTestSpec {
 
     logger.atInfo().log("Final config: %s", config);
     return config;
+  }
+
+  /**
+   * Loads and merges a custom Mobly config into the provided `testbedConfig` if one is specified.
+   *
+   * <p>A custom config can be supplied via a test property (taking precedence) or as a file
+   * attached to the job. The custom config is expected to be a full Mobly config starting from the
+   * "TestBeds" node, while `testbedConfig` represents the first object within the "TestBeds" array.
+   * The merge operation overwrites existing values in `testbedConfig` with those from the custom
+   * config.
+   */
+  @VisibleForTesting
+  void useCustomConfigIfProvided(TestInfo testInfo, JSONObject testbedConfig)
+      throws MobileHarnessException {
+    String customConfigPath = null;
+    if (testInfo.properties().has(FILE_MOBLY_CONFIG)) {
+      customConfigPath = testInfo.properties().get(FILE_MOBLY_CONFIG);
+      logger.atInfo().log("Detected custom Mobly path from test properties: %s.", customConfigPath);
+    } else if (testInfo.jobInfo().files().isTagNotEmpty(FILE_MOBLY_CONFIG)) {
+      customConfigPath = testInfo.jobInfo().files().getSingle(FILE_MOBLY_CONFIG);
+      logger.atInfo().log("Detected custom Mobly path from job-info: %s.", customConfigPath);
+    } else {
+      logger.atInfo().log("No custom Mobly config detected.");
+    }
+    if (!isNullOrEmpty(customConfigPath)) {
+      JSONObject customMoblyConfig =
+          MoblyConfigGenerator.getMoblyConfigFromYaml(localFileUtil.readFile(customConfigPath));
+      logger.atInfo().log("Custom Mobly config: %s", customMoblyConfig);
+      logger.atInfo().log("Original Mobly config: %s", testbedConfig);
+      MoblyConfigGenerator.concatMoblyConfig(
+          testbedConfig, customMoblyConfig, /* overwriteOriginal= */ true);
+      logger.atInfo().log("Testbed config after loading custom Mobly YAML: %s", testbedConfig);
+    }
   }
 
   private static ImmutableSet<String> getPrivateParamNames(TestInfo testInfo) {
