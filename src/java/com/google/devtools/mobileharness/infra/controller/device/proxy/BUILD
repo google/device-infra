@@ -75,6 +75,7 @@ java_library(
     visibility = ["//visibility:private"],
     deps = [
         ":proxy_device_requirement",
+        "//java/com/google/devtools/mobileharness/infra/controller/device/provider/deviceapi",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/proxy:device_proxy",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/job:locator",
