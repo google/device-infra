@@ -19,6 +19,7 @@ load("//src/javatests/com/google/devtools/mobileharness/builddefs:junit_test_sui
 package(
     default_applicable_licenses = ["//:license"],
     default_testonly = 1,
+    default_visibility = ["//:deviceinfra_all_pkg"],
 )
 
 java_library(
@@ -26,13 +27,21 @@ java_library(
     srcs = glob(["*.java"]),
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/command",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:cros_base_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:cros_dut_topology_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:cros_ls_nexus_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:cros_decorator_spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:mobly_test_spec",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
+        "@maven//:com_google_guava_guava",
+        "@maven//:com_google_inject_guice",
+        "@maven//:javax_inject_jsr330_api",
         "@maven//:junit_junit",
         "@maven//:org_mockito_mockito_core",
     ],
