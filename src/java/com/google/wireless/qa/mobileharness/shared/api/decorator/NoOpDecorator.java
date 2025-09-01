@@ -23,8 +23,6 @@ import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnot
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
-import com.google.wireless.qa.mobileharness.shared.model.job.out.Result;
-import com.google.wireless.qa.mobileharness.shared.proto.Job;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.NoOpDecoratorSpec;
 import javax.inject.Inject;
 
@@ -46,23 +44,22 @@ public class NoOpDecorator extends BaseDecorator implements SpecConfigable<NoOpD
       if (spec.hasExpectedResultBeforePostRun()) {
         // Checks if expected result is matched.
         TestResult expectedResult = spec.getExpectedResultBeforePostRun();
-        TestResult currentResult = Result.upgradeTestResult(testInfo.result().get());
+        TestResult currentResult = testInfo.resultWithCause().get().type();
         if (currentResult.equals(expectedResult)) {
           testInfo.log().atInfo().log(
               "NoOpDecorator got expected result [%s] before postRun(), set result to PASS",
               expectedResult);
-          testInfo.result().set(Job.TestResult.PASS);
+          testInfo.resultWithCause().setPass();
         } else {
-          testInfo
-              .warnings()
-              .addAndLog(
-                  new MobileHarnessException(
-                      ExtErrorId.NO_OP_DECORATOR_TEST_FAILURE,
-                      String.format(
-                          "NoOpDecorator expected result [%s] before postRun() but got [%s],"
-                              + " set result to FAIL",
-                          expectedResult, currentResult)));
-          testInfo.result().set(Job.TestResult.FAIL);
+          MobileHarnessException e =
+              new MobileHarnessException(
+                  ExtErrorId.NO_OP_DECORATOR_TEST_FAILURE,
+                  String.format(
+                      "NoOpDecorator expected result [%s] before postRun() but got [%s],"
+                          + " set result to FAIL",
+                      expectedResult, currentResult));
+          testInfo.warnings().addAndLog(e);
+          testInfo.resultWithCause().setNonPassing(TestResult.FAIL, e);
         }
       }
     }

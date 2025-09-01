@@ -564,8 +564,6 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/out",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:no_op_decorator_spec_java_proto",
         "@maven//:javax_inject_jsr330_api",
     ],
