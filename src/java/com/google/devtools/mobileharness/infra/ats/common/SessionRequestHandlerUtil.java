@@ -168,7 +168,7 @@ public class SessionRequestHandlerUtil {
   private static final Duration DEFAULT_NON_TRADEFED_START_TIMEOUT = Duration.ofDays(4L);
 
   private static final Duration GET_DEVICE_FOR_ATS_SERVER_RETRY_INTERVAL = Duration.ofSeconds(30);
-  private static final int GET_DEVICE_FOR_ATS_SERVER_MAX_RETRY_ATTEMPTS = 5;
+  private static final int GET_DEVICE_FOR_ATS_SERVER_MAX_RETRY_ATTEMPTS = 20;
 
   private static final ImmutableList<String> XTS_TYPE_THAT_NEED_TEST_HARNESS_PROPERTY_FALSE =
       ImmutableList.of("cts", "mcts");

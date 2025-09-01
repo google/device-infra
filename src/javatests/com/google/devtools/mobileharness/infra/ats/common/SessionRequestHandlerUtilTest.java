@@ -361,7 +361,7 @@ public final class SessionRequestHandlerUtilTest {
             () -> sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo));
 
     assertThat(exception).hasMessageThat().contains("No available device is found.");
-    verify(sleeper, times(4)).sleep(Duration.ofSeconds(30));
+    verify(sleeper, times(19)).sleep(Duration.ofSeconds(30));
   }
 
   @Test
