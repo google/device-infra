@@ -322,6 +322,7 @@ public class ExecTestServiceImpl {
             .setJob(convertJobInfo(testInfo.jobInfo()))
             .setStatus(testInfo.status().get())
             .setResult(TestResult.valueOf(testResult.type().name()))
+            .setResultType(testResult.type())
             .setCreateTime(testInfo.timing().getCreateTime().toEpochMilli())
             .setModifyTime(testInfo.timing().getModifyTime().toEpochMilli());
     testResult.causeProto().ifPresent(testProto::setResultCause);
