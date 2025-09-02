@@ -732,14 +732,12 @@ public class MoblyTest extends BaseDriver implements MoblyTestSpec {
       if (result.exitCode() != 0) {
         String possibleSdkTool = executor.run(Command.of("whereis", sdkToolName));
         getTest()
-            .warnings()
-            .addAndLog(
-                new MobileHarnessException(
-                    ExtErrorId.MOBLY_SDK_TOOL_NOT_FOUND_ERROR,
-                    String.format(
-                        "Unable to find the sdk tool \"%s\". Executables found: %s",
-                        sdkToolName, possibleSdkTool)),
-                logger);
+            .log()
+            .atWarning()
+            .alsoTo(logger)
+            .log(
+                "Unable to find the sdk tool \"%s\". Executables found: %s",
+                sdkToolName, possibleSdkTool);
         return Optional.empty();
       }
       sdkFile = new File(result.stdout().trim());
