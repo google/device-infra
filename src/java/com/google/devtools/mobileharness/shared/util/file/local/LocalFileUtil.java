@@ -2175,7 +2175,42 @@ public class LocalFileUtil {
         /* sortFile= */ false,
         /* storeOnly= */ false,
         /* compressionLevel= */ null,
-        /* timeout= */ null);
+        /* timeout= */ null,
+        /* keepLocalSourceRootBaseName= */ false);
+  }
+
+  /**
+   * Packs the given source directory into a zip file.
+   *
+   * @param sourceDirPath path of the source directory
+   * @param zipFilePath path of the generated zip file
+   * @param keepLocalSourceRootBaseName Supposing localSourceRoot is /foo/bar, and contains
+   *     /foo/bar/output1, /foo/bar/outputs.
+   *     <p>If true, the zip structure will be:
+   *     <pre>{@code
+   * bar/
+   * ├── output1
+   * └── output2.txt
+   * }</pre>
+   *     <p>Otherwise, the zip structure will be:
+   *     <pre>{@code
+   * ├── output1
+   * └── output2.txt
+   * }</pre>
+   *
+   * @return the log
+   */
+  public String zipDir(
+      String sourceDirPath, String zipFilePath, boolean keepLocalSourceRootBaseName)
+      throws MobileHarnessException, InterruptedException {
+    return zipDir(
+        sourceDirPath,
+        zipFilePath,
+        /* sortFile= */ false,
+        /* storeOnly= */ false,
+        /* compressionLevel= */ null,
+        /* timeout= */ null,
+        keepLocalSourceRootBaseName);
   }
 
   /**
@@ -2198,6 +2233,54 @@ public class LocalFileUtil {
       boolean storeOnly,
       @Nullable Integer compressionLevel,
       @Nullable Timeout timeout)
+      throws MobileHarnessException, InterruptedException {
+    return zipDir(
+        sourceDirPath,
+        zipFilePath,
+        sortFile,
+        storeOnly,
+        compressionLevel,
+        timeout,
+        /* keepLocalSourceRootBaseName= */ false);
+  }
+
+  /**
+   * Packs the given source directory into a zip file.
+   *
+   * @param sourceDirPath path of the source directory
+   * @param zipFilePath path of the generated zip file
+   * @param sortFile whether to attach the files to the zip file in order.
+   * @param storeOnly whether pack all file together without any compression
+   * @param compressionLevel the level of compression (1-9), where 1 indicates the fastest
+   *     compression speed (less compression) and 9 indicates the slowest compression speed (the
+   *     best compression). If null, use the default configuration of "zip" command.
+   * @param timeout the timeout of the zip operation; null means default timeout
+   * @param keepLocalSourceRootBaseName Supposing localSourceRoot is /foo/bar, and contains
+   *     /foo/bar/output1, /foo/bar/outputs.
+   *     <p>If true, the zip structure will be:
+   *     <pre>{@code
+   * bar/
+   * ├── output1
+   * └── output2.txt
+   *
+   * }</pre>
+   *     <p>Otherwise, the zip structure will be:
+   *     <pre>{@code
+   * ├── output1
+   * └── output2.txt
+   *
+   * }</pre>
+   *
+   * @return the log
+   */
+  public String zipDir(
+      String sourceDirPath,
+      String zipFilePath,
+      boolean sortFile,
+      boolean storeOnly,
+      @Nullable Integer compressionLevel,
+      @Nullable Timeout timeout,
+      boolean keepLocalSourceRootBaseName)
       throws MobileHarnessException, InterruptedException {
     Path absSourceDirPath = Paths.get(sourceDirPath).toAbsolutePath();
     ImmutableList.Builder<String> arguments =
@@ -2223,29 +2306,45 @@ public class LocalFileUtil {
     }
     arguments.add("-r", zipFilePath);
     if (sortFile) {
-      // 1) For b/119577531, we used "zip -X -r $zip .", but the order of the attached files may be
-      // undefined in some file systems, that will result in checksum changes. To solve this
+      // 1) For b/119577531, we used "zip -X -r $zip .", but the order of the attached files may
+      // be undefined in some file systems, that will result in checksum changes. To solve this
       // problem, we list files under the directory and append them to the zip file in order.
       // 2) Use `listFilePaths(String dirPath, boolean recursively)` instead of
       // `listFilePaths(Path dir, boolean recursively)` because the later one does not follow
       // symbolic links.
       List<String> files = listFilePaths(absSourceDirPath.toString(), true);
 
-      // If there are too many files in the command line, the command will fail with "Argument list
-      // too long" b/414412730
+      // If there are too many files in the command line, the command will fail with "Argument
+      // list too long" b/414412730
       if (files.size() < 1000) {
         arguments.addAll(
             files.stream()
                 .sorted()
-                .map(file -> absSourceDirPath.relativize(Path.of(file).toAbsolutePath()).toString())
+                .map(
+                    file ->
+                        keepLocalSourceRootBaseName
+                            ? PathUtil.join(
+                                PathUtil.basename(sourceDirPath),
+                                absSourceDirPath
+                                    .relativize(Path.of(file).toAbsolutePath())
+                                    .toString())
+                            : absSourceDirPath
+                                .relativize(Path.of(file).toAbsolutePath())
+                                .toString())
                 .collect(toImmutableList()));
       } else {
-        arguments.add(".");
+        arguments.add(keepLocalSourceRootBaseName ? PathUtil.basename(sourceDirPath) : ".");
       }
     } else {
-      arguments.add(".");
+      arguments.add(keepLocalSourceRootBaseName ? PathUtil.basename(sourceDirPath) : ".");
     }
-    Command command = Command.of(arguments.build()).workDir(absSourceDirPath); // for b/28160125
+    // Determine the workDir for b/28160125.
+    Path workDir = absSourceDirPath;
+    if (keepLocalSourceRootBaseName && absSourceDirPath.getParent() != null) {
+      workDir = absSourceDirPath.getParent();
+    }
+    Command command = Command.of(arguments.build()).workDir(workDir);
+
     if (timeout != null) {
       command = command.timeout(timeout);
     }
