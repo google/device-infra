@@ -147,7 +147,7 @@ public final class JobInfoConverter {
         .setRemoteGenFiles(RemoteFilesConverter.toProto(jobInfo.remoteGenFiles()))
         .setRemoteRunFiles(RemoteFilesConverter.toProto(jobInfo.remoteRunFiles()))
         .setStatus(StatusConverter.toProto(jobInfo.status()))
-        .setResult(ResultConverter.toProto(jobInfo.result()))
+        .setResult(ResultConverter.toProto(jobInfo.resultWithCause()))
         .setProperties(PropertiesConverter.toProto(jobInfo.properties()))
         .addAllError(jobInfo.warnings().getAll())
         .setJobSpec(jobInfo.protoSpec().getProto())

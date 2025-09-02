@@ -112,7 +112,7 @@ public final class TestInfoConverter {
         .setFiles(FilesConverter.toProto(testInfo.files()))
         .setRemoteGenFiles(RemoteFilesConverter.toProto(testInfo.remoteGenFiles()))
         .setStatus(StatusConverter.toProto(testInfo.status()))
-        .setResult(ResultConverter.toProto(testInfo.result()))
+        .setResult(ResultConverter.toProto(testInfo.resultWithCause()))
         .setProperties(PropertiesConverter.toProto(testInfo.properties()))
         .addAllError(testInfo.warnings().getAll())
         .addAllSubTestInfo(
