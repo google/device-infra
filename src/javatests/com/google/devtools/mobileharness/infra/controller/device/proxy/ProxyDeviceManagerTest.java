@@ -86,7 +86,8 @@ public class ProxyDeviceManagerTest {
                 ProxyDeviceRequirement.of(jobInfo.subDeviceSpecs(), 2),
                 4,
                 ProxyDeviceRequirement.of(jobInfo.subDeviceSpecs(), 4)),
-            testLocators);
+            testLocators,
+            jobInfo.setting());
 
     assertThat(result.keySet()).containsExactlyElementsIn(testLocators);
     assertThat(requireNonNull(result.get(testLocator1)).get().devices())

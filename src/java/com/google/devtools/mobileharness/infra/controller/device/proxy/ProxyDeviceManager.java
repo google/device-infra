@@ -44,6 +44,7 @@ import com.google.devtools.mobileharness.api.model.job.JobLocator;
 import com.google.devtools.mobileharness.api.model.job.TestLocator;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
+import com.google.wireless.qa.mobileharness.shared.model.job.JobSetting;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
@@ -116,7 +117,8 @@ public class ProxyDeviceManager {
   public ImmutableMap<TestLocator, ListenableFuture<ProxyDevices>> leaseDevicesOfJobAsync(
       JobLocator jobLocator,
       ImmutableMap<Integer, ProxyDeviceRequirement> deviceRequirements,
-      ImmutableSet<TestLocator> testLocators) {
+      ImmutableSet<TestLocator> testLocators,
+      JobSetting jobSetting) {
     logger.atInfo().log("Add job [%s] with tests %s", jobLocator, testLocators);
     AtomicReference<ImmutableMap<TestLocator, ListenableFuture<ProxyDevices>>> result =
         new AtomicReference<>();
@@ -124,7 +126,7 @@ public class ProxyDeviceManager {
         jobLocator,
         (locator, oldJob) -> {
           checkState(oldJob == null, "Job [%s] has already been added", jobLocator);
-          Job job = new Job(jobLocator, deviceRequirements, testLocators);
+          Job job = new Job(jobLocator, deviceRequirements, testLocators, jobSetting);
           synchronized (job.tests) {
             result.set(
                 job.tests.entrySet().stream()
@@ -150,10 +152,11 @@ public class ProxyDeviceManager {
    * @throws IllegalStateException if the job doesn't exist, or the test has been added to the job,
    *     or {@link #releaseDevicesOfJob(JobLocator)} of the job has been called
    */
-  public ListenableFuture<ProxyDevices> leaseDevicesOfTestAsync(TestLocator testLocator) {
+  public ListenableFuture<ProxyDevices> leaseDevicesOfTestAsync(
+      TestLocator testLocator, JobSetting jobSetting) {
     Job job = jobs.get(testLocator.jobLocator());
     checkState(job != null, "Job [%s] does not exist", testLocator.jobLocator());
-    return job.addTest(testLocator);
+    return job.addTest(testLocator, jobSetting);
   }
 
   /**
@@ -203,7 +206,8 @@ public class ProxyDeviceManager {
     private Job(
         JobLocator jobLocator,
         ImmutableMap<Integer, ProxyDeviceRequirement> deviceRequirements,
-        ImmutableSet<TestLocator> testLocators) {
+        ImmutableSet<TestLocator> testLocators,
+        JobSetting jobSetting) {
       this.jobLocator = jobLocator;
       this.deviceRequirements = deviceRequirements;
       this.tests =
@@ -211,7 +215,7 @@ public class ProxyDeviceManager {
               .collect(
                   toMap(
                       identity(),
-                      testLocator -> new Test(testLocator, deviceRequirements),
+                      testLocator -> new Test(testLocator, deviceRequirements, jobSetting),
                       (a, b) -> a,
                       HashMap::new));
     }
@@ -224,7 +228,7 @@ public class ProxyDeviceManager {
       }
     }
 
-    private ListenableFuture<ProxyDevices> addTest(TestLocator testLocator) {
+    private ListenableFuture<ProxyDevices> addTest(TestLocator testLocator, JobSetting jobSetting) {
       synchronized (tests) {
         checkState(
             !deviceReleased,
@@ -235,7 +239,7 @@ public class ProxyDeviceManager {
             "Test [%s] has already been added to job",
             testLocator);
         logger.atWarning().log("Add test [%s] to job", testLocator);
-        Test test = new Test(testLocator, deviceRequirements);
+        Test test = new Test(testLocator, deviceRequirements, jobSetting);
         tests.put(testLocator, test);
 
         // Lease devices immediately.
@@ -311,14 +315,16 @@ public class ProxyDeviceManager {
     private final SettableFuture<ProxyDevices> leaseDevicesFuture = SettableFuture.create();
 
     private Test(
-        TestLocator testLocator, ImmutableMap<Integer, ProxyDeviceRequirement> deviceRequirements) {
+        TestLocator testLocator,
+        ImmutableMap<Integer, ProxyDeviceRequirement> deviceRequirements,
+        JobSetting jobSetting) {
       this.testLocator = testLocator;
       this.subDevices =
           deviceRequirements.entrySet().stream()
               .collect(
                   toImmutableMap(
                       Entry::getKey,
-                      e -> new ProxiedDevice(testLocator, e.getKey(), e.getValue())));
+                      e -> new ProxiedDevice(testLocator, e.getKey(), e.getValue(), jobSetting)));
     }
 
     private ListenableFuture<ProxyDevices> getLeaseDevicesFuture() {
@@ -379,11 +385,15 @@ public class ProxyDeviceManager {
     private boolean deviceReleased;
 
     private ProxiedDevice(
-        TestLocator testLocator, int subDeviceIndex, ProxyDeviceRequirement deviceRequirement) {
+        TestLocator testLocator,
+        int subDeviceIndex,
+        ProxyDeviceRequirement deviceRequirement,
+        JobSetting jobSetting) {
       this.formattedDeviceLocator =
           String.format("proxied device #%s of test [%s]", subDeviceIndex, testLocator);
       this.proxyDeviceRunner =
-          proxyDeviceRunnerFactory.create(formattedDeviceLocator, deviceRequirement, testLocator);
+          proxyDeviceRunnerFactory.create(
+              formattedDeviceLocator, deviceRequirement, testLocator, jobSetting);
       this.deviceLeaserThreadName =
           String.format("device-leaser-#%s-%s", subDeviceIndex, testLocator);
       this.deviceReleaserThreadName =

@@ -23,6 +23,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableListMultimap;
+import com.google.devtools.mobileharness.api.model.job.JobLocator;
 import com.google.devtools.mobileharness.api.model.job.TestLocator;
 import com.google.devtools.mobileharness.api.model.job.in.Decorators;
 import com.google.devtools.mobileharness.infra.controller.device.provider.deviceapi.LeasedDeviceConnection;
@@ -35,11 +36,14 @@ import com.google.devtools.omnilab.device.api.Dimension;
 import com.google.devtools.omnilab.device.api.Dimensions;
 import com.google.devtools.omnilab.device.api.UnknownDevice;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
+import com.google.wireless.qa.mobileharness.shared.model.job.JobSetting;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.ScopedSpecs;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.SubDeviceSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.SubDeviceSpecs;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
+import com.google.wireless.qa.mobileharness.shared.proto.Job.Timeout;
+import java.time.Duration;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -61,8 +65,9 @@ public final class AndroidRealDeviceProxyTest {
   private static final String DECORATOR = "AndroidLogCatDecorator";
   private static final String MODEL = "pixel 6";
   private static final String SDK_VERSION = "30";
+  private static final TestLocator TEST_LOCATOR =
+      TestLocator.of("test_id", "test_name", JobLocator.of("job_id", "job_name"));
 
-  @Mock private TestLocator testLocator;
   @Mock private RemoteDeviceConnector remoteDeviceConnector;
   @Mock private LeasedDeviceConnection leasedDeviceConnection;
   @Mock private AndroidSystemStateUtil androidSystemStateUtil;
@@ -86,16 +91,23 @@ public final class AndroidRealDeviceProxyTest {
     subDeviceSpecs.addSubDevice(subDeviceSpec);
     ProxyDeviceRequirement proxyDeviceRequirement = ProxyDeviceRequirement.of(subDeviceSpecs, 0);
 
-    when(remoteDeviceConnector.connect(any())).thenReturn(leasedDeviceConnection);
+    when(remoteDeviceConnector.connect(any(), any(), any())).thenReturn(leasedDeviceConnection);
     when(leasedDeviceConnection.getLocalAdbSerial()).thenReturn(LOCAL_ADB_SERIAL);
     when(leasedDeviceConnection.getRemoteDeviceId()).thenReturn(REMOTE_DEVICE_ID);
     when(leasedDeviceConnection.getHostname()).thenReturn(HOSTNAME);
     when(leasedDeviceConnection.getAllocatedDeviceProperties())
         .thenReturn(ImmutableListMultimap.of("key", "value"));
 
+    Timeout timeout =
+        Timeout.newBuilder().setJobTimeoutMs(1_200_000L).setTestTimeoutMs(600_000L).build();
+    JobSetting jobSetting = JobSetting.newBuilder().setTimeout(timeout).build();
     androidRealDeviceProxy =
         new AndroidRealDeviceProxy(
-            proxyDeviceRequirement, testLocator, remoteDeviceConnector, androidSystemStateUtil);
+            proxyDeviceRequirement,
+            TEST_LOCATOR,
+            remoteDeviceConnector,
+            androidSystemStateUtil,
+            jobSetting);
   }
 
   @Test
@@ -122,10 +134,19 @@ public final class AndroidRealDeviceProxyTest {
 
     ArgumentCaptor<DeviceSpecification> deviceSpecCaptor =
         ArgumentCaptor.forClass(DeviceSpecification.class);
-    verify(remoteDeviceConnector).connect(deviceSpecCaptor.capture());
+    ArgumentCaptor<Duration> queueTimeoutCaptor = ArgumentCaptor.forClass(Duration.class);
+    ArgumentCaptor<Duration> leaseDurationCaptor = ArgumentCaptor.forClass(Duration.class);
+    verify(remoteDeviceConnector)
+        .connect(
+            deviceSpecCaptor.capture(),
+            queueTimeoutCaptor.capture(),
+            leaseDurationCaptor.capture());
     assertThat(deviceSpecCaptor.getValue())
         .ignoringRepeatedFieldOrder()
         .isEqualTo(expectedDeviceSpec);
+
+    assertThat(queueTimeoutCaptor.getValue()).isEqualTo(Duration.ofMinutes(20));
+    assertThat(leaseDurationCaptor.getValue()).isEqualTo(Duration.ofMinutes(10));
     verify(androidSystemStateUtil).waitUntilReady(LOCAL_ADB_SERIAL);
   }
 

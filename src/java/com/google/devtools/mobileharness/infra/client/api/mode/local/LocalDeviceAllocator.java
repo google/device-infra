@@ -124,7 +124,8 @@ public class LocalDeviceAllocator extends AbstractDeviceAllocator {
       // ProxyDeviceManager will control the device leasing concurrency.
       try {
         proxyDeviceManager
-            .leaseDevicesOfJobAsync(jobLocator, deviceRequirements, tests.keySet())
+            .leaseDevicesOfJobAsync(
+                jobLocator, deviceRequirements, tests.keySet(), jobInfo.setting())
             .forEach(
                 // When a test's devices have been leased, creates an allocation.
                 (testLocator, proxyDevices) ->
@@ -262,7 +263,7 @@ public class LocalDeviceAllocator extends AbstractDeviceAllocator {
       // Leases the test's devices asynchronously.
       try {
         addCallback(
-            proxyDeviceManager.leaseDevicesOfTestAsync(testLocator),
+            proxyDeviceManager.leaseDevicesOfTestAsync(testLocator, testInfo.jobInfo().setting()),
             new TestProxyDevicesCallback(testInfo),
             threadPool);
       } catch (IllegalStateException e) {

@@ -28,11 +28,11 @@ import com.google.inject.Guice;
 import com.google.inject.ProvisionException;
 import com.google.inject.assistedinject.Assisted;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
+import com.google.wireless.qa.mobileharness.shared.model.job.JobSetting;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.SubDeviceSpec;
 import javax.annotation.concurrent.GuardedBy;
 import javax.inject.Inject;
 
-/** Device runner for a proxied device. */
 class ProxyDeviceRunner {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
@@ -43,13 +43,15 @@ class ProxyDeviceRunner {
     ProxyDeviceRunner create(
         String formattedDeviceLocator,
         ProxyDeviceRequirement deviceRequirement,
-        TestLocator testLocator);
+        TestLocator testLocator,
+        JobSetting jobSetting);
   }
 
   private final String formattedDeviceLocator;
   private final ProxyDeviceRequirement deviceRequirement;
   private final TestLocator testLocator;
   private final ReflectionUtil reflectionUtil;
+  private final JobSetting jobSetting;
 
   private final Object releaseDeviceLock = new Object();
 
@@ -64,11 +66,13 @@ class ProxyDeviceRunner {
       @Assisted String formattedDeviceLocator,
       @Assisted ProxyDeviceRequirement deviceRequirement,
       @Assisted TestLocator testLocator,
+      @Assisted JobSetting jobSetting,
       ReflectionUtil reflectionUtil) {
     this.formattedDeviceLocator = formattedDeviceLocator;
     this.deviceRequirement = deviceRequirement;
     this.testLocator = testLocator;
     this.reflectionUtil = reflectionUtil;
+    this.jobSetting = jobSetting;
   }
 
   Device leaseDevice() throws MobileHarnessException, InterruptedException {
@@ -117,7 +121,7 @@ class ProxyDeviceRunner {
       Class<? extends DeviceProxy> deviceProxyClass =
           reflectionUtil.loadClass(
               deviceProxyClassName, DeviceProxy.class, getClass().getClassLoader());
-      return Guice.createInjector(new DeviceProxyModule(deviceRequirement, testLocator))
+      return Guice.createInjector(new DeviceProxyModule(deviceRequirement, testLocator, jobSetting))
           .getInstance(deviceProxyClass);
     } catch (MobileHarnessException | CreationException | ProvisionException e) {
       throw new MobileHarnessException(
@@ -145,16 +149,20 @@ class ProxyDeviceRunner {
 
     private final ProxyDeviceRequirement deviceRequirement;
     private final TestLocator testLocator;
+    private final JobSetting jobSetting;
 
-    private DeviceProxyModule(ProxyDeviceRequirement deviceRequirement, TestLocator testLocator) {
+    private DeviceProxyModule(
+        ProxyDeviceRequirement deviceRequirement, TestLocator testLocator, JobSetting jobSetting) {
       this.deviceRequirement = deviceRequirement;
       this.testLocator = testLocator;
+      this.jobSetting = jobSetting;
     }
 
     @Override
     protected void configure() {
       bind(ProxyDeviceRequirement.class).toInstance(deviceRequirement);
       bind(TestLocator.class).toInstance(testLocator);
+      bind(JobSetting.class).toInstance(jobSetting);
     }
   }
 }

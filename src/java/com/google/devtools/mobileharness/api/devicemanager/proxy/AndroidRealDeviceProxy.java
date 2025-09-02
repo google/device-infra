@@ -34,7 +34,9 @@ import com.google.wireless.qa.mobileharness.shared.api.device.AndroidRealDevice;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.validator.ValidatorFactory;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
+import com.google.wireless.qa.mobileharness.shared.model.job.JobSetting;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.SubDeviceSpec;
+import java.time.Duration;
 import javax.inject.Inject;
 
 /** Device proxy for Android real devices. */
@@ -46,6 +48,7 @@ public class AndroidRealDeviceProxy implements DeviceProxy {
   private final TestLocator testLocator;
   private final RemoteDeviceConnector remoteDeviceConnector;
   private final AndroidSystemStateUtil androidSystemStateUtil;
+  private final JobSetting jobSetting;
   private LeasedDeviceConnection leasedDeviceConnection;
 
   @Inject
@@ -53,17 +56,23 @@ public class AndroidRealDeviceProxy implements DeviceProxy {
       ProxyDeviceRequirement deviceRequirement,
       TestLocator testLocator,
       RemoteDeviceConnector remoteDeviceConnector,
-      AndroidSystemStateUtil androidSystemStateUtil) {
+      AndroidSystemStateUtil androidSystemStateUtil,
+      JobSetting jobSetting) {
     this.deviceRequirement = deviceRequirement;
     this.testLocator = testLocator;
     this.remoteDeviceConnector = remoteDeviceConnector;
     this.androidSystemStateUtil = androidSystemStateUtil;
+    this.jobSetting = jobSetting;
   }
 
   @Override
   public Device leaseDevice() throws MobileHarnessException, InterruptedException {
     DeviceSpecification deviceSpec = createDeviceSpecification();
-    this.leasedDeviceConnection = remoteDeviceConnector.connect(deviceSpec);
+    this.leasedDeviceConnection =
+        remoteDeviceConnector.connect(
+            deviceSpec,
+            Duration.ofMillis(jobSetting.getTimeout().getJobTimeoutMs()),
+            Duration.ofMillis(jobSetting.getTimeout().getTestTimeoutMs()));
 
     // Creates the Device instance.
     DeviceId deviceId =
