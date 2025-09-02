@@ -28,7 +28,7 @@ java_library(
     srcs = ["FieldMaskUtils.java"],
     deps = [
         "@com_google_protobuf//:protobuf_java",
-        "@com_google_protobuf_protobuf_java",
+        "@maven//:com_google_protobuf_protobuf_java",
     ],
 )
 

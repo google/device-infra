@@ -50,8 +50,8 @@ java_library(
     srcs = ["TimeUtils.java"],
     deps = [
         "@com_google_protobuf//:protobuf_java_util",
-        "@com_google_protobuf_protobuf_java",
         "@maven//:com_google_guava_guava",
+        "@maven//:com_google_protobuf_protobuf_java",
     ],
 )
 

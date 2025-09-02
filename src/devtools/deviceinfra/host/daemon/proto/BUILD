@@ -50,7 +50,7 @@ py_proto_library(
         "//third_party/py/multitest_transport:__subpackages__",
     ],
     deps = [
-        "@com_github_protocolbuffers_protobuf//:well_known_types_py_pb2",
+        "@com_google_protobuf//:well_known_types_py_pb2",
     ],
 )
 

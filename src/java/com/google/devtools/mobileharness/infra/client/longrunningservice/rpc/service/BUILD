@@ -86,9 +86,9 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:session_manager",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/util:session_query_util",
         "@com_google_protobuf//:protobuf_java_util",
-        "@com_google_protobuf_protobuf_java",
         "@io_grpc_grpc_java//stub",
         "@maven//:com_google_guava_guava",
+        "@maven//:com_google_protobuf_protobuf_java",
         "@maven//:javax_inject_jsr330_api",
     ],
 )

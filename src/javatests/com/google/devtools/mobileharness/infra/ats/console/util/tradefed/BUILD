@@ -48,7 +48,7 @@ java_library(
     srcs = ["TestRecordHelperTestData.java"],
     deps = [
         "//src/devtools/mobileharness/infra/ats/console/tradefed/proto:record_java_proto",
-        "@com_google_protobuf_protobuf_java",
+        "@maven//:com_google_protobuf_protobuf_java",
     ],
 )
 

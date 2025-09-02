@@ -41,7 +41,7 @@ py_proto_library(
     ],
     deps = [
         "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_py_proto",
-        "@com_github_protocolbuffers_protobuf//:well_known_types_py_pb2",
+        "@com_google_protobuf//:well_known_types_py_pb2",
     ],
 )
 

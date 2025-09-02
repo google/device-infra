@@ -40,6 +40,6 @@ py_proto_library(
         "xts_common.proto",
     ],
     deps = [
-        "@com_github_protocolbuffers_protobuf//:well_known_types_py_pb2",
+        "@com_google_protobuf//:well_known_types_py_pb2",
     ],
 )

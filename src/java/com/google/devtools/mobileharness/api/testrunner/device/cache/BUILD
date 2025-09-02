@@ -27,9 +27,9 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@com_google_protobuf//:protobuf_java_util",
-        "@com_google_protobuf_protobuf_java",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
+        "@maven//:com_google_protobuf_protobuf_java",
     ],
 )
 

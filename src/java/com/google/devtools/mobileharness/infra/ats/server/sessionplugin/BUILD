@@ -58,9 +58,9 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
         "@com_google_protobuf//:protobuf_java",
         "@com_google_protobuf//:protobuf_java_util",
-        "@com_google_protobuf_protobuf_java",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
+        "@maven//:com_google_protobuf_protobuf_java",
         "@maven//:javax_inject_jsr330_api",
     ],
 )

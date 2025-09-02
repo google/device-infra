@@ -81,7 +81,7 @@ py_proto_library(
     ],
     deps = [
         "//src/devtools/common/metrics/stability/model/proto:error_py_proto",
-        "@com_github_protocolbuffers_protobuf//:well_known_types_py_pb2",
+        "@com_google_protobuf//:well_known_types_py_pb2",
     ],
 )
 
@@ -112,7 +112,7 @@ py_proto_library(
     ],
     deps = [
         ":session_py_proto",
-        "@com_github_protocolbuffers_protobuf//:well_known_types_py_pb2",
+        "@com_google_protobuf//:well_known_types_py_pb2",
     ],
 )
 

@@ -53,7 +53,7 @@ py_proto_library(
         "filter.proto",
     ],
     deps = [
-        "@com_github_protocolbuffers_protobuf//:well_known_types_py_pb2",
+        "@com_google_protobuf//:well_known_types_py_pb2",
     ],
 )
 
@@ -83,7 +83,7 @@ py_proto_library(
         ":filter_py_proto",
         "//src/devtools/mobileharness/api/model/proto:device_py_pb2",
         "//src/devtools/mobileharness/api/model/proto:lab_py_proto",
-        "@com_github_protocolbuffers_protobuf//:well_known_types_py_pb2",
+        "@com_google_protobuf//:well_known_types_py_pb2",
     ],
 )
 
@@ -111,6 +111,6 @@ py_proto_library(
         ":lab_query_py_proto",
         "//src/devtools/mobileharness/api/model/proto:device_py_pb2",
         "//src/devtools/mobileharness/api/model/proto:lab_py_proto",
-        "@com_github_protocolbuffers_protobuf//:well_known_types_py_pb2",
+        "@com_google_protobuf//:well_known_types_py_pb2",
     ],
 )

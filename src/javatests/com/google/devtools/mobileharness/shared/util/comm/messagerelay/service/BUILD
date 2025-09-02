@@ -31,11 +31,11 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/messagerelay/service",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/messagerelay/service:stream_manager",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
-        "@com_google_protobuf_protobuf_java",
         "@io_grpc_grpc_java//core",
         "@io_grpc_grpc_java//core:inprocess",
         "@io_grpc_grpc_java//stub",
         "@io_grpc_grpc_java//testing",
+        "@maven//:com_google_protobuf_protobuf_java",
         "@maven//:junit_junit",
     ],
 )
