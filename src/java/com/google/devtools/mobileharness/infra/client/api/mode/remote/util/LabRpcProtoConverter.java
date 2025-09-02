@@ -120,7 +120,7 @@ public class LabRpcProtoConverter {
     remoteLogOffset.put(testId, remoteLogOffset.getOrDefault(testId, 0) + remoteLog.length());
 
     testInfo.status().set(resp.getTestStatus());
-    setTestResultByGetTestStatusResponse(resp, testInfo, testInfo.result().toNewResult());
+    setTestResultByGetTestStatusResponse(resp, testInfo, testInfo.resultWithCause());
 
     // Update sub-testInfo when sub-tests are available.
     Set<String> leftOverSubTestIds =
