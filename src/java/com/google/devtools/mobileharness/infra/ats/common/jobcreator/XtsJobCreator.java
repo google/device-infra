@@ -78,7 +78,8 @@ public abstract class XtsJobCreator {
           InfraErrorId.XTS_NO_MATCHED_TRADEFED_MODULES,
           InfraErrorId.XTS_NO_MATCHED_NON_TF_MODULES_TO_RETRY);
 
-  private static final ImmutableSet<String> CTS_TEST_PLANS = ImmutableSet.of("cts", "cts-system");
+  private static final ImmutableSet<String> CTS_TEST_PLANS =
+      ImmutableSet.of("cts", "cts-system", "incremental-deqp");
 
   private final SessionRequestHandlerUtil sessionRequestHandlerUtil;
   protected final LocalFileUtil localFileUtil;
