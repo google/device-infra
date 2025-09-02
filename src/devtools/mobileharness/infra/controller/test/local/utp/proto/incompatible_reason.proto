@@ -79,6 +79,10 @@ enum ConverterIncompatibleReason {
   // Range: 10_201 ~ 10_210
   IOS_NATIVE_XCTEST_UNSUPPORTED = 10201;
 
+  // IosRoboTest
+  // Range: 10_211 ~ 10_220
+  IOS_ROBO_TEST_UNSUPPORTED = 10211;
+
   // ******************************
   // Decorator converters.
   // Range: 20_001 ~ MAX
