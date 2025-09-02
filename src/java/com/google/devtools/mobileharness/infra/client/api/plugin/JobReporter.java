@@ -102,7 +102,7 @@ public class JobReporter {
     String failedTestsDetails = getResultDetail("Failed/Error", failedTests, finalizedTests);
     String failedTestsCount = getResultCount("Failed/Error", failedTests);
 
-    String jobResult = jobInfo.result().get().name() + "!";
+    String jobResult = jobInfo.resultWithCause().get().type().name() + "!";
     jobInfo
         .log()
         .atInfo()

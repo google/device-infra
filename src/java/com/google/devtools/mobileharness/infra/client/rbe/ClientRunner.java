@@ -73,7 +73,7 @@ class ClientRunner {
   private ExitCode checkJobResults(List<JobInfo> jobInfos) {
     int totalTests = 0;
     for (JobInfo jobInfo : jobInfos) {
-      TestResult jobResult = jobInfo.result().toNewResult().get().type();
+      TestResult jobResult = jobInfo.resultWithCause().get().type();
       if (jobResult != TestResult.PASS && jobResult != TestResult.SKIP) {
         return ExitCode.Client.TEST_FAILURE;
       }

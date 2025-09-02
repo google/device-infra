@@ -43,8 +43,8 @@ final class ResultConverter {
    * Gets a {@link ResultProto} by the given {@link Result}. The cause to the failure result is also
    * persistent if presented.
    */
-  static ResultProto toProto(Result result) {
-    ResultTypeWithCause resultTypeWithCause = result.toNewResult().get();
+  static ResultProto toProto(com.google.devtools.mobileharness.api.model.job.out.Result result) {
+    ResultTypeWithCause resultTypeWithCause = result.get();
     ResultProto.Builder resultProto =
         ResultProto.newBuilder().setResult(resultTypeWithCause.type());
     resultTypeWithCause.causeProto().ifPresent(resultProto::setExceptionDetail);
