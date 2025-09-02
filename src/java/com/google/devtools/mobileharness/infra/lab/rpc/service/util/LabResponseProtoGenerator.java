@@ -184,6 +184,7 @@ public class LabResponseProtoGenerator {
         GetTestStatusResponse.newBuilder()
             .setTestStatus(testStatus)
             .setTestResult(TestResult.valueOf(testResult.type().name()))
+            .setTestResultType(testResult.type())
             .addAllTestMessage(bufferedTestMessages);
     testResult.causeProto().ifPresent(builder::setTestResultCause);
     if (req != null) {

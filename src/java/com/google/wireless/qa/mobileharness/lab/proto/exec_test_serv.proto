@@ -22,6 +22,7 @@ import "src/devtools/common/metrics/stability/model/proto/exception.proto";
 import "src/devtools/mobileharness/api/model/proto/device.proto";
 import "src/devtools/mobileharness/api/model/proto/error.proto";
 import "src/devtools/mobileharness/api/model/proto/job.proto";
+import "src/devtools/mobileharness/api/model/proto/test.proto";
 import "src/devtools/mobileharness/shared/trace/proto/span.proto";
 import "src/java/com/google/wireless/qa/mobileharness/lab/proto/stat.proto";
 import "src/java/com/google/wireless/qa/mobileharness/shared/proto/common.proto";
@@ -146,15 +147,18 @@ message GetTestStatusRequest {
   repeated GetTestStatusRequest sub_test = 4;
 }
 
-// Next ID: 9
+// Next ID:10
 message GetTestStatusResponse {
   // Current status of the test.
   optional mobileharness.shared.TestStatus test_status = 1;
+
+  optional mobileharness.shared.TestResult test_result = 2 [deprecated = true];
+  optional stability.model.ExceptionDetail test_result_cause = 8;
   // Test result. When the result is PASS/FAIL/ERROR/TIMEOUT, it doesn't mean
   // the test is finished. The lab server may do some addition work like dumping
   // device logs.
-  required mobileharness.shared.TestResult test_result = 2;
-  optional stability.model.ExceptionDetail test_result_cause = 8;
+  optional mobileharness.api.model.TestResult test_result_type = 9;
+
   // Output log from the specified offset.
   required string test_log = 3;
   // Test messages. Only valid for the top-level test.
