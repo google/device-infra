@@ -23,6 +23,7 @@ import "src/devtools/common/metrics/stability/model/proto/error_type.proto";
 import "src/devtools/common/metrics/stability/model/proto/exception.proto";
 import "src/devtools/mobileharness/api/model/proto/error.proto";
 import "src/devtools/mobileharness/api/model/proto/job.proto";
+import "src/devtools/mobileharness/api/model/proto/test.proto";
 import "src/java/com/google/wireless/qa/mobileharness/shared/proto/common.proto";
 import "src/java/com/google/wireless/qa/mobileharness/shared/proto/job.proto";
 
@@ -179,6 +180,7 @@ message DeviceRequirement {
   repeated mobileharness.shared.StrPair dimension = 3;
 }
 
+// Next ID: 22
 message JobSummary {
   optional string id = 1;
   optional string name = 2;
@@ -186,7 +188,8 @@ message JobSummary {
   optional mobileharness.shared.JobType type = 4;
   optional JobSetting setting = 5;
   optional mobileharness.shared.TestStatus status = 6;
-  optional mobileharness.shared.TestResult result = 7;
+  optional mobileharness.shared.TestResult result = 7 [deprecated = true];
+  optional mobileharness.api.model.TestResult result_type = 21;
   optional TimeDetail time_detail = 8;
   optional string log = 10;
   repeated mobileharness.shared.StrPair param = 11;

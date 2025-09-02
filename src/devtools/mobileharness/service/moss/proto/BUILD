@@ -27,6 +27,7 @@ proto_library(
         "//src/devtools/common/metrics/stability/model/proto:error_proto",
         "//src/devtools/mobileharness/api/model/proto:error_proto",
         "//src/devtools/mobileharness/api/model/proto:job_proto",
+        "//src/devtools/mobileharness/api/model/proto:test_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:common_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_proto",
     ],
