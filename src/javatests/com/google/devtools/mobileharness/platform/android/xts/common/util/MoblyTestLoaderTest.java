@@ -74,7 +74,7 @@ public final class MoblyTestLoaderTest {
   @Test
   public void getTestNamesInModule_withTestRunnerOutputFormat_success() throws Exception {
     String output = new LocalFileUtil().readFile(TEST_RUNNER_OUTPUT_PATH);
-    Command expectedCommand = Command.of("/path/to/x86_64/module1", "--", "-l");
+    Command expectedCommand = Command.of("/path/to/x86_64/module1", "-l");
     when(commandExecutor.run(expectedCommand)).thenReturn(output);
     assertThat(moblyTestLoader.getTestNamesInModule(MODULE_CONFIG_PATH, MODULE_CONFIG))
         .containsExactly(
@@ -89,7 +89,7 @@ public final class MoblyTestLoaderTest {
   @Test
   public void getTestNamesInModule_withSuiteRunnerOutputFormat_success() throws Exception {
     String output = new LocalFileUtil().readFile(SUITE_RUNNER_OUTPUT_PATH);
-    Command expectedCommand = Command.of("/path/to/x86_64/module1", "--", "-l");
+    Command expectedCommand = Command.of("/path/to/x86_64/module1", "-l");
     when(commandExecutor.run(expectedCommand)).thenReturn(output);
     assertThat(moblyTestLoader.getTestNamesInModule(MODULE_CONFIG_PATH, MODULE_CONFIG))
         .containsExactly(
@@ -105,7 +105,7 @@ public final class MoblyTestLoaderTest {
 
   @Test
   public void getTestNamesInModule_emptyOutput() throws Exception {
-    Command expectedCommand = Command.of("/path/to/x86_64/module1", "--", "-l");
+    Command expectedCommand = Command.of("/path/to/x86_64/module1", "-l");
     when(commandExecutor.run(expectedCommand)).thenReturn("");
     MobileHarnessException mhException =
         Assert.assertThrows(
@@ -117,7 +117,7 @@ public final class MoblyTestLoaderTest {
 
   @Test
   public void getTestNamesInModule_uselessOutput() throws Exception {
-    Command expectedCommand = Command.of("/path/to/x86_64/module1", "--", "-l");
+    Command expectedCommand = Command.of("/path/to/x86_64/module1", "-l");
     when(commandExecutor.run(expectedCommand)).thenReturn("random line1 \nrandom line2");
     MobileHarnessException mhException =
         Assert.assertThrows(
@@ -129,7 +129,7 @@ public final class MoblyTestLoaderTest {
 
   @Test
   public void getTestNamesInModule_onlyOneLineOutput() throws Exception {
-    Command expectedCommand = Command.of("/path/to/x86_64/module1", "--", "-l");
+    Command expectedCommand = Command.of("/path/to/x86_64/module1", "-l");
     when(commandExecutor.run(expectedCommand))
         .thenReturn("==========> CompanionDeviceManagerTestClass <==========");
     MobileHarnessException mhException =

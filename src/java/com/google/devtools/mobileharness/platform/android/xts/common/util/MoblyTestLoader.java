@@ -73,7 +73,7 @@ public class MoblyTestLoader {
     }
     Path moblyBinaryPath = filePaths.get(0);
     Command command =
-        Command.of(moblyBinaryPath.toAbsolutePath().toString(), "--", "-l").redirectStderr(false);
+        Command.of(moblyBinaryPath.toAbsolutePath().toString(), "-l").redirectStderr(false);
     String output = commandExecutor.run(command);
     List<String> lines = NEWLINE_SPLITTER.splitToList(output);
 
