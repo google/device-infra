@@ -298,6 +298,8 @@ public final class Dimension {
     SDK_VERSION,
     /** Whether the system build is signed. Values includes: dev-keys/release-keys/test-keys. */
     SIGN,
+    /** The type of the SIM card. */
+    SIM_CARD_TYPE,
     /** The remaining storage lifetime in percentages. */
     STORAGE_LIFETIME_PERCENTAGE,
     /** Whether the device is a svelte device. */
@@ -417,6 +419,18 @@ public final class Dimension {
     USB,
     SSH,
     VIDEO,
+  }
+
+  /**
+   * Values for SIM_CARD_TYPE.
+   *
+   * <p>These are the same as Tradefed's
+   * http://google3/third_party/java_src/tradefederation_core/tools/tradefederation/core/invocation_interfaces/com/android/tradefed/invoker/shard/token/TokenProperty.java;l=23-25;rcl=364381045
+   */
+  public enum SimCardTypeValue {
+    SIM_CARD,
+    UICC_SIM_CARD,
+    SECURE_ELEMENT_SIM_CARD,
   }
 
   /** Dimension values. */
