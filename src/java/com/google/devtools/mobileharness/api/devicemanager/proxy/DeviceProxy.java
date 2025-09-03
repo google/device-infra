@@ -32,7 +32,9 @@ import com.google.wireless.qa.mobileharness.shared.api.device.Device;
  * types contain "NoOpDevice".
  *
  * <p>An implementation class should be able to be injected by <b>Guice</b> (containing a no-arg
- * constructor or a constructor annotated by annotations like {@link javax.inject.Inject}).
+ * constructor or a constructor annotated by annotations like {@link javax.inject.Inject}). An
+ * implementation class can also be annotated by {@link DeviceProxyModule} to specify extra Guice
+ * modules for creating its dependencies.
  *
  * <p>The following type are bound during the injection of an implementation class:
  *
@@ -42,6 +44,8 @@ import com.google.wireless.qa.mobileharness.shared.api.device.Device;
  *       ProxyDeviceRequirement} to provide the device requirement of a sub device of a job
  *   <li>{@linkplain com.google.devtools.mobileharness.api.model.job.TestLocator TestLocator} to
  *       provide a test locator
+ *   <li>{@linkplain com.google.wireless.qa.mobileharness.shared.model.job.JobSetting JobSetting} to
+ *       provide the job setting of the test
  * </ul>
  */
 public interface DeviceProxy {

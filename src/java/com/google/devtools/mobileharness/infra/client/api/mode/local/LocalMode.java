@@ -118,9 +118,9 @@ public class LocalMode implements ExecMode {
   /** Starts the singleton local device manager and the local scheduler, if has not. */
   @Override
   public void initialize(EventBus globalInternalBus) throws InterruptedException {
-    if (localDeviceManager == null) {
+    if (localDeviceManager == null && proxyDeviceManager == null) {
       synchronized (LOCAL_ENV_LOCK) {
-        if (localDeviceManager == null) {
+        if (localDeviceManager == null && proxyDeviceManager == null) {
           logger.atInfo().log("Starting local device manager");
 
           localEnvThreadPool =
@@ -143,17 +143,20 @@ public class LocalMode implements ExecMode {
           // Subscribes LocalDeviceUpEvent.
           globalInternalBus.register(this);
 
-          // Initializes ProxyDeviceManager.
-          proxyDeviceManager =
-              Guice.createInjector(
-                      new AbstractModule() {
-                        @Override
-                        protected void configure() {
-                          bind(ListeningExecutorService.class).toInstance(localEnvThreadPool);
-                          install(new ProxyDeviceManagerModule());
-                        }
-                      })
-                  .getInstance(ProxyDeviceManager.class);
+          if (Flags.instance().enableProxyMode.getNonNull()) {
+            // Initializes ProxyDeviceManager.
+            proxyDeviceManager =
+                Guice.createInjector(
+                        new AbstractModule() {
+                          @Override
+                          protected void configure() {
+                            bind(ListeningExecutorService.class).toInstance(localEnvThreadPool);
+                            install(new ProxyDeviceManagerModule());
+                          }
+                        })
+                    .getInstance(ProxyDeviceManager.class);
+            return;
+          }
 
           // Initializes local device manager.
           DetectorsAndDispatchers detectorsAndDispatchers =

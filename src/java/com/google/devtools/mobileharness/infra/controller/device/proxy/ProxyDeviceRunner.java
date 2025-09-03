@@ -16,8 +16,10 @@
 
 package com.google.devtools.mobileharness.infra.controller.device.proxy;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.devicemanager.proxy.DeviceProxy;
+import com.google.devtools.mobileharness.api.devicemanager.proxy.DeviceProxyModule;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.TestLocator;
@@ -25,6 +27,7 @@ import com.google.devtools.mobileharness.shared.util.reflection.ReflectionUtil;
 import com.google.inject.AbstractModule;
 import com.google.inject.CreationException;
 import com.google.inject.Guice;
+import com.google.inject.Module;
 import com.google.inject.ProvisionException;
 import com.google.inject.assistedinject.Assisted;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
@@ -121,9 +124,21 @@ class ProxyDeviceRunner {
       Class<? extends DeviceProxy> deviceProxyClass =
           reflectionUtil.loadClass(
               deviceProxyClassName, DeviceProxy.class, getClass().getClassLoader());
-      return Guice.createInjector(new DeviceProxyModule(deviceRequirement, testLocator, jobSetting))
-          .getInstance(deviceProxyClass);
-    } catch (MobileHarnessException | CreationException | ProvisionException e) {
+
+      // Instantiates modules.
+      ImmutableList.Builder<Module> modules = ImmutableList.builder();
+      modules.add(new ProxyDeviceRunnerModule(deviceRequirement, testLocator, jobSetting));
+      if (deviceProxyClass.isAnnotationPresent(DeviceProxyModule.class)) {
+        // TODO: The module instances are created every time. Need to find a way to
+        // cache and reuse them.
+        for (Class<? extends Module> moduleClass :
+            deviceProxyClass.getAnnotation(DeviceProxyModule.class).value()) {
+          modules.add(Guice.createInjector().getInstance(moduleClass));
+        }
+      }
+
+      return Guice.createInjector(modules.build()).getInstance(deviceProxyClass);
+    } catch (CreationException | ProvisionException | MobileHarnessException e) {
       throw new MobileHarnessException(
           InfraErrorId.DM_DEVICE_PROXY_INSTANTIATION_ERROR,
           String.format(
@@ -145,13 +160,13 @@ class ProxyDeviceRunner {
         "com.google.devtools.mobileharness.api.devicemanager.proxy.%sProxy", deviceType);
   }
 
-  private static class DeviceProxyModule extends AbstractModule {
+  private static class ProxyDeviceRunnerModule extends AbstractModule {
 
     private final ProxyDeviceRequirement deviceRequirement;
     private final TestLocator testLocator;
     private final JobSetting jobSetting;
 
-    private DeviceProxyModule(
+    private ProxyDeviceRunnerModule(
         ProxyDeviceRequirement deviceRequirement, TestLocator testLocator, JobSetting jobSetting) {
       this.deviceRequirement = deviceRequirement;
       this.testLocator = testLocator;

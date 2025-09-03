@@ -21,6 +21,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.TestLocator;
 import com.google.devtools.mobileharness.api.model.lab.DeviceId;
 import com.google.devtools.mobileharness.api.model.lab.LiteDeviceInfoFactory;
+import com.google.devtools.mobileharness.infra.controller.device.provider.deviceapi.DeviceApiModule;
 import com.google.devtools.mobileharness.infra.controller.device.provider.deviceapi.LeasedDeviceConnection;
 import com.google.devtools.mobileharness.infra.controller.device.provider.deviceapi.RemoteDeviceConnector;
 import com.google.devtools.mobileharness.infra.controller.device.proxy.ProxyDeviceRequirement;
@@ -40,6 +41,7 @@ import java.time.Duration;
 import javax.inject.Inject;
 
 /** Device proxy for Android real devices. */
+@DeviceProxyModule(DeviceApiModule.class)
 public class AndroidRealDeviceProxy implements DeviceProxy {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
