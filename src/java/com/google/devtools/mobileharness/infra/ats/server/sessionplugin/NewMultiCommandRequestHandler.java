@@ -839,6 +839,15 @@ final class NewMultiCommandRequestHandler {
     }
   }
 
+  void prepareMoblyJobLogDirName(JobInfo jobInfo, RequestDetail.Builder requestDetail) {
+    String moduleId = SessionResultHandlerUtil.getExpandedNonTfModuleId(jobInfo);
+    for (TestInfo testInfo : jobInfo.tests().getAll().values()) {
+      requestDetail.addNonTradefedLogDirNames(
+          SessionResultHandlerUtil.getNonTradefedLogDirName(
+              moduleId.replace(' ', '_'), testInfo.locator().getId()));
+    }
+  }
+
   /**
    * Creates a manifest file in the output directory, listing all the files (using their relative
    * paths) in the output directory. Also removes any existing manifest file with the same name if

@@ -270,6 +270,7 @@ final class AtsServerSessionPlugin {
       JobInfo jobInfo = jobEndEvent.getJob();
 
       if (jobInfo.properties().getBoolean(Job.IS_XTS_NON_TF_JOB).orElse(false)) {
+        newMultiCommandRequestHandler.prepareMoblyJobLogDirName(jobInfo, requestDetail);
         for (TestInfo testInfo : jobEndEvent.getJob().tests().getAll().values()) {
           ResultTypeWithCause resultWithCause = testInfo.resultWithCause().get();
           ModuleRunResult.Builder resultBuilder =

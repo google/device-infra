@@ -952,7 +952,7 @@ public class SessionResultHandlerUtil {
     if (test.jobInfo().properties().getBoolean(Job.IS_XTS_NON_TF_JOB).orElse(false)) {
       prefix = getExpandedNonTfModuleId(test.jobInfo()).replace(' ', '_');
     }
-    Path targetDir = parentDir.resolve(String.format("%s_test_%s", prefix, test.locator().getId()));
+    Path targetDir = parentDir.resolve(getNonTradefedLogDirName(prefix, test.locator().getId()));
     localFileUtil.prepareDir(targetDir);
     return targetDir;
   }
@@ -1272,7 +1272,7 @@ public class SessionResultHandlerUtil {
   }
 
   /** Returns the expanded non-tradefed module id of the given non-tradefed job. */
-  private static String getExpandedNonTfModuleId(JobInfo jobInfo) {
+  public static String getExpandedNonTfModuleId(JobInfo jobInfo) {
     String moduleName =
         jobInfo.properties().getOptional(SessionHandlerHelper.XTS_MODULE_NAME_PROP).orElse("");
     String abi = jobInfo.properties().get(SessionHandlerHelper.XTS_MODULE_ABI_PROP);
@@ -1284,5 +1284,10 @@ public class SessionResultHandlerUtil {
       moduleName = AbiUtil.createId(abi, moduleName);
     }
     return moduleName;
+  }
+
+  /** Gets non-tradefed test log directory name. */
+  public static String getNonTradefedLogDirName(String moduleName, String testId) {
+    return moduleName + "_test_" + testId;
   }
 }

@@ -241,8 +241,10 @@ message RequestDetail {
   // Required if cancel_reason or error_reason is present.
   optional string error_message = 25;
 
+  // Used for displaying logs in frontend.
   optional string working_job_id = 26;
   optional string working_test_id = 27;
+  repeated string non_tradefed_log_dir_names = 28;
 }
 
 message TestContext {
