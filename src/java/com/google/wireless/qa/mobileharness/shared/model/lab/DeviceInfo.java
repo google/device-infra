@@ -75,6 +75,7 @@ public class DeviceInfo extends DeviceScheduleUnit {
     drivers().addAll(deviceInfo.getDriverList());
     decorators().addAll(deviceInfo.getDecoratorList());
     owners().addAll(deviceInfo.getOwnerList());
+    executors().addAll(deviceInfo.getExecutorList());
     deviceInfo
         .getDimensionList()
         .forEach(

@@ -67,6 +67,7 @@ public class SingleDeviceDiagnostician implements AllocationDiagnostician {
               DeviceQuery.DeviceInfo.ID_FIELD_NUMBER,
               DeviceQuery.DeviceInfo.STATUS_FIELD_NUMBER,
               DeviceQuery.DeviceInfo.OWNER_FIELD_NUMBER,
+              DeviceQuery.DeviceInfo.EXECUTOR_FIELD_NUMBER,
               DeviceQuery.DeviceInfo.TYPE_FIELD_NUMBER,
               DeviceQuery.DeviceInfo.DRIVER_FIELD_NUMBER,
               DeviceQuery.DeviceInfo.DIMENSION_FIELD_NUMBER)
@@ -292,6 +293,7 @@ public class SingleDeviceDiagnostician implements AllocationDiagnostician {
         new DeviceInfo(
             deviceLocator, DeviceStatus.valueOf(Ascii.toUpperCase(deviceProto.getStatus())));
     deviceInfo.owners().addAll(deviceProto.getOwnerList());
+    deviceInfo.executors().addAll(deviceProto.getExecutorList());
     deviceInfo.types().addAll(deviceProto.getTypeList());
     deviceInfo.drivers().addAll(deviceProto.getDriverList());
     deviceInfo.decorators().addAll(deviceProto.getDecoratorList());

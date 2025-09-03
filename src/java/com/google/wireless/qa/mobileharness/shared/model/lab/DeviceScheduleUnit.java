@@ -20,6 +20,7 @@ import com.google.common.base.Preconditions;
 import com.google.wireless.qa.mobileharness.shared.model.lab.in.CompositeDimensions;
 import com.google.wireless.qa.mobileharness.shared.model.lab.in.Decorators;
 import com.google.wireless.qa.mobileharness.shared.model.lab.in.Drivers;
+import com.google.wireless.qa.mobileharness.shared.model.lab.in.Executors;
 import com.google.wireless.qa.mobileharness.shared.model.lab.in.Owners;
 import com.google.wireless.qa.mobileharness.shared.model.lab.in.Types;
 
@@ -43,6 +44,9 @@ public class DeviceScheduleUnit implements Cloneable {
   /** Device owners. */
   private volatile Owners owners;
 
+  /** Device executors. */
+  private volatile Executors executors;
+
   /** Device dimension. */
   private volatile CompositeDimensions dimensions;
 
@@ -58,6 +62,7 @@ public class DeviceScheduleUnit implements Cloneable {
     this.decorators = new Decorators();
     this.dimensions = new CompositeDimensions();
     this.owners = new Owners();
+    this.executors = new Executors();
   }
 
   protected DeviceScheduleUnit(DeviceScheduleUnit other) {
@@ -66,6 +71,7 @@ public class DeviceScheduleUnit implements Cloneable {
     this.drivers.setAll(other.drivers.getAll());
     this.decorators.setAll(other.decorators.getAll());
     this.owners.setAll(other.owners.getAll());
+    this.executors.setAll(other.executors.getAll());
     this.dimensions.supported().setAll(other.dimensions.supported().getAll());
     this.dimensions.required().setAll(other.dimensions.required().getAll());
   }
@@ -81,6 +87,7 @@ public class DeviceScheduleUnit implements Cloneable {
     drivers.setAll(other.drivers.getAll());
     decorators.setAll(other.decorators.getAll());
     owners.setAll(other.owners.getAll());
+    executors.setAll(other.executors.getAll());
     this.dimensions.supported().setAll(other.dimensions.supported().getAll());
     this.dimensions.required().setAll(other.dimensions.required().getAll());
   }
@@ -108,6 +115,11 @@ public class DeviceScheduleUnit implements Cloneable {
   /** Gets the device owners. */
   public Owners owners() {
     return owners;
+  }
+
+  /** Gets the device executors. */
+  public Executors executors() {
+    return executors;
   }
 
   /** Gets the device dimensions. */
