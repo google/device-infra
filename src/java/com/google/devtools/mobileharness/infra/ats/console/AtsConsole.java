@@ -130,6 +130,9 @@ public class AtsConsole {
         preprocessDeviceInfraServiceFlags(deviceInfraServiceFlags);
     DeviceInfraServiceUtil.parseFlags(finalDeviceInfraServiceFlags.flags());
 
+    // Prints notice message.
+    System.out.println(NoticeMessageUtil.getNoticeMessage());
+
     // Prepares dirs.
     DirPreparer.prepareDirRoots();
 
@@ -270,9 +273,6 @@ public class AtsConsole {
     logger.atInfo().with(IMPORTANCE, DEBUG).log("ATS console ID: %s", clientId);
     logger.atInfo().with(IMPORTANCE, DEBUG).log("Flags: %s", deviceInfraServiceFlags.flags());
     systemInfoPrinter.printSystemInfo(DEBUG);
-
-    // Prints notice message.
-    consoleUtil.printlnStdout(NoticeMessageUtil.getNoticeMessage());
 
     // Prints version information.
     consoleUtil.printlnStdout(versionMessageUtil.getVersionMessage());
