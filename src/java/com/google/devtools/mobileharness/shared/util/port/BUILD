@@ -30,6 +30,25 @@ java_library(
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "portpicker",
+    srcs = [
+        "PortFinder.java",
+        "PortPicker.java",
+        "UnableToFindPortException.java",
+        "UnexpectedPortStateException.java",
+    ],
+    visibility = [
+        "//:deviceinfra_all_pkg",
+        "//:omnilab_fusion",
+    ],
+    deps = [
+        ":portprober",
+        "@maven//:com_google_code_findbugs_jsr305",
     ],
 )
