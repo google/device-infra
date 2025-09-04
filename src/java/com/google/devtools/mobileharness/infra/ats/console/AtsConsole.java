@@ -109,8 +109,11 @@ public class AtsConsole {
   private static final String USE_NEW_OLC_SERVER_ENV_VAR = "USE_NEW_OLC_SERVER";
   private static final String USE_TF_RETRY_ENV_VAR = "USE_TF_RETRY";
   private static final String EMBEDDED_MODE_ENV_VAR = "OLC_SERVER_EMBEDDED_MODE";
+  private static final String USE_NEW_PUBLIC_DIR_FOR_NEW_OLC_SERVER_ENV_VAR =
+      "USE_NEW_PUBLIC_DIR_FOR_NEW_OLC_SERVER";
 
   private static final boolean DEFAULT_EMBEDDED_MODE = false;
+  private static final boolean DEFAULT_USE_NEW_PUBLIC_DIR_FOR_NEW_OLC_SERVER = true;
 
   private static final String OLC_SERVER_CLASS_PATH = "ats_olc_server_local_mode_deploy.jar";
   private static final String OLC_SERVER_MODULE_FACTORY_IMPL_CLASS_NAME =
@@ -470,10 +473,15 @@ public class AtsConsole {
             ? DEFAULT_EMBEDDED_MODE
             : Boolean.parseBoolean(System.getenv(EMBEDDED_MODE_ENV_VAR));
     boolean useNewOlcServer = Boolean.parseBoolean(System.getenv(USE_NEW_OLC_SERVER_ENV_VAR));
+    boolean useNewPublicDir =
+        System.getenv(USE_NEW_PUBLIC_DIR_FOR_NEW_OLC_SERVER_ENV_VAR) == null
+            ? DEFAULT_USE_NEW_PUBLIC_DIR_FOR_NEW_OLC_SERVER
+            : Boolean.parseBoolean(System.getenv(USE_NEW_PUBLIC_DIR_FOR_NEW_OLC_SERVER_ENV_VAR));
     if (useNewOlcServer || embeddedMode) {
       // Generate random flags for new OLC server or embedded mode.
       extraFlags.addAll(
-          getRandomServerFlags(embeddedMode ? RandomServerType.PID : RandomServerType.PORT));
+          getRandomServerFlags(
+              embeddedMode ? RandomServerType.PID : RandomServerType.PORT, useNewPublicDir));
     }
     // Always overrides the embedded mode flag to keep it consistent with random server flags.
     extraFlags.add(String.format("--ats_console_olc_server_embedded_mode=%s", embeddedMode));
@@ -490,8 +498,8 @@ public class AtsConsole {
     PID,
   }
 
-  private static ImmutableList<String> getRandomServerFlags(RandomServerType type)
-      throws IOException, InterruptedException {
+  private static ImmutableList<String> getRandomServerFlags(
+      RandomServerType type, boolean randomPublicDir) throws IOException, InterruptedException {
     ImmutableList.Builder<String> result = ImmutableList.builder();
     String serverId;
     if (type == RandomServerType.PORT) {
@@ -501,9 +509,11 @@ public class AtsConsole {
     } else {
       serverId = String.format("p%s", ProcessHandle.current().pid());
     }
+    if (randomPublicDir) {
+      result.add(String.format("--public_dir=/tmp/xts_console/server_%s", serverId));
+    }
     return result
         .add(
-            String.format("--public_dir=/tmp/xts_console/server_%s", serverId),
             String.format("--tmp_dir_root=/tmp/xts_console/server_%s", serverId),
             "--ats_console_olc_server_copy_server_resource=false")
         .build();
