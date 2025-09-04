@@ -15,6 +15,11 @@
 
 load("@rules_java//java:defs.bzl", "java_library")
 
+package(
+    default_applicable_licenses = ["//:license"],
+    default_visibility = ["//:deviceinfra_all_pkg"],
+)
+
 java_library(
     name = "xts_tradefed_test_module",
     srcs = ["XtsTradefedTestModule.java"],
@@ -24,6 +29,26 @@ java_library(
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_module",
+        "@maven//:com_google_inject_guice",
+    ],
+)
+
+java_library(
+    name = "cros_ls_nexus_decorator_module",
+    srcs = ["CrosLsNexusDecoratorModule.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/command",
+        "//src/java/com/google/devtools/mobileharness/shared/util/port:portprober",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:cros_ls_nexus_decorator",
+        "@maven//:com_google_inject_guice",
+    ],
+)
+
+java_library(
+    name = "cros_dut_topology_decorator_module",
+    srcs = ["CrosDutTopologyDecoratorModule.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/command",
         "@maven//:com_google_inject_guice",
     ],
 )
