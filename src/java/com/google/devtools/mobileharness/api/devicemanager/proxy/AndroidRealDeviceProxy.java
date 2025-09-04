@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.api.devicemanager.proxy;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.TestLocator;
@@ -27,6 +28,7 @@ import com.google.devtools.mobileharness.infra.controller.device.provider.device
 import com.google.devtools.mobileharness.infra.controller.device.proxy.ProxyDeviceRequirement;
 import com.google.devtools.mobileharness.infra.controller.device.util.DeviceIdUtil;
 import com.google.devtools.mobileharness.platform.android.systemstate.AndroidSystemStateUtil;
+import com.google.devtools.omnilab.device.api.DevicePool;
 import com.google.devtools.omnilab.device.api.DeviceSpecification;
 import com.google.devtools.omnilab.device.api.Dimension;
 import com.google.devtools.omnilab.device.api.Dimensions;
@@ -38,6 +40,7 @@ import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobSetting;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.SubDeviceSpec;
 import java.time.Duration;
+import java.util.Objects;
 import javax.inject.Inject;
 
 /** Device proxy for Android real devices. */
@@ -72,6 +75,9 @@ public class AndroidRealDeviceProxy implements DeviceProxy {
     DeviceSpecification deviceSpec = createDeviceSpecification();
     this.leasedDeviceConnection =
         remoteDeviceConnector.connect(
+            isCoreLabDevice()
+                ? DevicePool.ANDROID_CORE_LAB_POOL
+                : DevicePool.ANDROID_SATELLITE_LAB_POOL,
             deviceSpec,
             Duration.ofMillis(jobSetting.getTimeout().getJobTimeoutMs()),
             Duration.ofMillis(jobSetting.getTimeout().getTestTimeoutMs()));
@@ -102,6 +108,12 @@ public class AndroidRealDeviceProxy implements DeviceProxy {
     if (leasedDeviceConnection != null) {
       leasedDeviceConnection.close();
     }
+  }
+
+  private boolean isCoreLabDevice() {
+    ImmutableMap<String, String> dimensions =
+        deviceRequirement.subDeviceSpecs().getSubDevice(0).dimensions().getAll();
+    return Objects.equals(dimensions.get("pool"), "shared");
   }
 
   private DeviceSpecification createDeviceSpecification() {

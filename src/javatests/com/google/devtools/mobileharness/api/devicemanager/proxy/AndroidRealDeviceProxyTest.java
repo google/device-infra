@@ -31,6 +31,7 @@ import com.google.devtools.mobileharness.infra.controller.device.provider.device
 import com.google.devtools.mobileharness.infra.controller.device.proxy.ProxyDeviceRequirement;
 import com.google.devtools.mobileharness.infra.controller.scheduler.model.job.in.DeviceRequirement;
 import com.google.devtools.mobileharness.platform.android.systemstate.AndroidSystemStateUtil;
+import com.google.devtools.omnilab.device.api.DevicePool;
 import com.google.devtools.omnilab.device.api.DeviceSpecification;
 import com.google.devtools.omnilab.device.api.Dimension;
 import com.google.devtools.omnilab.device.api.Dimensions;
@@ -44,6 +45,8 @@ import com.google.wireless.qa.mobileharness.shared.model.job.in.SubDeviceSpecs;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.Timeout;
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -67,63 +70,29 @@ public final class AndroidRealDeviceProxyTest {
   private static final String SDK_VERSION = "30";
   private static final TestLocator TEST_LOCATOR =
       TestLocator.of("test_id", "test_name", JobLocator.of("job_id", "job_name"));
+  private static final Timeout TIMEOUT =
+      Timeout.newBuilder().setJobTimeoutMs(1_200_000L).setTestTimeoutMs(600_000L).build();
+  private static final JobSetting JOB_SETTING = JobSetting.newBuilder().setTimeout(TIMEOUT).build();
 
   @Mock private RemoteDeviceConnector remoteDeviceConnector;
   @Mock private LeasedDeviceConnection leasedDeviceConnection;
   @Mock private AndroidSystemStateUtil androidSystemStateUtil;
 
-  private AndroidRealDeviceProxy androidRealDeviceProxy;
-
   @Before
   public void setUp() throws Exception {
-    Timing timing = new Timing();
-    Decorators decorators = new Decorators();
-    decorators.add(DECORATOR);
-    com.google.devtools.mobileharness.api.model.job.in.Dimensions dimensions =
-        new com.google.devtools.mobileharness.api.model.job.in.Dimensions();
-    dimensions.add("model", MODEL);
-    dimensions.add("sdk_version", SDK_VERSION);
-    DeviceRequirement deviceRequirement =
-        DeviceRequirement.create("AndroidRealDevice", decorators, dimensions);
-    SubDeviceSpec subDeviceSpec =
-        SubDeviceSpec.createForTesting(deviceRequirement, new ScopedSpecs(timing), timing);
-    SubDeviceSpecs subDeviceSpecs = new SubDeviceSpecs(new Params(timing), timing);
-    subDeviceSpecs.addSubDevice(subDeviceSpec);
-    ProxyDeviceRequirement proxyDeviceRequirement = ProxyDeviceRequirement.of(subDeviceSpecs, 0);
-
-    when(remoteDeviceConnector.connect(any(), any(), any())).thenReturn(leasedDeviceConnection);
+    when(remoteDeviceConnector.connect(any(), any(), any(), any()))
+        .thenReturn(leasedDeviceConnection);
     when(leasedDeviceConnection.getLocalAdbSerial()).thenReturn(LOCAL_ADB_SERIAL);
     when(leasedDeviceConnection.getRemoteDeviceId()).thenReturn(REMOTE_DEVICE_ID);
     when(leasedDeviceConnection.getHostname()).thenReturn(HOSTNAME);
     when(leasedDeviceConnection.getAllocatedDeviceProperties())
         .thenReturn(ImmutableListMultimap.of("key", "value"));
-
-    Timeout timeout =
-        Timeout.newBuilder().setJobTimeoutMs(1_200_000L).setTestTimeoutMs(600_000L).build();
-    JobSetting jobSetting = JobSetting.newBuilder().setTimeout(timeout).build();
-    androidRealDeviceProxy =
-        new AndroidRealDeviceProxy(
-            proxyDeviceRequirement,
-            TEST_LOCATOR,
-            remoteDeviceConnector,
-            androidSystemStateUtil,
-            jobSetting);
   }
 
   @Test
   public void leaseDevice_success() throws Exception {
-    DeviceSpecification expectedDeviceSpec =
-        DeviceSpecification.newBuilder()
-            .setUnknownDevice(UnknownDevice.getDefaultInstance())
-            .setLegacyDimensions(
-                Dimensions.newBuilder()
-                    .addDimensions(
-                        Dimension.newBuilder().setName("devicetype").setValue("AndroidRealDevice"))
-                    .addDimensions(Dimension.newBuilder().setName("decorator").setValue(DECORATOR))
-                    .addDimensions(Dimension.newBuilder().setName("model").setValue(MODEL))
-                    .addDimensions(
-                        Dimension.newBuilder().setName("sdk_version").setValue(SDK_VERSION)))
-            .build();
+    AndroidRealDeviceProxy androidRealDeviceProxy = createAndroidRealDeviceProxy(new HashMap<>());
+    DeviceSpecification expectedDeviceSpec = createExpectedDeviceSpecification(new HashMap<>());
 
     Device device = androidRealDeviceProxy.leaseDevice();
 
@@ -132,29 +101,100 @@ public final class AndroidRealDeviceProxyTest {
     assertThat(device.getDimension("host_name")).containsExactly(HOSTNAME);
     assertThat(device.getDimension("key")).containsExactly("value");
 
+    ArgumentCaptor<DevicePool> devicePoolCaptor = ArgumentCaptor.forClass(DevicePool.class);
     ArgumentCaptor<DeviceSpecification> deviceSpecCaptor =
         ArgumentCaptor.forClass(DeviceSpecification.class);
     ArgumentCaptor<Duration> queueTimeoutCaptor = ArgumentCaptor.forClass(Duration.class);
     ArgumentCaptor<Duration> leaseDurationCaptor = ArgumentCaptor.forClass(Duration.class);
     verify(remoteDeviceConnector)
         .connect(
+            devicePoolCaptor.capture(),
             deviceSpecCaptor.capture(),
             queueTimeoutCaptor.capture(),
             leaseDurationCaptor.capture());
+
+    assertThat(devicePoolCaptor.getValue()).isEqualTo(DevicePool.ANDROID_SATELLITE_LAB_POOL);
     assertThat(deviceSpecCaptor.getValue())
         .ignoringRepeatedFieldOrder()
         .isEqualTo(expectedDeviceSpec);
-
     assertThat(queueTimeoutCaptor.getValue()).isEqualTo(Duration.ofMinutes(20));
     assertThat(leaseDurationCaptor.getValue()).isEqualTo(Duration.ofMinutes(10));
     verify(androidSystemStateUtil).waitUntilReady(LOCAL_ADB_SERIAL);
   }
 
   @Test
+  public void leaseDevice_coreLabPool_success() throws Exception {
+    Map<String, String> extraDimensions = new HashMap<>();
+    extraDimensions.put("pool", "shared");
+    AndroidRealDeviceProxy androidRealDeviceProxy = createAndroidRealDeviceProxy(extraDimensions);
+    DeviceSpecification expectedDeviceSpec = createExpectedDeviceSpecification(extraDimensions);
+
+    Device device = androidRealDeviceProxy.leaseDevice();
+
+    assertThat(device.getDeviceId()).isEqualTo(LOCAL_ADB_SERIAL);
+
+    ArgumentCaptor<DevicePool> devicePoolCaptor = ArgumentCaptor.forClass(DevicePool.class);
+    ArgumentCaptor<DeviceSpecification> deviceSpecCaptor =
+        ArgumentCaptor.forClass(DeviceSpecification.class);
+    verify(remoteDeviceConnector)
+        .connect(devicePoolCaptor.capture(), deviceSpecCaptor.capture(), any(), any());
+
+    assertThat(devicePoolCaptor.getValue()).isEqualTo(DevicePool.ANDROID_CORE_LAB_POOL);
+    assertThat(deviceSpecCaptor.getValue())
+        .ignoringRepeatedFieldOrder()
+        .isEqualTo(expectedDeviceSpec);
+  }
+
+  @Test
   public void releaseDevice_success() throws Exception {
+    AndroidRealDeviceProxy androidRealDeviceProxy = createAndroidRealDeviceProxy(new HashMap<>());
     var unused = androidRealDeviceProxy.leaseDevice();
     androidRealDeviceProxy.releaseDevice();
 
     verify(leasedDeviceConnection).close();
+  }
+
+  private AndroidRealDeviceProxy createAndroidRealDeviceProxy(Map<String, String> dimensionsMap) {
+    Timing timing = new Timing();
+    Decorators decorators = new Decorators();
+    decorators.add(DECORATOR);
+    com.google.devtools.mobileharness.api.model.job.in.Dimensions dimensions =
+        new com.google.devtools.mobileharness.api.model.job.in.Dimensions();
+    dimensions.add("model", MODEL);
+    dimensions.add("sdk_version", SDK_VERSION);
+    dimensionsMap.forEach(dimensions::add);
+
+    DeviceRequirement deviceRequirement =
+        DeviceRequirement.create("AndroidRealDevice", decorators, dimensions);
+    SubDeviceSpec subDeviceSpec =
+        SubDeviceSpec.createForTesting(deviceRequirement, new ScopedSpecs(timing), timing);
+    SubDeviceSpecs subDeviceSpecs = new SubDeviceSpecs(new Params(timing), timing);
+    subDeviceSpecs.addSubDevice(subDeviceSpec);
+    ProxyDeviceRequirement proxyDeviceRequirement = ProxyDeviceRequirement.of(subDeviceSpecs, 0);
+
+    return new AndroidRealDeviceProxy(
+        proxyDeviceRequirement,
+        TEST_LOCATOR,
+        remoteDeviceConnector,
+        androidSystemStateUtil,
+        JOB_SETTING);
+  }
+
+  private DeviceSpecification createExpectedDeviceSpecification(
+      Map<String, String> extraDimensions) {
+    Dimensions.Builder dimensionsBuilder =
+        Dimensions.newBuilder()
+            .addDimensions(
+                Dimension.newBuilder().setName("devicetype").setValue("AndroidRealDevice"))
+            .addDimensions(Dimension.newBuilder().setName("decorator").setValue(DECORATOR))
+            .addDimensions(Dimension.newBuilder().setName("model").setValue(MODEL))
+            .addDimensions(Dimension.newBuilder().setName("sdk_version").setValue(SDK_VERSION));
+    extraDimensions.forEach(
+        (key, value) ->
+            dimensionsBuilder.addDimensions(Dimension.newBuilder().setName(key).setValue(value)));
+    return DeviceSpecification.newBuilder()
+        .setUnknownDevice(UnknownDevice.getDefaultInstance())
+        .setLegacyDimensions(dimensionsBuilder)
+        .build();
   }
 }
