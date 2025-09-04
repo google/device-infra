@@ -20,9 +20,14 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.io.BaseEncoding;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.ConditionedDeviceConfigProto.ConditionedDeviceConfig;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.ConditionedDeviceConfigProto.ConditionedDeviceConfigs;
+import com.google.protobuf.ExtensionRegistry;
+import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
+import java.util.List;
+import java.util.Optional;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
@@ -30,6 +35,9 @@ import java.util.regex.PatternSyntaxException;
 final class ConditionedDeviceConfigUtil {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
+  private static final String CONDITIONED_DEVICE_CONFIGS_DIMENSION_KEY =
+      "conditioned_device_configs";
 
   /** Get a list of adb commands for the current device to run by the conditioned device configs. */
   public static ImmutableList<String> getBeforeFinishSetupAdbCommandsByDevice(
@@ -71,6 +79,38 @@ final class ConditionedDeviceConfigUtil {
               }
               return false;
             });
+  }
+
+  /**
+   * Returns the conditioned device configs from the device dimensions.
+   *
+   * <ol>
+   *   <li>The conditioned device configs are stored in the device dimensions with the key
+   *       "conditioned_device_configs".
+   *   <li>The value is a base64 encoded string of the ConditionedDeviceConfigs proto.
+   * </ol>
+   */
+  public static Optional<ConditionedDeviceConfigs> getConditionedDeviceConfigsFromDimensions(
+      Device device) {
+    List<String> conditionedDeviceConfigsValueList =
+        device.getDimension(CONDITIONED_DEVICE_CONFIGS_DIMENSION_KEY);
+    if (conditionedDeviceConfigsValueList.isEmpty()) {
+      return Optional.empty();
+    }
+
+    // Only the first value is used for now.
+    String conditionedDeviceConfigsDimensionValue = conditionedDeviceConfigsValueList.get(0);
+    try {
+      return Optional.of(
+          ConditionedDeviceConfigs.parseFrom(
+              BaseEncoding.base64().decode(conditionedDeviceConfigsDimensionValue),
+              ExtensionRegistry.getEmptyRegistry()));
+    } catch (IllegalArgumentException | InvalidProtocolBufferException e) {
+      logger.atWarning().withCause(e).log(
+          "Failed to parse conditioned device configs from dimension value [%s]",
+          conditionedDeviceConfigsDimensionValue);
+      return Optional.empty();
+    }
   }
 
   private ConditionedDeviceConfigUtil() {}
