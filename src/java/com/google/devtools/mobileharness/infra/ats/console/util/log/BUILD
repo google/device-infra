@@ -27,6 +27,7 @@ java_library(
     deps = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/constant:dirs",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/constant:dirs",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "@maven//:com_google_guava_guava",
     ],
 )

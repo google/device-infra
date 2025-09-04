@@ -55,6 +55,7 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.
 import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.InterruptibleLineReader;
 import com.google.devtools.mobileharness.infra.ats.console.util.log.LogDumper;
+import com.google.devtools.mobileharness.infra.ats.console.util.log.LogDumper.LogDirsType;
 import com.google.devtools.mobileharness.infra.ats.console.util.log.LogRecordPrinter;
 import com.google.devtools.mobileharness.infra.ats.console.util.notice.NoticeMessageUtil;
 import com.google.devtools.mobileharness.infra.ats.console.util.version.VersionMessageUtil;
@@ -284,7 +285,7 @@ public class AtsConsole {
     consoleUtil.printlnStdout(
         "Use \"help\" to get more information on running commands. Use \"dump bugreport\" to"
             + " generate a debug info file. Log dirs: %s",
-        LogDumper.getLogDirs());
+        LogDumper.getLogDirs(LogDirsType.USED));
 
     // Prints arguments.
     if (!mainArgs.isEmpty()) {
@@ -381,7 +382,7 @@ public class AtsConsole {
 
   private void onShutdown() {
     // Dump logs.
-    System.out.println(LogDumper.dumpLog());
+    System.out.println(LogDumper.dumpLog(LogDirsType.USED));
 
     if (Flags.instance().atsConsoleOlcServerEmbeddedMode.getNonNull()) {
       olcServerRunner.onShutdown();

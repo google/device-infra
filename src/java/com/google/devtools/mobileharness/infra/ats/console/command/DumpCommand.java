@@ -38,6 +38,7 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.proto.Sess
 import com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin.PluginOutputPrinter;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
 import com.google.devtools.mobileharness.infra.ats.console.util.log.LogDumper;
+import com.google.devtools.mobileharness.infra.ats.console.util.log.LogDumper.LogDirsType;
 import com.google.devtools.mobileharness.infra.ats.console.util.plan.PlanHelper;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.OlcServerDirs;
 import com.google.devtools.mobileharness.shared.util.command.CommandException;
@@ -244,7 +245,7 @@ class DumpCommand implements Callable<Integer> {
   }
 
   private void printLogDirs() {
-    consoleUtil.printlnStdout(LogDumper.dumpLog());
+    consoleUtil.printlnStdout(LogDumper.dumpLog(LogDirsType.ALL));
   }
 
   private void createServerStackTraceFile(String filePath) {

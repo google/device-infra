@@ -21,18 +21,29 @@ import static java.util.stream.Collectors.joining;
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.infra.ats.console.constant.AtsConsoleDirs;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.OlcServerDirs;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 
 /** Utility for dumping logs. */
 public class LogDumper {
 
+  /** Type of log dirs to dump. */
+  public enum LogDirsType {
+    ALL,
+    USED,
+  }
+
   /** Gets log dirs of ATS console and OLC server. */
-  public static ImmutableList<String> getLogDirs() {
-    return ImmutableList.of(OlcServerDirs.getLogDir(), AtsConsoleDirs.getLogDir());
+  public static ImmutableList<String> getLogDirs(LogDirsType type) {
+    boolean allLogDirs =
+        type == LogDirsType.ALL || !Flags.instance().atsConsoleOlcServerEmbeddedMode.getNonNull();
+    return allLogDirs
+        ? ImmutableList.of(OlcServerDirs.getLogDir(), AtsConsoleDirs.getLogDir())
+        : ImmutableList.of(AtsConsoleDirs.getLogDir());
   }
 
   /** Prints information about log dirs of ATS console and OLC server. */
-  public static String dumpLog() {
-    return getLogDirs().stream()
+  public static String dumpLog(LogDirsType type) {
+    return getLogDirs(type).stream()
         .map(logDir -> String.format("Saved log to %s/", logDir))
         .collect(joining("\n"));
   }
