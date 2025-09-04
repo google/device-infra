@@ -27,6 +27,7 @@ import static org.mockito.Mockito.when;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.platform.android.appcrawler.PostProcessor;
 import com.google.devtools.mobileharness.platform.android.appcrawler.PreProcessor;
 import com.google.devtools.mobileharness.platform.android.appcrawler.UtpBinariesExtractor;
@@ -41,7 +42,6 @@ import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobSetting;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
-import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.AndroidRoboTestSpec;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.AndroidRoboTestSpec.ControllerEndpoint;
 import java.nio.file.Path;
@@ -131,7 +131,7 @@ public class AndroidRoboTestTest {
     verify(commandProcess).await(any());
 
     assertThat(testInfo.properties().get(ANDROID_ROBO_TEST_TEST_END_EPOCH_MS)).isEqualTo("3");
-    assertThat(testInfo.result().get()).isEqualTo(TestResult.PASS);
+    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
     verify(postProcessor).uninstallApks(testInfo, device, spec);
   }
 
@@ -153,7 +153,7 @@ public class AndroidRoboTestTest {
 
     roboTest.run(testInfo);
 
-    assertThat(testInfo.result().get()).isEqualTo(TestResult.SKIP);
+    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.SKIP);
   }
 
   @Test
