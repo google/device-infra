@@ -14,18 +14,18 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.shared.util.port;
+package com.google.wireless.qa.mobileharness.shared.api.module;
 
-import javax.annotation.Nullable;
+import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
+import com.google.devtools.mobileharness.shared.util.port.PortPicker;
+import com.google.inject.AbstractModule;
 
-/** Exception thrown when an attempt to find a free port fails. */
-public class UnableToFindPortException extends RuntimeException {
+/** Module for providing dependencies for {@code CrosLsNexusDecorator}. */
+public final class CrosLsNexusDecoratorModule extends AbstractModule {
 
-  public UnableToFindPortException(String message) {
-    super(message);
-  }
-
-  public UnableToFindPortException(@Nullable Throwable cause) {
-    super(cause);
+  @Override
+  protected void configure() {
+    bind(CommandExecutor.class).toInstance(new CommandExecutor());
+    bind(PortPicker.class).toInstance(new PortPicker());
   }
 }
