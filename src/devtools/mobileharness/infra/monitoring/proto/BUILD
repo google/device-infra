@@ -24,7 +24,7 @@ package(
 proto_library(
     name = "monitored_record_proto",
     srcs = ["monitored_record.proto"],
-    deps = ["@com_google_protobuf//:timestamp_proto"],
+    deps = ["@protobuf//:timestamp_proto"],
 )
 
 java_proto_library(

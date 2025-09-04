@@ -27,8 +27,8 @@ proto_library(
     srcs = ["command_record.proto"],
     deps = [
         "//src/devtools/common/metrics/stability/model/proto:error_proto",
-        "@com_google_protobuf//:duration_proto",
-        "@com_google_protobuf//:timestamp_proto",
+        "@protobuf//:duration_proto",
+        "@protobuf//:timestamp_proto",
     ],
 )
 

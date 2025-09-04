@@ -26,7 +26,7 @@ java_library(
         "//src/devtools/mobileharness/shared/version/proto:version_service_grpc",
         "//src/devtools/mobileharness/shared/version/proto:version_service_java_proto",
         "//src/java/com/google/devtools/mobileharness/shared/version/rpc/service",
-        "@io_grpc_grpc_java//stub",
+        "@grpc-java//stub",
         "@maven//:javax_inject_jsr330_api",
     ],
 )
@@ -39,7 +39,7 @@ java_library(
     deps = [
         ":grpc",
         "//src/java/com/google/devtools/mobileharness/infra/lab:annotations",
-        "@io_grpc_grpc_java//core",
+        "@grpc-java//core",
         "@maven//:com_google_inject_guice",
     ],
 )

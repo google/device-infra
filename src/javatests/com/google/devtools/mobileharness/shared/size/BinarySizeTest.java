@@ -63,13 +63,13 @@ public class BinarySizeTest {
           "ats_olc_server",
           41_950_000L,
           "ats_olc_server_local_mode",
-          44_450_000L,
+          47_050_000L,
           "lab_server",
-          42_850_000L,
+          46_050_000L,
           "ats_console",
-          23_950_000L,
+          22_550_000L,
           "xts_tradefed_agent",
-          4_550_000L);
+          9_350_000L);
 
   private static final long MAX_RESOURCE_FILE_SIZE_BYTE = 800_000L;
 

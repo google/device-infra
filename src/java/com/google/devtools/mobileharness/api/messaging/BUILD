@@ -37,7 +37,7 @@ java_library(
         "SubscribeMessage.java",
     ],
     deps = [
-        "@com_google_protobuf//:protobuf_java",
+        "@protobuf//:protobuf_java",
     ],
 )
 

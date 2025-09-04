@@ -1,0 +1,392 @@
+diff --git a/WORKSPACE b/WORKSPACE
+index e8f66fd..1238f0b 100644
+--- a/WORKSPACE
++++ b/WORKSPACE
+@@ -21,7 +21,7 @@ http_archive(
+ )
+ 
+ load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies", "go_repository")
+-load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
++load("@rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
+ 
+ go_rules_dependencies()
+ 
+diff --git a/go/api/command/BUILD.bazel b/go/api/command/BUILD.bazel
+index 6614ff0..02dd931 100644
+--- a/go/api/command/BUILD.bazel
++++ b/go/api/command/BUILD.bazel
+@@ -1,6 +1,6 @@
+ load("@rules_proto//proto:defs.bzl", "proto_library")
+-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+-load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
++load("@rules_go//go:def.bzl", "go_library")
++load("@rules_go//proto:def.bzl", "go_proto_library")
+ 
+ proto_library(
+     name = "command_proto",
+diff --git a/go/api/credshelper/BUILD.bazel b/go/api/credshelper/BUILD.bazel
+index a63a858..8d6b286 100644
+--- a/go/api/credshelper/BUILD.bazel
++++ b/go/api/credshelper/BUILD.bazel
+@@ -1,6 +1,6 @@
+ load("@rules_proto//proto:defs.bzl", "proto_library")
+-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+-load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
++load("@rules_go//go:def.bzl", "go_library")
++load("@rules_go//proto:def.bzl", "go_proto_library")
+ 
+ proto_library(
+     name = "credshelper_proto",
+diff --git a/go/cmd/bazelcredswrapper/BUILD.bazel b/go/cmd/bazelcredswrapper/BUILD.bazel
+index 6078666..0722650 100644
+--- a/go/cmd/bazelcredswrapper/BUILD.bazel
++++ b/go/cmd/bazelcredswrapper/BUILD.bazel
+@@ -1,4 +1,4 @@
+-load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
++load("@rules_go//go:def.bzl", "go_binary", "go_library")
+ 
+ go_library(
+     name = "bazelcredswrapper_lib",
+diff --git a/go/cmd/remotetool/BUILD.bazel b/go/cmd/remotetool/BUILD.bazel
+index f781d6c..20f877f 100644
+--- a/go/cmd/remotetool/BUILD.bazel
++++ b/go/cmd/remotetool/BUILD.bazel
+@@ -1,4 +1,4 @@
+-load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
++load("@rules_go//go:def.bzl", "go_binary", "go_library")
+ 
+ go_library(
+     name = "remotetool_lib",
+diff --git a/go/cmd/rexec/BUILD.bazel b/go/cmd/rexec/BUILD.bazel
+index 2a75667..c4f47b2 100644
+--- a/go/cmd/rexec/BUILD.bazel
++++ b/go/cmd/rexec/BUILD.bazel
+@@ -1,4 +1,4 @@
+-load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
++load("@rules_go//go:def.bzl", "go_binary", "go_library")
+ 
+ go_library(
+     name = "rexec_lib",
+diff --git a/go/pkg/actas/BUILD.bazel b/go/pkg/actas/BUILD.bazel
+index 6ab47fb..7704aff 100644
+--- a/go/pkg/actas/BUILD.bazel
++++ b/go/pkg/actas/BUILD.bazel
+@@ -1,4 +1,4 @@
+-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
++load("@rules_go//go:def.bzl", "go_library", "go_test")
+ 
+ go_library(
+     name = "actas",
+diff --git a/go/pkg/balancer/BUILD.bazel b/go/pkg/balancer/BUILD.bazel
+index a0c4c67..3820bc6 100644
+--- a/go/pkg/balancer/BUILD.bazel
++++ b/go/pkg/balancer/BUILD.bazel
+@@ -1,4 +1,4 @@
+-load("@io_bazel_rules_go//go:def.bzl", "go_library")
++load("@rules_go//go:def.bzl", "go_library")
+ 
+ go_library(
+     name = "balancer",
+@@ -6,6 +6,6 @@ go_library(
+     importpath = "github.com/bazelbuild/remote-apis-sdks/go/pkg/balancer",
+     visibility = ["//visibility:public"],
+     deps = [
+-        "@org_golang_google_grpc//:go_default_library",
++        "@org_golang_google_grpc//:grpc",
+     ],
+ )
+diff --git a/go/pkg/cache/BUILD.bazel b/go/pkg/cache/BUILD.bazel
+index 202626b..ba20db5 100644
+--- a/go/pkg/cache/BUILD.bazel
++++ b/go/pkg/cache/BUILD.bazel
+@@ -1,4 +1,4 @@
+-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
++load("@rules_go//go:def.bzl", "go_library", "go_test")
+ 
+ go_library(
+     name = "cache",
+diff --git a/go/pkg/cas/BUILD.bazel b/go/pkg/cas/BUILD.bazel
+index e84ee48..6c9dae9 100644
+--- a/go/pkg/cas/BUILD.bazel
++++ b/go/pkg/cas/BUILD.bazel
+@@ -1,4 +1,4 @@
+-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
++load("@rules_go//go:def.bzl", "go_library", "go_test")
+ 
+ go_library(
+     name = "cas",
+@@ -17,9 +17,9 @@ go_library(
+         "@com_github_golang_glog//:glog",
+         "@com_github_google_uuid//:uuid",
+         "@com_github_klauspost_compress//zstd",
+-        "@go_googleapis//google/bytestream:bytestream_go_proto",
++        "@org_golang_google_genproto_googleapis_bytestream//:bytestream",
+         "@org_golang_google_api//support/bundler",
+-        "@org_golang_google_grpc//:go_default_library",
++        "@org_golang_google_grpc//:grpc",
+         "@org_golang_google_grpc//status",
+         "@org_golang_google_protobuf//encoding/protowire",
+         "@org_golang_google_protobuf//proto",
+@@ -41,7 +41,7 @@ go_test(
+         "//go/pkg/fakes",
+         "@com_github_bazelbuild_remote_apis//build/bazel/remote/execution/v2:remote_execution_go_proto",
+         "@com_github_google_go_cmp//cmp",
+-        "@org_golang_google_grpc//:go_default_library",
++        "@org_golang_google_grpc//:grpc",
+         "@org_golang_google_grpc//codes",
+         "@org_golang_google_grpc//status",
+         "@org_golang_google_protobuf//proto",
+diff --git a/go/pkg/chunker/BUILD.bazel b/go/pkg/chunker/BUILD.bazel
+index 1f9ab8c..fe8c673 100644
+--- a/go/pkg/chunker/BUILD.bazel
++++ b/go/pkg/chunker/BUILD.bazel
+@@ -1,4 +1,4 @@
+-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
++load("@rules_go//go:def.bzl", "go_library", "go_test")
+ 
+ go_library(
+     name = "chunker",
+diff --git a/go/pkg/client/BUILD.bazel b/go/pkg/client/BUILD.bazel
+index 72ab681..277129f 100644
+--- a/go/pkg/client/BUILD.bazel
++++ b/go/pkg/client/BUILD.bazel
+@@ -1,4 +1,4 @@
+-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
++load("@rules_go//go:def.bzl", "go_library", "go_test")
+ 
+ go_library(
+     name = "client",
+@@ -30,10 +30,10 @@ go_library(
+         "@com_github_golang_glog//:glog",
+         "@com_github_google_uuid//:uuid",
+         "@com_github_klauspost_compress//zstd",
+-        "@go_googleapis//google/bytestream:bytestream_go_proto",
+-        "@go_googleapis//google/longrunning:longrunning_go_proto",
+-        "@go_googleapis//google/rpc:errdetails_go_proto",
+-        "@org_golang_google_grpc//:go_default_library",
++        "@org_golang_google_genproto_googleapis_bytestream//:bytestream",
++        "@org_golang_google_genproto//googleapis/longrunning",
++        "@org_golang_google_genproto_googleapis_rpc//errdetails",
++        "@org_golang_google_grpc//:grpc",
+         "@org_golang_google_grpc//codes",
+         "@org_golang_google_grpc//credentials",
+         "@org_golang_google_grpc//credentials/oauth",
+@@ -82,10 +82,10 @@ go_test(
+         "@com_github_google_go_cmp//cmp",
+         "@com_github_google_go_cmp//cmp/cmpopts",
+         "@com_github_klauspost_compress//zstd",
+-        "@go_googleapis//google/bytestream:bytestream_go_proto",
+-        "@go_googleapis//google/longrunning:longrunning_go_proto",
++        "@org_golang_google_genproto_googleapis_bytestream//:bytestream",
++        "@org_golang_google_genproto//googleapis/longrunning",
+         "@go_googleapis//google/rpc:status_go_proto",
+-        "@org_golang_google_grpc//:go_default_library",
++        "@org_golang_google_grpc//:grpc",
+         "@org_golang_google_grpc//codes",
+         "@org_golang_google_grpc//metadata",
+         "@org_golang_google_grpc//status",
+diff --git a/go/pkg/command/BUILD.bazel b/go/pkg/command/BUILD.bazel
+index 8ccf9ad..04e8e16 100644
+--- a/go/pkg/command/BUILD.bazel
++++ b/go/pkg/command/BUILD.bazel
+@@ -1,4 +1,4 @@
+-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
++load("@rules_go//go:def.bzl", "go_library", "go_test")
+ 
+ go_library(
+     name = "command",
+diff --git a/go/pkg/contextmd/BUILD.bazel b/go/pkg/contextmd/BUILD.bazel
+index 3b80b61..1c0de37 100644
+--- a/go/pkg/contextmd/BUILD.bazel
++++ b/go/pkg/contextmd/BUILD.bazel
+@@ -1,4 +1,4 @@
+-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
++load("@rules_go//go:def.bzl", "go_library", "go_test")
+ 
+ go_library(
+     name = "contextmd",
+diff --git a/go/pkg/credshelper/BUILD.bazel b/go/pkg/credshelper/BUILD.bazel
+index d5823ee..6c477d1 100644
+--- a/go/pkg/credshelper/BUILD.bazel
++++ b/go/pkg/credshelper/BUILD.bazel
+@@ -1,4 +1,4 @@
+-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
++load("@rules_go//go:def.bzl", "go_library", "go_test")
+ 
+ go_library(
+     name = "credshelper",
+diff --git a/go/pkg/digest/BUILD.bazel b/go/pkg/digest/BUILD.bazel
+index 048b33d..fde49dd 100644
+--- a/go/pkg/digest/BUILD.bazel
++++ b/go/pkg/digest/BUILD.bazel
+@@ -1,4 +1,4 @@
+-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
++load("@rules_go//go:def.bzl", "go_library", "go_test")
+ 
+ go_library(
+     name = "digest",
+diff --git a/go/pkg/fakes/BUILD.bazel b/go/pkg/fakes/BUILD.bazel
+index 788837a..239aee3 100644
+--- a/go/pkg/fakes/BUILD.bazel
++++ b/go/pkg/fakes/BUILD.bazel
+@@ -1,4 +1,4 @@
+-load("@io_bazel_rules_go//go:def.bzl", "go_library")
++load("@rules_go//go:def.bzl", "go_library")
+ 
+ go_library(
+     name = "fakes",
+@@ -23,9 +23,9 @@ go_library(
+         "@com_github_bazelbuild_remote_apis//build/bazel/remote/execution/v2:remote_execution_go_proto",
+         "@com_github_google_uuid//:uuid",
+         "@com_github_klauspost_compress//zstd",
+-        "@go_googleapis//google/bytestream:bytestream_go_proto",
+-        "@go_googleapis//google/longrunning:longrunning_go_proto",
+-        "@org_golang_google_grpc//:go_default_library",
++        "@org_golang_google_genproto_googleapis_bytestream//:bytestream",
++        "@org_golang_google_genproto//googleapis/longrunning",
++        "@org_golang_google_grpc//:grpc",
+         "@org_golang_google_grpc//codes",
+         "@org_golang_google_grpc//status",
+         "@org_golang_google_protobuf//proto",
+diff --git a/go/pkg/fakes/auxpb/BUILD.bazel b/go/pkg/fakes/auxpb/BUILD.bazel
+index 106e498..4fd9bf5 100644
+--- a/go/pkg/fakes/auxpb/BUILD.bazel
++++ b/go/pkg/fakes/auxpb/BUILD.bazel
+@@ -1,6 +1,6 @@
+ load("@rules_proto//proto:defs.bzl", "proto_library")
+-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+-load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
++load("@rules_go//go:def.bzl", "go_library")
++load("@rules_go//proto:def.bzl", "go_proto_library")
+ 
+ proto_library(
+     name = "auxiliary_metadata_proto",
+diff --git a/go/pkg/filemetadata/BUILD.bazel b/go/pkg/filemetadata/BUILD.bazel
+index a459479..95a01db 100644
+--- a/go/pkg/filemetadata/BUILD.bazel
++++ b/go/pkg/filemetadata/BUILD.bazel
+@@ -1,4 +1,4 @@
+-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
++load("@rules_go//go:def.bzl", "go_library", "go_test")
+ 
+ go_library(
+     name = "filemetadata",
+diff --git a/go/pkg/flags/BUILD.bazel b/go/pkg/flags/BUILD.bazel
+index 585d991..8b76e3d 100644
+--- a/go/pkg/flags/BUILD.bazel
++++ b/go/pkg/flags/BUILD.bazel
+@@ -1,4 +1,4 @@
+-load("@io_bazel_rules_go//go:def.bzl", "go_library")
++load("@rules_go//go:def.bzl", "go_library")
+ 
+ go_library(
+     name = "flags",
+@@ -10,7 +10,7 @@ go_library(
+         "//go/pkg/credshelper",
+         "//go/pkg/moreflag",
+         "@com_github_golang_glog//:glog",
+-        "@org_golang_google_grpc//:go_default_library",
++        "@org_golang_google_grpc//:grpc",
+         "@org_golang_google_grpc//keepalive",
+     ],
+ )
+diff --git a/go/pkg/moreflag/BUILD.bazel b/go/pkg/moreflag/BUILD.bazel
+index 8c32bd8..23fae28 100644
+--- a/go/pkg/moreflag/BUILD.bazel
++++ b/go/pkg/moreflag/BUILD.bazel
+@@ -1,4 +1,4 @@
+-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
++load("@rules_go//go:def.bzl", "go_library", "go_test")
+ 
+ go_library(
+     name = "moreflag",
+diff --git a/go/pkg/outerr/BUILD.bazel b/go/pkg/outerr/BUILD.bazel
+index 272db85..5035cae 100644
+--- a/go/pkg/outerr/BUILD.bazel
++++ b/go/pkg/outerr/BUILD.bazel
+@@ -1,4 +1,4 @@
+-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
++load("@rules_go//go:def.bzl", "go_library", "go_test")
+ 
+ go_library(
+     name = "outerr",
+diff --git a/go/pkg/portpicker/BUILD.bazel b/go/pkg/portpicker/BUILD.bazel
+index 2a8cd20..2f51d24 100644
+--- a/go/pkg/portpicker/BUILD.bazel
++++ b/go/pkg/portpicker/BUILD.bazel
+@@ -1,4 +1,4 @@
+-load("@io_bazel_rules_go//go:def.bzl", "go_library")
++load("@rules_go//go:def.bzl", "go_library")
+ 
+ go_library(
+     name = "portpicker",
+diff --git a/go/pkg/reader/BUILD.bazel b/go/pkg/reader/BUILD.bazel
+index 5f6c71c..1adbfdd 100644
+--- a/go/pkg/reader/BUILD.bazel
++++ b/go/pkg/reader/BUILD.bazel
+@@ -1,4 +1,4 @@
+-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
++load("@rules_go//go:def.bzl", "go_library", "go_test")
+ 
+ go_library(
+     name = "reader",
+diff --git a/go/pkg/retry/BUILD.bazel b/go/pkg/retry/BUILD.bazel
+index a68b739..7a171b9 100644
+--- a/go/pkg/retry/BUILD.bazel
++++ b/go/pkg/retry/BUILD.bazel
+@@ -1,4 +1,4 @@
+-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
++load("@rules_go//go:def.bzl", "go_library", "go_test")
+ 
+ go_library(
+     name = "retry",
+diff --git a/go/pkg/rexec/BUILD.bazel b/go/pkg/rexec/BUILD.bazel
+index 1346b84..4ec7a0b 100644
+--- a/go/pkg/rexec/BUILD.bazel
++++ b/go/pkg/rexec/BUILD.bazel
+@@ -1,4 +1,4 @@
+-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
++load("@rules_go//go:def.bzl", "go_library", "go_test")
+ 
+ go_library(
+     name = "rexec",
+diff --git a/go/pkg/symlinkopts/BUILD.bazel b/go/pkg/symlinkopts/BUILD.bazel
+index 90af927..4736137 100644
+--- a/go/pkg/symlinkopts/BUILD.bazel
++++ b/go/pkg/symlinkopts/BUILD.bazel
+@@ -1,4 +1,4 @@
+-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
++load("@rules_go//go:def.bzl", "go_library", "go_test")
+ 
+ go_library(
+     name = "symlinkopts",
+diff --git a/go/pkg/testutil/BUILD.bazel b/go/pkg/testutil/BUILD.bazel
+index 9469f30..8bae016 100644
+--- a/go/pkg/testutil/BUILD.bazel
++++ b/go/pkg/testutil/BUILD.bazel
+@@ -1,4 +1,4 @@
+-load("@io_bazel_rules_go//go:def.bzl", "go_library")
++load("@rules_go//go:def.bzl", "go_library")
+ 
+ go_library(
+     name = "testutil",
+diff --git a/go/pkg/tool/BUILD.bazel b/go/pkg/tool/BUILD.bazel
+index 12b8ddf..827ab74 100644
+--- a/go/pkg/tool/BUILD.bazel
++++ b/go/pkg/tool/BUILD.bazel
+@@ -1,4 +1,4 @@
+-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
++load("@rules_go//go:def.bzl", "go_library", "go_test")
+ 
+ go_library(
+     name = "tool",
+diff --git a/go/pkg/uploadinfo/BUILD.bazel b/go/pkg/uploadinfo/BUILD.bazel
+index 1795eba..771be40 100644
+--- a/go/pkg/uploadinfo/BUILD.bazel
++++ b/go/pkg/uploadinfo/BUILD.bazel
+@@ -1,4 +1,4 @@
+-load("@io_bazel_rules_go//go:def.bzl", "go_library")
++load("@rules_go//go:def.bzl", "go_library")
+ 
+ go_library(
+     name = "uploadinfo",

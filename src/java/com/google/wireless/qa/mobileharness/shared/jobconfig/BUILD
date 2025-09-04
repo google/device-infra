@@ -42,12 +42,12 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_config_java_proto",
-        "@com_google_protobuf//:protobuf_java",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_code_gson_gson",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_http_client_google_http_client",
+        "@protobuf//:protobuf_java",
     ],
 )
 
@@ -57,8 +57,8 @@ java_library(
     deps = [
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/json:v2_api",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_config_java_proto",
-        "@com_google_protobuf//:protobuf_java",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_code_gson_gson",
+        "@protobuf//:protobuf_java",
     ],
 )

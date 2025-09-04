@@ -13,8 +13,8 @@
 # limitations under the License.
 #
 
-load("@com_github_grpc_grpc//bazel:python_rules.bzl", "py_grpc_library", "py_proto_library")
-load("@io_grpc_grpc_java//:java_grpc_library.bzl", "java_grpc_library")
+load("@grpc//bazel:python_rules.bzl", "py_grpc_library", "py_proto_library")
+load("@grpc-java//:java_grpc_library.bzl", "java_grpc_library")
 
 package(
     default_applicable_licenses = ["//:license"],
@@ -63,8 +63,8 @@ proto_library(
     srcs = ["session.proto"],
     deps = [
         "//src/devtools/common/metrics/stability/model/proto:error_proto",
-        "@com_google_protobuf//:any_proto",
-        "@com_google_protobuf//:timestamp_proto",
+        "@protobuf//:any_proto",
+        "@protobuf//:timestamp_proto",
     ],
 )
 
@@ -83,7 +83,7 @@ proto_library(
     srcs = ["session_service.proto"],
     deps = [
         ":session_proto",
-        "@com_google_protobuf//:field_mask_proto",
+        "@protobuf//:field_mask_proto",
     ],
 )
 

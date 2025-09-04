@@ -30,7 +30,7 @@ proto_library(
         ":device_config_proto",
         ":device_dimension_proto",
         ":device_info_proto",
-        "@com_google_protobuf//:timestamp_proto",
+        "@protobuf//:timestamp_proto",
     ],
 )
 

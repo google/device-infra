@@ -29,8 +29,8 @@ java_library(
     deps = [
         ":duration_flag",
         ":flag",
-        "@maven//:com_beust_jcommander",
         "@maven//:com_google_guava_guava",
+        "@maven//:org_jcommander_jcommander",
     ],
 )
 
@@ -40,9 +40,9 @@ java_library(
         "Flag.java",
     ],
     deps = [
-        "@maven//:com_beust_jcommander",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
+        "@maven//:org_jcommander_jcommander",
     ],
 )
 
@@ -51,7 +51,7 @@ java_library(
     srcs = ["DurationFlag.java"],
     deps = [
         ":flag",
-        "@maven//:com_beust_jcommander",
         "@maven//:com_google_guava_guava",
+        "@maven//:org_jcommander_jcommander",
     ],
 )

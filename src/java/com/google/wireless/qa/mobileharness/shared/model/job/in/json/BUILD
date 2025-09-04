@@ -27,9 +27,9 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in:__pkg__",
     ],
     deps = [
-        "@com_google_protobuf//:protobuf_java",
         "@maven//:com_google_code_gson_gson",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
+        "@protobuf//:protobuf_java",
     ],
 )

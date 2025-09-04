@@ -24,9 +24,12 @@ package(
 java_library(
     name = "stub",
     srcs = glob(["*.java"]),
-    data = glob([
-        "testdata/*.*",
-    ]),
+    data = glob(
+        [
+            "testdata/*.*",
+        ],
+        allow_empty = True,
+    ),
     deps = [
         "//src/java/com/google/devtools/mobileharness/shared/logging/controller/uploader/stackdriver/stub",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/server:sever_builder_factory",
@@ -34,9 +37,9 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local:res_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/path",
-        "@io_grpc_grpc_java//core",
-        "@io_grpc_grpc_java//stub",
-        "@io_grpc_grpc_java//testing",
+        "@grpc-java//core",
+        "@grpc-java//stub",
+        "@grpc-java//testing",
         "@maven//:com_google_api_grpc_grpc_google_cloud_logging_v2",
         "@maven//:com_google_api_grpc_proto_google_cloud_logging_v2",
         "@maven//:com_google_guava_guava",

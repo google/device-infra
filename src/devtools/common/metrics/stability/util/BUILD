@@ -29,7 +29,7 @@ py_library(
     deps = [
         "//src/devtools/common/metrics/stability/model/proto:error_py_proto",
         "//src/devtools/common/metrics/stability/rpc/proto:rpc_error_payload_py_proto",
-        "@com_github_grpc_grpc//src/python/grpcio/grpc:grpcio",
+        "@grpc//src/python/grpcio/grpc:grpcio",
     ],
 )
 
@@ -41,7 +41,7 @@ py_test(
     tags = ["deviceinfra_disable_in_kokoro"],
     deps = [
         ":grpc_error_util_lib",
-        "@com_github_grpc_grpc//src/python/grpcio/grpc:grpcio",
-        "@com_google_absl_py//absl/testing:absltest",
+        "@abseil-py//absl/testing:absltest",
+        "@grpc//src/python/grpcio/grpc:grpcio",
     ],
 )

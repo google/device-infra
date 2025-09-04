@@ -31,8 +31,8 @@ java_library(
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
-        "@io_grpc_grpc_java//core",
-        "@io_grpc_grpc_java//netty",
+        "@grpc-java//core",
+        "@grpc-java//netty",
     ],
 )
 
@@ -43,7 +43,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:more_futures",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "@io_grpc_grpc_java//core",
+        "@grpc-java//core",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
     ],
@@ -53,8 +53,8 @@ java_library(
     name = "client_interceptor_factory",
     srcs = ["ClientInterceptorFactory.java"],
     deps = [
-        "@io_grpc_grpc_java//auth",
-        "@io_grpc_grpc_java//core",
+        "@grpc-java//auth",
+        "@grpc-java//core",
         "@maven//:com_google_auth_google_auth_library_credentials",
         "@maven//:com_google_auth_google_auth_library_oauth2_http",
         "@maven//:com_google_guava_guava",
@@ -70,8 +70,8 @@ java_library(
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/shared/constant/closeable",
-        "@io_grpc_grpc_java//core",
-        "@io_grpc_grpc_java//stub",
+        "@grpc-java//core",
+        "@grpc-java//stub",
         "@maven//:com_google_guava_guava",
     ],
 )
@@ -80,7 +80,7 @@ java_library(
     name = "stubs",
     srcs = ["Stubs.java"],
     deps = [
-        "@io_grpc_grpc_java//stub",
+        "@grpc-java//stub",
     ],
 )
 
@@ -100,10 +100,10 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_reflection_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
-        "@com_google_protobuf//:protobuf_java",
-        "@io_grpc_grpc_java//core",
+        "@grpc-java//core",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
+        "@protobuf//:protobuf_java",
     ],
 )
 
@@ -122,7 +122,7 @@ java_library(
         ":proxy",
         "//src/devtools/mobileharness/shared/util/comm/stub:stub_configuration_java_proto",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/relay/client",
-        "@io_grpc_grpc_java//core",
+        "@grpc-java//core",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
         "@maven//:javax_inject_jsr330_api",

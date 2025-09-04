@@ -24,7 +24,7 @@ proto_library(
     name = "event_bus_proto",
     srcs = ["event_bus.proto"],
     deps = [
-        "@com_google_protobuf//:timestamp_proto",
+        "@protobuf//:timestamp_proto",
     ],
 )
 
