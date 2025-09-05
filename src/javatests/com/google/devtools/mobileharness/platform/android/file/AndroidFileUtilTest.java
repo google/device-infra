@@ -1067,10 +1067,9 @@ public final class AndroidFileUtilTest {
         .thenThrow(
             new MobileHarnessException(
                 AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE, "Error"));
-    when(androidSystemSettingUtil.getDeviceSdkVersion(eq(SERIAL))).thenReturn(29);
     when(androidSystemSpecUtil.isEmulator(eq(SERIAL))).thenReturn(false);
 
-    androidFileUtil.remount(SERIAL, true);
+    assertThat(androidFileUtil.remount(SERIAL, true)).isTrue();
 
     verify(adb).run(eq(SERIAL), aryEq(new String[] {AndroidFileUtil.ADB_ARG_REMOUNT}));
     assertThat(
@@ -1091,10 +1090,9 @@ public final class AndroidFileUtilTest {
         .thenThrow(
             new MobileHarnessException(
                 AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE, "Error"));
-    when(androidSystemSettingUtil.getDeviceSdkVersion(eq(SERIAL))).thenReturn(34);
     when(androidSystemSpecUtil.isEmulator(eq(SERIAL))).thenReturn(false);
 
-    androidFileUtil.remount(SERIAL, true);
+    assertThat(androidFileUtil.remount(SERIAL, true)).isTrue();
 
     verify(adb).run(eq(SERIAL), aryEq(new String[] {AndroidFileUtil.ADB_ARG_REMOUNT}));
     assertThat(
@@ -1114,13 +1112,11 @@ public final class AndroidFileUtilTest {
         .thenThrow(
             new MobileHarnessException(
                 AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE, "Error"));
-
-    when(androidSystemSettingUtil.getDeviceSdkVersion(eq(SERIAL))).thenReturn(29);
     when(androidSystemSpecUtil.isEmulator(eq(SERIAL))).thenReturn(false);
 
-    androidFileUtil.remount(SERIAL);
-    verify(adb).run(eq(SERIAL), aryEq(new String[] {AndroidFileUtil.ADB_ARG_REMOUNT}));
+    assertThat(androidFileUtil.remount(SERIAL)).isTrue();
 
+    verify(adb).run(eq(SERIAL), aryEq(new String[] {AndroidFileUtil.ADB_ARG_REMOUNT}));
     assertThat(
             assertThrows(MobileHarnessException.class, () -> androidFileUtil.remount(SERIAL))
                 .getErrorId())
@@ -1143,15 +1139,13 @@ public final class AndroidFileUtilTest {
             + "Using overlayfs for /product"
             + "Now reboot your device for settings to take effect";
     when(adb.run(eq(SERIAL), aryEq(new String[] {AndroidFileUtil.ADB_ARG_REMOUNT})))
-        .thenReturn("")
         .thenThrow(
             new MobileHarnessException(
                 AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE, adbRemountOutput));
-
-    when(androidSystemSettingUtil.getDeviceSdkVersion(eq(SERIAL))).thenReturn(29);
     when(androidSystemSpecUtil.isEmulator(eq(SERIAL))).thenReturn(false);
 
-    androidFileUtil.remount(SERIAL);
+    assertThat(androidFileUtil.remount(SERIAL)).isFalse();
+
     verify(adb).run(eq(SERIAL), aryEq(new String[] {AndroidFileUtil.ADB_ARG_REMOUNT}));
   }
 
@@ -1166,9 +1160,9 @@ public final class AndroidFileUtilTest {
     when(androidSystemSettingUtil.getDeviceSdkVersion(eq(SERIAL))).thenReturn(30);
     when(androidSystemSpecUtil.isEmulator(eq(SERIAL))).thenReturn(true);
 
-    androidFileUtil.remount(SERIAL);
-    verify(adb).run(eq(SERIAL), aryEq(new String[] {"shell", "mount", "-o", "rw,remount", "/"}));
+    assertThat(androidFileUtil.remount(SERIAL)).isTrue();
 
+    verify(adb).run(eq(SERIAL), aryEq(new String[] {"shell", "mount", "-o", "rw,remount", "/"}));
     assertThat(
             assertThrows(MobileHarnessException.class, () -> androidFileUtil.remount(SERIAL))
                 .getErrorId())
@@ -1186,9 +1180,9 @@ public final class AndroidFileUtilTest {
     when(androidSystemSettingUtil.getDeviceSdkVersion(eq(SERIAL))).thenReturn(33);
     when(androidSystemSpecUtil.isEmulator(eq(SERIAL))).thenReturn(true);
 
-    androidFileUtil.remount(SERIAL);
-    verify(adb).run(eq(SERIAL), aryEq(new String[] {"shell", "remount"}));
+    assertThat(androidFileUtil.remount(SERIAL)).isTrue();
 
+    verify(adb).run(eq(SERIAL), aryEq(new String[] {"shell", "remount"}));
     assertThat(
             assertThrows(MobileHarnessException.class, () -> androidFileUtil.remount(SERIAL))
                 .getErrorId())
@@ -1206,9 +1200,9 @@ public final class AndroidFileUtilTest {
     when(androidSystemSettingUtil.getDeviceSdkVersion(eq(SERIAL))).thenReturn(36);
     when(androidSystemSpecUtil.isEmulator(eq(SERIAL))).thenReturn(true);
 
-    androidFileUtil.remount(SERIAL);
-    verify(adb).run(eq(SERIAL), aryEq(new String[] {"shell", "remount", "/"}));
+    assertThat(androidFileUtil.remount(SERIAL)).isTrue();
 
+    verify(adb).run(eq(SERIAL), aryEq(new String[] {"shell", "remount", "/"}));
     assertThat(
             assertThrows(MobileHarnessException.class, () -> androidFileUtil.remount(SERIAL))
                 .getErrorId())

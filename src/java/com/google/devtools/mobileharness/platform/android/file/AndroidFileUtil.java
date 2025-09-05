@@ -100,8 +100,7 @@ public class AndroidFileUtil {
   private static final ImmutableList<String> ADB_REMOUNT_SUCCESS_INDICATORS =
       ImmutableList.of("remount succeeded", "Remount succeeded");
 
-  private static final String ADB_REMOUNT_REBOOT_INDICATOR =
-      "Now reboot your device for settings to take effect";
+  private static final String ADB_REMOUNT_REBOOT_INDICATOR = "reboot your device";
   private static final String ADB_REMOUNT_EXIT_CODE_INDICATOR = "exit_code=11";
 
   /** Indicator for a file showed in "adb shell ls -l". */
@@ -1005,12 +1004,14 @@ public class AndroidFileUtil {
    * works if the device has root access and has already become root, and it affects all users.
    *
    * @param serial serial number of the device
+   * @return true if remount is successful, false if reboot is needed
    * @throws MobileHarnessException if fails to execute the commands or timeout
    * @throws InterruptedException if the thread executing the commands is interrupted
    */
-  public void remount(String serial) throws MobileHarnessException, InterruptedException {
+  @CanIgnoreReturnValue
+  public boolean remount(String serial) throws MobileHarnessException, InterruptedException {
     // Due to legacy issues, the results are not checked by default.
-    remount(serial, /* checkResults= */ false);
+    return remount(serial, /* checkResults= */ false);
   }
 
   /**
@@ -1019,10 +1020,12 @@ public class AndroidFileUtil {
    *
    * @param serial serial number of the device
    * @param checkResults if check the output for success
+   * @return true if remount is successful, false if reboot is needed
    * @throws MobileHarnessException if fails to execute the commands or timeout
    * @throws InterruptedException if the thread executing the commands is interrupted
    */
-  public void remount(String serial, boolean checkResults)
+  @CanIgnoreReturnValue
+  public boolean remount(String serial, boolean checkResults)
       throws MobileHarnessException, InterruptedException {
     String output = "";
     try {
@@ -1037,7 +1040,7 @@ public class AndroidFileUtil {
           result = adb.run(serial, new String[] {"shell", "mount", "-o", "rw,remount", "/"});
         }
         if (remountSuccess(result)) {
-          return;
+          return true;
         }
       }
       // "adb remount" puts the /system partition in writable mode (by default, /system is only
@@ -1058,11 +1061,13 @@ public class AndroidFileUtil {
         logger.atWarning().log(
             "Needs to reboot device %s to make remount effective because [%s].",
             serial, MoreThrowables.shortDebugString(e));
+        return false;
       } else {
         throw new MobileHarnessException(
             AndroidErrorId.ANDROID_FILE_UTIL_REMOUNT_ERROR, e.getMessage(), e);
       }
     }
+    return true;
   }
 
   /**
