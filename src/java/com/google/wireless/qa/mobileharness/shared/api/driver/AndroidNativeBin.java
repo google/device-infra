@@ -24,7 +24,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.api.model.proto.Test;
+import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
 import com.google.devtools.mobileharness.platform.android.lightning.systemsetting.SystemSettingManager;
 import com.google.devtools.mobileharness.platform.android.nativebin.NativeBinArgs;
@@ -44,7 +44,6 @@ import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
-import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import java.io.File;
 import java.time.Duration;
 import java.util.Locale;
@@ -231,7 +230,7 @@ public class AndroidNativeBin extends BaseDriver implements AndroidNativeBinSpec
         testInfo.resultWithCause().setPass();
       } else {
         if (AndroidErrorId.NATIVE_BIN_UTIL_RUN_NATIVE_BIN_TIMEOUT.equals(e.getErrorId())) {
-          testInfo.result().set(TestResult.TIMEOUT);
+          testInfo.resultWithCause().setNonPassing(TestResult.TIMEOUT, e);
         }
         throw e;
       }
@@ -294,7 +293,7 @@ public class AndroidNativeBin extends BaseDriver implements AndroidNativeBinSpec
       testInfo
           .resultWithCause()
           .setNonPassing(
-              Test.TestResult.FAIL,
+              TestResult.FAIL,
               new MobileHarnessException(
                   AndroidErrorId.ANDROID_NATIVE_BIN_EXIT_CODE_ERROR,
                   "AndroidNativeBin returns non-zero exit code: " + commandResult.exitCode()));
@@ -304,7 +303,7 @@ public class AndroidNativeBin extends BaseDriver implements AndroidNativeBinSpec
       testInfo
           .resultWithCause()
           .setNonPassing(
-              Test.TestResult.FAIL,
+              TestResult.FAIL,
               new MobileHarnessException(
                   AndroidErrorId.ANDROID_NATIVE_BIN_SIGNAL_NOT_FOUND,
                   String.format("Failed to find signal [%s] in AndroidNativeBin log", passSignal)));

@@ -26,7 +26,7 @@ import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.E
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.api.model.proto.Test;
+import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.platform.android.appcrawler.PostProcessor;
 import com.google.devtools.mobileharness.platform.android.appcrawler.PreProcessor;
 import com.google.devtools.mobileharness.platform.android.appcrawler.UtpBinariesExtractor;
@@ -46,7 +46,6 @@ import com.google.wireless.qa.mobileharness.shared.api.annotation.TestAnnotation
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
-import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.AndroidRoboTestSpec;
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -247,7 +246,16 @@ public class AndroidRoboTest extends BaseDriver implements SpecConfigable<Androi
 
   private void setResult(TestInfo testInfo, TestResult result) throws MobileHarnessException {
     if (!result.equals(TestResult.ERROR)) {
-      testInfo.result().set(result);
+      if (result.equals(TestResult.PASS)) {
+        testInfo.resultWithCause().setPass();
+      } else {
+        testInfo
+            .resultWithCause()
+            .setNonPassing(
+                result,
+                new MobileHarnessException(
+                    AndroidErrorId.ANDROID_ROBO_TEST_COMMAND_EXECUTION_ERROR, "Robo Cli failed."));
+      }
       return;
     }
     // If Error, read the exception detail proto.
@@ -257,7 +265,7 @@ public class AndroidRoboTest extends BaseDriver implements SpecConfigable<Androi
       var exceptionDetail =
           ExceptionDetail.parseFrom(
               Files.readAllBytes(exceptionDetailProtoPath), ExtensionRegistry.getEmptyRegistry());
-      testInfo.resultWithCause().setNonPassing(Test.TestResult.ERROR, exceptionDetail);
+      testInfo.resultWithCause().setNonPassing(TestResult.ERROR, exceptionDetail);
     } catch (IOException ex) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_ROBO_TEST_MH_EXCEPTION_DETAIL_READ_ERROR,

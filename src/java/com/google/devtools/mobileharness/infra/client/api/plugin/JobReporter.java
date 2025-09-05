@@ -20,10 +20,10 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.ListMultimap;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
-import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestStatus;
 import java.util.ArrayList;
 import java.util.List;
@@ -72,9 +72,9 @@ public class JobReporter {
         int passedNumber = 0;
         int skippedNumber = 0;
         for (TestInfo testInfo : testInfos) {
-          if (testInfo.result().get().equals(TestResult.PASS)) {
+          if (testInfo.resultWithCause().get().type().equals(TestResult.PASS)) {
             ++passedNumber;
-          } else if (testInfo.result().get().equals(TestResult.SKIP)) {
+          } else if (testInfo.resultWithCause().get().type().equals(TestResult.SKIP)) {
             ++skippedNumber;
           }
         }
@@ -168,7 +168,7 @@ public class JobReporter {
               || testInfo.status().get().equals(TestStatus.SUSPENDED)) {
             resultNum[5]++;
           } else {
-            resultNum[testInfo.result().get().getNumber()]++;
+            resultNum[testInfo.resultWithCause().get().type().getNumber()]++;
           }
         }
         for (int i = 0; i < 5; ++i) {

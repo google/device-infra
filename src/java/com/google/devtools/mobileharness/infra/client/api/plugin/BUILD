@@ -27,6 +27,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event/util:injection_event",
     ],
     deps = [
+        "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/client/api/event:job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
