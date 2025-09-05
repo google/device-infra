@@ -13,7 +13,7 @@
 # limitations under the License.
 #
 
-load("@com_google_protobuf//:protobuf.bzl", "py_proto_library")
+load("@com_github_grpc_grpc//bazel:python_rules.bzl", "py_proto_library")
 
 package(
     default_applicable_licenses = ["//:license"],
@@ -36,13 +36,7 @@ proto_library(
 
 py_proto_library(
     name = "device_py_pb2",
-    srcs = [
-        "device.proto",
-    ],
-    deps = [
-        ":lab_py_proto",
-        "//src/devtools/common/metrics/stability/model/proto:error_py_proto",
-    ],
+    deps = [":device_proto"],
 )
 
 java_proto_library(
@@ -91,12 +85,7 @@ java_proto_library(
 
 py_proto_library(
     name = "lab_py_proto",
-    srcs = [
-        "lab.proto",
-    ],
-    deps = [
-        ":universe_py_proto",
-    ],
+    deps = [":lab_proto"],
 )
 
 proto_library(
@@ -122,7 +111,5 @@ java_proto_library(
 
 py_proto_library(
     name = "universe_py_proto",
-    srcs = [
-        "universe.proto",
-    ],
+    deps = [":universe_proto"],
 )

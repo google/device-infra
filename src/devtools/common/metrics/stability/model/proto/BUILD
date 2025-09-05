@@ -13,7 +13,7 @@
 # limitations under the License.
 #
 
-load("@com_google_protobuf//:protobuf.bzl", "py_proto_library")
+load("@com_github_grpc_grpc//bazel:python_rules.bzl", "py_proto_library")
 
 DEFAULT_VISIBILITY = [
     "//:deviceinfra_all_pkg",
@@ -42,11 +42,5 @@ java_proto_library(
 
 py_proto_library(
     name = "error_py_proto",
-    srcs = [
-        "error_id.proto",
-        "error_type.proto",
-        "exception.proto",
-        "namespace.proto",
-    ],
-    include = "../../../../../../..",  # There's package name conflict for `src`, but not clear why it can fix the issue.
+    deps = [":error_proto"],
 )

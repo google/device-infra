@@ -13,8 +13,7 @@
 # limitations under the License.
 #
 
-load("@com_github_grpc_grpc//bazel:python_rules.bzl", "py_grpc_library")
-load("@com_google_protobuf//:protobuf.bzl", "py_proto_library")
+load("@com_github_grpc_grpc//bazel:python_rules.bzl", "py_grpc_library", "py_proto_library")
 load("@io_grpc_grpc_java//:java_grpc_library.bzl", "java_grpc_library")
 
 package(
@@ -120,13 +119,7 @@ java_grpc_library(
 
 py_proto_library(
     name = "lab_record_service_py_proto",
-    srcs = [
-        "lab_record_service.proto",
-    ],
-    deps = [
-        "//src/devtools/mobileharness/api/query/proto:lab_query_py_proto",
-        "//src/devtools/mobileharness/api/query/proto:lab_record_py_proto",
-    ],
+    deps = [":lab_record_service_proto"],
 )
 
 py_grpc_library(

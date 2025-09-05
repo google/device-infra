@@ -13,7 +13,7 @@
 # limitations under the License.
 #
 
-load("@com_google_protobuf//:protobuf.bzl", "py_proto_library")
+load("@com_github_grpc_grpc//bazel:python_rules.bzl", "py_proto_library")
 
 package(
     default_applicable_licenses = ["//:license"],
@@ -49,12 +49,7 @@ java_proto_library(
 
 py_proto_library(
     name = "filter_py_proto",
-    srcs = [
-        "filter.proto",
-    ],
-    deps = [
-        "@com_github_protocolbuffers_protobuf//:well_known_types_py_pb2",
-    ],
+    deps = [":filter_proto"],
 )
 
 proto_library(
@@ -76,15 +71,7 @@ java_proto_library(
 
 py_proto_library(
     name = "lab_query_py_proto",
-    srcs = [
-        "lab_query.proto",
-    ],
-    deps = [
-        ":filter_py_proto",
-        "//src/devtools/mobileharness/api/model/proto:device_py_pb2",
-        "//src/devtools/mobileharness/api/model/proto:lab_py_proto",
-        "@com_github_protocolbuffers_protobuf//:well_known_types_py_pb2",
-    ],
+    deps = [":lab_query_proto"],
 )
 
 proto_library(
@@ -103,14 +90,5 @@ java_proto_library(
 
 py_proto_library(
     name = "lab_record_py_proto",
-    srcs = [
-        "lab_record.proto",
-    ],
-    deps = [
-        ":filter_py_proto",
-        ":lab_query_py_proto",
-        "//src/devtools/mobileharness/api/model/proto:device_py_pb2",
-        "//src/devtools/mobileharness/api/model/proto:lab_py_proto",
-        "@com_github_protocolbuffers_protobuf//:well_known_types_py_pb2",
-    ],
+    deps = [":lab_record_proto"],
 )

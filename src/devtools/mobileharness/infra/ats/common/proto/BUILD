@@ -13,7 +13,7 @@
 # limitations under the License.
 #
 
-load("@com_google_protobuf//:protobuf.bzl", "py_proto_library")
+load("@com_github_grpc_grpc//bazel:python_rules.bzl", "py_proto_library")
 
 package(
     default_applicable_licenses = ["//:license"],
@@ -36,10 +36,5 @@ java_proto_library(
 
 py_proto_library(
     name = "xts_common_py_proto",
-    srcs = [
-        "xts_common.proto",
-    ],
-    deps = [
-        "@com_github_protocolbuffers_protobuf//:well_known_types_py_pb2",
-    ],
+    deps = [":xts_common_proto"],
 )
