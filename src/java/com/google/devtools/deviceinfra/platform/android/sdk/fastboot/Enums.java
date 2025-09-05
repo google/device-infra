@@ -65,6 +65,7 @@ public final class Enums {
     SERIALNO,
     SOC_ID,
     UNLOCKED,
+    VERSION_OS,
   }
 
   /**
