@@ -247,6 +247,7 @@ java_library(
     srcs = ["AndroidFilePusherDecorator.java"],
     deps = [
         ":base_decorator",
+        "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/android/file:android_file_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/lightning/fileoperator",
@@ -259,7 +260,6 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:android_file_pusher_spec",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
         "@maven//:com_google_guava_guava",
     ],
 )
