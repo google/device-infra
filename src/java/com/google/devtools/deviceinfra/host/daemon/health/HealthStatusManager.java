@@ -34,6 +34,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicReference;
+import javax.annotation.Nullable;
 
 /** Health manager for server to maintain its status and notify when drain request come. */
 @Singleton
@@ -58,6 +59,8 @@ public class HealthStatusManager {
 
   /** Executor service to run drain thread. */
   private final ExecutorService threadPool;
+
+  private Future<?> drainFuture;
 
   @Inject
   HealthStatusManager(Set<DrainHandler> drainHandlers) {
@@ -102,7 +105,7 @@ public class HealthStatusManager {
 
     // Setting the drain timeout to the shorter one from request or value from flag.
     Duration drainTimeout = calculateTimeout(timeoutOpt);
-    Future<?> drainFuture =
+    drainFuture =
         threadPool.submit(
             () -> {
               try {
@@ -141,6 +144,11 @@ public class HealthStatusManager {
                 servingStatus.set(ServingStatus.DRAINED);
               }
             });
+  }
+
+  @Nullable
+  Future<?> getDrainFuture() {
+    return drainFuture;
   }
 
   /** Check if all handlers has drained. */

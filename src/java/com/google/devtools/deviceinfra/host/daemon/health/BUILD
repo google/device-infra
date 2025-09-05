@@ -32,6 +32,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
+        "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
     ],
@@ -48,5 +49,22 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/lab:annotations",
         "@io_grpc_grpc_java//core",
         "@maven//:com_google_inject_guice",
+    ],
+)
+
+java_library(
+    name = "drain_service",
+    srcs = [
+        "DrainService.java",
+        "DrainServiceModule.java",
+    ],
+    visibility = ["//:omnilab_fusion"],
+    deps = [
+        ":health_status_manager",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:service_module",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "@maven//:com_google_guava_guava",
+        "@maven//:com_google_inject_guice",
+        "@maven//:javax_inject_jsr330_api",
     ],
 )
