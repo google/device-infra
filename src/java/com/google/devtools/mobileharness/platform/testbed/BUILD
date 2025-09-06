@@ -62,8 +62,7 @@ java_library(
     srcs = [
         "SubDeviceSynchronizationDriver.java",
     ],
-    visibility = [
-    ],
+    visibility = ["//visibility:private"],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
