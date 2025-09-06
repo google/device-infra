@@ -22,6 +22,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.ErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
 import com.google.devtools.mobileharness.platform.android.lightning.fileoperator.FileOperator;
 import com.google.devtools.mobileharness.platform.android.lightning.fileoperator.FilePushArgs;
@@ -34,7 +35,6 @@ import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidFilePusherSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
-import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import java.time.Duration;
 import java.util.HashSet;
 import java.util.Map;
@@ -151,7 +151,7 @@ public class AndroidFilePusherDecorator extends BaseDecorator implements Android
                 message,
                 e);
           } else if (message.contains("Read-only file system")) {
-            testInfo.result().set(TestResult.FAIL);
+            testInfo.resultWithCause().setNonPassing(TestResult.FAIL, e);
             throw new MobileHarnessException(
                 AndroidErrorId.ANDROID_FILE_PUSHER_DECORATOR_READ_ONLY_FILE_FROM_USER, message, e);
           }
@@ -178,20 +178,20 @@ public class AndroidFilePusherDecorator extends BaseDecorator implements Android
         com.google.devtools.mobileharness.api.model.error.AndroidErrorId errorId =
             AndroidErrorId.ANDROID_FILE_PUSHER_DECORATOR_PUSH_FILE_ERROR;
         if (AndroidErrorId.ANDROID_FILE_OPERATOR_FILE_NOT_FOUND.equals(exErrorId)) {
-          testInfo.result().set(TestResult.FAIL);
+          testInfo.resultWithCause().setNonPassing(TestResult.FAIL, e);
           errorId = AndroidErrorId.ANDROID_FILE_PUSHER_DECORATOR_USER_FILE_NOT_FOUND;
         } else if (AndroidErrorId.ANDROID_FILE_OPERATOR_ILLEGAL_ARGUMENT.equals(exErrorId)) {
-          testInfo.result().set(TestResult.FAIL);
+          testInfo.resultWithCause().setNonPassing(TestResult.FAIL, e);
           errorId = AndroidErrorId.ANDROID_FILE_PUSHER_DECORATOR_ILLEGAL_ARGUMENT;
         } else {
           if (message.contains("Read-only file system")) {
             errorId = AndroidErrorId.ANDROID_FILE_PUSHER_DECORATOR_READ_ONLY_FILE_FROM_USER;
-            testInfo.result().set(TestResult.FAIL);
+            testInfo.resultWithCause().setNonPassing(TestResult.FAIL, e);
           }
           if (message.contains("Not a directory") || message.contains("Is a directory")) {
             errorId =
                 AndroidErrorId.ANDROID_FILE_PUSHER_DECORATOR_PUSH_USER_DIRECTORY_TO_FILE_ERROR;
-            testInfo.result().set(TestResult.FAIL);
+            testInfo.resultWithCause().setNonPassing(TestResult.FAIL, e);
           }
         }
         throw new MobileHarnessException(errorId, message, e);
