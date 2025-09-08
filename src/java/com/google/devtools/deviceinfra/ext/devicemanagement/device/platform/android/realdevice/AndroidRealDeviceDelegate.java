@@ -51,6 +51,7 @@ import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfi
 import com.google.devtools.mobileharness.platform.android.app.devicedaemon.DeviceDaemonApkInfoProvider;
 import com.google.devtools.mobileharness.platform.android.app.devicedaemon.DeviceDaemonHelper;
 import com.google.devtools.mobileharness.platform.android.app.mtaastools.MtaasToolsInstantiator;
+import com.google.devtools.mobileharness.platform.android.app.telephony.TelephonyHelper;
 import com.google.devtools.mobileharness.platform.android.connectivity.AndroidConnectivityUtil;
 import com.google.devtools.mobileharness.platform.android.connectivity.ConnectToWifiArgs;
 import com.google.devtools.mobileharness.platform.android.device.AndroidDeviceHelper;
@@ -165,6 +166,7 @@ public abstract class AndroidRealDeviceDelegate {
   private final LocalFileUtil fileUtil;
   private final AndroidDeviceHelper androidDeviceHelper;
   private final MtaasToolsInstantiator mtaasToolsInstantiator;
+  private final TelephonyHelper telephonyHelper;
 
   private final DeviceAdminUtil deviceAdminUtil;
 
@@ -192,7 +194,8 @@ public abstract class AndroidRealDeviceDelegate {
       Fastboot fastboot,
       LocalFileUtil fileUtil,
       DeviceAdminUtil deviceAdminUtil,
-      MtaasToolsInstantiator mtaasToolsInstantiator) {
+      MtaasToolsInstantiator mtaasToolsInstantiator,
+      TelephonyHelper telephonyHelper) {
     this.device = device;
     this.androidDeviceDelegate = androidDeviceDelegate;
     this.deviceStat = deviceStat;
@@ -217,6 +220,7 @@ public abstract class AndroidRealDeviceDelegate {
     this.fileUtil = fileUtil;
     this.deviceAdminUtil = deviceAdminUtil;
     this.mtaasToolsInstantiator = mtaasToolsInstantiator;
+    this.telephonyHelper = telephonyHelper;
 
     this.deviceId = device.getDeviceId();
     device.setProperty(
@@ -692,6 +696,16 @@ public abstract class AndroidRealDeviceDelegate {
     // Adds screenshot dimension.
     if (ifScreenshotAble(sdkVersion)) {
       device.addDimension(Dimension.Name.SCREENSHOT_ABLE, String.valueOf(true));
+    }
+
+    if (Flags.instance().checkAndroidDeviceSimCardType.getNonNull()) {
+      try {
+        telephonyHelper.updateSimDimensions(device);
+      } catch (MobileHarnessException e) {
+        logger.atInfo().log(
+            "Failed to get device %s SIM card type: %s",
+            deviceId, MoreThrowables.shortDebugString(e));
+      }
     }
 
     if (!isRooted()) {

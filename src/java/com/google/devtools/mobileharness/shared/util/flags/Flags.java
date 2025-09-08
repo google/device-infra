@@ -479,6 +479,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> cachePushedFiles = cachePushedFilesDefault;
 
+  private static final Flag<Boolean> checkAndroidDeviceSimCardTypeDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--check_android_device_sim_card_type",
+      description = "Whether to check the sim card type of Android devices. Default is false.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> checkAndroidDeviceSimCardType = checkAndroidDeviceSimCardTypeDefault;
+
   private static final Flag<Duration> checkDeviceIntervalDefault =
       DurationFlag.value(Duration.ofMinutes(5L));
 
