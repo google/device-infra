@@ -59,6 +59,7 @@ import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import com.google.protobuf.ByteString;
 import java.io.BufferedOutputStream;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -707,6 +708,17 @@ public class GcsUtil {
   public Optional<String> getCrc32c(GcsApiObject gcsFile)
       throws MobileHarnessException, InterruptedException {
     return getMetadata(gcsFile).map(StorageObject::getCrc32c);
+  }
+
+  /**
+   * Gets Crc32c of GCS file {@code gscFile} in bytes. Go to
+   * https://cloud.google.com/storage/docs/composite-objects for more details.
+   *
+   * @return crc32c of file {@code file}; or empty if {@code file} doesn't exist
+   */
+  public Optional<ByteString> getCrc32cBytes(Path gcsFile)
+      throws MobileHarnessException, InterruptedException {
+    return getCrc32c(gcsFile).map(s -> ByteString.copyFrom(BaseEncoding.base64().decode(s)));
   }
 
   /**
