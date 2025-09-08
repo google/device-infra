@@ -17,14 +17,15 @@
 package com.google.devtools.mobileharness.infra.controller.device.util;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.io.BaseEncoding;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.ConditionedDeviceConfigProto.ConditionedDeviceConfig;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.ConditionedDeviceConfigProto.ConditionedDeviceConfigs;
-import com.google.protobuf.ExtensionRegistry;
-import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.TextFormat;
+import com.google.protobuf.TextFormat.ParseException;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import java.util.List;
 import java.util.Optional;
@@ -101,11 +102,13 @@ final class ConditionedDeviceConfigUtil {
     // Only the first value is used for now.
     String conditionedDeviceConfigsDimensionValue = conditionedDeviceConfigsValueList.get(0);
     try {
-      return Optional.of(
-          ConditionedDeviceConfigs.parseFrom(
-              BaseEncoding.base64().decode(conditionedDeviceConfigsDimensionValue),
-              ExtensionRegistry.getEmptyRegistry()));
-    } catch (IllegalArgumentException | InvalidProtocolBufferException e) {
+      ConditionedDeviceConfigs.Builder conditionedDeviceConfigs =
+          ConditionedDeviceConfigs.newBuilder();
+      TextFormat.merge(
+          new String(BaseEncoding.base64().decode(conditionedDeviceConfigsDimensionValue), UTF_8),
+          conditionedDeviceConfigs);
+      return Optional.of(conditionedDeviceConfigs.build());
+    } catch (IllegalArgumentException | ParseException e) {
       logger.atWarning().withCause(e).log(
           "Failed to parse conditioned device configs from dimension value [%s]",
           conditionedDeviceConfigsDimensionValue);
