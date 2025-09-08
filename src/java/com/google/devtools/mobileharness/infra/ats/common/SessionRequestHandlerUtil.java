@@ -451,6 +451,17 @@ public class SessionRequestHandlerUtil {
     addSessionClientIdToJobInfo(jobInfo, sessionRequestInfo);
     jobInfo.properties().add(Job.IS_XTS_TF_JOB, "true");
     injectCommonParams(jobInfo);
+    if (Flags.instance().enablePersistentCache.getNonNull()) {
+      sessionRequestInfo
+          .androidXtsZipTestResource()
+          .ifPresent(
+              resource ->
+                  jobInfo
+                      .params()
+                      .add(
+                          JobInfo.PARAM_PERISTENT_CACHE_FILE_LIST,
+                          resource.getOriginalDownloadUrl()));
+    }
     tradefedJobInfo
         .extraJobProperties()
         .forEach((key, value) -> jobInfo.properties().add(key, value));

@@ -35,11 +35,19 @@ public final class CacheBuilder {
 
     @Nullable
     private static CacheBuilder createInstance() {
+      if (!Flags.instance().enablePersistentCache.getNonNull()) {
+        return null;
+      }
       String rootDir = Flags.instance().persistentCacheDir.get();
-      if (rootDir == null) {
+      if (rootDir == null || !isRootDirValid(rootDir)) {
         return null;
       }
       return new CacheBuilder(Path.of(rootDir), new LocalFileUtil(), InstantSource.system());
+    }
+
+    private static boolean isRootDirValid(String rootDir) {
+      LocalFileUtil localFileUtil = new LocalFileUtil();
+      return localFileUtil.isDirExist(rootDir);
     }
   }
 

@@ -1097,6 +1097,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableMessagingService = enableMessagingServiceDefault;
 
+  private static final Flag<Boolean> enablePersistentCacheDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enable_persistent_cache",
+      description = "Whether to enable persistent cache.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enablePersistentCache = enablePersistentCacheDefault;
+
   private static final Flag<Boolean> enableProxyModeDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(

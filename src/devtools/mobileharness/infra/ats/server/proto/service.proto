@@ -75,6 +75,9 @@ message TestResource {
   optional string decompress_dir = 5;
   optional bool mount_zip = 6;
   optional TestResourceParameters params = 7;
+  // The original download url of the test resource. Do not set the field if
+  // the test resource is locally generated.
+  optional string original_download_url = 8;
 }
 
 message TestResourceParameters {

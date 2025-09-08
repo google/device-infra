@@ -123,6 +123,8 @@ final class NewMultiCommandRequestHandler {
   @VisibleForTesting static final String XTS_TF_JOB_PROP = "xts-tradefed-job";
   private static final String ACLOUD_FILENAME = "acloud_prebuilt";
 
+  private static final String ATS_GOOGLE_CLOUD_STORAGE_PREFIX = "mtt:///google_cloud_storage/";
+
   @VisibleForTesting
   static final String REQUEST_ERROR_MESSAGE_FOR_TRADEFED_INVOCATION_ERROR =
       "Tradefed invocation had an error.";
@@ -457,8 +459,12 @@ final class NewMultiCommandRequestHandler {
 
   private String replacePathForRemoteRunner(String path)
       throws MobileHarnessException, InterruptedException {
+    logger.atInfo().log("The path is: %s", path);
     if (path.startsWith(RemoteFileType.ATS_FILE_SERVER.prefix())) {
       return path;
+    }
+    if (path.startsWith(ATS_GOOGLE_CLOUD_STORAGE_PREFIX)) {
+      return path.replace(ATS_GOOGLE_CLOUD_STORAGE_PREFIX, RemoteFileType.GCS.prefix());
     }
     if (PathUtil.basename(path).equals(ACLOUD_FILENAME)
         && !path.startsWith(Flags.instance().atsStoragePath.getNonNull())) {
@@ -512,13 +518,19 @@ final class NewMultiCommandRequestHandler {
       // TODO: need to handle non device serial case.
     }
     String androidXtsZipPath = "";
+    TestResource androidXtsZipTestResource = null;
     ImmutableList.Builder<TestResource> fileTestResources = ImmutableList.builder();
     for (TestResource testResource : request.getTestResourcesList()) {
       URL testResourceUrl = getTestResourceUrl(testResource);
 
       if (testResourceUrl.getProtocol().equals("file")) {
         if (ANDROID_XTS_ZIP_FILENAME_REGEX.matcher(testResource.getName()).matches()) {
-          androidXtsZipPath = testResourceUrl.getPath();
+          if (Flags.instance().enablePersistentCache.getNonNull()) {
+            androidXtsZipPath = testResource.getOriginalDownloadUrl();
+          } else {
+            androidXtsZipPath = testResourceUrl.getPath();
+          }
+          androidXtsZipTestResource = testResource;
         } else {
           fileTestResources.add(testResource);
         }
@@ -557,6 +569,9 @@ final class NewMultiCommandRequestHandler {
     sessionRequestInfoBuilder.setXtsType(xtsType);
     sessionRequestInfoBuilder.setXtsRootDir(xtsRootDir);
     sessionRequestInfoBuilder.setAndroidXtsZip(replacePathForRemoteRunner(androidXtsZipPath));
+    if (androidXtsZipTestResource != null) {
+      sessionRequestInfoBuilder.setAndroidXtsZipTestResource(androidXtsZipTestResource);
+    }
     sessionRequestInfoBuilder.setDeviceSerials(deviceSerials);
     sessionRequestInfoBuilder.setEnvVars(
         ImmutableMap.copyOf(request.getTestEnvironment().getEnvVarsMap()));
