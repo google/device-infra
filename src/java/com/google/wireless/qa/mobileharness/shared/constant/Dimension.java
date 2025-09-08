@@ -98,7 +98,9 @@ public final class Dimension {
     INTERNET,
     /** The health of GCS. */
     GCS_FAILURE,
-    /** The signature of GMS Core. */
+    /** The operator of the GSM card. */
+    GSM_OPERATOR_ALPHA,
+    /** The health of GCS. /** The signature of GMS Core. */
     GMSCORE_SIGNATURE,
     /** The lab location of the device. */
     LAB_LOCATION,
@@ -250,6 +252,8 @@ public final class Dimension {
     GSERVICES_ANDROID_ID,
     /** The hardware name of the device. */
     HARDWARE,
+    /** The hardware UFS of the device. */
+    HARDWARE_UFS,
     /**
      * The internal storage status of the device. The common value is OK. If free space is less than
      * 1.0G, this value will be LOW.
@@ -300,6 +304,8 @@ public final class Dimension {
     SIGN,
     /** The type of the SIM card. */
     SIM_CARD_TYPE,
+    /** The operator of the SIM card. */
+    SIM_OPERATOR,
     /** The remaining storage lifetime in percentages. */
     STORAGE_LIFETIME_PERCENTAGE,
     /** Whether the device is a svelte device. */

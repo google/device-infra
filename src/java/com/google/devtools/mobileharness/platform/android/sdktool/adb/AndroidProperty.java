@@ -56,8 +56,10 @@ public enum AndroidProperty {
   DPM_STATE("ro.boot.dpm_state"),
   @DoNotAddToDimension
   FLAVOR("ro.build.flavor"),
+  GSM_OPERATOR_ALPHA("gsm.operator.alpha"),
   HARDWARE("ro.hardware"),
   HARDWARE_TYPE("ro.hardware.type"),
+  HARDWARE_UFS("ro.boot.hardware.ufs"),
   INCREMENTAL_BUILD("ro.build.version.incremental"),
   @DoNotAddToDimension
   KAIOS_RUNTIME_TOKEN("kaios.services.runtime.token"),
@@ -87,6 +89,7 @@ public enum AndroidProperty {
   SIGN("ro.build.tags"),
   @DoNotAddToDimension
   SILENT("ro.audio.silent"),
+  SIM_OPERATOR_ALPHA("gsm.sim.operator.alpha"),
   SIM_STATE("gsm.sim.state"),
   SOC_ID("ro.boot.hw.soc.id"),
   SOC_REV("ro.boot.hw.soc.rev"),
