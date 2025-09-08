@@ -94,6 +94,7 @@ import com.google.wireless.qa.mobileharness.shared.model.allocation.Allocation;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestLocator;
+import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.JobSpecHelper;
 import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestStatus;
@@ -674,15 +675,18 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
             jobInfo.files().getAll().entries().stream(),
             JobSpecHelper.getFiles(jobInfo.protoSpec().getProto()).entrySet().stream(),
             jobInfo.scopedSpecs().getFiles(jobSpecHelper).entrySet().stream())
-        .filter(entry -> !resolveInClient(entry.getValue()))
+        .filter(entry -> !resolveInClient(entry.getValue(), jobInfo.params()))
         .map(entry -> createResolveFileItem(entry.getKey(), entry.getValue(), jobInfo))
         .collect(toImmutableList());
   }
 
   /** Returns whether the file should be resolved in the client. */
-  private static boolean resolveInClient(String filePath) {
+  private static boolean resolveInClient(String filePath, Params jobParams) {
     if (Flags.instance().enableClientFileTransfer.getNonNull()) {
-      return Stream.of(RemoteFileType.ATS_FILE_SERVER.prefix()).noneMatch(filePath::startsWith);
+      return Stream.of(RemoteFileType.ATS_FILE_SERVER.prefix()).noneMatch(filePath::startsWith)
+          && !jobParams
+              .getList(JobInfo.PARAM_PERISTENT_CACHE_FILE_LIST, ImmutableList.of())
+              .contains(filePath);
     } else {
       return false;
     }
