@@ -22,10 +22,12 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ListMultimap;
+import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import java.nio.file.Path;
 import java.util.ArrayDeque;
 import java.util.HashSet;
@@ -40,6 +42,8 @@ import org.w3c.dom.NodeList;
 
 /** A parser to parse test plans from the xts-tradefed.jar file only. */
 public class TestPlanParser {
+
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private static final String CONFIGURATION_NODE_NAME = "configuration";
   private static final String OPTION_NODE_NAME = "option";
@@ -103,6 +107,12 @@ public class TestPlanParser {
                 testPlanName.equals(rootTestPlan)
                     ? rootTestPlan
                     : String.format("%s in %s", testPlanName, rootTestPlan));
+        // TODO: remove this once the bug is fixed. The MTS and Csuite tests are
+        // failing in ATS UI 2.0 due to the test plan parsing error.
+        if (Flags.instance().enableAtsMode.getNonNull()) {
+          logger.atWarning().log("%s", errorMessage);
+          continue;
+        }
         throw MobileHarnessExceptionFactory.createUserFacingException(
             InfraErrorId.XTS_CONFIG_XML_PARSE_ERROR, errorMessage, /* cause= */ null);
       }
