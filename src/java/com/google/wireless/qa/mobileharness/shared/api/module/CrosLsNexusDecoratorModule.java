@@ -17,10 +17,7 @@
 package com.google.wireless.qa.mobileharness.shared.api.module;
 
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
-import com.google.devtools.mobileharness.shared.util.port.PortProber;
 import com.google.inject.AbstractModule;
-import com.google.inject.Provides;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.CrosLsNexusDecorator;
 
 /** Module for providing dependencies for {@code CrosLsNexusDecorator}. */
 public final class CrosLsNexusDecoratorModule extends AbstractModule {
@@ -28,10 +25,5 @@ public final class CrosLsNexusDecoratorModule extends AbstractModule {
   @Override
   protected void configure() {
     bind(CommandExecutor.class).toInstance(new CommandExecutor());
-  }
-
-  @Provides
-  CrosLsNexusDecorator.PortPicker providePortPicker() {
-    return () -> PortProber.pickUnusedPort();
   }
 }

@@ -25,12 +25,16 @@ import static com.google.wireless.qa.mobileharness.shared.api.spec.CrosDecorator
 import static com.google.wireless.qa.mobileharness.shared.api.spec.CrosDecoratorSpec.LSNEXUS_PARAM_SUFFIX;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
@@ -46,10 +50,13 @@ import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Log;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Log.Api;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
-import java.io.IOException;
+import java.io.File;
+import java.nio.file.Files;
+import java.time.Duration;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.mockito.ArgumentCaptor;
@@ -72,11 +79,11 @@ public class CrosLsNexusDecoratorTest {
       INVENTORY_SERVICE_HOST_VALUE + ":" + INVENTORY_SERVICE_PORT_VALUE;
 
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
+  @Rule public final TemporaryFolder tempFolder = new TemporaryFolder();
 
   @Mock private Driver decoratedDriver;
   @Mock private TestInfo testInfo;
   @Mock private CommandExecutor commandExecutor;
-  @Mock private CrosLsNexusDecorator.PortPicker portPicker;
   @Mock private Device device;
   @Mock private Properties properties;
   @Mock private Log testLogger;
@@ -114,41 +121,40 @@ public class CrosLsNexusDecoratorTest {
                 bind(Driver.class).toInstance(decoratedDriver);
                 bind(TestInfo.class).toInstance(testInfo);
                 bind(CommandExecutor.class).toInstance(commandExecutor);
-                bind(CrosLsNexusDecorator.PortPicker.class).toInstance(portPicker);
               }
             });
     decorator = injector.getInstance(CrosLsNexusDecorator.class);
+    decorator = spy(decorator);
     when(commandExecutor.start(any(Command.class))).thenReturn(commandProcess);
   }
 
   @Test
-  public void prepare_success_usesFreePortToStartLsNexusService() throws Exception {
-    when(portPicker.pick()).thenReturn(1234567);
+  public void prepare_success_startsServiceWithCorrectCommand() throws Exception {
+    doReturn(SERVICE_PORT).when(decorator).readPortFromLsNexusService(any(), any(), any(), any());
 
-    decorator.prepare(testInfo);
-
-    verify(portPicker).pick();
-
-    var commandCaptor = ArgumentCaptor.forClass(Command.class);
-    verify(commandExecutor).start(commandCaptor.capture());
-    var command = commandCaptor.getValue().getCommand();
-    assertThat(command).contains("1234567");
-  }
-
-  @Test
-  public void prepare_success_startsLsNexusService() throws Exception {
     decorator.prepare(testInfo);
 
     var commandCaptor = ArgumentCaptor.forClass(Command.class);
     verify(commandExecutor).start(commandCaptor.capture());
     var command = commandCaptor.getValue().getCommand();
-    assertThat(command).contains(LSNEXUS_CIPD_PATH);
+    assertThat(command)
+        .containsAtLeast(
+            LSNEXUS_CIPD_PATH,
+            "server",
+            "-port",
+            "0",
+            "-logs",
+            "/tmp/gen_files/lsnexus_" + DUT_NAME,
+            "-dut",
+            DUT_NAME,
+            "-labservice",
+            INVENTORY_SERVICE_ADDRESS)
+        .inOrder();
   }
 
   @Test
-  public void prepare_success_addsStartedServiceAddressToTestProperties() throws Exception {
-    when(portPicker.pick()).thenReturn(SERVICE_PORT);
-    when(testInfo.properties()).thenReturn(properties);
+  public void prepare_success_addsServiceAddressToTestProperties() throws Exception {
+    doReturn(SERVICE_PORT).when(decorator).readPortFromLsNexusService(any(), any(), any(), any());
 
     decorator.prepare(testInfo);
 
@@ -156,35 +162,45 @@ public class CrosLsNexusDecoratorTest {
   }
 
   @Test
-  public void prepare_portPickerThrowsException_throwsMobileHarnessException() throws Exception {
-    when(portPicker.pick()).thenThrow(new IOException("Test exception"));
+  public void prepare_readPortFromLsNexusServiceThrowsException_throwsException() throws Exception {
+    doThrow(new MobileHarnessException(BasicErrorId.NON_MH_EXCEPTION, "test"))
+        .when(decorator)
+        .readPortFromLsNexusService(any(), any(), any(), any());
 
     assertThrows(MobileHarnessException.class, () -> decorator.prepare(testInfo));
   }
 
   @Test
+  public void createLsNexusServiceLogDir_returnsCorrectPath() throws MobileHarnessException {
+    when(testInfo.getGenFileDir()).thenReturn("/tmp/gen");
+    String logDir = decorator.createLsNexusServiceLogDir(testInfo, DUT_NAME);
+    assertThat(logDir).isEqualTo("/tmp/gen/lsnexus_" + DUT_NAME);
+  }
+
+  @Test
   public void startLsNexusService_success_startsProcessWithCorrectCommand()
       throws MobileHarnessException {
-    when(testInfo.getGenFileDir()).thenReturn("/tmp/service_gen_files");
+    String logDir = "/tmp/service_log_dir";
 
-    var unused = decorator.startLsNexusService(testInfo, DUT_NAME, SERVICE_PORT);
+    var unused = decorator.startLsNexusService(testInfo, DUT_NAME, logDir);
 
     var commandCaptor = ArgumentCaptor.forClass(Command.class);
     verify(commandExecutor).start(commandCaptor.capture());
     var command = commandCaptor.getValue().getCommand();
 
     assertThat(command)
-        .containsAtLeast(
+        .containsExactly(
             LSNEXUS_CIPD_PATH,
             "server",
             "-port",
-            String.valueOf(SERVICE_PORT),
+            "0",
             "-logs",
-            "/tmp/service_gen_files/lsnexus_" + DUT_NAME,
+            logDir,
             "-dut",
             DUT_NAME,
-            /* lab_service_address */ "-labservice",
-            INVENTORY_SERVICE_ADDRESS);
+            "-labservice",
+            INVENTORY_SERVICE_ADDRESS)
+        .inOrder();
   }
 
   @Test
@@ -192,13 +208,64 @@ public class CrosLsNexusDecoratorTest {
     CommandProcess mockCommandProcess = mock(CommandProcess.class);
     when(commandExecutor.start(any(Command.class))).thenReturn(mockCommandProcess);
 
-    CommandProcess result = decorator.startLsNexusService(testInfo, DUT_NAME, SERVICE_PORT);
+    CommandProcess result = decorator.startLsNexusService(testInfo, DUT_NAME, "/tmp/log_dir");
 
     assertThat(result).isSameInstanceAs(mockCommandProcess);
   }
 
   @Test
+  public void readPortFromLsNexusService_success_returnsPortNumber() throws Exception {
+    File logDir = tempFolder.newFolder("logs");
+    File portFile = new File(logDir, "lsnexus_port");
+    Files.writeString(portFile.toPath(), " " + SERVICE_PORT + "\n");
+
+    int port =
+        decorator.readPortFromLsNexusService(
+            testInfo, commandProcess, logDir.getAbsolutePath(), Duration.ofSeconds(1));
+
+    assertThat(port).isEqualTo(SERVICE_PORT);
+  }
+
+  @Test
+  public void readPortFromLsNexusService_success_doesNotKillProcess() throws Exception {
+    File logDir = tempFolder.newFolder("logs");
+    File portFile = new File(logDir, "lsnexus_port");
+    Files.writeString(portFile.toPath(), " " + SERVICE_PORT + "\n");
+
+    int unused =
+        decorator.readPortFromLsNexusService(
+            testInfo, commandProcess, logDir.getAbsolutePath(), Duration.ofSeconds(1));
+
+    verify(commandProcess, never()).kill();
+  }
+
+  @Test
+  public void readPortFromLsNexusService_timeout_throwsException() throws Exception {
+    File logDir = tempFolder.newFolder("logs");
+
+    MobileHarnessException e =
+        assertThrows(
+            MobileHarnessException.class,
+            () ->
+                decorator.readPortFromLsNexusService(
+                    testInfo, commandProcess, logDir.getAbsolutePath(), Duration.ofMillis(10)));
+    assertThat(e).hasMessageThat().contains("LSNexus service failed to start");
+  }
+
+  @Test
+  public void readPortFromLsNexusService_timeout_killsProcess() throws Exception {
+    File logDir = tempFolder.newFolder("logs");
+    assertThrows(
+        MobileHarnessException.class,
+        () ->
+            decorator.readPortFromLsNexusService(
+                testInfo, commandProcess, logDir.getAbsolutePath(), Duration.ofMillis(10)));
+    verify(commandProcess).kill();
+  }
+
+  @Test
   public void tearDown_success_stopsService() throws Exception {
+    doReturn(SERVICE_PORT).when(decorator).readPortFromLsNexusService(any(), any(), any(), any());
     decorator.prepare(testInfo);
     decorator.tearDown(testInfo);
 
@@ -214,6 +281,7 @@ public class CrosLsNexusDecoratorTest {
 
   @Test
   public void tearDown_afterPrepare_isIdempotent() throws Exception {
+    doReturn(SERVICE_PORT).when(decorator).readPortFromLsNexusService(any(), any(), any(), any());
     // Start the service once.
     decorator.prepare(testInfo);
     // Call tearDown twice to ensure it is idempotent.

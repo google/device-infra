@@ -38,8 +38,6 @@ java_library(
     srcs = ["CrosLsNexusDecoratorModule.java"],
     deps = [
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
-        "//src/java/com/google/devtools/mobileharness/shared/util/port:portprober",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:cros_ls_nexus_decorator",
         "@maven//:com_google_inject_guice",
     ],
 )
