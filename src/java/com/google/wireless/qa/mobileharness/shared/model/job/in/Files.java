@@ -74,6 +74,19 @@ public class Files {
   }
 
   /**
+   * Adds a input file/dir, marks it with the given tag. If you add the same file/dir with the same
+   * tag for more than once, the call leaves it unchanged.
+   *
+   * @param tag tag of the file/dir
+   * @param fileInfo input file/dir info
+   */
+  @CanIgnoreReturnValue
+  public Files add(String tag, FileInfo fileInfo) throws MobileHarnessException {
+    newFiles.add(tag, fileInfo);
+    return this;
+  }
+
+  /**
    * Adds the given input files/dirs.
    *
    * @param fileOrDirs {tag, path} mappings of the input files/dirs

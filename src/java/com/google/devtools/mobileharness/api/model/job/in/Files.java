@@ -111,28 +111,40 @@ public class Files {
    */
   @CanIgnoreReturnValue
   public Files add(String tag, String fileOrDirPath) throws MobileHarnessException {
+    return add(tag, FileInfo.create(fileOrDirPath, null));
+  }
+
+  /**
+   * Adds a input file/dir, marks it with the given tag. If you add the same file/dir with the same
+   * tag for more than once, the call leaves it unchanged.
+   *
+   * @param tag tag of the file/dir
+   * @param fileInfo input file/dir info
+   */
+  @CanIgnoreReturnValue
+  public Files add(String tag, FileInfo fileInfo) throws MobileHarnessException {
     try {
-      checkFileOrDirIfLocal(fileOrDirPath);
+      checkFileOrDirIfLocal(fileInfo.path());
     } catch (MobileHarnessException e) {
       throw new MobileHarnessException(
           BasicErrorId.JOB_OR_TEST_FILE_ADD_NONEXIST_FILE,
-          String.format("Failed to add non-existing file [%s]%s", tag, fileOrDirPath),
+          String.format("Failed to add non-existing file [%s]%s", tag, fileInfo.path()),
           e);
     }
     synchronized (this) {
       Map<String, FileInfo> tagFileOrDirs = getTagFileOrDirs(tag);
-      if (tagFileOrDirs.containsKey(fileOrDirPath)) {
+      if (tagFileOrDirs.containsKey(fileInfo.path())) {
         logger.atInfo().log(
-            "Input file/dir [%s]%s already exist", tag, fileUtil.getFileOrDirName(fileOrDirPath));
+            "Input file/dir [%s]%s already exist", tag, fileUtil.getFileOrDirName(fileInfo.path()));
         return this;
       }
-      tagFileOrDirs.put(fileOrDirPath, FileInfo.create(fileOrDirPath, null));
+      tagFileOrDirs.put(fileInfo.path(), fileInfo);
     }
     if (timing != null) {
       timing.touch();
     }
     logger.atInfo().log(
-        "Added input file/dir [%s]%s", tag, fileUtil.getFileOrDirName(fileOrDirPath));
+        "Added input file/dir [%s]%s", tag, fileUtil.getFileOrDirName(fileInfo.path()));
     return this;
   }
 
