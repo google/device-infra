@@ -630,3 +630,20 @@ java_library(
         "@maven//:javax_inject_jsr330_api",
     ],
 )
+
+java_library(
+    name = "cros_dut_topology_decorator",
+    srcs = ["CrosDutTopologyDecorator.java"],
+    deps = [
+        ":cros_base_decorator",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/command",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:mobly_test_spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)

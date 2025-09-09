@@ -43,3 +43,12 @@ java_library(
         "@maven//:com_google_inject_guice",
     ],
 )
+
+java_library(
+    name = "cros_dut_topology_decorator_module",
+    srcs = ["CrosDutTopologyDecoratorModule.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/command",
+        "@maven//:com_google_inject_guice",
+    ],
+)
