@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.infra.ats.common;
 
 import static com.google.common.base.Ascii.toLowerCase;
+import static com.google.common.base.Enums.getIfPresent;
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableListMultimap.toImmutableListMultimap;
@@ -84,6 +85,7 @@ import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.gson.Gson;
 import com.google.inject.Provider;
 import com.google.protobuf.TextFormat.ParseException;
+import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Value;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -944,8 +946,15 @@ public class SessionRequestHandlerUtil {
         String moduleParameter = getModuleParameter(expandedModuleName).orElse(null);
 
         // Filters the module by metadata include-filter and exclude-filter.
+        ImmutableListMultimap<String, String> moduleMetadata =
+            entry.getValue().getConfigDescriptor().getMetadataMap().values().stream()
+                .flatMap(
+                    metadata ->
+                        metadata.getValueList().stream()
+                            .map(value -> Maps.immutableEntry(metadata.getKey(), value)))
+                .collect(toImmutableListMultimap(Entry::getKey, Entry::getValue));
         if (!filterModuleByConfigMetadata(
-            entry.getValue(), moduleMetadataIncludeFilters, moduleMetadataExcludeFilters)) {
+            moduleMetadata, moduleMetadataIncludeFilters, moduleMetadataExcludeFilters)) {
           continue;
         }
 
@@ -1066,6 +1075,20 @@ public class SessionRequestHandlerUtil {
                 startTimeout,
                 isSkipDeviceInfo(sessionRequestInfo, subPlan),
                 sessionRequestInfo.xtsSuiteInfo());
+
+        getSimCardTypeDimensionValue(moduleMetadata)
+            .ifPresent(
+                simCardTypeDimensionValue ->
+                    jobInfo
+                        .subDeviceSpecs()
+                        .getAllSubDevices()
+                        .forEach(
+                            subDeviceSpec ->
+                                subDeviceSpec
+                                    .deviceRequirement()
+                                    .dimensions()
+                                    .add(Name.SIM_CARD_TYPE, simCardTypeDimensionValue)));
+
         if (deviceSerialsDimensionValue != null) {
           jobInfo
               .subDeviceSpecs()
@@ -1097,17 +1120,9 @@ public class SessionRequestHandlerUtil {
    */
   @VisibleForTesting
   static boolean filterModuleByConfigMetadata(
-      Configuration config,
+      ImmutableListMultimap<String, String> moduleMetadata,
       ImmutableMultimap<String, String> includeFilters,
       ImmutableMultimap<String, String> excludeFilters) {
-    ImmutableListMultimap<String, String> moduleMetadata =
-        config.getConfigDescriptor().getMetadataMap().values().stream()
-            .flatMap(
-                metadata ->
-                    metadata.getValueList().stream()
-                        .map(value -> Maps.immutableEntry(metadata.getKey(), value)))
-            .collect(toImmutableListMultimap(Entry::getKey, Entry::getValue));
-
     if (!includeFilters.isEmpty()
         && !includeFilters.entries().stream()
             .allMatch(filter -> moduleMetadata.containsEntry(filter.getKey(), filter.getValue()))) {
@@ -1119,6 +1134,21 @@ public class SessionRequestHandlerUtil {
       return false;
     }
     return true;
+  }
+
+  /**
+   * Gets the sim card type dimension value from the module's configuration descriptor metadata.
+   *
+   * @param moduleMetadata the module metadata
+   * @return the sim card type dimension value, or empty if not found
+   */
+  @VisibleForTesting
+  static Optional<String> getSimCardTypeDimensionValue(
+      ImmutableListMultimap<String, String> moduleMetadata) {
+    return moduleMetadata.get("token").stream()
+        .filter(
+            tokenValue -> getIfPresent(Dimension.SimCardTypeValue.class, tokenValue).isPresent())
+        .findFirst();
   }
 
   private DeviceConfigurations readXtsDeviceConfigFile(Path xtsDeviceConfigFile)

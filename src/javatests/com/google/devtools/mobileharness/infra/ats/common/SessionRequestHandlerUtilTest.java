@@ -31,6 +31,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
@@ -49,8 +50,6 @@ import com.google.devtools.mobileharness.platform.android.xts.common.util.MoblyT
 import com.google.devtools.mobileharness.platform.android.xts.config.ConfigurationUtil;
 import com.google.devtools.mobileharness.platform.android.xts.config.ModuleConfigurationHelper;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
-import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.ConfigurationDescriptor;
-import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.ConfigurationDescriptorMetadata;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.ConfigurationMetadata;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Device;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper;
@@ -1332,37 +1331,21 @@ public final class SessionRequestHandlerUtilTest {
 
   @Test
   public void filterModuleByConfigMetadata_success() throws Exception {
-    Configuration config =
-        defaultConfigurationBuilder()
-            .setConfigDescriptor(
-                ConfigurationDescriptor.newBuilder()
-                    .putMetadata(
-                        "key1",
-                        ConfigurationDescriptorMetadata.newBuilder()
-                            .setKey("key1")
-                            .addValue("value1")
-                            .addValue("value2")
-                            .build())
-                    .putMetadata(
-                        "key2",
-                        ConfigurationDescriptorMetadata.newBuilder()
-                            .setKey("key2")
-                            .addValue("value3")
-                            .addValue("value4")
-                            .build()))
-            .build();
+    ImmutableListMultimap<String, String> moduleMetadata =
+        ImmutableListMultimap.of(
+            "key1", "value1", "key1", "value2", "key2", "value3", "key2", "value4");
 
     // Include filter partially matched.
     assertThat(
             SessionRequestHandlerUtil.filterModuleByConfigMetadata(
-                config,
+                moduleMetadata,
                 ImmutableMultimap.of("key1", "value1", "key1", "value2"),
                 ImmutableMultimap.of("key2", "value5")))
         .isTrue();
     // Include filter fully match.
     assertThat(
             SessionRequestHandlerUtil.filterModuleByConfigMetadata(
-                config,
+                moduleMetadata,
                 ImmutableMultimap.of(
                     "key1", "value1", "key1", "value2", "key2", "value3", "key2", "value4"),
                 ImmutableMultimap.of("key1", "value5", "key2", "value5")))
@@ -1370,28 +1353,28 @@ public final class SessionRequestHandlerUtilTest {
     // Include filter unmatched.
     assertThat(
             SessionRequestHandlerUtil.filterModuleByConfigMetadata(
-                config,
+                moduleMetadata,
                 ImmutableMultimap.of("key1", "value1", "key1", "value2", "key1", "value3"),
                 ImmutableMultimap.of()))
         .isFalse();
     // Exclude filter partially matched.
     assertThat(
             SessionRequestHandlerUtil.filterModuleByConfigMetadata(
-                config,
+                moduleMetadata,
                 ImmutableMultimap.of("key1", "value1", "key1", "value2"),
                 ImmutableMultimap.of("key2", "value3")))
         .isFalse();
     // Exclude filter fully match.
     assertThat(
             SessionRequestHandlerUtil.filterModuleByConfigMetadata(
-                config,
+                moduleMetadata,
                 ImmutableMultimap.of("key1", "value1", "key1", "value2"),
                 ImmutableMultimap.of("key2", "value3", "key2", "value4")))
         .isFalse();
     // Exclude filter unmatched.
     assertThat(
             SessionRequestHandlerUtil.filterModuleByConfigMetadata(
-                config, ImmutableMultimap.of(), ImmutableMultimap.of("key2", "value5")))
+                moduleMetadata, ImmutableMultimap.of(), ImmutableMultimap.of("key2", "value5")))
         .isTrue();
   }
 
@@ -1484,5 +1467,35 @@ public final class SessionRequestHandlerUtilTest {
                 .build());
 
     assertThat(sessionRequestHandlerUtil.getHostIp("device_id_1")).isEmpty();
+  }
+
+  @Test
+  public void getSimCardTypeDimensionValue_noTokenKey_returnsEmpty() {
+    ImmutableListMultimap<String, String> moduleMetadata =
+        ImmutableListMultimap.of("other_key", "value");
+    assertThat(SessionRequestHandlerUtil.getSimCardTypeDimensionValue(moduleMetadata)).isEmpty();
+  }
+
+  @Test
+  public void getSimCardTypeDimensionValue_tokenKeyWithNoMatchingValue_returnsEmpty() {
+    ImmutableListMultimap<String, String> moduleMetadata =
+        ImmutableListMultimap.of("token", "NOT_A_SIM_TYPE");
+    assertThat(SessionRequestHandlerUtil.getSimCardTypeDimensionValue(moduleMetadata)).isEmpty();
+  }
+
+  @Test
+  public void getSimCardTypeDimensionValue_tokenKeyWithMatchingValue_returnsValue() {
+    ImmutableListMultimap<String, String> moduleMetadata =
+        ImmutableListMultimap.of("token", "SIM_CARD", "token", "OTHER_VALUE");
+    assertThat(SessionRequestHandlerUtil.getSimCardTypeDimensionValue(moduleMetadata))
+        .hasValue("SIM_CARD");
+  }
+
+  @Test
+  public void getSimCardTypeDimensionValue_tokenKeyWithMultipleMatchingValues_returnsFirst() {
+    ImmutableListMultimap<String, String> moduleMetadata =
+        ImmutableListMultimap.of("token", "UICC_SIM_CARD", "token", "SIM_CARD");
+    assertThat(SessionRequestHandlerUtil.getSimCardTypeDimensionValue(moduleMetadata))
+        .hasValue("UICC_SIM_CARD");
   }
 }
