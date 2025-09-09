@@ -118,6 +118,12 @@ java_library(
         "//src/devtools/mobileharness/infra/controller/test/util/xtsdownloader/configs:cts_list",
         "//src/devtools/mobileharness/infra/controller/test/util/xtsdownloader/configs:mcts_list",
     ],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/remote:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats:__subpackages__",
+    ],
     deps = [
         ":device_details",
         ":device_details_retriever",
@@ -129,6 +135,7 @@ java_library(
         "//src/devtools/mobileharness/api/model/proto:job_java_proto",
         "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
         "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",
+        "//src/devtools/mobileharness/infra/ats/server/proto:service_java_proto",
         "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",
         "//src/devtools/mobileharness/platform/android/xts/proto:device_configuration_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",

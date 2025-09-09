@@ -1714,6 +1714,14 @@ public class Flags {
       converter = Flag.StringConverter.class)
   public Flag<String> perfettoScriptPath = perfettoScriptPathDefault;
 
+  private static final Flag<String> persistentCacheDirDefault = Flag.value(null);
+
+  @com.beust.jcommander.Parameter(
+      names = "--persistent_cache_dir",
+      description = "Root directory for persistent cache.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> persistentCacheDir = persistentCacheDirDefault;
+
   private static final Flag<Boolean> prepareDeviceAfterTestDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(
