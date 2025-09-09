@@ -39,6 +39,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptions
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.api.model.proto.Device.PostTestDeviceOp;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto;
+import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.client.api.mode.remote.util.LabRpcProtoConverter;
 import com.google.devtools.mobileharness.infra.client.api.proto.ResourceFederationProto.ResourceFederation;
 import com.google.devtools.mobileharness.infra.client.api.util.longevity.LongevityTestHelper;
@@ -682,7 +683,8 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
   /** Returns whether the file should be resolved in the client. */
   private static boolean resolveInClient(String filePath) {
     if (Flags.instance().enableClientFileTransfer.getNonNull()) {
-      return Stream.of(RemoteFileType.ATS_FILE_SERVER.prefix()).noneMatch(filePath::startsWith);
+      return Stream.of(RemoteFileType.ATS_FILE_SERVER.prefix()).noneMatch(filePath::startsWith)
+          || filePath.equals(SessionRequestHandlerUtil.PARAM_ANDROID_XTS_ZIP_FILE_PATH);
     } else {
       return false;
     }

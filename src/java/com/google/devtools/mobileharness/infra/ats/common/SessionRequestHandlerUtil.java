@@ -56,6 +56,7 @@ import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser;
 import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser.TestPlanFilter;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.ShardingMode;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfoFactory;
+import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestResource;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.SessionGenDir;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.SessionTempDir;
@@ -159,6 +160,15 @@ public class SessionRequestHandlerUtil {
    */
   public static final String PARAM_CHECK_INSTALLED_GMS_CORE_VERSION =
       "check_installed_gms_core_version";
+
+  public static final String PARAM_ANDROID_XTS_ZIP_FILE_PATH = "android_xts_zip_file_path";
+
+  public static final String PARAM_ANDROID_XTS_ZIP_CHECKSUM = "android_xts_zip_checksum";
+
+  public static final String PARAM_ANDROID_XTS_ZIP_CHECKSUM_ALGORITHM =
+      "android_xts_zip_checksum_algorithm";
+
+  public static final String PARAM_ANDROID_XTS_ZIP_SIZE = "android_xts_zip_size";
 
   private static final Pattern MODULE_PARAMETER_PATTERN =
       Pattern.compile(".*\\[(?<moduleParam>.*)]$");
@@ -448,6 +458,28 @@ public class SessionRequestHandlerUtil {
     addSessionClientIdToJobInfo(jobInfo, sessionRequestInfo);
     jobInfo.properties().add(Job.IS_XTS_TF_JOB, "true");
     injectCommonParams(jobInfo);
+    TestResource androidXtsZipTestResource =
+        sessionRequestInfo.androidXtsZipTestResource().orElse(null);
+    if (androidXtsZipTestResource != null) {
+      jobInfo
+          .params()
+          .add(
+              PARAM_ANDROID_XTS_ZIP_FILE_PATH,
+              androidXtsZipTestResource.getParams().getOriginalDownloadUrl());
+      jobInfo
+          .params()
+          .add(PARAM_ANDROID_XTS_ZIP_CHECKSUM, androidXtsZipTestResource.getParams().getChecksum());
+      jobInfo
+          .params()
+          .add(
+              PARAM_ANDROID_XTS_ZIP_CHECKSUM_ALGORITHM,
+              androidXtsZipTestResource.getParams().getChecksumAlgorithm());
+      jobInfo
+          .params()
+          .add(
+              PARAM_ANDROID_XTS_ZIP_SIZE,
+              Long.toString(androidXtsZipTestResource.getParams().getSize()));
+    }
     tradefedJobInfo
         .extraJobProperties()
         .forEach((key, value) -> jobInfo.properties().add(key, value));

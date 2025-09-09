@@ -24,7 +24,9 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.file.resolver.cache.LocalCache;
+import com.google.devtools.mobileharness.shared.file.resolver.cache.PersistentResolvedFileCache;
 import com.google.devtools.mobileharness.shared.file.resolver.cache.ResolvedFileCache.CachedResolveResult;
+import com.google.devtools.mobileharness.shared.util.cache.persistent.CacheBuilder;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import java.time.Duration;
@@ -35,6 +37,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
 /** The file resolver to cache the resolved files. */
@@ -46,6 +49,7 @@ public class CacheFileResolver extends AbstractFileResolver {
   private static final Duration FAIL_CACHE_EXPIRATION_TIME = Duration.ofMinutes(3);
 
   private final LocalCache localCache;
+  @Nullable private final PersistentResolvedFileCache persistentResolvedFileCache;
   private final LocalFileUtil localFileUtil;
   private final InstantSource instantSource;
 
@@ -57,6 +61,13 @@ public class CacheFileResolver extends AbstractFileResolver {
     this.localFileUtil = localFileUtil;
     this.instantSource = instantSource;
     this.localCache = new LocalCache(executorService, instantSource, (key) -> super.resolve(key));
+    CacheBuilder cacheBuilder = CacheBuilder.getInstance();
+    if (cacheBuilder != null) {
+      this.persistentResolvedFileCache =
+          new PersistentResolvedFileCache(cacheBuilder, (key) -> super.resolve(key));
+    } else {
+      this.persistentResolvedFileCache = null;
+    }
   }
 
   @Override
@@ -81,6 +92,11 @@ public class CacheFileResolver extends AbstractFileResolver {
 
   private Optional<ResolveResult> internalResolve(ResolveSource resolveSource)
       throws MobileHarnessException, InterruptedException {
+    if (persistentResolvedFileCache != null
+        && persistentResolvedFileCache.isCachedResolveResultValid(resolveSource)) {
+      logger.atInfo().log("Using persistent cache for %s", resolveSource);
+      return persistentResolvedFileCache.getCachedResolveResult(resolveSource);
+    }
     CachedResolveResult cachedResult = localCache.getCachedResolveResult(resolveSource);
     if (!cachedResult.isCachedData()) {
       try {

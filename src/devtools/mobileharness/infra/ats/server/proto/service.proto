@@ -79,6 +79,11 @@ message TestResource {
 
 message TestResourceParameters {
   repeated string decompress_files = 1;
+  optional string original_download_url = 2;
+  optional bool download_from_worker = 3;
+  optional string checksum = 4;
+  optional string checksum_algorithm = 5;
+  optional int64 size = 6;
 }
 
 message TestEnvironment {

@@ -17,39 +17,28 @@ load("@rules_java//java:defs.bzl", "java_library")
 
 package(
     default_applicable_licenses = ["//:license"],
-    default_visibility = [
-        "//src/java/com/google/devtools/mobileharness/shared/file/resolver:__subpackages__",
-    ],
+    default_visibility = ["//:deviceinfra_all_pkg"],
 )
 
 java_library(
-    name = "cache",
+    name = "persistent",
     srcs = [
-        "LocalCache.java",
-        "ResolvedFileCache.java",
+        "CacheBuilder.java",
+        "CacheKey.java",
+        "CacheLoader.java",
+        "ChecksumHelper.java",
+        "PersistentCache.java",
     ],
     deps = [
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/devtools/mobileharness/shared/file/resolver:file_resolver",
-        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
-        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:timestamped_future",
-        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "@maven//:com_google_errorprone_error_prone_annotations",
-        "@maven//:com_google_guava_guava",
-    ],
-)
-
-java_library(
-    name = "persistent_cache",
-    srcs = [
-        "PersistentResolvedFileCache.java",
-    ],
-    deps = [
-        ":cache",
         "//src/devtools/mobileharness/shared/util/cache/persistent/proto:metadata_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/devtools/mobileharness/shared/file/resolver:file_resolver",
-        "//src/java/com/google/devtools/mobileharness/shared/util/cache/persistent",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_extension_registry",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
+        "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
     ],
 )

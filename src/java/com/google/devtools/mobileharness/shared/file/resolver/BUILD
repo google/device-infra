@@ -66,6 +66,8 @@ java_library(
         ":file_resolver",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/file/resolver/cache",
+        "//src/java/com/google/devtools/mobileharness/shared/file/resolver/cache:persistent_cache",
+        "//src/java/com/google/devtools/mobileharness/shared/util/cache/persistent",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/path",

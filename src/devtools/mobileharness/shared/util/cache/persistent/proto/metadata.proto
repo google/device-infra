@@ -1,0 +1,53 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package mobileharness.shared.util.cache.persistent;
+
+import "google/protobuf/timestamp.proto";
+
+option java_package = "com.google.devtools.mobileharness.shared.util.cache.persistent.proto";
+option java_outer_classname = "MetadataProto";
+
+enum StorageApi {
+  API_UNSPECIFIED = 0;
+  GCS = 1;
+}
+
+enum ChecksumAlgorithm {
+  CHECKSUM_ALGORITHM_UNSPECIFIED = 0;
+  CRC32C = 1;
+  MD5 = 2;
+}
+
+message Metadata {
+  // The checksum of the data. Required.
+  string checksum = 1;
+  // The checksum algorithm of the data. Required.
+  ChecksumAlgorithm checksum_algorithm = 2;
+  // The storage API of the data. Required.
+  // Each storage API may have its own checksum algorithm and checksum variant.
+  StorageApi storage_api = 3;
+
+  // The timestamp of the creation time of the data. Required.
+  google.protobuf.Timestamp creation_time = 4;
+
+  // The symlinks of the data. Should at least contain one symlink.
+  // Keep this field as the last field so that the update can be done by
+  // appending new symlinks to the end of the list.
+  repeated string symlinks = 10;
+}

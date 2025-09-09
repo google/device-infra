@@ -514,13 +514,15 @@ final class NewMultiCommandRequestHandler {
       // TODO: need to handle non device serial case.
     }
     String androidXtsZipPath = "";
+    TestResource androidXtsZipTestResource = null;
     ImmutableList.Builder<TestResource> fileTestResources = ImmutableList.builder();
     for (TestResource testResource : request.getTestResourcesList()) {
       URL testResourceUrl = getTestResourceUrl(testResource);
 
       if (testResourceUrl.getProtocol().equals("file")) {
         if (ANDROID_XTS_ZIP_FILENAME_REGEX.matcher(testResource.getName()).matches()) {
-          androidXtsZipPath = testResourceUrl.getPath();
+          androidXtsZipPath = testResource.getParams().getOriginalDownloadUrl();
+          androidXtsZipTestResource = testResource;
         } else {
           fileTestResources.add(testResource);
         }
@@ -558,7 +560,10 @@ final class NewMultiCommandRequestHandler {
     sessionRequestInfoBuilder.setCommandLineArgs(commandInfo.getCommandLine());
     sessionRequestInfoBuilder.setXtsType(xtsType);
     sessionRequestInfoBuilder.setXtsRootDir(xtsRootDir);
-    sessionRequestInfoBuilder.setAndroidXtsZip(replacePathForRemoteRunner(androidXtsZipPath));
+    sessionRequestInfoBuilder.setAndroidXtsZip(androidXtsZipPath);
+    if (androidXtsZipTestResource != null) {
+      sessionRequestInfoBuilder.setAndroidXtsZipTestResource(androidXtsZipTestResource);
+    }
     sessionRequestInfoBuilder.setDeviceSerials(deviceSerials);
     sessionRequestInfoBuilder.setEnvVars(
         ImmutableMap.copyOf(request.getTestEnvironment().getEnvVarsMap()));
