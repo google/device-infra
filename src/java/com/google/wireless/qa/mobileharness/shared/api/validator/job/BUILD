@@ -269,6 +269,7 @@ java_library(
     deps = [
         ":job_validator",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:mobly_test_spec",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "@maven//:com_google_errorprone_error_prone_annotations",
