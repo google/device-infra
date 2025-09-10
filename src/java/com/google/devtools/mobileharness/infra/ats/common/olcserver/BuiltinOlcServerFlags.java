@@ -31,6 +31,7 @@ public class BuiltinOlcServerFlags {
           "--adb_max_no_device_detection_rounds=1200",
           "--android_device_daemon=false",
           "--cache_installed_apks=false",
+          "--check_android_device_sim_card_type=true",
           "--check_device_interval=30d",
           "--clear_android_device_multi_users=false",
           "--detect_device_interval_sec=2",
