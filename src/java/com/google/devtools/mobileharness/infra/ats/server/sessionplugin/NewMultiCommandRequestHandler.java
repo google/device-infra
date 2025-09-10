@@ -197,10 +197,7 @@ final class NewMultiCommandRequestHandler {
         logger.atWarning().withCause(e).log(
             "Failed to create tradefed jobs for command [%s]. Interrupt the session [%s].",
             commandInfo.getCommandLine(), sessionInfo.getSessionId());
-        ErrorReason errorReason =
-            INVALID_RESOURCE_ERROR_IDS.contains(e.getErrorId())
-                ? ErrorReason.INVALID_RESOURCE
-                : ErrorReason.INVALID_REQUEST;
+        ErrorReason errorReason = getErrorReason(e);
         return CreateJobsResult.of(
             RequestState.ERROR,
             errorReason,
@@ -240,10 +237,7 @@ final class NewMultiCommandRequestHandler {
         logger.atWarning().withCause(e).log(
             "Failed to create non-tradefed jobs for command [%s]. Interrupt the session [%s].",
             commandInfo.getCommandLine(), sessionInfo.getSessionId());
-        ErrorReason errorReason =
-            INVALID_RESOURCE_ERROR_IDS.contains(e.getErrorId())
-                ? ErrorReason.INVALID_RESOURCE
-                : ErrorReason.INVALID_REQUEST;
+        ErrorReason errorReason = getErrorReason(e);
         return CreateJobsResult.of(
             RequestState.ERROR,
             errorReason,
@@ -318,7 +312,8 @@ final class NewMultiCommandRequestHandler {
       } catch (MobileHarnessException e) {
         commandDetail.ifPresent(
             builder -> {
-              builder.setState(CommandState.ERROR);
+              ErrorReason errorReason = getErrorReason(e);
+              setCommandError(builder, errorReason, e);
               commandDetailsBuilder.put(commandId, builder.build());
             });
         throw e;
@@ -379,7 +374,8 @@ final class NewMultiCommandRequestHandler {
     try {
       sessionRequestInfo = getSessionRequestInfo(request, commandInfo, sessionInfo);
     } catch (MobileHarnessException e) {
-      commandDetailBuilder.setState(CommandState.ERROR);
+      ErrorReason errorReason = getErrorReason(e);
+      setCommandError(commandDetailBuilder, errorReason, e);
       commandDetailsBuilder.put(commandId, commandDetailBuilder.build());
       throw e;
     }
@@ -399,7 +395,8 @@ final class NewMultiCommandRequestHandler {
         commandDetailsBuilder.put(commandId, commandDetailBuilder.build());
         return ImmutableList.of();
       }
-      commandDetailBuilder.setState(CommandState.ERROR);
+      ErrorReason errorReason = getErrorReason(e);
+      setCommandError(commandDetailBuilder, errorReason, e);
       commandDetailsBuilder.put(commandId, commandDetailBuilder.build());
       throw e;
     }
@@ -407,7 +404,8 @@ final class NewMultiCommandRequestHandler {
       try {
         insertAdditionalTestResource(jobInfo, request);
       } catch (MobileHarnessException e) {
-        commandDetailBuilder.setState(CommandState.ERROR);
+        ErrorReason errorReason = getErrorReason(e);
+        setCommandError(commandDetailBuilder, errorReason, e);
         commandDetailsBuilder.put(commandId, commandDetailBuilder.build());
         throw e;
       }
@@ -790,17 +788,19 @@ final class NewMultiCommandRequestHandler {
         commandDetailMapBuilder.buildKeepingLast();
     ErrorReason errorReason = requestDetail.getErrorReason();
     String errorMessage = requestDetail.getErrorMessage();
-    Optional<CommandDetail> commandDetailWithError =
-        commandDetailsMap.values().stream()
-            .filter(commandDetail -> commandDetail.getState() == CommandState.ERROR)
-            .findFirst();
-    if (commandDetailWithError.isPresent()
-        && commandDetailWithError.get().getErrorReason() != ErrorReason.UNKNOWN_REASON) {
-      errorReason = commandDetailWithError.get().getErrorReason();
-      errorMessage =
-          errorReason == ErrorReason.TRADEFED_INVOCATION_ERROR
-              ? REQUEST_ERROR_MESSAGE_FOR_TRADEFED_INVOCATION_ERROR
-              : commandDetailWithError.get().getErrorMessage();
+    if (errorReason == ErrorReason.UNKNOWN_REASON) {
+      Optional<CommandDetail> commandDetailWithError =
+          commandDetailsMap.values().stream()
+              .filter(commandDetail -> commandDetail.getState() == CommandState.ERROR)
+              .findFirst();
+      if (commandDetailWithError.isPresent()
+          && commandDetailWithError.get().getErrorReason() != ErrorReason.UNKNOWN_REASON) {
+        errorReason = commandDetailWithError.get().getErrorReason();
+        errorMessage =
+            errorReason == ErrorReason.TRADEFED_INVOCATION_ERROR
+                ? REQUEST_ERROR_MESSAGE_FOR_TRADEFED_INVOCATION_ERROR
+                : commandDetailWithError.get().getErrorMessage();
+      }
     }
 
     return HandleResultProcessingResult.of(
@@ -952,6 +952,12 @@ final class NewMultiCommandRequestHandler {
             }
           }
         });
+  }
+
+  private ErrorReason getErrorReason(MobileHarnessException e) {
+    return INVALID_RESOURCE_ERROR_IDS.contains(e.getErrorId())
+        ? ErrorReason.INVALID_RESOURCE
+        : ErrorReason.INVALID_REQUEST;
   }
 
   private URL getTestResourceUrl(TestResource testResource) throws MobileHarnessException {

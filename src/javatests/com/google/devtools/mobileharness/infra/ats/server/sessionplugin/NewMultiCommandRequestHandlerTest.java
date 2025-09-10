@@ -655,6 +655,38 @@ public final class NewMultiCommandRequestHandlerTest {
   }
 
   @Test
+  public void createTradefedJobs_jobCreatorThrowsInvalidResourceError() throws Exception {
+    when(clock.millis()).thenReturn(1000L).thenReturn(2000L).thenReturn(3000L);
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+    when(xtsJobCreator.createXtsTradefedTestJob(any()))
+        .thenThrow(
+            new MobileHarnessException(
+                BasicErrorId.LOCAL_FILE_UNZIP_ERROR, "Failed to unzip file"));
+
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+
+    assertThat(createJobsResult.state()).isEqualTo(RequestState.ERROR);
+    assertThat(createJobsResult.errorReason()).hasValue(ErrorReason.INVALID_RESOURCE);
+  }
+
+  @Test
+  public void createTradefedJobs_jobCreatorThrowsInvalidRequestError() throws Exception {
+    when(clock.millis()).thenReturn(1000L).thenReturn(2000L).thenReturn(3000L);
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+    when(xtsJobCreator.createXtsTradefedTestJob(any()))
+        .thenThrow(
+            new MobileHarnessException(
+                InfraErrorId.ATS_SERVER_INVALID_REQUEST_ERROR, "Invalid request"));
+
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+
+    assertThat(createJobsResult.state()).isEqualTo(RequestState.ERROR);
+    assertThat(createJobsResult.errorReason()).hasValue(ErrorReason.INVALID_REQUEST);
+  }
+
+  @Test
   public void createTradefedJobs_mountOrUnzipAndroidXtsZipFailed_errorWithInvalidResourceError()
       throws Exception {
     when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
@@ -1092,6 +1124,100 @@ public final class NewMultiCommandRequestHandlerTest {
     assertThat(handleResultProcessingResult.errorMessage())
         .hasValue(
             NewMultiCommandRequestHandler.REQUEST_ERROR_MESSAGE_FOR_TRADEFED_INVOCATION_ERROR);
+  }
+
+  @Test
+  public void handleResultProcessing_commandError_updateRequestError() throws Exception {
+    Result result =
+        Result.newBuilder()
+            .setSummary(Summary.newBuilder().setPassed(0).setFailed(0).build())
+            .build();
+    mockProcessResult(result);
+
+    // Mock the content of the tradefed invocation runtime info log file.
+    String tradefedInvocationErrorMessage = "example error message";
+    when(xtsTradefedRuntimeInfoFileUtil.readInfo(any(), any()))
+        .thenReturn(
+            Optional.of(
+                new XtsTradefedRuntimeInfoFileDetail(
+                    new XtsTradefedRuntimeInfo(
+                        ImmutableList.of(
+                            new TradefedInvocation(
+                                /* isRunning= */ false,
+                                ImmutableList.of(DEVICE_ID_1, DEVICE_ID_2),
+                                "failed",
+                                tradefedInvocationErrorMessage)),
+                        /* timestamp= */ Instant.now()),
+                    /* lastModifiedTime= */ Instant.now())));
+
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+
+    // Add TF job.
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+    assertThat(createJobsResult.jobInfos()).containsExactly(jobInfo);
+
+    RequestDetail.Builder requestDetail =
+        RequestDetail.newBuilder()
+            .setOriginalRequest(request)
+            .putAllCommandDetails(createJobsResult.commandDetails())
+            .setErrorReason(ErrorReason.UNKNOWN_REASON); // Request error reason is unknown
+    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
+    HandleResultProcessingResult handleResultProcessingResult =
+        newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail);
+
+    assertThat(handleResultProcessingResult.errorReason())
+        .hasValue(ErrorReason.TRADEFED_INVOCATION_ERROR);
+    assertThat(handleResultProcessingResult.errorMessage())
+        .hasValue(
+            NewMultiCommandRequestHandler.REQUEST_ERROR_MESSAGE_FOR_TRADEFED_INVOCATION_ERROR);
+  }
+
+  @Test
+  public void handleResultProcessing_requestErrorExist_keepRequestError() throws Exception {
+    Result result =
+        Result.newBuilder()
+            .setSummary(Summary.newBuilder().setPassed(0).setFailed(0).build())
+            .build();
+    mockProcessResult(result);
+
+    // Mock the content of the tradefed invocation runtime info log file.
+    String tradefedInvocationErrorMessage = "example error message";
+    when(xtsTradefedRuntimeInfoFileUtil.readInfo(any(), any()))
+        .thenReturn(
+            Optional.of(
+                new XtsTradefedRuntimeInfoFileDetail(
+                    new XtsTradefedRuntimeInfo(
+                        ImmutableList.of(
+                            new TradefedInvocation(
+                                /* isRunning= */ false,
+                                ImmutableList.of(DEVICE_ID_1, DEVICE_ID_2),
+                                "failed",
+                                tradefedInvocationErrorMessage)),
+                        /* timestamp= */ Instant.now()),
+                    /* lastModifiedTime= */ Instant.now())));
+
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+
+    // Add TF job.
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+    assertThat(createJobsResult.jobInfos()).containsExactly(jobInfo);
+
+    RequestDetail.Builder requestDetail =
+        RequestDetail.newBuilder()
+            .setOriginalRequest(request)
+            .putAllCommandDetails(createJobsResult.commandDetails())
+            .setErrorReason(ErrorReason.INVALID_REQUEST) // Request error reason exists
+            .setErrorMessage("Original request error");
+    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
+    HandleResultProcessingResult handleResultProcessingResult =
+        newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail);
+
+    assertThat(handleResultProcessingResult.errorReason()).hasValue(ErrorReason.INVALID_REQUEST);
+    assertThat(handleResultProcessingResult.errorMessage()).hasValue("Original request error");
   }
 
   @Test
