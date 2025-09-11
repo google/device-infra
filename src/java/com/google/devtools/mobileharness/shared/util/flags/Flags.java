@@ -1197,6 +1197,16 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableZombieFileClean = enableZombieFileCleanDefault;
 
+  private static final Flag<Boolean> enforceFlashSafetyChecksDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enforce_flash_safety_checks",
+      description =
+          "Whether to enable flash safety checks, which disables flash support when devices are in"
+              + " risky status.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enforceFlashSafetyChecks = enforceFlashSafetyChecksDefault;
+
   private static final Flag<Boolean> enforceSafeDischargeDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(

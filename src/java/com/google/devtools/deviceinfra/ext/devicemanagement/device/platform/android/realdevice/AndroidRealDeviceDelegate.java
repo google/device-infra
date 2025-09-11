@@ -147,7 +147,7 @@ public abstract class AndroidRealDeviceDelegate {
   private final Clock clock;
 
   private final AndroidAdbInternalUtil androidAdbInternalUtil;
-  private final AndroidAdbUtil androidAdbUtil;
+  protected final AndroidAdbUtil androidAdbUtil;
   private final AndroidProcessUtil androidProcessUtil;
   private final AndroidSystemSettingUtil systemSettingUtil;
   private final AndroidFileUtil androidFileUtil;
@@ -162,7 +162,7 @@ public abstract class AndroidRealDeviceDelegate {
   private final ApkInstaller apkInstaller;
   private final SystemStateManager systemStateManager;
   private final DeviceDaemonHelper deviceDaemonHelper;
-  private final Fastboot fastboot;
+  protected final Fastboot fastboot;
   private final LocalFileUtil fileUtil;
   private final AndroidDeviceHelper androidDeviceHelper;
   private final MtaasToolsInstantiator mtaasToolsInstantiator;
@@ -265,6 +265,10 @@ public abstract class AndroidRealDeviceDelegate {
 
   /** Extra things for device set up in the {@link #setUp()} */
   protected abstract void extrasInSetUp() throws MobileHarnessException, InterruptedException;
+
+  @VisibleForTesting
+  protected abstract void enforceFlashSafetyChecksIfNeeded()
+      throws MobileHarnessException, InterruptedException;
 
   private void setUpFastbootModeDevice() throws MobileHarnessException, InterruptedException {
     logger.atInfo().log("Setting up fastboot mode device for device %s", deviceId);
@@ -1063,6 +1067,7 @@ public abstract class AndroidRealDeviceDelegate {
     startActivityController();
 
     enforceSafeDischargeLevelIfNeeded();
+    enforceFlashSafetyChecksIfNeeded();
 
     isDimensionChanged |= updateCheckinGroupStatus();
 

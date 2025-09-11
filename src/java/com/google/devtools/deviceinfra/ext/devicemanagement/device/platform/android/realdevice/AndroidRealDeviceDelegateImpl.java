@@ -316,4 +316,10 @@ public class AndroidRealDeviceDelegateImpl extends AndroidRealDeviceDelegate {
       throws MobileHarnessException, InterruptedException {
     // Do nothing by default
   }
+
+  @Override
+  protected void enforceFlashSafetyChecksIfNeeded()
+      throws MobileHarnessException, InterruptedException {
+    // Do nothing by default
+  }
 }
