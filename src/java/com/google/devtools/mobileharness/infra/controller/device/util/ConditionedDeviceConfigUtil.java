@@ -33,7 +33,7 @@ import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
 /** Utils related to conditioned device config. */
-final class ConditionedDeviceConfigUtil {
+public final class ConditionedDeviceConfigUtil {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 

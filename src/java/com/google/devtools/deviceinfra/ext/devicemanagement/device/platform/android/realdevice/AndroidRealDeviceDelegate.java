@@ -40,6 +40,7 @@ import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.a
 import com.google.devtools.deviceinfra.platform.android.sdk.fastboot.Enums.FastbootProperty;
 import com.google.devtools.deviceinfra.platform.android.sdk.fastboot.Fastboot;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.WifiConfig;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.ConditionedDeviceConfigProto.ConditionedDeviceConfigs;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -48,6 +49,7 @@ import com.google.devtools.mobileharness.api.model.proto.Device.PostTestDeviceOp
 import com.google.devtools.mobileharness.api.testrunner.device.cache.DeviceCache;
 import com.google.devtools.mobileharness.infra.container.sandbox.device.DeviceSandboxController;
 import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
+import com.google.devtools.mobileharness.infra.controller.device.util.ConditionedDeviceConfigUtil;
 import com.google.devtools.mobileharness.platform.android.app.devicedaemon.DeviceDaemonApkInfoProvider;
 import com.google.devtools.mobileharness.platform.android.app.devicedaemon.DeviceDaemonHelper;
 import com.google.devtools.mobileharness.platform.android.app.mtaastools.MtaasToolsInstantiator;
@@ -492,6 +494,7 @@ public abstract class AndroidRealDeviceDelegate {
     addRealDeviceFullStackDimensions();
     startActivityController();
     extraSettingsForFullStackDevice();
+    execBeforeFinishSetupAdbCommands();
     logger.atInfo().log("Device %s is ready", deviceId);
   }
 
@@ -830,6 +833,22 @@ public abstract class AndroidRealDeviceDelegate {
         && !features.contains(AndroidRealDeviceConstants.FEATURE_AUTOMOTIVE)) {
       logger.atInfo().log("Disable device %s screen lock", deviceId);
       systemSettingUtil.disableScreenLock(deviceId, sdkVersion);
+    }
+  }
+
+  private void execBeforeFinishSetupAdbCommands() {
+    Optional<ConditionedDeviceConfigs> conditionedDeviceConfigsOpt =
+        ConditionedDeviceConfigUtil.getConditionedDeviceConfigsFromDimensions(device);
+    if (conditionedDeviceConfigsOpt.isEmpty()) {
+      return;
+    }
+
+    ImmutableList<String> adbCommands =
+        ConditionedDeviceConfigUtil.getBeforeFinishSetupAdbCommandsByDevice(
+            conditionedDeviceConfigsOpt.get(), device);
+    for (String adbCommand : adbCommands) {
+      // TODO: b/430037981 - run the adb command for real through some util.
+      logger.atInfo().log("Dry-run: command %s on device %s", adbCommand, deviceId);
     }
   }
 

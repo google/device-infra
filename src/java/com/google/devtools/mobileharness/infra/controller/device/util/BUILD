@@ -71,6 +71,7 @@ java_library(
     name = "conditioned_device_config_util",
     srcs = ["ConditionedDeviceConfigUtil.java"],
     visibility = [
+        "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android/realdevice:__pkg__",
     ],
     deps = [
         "//src/devtools/mobileharness/api/deviceconfig/proto:conditioned_device_config_java_proto",
