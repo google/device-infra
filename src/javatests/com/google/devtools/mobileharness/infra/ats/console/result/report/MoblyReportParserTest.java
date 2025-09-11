@@ -20,6 +20,7 @@ import static com.google.common.truth.Truth.assertThat;
 
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Reason;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.StackTrace;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Summary;
@@ -50,9 +51,13 @@ public final class MoblyReportParserTest {
       TestRunfilesUtil.getRunfilesLocation(
           "result/report/testdata/mobly/pass/build_attrs.textproto");
 
-  private static final String MODULE_RESULT_FILE =
+  private static final String MODULE_RESULT_FILE_PASS =
       TestRunfilesUtil.getRunfilesLocation(
           "result/report/testdata/mobly/pass/ats_module_run_result.textproto");
+
+  private static final String MODULE_RESULT_FILE_FAIL =
+      TestRunfilesUtil.getRunfilesLocation(
+          "result/report/testdata/mobly/fail/ats_module_run_result.textproto");
 
   private static final String DEVICE_BUILD_FINGERPRINT =
       "google/bramble/bramble:UpsideDownCake/UP1A.220722.002/8859461:userdebug/dev-keys";
@@ -76,7 +81,7 @@ public final class MoblyReportParserTest {
                 Optional.of(Path.of(RESULT_ATTR_FILE)),
                 Optional.of(DEVICE_BUILD_FINGERPRINT),
                 Optional.of(Path.of(BUILD_ATTR_FILE)),
-                Optional.of(Path.of(MODULE_RESULT_FILE))));
+                Optional.of(Path.of(MODULE_RESULT_FILE_PASS))));
 
     assertThat(res).isPresent();
 
@@ -138,6 +143,55 @@ public final class MoblyReportParserTest {
                             ReportProto.Test.newBuilder()
                                 .setResult("fail")
                                 .setName("test_hello_world2_2")))
+                .build());
+  }
+
+  /**
+   * In the case where there's any MobileHarness infra failure (e.g. device allocation failure), the
+   * Mobly module itself won't get to run, the "module run result" file will be the only result file
+   * available, missing all other Mobly module generated result files.
+   */
+  @Test
+  public void parseMoblyTestResult_withOnlyModuleRunResultFile() throws Exception {
+    Optional<Result> res =
+        moblyReportParser.parseMoblyTestResult(
+            MoblyReportInfo.of(
+                "mobly-package-name",
+                "module-abi",
+                "module-parameter",
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.of(Path.of(MODULE_RESULT_FILE_FAIL))));
+
+    assertThat(res).isPresent();
+
+    Result report = res.get();
+    assertThat(report.getSummary())
+        .isEqualTo(
+            Summary.newBuilder()
+                .setPassed(0)
+                .setFailed(0)
+                .setModulesDone(0)
+                .setModulesTotal(1)
+                .build());
+
+    assertThat(report.getModuleInfoList()).hasSize(1);
+    assertThat(report.getModuleInfo(0))
+        .isEqualTo(
+            Module.newBuilder()
+                .setName("mobly-package-name[module-parameter]")
+                .setIsNonTfModule(true)
+                .setAbi("module-abi")
+                .setDone(false)
+                .setTotalTests(0)
+                .setPassed(0)
+                .setReason(
+                    Reason.newBuilder()
+                        .setMsg(
+                            "ERROR[cause=MobileHarnessException: Test failed to allocate"
+                                + " devices.]"))
                 .build());
   }
 }

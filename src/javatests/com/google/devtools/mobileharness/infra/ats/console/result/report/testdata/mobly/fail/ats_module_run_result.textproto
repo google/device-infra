@@ -1,2 +1,2 @@
-result: FAIL
-cause: Empty cause.
+result: ERROR
+cause: "ERROR[cause=MobileHarnessException: Test failed to allocate devices.]"

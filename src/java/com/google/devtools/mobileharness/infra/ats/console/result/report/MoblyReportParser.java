@@ -204,7 +204,14 @@ public class MoblyReportParser {
       if (moduleRunResult.getResult().equals(TestResult.ERROR)
           || moduleRunResult.getResult().equals(TestResult.FAIL)) {
         Module module =
-            moduleBuilder.setReason(Reason.newBuilder().setMsg(moduleRunResult.getCause())).build();
+            moduleBuilder
+                // We don't have the total tests number and we're setting it as 0 so the report html
+                // doesn't show this field as empty.
+                .setTotalTests(0)
+                .setPassed(0)
+                .setDone(false)
+                .setReason(Reason.newBuilder().setMsg(moduleRunResult.getCause()))
+                .build();
         resultBuilder
             .setSummary(
                 Summary.newBuilder().setPassed(0).setFailed(0).setModulesDone(0).setModulesTotal(1))
