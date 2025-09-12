@@ -149,7 +149,7 @@ public class FileClassifier implements FileCallback {
       if (checksum != null) {
         testFileUnit.setChecksum(checksum);
       }
-      jobManager.notifyTestFile(testFileUnit.setChecksum(checksum).build());
+      jobManager.notifyTestFile(testFileUnit.build());
     } else {
       JobLocator jobLocator = JobLocator.parseString(fileId);
       JobExecutionUnit job = jobManager.getJob(jobLocator.getId());
@@ -164,7 +164,7 @@ public class FileClassifier implements FileCallback {
       if (checksum != null) {
         jobFileUnit.setChecksum(checksum);
       }
-      jobManager.notifyJobFile(jobFileUnit.setChecksum(checksum).build());
+      jobManager.notifyJobFile(jobFileUnit.build());
     }
   }
 
