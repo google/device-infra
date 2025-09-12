@@ -32,16 +32,16 @@ import java.util.Optional;
 import javax.annotation.Nullable;
 
 /** Helper class to compute and compare checksums. */
-public final class ChecksumHelper {
+final class ChecksumHelper {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private static final BaseEncoding BASE64_ENCODING = BaseEncoding.base64();
 
-  public static ByteString decode(String encoded) {
+  static ByteString decode(String encoded) {
     return ByteString.copyFrom(BASE64_ENCODING.decode(encoded));
   }
 
-  public static String encode(ByteString checksum) {
+  static String encode(ByteString checksum) {
     return BASE64_ENCODING.encode(checksum.toByteArray());
   }
 

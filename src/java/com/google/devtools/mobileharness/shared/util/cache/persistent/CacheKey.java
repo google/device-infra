@@ -17,9 +17,11 @@
 package com.google.devtools.mobileharness.shared.util.cache.persistent;
 
 import static com.google.common.base.Ascii.toLowerCase;
+import static com.google.devtools.mobileharness.shared.util.cache.persistent.ChecksumHelper.encode;
 
 import com.google.auto.value.AutoValue;
 import com.google.devtools.mobileharness.shared.util.file.checksum.proto.ChecksumProto.Algorithm;
+import com.google.devtools.mobileharness.shared.util.file.checksum.proto.ChecksumProto.Checksum;
 import com.google.devtools.mobileharness.shared.util.file.checksum.proto.ChecksumProto.StorageApi;
 import com.google.errorprone.annotations.Immutable;
 import com.google.errorprone.annotations.ImmutableTypeParameter;
@@ -48,6 +50,16 @@ public abstract class CacheKey<@ImmutableTypeParameter K> {
       Algorithm checksumAlgorithm,
       String checksum) {
     return new AutoValue_CacheKey<>(originalKey, team, storageApi, checksumAlgorithm, checksum);
+  }
+
+  public static <@ImmutableTypeParameter K> CacheKey<K> create(
+      K originalKey, String team, Checksum checksum) {
+    return create(
+        originalKey,
+        team,
+        checksum.getStorageApi(),
+        checksum.getAlgorithm(),
+        encode(checksum.getData()));
   }
 
   Path getRelativePath() {
