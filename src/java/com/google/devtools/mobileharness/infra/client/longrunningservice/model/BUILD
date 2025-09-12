@@ -36,11 +36,11 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/message:field_mask_utils",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
-        "@com_google_protobuf//:protobuf_java",
-        "@com_google_protobuf_protobuf_java",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
+        "@maven//:com_google_protobuf_protobuf_java",
+        "@protobuf//:protobuf_java",
     ],
 )
 
@@ -57,8 +57,8 @@ java_library(
         ":session_info",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_java_proto",
         "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_text_format",
-        "@com_google_protobuf//:protobuf_java",
         "@maven//:com_google_code_findbugs_jsr305",
+        "@protobuf//:protobuf_java",
     ],
 )
 
@@ -71,9 +71,9 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_text_format",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
-        "@com_google_protobuf//:protobuf_java",
-        "@com_google_protobuf_protobuf_java",
         "@maven//:com_google_errorprone_error_prone_annotations",
+        "@maven//:com_google_protobuf_protobuf_java",
+        "@protobuf//:protobuf_java",
     ],
 )
 
@@ -89,13 +89,13 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/constant/closeable",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/event:event_bus_backend",
-        "@com_google_protobuf//:protobuf_java",
         "@maven//:com_google_guava_guava",
+        "@protobuf//:protobuf_java",
     ],
 )
 
 java_library(
     name = "with_proto",
     srcs = ["WithProto.java"],
-    deps = ["@com_google_protobuf//:protobuf_java"],
+    deps = ["@protobuf//:protobuf_java"],
 )

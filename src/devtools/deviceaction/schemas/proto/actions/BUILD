@@ -38,7 +38,7 @@ proto_library(
     deps = [
         "//src/devtools/deviceaction/schemas/proto:base_spec_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:base_spec_proto",
-        "@com_google_protobuf//:duration_proto",
+        "@protobuf//:duration_proto",
     ],
 )
 

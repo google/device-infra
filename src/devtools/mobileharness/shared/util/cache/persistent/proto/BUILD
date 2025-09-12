@@ -25,7 +25,7 @@ proto_library(
     srcs = ["metadata.proto"],
     deps = [
         "//src/devtools/mobileharness/shared/util/file/checksum/proto:checksum_proto",
-        "@com_google_protobuf//:timestamp_proto",
+        "@protobuf//:timestamp_proto",
     ],
 )
 

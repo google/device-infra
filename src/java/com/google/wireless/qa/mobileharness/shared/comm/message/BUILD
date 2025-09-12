@@ -55,8 +55,8 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/comm/message/event:__pkg__",
     ],
     deps = [
-        "@com_google_protobuf//:protobuf_java",
         "@maven//:com_google_guava_guava",
+        "@protobuf//:protobuf_java",
     ],
 )
 
@@ -91,7 +91,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/messaging/message",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
-        "@com_google_protobuf//:protobuf_java",
         "@maven//:com_google_guava_guava",
+        "@protobuf//:protobuf_java",
     ],
 )

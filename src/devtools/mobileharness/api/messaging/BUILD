@@ -13,7 +13,7 @@
 # limitations under the License.
 #
 
-load("@io_grpc_grpc_java//:java_grpc_library.bzl", "java_grpc_library")
+load("@grpc-java//:java_grpc_library.bzl", "java_grpc_library")
 
 package(
     default_applicable_licenses = ["//:license"],
@@ -27,8 +27,8 @@ proto_library(
     srcs = ["messaging.proto"],
     deps = [
         "//src/devtools/common/metrics/stability/model/proto:error_proto",
-        "@com_google_protobuf//:any_proto",
-        "@com_google_protobuf//:timestamp_proto",
+        "@protobuf//:any_proto",
+        "@protobuf//:timestamp_proto",
     ],
 )
 

@@ -29,5 +29,5 @@ java_library(
 java_library(
     name = "ansi_terminal",
     srcs = ["AnsiTerminal.java"],
-    deps = ["@com_google_protobuf//:protobuf_java"],
+    deps = ["@protobuf//:protobuf_java"],
 )

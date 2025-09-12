@@ -103,9 +103,9 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/lab:locator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/util:device",
-        "@com_google_protobuf//:protobuf_java_util",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
+        "@protobuf//:protobuf_java_util",
     ],
 )

@@ -31,7 +31,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_extension_registry",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:device_model_java_proto",
-        "@com_google_protobuf//:protobuf_java",
+        "@protobuf//:protobuf_java",
     ],
 )
 

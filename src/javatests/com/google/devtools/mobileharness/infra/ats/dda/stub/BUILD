@@ -46,7 +46,7 @@ java_library(
         "//src/javatests/com/google/devtools/mobileharness/shared/util/junit/rule:monitored_string_suppliers",
         "//src/javatests/com/google/devtools/mobileharness/shared/util/junit/rule:print_test_name",
         "//src/javatests/com/google/devtools/mobileharness/shared/util/runfiles:runfiles_util",
-        "@io_grpc_grpc_java//core",
+        "@grpc-java//core",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_truth_extensions_truth_proto_extension",
         "@maven//:junit_junit",

@@ -31,7 +31,7 @@ java_library(
         ["*.java"],
     ),
     deps = [
-        "@com_google_protobuf//:protobuf_java",
         "@maven//:javax_inject_jsr330_api",
+        "@protobuf//:protobuf_java",
     ],
 )
