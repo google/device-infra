@@ -154,7 +154,8 @@ public class PubsubClientImpl extends DataPusher {
 
   private static Optional<ByteString> serialize(Message data) {
     try {
-      return Optional.of(ByteString.copyFromUtf8(JsonFormat.printer().print(data)));
+      return Optional.of(
+          ByteString.copyFromUtf8(JsonFormat.printer().preservingProtoFieldNames().print(data)));
     } catch (InvalidProtocolBufferException e) {
       logger.atWarning().withCause(e).log(
           "Failed to convert proto message %s to byte string.", data);
