@@ -31,6 +31,7 @@ message TestFileUnit {
   string tag = 2;
   string local_path = 3;
   string original_path = 4;
+  string checksum = 5;
 }
 
 // A job file in a MH lab.
@@ -40,6 +41,7 @@ message JobFileUnit {
   string tag = 2;
   string local_path = 3;
   string original_path = 4;
+  string checksum = 5;
 }
 
 // This message is for MH lab only (lab server / test engine).

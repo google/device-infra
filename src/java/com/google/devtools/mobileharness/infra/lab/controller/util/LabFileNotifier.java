@@ -24,6 +24,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.job.in.Files.FileInfo;
 import com.google.devtools.mobileharness.api.model.job.util.AddFileHandler;
 import com.google.devtools.mobileharness.infra.lab.proto.File.JobFileUnit;
 import com.google.devtools.mobileharness.infra.lab.proto.File.JobOrTestFileUnit;
@@ -176,7 +177,13 @@ public class LabFileNotifier {
 
   @GuardedBy("fileCache")
   protected void addTestFile(TestFileUnit testFileUnit) throws MobileHarnessException {
-    testInfo.files().add(testFileUnit.getTag(), testFileUnit.getLocalPath());
+    testInfo
+        .files()
+        .add(
+            testFileUnit.getTag(),
+            FileInfo.create(
+                testFileUnit.getLocalPath(),
+                testFileUnit.getChecksum().isEmpty() ? null : testFileUnit.getChecksum()));
   }
 
   @GuardedBy("fileCache")
@@ -184,7 +191,13 @@ public class LabFileNotifier {
     JobInfo jobInfo = testInfo.jobInfo();
     if (!jobFileUnit.getTag().startsWith(JobSpecHelper.FILE_TAG_PREFIX)
         && !jobFileUnit.getTag().startsWith(ScopedSpecs.FILE_TAG_PREFIX)) {
-      jobInfo.files().add(jobFileUnit.getTag(), jobFileUnit.getLocalPath());
+      jobInfo
+          .files()
+          .add(
+              jobFileUnit.getTag(),
+              FileInfo.create(
+                  jobFileUnit.getLocalPath(),
+                  jobFileUnit.getChecksum().isEmpty() ? null : jobFileUnit.getChecksum()));
     }
   }
 

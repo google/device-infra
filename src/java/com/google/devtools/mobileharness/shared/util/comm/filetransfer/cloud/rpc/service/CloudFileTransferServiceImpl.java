@@ -187,7 +187,8 @@ public class CloudFileTransferServiceImpl {
           logPrefix,
           request.getMetadata(),
           request.getOriginalPath(),
-          request.hasCompressOptions() ? request.getCompressOptions() : null);
+          request.hasCompressOptions() ? request.getCompressOptions() : null,
+          request.getChecksum().isEmpty() ? null : request.getChecksum());
       logger.atInfo().log(
           "%sDownloaded file %s from GCS file %s",
           logPrefix, request.getOriginalPath(), request.getGcsFile());
@@ -264,7 +265,8 @@ public class CloudFileTransferServiceImpl {
       String logPrefix,
       Any metadata,
       String originalPath,
-      @Nullable CompressOptions compressOptions)
+      @Nullable CompressOptions compressOptions,
+      @Nullable String checksum)
       throws MobileHarnessException, InterruptedException {
     @Nullable Path unzippedCache = null;
     try {
@@ -280,7 +282,7 @@ public class CloudFileTransferServiceImpl {
       } else {
         finalizedReceivedFileOrDir = receivedFile;
       }
-      handlers.notify(metadata, finalizedReceivedFileOrDir, Path.of(originalPath));
+      handlers.notify(metadata, finalizedReceivedFileOrDir, Path.of(originalPath), checksum);
     } finally {
       // Cleanup the unzipped caches as soon as possible as zipped file for directory could be large
       if (unzippedCache != null && localFileUtil.isFileOrDirExist(unzippedCache)) {
@@ -517,7 +519,8 @@ public class CloudFileTransferServiceImpl {
           "",
           request.getMetadata(),
           request.getOriginalPath(),
-          request.hasCompressOptions() ? request.getCompressOptions() : null);
+          request.hasCompressOptions() ? request.getCompressOptions() : null,
+          request.getChecksum().isEmpty() ? null : request.getChecksum());
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       throw new MobileHarnessException(InfraErrorId.FT_RPC_SAVE_FILE_INTERRUPTED, "Interrupted", e);

@@ -31,6 +31,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@com_google_protobuf//:protobuf_java",
         "@com_google_protobuf_protobuf_java",
+        "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
     ],
@@ -50,5 +51,6 @@ java_library(
         "//src/devtools/mobileharness/shared/util/comm/filetransfer/common/proto:tagged_file_metadata_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/wireless/qa/mobileharness/shared/comm/filetransfer",
+        "@maven//:com_google_code_findbugs_jsr305",
     ],
 )

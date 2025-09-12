@@ -182,7 +182,7 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
     long fileSize;
     boolean isCached;
     if (isFileExists(Path.of(local)) || localFileUtil.isDirExist(local)) {
-      FileOperationStatus result = sendDirectlyIfSmall(metadata, Path.of(local));
+      FileOperationStatus result = sendDirectlyIfSmall(metadata, Path.of(local), checksum);
       if (result.isFinished()) {
         fileSize = result.fileSize();
         isCached = false;
@@ -250,7 +250,8 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
    *
    * @return {@link FileOperationStatus} of the send operation.
    */
-  private FileOperationStatus sendDirectlyIfSmall(Any metadata, Path local)
+  private FileOperationStatus sendDirectlyIfSmall(
+      Any metadata, Path local, @Nullable String checksum)
       throws MobileHarnessException, InterruptedException {
     try {
       if (!fileOrDirExists(local.toString())) {
@@ -264,6 +265,9 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
 
       SaveFileRequest.Builder request =
           SaveFileRequest.newBuilder().setMetadata(metadata).setOriginalPath(local.toString());
+      if (checksum != null) {
+        request.setChecksum(checksum);
+      }
       if (dirExists(local.toString())) {
         long totalSize = 0;
         for (Path file : listFilesForPath(local)) {

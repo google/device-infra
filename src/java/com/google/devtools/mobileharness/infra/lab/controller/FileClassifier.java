@@ -37,6 +37,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.TestLocator;
 import java.io.File;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
+import javax.annotation.Nullable;
 
 /**
  * Socket file receiver callback for classifying job/test files and adding to job/test accordingly.
@@ -125,11 +126,12 @@ public class FileClassifier implements FileCallback {
   }
 
   @Override
-  public void onReceived(String fileId, String tag, String path, String originalPath)
+  public void onReceived(
+      String fileId, String tag, String path, String originalPath, @Nullable String checksum)
       throws MobileHarnessException, InterruptedException {
     logger.atInfo().log(
-        "Receive lab file [fileId=%s, tag=%s, path=%s, originalPath=%s]",
-        fileId, tag, path, originalPath);
+        "Receive lab file [fileId=%s, tag=%s, path=%s, originalPath=%s, checksum=%s]",
+        fileId, tag, path, originalPath, checksum);
     TestLocator testLocator = TestLocator.tryParseString(fileId);
     if (testLocator != null) {
       TestExecutionUnit test =
@@ -137,25 +139,32 @@ public class FileClassifier implements FileCallback {
       String targetFileOrDirPath =
           PathUtil.join(test.job().dirs().runFileDir(), testLocator.getId(), originalPath);
       copyFileToJobDir(testLocator.getJobLocator().getId(), tag, path, targetFileOrDirPath);
-      jobManager.notifyTestFile(
+
+      TestFileUnit.Builder testFileUnit =
           TestFileUnit.newBuilder()
               .setTestLocator(testLocator.toNewTestLocator().toProto())
               .setTag(tag)
               .setLocalPath(targetFileOrDirPath)
-              .setOriginalPath(originalPath)
-              .build());
+              .setOriginalPath(originalPath);
+      if (checksum != null) {
+        testFileUnit.setChecksum(checksum);
+      }
+      jobManager.notifyTestFile(testFileUnit.setChecksum(checksum).build());
     } else {
       JobLocator jobLocator = JobLocator.parseString(fileId);
       JobExecutionUnit job = jobManager.getJob(jobLocator.getId());
       String targetFileOrDirPath = PathUtil.join(job.dirs().runFileDir(), originalPath);
       copyFileToJobDir(jobLocator.getId(), tag, path, targetFileOrDirPath);
-      jobManager.notifyJobFile(
+      JobFileUnit.Builder jobFileUnit =
           JobFileUnit.newBuilder()
               .setJobLocator(jobLocator.toNewJobLocator().toProto())
               .setTag(tag)
               .setLocalPath(targetFileOrDirPath)
-              .setOriginalPath(originalPath)
-              .build());
+              .setOriginalPath(originalPath);
+      if (checksum != null) {
+        jobFileUnit.setChecksum(checksum);
+      }
+      jobManager.notifyJobFile(jobFileUnit.setChecksum(checksum).build());
     }
   }
 

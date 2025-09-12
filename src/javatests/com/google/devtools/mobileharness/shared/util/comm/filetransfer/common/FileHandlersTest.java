@@ -24,6 +24,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.common.FileHandlers.Handler;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.common.proto.FileHandlersTest.FtMeta;
 import java.nio.file.Path;
+import javax.annotation.Nullable;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -40,13 +41,14 @@ public class FileHandlersTest {
 
     assertThrows(
         MobileHarnessException.class,
-        () -> FileHandlers.getMetadataClass((meta, receivedPath, originalPath) -> {}));
+        () -> FileHandlers.getMetadataClass((meta, receivedPath, originalPath, checksum) -> {}));
 
     assertThat(
             FileHandlers.getMetadataClass(
                 new Handler<FtMeta>() {
                   @Override
-                  public void onReceived(FtMeta meta, Path receivedPath, Path originalPath)
+                  public void onReceived(
+                      FtMeta meta, Path receivedPath, Path originalPath, @Nullable String checksum)
                       throws MobileHarnessException, InterruptedException {}
                 }))
         .isEqualTo(FtMeta.class);

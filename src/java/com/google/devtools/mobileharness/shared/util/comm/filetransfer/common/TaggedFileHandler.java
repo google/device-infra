@@ -21,6 +21,7 @@ import com.google.devtools.mobileharness.shared.util.comm.filetransfer.common.Fi
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.common.proto.TaggedFileMetadataProto.TaggedFileMetadata;
 import com.google.wireless.qa.mobileharness.shared.comm.filetransfer.FileCallback;
 import java.nio.file.Path;
+import javax.annotation.Nullable;
 
 /**
  * Handler of receiving tag files. It's an adapter between {@link FileCallback} and {@link Handler}.
@@ -35,9 +36,14 @@ public class TaggedFileHandler implements Handler<TaggedFileMetadata> {
   }
 
   @Override
-  public void onReceived(TaggedFileMetadata meta, Path receivedPath, Path originalPath)
+  public void onReceived(
+      TaggedFileMetadata meta, Path receivedPath, Path originalPath, @Nullable String checksum)
       throws MobileHarnessException, InterruptedException {
     callback.onReceived(
-        meta.getFileId(), meta.getTag(), receivedPath.toString(), originalPath.toString());
+        meta.getFileId(),
+        meta.getTag(),
+        receivedPath.toString(),
+        originalPath.toString(),
+        checksum);
   }
 }

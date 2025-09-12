@@ -32,6 +32,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/filetransfer/common:tagged_file_handler",
         "//src/java/com/google/wireless/qa/mobileharness/shared/comm/filetransfer",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
+        "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:junit_junit",
         "@maven//:org_mockito_mockito_core",
     ],

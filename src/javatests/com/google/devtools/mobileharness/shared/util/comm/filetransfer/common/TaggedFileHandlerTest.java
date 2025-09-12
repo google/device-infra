@@ -41,6 +41,7 @@ public class TaggedFileHandlerTest {
     handler.onReceived(
         TaggedFileMetadata.getDefaultInstance(),
         Path.of("received_path"),
-        Path.of("original_path"));
+        Path.of("original_path"),
+        "checksum");
   }
 }

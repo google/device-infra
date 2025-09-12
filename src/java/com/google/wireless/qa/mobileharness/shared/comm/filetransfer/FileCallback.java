@@ -17,6 +17,7 @@
 package com.google.wireless.qa.mobileharness.shared.comm.filetransfer;
 
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import javax.annotation.Nullable;
 
 /** Callback when receives a file. */
 public interface FileCallback {
@@ -28,7 +29,9 @@ public interface FileCallback {
    * @param tag file tag
    * @param path file path on the receiver side
    * @param originalPath file path on the sender side
+   * @param checksum checksum of the file
    */
-  void onReceived(String fileId, String tag, String path, String originalPath)
+  void onReceived(
+      String fileId, String tag, String path, String originalPath, @Nullable String checksum)
       throws MobileHarnessException, InterruptedException;
 }

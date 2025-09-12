@@ -31,6 +31,7 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import javax.annotation.Nullable;
 
 /** A group of {@link Handler} for {@link #notify}ing. */
 public class FileHandlers {
@@ -47,8 +48,9 @@ public class FileHandlers {
      * @param meta Metadata of transferred file
      * @param receivedPath file path in receiver side
      * @param originalPath file path in sender side
+     * @param checksum checksum of the file
      */
-    void onReceived(M meta, Path receivedPath, Path originalPath)
+    void onReceived(M meta, Path receivedPath, Path originalPath, @Nullable String checksum)
         throws MobileHarnessException, InterruptedException;
   }
 
@@ -92,7 +94,7 @@ public class FileHandlers {
   }
 
   /** Notifies all handlers after file is received. */
-  public void notify(Any metadata, Path savedPath, Path originalPath)
+  public void notify(Any metadata, Path savedPath, Path originalPath, @Nullable String checksum)
       throws MobileHarnessException, InterruptedException {
     for (Entry<Class<Message>, Handler<Message>> entry : handlers.entrySet()) {
       Class<Message> metaClass = entry.getKey();
@@ -108,7 +110,7 @@ public class FileHandlers {
             "Failed to unpack metadata as class [%s], raw data : %s", metaClass, e.getMessage());
         continue;
       }
-      entry.getValue().onReceived(meta, savedPath, originalPath);
+      entry.getValue().onReceived(meta, savedPath, originalPath, checksum);
       break;
     }
   }

@@ -177,6 +177,9 @@ message SaveFileRequest {
   // Options while decompressing a file. It is used only if
   // |is_compressed| is true.
   CompressOptions compress_options = 5;
+
+  // Checksum of the file.
+  string checksum = 6;
 }
 
 message SaveFileResponse {}

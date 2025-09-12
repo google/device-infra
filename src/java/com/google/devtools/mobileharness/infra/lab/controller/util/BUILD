@@ -30,6 +30,7 @@ java_library(
     deps = [
         "//src/devtools/mobileharness/infra/lab/proto:file_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/api/model/job/in",
         "//src/java/com/google/devtools/mobileharness/api/model/job/util:add_file_handler",
         "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_text_format",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
