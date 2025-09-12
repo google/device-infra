@@ -381,7 +381,7 @@ public class GcsUtil {
   public void copyFileOrDirectoryToLocal(String gcsFileOrDir, Path localFileOrDir)
       throws MobileHarnessException, InterruptedException {
     Path gcsPath = GcsUri.parseUri(gcsFileOrDir).objectPath();
-    if (isFile(gcsFileOrDir)) {
+    if (isFile(gcsPath.toString())) {
       copyFileToLocal(gcsPath, localFileOrDir);
     } else {
       copyDirectoryToLocal(gcsPath, localFileOrDir);
