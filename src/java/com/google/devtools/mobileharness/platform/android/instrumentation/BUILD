@@ -31,6 +31,7 @@ java_library(
         "AndroidTestContent.java",
     ],
     deps = [
+        ":storage_constants",
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/devtools/mobileharness/platform/android/testing/proto:test_args_pb_java_proto",
         "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
@@ -62,8 +63,12 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/out",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:android_instrumentation_spec_java_proto",
-        "@maven//:androidx_test_services_storage",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
     ],
+)
+
+java_library(
+    name = "storage_constants",
+    srcs = ["TestStorageConstants.java"],
 )

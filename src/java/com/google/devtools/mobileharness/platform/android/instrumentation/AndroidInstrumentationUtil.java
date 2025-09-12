@@ -18,7 +18,6 @@ package com.google.devtools.mobileharness.platform.android.instrumentation;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
-import androidx.test.services.storage.TestStorageConstants;
 import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
