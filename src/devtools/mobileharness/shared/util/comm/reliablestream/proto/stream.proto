@@ -1,0 +1,130 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package mobileharness.shared.util.comm.reliablestream;
+
+import "google/protobuf/any.proto";
+import "src/devtools/common/metrics/stability/model/proto/exception.proto";
+
+option java_package = "com.google.devtools.mobileharness.shared.util.comm.reliablestream.proto";
+option java_outer_classname = "StreamProto";
+
+// ========================================
+// Client-to-Server Messages
+// ========================================
+
+// A frame from client to server.
+message RequestFrame {
+  oneof content {
+    ControlRequest control_request = 1;
+    Data data = 2;
+  }
+}
+
+// A control command from client to server.
+message ControlRequest {
+  // The identifier of a logical stream.
+  string stream_id = 1;
+
+  oneof command {
+    CreateStream create_stream = 2;
+    CloseStream close_stream = 3;
+  }
+}
+
+// Creates a logical stream.
+message CreateStream {
+  // The identifier of a group of related streams, used by the server for bulk
+  // cleanup operations.
+  string stream_group_id = 1;
+
+  // Context to create the stream.
+  google.protobuf.Any context = 2;
+}
+
+// Closes a logical stream.
+//
+// This is a "fire-and-forget" command. The protocol does NOT guarantee
+// delivery of ANY packets sent just before this command.
+message CloseStream {}
+
+// ========================================
+// Server-to-Client Messages
+// ========================================
+
+// A frame from server to client.
+message ResponseFrame {
+  oneof content {
+    ControlResponse control_response = 1;
+    Data data = 2;
+  }
+}
+
+// A control command from server to client.
+message ControlResponse {
+  // The identifier of a logical stream.
+  string stream_id = 1;
+
+  oneof command {
+    CreateStreamResult create_stream_result = 2;
+  }
+}
+
+// The result of a logical stream creation.
+message CreateStreamResult {
+  oneof result {
+    CreateStreamSuccess success = 1;
+    CreateStreamFailure failure = 2;
+  }
+}
+
+// Reports the successful creation of a logical stream.
+message CreateStreamSuccess {
+  google.protobuf.Any response = 1;
+}
+
+// Reports a failure to create a logical stream.
+message CreateStreamFailure {
+  stability.model.ExceptionDetail error = 1;
+}
+
+// ========================================
+// Shared Messages
+// ========================================
+
+// Data packets and acknowledgments between client and server.
+message Data {
+  repeated Packet packets = 1;
+  optional PacketAck packet_ack = 2;
+}
+
+// A single unit of application data in one direction of a logical stream.
+message Packet {
+  int64 sequence_number = 1;
+  bytes data = 2;
+}
+
+// Acknowledgments for packets in one direction of a logical stream.
+message PacketAck {
+  // Indicates that packets whose sequence number <= this number have been
+  // received.
+  int64 cumulative_ack_sequence_number = 1;
+
+  // Indicates that packets with those sequence numbers have been received.
+  repeated int64 individual_ack_sequence_numbers = 2;
+}
