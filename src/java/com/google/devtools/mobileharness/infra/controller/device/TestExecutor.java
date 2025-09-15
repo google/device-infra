@@ -16,7 +16,11 @@
 
 package com.google.devtools.mobileharness.infra.controller.device;
 
+import static com.google.common.util.concurrent.Futures.immediateFuture;
+
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.controller.test.model.TestExecutionResult;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import javax.annotation.Nullable;
 
@@ -30,10 +34,17 @@ public interface TestExecutor {
   void reserve(LocalDeviceTestExecutor test) throws MobileHarnessException;
 
   /**
-   * Tries to stop the current device runner if it is running the giving test. It will be stopped as
-   * quickly as possible.
+   * Tries to stop the current device runner if it is running the given test.
+   *
+   * <p>This attempts an interruptible cancel of the test future but doesn't guarantee the test has
+   * stopped running. It's a no-op if test has already stopped or doesn't match the current test.
    */
   void cancel(LocalDeviceTestExecutor test);
+
+  /** Cancels any ongoing test and provides the test future to track the cancelation. */
+  default ListenableFuture<TestExecutionResult> cancelCurrentTest() {
+    return immediateFuture(null);
+  }
 
   /** Stops any ongoing test and makes it unavailable for reservations. */
   default void tearDown() {}
