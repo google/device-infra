@@ -50,6 +50,7 @@ import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryException;
 import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryStrategy;
 import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryingCallable;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
@@ -812,6 +813,19 @@ public class AndroidInstrumentationUtil {
                   deviceExternalStoragePath,
                   ANDROID_TEST_DEVICE_PATH_INTERNAL_USE + ANDROID_TEST_TEST_ARGS_FILE_NAME);
           androidFileUtil.push(serial, sdkVersion, hostFilePath, deviceFilePath);
+          if (isMultiUserSpecialCase) {
+            // Based on b/406931839#comment3, try to force sync.
+            String forceSyncCommand = "pm clear com.google.android.providers.media.module";
+            try {
+              String output = adb.runShell(serial, forceSyncCommand);
+              logger.atInfo().log(
+                  "Force sync by running '%s' output: %s", forceSyncCommand, output);
+            } catch (MobileHarnessException e) {
+              logger.atWarning().log(
+                  "Failed to force sync by running '%s':%s",
+                  forceSyncCommand, MoreThrowables.shortDebugString(e));
+            }
+          }
         }
       } catch (MobileHarnessException e) {
         throw new MobileHarnessException(
