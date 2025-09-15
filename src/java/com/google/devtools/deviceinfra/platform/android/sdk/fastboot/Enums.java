@@ -61,6 +61,7 @@ public final class Enums {
     SBDP_ALLOW,
     SBDP_AR_CHECK,
     SBDP_AR_UPDATE,
+    SECURE,
     SECURE_BOOT,
     SERIALNO,
     SOC_ID,
