@@ -13,6 +13,10 @@
 # limitations under the License.
 #
 
+load("@rules_android//android:rules.bzl", "android_binary")
+
+licenses(["notice"])
+
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
@@ -20,7 +24,17 @@ package(
     ],
 )
 
-filegroup(
-    name = "telephony_utility",
-    srcs = ["TelephonyUtility.apk"],
+android_binary(
+    name = "TelephonyUtility",
+    testonly = 1,
+    srcs = glob(["*.java"]),
+    # This apk's package name is reused (instead of renamed to the mobileharness path) so that we
+    # avoid having to potentially allowlist the new package to install on devices.
+    custom_package = "android.telephony.utility",
+    manifest = "AndroidManifest.xml",
+    multidex = "native",
+    deps = [
+        "@maven//:androidx_test_ext_junit",
+        "@maven//:androidx_test_runner",
+    ],
 )

@@ -39,17 +39,11 @@ public class BinarySizeTest {
   private static final ImmutableSet<String>
       ATS_OLC_SERVER_LOCAL_MODE_LARGE_RESOURCE_PATH_ALLOWLIST =
           ImmutableSet.of(
-              "com/google/devtools/mobileharness/platform/android/xts/agent/tradefed_invocation_agent_deploy.jar",
-              // TODO: Remove after this bug is fixed and unblocks cl/799442560 when
-              // we'll be able to build the apk from source code.
-              "com/google/devtools/mobileharness/platform/android/app/binary/telephony/TelephonyUtility.apk");
+              "com/google/devtools/mobileharness/platform/android/xts/agent/tradefed_invocation_agent_deploy.jar");
   private static final ImmutableSet<String> LAB_SERVER_LARGE_RESOURCE_PATH_ALLOWLIST =
       ImmutableSet.of(
           "com/google/devtools/mobileharness/platform/android/xts/agent/tradefed_invocation_agent_deploy.jar",
-          "com/google/wireless/qa/mobileharness/tool/android/language/switchlanguage.apk",
-          // TODO: Remove after this bug is fixed and unblocks cl/799442560 when
-          // we'll be able to build the apk from source code.
-          "com/google/devtools/mobileharness/platform/android/app/binary/telephony/TelephonyUtility.apk");
+          "com/google/wireless/qa/mobileharness/tool/android/language/switchlanguage.apk");
   private static final ImmutableSet<String> ATS_CONSOLE_LARGE_RESOURCE_PATH_ALLOWLIST =
       ImmutableSet.of();
 
@@ -63,7 +57,7 @@ public class BinarySizeTest {
           "ats_olc_server",
           41_950_000L,
           "ats_olc_server_local_mode",
-          43_050_000L,
+          40_950_000L,
           "lab_server",
           41_950_000L,
           "ats_console",

@@ -28,7 +28,7 @@ java_library(
         "TelephonyHelper.java",
     ],
     resources = [
-        "//src/java/com/google/devtools/mobileharness/platform/android/app/binary/telephony:telephony_utility",
+        "//src/java/com/google/devtools/mobileharness/platform/android/app/binary/telephony:TelephonyUtility.apk",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",

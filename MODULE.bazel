@@ -104,6 +104,8 @@ maven = use_extension("@rules_jvm_external//:extensions.bzl", "maven")
         version = version,
     )
     for group, artifact, version in [coord.split(":") for coord in [
+        "androidx.test.ext:junit:1.1.3",
+        "androidx.test:runner:1.4.0",
         "com.google.guava:guava-testlib:33.0.0-jre",
         "com.google.inject.extensions:guice-testlib:5.1.0",
         "com.google.testparameterinjector:test-parameter-injector:1.16",

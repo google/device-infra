@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="android.telephony.utility">
+
+    <uses-sdk android:minSdkVersion="28"
+          android:targetSdkVersion="31"/>
+
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+
+    <instrumentation android:name="androidx.test.runner.AndroidJUnitRunner"
+                     android:targetPackage="android.telephony.utility"
+                     android:label="Helper to get the sim card state">
+    </instrumentation>
+
+    <application>
+        <uses-library android:name="android.test.runner" />
+    </application>
+</manifest>
