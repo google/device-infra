@@ -13,7 +13,7 @@
 # limitations under the License.
 #
 
-load("@com_github_grpc_grpc//bazel:python_rules.bzl", "py_proto_library")
+load("@grpc//bazel:python_rules.bzl", "py_proto_library")
 
 package(
     default_applicable_licenses = ["//:license"],
@@ -59,8 +59,8 @@ proto_library(
         ":filter_proto",
         "//src/devtools/mobileharness/api/model/proto:device_proto",
         "//src/devtools/mobileharness/api/model/proto:lab_proto",
-        "@com_google_protobuf//:field_mask_proto",
-        "@com_google_protobuf//:timestamp_proto",
+        "@protobuf//:field_mask_proto",
+        "@protobuf//:timestamp_proto",
     ],
 )
 
@@ -79,7 +79,7 @@ proto_library(
     srcs = ["lab_record.proto"],
     deps = [
         ":lab_query_proto",
-        "@com_google_protobuf//:timestamp_proto",
+        "@protobuf//:timestamp_proto",
     ],
 )
 

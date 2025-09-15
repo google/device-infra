@@ -32,8 +32,8 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/filter:filter_utils",
         "//src/java/com/google/devtools/mobileharness/shared/util/filter:mask_utils",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
-        "@com_google_protobuf_protobuf_java",
         "@maven//:com_google_guava_guava",
+        "@maven//:com_google_protobuf_protobuf_java",
         "@maven//:junit_junit",
     ],
 )

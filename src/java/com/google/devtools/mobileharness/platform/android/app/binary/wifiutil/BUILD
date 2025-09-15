@@ -13,7 +13,7 @@
 # limitations under the License.
 #
 
-load("@rules_android_sdk//android:rules.bzl", "android_binary", "android_library")
+load("@rules_android//android:rules.bzl", "android_binary", "android_library")
 
 licenses(["notice"])
 

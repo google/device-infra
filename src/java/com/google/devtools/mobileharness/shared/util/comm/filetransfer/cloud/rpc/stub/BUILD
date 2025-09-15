@@ -52,6 +52,6 @@ java_library(
         "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc:stub_util",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:stub_configures",
-        "@io_grpc_grpc_java//core",
+        "@grpc-java//core",
     ],
 )

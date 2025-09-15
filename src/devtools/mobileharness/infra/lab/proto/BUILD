@@ -13,7 +13,7 @@
 # limitations under the License.
 #
 
-load("@io_grpc_grpc_java//:java_grpc_library.bzl", "java_grpc_library")
+load("@grpc-java//:java_grpc_library.bzl", "java_grpc_library")
 
 package(
     default_applicable_licenses = ["//:license"],
@@ -50,8 +50,8 @@ proto_library(
         "//src/devtools/mobileharness/infra/container/proto:test_engine_proto",
         "//src/devtools/mobileharness/shared/trace/proto:span_proto",
         "//src/devtools/mobileharness/shared/version/proto:version_proto",
-        "@com_google_protobuf//:duration_proto",
-        "@com_google_protobuf//:timestamp_proto",
+        "@protobuf//:duration_proto",
+        "@protobuf//:timestamp_proto",
     ],
 )
 

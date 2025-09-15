@@ -13,8 +13,8 @@
 # limitations under the License.
 #
 
-load("@com_github_grpc_grpc//bazel:python_rules.bzl", "py_grpc_library", "py_proto_library")
-load("@io_grpc_grpc_java//:java_grpc_library.bzl", "java_grpc_library")
+load("@grpc//bazel:python_rules.bzl", "py_grpc_library", "py_proto_library")
+load("@grpc-java//:java_grpc_library.bzl", "java_grpc_library")
 
 package(
     default_applicable_licenses = ["//:license"],
@@ -27,7 +27,7 @@ proto_library(
     name = "health_proto",
     srcs = ["health.proto"],
     deps = [
-        "@com_google_protobuf//:duration_proto",
+        "@protobuf//:duration_proto",
     ],
 )
 

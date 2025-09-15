@@ -33,8 +33,8 @@ proto_library(
         "test_record.proto",
     ],
     deps = [
-        "@com_google_protobuf//:any_proto",
-        "@com_google_protobuf//:timestamp_proto",
+        "@protobuf//:any_proto",
+        "@protobuf//:timestamp_proto",
     ],
 )
 

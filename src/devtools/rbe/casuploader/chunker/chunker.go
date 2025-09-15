@@ -55,7 +55,7 @@ func ChunkFile(path string, chunksDir string, avgChunkSizeKb int) ([]ChunkInfo, 
 			chunkmap[sha256] = chunk.Length
 			writeChunkToFile(chunksDir, sha256, chunk)
 		}
-		chunkList = append(chunkList, ChunkInfo{SHA256: sha256, Offset: chunk.Offset})
+		chunkList = append(chunkList, ChunkInfo{SHA256: sha256, Offset: int64(chunk.Offset)})
 	}
 
 	return chunkList, nil

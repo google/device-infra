@@ -53,13 +53,13 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/system",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/util:test_runfiles_util",
-        "@com_google_protobuf//:protobuf_java",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_extensions_guice_testlib",
         "@maven//:com_google_inject_guice",
         "@maven//:javax_inject_jsr330_api",
         "@maven//:junit_junit",
         "@maven//:org_mockito_mockito_core",
+        "@protobuf//:protobuf_java",
     ],
 )
 

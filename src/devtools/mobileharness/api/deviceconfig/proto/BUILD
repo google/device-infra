@@ -29,7 +29,7 @@ proto_library(
     srcs = ["basic.proto"],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:device_proto",
-        "@com_google_protobuf//:wrappers_proto",
+        "@protobuf//:wrappers_proto",
     ],
 )
 
@@ -43,7 +43,7 @@ proto_library(
     srcs = ["device.proto"],
     deps = [
         ":basic_proto",
-        "@com_google_protobuf//:any_proto",
+        "@protobuf//:any_proto",
     ],
 )
 

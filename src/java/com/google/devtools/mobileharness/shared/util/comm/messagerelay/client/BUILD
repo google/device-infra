@@ -24,6 +24,6 @@ java_library(
         "//src/devtools/mobileharness/shared/util/comm/messagerelay/proto:message_relay_service_java_grpc",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:channel_factory",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:channel_manager",
-        "@io_grpc_grpc_java//core",
+        "@grpc-java//core",
     ],
 )

@@ -28,7 +28,7 @@ proto_library(
     name = "span_proto",
     srcs = ["span.proto"],
     deps = [
-        "@com_google_protobuf//:timestamp_proto",
+        "@protobuf//:timestamp_proto",
     ],
 )
 

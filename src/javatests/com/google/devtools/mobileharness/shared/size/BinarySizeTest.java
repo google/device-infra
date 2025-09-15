@@ -63,11 +63,11 @@ public class BinarySizeTest {
           "ats_olc_server",
           41_950_000L,
           "ats_olc_server_local_mode",
-          44_450_000L,
+          43_050_000L,
           "lab_server",
-          42_850_000L,
+          41_950_000L,
           "ats_console",
-          23_950_000L,
+          22_550_000L,
           "xts_tradefed_agent",
           4_550_000L);
 

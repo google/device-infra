@@ -13,7 +13,7 @@
 # limitations under the License.
 #
 
-load("@io_grpc_grpc_java//:java_grpc_library.bzl", "java_grpc_library")
+load("@grpc-java//:java_grpc_library.bzl", "java_grpc_library")
 
 package(
     default_applicable_licenses = ["//:license"],
@@ -27,7 +27,7 @@ proto_library(
     srcs = ["cloud_file_transfer.proto"],
     deps = [
         "//src/devtools/mobileharness/shared/util/comm/filetransfer/common/proto:file_info_proto",
-        "@com_google_protobuf//:any_proto",
+        "@protobuf//:any_proto",
     ],
 )
 

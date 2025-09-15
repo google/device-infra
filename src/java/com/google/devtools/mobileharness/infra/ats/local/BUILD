@@ -57,12 +57,12 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "@com_google_protobuf//:protobuf_java",
-        "@com_google_protobuf_protobuf_java",
-        "@io_grpc_grpc_java//stub",
+        "@grpc-java//stub",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
+        "@maven//:com_google_protobuf_protobuf_java",
         "@maven//:javax_inject_jsr330_api",
+        "@protobuf//:protobuf_java",
     ],
 )
 

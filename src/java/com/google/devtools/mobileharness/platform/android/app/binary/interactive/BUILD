@@ -13,7 +13,7 @@
 # limitations under the License.
 #
 
-load("@rules_android_sdk//android:rules.bzl", "android_binary")
+load("@rules_android//android:rules.bzl", "android_binary")
 load("@rules_java//java:defs.bzl", "java_library")
 
 package(

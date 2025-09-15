@@ -105,7 +105,7 @@ proto_library(
     deps = [
         ":job_proto",
         "//src/devtools/mobileharness/api/model/proto:job_proto",
-        "@com_google_protobuf//:descriptor_proto",
+        "@protobuf//:descriptor_proto",
     ],
 )
 

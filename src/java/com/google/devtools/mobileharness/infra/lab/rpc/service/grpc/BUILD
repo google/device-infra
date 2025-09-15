@@ -31,7 +31,7 @@ java_library(
         "//src/devtools/mobileharness/infra/lab/proto:prepare_test_service_java_proto",
         "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc:service_util",
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/service:prepare_test",
-        "@io_grpc_grpc_java//stub",
+        "@grpc-java//stub",
         "@maven//:javax_inject_jsr330_api",
     ],
 )
@@ -44,7 +44,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/service:exec_test",
         "//src/java/com/google/wireless/qa/mobileharness/lab/proto:exec_test_serv_grpc",
         "//src/java/com/google/wireless/qa/mobileharness/lab/proto:exec_test_serv_java_proto",
-        "@io_grpc_grpc_java//stub",
+        "@grpc-java//stub",
         "@maven//:javax_inject_jsr330_api",
     ],
 )
@@ -57,7 +57,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/service:stat",
         "//src/java/com/google/wireless/qa/mobileharness/lab/proto:stat_serv_grpc",
         "//src/java/com/google/wireless/qa/mobileharness/lab/proto:stat_serv_java_proto",
-        "@io_grpc_grpc_java//stub",
+        "@grpc-java//stub",
     ],
 )
 
@@ -69,7 +69,7 @@ java_library(
         ":prepare_test",
         ":stat",
         "//src/java/com/google/devtools/mobileharness/infra/lab:annotations",
-        "@io_grpc_grpc_java//core",
+        "@grpc-java//core",
         "@maven//:com_google_inject_guice",
     ],
 )

@@ -35,6 +35,6 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event:base_test_events",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/allocation",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
-        "@com_google_protobuf//:protobuf_java",
+        "@protobuf//:protobuf_java",
     ],
 )

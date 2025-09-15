@@ -13,8 +13,8 @@
 # limitations under the License.
 #
 
-load("@com_github_grpc_grpc//bazel:python_rules.bzl", "py_grpc_library", "py_proto_library")
-load("@io_grpc_grpc_java//:java_grpc_library.bzl", "java_grpc_library")
+load("@grpc//bazel:python_rules.bzl", "py_grpc_library", "py_proto_library")
+load("@grpc-java//:java_grpc_library.bzl", "java_grpc_library")
 
 package(
     default_applicable_licenses = ["//:license"],
@@ -42,7 +42,7 @@ proto_library(
         "//src/devtools/deviceinfra/api/deviceinfo/proto:device_requirement_proto",
         "//src/devtools/mobileharness/api/model/proto:test_proto",
         "//src/devtools/mobileharness/api/query/proto:device_query_proto",
-        "@com_google_protobuf//:duration_proto",
+        "@protobuf//:duration_proto",
     ],
 )
 
@@ -82,7 +82,7 @@ proto_library(
         "//src/devtools/mobileharness/api/model/proto:lab_proto",
         "//src/devtools/mobileharness/api/model/proto:test_proto",
         "//src/devtools/mobileharness/shared/version/proto:version_proto",
-        "@com_google_protobuf//:duration_proto",
+        "@protobuf//:duration_proto",
     ],
 )
 

@@ -15,7 +15,7 @@
 
 # Session Plugin messages used for serving ATS server and ATS Web UI.
 
-load("@com_github_grpc_grpc//bazel:python_rules.bzl", "py_proto_library")
+load("@grpc//bazel:python_rules.bzl", "py_proto_library")
 
 package(
     default_applicable_licenses = ["//:license"],
@@ -30,8 +30,8 @@ proto_library(
     srcs = ["service.proto"],
     deps = [
         "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_proto",
-        "@com_google_protobuf//:duration_proto",
-        "@com_google_protobuf//:timestamp_proto",
+        "@protobuf//:duration_proto",
+        "@protobuf//:timestamp_proto",
     ],
 )
 

@@ -16,7 +16,7 @@
 # Description:
 #   MobileHarness Android device switch language app for switching language and country of the device.
 
-load("@rules_android_sdk//android:rules.bzl", "android_binary")
+load("@rules_android//android:rules.bzl", "android_binary")
 
 package(
     default_applicable_licenses = ["//:license"],

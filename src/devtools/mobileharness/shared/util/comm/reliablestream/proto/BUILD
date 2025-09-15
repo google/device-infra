@@ -25,7 +25,7 @@ proto_library(
     srcs = ["stream.proto"],
     deps = [
         "//src/devtools/common/metrics/stability/model/proto:error_proto",
-        "@com_google_protobuf//:any_proto",
+        "@protobuf//:any_proto",
     ],
 )
 

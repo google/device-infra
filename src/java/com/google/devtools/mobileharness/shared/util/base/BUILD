@@ -47,7 +47,7 @@ java_library(
     name = "proto_extension_registry",
     srcs = ["ProtoExtensionRegistry.java"],
     deps = [
-        "@com_google_protobuf//:protobuf_java",
+        "@protobuf//:protobuf_java",
     ],
 )
 
@@ -57,7 +57,7 @@ java_library(
     deps = [
         ":proto_extension_registry",
         ":proto_reflection_util",
-        "@com_google_protobuf//:protobuf_java",
+        "@protobuf//:protobuf_java",
     ],
 )
 
@@ -97,7 +97,7 @@ java_library(
         "//:deviceinfra_all_pkg",
     ],
     deps = [
-        "@com_google_protobuf//:protobuf_java",
+        "@protobuf//:protobuf_java",
     ],
 )
 

@@ -29,7 +29,7 @@ java_library(
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_service_java_proto",
         "//src/java/com/google/devtools/mobileharness/shared/util/message:field_mask_utils",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
-        "@com_google_protobuf_protobuf_java",
+        "@maven//:com_google_protobuf_protobuf_java",
         "@maven//:com_google_truth_extensions_truth_proto_extension",
         "@maven//:junit_junit",
     ],

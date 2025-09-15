@@ -22,7 +22,7 @@ proto_library(
         "//src/devtools/common/metrics/stability/model/proto:error_proto",
         "//src/devtools/mobileharness/api/model/proto:job_proto",
         "//src/devtools/mobileharness/api/query/proto:lab_query_proto",
-        "@com_google_protobuf//:duration_proto",
+        "@protobuf//:duration_proto",
     ],
 )
 

@@ -13,7 +13,7 @@
 # limitations under the License.
 #
 
-load("@com_github_grpc_grpc//bazel:python_rules.bzl", "py_proto_library")
+load("@grpc//bazel:python_rules.bzl", "py_proto_library")
 
 DEFAULT_VISIBILITY = [
     "//:deviceinfra_all_pkg",

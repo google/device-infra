@@ -33,7 +33,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/relay",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:channel_factory",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:channel_manager",
-        "@io_grpc_grpc_java//core",
+        "@grpc-java//core",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
     ],
@@ -52,7 +52,7 @@ java_library(
         "//src/devtools/mobileharness/shared/util/comm/relay/proto:destination_java_proto",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/relay",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "@io_grpc_grpc_java//core",
+        "@grpc-java//core",
         "@maven//:com_google_code_findbugs_jsr305",
     ],
 )
@@ -64,7 +64,7 @@ java_library(
         "ServerUtils.java",
     ],
     deps = [
-        "@io_grpc_grpc_java//core",
+        "@grpc-java//core",
     ],
 )
 
@@ -75,6 +75,6 @@ java_library(
         ":connection_manager",
         ":relay_service",
         ":server_utils",
-        "@io_grpc_grpc_java//core",
+        "@grpc-java//core",
     ],
 )

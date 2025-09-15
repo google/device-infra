@@ -286,13 +286,13 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:xts_tradefed_test_spec_java_proto",
-        "@com_google_protobuf//:protobuf_java",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_code_gson_gson",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
         "@maven//:org_apache_commons_commons_text",
+        "@protobuf//:protobuf_java",
     ],
 )
 
@@ -321,9 +321,9 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:android_robo_test_spec_java_proto",
-        "@com_google_protobuf//:protobuf_java",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
+        "@protobuf//:protobuf_java",
     ],
 )
 ################################################################################

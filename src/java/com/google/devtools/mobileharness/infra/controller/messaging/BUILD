@@ -24,7 +24,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/messaging:messaging_subscriber",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_text_format",
-        "@com_google_protobuf//:protobuf_java",
+        "@protobuf//:protobuf_java",
     ],
 )
 
@@ -97,10 +97,10 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_text_format",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
-        "@com_google_protobuf//:protobuf_java",
-        "@com_google_protobuf_protobuf_java",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
+        "@maven//:com_google_protobuf_protobuf_java",
+        "@protobuf//:protobuf_java",
     ],
 )
 
@@ -163,7 +163,7 @@ java_library(
         "//src/devtools/mobileharness/api/messaging:messaging_service_java_proto",
         "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc:service_util",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "@io_grpc_grpc_java//stub",
+        "@grpc-java//stub",
         "@maven//:javax_inject_jsr330_api",
     ],
 )
@@ -181,7 +181,7 @@ java_library(
         "//src/devtools/mobileharness/api/messaging:messaging_service_java_grpc",
         "//src/java/com/google/devtools/mobileharness/infra/lab:annotations",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
-        "@io_grpc_grpc_java//core",
+        "@grpc-java//core",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
     ],

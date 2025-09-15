@@ -33,8 +33,8 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/remote:lab_server_locator",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/util/stub:stub_utils",
         "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_extension_registry",
-        "@com_google_protobuf//:protobuf_java",
-        "@io_grpc_grpc_java//core",
+        "@grpc-java//core",
         "@maven//:com_google_errorprone_error_prone_annotations",
+        "@protobuf//:protobuf_java",
     ],
 )

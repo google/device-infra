@@ -30,7 +30,7 @@ java_library(
         "//src/devtools/deviceinfra/host/daemon/proto:health_java_proto",
         "//src/java/com/google/devtools/deviceinfra/host/daemon/health:health_status_manager",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
-        "@io_grpc_grpc_java//stub",
+        "@grpc-java//stub",
         "@maven//:com_google_inject_guice",
     ],
 )

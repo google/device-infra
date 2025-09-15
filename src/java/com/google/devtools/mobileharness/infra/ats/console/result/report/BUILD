@@ -146,10 +146,10 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "@com_google_protobuf//:protobuf_java",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
+        "@protobuf//:protobuf_java",
     ],
 )
 
@@ -172,9 +172,9 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "@com_google_protobuf//:protobuf_java",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
+        "@protobuf//:protobuf_java",
     ],
 )
 
@@ -216,6 +216,6 @@ java_library(
     deps = [
         "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
         "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_extension_registry",
-        "@com_google_protobuf//:protobuf_java",
+        "@protobuf//:protobuf_java",
     ],
 )

@@ -4,4 +4,16 @@ build --java_runtime_version=remotejdk_17
 build --tool_java_language_version=17
 build --tool_java_runtime_version=remotejdk_17
 
-build --cxxopt=-std=c++14 --host_cxxopt=-std=c++14
+# Enforce C++17 for target configuration C++ files
+build --cxxopt=-std=c++17
+# Enforce C11 for target configuration C files
+build --conlyopt=-std=c11
+# Define feature test macro for C compilations (target)
+build --conlyopt=-D_DEFAULT_SOURCE
+
+# Enforce C++17 for host/exec configuration C++ files
+build --host_cxxopt=-std=c++17
+# Enforce C11 for host/exec configuration C files
+build --host_conlyopt=-std=c11
+# Define feature test macro for C compilations (host/exec)
+build --host_conlyopt=-D_DEFAULT_SOURCE

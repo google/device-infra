@@ -13,7 +13,7 @@
 # limitations under the License.
 #
 
-load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 package(
     default_applicable_licenses = ["//:license"],

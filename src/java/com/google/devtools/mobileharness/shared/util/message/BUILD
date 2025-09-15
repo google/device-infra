@@ -27,8 +27,8 @@ java_library(
     name = "field_mask_utils",
     srcs = ["FieldMaskUtils.java"],
     deps = [
-        "@com_google_protobuf//:protobuf_java",
-        "@com_google_protobuf_protobuf_java",
+        "@maven//:com_google_protobuf_protobuf_java",
+        "@protobuf//:protobuf_java",
     ],
 )
 
@@ -38,9 +38,9 @@ java_library(
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
-        "@com_google_protobuf//:protobuf_java",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
+        "@protobuf//:protobuf_java",
     ],
 )
 

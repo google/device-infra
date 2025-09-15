@@ -41,8 +41,8 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/server:lifecycle",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "@io_grpc_grpc_java//core",
-        "@io_grpc_grpc_java//stub",
+        "@grpc-java//core",
+        "@grpc-java//stub",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
@@ -85,11 +85,11 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:session_manager",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/util:session_query_util",
-        "@com_google_protobuf//:protobuf_java_util",
-        "@com_google_protobuf_protobuf_java",
-        "@io_grpc_grpc_java//stub",
+        "@grpc-java//stub",
         "@maven//:com_google_guava_guava",
+        "@maven//:com_google_protobuf_protobuf_java",
         "@maven//:javax_inject_jsr330_api",
+        "@protobuf//:protobuf_java_util",
     ],
 )
 
@@ -101,6 +101,6 @@ java_library(
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:version_service_java_proto",
         "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc:service_util",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/util:version_proto_util",
-        "@io_grpc_grpc_java//stub",
+        "@grpc-java//stub",
     ],
 )

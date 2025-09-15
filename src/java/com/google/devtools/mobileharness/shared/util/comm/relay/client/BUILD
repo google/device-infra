@@ -26,7 +26,7 @@ java_library(
     deps = [
         "//src/devtools/mobileharness/shared/util/comm/relay/proto:destination_java_proto",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/relay",
-        "@io_grpc_grpc_java//core",
-        "@io_grpc_grpc_java//stub",
+        "@grpc-java//core",
+        "@grpc-java//stub",
     ],
 )

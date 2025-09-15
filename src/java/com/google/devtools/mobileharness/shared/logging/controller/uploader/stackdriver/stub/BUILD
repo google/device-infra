@@ -40,7 +40,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local:res_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/path",
-        "@io_grpc_grpc_java//core",
+        "@grpc-java//core",
         "@maven//:com_google_api_grpc_grpc_google_cloud_logging_v2",
         "@maven//:com_google_api_grpc_proto_google_cloud_logging_v2",
         "@maven//:com_google_errorprone_error_prone_annotations",

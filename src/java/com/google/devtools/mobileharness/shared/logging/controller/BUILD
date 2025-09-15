@@ -36,9 +36,9 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/logging/parameter",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "@com_google_protobuf//:protobuf_java_util",
         "@maven//:com_google_api_grpc_proto_google_cloud_logging_v2",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
+        "@protobuf//:protobuf_java_util",
     ],
 )

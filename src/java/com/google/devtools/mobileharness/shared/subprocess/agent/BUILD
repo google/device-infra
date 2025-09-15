@@ -48,8 +48,8 @@ java_binary(
         "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_extension_registry",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "@com_google_protobuf//:protobuf_java",
         "@maven//:net_bytebuddy_byte_buddy",
+        "@protobuf//:protobuf_java",
     ],
 )
 

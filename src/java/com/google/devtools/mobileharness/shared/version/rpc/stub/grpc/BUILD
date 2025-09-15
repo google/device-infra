@@ -37,6 +37,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:stub_configures",
         "//src/java/com/google/devtools/mobileharness/shared/version/rpc/stub",
-        "@io_grpc_grpc_java//core",
+        "@grpc-java//core",
     ],
 )

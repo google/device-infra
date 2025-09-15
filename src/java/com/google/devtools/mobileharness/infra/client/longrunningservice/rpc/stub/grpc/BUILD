@@ -37,8 +37,8 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:control_stub",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:stubs",
-        "@io_grpc_grpc_java//core",
-        "@io_grpc_grpc_java//stub",
+        "@grpc-java//core",
+        "@grpc-java//stub",
     ],
 )
 
@@ -53,8 +53,8 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:session_stub",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:stubs",
-        "@io_grpc_grpc_java//core",
-        "@io_grpc_grpc_java//stub",
+        "@grpc-java//core",
+        "@grpc-java//stub",
     ],
 )
 
@@ -69,6 +69,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:version_stub",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:stubs",
-        "@io_grpc_grpc_java//core",
+        "@grpc-java//core",
     ],
 )

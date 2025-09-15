@@ -39,7 +39,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:channel_manager",
         "//src/java/com/google/devtools/mobileharness/shared/version/rpc/stub",
         "//src/java/com/google/devtools/mobileharness/shared/version/rpc/stub/grpc",
-        "@io_grpc_grpc_java//core",
+        "@grpc-java//core",
     ],
 )
 

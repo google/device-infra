@@ -46,10 +46,8 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
-        "@com_google_protobuf//:protobuf_java",
-        "@com_google_protobuf//:protobuf_java_util",
-        "@io_grpc_grpc_java//auth",
-        "@io_grpc_grpc_java//core",
+        "@grpc-java//auth",
+        "@grpc-java//core",
         "@maven//:com_google_api_grpc_grpc_google_cloud_pubsub_v1",
         "@maven//:com_google_api_grpc_proto_google_cloud_pubsub_v1",
         "@maven//:com_google_auth_google_auth_library_oauth2_http",
@@ -57,6 +55,8 @@ java_library(
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
         "@maven//:javax_inject_jsr330_api",
+        "@protobuf//:protobuf_java",
+        "@protobuf//:protobuf_java_util",
     ],
 )
 
@@ -71,9 +71,9 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "@com_google_protobuf//:protobuf_java",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
+        "@protobuf//:protobuf_java",
     ],
 )
 

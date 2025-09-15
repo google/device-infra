@@ -33,9 +33,9 @@ java_library(
         "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc:service_util",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/filetransfer/common:file_handlers",
-        "@com_google_protobuf//:protobuf_java",
-        "@io_grpc_grpc_java//stub",
+        "@grpc-java//stub",
         "@maven//:com_google_errorprone_error_prone_annotations",
+        "@protobuf//:protobuf_java",
     ],
 )
 
@@ -56,11 +56,11 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/file/remote:gcs_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "@com_google_protobuf//:protobuf_java",
-        "@com_google_protobuf_protobuf_java",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
+        "@maven//:com_google_protobuf_protobuf_java",
+        "@protobuf//:protobuf_java",
     ],
 )
 
@@ -79,7 +79,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/filetransfer/common:tagged_file_handler",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dir",
-        "@io_grpc_grpc_java//core",
+        "@grpc-java//core",
         "@maven//:com_google_inject_guice",
         "@maven//:javax_inject_jsr330_api",
     ],

@@ -16,7 +16,7 @@
 # Description:
 #   Resource and Utils for MobileHarness Android device daemon app.
 
-load("@rules_android_sdk//android:rules.bzl", "android_library")
+load("@rules_android//android:rules.bzl", "android_library")
 
 package(
     default_applicable_licenses = ["//:license"],

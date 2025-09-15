@@ -46,7 +46,7 @@ proto_library(
     name = "runtime_info_proto",
     srcs = ["runtime_info.proto"],
     deps = [
-        "@com_google_protobuf//:timestamp_proto",
+        "@protobuf//:timestamp_proto",
     ],
 )
 

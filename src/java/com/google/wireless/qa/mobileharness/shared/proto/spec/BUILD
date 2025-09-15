@@ -65,7 +65,7 @@ proto_library(
     name = "base_spec_proto",
     srcs = ["base_spec.proto"],
     deps = [
-        "@com_google_protobuf//:descriptor_proto",
+        "@protobuf//:descriptor_proto",
     ],
 )
 

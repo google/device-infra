@@ -17,7 +17,7 @@
 #   MobileHarness Android device daemon version 2 for unlocking device screen
 #   and keeping device awake. Target on devices with API level 28 and above.
 
-load("@rules_android_sdk//android:rules.bzl", "android_binary", "android_library")
+load("@rules_android//android:rules.bzl", "android_binary", "android_library")
 
 android_library(
     name = "resources",

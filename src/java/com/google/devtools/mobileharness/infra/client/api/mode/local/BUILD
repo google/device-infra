@@ -89,9 +89,9 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event:device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/lab",
-        "@com_google_protobuf//:protobuf_java",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
+        "@protobuf//:protobuf_java",
     ],
 )
 

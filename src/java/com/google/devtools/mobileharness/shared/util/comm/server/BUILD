@@ -38,7 +38,7 @@ java_library(
     deps = [
         ":reflection_operation_exception_wrapper",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "@io_grpc_grpc_java//core",
+        "@grpc-java//core",
         "@maven//:com_google_guava_guava",
     ],
 )
@@ -52,8 +52,8 @@ java_library(
         ":alts_auth_interceptor",
         ":reflection_operation_exception_wrapper",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "@io_grpc_grpc_java//core",
-        "@io_grpc_grpc_java//netty",
+        "@grpc-java//core",
+        "@grpc-java//netty",
     ],
 )
 
@@ -62,8 +62,8 @@ java_library(
     srcs = ["ClientAddressServerInterceptor.java"],
     deps = [
         ":grpc_contexts",
-        "@io_grpc_grpc_java//context",
-        "@io_grpc_grpc_java//core",
+        "@grpc-java//context",
+        "@grpc-java//core",
     ],
 )
 
@@ -71,7 +71,7 @@ java_library(
     name = "grpc_contexts",
     srcs = ["GrpcContexts.java"],
     deps = [
-        "@io_grpc_grpc_java//context",
+        "@grpc-java//context",
     ],
 )
 
@@ -84,7 +84,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:more_futures",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "@io_grpc_grpc_java//core",
+        "@grpc-java//core",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
     ],

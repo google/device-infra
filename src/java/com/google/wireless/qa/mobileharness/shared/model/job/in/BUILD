@@ -53,11 +53,11 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/lab:locator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:base_spec_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:job_spec_java_proto",
-        "@com_google_protobuf//:protobuf_java",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_code_gson_gson",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
+        "@protobuf//:protobuf_java",
     ],
 )
 
