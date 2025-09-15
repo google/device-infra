@@ -20,10 +20,7 @@ package(default_applicable_licenses = ["//:license"])
 java_library(
     name = "mtaastools",
     srcs = glob(["*.java"]),
-    visibility = [
-        "//:deviceinfra_all_pkg",
-        "//:omnilab_fusion",
-    ],
+    visibility = ["//:deviceinfra_all_pkg"],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/android/instrumentation:android_instrumentation_util",
