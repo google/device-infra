@@ -89,6 +89,7 @@ public class AndroidPhoneTest {
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
 
   @Captor public ArgumentCaptor<Multimap<String, String>> multimapArgumentCaptor;
+  @Captor public ArgumentCaptor<String[]> stringArrayCaptor;
 
   @Mock private AndroidAdbUtil mockAdbUtil;
   @Mock private AndroidFileUtil mockFileUtil;
@@ -421,15 +422,18 @@ public class AndroidPhoneTest {
             + "Apr 11, 2023 11:07:34 PM"
             + " com.android.tools.build.bundletool.commands.InstallMultiApksCommand execute\n"
             + "INFO: Please reboot device to complete installation.";
-    when(mockBundletoolUtil.installMultiApks(eq(UUID), eq(packages), any())).thenReturn(cmdOutput);
+    when(mockBundletoolUtil.installMultiApks(eq(UUID), eq(packages), any(String[].class)))
+        .thenReturn(cmdOutput);
 
     assertTrue(device.installBundledPackages(packages, "--enable-rollback"));
 
-    ArgumentCaptor<String> stringCaptor = ArgumentCaptor.forClass(String.class);
-    verify(mockBundletoolUtil).installMultiApks(eq(UUID), eq(packages), stringCaptor.capture());
-    assertThat(stringCaptor.getAllValues()).containsAtLeast("--enable-rollback", "--staged");
+    verify(mockBundletoolUtil)
+        .installMultiApks(eq(UUID), eq(packages), stringArrayCaptor.capture());
+    assertThat(stringArrayCaptor.getValue())
+        .asList()
+        .containsAtLeast("--enable-rollback", "--staged");
     if (spec.hasStagedReadyTimeout()) {
-      assertThat(stringCaptor.getAllValues()).contains("--timeout-millis=120000");
+      assertThat(stringArrayCaptor.getValue()).asList().contains("--timeout-millis=120000");
     }
   }
 
@@ -446,15 +450,18 @@ public class AndroidPhoneTest {
             + "Success\n"
             + "Apr 11, 2023 11:15:27 PM"
             + " com.android.tools.build.bundletool.commands.InstallMultiApksCommand execute";
-    when(mockBundletoolUtil.installMultiApks(eq(UUID), eq(packages), any())).thenReturn(cmdOutput);
+    when(mockBundletoolUtil.installMultiApks(eq(UUID), eq(packages), any(String[].class)))
+        .thenReturn(cmdOutput);
 
     assertFalse(device.installBundledPackages(packages, "--enable-rollback"));
 
-    ArgumentCaptor<String> stringCaptor = ArgumentCaptor.forClass(String.class);
-    verify(mockBundletoolUtil).installMultiApks(eq(UUID), eq(packages), stringCaptor.capture());
-    assertThat(stringCaptor.getAllValues()).containsAtLeast("--enable-rollback", "--staged");
+    verify(mockBundletoolUtil)
+        .installMultiApks(eq(UUID), eq(packages), stringArrayCaptor.capture());
+    assertThat(stringArrayCaptor.getValue())
+        .asList()
+        .containsAtLeast("--enable-rollback", "--staged");
     if (spec.hasStagedReadyTimeout()) {
-      assertThat(stringCaptor.getAllValues()).contains("--timeout-millis=120000");
+      assertThat(stringArrayCaptor.getValue()).asList().contains("--timeout-millis=120000");
     }
   }
 
@@ -473,7 +480,8 @@ public class AndroidPhoneTest {
             + " Installation of the app failed.\n"
             + "\tat com.android.tools.build.bundletool.model.exceptions.InternalExceptionBuilder.build(InternalExceptionBuilder.java:57)\n"
             + "\t... 6 more";
-    when(mockBundletoolUtil.installMultiApks(eq(UUID), eq(packages), any())).thenReturn(cmdOutput);
+    when(mockBundletoolUtil.installMultiApks(eq(UUID), eq(packages), any(String[].class)))
+        .thenReturn(cmdOutput);
 
     DeviceActionException t =
         assertThrows(
@@ -519,15 +527,17 @@ public class AndroidPhoneTest {
             + "Apr 12, 2023 8:15:10 PM"
             + " com.android.tools.build.bundletool.commands.InstallMultiApksCommand execute\n"
             + "INFO: Please reboot device to complete installation.";
-    when(mockBundletoolUtil.installApksZip(eq(UUID), eq(train), any())).thenReturn(cmdOutput);
+    when(mockBundletoolUtil.installApksZip(eq(UUID), eq(train), any(String[].class)))
+        .thenReturn(cmdOutput);
 
     assertTrue(device.installZippedTrain(train, "--enable-rollback"));
 
-    ArgumentCaptor<String> stringCaptor = ArgumentCaptor.forClass(String.class);
-    verify(mockBundletoolUtil).installApksZip(eq(UUID), eq(train), stringCaptor.capture());
-    assertThat(stringCaptor.getAllValues()).containsAtLeast("--enable-rollback", "--staged");
+    verify(mockBundletoolUtil).installApksZip(eq(UUID), eq(train), stringArrayCaptor.capture());
+    assertThat(stringArrayCaptor.getValue())
+        .asList()
+        .containsAtLeast("--enable-rollback", "--staged");
     if (spec.hasStagedReadyTimeout()) {
-      assertThat(stringCaptor.getAllValues()).contains("--timeout-millis=120000");
+      assertThat(stringArrayCaptor.getValue()).asList().contains("--timeout-millis=120000");
     }
   }
 
@@ -566,7 +576,8 @@ public class AndroidPhoneTest {
             + " didn't terminate successfully (exit code: 1). Check the logs.\n"
             + "\tat com.android.tools.build.bundletool.model.exceptions.InternalExceptionBuilder.build(InternalExceptionBuilder.java:57)\n"
             + "\t...";
-    when(mockBundletoolUtil.installApksZip(eq(UUID), eq(train), any())).thenReturn(cmdOutput);
+    when(mockBundletoolUtil.installApksZip(eq(UUID), eq(train), any(String[].class)))
+        .thenReturn(cmdOutput);
 
     DeviceActionException t =
         assertThrows(
