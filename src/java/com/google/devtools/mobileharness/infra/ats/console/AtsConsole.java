@@ -114,7 +114,7 @@ public class AtsConsole {
       "USE_NEW_PUBLIC_DIR_FOR_NEW_OLC_SERVER";
 
   private static final boolean DEFAULT_EMBEDDED_MODE = false;
-  private static final boolean DEFAULT_USE_NEW_PUBLIC_DIR_FOR_NEW_OLC_SERVER = true;
+  private static final boolean DEFAULT_USE_NEW_PUBLIC_DIR_FOR_NEW_OLC_SERVER = false;
 
   private static final String OLC_SERVER_CLASS_PATH = "ats_olc_server_local_mode_deploy.jar";
   private static final String OLC_SERVER_MODULE_FACTORY_IMPL_CLASS_NAME =
