@@ -16,6 +16,9 @@
 # Description:
 #   Proto definitions for span which is used to track efficiency.
 
+load("@protobuf//bazel:java_proto_library.bzl", "java_proto_library")
+load("@protobuf//bazel:proto_library.bzl", "proto_library")
+
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [

@@ -13,7 +13,7 @@
 # limitations under the License.
 #
 
-load("@grpc//bazel:python_rules.bzl", "py_proto_library")
+load("@protobuf//bazel:py_proto_library.bzl", "py_proto_library")
 
 package(
     default_applicable_licenses = ["//:license"],
