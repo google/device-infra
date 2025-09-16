@@ -21,7 +21,6 @@ load("@rules_android//android:rules.bzl", "android_binary", "android_library")
 
 android_library(
     name = "resources",
-    javacopts = ["-source 8 -target 8"],
     manifest = "AndroidManifest.xml",
     resource_files = ["//src/java/com/google/devtools/mobileharness/platform/android/app/binary/devicedaemon/shared:resource_files"],
 )
@@ -29,7 +28,6 @@ android_library(
 android_library(
     name = "daemon_lib",
     srcs = [":resources"] + glob(["*.java"]),
-    javacopts = ["-source 8 -target 8"],
     deps = [
         "//src/java/com/google/devtools/mobileharness/platform/android/app/binary/devicedaemon/shared:daemon_base_activity",
         "//src/java/com/google/devtools/mobileharness/platform/android/app/binary/devicedaemon/shared:res_id",
@@ -39,7 +37,6 @@ android_library(
 
 android_binary(
     name = "daemon",
-    javacopts = ["-source 8 -target 8"],
     manifest = "AndroidManifest.xml",
     resource_files = ["//src/java/com/google/devtools/mobileharness/platform/android/app/binary/devicedaemon/shared:resource_files"],
     visibility = [

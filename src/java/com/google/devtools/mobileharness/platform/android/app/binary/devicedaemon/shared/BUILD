@@ -35,7 +35,6 @@ android_library(
     srcs = [
         "DaemonUtil.java",
     ],
-    javacopts = ["-source 8 -target 8"],
     deps = [
         "@maven//:androidx_annotation_annotation",
     ],
@@ -46,7 +45,6 @@ android_library(
     srcs = [
         "ResId.java",
     ],
-    javacopts = ["-source 8 -target 8"],
 )
 
 android_library(
@@ -54,7 +52,6 @@ android_library(
     srcs = [
         "DaemonBaseActivity.java",
     ],
-    javacopts = ["-source 8 -target 8"],
     deps = [
         ":daemon_util",
         ":res_id",

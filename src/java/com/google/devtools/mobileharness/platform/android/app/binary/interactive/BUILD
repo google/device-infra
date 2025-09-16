@@ -31,7 +31,6 @@ java_library(
 android_binary(
     name = "InstructionDialog",
     srcs = ["InstructionDialogActivity.java"],
-    javacopts = ["-source 8 -target 8"],  # TODO: Upgrade android rules
     manifest = "AndroidManifest.xml",
     resource_files = glob(["res/**"]),
     deps = [

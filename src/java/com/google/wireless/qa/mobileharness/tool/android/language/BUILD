@@ -28,7 +28,6 @@ package(
 android_binary(
     name = "switchlanguage",
     srcs = glob(["*.java"]),
-    javacopts = ["-source 8 -target 8"],
     manifest = "AndroidManifest.xml",
     multidex = "native",
     deps = [
