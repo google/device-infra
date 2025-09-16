@@ -418,6 +418,23 @@ public class Flags {
       converter = Flag.StringConverter.class)
   public Flag<String> atsFileServer = atsFileServerDefault;
 
+  private static final Flag<String> atsFileResolverCacheDirDefault =
+      Flag.value("/data/ats_file_resolver_cache");
+
+  @com.beust.jcommander.Parameter(
+      names = "--ats_file_resolver_cache_dir",
+      description = "The directory for ATS file resolver cache.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> atsFileResolverCacheDir = atsFileResolverCacheDirDefault;
+
+  private static final Flag<Long> atsFileResolverCacheSizeMbDefault = Flag.value(50L * 1024);
+
+  @com.beust.jcommander.Parameter(
+      names = "--ats_file_resolver_cache_size_mb",
+      description = "The max cache size in MB for ATS file resolver cache. Default is 51200MB.",
+      converter = Flag.LongConverter.class)
+  public Flag<Long> atsFileResolverCacheSizeMb = atsFileResolverCacheSizeMbDefault;
+
   private static final Flag<Duration> atsLabRemovalTimeDefault =
       DurationFlag.value(Duration.ofDays(7L));
 
@@ -1038,6 +1055,14 @@ public class Flags {
       description = "For file cleaner, enable/disable checkFileSystemIo in each check interval.",
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableFileSystemIoCheck = enableFileSystemIoCheckDefault;
+
+  private static final Flag<Boolean> enableAtsFileResolverCacheDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enable_ats_file_resolver_cache",
+      description = "Whether to enable ATS file resolver cache. Default is false.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableAtsFileResolverCache = enableAtsFileResolverCacheDefault;
 
   private static final Flag<Boolean> enableAtsFileServerUploaderDefault = Flag.value(false);
 

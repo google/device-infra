@@ -96,6 +96,7 @@ java_library(
     srcs = ["AtsFileServerFileResolver.java"],
     deps = [
         ":abstract_file_resolver",
+        ":ats_file_cache_manager",
         ":file_resolver",
         "//src/java/com/google/devtools/deviceinfra/shared/util/file/remote/constant:remote_file_type",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
@@ -107,6 +108,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation:basic_annotation",
         "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_code_gson_gson",
         "@maven//:com_google_guava_guava",
     ],
 )
@@ -146,5 +148,17 @@ java_library(
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_extensions_guice_assistedinject",
         "@maven//:com_google_inject_guice",
+    ],
+)
+
+java_library(
+    name = "ats_file_cache_manager",
+    srcs = ["AtsFileCacheManager.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "@maven//:com_google_guava_guava",
     ],
 )
