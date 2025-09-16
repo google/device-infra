@@ -128,7 +128,6 @@ py_proto_library(
 py_grpc_library(
     name = "lab_record_service_py_grpc",
     srcs = [":lab_record_service_proto"],
-    tags = ["deviceinfra_disable_in_kokoro"],
     deps = [":lab_record_service_py_proto"],
 )
 

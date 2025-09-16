@@ -56,7 +56,6 @@ py_proto_library(
 py_grpc_library(
     name = "health_service_py_grpc",
     srcs = [":health_proto"],
-    tags = ["deviceinfra_disable_in_kokoro"],
     visibility = [
         "//third_party/py/multitest_transport:__subpackages__",
     ],

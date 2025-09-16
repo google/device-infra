@@ -50,7 +50,7 @@ cd device-infra/
 Build the source code:
 
 ```
-bazelisk build --keep_going --build_tag_filters=-deviceinfra_disable_in_kokoro src/...
+bazelisk build --keep_going src/...
 ```
 
 Relevant artifacts can be found at:

@@ -19,8 +19,8 @@ import zlib
 
 import grpc
 
-from com_google_deviceinfra.src.devtools.common.metrics.stability.model.proto import exception_pb2
-from com_google_deviceinfra.src.devtools.common.metrics.stability.rpc.proto import rpc_error_payload_pb2
+from src.devtools.common.metrics.stability.model.proto import exception_pb2
+from src.devtools.common.metrics.stability.rpc.proto import rpc_error_payload_pb2
 
 _EXCEPTION_KEY = '__crpc_mse_300713958-bin'
 

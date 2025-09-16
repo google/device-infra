@@ -14,7 +14,7 @@
 import collections
 import grpc
 from absl.testing import absltest
-from com_google_deviceinfra.src.devtools.common.metrics.stability.util import grpc_error_util
+from src.devtools.common.metrics.stability.util import grpc_error_util
 
 _Metadata = collections.namedtuple(
     '_Metadata',
