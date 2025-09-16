@@ -34,6 +34,7 @@ android_binary(
     manifest = "AndroidManifest.xml",
     multidex = "native",
     deps = [
+        "@maven//:androidx_test_core",
         "@maven//:androidx_test_ext_junit",
         "@maven//:androidx_test_runner",
     ],

@@ -25,7 +25,8 @@ import android.se.omapi.Reader;
 import android.se.omapi.SEService;
 import android.se.omapi.SEService.OnConnectedListener;
 import android.telephony.TelephonyManager;
-import androidx.test.InstrumentationRegistry;
+import androidx.test.core.app.ApplicationProvider;
+import androidx.test.platform.app.InstrumentationRegistry;
 import androidx.test.runner.AndroidJUnit4;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -51,9 +52,9 @@ public class SimCardUtil {
   private static final long SERVICE_CONNECTION_TIME_OUT = 3000;
 
   private SEService mSeService;
-  private Object mServiceMutex = new Object();
+  private final Object mServiceMutex = new Object();
   private Timer mConnectionTimer;
-  private ServiceConnectionTimerTask mTimerTask = new ServiceConnectionTimerTask();
+  private final ServiceConnectionTimerTask mTimerTask = new ServiceConnectionTimerTask();
   private boolean mConnected = false;
   private final OnConnectedListener mListener =
       new OnConnectedListener() {
@@ -69,7 +70,8 @@ public class SimCardUtil {
   @Before
   public void setUp() throws Exception {
     mSeService =
-        new SEService(InstrumentationRegistry.getContext(), new SynchronousExecutor(), mListener);
+        new SEService(
+            ApplicationProvider.getApplicationContext(), new SynchronousExecutor(), mListener);
     mConnectionTimer = new Timer();
     mConnectionTimer.schedule(mTimerTask, SERVICE_CONNECTION_TIME_OUT);
   }
@@ -77,7 +79,7 @@ public class SimCardUtil {
   @Test
   public void getSimCardInformation() throws Exception {
     // Context of the app under test.
-    Context context = InstrumentationRegistry.getTargetContext();
+    Context context = ApplicationProvider.getApplicationContext();
     Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
 
     TelephonyManager tm = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
@@ -97,7 +99,7 @@ public class SimCardUtil {
       Reader[] readers = mSeService.getReaders();
       for (Reader reader : readers) {
         returnBundle.putBoolean(SECURED_ELEMENT, reader.isSecureElementPresent());
-        returnBundle.putBoolean(SE_SERVICE, reader.getSEService() != null ? true : false);
+        returnBundle.putBoolean(SE_SERVICE, reader.getSEService() != null);
       }
     } else {
       returnBundle.putBoolean(SECURED_ELEMENT, false);
@@ -116,7 +118,7 @@ public class SimCardUtil {
 
   private boolean waitForConnection() {
     synchronized (mServiceMutex) {
-      if (!mConnected) {
+      while (!mConnected) {
         try {
           mServiceMutex.wait();
         } catch (InterruptedException e) {
@@ -133,7 +135,7 @@ public class SimCardUtil {
     }
   }
 
-  private class SynchronousExecutor implements Executor {
+  private static class SynchronousExecutor implements Executor {
     @Override
     public void execute(Runnable r) {
       r.run();
