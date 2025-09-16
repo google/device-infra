@@ -13,8 +13,6 @@
 # limitations under the License.
 #
 
-load("@rules_java//java:defs.bzl", "java_proto_library")
-
 package(
     default_applicable_licenses = ["//:license"],
     default_testonly = 1,
