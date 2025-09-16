@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.infra.lab.rpc.service;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.EventBus;
@@ -40,7 +42,6 @@ import com.google.devtools.mobileharness.infra.lab.controller.util.LabFileNotifi
 import com.google.devtools.mobileharness.infra.lab.rpc.service.util.LabResponseProtoGenerator;
 import com.google.devtools.mobileharness.infra.lab.rpc.service.util.TestInfoCreator;
 import com.google.devtools.mobileharness.shared.util.comm.messaging.message.TestMessageInfo;
-import com.google.devtools.mobileharness.shared.util.error.ErrorModelConverter;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.message.StrPairUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
@@ -181,7 +182,7 @@ public class ExecTestServiceImpl {
     for (String deviceId : req.getDeviceIdList()) {
       devices.add(deviceHelperFactory.getDeviceHelper(deviceId));
     }
-    List<String> deviceIds = devices.stream().map(Device::getDeviceId).collect(Collectors.toList());
+    List<String> deviceIds = devices.stream().map(Device::getDeviceId).collect(toImmutableList());
 
     // Creates Allocation.
     Allocation allocation =
@@ -189,7 +190,7 @@ public class ExecTestServiceImpl {
             testInfo.locator(),
             // TODO: Use the correct way to create DeviceLocator after b/37969936
             // fixed.
-            deviceIds.stream().map(DeviceLocator::new).collect(Collectors.toList()),
+            deviceIds.stream().map(DeviceLocator::new).collect(toImmutableList()),
             devices.stream()
                 .map(Device::getDimensions)
                 .map(StrPairUtil::convertCollectionToMultimap)
@@ -327,9 +328,6 @@ public class ExecTestServiceImpl {
             .setModifyTime(testInfo.timing().getModifyTime().toEpochMilli());
     testResult.causeProto().ifPresent(testProto::setResultCause);
     testProto.setLog(testInfo.log().get(0));
-    testInfo.warnings().getAll().stream()
-        .map(exceptionDetail -> ErrorModelConverter.toLegacyErrorInfo(exceptionDetail))
-        .forEach(testProto::addError);
     testInfo.warnings().getAll().forEach(testProto::addWarning);
     testProto.addAllProperty(StrPairUtil.convertMapToList(testInfo.properties().getAll()));
     return testProto.build();

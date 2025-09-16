@@ -108,7 +108,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/service/util:lab_response_proto_generator",
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/service/util:test_info_creator",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/messaging/message",
-        "//src/java/com/google/devtools/mobileharness/shared/util/error:error_model_converter",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/message:str_pair",
