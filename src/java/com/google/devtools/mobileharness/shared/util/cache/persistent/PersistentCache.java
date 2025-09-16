@@ -31,7 +31,6 @@ import com.google.devtools.mobileharness.shared.util.base.ProtoExtensionRegistry
 import com.google.devtools.mobileharness.shared.util.cache.persistent.proto.MetadataProto.Metadata;
 import com.google.devtools.mobileharness.shared.util.file.checksum.proto.ChecksumProto.Algorithm;
 import com.google.devtools.mobileharness.shared.util.file.checksum.proto.ChecksumProto.Checksum;
-import com.google.devtools.mobileharness.shared.util.file.checksum.proto.ChecksumProto.StorageApi;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.errorprone.annotations.ImmutableTypeParameter;
@@ -257,15 +256,11 @@ public class PersistentCache<@ImmutableTypeParameter K> {
 
   private boolean isCacheValid(Path dataPath, Metadata metadata) {
     return isCacheValid(
-        dataPath,
-        metadata.getChecksum().getStorageApi(),
-        metadata.getChecksum().getAlgorithm(),
-        metadata.getChecksum().getData());
+        dataPath, metadata.getChecksum().getAlgorithm(), metadata.getChecksum().getData());
   }
 
-  private boolean isCacheValid(
-      Path dataPath, StorageApi storageApi, Algorithm checksumAlgorithm, ByteString checksum) {
-    return isChecksumValid(dataPath, storageApi, checksumAlgorithm, checksum);
+  private boolean isCacheValid(Path dataPath, Algorithm checksumAlgorithm, ByteString checksum) {
+    return isChecksumValid(dataPath, checksumAlgorithm, checksum);
   }
 
   private Path createSymlink(
@@ -377,8 +372,7 @@ public class PersistentCache<@ImmutableTypeParameter K> {
       throws MobileHarnessException, InterruptedException {
     Optional<Path> dataOp = cacheLoader.load(key.originalKey());
     if (dataOp.isPresent()
-        && isCacheValid(
-            dataOp.get(), key.storageApi(), key.checksumAlgorithm(), decode(key.checksum()))) {
+        && isCacheValid(dataOp.get(), key.checksumAlgorithm(), decode(key.checksum()))) {
       Path linkPath = createSymLinkToData(cachePaths, dataOp.get());
       return Optional.of(createMetadata(linkPath, key));
     }
@@ -399,7 +393,6 @@ public class PersistentCache<@ImmutableTypeParameter K> {
     return Metadata.newBuilder()
         .setChecksum(
             Checksum.newBuilder()
-                .setStorageApi(cacheKey.storageApi())
                 .setAlgorithm(cacheKey.checksumAlgorithm())
                 .setData(decode(cacheKey.checksum())))
         .setCreationTime(toProtoTimestamp(instantSource.instant()))

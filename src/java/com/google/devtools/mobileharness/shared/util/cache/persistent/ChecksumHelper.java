@@ -24,7 +24,6 @@ import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
 import com.google.devtools.mobileharness.shared.util.file.checksum.proto.ChecksumProto.Algorithm;
-import com.google.devtools.mobileharness.shared.util.file.checksum.proto.ChecksumProto.StorageApi;
 import com.google.protobuf.ByteString;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -32,34 +31,32 @@ import java.util.Optional;
 import javax.annotation.Nullable;
 
 /** Helper class to compute and compare checksums. */
-public final class ChecksumHelper {
+final class ChecksumHelper {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private static final BaseEncoding BASE64_ENCODING = BaseEncoding.base64();
 
-  public static ByteString decode(String encoded) {
+  static ByteString decode(String encoded) {
     return ByteString.copyFrom(BASE64_ENCODING.decode(encoded));
   }
 
-  public static String encode(ByteString checksum) {
+  static String encode(ByteString checksum) {
     return BASE64_ENCODING.encode(checksum.toByteArray());
   }
 
-  static boolean isChecksumValid(
-      Path dataPath, StorageApi storageApi, Algorithm checksumAlgorithm, ByteString expected) {
-    return computeChecksum(dataPath, storageApi, checksumAlgorithm)
+  static boolean isChecksumValid(Path dataPath, Algorithm checksumAlgorithm, ByteString expected) {
+    return computeChecksum(dataPath, checksumAlgorithm)
         .map(computed -> computed.equals(expected))
         .orElse(false);
   }
 
-  private static Optional<ByteString> computeChecksum(
-      Path dataPath, StorageApi storageApi, Algorithm checksumAlgorithm) {
-    return switch (storageApi) {
-      case GCS ->
+  private static Optional<ByteString> computeChecksum(Path dataPath, Algorithm checksumAlgorithm) {
+    return switch (checksumAlgorithm) {
+      case GCS_CRC32C, GCS_MD5 ->
           getHashFunction(checksumAlgorithm)
               .map(hashFunction -> computeGcsChecksum(dataPath, hashFunction, checksumAlgorithm));
-      case API_UNSPECIFIED, UNRECOGNIZED -> {
-        logger.atWarning().log("Unknown storage API %s.", storageApi);
+      case ALGORITHM_UNSPECIFIED, UNRECOGNIZED -> {
+        logger.atWarning().log("Unknown checksum algorithm %s.", checksumAlgorithm);
         yield Optional.empty();
       }
     };
@@ -71,12 +68,12 @@ public final class ChecksumHelper {
     try {
       byte[] bytes = asByteSource(dataPath).hash(hashFunction).asBytes();
       switch (checksumAlgorithm) {
-        case CRC32C -> {
+        case GCS_CRC32C -> {
           // GCS stores the checksum in big endian while the CRC32C is computed in little endian.
           // See https://cloud.google.com/storage/docs/metadata#crc32c
           reverse(bytes);
         }
-        case MD5, ALGORITHM_UNSPECIFIED, UNRECOGNIZED -> {
+        case GCS_MD5, ALGORITHM_UNSPECIFIED, UNRECOGNIZED -> {
           // Do nothing.
         }
       }
@@ -90,8 +87,8 @@ public final class ChecksumHelper {
   @SuppressWarnings("deprecation") // MD5 is still used in GCS.
   private static Optional<HashFunction> getHashFunction(Algorithm checksumAlgorithm) {
     return switch (checksumAlgorithm) {
-      case CRC32C -> Optional.of(Hashing.crc32c());
-      case MD5 -> Optional.of(Hashing.md5());
+      case GCS_CRC32C -> Optional.of(Hashing.crc32c());
+      case GCS_MD5 -> Optional.of(Hashing.md5());
       case ALGORITHM_UNSPECIFIED, UNRECOGNIZED -> {
         logger.atWarning().log("Unknown checksum algorithm %s.", checksumAlgorithm);
         yield Optional.empty();

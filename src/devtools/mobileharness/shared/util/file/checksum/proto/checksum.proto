@@ -21,23 +21,18 @@ package mobileharness.shared.util.file.checksum;
 option java_package = "com.google.devtools.mobileharness.shared.util.file.checksum.proto";
 option java_outer_classname = "ChecksumProto";
 
-enum StorageApi {
-  API_UNSPECIFIED = 0;
-  GCS = 1;
-}
-
+// The checksum algorithm. You need to specify the storage API as prefix of
+// the enum name because different storage APIs might use variants of the same
+// checksum algorithm.
 enum Algorithm {
   ALGORITHM_UNSPECIFIED = 0;
-  CRC32C = 1;
-  MD5 = 2;
+  GCS_CRC32C = 1;
+  GCS_MD5 = 2;
 }
 
 message Checksum {
-  // The storage API of the file. Some storage API has its own variant of
-  // checksum algorithm.
-  StorageApi storage_api = 1;
   // REQUIRED. The checksum algorithm of the file.
-  Algorithm algorithm = 2;
+  Algorithm algorithm = 1;
   // REQUIRED. The checksum value of the file.
-  bytes data = 3;
+  bytes data = 2;
 }

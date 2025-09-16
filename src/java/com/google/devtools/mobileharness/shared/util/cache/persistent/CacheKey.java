@@ -17,10 +17,11 @@
 package com.google.devtools.mobileharness.shared.util.cache.persistent;
 
 import static com.google.common.base.Ascii.toLowerCase;
+import static com.google.devtools.mobileharness.shared.util.cache.persistent.ChecksumHelper.encode;
 
 import com.google.auto.value.AutoValue;
 import com.google.devtools.mobileharness.shared.util.file.checksum.proto.ChecksumProto.Algorithm;
-import com.google.devtools.mobileharness.shared.util.file.checksum.proto.ChecksumProto.StorageApi;
+import com.google.devtools.mobileharness.shared.util.file.checksum.proto.ChecksumProto.Checksum;
 import com.google.errorprone.annotations.Immutable;
 import com.google.errorprone.annotations.ImmutableTypeParameter;
 import java.nio.file.Path;
@@ -34,27 +35,22 @@ public abstract class CacheKey<@ImmutableTypeParameter K> {
 
   public abstract String team();
 
-  public abstract StorageApi storageApi();
-
   public abstract Algorithm checksumAlgorithm();
 
   // Base64 encoded checksum.
   public abstract String checksum();
 
   public static <@ImmutableTypeParameter K> CacheKey<K> create(
-      K originalKey,
-      String team,
-      StorageApi storageApi,
-      Algorithm checksumAlgorithm,
-      String checksum) {
-    return new AutoValue_CacheKey<>(originalKey, team, storageApi, checksumAlgorithm, checksum);
+      K originalKey, String team, Algorithm checksumAlgorithm, String checksum) {
+    return new AutoValue_CacheKey<>(originalKey, team, checksumAlgorithm, checksum);
+  }
+
+  public static <@ImmutableTypeParameter K> CacheKey<K> create(
+      K originalKey, String team, Checksum checksum) {
+    return create(originalKey, team, checksum.getAlgorithm(), encode(checksum.getData()));
   }
 
   Path getRelativePath() {
-    return Path.of(
-        team(),
-        toLowerCase(storageApi().name()),
-        toLowerCase(checksumAlgorithm().name()),
-        checksum());
+    return Path.of(team(), toLowerCase(checksumAlgorithm().name()), checksum());
   }
 }
