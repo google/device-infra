@@ -21,6 +21,31 @@ public final class Enums {
 
   /** Partitions of the Android ROM. The order matters. */
   public enum Partition {
+    ABL,
+    ADSP_ODA,
+    DEVCFG,
+    ESEPROXY,
+    ESESERVICE,
+    HYP,
+    IMAGEFV,
+    INI_BOOT,
+    KEYMASTER,
+    MODEM,
+    MULTIIMGOEM,
+    ODM,
+    QUPFW,
+    RPM,
+    SYSTEM_DLKM,
+    SYSTEM_EXT,
+    TZ,
+    UEFISECAPP,
+    VBMETA_SYSTEM,
+    VENDOR_BOOT,
+    VENDOR_DLKM,
+    VENDOR_KERNEL_BOOT,
+    XBL,
+    XBL_CONFIG,
+
     BOOTLOADER,
     // Used in gobo, same as BOOTLOADER.
     SINGLEBOOTLOADER,
