@@ -26,6 +26,7 @@ java_library(
         "CacheBuilder.java",
         "CacheKey.java",
         "CacheLoader.java",
+        "CacheResult.java",
         "ChecksumHelper.java",
         "PersistentCache.java",
     ],

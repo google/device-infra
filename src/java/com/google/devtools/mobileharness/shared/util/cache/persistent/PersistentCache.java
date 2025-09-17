@@ -150,7 +150,7 @@ public class PersistentCache<@ImmutableTypeParameter K> {
    * @throws MobileHarnessException if the load operation fails or IO operations fail
    * @throws InterruptedException if the thread is interrupted
    */
-  public Optional<Path> get(CacheKey<K> cacheKey, Path targetPath, boolean isTargetDir)
+  public Optional<CacheResult> get(CacheKey<K> cacheKey, Path targetPath, boolean isTargetDir)
       throws MobileHarnessException, InterruptedException {
     CachePaths cachePaths = createCachePaths(cacheKey);
 
@@ -174,9 +174,9 @@ public class PersistentCache<@ImmutableTypeParameter K> {
               Metadata metadata = cacheStatus.metadata().get();
               Path symlink = createSymlink(cachePaths, metadata, targetPath, isTargetDir);
               if (!metadata.getSymlinksList().contains(symlink.toAbsolutePath().toString())) {
-                addSymlink(cachePaths.metadataPath(), symlink);
+                metadata = addSymlink(cachePaths.metadataPath(), symlink);
               }
-              return Optional.of(symlink);
+              return Optional.of(CacheResult.create(symlink, metadata));
             }
           }
         } finally {
@@ -190,11 +190,11 @@ public class PersistentCache<@ImmutableTypeParameter K> {
       try (FileLock exclusiveLock = channel.lock()) {
         logger.atInfo().log("Acquired exclusive lock.");
         CacheStatus cacheStatus = getCacheStatus(cachePaths);
-        Optional<Metadata> metadata = Optional.empty();
+        Optional<Metadata> metadataOp = Optional.empty();
         boolean createMetadata = false;
         switch (cacheStatus.cacheState()) {
           case VALID:
-            metadata = cacheStatus.metadata();
+            metadataOp = cacheStatus.metadata();
             break;
           case INVALID:
             logger.atInfo().log("Cache %s is invalid. Clearing cache.", cacheKey.getRelativePath());
@@ -203,22 +203,20 @@ public class PersistentCache<@ImmutableTypeParameter K> {
           case NOT_PRESENT:
             logger.atInfo().log(
                 "Cache %s is not present. Loading cache.", cacheKey.getRelativePath());
-            metadata = loadCache(cacheKey, cachePaths);
+            metadataOp = loadCache(cacheKey, cachePaths);
             createMetadata = true;
             break;
         }
-        if (metadata.isPresent()) {
-          Path newSymlink = createSymlink(cachePaths, metadata.get(), targetPath, isTargetDir);
+        if (metadataOp.isPresent()) {
+          Metadata metadata = metadataOp.get();
+          Path newSymlink = createSymlink(cachePaths, metadata, targetPath, isTargetDir);
           if (createMetadata) {
-            serializeMetadata(
-                cachePaths.metadataPath(), updateMetadata(metadata.get(), newSymlink));
-          } else if (!metadata
-              .get()
-              .getSymlinksList()
-              .contains(newSymlink.toAbsolutePath().toString())) {
-            addSymlink(cachePaths.metadataPath(), newSymlink);
+            metadata = updateMetadata(metadata, newSymlink);
+            serializeMetadata(cachePaths.metadataPath(), metadata);
+          } else if (!metadata.getSymlinksList().contains(newSymlink.toAbsolutePath().toString())) {
+            metadata = addSymlink(cachePaths.metadataPath(), newSymlink);
           }
-          return Optional.of(newSymlink);
+          return Optional.of(CacheResult.create(newSymlink, metadata));
         }
         return Optional.empty();
       } finally {
@@ -307,7 +305,8 @@ public class PersistentCache<@ImmutableTypeParameter K> {
   }
 
   @VisibleForTesting
-  static void addSymlink(Path metadataPath, Path newSymlink) throws MobileHarnessException {
+  @CanIgnoreReturnValue
+  static Metadata addSymlink(Path metadataPath, Path newSymlink) throws MobileHarnessException {
     try (FileChannel channel =
             FileChannel.open(metadataPath, StandardOpenOption.WRITE, StandardOpenOption.READ);
         FileLock metadataLock = channel.lock()) {
@@ -323,13 +322,14 @@ public class PersistentCache<@ImmutableTypeParameter K> {
       // Check if the symlink already exists.
       String newSymlinkStr = newSymlink.toAbsolutePath().toString();
       if (builder.getSymlinksList().contains(newSymlinkStr)) {
-        return;
+        return builder.build();
       }
       // Incrementally update the metadata file by appending the new symlink to the end of the
       // list.
       Metadata partialUpdate = Metadata.newBuilder().addSymlinks(newSymlinkStr).build();
       channel.position(size);
       channel.write(ByteBuffer.wrap(partialUpdate.toByteArray()));
+      return builder.addSymlinks(newSymlinkStr).build();
     } catch (IOException e) {
       throw new MobileHarnessException(
           BasicErrorId.PERSISTENT_CACHE_APPEND_METADATA_ERROR,
