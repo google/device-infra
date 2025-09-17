@@ -21,7 +21,6 @@ java_library(
     name = "device_initializer",
     srcs = ["AndroidDeviceInitializer.java"],
     visibility = [
-        "//:omnilab_fusion",
         "//src/java/com/google/devtools/mobileharness/api/testrunner/step/android:__subpackages__",
     ],
     deps = [
