@@ -33,6 +33,11 @@ message TenantDeviceConfigList {
 
 // A single mapping between hardware fingerprint and device config.
 message TenantDeviceConfig {
+  // The device pool for this config. A pool is a subdivision of devices in the
+  // tenant, for example, a lab may have separate "presubmit" and "postsubmit"
+  // device pools. An empty pool represents a "wildcard" config which devices in
+  // any pool may match.
+  string pool = 3;
   // A device selector for the given device config.
   HardwareFingerprint hardware_fingerprint = 1;
   // The device config to apply to a matching device.
