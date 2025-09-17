@@ -287,7 +287,9 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
               /* sortFile= */ false,
               params.zipStoreOnly(),
               /* compressionLevel= */ 1,
-              Timeout.fixed(params.zipTimeout()));
+              Timeout.fixed(params.zipTimeout()),
+              /* keepLocalSourceRootBaseName= */ false,
+              /* keepFileMetadata= */ false);
           request
               .setIsCompressed(true)
               .setCompressOptions(toCompressOptions(params))

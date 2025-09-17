@@ -2167,6 +2167,7 @@ public class LocalFileUtil {
    * @param zipFilePath path of the generated zip file
    * @return the log
    */
+  @CanIgnoreReturnValue
   public String zipDir(String sourceDirPath, String zipFilePath)
       throws MobileHarnessException, InterruptedException {
     return zipDir(
@@ -2176,72 +2177,8 @@ public class LocalFileUtil {
         /* storeOnly= */ false,
         /* compressionLevel= */ null,
         /* timeout= */ null,
-        /* keepLocalSourceRootBaseName= */ false);
-  }
-
-  /**
-   * Packs the given source directory into a zip file.
-   *
-   * @param sourceDirPath path of the source directory
-   * @param zipFilePath path of the generated zip file
-   * @param keepLocalSourceRootBaseName Supposing localSourceRoot is /foo/bar, and contains
-   *     /foo/bar/output1, /foo/bar/outputs.
-   *     <p>If true, the zip structure will be:
-   *     <pre>{@code
-   * bar/
-   * ├── output1
-   * └── output2.txt
-   * }</pre>
-   *     <p>Otherwise, the zip structure will be:
-   *     <pre>{@code
-   * ├── output1
-   * └── output2.txt
-   * }</pre>
-   *
-   * @return the log
-   */
-  public String zipDir(
-      String sourceDirPath, String zipFilePath, boolean keepLocalSourceRootBaseName)
-      throws MobileHarnessException, InterruptedException {
-    return zipDir(
-        sourceDirPath,
-        zipFilePath,
-        /* sortFile= */ false,
-        /* storeOnly= */ false,
-        /* compressionLevel= */ null,
-        /* timeout= */ null,
-        keepLocalSourceRootBaseName);
-  }
-
-  /**
-   * Packs the given source directory into a zip file.
-   *
-   * @param sourceDirPath path of the source directory
-   * @param zipFilePath path of the generated zip file
-   * @param sortFile whether to attach the files to the zip file in order.
-   * @param storeOnly whether pack all file together without any compression
-   * @param compressionLevel the level of compression (1-9), where 1 indicates the fastest
-   *     compression speed (less compression) and 9 indicates the slowest compression speed (the
-   *     best compression). If null, use the default configuration of "zip" command.
-   * @param timeout the timeout of the zip operation; null means default timeout
-   * @return the log
-   */
-  public String zipDir(
-      String sourceDirPath,
-      String zipFilePath,
-      boolean sortFile,
-      boolean storeOnly,
-      @Nullable Integer compressionLevel,
-      @Nullable Timeout timeout)
-      throws MobileHarnessException, InterruptedException {
-    return zipDir(
-        sourceDirPath,
-        zipFilePath,
-        sortFile,
-        storeOnly,
-        compressionLevel,
-        timeout,
-        /* keepLocalSourceRootBaseName= */ false);
+        /* keepLocalSourceRootBaseName= */ false,
+        /* keepFileMetadata= */ false);
   }
 
   /**
@@ -2271,8 +2208,10 @@ public class LocalFileUtil {
    *
    * }</pre>
    *
+   * @param keepFileMetadata whether to keep file metadata like last modified time (-X argument)
    * @return the log
    */
+  @CanIgnoreReturnValue
   public String zipDir(
       String sourceDirPath,
       String zipFilePath,
@@ -2280,16 +2219,16 @@ public class LocalFileUtil {
       boolean storeOnly,
       @Nullable Integer compressionLevel,
       @Nullable Timeout timeout,
-      boolean keepLocalSourceRootBaseName)
+      boolean keepLocalSourceRootBaseName,
+      boolean keepFileMetadata)
       throws MobileHarnessException, InterruptedException {
     Path absSourceDirPath = Paths.get(sourceDirPath).toAbsolutePath();
-    ImmutableList.Builder<String> arguments =
-        ImmutableList.<String>builder()
-            .add(
-                "zip",
-                // Do not save extra file attributes(Extended Attributes on OS/2, uid/gid and file
-                // timeson Unix). so the zip file MD5 keep the same if source file doesn't change.
-                "-X");
+    ImmutableList.Builder<String> arguments = ImmutableList.<String>builder().add("zip");
+    if (!keepFileMetadata) {
+      // Do not save extra file attributes(Extended Attributes on OS/2, uid/gid and file
+      // timeson Unix). so the zip file MD5 keep the same if source file doesn't change.
+      arguments.add("-X");
+    }
     if (storeOnly) {
       arguments.add("-0");
     }

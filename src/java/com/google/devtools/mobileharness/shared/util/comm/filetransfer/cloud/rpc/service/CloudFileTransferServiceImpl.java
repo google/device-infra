@@ -565,7 +565,9 @@ public class CloudFileTransferServiceImpl {
                 /* sortFile= */ false,
                 compressOptions.getStoreOnly(),
                 /* compressionLevel= */ 1,
-                Timeout.fixed(Duration.ofMillis(compressOptions.getTimeoutMs())));
+                Timeout.fixed(Duration.ofMillis(compressOptions.getTimeoutMs())),
+                /* keepLocalSourceRootBaseName= */ false,
+                /* keepFileMetadata= */ false);
           } else {
             localFileUtil.zipDir(src.toString(), tmpZipFile.toString());
           }

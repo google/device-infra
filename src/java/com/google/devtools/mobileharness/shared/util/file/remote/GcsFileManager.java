@@ -494,7 +494,9 @@ public class GcsFileManager {
           /* sortFile= */ true,
           zipStoreOnly,
           /* compressionLevel= */ 1,
-          zipTimeout.map(Timeout::fixed).orElse(null));
+          zipTimeout.map(Timeout::fixed).orElse(null),
+          /* keepLocalSourceRootBaseName= */ false,
+          /* keepFileMetadata= */ false);
       String decodedChecksum = checksum.orElse(gcsUtil.calculateChecksum(tmpZipFile));
       String crc32cChecksum = gcsUtil.decodeCrc32c(gcsUtil.calculateCrc32c(tmpZipFile));
       logger.atInfo().log(
