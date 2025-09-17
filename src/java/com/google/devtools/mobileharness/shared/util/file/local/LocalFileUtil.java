@@ -55,6 +55,7 @@ import java.io.InputStream;
 import java.io.Reader;
 import java.nio.ByteBuffer;
 import java.nio.channels.SeekableByteChannel;
+import java.nio.file.CopyOption;
 import java.nio.file.DirectoryStream;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.FileVisitResult;
@@ -122,6 +123,15 @@ public class LocalFileUtil {
   private static final Duration SLOW_CMD_TIMEOUT = Duration.ofMinutes(10L);
 
   private static final Pattern SPACE_CHARS = Pattern.compile("\\s+");
+
+  private static final CopyOption[] COPY_OPTIONS_NOT_COPY_ATTRIBUTES =
+      new CopyOption[] {LinkOption.NOFOLLOW_LINKS, StandardCopyOption.REPLACE_EXISTING};
+  private static final CopyOption[] COPY_OPTIONS_COPY_ATTRIBUTES =
+      new CopyOption[] {
+        StandardCopyOption.COPY_ATTRIBUTES,
+        LinkOption.NOFOLLOW_LINKS,
+        StandardCopyOption.REPLACE_EXISTING
+      };
 
   /** System command executor. */
   private final CommandExecutor cmdExecutor;
@@ -332,7 +342,7 @@ public class LocalFileUtil {
 
     // Collect all running commands with files under the given directory.
     Command listRunningCommand = Command.of("ps", "xao", "command").timeout(Duration.ofSeconds(30));
-    String runningCommands = "";
+    String runningCommands;
     try {
       String commandOutput = cmdExecutor.exec(listRunningCommand).stdout();
       ImmutableList.Builder<String> runningCommandsBuilder = ImmutableList.builder();
@@ -397,9 +407,25 @@ public class LocalFileUtil {
    * <p>It uses Java NIO to iterate the files under the source directory and copy to the destination
    * directory. The symbolic link is not followed when copy the file.
    *
-   * @throws MobileHarnessException if fails to copy
+   * <p>File attributes will not be copied.
+   *
+   * @see #copyFileOrDir(String, String, boolean)
    */
   public void copyFileOrDir(String srcFileOrDirPath, String desFileOrDirPath)
+      throws MobileHarnessException, InterruptedException {
+    copyFileOrDir(srcFileOrDirPath, desFileOrDirPath, /* copyAttributes= */ false);
+  }
+
+  /**
+   * Copies a single file, or recursively copies a directory.
+   *
+   * <p>It uses Java NIO to iterate the files under the source directory and copy to the destination
+   * directory. The symbolic link is not followed when copy the file.
+   *
+   * @param copyAttributes whether to copy file attributes
+   */
+  public void copyFileOrDir(
+      String srcFileOrDirPath, String desFileOrDirPath, boolean copyAttributes)
       throws MobileHarnessException, InterruptedException {
     logger.atInfo().log("Copy file or dir from %s to %s", srcFileOrDirPath, desFileOrDirPath);
     // If the dest is an existing directory, copy the dir/dir under it, just like "cp -rf" does.
@@ -409,6 +435,8 @@ public class LocalFileUtil {
 
     try {
       String finalDesFileOrDirPath = desFileOrDirPath;
+      CopyOption[] copyOptions =
+          copyAttributes ? COPY_OPTIONS_COPY_ATTRIBUTES : COPY_OPTIONS_NOT_COPY_ATTRIBUTES;
       Files.walkFileTree(
           Paths.get(srcFileOrDirPath),
           new SimpleFileVisitor<>() {
@@ -431,11 +459,7 @@ public class LocalFileUtil {
                   Path.of(
                       finalDesFileOrDirPath, file.toString().substring(srcFileOrDirPath.length()));
               try {
-                Files.copy(
-                    file,
-                    targetFile,
-                    LinkOption.NOFOLLOW_LINKS,
-                    StandardCopyOption.REPLACE_EXISTING);
+                Files.copy(file, targetFile, copyOptions);
               } catch (NoSuchFileException e) {
                 // Does nothing.
               }
@@ -1215,7 +1239,7 @@ public class LocalFileUtil {
       List<Path> files = new ArrayList<>();
       Files.walkFileTree(
           dir,
-          new SimpleFileVisitor<Path>() {
+          new SimpleFileVisitor<>() {
 
             @Override
             public FileVisitResult preVisitDirectory(Path directory, BasicFileAttributes attrs) {
@@ -1359,7 +1383,7 @@ public class LocalFileUtil {
   /**
    * Lists the files/directories paths directly under the given directory.
    *
-   * @return array of the files/directories, null if the directory path is invalid
+   * @return list of the files/directories, null if the directory path is invalid
    * @throws MobileHarnessException if the given path doesn't exist or is a file, not a directory
    */
   public List<String> listFileOrDirPaths(String dirPath) throws MobileHarnessException {
