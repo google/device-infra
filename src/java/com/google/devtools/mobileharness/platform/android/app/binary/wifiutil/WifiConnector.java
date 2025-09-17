@@ -219,7 +219,7 @@ public class WifiConnector {
       urlConnection = (HttpURLConnection) url.openConnection();
       urlConnection.connect();
     } catch (final Exception e) {
-      Log.e(TAG, "Failed to open connection to check connectivity", e);
+      Log.e(TAG, "Failed to open connection to check connectivity. Error: " + e.getMessage(), e);
       return false;
     } finally {
       if (urlConnection != null) {
@@ -391,7 +391,7 @@ public class WifiConnector {
       json.put("rssi", info.getRssi());
       json.put("macAddress", info.getMacAddress());
     } catch (final JSONException e) {
-      throw new WifiException(e.toString());
+      throw new WifiException(e.toString(), e);
     }
 
     return json;
