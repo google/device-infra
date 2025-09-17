@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.shared.util.file.checksum.proto.ChecksumProto.Checksum;
 import com.google.errorprone.annotations.Immutable;
 import java.util.List;
 import java.util.Optional;
@@ -53,6 +54,10 @@ public interface FileResolver {
 
   /** Resolves multiple files asynchronously. */
   ListenableFuture<List<Optional<ResolveResult>>> resolveAsync(List<ResolveSource> resolveSources);
+
+  /** Gets the checksum of the file to be resolved. */
+  Optional<Checksum> getChecksum(ResolveSource resolveSource)
+      throws MobileHarnessException, InterruptedException;
 
   /** Resolved file. */
   @Immutable

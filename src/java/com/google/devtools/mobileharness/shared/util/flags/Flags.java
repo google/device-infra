@@ -1324,6 +1324,22 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> forceToUseGrpc = forceToUseGrpcDefault;
 
+  private static final Flag<String> gcsResolverCredentialFileDefault = Flag.value(null);
+
+  @com.beust.jcommander.Parameter(
+      names = "--gcs_resolver_credential_file",
+      description = "The credential file path for the service account to use GCS resolver.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> gcsResolverCredentialFile = gcsResolverCredentialFileDefault;
+
+  private static final Flag<String> gcsResolverProjectIdDefault = Flag.value(null);
+
+  @com.beust.jcommander.Parameter(
+      names = "--gcs_resolver_project_id",
+      description = "The project ID of the GCS resolver.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> gcsResolverProjectId = gcsResolverProjectIdDefault;
+
   private static final Flag<Integer> gcsUtilThreadsDefault = Flag.value(30);
 
   @com.beust.jcommander.Parameter(

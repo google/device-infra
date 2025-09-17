@@ -29,6 +29,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.shared.util.file.checksum.proto.ChecksumProto.Checksum;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.util.ArrayList;
 import java.util.List;
@@ -148,6 +149,29 @@ public abstract class AbstractFileResolver implements FileResolver {
           return Futures.allAsList(fileResolveFutures);
         },
         executorService);
+  }
+
+  /**
+   * Gets the checksum of the file to be resolved.
+   *
+   * @param resolveSource the resolve source, including file and parameters.
+   * @return the checksum of the file to be resolved.
+   */
+  @Override
+  public Optional<Checksum> getChecksum(ResolveSource resolveSource)
+      throws MobileHarnessException, InterruptedException {
+    if (shouldActuallyResolve(resolveSource)) {
+      return computeChecksum(resolveSource);
+    }
+    if (successor != null) {
+      return successor.getChecksum(resolveSource);
+    }
+    return Optional.empty();
+  }
+
+  protected Optional<Checksum> computeChecksum(ResolveSource resolveSource)
+      throws MobileHarnessException, InterruptedException {
+    return Optional.empty();
   }
 
   /**

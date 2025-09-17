@@ -36,6 +36,7 @@ java_library(
     name = "file_resolver",
     srcs = ["FileResolver.java"],
     deps = [
+        "//src/devtools/mobileharness/shared/util/file/checksum/proto:checksum_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "@maven//:com_google_code_findbugs_jsr305",
@@ -49,8 +50,8 @@ java_library(
     deps = [
         ":file_resolver",
         "//src/devtools/mobileharness/shared/trace/proto:span_java_proto",
+        "//src/devtools/mobileharness/shared/util/file/checksum/proto:checksum_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_errorprone_error_prone_annotations",
@@ -114,9 +115,12 @@ java_library(
     deps = [
         ":abstract_file_resolver",
         ":file_resolver",
+        "//src/devtools/mobileharness/shared/util/file/checksum/proto:checksum_java_proto",
         "//src/java/com/google/devtools/deviceinfra/shared/util/file/remote/constant:remote_file_type",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/remote:gcs_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/path",
         "@maven//:com_google_code_findbugs_jsr305",
