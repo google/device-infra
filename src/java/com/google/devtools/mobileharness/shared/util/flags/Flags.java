@@ -1155,6 +1155,18 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableStubbyRpcServer = enableStubbyRpcServerDefault;
 
+  private static final Flag<Boolean> enableTestHarnessCheckForRequiredTestsDefault =
+      Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enable_test_harness_check_for_required_tests",
+      description =
+          "Whether to enable test harness check for required tests in ATS server. Default is"
+              + " false.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableTestHarnessCheckForRequiredTests =
+      enableTestHarnessCheckForRequiredTestsDefault;
+
   private static final Flag<Boolean> enableTestLogCollectorDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(

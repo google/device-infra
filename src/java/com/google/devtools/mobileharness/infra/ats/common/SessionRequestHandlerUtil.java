@@ -249,7 +249,10 @@ public class SessionRequestHandlerUtil {
     int shardCount = max(requestedShardCount, minDeviceCount);
     ImmutableSet<DeviceDetails> availableDevices = getAvailableDevices(sessionRequestInfo);
     Map<String, String> extraDimensions = new HashMap<>();
+    // TODO: b/444562857 - Remove enableTestHarnessCheckForRequiredTests flag once test harness
+    // dimension allocation issue is fixed.
     if (Flags.instance().isOmniMode.getNonNull()
+        && Flags.instance().enableTestHarnessCheckForRequiredTests.getNonNull()
         && needTestHarnessPropertyFalse(sessionRequestInfo)) {
       extraDimensions.put(toLowerCase(AndroidProperty.PERSIST_TEST_HARNESS.name()), Value.FALSE);
     }
