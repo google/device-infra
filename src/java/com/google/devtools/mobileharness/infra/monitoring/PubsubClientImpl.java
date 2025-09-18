@@ -152,7 +152,7 @@ public class PubsubClientImpl extends DataPusher {
         directExecutor());
   }
 
-  private static Optional<ByteString> serialize(Message data) {
+  static Optional<ByteString> serialize(Message data) {
     try {
       return Optional.of(
           ByteString.copyFromUtf8(JsonFormat.printer().preservingProtoFieldNames().print(data)));
