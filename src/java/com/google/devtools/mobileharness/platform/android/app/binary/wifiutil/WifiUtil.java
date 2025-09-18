@@ -49,6 +49,10 @@ public class WifiUtil extends Instrumentation {
       super(msg);
     }
 
+    public MissingArgException(String msg, Throwable cause) {
+      super(msg, cause);
+    }
+
     public static MissingArgException fromArg(String arg) {
       return new MissingArgException(String.format("Error: missing mandatory argument '%s'", arg));
     }
@@ -134,7 +138,7 @@ public class WifiUtil extends Instrumentation {
       intVal = Integer.parseInt(val);
     } catch (NumberFormatException e) {
       final String msg = String.format("Couldn't parse arg '%s': %s", arg, e.getMessage());
-      throw new MissingArgException(msg);
+      throw new MissingArgException(msg, e);
     }
 
     return intVal;
@@ -263,7 +267,7 @@ public class WifiUtil extends Instrumentation {
       } else if ("checkConnectivity".equals(method)) {
         final String url = getString("urlToCheck", DEFAULT_URL_TO_CHECK);
 
-        result.putBoolean("result", connector.checkConnectivity(url));
+        result.putBoolean("result", WifiConnector.checkConnectivity(url, /* enableRetry= */ true));
 
       } else if ("connectToNetwork".equals(method)) {
         final String ssid = expectString("ssid");

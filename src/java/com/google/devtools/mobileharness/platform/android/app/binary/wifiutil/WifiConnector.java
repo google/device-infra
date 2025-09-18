@@ -78,7 +78,7 @@ public class WifiConnector {
    * @throws WifiException if DEFAULT_TIMEOUT expires
    * @return time in millis spent waiting
    */
-  private long waitForCallable(
+  private static long waitForCallable(
       final Callable<Boolean> checker, final String description, final long timeout)
       throws WifiException {
     if (timeout <= 0) {
@@ -101,11 +101,6 @@ public class WifiConnector {
     }
     throw new WifiException(
         String.format("Failed %s due to exceeding timeout (%d ms)", description, timeout));
-  }
-
-  private void waitForCallable(final Callable<Boolean> checker, final String description)
-      throws WifiException {
-    long unused = waitForCallable(checker, description, DEFAULT_TIMEOUT);
   }
 
   /**
@@ -207,13 +202,51 @@ public class WifiConnector {
    * @param urlToCheck URL to send a test request to
    * @return <code>true</code> if the test request succeeds. Otherwise <code>false</code>.
    */
-  public static boolean checkConnectivity(final String urlToCheck) {
+  public static boolean checkConnectivity(String urlToCheck) {
+    return checkConnectivity(urlToCheck, /* enableRetry= */ false);
+  }
+
+  /**
+   * Check network connectivity by sending a HTTP request to a given URL.
+   *
+   * @param urlToCheck URL to send a test request to
+   * @param enableRetry whether to retry if the first check fails
+   * @return <code>true</code> if the test request succeeds. Otherwise <code>false</code>.
+   */
+  public static boolean checkConnectivity(final String urlToCheck, boolean enableRetry) {
     URL url = null;
     try {
       url = new URL(urlToCheck);
     } catch (MalformedURLException e) {
       throw new RuntimeException("Malformed URL", e);
     }
+
+    // Keep using the same URL instance thru the connectivity check process
+    final URL finalUrl = url;
+    boolean connectivityPassed = checkConnectivityHelper(finalUrl);
+    if (enableRetry && !connectivityPassed) {
+      long timeoutMs = 10 * 1000;
+      try {
+        long unused =
+            waitForCallable(
+                new Callable<Boolean>() {
+                  @Override
+                  public Boolean call() {
+                    return checkConnectivityHelper(finalUrl);
+                  }
+                },
+                String.format("checking connectivity to %s", urlToCheck),
+                timeoutMs);
+      } catch (WifiException e) {
+        Log.e(TAG, "Failed to check connectivity after retry. Error: " + e.getMessage(), e);
+        return false;
+      }
+      return true;
+    }
+    return connectivityPassed;
+  }
+
+  private static boolean checkConnectivityHelper(URL url) {
     HttpURLConnection urlConnection = null;
     try {
       urlConnection = (HttpURLConnection) url.openConnection();
