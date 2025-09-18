@@ -92,12 +92,14 @@ public final class DumpCommandTest {
     verify(localFileUtil)
         .copyFileOrDir(
             AtsConsoleDirs.getLogDir(),
-            DirCommon.getTempDirRoot() + "/ats_bugreport/ats_bugreport_1000/ats_console_logs_1000");
+            DirCommon.getTempDirRoot() + "/ats_bugreport/ats_bugreport_1000/ats_console_logs_1000",
+            /* copyAttributes= */ true);
     // OLC server logs:
     verify(localFileUtil)
         .copyFileOrDir(
             OlcServerDirs.getLogDir(),
-            DirCommon.getTempDirRoot() + "/ats_bugreport/ats_bugreport_1000/olc_server_logs_1000");
+            DirCommon.getTempDirRoot() + "/ats_bugreport/ats_bugreport_1000/olc_server_logs_1000",
+            /* copyAttributes= */ true);
     // ATS console stack trace:
     verify(localFileUtil)
         .writeToFile(
@@ -118,7 +120,13 @@ public final class DumpCommandTest {
     verify(localFileUtil)
         .zipDir(
             DirCommon.getTempDirRoot() + "/ats_bugreport/ats_bugreport_1000",
-            DirCommon.getTempDirRoot() + "/ats_bugreport/ats_bugreport_1000.zip");
+            DirCommon.getTempDirRoot() + "/ats_bugreport/ats_bugreport_1000.zip",
+            /* sortFile= */ false,
+            /* storeOnly= */ false,
+            /* compressionLevel= */ null,
+            /* timeout= */ null,
+            /* keepLocalSourceRootBaseName= */ false,
+            /* keepFileMetadata= */ true);
     verify(consoleUtil)
         .printlnStdout(
             "Output bugreport zip in %s",

@@ -132,10 +132,12 @@ class DumpCommand implements Callable<Integer> {
 
     localFileUtil.copyFileOrDir(
         AtsConsoleDirs.getLogDir(),
-        PathUtil.join(bugreportDirPath, String.format("ats_console_logs_%s", fileSuffix)));
+        PathUtil.join(bugreportDirPath, String.format("ats_console_logs_%s", fileSuffix)),
+        /* copyAttributes= */ true);
     localFileUtil.copyFileOrDir(
         OlcServerDirs.getLogDir(),
-        PathUtil.join(bugreportDirPath, String.format("olc_server_logs_%s", fileSuffix)));
+        PathUtil.join(bugreportDirPath, String.format("olc_server_logs_%s", fileSuffix)),
+        /* copyAttributes= */ true);
     localFileUtil.writeToFile(
         PathUtil.join(
             bugreportDirPath, String.format("ats_console_stack_trace_%s.txt", fileSuffix)),
@@ -165,7 +167,15 @@ class DumpCommand implements Callable<Integer> {
 
     // Zips files.
     String bugreportFilePath = PathUtil.join(baseDirPath, String.format("%s.zip", bugreportName));
-    localFileUtil.zipDir(bugreportDirPath, bugreportFilePath);
+    localFileUtil.zipDir(
+        bugreportDirPath,
+        bugreportFilePath,
+        /* sortFile= */ false,
+        /* storeOnly= */ false,
+        /* compressionLevel= */ null,
+        /* timeout= */ null,
+        /* keepLocalSourceRootBaseName= */ false,
+        /* keepFileMetadata= */ true);
     consoleUtil.printlnStdout("Output bugreport zip in %s", bugreportFilePath);
     return ExitCode.OK;
   }
