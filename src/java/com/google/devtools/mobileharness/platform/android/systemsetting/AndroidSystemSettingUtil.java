@@ -838,13 +838,14 @@ public class AndroidSystemSettingUtil {
                   AndroidErrorId.ANDROID_SYSTEM_SETTING_PARSE_AIRPLANE_MODE_ERROR,
                   "Failed to read airplane mode: " + output);
         };
-
-    // Makes sure the airplane mode setting has effect.
     try {
       output =
           adbUtil.broadcast(
               UtilArgs.builder().setSerial(serial).build(),
-              IntentArgs.builder().setAction(ADB_SHELL_BROADCAST_AIRPLANE_MODE).build(),
+              IntentArgs.builder()
+                  .setAction(ADB_SHELL_BROADCAST_AIRPLANE_MODE)
+                  .setExtrasBoolean(ImmutableMap.of("state", airplaneMode))
+                  .build(),
               /* checkCmdOutput= */ false,
               BROADCAST_AIRPLANE_MODE_TIMEOUT);
     } catch (MobileHarnessException e) {

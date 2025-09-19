@@ -333,6 +333,7 @@ public class AndroidSystemSettingUtilTest {
             UtilArgs.builder().setSerial(DEVICE_ID).build(),
             IntentArgs.builder()
                 .setAction(AndroidSystemSettingUtil.ADB_SHELL_BROADCAST_AIRPLANE_MODE)
+                .setExtrasBoolean(ImmutableMap.of("state", true))
                 .build(),
             /* checkCmdOutput= */ false,
             AndroidSystemSettingUtil.BROADCAST_AIRPLANE_MODE_TIMEOUT))
@@ -355,6 +356,7 @@ public class AndroidSystemSettingUtilTest {
             UtilArgs.builder().setSerial(DEVICE_ID).build(),
             IntentArgs.builder()
                 .setAction(AndroidSystemSettingUtil.ADB_SHELL_BROADCAST_AIRPLANE_MODE)
+                .setExtrasBoolean(ImmutableMap.of("state", true))
                 .build(),
             /* checkCmdOutput= */ false,
             AndroidSystemSettingUtil.BROADCAST_AIRPLANE_MODE_TIMEOUT))
@@ -373,6 +375,7 @@ public class AndroidSystemSettingUtilTest {
             UtilArgs.builder().setSerial(DEVICE_ID).build(),
             IntentArgs.builder()
                 .setAction(AndroidSystemSettingUtil.ADB_SHELL_BROADCAST_AIRPLANE_MODE)
+                .setExtrasBoolean(ImmutableMap.of("state", true))
                 .build(),
             /* checkCmdOutput= */ false,
             AndroidSystemSettingUtil.BROADCAST_AIRPLANE_MODE_TIMEOUT))
