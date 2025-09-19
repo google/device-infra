@@ -1949,6 +1949,7 @@ public class LocalFileUtil {
    *     file, or does not exist but cannot be created, or cannot be opened for any other reasons,
    *     or an I/O error occurs while writing or closing
    */
+  @CanIgnoreReturnValue
   public long writeToFile(Path filePath, byte[] input, boolean append)
       throws MobileHarnessException {
     prepareParentDir(filePath);
