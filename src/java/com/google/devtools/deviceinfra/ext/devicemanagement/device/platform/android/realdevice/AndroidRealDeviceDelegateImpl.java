@@ -21,6 +21,7 @@ import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.Multimap;
 import com.google.devtools.deviceinfra.ext.devicemanagement.device.platform.android.AndroidDeviceDelegate;
 import com.google.devtools.deviceinfra.ext.devicemanagement.device.platform.android.AndroidDeviceDelegateImpl;
+import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.deviceinfra.platform.android.sdk.fastboot.Fastboot;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.lab.LabLocator;
@@ -78,6 +79,7 @@ public class AndroidRealDeviceDelegateImpl extends AndroidRealDeviceDelegate {
         Clock.systemUTC(),
         new AndroidAdbInternalUtil(),
         new AndroidAdbUtil(),
+        new Adb(),
         new AndroidProcessUtil(),
         new AndroidSystemSettingUtil(),
         new AndroidFileUtil(),
@@ -107,6 +109,7 @@ public class AndroidRealDeviceDelegateImpl extends AndroidRealDeviceDelegate {
       Clock clock,
       AndroidAdbInternalUtil androidAdbInternalUtil,
       AndroidAdbUtil androidAdbUtil,
+      Adb adb,
       AndroidProcessUtil androidProcessUtil,
       AndroidSystemSettingUtil systemSettingUtil,
       AndroidFileUtil androidFileUtil,
@@ -133,6 +136,7 @@ public class AndroidRealDeviceDelegateImpl extends AndroidRealDeviceDelegate {
         clock,
         androidAdbInternalUtil,
         androidAdbUtil,
+        adb,
         androidProcessUtil,
         systemSettingUtil,
         androidFileUtil,

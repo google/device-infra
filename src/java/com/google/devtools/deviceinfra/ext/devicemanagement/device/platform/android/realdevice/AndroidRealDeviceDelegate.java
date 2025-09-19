@@ -36,6 +36,7 @@ import com.google.devtools.common.metrics.stability.util.ErrorIdComparator;
 import com.google.devtools.deviceinfra.ext.devicemanagement.device.BaseDeviceHelper;
 import com.google.devtools.deviceinfra.ext.devicemanagement.device.platform.android.AndroidDeviceDelegate;
 import com.google.devtools.deviceinfra.ext.devicemanagement.device.platform.android.AndroidDeviceDelegateHelper;
+import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Constants;
 import com.google.devtools.deviceinfra.platform.android.sdk.fastboot.Enums.FastbootProperty;
 import com.google.devtools.deviceinfra.platform.android.sdk.fastboot.Fastboot;
@@ -150,6 +151,7 @@ public abstract class AndroidRealDeviceDelegate {
 
   private final AndroidAdbInternalUtil androidAdbInternalUtil;
   protected final AndroidAdbUtil androidAdbUtil;
+  private final Adb adb;
   private final AndroidProcessUtil androidProcessUtil;
   private final AndroidSystemSettingUtil systemSettingUtil;
   private final AndroidFileUtil androidFileUtil;
@@ -179,6 +181,7 @@ public abstract class AndroidRealDeviceDelegate {
       Clock clock,
       AndroidAdbInternalUtil androidAdbInternalUtil,
       AndroidAdbUtil androidAdbUtil,
+      Adb adb,
       AndroidProcessUtil androidProcessUtil,
       AndroidSystemSettingUtil systemSettingUtil,
       AndroidFileUtil androidFileUtil,
@@ -204,6 +207,7 @@ public abstract class AndroidRealDeviceDelegate {
     this.clock = clock;
     this.androidAdbInternalUtil = androidAdbInternalUtil;
     this.androidAdbUtil = androidAdbUtil;
+    this.adb = adb;
     this.androidProcessUtil = androidProcessUtil;
     this.systemSettingUtil = systemSettingUtil;
     this.androidFileUtil = androidFileUtil;
@@ -494,7 +498,7 @@ public abstract class AndroidRealDeviceDelegate {
     addRealDeviceFullStackDimensions();
     startActivityController();
     extraSettingsForFullStackDevice();
-    execBeforeFinishSetupAdbCommands();
+    execBeforeFinishSetupAdbShellCommands();
     logger.atInfo().log("Device %s is ready", deviceId);
   }
 
@@ -836,7 +840,8 @@ public abstract class AndroidRealDeviceDelegate {
     }
   }
 
-  private void execBeforeFinishSetupAdbCommands() {
+  private void execBeforeFinishSetupAdbShellCommands()
+      throws MobileHarnessException, InterruptedException {
     Optional<ConditionedDeviceConfigs> conditionedDeviceConfigsOpt =
         ConditionedDeviceConfigUtil.getConditionedDeviceConfigsFromDimensions(device);
     if (conditionedDeviceConfigsOpt.isEmpty()) {
@@ -847,8 +852,9 @@ public abstract class AndroidRealDeviceDelegate {
         ConditionedDeviceConfigUtil.getBeforeFinishSetupAdbCommandsByDevice(
             conditionedDeviceConfigsOpt.get(), device);
     for (String adbCommand : adbCommands) {
-      // TODO: b/430037981 - run the adb command for real through some util.
-      logger.atInfo().log("Dry-run: command %s on device %s", adbCommand, deviceId);
+      logger.atInfo().log("Running adb command on device %s:\n\t%s", deviceId, adbCommand);
+      String output = adb.runShell(deviceId, adbCommand);
+      logger.atInfo().log("Output of adb command on device %s:\n\t%s", deviceId, output);
     }
   }
 
