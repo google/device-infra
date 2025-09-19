@@ -27,6 +27,9 @@ public interface PropertyName {
     /** The job allocation fails after start_timeout is reached. */
     ALLOCATION_FAIL_AFTER_START_TIMEOUT,
 
+    /** Whether to allow restricted data. */
+    ALLOW_RESTRICTED_DATA,
+
     /** The build id. */
     BUILD_ID,
 
@@ -39,6 +42,8 @@ public interface PropertyName {
     CLIENT_TYPE,
 
     CLIENT_VERSION,
+
+    DEVICE_PROVIDER,
 
     /** Execution mode (lower case of ExecModeUtil.getModeName()). */
     EXEC_MODE,
@@ -125,6 +130,9 @@ public interface PropertyName {
 
   /** Mobile Harness test property name constants. */
   enum Test implements PropertyName {
+    /** The actual user to run the test. */
+    ACTUAL_USER,
+
     /**
      * The deep-dive classification of allocation failure. The value is the name of the allocation
      * failure error ids.
@@ -154,8 +162,17 @@ public interface PropertyName {
      */
     ALLOCATION_TIME_SEC,
 
+    /** The epoch time when the video recording of the AndroidHdVideoDecorator starts. */
+    ANDROID_HD_VIDEO_DECORATOR_VIDEO_START_EPOCH_MS,
+
     /** Android instrumentation test method repeat times. */
     ANDROID_INST_TEST_METHOD_REPEAT_TIMES,
+
+    /** The epoch time when the Android Robo test execution ends. */
+    ANDROID_ROBO_TEST_TEST_END_EPOCH_MS,
+
+    /** The epoch time when the Android Robo test execution starts. */
+    ANDROID_ROBO_TEST_TEST_START_EPOCH_MS,
 
     /** Whether the test runs in MH container mode. Value type is boolean. */
     CONTAINER_MODE,
@@ -199,6 +216,12 @@ public interface PropertyName {
      */
     HYBRID_UTP_FORCIBLY_DISABLE,
 
+    /** The current UTP mode. */
+    HYBRID_UTP_MODE,
+
+    /** Whether the test can pass in hybrid UTP mode after disabling. */
+    HYBRID_UTP_PASS_AFTER_DISABLE,
+
     /**
      * Reasons why the test can not run in hybrid UTP mode.
      *
@@ -218,6 +241,12 @@ public interface PropertyName {
      * {@code com.google.devtools.mobileharness.infra.controller.test.local.LocalTestFlow}.
      */
     LOCAL_TEST_DISABLE_DEVICE_PRE_RUN_POST_RUN,
+
+    /** The epoch time when the UTP driver test execution ends. */
+    MH_UTP_DRIVER_TEST_END_EPOCH_MS,
+
+    /** The epoch time when the UTP driver test execution starts. */
+    MH_UTP_DRIVER_TEST_START_EPOCH_MS,
 
     /**
      * The name of the test property which indicates that the current test is non-passing, but will
