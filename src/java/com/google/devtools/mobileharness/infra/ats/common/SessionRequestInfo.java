@@ -46,6 +46,8 @@ public abstract class SessionRequestInfo {
 
   public abstract Optional<String> androidXtsZip();
 
+  public abstract Optional<TestResource> androidXtsZipTestResource();
+
   public abstract ImmutableList<String> deviceSerials();
 
   public abstract ImmutableList<String> excludeDeviceSerials();
@@ -247,6 +249,8 @@ public abstract class SessionRequestInfo {
     public abstract Builder setPythonPkgIndexUrl(String pythonPkgIndexUrl);
 
     public abstract Builder setAndroidXtsZip(String androidXtsZip);
+
+    public abstract Builder setAndroidXtsZipTestResource(TestResource testResource);
 
     public abstract Builder setEnvVars(ImmutableMap<String, String> envVars);
 

@@ -199,6 +199,13 @@ public class JobInfo extends JobScheduleUnit {
   @ParamAnnotation(
       required = false,
       help =
+          "The file list that should be cached with persistent cache. The value should be of format"
+              + " \"a,b,c\".")
+  public static final String PARAM_PERISTENT_CACHE_FILE_LIST = "persistent_cache_file_list";
+
+  @ParamAnnotation(
+      required = false,
+      help =
           "Whether to report test error as TOOL_FAILED. Default value is not set. Currently it only"
               + " supports tests triggered by gateway.")
   public static final String PARAM_REPORT_ERROR_AS_TOOL_FAILED = "report_error_as_tool_failed";
