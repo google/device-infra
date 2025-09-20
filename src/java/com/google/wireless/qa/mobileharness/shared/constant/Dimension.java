@@ -280,6 +280,8 @@ public final class Dimension {
     NUM_CPUS,
     /** The oem unlock statue of the device. Only used in fastboot mode. */
     OEM_UNLOCK,
+    /** Indicate if try to reboot device to recover it. Only used in fastboot mode. */
+    REBOOT_TO_RECOVER,
     /** The recovery tag name of the device. */
     RECOVERY,
     /**
