@@ -128,7 +128,10 @@ public class ResUtil {
       throws MobileHarnessException {
     String resDir = this.resDir.get();
     synchronized (resFiles) {
-      String key = relativeClass.getSimpleName() + "_" + resPathInJar;
+      String key =
+          resPathInJar.startsWith("/")
+              ? resPathInJar
+              : relativeClass.getName() + "_" + resPathInJar;
       String filePath = resFiles.get(key);
       if (filePath != null) {
         try {
