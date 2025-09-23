@@ -41,6 +41,7 @@ public class BuiltinOlcServerFlags {
           "--enable_android_device_ready_check=false",
           "--enable_device_state_change_recover=false",
           "--enable_device_system_settings_change=false",
+          "--enable_fastboot_detector=false",
           "--enable_root_device=false",
           "--ignore_check_device_failure=true",
           "--mute_android=false",
