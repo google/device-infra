@@ -84,6 +84,21 @@ java_library(
 )
 
 java_library(
+    name = "fastboot",
+    srcs = [
+        "FastbootDetector.java",
+    ],
+    deps = [
+        ":base",
+        "//src/java/com/google/devtools/deviceinfra/platform/android/sdk/fastboot",
+        "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector/model",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/system",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "no_op",
     srcs = ["NoOpDeviceDetector.java"],
     runtime_deps = [

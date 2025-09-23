@@ -22,6 +22,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.api.devicemanager.detector.BaseAdbDetector;
 import com.google.devtools.mobileharness.api.devicemanager.detector.Detector;
 import com.google.devtools.mobileharness.api.devicemanager.detector.FailedDeviceDetector;
+import com.google.devtools.mobileharness.api.devicemanager.detector.FastbootDetector;
 import com.google.devtools.mobileharness.api.devicemanager.detector.NoOpDeviceDetector;
 import com.google.devtools.mobileharness.api.devicemanager.dispatcher.AndroidLocalEmulatorDispatcher;
 import com.google.devtools.mobileharness.api.devicemanager.dispatcher.AndroidRealDeviceDispatcher;
@@ -46,10 +47,15 @@ final class AllDetectorsAndDispatchers {
 
   public static ImmutableList<Detector> detectorCandidatesForLabServerOss() {
     ImmutableList.Builder<Detector> detectorCandidates = ImmutableList.builder();
-    return detectorCandidates
+    detectorCandidates
         .addAll(detectorCandidatesForLocalModeInternalOssAndLabServerOss())
-        .add(new FailedDeviceDetector())
-        .build();
+        .add(new FailedDeviceDetector());
+
+    if (Flags.instance().enableFastbootDetector.getNonNull()) {
+      detectorCandidates.add(new FastbootDetector());
+    }
+
+    return detectorCandidates.build();
   }
 
   private static ImmutableList<Detector>

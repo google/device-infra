@@ -26,6 +26,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:base",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:base_adb",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:failed_device",
+        "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:fastboot",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:no_op",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector/model:android_emulator_type",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/dispatcher:android_local_emulator",
