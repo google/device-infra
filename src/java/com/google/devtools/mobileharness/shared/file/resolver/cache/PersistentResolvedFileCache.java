@@ -21,6 +21,7 @@ import static com.google.common.collect.Iterables.getOnlyElement;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.file.resolver.FileResolver.ResolveResult;
 import com.google.devtools.mobileharness.shared.file.resolver.FileResolver.ResolveSource;
@@ -37,6 +38,7 @@ import javax.annotation.Nullable;
 
 /** Cache for resolved files in persistent file system. */
 public class PersistentResolvedFileCache {
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   public static final String PERSISTENT_CACHE_KEY = "persistent";
   public static final String TEAM_KEY = "team";
@@ -69,6 +71,7 @@ public class PersistentResolvedFileCache {
     CacheKey<ResolveSource> cacheKey = createCacheKey(resolveSource, checksum);
     Optional<CacheResult> cachedResult =
         persistentCache.get(cacheKey, Path.of(resolveSource.targetDir()), /* isTargetDir= */ true);
+    logger.atInfo().log("Get cache result: %s for resolve source: %s", cachedResult, resolveSource);
     return cachedResult.map((r) -> createResolveResult(r, resolveSource));
   }
 
