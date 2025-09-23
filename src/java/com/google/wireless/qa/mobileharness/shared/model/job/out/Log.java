@@ -31,23 +31,32 @@ import com.google.wireless.qa.mobileharness.shared.model.job.out.Log.Api;
 import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 import java.util.TimeZone;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import javax.annotation.Nullable;
 
 /** Output log of the job/test. */
 public class Log implements LogCollector<Api> {
 
+  private static final int MAX_LOG_SIZE = 1024 * 1024 * 8;
+  private static final String LOG_TRUNCATED_MESSAGE =
+      "... [log truncated due to exceeding maximum size of 8M bytes]";
+
   /** See {@link LoggingApi}. */
   public interface Api extends LoggingApi<Api> {}
 
   private class LogCollectorBackendImpl implements LogCollectorBackend<LogData> {
 
+    // It's not thread-safe, but it's acceptable to exceed the MAX_LOG_SIZE a little bit.
     @Override
     public void log(LogData data) {
+      if (isLogTruncated.get()) {
+        return;
+      }
       // Example: I xx:xx:xx Failed to read file: IOException: This is the error message
       String message = data.getFormattedMessage();
       Optional<Throwable> cause = data.getCause();
-      append(
+      String logLine =
           DATE_FORMAT.format(timing.getClock().instant())
               + " "
               + data.getLevel().toString().charAt(0)
@@ -55,7 +64,15 @@ public class Log implements LogCollector<Api> {
               + message
               + (!message.isEmpty() && cause.isPresent() ? ": " : "")
               + cause.map(c -> formatCause(c, data.getWithCauseStack())).orElse("")
-              + "\n");
+              + "\n";
+      int maxAllowedLogLineSize = MAX_LOG_SIZE - LOG_TRUNCATED_MESSAGE.length() - buffer.length();
+      if (maxAllowedLogLineSize < logLine.length()) {
+        logLine =
+            (maxAllowedLogLineSize > 0 ? logLine.substring(0, maxAllowedLogLineSize) : "")
+                + LOG_TRUNCATED_MESSAGE;
+        isLogTruncated.set(true);
+      }
+      append(logLine);
     }
 
     private String formatCause(Throwable cause, boolean withCauseStack) {
@@ -102,6 +119,9 @@ public class Log implements LogCollector<Api> {
 
   /** Output logs will be appended to this buffer while running this job/test. */
   private final StringBuffer buffer = new StringBuffer();
+
+  /** Whether the log is truncated due to exceeding maximum size. */
+  private final AtomicBoolean isLogTruncated = new AtomicBoolean(false);
 
   /** The time records of the job/test. */
   private final Timing timing;
