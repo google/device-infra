@@ -70,7 +70,7 @@ public abstract class AbstractFileResolver implements FileResolver {
 
   /** Do the real pre process work. */
   protected Set<ResolveResult> actuallyPreBatchProcess(List<ResolveSource> resolveSources)
-      throws MobileHarnessException, InterruptedException {
+      throws MobileHarnessException, InterruptedException, ExecutionException {
     return ImmutableSet.of();
   }
 
@@ -180,7 +180,7 @@ public abstract class AbstractFileResolver implements FileResolver {
    * @param resolveSources all the files that one mobile test needs
    */
   protected Set<ResolveResult> preBatchProcess(List<ResolveSource> resolveSources)
-      throws MobileHarnessException, InterruptedException {
+      throws MobileHarnessException, InterruptedException, ExecutionException {
     Set<ResolveResult> resolveResults =
         actuallyPreBatchProcess(
             resolveSources.stream().filter(this::shouldActuallyResolve).collect(toImmutableList()));
