@@ -1,0 +1,31 @@
+// This tsconfig adjust compilerOptions in the same way that
+// strict_checks = False used to.
+{
+  "compilerOptions": {
+    "allowUnreachableCode": true,
+    "noFallthroughCasesInSwitch": false,
+    "noImplicitAny": false,
+    "noImplicitOverride": false,
+    "noImplicitReturns": false,
+    "noImplicitThis": false,
+    "noPropertyAccessFromIndexSignature": false,
+    "strictBindCallApply": false,
+    "strictFunctionTypes": false,
+    "strictPropertyInitialization": false,
+    "useUnknownInCatchVariables": false,
+    "plugins": [
+      // Most projects won't compile with the standard google3 tsetse
+      // checks enabled, but they are likely uncovering some interesting
+      // bugs. We recommend reporting these issues upstream for
+      // consideration by OSS maintainers.
+      {
+        "name": "@bazel/tsetse",
+        "disabledRules": [
+            "ban-mutable-exports",
+            "check-return-value",
+            "must-use-promises"
+        ]
+      }
+    ]
+  }
+}

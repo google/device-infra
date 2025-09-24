@@ -1,0 +1,19 @@
+{
+  "$schema": "../../../../../../../../third_party/javascript/angular_cli/packages/angular/cli/lib/config/schema.json",
+  "version": 1,
+  "projects": {
+    "angular": {
+      "root": "",
+      "sourceRoot": "",
+      "projectType": "application",
+      "prefix": "app",
+      "schematics": {
+        "angular:component": {
+          "changeDetection": "OnPush",
+          "styleext": "scss"
+        }
+      }
+    }
+  },
+  "defaultProject": "angular"
+}
