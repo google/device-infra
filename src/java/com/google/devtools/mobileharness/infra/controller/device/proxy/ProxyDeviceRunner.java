@@ -32,6 +32,7 @@ import com.google.inject.ProvisionException;
 import com.google.inject.assistedinject.Assisted;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobSetting;
+import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.SubDeviceSpec;
 import javax.annotation.concurrent.GuardedBy;
 import javax.inject.Inject;
@@ -47,7 +48,8 @@ class ProxyDeviceRunner {
         String formattedDeviceLocator,
         ProxyDeviceRequirement deviceRequirement,
         TestLocator testLocator,
-        JobSetting jobSetting);
+        JobSetting jobSetting,
+        Params params);
   }
 
   private final String formattedDeviceLocator;
@@ -55,6 +57,7 @@ class ProxyDeviceRunner {
   private final TestLocator testLocator;
   private final ReflectionUtil reflectionUtil;
   private final JobSetting jobSetting;
+  private final Params params;
 
   private final Object releaseDeviceLock = new Object();
 
@@ -70,12 +73,14 @@ class ProxyDeviceRunner {
       @Assisted ProxyDeviceRequirement deviceRequirement,
       @Assisted TestLocator testLocator,
       @Assisted JobSetting jobSetting,
+      @Assisted Params params,
       ReflectionUtil reflectionUtil) {
     this.formattedDeviceLocator = formattedDeviceLocator;
     this.deviceRequirement = deviceRequirement;
     this.testLocator = testLocator;
     this.reflectionUtil = reflectionUtil;
     this.jobSetting = jobSetting;
+    this.params = params;
   }
 
   Device leaseDevice() throws MobileHarnessException, InterruptedException {
@@ -127,7 +132,7 @@ class ProxyDeviceRunner {
 
       // Instantiates modules.
       ImmutableList.Builder<Module> modules = ImmutableList.builder();
-      modules.add(new ProxyDeviceRunnerModule(deviceRequirement, testLocator, jobSetting));
+      modules.add(new ProxyDeviceRunnerModule(deviceRequirement, testLocator, jobSetting, params));
       if (deviceProxyClass.isAnnotationPresent(DeviceProxyModule.class)) {
         // TODO: The module instances are created every time. Need to find a way to
         // cache and reuse them.
@@ -165,12 +170,17 @@ class ProxyDeviceRunner {
     private final ProxyDeviceRequirement deviceRequirement;
     private final TestLocator testLocator;
     private final JobSetting jobSetting;
+    private final Params params;
 
     private ProxyDeviceRunnerModule(
-        ProxyDeviceRequirement deviceRequirement, TestLocator testLocator, JobSetting jobSetting) {
+        ProxyDeviceRequirement deviceRequirement,
+        TestLocator testLocator,
+        JobSetting jobSetting,
+        Params params) {
       this.deviceRequirement = deviceRequirement;
       this.testLocator = testLocator;
       this.jobSetting = jobSetting;
+      this.params = params;
     }
 
     @Override
@@ -178,6 +188,7 @@ class ProxyDeviceRunner {
       bind(ProxyDeviceRequirement.class).toInstance(deviceRequirement);
       bind(TestLocator.class).toInstance(testLocator);
       bind(JobSetting.class).toInstance(jobSetting);
+      bind(Params.class).toInstance(params);
     }
   }
 }
