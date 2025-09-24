@@ -22,6 +22,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.hash.Hashing;
+import com.google.common.io.MoreFiles;
 import com.google.common.net.UrlEscapers;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.deviceinfra.shared.util.file.remote.constant.RemoteFileType;
@@ -36,13 +38,18 @@ import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.ParamAnnotation;
+import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 
@@ -64,6 +71,7 @@ public class AtsFileServerFileResolver extends AbstractFileResolver {
 
   private final LocalFileUtil localFileUtil;
   private final Sleeper sleeper;
+  private final AtsFileCacheManager cacheManager;
 
   public AtsFileServerFileResolver(
       @Nullable ListeningExecutorService executorService, LocalFileUtil localFileUtil) {
@@ -78,6 +86,7 @@ public class AtsFileServerFileResolver extends AbstractFileResolver {
     super(executorService);
     this.localFileUtil = localFileUtil;
     this.sleeper = sleeper;
+    this.cacheManager = AtsFileCacheManager.getInstance();
   }
 
   @Override
@@ -95,6 +104,25 @@ public class AtsFileServerFileResolver extends AbstractFileResolver {
           ImmutableList.of(ResolvedFile.create(path, null)), ImmutableMap.of(), resolveSource);
     } else {
       String sourcePath = path.replace(RemoteFileType.ATS_FILE_SERVER.prefix(), "");
+
+      // Get SHA256 from server.
+      Optional<String> serverSha256 = getFileSha256(sourcePath);
+
+      // Check cache if sha256 is available, and copy from cache if present.
+      if (serverSha256.isPresent()) {
+        String destination = PathUtil.join(resolveSource.targetDir(), sourcePath);
+        localFileUtil.prepareParentDir(destination);
+        if (cacheManager.copyFromCacheIfPresent(serverSha256.get(), Path.of(destination))) {
+          logger.atInfo().log(
+              "File %s with sha256 %s copied from cache to %s",
+              sourcePath, serverSha256.get(), destination);
+          return ResolveResult.of(
+              ImmutableList.of(ResolvedFile.create(destination, null)),
+              ImmutableMap.of(),
+              resolveSource);
+        }
+      }
+
       String httpSourcePath =
           String.join(
               "/",
@@ -112,7 +140,27 @@ public class AtsFileServerFileResolver extends AbstractFileResolver {
       localFileUtil.prepareParentDir(destination);
       for (int i = 0; i < MAX_DOWNLOAD_ATTEMPTS; i++) {
         try {
+          // This can be optimized to avoid downloading the same file in parallel by different test
+          // requests, should only download once.
           downloadFile(destination, httpSourcePath);
+          // Add to cache if sha256 matches.
+          if (serverSha256.isPresent()) {
+            try {
+              String downloadedFileSha256 =
+                  MoreFiles.asByteSource(Path.of(destination)).hash(Hashing.sha256()).toString();
+              if (serverSha256.get().equals(downloadedFileSha256)) {
+                cacheManager.addToCache(Path.of(destination), serverSha256.get());
+              } else {
+                logger.atWarning().log(
+                    "Downloaded file %s sha256 mismatch! Server sha256: %s, downloaded file"
+                        + " sha256: %s. File will not be cached.",
+                    destination, serverSha256.get(), downloadedFileSha256);
+              }
+            } catch (IOException e) {
+              logger.atWarning().withCause(e).log(
+                  "Failed to calculate sha256 for %s or add to cache.", destination);
+            }
+          }
           break;
         } catch (MobileHarnessException e) {
           if (i < MAX_DOWNLOAD_ATTEMPTS - 1) {
@@ -128,6 +176,45 @@ public class AtsFileServerFileResolver extends AbstractFileResolver {
           ImmutableList.of(ResolvedFile.create(destination, null)),
           ImmutableMap.of(),
           resolveSource);
+    }
+  }
+
+  private Optional<String> getFileSha256(String sourcePath) throws InterruptedException {
+    String httpHashPath =
+        String.join(
+            "/",
+            Flags.instance().atsFileServer.getNonNull(),
+            PathUtil.join("hash", UrlEscapers.urlFragmentEscaper().escape(sourcePath)));
+    try {
+      httpHashPath = new URI(httpHashPath).normalize().toString();
+    } catch (URISyntaxException e) {
+      logger.atWarning().withCause(e).log("Invalid hash path %s in ats file server.", httpHashPath);
+      return Optional.empty();
+    }
+    try {
+      String output =
+          createCommandExecutor()
+              .run(Command.of("curl", "-sfL", httpHashPath).timeout(Duration.ofMinutes(1)));
+      logger.atInfo().log(
+          "Received response from ATS file server /hash endpoint for %s: %s", sourcePath, output);
+      JsonObject jsonObject = JsonParser.parseString(output).getAsJsonObject();
+      if (jsonObject.has("sha256")) {
+        return Optional.of(jsonObject.get("sha256").getAsString());
+      } else {
+        logger.atWarning().log(
+            "Failed to get sha256 for %s from ats file server, response: %s", sourcePath, output);
+        return Optional.empty();
+      }
+    } catch (MobileHarnessException e) {
+      if (e instanceof CommandFailureException commandFailureException) {
+        CommandResult result = commandFailureException.result();
+        logger.atWarning().log(
+            "Logs of failed ats file hasher: STDOUT: %s\nSTDERR: %s",
+            result.stdout(), result.stderr());
+      }
+      logger.atWarning().withCause(e).log(
+          "Failed to get sha256 for %s from ats file server.", sourcePath);
+      return Optional.empty();
     }
   }
 
