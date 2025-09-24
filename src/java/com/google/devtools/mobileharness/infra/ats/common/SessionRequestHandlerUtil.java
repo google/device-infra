@@ -451,11 +451,24 @@ public class SessionRequestHandlerUtil {
     addSessionClientIdToJobInfo(jobInfo, sessionRequestInfo);
     jobInfo.properties().add(Job.IS_XTS_TF_JOB, "true");
     injectCommonParams(jobInfo);
+    if (Flags.instance().enablePersistentCache.getNonNull()) {
+      sessionRequestInfo
+          .androidXtsZipDownloadUrl()
+          .ifPresent(url -> addUrlToPersistentCacheList(jobInfo, url));
+    }
     tradefedJobInfo
         .extraJobProperties()
         .forEach((key, value) -> jobInfo.properties().add(key, value));
     printCreatedJobInfo(jobInfo, /* isTf= */ true);
     return jobInfo;
+  }
+
+  private void addUrlToPersistentCacheList(JobInfo jobInfo, String url) {
+    List<String> urls =
+        new ArrayList<>(
+            jobInfo.params().getList(JobInfo.PARAM_PERISTENT_CACHE_FILE_LIST, ImmutableList.of()));
+    urls.add(url);
+    jobInfo.params().addList(JobInfo.PARAM_PERISTENT_CACHE_FILE_LIST, urls);
   }
 
   /** Gets all local tradefed modules which doesn't include the mcts modules. */

@@ -77,7 +77,12 @@ public class ServerJobCreator extends XtsJobCreator {
     if (atsServerSessionUtil.isLocalMode()) {
       driverParams.put("xts_root_dir", sessionRequestInfo.xtsRootDir());
     } else {
-      driverParams.put("android_xts_zip", sessionRequestInfo.androidXtsZip().get());
+      Optional<String> findAndroidXtsZip =
+          Flags.instance().enablePersistentCache.getNonNull()
+              ? sessionRequestInfo.androidXtsZipDownloadUrl()
+              : Optional.empty();
+      findAndroidXtsZip = findAndroidXtsZip.or(() -> sessionRequestInfo.androidXtsZip());
+      findAndroidXtsZip.ifPresent(url -> driverParams.put("android_xts_zip", url));
     }
     if (sessionRequestInfo.remoteRunnerFilePathPrefix().isPresent()
         && driverParams.containsKey("subplan_xml")) {
