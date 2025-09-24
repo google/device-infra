@@ -779,6 +779,26 @@ public class AndroidAdbUtil {
   }
 
   /**
+   * Removes reverse tcp port setup between host machine and device. Only works on API level >= 21.
+   *
+   * @param serial serial number of the device
+   * @param hostPort the port on local machine
+   * @throws MobileHarnessException if fails to remove reverse tcp setup
+   * @throws InterruptedException if the thread executing the commands is interrupted
+   */
+  public void removeReverseTcpPort(String serial, int hostPort)
+      throws MobileHarnessException, InterruptedException {
+    try {
+      String unused =
+          adb.runWithRetry(
+              serial, new String[] {ADB_ARG_REVERSE_TCP, "--remove", "tcp:" + hostPort});
+    } catch (MobileHarnessException e) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_ADB_UTIL_REMOVE_REVERSE_TCP_PORT_ERROR, e.getMessage(), e);
+    }
+  }
+
+  /**
    * Removes all reverse tcp ports setup between host machine and device. Only works on API level >=
    * 21.
    *
