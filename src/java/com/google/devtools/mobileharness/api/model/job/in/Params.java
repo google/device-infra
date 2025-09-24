@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.api.model.job.in;
 
 import com.google.common.base.Ascii;
+import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -28,6 +29,7 @@ import com.google.devtools.mobileharness.service.moss.proto.Slg.ParamsProto;
 import com.google.devtools.mobileharness.shared.util.base.StrUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -37,8 +39,11 @@ import javax.annotation.Nullable;
 /** Input parameters. */
 public class Params {
 
+  private static final String DEFAULT_LIST_SEPARATOR = ",";
+
   /** Default splitter to split a long string into a string list. */
-  private static final Splitter LIST_SPLITTER = Splitter.on(',').trimResults().omitEmptyStrings();
+  private static final Splitter LIST_SPLITTER =
+      Splitter.on(DEFAULT_LIST_SEPARATOR).trimResults().omitEmptyStrings();
 
   /** Input parameters. */
   private final Map<String, String> params = new ConcurrentHashMap<>();
@@ -270,6 +275,37 @@ public class Params {
       return Lists.newArrayList(listSplitter.split(value.get()));
     }
     return defaultValue;
+  }
+
+  /**
+   * Creates a new string-list-valued parameter with the given name and values and default
+   * separator.
+   *
+   * <p>It will overwrite the existing parameter value if any.
+   *
+   * @param name parameter name/key.
+   * @param values the values to be added to the parameter. It will contain the same elements as the
+   *     return value of {@link getList}
+   */
+  @CanIgnoreReturnValue
+  public Params addList(String name, Collection<String> values) {
+    return addList(name, values, DEFAULT_LIST_SEPARATOR);
+  }
+
+  /**
+   * Create a new string-list-valued parameter with the given name and values.
+   *
+   * <p>It will overwrite the existing parameter value if any.
+   *
+   * @param name parameter name/key.
+   * @param values the values to be added to the parameter. It will contain the same elements as the
+   *     return value of {@link getList}
+   * @param separator the separator to join the values.
+   */
+  @CanIgnoreReturnValue
+  public Params addList(String name, Collection<String> values, String separator) {
+    Joiner joiner = Joiner.on(separator).skipNulls();
+    return add(name, joiner.join(values));
   }
 
   /**

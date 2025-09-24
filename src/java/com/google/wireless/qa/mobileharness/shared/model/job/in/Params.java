@@ -20,6 +20,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -188,6 +189,38 @@ public class Params {
    */
   public List<String> getList(String name, String separator, List<String> defaultValue) {
     return newParams.getList(name, separator, defaultValue);
+  }
+
+  /**
+   * Creates a new string-list-valued parameter with the given name and values and default
+   * separator.
+   *
+   * <p>It will overwrite the existing parameter value if any.
+   *
+   * @param name parameter name/key.
+   * @param values the values to be added to the parameter. It will contain the same elements as the
+   *     return value of {@link getList}
+   */
+  @CanIgnoreReturnValue
+  public Params addList(String name, Collection<String> values) {
+    newParams.addList(name, values);
+    return this;
+  }
+
+  /**
+   * Create a new string-list-valued parameter with the given name and values.
+   *
+   * <p>It will overwrite the existing parameter value if any.
+   *
+   * @param name parameter name/key.
+   * @param values the values to be added to the parameter. It will contain the same elements as the
+   *     return value of {@link getList}
+   * @param separator the separator to join the values.
+   */
+  @CanIgnoreReturnValue
+  public Params addList(String name, Collection<String> values, String separator) {
+    newParams.addList(name, values, separator);
+    return this;
   }
 
   /**
