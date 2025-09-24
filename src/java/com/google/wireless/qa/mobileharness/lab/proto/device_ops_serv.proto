@@ -60,6 +60,7 @@ message GetDeviceDebugInfoRequest {
     IP_LINK_SHOW = 8;
     ARP_SHOW = 9;
     WHICH_ADB = 10;
+    IFCONFIG = 11;
   }
   repeated GetDeviceDebugInfoCommand command = 1;
 }
