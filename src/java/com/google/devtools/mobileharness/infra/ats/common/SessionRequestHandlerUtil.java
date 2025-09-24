@@ -281,6 +281,14 @@ public class SessionRequestHandlerUtil {
             availableDevices.stream()
                 .map(device -> device.uuid().orElse(""))
                 .collect(toImmutableSet());
+        if (!sessionRequestInfo.allowPartialDeviceMatch()
+            && !availableDeviceUuids.containsAll(sessionRequestInfo.deviceSerials())) {
+          throw MobileHarnessExceptionFactory.createUserFacingException(
+              InfraErrorId.OLCS_NO_AVAILABLE_DEVICE,
+              "Device is strictly matching and not all requested devices are available, set"
+                  + " allow_partial_device_match if you don't want strict match.",
+              /* cause= */ null);
+        }
         return sessionRequestInfo.deviceSerials().stream()
             .filter(availableDeviceUuids::contains)
             .map(

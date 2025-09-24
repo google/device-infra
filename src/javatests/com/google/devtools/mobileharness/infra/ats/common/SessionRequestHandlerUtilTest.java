@@ -252,6 +252,7 @@ public final class SessionRequestHandlerUtilTest {
     SessionRequestInfo sessionRequestInfo =
         defaultSessionRequestInfoBuilder()
             .setIsAtsServerRequest(true)
+            .setAllowPartialDeviceMatch(true)
             .setDeviceSerials(ImmutableList.of("device_id_1", "device_id_2"))
             .build();
     ImmutableList<SubDeviceSpec> subDeviceSpecs =
@@ -263,6 +264,32 @@ public final class SessionRequestHandlerUtilTest {
         .containsExactly(subDeviceSpecWithDimension("uuid", "device_id_1"));
 
     initializeJobConfig_atsServerSpecifyOneDevice_createJobWithThatDevice();
+  }
+
+  @Test
+  public void
+      initializeJobConfig_atsServerSpecifyNotAvailableDeviceAndNoPartialMatch_throwException()
+          throws Exception {
+    when(deviceQuerier.queryDevice(any()))
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder()
+                        .setId("device_id_1")
+                        .addDimension(
+                            Dimension.newBuilder().setName("uuid").setValue("device_id_1"))
+                        .addType("AndroidOnlineDevice"))
+                .build());
+    SessionRequestInfo sessionRequestInfo =
+        defaultSessionRequestInfoBuilder()
+            .setIsAtsServerRequest(true)
+            .setAllowPartialDeviceMatch(false)
+            .setDeviceSerials(ImmutableList.of("device_id_1", "device_id_2"))
+            .build();
+
+    assertThrows(
+        MobileHarnessException.class,
+        () -> sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo));
   }
 
   @Test
