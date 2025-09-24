@@ -321,6 +321,15 @@ public abstract class AndroidRealDeviceDelegate {
         invalidateCacheDevice(deviceId);
       }
       setUpOnlineModeDevice();
+    } else if (isAllowedToRebootFastbootDeviceToRecover()) {
+      // Set REBOOT_TO_STATE property to DeviceState.DEVICE and throw MobileHarnessException to
+      // interrupt device setup so LocalDeviceRunner reboot device later.
+      AndroidDeviceDelegateHelper.setRebootToStateProperty(device, DeviceState.DEVICE);
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_REAL_DEVICE_REBOOT_FASTBOOT_DEVICE_TO_RECOVER,
+          String.format(
+              "Device %s has dimension %s with value true, reboot device to normal mode later",
+              deviceId, Ascii.toLowerCase(Dimension.Name.REBOOT_TO_RECOVER.name())));
     } else {
       device.addSupportedDriver(AndroidRealDeviceConstants.NO_OP_DRIVER);
       device.addSupportedDriver(AndroidRealDeviceConstants.MOBLY_TEST_DRIVER);
@@ -1425,8 +1434,15 @@ public abstract class AndroidRealDeviceDelegate {
           String unused = fastboot.rebootBootloader(deviceId);
           break;
         default:
-          // Skip rebooting fastboot mode device, because its data may be destroyed.
-          logger.atInfo().log("Device %s is in the fastboot mode skip rebooting", deviceId);
+          if (isAllowedToRebootFastbootDeviceToRecover()) {
+            logger.atInfo().log(
+                "Device %s has dimension %s with value true, reboot to normal mode",
+                deviceId, Dimension.Name.REBOOT_TO_RECOVER.name());
+            fastboot.reboot(deviceId, /* waitTime= */ Duration.ofSeconds(10));
+          } else {
+            // Skip rebooting fastboot mode device, because its data may be destroyed.
+            logger.atInfo().log("Device %s is in the fastboot mode skip rebooting", deviceId);
+          }
           break;
       }
     }
@@ -2649,6 +2665,19 @@ public abstract class AndroidRealDeviceDelegate {
     return (dimensionList.size() == 1
         && Ascii.equalsIgnoreCase(
             dimensionList.get(0), AndroidRealDeviceConstants.RECOVERY_TYPE_TEST_HARNESS));
+  }
+
+  /** Checks whether to reboot fastboot device to recover. */
+  private boolean needRebootFastbootDeviceToRecover() {
+    List<String> dimensionList = device.getDimension(Dimension.Name.REBOOT_TO_RECOVER);
+    return (dimensionList.size() == 1 && Ascii.equalsIgnoreCase("true", dimensionList.get(0)));
+  }
+
+  private boolean isAllowedToRebootFastbootDeviceToRecover() {
+    return needRebootFastbootDeviceToRecover()
+        && deviceStat != null
+        && deviceStat.getConsecutiveSetupFailureTimes()
+            <= AndroidRealDeviceConstants.CONSECUTIVE_SETUP_FAILURE_NUM_TO_FASTBOOT_MODE;
   }
 
   /**

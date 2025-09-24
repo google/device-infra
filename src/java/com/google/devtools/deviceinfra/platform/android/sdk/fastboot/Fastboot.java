@@ -42,6 +42,7 @@ import com.google.devtools.mobileharness.shared.util.quota.QuotaManager.Lease;
 import com.google.devtools.mobileharness.shared.util.quota.proto.Quota.QuotaKey;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
+import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -479,9 +480,23 @@ public class Fastboot {
 
   /** Reboots the device. */
   public void reboot(String serial) throws MobileHarnessException, InterruptedException {
+    reboot(serial, Duration.ZERO);
+  }
+
+  /**
+   * Reboots the device.
+   *
+   * @param serial device serial number
+   * @param waitTime the time to wait after the fastboot device is rebooted
+   */
+  public void reboot(String serial, Duration waitTime)
+      throws MobileHarnessException, InterruptedException {
     checkFastboot();
     runWithRetry(
         serial, new String[] {"reboot"}, SHORT_COMMAND_DURATION, /* flashSemaphore= */ false);
+    if (TimeUtils.isDurationPositive(waitTime)) {
+      sleeper.sleep(waitTime);
+    }
   }
 
   /**

@@ -39,6 +39,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/quota",
         "//src/java/com/google/devtools/mobileharness/shared/util/system",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
         "@maven//:org_apache_commons_commons_lang3",
