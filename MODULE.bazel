@@ -77,7 +77,10 @@ use_repo(
     "com_github_hanwen_go_fuse_v2",
     "com_github_jotfs_fastcdc_go",
     "com_github_pkg_xattr",
+    "org_chromium_go_luci",
+    "org_golang_google_grpc",
     "org_golang_google_protobuf",
+    "org_golang_x_sync",
 )
 
 inject_repo(

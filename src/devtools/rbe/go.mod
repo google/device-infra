@@ -10,21 +10,22 @@ require (
 	github.com/hanwen/go-fuse/v2 v2.7.2
 	github.com/jotfs/fastcdc-go v0.2.0
 	github.com/pkg/xattr v0.4.12
+	go.chromium.org/luci v0.0.0-20241204121246-ca1514f04295
+	golang.org/x/sync v0.11.0
+	google.golang.org/grpc v1.67.3
 	google.golang.org/protobuf v1.36.3
 )
 
 require (
-	cloud.google.com/go/compute/metadata v0.5.0 // indirect
-	cloud.google.com/go/longrunning v0.5.12 // indirect
-	github.com/klauspost/compress v1.17.8 // indirect
+	cloud.google.com/go/compute/metadata v0.5.2 // indirect
+	cloud.google.com/go/longrunning v0.6.1 // indirect
+	github.com/klauspost/compress v1.17.10 // indirect
 	golang.org/x/net v0.36.0 // indirect
-	golang.org/x/oauth2 v0.22.0 // indirect
-	golang.org/x/sync v0.11.0 // indirect
+	golang.org/x/oauth2 v0.23.0 // indirect
 	golang.org/x/sys v0.30.0 // indirect
 	golang.org/x/text v0.22.0 // indirect
-	google.golang.org/genproto v0.0.0-20240730163845-b1a4ccb954bf // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20240812133136-8ffd90a71988 // indirect
-	google.golang.org/genproto/googleapis/bytestream v0.0.0-20230807174057-1744710a1577 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240812133136-8ffd90a71988 // indirect
-	google.golang.org/grpc v1.65.0 // indirect
+	google.golang.org/genproto v0.0.0-20241007155032-5fefd90f89a9 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20241007155032-5fefd90f89a9 // indirect
+	google.golang.org/genproto/googleapis/bytestream v0.0.0-20241007155032-5fefd90f89a9 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20241007155032-5fefd90f89a9 // indirect
 )
