@@ -20,6 +20,8 @@ package(
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/util/xtsdownloader:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__subpackages__",
         "//wireless/android/engprod/regression_pipeline/templates:__subpackages__",
+        # For xTS issue agent bug bots.
+        "//wireless/android/sdlc/riemann/be/automation/contrib/trunkstable:__subpackages__",
     ],
 )
 
