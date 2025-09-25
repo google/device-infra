@@ -3,9 +3,7 @@ package chunker
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -31,7 +29,7 @@ func TestChunkFile(t *testing.T) {
 		os.MkdirAll(targetDir, 0755)
 		defer func() {
 			if err := os.RemoveAll(targetDir); err != nil {
-				fmt.Printf("failed to remove tmp dir: %v", err)
+				t.Logf("failed to remove tmp dir: %v", err)
 			}
 		}()
 
@@ -39,10 +37,10 @@ func TestChunkFile(t *testing.T) {
 		os.MkdirAll(chunksDir, 0755)
 
 		seed := time.Now().UnixNano()
-		fmt.Printf("Seed: %d\n", seed)
+		t.Logf("Seed: %d\n", seed)
 
 		sourcePath := filepath.Join(targetDir, test.name+"_source")
-		if err := createRandomFile(sourcePath, fileSizeKB*1024, seed, test.duplicateContent); err != nil {
+		if err := createRandomFile(t, sourcePath, fileSizeKB*1024, seed, test.duplicateContent); err != nil {
 			t.Fatalf("Failed to create random file: %v", err)
 		}
 
@@ -53,7 +51,7 @@ func TestChunkFile(t *testing.T) {
 		}
 
 		restoredPath := filepath.Join(targetDir, test.name+"_restored")
-		fmt.Printf("Restoring file %s from dir: %s\n", restoredPath, chunksDir)
+		t.Logf("Restoring file %s from dir: %s\n", restoredPath, chunksDir)
 		if err := RestoreFile(restoredPath, chunksDir, chunks); err != nil {
 			t.Fatalf("Failed to restore file: %v", err)
 		}
@@ -66,8 +64,8 @@ func TestChunkFile(t *testing.T) {
 	}
 }
 
-func createRandomFile(path string, size int, seed int64, duplicateContent bool) error {
-	fmt.Printf("Creating a random file %s of size %d using seed %d\n", path, size, seed)
+func createRandomFile(t *testing.T, path string, size int, seed int64, duplicateContent bool) error {
+	t.Logf("Creating a random file %s of size %d using seed %d\n", path, size, seed)
 
 	// Generate seeded random data
 	rng := rand.New(rand.NewSource(seed))
@@ -90,8 +88,8 @@ func createRandomFile(path string, size int, seed int64, duplicateContent bool) 
 	}
 
 	// Write the generated data to the file.
-	if err := ioutil.WriteFile(path, randomData, 0644); err != nil {
-		fmt.Printf("Error writing to file %s, %s\n", path, err)
+	if err := os.WriteFile(path, randomData, 0644); err != nil {
+		t.Logf("Error writing to file %s, %s\n", path, err)
 		return err
 	}
 

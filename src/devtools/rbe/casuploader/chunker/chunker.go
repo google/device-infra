@@ -28,6 +28,11 @@ func ChunkFile(path string, chunksDir string, avgChunkSizeKb int) ([]ChunkInfo, 
 	}
 	defer source.Close()
 
+	fileInfo, err := source.Stat()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get file info for %s: %v", path, err)
+	}
+
 	chunker, err := fastcdc.NewChunker(source, fastcdc.Options{
 		AverageSize: 1024 * avgChunkSizeKb,
 	})
@@ -35,9 +40,10 @@ func ChunkFile(path string, chunksDir string, avgChunkSizeKb int) ([]ChunkInfo, 
 		return nil, fmt.Errorf("failed to create chunker for %s: %v", path, err)
 	}
 
-	chunks := []fastcdc.Chunk{}
-	chunkmap := make(map[string]int)
-	chunkList := []ChunkInfo{}
+	// Add 5% to the estimated chunks to hopefully avoid in-loop reallocating of a large slice.
+	estimatedChunks := int(1.05*float64(fileInfo.Size())/float64(1024*avgChunkSizeKb)) + 1
+	seenChunks := make(map[string]struct{})	// Use the map as a set to deduplicate chunks.
+	chunkList := make([]ChunkInfo, 0, estimatedChunks)
 
 	for {
 		chunk, err := chunker.Next()
@@ -49,11 +55,13 @@ func ChunkFile(path string, chunksDir string, avgChunkSizeKb int) ([]ChunkInfo, 
 		}
 
 		sha256 := chunkSHA256(chunk)
-		chunks = append(chunks, chunk)
-		_, ok := chunkmap[sha256]
-		if !ok {
-			chunkmap[sha256] = chunk.Length
-			writeChunkToFile(chunksDir, sha256, chunk)
+		if _, ok := seenChunks[sha256]; !ok {
+			// To add the sha to the set, assign an empty struct value
+			seenChunks[sha256] = struct{}{}
+
+			if err := writeChunkToFile(chunksDir, sha256, chunk); err != nil {
+				return nil, fmt.Errorf("failed to write chunk %s: %w", sha256, err)
+			}
 		}
 		chunkList = append(chunkList, ChunkInfo{SHA256: sha256, Offset: int64(chunk.Offset)})
 	}
@@ -86,7 +94,7 @@ func RestoreFile(path string, chunksDir string, chunks []ChunkInfo) error {
 		if err := os.Link(filepath.Join(chunksDir, chunk.SHA256), path); err == nil {
 			return nil
 		}
-		// fallthrough as failover for file linking.
+		// If linking fails, fall back to copying the data.
 	}
 
 	file, err := os.Create(path)
