@@ -177,7 +177,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
     JobConfig jobConfig =
         sessionRequestHandlerUtil.initializeJobConfig(
-            sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs);
+            sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs, ImmutableMultimap.of());
 
     assertThat(jobConfig.getJobTimeoutSec()).isEqualTo(3000L);
     assertThat(jobConfig.getTestTimeoutSec()).isEqualTo(2940L);
@@ -194,7 +194,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
     JobConfig jobConfig =
         sessionRequestHandlerUtil.initializeJobConfig(
-            sessionRequestInfo, driverParams, subDeviceSpecs);
+            sessionRequestInfo, driverParams, subDeviceSpecs, ImmutableMultimap.of());
 
     assertThat(jobConfig.getDevice().getSubDeviceSpecList())
         .containsExactly(subDeviceSpecWithDimension("id", "regex:(device_id_1|device_id_2)"));
@@ -214,7 +214,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
     JobConfig jobConfig =
         sessionRequestHandlerUtil.initializeJobConfig(
-            sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs);
+            sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs, ImmutableMultimap.of());
     assertThat(jobConfig.getDevice().getSubDeviceSpecList())
         .containsExactly(subDeviceSpecWithDimension("id", "regex:(device_id_1|device_id_2)"));
   }
@@ -231,7 +231,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
     JobConfig jobConfig =
         sessionRequestHandlerUtil.initializeJobConfig(
-            sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs);
+            sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs, ImmutableMultimap.of());
     assertThat(jobConfig.getDevice().getSubDeviceSpecList())
         .containsExactly(subDeviceSpecWithDimension("uuid", "device_id_1"));
   }
@@ -258,7 +258,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
     JobConfig jobConfig =
         sessionRequestHandlerUtil.initializeJobConfig(
-            sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs);
+            sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs, ImmutableMultimap.of());
     assertThat(jobConfig.getDevice().getSubDeviceSpecList())
         .containsExactly(subDeviceSpecWithDimension("uuid", "device_id_1"));
 
@@ -376,7 +376,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
     JobConfig jobConfig =
         sessionRequestHandlerUtil.initializeJobConfig(
-            sessionRequestInfo, driverParams, subDeviceSpecs);
+            sessionRequestInfo, driverParams, subDeviceSpecs, ImmutableMultimap.of());
 
     // subDeviceSpecWithDimension uses "AndroidDevice" type, and cannot be used here.
     assertThat(jobConfig.getDevice().getSubDeviceSpecList())
@@ -404,7 +404,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
     JobConfig jobConfig =
         sessionRequestHandlerUtil.initializeJobConfig(
-            sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs);
+            sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs, ImmutableMultimap.of());
 
     assertThat(jobConfig.getDevice().getSubDeviceSpecList())
         .containsExactly(subDeviceSpecWithDimension("id", "regex:(device_id_2)"));
@@ -418,7 +418,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
     JobConfig jobConfig =
         sessionRequestHandlerUtil.initializeJobConfig(
-            sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs);
+            sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs, ImmutableMultimap.of());
     SubDeviceSpec subDeviceSpec =
         subDeviceSpecWithDimension("id", "regex:(device_id_1|device_id_2)");
     assertThat(jobConfig.getDevice().getSubDeviceSpecList())
@@ -436,7 +436,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
     JobConfig jobConfig =
         sessionRequestHandlerUtil.initializeJobConfig(
-            sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs);
+            sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs, ImmutableMultimap.of());
 
     // subDeviceSpecWithDimension uses "AndroidDevice" type, and cannot be used here.
     SubDeviceSpec subDeviceSpec =
@@ -465,7 +465,7 @@ public final class SessionRequestHandlerUtilTest {
         MobileHarnessException.class,
         () -> {
           sessionRequestHandlerUtil.initializeJobConfig(
-              sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs);
+              sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs, ImmutableMultimap.of());
         });
   }
 
@@ -480,7 +480,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
     JobConfig jobConfig =
         sessionRequestHandlerUtil.initializeJobConfig(
-            sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs);
+            sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs, ImmutableMultimap.of());
 
     SubDeviceSpec subDeviceSpec =
         subDeviceSpecWithDimension("id", "regex:(device_id_1|device_id_2)");
@@ -499,7 +499,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
     JobConfig jobConfig =
         sessionRequestHandlerUtil.initializeJobConfig(
-            sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs);
+            sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs, ImmutableMultimap.of());
 
     SubDeviceSpec subDeviceSpec =
         subDeviceSpecWithDimension("id", "regex:(device_id_1|device_id_2)");
@@ -530,7 +530,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
     JobConfig jobConfig =
         sessionRequestHandlerUtil.initializeJobConfig(
-            sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs);
+            sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs, ImmutableMultimap.of());
 
     assertThat(jobConfig.getDevice().getSubDeviceSpecList())
         .containsExactly(subDeviceSpecWithDimension("id", "device_id_1"));
@@ -547,7 +547,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
     JobConfig jobConfig =
         sessionRequestHandlerUtil.initializeJobConfig(
-            sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs);
+            sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs, ImmutableMultimap.of());
 
     assertThat(jobConfig.getDevice().getSubDeviceSpecList())
         .containsExactly(

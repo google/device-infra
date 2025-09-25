@@ -105,7 +105,7 @@ public final class ConsoleJobCreatorTest {
             .build();
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
 
-    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any()))
+    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any(), any()))
         .thenReturn(JobConfig.getDefaultInstance());
 
     ImmutableList<TradefedJobInfo> tradefedJobInfoList =
@@ -114,7 +114,7 @@ public final class ConsoleJobCreatorTest {
 
     assertThat(tradefedJobInfoList).hasSize(1);
     verify(sessionRequestHandlerUtil)
-        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any());
+        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any(), any());
     assertThat(driverParamsCaptor.getValue())
         .containsExactly(
             "run_command_args",
@@ -140,7 +140,7 @@ public final class ConsoleJobCreatorTest {
             .setShardingMode(ShardingMode.MODULE)
             .build();
 
-    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any()))
+    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any(), any()))
         .thenReturn(JobConfig.getDefaultInstance());
     when(moduleShardingArgsGenerator.generateShardingArgs(eq(sessionRequestInfo), any()))
         .thenReturn(ImmutableSet.of("arg1", "arg2"));
@@ -169,7 +169,7 @@ public final class ConsoleJobCreatorTest {
             .build();
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
 
-    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any()))
+    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any(), any()))
         .thenReturn(JobConfig.getDefaultInstance());
 
     ImmutableList<TradefedJobInfo> tradefedJobInfoList =
@@ -177,7 +177,7 @@ public final class ConsoleJobCreatorTest {
 
     assertThat(tradefedJobInfoList).hasSize(1);
     verify(sessionRequestHandlerUtil)
-        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any());
+        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any(), any());
     assertThat(driverParamsCaptor.getValue())
         .containsExactly(
             "xts_type",
@@ -211,7 +211,7 @@ public final class ConsoleJobCreatorTest {
             .build();
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
 
-    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any()))
+    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any(), any()))
         .thenReturn(JobConfig.getDefaultInstance());
 
     ImmutableList<TradefedJobInfo> tradefedJobInfoList =
@@ -219,7 +219,7 @@ public final class ConsoleJobCreatorTest {
 
     assertThat(tradefedJobInfoList).hasSize(1);
     verify(sessionRequestHandlerUtil)
-        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any());
+        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any(), any());
     assertThat(driverParamsCaptor.getValue())
         .containsExactly(
             "xts_type",
@@ -254,7 +254,7 @@ public final class ConsoleJobCreatorTest {
             .build();
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
 
-    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any()))
+    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any(), any()))
         .thenReturn(JobConfig.getDefaultInstance());
     when(retryGenerator.generateRetrySubPlan(any())).thenReturn(subPlan);
     doCallRealMethod().when(localFileUtil).prepareDir(any(Path.class));
@@ -265,7 +265,7 @@ public final class ConsoleJobCreatorTest {
 
     assertThat(tradefedJobInfoList).hasSize(1);
     verify(sessionRequestHandlerUtil)
-        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any());
+        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any(), any());
 
     Map<String, String> driverParamsMap = driverParamsCaptor.getValue();
     assertThat(driverParamsMap).hasSize(5);
@@ -306,7 +306,7 @@ public final class ConsoleJobCreatorTest {
 
     when(retryGenerator.generateRetrySubPlan(any())).thenReturn(subPlan);
     doCallRealMethod().when(localFileUtil).prepareDir(any(Path.class));
-    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any()))
+    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any(), any()))
         .thenReturn(JobConfig.getDefaultInstance());
 
     ImmutableList<TradefedJobInfo> tradefedJobInfoList =
@@ -324,7 +324,7 @@ public final class ConsoleJobCreatorTest {
         .isEqualTo("armeabi-v7a ModuleB android.test.Foo#test1");
 
     verify(sessionRequestHandlerUtil)
-        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any());
+        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any(), any());
     Map<String, String> driverParamsMap = driverParamsCaptor.getValue();
     assertThat(driverParamsMap).hasSize(5);
     assertThat(driverParamsMap)
@@ -384,7 +384,7 @@ public final class ConsoleJobCreatorTest {
         .thenReturn(
             Optional.of(
                 TradefedResultFilesBundle.of(testResultPath, ImmutableList.of(testRecordPath))));
-    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any()))
+    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any(), any()))
         .thenReturn(JobConfig.getDefaultInstance());
 
     @SuppressWarnings("unchecked")
@@ -396,7 +396,7 @@ public final class ConsoleJobCreatorTest {
 
     assertThat(tradefedJobInfoList).hasSize(1);
     verify(sessionRequestHandlerUtil)
-        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any());
+        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any(), any());
     assertThat(driverParamsCaptor.getValue())
         .containsExactly(
             "run_command_args",

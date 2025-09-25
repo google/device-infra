@@ -97,10 +97,9 @@ public class PreviousResultLoader {
         return result.get();
       } else {
         throw new MobileHarnessException(
-            ExtErrorId.PREV_RESULT_LOADER_MISSING_TEST_RESULT_PROTO_FILE_IN_SESSION,
+            ExtErrorId.PREV_RESULT_LOADER_MISSING_TEST_RESULT_XML_FILE_IN_SESSION,
             String.format(
-                "The test result proto file %s does not exist for session %s.",
-                testResultProtoFile.toAbsolutePath(),
+                "The test result xml file does not exist for session %s.",
                 previousSessionIndex != null
                     ? previousSessionIndex
                     : previousSessionResultDirName));
@@ -171,7 +170,7 @@ public class PreviousResultLoader {
         .toPath();
   }
 
-  /** Try to find the result with the legacy path. */
+  /** Try to find the result with the legacy path for ATS Console. */
   private Optional<Result> getPrevLegacySessionTestResult(
       Path resultsDir,
       @Nullable Integer previousSessionIndex,
@@ -234,6 +233,7 @@ public class PreviousResultLoader {
     return resultBuilder.build();
   }
 
+  /** Gets the result files bundle for the given session from ATS Console. */
   public Optional<TradefedResultFilesBundle> getPrevSessionResultFilesBundle(
       Path resultsDir,
       @Nullable Integer previousSessionIndex,
@@ -253,6 +253,24 @@ public class PreviousResultLoader {
     ImmutableList<Path> testRecordProtoFiles =
         ImmutableList.sortedCopyOf(
             localFileUtil.listFilesOrDirs(testRecordProtoDir, p -> p.toFile().isFile()));
+    if (testRecordProtoFiles.isEmpty()) {
+      return Optional.empty();
+    }
+    return Optional.of(TradefedResultFilesBundle.of(testResultXmlFile, testRecordProtoFiles));
+  }
+
+  /**
+   * Gets the result files bundle for the given session from ATS Server.
+   *
+   * @param resultDir parent dir path to the session's result files
+   */
+  public Optional<TradefedResultFilesBundle> getPrevSessionResultFilesBundle(Path resultDir)
+      throws MobileHarnessException {
+    Path testResultXmlFile = resultDir.resolve(SuiteCommon.TEST_RESULT_XML_FILE_NAME);
+    if (!localFileUtil.isFileExist(testResultXmlFile)) {
+      return Optional.empty();
+    }
+    ImmutableList<Path> testRecordProtoFiles = getPrevSessionTestRecordProtoFiles(resultDir);
     if (testRecordProtoFiles.isEmpty()) {
       return Optional.empty();
     }
