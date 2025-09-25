@@ -1209,8 +1209,15 @@ public class GcsUtil {
         }
         return response;
       } catch (MobileHarnessException e) {
-        if (causedByQuotaIssue(e) || causedByNetworkIssue(e)) {
-          logger.atWarning().log("Failed on quota or network issue, will retry: %s", actionInfo);
+        if (causedByQuotaIssue(e)) {
+          logger.atWarning().log("Failed on quota issue, will retry: %s", actionInfo);
+          lastException = e;
+          exceptions.add(
+              String.format(
+                  "attempt #%s [%s]: %s",
+                  i + 1, currentTime(), Throwables.getStackTraceAsString(e)));
+        } else if (causedByNetworkIssue(e)) {
+          logger.atWarning().log("Failed on network issue, will retry: %s", actionInfo);
           lastException = e;
           exceptions.add(
               String.format(
