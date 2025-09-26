@@ -616,7 +616,7 @@ public class SessionRequestHandlerUtil {
             .setExecMode("local")
             .setJobTimeoutSec(saturatedCast(jobTimeout.toSeconds()))
             .setTestTimeoutSec(saturatedCast(testTimeout.toSeconds()))
-            .setStartTimeoutSec(saturatedCast(startTimeout.toSeconds()))
+            .setStartTimeoutSec(startTimeout.toSeconds())
             .setPriority(Priority.HIGH)
             .setTestAttempts(1)
             .setTests(
@@ -1412,7 +1412,7 @@ public class SessionRequestHandlerUtil {
             .setExecMode("local")
             .setJobTimeoutSec(saturatedCast(jobTimeout.toSeconds()))
             .setTestTimeoutSec(saturatedCast(testTimeout.toSeconds()))
-            .setStartTimeoutSec(saturatedCast(startTimeout.toSeconds()))
+            .setStartTimeoutSec(startTimeout.toSeconds())
             .setPriority(Priority.HIGH)
             .setTestAttempts(1)
             .setTests(
