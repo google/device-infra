@@ -40,6 +40,7 @@ java_library(
     srcs = ["GcsUtil.java"],
     deps = [
         ":dataclass",
+        "//devtools/mobileharness/infra/lab/proto:lab_file_metadata_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/checksum",
@@ -47,6 +48,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dir",
         "@maven//:com_google_api_client_google_api_client",
         "@maven//:com_google_apis_google_api_services_storage",
         "@maven//:com_google_code_findbugs_jsr305",
@@ -71,6 +73,18 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_errorprone_error_prone_annotations",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "gcs_metadata_util",
+    srcs = ["GcsMetadataUtil.java"],
+    deps = [
+        "//devtools/mobileharness/infra/lab/proto:lab_file_metadata_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dir",
         "@maven//:com_google_guava_guava",
     ],
 )
