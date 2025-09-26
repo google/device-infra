@@ -76,6 +76,8 @@ public interface ApiConfig {
 
   void setLabConfig(LabConfig labConfig) throws MobileHarnessException;
 
+  void setTenantDeviceConfig(String deviceControlId, DeviceConfig deviceConfig);
+
   Optional<DeviceConfig> getDeviceConfigToStore(String deviceControlId);
 
   LabConfig getLabConfigToStore();
