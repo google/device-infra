@@ -18,6 +18,7 @@ package com.google.wireless.qa.mobileharness.shared.api.validator.job;
 
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.wireless.qa.mobileharness.shared.api.spec.XtsTradefedTestSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.XtsTradefedTestDriverSpec;
@@ -52,14 +53,29 @@ public class XtsTradefedTestJobValidator
       errors.add("An xTS test plan must be specified.");
     }
 
-    if (spec.getXtsTestPlan().equals("retry")
-        && spec.getPrevSessionXtsTestPlan().isEmpty()
-        && (spec.getPrevSessionTestResultXml().isEmpty()
-            || spec.getPrevSessionTestRecordFiles().isEmpty())) {
-      errors.add(
-          "The 'prev_session_xts_test_plan' must be specified when the test plan is 'retry', or"
-              + " must provide 'prev_session_test_result_xml' AND"
-              + " 'prev_session_test_record_files'.");
+    if (spec.getXtsTestPlan().equals("retry") && spec.getPrevSessionXtsTestPlan().isEmpty()) {
+      if (spec.getPrevSessionTestResultXml().isEmpty()
+          && spec.getPrevSessionTestRecordFiles().isEmpty()
+          && !jobInfo
+              .files()
+              .isTagNotEmpty(XtsTradefedTestSpec.TAG_PREV_SESSION_TEST_RECORD_PB_FILES)) {
+        errors.add(
+            "When the test plan is 'retry' and no 'prev_session_test_result_xml',"
+                + " 'prev_session_test_record_files', 'prev_session_test_record_pb_files'"
+                + " specified, 'prev_session_xts_test_plan' must be specified.");
+      } else if (spec.getPrevSessionTestResultXml().isEmpty()) {
+        errors.add(
+            "When the test plan is 'retry' and no 'prev_session_xts_test_plan' specified,"
+                + " 'prev_session_test_result_xml' must be specified.");
+      } else if (spec.getPrevSessionTestRecordFiles().isEmpty()
+          && !jobInfo
+              .files()
+              .isTagNotEmpty(XtsTradefedTestSpec.TAG_PREV_SESSION_TEST_RECORD_PB_FILES)) {
+        errors.add(
+            "When the test plan is 'retry' and no 'prev_session_xts_test_plan' specified, either"
+                + " 'prev_session_test_record_files' or 'prev_session_test_record_pb_files' must be"
+                + " specified.");
+      }
     }
 
     if (spec.getXtsRootDir().isEmpty() && spec.getAndroidXtsZip().isEmpty()) {

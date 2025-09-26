@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.infra.ats.common;
 
 import com.google.common.base.Ascii;
+import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
@@ -38,13 +39,23 @@ public class SessionHandlerHelper {
   public static final String TEST_RESULT_XML_FILE_NAME = "test_result.xml";
   public static final String TEST_RECORD_PROTOBUFFER_FILE_NAME = "test-record.pb";
 
+  private static final ImmutableSet<String> XTS_TYPES_SUPPORTING_ATS_RETRY =
+      ImmutableSet.of("cts", "cts-v-host", "gts");
+
   /** Checks if the test plan is retry. */
   public static boolean isRunRetry(String testPlan) {
     return Ascii.equalsIgnoreCase(testPlan, "retry");
   }
 
-  public static boolean useTfRetry() {
-    return Flags.instance().useTfRetry.getNonNull();
+  public static boolean useTfRetry(boolean isAtsServerRequest, String xtsType) {
+    if (Flags.instance().useTfRetry.getNonNull()) {
+      return true;
+    }
+    if (isAtsServerRequest) {
+      return !XTS_TYPES_SUPPORTING_ATS_RETRY.contains(Ascii.toLowerCase(xtsType));
+    }
+    // If it's from ATS Console, we prefer to use ATS retry mechanism by default
+    return false;
   }
 
   public static Path getSubPlanFilePath(Path xtsRootDir, String xtsType, String subPlanName) {

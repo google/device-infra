@@ -281,6 +281,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:composite_device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:xts_tradefed_test_spec",
         "//src/java/com/google/wireless/qa/mobileharness/shared/comm/message/event",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
