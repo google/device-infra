@@ -32,17 +32,24 @@ import com.google.devtools.mobileharness.shared.util.command.CommandException;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandFailureException;
 import com.google.devtools.mobileharness.shared.util.command.CommandResult;
+import com.google.devtools.mobileharness.shared.util.file.checksum.proto.ChecksumProto.Algorithm;
+import com.google.devtools.mobileharness.shared.util.file.checksum.proto.ChecksumProto.Checksum;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.google.protobuf.ByteString;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.ParamAnnotation;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.List;
+import java.util.Optional;
 import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 
@@ -128,6 +135,57 @@ public class AtsFileServerFileResolver extends AbstractFileResolver {
           ImmutableList.of(ResolvedFile.create(destination, null)),
           ImmutableMap.of(),
           resolveSource);
+    }
+  }
+
+  @Override
+  protected Optional<Checksum> computeChecksum(ResolveSource resolveSource)
+      throws MobileHarnessException, InterruptedException {
+    return getFileSha256(resolveSource.path())
+        .map(
+            sha256 ->
+                Checksum.newBuilder()
+                    .setAlgorithm(Algorithm.ATS_FILE_SERVER_SHA256)
+                    .setData(ByteString.copyFrom(Base64.getDecoder().decode(sha256)))
+                    .build());
+  }
+
+  private Optional<String> getFileSha256(String sourcePath) throws InterruptedException {
+    String httpHashPath =
+        String.join(
+            "/",
+            Flags.instance().atsFileServer.getNonNull(),
+            PathUtil.join("hash", UrlEscapers.urlFragmentEscaper().escape(sourcePath)));
+    try {
+      httpHashPath = new URI(httpHashPath).normalize().toString();
+    } catch (URISyntaxException e) {
+      logger.atWarning().withCause(e).log("Invalid hash path %s in ats file server.", httpHashPath);
+      return Optional.empty();
+    }
+    try {
+      String output =
+          createCommandExecutor()
+              .run(Command.of("curl", "-sfL", httpHashPath).timeout(Duration.ofMinutes(1)));
+      logger.atInfo().log(
+          "Received response from ATS file server /hash endpoint for %s: %s", sourcePath, output);
+      JsonObject jsonObject = JsonParser.parseString(output).getAsJsonObject();
+      if (jsonObject.has("sha256")) {
+        return Optional.of(jsonObject.get("sha256").getAsString());
+      } else {
+        logger.atWarning().log(
+            "Failed to get sha256 for %s from ats file server, response: %s", sourcePath, output);
+        return Optional.empty();
+      }
+    } catch (MobileHarnessException e) {
+      if (e instanceof CommandFailureException commandFailureException) {
+        CommandResult result = commandFailureException.result();
+        logger.atWarning().log(
+            "Logs of failed ats file hasher: STDOUT: %s\nSTDERR: %s",
+            result.stdout(), result.stderr());
+      }
+      logger.atWarning().withCause(e).log(
+          "Failed to get sha256 for %s from ats file server.", sourcePath);
+      return Optional.empty();
     }
   }
 
