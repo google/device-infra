@@ -33,6 +33,7 @@ import com.google.devtools.mobileharness.shared.constant.hostmanagement.HostProp
 import com.google.devtools.mobileharness.shared.labinfo.LabInfoProvider;
 import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
 import com.google.inject.Inject;
+import com.google.protobuf.Timestamp;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import java.time.Instant;
 import java.util.List;
@@ -58,10 +59,11 @@ public final class LabInfoPullerImpl implements DataPuller<MonitoredRecord> {
   @Override
   public ImmutableList<MonitoredRecord> pull() throws MobileHarnessException {
     ImmutableList.Builder<MonitoredRecord> builder = ImmutableList.builder();
+    Timestamp timestamp = TimeUtils.toProtoTimestamp(Instant.now());
     for (LabData labData :
         labInfoProvider.getLabInfos(Filter.getDefaultInstance()).getLabDataList()) {
-      MonitoredRecord.Builder record =
-          MonitoredRecord.newBuilder().setTimestamp(TimeUtils.toProtoTimestamp(Instant.now()));
+      MonitoredRecord.Builder record = MonitoredRecord.newBuilder().setTimestamp(timestamp);
+
       List<HostProperty> hostPropertyList =
           labData.getLabInfo().getLabServerFeature().getHostProperties().getHostPropertyList();
       MonitoredEntry.Builder hostEntry =
