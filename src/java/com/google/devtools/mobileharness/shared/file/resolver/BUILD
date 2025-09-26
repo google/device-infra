@@ -97,6 +97,7 @@ java_library(
     deps = [
         ":abstract_file_resolver",
         ":file_resolver",
+        "//src/devtools/mobileharness/shared/util/file/checksum/proto:checksum_java_proto",
         "//src/java/com/google/devtools/deviceinfra/shared/util/file/remote/constant:remote_file_type",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
@@ -107,7 +108,9 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation:basic_annotation",
         "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_code_gson_gson",
         "@maven//:com_google_guava_guava",
+        "@protobuf//:protobuf_java",
     ],
 )
 
