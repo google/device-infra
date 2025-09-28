@@ -86,6 +86,7 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.inject.AbstractModule;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
 import com.google.wireless.qa.mobileharness.client.api.event.JobStartEvent;
+import com.google.wireless.qa.mobileharness.client.api.event.internal.JobFirstAllocationEvent;
 import com.google.wireless.qa.mobileharness.shared.api.validator.JobChecker;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Value;
@@ -918,13 +919,20 @@ public class JobRunner implements Runnable {
       }
 
       if (!hasAllocation) {
+        hasAllocation = true;
         jobInfo
             .properties()
             .add(PropertyName.Job.FIRST_TEST_ALLOCATION_TIME_SEC, allocationTimeSec);
+
+        // Posts FirstTestAllocatedEvent to the API_PLUGIN scope.
+        logger.atInfo().log(
+            "Test [%s] of job [%s] got its first test allocation. Posting JobFirstAllocationEvent.",
+            testId, testInfo.jobInfo().locator().getId());
+        scopedEventBus.post(new JobFirstAllocationEvent(testInfo), EventScope.API_PLUGIN);
+        logger.atInfo().log("Finished posting JobFirstAllocationEvent.");
       }
 
       // Creates TestRunner with the allocation.
-      hasAllocation = true;
       if (suitableDeviceChecker != null) {
         suitableDeviceChecker.setHasFoundPotentialSuitableDevice();
       }
