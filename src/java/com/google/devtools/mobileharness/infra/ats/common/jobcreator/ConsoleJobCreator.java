@@ -22,6 +22,7 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ListMultimap;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
@@ -143,7 +144,8 @@ public class ConsoleJobCreator extends XtsJobCreator {
   protected void prepareTfRetry(
       SessionRequestInfo sessionRequestInfo,
       Map<String, String> driverParams,
-      ImmutableMap.Builder<XtsPropertyName, String> extraJobProperties)
+      ImmutableMap.Builder<XtsPropertyName, String> extraJobProperties,
+      ListMultimap<String, String> jobFiles)
       throws MobileHarnessException {
     Optional<Path> testReportPropertiesFile =
         getPrevSessionTestReportProperties(sessionRequestInfo);

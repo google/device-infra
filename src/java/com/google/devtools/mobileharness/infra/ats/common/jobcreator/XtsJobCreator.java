@@ -21,9 +21,12 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
+import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Streams;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.ErrorId;
@@ -72,6 +75,7 @@ public abstract class XtsJobCreator {
   private static final ImmutableSet<ErrorId> SKIPPABLE_ERROR_IDS =
       ImmutableSet.of(
           InfraErrorId.ATSC_TF_RETRY_WITHOUT_TF_MODULE,
+          InfraErrorId.ATS_SERVER_TF_RETRY_WITHOUT_TF_MODULE,
           InfraErrorId.OLCS_NO_CORRESPONDING_FILTER_FOUND_IN_SUBPLAN,
           InfraErrorId.OLCS_NO_FILTER_FOUND_IN_RETRY_SUBPLAN,
           InfraErrorId.XTS_NO_MATCHED_NON_TRADEFED_MODULES,
@@ -164,14 +168,15 @@ public abstract class XtsJobCreator {
     ImmutableMap.Builder<XtsPropertyName, String> extraJobProperties = ImmutableMap.builder();
 
     Map<String, String> driverParams = new HashMap<>();
+    ListMultimap<String, String> jobFiles = ArrayListMultimap.create();
     driverParams.put("xts_type", xtsType);
     driverParams.put("xts_test_plan", testPlan);
     extraJobProperties.put(Job.XTS_TEST_PLAN, testPlan);
     boolean prevSessionSkipDeviceInfo = false;
     if (SessionRequestHandlerUtil.isRunRetry(testPlan)) {
       extraJobProperties.put(Job.IS_RUN_RETRY, "true");
-      if (SessionHandlerHelper.useTfRetry()) {
-        prepareTfRetry(sessionRequestInfo, driverParams, extraJobProperties);
+      if (SessionHandlerHelper.useTfRetry(sessionRequestInfo.isAtsServerRequest(), xtsType)) {
+        prepareTfRetry(sessionRequestInfo, driverParams, extraJobProperties, jobFiles);
       } else {
         SubPlan runRetryTfSubPlan = prepareRunRetrySubPlan(sessionRequestInfo, /* forTf= */ true);
         String prevSessionXtsTestPlan = runRetryTfSubPlan.getPreviousSessionXtsTestPlan();
@@ -237,7 +242,7 @@ public abstract class XtsJobCreator {
     } else {
       ImmutableList<String> moduleFilters;
       if (SessionRequestHandlerUtil.isRunRetry(sessionRequestInfo.testPlan())) {
-        if (SessionHandlerHelper.useTfRetry()) {
+        if (SessionHandlerHelper.useTfRetry(sessionRequestInfo.isAtsServerRequest(), xtsType)) {
           // For "run retry" command handled by TF, pass the original modules to TF
           moduleFilters =
               sessionRequestInfo.moduleNames().stream()
@@ -266,14 +271,16 @@ public abstract class XtsJobCreator {
                           // For "run retry" command, the passed in include filters and exclude
                           // filters are set in generated subplan, no need to set in TF command
                           // again.
-                          !SessionHandlerHelper.useTfRetry()
+                          !SessionHandlerHelper.useTfRetry(
+                                      sessionRequestInfo.isAtsServerRequest(), xtsType)
                                   && SessionRequestHandlerUtil.isRunRetry(testPlan)
                               ? Stream.empty()
                               : sessionRequestInfo.includeFilters().stream()
                                   .map(
                                       includeFilter ->
                                           String.format("--include-filter \"%s\"", includeFilter)),
-                          !SessionHandlerHelper.useTfRetry()
+                          !SessionHandlerHelper.useTfRetry(
+                                      sessionRequestInfo.isAtsServerRequest(), xtsType)
                                   && SessionRequestHandlerUtil.isRunRetry(testPlan)
                               ? Stream.empty()
                               : sessionRequestInfo.excludeFilters().stream()
@@ -320,7 +327,10 @@ public abstract class XtsJobCreator {
       }
       JobConfig jobConfig =
           sessionRequestHandlerUtil.initializeJobConfig(
-              sessionRequestInfo, driverParamsCopy, subDeviceSpecList);
+              sessionRequestInfo,
+              driverParamsCopy,
+              subDeviceSpecList,
+              ImmutableMultimap.copyOf(jobFiles));
       tradefedJobInfos.add(TradefedJobInfo.of(jobConfig, extraJobProperties.buildOrThrow()));
     }
 
@@ -617,7 +627,8 @@ public abstract class XtsJobCreator {
   protected abstract void prepareTfRetry(
       SessionRequestInfo sessionRequestInfo,
       Map<String, String> driverParams,
-      ImmutableMap.Builder<XtsPropertyName, String> extraJobProperties)
+      ImmutableMap.Builder<XtsPropertyName, String> extraJobProperties,
+      ListMultimap<String, String> jobFiles)
       throws MobileHarnessException;
 
   protected abstract Optional<Path> getPrevSessionTestReportProperties(

@@ -173,3 +173,9 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
     ],
 )
+
+java_library(
+    name = "xts_tradefed_test_spec",
+    srcs = ["XtsTradefedTestSpec.java"],
+    deps = ["//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation:basic_annotation"],
+)

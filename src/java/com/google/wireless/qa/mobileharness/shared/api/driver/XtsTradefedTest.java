@@ -83,6 +83,7 @@ import com.google.wireless.qa.mobileharness.shared.api.CompositeDeviceUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DriverAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.device.CompositeDevice;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
+import com.google.wireless.qa.mobileharness.shared.api.spec.XtsTradefedTestSpec;
 import com.google.wireless.qa.mobileharness.shared.comm.message.event.TestMessageEvent;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -120,7 +121,7 @@ import org.apache.commons.text.StringSubstitutor;
 /** Driver for running Tradefed based xTS test suites. */
 @DriverAnnotation(help = "Running Tradefed based xTS test suites.")
 public class XtsTradefedTest extends BaseDriver
-    implements SpecConfigable<XtsTradefedTestDriverSpec> {
+    implements XtsTradefedTestSpec, SpecConfigable<XtsTradefedTestDriverSpec> {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private static final ImmutableSet<String> EXCLUDED_JAR_FILES =
@@ -904,7 +905,7 @@ public class XtsTradefedTest extends BaseDriver
       xtsCommandBuilder.add(
           "--subplan", com.google.common.io.Files.getNameWithoutExtension(spec.getSubplanXml()));
     }
-    if (useTfRunRetry(spec)) {
+    if (useTfRunRetry(spec, testInfo)) {
       // In setUpXtsWorkDir, it copies the previous session's test-record proto files and
       // test_result.xml file under a result dir, which always has session index 0
       xtsCommandBuilder.add("--retry", "0");
@@ -1156,7 +1157,7 @@ public class XtsTradefedTest extends BaseDriver
     createSymlink(linkLibDir, sourceXtsBundledLibDir);
     createSymlink(linkLib64Dir, sourceXtsBundledLib64Dir);
 
-    if (useTfRunRetry(spec)) {
+    if (useTfRunRetry(spec, testInfo)) {
       // When using TF "run retry", TF looks for the corresponding previous result dir per given
       // session index. So it needs to link the previous session's result dir to the work dir so TF
       // can locate the prev result to complete the retry.
@@ -1294,10 +1295,11 @@ public class XtsTradefedTest extends BaseDriver
     return spec.getXtsTestPlan().equals("retry") && !spec.getSubplanXml().isEmpty();
   }
 
-  private static boolean useTfRunRetry(XtsTradefedTestDriverSpec spec) {
+  private static boolean useTfRunRetry(XtsTradefedTestDriverSpec spec, TestInfo testInfo) {
     return spec.getXtsTestPlan().equals("retry")
-        && !spec.getPrevSessionTestRecordFiles().isEmpty()
-        && !spec.getPrevSessionTestResultXml().isEmpty();
+        && !spec.getPrevSessionTestResultXml().isEmpty()
+        && (!spec.getPrevSessionTestRecordFiles().isEmpty()
+            || testInfo.jobInfo().files().isTagNotEmpty(TAG_PREV_SESSION_TEST_RECORD_PB_FILES));
   }
 
   /**

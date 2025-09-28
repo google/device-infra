@@ -93,6 +93,8 @@ import com.google.wireless.qa.mobileharness.shared.proto.Job.Priority;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.DeviceList;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.Driver;
+import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.FileConfigList;
+import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.FileConfigList.FileConfig;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.StringList;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.StringMap;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.SubDeviceSpec;
@@ -536,7 +538,8 @@ public class SessionRequestHandlerUtil {
     // For "run retry" command handled by TF, consider the module filter as include filter.
     boolean isTfRetryWithModules =
         SessionRequestHandlerUtil.isRunRetry(sessionRequestInfo.testPlan())
-            && SessionHandlerHelper.useTfRetry()
+            && SessionHandlerHelper.useTfRetry(
+                sessionRequestInfo.isAtsServerRequest(), sessionRequestInfo.xtsType())
             && !sessionRequestInfo.moduleNames().isEmpty();
 
     ImmutableList<String> modules =
@@ -584,7 +587,8 @@ public class SessionRequestHandlerUtil {
   public JobConfig initializeJobConfig(
       SessionRequestInfo sessionRequestInfo,
       Map<String, String> driverParams,
-      ImmutableList<SubDeviceSpec> subDeviceSpecList)
+      ImmutableList<SubDeviceSpec> subDeviceSpecList,
+      ImmutableMultimap<String, String> jobFiles)
       throws InterruptedException, MobileHarnessException {
     String testPlan = sessionRequestInfo.testPlan();
     String xtsType = sessionRequestInfo.xtsType();
@@ -610,7 +614,7 @@ public class SessionRequestHandlerUtil {
 
     String name = "xts-tradefed-test-job";
     Path jobGenDir = createJobGenDir(name);
-    JobConfig jobConfig =
+    JobConfig.Builder jobConfigBuilder =
         JobConfig.newBuilder()
             .setName(name)
             .setExecMode("local")
@@ -626,8 +630,21 @@ public class SessionRequestHandlerUtil {
                 Driver.newBuilder()
                     .setName("XtsTradefedTest")
                     .setParam(new Gson().toJson(driverParams)))
-            .setGenFileDir(jobGenDir.toString())
-            .build();
+            .setGenFileDir(jobGenDir.toString());
+    if (!jobFiles.isEmpty()) {
+      jobConfigBuilder.setFiles(
+          FileConfigList.newBuilder()
+              .addAllContent(
+                  jobFiles.asMap().entrySet().stream()
+                      .map(
+                          entry ->
+                              FileConfig.newBuilder()
+                                  .setTag(entry.getKey())
+                                  .addAllPath(entry.getValue())
+                                  .build())
+                      .collect(toImmutableList())));
+    }
+    JobConfig jobConfig = jobConfigBuilder.build();
     logger.atInfo().log("XtsTradefedTest job config: %s", shortDebugString(jobConfig));
     return jobConfig;
   }

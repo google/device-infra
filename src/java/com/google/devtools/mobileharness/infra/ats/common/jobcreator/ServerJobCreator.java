@@ -16,11 +16,13 @@
 
 package com.google.devtools.mobileharness.infra.ats.common.jobcreator;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ListMultimap;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -28,10 +30,13 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionF
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName;
+import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.infra.ats.server.sessionplugin.TradefedConfigGenerator;
 import com.google.devtools.mobileharness.infra.ats.server.util.AtsServerSessionUtil;
+import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteTestFilter;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader;
+import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader.TradefedResultFilesBundle;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryArgs;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryGenerator;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryType;
@@ -45,6 +50,7 @@ import java.io.OutputStream;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import org.xmlpull.v1.XmlPullParserException;
@@ -195,12 +201,84 @@ public class ServerJobCreator extends XtsJobCreator {
   protected void prepareTfRetry(
       SessionRequestInfo sessionRequestInfo,
       Map<String, String> driverParams,
-      ImmutableMap.Builder<XtsPropertyName, String> extraJobProperties)
+      ImmutableMap.Builder<XtsPropertyName, String> extraJobProperties,
+      ListMultimap<String, String> jobFiles)
       throws MobileHarnessException {
-    throw MobileHarnessExceptionFactory.createUserFacingException(
-        InfraErrorId.ATS_SERVER_USE_TF_RETRY_ERROR,
-        "ATS server doesn't support TF retry.",
-        /* cause= */ null);
+    Optional<Path> testReportPropertiesFile =
+        getPrevSessionTestReportProperties(sessionRequestInfo);
+    if (testReportPropertiesFile.isPresent()) {
+      Properties testReportProperties = loadTestReportProperties(testReportPropertiesFile.get());
+      // If previous session doesn't have TF module, skip running TF retry.
+      if (!Boolean.parseBoolean(
+          testReportProperties.getProperty(SuiteCommon.TEST_REPORT_PROPERTY_HAS_TF_MODULE))) {
+        throw MobileHarnessExceptionFactory.createUserFacingException(
+            InfraErrorId.ATS_SERVER_TF_RETRY_WITHOUT_TF_MODULE,
+            "Previous session doesn't have tradefed module",
+            /* cause= */ null);
+      }
+      extraJobProperties
+          .put(
+              Job.PREV_SESSION_HAS_TF_MODULE,
+              String.valueOf(
+                  Boolean.parseBoolean(
+                      testReportProperties.getProperty(
+                          SuiteCommon.TEST_REPORT_PROPERTY_HAS_TF_MODULE))))
+          .put(
+              Job.PREV_SESSION_HAS_NON_TF_MODULE,
+              String.valueOf(
+                  Boolean.parseBoolean(
+                      testReportProperties.getProperty(
+                          SuiteCommon.TEST_REPORT_PROPERTY_HAS_NON_TF_MODULE))));
+    }
+    TradefedResultFilesBundle tfRunRetryFilesBundle =
+        findTfRunRetryFilesBundle(Path.of(sessionRequestInfo.retryResultDir().orElseThrow()));
+    driverParams.put(
+        "prev_session_test_result_xml",
+        toAtsServerPaths(
+                ImmutableList.of(tfRunRetryFilesBundle.testResultXml()),
+                sessionRequestInfo.remoteRunnerFilePathPrefix().orElse(null))
+            .get(0));
+    // It uses jobFiles here instead of driverParams as driverParams doesn't work well with list of
+    // files.
+    jobFiles.putAll(
+        "prev_session_test_record_pb_files",
+        toAtsServerPaths(
+            tfRunRetryFilesBundle.testRecordProtoFiles(),
+            sessionRequestInfo.remoteRunnerFilePathPrefix().orElse(null)));
+    if (sessionRequestInfo.retryType().isPresent()) {
+      driverParams.put("retry_type", sessionRequestInfo.retryType().get().toString());
+    }
+  }
+
+  private TradefedResultFilesBundle findTfRunRetryFilesBundle(Path retryResultDir)
+      throws MobileHarnessException {
+    return previousResultLoader
+        .getPrevSessionResultFilesBundle(retryResultDir)
+        .orElseThrow(
+            () ->
+                new MobileHarnessException(
+                    InfraErrorId.ATS_SERVER_RUN_RETRY_COMMAND_PREV_SESSION_MISS_RESULT_FILES,
+                    "Previous session misses test-record proto files and the test_result.xml file,"
+                        + " not able to retry it"));
+  }
+
+  private ImmutableList<String> toAtsServerPaths(
+      ImmutableList<Path> paths, @Nullable String remoteRunnerFilePathPrefix) {
+    if (remoteRunnerFilePathPrefix == null) {
+      return paths.stream()
+          .map(Path::toAbsolutePath)
+          .map(Path::toString)
+          .collect(toImmutableList());
+    }
+    return paths.stream()
+        .map(Path::toAbsolutePath)
+        .map(Path::toString)
+        .map(
+            path ->
+                PathUtil.join(
+                    remoteRunnerFilePathPrefix,
+                    PathUtil.makeRelative(Flags.instance().atsStoragePath.getNonNull(), path)))
+        .collect(toImmutableList());
   }
 
   @Override

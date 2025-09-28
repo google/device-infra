@@ -135,7 +135,7 @@ public final class ServerJobCreatorTest {
             .setAndroidXtsZip(ANDROID_XTS_ZIP_PATH)
             .setModuleNames(ImmutableList.of("mock_module"))
             .build();
-    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any()))
+    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any(), any()))
         .thenReturn(JobConfig.getDefaultInstance());
     MobileHarnessException thrown =
         assertThrows(
@@ -160,7 +160,7 @@ public final class ServerJobCreatorTest {
             .setShardingMode(ShardingMode.MODULE)
             .build();
 
-    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any()))
+    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any(), any()))
         .thenReturn(JobConfig.getDefaultInstance());
     when(moduleShardingArgsGenerator.generateShardingArgs(eq(sessionRequestInfo), any()))
         .thenReturn(ImmutableSet.of("arg1", "arg2", "arg3"));
@@ -190,7 +190,7 @@ public final class ServerJobCreatorTest {
             .build();
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
 
-    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any()))
+    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any(), any()))
         .thenReturn(JobConfig.getDefaultInstance());
 
     ImmutableList<TradefedJobInfo> tradefedJobInfoList =
@@ -199,7 +199,7 @@ public final class ServerJobCreatorTest {
 
     assertThat(tradefedJobInfoList).hasSize(1);
     verify(sessionRequestHandlerUtil)
-        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any());
+        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any(), any());
     assertThat(driverParamsCaptor.getValue())
         .containsExactly(
             "run_command_args",
@@ -238,7 +238,7 @@ public final class ServerJobCreatorTest {
             .build();
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
 
-    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any()))
+    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any(), any()))
         .thenReturn(JobConfig.getDefaultInstance());
 
     ImmutableList<TradefedJobInfo> tradefedJobInfoList =
@@ -247,7 +247,7 @@ public final class ServerJobCreatorTest {
 
     assertThat(tradefedJobInfoList).hasSize(1);
     verify(sessionRequestHandlerUtil)
-        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any());
+        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any(), any());
     assertThat(driverParamsCaptor.getValue())
         .containsExactly(
             "run_command_args",
@@ -293,7 +293,7 @@ public final class ServerJobCreatorTest {
             .build();
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
 
-    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any()))
+    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any(), any()))
         .thenReturn(JobConfig.getDefaultInstance());
     when(retryGenerator.generateRetrySubPlan(any())).thenReturn(subPlan);
     doCallRealMethod().when(localFileUtil).prepareDir(any(Path.class));
@@ -304,7 +304,7 @@ public final class ServerJobCreatorTest {
 
     assertThat(tradefedJobInfoList).hasSize(1);
     verify(sessionRequestHandlerUtil)
-        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any());
+        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any(), any());
 
     Map<String, String> driverParamsMap = driverParamsCaptor.getValue();
     assertThat(driverParamsMap).hasSize(6);
@@ -350,7 +350,7 @@ public final class ServerJobCreatorTest {
 
     when(retryGenerator.generateRetrySubPlan(any())).thenReturn(subPlan);
     doCallRealMethod().when(localFileUtil).prepareDir(any(Path.class));
-    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any()))
+    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any(), any()))
         .thenReturn(JobConfig.getDefaultInstance());
 
     ImmutableList<TradefedJobInfo> tradefedJobInfoList =
@@ -368,7 +368,7 @@ public final class ServerJobCreatorTest {
         .isEqualTo("armeabi-v7a ModuleB android.test.Foo#test1");
 
     verify(sessionRequestHandlerUtil)
-        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any());
+        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any(), any());
     Map<String, String> driverParamsMap = driverParamsCaptor.getValue();
     assertThat(driverParamsMap).hasSize(6);
     assertThat(driverParamsMap)
@@ -411,7 +411,7 @@ public final class ServerJobCreatorTest {
 
     when(retryGenerator.generateRetrySubPlan(any())).thenReturn(subPlan);
     doCallRealMethod().when(localFileUtil).prepareDir(any(Path.class));
-    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any()))
+    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any(), any()))
         .thenReturn(JobConfig.getDefaultInstance());
 
     ImmutableList<TradefedJobInfo> tradefedJobInfoList =
@@ -427,7 +427,7 @@ public final class ServerJobCreatorTest {
     assertThat(retryArgs.previousSessionIndex().isEmpty()).isTrue();
 
     verify(sessionRequestHandlerUtil)
-        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any());
+        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any(), any());
     Map<String, String> driverParamsMap = driverParamsCaptor.getValue();
     assertThat(driverParamsMap).hasSize(6);
     assertThat(driverParamsMap)
@@ -469,7 +469,7 @@ public final class ServerJobCreatorTest {
 
     doCallRealMethod().when(localFileUtil).isFileExist(any(Path.class));
     doCallRealMethod().when(localFileUtil).removeFileOrDir(any(Path.class));
-    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any()))
+    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any(), any()))
         .thenReturn(JobConfig.getDefaultInstance());
 
     ImmutableList<TradefedJobInfo> tradefedJobInfoList =
@@ -478,7 +478,7 @@ public final class ServerJobCreatorTest {
 
     assertThat(tradefedJobInfoList).hasSize(1);
     verify(sessionRequestHandlerUtil)
-        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any());
+        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any(), any());
     Map<String, String> driverParamsMap = driverParamsCaptor.getValue();
     assertThat(driverParamsMap)
         .containsAtLeast(
@@ -519,7 +519,7 @@ public final class ServerJobCreatorTest {
 
     doCallRealMethod().when(localFileUtil).isFileExist(any(Path.class));
     doCallRealMethod().when(localFileUtil).removeFileOrDir(any(Path.class));
-    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any()))
+    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any(), any()))
         .thenReturn(JobConfig.getDefaultInstance());
 
     ImmutableList<TradefedJobInfo> tradefedJobInfoList =
@@ -529,7 +529,7 @@ public final class ServerJobCreatorTest {
     assertThat(tradefedJobInfoList).hasSize(1);
 
     verify(sessionRequestHandlerUtil)
-        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any());
+        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any(), any());
     Map<String, String> driverParamsMap = driverParamsCaptor.getValue();
     assertThat(driverParamsMap)
         .containsAtLeast(
