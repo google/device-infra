@@ -52,9 +52,9 @@ final class ChecksumHelper {
 
   private static Optional<ByteString> computeChecksum(Path dataPath, Algorithm checksumAlgorithm) {
     return switch (checksumAlgorithm) {
-      case GCS_CRC32C, GCS_MD5 ->
+      case GCS_CRC32C, GCS_MD5, ATS_FILE_SERVER_SHA256 ->
           getHashFunction(checksumAlgorithm)
-              .map(hashFunction -> computeGcsChecksum(dataPath, hashFunction, checksumAlgorithm));
+              .map(hashFunction -> compute(dataPath, hashFunction, checksumAlgorithm));
       case ALGORITHM_UNSPECIFIED, UNRECOGNIZED -> {
         logger.atWarning().log("Unknown checksum algorithm %s.", checksumAlgorithm);
         yield Optional.empty();
@@ -63,7 +63,7 @@ final class ChecksumHelper {
   }
 
   @Nullable
-  private static ByteString computeGcsChecksum(
+  private static ByteString compute(
       Path dataPath, HashFunction hashFunction, Algorithm checksumAlgorithm) {
     try {
       byte[] bytes = asByteSource(dataPath).hash(hashFunction).asBytes();
@@ -73,7 +73,7 @@ final class ChecksumHelper {
           // See https://cloud.google.com/storage/docs/metadata#crc32c
           reverse(bytes);
         }
-        case GCS_MD5, ALGORITHM_UNSPECIFIED, UNRECOGNIZED -> {
+        case GCS_MD5, ATS_FILE_SERVER_SHA256, ALGORITHM_UNSPECIFIED, UNRECOGNIZED -> {
           // Do nothing.
         }
       }
@@ -89,6 +89,7 @@ final class ChecksumHelper {
     return switch (checksumAlgorithm) {
       case GCS_CRC32C -> Optional.of(Hashing.crc32c());
       case GCS_MD5 -> Optional.of(Hashing.md5());
+      case ATS_FILE_SERVER_SHA256 -> Optional.of(Hashing.sha256());
       case ALGORITHM_UNSPECIFIED, UNRECOGNIZED -> {
         logger.atWarning().log("Unknown checksum algorithm %s.", checksumAlgorithm);
         yield Optional.empty();

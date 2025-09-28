@@ -28,6 +28,7 @@ enum Algorithm {
   ALGORITHM_UNSPECIFIED = 0;
   GCS_CRC32C = 1;
   GCS_MD5 = 2;
+  ATS_FILE_SERVER_SHA256 = 3;
 }
 
 message Checksum {
