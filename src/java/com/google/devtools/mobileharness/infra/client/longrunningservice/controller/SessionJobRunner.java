@@ -19,9 +19,11 @@ package com.google.devtools.mobileharness.infra.client.longrunningservice.contro
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.client.api.ClientApi;
+import com.google.devtools.mobileharness.infra.client.api.controller.job.event.FirstTestAllocatedEvent;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionDetailHolder;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
@@ -31,6 +33,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.concurrent.GuardedBy;
 import javax.inject.Inject;
 
@@ -65,6 +68,14 @@ public class SessionJobRunner {
       throws MobileHarnessException, InterruptedException {
     List<String> allJobIds = new ArrayList<>();
 
+    final AtomicBoolean sessionActivated = new AtomicBoolean(false);
+
+    Object sessionActivationListener =
+        new SessionActivationListener(sessionDetailHolder, sessionActivated);
+
+    List<Object> allJobPlugins = new ArrayList<>(sessionPlugins);
+    allJobPlugins.add(sessionActivationListener);
+
     try {
       while (true) {
         boolean enableJobPolling;
@@ -90,7 +101,7 @@ public class SessionJobRunner {
                 "Starting job %s of session %s",
                 jobInfo.locator().getId(), sessionDetailHolder.getSessionId());
             jobInfo.properties().add(Job.CLIENT_TYPE, "olc");
-            clientApi.startJob(jobInfo, execMode, sessionPlugins);
+            clientApi.startJob(jobInfo, execMode, allJobPlugins);
           }
         }
 
@@ -128,5 +139,36 @@ public class SessionJobRunner {
 
   private void killJobs(List<String> jobIds) {
     jobIds.forEach(clientApi::killJob);
+  }
+
+  /**
+   * A session-scope plugin that listens to the first test allocation event and sets the
+   * HAS_ASSOCIATED_ALLOCATION property for all jobs in the session.
+   */
+  private static class SessionActivationListener {
+
+    private final SessionDetailHolder sessionDetailHolder;
+    private final AtomicBoolean sessionActivated;
+
+    private SessionActivationListener(
+        SessionDetailHolder sessionDetailHolder, AtomicBoolean sessionActivated) {
+      this.sessionDetailHolder = sessionDetailHolder;
+      this.sessionActivated = sessionActivated;
+    }
+
+    @Subscribe
+    public void onFirstTestAllocated(FirstTestAllocatedEvent event) {
+      if (sessionActivated.compareAndSet(false, true)) {
+        logger.atInfo().log(
+            "Session [%s] activated by job [%s]'s first test allocation. "
+                + "Setting HAS_ASSOCIATED_ALLOCATION for all jobs in this session.",
+            sessionDetailHolder.getSessionId(), event.allocatedJob().locator().getId());
+
+        ImmutableList<JobInfo> allJobsInSession = sessionDetailHolder.getAllJobs();
+        for (JobInfo job : allJobsInSession) {
+          job.properties().add(Job.HAS_ASSOCIATED_ALLOCATION, "true");
+        }
+      }
+    }
   }
 }

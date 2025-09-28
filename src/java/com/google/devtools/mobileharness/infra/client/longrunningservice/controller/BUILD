@@ -122,6 +122,7 @@ java_library(
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/client/api",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/job/event",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_detail_holder",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",

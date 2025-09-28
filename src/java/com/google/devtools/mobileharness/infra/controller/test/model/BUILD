@@ -28,6 +28,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:__pkg__",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
