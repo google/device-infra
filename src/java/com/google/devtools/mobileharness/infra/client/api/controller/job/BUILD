@@ -19,6 +19,7 @@ package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/client:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:__pkg__",
     ],
 )
 
@@ -46,6 +47,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/allocation/diagnostic/multidevice",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/allocation/diagnostic/singledevice",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/device:querier",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/job/event",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/remote:exception",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/plugin:test_retry_handler",
