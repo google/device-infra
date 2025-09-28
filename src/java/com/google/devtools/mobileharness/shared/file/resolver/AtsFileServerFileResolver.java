@@ -101,7 +101,7 @@ public class AtsFileServerFileResolver extends AbstractFileResolver {
       return ResolveResult.of(
           ImmutableList.of(ResolvedFile.create(path, null)), ImmutableMap.of(), resolveSource);
     } else {
-      String sourcePath = path.replace(RemoteFileType.ATS_FILE_SERVER.prefix(), "");
+      String sourcePath = getSourcePath(path);
       String httpSourcePath =
           String.join(
               "/",
@@ -141,7 +141,7 @@ public class AtsFileServerFileResolver extends AbstractFileResolver {
   @Override
   protected Optional<Checksum> computeChecksum(ResolveSource resolveSource)
       throws MobileHarnessException, InterruptedException {
-    return getFileSha256(resolveSource.path())
+    return getFileSha256(getSourcePath(resolveSource.path()))
         .map(
             sha256 ->
                 Checksum.newBuilder()
@@ -187,6 +187,10 @@ public class AtsFileServerFileResolver extends AbstractFileResolver {
           "Failed to get sha256 for %s from ats file server.", sourcePath);
       return Optional.empty();
     }
+  }
+
+  private static String getSourcePath(String path) {
+    return path.replace(RemoteFileType.ATS_FILE_SERVER.prefix(), "");
   }
 
   private void downloadFile(String destination, String httpSourcePath)
