@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.infra.ats.common.jobcreator;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil.urlForWorkerResolve;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -85,7 +86,7 @@ public class ServerJobCreator extends XtsJobCreator {
     } else {
       Optional<String> findAndroidXtsZip =
           Flags.instance().enablePersistentCache.getNonNull()
-              ? sessionRequestInfo.androidXtsZipDownloadUrl()
+              ? urlForWorkerResolve(sessionRequestInfo)
               : Optional.empty();
       findAndroidXtsZip = findAndroidXtsZip.or(() -> sessionRequestInfo.androidXtsZip());
       findAndroidXtsZip.ifPresent(url -> driverParams.put("android_xts_zip", url));

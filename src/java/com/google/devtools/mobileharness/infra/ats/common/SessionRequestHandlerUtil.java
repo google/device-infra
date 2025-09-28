@@ -454,8 +454,7 @@ public class SessionRequestHandlerUtil {
     jobInfo.properties().add(Job.IS_XTS_TF_JOB, "true");
     injectCommonParams(jobInfo);
     if (Flags.instance().enablePersistentCache.getNonNull()) {
-      sessionRequestInfo
-          .androidXtsZipDownloadUrl()
+      urlForWorkerResolve(sessionRequestInfo)
           .ifPresent(url -> addUrlToPersistentCacheList(jobInfo, url));
     }
     tradefedJobInfo
@@ -463,6 +462,12 @@ public class SessionRequestHandlerUtil {
         .forEach((key, value) -> jobInfo.properties().add(key, value));
     printCreatedJobInfo(jobInfo, /* isTf= */ true);
     return jobInfo;
+  }
+
+  public static Optional<String> urlForWorkerResolve(SessionRequestInfo sessionRequestInfo) {
+    return Flags.instance().transferResourcesFromController.getNonNull()
+        ? sessionRequestInfo.androidXtsZip() // Local url in controller.
+        : sessionRequestInfo.androidXtsZipDownloadUrl(); // Remote download url.
   }
 
   private void addUrlToPersistentCacheList(JobInfo jobInfo, String url) {

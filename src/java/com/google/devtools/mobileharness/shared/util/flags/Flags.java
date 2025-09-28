@@ -2080,6 +2080,16 @@ public class Flags {
       converter = Flag.StringConverter.class)
   public Flag<String> tradefedCurlDownloadLimitRate = tradefedCurlDownloadLimitRateDefault;
 
+  private static final Flag<Boolean> transferResourcesFromControllerDefault = Flag.value(true);
+
+  @com.beust.jcommander.Parameter(
+      names = "--transfer_resources_from_controller",
+      description =
+          "Whether to transfer all resources from the controller to workers. The default is true."
+              + " Only set it to false when the controller and workers cross different networks.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> transferResourcesFromController = transferResourcesFromControllerDefault;
+
   private static final Flag<Boolean> useAltsDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(
