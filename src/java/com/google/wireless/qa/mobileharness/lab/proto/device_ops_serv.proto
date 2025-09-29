@@ -63,6 +63,7 @@ message GetDeviceDebugInfoRequest {
     IFCONFIG = 11;
     IDEVICEMODECTL_LIST = 12;
     UHUBCTL_LIST = 13;
+    CFGUTIL_LIST = 14;
   }
   repeated GetDeviceDebugInfoCommand command = 1;
 }
