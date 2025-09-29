@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.infra.controller.device.config;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static java.util.concurrent.TimeUnit.MINUTES;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
@@ -101,6 +102,9 @@ public class ApiConfigV5 implements ApiConfig {
   /** <DeviceControlId, DeviceConfig> map. */
   private final Map<String, DeviceConfig> deviceConfigs = new ConcurrentHashMap<>();
 
+  /** <DeviceControlId, DeviceConfig> map for tenant configs. */
+  private final Map<String, DeviceConfig> tenantDeviceConfigs = new ConcurrentHashMap<>();
+
   private final Set<ApiConfigListener> listeners = ConcurrentHashMap.newKeySet();
 
   private boolean isDefaultPublic;
@@ -158,12 +162,22 @@ public class ApiConfigV5 implements ApiConfig {
 
   @Override
   public List<String> getOwners(String deviceControlId) {
-    return getBasicDeviceConfig(deviceControlId).getOwnerList();
+    Set<String> owners = new HashSet<>(getBasicDeviceConfig(deviceControlId).getOwnerList());
+    DeviceConfig tenantConfig = tenantDeviceConfigs.get(deviceControlId);
+    if (tenantConfig != null) {
+      owners.addAll(tenantConfig.getBasicConfig().getOwnerList());
+    }
+    return new ArrayList<>(owners);
   }
 
   @Override
   public List<String> getExecutors(String deviceControlId) {
-    return getBasicDeviceConfig(deviceControlId).getExecutorList();
+    Set<String> executors = new HashSet<>(getBasicDeviceConfig(deviceControlId).getExecutorList());
+    DeviceConfig tenantConfig = tenantDeviceConfigs.get(deviceControlId);
+    if (tenantConfig != null) {
+      executors.addAll(tenantConfig.getBasicConfig().getExecutorList());
+    }
+    return new ArrayList<>(executors);
   }
 
   @Override
@@ -295,6 +309,16 @@ public class ApiConfigV5 implements ApiConfig {
     this.labConfig = labConfig;
     for (ApiConfigListener listener : listeners) {
       listener.onLabConfigChange();
+    }
+  }
+
+  @Override
+  public void setTenantDeviceConfig(String deviceControlId, DeviceConfig tenantConfig) {
+    DeviceConfig existingTenantConfig = tenantDeviceConfigs.get(deviceControlId);
+    if (!tenantConfig.equals(existingTenantConfig)) {
+      logger.atInfo().atMostEvery(2, MINUTES).log(
+          "Set TenantDeviceConfig for device %s to %s ", deviceControlId, tenantConfig);
+      tenantDeviceConfigs.put(deviceControlId, tenantConfig);
     }
   }
 
