@@ -283,8 +283,13 @@ public class SessionRequestHandlerUtil {
             availableDevices.stream()
                 .map(device -> device.uuid().orElse(""))
                 .collect(toImmutableSet());
-        return sessionRequestInfo.deviceSerials().stream()
-            .filter(availableDeviceUuids::contains)
+        Stream<String> deviceSerials = sessionRequestInfo.deviceSerials().stream();
+        if (sessionRequestInfo.allowPartialDeviceMatch()) {
+          // TODO: The available devices should online and not busy. Currently only
+          // check for online devices.
+          deviceSerials = deviceSerials.filter(availableDeviceUuids::contains);
+        }
+        return deviceSerials
             .map(
                 deviceSerial ->
                     SubDeviceSpec.newBuilder()

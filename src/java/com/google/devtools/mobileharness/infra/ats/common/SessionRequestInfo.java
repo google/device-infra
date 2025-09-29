@@ -167,6 +167,8 @@ public abstract class SessionRequestInfo {
   // The test environment passed in from ATS server. Used for building command.xml file.
   public abstract Optional<TestEnvironment> atsServerTestEnvironment();
 
+  public abstract boolean allowPartialDeviceMatch();
+
   public static Builder builder() {
     return new AutoValue_SessionRequestInfo.Builder()
         .setModuleNames(ImmutableList.of())
@@ -194,7 +196,8 @@ public abstract class SessionRequestInfo {
         .setShardingMode(ShardingMode.RUNNER)
         .setXtsSuiteInfo(ImmutableMap.of())
         .setAtsServerTestResources(ImmutableList.of())
-        .setExcludeRunners(ImmutableSet.of());
+        .setExcludeRunners(ImmutableSet.of())
+        .setAllowPartialDeviceMatch(false);
   }
 
   public abstract Builder toBuilder();
@@ -314,6 +317,8 @@ public abstract class SessionRequestInfo {
         ImmutableList<TestResource> atsServerTestResources);
 
     public abstract Builder setAtsServerTestEnvironment(TestEnvironment atsServerTestEnvironment);
+
+    public abstract Builder setAllowPartialDeviceMatch(boolean allowPartialDeviceMatch);
 
     protected abstract SessionRequestInfo autoBuild();
 

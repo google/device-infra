@@ -608,7 +608,8 @@ final class NewMultiCommandRequestHandler {
     sessionRequestInfoBuilder
         .setJobTimeout(toJavaDuration(request.getTestEnvironment().getInvocationTimeout()))
         .setStartTimeout(toJavaDuration(request.getQueueTimeout()))
-        .setIsAtsServerRequest(true);
+        .setIsAtsServerRequest(true)
+        .setAllowPartialDeviceMatch(commandInfo.getAllowPartialDeviceMatch());
 
     if (commandInfo.getShardingMode() != ShardingMode.SHARDING_MODE_UNSPECIFIED) {
       sessionRequestInfoBuilder.setShardingMode(commandInfo.getShardingMode());
@@ -759,6 +760,11 @@ final class NewMultiCommandRequestHandler {
             || hasCommandFailed(commandDetailBuilder.build())) {
           commandDetailBuilder.setState(CommandState.COMPLETED);
         } else {
+          logger.atInfo().log(
+              "Command detail: passed: %d, failed: %d, total: %d",
+              commandDetailBuilder.getPassedTestCount(),
+              commandDetailBuilder.getFailedTestCount(),
+              commandDetailBuilder.getTotalTestCount());
           setCommandError(
               commandDetailBuilder,
               ErrorReason.RESULT_PROCESSING_ERROR,

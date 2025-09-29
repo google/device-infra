@@ -65,6 +65,7 @@ message CommandInfo {
   }
   optional mobileharness.infra.ats.common.ShardingMode sharding_mode = 6;
   optional bool enable_xts_dynamic_download = 7;
+  optional bool allow_partial_device_match = 8;
 }
 
 message TestResource {
@@ -132,7 +133,7 @@ message DeviceActionConfigObject {
 }
 
 // Command detail returned by session service.
-// Next ID: 21
+// Next ID: 22
 message CommandDetail {
   string id = 1;
   string request_id = 2;
@@ -169,6 +170,7 @@ message CommandDetail {
   // Only useful to frontend for generating command attempt message.
   optional string command_attempt_id = 19;
   optional string host_ip = 20;
+  optional bool allow_partial_device_match = 21;
 }
 
 enum CommandState {

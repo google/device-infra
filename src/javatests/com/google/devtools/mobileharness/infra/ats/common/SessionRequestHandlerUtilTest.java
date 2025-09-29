@@ -252,6 +252,7 @@ public final class SessionRequestHandlerUtilTest {
     SessionRequestInfo sessionRequestInfo =
         defaultSessionRequestInfoBuilder()
             .setIsAtsServerRequest(true)
+            .setAllowPartialDeviceMatch(true)
             .setDeviceSerials(ImmutableList.of("device_id_1", "device_id_2"))
             .build();
     ImmutableList<SubDeviceSpec> subDeviceSpecs =
@@ -361,6 +362,68 @@ public final class SessionRequestHandlerUtilTest {
 
     assertThat(exception).hasMessageThat().contains("No available device is found.");
     verify(sleeper, times(19)).sleep(Duration.ofSeconds(30));
+  }
+
+  @Test
+  public void
+      getSubDeviceSpecListForTradefed_atsServerRequestWithPartialDeviceMatch_allowPartialDeviceMatch_filterNotAvailableDevices()
+          throws Exception {
+    when(deviceQuerier.queryDevice(any()))
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder()
+                        .setId("device_id_1")
+                        .addDimension(
+                            Dimension.newBuilder().setName("uuid").setValue("device_id_1"))
+                        .addType("AndroidOnlineDevice"))
+                .build());
+
+    SessionRequestInfo sessionRequestInfo =
+        defaultSessionRequestInfoBuilder()
+            .setIsAtsServerRequest(true)
+            .setAllowPartialDeviceMatch(true)
+            .setDeviceSerials(ImmutableList.of("device_id_1", "device_id_2"))
+            .build();
+
+    ImmutableList<SubDeviceSpec> subDeviceSpecs =
+        sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
+
+    assertThat(subDeviceSpecs).hasSize(1);
+    assertThat(subDeviceSpecs.get(0).getDimensions().getContentMap())
+        .containsEntry("uuid", "device_id_1");
+  }
+
+  @Test
+  public void
+      getSubDeviceSpecListForTradefed_atsServerRequestWithPartialDeviceMatch_notAllowPartialDeviceMatch_notFilterNotAvailableDevices()
+          throws Exception {
+    when(deviceQuerier.queryDevice(any()))
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder()
+                        .setId("device_id_1")
+                        .addDimension(
+                            Dimension.newBuilder().setName("uuid").setValue("device_id_1"))
+                        .addType("AndroidOnlineDevice"))
+                .build());
+
+    SessionRequestInfo sessionRequestInfo =
+        defaultSessionRequestInfoBuilder()
+            .setIsAtsServerRequest(true)
+            .setAllowPartialDeviceMatch(false)
+            .setDeviceSerials(ImmutableList.of("device_id_1", "device_id_2"))
+            .build();
+
+    ImmutableList<SubDeviceSpec> subDeviceSpecs =
+        sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
+
+    assertThat(subDeviceSpecs).hasSize(2);
+    assertThat(subDeviceSpecs.get(0).getDimensions().getContentMap())
+        .containsEntry("uuid", "device_id_1");
+    assertThat(subDeviceSpecs.get(1).getDimensions().getContentMap())
+        .containsEntry("uuid", "device_id_2");
   }
 
   @Test
