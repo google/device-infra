@@ -109,32 +109,6 @@ public class PersistentCache<@ImmutableTypeParameter K> {
     }
   }
 
-  @VisibleForTesting
-  static class CachePaths {
-
-    private final Path cacheDirPath;
-
-    private CachePaths(Path cacheDirPath) {
-      this.cacheDirPath = cacheDirPath;
-    }
-
-    Path cacheDirPath() {
-      return cacheDirPath;
-    }
-
-    Path dataPath() {
-      return cacheDirPath().resolve(".data");
-    }
-
-    Path lockPath() {
-      return cacheDirPath().resolve(".lock");
-    }
-
-    Path metadataPath() {
-      return cacheDirPath().resolve(".metadata");
-    }
-  }
-
   /**
    * Gets the cache for the given {@code cacheKey}.
    *
@@ -176,6 +150,8 @@ public class PersistentCache<@ImmutableTypeParameter K> {
               if (!metadata.getSymlinksList().contains(symlink.toAbsolutePath().toString())) {
                 metadata = addSymlink(cachePaths.metadataPath(), symlink);
               }
+              // Touch the metadata file to update the atime.
+              touchMetadata(cachePaths);
               return Optional.of(CacheResult.create(symlink, metadata));
             }
           }
@@ -194,6 +170,7 @@ public class PersistentCache<@ImmutableTypeParameter K> {
         boolean createMetadata = false;
         switch (cacheStatus.cacheState()) {
           case VALID:
+            logger.atInfo().log("Cache %s is valid. Fetching cache.", cacheKey.getRelativePath());
             metadataOp = cacheStatus.metadata();
             break;
           case INVALID:
@@ -216,6 +193,8 @@ public class PersistentCache<@ImmutableTypeParameter K> {
           } else if (!metadata.getSymlinksList().contains(newSymlink.toAbsolutePath().toString())) {
             metadata = addSymlink(cachePaths.metadataPath(), newSymlink);
           }
+          // Touch the metadata file to update the atime.
+          touchMetadata(cachePaths);
           return Optional.of(CacheResult.create(newSymlink, metadata));
         }
         return Optional.empty();
@@ -231,7 +210,7 @@ public class PersistentCache<@ImmutableTypeParameter K> {
   private CachePaths createCachePaths(CacheKey<K> cacheKey) throws MobileHarnessException {
     Path cacheDirPath = rootPersistentDir.resolve(cacheKey.getRelativePath());
     localFileUtil.prepareDir(cacheDirPath);
-    return new CachePaths(cacheDirPath);
+    return CachePaths.create(cacheDirPath);
   }
 
   private CacheStatus getCacheStatus(CachePaths cachePaths) {
@@ -359,6 +338,10 @@ public class PersistentCache<@ImmutableTypeParameter K> {
       return targetPath.resolve(fileName);
     }
     return targetPath;
+  }
+
+  private void touchMetadata(CachePaths cachePaths) throws MobileHarnessException {
+    localFileUtil.touchFileOrDir(cachePaths.metadataPath(), /* ifCreateNewFile= */ false);
   }
 
   private void clearCache(CachePaths cachePaths)

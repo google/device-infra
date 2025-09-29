@@ -21,6 +21,14 @@ package(
 )
 
 java_library(
+    name = "cache_paths",
+    srcs = ["CachePaths.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+    ],
+)
+
+java_library(
     name = "persistent",
     srcs = [
         "CacheBuilder.java",
@@ -31,6 +39,7 @@ java_library(
         "PersistentCache.java",
     ],
     deps = [
+        ":cache_paths",
         "//src/devtools/mobileharness/shared/util/cache/persistent/proto:metadata_java_proto",
         "//src/devtools/mobileharness/shared/util/file/checksum/proto:checksum_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
