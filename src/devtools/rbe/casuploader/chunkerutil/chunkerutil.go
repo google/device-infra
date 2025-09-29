@@ -57,6 +57,7 @@ func CreateIndexFile(inDir string, chunksIndex []ChunksIndex) error {
 
 	linkedPath := filepath.Join(inDir, ChunksDirName, ChunksIndexFileName)
 	if err := os.Link(indexPath, linkedPath); err != nil {
+		// Creating a backup index file is redundant, so we don't fail the upload if this fails.
 		log.Errorf("failed to hardlink chunk index file: %v", err)
 	}
 
