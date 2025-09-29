@@ -17,10 +17,11 @@
 package com.google.devtools.mobileharness.infra.ats.common;
 
 import com.google.common.base.Ascii;
-import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
+import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteVersion;
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import java.io.File;
@@ -28,6 +29,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
+import javax.annotation.Nullable;
 
 /** Helper class for session handler utils. */
 public class SessionHandlerHelper {
@@ -39,20 +41,45 @@ public class SessionHandlerHelper {
   public static final String TEST_RESULT_XML_FILE_NAME = "test_result.xml";
   public static final String TEST_RECORD_PROTOBUFFER_FILE_NAME = "test-record.pb";
 
-  private static final ImmutableSet<String> XTS_TYPES_SUPPORTING_ATS_RETRY =
-      ImmutableSet.of("cts", "cts-v-host", "gts");
+  /**
+   * The minimum version of the test suite that supports ATS retry.
+   *
+   * <p>If the min version is TestSuiteVersion.create(0, 0, 0, 0), it means its all versions support
+   * ATS retry.
+   */
+  private static final ImmutableMap<String, TestSuiteVersion>
+      XTS_TYPES_SUPPORTING_ATS_RETRY_WITH_MIN_VERSION =
+          ImmutableMap.of(
+              "cts",
+              TestSuiteVersion.create(14, 0, 0, 7),
+              "cts-v-host",
+              TestSuiteVersion.create(16, 0, 0, 1),
+              "gts",
+              TestSuiteVersion.create(12, 0, 0, 1));
 
   /** Checks if the test plan is retry. */
   public static boolean isRunRetry(String testPlan) {
     return Ascii.equalsIgnoreCase(testPlan, "retry");
   }
 
-  public static boolean useTfRetry(boolean isAtsServerRequest, String xtsType) {
+  public static boolean useTfRetry(
+      boolean isAtsServerRequest, String xtsType, @Nullable TestSuiteVersion testSuiteVersion) {
     if (Flags.instance().useTfRetry.getNonNull()) {
       return true;
     }
     if (isAtsServerRequest) {
-      return !XTS_TYPES_SUPPORTING_ATS_RETRY.contains(Ascii.toLowerCase(xtsType));
+      // If the xtsType is not in the map, it means it doesn't support ATS retry.
+      if (!XTS_TYPES_SUPPORTING_ATS_RETRY_WITH_MIN_VERSION.containsKey(
+          Ascii.toLowerCase(xtsType))) {
+        return true;
+      }
+      if (testSuiteVersion == null) {
+        // If the test suite version is not available, uses ATS retry.
+        return false;
+      }
+      return testSuiteVersion.compareTo(
+              XTS_TYPES_SUPPORTING_ATS_RETRY_WITH_MIN_VERSION.get(Ascii.toLowerCase(xtsType)))
+          < 0;
     }
     // If it's from ATS Console, we prefer to use ATS retry mechanism by default
     return false;

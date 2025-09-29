@@ -173,9 +173,18 @@ public abstract class XtsJobCreator {
     driverParams.put("xts_test_plan", testPlan);
     extraJobProperties.put(Job.XTS_TEST_PLAN, testPlan);
     boolean prevSessionSkipDeviceInfo = false;
+    boolean useTfRetry =
+        SessionHandlerHelper.useTfRetry(
+            sessionRequestInfo.isAtsServerRequest(),
+            xtsType,
+            sessionRequestInfo
+                .testSuiteInfo()
+                .map(testSuiteInfo -> testSuiteInfo.getTestSuiteVersion().orElse(null))
+                .orElse(null));
     if (SessionRequestHandlerUtil.isRunRetry(testPlan)) {
       extraJobProperties.put(Job.IS_RUN_RETRY, "true");
-      if (SessionHandlerHelper.useTfRetry(sessionRequestInfo.isAtsServerRequest(), xtsType)) {
+      if (useTfRetry) {
+        logger.atInfo().log("Preparing for TF retry...");
         prepareTfRetry(sessionRequestInfo, driverParams, extraJobProperties, jobFiles);
       } else {
         SubPlan runRetryTfSubPlan = prepareRunRetrySubPlan(sessionRequestInfo, /* forTf= */ true);
@@ -242,7 +251,7 @@ public abstract class XtsJobCreator {
     } else {
       ImmutableList<String> moduleFilters;
       if (SessionRequestHandlerUtil.isRunRetry(sessionRequestInfo.testPlan())) {
-        if (SessionHandlerHelper.useTfRetry(sessionRequestInfo.isAtsServerRequest(), xtsType)) {
+        if (useTfRetry) {
           // For "run retry" command handled by TF, pass the original modules to TF
           moduleFilters =
               sessionRequestInfo.moduleNames().stream()
@@ -271,17 +280,13 @@ public abstract class XtsJobCreator {
                           // For "run retry" command, the passed in include filters and exclude
                           // filters are set in generated subplan, no need to set in TF command
                           // again.
-                          !SessionHandlerHelper.useTfRetry(
-                                      sessionRequestInfo.isAtsServerRequest(), xtsType)
-                                  && SessionRequestHandlerUtil.isRunRetry(testPlan)
+                          !useTfRetry && SessionRequestHandlerUtil.isRunRetry(testPlan)
                               ? Stream.empty()
                               : sessionRequestInfo.includeFilters().stream()
                                   .map(
                                       includeFilter ->
                                           String.format("--include-filter \"%s\"", includeFilter)),
-                          !SessionHandlerHelper.useTfRetry(
-                                      sessionRequestInfo.isAtsServerRequest(), xtsType)
-                                  && SessionRequestHandlerUtil.isRunRetry(testPlan)
+                          !useTfRetry && SessionRequestHandlerUtil.isRunRetry(testPlan)
                               ? Stream.empty()
                               : sessionRequestInfo.excludeFilters().stream()
                                   .map(

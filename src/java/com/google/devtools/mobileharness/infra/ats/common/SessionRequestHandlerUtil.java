@@ -544,7 +544,12 @@ public class SessionRequestHandlerUtil {
     boolean isTfRetryWithModules =
         SessionRequestHandlerUtil.isRunRetry(sessionRequestInfo.testPlan())
             && SessionHandlerHelper.useTfRetry(
-                sessionRequestInfo.isAtsServerRequest(), sessionRequestInfo.xtsType())
+                sessionRequestInfo.isAtsServerRequest(),
+                sessionRequestInfo.xtsType(),
+                sessionRequestInfo
+                    .testSuiteInfo()
+                    .map(testSuiteInfo -> testSuiteInfo.getTestSuiteVersion().orElse(null))
+                    .orElse(null))
             && !sessionRequestInfo.moduleNames().isEmpty();
 
     ImmutableList<String> modules =

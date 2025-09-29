@@ -69,6 +69,7 @@ import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsCon
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfo.TradefedInvocation;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfoFileUtil;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfoFileUtil.XtsTradefedRuntimeInfoFileDetail;
+import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteInfoProvider;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -559,11 +560,13 @@ final class NewMultiCommandRequestHandler {
                     androidXtsZipPathCopy));
 
     SessionRequestInfo.Builder sessionRequestInfoBuilder =
-        CommandLineParser.getInstance().parseCommandLine(commandInfo.getCommandLine());
-    sessionRequestInfoBuilder.setCommandLineArgs(commandInfo.getCommandLine());
-    sessionRequestInfoBuilder.setXtsType(xtsType);
-    sessionRequestInfoBuilder.setXtsRootDir(xtsRootDir);
-    sessionRequestInfoBuilder.setAndroidXtsZip(replacePathForRemoteRunner(androidXtsZipPath));
+        CommandLineParser.getInstance()
+            .parseCommandLine(commandInfo.getCommandLine())
+            .setCommandLineArgs(commandInfo.getCommandLine())
+            .setXtsType(xtsType)
+            .setXtsRootDir(xtsRootDir)
+            .setAndroidXtsZip(replacePathForRemoteRunner(androidXtsZipPath))
+            .setTestSuiteInfo(TestSuiteInfoProvider.getTestSuiteInfo(xtsRootDir, xtsType));
     if (!isNullOrEmpty(androidXtsZipDownloadUrl)) {
       sessionRequestInfoBuilder.setAndroidXtsZipDownloadUrl(
           replacePathForRemoteRunner(androidXtsZipDownloadUrl));

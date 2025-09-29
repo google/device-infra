@@ -26,6 +26,7 @@ import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.S
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestEnvironment;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestResource;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
+import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteInfo;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryType;
 import java.time.Duration;
 import java.util.List;
@@ -155,6 +156,8 @@ public abstract class SessionRequestInfo {
   public abstract Optional<Boolean> isXtsDynamicDownloadEnabled();
 
   public abstract ImmutableMap<String, String> xtsSuiteInfo();
+
+  public abstract Optional<TestSuiteInfo> testSuiteInfo();
 
   public abstract ImmutableSet<String> excludeRunners();
 
@@ -302,6 +305,8 @@ public abstract class SessionRequestInfo {
     public abstract Builder setIsXtsDynamicDownloadEnabled(boolean isXtsDynamicDownloadEnabled);
 
     public abstract Builder setXtsSuiteInfo(ImmutableMap<String, String> xtsSuiteInfo);
+
+    public abstract Builder setTestSuiteInfo(TestSuiteInfo testSuiteInfo);
 
     public abstract Builder setExcludeRunners(ImmutableSet<String> excludeRunners);
 

@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.platform.android.xts.suite;
 
+import static com.google.common.base.Strings.isNullOrEmpty;
+
 import com.google.common.base.Splitter;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.infra.ats.common.plan.JarFileUtil;
@@ -40,6 +42,12 @@ public class TestSuiteInfo {
   /** Expected property filename in jar resource. */
   private static final String SUITE_INFO_PROPERTY = "test-suite-info.properties";
 
+  private static final String STUB_BUILD_NUMBER = "[stub build number]";
+  private static final String STUB_TARGET_ARCH = "[stub target arch]";
+  private static final String STUB_NAME = "[stub name]";
+  private static final String STUB_FULLNAME = "[stub fullname]";
+  private static final String STUB_VERSION = "[stub version]";
+
   // Suite info keys
   private static final String BUILD_NUMBER = "build_number";
   private static final String TARGET_ARCH = "target_arch";
@@ -47,6 +55,7 @@ public class TestSuiteInfo {
   private static final String FULLNAME = "fullname";
   private static final String VERSION = "version";
 
+  private volatile Optional<TestSuiteVersion> testSuiteVersion = null;
   private Properties testSuiteInfoProps;
   private final JarFileUtil jarFileUtil;
   private final String xtsRootDir;
@@ -69,11 +78,11 @@ public class TestSuiteInfo {
             "Unable to load suite info from jar resource %s, using stub info instead",
             SUITE_INFO_PROPERTY);
         testSuiteInfoProps = new Properties();
-        testSuiteInfoProps.setProperty(BUILD_NUMBER, "[stub build number]");
-        testSuiteInfoProps.setProperty(TARGET_ARCH, "[stub target arch]");
-        testSuiteInfoProps.setProperty(NAME, "[stub name]");
-        testSuiteInfoProps.setProperty(FULLNAME, "[stub fullname]");
-        testSuiteInfoProps.setProperty(VERSION, "[stub version]");
+        testSuiteInfoProps.setProperty(BUILD_NUMBER, STUB_BUILD_NUMBER);
+        testSuiteInfoProps.setProperty(TARGET_ARCH, STUB_TARGET_ARCH);
+        testSuiteInfoProps.setProperty(NAME, STUB_NAME);
+        testSuiteInfoProps.setProperty(FULLNAME, STUB_FULLNAME);
+        testSuiteInfoProps.setProperty(VERSION, STUB_VERSION);
       } else {
         testSuiteInfoProps = loadSuiteInfoFromInputStream(testSuiteInfoPropsInputStream.get());
       }
@@ -117,6 +126,22 @@ public class TestSuiteInfo {
   /** Gets the version name of the test suite. */
   public String getVersion() {
     return testSuiteInfoProps.getProperty(VERSION);
+  }
+
+  public Optional<TestSuiteVersion> getTestSuiteVersion() {
+    if (testSuiteVersion == null) {
+      synchronized (this) {
+        if (testSuiteVersion == null) {
+          String version = getVersion();
+          if (isNullOrEmpty(version) || version.trim().isEmpty() || version.equals(STUB_VERSION)) {
+            testSuiteVersion = Optional.empty();
+          } else {
+            testSuiteVersion = Optional.of(TestSuiteVersion.create(version.trim()));
+          }
+        }
+      }
+    }
+    return testSuiteVersion;
   }
 
   /**

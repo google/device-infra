@@ -51,6 +51,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.constan
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
+import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteInfoProvider;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryType;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
@@ -344,6 +345,9 @@ class RunCommandHandler {
             .setModuleArgs(runCommand.getModuleArgList())
             .setExtraArgs(runCommand.getExtraArgList())
             .setXtsSuiteInfo(ImmutableMap.copyOf(runCommand.getXtsSuiteInfoMap()))
+            .setTestSuiteInfo(
+                TestSuiteInfoProvider.getTestSuiteInfo(
+                    runCommand.getXtsRootDir(), runCommand.getXtsType()))
             .setExcludeRunners(ImmutableSet.copyOf(runCommand.getExcludeRunnerList()));
     ImmutableMultimap.Builder<String, String> moduleMetadataIncludeFilters =
         ImmutableMultimap.builder();

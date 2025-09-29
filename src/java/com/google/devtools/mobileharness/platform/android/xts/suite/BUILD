@@ -82,10 +82,12 @@ java_library(
     name = "test_suite_info",
     srcs = ["TestSuiteInfo.java"],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/version:__pkg__",
     ],
     deps = [
+        ":test_suite_version",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/plan:jar_file_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_dir_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
@@ -186,14 +188,30 @@ java_library(
     name = "test_suite_info_provider",
     srcs = ["TestSuiteInfoProvider.java"],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/version:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__",
     ],
     deps = [
         ":test_suite_info",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/plan:jar_file_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "test_suite_version",
+    srcs = ["TestSuiteVersion.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/suite:__pkg__",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "@maven//:com_google_guava_guava",
     ],
 )
