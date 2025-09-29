@@ -62,6 +62,7 @@ message GetDeviceDebugInfoRequest {
     WHICH_ADB = 10;
     IFCONFIG = 11;
     IDEVICEMODECTL_LIST = 12;
+    UHUBCTL_LIST = 13;
   }
   repeated GetDeviceDebugInfoCommand command = 1;
 }
