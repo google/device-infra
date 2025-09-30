@@ -22,7 +22,6 @@ java_library(
     srcs = ["MoblyPostTestProcessor.java"],
     visibility = [
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
-        "//src/javatests/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
     ],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
