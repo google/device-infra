@@ -41,6 +41,24 @@ public class ThreadPools {
   }
 
   /**
+   * Creates a fixed-size thread pool whose threads are daemon threads, have the given name prefix
+   * and have a default uncaught exception handler, and which will automatically propagate
+   * invocation context.
+   *
+   * @param threadNamePrefix if it is "foo", the thread names are like "foo-1", "foo-2", etc.
+   * @param numThreads the number of threads in the pool
+   */
+  public static ListeningExecutorService createStandardFixedThreadPool(
+      String threadNamePrefix, int numThreads) {
+    return InvocationContextExecutors.propagatingContext(
+        MoreExecutors.listeningDecorator(
+            Executors.newFixedThreadPool(
+                numThreads,
+                ThreadFactoryUtil.createThreadFactory(threadNamePrefix, /* daemon= */ true))),
+        ListeningExecutorService.class);
+  }
+
+  /**
    * Creates a scheduled thread pool with the given core pool size, whose threads are daemon threads
    * , have the given name prefix and have a default uncaught exception handler, and which will
    * automatically propagate invocation context.
