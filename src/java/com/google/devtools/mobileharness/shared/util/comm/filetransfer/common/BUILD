@@ -41,7 +41,6 @@ java_library(
     name = "tagged_file_handler",
     srcs = ["TaggedFileHandler.java"],
     visibility = [
-        "//:omnilab_fusion",
         "//java/com/google/wireless/qa/mobileharness/shared/comm/filetransfer/stubby/service:__pkg__",
         "//src/java/com/google/devtools/mobileharness:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/shared/util/comm/filetransfer:__subpackages__",
