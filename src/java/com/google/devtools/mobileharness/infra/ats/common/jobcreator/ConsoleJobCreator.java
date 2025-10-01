@@ -40,7 +40,7 @@ import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryG
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryType;
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
-import com.google.gson.Gson;
+import com.google.wireless.qa.mobileharness.shared.api.spec.XtsTradefedTestSpec;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
@@ -182,14 +182,14 @@ public class ConsoleJobCreator extends XtsJobCreator {
     driverParams.put(
         "prev_session_test_result_xml",
         tfRunRetryFilesBundle.testResultXml().toAbsolutePath().toString());
-    driverParams.put(
-        "prev_session_test_record_files",
-        new Gson()
-            .toJson(
-                tfRunRetryFilesBundle.testRecordProtoFiles().stream()
-                    .map(Path::toAbsolutePath)
-                    .map(Path::toString)
-                    .collect(toImmutableList())));
+    // It uses jobFiles here instead of driverParams as driverParams doesn't work well with list of
+    // files.
+    jobFiles.putAll(
+        XtsTradefedTestSpec.TAG_PREV_SESSION_TEST_RECORD_PB_FILES,
+        tfRunRetryFilesBundle.testRecordProtoFiles().stream()
+            .map(Path::toAbsolutePath)
+            .map(Path::toString)
+            .collect(toImmutableList()));
     if (sessionRequestInfo.retryType().isPresent()) {
       driverParams.put("retry_type", sessionRequestInfo.retryType().get().toString());
     }
