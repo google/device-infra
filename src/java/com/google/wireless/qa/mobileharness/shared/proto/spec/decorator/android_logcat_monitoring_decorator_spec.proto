@@ -1,0 +1,78 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto2";
+
+package mobileharness.shared.spec;
+
+import "src/java/com/google/wireless/qa/mobileharness/shared/proto/spec/base_spec.proto";
+
+option java_package = "com.google.wireless.qa.mobileharness.shared.proto.spec.decorator";
+option java_multiple_files = true;
+
+// Spec for AndroidLogcatMonitoringDecorator.
+message AndroidLogcatMonitoringDecoratorSpec {
+  extend DecoratorSpec {
+    optional AndroidLogcatMonitoringDecoratorSpec ext = 1013;
+  }
+
+  // Packages under test. Crashes of these packages will not abort the test but
+  // will only be reported as a failed test. This should include the
+  // package under test and any additional packages the test depends on.
+  repeated string packages_under_test = 1 [(field_detail) = {
+    help: "PackageID of all the apps under test to monitor."
+  }];
+
+  // System/infrastructure packages to monitor. If any of these
+  // packages/processes crash and generate a dialog on the screen, abort the
+  // test with an error as it could corrupt the underlying test. This is the
+  // default behavior unless the 'disable_abort_on_crash_detection' is set.
+  repeated string infra_packages_to_monitor = 2
+      [(field_detail) = { help: "PackageID of all the apps to monitor." }];
+
+  // Packages that may crash during the test which can be safely ignored.
+  // These do not affect the ongoing test.
+  repeated string packages_to_ignore = 3
+      [(field_detail) = { help: "PackageID of all the apps to ignore." }];
+
+  // Maximum number of dropbox entries that will be retrieved from the device.
+  // Default max is 10.
+  optional int32 max_dropbox_entries = 4
+      [(field_detail) = { help: "Maximum dropbox entries to retrieve." }];
+
+  // Config to detect events in logcat.
+  // All fields in this message type are required.
+  message DeviceEventConfig {
+    // Name of the event. Used to name the event in output report as well.
+    optional string event_name = 1 [
+      (field_detail) = { help: "Name of the event used to report in results." }
+    ];
+
+    // Logcat tag to scan for in logcat.
+    optional string tag = 2
+        [(field_detail) = { help: "Log tag to check against." }];
+
+    // Regex pattern to match against.
+    optional string line_regex = 3 [(field_detail) = {
+      help: "Regex pattern to check with on the log message."
+    }];
+  }
+
+  // Device events to detect in logcat.
+  repeated DeviceEventConfig device_event_config = 5 [
+    (field_detail) = { help: "Device events to scan for in the logcat stream." }
+  ];
+}
