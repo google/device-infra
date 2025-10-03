@@ -1,0 +1,83 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto2";
+
+package mobileharness.shared.spec;
+
+import "src/java/com/google/wireless/qa/mobileharness/shared/proto/spec/base_spec.proto";
+
+option java_package = "com.google.wireless.qa.mobileharness.shared.proto.spec.decorator";
+option java_multiple_files = true;
+
+// Spec for AndroidLogcatMonitoringDecorator.
+message AndroidLogcatMonitoringDecoratorSpec {
+  extend DecoratorSpec {
+    optional AndroidLogcatMonitoringDecoratorSpec ext = 1013;
+  }
+
+  // Packages whose crashes should be reported as a test failure.
+  // This is the primary monitoring tier for the app-under-test. A crash in
+  // one of these packages will cause the specific test to be marked as
+  // 'FAILED' but will allow the overall test suite to continue.
+  repeated string report_as_failure_packages = 1 [(field_detail) = {
+    help: "PackageID of all the apps under which will cause a failure."
+  }];
+
+  // Critical packages whose crashes are considered fatal to the test
+  // environment.
+  // If any of these packages crash (e.g., system_server, SystemUI), the
+  // entire test run will be marked as an ERROR. This prevents a corrupted
+  // device state from producing invalid subsequent results.
+  repeated string error_on_crash_packages = 2 [(field_detail) = {
+    help: "Critical packages that will abort the entire test run upon crashing."
+  }];
+
+  // Packages that may crash during the test which can be safely ignored.
+  // Used to suppress known, benign crashes from components that do not affect
+  // the test's validity. This helps reduce noise in crash reports.
+  repeated string packages_to_ignore = 3 [
+    (field_detail) = { help: "List of packages whose crashes will be ignored." }
+  ];
+
+  // Maximum number of dropbox entries that will be retrieved from the device
+  // after a crash event. Default max is 10.
+  optional int32 max_dropbox_entries = 4
+      [(field_detail) = { help: "Maximum dropbox entries to retrieve." }];
+
+  // Config to detect events in logcat.
+  // All fields in this message type are required.
+  message DeviceEventConfig {
+    // Name of the event. Used to name the event in output report as well.
+    optional string event_name = 1 [
+      (field_detail) = { help: "Name of the event used to report in results." }
+    ];
+
+    // Logcat tag to scan for in logcat.
+    optional string tag = 2
+        [(field_detail) = { help: "Log tag to check against." }];
+
+    // Regex pattern to match against.
+    optional string line_regex = 3 [(field_detail) = {
+      help: "Regex pattern to check with on the log message."
+    }];
+  }
+
+  // Device events to detect in logcat.
+  repeated DeviceEventConfig device_event_config = 5 [
+    (field_detail) = { help: "Device events to scan for in the logcat stream." }
+  ];
+}
