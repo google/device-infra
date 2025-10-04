@@ -16,8 +16,6 @@
 
 package com.google.devtools.mobileharness.shared.util.comparator;
 
-import static java.lang.Math.min;
-
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
 import java.util.Comparator;
@@ -65,7 +63,7 @@ public class NaturalSortOrderComparator implements Comparator<String> {
     int secondaryComparingResult = 0;
 
     // Compares each section which is a non-empty string of consecutive digits or non-digits.
-    int minSectionNum = min(sectionNum1, sectionNum2);
+    int minSectionNum = Math.min(sectionNum1, sectionNum2);
     for (int i = 0; i < minSectionNum; i++) {
       Section section1 = sections1.get(i);
       Section section2 = sections2.get(i);
