@@ -23,6 +23,7 @@ import static com.google.devtools.mobileharness.shared.constant.LogRecordImporta
 import static java.util.stream.Collectors.toCollection;
 
 import com.google.auto.value.AutoValue;
+import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -949,12 +950,19 @@ public class SessionResultHandlerUtil {
           logRootDir.resolve(
               tradefedTestInfo.properties().get(XtsConstants.TRADEFED_INVOCATION_DIR_NAME));
     } else {
+      String xtsJobType =
+          tradefedTestInfo
+              .jobInfo()
+              .properties()
+              .getOptional(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME)
+              .map(s -> Ascii.toLowerCase(s) + "_")
+              .orElse("");
       invocationDir =
           logRootDir.resolve(
               XtsConstants.TRADEFED_INVOCATION_DIR_NAME_PREFIX
+                  + xtsJobType
                   + tradefedTestInfo.locator().getId());
     }
-
     return invocationDir;
   }
 
