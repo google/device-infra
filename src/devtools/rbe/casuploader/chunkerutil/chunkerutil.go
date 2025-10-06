@@ -2,6 +2,8 @@
 package chunkerutil
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -18,6 +20,8 @@ const (
 	ChunksDirName = "_chunks"
 	// ChunksIndexFileName is the name of the chunks index file.
 	ChunksIndexFileName = "_chunks_index.json"
+	// snippetSize is the size of the snippet to log when logging file snippets.
+	snippetSize = 1024
 )
 
 // ChunksIndex is the index of all chunks for a file.
@@ -61,7 +65,26 @@ func CreateIndexFile(inDir string, chunksIndex []ChunksIndex) error {
 		log.Errorf("failed to hardlink chunk index file: %v", err)
 	}
 
+	hash := sha256.Sum256(outputContent)
+	log.Infof("hash of index file: %s", hex.EncodeToString(hash[:]))
+
 	return nil
+}
+
+func logFileSnippets(filepath string, content []byte) {
+	if len(content) == 0 {
+		log.Warningf("File %s is empty.", filepath)
+		return
+	}
+
+	log.Infof("File %s size: %d bytes", filepath, len(content))
+
+	if len(content) <= 2*snippetSize {
+		log.Infof("File content snippet:\n%s", string(content))
+		return
+	}
+	log.Infof("File content snippet (first %d bytes):\n%s", snippetSize, string(content[:snippetSize]))
+	log.Infof("File content snippet (last %d bytes):\n%s", snippetSize, string(content[len(content)-snippetSize:]))
 }
 
 // RestoreFiles restores files to dstDir with chunks index file and chunks file in srcDir.
@@ -77,8 +100,12 @@ func RestoreFiles(srcDir string, dstDir string, keepChunks bool) error {
 		return fmt.Errorf("can't read chunk index file: %v", err)
 	}
 
+	hash := sha256.Sum256(index)
+	log.Infof("hash of index file: %s", hex.EncodeToString(hash[:]))
+
 	var chunksIndexEntries []ChunksIndex
 	if err := json.Unmarshal(index, &chunksIndexEntries); err != nil {
+		logFileSnippets(indexPath, index)
 		return fmt.Errorf("can't unmarshal chunk index file: %v", err)
 	}
 
