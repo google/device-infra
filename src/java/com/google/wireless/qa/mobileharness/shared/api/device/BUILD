@@ -204,6 +204,23 @@ java_library(
 )
 
 java_library(
+    name = "fusion_testbed_device_factory",
+    srcs = ["FusionTestbedDeviceFactory.java"],
+    visibility = [
+        # This should ONLY be visible to OmniLab Fusion. This is not intended to be used by anyone
+        # else.
+        "//:omnilab_fusion",
+    ],
+    deps = [
+        ":device",
+        ":testbed_device",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/platform/testbed/adhoc",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "misc_device",
     srcs = ["MiscDevice.java"],
     deps = [
