@@ -33,18 +33,20 @@ public final class TestSuiteVersionTest {
     assertThat(TestSuiteVersion.create("8.0_r26")).isEqualTo(TestSuiteVersion.create(8, 0, 0, 26));
     assertThat(TestSuiteVersion.create("4.0.3_r4")).isEqualTo(TestSuiteVersion.create(4, 0, 3, 4));
     assertThat(TestSuiteVersion.create("10_R2")).isEqualTo(TestSuiteVersion.create(10, 0, 0, 2));
+    assertThat(TestSuiteVersion.create("6.0")).isEqualTo(TestSuiteVersion.create(6, 0, 0, 0));
+    assertThat(TestSuiteVersion.create("16.1")).isEqualTo(TestSuiteVersion.create(16, 1, 0, 0));
   }
 
   @Test
   public void create_fromInvalidVersionString_throwsException() {
-    assertThrows(IllegalArgumentException.class, () -> TestSuiteVersion.create("16.1"));
-    assertThrows(NumberFormatException.class, () -> TestSuiteVersion.create("16.1_r"));
     assertThrows(IllegalArgumentException.class, () -> TestSuiteVersion.create("16.1_2"));
     assertThrows(IllegalArgumentException.class, () -> TestSuiteVersion.create("1.2.3.4_r1"));
     assertThrows(IllegalArgumentException.class, () -> TestSuiteVersion.create(""));
-    assertThrows(IllegalArgumentException.class, () -> TestSuiteVersion.create("_r1"));
-    assertThrows(IllegalArgumentException.class, () -> TestSuiteVersion.create("r1"));
+    assertThrows(IllegalArgumentException.class, () -> TestSuiteVersion.create("_"));
+    assertThrows(NumberFormatException.class, () -> TestSuiteVersion.create("_r1"));
+    assertThrows(NumberFormatException.class, () -> TestSuiteVersion.create("r1"));
     assertThrows(NumberFormatException.class, () -> TestSuiteVersion.create("1.2_rX"));
+    assertThrows(NumberFormatException.class, () -> TestSuiteVersion.create("16.1_r"));
   }
 
   @Test

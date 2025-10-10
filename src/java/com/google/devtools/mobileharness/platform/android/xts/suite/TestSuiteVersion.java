@@ -45,7 +45,9 @@ public abstract class TestSuiteVersion implements Comparable<TestSuiteVersion> {
     int minor = 0;
     int patch = 0;
     int revision = 0;
-    if (parts.size() != 2) {
+    // android-mts doesn't have revision in the version string, e.g., "6.0"
+    boolean hasRevision = parts.size() > 1;
+    if (parts.isEmpty()) {
       throw new IllegalArgumentException(
           String.format("Invalid version string: %s", versionString));
     }
@@ -66,12 +68,14 @@ public abstract class TestSuiteVersion implements Comparable<TestSuiteVersion> {
       major = Integer.parseInt(majorMinorPatch.get(0));
     }
 
-    String revisionString = parts.get(1);
-    if (revisionString.startsWith("r") || revisionString.startsWith("R")) {
-      revision = Integer.parseInt(revisionString.substring(1));
-    } else {
-      throw new IllegalArgumentException(
-          String.format("Invalid version string: %s", versionString));
+    if (hasRevision) {
+      String revisionString = parts.get(1);
+      if (revisionString.startsWith("r") || revisionString.startsWith("R")) {
+        revision = Integer.parseInt(revisionString.substring(1));
+      } else {
+        throw new IllegalArgumentException(
+            String.format("Invalid revision in version string: %s", versionString));
+      }
     }
     return create(major, minor, patch, revision);
   }
