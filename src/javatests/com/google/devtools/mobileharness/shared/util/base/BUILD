@@ -25,6 +25,7 @@ java_library(
     name = "base",
     srcs = glob(["*.java"]),
     deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/base:data_size",
         "//src/java/com/google/devtools/mobileharness/shared/util/base:optionals",
         "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_reflection_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_text_format",

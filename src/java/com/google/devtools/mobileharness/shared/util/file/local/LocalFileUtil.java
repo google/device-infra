@@ -34,6 +34,9 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.shared.util.file.remote.constant.RemoteFileType;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.shared.util.base.BinaryPrefix;
+import com.google.devtools.mobileharness.shared.util.base.DataSize;
+import com.google.devtools.mobileharness.shared.util.base.SizeUnit;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandException;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
@@ -649,8 +652,7 @@ public class LocalFileUtil {
     }
   }
 
-  /** Gets the size of the given file/directory. */
-  public long getFileOrDirSize(String fileOrDirPath)
+  public DataSize getFileOrDirDataSize(String fileOrDirPath)
       throws MobileHarnessException, InterruptedException {
     checkFileOrDir(fileOrDirPath);
     // This command could be very slow if the folder is too large.
@@ -675,13 +677,19 @@ public class LocalFileUtil {
               "Failed to parse the size of file/dir %s from:%n%s", fileOrDirPath, output));
     }
     try {
-      return Long.parseLong(words.get(0)) << 10L;
+      return DataSize.of(Long.parseLong(words.get(0)), BinaryPrefix.KIBI, SizeUnit.BYTES);
     } catch (NumberFormatException e) {
       throw new MobileHarnessException(
           BasicErrorId.LOCAL_FILE_OR_DIR_PARSE_SIZE_ERROR,
           String.format("Failed to parse the size of file/dir %s from:%n%s", fileOrDirPath, output),
           e);
     }
+  }
+
+  /** Gets the bytes size of the given file/directory. */
+  public long getFileOrDirSize(String fileOrDirPath)
+      throws MobileHarnessException, InterruptedException {
+    return getFileOrDirDataSize(fileOrDirPath).toBytes();
   }
 
   /** Returns the owner of file {@code path}. */

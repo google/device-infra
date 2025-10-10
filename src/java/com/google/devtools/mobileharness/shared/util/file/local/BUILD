@@ -29,6 +29,7 @@ java_library(
     deps = [
         "//src/java/com/google/devtools/deviceinfra/shared/util/file/remote/constant:remote_file_type",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/base:data_size",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/path",
