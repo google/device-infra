@@ -461,6 +461,23 @@ public class Flags {
       converter = Flag.StringConverter.class)
   public Flag<String> atsXtsWorkDir = atsXtsWorkDirDefault;
 
+  private static final Flag<Duration> cacheEvictionCheckIntervalDefault =
+      DurationFlag.value(Duration.ofMinutes(5L));
+
+  @com.beust.jcommander.Parameter(
+      names = "--cache_eviction_check_interval",
+      description = "Interval to check cache eviction. Default is 5 minutes.",
+      converter = DurationFlag.DurationConverter.class)
+  public Flag<Duration> cacheEvictionCheckInterval = cacheEvictionCheckIntervalDefault;
+
+  private static final Flag<Double> cacheEvictionTrimToRatioDefault = Flag.value(0.8);
+
+  @com.beust.jcommander.Parameter(
+      names = "--cache_eviction_trim_to_ratio",
+      description = "Cache eviction will trim the cache to this ratio of the max cache size.",
+      converter = Flag.DoubleConverter.class)
+  public Flag<Double> cacheEvictionTrimToRatio = cacheEvictionTrimToRatioDefault;
+
   private static final Flag<Boolean> cacheInstalledApksDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(
@@ -1595,6 +1612,14 @@ public class Flags {
               + " execeeds the timeout. Default is 3 days.",
       converter = DurationFlag.DurationConverter.class)
   public Flag<Duration> maxDrainTimeout = maxDrainTimeoutDefault;
+
+  private static final Flag<Long> maxPersistentCacheSizeInGigabytesDefault = Flag.value(200L);
+
+  @com.beust.jcommander.Parameter(
+      names = "--max_persistent_cache_size_in_gigabytes",
+      description = "Maximum size in gigabytes for persistent cache.",
+      converter = Flag.LongConverter.class)
+  public Flag<Long> maxPersistentCacheSizeInGigabytes = maxPersistentCacheSizeInGigabytesDefault;
 
   private static final Flag<Boolean> defaultAdbCommandRedirectStderrDefault = Flag.value(true);
 

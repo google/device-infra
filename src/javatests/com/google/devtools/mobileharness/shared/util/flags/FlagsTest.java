@@ -52,6 +52,9 @@ public class FlagsTest {
     assertThat(Flags.instance().extraAdbCommandTimeout.getNonNull())
         .isEqualTo(Duration.ofSeconds(123L));
 
+    Flags.parse(new String[] {"--cache_eviction_trim_to_ratio=0.5"});
+    assertThat(Flags.instance().cacheEvictionTrimToRatio.getNonNull()).isEqualTo(0.5);
+
     assertThrows(
         IllegalArgumentException.class,
         () ->

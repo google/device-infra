@@ -38,6 +38,15 @@ public class Flag<T> {
     }
   }
 
+  /** Converter for creating double flag from JCommander. */
+  public static class DoubleConverter implements IStringConverter<Flag<Double>> {
+
+    @Override
+    public Flag<Double> convert(String value) {
+      return value(Double.parseDouble(value));
+    }
+  }
+
   /** Converter for creating integer flag from JCommander. */
   public static class IntegerConverter implements IStringConverter<Flag<Integer>> {
 
