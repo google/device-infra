@@ -18,9 +18,11 @@ package com.google.devtools.mobileharness.infra.client.api.controller.job;
 
 import static com.google.common.collect.Comparators.min;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.joining;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -36,6 +38,7 @@ import com.google.common.collect.Streams;
 import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.common.metrics.stability.converter.ErrorModelConverter;
 import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;
@@ -73,6 +76,7 @@ import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberEx
 import com.google.devtools.mobileharness.shared.constant.closeable.MobileHarnessAutoCloseable;
 import com.google.devtools.mobileharness.shared.util.algorithm.GraphMatching;
 import com.google.devtools.mobileharness.shared.util.comm.messaging.poster.TestMessagePoster;
+import com.google.devtools.mobileharness.shared.util.concurrent.Callables;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.event.EventBus.SubscriberExceptionContext;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -108,6 +112,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.stream.IntStream;
 import javax.annotation.Nullable;
@@ -207,6 +213,9 @@ public class JobRunner implements Runnable {
 
   /** Whether the job has allocated any devices. */
   private volatile boolean hasAllocation = false;
+
+  /** Future that completes when job files are prepared. */
+  @Nullable private ListenableFuture<?> preparejobFilesFuture;
 
   /** File util for cleaning job files. */
   private final LocalFileUtil fileUtil;
@@ -704,62 +713,23 @@ public class JobRunner implements Runnable {
           && !jobInfo.params().has("acid_id")) {
         jobChecker.validateJob(jobInfo);
       }
-      resolveJobFiles(jobInfo);
 
-      jobInfo
-          .log()
-          .atInfo()
-          .alsoTo(logger)
-          .log("Loading client jar plugins for job %s", jobInfo.locator().getId());
-      final PluginCreator loader =
-          new PluginCreator(
-              jobInfo.files().get(JobInfo.TAG_CLIENT_PLUGIN),
-              jobInfo.params().getList(JobInfo.PARAM_CLIENT_PLUGIN, null),
-              jobInfo.params().getList(JobInfo.PARAM_CLIENT_PLUGIN_MODULES, null),
-              jobInfo.params().get(JobInfo.PARAM_CLIENT_PLUGIN_FORCE_LOAD_FROM_JAR_CLASS_REGEX),
-              PluginType.CLIENT,
-              jobInfo.log(),
-              new AbstractModule() {
-
-                @Override
-                public void configure() {
-                  bind(ExecMode.class).toInstance(execMode);
-                }
-              },
-              new CommonSetupModule());
-      if (loader.load()) {
-        registerEventHandler(
-            new Object() {
-              @Subscribe
-              public void onJobEnded(JobEndEvent event) {
-                loader.close();
-                jobInfo
-                    .log()
-                    .atInfo()
-                    .alsoTo(logger)
-                    .log("Closed jar plugin class loader of job %s", event.getJob().locator());
-              }
-            },
-            EventScope.CLASS_INTERNAL);
-
-        int pluginIndex = 0;
-        for (Object plugin : loader.getPlugins()) {
-          jobInfo
-              .log()
-              .atInfo()
-              .alsoTo(logger)
-              .log(
-                  "Loaded jar plugin: %s for job %s",
-                  plugin.getClass().getCanonicalName(), jobInfo.locator().getId());
-          registerEventHandler(plugin, EventScope.JAR_PLUGIN);
-
-          // Add client plugin class name into JobInfo property for plugin usage analysis.
-          jobInfo
-              .properties()
-              .add(
-                  JobInfo.PARAM_CLIENT_PLUGIN + "_" + pluginIndex++,
-                  plugin.getClass().getCanonicalName());
-        }
+      if (isResumedJob(jobInfo)) {
+        preparejobFilesFuture =
+            logFailure(
+                threadPool.submit(
+                    Callables.threadRenaming(
+                        () -> {
+                          prepareJobFiles();
+                          return null;
+                        },
+                        () -> "prepare-job-files-" + jobInfo.locator().getId())),
+                Level.SEVERE,
+                "Fatal error in prepare job files for job %s",
+                jobInfo.locator().getId());
+      } else {
+        prepareJobFiles();
+        preparejobFilesFuture = immediateFuture(null);
       }
 
       long preRunJobTimeMs = stopwatch.stop().elapsed().toMillis();
@@ -770,7 +740,7 @@ public class JobRunner implements Runnable {
       logger.atWarning().withCause(e).log("Failed to preRun job.");
       throw e;
     } finally {
-      if (!jobInfo.properties().getBoolean(PropertyName.Job._IS_RESUMED_JOB).orElse(false)) {
+      if (!isResumedJob(jobInfo)) {
         JobStartEvent jobStartEvent = new JobStartEvent(jobInfo);
         scopedEventBus.post(
             jobStartEvent,
@@ -806,10 +776,87 @@ public class JobRunner implements Runnable {
     return skipJob;
   }
 
+  private void prepareJobFiles() throws MobileHarnessException, InterruptedException {
+    resolveJobFiles(jobInfo);
+    loadClientPlugins();
+  }
+
+  private static boolean isResumedJob(JobInfo jobInfo) {
+    return jobInfo.properties().getBoolean(PropertyName.Job._IS_RESUMED_JOB).orElse(false);
+  }
+
+  private void loadClientPlugins() throws MobileHarnessException {
+    jobInfo
+        .log()
+        .atInfo()
+        .alsoTo(logger)
+        .log("Loading client jar plugins for job %s", jobInfo.locator().getId());
+    final PluginCreator loader =
+        new PluginCreator(
+            jobInfo.files().get(JobInfo.TAG_CLIENT_PLUGIN),
+            jobInfo.params().getList(JobInfo.PARAM_CLIENT_PLUGIN, null),
+            jobInfo.params().getList(JobInfo.PARAM_CLIENT_PLUGIN_MODULES, null),
+            jobInfo.params().get(JobInfo.PARAM_CLIENT_PLUGIN_FORCE_LOAD_FROM_JAR_CLASS_REGEX),
+            PluginType.CLIENT,
+            jobInfo.log(),
+            new AbstractModule() {
+
+              @Override
+              public void configure() {
+                bind(ExecMode.class).toInstance(execMode);
+              }
+            },
+            new CommonSetupModule());
+    if (loader.load()) {
+      registerEventHandler(
+          new Object() {
+            @Subscribe
+            public void onJobEnded(JobEndEvent event) {
+              loader.close();
+              jobInfo
+                  .log()
+                  .atInfo()
+                  .alsoTo(logger)
+                  .log("Closed jar plugin class loader of job %s", event.getJob().locator());
+            }
+          },
+          EventScope.CLASS_INTERNAL);
+
+      int pluginIndex = 0;
+      for (Object plugin : loader.getPlugins()) {
+        jobInfo
+            .log()
+            .atInfo()
+            .alsoTo(logger)
+            .log(
+                "Loaded jar plugin: %s for job %s",
+                plugin.getClass().getCanonicalName(), jobInfo.locator().getId());
+        registerEventHandler(plugin, EventScope.JAR_PLUGIN);
+
+        // Add client plugin class name into JobInfo property for plugin usage analysis.
+        jobInfo
+            .properties()
+            .add(
+                JobInfo.PARAM_CLIENT_PLUGIN + "_" + pluginIndex++,
+                plugin.getClass().getCanonicalName());
+      }
+    }
+  }
+
   @SuppressWarnings("EmptyTryBlock")
   private void handleNewAllocation(
       AllocationWithStats allocationWithStats, Instant startDeviceAllocationTime)
       throws MobileHarnessException, InterruptedException {
+    if (!areJobFilesReady()) {
+      // For a resumed job, the test has usually already started on the device, so it's
+      // acceptable to hold the allocation and wait for job files to be ready, rather than
+      // releasing the allocation.
+      // Job files not ready yet. Skip this allocation and wait for them to be ready.
+      logger.atInfo().log(
+          "Job files are not ready for test %s. Skipping allocation handling for now.",
+          allocationWithStats.allocation().getTest().id());
+      return;
+    }
     Allocation allocation = allocationWithStats.allocation();
     logger.atInfo().log("Allocation: %s", allocation);
     // Double checks the allocation.
@@ -937,6 +984,28 @@ public class JobRunner implements Runnable {
         deviceAllocator.releaseAllocation(allocation, result, true);
       }
     }
+  }
+
+  /** Checks if the job files are ready. */
+  private boolean areJobFilesReady() throws MobileHarnessException, InterruptedException {
+    if (preparejobFilesFuture != null) {
+      try {
+        // Check if ready without blocking.
+        preparejobFilesFuture.get(0, SECONDS);
+      } catch (ExecutionException e) {
+        if (e.getCause() instanceof MobileHarnessException) {
+          throw (MobileHarnessException) e.getCause();
+        } else {
+          throw new MobileHarnessException(
+              InfraErrorId.CLIENT_JR_JOB_PREPARE_JOB_FILES_ERROR,
+              "Failed to prepare job files",
+              e.getCause());
+        }
+      } catch (TimeoutException e) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /**
