@@ -17,6 +17,7 @@
 package com.google.wireless.qa.mobileharness.shared.api.device;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.testbed.adhoc.AdhocTestbedConfig;
 import java.util.List;
@@ -40,7 +41,12 @@ public class FusionTestbedDeviceFactory {
         preCreatedSubDevices,
         /* deviceFactory= */ null,
         /* apiConfig= */ null,
-        /* managedDeviceInfo= */ true);
+        /* managedDeviceInfo= */ true) {
+      @Override
+      public ImmutableSet<Device> getManagedDevices() {
+        return ImmutableSet.copyOf(preCreatedSubDevices);
+      }
+    };
   }
 
   private FusionTestbedDeviceFactory() {}
