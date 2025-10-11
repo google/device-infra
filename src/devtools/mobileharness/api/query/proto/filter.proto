@@ -60,6 +60,12 @@ message DeviceFilter {
       StringMatchCondition condition = 1;
     }
 
+    // Condition to match the host name of a device.
+    // This is used for filtering the devices from a specific host.
+    message HostNameMatchCondition {
+      StringMatchCondition condition = 1;
+    }
+
     // Condition to match the dimension of a device.
     message StatusMatchCondition {
       StringMatchCondition condition = 1;
@@ -105,6 +111,7 @@ message DeviceFilter {
       DecoratorMatchCondition decorator_match_condition = 6;
       DimensionMatchCondition dimension_match_condition = 7;
       ExecutorMatchCondition executor_match_condition = 8;
+      HostNameMatchCondition host_name_match_condition = 9;
     }
   }
 
