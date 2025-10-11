@@ -21,6 +21,9 @@ import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.devtools.mobileharness.shared.context.InvocationContextExecutors;
 import java.util.concurrent.Executors;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 /** Utilities for creating thread pools. */
 public class ThreadPools {
@@ -36,6 +39,28 @@ public class ThreadPools {
     return InvocationContextExecutors.propagatingContext(
         MoreExecutors.listeningDecorator(
             Executors.newCachedThreadPool(
+                ThreadFactoryUtil.createThreadFactory(threadNamePrefix, /* daemon= */ true))),
+        ListeningExecutorService.class);
+  }
+
+  /**
+   * Creates a cached thread pool with the given maximum pool size, whose threads are daemon
+   * threads, have the given name prefix and have a default uncaught exception handler, and which
+   * will automatically propagate invocation context.
+   *
+   * @param threadNamePrefix if it is "foo", the thread names are like "foo-1", "foo-2", etc.
+   * @param maximumPoolSize the maximum pool size of the thread pool.
+   */
+  public static ListeningExecutorService createStandardThreadPoolWithMaxSize(
+      String threadNamePrefix, int maximumPoolSize) {
+    return InvocationContextExecutors.propagatingContext(
+        MoreExecutors.listeningDecorator(
+            new ThreadPoolExecutor(
+                0,
+                maximumPoolSize,
+                60L,
+                TimeUnit.SECONDS,
+                new SynchronousQueue<Runnable>(),
                 ThreadFactoryUtil.createThreadFactory(threadNamePrefix, /* daemon= */ true))),
         ListeningExecutorService.class);
   }
