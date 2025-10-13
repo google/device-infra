@@ -27,8 +27,11 @@ import com.google.devtools.mobileharness.shared.util.base.BinaryPrefix;
 import com.google.devtools.mobileharness.shared.util.base.DataSize;
 import com.google.devtools.mobileharness.shared.util.base.SizeUnit;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.wireless.qa.mobileharness.shared.MobileHarnessLogger;
+import com.google.wireless.qa.mobileharness.shared.constant.DirCommon;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.concurrent.Executors;
@@ -37,6 +40,7 @@ import java.util.concurrent.ScheduledExecutorService;
 /** A server that periodically triggers the {@link CacheManager}. */
 public final class CacheManagerServer {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+  private static final String LOG_DIR_NAME = "persistent_cache_manager_log";
 
   private final CacheManager cacheManager;
   private final Duration checkInterval;
@@ -80,6 +84,10 @@ public final class CacheManagerServer {
       System.exit(1);
     }
     Path rootCacheDir = Path.of(persistentCacheDir);
+
+    String logDir = PathUtil.join(DirCommon.getPublicDirRoot(), LOG_DIR_NAME);
+    MobileHarnessLogger.init(logDir);
+    logger.atInfo().log("Persistent Cache Manager writes logs to the directory: %s", logDir);
 
     DataSize maxCacheSize =
         DataSize.of(
