@@ -62,6 +62,7 @@ import com.google.devtools.mobileharness.infra.client.api.controller.allocation.
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.diagnostic.multidevice.MultiDeviceDiagnostician;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.diagnostic.singledevice.SingleDeviceDiagnostician;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
+import com.google.devtools.mobileharness.infra.client.api.controller.job.event.FirstTestAllocatedEvent;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
 import com.google.devtools.mobileharness.infra.client.api.mode.remote.JobCancelledException;
 import com.google.devtools.mobileharness.infra.client.api.util.result.ClientAllocErrorUtil;
@@ -918,13 +919,20 @@ public class JobRunner implements Runnable {
       }
 
       if (!hasAllocation) {
+        hasAllocation = true;
         jobInfo
             .properties()
             .add(PropertyName.Job.FIRST_TEST_ALLOCATION_TIME_SEC, allocationTimeSec);
+
+        // Posts FirstTestAllocatedEvent to the API_PLUGIN scope.
+        logger.atInfo().log(
+            "Test [%s] of job [%s] got its first test allocation. Posting FirstTestAllocatedEvent.",
+            testId, testInfo.jobInfo().locator().getId());
+        scopedEventBus.post(new FirstTestAllocatedEvent(testInfo), EventScope.API_PLUGIN);
+        logger.atInfo().log("Finished posting FirstTestAllocatedEvent.");
       }
 
       // Creates TestRunner with the allocation.
-      hasAllocation = true;
       if (suitableDeviceChecker != null) {
         suitableDeviceChecker.setHasFoundPotentialSuitableDevice();
       }
