@@ -1,0 +1,47 @@
+<!doctype html>
+<!--
+ Copyright 2025 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+<html lang="en">
+<head>
+  <base href="/">
+  <title>Android Test Station</title>
+  <link rel="shortcut icon" href="static/images/favicon.ico">
+  <link href="static/css/styles.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=Google+Sans" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=Roboto+Condensed" rel="stylesheet">
+</head>
+<body>
+<app-root></app-root>
+<script>
+  window.APP_DATA = {
+    adbVersion: "{{env.ADB_VERSION}}",
+    analyticsTrackingId: "{{analytics_tracking_id}}",
+    hostname: "{{env.HOSTNAME}}",
+    fileServerRoot: "{{env.FILE_SERVER_ROOT}}",
+    isGoogle: "{{env.IS_GOOGLE}}" === "True",
+    mttVersion: "{{env.VERSION}}",
+    netdataUrl: "{{env.NETDATA_URL}}",
+    setupWizardCompleted: "{{private_node_config.setup_wizard_completed}}" === "True",
+    isAtsLabInstance: false,
+    isOmniLabBased: "{{env.IS_OMNILAB_BASED}}" === "True",
+  };
+</script>
+<script src="/app.js?version={{env.VERSION}}"></script>
+</body>
+</html>
