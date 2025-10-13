@@ -889,6 +889,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableAtsMode = enableAtsModeDefault;
 
+  private static final Flag<Boolean> enableCachingReservedDeviceDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enable_caching_reserved_device",
+      description = "Whether to enable caching reserved device. Default is false.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableCachingReservedDevice = enableCachingReservedDeviceDefault;
+
   private static final Flag<Boolean> enableClientExperimentManagerDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(
