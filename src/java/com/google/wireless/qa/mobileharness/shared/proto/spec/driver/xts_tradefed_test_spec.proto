@@ -90,10 +90,7 @@ message XtsTradefedTestDriverSpec {
           "If empty, it will be written in the test gen file dir."
   }];
 
-  optional string prev_session_test_record_files = 14 [(file_detail) = {
-    help: "The test record proto files for the previous session. This is a "
-          "List<String> encoded as a JSON string."
-  }];
+  optional string prev_session_test_record_files = 14 [deprecated = true];
 
   optional string prev_session_test_result_xml = 15 [(file_detail) = {
     help: "The test result xml file for the previous session."

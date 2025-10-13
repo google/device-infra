@@ -27,6 +27,7 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
@@ -45,6 +46,7 @@ import com.google.devtools.mobileharness.shared.util.junit.rule.SetFlagsOss;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
+import com.google.wireless.qa.mobileharness.shared.api.spec.XtsTradefedTestSpec;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.SubDeviceSpec;
 import java.io.File;
@@ -389,6 +391,9 @@ public final class ConsoleJobCreatorTest {
 
     @SuppressWarnings("unchecked")
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
+    @SuppressWarnings("unchecked")
+    ArgumentCaptor<ImmutableMultimap<String, String>> jobFilesCaptor =
+        ArgumentCaptor.forClass(ImmutableMultimap.class);
 
     ImmutableList<TradefedJobInfo> tradefedJobInfoList =
         jobCreator.createXtsTradefedTestJobInfo(
@@ -396,7 +401,8 @@ public final class ConsoleJobCreatorTest {
 
     assertThat(tradefedJobInfoList).hasSize(1);
     verify(sessionRequestHandlerUtil)
-        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any(), any());
+        .initializeJobConfig(
+            eq(sessionRequestInfo), driverParamsCaptor.capture(), any(), jobFilesCaptor.capture());
     assertThat(driverParamsCaptor.getValue())
         .containsExactly(
             "run_command_args",
@@ -408,9 +414,10 @@ public final class ConsoleJobCreatorTest {
             "xts_test_plan",
             "retry",
             "prev_session_test_result_xml",
-            testResultPath.toString(),
-            "prev_session_test_record_files",
-            String.format("[\"%s\"]", testRecordPath)); // json format
+            testResultPath.toString());
+    assertThat(jobFilesCaptor.getValue())
+        .containsExactly(
+            XtsTradefedTestSpec.TAG_PREV_SESSION_TEST_RECORD_PB_FILES, testRecordPath.toString());
     assertThat(tradefedJobInfoList.get(0).extraJobProperties())
         .containsEntry(Job.IS_RUN_RETRY, "true");
   }

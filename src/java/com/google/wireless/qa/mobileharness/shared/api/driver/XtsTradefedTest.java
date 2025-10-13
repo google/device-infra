@@ -1298,8 +1298,7 @@ public class XtsTradefedTest extends BaseDriver
   private static boolean useTfRunRetry(XtsTradefedTestDriverSpec spec, TestInfo testInfo) {
     return spec.getXtsTestPlan().equals("retry")
         && !spec.getPrevSessionTestResultXml().isEmpty()
-        && (!spec.getPrevSessionTestRecordFiles().isEmpty()
-            || testInfo.jobInfo().files().isTagNotEmpty(TAG_PREV_SESSION_TEST_RECORD_PB_FILES));
+        && testInfo.jobInfo().files().isTagNotEmpty(TAG_PREV_SESSION_TEST_RECORD_PB_FILES);
   }
 
   /**
