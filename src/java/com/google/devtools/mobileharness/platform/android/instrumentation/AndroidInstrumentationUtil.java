@@ -820,6 +820,11 @@ public class AndroidInstrumentationUtil {
               String output = adb.runShell(serial, forceSyncCommand);
               logger.atInfo().log(
                   "Force sync by running '%s' output: %s", forceSyncCommand, output);
+              // Give MediaProvider time to reindex the newly pushed test args file before the
+              // instrumentation test starts.
+              String sleepCommand = "sleep 10";
+              var unused = adb.runShell(serial, sleepCommand);
+              logger.atInfo().log("Sleeping by running '%s'", sleepCommand);
             } catch (MobileHarnessException e) {
               logger.atWarning().log(
                   "Failed to force sync by running '%s':%s",
