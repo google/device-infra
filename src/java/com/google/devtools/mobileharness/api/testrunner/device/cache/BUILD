@@ -46,6 +46,20 @@ java_library(
 )
 
 java_library(
+    name = "container_device_cache",
+    srcs = ["ContainerDeviceCache.java"],
+    visibility = [
+        # Do NOT add visibility here.
+        # This target should only be used by MH infra only right before passing through devices.
+    ],
+    deps = [
+        ":device_cache_manager",
+        "@maven//:com_google_errorprone_error_prone_annotations",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "local_device_cache",
     srcs = ["LocalDeviceCache.java"],
     visibility = [
