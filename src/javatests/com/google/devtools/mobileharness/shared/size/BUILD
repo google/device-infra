@@ -30,6 +30,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:ats_olc_server_deploy.jar",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:ats_olc_server_local_mode_deploy.jar",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:ats_console_deploy.jar",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/persistentcache:cache_manager_server_deploy.jar",
         "//src/java/com/google/devtools/mobileharness/infra/lab:lab_server_oss_deploy.jar",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/agent:tradefed_invocation_agent_deploy.jar",
     ],

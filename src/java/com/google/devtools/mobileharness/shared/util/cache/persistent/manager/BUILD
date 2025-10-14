@@ -13,11 +13,14 @@
 # limitations under the License.
 #
 
-load("@rules_java//java:defs.bzl", "java_binary", "java_library")
+load("@rules_java//java:defs.bzl", "java_library")
 
 package(
     default_applicable_licenses = ["//:license"],
-    default_visibility = ["//javatests/com/google/devtools/mobileharness/shared/util/cache/persistent/manager:__subpackages__"],
+    default_visibility = [
+        "//javatests/com/google/devtools/mobileharness/shared/util/cache/persistent/manager:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/persistentcache:__subpackages__",
+    ],
 )
 
 java_library(
@@ -109,10 +112,4 @@ java_library(
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
     ],
-)
-
-java_binary(
-    name = "cache_manager_server",
-    main_class = "com.google.devtools.mobileharness.shared.util.cache.persistent.manager.CacheManagerServer",
-    runtime_deps = [":cache_manager_server_lib"],
 )

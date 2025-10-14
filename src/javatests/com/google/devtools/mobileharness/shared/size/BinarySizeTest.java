@@ -62,6 +62,8 @@ public class BinarySizeTest {
           41_950_000L,
           "ats_console",
           22_550_000L,
+          "persistent_cache_manager",
+          9_050_000L,
           "xts_tradefed_agent",
           4_550_000L);
 
@@ -107,6 +109,13 @@ public class BinarySizeTest {
   private static final String ATS_CONSOLE_BINARY_SOURCE_PATH =
       "google3/third_party/deviceinfra/src/java/com/google/devtools/mobileharness"
           + "/infra/ats/console:ats_console_deploy.jar";
+
+  private static final String PERSISTENT_CACHE_MANAGER_BINARY_FILE_PATH =
+      RunfilesUtil.getRunfilesLocation(
+          "java/com/google/devtools/mobileharness/infra/ats/persistentcache/cache_manager_server_deploy.jar");
+  private static final String PERSISTENT_CACHE_MANAGER_BINARY_SOURCE_PATH =
+      "google3/third_party/deviceinfra/src/java/com/google/devtools/mobileharness"
+          + "/infra/ats/persistentcache:cache_manager_server_deploy.jar";
 
   private static final String XTS_TRADEFED_AGENT_PATH =
       RunfilesUtil.getRunfilesLocation(
@@ -214,6 +223,15 @@ public class BinarySizeTest {
         ATS_CONSOLE_LARGE_RESOURCE_PATH_ALLOWLIST,
         ATS_CONSOLE_BINARY_SOURCE_PATH,
         BINARY_SIZE_TEST_SOURCE_PATH + "#ATS_CONSOLE_LARGE_RESOURCE_PATH_ALLOWLIST");
+  }
+
+  @Test
+  public void checkPersistentCacheManagerBinarySize() throws Exception {
+    BinarySizeChecker.checkBinarySize(
+        "cache_manager_server_deploy.jar",
+        BINARIES_MAX_SIZE_BYTE.get("persistent_cache_manager"),
+        PERSISTENT_CACHE_MANAGER_BINARY_FILE_PATH,
+        PERSISTENT_CACHE_MANAGER_BINARY_SOURCE_PATH);
   }
 
   @Test
