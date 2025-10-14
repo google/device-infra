@@ -76,3 +76,12 @@ enum TestEngineStatus {
   FAILED = 5;
   CLOSED = 6;
 }
+
+// The status of resolving files in lab.
+enum ResolveFileStatus {
+  RESOLVE_FILE_STATUS_UNSPECIFIED = 0;
+  RESOLVE_FILE_NOT_STARTED = 1;
+  RESOLVE_FILE_RESOLVING = 2;
+  RESOLVE_FILE_RESOLVED = 3;
+  RESOLVE_FILE_FAILED = 4;
+}

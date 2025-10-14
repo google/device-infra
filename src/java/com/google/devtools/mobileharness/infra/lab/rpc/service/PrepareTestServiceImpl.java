@@ -50,6 +50,7 @@ import com.google.devtools.mobileharness.api.model.lab.LabLocator;
 import com.google.devtools.mobileharness.api.model.proto.Job.JobFeature;
 import com.google.devtools.mobileharness.infra.container.controller.ProxyTestRunner;
 import com.google.devtools.mobileharness.infra.container.controller.ProxyToDirectTestRunner;
+import com.google.devtools.mobileharness.infra.container.proto.TestEngine.ResolveFileStatus;
 import com.google.devtools.mobileharness.infra.container.proto.TestEngine.TestEngineLocator;
 import com.google.devtools.mobileharness.infra.container.proto.TestEngine.TestEngineLocator.GrpcLocator;
 import com.google.devtools.mobileharness.infra.container.proto.TestEngine.TestEngineLocator.StubbyLocator;
@@ -572,20 +573,28 @@ public class PrepareTestServiceImpl {
 
     Optional<ListenableFuture<List<ResolveResult>>> resolveJobFilesFuture =
         jobManager.getResolveJobFilesFuture(jobId, testId);
+    // TODO: Remove TestEngineStatus after the new ResolveFileStatus is fully
+    // supported.
     TestEngineStatus resolveJobFilesStatus;
+    ResolveFileStatus resolveFileStatus;
+    Optional<Throwable> resolveFileErrorInResponse = Optional.empty();
     if (resolveJobFilesFuture.isPresent()) {
       try {
         resolveJobFilesFuture.get().get(0, SECONDS);
         resolveJobFilesStatus = TestEngineStatus.READY;
+        resolveFileStatus = ResolveFileStatus.RESOLVE_FILE_RESOLVED;
       } catch (ExecutionException e) {
         resolveJobFilesStatus = TestEngineStatus.FAILED;
+        resolveFileStatus = ResolveFileStatus.RESOLVE_FILE_FAILED;
         if (testEngineErrorInResponse.isPresent()) {
           testEngineErrorInResponse.get().addSuppressed(e.getCause());
         } else {
           testEngineErrorInResponse = Optional.ofNullable(e.getCause());
         }
+        resolveFileErrorInResponse = Optional.ofNullable(e.getCause());
       } catch (TimeoutException e) {
         resolveJobFilesStatus = TestEngineStatus.STARTED;
+        resolveFileStatus = ResolveFileStatus.RESOLVE_FILE_RESOLVING;
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
         throw new MobileHarnessException(
@@ -595,6 +604,7 @@ public class PrepareTestServiceImpl {
       }
     } else {
       resolveJobFilesStatus = TestEngineStatus.NOT_STARTED;
+      resolveFileStatus = ResolveFileStatus.RESOLVE_FILE_NOT_STARTED;
     }
 
     GetTestEngineStatusResponse.Builder response =
@@ -603,11 +613,15 @@ public class PrepareTestServiceImpl {
             .setTestEngineStatus(
                 testEngineStatus.equals(TestEngineStatus.READY)
                     ? resolveJobFilesStatus
-                    : testEngineStatus);
+                    : testEngineStatus)
+            .setResolveFileStatus(resolveFileStatus);
     testEngineLocator.ifPresent(response::setTestEngineLocator);
     testEngineErrorInResponse
         .map(ErrorModelConverter::toExceptionDetail)
         .ifPresent(response::setExceptionDetail);
+    resolveFileErrorInResponse
+        .map(ErrorModelConverter::toExceptionDetail)
+        .ifPresent(response::setResolveFileExceptionDetail);
     return response.build();
   }
 }

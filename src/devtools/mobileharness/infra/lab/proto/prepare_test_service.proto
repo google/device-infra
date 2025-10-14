@@ -153,6 +153,10 @@ message GetTestEngineStatusResponse {
 
   stability.model.ExceptionDetail exception_detail = 6;
 
+  mobileharness.infra.container.ResolveFileStatus resolve_file_status = 7;
+
+  stability.model.ExceptionDetail resolve_file_exception_detail = 8;
+
   reserved 4, 5;
 }
 
