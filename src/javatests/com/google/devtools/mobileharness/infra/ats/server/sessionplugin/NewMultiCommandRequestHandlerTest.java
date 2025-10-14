@@ -40,15 +40,14 @@ import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.SessionResultHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.infra.ats.common.XtsTypeLoader;
 import com.google.devtools.mobileharness.infra.ats.common.jobcreator.XtsJobCreator;
-import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
-import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
-import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Summary;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandDetail;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandInfo;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandState;
@@ -84,9 +83,11 @@ import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfos;
+import com.google.wireless.qa.mobileharness.shared.model.job.TestLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Files;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
+import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.SubDeviceSpec;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryResult;
@@ -123,6 +124,13 @@ public final class NewMultiCommandRequestHandlerTest {
   private static final String DEVICE_ID_1 = "device_id_1";
   private static final String DEVICE_ID_2 = "device_id_2";
   private static final Path TRADEFED_INVOCATION_LOG_DIR = Path.of("/tradefed_invocation_log_dir");
+  private static final ResultTypeWithCause PASS_RESULT =
+      ResultTypeWithCause.create(
+          com.google.devtools.mobileharness.api.model.proto.Test.TestResult.PASS, null);
+  private static final ResultTypeWithCause ERROR_RESULT =
+      ResultTypeWithCause.create(
+          com.google.devtools.mobileharness.api.model.proto.Test.TestResult.ERROR,
+          new MobileHarnessException(BasicErrorId.JOB_TIMEOUT, "test failed with exception"));
 
   private CommandInfo commandInfo = CommandInfo.getDefaultInstance();
   private NewMultiCommandRequest request = NewMultiCommandRequest.getDefaultInstance();
@@ -149,6 +157,10 @@ public final class NewMultiCommandRequestHandlerTest {
   @Mock private Files files;
   @Mock private TestInfo testInfo;
   @Mock private TestInfos testInfos;
+  @Mock private com.google.wireless.qa.mobileharness.shared.model.job.out.Result jobResult;
+  @Mock private com.google.wireless.qa.mobileharness.shared.model.job.out.Result testResult;
+  @Mock private com.google.devtools.mobileharness.api.model.job.out.Result newJobResult;
+  @Mock private com.google.devtools.mobileharness.api.model.job.out.Result newTestResult;
   private final Properties properties = new Properties(new Timing());
 
   @Captor private ArgumentCaptor<SessionRequestInfo> sessionRequestInfoCaptor;
@@ -870,10 +882,12 @@ public final class NewMultiCommandRequestHandlerTest {
 
   @Test
   public void handleResultProcessing_passResult() throws Exception {
-    Result result =
-        Result.newBuilder()
-            .setSummary(Summary.newBuilder().setPassed(10).setFailed(0).build())
-            .addModuleInfo(Module.newBuilder().setName("module1").setFailedTests(0).build())
+    setUpPassingJobAndTestResults();
+    ReportProto.Result result =
+        ReportProto.Result.newBuilder()
+            .setSummary(ReportProto.Summary.newBuilder().setPassed(10).setFailed(0).build())
+            .addModuleInfo(
+                ReportProto.Module.newBuilder().setName("module1").setFailedTests(0).build())
             .build();
     request = request.toBuilder().setRetryPreviousSessionId("prev_session_id").build();
     mockProcessResult(result);
@@ -907,10 +921,12 @@ public final class NewMultiCommandRequestHandlerTest {
 
   @Test
   public void handleResultProcessing_failResult() throws Exception {
-    Result result =
-        Result.newBuilder()
-            .setSummary(Summary.newBuilder().setPassed(5).setFailed(5).build())
-            .addModuleInfo(Module.newBuilder().setName("module1").setFailedTests(5).build())
+    setUpPassingJobAndTestResults();
+    ReportProto.Result result =
+        ReportProto.Result.newBuilder()
+            .setSummary(ReportProto.Summary.newBuilder().setPassed(5).setFailed(5).build())
+            .addModuleInfo(
+                ReportProto.Module.newBuilder().setName("module1").setFailedTests(5).build())
             .build();
 
     mockProcessResult(result);
@@ -932,10 +948,12 @@ public final class NewMultiCommandRequestHandlerTest {
 
   @Test
   public void handleResultProcessing_zeroTotalTest_treatAsError() throws Exception {
-    Result.Builder resultBuilder =
-        Result.newBuilder().setSummary(Summary.newBuilder().setPassed(0).setFailed(0).build());
-
-    mockProcessResult(resultBuilder.build());
+    setUpPassingJobAndTestResults();
+    ReportProto.Result result =
+        ReportProto.Result.newBuilder()
+            .setSummary(ReportProto.Summary.newBuilder().setPassed(0).setFailed(0).build())
+            .build();
+    mockProcessResult(result);
     HandleResultProcessingResult handleResultProcessingResult =
         createJobAndHandleResultProcessing(request);
 
@@ -952,7 +970,57 @@ public final class NewMultiCommandRequestHandlerTest {
   }
 
   @Test
+  public void handleResultProcessing_zeroTotalTestWithFailedTest_setsError() throws Exception {
+    setUpPassingJobAndTestResults();
+    ReportProto.Result result =
+        ReportProto.Result.newBuilder()
+            .setSummary(ReportProto.Summary.newBuilder().setPassed(0).setFailed(0).build())
+            .build();
+    mockProcessResult(result);
+    when(testResult.get()).thenReturn(TestResult.FAIL);
+    when(newTestResult.get()).thenReturn(ERROR_RESULT);
+
+    HandleResultProcessingResult handleResultProcessingResult =
+        createJobAndHandleResultProcessing(request);
+
+    CommandDetail commandDetail =
+        handleResultProcessingResult.commandDetails().values().iterator().next();
+    assertThat(commandDetail.getState()).isEqualTo(CommandState.ERROR);
+    assertThat(commandDetail.getErrorMessage())
+        .isEqualTo("test failed with exception [MH|UNDETERMINED|JOB_TIMEOUT|20103]");
+    assertThat(commandDetail.getErrorReason()).isEqualTo(ErrorReason.RESULT_PROCESSING_ERROR);
+  }
+
+  @Test
+  public void handleResultProcessing_zeroTotalTestWithFailedJob_setsError() throws Exception {
+    setUpPassingJobAndTestResults();
+    ReportProto.Result result =
+        ReportProto.Result.newBuilder()
+            .setSummary(ReportProto.Summary.newBuilder().setPassed(0).setFailed(0).build())
+            .build();
+    mockProcessResult(result);
+    when(testResult.get()).thenReturn(TestResult.PASS);
+    when(jobResult.get()).thenReturn(TestResult.FAIL);
+    when(newJobResult.get())
+        .thenReturn(
+            ResultTypeWithCause.create(
+                com.google.devtools.mobileharness.api.model.proto.Test.TestResult.ERROR,
+                new MobileHarnessException(BasicErrorId.JOB_TIMEOUT, "job failed with exception")));
+
+    HandleResultProcessingResult handleResultProcessingResult =
+        createJobAndHandleResultProcessing(request);
+
+    CommandDetail commandDetail =
+        handleResultProcessingResult.commandDetails().values().iterator().next();
+    assertThat(commandDetail.getState()).isEqualTo(CommandState.ERROR);
+    assertThat(commandDetail.getErrorMessage())
+        .isEqualTo("job failed with exception [MH|UNDETERMINED|JOB_TIMEOUT|20103]");
+    assertThat(commandDetail.getErrorReason()).isEqualTo(ErrorReason.RESULT_PROCESSING_ERROR);
+  }
+
+  @Test
   public void handleResultProcessing_getMalformedOutputURL_onlyCleanup() throws Exception {
+    setUpPassingJobAndTestResults();
     when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
 
@@ -984,6 +1052,7 @@ public final class NewMultiCommandRequestHandlerTest {
 
   @Test
   public void handleResultProcessing_processResultFailed_onlyCleanup() throws Exception {
+    setUpPassingJobAndTestResults();
     when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
 
@@ -1014,6 +1083,7 @@ public final class NewMultiCommandRequestHandlerTest {
 
   @Test
   public void handleResultProcessing_nonFileUrl_onlyCleanup() throws Exception {
+    setUpPassingJobAndTestResults();
     when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
 
@@ -1040,9 +1110,10 @@ public final class NewMultiCommandRequestHandlerTest {
 
   @Test
   public void handleResultProcessing_tradefedError_failWithErrorMessage() throws Exception {
-    Result result =
-        Result.newBuilder()
-            .setSummary(Summary.newBuilder().setPassed(9).setFailed(1).build())
+    setUpPassingJobAndTestResults();
+    ReportProto.Result result =
+        ReportProto.Result.newBuilder()
+            .setSummary(ReportProto.Summary.newBuilder().setPassed(9).setFailed(1).build())
             .build();
     mockProcessResult(result);
 
@@ -1080,9 +1151,10 @@ public final class NewMultiCommandRequestHandlerTest {
 
   @Test
   public void handleResultProcessing_tradefedError_errorStateWithErrorMessage() throws Exception {
-    Result result =
-        Result.newBuilder()
-            .setSummary(Summary.newBuilder().setPassed(0).setFailed(0).build())
+    setUpPassingJobAndTestResults();
+    ReportProto.Result result =
+        ReportProto.Result.newBuilder()
+            .setSummary(ReportProto.Summary.newBuilder().setPassed(0).setFailed(0).build())
             .build();
     mockProcessResult(result);
 
@@ -1128,9 +1200,10 @@ public final class NewMultiCommandRequestHandlerTest {
 
   @Test
   public void handleResultProcessing_commandError_updateRequestError() throws Exception {
-    Result result =
-        Result.newBuilder()
-            .setSummary(Summary.newBuilder().setPassed(0).setFailed(0).build())
+    setUpPassingJobAndTestResults();
+    ReportProto.Result result =
+        ReportProto.Result.newBuilder()
+            .setSummary(ReportProto.Summary.newBuilder().setPassed(0).setFailed(0).build())
             .build();
     mockProcessResult(result);
 
@@ -1176,9 +1249,10 @@ public final class NewMultiCommandRequestHandlerTest {
 
   @Test
   public void handleResultProcessing_requestErrorExist_keepRequestError() throws Exception {
-    Result result =
-        Result.newBuilder()
-            .setSummary(Summary.newBuilder().setPassed(0).setFailed(0).build())
+    setUpPassingJobAndTestResults();
+    ReportProto.Result result =
+        ReportProto.Result.newBuilder()
+            .setSummary(ReportProto.Summary.newBuilder().setPassed(0).setFailed(0).build())
             .build();
     mockProcessResult(result);
 
@@ -1222,9 +1296,10 @@ public final class NewMultiCommandRequestHandlerTest {
 
   @Test
   public void handleResultProcessing_generatesManifestFile() throws Exception {
-    Result result =
-        Result.newBuilder()
-            .setSummary(Summary.newBuilder().setPassed(10).setFailed(0).build())
+    setUpPassingJobAndTestResults();
+    ReportProto.Result result =
+        ReportProto.Result.newBuilder()
+            .setSummary(ReportProto.Summary.newBuilder().setPassed(10).setFailed(0).build())
             .build();
     mockProcessResult(result);
     String logFile1 = "result.xsl";
@@ -1330,6 +1405,19 @@ public final class NewMultiCommandRequestHandlerTest {
     newMultiCommandRequestHandler.cleanup(sessionInfo);
   }
 
+  private void setUpPassingJobAndTestResults() {
+    when(jobInfo.result()).thenReturn(jobResult);
+    when(testInfo.result()).thenReturn(testResult);
+    when(jobResult.get()).thenReturn(TestResult.PASS);
+    when(testResult.get()).thenReturn(TestResult.PASS);
+    when(testInfo.locator())
+        .thenReturn(new TestLocator("test_id", "test_name", new JobLocator("job_id", "job_name")));
+    when(jobResult.toNewResult()).thenReturn(newJobResult);
+    when(testResult.toNewResult()).thenReturn(newTestResult);
+    when(newJobResult.get()).thenReturn(PASS_RESULT);
+    when(newTestResult.get()).thenReturn(PASS_RESULT);
+  }
+
   private void verifyUnmountRootDir(String xtsRootDir) throws Exception {
     // Verify that handler has unmounted the zip file after calling cleanup().
     Command unmountCommand =
@@ -1338,7 +1426,7 @@ public final class NewMultiCommandRequestHandlerTest {
     verify(sleeper).sleep(Duration.ofSeconds(5));
   }
 
-  private void mockProcessResult(Result result) throws Exception {
+  private void mockProcessResult(ReportProto.Result result) throws Exception {
     doAnswer(
             invocation -> {
               Path path = invocation.getArgument(0, Path.class);

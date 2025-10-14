@@ -80,6 +80,7 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.protobuf.util.Timestamps;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
+import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -760,15 +761,59 @@ final class NewMultiCommandRequestHandler {
             || hasCommandFailed(commandDetailBuilder.build())) {
           commandDetailBuilder.setState(CommandState.COMPLETED);
         } else {
-          logger.atInfo().log(
-              "Command detail: passed: %d, failed: %d, total: %d",
-              commandDetailBuilder.getPassedTestCount(),
-              commandDetailBuilder.getFailedTestCount(),
-              commandDetailBuilder.getTotalTestCount());
-          setCommandError(
-              commandDetailBuilder,
-              ErrorReason.RESULT_PROCESSING_ERROR,
-              "No valid test cases found in the result.");
+          ImmutableList<TestInfo> failedTests =
+              jobs.stream()
+                  .flatMap(jobInfo -> jobInfo.tests().getAll().values().stream())
+                  .filter(
+                      testInfo ->
+                          testInfo.result().get() != TestResult.PASS
+                              && testInfo.result().get() != TestResult.SKIP)
+                  .collect(toImmutableList());
+          if (!failedTests.isEmpty()) {
+            TestInfo failedTest = failedTests.get(0);
+            String errorMessage =
+                failedTest
+                    .result()
+                    .toNewResult()
+                    .get()
+                    .causeException()
+                    .map(Throwable::getMessage)
+                    .orElse(
+                        String.format(
+                            "Test %s failed with result %s.",
+                            failedTest.locator().getId(), failedTest.result().get()));
+            setCommandError(
+                commandDetailBuilder, ErrorReason.RESULT_PROCESSING_ERROR, errorMessage);
+          } else {
+            ImmutableList<JobInfo> failedJobs =
+                jobs.stream()
+                    .filter(
+                        jobInfo ->
+                            jobInfo.result().get() != TestResult.PASS
+                                && jobInfo.result().get() != TestResult.SKIP)
+                    .collect(toImmutableList());
+            if (!failedJobs.isEmpty()) {
+              JobInfo failedJob = failedJobs.get(0);
+              setCommandError(
+                  commandDetailBuilder,
+                  ErrorReason.RESULT_PROCESSING_ERROR,
+                  failedJob
+                      .result()
+                      .toNewResult()
+                      .get()
+                      .causeException()
+                      .map(Throwable::getMessage)
+                      .orElse(
+                          String.format(
+                              "Job %s failed with result %s.",
+                              failedJob.locator().getId(), failedJob.result().get())));
+            } else {
+              setCommandError(
+                  commandDetailBuilder,
+                  ErrorReason.RESULT_PROCESSING_ERROR,
+                  "No valid test cases found in the result.");
+            }
+          }
         }
         checkTradefedInvocationError(commandDetailBuilder, jobs, logDir);
       }

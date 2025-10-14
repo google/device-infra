@@ -163,6 +163,7 @@ public final class AtsServerSessionPluginTest {
   @Mock private TestInfos testInfos;
   @Mock private TestLocator testLocator;
   @Mock private SubDeviceSpecs subDeviceSpecs;
+  @Mock private com.google.wireless.qa.mobileharness.shared.model.job.out.Result testResult;
   private Properties testProperties;
 
   @Captor private ArgumentCaptor<UnaryOperator<RequestDetail>> unaryOperatorCaptor;
@@ -262,6 +263,10 @@ public final class AtsServerSessionPluginTest {
     when(testInfo.jobInfo()).thenReturn(jobInfo);
     when(testInfo.locator()).thenReturn(testLocator);
     when(testLocator.getId()).thenReturn("test_id");
+    when(jobInfo.result()).thenReturn(testResult);
+    when(testInfo.result()).thenReturn(testResult);
+    when(testResult.get())
+        .thenReturn(com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult.PASS);
     testProperties = new Properties(timing);
     SubDeviceSpec subDeviceSpec1 =
         SubDeviceSpec.createForTesting(
