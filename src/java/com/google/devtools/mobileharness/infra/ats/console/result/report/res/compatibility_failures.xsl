@@ -108,7 +108,7 @@
                         <tr>
                             <td class="rowtitle">Release (SDK)</td>
                             <td>
-                                <xsl:value-of select="Result/Build/@build_version_release"/> (<xsl:value-of select="Result/Build/@build_version_sdk"/>)
+                                <xsl:value-of select="Result/Build/@build_version_release"/> (<xsl:value-of select="Result/Build/@build_version_sdk_full"/>)
                             </td>
                         </tr>
                         <tr>
