@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.platform.android.xts.common;
 
+import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.infra.ats.console.result.xml.XmlConstants;
 
 /**
@@ -48,23 +49,25 @@ public enum DeviceBuildInfo {
   VERSION_INCREMENTAL("build_version_incremental", "ro.build.version.incremental"),
   VERSION_RELEASE("build_version_release", "ro.build.version.release"),
   VERSION_SDK("build_version_sdk", "ro.build.version.sdk"),
+  // Fallback to ro.build.version.sdk if ro.build.version.sdk_full (>= 36) is not available.
+  VERSION_SDK_FULL("build_version_sdk_full", "ro.build.version.sdk_full", "ro.build.version.sdk"),
   VERSION_SECURITY_PATCH("build_version_security_patch", "ro.build.version.security_patch"),
   SYSTEM_IMG_INFO(XmlConstants.SYSTEM_IMG_INFO_ATTR, "ro.system.build.fingerprint"),
   VENDOR_IMG_INFO(XmlConstants.VENDOR_IMG_INFO_ATTR, "ro.vendor.build.fingerprint");
 
   private final String attributeName;
-  private final String propName;
+  private final ImmutableList<String> propNames;
 
-  private DeviceBuildInfo(String attributeName, String propName) {
+  private DeviceBuildInfo(String attributeName, String... propNames) {
     this.attributeName = attributeName;
-    this.propName = propName;
+    this.propNames = ImmutableList.copyOf(propNames);
   }
 
   public String getAttributeName() {
     return attributeName;
   }
 
-  public String getPropName() {
-    return propName;
+  public ImmutableList<String> getPropNames() {
+    return propNames;
   }
 }

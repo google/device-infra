@@ -249,15 +249,13 @@ public final class XtsDeviceCompatibilityChecker {
 
   private String getDeviceBuildFingerprint(String serial)
       throws MobileHarnessException, InterruptedException {
-    return androidAdbUtil
-        .getProperty(serial, ImmutableList.of(DeviceBuildInfo.FINGERPRINT.getPropName()))
-        .trim();
+    return androidAdbUtil.getProperty(serial, DeviceBuildInfo.FINGERPRINT.getPropNames()).trim();
   }
 
   private String getDeviceVendorBuildFingerprint(String serial)
       throws MobileHarnessException, InterruptedException {
     return androidAdbUtil
-        .getProperty(serial, ImmutableList.of(DeviceBuildInfo.VENDOR_FINGERPRINT.getPropName()))
+        .getProperty(serial, DeviceBuildInfo.VENDOR_FINGERPRINT.getPropNames())
         .trim();
   }
 }

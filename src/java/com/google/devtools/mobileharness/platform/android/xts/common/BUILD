@@ -38,5 +38,8 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/plugin:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/plugin:__pkg__",
     ],
-    deps = ["//src/java/com/google/devtools/mobileharness/infra/ats/console/result/xml:xml_constants"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/xml:xml_constants",
+        "@maven//:com_google_guava_guava",
+    ],
 )

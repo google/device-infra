@@ -139,6 +139,7 @@ public final class MoblyReportHelperTest {
           Attribute.newBuilder().setKey("build_version_incremental").setValue("7641976").build(),
           Attribute.newBuilder().setKey("build_version_release").setValue("11").build(),
           Attribute.newBuilder().setKey("build_version_sdk").setValue("30").build(),
+          Attribute.newBuilder().setKey("build_version_sdk_full").setValue("30").build(),
           Attribute.newBuilder()
               .setKey("build_version_security_patch")
               .setValue("2021-10-01")
@@ -261,6 +262,24 @@ public final class MoblyReportHelperTest {
             EXPECTED_BUILD_ATTRIBUTES.stream()
                 .collect(toImmutableMap(Attribute::getKey, Attribute::getValue)))
         .inOrder();
+  }
+
+  @Test
+  public void generateBuildAttributes_withFirstAvailablePropValue() throws Exception {
+    moblyReportHelper = new MoblyReportHelper(adb, localFileUtil);
+
+    when(adb.runShellWithRetry(DEVICE_ID, "getprop"))
+        .thenReturn(
+            """
+            [ro.build.version.sdk]: [36]
+            [ro.build.version.sdk_full]: [36.1]
+            """);
+    when(adb.runShellWithRetry(DEVICE_ID, "uname -a")).thenReturn("");
+
+    assertThat(
+            moblyReportHelper.generateBuildAttributes(
+                DEVICE_ID, /* skipCollectBuildPrefixAttribute= */ false))
+        .containsAtLeast("build_version_sdk", "36", "build_version_sdk_full", "36.1");
   }
 
   @Test

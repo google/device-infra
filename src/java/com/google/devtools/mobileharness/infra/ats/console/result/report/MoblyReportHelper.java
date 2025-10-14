@@ -230,7 +230,11 @@ public class MoblyReportHelper {
       }
       buildAttributesMap.put(
           deviceBuildInfo.getAttributeName(),
-          propNameToValueMap.getOrDefault(deviceBuildInfo.getPropName(), ""));
+          deviceBuildInfo.getPropNames().stream()
+              .map(propNameToValueMap::get)
+              .filter(value -> !Strings.isNullOrEmpty(value))
+              .findFirst()
+              .orElse(""));
     }
 
     String kernelInfoResult = "";
@@ -251,7 +255,7 @@ public class MoblyReportHelper {
   private static ImmutableSet<String> getTargetProps() {
     ImmutableSet.Builder<String> props = ImmutableSet.builder();
     for (DeviceBuildInfo deviceBuildInfo : DeviceBuildInfo.values()) {
-      props.add(deviceBuildInfo.getPropName());
+      props.addAll(deviceBuildInfo.getPropNames());
     }
     return props.build();
   }
