@@ -145,10 +145,18 @@ public class PerfettoStep {
           .setTags(Optional.empty())
           .setTime(Duration.ZERO)
           .setBufferSizeKb(0);
-      logger.atInfo().log(
-          "Using Perfetto normal mode with config file, tags/time/buffer will be ignored");
+      testInfo
+          .log()
+          .atInfo()
+          .alsoTo(logger)
+          .log("Using Perfetto normal mode with config file, tags/time/buffer will be ignored");
     } catch (MobileHarnessException e) {
-      logger.atInfo().withCause(e).log("Error building Perfetto parameters.");
+      testInfo
+          .log()
+          .atInfo()
+          .alsoTo(logger)
+          .withCause(e)
+          .log("Error building Perfetto parameters.");
       String tags = jobInfo.params().get(PARAM_PERFETTO_TAGS, defaultTags);
       Duration time =
           Duration.ofSeconds(
@@ -211,11 +219,18 @@ public class PerfettoStep {
           .setConfigFile(Optional.ofNullable(jobInfo.files().getSingle(FILE_PERFETTO_CONFIG)))
           .setTags(Optional.empty())
           .setBufferSizeKb(0);
-      logger.atInfo().log(
-          "Using Perfetto normal mode with config file, tags/time/buffer will be ignored");
+      testInfo
+          .log()
+          .atInfo()
+          .alsoTo(logger)
+          .log("Using Perfetto normal mode with config file, tags/time/buffer will be ignored");
     } catch (MobileHarnessException e) {
-      logger.atInfo().log(
-          "Did not find perfetto_config among files, using command line arguments.");
+      testInfo
+          .log()
+          .atInfo()
+          .alsoTo(logger)
+          .withCause(e)
+          .log("Did not find perfetto_config among files, using command line arguments.");
       String tags = jobInfo.params().get(PARAM_PERFETTO_TAGS, defaultTags);
       int bufferSize = jobInfo.params().getInt(PARAM_PERFETTO_BUFFER_SIZE, defaultBufferSize);
 
