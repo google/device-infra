@@ -34,6 +34,7 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatusWithTimestamp;
 import com.google.devtools.mobileharness.api.model.proto.Device.PostTestDeviceOp;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
+import com.google.devtools.mobileharness.api.testrunner.device.cache.ContainerDeviceCache;
 import com.google.devtools.mobileharness.api.testrunner.device.cache.DeviceCacheManager;
 import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
 import com.google.devtools.mobileharness.infra.controller.device.external.ExternalDeviceManager;
@@ -59,6 +60,7 @@ import com.google.wireless.qa.mobileharness.shared.util.DeviceUtil;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -167,6 +169,7 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
   private Instant lastInterruptTime;
 
   private final ExternalDeviceManager externalDeviceManager;
+  private final ContainerDeviceCache containerDeviceCache;
 
   /**
    * Creates a new device runner.
@@ -199,6 +202,7 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
     this.globalInternalBus = globalInternalBus;
     this.deviceRebootUtil = new DeviceRebootUtil();
     this.externalDeviceManager = externalDeviceManager;
+    this.containerDeviceCache = ContainerDeviceCache.getInstance();
   }
 
   /** Creates a new device runner. For test only. */
@@ -211,7 +215,8 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
       Clock clock,
       Sleeper sleeper,
       Thread runningThread,
-      ExternalDeviceManager externalDeviceManager) {
+      ExternalDeviceManager externalDeviceManager,
+      ContainerDeviceCache containerDeviceCache) {
     this.device = device;
     this.deviceStat = stat;
     this.apiConfig = apiConfig;
@@ -226,6 +231,7 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
     globalInternalBus = new EventBus();
     this.deviceRebootUtil = new DeviceRebootUtil();
     this.externalDeviceManager = externalDeviceManager;
+    this.containerDeviceCache = containerDeviceCache;
   }
 
   @Override
@@ -568,6 +574,14 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
               this.test.getTestRunner().getTestExecutionUnit().locator(),
               test.getTestRunner().getTestExecutionUnit().locator()));
     }
+
+    if (Flags.instance().enableCachingReservedDevice.getNonNull()) {
+      containerDeviceCache.cache(
+          device.getDeviceControlId(),
+          device.getClass().getSimpleName(),
+          ChronoUnit.YEARS.getDuration());
+    }
+
     logger.atInfo().log(
         "Reserved to test %s", test.getTestRunner().getTestExecutionUnit().locator());
     notifyAll();

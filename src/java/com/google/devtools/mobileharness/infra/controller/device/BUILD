@@ -221,6 +221,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/constant:device_property",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/lab:device_id_descriptor",
+        "//src/java/com/google/devtools/mobileharness/api/testrunner/device/cache:container_device_cache",
         "//src/java/com/google/devtools/mobileharness/api/testrunner/device/cache:device_cache_manager",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device/config",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device/external:external_device_manager",
