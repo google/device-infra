@@ -82,7 +82,7 @@ public class MoblyConfigGenerator {
       // dimensions, whereas for static testbed, this config only contains information from the user
       // defined testbed yaml. So add sub device dimensions to Mobly config for static testbed.
       if (!(testbedDevice.getConfig() instanceof AdhocTestbedConfig)) {
-        addSubDeviceDimensions(moblyConfig, testbedDevice.getManagedDevices());
+        addSubDeviceDimensionsAndProperties(moblyConfig, testbedDevice.getManagedDevices());
       }
       return moblyConfig;
     } else {
@@ -100,7 +100,7 @@ public class MoblyConfigGenerator {
    *
    * @throws JSONException If there are sub devices with no corresponding info in the config.
    */
-  private static void addSubDeviceDimensions(
+  private static void addSubDeviceDimensionsAndProperties(
       JSONObject moblyConfig, ImmutableSet<Device> subDevices)
       throws MobileHarnessException, JSONException {
     for (Device device : subDevices) {
@@ -137,6 +137,13 @@ public class MoblyConfigGenerator {
           } else {
             dimensionConfig.put(key, new JSONArray(deviceDimensionsMap.get(key)));
           }
+        }
+
+        for (Map.Entry<String, String> property : device.getProperties().entrySet()) {
+          if (deviceConfig.has(property.getKey())) {
+            continue;
+          }
+          deviceConfig.put(property.getKey(), property.getValue());
         }
         break;
       }
