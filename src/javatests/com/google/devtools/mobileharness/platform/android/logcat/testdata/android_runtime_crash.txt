@@ -1,0 +1,22 @@
+10-13 16:27:09.123 1000 1000 I SystemService: Some system message
+10-13 16:27:10.123 12345 12345 E AndroidRuntime: FATAL EXCEPTION: main
+10-13 16:27:10.123 12345 12345 E AndroidRuntime: Process: com.example.app, PID: 12345
+10-13 16:27:10.123 12345 12345 E AndroidRuntime: java.lang.RuntimeException: Unable to start activity ComponentInfo{com.example.app/com.example.app.MainActivity}: java.lang.NullPointerException
+10-13 16:27:10.123 12345 12345 E AndroidRuntime:  at android.app.ActivityThread.performLaunchActivity(ActivityThread.java:2778)
+10-13 16:27:10.123 12345 12345 E AndroidRuntime:  at android.app.ActivityThread.handleLaunchActivity(ActivityThread.java:2856)
+10-13 16:27:10.123 12345 12345 E AndroidRuntime:  at android.app.ActivityThread.-wrap11(Unknown Source:0)
+10-13 16:27:10.123 12345 12345 E AndroidRuntime:  at android.app.ActivityThread$H.handleMessage(ActivityThread.java:1589)
+10-13 16:27:10.123 12345 12345 E AndroidRuntime:  at android.os.Handler.dispatchMessage(Handler.java:106)
+10-13 16:27:10.123 12345 12345 E AndroidRuntime:  at android.os.Looper.loop(Looper.java:164)
+10-13 16:27:10.123 12345 12345 E AndroidRuntime:  at android.app.ActivityThread.main(ActivityThread.java:6494)
+10-13 16:27:10.123 12345 12345 E AndroidRuntime:  at java.lang.reflect.Method.invoke(Native Method)
+10-13 16:27:10.123 12345 12345 E AndroidRuntime:  at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:438)
+10-13 16:27:10.123 12345 12345 E AndroidRuntime:  at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:807)
+10-13 16:27:10.123 12345 12345 E AndroidRuntime: Caused by: java.lang.NullPointerException
+10-13 16:27:10.123 12345 12345 E AndroidRuntime:  at com.example.app.MainActivity.onCreate(MainActivity.java:10)
+10-13 16:27:10.123 12345 12345 E AndroidRuntime:  at android.app.Activity.performCreate(Activity.java:7009)
+10-13 16:27:10.123 12345 12345 E AndroidRuntime:  at android.app.Activity.performCreate(Activity.java:7000)
+10-13 16:27:10.123 12345 12345 E AndroidRuntime:  at android.app.Instrumentation.callActivityOnCreate(Instrumentation.java:1214)
+10-13 16:27:10.123 12345 12345 E AndroidRuntime:  at android.app.ActivityThread.performLaunchActivity(ActivityThread.java:2731)
+10-13 16:27:10.123 12345 12345 E AndroidRuntime:  ... 11 more
+10-13 16:27:11.000 2000 2000 W lowmemorykiller: Killing low memory processes

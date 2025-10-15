@@ -1,0 +1,8 @@
+10-13 16:27:10.123 12345 12345 E AndroidRuntime: FATAL EXCEPTION: main
+10-13 16:27:10.123 12345 12345 E AndroidRuntime: Process: com.example.app, PID: 12345
+10-13 16:27:10.123 12345 12345 E AndroidRuntime: java.lang.RuntimeException: Unable to start activity ComponentInfo{com.example.app/com.example.app.MainActivity}: java.lang.NullPointerException
+10-13 16:27:10.123 12345 12345 E AndroidRuntime:  ... 11 more
+10-13 16:28:10.123 54321 54321 E AndroidRuntime: FATAL EXCEPTION: Thread-2
+10-13 16:28:10.123 54321 54321 E AndroidRuntime: Process: com.another.app, PID: 54321
+10-13 16:28:10.123 54321 54321 E AndroidRuntime: java.lang.IllegalStateException: Another crash
+10-13 16:28:10.123 54321 54321 E AndroidRuntime:  ... 5 more
