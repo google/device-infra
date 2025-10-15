@@ -54,6 +54,7 @@ import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
+import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.android.Aapt;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
@@ -187,6 +188,9 @@ public class AndroidInstrumentationUtil {
   private static final Duration DEVICE_RECONNECT_INITIAL_DELAY = Duration.ofSeconds(5);
   private static final int DEVICE_RECONNECT_DELAY_MULTIPLIER = 3;
 
+  /** Wait time for MediaProvider to reindex files after clearing its data. */
+  private static final Duration MEDIA_PROVIDER_REINDEX_DELAY = Duration.ofSeconds(10);
+
   /** The result of the gtest process result. */
   @AutoValue
   public abstract static class GtestResult {
@@ -231,6 +235,8 @@ public class AndroidInstrumentationUtil {
 
   private final ApkInstaller apkInstaller;
 
+  private final Sleeper sleeper;
+
   /** Creates a util for Android device operations. */
   public AndroidInstrumentationUtil() {
     this(
@@ -245,7 +251,8 @@ public class AndroidInstrumentationUtil {
         new SystemStateManager(),
         new ResUtil(),
         new Aapt(),
-        new ApkInstaller());
+        new ApkInstaller(),
+        Sleeper.defaultSleeper());
   }
 
   /** Constructor for unit tests only. */
@@ -262,7 +269,8 @@ public class AndroidInstrumentationUtil {
       SystemStateManager systemStateManager,
       ResUtil resUtil,
       Aapt aapt,
-      ApkInstaller apkInstaller) {
+      ApkInstaller apkInstaller,
+      Sleeper sleeper) {
     this.adb = adb;
     this.commandExecutor = commandExecutor;
     this.clock = clock;
@@ -275,6 +283,7 @@ public class AndroidInstrumentationUtil {
     this.resUtil = resUtil;
     this.aapt = aapt;
     this.apkInstaller = apkInstaller;
+    this.sleeper = sleeper;
   }
 
   /**
@@ -822,9 +831,10 @@ public class AndroidInstrumentationUtil {
                   "Force sync by running '%s' output: %s", forceSyncCommand, output);
               // Give MediaProvider time to reindex the newly pushed test args file before the
               // instrumentation test starts.
-              String sleepCommand = "sleep 10";
-              var unused = adb.runShell(serial, sleepCommand);
-              logger.atInfo().log("Sleeping by running '%s'", sleepCommand);
+              logger.atInfo().log(
+                  "Sleeping for %d seconds for MediaProvider to reindex files...",
+                  MEDIA_PROVIDER_REINDEX_DELAY.toSeconds());
+              sleeper.sleep(MEDIA_PROVIDER_REINDEX_DELAY);
             } catch (MobileHarnessException e) {
               logger.atWarning().log(
                   "Failed to force sync by running '%s':%s",
