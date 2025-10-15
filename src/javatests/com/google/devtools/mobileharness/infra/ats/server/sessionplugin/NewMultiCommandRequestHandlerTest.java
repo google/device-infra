@@ -885,7 +885,12 @@ public final class NewMultiCommandRequestHandlerTest {
     setUpPassingJobAndTestResults();
     ReportProto.Result result =
         ReportProto.Result.newBuilder()
-            .setSummary(ReportProto.Summary.newBuilder().setPassed(10).setFailed(0).build())
+            .setSummary(
+                ReportProto.Summary.newBuilder()
+                    .setPassed(10)
+                    .setFailed(0)
+                    .setModulesTotal(1)
+                    .build())
             .addModuleInfo(
                 ReportProto.Module.newBuilder().setName("module1").setFailedTests(0).build())
             .build();
@@ -924,7 +929,12 @@ public final class NewMultiCommandRequestHandlerTest {
     setUpPassingJobAndTestResults();
     ReportProto.Result result =
         ReportProto.Result.newBuilder()
-            .setSummary(ReportProto.Summary.newBuilder().setPassed(5).setFailed(5).build())
+            .setSummary(
+                ReportProto.Summary.newBuilder()
+                    .setPassed(5)
+                    .setFailed(5)
+                    .setModulesTotal(1)
+                    .build())
             .addModuleInfo(
                 ReportProto.Module.newBuilder().setName("module1").setFailedTests(5).build())
             .build();
@@ -967,6 +977,35 @@ public final class NewMultiCommandRequestHandlerTest {
         UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
     assertThat(commandDetail.getId()).isEqualTo(commandId);
     assertThat(commandDetail.getState()).isEqualTo(CommandState.ERROR);
+  }
+
+  @Test
+  public void handleResultProcessing_zeroTotalTestAndOneModuleRan_treatAsCompleted()
+      throws Exception {
+    setUpPassingJobAndTestResults();
+    ReportProto.Result result =
+        ReportProto.Result.newBuilder()
+            .setSummary(
+                ReportProto.Summary.newBuilder()
+                    .setPassed(0)
+                    .setFailed(0)
+                    .setModulesTotal(1)
+                    .build())
+            .build();
+    mockProcessResult(result);
+    HandleResultProcessingResult handleResultProcessingResult =
+        createJobAndHandleResultProcessing(request);
+
+    assertThat(handleResultProcessingResult.commandDetails()).hasSize(1);
+    CommandDetail commandDetail =
+        handleResultProcessingResult.commandDetails().values().iterator().next();
+    assertThat(commandDetail.getPassedTestCount()).isEqualTo(0);
+    assertThat(commandDetail.getFailedTestCount()).isEqualTo(0);
+    assertThat(commandDetail.getTotalTestCount()).isEqualTo(0);
+    String commandId =
+        UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
+    assertThat(commandDetail.getId()).isEqualTo(commandId);
+    assertThat(commandDetail.getState()).isEqualTo(CommandState.COMPLETED);
   }
 
   @Test
@@ -1113,7 +1152,12 @@ public final class NewMultiCommandRequestHandlerTest {
     setUpPassingJobAndTestResults();
     ReportProto.Result result =
         ReportProto.Result.newBuilder()
-            .setSummary(ReportProto.Summary.newBuilder().setPassed(9).setFailed(1).build())
+            .setSummary(
+                ReportProto.Summary.newBuilder()
+                    .setPassed(9)
+                    .setFailed(1)
+                    .setModulesTotal(1)
+                    .build())
             .build();
     mockProcessResult(result);
 

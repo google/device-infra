@@ -1167,7 +1167,8 @@ public final class AtsServerSessionPluginTest {
         resultBuilder =
             com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result
                 .newBuilder()
-                .setSummary(Summary.newBuilder().setPassed(5).setFailed(5).build());
+                .setSummary(
+                    Summary.newBuilder().setPassed(5).setFailed(5).setModulesTotal(1).build());
     when(sessionResultHandlerUtil.processResult(
             any(), any(), any(), any(), eq(ImmutableList.of(jobInfo)), any()))
         .thenReturn(Optional.of(resultBuilder.build()));
@@ -1226,7 +1227,8 @@ public final class AtsServerSessionPluginTest {
         resultBuilder =
             com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result
                 .newBuilder()
-                .setSummary(Summary.newBuilder().setPassed(5).setFailed(0).build());
+                .setSummary(
+                    Summary.newBuilder().setPassed(5).setFailed(0).setModulesTotal(1).build());
     when(sessionResultHandlerUtil.processResult(
             any(), any(), any(), any(), eq(ImmutableList.of(jobInfo)), any()))
         .thenReturn(Optional.of(resultBuilder.build()));

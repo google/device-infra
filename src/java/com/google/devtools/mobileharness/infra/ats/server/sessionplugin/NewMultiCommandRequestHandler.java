@@ -757,8 +757,7 @@ final class NewMultiCommandRequestHandler {
 
       if (commandDetailBuilder.getState() == CommandState.UNKNOWN_STATE
           || commandDetailBuilder.getState() == CommandState.RUNNING) {
-        if (hasCommandPassed(commandDetailBuilder.build())
-            || hasCommandFailed(commandDetailBuilder.build())) {
+        if (commandDetailBuilder.getTotalModuleCount() > 0) {
           commandDetailBuilder.setState(CommandState.COMPLETED);
         } else {
           ImmutableList<TestInfo> failedTests =
@@ -1034,14 +1033,6 @@ final class NewMultiCommandRequestHandler {
           String.format("Failed to parse url from : %s", testResource.getUrl()),
           e);
     }
-  }
-
-  private boolean hasCommandPassed(CommandDetail commandDetail) {
-    return commandDetail.getTotalTestCount() > 0 && commandDetail.getFailedTestCount() == 0;
-  }
-
-  private boolean hasCommandFailed(CommandDetail commandDetail) {
-    return commandDetail.getTotalTestCount() > 0 && commandDetail.getFailedTestCount() != 0;
   }
 
   @CanIgnoreReturnValue
