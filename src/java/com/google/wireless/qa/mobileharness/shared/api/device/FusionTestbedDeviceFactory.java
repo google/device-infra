@@ -19,7 +19,7 @@ package com.google.wireless.qa.mobileharness.shared.api.device;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.platform.testbed.adhoc.AdhocTestbedConfig;
+import com.google.devtools.mobileharness.platform.testbed.config.TestbedConfig;
 import java.util.List;
 
 /** Factory methods for creating TestbedDevices for Fusion-based Lab Hosts. */
@@ -31,13 +31,15 @@ public class FusionTestbedDeviceFactory {
    * @param deviceId The id of the testbed.
    * @param preCreatedSubDevices pre-created sub device instances from MH device manager. If
    *     specified, this testbed device will not create sub device instances anymore.
+   * @param testbedConfig the config for the testbed
    * @throws MobileHarnessException Thrown if the testbed could not be loaded.
    */
   public static TestbedDevice newTestbedDeviceWithManagedDeviceInfo(
-      String deviceId, List<Device> preCreatedSubDevices) throws MobileHarnessException {
+      String deviceId, List<Device> preCreatedSubDevices, TestbedConfig testbedConfig)
+      throws MobileHarnessException {
     return new TestbedDevice(
         deviceId,
-        () -> ImmutableMap.of(deviceId, AdhocTestbedConfig.create(deviceId, preCreatedSubDevices)),
+        () -> ImmutableMap.of(deviceId, testbedConfig),
         preCreatedSubDevices,
         /* deviceFactory= */ null,
         /* apiConfig= */ null,

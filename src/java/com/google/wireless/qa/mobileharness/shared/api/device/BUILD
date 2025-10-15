@@ -215,7 +215,7 @@ java_library(
         ":device",
         ":testbed_device",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/devtools/mobileharness/platform/testbed/adhoc",
+        "//src/java/com/google/devtools/mobileharness/platform/testbed/config:base",
         "@maven//:com_google_guava_guava",
     ],
 )
