@@ -45,7 +45,9 @@ import com.google.devtools.mobileharness.infra.client.api.util.longevity.Longevi
 import com.google.devtools.mobileharness.infra.container.proto.ModeSettingProto.ContainerModePreference;
 import com.google.devtools.mobileharness.infra.container.proto.ModeSettingProto.SandboxModePreference;
 import com.google.devtools.mobileharness.infra.container.proto.SandboxSettingProto.SandboxSetting;
+import com.google.devtools.mobileharness.infra.container.proto.TestEngine.ResolveFileStatus;
 import com.google.devtools.mobileharness.infra.container.proto.TestEngine.TestEngineLocator;
+import com.google.devtools.mobileharness.infra.container.proto.TestEngine.TestEngineStatus;
 import com.google.devtools.mobileharness.infra.controller.test.BaseTestRunner;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunner;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunnerSetting;
@@ -713,29 +715,48 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
     int count = 0;
     while (true) {
       count++;
-      switch (response.getTestEngineStatus()) {
-        case READY:
-          logger.atInfo().log(
-              "Test engine becomes ready, locator=[%s]",
-              shortDebugString(response.getTestEngineLocator()));
-          return response.getTestEngineLocator();
-        case FAILED:
-          logger.atInfo().log("Test engine failed to start");
-          throw new MobileHarnessException(
-              InfraErrorId.TE_TEST_ENGINE_FAILURE_WHEN_CLIENT_WAITING_TEST_ENGINE_READY,
-              "Test engine failed to start",
-              ErrorModelConverter.toDeserializedException(response.getExceptionDetail()));
-        case CLOSED:
-          logger.atInfo().log("Test engine closed");
-          throw new MobileHarnessException(
-              InfraErrorId.TE_TEST_ENGINE_CLOSED_WHEN_CLIENT_WAITING_TEST_ENGINE_READY,
-              "Test engine closed",
-              /* cause= */ response.hasExceptionDetail()
-                  ? ErrorModelConverter.toDeserializedException(response.getExceptionDetail())
-                  : null);
-        default:
-          logger.atInfo().log("Test engine status: [%s]", response.getTestEngineStatus());
+      if (response.getTestEngineStatus() == TestEngineStatus.READY
+          && (response.getResolveFileStatus() == ResolveFileStatus.RESOLVE_FILE_RESOLVED
+              || response.getResolveFileStatus()
+                  == ResolveFileStatus.RESOLVE_FILE_STATUS_UNSPECIFIED)) {
+        // TODO: Remove check for RESOLVE_FILE_STATUS_UNSPECIFIED after all labs are
+        // updated to beyond 4.339.
+        logger.atInfo().log(
+            "Test engine becomes ready, locator=[%s]",
+            shortDebugString(response.getTestEngineLocator()));
+        logger.atInfo().log(
+            "Lab server side resolve file succeeded with status %s.",
+            response.getResolveFileStatus());
+        return response.getTestEngineLocator();
       }
+
+      if (response.getTestEngineStatus() == TestEngineStatus.FAILED) {
+        logger.atInfo().log("Test engine failed to start");
+        throw new MobileHarnessException(
+            InfraErrorId.TE_TEST_ENGINE_FAILURE_WHEN_CLIENT_WAITING_TEST_ENGINE_READY,
+            "Test engine failed to start",
+            ErrorModelConverter.toDeserializedException(response.getExceptionDetail()));
+      }
+      if (response.getTestEngineStatus() == TestEngineStatus.CLOSED) {
+        logger.atInfo().log("Test engine closed");
+        throw new MobileHarnessException(
+            InfraErrorId.TE_TEST_ENGINE_CLOSED_WHEN_CLIENT_WAITING_TEST_ENGINE_READY,
+            "Test engine closed",
+            response.hasExceptionDetail()
+                ? ErrorModelConverter.toDeserializedException(response.getExceptionDetail())
+                : null);
+      }
+      if (response.getResolveFileStatus() == ResolveFileStatus.RESOLVE_FILE_FAILED) {
+        logger.atInfo().log("Resolve file failed");
+        throw new MobileHarnessException(
+            InfraErrorId.TE_RESOLVE_FILE_FAILURE_WHEN_CLIENT_WAITING_FILE_RESOLVED,
+            "Resolve file failed",
+            ErrorModelConverter.toDeserializedException(response.getResolveFileExceptionDetail()));
+      }
+
+      logger.atInfo().log("Test engine status: [%s]", response.getTestEngineStatus());
+      logger.atInfo().log(
+          "Lab server side resolve file status: [%s]", response.getResolveFileStatus());
 
       sleeper.sleep(getGetTestEngineStatusInterval(count));
       logger.atInfo().log("Getting test engine status...");
