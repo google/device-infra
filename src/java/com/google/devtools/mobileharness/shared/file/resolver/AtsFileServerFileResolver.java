@@ -162,10 +162,11 @@ public class AtsFileServerFileResolver extends AbstractFileResolver {
       logger.atWarning().withCause(e).log("Invalid hash path %s in ats file server.", httpHashPath);
       return Optional.empty();
     }
+    // TODO: b/452574841 - Speed up the hash computation.
     try {
       String output =
           createCommandExecutor()
-              .run(Command.of("curl", "-sfL", httpHashPath).timeout(Duration.ofMinutes(1)));
+              .run(Command.of("curl", "-sfL", httpHashPath).timeout(Duration.ofMinutes(5)));
       logger.atInfo().log(
           "Received response from ATS file server /hash endpoint for %s: %s", sourcePath, output);
       JsonObject jsonObject = JsonParser.parseString(output).getAsJsonObject();
