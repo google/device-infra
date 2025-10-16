@@ -222,12 +222,14 @@ public class VerifierResultHelper {
   private void installApkIfVersionNameMismatch(String serial, String apkPath)
       throws InterruptedException, MobileHarnessException {
     String originalVersionName = "not installed";
+    int sdkVersion = androidSystemSettingUtil.getDeviceSdkVersion(serial);
     try {
       // Check if the apk is installed for current user. The installed apk may be not available to
       // current user and need re-installation.
       if (!androidPackageManagerUtil
           .listPackages(
               UtilArgs.builder()
+                  .setSdkVersion(sdkVersion)
                   .setSerial(serial)
                   .setUserId(Integer.toString(getUserId(serial)))
                   .build(),
@@ -247,7 +249,6 @@ public class VerifierResultHelper {
           newVersionName, serial, originalVersionName);
       // Allow access to non-SDK interfaces.
       var unused = adb.runShellWithRetry(serial, "settings put global hidden_api_policy 1");
-      int sdkVersion = androidSystemSettingUtil.getDeviceSdkVersion(serial);
       androidPackageManagerUtil.installApk(serial, sdkVersion, apkPath);
     }
   }
