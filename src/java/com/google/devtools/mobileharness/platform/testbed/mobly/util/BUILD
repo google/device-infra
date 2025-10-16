@@ -22,7 +22,6 @@ java_library(
     srcs = ["MoblyAospTestSetupUtil.java"],
     visibility = [
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
-        "//src/javatests/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
     ],
     deps = [
         ":install_mobly_test_deps_args",
@@ -75,7 +74,6 @@ java_library(
     srcs = ["InstallMoblyTestDepsArgs.java"],
     visibility = [
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
-        "//src/javatests/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
     ],
     deps = ["//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value"],
 )
@@ -86,7 +84,6 @@ java_library(
     visibility = [
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/platform/testbed/mobly/util:__subpackages__",
-        "//src/javatests/com/google/wireless/qa/mobileharness/shared/api/driver:__subpackages__",
     ],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
