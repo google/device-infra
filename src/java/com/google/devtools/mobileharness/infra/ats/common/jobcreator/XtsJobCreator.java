@@ -214,6 +214,7 @@ public abstract class XtsJobCreator {
 
     ImmutableList<SubDeviceSpec> subDeviceSpecList =
         sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
+    logger.atInfo().log("Get the sub device spec list: %s", subDeviceSpecList);
 
     injectEnvSpecificProperties(sessionRequestInfo, driverParams, subDeviceSpecList.size());
 
