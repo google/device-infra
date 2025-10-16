@@ -1724,6 +1724,22 @@ public class Flags {
       converter = Flag.IntegerConverter.class)
   public Flag<Integer> noOpDeviceNum = noOpDeviceNumDefault;
 
+  private static final Flag<Boolean> noOpDeviceRandomOfflineDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--no_op_device_random_offline",
+      description = "If enabled, randomly take some NoOpDevice offline.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> noOpDeviceRandomOffline = noOpDeviceRandomOfflineDefault;
+
+  private static final Flag<Integer> noOpDeviceStartIndexDefault = Flag.value(0);
+
+  @com.beust.jcommander.Parameter(
+      names = "--no_op_device_start_index",
+      description = "The start index of NoOpDevice.",
+      converter = Flag.IntegerConverter.class)
+  public Flag<Integer> noOpDeviceStartIndex = noOpDeviceStartIndexDefault;
+
   private static final Flag<String> noOpDeviceTypeDefault = Flag.value("");
 
   @com.beust.jcommander.Parameter(

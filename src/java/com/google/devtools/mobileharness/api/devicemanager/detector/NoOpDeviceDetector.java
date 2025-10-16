@@ -53,10 +53,21 @@ public class NoOpDeviceDetector implements Detector {
 
   @Override
   public List<DetectionResult> detectDevices() throws MobileHarnessException, InterruptedException {
+    int deviceIndexToTakeOffline = -1;
+    if (Flags.instance().noOpDeviceRandomOffline.getNonNull()) {
+      // This is roughly 1/100 chance ...
+      deviceIndexToTakeOffline = RANDOM.nextInt(Flags.instance().noOpDeviceNum.getNonNull() * 100);
+    }
     List<DetectionResult> detectionResults = new ArrayList<>();
     for (int i = 0; i < Flags.instance().noOpDeviceNum.getNonNull(); i++) {
-      detectionResults.add(
-          DetectionResult.of(String.format("%s-%d", deviceIdPrefix, i), DetectionType.NO_OP));
+      if (i != deviceIndexToTakeOffline) {
+        detectionResults.add(
+            DetectionResult.of(
+                String.format(
+                    "%s-%d",
+                    deviceIdPrefix, i + Flags.instance().noOpDeviceStartIndex.getNonNull()),
+                DetectionType.NO_OP));
+      }
     }
     return detectionResults;
   }
