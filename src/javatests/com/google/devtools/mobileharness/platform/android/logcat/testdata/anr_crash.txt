@@ -1,0 +1,13 @@
+10-16 09:59:59.100 100 101 I other_tag: Some other message before ANRs
+10-16 10:00:00.100 100 101 E ActivityManager: ANR in com.app.anr (com.app.anr/.MainActivity)
+10-16 10:00:00.150 100 101 I ActivityManager: Irrelevant line 1
+10-16 10:00:00.200 100 101 E ActivityManager: PID: 12345
+10-16 10:00:00.250 100 101 I ActivityManager: Irrelevant line 2
+10-16 10:00:00.300 100 101 E ActivityManager: Reason: Test ANR reason 1
+10-16 10:00:00.400 100 101 W irrelevant_tag: in between ANRs
+10-16 10:01:00.100 200 201 E ActivityManager: ANR in com.app.anr2
+10-16 10:01:00.150 200 201 I ActivityManager: Irrelevant line 3
+10-16 10:01:00.200 200 201 E ActivityManager: PID: 67890
+10-16 10:01:00.250 200 201 I ActivityManager: Irrelevant line 4
+10-16 10:01:00.300 200 201 E ActivityManager: Reason: Test ANR reason 2
+10-16 10:01:00.400 200 201 D last_tag: after all ANRs

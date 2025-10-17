@@ -22,8 +22,11 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.logcat.AndroidRuntimeCrashDetector;
+import com.google.devtools.mobileharness.platform.android.logcat.AnrDetector;
+import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatLineProxy;
 import com.google.devtools.mobileharness.platform.android.logcat.MonitoringConfig;
+import com.google.devtools.mobileharness.platform.android.logcat.NativeCrashDetector;
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
@@ -80,7 +83,11 @@ public class AndroidLogcatMonitoringDecorator extends BaseDecorator
             spec.getErrorOnCrashPackagesList(),
             spec.getPackagesToIgnoreList());
     var artProcessor = new AndroidRuntimeCrashDetector(monitoringConfig);
+    var anrProcessor = new AnrDetector(monitoringConfig);
+    var nativeCrashProcessor = new NativeCrashDetector(monitoringConfig);
     logcatLineProxy.addLineProcessor(artProcessor);
+    logcatLineProxy.addLineProcessor(anrProcessor);
+    logcatLineProxy.addLineProcessor(nativeCrashProcessor);
     String currentDeviceTime = adb.runShell(deviceId, DATE_COMMAND);
 
     testInfo
@@ -99,13 +106,21 @@ public class AndroidLogcatMonitoringDecorator extends BaseDecorator
     getDecorated().run(testInfo);
     process.killAndThenKillForcibly(Duration.ofSeconds(5));
     finish(testInfo);
-    testInfo
-        .log()
-        .atInfo()
-        .alsoTo(logger)
-        .log(
-            "\n\n################### Crash Events #####################\n%s\n\n",
-            Joiner.on("\n").join(artProcessor.getEvents()));
+    var crashEvents =
+        ImmutableList.<LogcatEvent>builder()
+            .addAll(artProcessor.getEvents())
+            .addAll(anrProcessor.getEvents())
+            .addAll(nativeCrashProcessor.getEvents())
+            .build();
+    if (!crashEvents.isEmpty()) {
+      testInfo
+          .log()
+          .atInfo()
+          .alsoTo(logger)
+          .log(
+              "\n\n################### Crash Events #####################\n%s\n\n",
+              Joiner.on(System.lineSeparator()).join(crashEvents));
+    }
   }
 
   private void finish(TestInfo testInfo) throws MobileHarnessException {

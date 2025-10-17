@@ -1,0 +1,12 @@
+10-13 12:54:01.123  1230  1230 I unrelated: Some message before crash
+10-13 12:54:02.123  1234  1234 F DEBUG   : *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+10-13 12:54:02.123  1234  1234 F DEBUG   : Build fingerprint: 'google/cheetah/cheetah:13/TQ1A.221205.011/9244662:user/release-keys'
+10-13 12:54:02.123  1234  1234 F DEBUG   : Revision: 'DVT1.0'
+10-13 12:54:02.123  1234  1234 F DEBUG   : ABI: 'arm64'
+10-13 12:54:02.123  1234  1234 F DEBUG   : Timestamp: 2023-10-13 12:54:02.123+0800
+10-13 12:54:02.123  1234  1234 F DEBUG   : pid: 12345, tid: 12345, name: com.example.app  >>> com.example.app <<<
+10-13 12:54:02.123  1234  1234 F DEBUG   : uid: 10166
+10-13 12:54:02.123  1234  1234 F DEBUG   : signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x0
+10-13 12:54:02.123  1234  1234 F DEBUG   : Cause: null pointer dereference
+10-13 12:54:02.123  1234  1234 F DEBUG   :     x0  0000000000000000  x1  0000007b8b7b78f0  x2  0000000000000001  x3  0000000000000000
+10-13 12:54:03.123  1230  1230 I unrelated: Some message after crash
