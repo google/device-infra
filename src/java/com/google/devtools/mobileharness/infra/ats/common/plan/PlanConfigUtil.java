@@ -149,7 +149,8 @@ public class PlanConfigUtil {
   }
 
   public Optional<Document> loadConfig(String configName, Path jar) {
-    Optional<InputStream> configStream = getBundledConfigStream(jar, configName);
+    Optional<InputStream> configStream =
+        getBundledConfigStream(jar, configName).or(() -> getLocalConfigStream(configName));
     if (configStream.isEmpty()) {
       return Optional.empty();
     }
@@ -196,6 +197,28 @@ public class PlanConfigUtil {
     }
 
     return jarFileUtil.getZipEntryInputStream(jar, String.format("%s%s", getConfigPrefix(), name));
+  }
+
+  private Optional<InputStream> getLocalConfigStream(String configName) {
+    Path configPath = Path.of(configName);
+    if (localFileUtil.isFileExist(configPath)) {
+      try {
+        return Optional.of(localFileUtil.newInputStream(configPath));
+      } catch (MobileHarnessException e) {
+        logger
+            .atWarning()
+            .with(IMPORTANCE, IMPORTANT)
+            .withCause(e)
+            .log("Failed to get input stream for local config file %s", configPath);
+        return Optional.empty();
+      }
+    } else {
+      logger
+          .atWarning()
+          .with(IMPORTANCE, IMPORTANT)
+          .log("Failed to find local config %s", configName);
+      return Optional.empty();
+    }
   }
 
   private PlanConfigInfo loadPlanConfigInfo(String configName, Path jar, Document document) {

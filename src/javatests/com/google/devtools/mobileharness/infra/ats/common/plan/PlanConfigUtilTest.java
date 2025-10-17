@@ -25,6 +25,7 @@ import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
 import com.google.inject.Guice;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Optional;
 import javax.inject.Inject;
 import org.junit.Before;
 import org.junit.Rule;
@@ -32,6 +33,7 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+import org.w3c.dom.Document;
 
 @RunWith(JUnit4.class)
 public final class PlanConfigUtilTest {
@@ -40,6 +42,10 @@ public final class PlanConfigUtilTest {
 
   private static final String TEST_DATA_JAR_DIRECTORY =
       "javatests/com/google/devtools/mobileharness/infra/ats/common/plan/testdata/jar";
+
+  private static final String TEST_LOCAL_PLAN =
+      RunfilesUtil.getRunfilesLocation(
+          "javatests/com/google/devtools/mobileharness/infra/ats/common/plan/testdata/testplan/local-plan.xml");
 
   private static final String TEST_JAR_DIR =
       RunfilesUtil.getRunfilesLocation(TEST_DATA_JAR_DIRECTORY);
@@ -76,6 +82,16 @@ public final class PlanConfigUtilTest {
                 "util/wifi",
                 testJarDir.resolve("test_app.jar"),
                 "Utility config to configure wifi on device"));
+  }
+
+  @Test
+  public void loadConfig_fromLocalFile() throws Exception {
+    Optional<Document> document =
+        planConfigUtil.loadConfig(TEST_LOCAL_PLAN, testJarDir.resolve("test_app.jar"));
+
+    assertThat(document).isPresent();
+    assertThat(document.get().getDocumentElement().getAttribute("description"))
+        .isEqualTo("local-test-plan");
   }
 
   private void prepareTestJars() throws Exception {
