@@ -150,8 +150,10 @@ public enum MoblySubdeviceType {
       /* jsonTypeName= */ "WindowsDevice",
       /* jsonIdKey= */ "hostname",
       /* mhClassName= */ "WindowsDevice"),
-  MANEKI_DEVICE(
-      /* jsonTypeName= */ "ManekiDevice", /* jsonIdKey= */ "id", /* mhClassName= */ "ManekiDevice");
+  MANEKI_DIAL_DEVICE(
+      /* jsonTypeName= */ "ManekiDialDevice",
+      /* jsonIdKey= */ "id",
+      /* mhClassName= */ "ManekiDialDevice");
 
   private final String jsonTypeName;
   private final String jsonIdKey;
