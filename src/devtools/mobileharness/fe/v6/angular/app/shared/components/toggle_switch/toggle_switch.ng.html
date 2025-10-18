@@ -1,0 +1,40 @@
+<div class="toggle-switch-container">
+  @if (label && labelPosition === 'left') {
+    <label class="toggle-switch__label toggle-switch__label--left">
+      {{ label }}
+    </label>
+  }
+
+  <!-- Toggle switch body -->
+  <div
+    [class.toggle-switch--checked]="checked"
+    [class.toggle-switch--disabled]="disabled"
+    [class.toggle-switch--medium]="size === 'medium'"
+    [class.toggle-switch--small]="size === 'small'"
+    [class.toggle-switch--large]="size === 'large'"
+    class="toggle-switch"
+    (click)="onToggle()"
+    [style.background-color]="checked ? color : ''"
+    [style.border-color]="checked ? color : ''"
+    role="switch"
+    [attr.aria-checked]="checked"
+    [attr.aria-disabled]="disabled"
+  >
+    <!-- Thumb -->
+    <div class="toggle-switch__thumb"></div>
+
+    <input
+      type="checkbox"
+      [checked]="checked"
+      [disabled]="disabled"
+      (change)="onToggle()"
+      class="toggle-switch__input"
+    />
+  </div>
+
+  @if (label && labelPosition === 'right') {
+    <label class="toggle-switch__label toggle-switch__label--right">
+      {{ label }}
+    </label>
+  }
+</div>

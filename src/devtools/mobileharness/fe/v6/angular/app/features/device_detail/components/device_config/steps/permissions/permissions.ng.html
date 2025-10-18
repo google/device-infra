@@ -1,0 +1,27 @@
+<div class="permissions-container">
+  @if (workflow === 'wizard') {
+    <h3 class="font-semibold text-gray-800">Permissions</h3>
+    <p class="font-margin text-gray-600">
+      Let's start by setting up who can manage and use this device.
+    </p>
+  }
+
+  <div [class]="workflow === 'wizard' ? 'space-y-10' : 'space-y-8'">
+    @for (permission of PERMISSIONS; track permission.type) {
+      <div>
+        <h4
+          class="title-medium"
+          [class]="workflow === 'wizard' ? 'text-gray-800' : 'text-gray-700'"
+        >
+          {{ permission.title }}
+        </h4>
+        <p
+          [class]="workflow === 'wizard' ? 'wizard-question-text' : 'definition-text text-gray-600'"
+        >
+          {{ permission.definition }}
+        </p>
+        <app-user-add [(users)]="permission.users"></app-user-add>
+      </div>
+    }
+  </div>
+</div>
