@@ -20,10 +20,7 @@ package(default_applicable_licenses = ["//:license"])
 java_library(
     name = "stub",
     srcs = ["VersionStub.java"],
-    visibility = [
-        "//:deviceinfra_all_pkg",
-        "//:omnilab_fusion",
-    ],
+    visibility = ["//:deviceinfra_all_pkg"],
     deps = [
         "//src/devtools/mobileharness/shared/version/proto:version_service_java_proto",
         "//src/java/com/google/devtools/common/metrics/stability/rpc:exception",
