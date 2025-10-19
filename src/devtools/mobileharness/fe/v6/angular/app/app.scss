@@ -1,0 +1,482 @@
+/**
+ * Copyright 2025 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+@use '@angular/material' as mat;
+@use 'sass:list';
+@use 'sass:map';
+
+// Colors
+$blue-50: #e8f0fe;
+$blue-100: #d2e3fc;
+$blue-300: #8ab4f8;
+$blue-500: #4285f4;
+$blue-600: #1a73e8;
+$blue-700: #1967d2;
+
+$cyan-500: #24c1e0;
+
+$green-50: #e6f4ea;
+$green-100: #ceead6;
+$green-500: #34a853;
+$green-600: #1e8e3e;
+$green-900: #0d652d;
+
+$grey-100: #f1f3f4;
+$grey-300: #dadce0;
+$grey-500: #9aa0a6;
+$grey-700: #5f6368;
+$grey-800: #3c4043;
+$grey-900: #202124;
+
+$red-50: #fce8e6;
+$red-100: #fad2cf;
+$red-400: #ea4335;
+$red-600: #d93025;
+$red-700: #c5221f;
+
+$yellow-50: #fef7e0;
+$yellow-100: #feefc3;
+$yellow-400: #fcc934;
+$yellow-800: #f9a825;
+$yellow-900: #e37400;
+
+$labcosnole-bg: #f0f4f9;
+
+$white: #fff;
+
+// Themes
+$primary-dark: $grey-900;
+$primary-more: $grey-700;
+$primary: $grey-500;
+$primary-less: $grey-300;
+$primary-light: $grey-100;
+
+$accent: $blue-500;
+$accent-dark: $blue-700;
+$accent-light: $blue-100;
+
+$danger: $red-400;
+$danger-dark: $red-700;
+$danger-background: $red-100;
+
+$progress: $cyan-500;
+$progress-background: $blue-100;
+
+$success: $green-500;
+$success-dark: $green-900;
+$success-background: $green-100;
+
+$warning: $yellow-400;
+$warning-background: $yellow-100;
+
+// $background-default: $white;
+$background-default: $labcosnole-bg;
+$text-default: $grey-900;
+
+// Components
+$background-active: $accent-light;
+$background-button-flat: $accent-dark;
+$background-chip: $primary-less;
+$background-table-header: $primary-light;
+
+$border-button: $accent;
+$border-chip: $primary;
+$border-menu: $primary-less;
+$border-table: $primary-less;
+
+$navigation: $grey-800;
+
+$text-button: $accent-dark;
+$text-button-flat: $white;
+$text-danger: $danger;
+$text-danger-small: $danger-dark;
+$text-header: $primary-dark;
+$text-link: $accent-dark;
+$text-menu: $accent-dark;
+$text-primary: $primary-more;
+$text-progress: $progress;
+$text-success: $success;
+$text-success-small: $success-dark;
+$text-warning: $warning;
+
+$icon-danger: $danger;
+$icon-warning: $yellow-800;
+
+// Core material styles
+@include mat.core();
+
+// Application theme
+$primary: mat.m2-define-palette(mat.$m2-grey-palette);
+$accent: mat.m2-define-palette(mat.$m2-blue-palette, 100);
+$warn: mat.m2-define-palette(mat.$m2-amber-palette);
+$labconsole-font: 'Google Sans';
+$typography: mat.m2-define-typography-config(
+  $font-family: $labconsole-font,
+);
+
+$theme: mat.m2-define-light-theme(
+  (
+    color: (
+      primary: $primary,
+      accent: $accent,
+      warn: $warn,
+    ),
+    density: 0,
+    typography: $typography,
+  )
+);
+
+// Add background theme
+// $background-color: $white;
+$background-color: $labcosnole-bg;
+$background: map-get(mat.m2-get-color-config($theme), background);
+$background: map_merge(
+  $background,
+  (
+    background: $background-color,
+  )
+);
+$theme: map_merge(
+  $theme,
+  (
+    background: $background,
+  )
+);
+
+// Apply themes to all components
+@include mat.all-component-themes($theme);
+@include mat.divider-theme($theme);
+@include mat.radio-theme($theme);
+@include mat.select-theme($theme);
+@include mat.checkbox-theme($theme);
+@include mat.dialog-theme($theme);
+@include mat.tooltip-theme($theme);
+@include mat.table-theme($theme);
+@include mat.progress-spinner-theme($theme);
+@include mat.fab-theme($theme);
+@include mat.progress-bar-theme($theme);
+@include mat.icon-button-theme($theme);
+@include mat.paginator-theme($theme);
+@include mat.tabs-theme($theme);
+@include mat.list-theme($theme);
+@include mat.autocomplete-theme($theme);
+@include mat.menu-theme($theme);
+@include mat.card-theme($theme);
+@include mat.core-theme($theme);
+@include mat.chips-theme($theme);
+@include mat.snack-bar-theme($theme);
+
+@include mat.checkbox-typography($typography);
+@include mat.radio-typography($typography);
+@include mat.dialog-typography($typography);
+@include mat.tooltip-typography($typography);
+@include mat.snack-bar-typography($typography);
+@include mat.table-typography($typography);
+@include mat.progress-spinner-typography($typography);
+@include mat.progress-bar-typography($typography);
+@include mat.menu-typography($typography);
+
+$button-primary: mat.m2-define-palette(mat.$m2-grey-palette);
+$button-accent: mat.m2-define-palette(mat.$m2-blue-palette, 700);
+$button-theme: mat.m2-define-light-theme(
+  (
+    color: (
+      primary: $button-primary,
+      accent: $button-accent,
+    ),
+    density: 0,
+    typography: mat.m2-define-typography-config(),
+  )
+);
+@include mat.button-theme($button-theme);
+
+$stepper-primary: mat.m2-define-palette(mat.$m2-blue-palette, 700);
+$stepper-accent: mat.m2-define-palette(mat.$m2-blue-palette, 100);
+$stepper-theme: mat.m2-define-light-theme(
+  (
+    color: (
+      primary: $stepper-primary,
+      accent: $stepper-accent,
+    ),
+    density: 0,
+    typography: mat.m2-define-typography-config(),
+  )
+);
+@include mat.stepper-theme($stepper-theme);
+
+$input-primary: mat.m2-define-palette(mat.$m2-blue-palette, 600);
+$input-accent: mat.m2-define-palette(mat.$m2-blue-palette, 600);
+
+// Form theme
+$primary: mat.m2-define-palette(mat.$m2-grey-palette);
+$accent: mat.m2-define-palette(mat.$m2-blue-palette, 100);
+$warn: mat.m2-define-palette(mat.$m2-amber-palette);
+
+a {
+  color: $text-link;
+  text-decoration: none;
+}
+
+body {
+  // font-family: 'Roboto', sans-serif;
+  font-family: $labconsole-font;
+  height: 100vh;
+  margin: 0;
+}
+
+mat-spinner.loading-spinner {
+  left: 50%;
+  margin: -50px 0 0 -50px;
+  position: absolute;
+  top: 50%;
+}
+
+[mat-icon-button] mat-icon:not([color]) {
+  opacity: 0.6;
+}
+
+[mat-icon-button]:hover mat-icon:not([color]) {
+  opacity: 1;
+}
+
+.loading-mask {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.loading-spinner-overlay {
+  align-items: center;
+  display: flex;
+  height: 100%;
+  justify-content: center;
+  position: absolute;
+  width: 100%;
+  z-index: 101;
+}
+
+.page {
+  margin: 24px;
+}
+
+::-webkit-scrollbar {
+  background-color: $background-default;
+  width: 15px;
+}
+
+::-webkit-scrollbar-track {
+  background-color: $background-default;
+  &:hover {
+    background-color: map.get(mat.$m2-grey-palette, 100);
+  }
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: map.get(mat.$m2-grey-palette, 300);
+  border-radius: 16px;
+  border: 5px solid $white;
+  &:hover {
+    background-color: map.get(mat.$m2-grey-palette, 400);
+    border: 4px solid map.get(mat.$m2-grey-palette, 100);
+  }
+}
+
+::-webkit-scrollbar-button {
+  display: none;
+}
+
+// ================================begin of app.scss
+
+app-root {
+  height: calc(100vh - 64px);
+  display: block;
+}
+
+app-root {
+  $sidenav-collapsed-width: 62px;
+  $sidenav-expanded-width: 200px;
+  $nav-transition-duration: 250ms;
+
+  @mixin sidenav-container-transition($duration) {
+    transition-property: width;
+    transition-duration: $duration;
+    transition-timing-function: ease-in-out;
+  }
+
+  @mixin sidenav-nav-list-transition($duration) {
+    transition-property: opacity;
+    transition-duration: $duration;
+    transition-timing-function: ease-in-out;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  @mixin sidenav-content-transition($duration) {
+    transition-property: margin-left;
+    transition-duration: $duration;
+    transition-timing-function: ease-in-out;
+  }
+
+  button.toggleSidenavButton.toolbar-button {
+    left: -10px;
+
+    mat-icon {
+      color: $navigation;
+    }
+  }
+
+  :host,
+  mat-sidenav-content {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  footer {
+    color: #787878;
+    flex: none;
+    font-size: 13px;
+    margin: 20px 20px 4px;
+    display: flex;
+    flex-wrap: nowrap;
+    place-content: center space-between;
+    align-items: center;
+  }
+
+  main {
+    // flex: 1;
+    height: calc(100% - 41px);
+    overflow: auto;
+  }
+
+  mat-divider {
+    margin: 10px;
+  }
+
+  mat-icon {
+    margin-right: 6px;
+  }
+
+  mat-nav-list {
+    a[mat-list-item] {
+      font-size: 14px;
+      height: 40px;
+      margin: 5px 0px;
+    }
+
+    [mat-list-item].active {
+      background: $background-active;
+    }
+  }
+
+  .mat-mdc-list-base {
+    @include mat.list-overrides(
+      (
+        list-item-leading-icon-color: rgba(0, 0, 0, 0.87),
+      )
+    );
+  }
+
+  .app-sidenav-container {
+    background-color: $labcosnole-bg;
+
+    > mat-sidenav {
+      background-color: $labcosnole-bg;
+    }
+  }
+
+  mat-sidenav-container {
+    height: 100%;
+
+    mat-sidenav {
+      @include sidenav-container-transition($nav-transition-duration);
+      width: $sidenav-expanded-width;
+
+      .mat-mdc-subheader,
+      .mat-divider,
+      .mat-mdc-list-item span {
+        @include sidenav-nav-list-transition($nav-transition-duration);
+      }
+    }
+
+    .mat-sidenav-content {
+      @include sidenav-content-transition($nav-transition-duration);
+      // stylelint-disable declaration-no-important -- override the margin-left to adjust the width of the content for the side nav.
+      margin-left: calc($sidenav-expanded-width - 12px) !important;
+    }
+
+    &.collapsed {
+      mat-sidenav {
+        width: $sidenav-collapsed-width;
+
+        .mat-mdc-subheader,
+        .mat-divider,
+        .mat-mdc-list-item span {
+          opacity: 0;
+        }
+      }
+
+      .mat-sidenav-content {
+        // stylelint-disable declaration-no-important -- override the margin-left to adjust the width of the content for the side nav.
+        margin-left: $sidenav-collapsed-width !important;
+      }
+    }
+  }
+
+  .app-toolbar {
+    background-color: $white;
+    border-bottom: 1px solid $border-menu;
+    position: sticky;
+    top: 0;
+    display: flex;
+
+    .title {
+      font-size: 20px;
+      padding: 0 11px;
+    }
+
+    .version-info {
+      display: flex;
+      flex: 1;
+      font-size: 12px;
+      justify-content: flex-end;
+      line-height: 16px;
+    }
+    .account-menu {
+      display: flex;
+      flex: 1;
+      justify-content: flex-end;
+
+      button {
+        padding: 0;
+        .user-avatar {
+          width: 36px;
+          height: 36px;
+          border-radius: 50%;
+        }
+      }
+    }
+    img {
+      // height: 100%;
+      object-fit: contain;
+      vertical-align: middle;
+      width: 52px;
+      height: 32px;
+    }
+  }
+}
+
+.display-hidden {
+  display: none;
+}

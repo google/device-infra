@@ -1,0 +1,13 @@
+@if (configResult$ | async; as configResult) {
+  @if (configResult.isHostManaged) {
+    <app-host-managed [deviceId]="data.deviceId"></app-host-managed>
+  } @else if (!configResult.deviceConfig) {
+    <app-empty-config
+      [deviceId]="data.deviceId"
+      [hostName]="data.hostName"
+      title="This device has an empty configuration. Choose how to begin."
+    ></app-empty-config>
+  } @else {
+    <app-settings [deviceId]="data.deviceId" [config]="configResult.deviceConfig"></app-settings>
+  }
+}

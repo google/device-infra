@@ -1,0 +1,44 @@
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  padding: 1rem 1.5rem;
+  font-size: 1.125rem;
+  font-weight: 500;
+  user-select: none;
+  border-bottom: 1px solid #e0e0e0;
+
+  .expand-icon {
+    transition: transform 0.2s ease-in-out;
+  }
+
+  .expand-icon.rotated {
+    transform: rotate(-90deg);
+  }
+}
+
+.panel-header.collapsed {
+  border-bottom: none;
+}
+
+.panel-content {
+  display: grid;
+  grid-template-rows: 0fr;
+  overflow: hidden;
+  transition: grid-template-rows 225ms cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+.panel-content .content {
+  min-height: 0;
+  transition: visibility 0.5s;
+  visibility: hidden;
+}
+
+.panel-content.expanded {
+  grid-template-rows: 1fr;
+}
+
+.panel-content.expanded .content {
+  visibility: visible;
+}

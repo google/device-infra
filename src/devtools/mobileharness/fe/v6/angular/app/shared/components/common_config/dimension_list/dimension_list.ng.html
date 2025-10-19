@@ -1,0 +1,52 @@
+<div class="dimension-list-header">
+  <span>Name</span>
+  <span>Value</span>
+  <span class="action-col">Actions</span>
+</div>
+<div class="dimension-list-container">
+  @if (dimensions.length === 0) {
+    <div class="no-dimension-container">
+      <p class="no-dimension-message text-gray-500">No dimensions of this type have been added.</p>
+    </div>
+  }
+
+  @for (dimension of dimensions; track $index; let i = $index) {
+    <div class="dimension-list-row">
+      <div class="form-group">
+        <label class="form-label">Dimension Name</label>
+        <input
+          type="text"
+          class="form-input"
+          [class.error]="currentEditingIndex === i && duplicate(i)"
+          placeholder="e.g., pool"
+          [(ngModel)]="dimension.name"
+          (input)="onDimensionChanged(i, dimension.name, dimension.value)"
+        />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Dimension Value</label>
+        <input
+          type="text"
+          class="form-input"
+          [class.error]="currentEditingIndex === i && duplicate(i)"
+          placeholder="e.g., presubmit"
+          [(ngModel)]="dimension.value"
+          (input)="onDimensionChanged(i, dimension.name, dimension.value)"
+        />
+      </div>
+
+      <div class="delete-button-wrapper">
+        <button mat-icon-button title="Remove dimension" (click)="remove(i)">
+          <mat-icon>delete</mat-icon>
+        </button>
+      </div>
+    </div>
+
+    @if (currentEditingIndex === i && duplicate(i)) {
+      <div class="error-message"> Duplicate dimension, please change the name or value. </div>
+    }
+  }
+</div>
+<button class="add-dimension-button" type="button" mat-button (click)="add()">
+  <mat-icon>add</mat-icon>Add Dimension
+</button>

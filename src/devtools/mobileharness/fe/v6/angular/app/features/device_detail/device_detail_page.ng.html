@@ -1,0 +1,159 @@
+<div class="page-container">
+  @if (devicePageData$ | async; as data) {
+    @if (data.error) {
+      <div class="error-message">
+        <mat-icon class="error-icon">error_outline</mat-icon>
+        <p>{{ data.error }}</p>
+        <a routerLink="/dev/device-harness" class="m3-button">Back to Harness</a>
+      </div>
+    } @else if (data.device; as device) {
+      <div class="main-card">
+        <header class="card-header">
+          <div class="header-device-id">
+            <a
+              [routerLink]="['/hosts', device.host.name]"
+              class="host-link"
+              title="Navigate to host: {{ device.host.name }}"
+              >{{ device.host.name }}</a
+            >
+            <mat-icon class="chevron-icon">chevron_right</mat-icon>
+            <span class="device-id-text" title="Device ID: {{ device.id }}">{{ device.id }}</span>
+          </div>
+
+          <div class="header-actions">
+            <!-- Basic set of actions, responsive handling will be in CSS -->
+            <button
+              class="m3-action-button filled"
+              (click)="openConfiguration(device.id, device.host.name)"
+            >
+              <mat-icon>settings</mat-icon>Configuration
+            </button>
+            <button
+              class="m3-action-button filled"
+              (click)="takeScreenshot()"
+              [disabled]="!device.basicInfo.os.toLowerCase().includes('android')"
+            >
+              <mat-icon>screenshot</mat-icon>Screenshot
+            </button>
+            <button
+              class="m3-action-button filled"
+              (click)="remoteControl()"
+              [disabled]="!device.basicInfo.os.toLowerCase().includes('android')"
+            >
+              <mat-icon>important_devices</mat-icon>Remote Control
+            </button>
+            <button
+              class="m3-action-button filled"
+              (click)="flashDevice()"
+              [disabled]="!device.basicInfo.os.toLowerCase().includes('android')"
+            >
+              <mat-icon>flash_on</mat-icon>Flash
+            </button>
+            <button
+              class="m3-action-button filled"
+              (click)="getLogcat()"
+              [disabled]="!device.basicInfo.os.toLowerCase().includes('android')"
+            >
+              <mat-icon>description</mat-icon>Get Logcat
+            </button>
+            <button class="m3-action-button filled" (click)="quarantineDevice()">
+              <mat-icon>block</mat-icon>Quarantine
+            </button>
+          </div>
+        </header>
+
+        <div class="card-body">
+          <!-- Device Title Bar -->
+          <div class="device-title-bar">
+            <div class="title-icon-wrapper">
+              <mat-icon class="title-icon">important_devices</mat-icon>
+            </div>
+            <div class="title-text-wrapper">
+              <div class="title-main">
+                <h1 class="device-title" title="{{ device.id }}">{{ device.id }}</h1>
+                <button
+                  (click)="copyToClipboard(device.id)"
+                  class="copy-button"
+                  title="Copy device ID"
+                >
+                  <mat-icon class="copy-icon">content_copy</mat-icon>
+                </button>
+              </div>
+              <div class="title-subtitle">
+                <span>Connected to Host:</span>
+                <a
+                  [routerLink]="['/hosts', device.host.name]"
+                  class="host-link-inline"
+                  title="{{ device.host.name }}"
+                  >{{ device.host.name }}</a
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- Tabs -->
+          <div class="tabs-container">
+            <nav class="tabs-nav">
+              <button
+                (click)="setActiveTab('overview')"
+                class="tab-link"
+                [class.active]="activeTab() === 'overview'"
+              >
+                Overview
+              </button>
+              <button
+                (click)="setActiveTab('test-history')"
+                class="tab-link"
+                [class.active]="activeTab() === 'test-history'"
+              >
+                Test History
+              </button>
+              <button
+                (click)="setActiveTab('health')"
+                class="tab-link"
+                [class.active]="activeTab() === 'health'"
+              >
+                Health Statistics
+              </button>
+              <button
+                (click)="setActiveTab('record')"
+                class="tab-link"
+                [class.active]="activeTab() === 'record'"
+              >
+                Record
+              </button>
+            </nav>
+          </div>
+
+          <!-- Tab Content -->
+          <div class="tab-content-container">
+            @if (activeTab() === 'overview') {
+              <div class="tab-content">
+                <app-device-overview-tab [device]="device"></app-device-overview-tab>
+              </div>
+            }
+            @if (activeTab() === 'test-history') {
+              <div class="tab-content">
+                <p class="placeholder-text">Test History UI Mock is defined in another document.</p>
+              </div>
+            }
+            @if (activeTab() === 'health') {
+              <div class="tab-content">
+                <p class="placeholder-text">Health Statistics Content Here.</p>
+              </div>
+            }
+            @if (activeTab() === 'record') {
+              <div class="tab-content">
+                <p class="placeholder-text">Device Record Content Here.</p>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    } @else {
+      <div class="loading-message">
+        <p>Loading device details...</p>
+      </div>
+    }
+  }
+</div>

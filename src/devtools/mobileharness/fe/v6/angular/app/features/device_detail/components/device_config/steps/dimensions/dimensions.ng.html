@@ -1,0 +1,66 @@
+<div class="dimension-editor-wrapper">
+  <div class="dimension-editor-header">
+    @if (workflow === 'wizard') {
+      <h3 class="font-semibold text-gray-800">Dimensions</h3>
+      <p class="text-gray-600 header-desc">
+        Do you need to add any custom dimensions for advanced scheduling? <br />
+        <strong>
+          Many dimensions (like model) are added automatically. It's safe to skip this step if you
+          are unsure.
+        </strong>
+      </p>
+    } @else {
+      <h3 class="font-semibold text-gray-800">Dimensions</h3>
+    }
+  </div>
+
+  <div class="dimension-editor-content space-y-8">
+    <div class="dimension-group">
+      <h4 class="font-medium text-gray-700 dim-title">Supported Dimensions</h4>
+      @if (workflow === 'wizard') {
+        <details class="wizard-details">
+          <summary>What are 'Supported Dimensions'?</summary>
+          <div class="wizard-details-content">
+            These are additional dimensions that describe this device (e.g., 'label:
+            some_label').<br />
+            An OmniLab job can request these dimensions, along with system-provided ones, to find
+            and use this device.
+          </div>
+        </details>
+      } @else {
+        <p class="text-gray-600 dis-desc">
+          These are additional dimensions that describe this device (e.g., 'label: some_label').<br />
+          An OmniLab job can request these dimensions, along with system-provided ones, to find and
+          use this device.
+        </p>
+      }
+      <app-dimension-list
+        [(dimensions)]="dimensions.supported"
+        (hasError)="onHasErrorChanged('supported', $event)"
+      ></app-dimension-list>
+    </div>
+    <div class="dimension-group">
+      <h4 class="font-medium text-gray-700 dim-title">Required Dimensions</h4>
+      @if (workflow === 'wizard') {
+        <details class="wizard-details">
+          <summary>What are 'Required Dimensions'?</summary>
+          <div class="wizard-details-content">
+            These are additional dimensions that a job MUST provide to use this device (e.g., 'pool:
+            some_pool').<br />
+            This protects a specialized device from being used by general jobs.
+          </div>
+        </details>
+      } @else {
+        <p class="text-gray-600 dis-desc">
+          These are additional dimensions that a job MUST provide to use this device (e.g., 'pool:
+          some_pool').<br />
+          This protects a specialized device from being used by general jobs.
+        </p>
+      }
+      <app-dimension-list
+        [(dimensions)]="dimensions.required"
+        (hasError)="onHasErrorChanged('required', $event)"
+      ></app-dimension-list>
+    </div>
+  </div>
+</div>

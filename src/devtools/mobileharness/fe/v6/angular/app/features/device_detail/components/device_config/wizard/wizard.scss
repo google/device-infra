@@ -1,0 +1,96 @@
+@use '../../../../../shared/styles/configuration';
+@use '@angular/material' as mat;
+
+:host {
+  @include mat.stepper-overrides((
+    header-height: 24px,
+    header-selected-state-icon-background-color: #1A73E8,
+    // header-selected-state-label-text-color: #1A73E8,
+    header-selected-state-label-text-color: #1d4ed8,
+    header-done-state-icon-background-color: #1A73E8,
+  ));
+
+  @include mat.table-overrides((
+    header-container-height: 2rem,
+    row-item-container-height: 1.25rem,
+    row-item-outline-width: 0,
+  ));
+}
+
+.stepper-section {
+  flex-grow: 1;
+}
+
+.stepper-section ::ng-deep .mat-horizontal-stepper-wrapper {
+  max-height: calc(90vh - 99px - 85px);
+}
+
+.stepper-section ::ng-deep .mat-horizontal-stepper-header-container {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
+  background-color: #f8fafc;
+  text-align: center;
+  display: flex;
+  justify-content: center;
+
+  overflow-y: auto;
+}
+
+.stepper-section ::ng-deep .mat-horizontal-content-container {
+  padding: 0;
+}
+
+.stepper-section ::ng-deep .mat-stepper-horizontal-line{
+  max-width: 50px;
+}
+
+.step-content {
+  padding: 1.5rem;
+  overflow-y: auto;
+  flex-grow: 1;
+  min-height: 0px;
+  max-height: calc(90vh - 99px - 85px - 56px);
+
+  .review-desc {
+    margin: 0.25rem 0 1.5rem 0;
+  }
+
+  .review-table {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    text-align: left;
+    width: 100%;
+  }
+
+  .review-table .header-row {
+    font-size: 0.75rem;
+    line-height: 1rem;
+    text-transform: uppercase;
+    background-color: #f8fafc;
+    font-weight: 600; color: #475569;
+  }
+
+  .review-table td {
+    padding: 0.75rem 1rem;
+    vertical-align: top;
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  .review-table .category-row td {
+    font-weight: 600;
+    color: #1e293b;
+    background-color: #f8fafc;
+  }
+}
+
+.title-medium {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+}
+
+@media (min-width: 768px) {
+  .step-content {
+    padding: 2rem;
+  }
+}
+
