@@ -32,8 +32,6 @@ java_library(
         "//src/javatests/com/google/devtools/mobileharness/infra/client/api:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/controller/device/proxy:__pkg__",
     ],
-    runtime_deps = [
-    ],
     deps = [
         ":device_info_filter",
         ":local_device_allocator",
