@@ -16,7 +16,9 @@
 
 package com.google.devtools.mobileharness.api.devicemanager.detector;
 
-import com.google.common.base.Strings;
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
+import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.api.devicemanager.detector.model.DetectionResult;
 import com.google.devtools.mobileharness.api.devicemanager.detector.model.DetectionResult.DetectionType;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -24,6 +26,7 @@ import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.stream.IntStream;
 
 /**
  * Detector for generating {@link com.google.wireless.qa.mobileharness.shared.api.device.NoOpDevice}
@@ -33,42 +36,49 @@ import java.util.Random;
  * --no_op_device_num is set, all other devices will be disabled.
  */
 public class NoOpDeviceDetector implements Detector {
+
   private static final Random RANDOM = new Random();
 
-  private final String deviceIdPrefix;
-
-  public NoOpDeviceDetector() {
-    String supportedDeviceType = Flags.instance().noOpDeviceType.getNonNull();
-    if (!Strings.isNullOrEmpty(supportedDeviceType)) {
-      deviceIdPrefix = supportedDeviceType;
-    } else {
-      deviceIdPrefix = "NoOpDevice";
-    }
-  }
+  /** Set in {@link #precondition()}. */
+  private volatile ImmutableList<DetectionResult> detectionResults;
 
   @Override
   public boolean precondition() throws InterruptedException {
-    return Flags.instance().noOpDeviceNum.getNonNull() > 0;
+    detectionResults = createDetectionResults();
+    return !detectionResults.isEmpty();
   }
 
+  @SuppressWarnings("MixedMutabilityReturnType")
   @Override
   public List<DetectionResult> detectDevices() throws MobileHarnessException, InterruptedException {
-    int deviceIndexToTakeOffline = -1;
-    if (Flags.instance().noOpDeviceRandomOffline.getNonNull()) {
-      // This is roughly 1/100 chance ...
-      deviceIndexToTakeOffline = RANDOM.nextInt(Flags.instance().noOpDeviceNum.getNonNull() * 100);
+    if (!Flags.instance().noOpDeviceRandomOffline.getNonNull() || RANDOM.nextInt(100) >= 1) {
+      return detectionResults;
     }
-    List<DetectionResult> detectionResults = new ArrayList<>();
-    for (int i = 0; i < Flags.instance().noOpDeviceNum.getNonNull(); i++) {
+
+    // With a 1% change, makes one device be offline.
+    int deviceIndexToTakeOffline = RANDOM.nextInt(detectionResults.size());
+    List<DetectionResult> newDetectionResults = new ArrayList<>(detectionResults.size() - 1);
+    for (int i = 0; i < detectionResults.size(); i++) {
       if (i != deviceIndexToTakeOffline) {
-        detectionResults.add(
-            DetectionResult.of(
-                String.format(
-                    "%s-%d",
-                    deviceIdPrefix, i + Flags.instance().noOpDeviceStartIndex.getNonNull()),
-                DetectionType.NO_OP));
+        newDetectionResults.add(detectionResults.get(i));
       }
     }
-    return detectionResults;
+    return newDetectionResults;
+  }
+
+  private static ImmutableList<DetectionResult> createDetectionResults() {
+    String noOpDeviceType = Flags.instance().noOpDeviceType.getNonNull();
+    String deviceIdPrefix = noOpDeviceType.isEmpty() ? "NoOpDevice" : noOpDeviceType;
+
+    return IntStream.range(0, Flags.instance().noOpDeviceNum.getNonNull())
+        .mapToObj(
+            offset ->
+                DetectionResult.of(
+                    String.format(
+                        "%s-%d",
+                        deviceIdPrefix,
+                        Flags.instance().noOpDeviceStartIndex.getNonNull() + offset),
+                    DetectionType.NO_OP))
+        .collect(toImmutableList());
   }
 }
