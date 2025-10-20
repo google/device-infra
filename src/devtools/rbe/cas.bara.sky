@@ -7,6 +7,10 @@ CAS_BUILD_FILES = [
     "**.bzl",
 ]
 
+GOOGLE3_CAS_EXCLUDES = [
+    "src/devtools/rbe/casdownloader/config.json",  # Internal information, no plan to open source.
+]
+
 def cas_build_file_replace(before_target, after_target):
     """
     Replace package targets (such as in dependencies) with a given prefix with a new prefix.
