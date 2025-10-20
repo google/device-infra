@@ -97,6 +97,9 @@ public final class TestPlanParserTest {
     assertThat(filter.moduleMetadataExcludeFilters())
         .containsExactly(
             "component", "pts-root", "mock_key", "mock_value", "component", "gts-root");
+    assertThat(filter.tests())
+        .containsExactly(
+            "com.android.compatibility.common.tradefed.testtype.suite.CompatibilityTestSuite");
   }
 
   @Test
@@ -125,6 +128,7 @@ public final class TestPlanParserTest {
                 ImmutableSet.of(),
                 ImmutableSet.of(),
                 ImmutableMultimap.of(),
-                ImmutableMultimap.of()));
+                ImmutableMultimap.of(),
+                ImmutableSet.of()));
   }
 }

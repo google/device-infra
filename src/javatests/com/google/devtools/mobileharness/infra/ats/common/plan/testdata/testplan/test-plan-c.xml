@@ -24,4 +24,6 @@
     <option name="compatibility:module-metadata-include-filter" key="mock_flag" value="none" />
     <option name="compatibility:include-filter" value="CtsOsTestCases android.os.cts.BuildTest#testIsSecureUserBuild" />
 
+    <test class="com.android.compatibility.common.tradefed.testtype.suite.CompatibilityTestSuite" />
+
 </configuration>

@@ -110,7 +110,12 @@ public final class SessionRequestHandlerUtilTest {
 
   private final TestPlanFilter testPlanFilter =
       TestPlanFilter.create(
-          ImmutableSet.of(), ImmutableSet.of(), ImmutableMultimap.of(), ImmutableMultimap.of());
+          ImmutableSet.of(),
+          ImmutableSet.of(),
+          ImmutableMultimap.of(),
+          ImmutableMultimap.of(),
+          ImmutableSet.of(
+              "com.android.compatibility.common.tradefed.testtype.suite.CompatibilityTestSuite"));
 
   @Before
   public void setUp() throws Exception {
@@ -1369,7 +1374,9 @@ public final class SessionRequestHandlerUtilTest {
                 ImmutableSet.of(),
                 ImmutableSet.of("module1 FooTest#test1", "module2 FooTest#test2"),
                 ImmutableMultimap.of(),
-                ImmutableMultimap.of()));
+                ImmutableMultimap.of(),
+                ImmutableSet.of(
+                    "com.android.compatibility.common.tradefed.testtype.suite.CompatibilityTestSuite")));
 
     SessionRequestInfo sessionRequestInfo =
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(
@@ -1464,6 +1471,27 @@ public final class SessionRequestHandlerUtilTest {
             defaultSessionRequestInfoBuilder()
                 .setExcludeRunners(ImmutableSet.of("com.google.Driver"))
                 .build());
+    ImmutableList<JobInfo> jobInfos =
+        sessionRequestHandlerUtil.createXtsNonTradefedJobs(
+            sessionRequestInfo, null, ImmutableMap.of());
+
+    assertThat(jobInfos).isEmpty();
+  }
+
+  @Test
+  public void excludeNonTfModuleByTestPlan() throws Exception {
+    when(testPlanParser.parseFilters(any(), any(), eq("cts")))
+        .thenReturn(
+            TestPlanFilter.create(
+                ImmutableSet.of(),
+                ImmutableSet.of("module1 FooTest#test1", "module2 FooTest#test2"),
+                ImmutableMultimap.of(),
+                ImmutableMultimap.of(),
+                ImmutableSet.of()));
+    setUpForCreateXtsNonTradefedJobs();
+    SessionRequestInfo sessionRequestInfo =
+        sessionRequestHandlerUtil.addNonTradefedModuleInfo(
+            defaultSessionRequestInfoBuilder().build());
     ImmutableList<JobInfo> jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
             sessionRequestInfo, null, ImmutableMap.of());

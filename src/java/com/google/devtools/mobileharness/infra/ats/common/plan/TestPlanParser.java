@@ -48,6 +48,7 @@ public class TestPlanParser {
   private static final String CONFIGURATION_NODE_NAME = "configuration";
   private static final String OPTION_NODE_NAME = "option";
   private static final String INCLUDE_NODE_NAME = "include";
+  private static final String TEST_NODE_NAME = "test";
 
   private static final String ATTR_NAME_KEY = "name";
   private static final String ATTR_KEY_KEY = "key";
@@ -59,6 +60,7 @@ public class TestPlanParser {
       "compatibility:module-metadata-include-filter";
   private static final String MODULE_METADATA_EXCLUDE_FILTER_ATTR_NAME =
       "compatibility:module-metadata-exclude-filter";
+  private static final String CLASS_ATTR_NAME = "class";
 
   private final PlanConfigUtil planConfigUtil;
 
@@ -72,7 +74,11 @@ public class TestPlanParser {
     if (rootTestPlan.equals("retry")) {
       // Skip parsing the retry test plan since it is not a valid XML.
       return TestPlanFilter.create(
-          ImmutableSet.of(), ImmutableSet.of(), ImmutableMultimap.of(), ImmutableMultimap.of());
+          ImmutableSet.of(),
+          ImmutableSet.of(),
+          ImmutableMultimap.of(),
+          ImmutableMultimap.of(),
+          ImmutableSet.of());
     }
 
     Path xtsTradefedJarPath =
@@ -88,6 +94,7 @@ public class TestPlanParser {
     Set<String> excludeFilters = new HashSet<>();
     ListMultimap<String, String> metadataIncludeFilters = ArrayListMultimap.create();
     ListMultimap<String, String> metadataExcludeFilters = ArrayListMultimap.create();
+    Set<String> tests = new HashSet<>();
 
     HashSet<String> parsedTestPlans = new HashSet<>();
     Queue<Node> pendingNodes = new ArrayDeque<>();
@@ -135,6 +142,9 @@ public class TestPlanParser {
           case INCLUDE_NODE_NAME:
             parseIncludeNode(node, parsedTestPlans, pendingTestPlans);
             break;
+          case TEST_NODE_NAME:
+            parseTestNode(node, tests);
+            break;
           default:
             break;
         }
@@ -144,7 +154,8 @@ public class TestPlanParser {
         ImmutableSet.copyOf(includeFilters),
         ImmutableSet.copyOf(excludeFilters),
         ImmutableMultimap.copyOf(metadataIncludeFilters),
-        ImmutableMultimap.copyOf(metadataExcludeFilters));
+        ImmutableMultimap.copyOf(metadataExcludeFilters),
+        ImmutableSet.copyOf(tests));
   }
 
   /**
@@ -225,6 +236,14 @@ public class TestPlanParser {
     }
   }
 
+  private static void parseTestNode(Node node, Set<String> tests) {
+    NamedNodeMap attributes = node.getAttributes();
+    Node classNode = attributes.getNamedItem(CLASS_ATTR_NAME);
+    if (classNode != null) {
+      tests.add(classNode.getNodeValue());
+    }
+  }
+
   /** A data class for all filters collected from the test plan. */
   @AutoValue
   public abstract static class TestPlanFilter {
@@ -236,16 +255,20 @@ public class TestPlanParser {
 
     public abstract ImmutableMultimap<String, String> moduleMetadataExcludeFilters();
 
+    public abstract ImmutableSet<String> tests();
+
     public static TestPlanFilter create(
         ImmutableSet<String> includeFilters,
         ImmutableSet<String> excludeFilters,
         ImmutableMultimap<String, String> moduleMetadataIncludeFilters,
-        ImmutableMultimap<String, String> moduleMetadataExcludeFilters) {
+        ImmutableMultimap<String, String> moduleMetadataExcludeFilters,
+        ImmutableSet<String> tests) {
       return new AutoValue_TestPlanParser_TestPlanFilter(
           includeFilters,
           excludeFilters,
           moduleMetadataIncludeFilters,
-          moduleMetadataExcludeFilters);
+          moduleMetadataExcludeFilters,
+          tests);
     }
   }
 }

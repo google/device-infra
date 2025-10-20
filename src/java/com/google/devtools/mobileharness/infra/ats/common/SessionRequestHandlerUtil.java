@@ -162,6 +162,9 @@ public class SessionRequestHandlerUtil {
   public static final String PARAM_CHECK_INSTALLED_GMS_CORE_VERSION =
       "check_installed_gms_core_version";
 
+  private static final String COMPATIBILITY_TEST_SUITE_CLASS_NAME =
+      "com.android.compatibility.common.tradefed.testtype.suite.CompatibilityTestSuite";
+
   private static final Pattern MODULE_PARAMETER_PATTERN =
       Pattern.compile(".*\\[(?<moduleParam>.*)]$");
 
@@ -865,19 +868,23 @@ public class SessionRequestHandlerUtil {
         sessionRequestInfo.v2ConfigsMap().entrySet().stream()
             .collect(toImmutableMap(e -> e.getValue().getMetadata().getXtsModule(), Entry::getKey));
 
-    TestPlanFilter testPlanFilter;
-    if (SessionRequestHandlerUtil.isRunRetry(sessionRequestInfo.testPlan()) && subPlan != null) {
-      testPlanFilter =
-          testPlanParser.parseFilters(
-              Path.of(sessionRequestInfo.xtsRootDir()),
-              sessionRequestInfo.xtsType(),
-              subPlan.getPreviousSessionXtsTestPlan());
-    } else {
-      testPlanFilter =
-          testPlanParser.parseFilters(
-              Path.of(sessionRequestInfo.xtsRootDir()),
-              sessionRequestInfo.xtsType(),
-              sessionRequestInfo.testPlan());
+    String testPlan =
+        (SessionRequestHandlerUtil.isRunRetry(sessionRequestInfo.testPlan()) && subPlan != null)
+            ? subPlan.getPreviousSessionXtsTestPlan()
+            : sessionRequestInfo.testPlan();
+    TestPlanFilter testPlanFilter =
+        testPlanParser.parseFilters(
+            Path.of(sessionRequestInfo.xtsRootDir()), sessionRequestInfo.xtsType(), testPlan);
+
+    if (!testPlanFilter.tests().contains(COMPATIBILITY_TEST_SUITE_CLASS_NAME)) {
+      logger
+          .atInfo()
+          .with(IMPORTANCE, IMPORTANT)
+          .log(
+              "The test plan %s is not for compatibility test suite. Skip creating non-tradefed"
+                  + " jobs. Plan includes tests: %s.",
+              testPlan, testPlanFilter.tests());
+      return ImmutableList.of();
     }
 
     ImmutableList<SuiteTestFilter> includeFilters;
