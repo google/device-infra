@@ -521,20 +521,45 @@ public abstract class XtsJobCreator {
       SessionRequestInfo sessionRequestInfo)
       throws MobileHarnessException, InterruptedException {
     if (sessionRequestInfo.isXtsDynamicDownloadEnabled().orElse(false)) {
+      ImmutableList.Builder<JobInfo> dynamicJobs = ImmutableList.builder();
       // Create two jobs: create a dynamic download job and a static job.
       for (Map.Entry<String, ImmutableSet<String>> entry : totalDynamicModuleVariables.entrySet()) {
         String jobName = entry.getKey();
-        jobInfos.add(createDynamicJobInfo(sessionRequestInfo, tradefedJobInfo, jobName));
+        dynamicJobs.add(
+            createDynamicJobInfo(
+                reviseRequestInfoForDynamicJob(sessionRequestInfo), tradefedJobInfo, jobName));
       }
-      if (!jobInfos.build().isEmpty()) {
+
+      ImmutableList<JobInfo> createdDynamicJobs = dynamicJobs.build();
+      // Make sure static job is created first and therefore executed first later in the queue. This
+      // list of job will be triggered in AtsServerSessionPlugin one by one. AtsServerSessionPlugin
+      // will make sure the static job is complete before starting the dynamic jobs, and skip
+      // dynamic jobs if static job failed.
+      if (!createdDynamicJobs.isEmpty()) {
         jobInfos.add(
             createDynamicJobInfo(
                 sessionRequestInfo, tradefedJobInfo, XtsConstants.STATIC_XTS_JOB_NAME));
+        jobInfos.addAll(createdDynamicJobs);
       }
     }
   }
 
-  private JobInfo createDynamicJobInfo(
+  /**
+   * Revises the given {@link SessionRequestInfo} for a dynamic job.
+   *
+   * <p>Subclasses can override this method to customize the session request info for dynamic jobs.
+   * Currently this method is mainly used for removing the device actions in the dynamic download
+   * jobs.
+   *
+   * @param sessionRequestInfo the original session request info
+   * @return the revised session request info for the dynamic job
+   */
+  protected SessionRequestInfo reviseRequestInfoForDynamicJob(
+      SessionRequestInfo sessionRequestInfo) {
+    return sessionRequestInfo;
+  }
+
+  protected JobInfo createDynamicJobInfo(
       SessionRequestInfo sessionRequestInfo, TradefedJobInfo tradefedJobInfo, String jobName)
       throws MobileHarnessException, InterruptedException {
     String updatedJobName = tradefedJobInfo.jobConfig().getName() + "_" + jobName;
