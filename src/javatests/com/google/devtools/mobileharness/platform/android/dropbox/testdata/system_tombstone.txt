@@ -1,0 +1,192 @@
+Drop box contents: 76 entries
+Searching for: SYSTEM_TOMBSTONE
+
+========================================
+2025-10-24 14:11:35 SYSTEM_TOMBSTONE (compressed text, 18396 bytes)
+isPrevious: true
+Build: google/sdk_goog3_x86/generic_x86:8.0.0/OSR1.180418.003/4741120:userdebug/test-keys
+Hardware: unknown
+Revision: 0
+Bootloader: unknown
+Radio: unknown
+Kernel: Linux version 3.18.94+ (gcc version 4.9 20140827 (prerelease) (GCC) ) #1 SMP PREEMPT Fri Mar 22 04:30:59 UTC 2019
+
+*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+Build fingerprint: 'google/sdk_goog3_x86/generic_x86:8.0.0/OSR1.180418.003/4741120:userdebug/test-keys'
+Revision: '0'
+ABI: 'x86'
+pid: 4220, tid: 4220, name: g.nativecrasher  >>> com.test.app.nativecrasher <<<
+signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x0
+Cause: null pointer dereference
+    eax 00000021  ebx 8d9390f4  ecx f887fd71  edx 00000001
+    esi 8d850997  edi bffca198
+    xcs 00000073  xds 0000007b  xes 0000007b  xfs 0000003b  xss 0000007b
+    eip 8d938611  ebp bffc9fb8  esp bffc9fa0  flags 00010286
+
+backtrace:
+    #00 pc 00000611  /data/app/com.test.app.nativecrasher-ieFeZoTQiq-DeJ_kD1SBiQ==/lib/x86/libcrasher.so (Java_com_google_android_apps_mtaas_testing_nativecrasher_CrashActivity_crash+49)
+    #01 pc 0063ece7  /system/lib/libart.so (art_quick_generic_jni_trampoline+71)
+    #02 pc 00638d52  /system/lib/libart.so (art_quick_invoke_stub+338)
+    #03 pc 00112b48  /system/lib/libart.so (_ZN3art9ArtMethod6InvokeEPNS_6ThreadEPjjPNS_6JValueEPKc+232)
+    #04 pc 0032322f  /system/lib/libart.so (_ZN3art11interpreter34ArtInterpreterToCompiledCodeBridgeEPNS_6ThreadEPNS_9ArtMethodEPKNS_7DexFile8CodeItemEPNS_11ShadowFrameEPNS_6JValueE+367)
+    #05 pc 0031be11  /system/lib/libart.so (_ZN3art11interpreter6DoCallILb0ELb0EEEbPNS_9ArtMethodEPNS_6ThreadERNS_11ShadowFrameEPKNS_11InstructionEtPNS_6JValueE+817)
+    #06 pc 0061e1a1  /system/lib/libart.so (MterpInvokeVirtual+881)
+    #07 pc 00629921  /system/lib/libart.so (artMterpAsmInstructionStart+14113)
+    #08 pc 002f5f89  /system/lib/libart.so (_ZN3art11interpreterL7ExecuteEPNS_6ThreadEPKNS_7DexFile8CodeItemERNS_11ShadowFrameENS_6JValueEb+537)
+    #09 pc 002fddeb  /system/lib/libart.so (_ZN3art11interpreter30EnterInterpreterFromEntryPointEPNS_6ThreadEPKNS_7DexFile8CodeItemEPNS_11ShadowFrameE+139)
+    #10 pc 0060e56f  /system/lib/libart.so (artQuickToInterpreterBridge+1375)
+    #11 pc 0063edad  /system/lib/libart.so (art_quick_to_interpreter_bridge+77)
+    #12 pc 0079db21  /system/framework/x86/boot-framework.oat (offset 0x5e9000) (android.app.Instrumentation.callActivityOnCreate+113)
+    #13 pc 00638d52  /system/lib/libart.so (art_quick_invoke_stub+338)
+    #14 pc 00112b48  /system/lib/libart.so (_ZN3art9ArtMethod6InvokeEPNS_6ThreadEPjjPNS_6JValueEPKc+232)
+    #15 pc 0032322f  /system/lib/libart.so (_ZN3art11interpreter34ArtInterpreterToCompiledCodeBridgeEPNS_6ThreadEPNS_9ArtMethodEPKNS_7DexFile8CodeItemEPNS_11ShadowFrameEPNS_6JValueE+367)
+    #16 pc 0031c695  /system/lib/libart.so (_ZN3art11interpreter6DoCallILb0ELb1EEEbPNS_9ArtMethodEPNS_6ThreadERNS_11ShadowFrameEPKNS_11InstructionEtPNS_6JValueE+1765)
+
+stack:
+         bffc9f60  00000000
+         bffc9f64  00000004
+         bffc9f68  8d9383fc  /data/app/com.test.app.nativecrasher-ieFeZoTQiq-DeJ_kD1SBiQ==/lib/x86/libcrasher.so
+         bffc9f6c  8d93840a  /data/app/com.test.app.nativecrasher-ieFeZoTQiq-DeJ_kD1SBiQ==/lib/x86/libcrasher.so
+         bffc9f70  a9529320  [anon:libc_malloc]
+         bffc9f74  00000006
+         bffc9f78  a948b1e0  [anon:libc_malloc]
+         bffc9f7c  725a3c9f  /system/framework/x86/boot-framework.oat (android.content.pm.ActivityInfo.isFixedOrientation+63)
+         bffc9f80  00000000
+         bffc9f84  8d9390f4  /data/app/com.test.app.nativecrasher-ieFeZoTQiq-DeJ_kD1SBiQ==/lib/x86/libcrasher.so
+         bffc9f88  bffc9fb8
+         bffc9f8c  8d93860e  /data/app/com.test.app.nativecrasher-ieFeZoTQiq-DeJ_kD1SBiQ==/lib/x86/libcrasher.so (Java_com_google_android_apps_mtaas_testing_nativecrasher_CrashActivity_crash+46)
+         bffc9f90  00000004
+         bffc9f94  8d9383fc  /data/app/com.test.app.nativecrasher-ieFeZoTQiq-DeJ_kD1SBiQ==/lib/x86/libcrasher.so
+         bffc9f98  8d93840a  /data/app/com.test.app.nativecrasher-ieFeZoTQiq-DeJ_kD1SBiQ==/lib/x86/libcrasher.so
+         bffc9f9c  8d9385ef  /data/app/com.test.app.nativecrasher-ieFeZoTQiq-DeJ_kD1SBiQ==/lib/x86/libcrasher.so (Java_com_google_android_apps_mtaas_testing_nativecrasher_CrashActivity_crash+15)
+    #00  bffc9fa0  00000006
+         bffc9fa4  a955a000  [anon:libc_malloc]
+         bffc9fa8  00000000
+         bffc9fac  00000004
+         bffc9fb0  bffc9fd0
+         bffc9fb4  0000000c
+         bffc9fb8  bffc9fe0
+         bffc9fbc  a9348ce8  /system/lib/libart.so (art_quick_generic_jni_trampoline+72)
+
+memory near ebx:
+    8d9390d4 6ffffffd 00000002 6ffffffe 000002a0  ...o.......o....
+    8d9390e4 6fffffff 00000001 00000000 00000000  ...o............
+    8d9390f4 0000100c 00000000 00000000 ac956c90  .............l..
+    8d939104 ac956b40 ac3e44e0 00000000 00000000  @k...D>.........
+    8d939114 00000000 00000000 00000000 00000000  ................
+    8d939124 00000000 00000000 00000000 00000000  ................
+    8d939134 00000000 00000000 00000000 00000000  ................
+    8d939144 00000000 00000000 00000000 00000000  ................
+    8d939154 00000000 00000000 00000000 00000000  ................
+    8d939164 00000000 00000000 00000000 00000000  ................
+    8d939174 00000000 00000000 00000000 00000000  ................
+    8d939184 00000000 00000000 00000000 00000000  ................
+    8d939194 00000000 00000000 00000000 00000000  ................
+    8d9391a4 00000000 00000000 00000000 00000000  ................
+    8d9391b4 00000000 00000000 00000000 00000000  ................
+    8d9391c4 00000000 00000000 00000000 00000000  ................
+
+
+memory map: (fault address prefixed with --->)
+--->Fault address falls at 00000000 before any mapped regions
+    12c00000-5abfffff rw-         0  48000000  /dev/ashmem/dalvik-main space (region space) (deleted)
+    704ce000-706b3fff rw-         0    1e6000  /data/dalvik-cache/x86/system@framework@boot.art
+    706b4000-70770fff rw-         0     bd000  /data/dalvik-cache/x86/system@framework@boot-core-libart.art
+    70771000-707adfff rw-         0     3d000  /data/dalvik-cache/x86/system@framework@boot-conscrypt.art
+    707ae000-707d5fff rw-         0     28000  /data/dalvik-cache/x86/system@framework@boot-okhttp.art
+    707d6000-707d9fff rw-         0      4000  /data/dalvik-cache/x86/system@framework@boot-legacy-test.art
+    707da000-7080bfff rw-         0     32000  /data/dalvik-cache/x86/system@framework@boot-bouncycastle.art
+    7080c000-70839fff rw-         0     2e000  /data/dalvik-cache/x86/system@framework@boot-ext.art
+    7083a000-70d74fff rw-         0    53b000  /data/dalvik-cache/x86/system@framework@boot-framework.art
+    70d75000-70dc4fff rw-         0     50000  /data/dalvik-cache/x86/system@framework@boot-telephony-common.art
+    70dc5000-70dccfff rw-         0      8000  /data/dalvik-cache/x86/system@framework@boot-voip-common.art
+    70dcd000-70dd3fff rw-         0      7000  /data/dalvik-cache/x86/system@framework@boot-ims-common.art
+    70dd4000-70de8fff rw-         0     15000  /data/dalvik-cache/x86/system@framework@boot-apache-xml.art
+    70de9000-70e06fff rw-         0     1e000  /data/dalvik-cache/x86/system@framework@boot-org.apache.http.legacy.boot.art
+    70e07000-70e07fff rw-         0      1000  /data/dalvik-cache/x86/system@framework@boot-android.hidl.base-V1.0-java.art
+    70e08000-70e0afff rw-         0      3000  /data/dalvik-cache/x86/system@framework@boot-android.hidl.manager-V1.0-java.art
+    70e0b000-70fe9fff r--         0    1df000  /system/framework/x86/boot.oat (BuildId: 790ccef9caaed803d2786c55fe1c8d2cc468ef2e)
+    aa37200[[TRUNCATED]]
+
+========================================
+2025-10-24 15:09:08 SYSTEM_TOMBSTONE (compressed text, 20032 bytes)
+isPrevious: true
+Build: google/sdk_goog3_x86/generic_x86:8.0.0/OSR1.180418.003/4741120:userdebug/test-keys
+Hardware: unknown
+Revision: 0
+Bootloader: unknown
+Radio: unknown
+Kernel: Linux version 3.18.94+ (gcc version 4.9 20140827 (prerelease) (GCC) ) #1 SMP PREEMPT Fri Mar 22 04:30:59 UTC 2019
+
+*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+Build fingerprint: 'google/sdk_goog3_x86/generic_x86:8.0.0/OSR1.180418.003/4741120:userdebug/test-keys'
+Revision: '0'
+ABI: 'x86'
+pid: 7768, tid: 7768, name: g.nativecrasher  >>> com.test.app.nativecrasher2 <<<
+signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x0
+Cause: null pointer dereference
+    eax 00000021  ebx 8dba20f4  ecx f887fd71  edx 00000001
+    esi 8def09b7  edi bffca898
+    xcs 00000073  xds 0000007b  xes 0000007b  xfs 0000003b  xss 0000007b
+    eip 8dba1611  ebp bffca6d8  esp bffca6c0  flags 00010286
+
+backtrace:
+    #00 pc 00000611  /data/app/com.test.app.nativecrasher-ieFeZoTQiq-DeJ_kD1SBiQ==/lib/x86/libcrasher.so (Java_com_google_android_apps_mtaas_testing_nativecrasher_CrashActivity_crash+49)
+    #01 pc 0000d548  /data/app/com.test.app.nativecrasher-ieFeZoTQiq-DeJ_kD1SBiQ==/oat/x86/base.odex (offset 0xd000)
+    #02 pc 000d9fff  [anon:libc_malloc:a9480000]
+    #03 pc 0004c777  /dev/ashmem/dalvik-main space (region space) (deleted)
+
+stack:
+         bffca680  00000000
+         bffca684  00000004
+         bffca688  8dba13fc  /data/app/com.test.app.nativecrasher-ieFeZoTQiq-DeJ_kD1SBiQ==/lib/x86/libcrasher.so
+         bffca68c  8dba140a  /data/app/com.test.app.nativecrasher-ieFeZoTQiq-DeJ_kD1SBiQ==/lib/x86/libcrasher.so
+         bffca690  a93607ea  /system/lib/libart.so
+         bffca694  a93607e2  /system/lib/libart.so
+         bffca698  00000000
+         bffca69c  00590000
+         bffca6a0  00430000
+         bffca6a4  8dba20f4  /data/app/com.test.app.nativecrasher-ieFeZoTQiq-DeJ_kD1SBiQ==/lib/x86/libcrasher.so
+         bffca6a8  bffca6d8
+         bffca6ac  8dba160e  /data/app/com.test.app.nativecrasher-ieFeZoTQiq-DeJ_kD1SBiQ==/lib/x86/libcrasher.so (Java_com_google_android_apps_mtaas_testing_nativecrasher_CrashActivity_crash+46)
+         bffca6b0  00000004
+         bffca6b4  8dba13fc  /data/app/com.test.app.nativecrasher-ieFeZoTQiq-DeJ_kD1SBiQ==/lib/x86/libcrasher.so
+         bffca6b8  8dba140a  /data/app/com.test.app.nativecrasher-ieFeZoTQiq-DeJ_kD1SBiQ==/lib/x86/libcrasher.so
+         bffca6bc  8dba15ef  /data/app/com.test.app.nativecrasher-ieFeZoTQiq-DeJ_kD1SBiQ==/lib/x86/libcrasher.so (Java_com_google_android_apps_mtaas_testing_nativecrasher_CrashActivity_crash+15)
+
+memory near ebx:
+    8dba20d4 6ffffffd 00000002 6ffffffe 000002a0  ...o.......o....
+    8dba20e4 6fffffff 00000001 00000000 00000000  ...o............
+    8dba20f4 0000100c 00000000 00000000 ac956c90  .............l..
+    8dba2104 ac956b40 ac3e44e0 00000000 00000000  @k...D>.........
+    8dba2114 00000000 00000000 00000000 00000000  ................
+    8dba2124 00000000 00000000 00000000 00000000  ................
+    8dba2134 00000000 00000000 00000000 00000000  ................
+    8dba2144 00000000 00000000 00000000 00000000  ................
+    8dba2154 00000000 00000000 00000000 00000000  ................
+    8dba2164 00000000 00000000 00000000 00000000  ................
+    8dba2174 00000000 00000000 00000000 00000000  ................
+    8dba2184 00000000 00000000 00000000 00000000  ................
+    8dba2194 00000000 00000000 00000000 00000000  ................
+    8dba21a4 00000000 00000000 00000000 00000000  ................
+    8dba21b4 00000000 00000000 00000000 00000000  ................
+    8dba21c4 00000000 00000000 00000000 00000000  ................
+
+memory map: (fault address prefixed with --->)
+--->Fault address falls at 00000000 before any mapped regions
+    12c00000-5abfffff rw-         0  48000000  /dev/ashmem/dalvik-main space (region space) (deleted)
+    704ce000-706b3fff rw-         0    1e6000  /data/dalvik-cache/x86/system@framework@boot.art
+    706b4000-70770fff rw-         0     bd000  /data/dalvik-cache/x86/system@framework@boot-core-libart.art
+    70771000-707adfff rw-         0     3d000  /data/dalvik-cache/x86/system@framework@boot-conscrypt.art
+    707ae000-707d5fff rw-         0     28000  /data/dalvik-cache/x86/system@framework@boot-okhttp.art
+    707d6000-707d9fff rw-         0      4000  /data/dalvik-cache/x86/system@framework@boot-legacy-test.art
+    707da000-7080bfff rw-         0     32000  /data/dalvik-cache/x86/system@framework@boot-bouncycastle.art
+    7080c000-70839fff rw-         0     2e000  /data/dalvik-cache/x86/system@framework@boot-ext.art
+    7083a000-70d74fff rw-         0    53b000  /data/dalvik-cache/x86/system@framework@boot-framework.art
+    70d75000-70dc4fff rw-         0     50000  /data/dalvik-cache/x86/system@framework@boot-telephony-common.art
+    70dc5000-70dccfff rw-         0      8000  /data/dalvik-cache/x86/system@framework@boot-voip-common.art
+    70dcd000-70dd3fff rw-         0      7000  /data/dalvik-cache/x86/system@framework@boot-ims-common.art
+    70dd4000-70de8fff rw-         0     15000  /data/dalvik-cache/x86/system@framework@boot-apache-xml.art
+    70de9000-70e06fff rw-         0     1e000  /data/dalvik-cache/x86/system@framework@boot-org.apache.http.legacy.boot.art
+ [[TRUNCATED]]
+

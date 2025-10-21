@@ -1,0 +1,62 @@
+Drop box contents: 140 entries
+Max entries: 1000
+Low priority rate limit period: 2000 ms
+Low priority tags: {data_app_wtf, keymaster, system_server_wtf, system_app_strictmode, system_app_wtf, system_server_strictmode, data_app_strictmode, netstats}
+Searching for: data_app_crash
+
+========================================
+2025-10-24 16:33:24 data_app_crash (text, 1836 bytes)
+Process: com.test.app.jetpack
+PID: 9667
+UID: 10172
+Flags: 0x3088be45
+Package: com.test.app.jetpack v1 (1.0)
+Foreground: Yes
+Process-Runtime: 9078
+Build: google/sdk_goog3_x86/generic_x86_arm:11/RSR1.230821.005/11407401:userdebug/dev-keys
+
+java.lang.RuntimeException: Unable to start activity ComponentInfo{com.test.app.jetpack/com.test.app.jetpack.CrashActivity}: java.lang.RuntimeException: Intentionally crashing
+    at android.app.ActivityThread.performLaunchActivity(ActivityThread.java:3449)
+    at android.app.ActivityThread.handleLaunchActivity(ActivityThread.java:3601)
+    at android.app.servertransaction.LaunchActivityItem.execute(LaunchActivityItem.java:85)
+    at android.app.servertransaction.TransactionExecutor.executeCallbacks(TransactionExecutor.java:135)
+    at android.app.servertransaction.TransactionExecutor.execute(TransactionExecutor.java:95)
+    at android.app.ActivityThread$H.handleMessage(ActivityThread.java:2066)
+    at android.os.Handler.dispatchMessage(Handler.java:106)
+    at android.os.Looper.loop(Looper.java:223)
+    at android.app.ActivityThread.main(ActivityThread.java:7656)
+    at java.lang.reflect.Method.invoke(Native Method)
+    at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:592)
+    at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:947)
+Caused by: java.lang.RuntimeException: Intentionally crashing
+    at com.test.app.jetpack.CrashActivity.onCreate(CrashActivity.kt:12)
+    at android.app.Activity.performCreate(Activity.java:7994)
+    at android.app.Activity.performCreate(Activity.java:7978)
+    at android.app.Instrumentation.callActivityOnCreate(Instrumentation.java:1309)
+    at android.app.ActivityThread.performLaunchActivity(ActivityThread.java:3422)
+    ... 11 more
+
+========================================
+2025-10-24 17:33:24 data_app_crash (text, 1125 bytes)
+Process: com.test.app.jetpack1
+PID: 2816
+UID: 10134
+Flags: 0x38d9be45
+Package: com.test.app.jetpack1 v22981508 (4.52.0.316821695)
+Foreground: No
+Process-Runtime: 18438
+Build: google/sdk_goog3_x86/generic_x86_arm:11/RSR1.230821.005/11407401:userdebug/dev-keys
+
+java.lang.SecurityException: Unable to start service Intent { act=com.google.android.c2dm.intent.REGISTER pkg=com.google.android.gms (has extras) }: Unable to launch app com.google.android.gms/10123 for service Intent { act=com.google.android.c2dm.intent.REGISTER pkg=com.google.android.gms }: process is bad
+    at android.app.ContextImpl.startServiceCommon(ContextImpl.java:1712)
+    at android.app.ContextImpl.startService(ContextImpl.java:1670)
+    at android.content.ContextWrapper.startService(ContextWrapper.java:720)
+    at aipw.a(PG:88)
+    at aipw.a(PG:97)
+    at anvf.a(PG:11)
+    at anvi.a(PG:119)
+    at anxa.a(PG:5)
+    at anwr.run(Unknown Source:1)
+    at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1167)
+    at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:641)
+    at java.lang.Thread.run(Thread.java:923)
