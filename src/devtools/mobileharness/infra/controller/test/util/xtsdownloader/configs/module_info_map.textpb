@@ -109,10 +109,6 @@ module_package_to_module_info: {
   value: "android-mcts-appsearch"
 }
 module_package_to_module_info: {
-  key: "com.google.android.btservices"
-  value: "android-mcts-bluetooth"
-}
-module_package_to_module_info: {
   key: "com.google.android.ondevicepersonalization"
   value: "android-mcts-ondevicepersonalization"
 }
@@ -141,6 +137,28 @@ module_package_to_module_info: {
 module_package_to_module_info: {
   key: "com.google.android.tzdata5"
   value: "android-mcts-tzdata"
+}
+
+# B-introduced modules
+module_package_to_module_info: {
+  key: "com.google.android.bt"
+  value: "android-mcts-bt"
+}
+module_package_to_module_info: {
+  key: "com.google.android.crashrecovery"
+  value: "android-mcts-crashrecovery"
+}
+module_package_to_module_info: {
+  key: "com.google.android.nfcservices"
+  value: "android-mcts-nfc"
+}
+module_package_to_module_info: {
+  key: "com.google.android.profiling"
+  value: "android-mcts-profiling"
+}
+module_package_to_module_info: {
+  key: "com.google.android.uprobestats"
+  value: "android-mcts-uprobestats"
 }
 
 # Go modules
@@ -261,3 +279,24 @@ module_package_to_module_info: {
   key: "com.google.android.go.tzdata5"
   value: "android-mcts-tzdata"
 }
+module_package_to_module_info: {
+  key: "com.google.android.go.bt"
+  value: "android-mcts-bt"
+}
+module_package_to_module_info: {
+  key: "com.google.android.go.crashrecovery"
+  value: "android-mcts-crashrecovery"
+}
+module_package_to_module_info: {
+  key: "com.google.android.go.nfcservices"
+  value: "android-mcts-nfc"
+}
+module_package_to_module_info: {
+  key: "com.google.android.go.profiling"
+  value: "android-mcts-profiling"
+}
+module_package_to_module_info: {
+  key: "com.google.android.go.uprobestats"
+  value: "android-mcts-uprobestats"
+}
+

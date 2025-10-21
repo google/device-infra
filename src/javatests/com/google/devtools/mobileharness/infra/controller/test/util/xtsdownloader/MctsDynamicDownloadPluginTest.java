@@ -207,9 +207,6 @@ public final class MctsDynamicDownloadPluginTest {
         "/tmp/android-mcts-appsearch.zip",
         "https://dl\\.google\\.com/dl/android/xts/mcts/30/arm64/android-mcts-appsearch\\.zip");
     mockDownloadPublicUrlFiles(
-        "/tmp/android-mcts-bluetooth.zip",
-        "https://dl\\.google\\.com/dl/android/xts/mcts/30/arm64/android-mcts-bluetooth\\.zip");
-    mockDownloadPublicUrlFiles(
         "/tmp/android-mcts-ondevicepersonalization.zip",
         "https://dl\\.google\\.com/dl/android/xts/mcts/30/arm64/android-mcts-ondevicepersonalization\\.zip");
     mockDownloadPublicUrlFiles(
@@ -267,7 +264,6 @@ public final class MctsDynamicDownloadPluginTest {
     generateTestZipFile("android-mcts-scheduling", "scheduling.txt", "/tmp");
     generateTestZipFile("android-mcts-adservices", "adservices.txt", "/tmp");
     generateTestZipFile("android-mcts-appsearch", "appsearch.txt", "/tmp");
-    generateTestZipFile("android-mcts-bluetooth", "bluetooth.txt", "/tmp");
     generateTestZipFile(
         "android-mcts-ondevicepersonalization", "ondevicepersonalization.txt", "/tmp");
     generateTestZipFile("android-mcts-uwb", "uwb.txt", "/tmp");
@@ -312,7 +308,6 @@ public final class MctsDynamicDownloadPluginTest {
             "scheduling.txt",
             "adservices.txt",
             "appsearch.txt",
-            "bluetooth.txt",
             "ondevicepersonalization.txt",
             "uwb.txt",
             "healthfitness.txt",
