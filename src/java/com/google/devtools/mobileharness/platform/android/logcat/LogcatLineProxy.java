@@ -48,6 +48,15 @@ public class LogcatLineProxy implements LineCallback {
     lineProcessors.add(processor);
   }
 
+  /** Get logcat events from all the registered line processors. */
+  public ImmutableList<LogcatEvent> getLogcatEventsFromProcessors() {
+    ImmutableList.Builder<LogcatEvent> crashEvents = ImmutableList.builder();
+    for (LineProcessor processor : lineProcessors) {
+      crashEvents.addAll(processor.getEvents());
+    }
+    return crashEvents.build();
+  }
+
   /** Return all the unparsed logcat lines. */
   public ImmutableList<String> getUnparsedLines() {
     return ImmutableList.copyOf(unparsedLines);

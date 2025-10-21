@@ -17,8 +17,16 @@
 package com.google.devtools.mobileharness.platform.android.logcat;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.CrashType.ANDROID_RUNTIME;
+import static com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.CrashType.NATIVE;
+import static com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.ProcessCategory.FAILURE;
+import static com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.ProcessCategory.IGNORED;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableList;
+import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.CrashEvent;
+import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.CrashedProcess;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatParser.LogcatLine;
 import org.junit.Before;
 import org.junit.Rule;
@@ -67,12 +75,30 @@ public final class LogcatLineProxyTest {
   }
 
   @Test
-  @SuppressWarnings("CheckReturnValue")
+  public void getLogcatEventsFromProcessors_getsLogcatEvents() {
+    var crashEvent1 =
+        new CrashEvent(
+            new CrashedProcess("crashprocess1", 100, FAILURE, ANDROID_RUNTIME), "crash log line1");
+    var crashEvent2 =
+        new CrashEvent(
+            new CrashedProcess("crashprocess2", 200, IGNORED, NATIVE), "crash log line2");
+    when(mockLineProcessor1.getEvents()).thenReturn(ImmutableList.of(crashEvent1));
+    when(mockLineProcessor2.getEvents()).thenReturn(ImmutableList.of(crashEvent2));
+
+    logcatLineProxy.addLineProcessor(mockLineProcessor1);
+    logcatLineProxy.addLineProcessor(mockLineProcessor2);
+
+    assertThat(logcatLineProxy.getLogcatEventsFromProcessors())
+        .containsExactly(crashEvent1, crashEvent2);
+  }
+
+  @Test
   public void finish_writesUnparsedLinesToFile() {
     String unparsableLine1 = "unparsable line 1";
     String unparsableLine2 = "unparsable line 2";
     var unused = logcatLineProxy.onLine(unparsableLine1);
-    logcatLineProxy.onLine("10-13 12:54:02.123  1234  5678 I ActivityManager: Some message");
+    unused =
+        logcatLineProxy.onLine("10-13 12:54:02.123  1234  5678 I ActivityManager: Some message");
     unused = logcatLineProxy.onLine(unparsableLine2);
 
     assertThat(logcatLineProxy.getUnparsedLines())

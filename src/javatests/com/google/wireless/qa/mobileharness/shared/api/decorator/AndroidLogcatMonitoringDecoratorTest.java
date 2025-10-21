@@ -25,7 +25,13 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
+import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent;
+import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.CrashEvent;
+import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.CrashedProcess;
+import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.ProcessCategory;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatLineProxy;
+import com.google.devtools.mobileharness.platform.android.logcat.proto.LogcatMonitoringReport;
+import com.google.devtools.mobileharness.shared.util.base.ProtoExtensionRegistry;
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.time.CountDownTimer;
@@ -91,6 +97,7 @@ public class AndroidLogcatMonitoringDecoratorTest {
             .addReportAsFailurePackages("com.test.me")
             .build();
     when(jobInfo.combinedSpec(any())).thenReturn(spec);
+    when(logcatLineProxy.getLogcatEventsFromProcessors()).thenReturn(ImmutableList.of());
     when(logcatLineProxy.getUnparsedLines()).thenReturn(ImmutableList.of());
 
     AndroidLogcatMonitoringDecorator decorator =
@@ -120,6 +127,7 @@ public class AndroidLogcatMonitoringDecoratorTest {
     when(jobInfo.combinedSpec(any())).thenReturn(spec);
     var line1 = "unparsed line 1";
     var line2 = "unparsed line 2";
+    when(logcatLineProxy.getLogcatEventsFromProcessors()).thenReturn(ImmutableList.of());
     when(logcatLineProxy.getUnparsedLines()).thenReturn(ImmutableList.of(line1, line2));
 
     AndroidLogcatMonitoringDecorator decorator =
@@ -132,5 +140,38 @@ public class AndroidLogcatMonitoringDecoratorTest {
     Path unparsedLogcatPath = genFilesDir.resolve("unparsed_logcat.txt");
     assertThat(Files.exists(unparsedLogcatPath)).isTrue();
     assertThat(Files.readAllLines(unparsedLogcatPath)).containsExactly(line1, line2);
+  }
+
+  @Test
+  public void decorator_run_succeeds_and_writes_report() throws Exception {
+    AndroidLogcatMonitoringDecoratorSpec spec =
+        AndroidLogcatMonitoringDecoratorSpec.newBuilder()
+            .addReportAsFailurePackages("com.test.me")
+            .build();
+    when(jobInfo.combinedSpec(any())).thenReturn(spec);
+    when(logcatLineProxy.getUnparsedLines()).thenReturn(ImmutableList.of());
+    when(logcatLineProxy.getLogcatEventsFromProcessors())
+        .thenReturn(
+            ImmutableList.of(
+                new CrashEvent(
+                    new CrashedProcess(
+                        "com.test.me", 123, ProcessCategory.FAILURE, LogcatEvent.CrashType.ANR),
+                    "crash_log")));
+
+    AndroidLogcatMonitoringDecorator decorator =
+        new AndroidLogcatMonitoringDecorator(
+            decoratedDriver, testInfo, adb, logcatLineProxy, localFileUtil);
+
+    decorator.run(testInfo);
+
+    Path reportPath = genFilesDir.resolve("logcat_monitoring_report.proto");
+    assertThat(Files.exists(reportPath)).isTrue();
+    LogcatMonitoringReport report =
+        LogcatMonitoringReport.parseFrom(
+            Files.readAllBytes(reportPath), ProtoExtensionRegistry.getGeneratedRegistry());
+    assertThat(report.getCrashEventsList()).hasSize(1);
+    assertThat(report.getCrashEvents(0).getProcessName()).isEqualTo("com.test.me");
+    assertThat(report.getCrashEvents(0).getCategory())
+        .isEqualTo(LogcatMonitoringReport.Category.FAILURE);
   }
 }

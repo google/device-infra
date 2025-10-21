@@ -358,6 +358,7 @@ java_library(
     srcs = ["AndroidLogcatMonitoringDecorator.java"],
     deps = [
         ":base_decorator",
+        "//src/devtools/mobileharness/platform/android/logcat/proto:logcat_monitoring_report_java_proto",
         "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/android/logcat",

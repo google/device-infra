@@ -24,9 +24,14 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.logcat.AndroidRuntimeCrashDetector;
 import com.google.devtools.mobileharness.platform.android.logcat.AnrDetector;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent;
+import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.CrashEvent;
+import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.DeviceEvent;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatLineProxy;
 import com.google.devtools.mobileharness.platform.android.logcat.MonitoringConfig;
 import com.google.devtools.mobileharness.platform.android.logcat.NativeCrashDetector;
+import com.google.devtools.mobileharness.platform.android.logcat.proto.LogcatMonitoringReport;
+import com.google.devtools.mobileharness.platform.android.logcat.proto.LogcatMonitoringReport.Category;
+import com.google.devtools.mobileharness.platform.android.logcat.proto.LogcatMonitoringReport.CrashType;
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
@@ -47,6 +52,7 @@ public class AndroidLogcatMonitoringDecorator extends BaseDecorator
 
   private static final String DATE_COMMAND = "date +%m-%d\\ %H:%M:%S.000";
   private static final String UNPARSED_LOGCAT_FILE = "unparsed_logcat.txt";
+  private static final String LOGCAT_MONITORING_REPORT_PROTO = "logcat_monitoring_report.proto";
 
   private final Adb adb;
   private final LogcatLineProxy logcatLineProxy;
@@ -68,7 +74,6 @@ public class AndroidLogcatMonitoringDecorator extends BaseDecorator
   @Override
   public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
     AndroidLogcatMonitoringDecoratorSpec spec = testInfo.jobInfo().combinedSpec(this);
-
     testInfo
         .log()
         .atInfo()
@@ -90,11 +95,7 @@ public class AndroidLogcatMonitoringDecorator extends BaseDecorator
     logcatLineProxy.addLineProcessor(nativeCrashProcessor);
     String currentDeviceTime = adb.runShell(deviceId, DATE_COMMAND);
 
-    testInfo
-        .log()
-        .atInfo()
-        .alsoTo(logger)
-        .log("------- Device time: %s  --------\n", currentDeviceTime);
+    testInfo.log().atInfo().alsoTo(logger).log("---- Device time: %s ----\n", currentDeviceTime);
 
     CommandProcess process =
         adb.runShellAsync(
@@ -103,27 +104,27 @@ public class AndroidLogcatMonitoringDecorator extends BaseDecorator
             testInfo.jobInfo().timer().remainingTimeJava(),
             logcatLineProxy);
 
-    getDecorated().run(testInfo);
-    process.killAndThenKillForcibly(Duration.ofSeconds(5));
-    finish(testInfo);
-    var crashEvents =
-        ImmutableList.<LogcatEvent>builder()
-            .addAll(artProcessor.getEvents())
-            .addAll(anrProcessor.getEvents())
-            .addAll(nativeCrashProcessor.getEvents())
-            .build();
-    if (!crashEvents.isEmpty()) {
-      testInfo
-          .log()
-          .atInfo()
-          .alsoTo(logger)
-          .log(
-              "\n\n################### Crash Events #####################\n%s\n\n",
-              Joiner.on(System.lineSeparator()).join(crashEvents));
+    try {
+      getDecorated().run(testInfo);
+    } finally {
+      process.killAndThenKillForcibly(Duration.ofSeconds(5));
+      writeMonitoringReport(testInfo);
+      writeUnparsedLogcatLines(testInfo);
     }
   }
 
-  private void finish(TestInfo testInfo) throws MobileHarnessException {
+  private void writeMonitoringReport(TestInfo testInfo) throws MobileHarnessException {
+    ImmutableList<LogcatEvent> logcatEvents = logcatLineProxy.getLogcatEventsFromProcessors();
+    if (logcatEvents.isEmpty()) {
+      return;
+    }
+    var report = createReport(logcatEvents);
+    testInfo.log().atInfo().alsoTo(logger).log("\n#### Logcat Monitoring Report ####\n%s", report);
+    Path reportPath = Path.of(testInfo.getGenFileDir(), LOGCAT_MONITORING_REPORT_PROTO);
+    localFileUtil.writeToFile(reportPath.toString(), report.toByteArray());
+  }
+
+  private void writeUnparsedLogcatLines(TestInfo testInfo) throws MobileHarnessException {
     ImmutableList<String> unparsedLogcatLines = logcatLineProxy.getUnparsedLines();
     if (unparsedLogcatLines.isEmpty()) {
       return;
@@ -131,5 +132,42 @@ public class AndroidLogcatMonitoringDecorator extends BaseDecorator
     Path unparsedLogcatPath = Path.of(testInfo.getGenFileDir(), UNPARSED_LOGCAT_FILE);
     localFileUtil.writeToFile(
         unparsedLogcatPath.toString(), Joiner.on(System.lineSeparator()).join(unparsedLogcatLines));
+  }
+
+  private static LogcatMonitoringReport createReport(ImmutableList<LogcatEvent> logcatEvents) {
+    LogcatMonitoringReport.Builder reportBuilder = LogcatMonitoringReport.newBuilder();
+    for (var event : logcatEvents) {
+      if (event instanceof CrashEvent crashEvent) {
+        var crashBuilder = LogcatMonitoringReport.CrashEvent.newBuilder();
+        var category =
+            switch (crashEvent.process().category()) {
+              case FAILURE -> LogcatMonitoringReport.Category.FAILURE;
+              case ERROR -> LogcatMonitoringReport.Category.ERROR;
+              default -> Category.IGNORED;
+            };
+        var crashType =
+            switch (crashEvent.process().type()) {
+              case ANDROID_RUNTIME -> CrashType.ANDROID_RUNTIME;
+              case NATIVE -> CrashType.NATIVE;
+              case ANR -> CrashType.ANR;
+              case UNKNOWN -> CrashType.UNKNOWN_CRASH_TYPE;
+            };
+        crashBuilder
+            .setProcessName(crashEvent.process().name())
+            .setPid(crashEvent.process().pid())
+            .setCrashType(crashType)
+            .setCategory(category)
+            .setLogLines(crashEvent.crashLogs());
+        reportBuilder.addCrashEvents(crashBuilder.build());
+      } else if (event instanceof DeviceEvent deviceEvent) {
+        var deviceEventBuilder =
+            LogcatMonitoringReport.DeviceEvent.newBuilder()
+                .setEventName(deviceEvent.eventName())
+                .setTag(deviceEvent.tag())
+                .setLogLines(deviceEvent.logLines());
+        reportBuilder.addDeviceEvents(deviceEventBuilder.build());
+      }
+    }
+    return reportBuilder.build();
   }
 }
