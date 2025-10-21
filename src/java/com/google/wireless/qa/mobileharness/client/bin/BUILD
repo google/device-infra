@@ -29,7 +29,6 @@ java_library(
     visibility = [
         "//java/com/google/wireless/qa/mobileharness/client/bin:__pkg__",
         "//javatests/com/google/wireless/qa/mobileharness/client/bin:__pkg__",
-        "//src/java/com/google/devtools/mobileharness/infra/client/rbe:__subpackages__",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",

@@ -24,7 +24,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/client:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/api:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:__pkg__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/client/rbe:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/controller/device/proxy:__pkg__",
     ],
     deps = [

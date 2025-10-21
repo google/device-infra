@@ -26,7 +26,6 @@ package(
         "//javatests/com/google/devtools/mobileharness:__subpackages__",
         "//javatests/com/google/wireless/qa/mobileharness:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/ats:__subpackages__",
-        "//src/java/com/google/devtools/mobileharness/infra/client/rbe:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness:__subpackages__",
     ],
 )
