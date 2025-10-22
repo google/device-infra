@@ -34,14 +34,14 @@ import javax.annotation.Nullable;
 final class ChecksumHelper {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  private static final BaseEncoding BASE64_ENCODING = BaseEncoding.base64();
+  private static final BaseEncoding HEX_ENCODING = BaseEncoding.base16().lowerCase();
 
   static ByteString decode(String encoded) {
-    return ByteString.copyFrom(BASE64_ENCODING.decode(encoded));
+    return ByteString.copyFrom(HEX_ENCODING.decode(encoded));
   }
 
   static String encode(ByteString checksum) {
-    return BASE64_ENCODING.encode(checksum.toByteArray());
+    return HEX_ENCODING.encode(checksum.toByteArray());
   }
 
   static boolean isChecksumValid(Path dataPath, Algorithm checksumAlgorithm, ByteString expected) {

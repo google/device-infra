@@ -37,7 +37,7 @@ public abstract class CacheKey<@ImmutableTypeParameter K> {
 
   public abstract Algorithm checksumAlgorithm();
 
-  // Base64 encoded checksum.
+  // Hex encoded checksum.
   public abstract String checksum();
 
   public static <@ImmutableTypeParameter K> CacheKey<K> create(
