@@ -441,6 +441,12 @@ public interface PropertyName {
     public static final String PREFIX_HYBRID_UTP_DETAILED_INCOMPATIBLE_REASON =
         "hybrid_utp_detailed_incompatible_reason_";
 
+    /** Whether the file resolve is skipped for one tag. */
+    public static final String PREFIX_FILE_SKIP_RESOLVE = "file_skip_resolve_";
+
+    /** Whether the file is resolved lazily for one tag. */
+    public static final String PREFIX_FILE_LAZY_RESOLVE = "file_lazy_resolve_";
+
     /** Gateway service property name constants. */
     public enum Gateway implements PropertyName {
 
