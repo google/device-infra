@@ -466,7 +466,8 @@ public class SimpleScheduler extends AbstractScheduler implements Runnable {
   private boolean checkAndAllocateSingleDevice(
       JobScheduleUnit job, TestLocator test, DeviceScheduleUnit device, boolean fireEvent) {
     List<String> deviceList = Flags.instance().deviceListToDebugAllocation.getNonNull();
-    if (matchDeviceList(deviceList, device.locator().id())) {
+    boolean debugAllocation = matchDeviceList(deviceList, device.locator().id());
+    if (debugAllocation) {
       logger.atWarning().log(
           "Print out the info for device %s to debug allocation.\nDevice: %s\nJob: %s",
           device.locator().id(), device, job);
@@ -474,7 +475,19 @@ public class SimpleScheduler extends AbstractScheduler implements Runnable {
     if (!allocations.containsDevice(device.locator().universalId())
         && ifDeviceSupports(device, job)) {
       // Found a suitable and idle device for the new test.
-      return allocate(test, device, fireEvent);
+      boolean allocated = allocate(test, device, fireEvent);
+      if (debugAllocation && !allocated) {
+        logger.atWarning().log("Failed to allocate device %s to test %s", device, test);
+      }
+      return allocated;
+    } else if (allocations.containsDevice(device.locator().universalId())) {
+      if (debugAllocation) {
+        logger.atWarning().log(
+            "Device %s is already allocationed %s.",
+            device, allocations.getAllocationByDevice(device.locator().universalId()));
+      }
+    } else if (debugAllocation) {
+      logger.atWarning().log("Device %s does not support the job %s.", device, job);
     }
     return false;
   }
