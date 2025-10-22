@@ -47,7 +47,7 @@ summary: {
 module_info: {
   name: "CtsPackageSettingHostTestCases"
   abi: "arm64-v8a"
-  runtime_millis: 268049
+  runtime_millis: 804147
   done: true
   passed: 1
   total_tests: 2

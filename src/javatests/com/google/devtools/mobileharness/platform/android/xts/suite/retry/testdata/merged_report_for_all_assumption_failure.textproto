@@ -58,12 +58,12 @@ summary {
 module_info {
   name: "CtsAccelerationTestCases"
   abi: "arm64-v8a"
-  runtime_millis: 10643
+  runtime_millis: 31929
   done: true
   passed: 0
   total_tests: 6
-  prep_time_millis: 3000
-  teardown_time_millis: 2000
+  prep_time_millis: 6000
+  teardown_time_millis: 4000
   test_case {
     name: "android.acceleration.cts.HardwareAccelerationTest"
     test {
