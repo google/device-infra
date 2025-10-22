@@ -25,16 +25,7 @@ package(
 
 java_library(
     name = "logcat",
-    srcs = [
-        "AndroidRuntimeCrashDetector.java",
-        "AnrDetector.java",
-        "LineProcessor.java",
-        "LogcatEvent.java",
-        "LogcatLineProxy.java",
-        "LogcatParser.java",
-        "MonitoringConfig.java",
-        "NativeCrashDetector.java",
-    ],
+    srcs = glob(["*.java"]),
     deps = [
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
         "@maven//:com_google_guava_guava",

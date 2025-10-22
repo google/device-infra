@@ -28,6 +28,7 @@ import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.a
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.CrashEvent;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.CrashedProcess;
+import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.DeviceEvent;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.ProcessCategory;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatLineProxy;
 import com.google.devtools.mobileharness.platform.android.logcat.proto.LogcatMonitoringReport;
@@ -156,7 +157,8 @@ public class AndroidLogcatMonitoringDecoratorTest {
                 new CrashEvent(
                     new CrashedProcess(
                         "com.test.me", 123, ProcessCategory.FAILURE, LogcatEvent.CrashType.ANR),
-                    "crash_log")));
+                    "crash_log"),
+                new DeviceEvent("DEVICE_EVENT", "tag", "message")));
 
     AndroidLogcatMonitoringDecorator decorator =
         new AndroidLogcatMonitoringDecorator(
@@ -173,5 +175,7 @@ public class AndroidLogcatMonitoringDecoratorTest {
     assertThat(report.getCrashEvents(0).getProcessName()).isEqualTo("com.test.me");
     assertThat(report.getCrashEvents(0).getCategory())
         .isEqualTo(LogcatMonitoringReport.Category.FAILURE);
+    assertThat(report.getDeviceEventsList()).hasSize(1);
+    assertThat(report.getDeviceEvents(0).getEventName()).isEqualTo("DEVICE_EVENT");
   }
 }

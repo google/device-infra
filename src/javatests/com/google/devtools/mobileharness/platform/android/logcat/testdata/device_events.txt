@@ -1,0 +1,8 @@
+10-20 11:40:12.016  1234  1234 I LOG     : a logcat line 1
+10-20 11:40:12.016  3674  7646 I resolv  : GetAddrInfoHandler::run: network access blocked
+10-20 11:40:12.026  3674  9376 W resolv  : GetAddrInfoHandler::run: Error writing DNS result to client uid 99999 pid 1111: Broken pipe
+10-20 11:40:12.016  1234  1234 I LOG     : a logcat line 2
+10-20 11:40:12.016  1073  4158 D NetworkMonitor/102: PROBE_HTTPS https://www.google.com/generate_204 Probe failed with exception java.net.UnknownHostException: Unable to resolve host \"www.google.com\": No address associated with hostname
+10-20 11:40:12.026  1234  1234 D LOG     : a logcat line 3
+10-20 11:40:12.016  1234  1234 I PowerManagerService   : Going to sleep due to power_button uid(1234)
+10-20 11:40:12.026  1234  1234 D LOG     : a logcat line 3

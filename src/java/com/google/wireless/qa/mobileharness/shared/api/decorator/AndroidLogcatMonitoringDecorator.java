@@ -23,6 +23,8 @@ import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.a
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.logcat.AndroidRuntimeCrashDetector;
 import com.google.devtools.mobileharness.platform.android.logcat.AnrDetector;
+import com.google.devtools.mobileharness.platform.android.logcat.DeviceEventDetector;
+import com.google.devtools.mobileharness.platform.android.logcat.DeviceEventDetector.DeviceEventConfig;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.CrashEvent;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.DeviceEvent;
@@ -90,9 +92,12 @@ public class AndroidLogcatMonitoringDecorator extends BaseDecorator
     var artProcessor = new AndroidRuntimeCrashDetector(monitoringConfig);
     var anrProcessor = new AnrDetector(monitoringConfig);
     var nativeCrashProcessor = new NativeCrashDetector(monitoringConfig);
+    var deviceEventDetector = new DeviceEventDetector(makeDeviceEventDetectorConfig(spec));
+
     logcatLineProxy.addLineProcessor(artProcessor);
     logcatLineProxy.addLineProcessor(anrProcessor);
     logcatLineProxy.addLineProcessor(nativeCrashProcessor);
+    logcatLineProxy.addLineProcessor(deviceEventDetector);
     String currentDeviceTime = adb.runShell(deviceId, DATE_COMMAND);
 
     testInfo.log().atInfo().alsoTo(logger).log("---- Device time: %s ----\n", currentDeviceTime);
@@ -169,5 +174,16 @@ public class AndroidLogcatMonitoringDecorator extends BaseDecorator
       }
     }
     return reportBuilder.build();
+  }
+
+  private static ImmutableList<DeviceEventDetector.DeviceEventConfig> makeDeviceEventDetectorConfig(
+      AndroidLogcatMonitoringDecoratorSpec spec) {
+    var builder = ImmutableList.<DeviceEventDetector.DeviceEventConfig>builder();
+    for (var eventConfig : spec.getDeviceEventConfigList()) {
+      builder.add(
+          new DeviceEventConfig(
+              eventConfig.getEventName(), eventConfig.getTag(), eventConfig.getLineRegex()));
+    }
+    return builder.build();
   }
 }
