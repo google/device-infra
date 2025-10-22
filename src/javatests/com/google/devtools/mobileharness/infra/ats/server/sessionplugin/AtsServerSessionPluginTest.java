@@ -20,7 +20,9 @@ import static com.google.common.truth.Truth.assertThat;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.endsWith;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -105,6 +107,7 @@ import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestStatus;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryResult;
+import java.io.File;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
@@ -299,6 +302,10 @@ public final class AtsServerSessionPluginTest {
     when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
     when(xtsTypeLoader.getXtsType(any(), any())).thenReturn("cts");
     when(commandExecutor.run(any())).thenReturn("command output.");
+    doReturn(true).when(localFileUtil).isDirExist(endsWith("/android-cts/testcases"));
+    doReturn(ImmutableList.of(new File("some_testcase")))
+        .when(localFileUtil)
+        .listFiles(endsWith("/android-cts/testcases"), eq(false));
     when(sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(any()))
         .thenReturn(
             ImmutableList.of(

@@ -1043,13 +1043,15 @@ final class NewMultiCommandRequestHandler {
     }
     Command command =
         Command.of("fuse-zip", "-r", zipFilePath, targetDirPath).timeout(SLOW_CMD_TIMEOUT);
+    String output = "";
     try {
-      return commandExecutor.run(command);
+      output = commandExecutor.run(command);
     } catch (MobileHarnessException e) {
-      if (e.getMessage().contains("mountpoint is not empty")) {
+      if (e.getMessage() != null && e.getMessage().contains("mountpoint is not empty")) {
         logger.atInfo().log(
-            "Mount point is not empty. It's usually caused by session is resumed and is"
-                + " acceptable.");
+            "Mount point %s is not empty. It's usually caused by session is resumed and is"
+                + " acceptable.",
+            targetDirPath);
         return "";
       } else {
         // This might happen when the host machine doesn't have the fuse-zip binary installed (e.g.
@@ -1059,6 +1061,17 @@ final class NewMultiCommandRequestHandler {
             zipFilePath, targetDirPath);
         return localFileUtil.unzipFile(zipFilePath, targetDirPath, UNZIP_TIMEOUT);
       }
+    }
+    if (validateMountedXtsRootDir(targetDirPath)) {
+      return output;
+    } else {
+      // If the mounted XTS root directory is invalid, we'll try to unzip the XTS zip file again.
+      logger.atWarning().log(
+          "Mounted XTS root directory %s is invalid. Trying to unmount and unzip %s to %s"
+              + " instead.",
+          targetDirPath, zipFilePath, targetDirPath);
+      unmountOrRemoveZipDir(targetDirPath);
+      return localFileUtil.unzipFile(zipFilePath, targetDirPath, UNZIP_TIMEOUT);
     }
   }
 
@@ -1100,6 +1113,39 @@ final class NewMultiCommandRequestHandler {
         .setState(CommandState.ERROR)
         .setErrorReason(reason)
         .setErrorMessage(errorMessage);
+  }
+
+  private boolean validateMountedXtsRootDir(String xtsRootDir) {
+    String xtsType;
+    try {
+      xtsType =
+          xtsTypeLoader.getXtsType(
+              xtsRootDir,
+              () ->
+                  "Invalid XTS zip file. Please make sure your XTS zip file only contains one xts"
+                      + " type.");
+    } catch (IllegalStateException e) {
+      logger.atWarning().withCause(e).log(
+          "Failed to get XTS type from mounted XTS root directory: %s", xtsRootDir);
+      return false;
+    }
+    try {
+      String testcasesDir = PathUtil.join(xtsRootDir, "android-" + xtsType, "testcases");
+      if (!localFileUtil.isDirExist(testcasesDir)) {
+        logger.atWarning().log(
+            "Testcases dir %s in mounted XTS root directory does not exist.", testcasesDir);
+        return false;
+      }
+      if (localFileUtil.listFiles(testcasesDir, false).isEmpty()) {
+        logger.atWarning().log(
+            "Testcases dir %s in mounted XTS root directory is empty.", testcasesDir);
+        return false;
+      }
+      return true;
+    } catch (MobileHarnessException e) {
+      logger.atWarning().withCause(e).log("Failed to check testcases dir for %s.", xtsRootDir);
+      return false;
+    }
   }
 
   private static int getRandom4Digits() {
