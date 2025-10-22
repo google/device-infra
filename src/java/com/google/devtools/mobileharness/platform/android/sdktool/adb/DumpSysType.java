@@ -24,6 +24,7 @@ package com.google.devtools.mobileharness.platform.android.sdktool.adb;
  *     dumpsys commands in the Android adb shell</a>
  */
 public enum DumpSysType {
+  // keep-sorted start
   ACCOUNT("account"), // Account information
   ACTIVITY("activity"), // Activity information
   ALL("all"), // Use it to get a diagnostic output for all system services as command "adb shell
@@ -47,6 +48,7 @@ public enum DumpSysType {
   WIFI("wifi"), // Available access points and current connection
   WIFISCANNER("wifiscanner"), // Scanned wifi information
   WINDOW("window"); // Display information
+  // keep-sorted end
 
   private final String dumpSysTypeValue;
 

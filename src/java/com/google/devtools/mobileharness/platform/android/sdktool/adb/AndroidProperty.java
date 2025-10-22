@@ -37,6 +37,7 @@ import java.lang.annotation.Target;
  *     com.google.devtools.mobileharness.platform.android.device.AndroidDeviceHelper#updateAndroidPropertyDimensions
  */
 public enum AndroidProperty {
+  // keep-sorted start sticky_prefixes=@
   ABI("ro.product.cpu.abi", "ro.product.cpu.abi2"),
   ABILIST("ro.product.cpu.abilist"),
   BASEBAND_VERSION("gsm.version.baseband"),
@@ -97,6 +98,8 @@ public enum AndroidProperty {
   TEST_HARNESS("ro.test_harness"),
   TYPE("ro.product.name"),
   VERITYMODE("ro.boot.veritymode");
+
+  // keep-sorted end
 
   /** Keys of the Android system property. */
   private final ImmutableList<String> keys;

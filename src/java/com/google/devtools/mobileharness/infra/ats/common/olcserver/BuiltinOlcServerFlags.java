@@ -27,6 +27,7 @@ public class BuiltinOlcServerFlags {
 
   private static final ImmutableList<String> VALUE =
       ImmutableList.of(
+          // keep-sorted start
           "--adb_dont_kill_server=true",
           "--adb_max_no_device_detection_rounds=1200",
           "--android_device_daemon=false",
@@ -47,7 +48,9 @@ public class BuiltinOlcServerFlags {
           "--mute_android=false",
           "--olc_server_max_started_running_session_num=30",
           "--set_test_harness_property=false",
-          "--simplified_log_format=true");
+          "--simplified_log_format=true"
+          // keep-sorted end
+          );
 
   public static ImmutableList<String> get() {
     return VALUE;

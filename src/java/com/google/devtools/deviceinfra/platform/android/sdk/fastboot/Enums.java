@@ -48,6 +48,7 @@ public final class Enums {
 
   /** Android device properties in fastboot mode. */
   public enum FastbootProperty {
+    // keep-sorted start sticky_prefixes=@
     AP_AR_NS,
     AP_AR_S,
     AR_FORCE_UPDATE,
@@ -67,6 +68,7 @@ public final class Enums {
     SOC_ID,
     UNLOCKED,
     VERSION_OS,
+    // keep-sorted end sticky_prefixes=@
   }
 
   /**
