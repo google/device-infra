@@ -47,6 +47,7 @@ import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Maps;
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.deviceinfra.shared.util.file.remote.constant.RemoteFileType;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
@@ -473,9 +474,18 @@ public class SessionRequestHandlerUtil {
   }
 
   public static Optional<String> urlForWorkerResolve(SessionRequestInfo sessionRequestInfo) {
-    return Flags.instance().transferResourcesFromController.getNonNull()
-        ? sessionRequestInfo.androidXtsZip() // Local url in controller.
-        : sessionRequestInfo.androidXtsZipDownloadUrl(); // Remote download url.
+    if (Flags.instance().transferResourcesFromController.getNonNull()) {
+      return sessionRequestInfo.androidXtsZip(); // Local url in controller.
+    } else {
+      return sessionRequestInfo
+          .androidXtsZipDownloadUrl() // Remote download url.
+          .filter(url -> isDownloadUrlSupported(url))
+          .or(() -> sessionRequestInfo.androidXtsZip());
+    }
+  }
+
+  private static boolean isDownloadUrlSupported(String url) {
+    return url.startsWith(RemoteFileType.GCS.prefix());
   }
 
   private void addUrlToPersistentCacheList(JobInfo jobInfo, String url) {
