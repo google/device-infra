@@ -894,7 +894,7 @@ public class XtsTradefedTest extends BaseDriver
 
   private ImmutableList<String> getXtsRunCommandArgs(
       XtsTradefedTestDriverSpec spec, Map<String, String> envVars, TestInfo testInfo)
-      throws MobileHarnessException, InterruptedException {
+      throws MobileHarnessException {
     ImmutableList.Builder<String> xtsRunCommand =
         ImmutableList.<String>builder().add("run", "commandAndExit");
 
@@ -988,14 +988,13 @@ public class XtsTradefedTest extends BaseDriver
 
   private ImmutableList<String> getDeviceIds() {
     Device device = getDevice();
-    if (!(device instanceof CompositeDevice)) {
-      String id = getDeviceId(device);
-      return ImmutableList.of(id);
+    if (device instanceof CompositeDevice compositeDevice) {
+      return compositeDevice.getManagedDevices().stream()
+          .map(this::getDeviceId)
+          .collect(toImmutableList());
     }
-    CompositeDevice compositeDevice = (CompositeDevice) device;
-    return compositeDevice.getManagedDevices().stream()
-        .map(this::getDeviceId)
-        .collect(toImmutableList());
+
+    return ImmutableList.of(getDeviceId(device));
   }
 
   private String getDeviceId(Device device) {
@@ -1248,11 +1247,11 @@ public class XtsTradefedTest extends BaseDriver
     // For dynamic download jobs, only create symlinks for the test cases in the test list.
     // For non dynamic download jobs, create symlinks for the test cases not in the test list.
     List<String> subTestCases = localFileUtil.listFileOrDirPaths(target.toString());
-    Set<String> missingTestList = new HashSet<>();
+    Set<String> foundTests = new HashSet<>();
     for (String subTestCase : subTestCases) {
       Path subTestCasePath = Path.of(subTestCase);
       String subTestCaseName = subTestCasePath.getFileName().toString();
-      missingTestList.add(subTestCaseName);
+      foundTests.add(subTestCaseName);
       boolean shouldCreateSymlink =
           isDynamicDownload
               ? dynamicDownloadTestList.contains(subTestCaseName)
@@ -1268,9 +1267,9 @@ public class XtsTradefedTest extends BaseDriver
     logger.atInfo().log(
         "Finished integrating the test cases [%s] with the temp XTS workspace [%s].", target, link);
 
-    // Return the test cases that missing in the dynamic download folder but contains in the test
-    // list.
-    dynamicDownloadTestList.removeAll(missingTestList);
+    // Return the test cases that are present in the test list but are missing in the dynamic
+    // download folder.
+    dynamicDownloadTestList.removeAll(foundTests);
     return dynamicDownloadTestList;
   }
 
