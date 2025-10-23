@@ -1,0 +1,86 @@
+@use '../../../styles/configuration' as config;
+
+.config-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background-color: white;
+  border-top: 1px solid #e2e8f0;
+
+  font-family: config.$labconsole-font;
+
+  .permission-status {
+    display: flex;
+    align-items: center;
+    font-style: italic;
+    color: #64748b;
+    font-size: 0.8rem;
+  }
+  .permission-status .material-icons {
+    margin-right: 0.5rem;
+    font-size: 1.1rem;
+  }
+  .permission-status .spinner {
+    margin-right: 0.5rem;
+  }
+  .permission-status.success {
+    font-style: normal;
+  }
+  .permission-status.success .material-icons {
+    color: #16a34a;
+  }
+  .permission-status.failure {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    font-style: normal;
+  }
+  .permission-status.failure > div > .material-icons {
+    color: #dc2626;
+  }
+  @keyframes spin {
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+  .spinner {
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid #e2e8f0;
+    border-top-color: #0b57d0;
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+  }
+
+  .request-access-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    color: #0b57d0;
+    text-decoration: none;
+    font-size: 0.8rem;
+    font-weight: 500;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+    white-space: nowrap;
+    flex: 1;
+  }
+  .request-access-link:hover {
+      background-color: rgba(11, 87, 208, 0.08);
+  }
+  .request-access-link:hover .request-access-link-text {
+      text-decoration: underline;
+  }
+  .request-access-link .material-icons {
+      font-size: 0.9rem;
+      margin-right: 0;
+  }
+
+  mat-dialog-actions {
+    padding: 0;
+    gap: 0.75rem;
+  }
+}

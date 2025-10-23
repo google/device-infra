@@ -1,0 +1,100 @@
+@if (data.source === 'new') {
+  <app-wizard-stepper
+    #stepper
+    title="Host Configuration Guided Setup"
+    type="host"
+    width="56rem"
+    [WIZARD_STEPS]="WIZARD_STEPS"
+    [currentStep]="currentStep()"
+    (currentStepChange)="onCurrentStepChange($event)"
+    (apply)="submit()"
+  >
+    <ng-template #permissions>
+      <app-host-permissions
+        [(permissions)]="hostConfig().permissions"
+        workflow="wizard"
+      ></app-host-permissions>
+    </ng-template>
+    <ng-template #configMode>
+      <app-config-mode [(mode)]="hostConfig().deviceConfigMode" workflow="wizard"></app-config-mode>
+    </ng-template>
+    <ng-template #default>
+      <h3 class="default-title font-semibold text-gray-800">
+        @if (hostConfig().deviceConfigMode === 'PER_DEVICE') {
+          Default Device Configuration
+        } @else {
+          Shared Device Configuration
+        }
+      </h3>
+      <p class="text-gray-600 default-description">
+        @if (hostConfig().deviceConfigMode === 'PER_DEVICE') {
+          This configuration will be applied to any new physical device added to the host, or to all
+          virtual devices created on it.
+        } @else {
+          This configuration will apply to ALL devices managed by this host, overriding any
+          individual device settings.
+        }
+      </p>
+      <div class="space-y-8">
+        <!-- Device Permissions -->
+
+        <app-permissions
+          type="host"
+          workflow="wizard"
+          [permissions]="hostConfig().deviceConfig?.permissions || {owners: [], executors: []}"
+        ></app-permissions>
+
+        <!-- Wi-Fi -->
+        <div>
+          <h4 class="default-wifi-title text-gray-700">Device Wi-Fi</h4>
+          <app-wifi
+            type="host"
+            workflow="wizard"
+            [wifi]="
+              hostConfig().deviceConfig?.wifi || {type: 'NONE', ssid: '', psk: '', scanSsid: false}
+            "
+          ></app-wifi>
+        </div>
+      </div>
+    </ng-template>
+
+    <ng-template #review>
+      <app-review-table
+        title="Review & Submit"
+        description="Please review the configuration below. You can edit more advanced settings after the initial setup."
+        [dataSource]="dataSource"
+      ></app-review-table>
+    </ng-template>
+  </app-wizard-stepper>
+} @else {
+  <app-dialog
+    title="Review Configuration"
+    subtitle="For host: {{ data.hostName }}"
+    width="72rem"
+    (onPermissionChange)="applyChangesDisabled.set(!$event.hasPermission)"
+  >
+    <main class="step-content">
+      <app-review-table
+        title="Review & Submit"
+        description="You are about to apply a copied configuration. Please review the settings below before
+      applying them to this host."
+        [dataSource]="dataSource"
+      ></app-review-table>
+    </main>
+    <ng-template #actionsTemplate>
+      <button mat-dialog-close class="wizard-button wizard-button-tertiary"> Cancel </button>
+      <button
+        class="wizard-button wizard-button-primary"
+        [disabled]="applyChangesDisabled() || verifying()"
+        (click)="submit()"
+      >
+        @if (verifying()) {
+          <mat-spinner [diameter]="20" class="wizard-button-spinner"></mat-spinner>
+          Verifying...
+        } @else {
+          Apply Changes
+        }
+      </button>
+    </ng-template>
+  </app-dialog>
+}

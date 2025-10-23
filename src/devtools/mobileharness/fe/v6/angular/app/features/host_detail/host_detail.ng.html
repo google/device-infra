@@ -1,0 +1,36 @@
+<div class="host-detail-container">
+  @if (hostPageData$ | async; as data) {
+    <div class="main-card">
+      <header class="card-header">
+        <div class="header-host-id">
+          <span class="host-id-text">{{ data.hostName }}</span>
+          <span>({{ data.hostIP }})</span>
+        </div>
+
+        <div class="header-actions">
+          <button class="m3-action-button filled" (click)="openConfiguration(data.hostName)">
+            <mat-icon>settings</mat-icon>Configuration
+          </button>
+        </div>
+      </header>
+
+      <div class="card-body">
+        <div class="host-title-bar">
+          <div class="title-icon-wrapper">
+            <mat-icon class="title-icon">dns</mat-icon>
+          </div>
+          <h1 class="host-title" title="{{ data.hostName }}">
+            <span class="host-text-bold">Host: </span>
+            <span class="host-text">{{ data.hostName }}</span>
+          </h1>
+          <button class="copy-button" title="Copy host name to clipboard">
+            <mat-icon class="copy-icon">content_copy</mat-icon>
+          </button>
+          <div class="title-actions">
+            <a></a>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+</div>

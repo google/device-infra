@@ -1,0 +1,8 @@
+@use '../../../../../../shared/styles/configuration' as config;
+
+.properties-title {
+  display: flex;
+  align-items: center;
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+}

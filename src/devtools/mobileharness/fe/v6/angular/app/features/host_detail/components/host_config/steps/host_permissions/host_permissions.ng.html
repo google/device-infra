@@ -1,0 +1,41 @@
+<div class="host-permissions-container" [class.settings-container]="workflow === 'settings'">
+  <h3 class="title font-semibold text-gray-800">Host Permissions</h3>
+  <p class="desc text-gray-600">
+    @if (workflow === 'wizard') {
+      Let's start by setting up who can manage this host.
+    }
+    @if (workflow === 'settings') {
+      Manage who has administrative control over this host's configuration.
+    }
+  </p>
+
+  @if (uiStatus.hostAdmins.visible) {
+    <div class="chip-container space-y-8">
+      <h4 class="chip-title font-medium text-gray-700">Host Admins</h4>
+      <p class="chip-desc text-gray-500">
+        @if (workflow === 'settings') {
+          Host Admins can edit this configuration and manage the lab server. They do not
+          automatically get permissions to run tests on devices.
+        }
+      </p>
+      <app-entry-chip
+        [(entries)]="permissions.hostAdmins"
+        [editable]="uiStatus.hostAdmins.editability?.editable || false"
+      ></app-entry-chip>
+
+      @if (workflow === 'wizard') {
+        <p class="note text-gray-500">
+          Host Admins have full control over the host's configuration. They do not automatically get
+          permissions to run tests on devices.
+        </p>
+      }
+    </div>
+  }
+
+  @if (uiStatus.sshAccess.visible) {
+    <div class="ssh-access-container space-y-8">
+      <h4 class="chip-title font-medium text-gray-700">SSH Access</h4>
+      <p class="chip-desc text-gray-500"> // TODO: Add description for SSH access. </p>
+    </div>
+  }
+</div>

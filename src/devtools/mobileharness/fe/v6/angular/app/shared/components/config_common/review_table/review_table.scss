@@ -1,0 +1,50 @@
+@use '@angular/material' as mat;
+@use '../../../styles/configuration' as config;
+
+:host {
+  @include mat.table-overrides((
+    header-container-height: 2rem,
+    row-item-container-height: 1.25rem,
+    row-item-outline-width: 0,
+
+    header-headline-font: config.$labconsole-font,
+    row-item-label-text-font: config.$labconsole-font,
+    footer-supporting-text-font: config.$labconsole-font,
+  ));
+}
+
+.review-desc {
+  margin: 0.25rem 0 1.5rem 0;
+}
+
+.review-table {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  text-align: left;
+  width: 100%;
+}
+
+.review-table .header-row {
+  font-size: 0.75rem;
+  line-height: 1rem;
+  text-transform: uppercase;
+  background-color: #f8fafc;
+  font-weight: 600; color: #475569;
+}
+
+.review-table td {
+  padding: 0.75rem 1rem;
+  vertical-align: top;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.review-table .category-row td {
+  font-weight: 600;
+  color: #1e293b;
+  background-color: #f8fafc;
+}
+
+.title-medium {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+}

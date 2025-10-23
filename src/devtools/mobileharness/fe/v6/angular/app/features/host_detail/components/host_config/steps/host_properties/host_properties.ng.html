@@ -1,0 +1,12 @@
+<h3 class="properties-title font-semibold text-gray-800">Host Properties </h3>
+<p class="font-margin text-gray-600">
+  Define custom key-value metadata for this host, such as a 'host_group' or 'maintenance_contact'.
+</p>
+<app-metadata-list
+  emptyMessage="No host properties have been added."
+  addButtonLabel="Add Property"
+  [columns]="columns"
+  [metadataList]="properties"
+  (metadataListChange)="propertiesChange.emit($event)"
+  [uiStatus]="uiStatus"
+></app-metadata-list>

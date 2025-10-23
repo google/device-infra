@@ -1,0 +1,53 @@
+<app-dialog
+  title="Configure Host"
+  subtitle="Host Name: {{ hostName }}"
+  type="host"
+  [param]="{deviceId: '', hostName: hostName}"
+>
+  <mat-dialog-content class="config-content">
+    <div class="config-empty-container">
+      <h3 class="empty-config-title">{{ title }}</h3>
+      <div class="empty-config-grid">
+        <button class="choice-card" (click)="startNewConfig()">
+          <span mat-icon class="material-icons">add</span>
+          <p class="choice-card-title">Create New Configuration</p>
+        </button>
+        <button class="choice-card" (click)="copyFromAnotherHost()">
+          <span mat-icon class="material-icons">content_copy</span>
+          <p class="choice-card-title">Copy from Another Host</p>
+        </button>
+      </div>
+    </div>
+
+    <!-- Copy from another device -->
+    @if (copyFromAnother()) {
+      <div class="copy-from-container">
+        <label class="form-label" id="source-host-name-label">Enter source host name</label>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="form-field">
+          <input
+            matInput
+            type="text"
+            placeholder="e.g., host-a-1.example.com"
+            [(ngModel)]="anotherHostName"
+            aria-labelledby="source-host-name-label"
+          />
+        </mat-form-field>
+        <button
+          class="load-button wizard-button wizard-button-primary"
+          (click)="loadAndReviewConfig()"
+        >
+          Load & Review Configuration
+        </button>
+        <p class="copy-error-message">
+          {{ copyFromAnotherErrorMessage() }}
+        </p>
+      </div>
+    }
+  </mat-dialog-content>
+
+  <ng-template #actionsTemplate>
+    <button mat-button mat-dialog-close class="wizard-button wizard-button-tertiary">
+      Cancel
+    </button>
+  </ng-template>
+</app-dialog>

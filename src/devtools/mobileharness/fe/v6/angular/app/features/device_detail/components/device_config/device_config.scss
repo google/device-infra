@@ -1,10 +1,10 @@
-@use '../../../../shared/styles/configuration';
+@use '../../../../shared/styles/configuration' as config;
 
 .device-config-header {
   position: relative;
   padding: 1.5rem;
   margin: 0;
-  font-family: 'Roboto', sans-serif;
+  font-family: config.$labconsole-font;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -68,7 +68,7 @@
   justify-content: space-between;
   align-items: center;
   background-color: white;
-  font-family: 'Roboto', sans-serif;
+  font-family: config.$labconsole-font;
 
   .permission-status {
     display: flex;

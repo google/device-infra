@@ -1,12 +1,12 @@
 import {CommonModule} from '@angular/common';
 import {ChangeDetectionStrategy, Component, inject, OnInit} from '@angular/core';
-import {MAT_DIALOG_DATA, MatDialogModule} from '@angular/material/dialog';
+import {MAT_DIALOG_DATA} from '@angular/material/dialog';
 
 import {CONFIG_SERVICE} from '../../../../core/services/config/config_service';
 
-import {EmptyConfig} from './empty_config/empty_config';
+import {DeviceEmpty} from './device_empty/device_empty';
+import {DeviceSettings} from './device_settings/device_settings';
 import {HostManaged} from './host_managed/host_managed';
-import {Settings} from './settings/settings';
 
 /**
  * Component for displaying the device configuration dialog.
@@ -19,7 +19,12 @@ import {Settings} from './settings/settings';
   templateUrl: './device_config.ng.html',
   styleUrl: './device_config.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, MatDialogModule, HostManaged, EmptyConfig, Settings],
+  imports: [
+    CommonModule,
+    HostManaged,
+    DeviceEmpty,
+    DeviceSettings,
+  ],
 })
 export class DeviceConfig implements OnInit {
   readonly data = inject<{
