@@ -1,0 +1,162 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+edition = "2023";
+
+package mobileharness.infra.master.central;
+
+import "src/devtools/mobileharness/api/model/proto/device.proto";
+import "src/devtools/mobileharness/api/model/proto/test.proto";
+
+option java_package = "com.google.devtools.mobileharness.infra.master.central.proto";
+option java_outer_classname = "Device";
+
+message DeviceProfile {
+  .mobileharness.api.model.DeviceFeature feature = 1;  // Required.
+}
+
+// Next ID: 18
+message DeviceCondition {
+  // Optional. Device allocation in Master. Client and Lab Server may have delay
+  // to get this allocation info.
+  .mobileharness.api.model.TestLocator allocated_test_locator = 1;
+
+  // Optional: The timestamp when the last device allocation was created or
+  // released. This is the Master side time. This time should be set when
+  // allocated_test_locator is set. For b/132594211.
+  int64 allocation_modify_time_ms_from_master = 8 [deprecated = true];
+
+  // Optional. If true, it means the device just finished a test and is not
+  // ready for a new one because the Master hasn't received confirmation of the
+  // device readiness from Lab Server after the previous allocation was released
+  // in Master.
+  bool dirty = 2;
+
+  // Optional: The timestamp when the device DIRTY state changed last time. This
+  // is the Master side time. This time should be set when the dirty field is
+  // true. For b/132594211.
+  int64 dirty_modify_time_ms_from_master = 9;
+
+  // Required: device status reported by Lab Server.
+  .mobileharness.api.model.DeviceStatus status_from_lab = 3;
+
+  // Required: The timestamp when the current status from Lab Server was firstly
+  // reported to Master. This is the Master side time. For b/132594211.
+  int64 status_from_lab_modify_time_ms_from_master = 10;
+
+  // Optional:
+  repeated .mobileharness.api.model.DeviceError device_error_from_lab = 15;
+
+  // Required: The timestamp of the last sync up with Lab Server. This is the
+  // Lab Server reported time.
+  int64 sync_time_ms_from_lab = 4;
+
+  // Required: The timestamp of the last sync up with Lab Server. This is the
+  // Master Server side time.
+  int64 sync_time_ms_from_master = 5;
+
+  // Optional: The timestamp of the last time when the device became IDLE in
+  // Master. This is the Master Server side time. We use this time to calculate
+  // the scheduler latency when this device is allocated to a test. See
+  // b/71722259.
+  int64 become_idle_time_ms_from_master = 6;
+
+  // Optional: The last sign up time. This is the Master Server side time.
+  int64 last_sign_up_time_ms_from_master = 7;
+
+  // Optional: The temp dimension of the device.
+  // Unlike other dimensions in DeviceProfile, the temp required dimensions
+  // are expected to be changed frequently, so it is in DeviceCondition.
+  repeated TempDimension temp_dimension = 11;
+
+  // Optional: The status reported from device master.
+  .mobileharness.api.model.DeviceStatus status_from_dm = 12
+      [features.field_presence = EXPLICIT];
+
+  // Optional: The first sign up time. This is the Master Server side time.
+  int64 first_sign_up_time_ms_from_master = 13;
+
+  // Optional: The timestamp of the last time when the device became IDLE in
+  // Device Master(Wrangler). This is the Master Server side time. We use this
+  // time to the scheduler latency when this device is allocated to a test.
+  int64 become_idle_time_ms_from_dm = 14;
+
+  // Optional: The timestamp of the last time when the device was healthy.
+  // A device is healthy if and only if its type is healthy and its state is
+  // IDLE, BUSY or LAMEDUCK.
+  int64 last_healthy_time_ms_from_master = 16;
+
+  // Optional: The last sign up time. This is the Lab Server side time.
+  int64 last_sign_up_time_ms_from_lab = 17;
+}
+
+message TempDimension {
+  .mobileharness.api.model.DeviceDimension dimension = 1;  // Required.
+
+  // Required: the dimension will get expired after the given timestamp.
+  int64 expire_timestamp_ms = 2;
+
+  // Optional: whether the dimension is required. If true, the dimension will be
+  // added to the required dimension list of the device. Otherwise, the
+  // dimension will be added to the supported dimension list of the device.
+  // Default is true.
+  bool required = 3 [default = true, features.field_presence = EXPLICIT];
+}
+
+message DeviceSignUp {
+  // Optional: Will deprecate after uuid is ready.
+  string control_id = 1;
+
+  // Required: Lab Server side timestamp.
+  int64 timestamp_ms = 2;
+
+  // Required: Device status on Lab Server side.
+  .mobileharness.api.model.DeviceStatus status = 3;
+
+  // Optional.
+  .mobileharness.api.model.DeviceFeature feature = 4;
+
+  // Optional.
+  string uuid = 5;
+
+  // Optional: Device status from Device Master.
+  .mobileharness.api.model.DeviceStatus status_from_dm = 6
+      [features.field_presence = EXPLICIT];
+
+  // Optional: Whether the device is in the satellite lab.
+  bool is_satellite_lab = 7 [features.field_presence = EXPLICIT];
+
+  // Optional: Exceptions on the device.
+  .mobileharness.api.model.DeviceError device_error = 8;
+}
+
+message DeviceHeartbeat {
+  // Required.
+  string id = 1;
+
+  // Required: Lab Server side timestamp.
+  int64 timestamp_ms = 2;
+
+  // Required: Device status on Lab Server side.
+  .mobileharness.api.model.DeviceStatus status = 3;
+
+  // Optional: Device status from Device Master.
+  .mobileharness.api.model.DeviceStatus status_from_dm = 4
+      [features.field_presence = EXPLICIT];
+
+  // Optional: Whether the device is in the satellite lab.
+  bool is_satellite_lab = 5 [features.field_presence = EXPLICIT];
+}
