@@ -24,6 +24,16 @@ package(
 )
 
 proto_library(
+    name = "allocation_task_proto",
+    srcs = ["allocation_task.proto"],
+)
+
+java_proto_library(
+    name = "allocation_task_java_proto",
+    deps = [":allocation_task_proto"],
+)
+
+proto_library(
     name = "device_proto",
     srcs = ["device.proto"],
     deps = [
@@ -51,6 +61,24 @@ proto_library(
 java_proto_library(
     name = "job_java_proto",
     deps = [":job_proto"],
+)
+
+proto_library(
+    name = "lab_proto",
+    srcs = ["lab.proto"],
+    deps = [
+        "//src/devtools/mobileharness/api/model/proto:lab_proto",
+    ],
+)
+
+cc_proto_library(
+    name = "lab_cc_proto",
+    deps = [":lab_proto"],
+)
+
+java_proto_library(
+    name = "lab_java_proto",
+    deps = [":lab_proto"],
 )
 
 proto_library(
