@@ -31,6 +31,7 @@ import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.platform.android.event.util.AppInstallEventUtil;
 import com.google.devtools.mobileharness.platform.android.instrumentation.AndroidInstrumentationSetting;
 import com.google.devtools.mobileharness.platform.android.instrumentation.AndroidInstrumentationUtil;
+import com.google.devtools.mobileharness.platform.android.instrumentation.PrepareTestArgsParams;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstallArgs;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstaller;
 import com.google.devtools.mobileharness.platform.android.lightning.systemsetting.SystemSettingManager;
@@ -832,13 +833,22 @@ public class AndroidInstrumentation extends BaseDriver
       throws MobileHarnessException, InterruptedException {
     ImmutableMap<String, String> testArgs = androidInstrumentationUtil.getTestArgs(testInfo);
     androidInstrumentationUtil.prepareTestArgs(
-        getDevice().getDeviceId(),
-        testArgs,
-        externalStoragePath,
-        testInfo.getTmpFileDir(),
-        testInfo.log(),
-        testInfo.warnings(),
-        /* forceAdbPush= */ false);
+        PrepareTestArgsParams.builder()
+            .setSerial(getDevice().getDeviceId())
+            .setTestArgs(testArgs)
+            .setDeviceExternalStoragePath(externalStoragePath)
+            .setHostTmpFileDir(testInfo.getTmpFileDir())
+            .setLog(testInfo.log())
+            .setWarnings(testInfo.warnings())
+            .setSkipClearMediaProviderForMultiUserCase(
+                testInfo
+                    .jobInfo()
+                    .params()
+                    .getBool(
+                        AndroidInstrumentationDriverSpec
+                            .PARAM_SKIP_CLEAR_MEDIA_PROVIDER_FOR_MULTI_USER_CASE,
+                        false))
+            .build());
   }
 
   protected ImmutableSet<String> getBuildApks(TestInfo testInfo)

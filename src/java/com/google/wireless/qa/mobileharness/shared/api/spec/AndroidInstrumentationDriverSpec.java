@@ -226,6 +226,12 @@ public interface AndroidInstrumentationDriverSpec {
               + " false.")
   String PARAM_FAIL_IF_NO_TESTS_RAN = "fail_if_no_tests_ran";
 
+  @ParamAnnotation(
+      required = false,
+      help = "Whether to skip clear media provider for multi user case. By default, this is false.")
+  String PARAM_SKIP_CLEAR_MEDIA_PROVIDER_FOR_MULTI_USER_CASE =
+      "skip_clear_media_provider_for_multi_user_case";
+
   /** Resource path of the Android basic_services.apk which is needed for reading test_args. */
   String BASIC_SERVICE_APK_PATH =
       "/com/google/android/apps/common/testing/services/basic_services.apk";

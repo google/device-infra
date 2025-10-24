@@ -30,7 +30,9 @@ java_library(
         "AndroidInstrumentationUtil.java",
         "AndroidTestContent.java",
     ],
+    exports = [":prepare_test_args_params"],
     deps = [
+        ":prepare_test_args_params",
         ":storage_constants",
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/devtools/mobileharness/platform/android/testing/proto:test_args_pb_java_proto",
@@ -73,4 +75,15 @@ java_library(
 java_library(
     name = "storage_constants",
     srcs = ["TestStorageConstants.java"],
+)
+
+java_library(
+    name = "prepare_test_args_params",
+    srcs = ["PrepareTestArgsParams.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/job/out",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/out",
+        "@maven//:com_google_guava_guava",
+    ],
 )
