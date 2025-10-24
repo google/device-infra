@@ -96,6 +96,7 @@ java_library(
     deps = [
         ":module_sharding_args_generator",
         ":xts_job_creator",
+        "//src/devtools/mobileharness/infra/ats/server/proto:service_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/error:exception_factory",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_handler_util",

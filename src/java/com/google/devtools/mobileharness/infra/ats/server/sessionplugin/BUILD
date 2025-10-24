@@ -36,6 +36,7 @@ java_library(
     visibility = ["//src/javatests/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__"],
     deps = [
         ":new_multi_command_request_handler",
+        "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/devtools/mobileharness/infra/ats/console/result/proto:result_java_proto",
         "//src/devtools/mobileharness/infra/ats/server/proto:service_java_proto",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_java_proto",
@@ -48,6 +49,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_info",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:with_proto",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/service:local_session_stub",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_constants",
         "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_text_format",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",

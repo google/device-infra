@@ -27,6 +27,7 @@ import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
+import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ResultProto.ModuleRunResult;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.AtsServerSessionNotification;
@@ -55,6 +56,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginLoadingConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.CreateSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.LocalSessionStub;
+import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.message.proto.TestMessageProto.XtsTradefedRunCancellation;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
@@ -307,7 +309,31 @@ final class AtsServerSessionPlugin {
         // if we have multiple TF jobs execute serially, we need to only add the job one by one
         // after the previous job is ended.
         if (!tradefedJobs.isEmpty()) {
-          sessionInfo.addJob(tradefedJobs.remove(0));
+          boolean isStaticXtsJobAndFailed =
+              jobInfo
+                      .properties()
+                      .getBoolean(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED)
+                      .orElse(false)
+                  && jobInfo
+                      .properties()
+                      .getOptional(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME)
+                      .orElse("")
+                      .contains(XtsConstants.STATIC_XTS_JOB_NAME)
+                  && jobInfo.tests().getAll().values().stream()
+                      .noneMatch(
+                          testInfo ->
+                              testInfo.resultWithCause().get().type() == TestResult.PASS
+                                  && testInfo
+                                      .properties()
+                                      .getBoolean(XtsConstants.TRADEFED_JOBS_HAS_RESULT_FILE)
+                                      .orElse(false));
+          // The static xts job is the first job in the list, if the test failed, we don't
+          // execute any MCTS jobs.
+          if (isStaticXtsJobAndFailed) {
+            tradefedJobs.clear();
+          } else {
+            sessionInfo.addJob(tradefedJobs.remove(0));
+          }
         }
 
         if (requestDetail.getState() == RequestState.CANCELED) {

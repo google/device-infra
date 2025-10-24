@@ -26,6 +26,7 @@ public class XtsConstants {
   public static final String TRADEFED_TESTS_DONE = "tradefed_tests_done";
   public static final String TRADEFED_TESTS_TOTAL = "tradefed_tests_total";
   public static final String TRADEFED_JOBS_PASSED = "tradefed_jobs_passed";
+  public static final String TRADEFED_JOBS_HAS_RESULT_FILE = "tradefed_jobs_has_result_file";
 
   public static final String TRADEFED_OUTPUT_FILE_NAME = "xts_tf_output.log";
 

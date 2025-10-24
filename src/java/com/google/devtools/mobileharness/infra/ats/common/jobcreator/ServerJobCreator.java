@@ -32,6 +32,8 @@ import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerU
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName;
 import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName.Job;
+import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.DeviceActionConfigObject;
+import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestEnvironment;
 import com.google.devtools.mobileharness.infra.ats.server.sessionplugin.TradefedConfigGenerator;
 import com.google.devtools.mobileharness.infra.ats.server.util.AtsServerSessionUtil;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
@@ -289,5 +291,37 @@ public class ServerJobCreator extends XtsJobCreator {
     Path xtsSubPlansDir = Path.of(sessionRequestInfo.xtsRootDir()).getParent();
     return serializeRetrySubPlan(
         xtsSubPlansDir, subPlan, sessionRequestInfo.retrySessionId().orElseThrow());
+  }
+
+  /**
+   * Revises {@link SessionRequestInfo} for dynamic job.
+   *
+   * <p>The dynamic download job's device action should be cleared, since those actions should be
+   * executed in the static xts job that is triggered first.
+   */
+  @Override
+  protected SessionRequestInfo reviseRequestInfoForDynamicJob(
+      SessionRequestInfo sessionRequestInfo) {
+    if (sessionRequestInfo.atsServerTestEnvironment().isPresent()) {
+      // The dynamic download job's device action should be cleared, since those actions should
+      // be executed in the static xts job that is triggered first.
+      TestEnvironment testEnvironment = sessionRequestInfo.atsServerTestEnvironment().get();
+      ImmutableList<DeviceActionConfigObject> resultReporters =
+          testEnvironment.getDeviceActionConfigObjectsList().stream()
+              .filter(
+                  deviceActionConfigObject ->
+                      deviceActionConfigObject.getType()
+                          == DeviceActionConfigObject.DeviceActionConfigObjectType.RESULT_REPORTER)
+              .collect(toImmutableList());
+      TestEnvironment updatedTestEnvironment =
+          testEnvironment.toBuilder()
+              .clearDeviceActionConfigObjects()
+              .addAllDeviceActionConfigObjects(resultReporters)
+              .build();
+      return sessionRequestInfo.toBuilder()
+          .setAtsServerTestEnvironment(updatedTestEnvironment)
+          .build();
+    }
+    return sessionRequestInfo;
   }
 }
