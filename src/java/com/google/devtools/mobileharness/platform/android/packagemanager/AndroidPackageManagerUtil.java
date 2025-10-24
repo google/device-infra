@@ -1102,52 +1102,7 @@ public class AndroidPackageManagerUtil {
       }
     }
 
-    if (output.contains(OUTPUT_INSTALL_FAILED_NO_MATCHING_ABIS)) {
-      throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_ABI_INCOMPATIBLE,
-          "Failed to install "
-              + apkPath
-              + " due to no matching abis: "
-              + output
-              + "\n"
-              + " for more details.");
-    }
-
-    // Will be marked as FAIL (instead of ERROR) for this ErrorCode
-    if (output.contains(OUTPUT_INSTALL_FAILED_MISSING_SHARED_LIBRARY)) {
-      throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_MISSING_SHARED_LIBRARY,
-          String.format(
-              "Failed to install %s due to missing shared libraries: %s%n"
-                  + "Please check <uses-library> element in your manifest.%n",
-              apkPath, output));
-    }
-
-    if (output.contains(OUTPUT_INSTALL_PARSE_FAILED_MANIFEST_MALFORMED)) {
-      throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_PARSE_FAILED_MANIFEST_MALFORMED,
-          String.format(
-              "Failed to install %s due to the manifest marlformed: %s", apkPath, output));
-    }
-
-    if (output.contains(OUTPUT_INSTALL_FAILED_INVALID_APK)) {
-      throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_INVALID_APK,
-          String.format("Failed to install %s due to the invalid apk: %s", apkPath, output));
-    }
-
-    if (output.contains(OUTPUT_INSTALL_FAILED_DUPLICATE_PERMISSION)) {
-      throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_DUPLICATE_PERMISSION,
-          String.format(
-              "Failed to install %s due to the duplicate permission: %s", apkPath, output));
-    }
-
-    if (output.contains(OUTPUT_INSTALL_FAILED_OLDER_SDK)) {
-      throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_OLDER_SDK,
-          String.format("Failed to install %s due to the older sdk: %s", apkPath, output));
-    }
+    maybeThrowNonInfraInstallationError(output, apkPath);
 
     logger.atWarning().log("Failed to install apk %s to device %s:%n%s", apkPath, serial, output);
     // Uninstalls the existing package.
@@ -1381,13 +1336,7 @@ public class AndroidPackageManagerUtil {
       }
     } catch (MobileHarnessException e) {
       output = e.getMessage();
-      if (output.contains(OUTPUT_INSTALL_FAILED_NO_MATCHING_ABIS)) {
-        throw new MobileHarnessException(
-            AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_ABI_INCOMPATIBLE,
-            String.format(
-                "failed to install %s on device %s due to no matching abis",
-                packageMap.values(), serial));
-      }
+      maybeThrowNonInfraInstallationError(output, packageMap.values().toString());
       throwInstallationError("install command killed", e);
     }
 
@@ -1402,6 +1351,7 @@ public class AndroidPackageManagerUtil {
             AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_INVALID_APK_SPLIT_NULL,
             String.format("install-multi-package error: %s. See" + " for more details.", output));
       }
+      maybeThrowNonInfraInstallationError(output, packageMap.values().toString());
       throwInstallationError(
           "Failed to install packages:\n" + packageMap + '\n' + output, /* cause= */ null);
     }
@@ -1933,6 +1883,57 @@ public class AndroidPackageManagerUtil {
             .splitToStream(output)
             .allMatch(
                 line -> line.startsWith(OUTPUT_SUCCESS) || line.startsWith(SESSION_CREATION_START));
+  }
+
+  /**
+   * Throws a non-infra installation error for well-known installation errors detected in the ADB
+   * output, otherwise does nothing.
+   */
+  private static void maybeThrowNonInfraInstallationError(String output, String apk)
+      throws MobileHarnessException {
+    if (output.contains(OUTPUT_INSTALL_FAILED_NO_MATCHING_ABIS)) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_ABI_INCOMPATIBLE,
+          "Failed to install "
+              + apk
+              + " due to no matching abis: "
+              + output
+              + "\n"
+              + " for more details.");
+    }
+
+    if (output.contains(OUTPUT_INSTALL_FAILED_MISSING_SHARED_LIBRARY)) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_MISSING_SHARED_LIBRARY,
+          String.format(
+              "Failed to install %s due to missing shared libraries: %s%n"
+                  + "Please check <uses-library> element in your manifest.%n",
+              apk, output));
+    }
+
+    if (output.contains(OUTPUT_INSTALL_PARSE_FAILED_MANIFEST_MALFORMED)) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_PARSE_FAILED_MANIFEST_MALFORMED,
+          String.format("Failed to install %s due to the manifest marlformed: %s", apk, output));
+    }
+
+    if (output.contains(OUTPUT_INSTALL_FAILED_INVALID_APK)) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_INVALID_APK,
+          String.format("Failed to install %s due to the invalid apk: %s", apk, output));
+    }
+
+    if (output.contains(OUTPUT_INSTALL_FAILED_DUPLICATE_PERMISSION)) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_DUPLICATE_PERMISSION,
+          String.format("Failed to install %s due to the duplicate permission: %s", apk, output));
+    }
+
+    if (output.contains(OUTPUT_INSTALL_FAILED_OLDER_SDK)) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_OLDER_SDK,
+          String.format("Failed to install %s due to the older sdk: %s", apk, output));
+    }
   }
 
   private void throwInstallationError(String message, @Nullable Throwable cause)
