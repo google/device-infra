@@ -36,3 +36,44 @@ java_proto_library(
     name = "device_java_proto",
     deps = [":device_proto"],
 )
+
+proto_library(
+    name = "job_proto",
+    srcs = ["job.proto"],
+    deps = [
+        ":quota_proto",
+        ":test_proto",
+        "//src/devtools/mobileharness/api/model/proto:device_proto",
+        "//src/devtools/mobileharness/api/model/proto:job_proto",
+    ],
+)
+
+java_proto_library(
+    name = "job_java_proto",
+    deps = [":job_proto"],
+)
+
+proto_library(
+    name = "quota_proto",
+    srcs = ["quota.proto"],
+)
+
+java_proto_library(
+    name = "quota_java_proto",
+    deps = [":quota_proto"],
+)
+
+proto_library(
+    name = "test_proto",
+    srcs = ["test.proto"],
+    deps = [
+        ":quota_proto",
+        "//src/devtools/mobileharness/api/model/proto:device_proto",
+        "//src/devtools/mobileharness/api/model/proto:test_proto",
+    ],
+)
+
+java_proto_library(
+    name = "test_java_proto",
+    deps = [":test_proto"],
+)
