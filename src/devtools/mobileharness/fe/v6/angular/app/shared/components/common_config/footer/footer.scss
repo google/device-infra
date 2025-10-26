@@ -1,0 +1,58 @@
+.config-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #e2e8f0;
+  background-color: white;
+
+  font-family: 'Roboto', sans-serif;
+
+  .permission-status {
+    display: flex;
+    align-items: center;
+    font-style: italic;
+    color: #64748b;
+    font-size: 0.8rem;
+  }
+  .permission-status .material-icons {
+    margin-right: 0.5rem;
+    font-size: 1.1rem;
+  }
+  .permission-status .spinner {
+    margin-right: 0.5rem;
+  }
+  .permission-status.success {
+    font-style: normal;
+  }
+  .permission-status.success .material-icons {
+    color: #16a34a;
+  }
+  .permission-status.failure {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    font-style: normal;
+  }
+  .permission-status.failure > div > .material-icons {
+    color: #dc2626;
+  }
+  @keyframes spin {
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+  .spinner {
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid #e2e8f0;
+    border-top-color: #0b57d0;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  .dialog-actions {
+    gap: 0.75rem;
+  }
+}

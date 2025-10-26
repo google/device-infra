@@ -1,0 +1,137 @@
+h1, h2, h3, h4, h5, h6, p {
+  margin: 0;
+  font-family: 'Roboto', sans-serif;
+}
+
+*, ::after, ::before {
+  box-sizing: border-box;
+}
+
+.font-medium {
+  font-weight: 500;
+}
+
+.font-semibold {
+  font-weight: 600;
+}
+
+.font-margin {
+  margin-top: 0.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.text-gray-800 {
+  color: #1f2937;
+}
+
+.text-gray-700 {
+  color: #374151;
+}
+
+.text-gray-600 {
+  color: #4b5563;
+}
+
+.text-gray-500 {
+  color: #6b7280;
+}
+
+.form-label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #475569;
+  margin-bottom: 0.25rem;
+}
+
+.form-input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.375rem;
+  border: 1px solid #cbd5e1;
+  background: white;
+  transition: all 0.2s;
+  font-size: 100%;
+  font-family: 'Roboto', sans-serif;
+}
+
+
+
+.space-y-10 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 2.5rem;
+  margin-bottom: 0;
+}
+
+.space-y-8 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 2rem;
+  margin-bottom: 0;
+}
+
+.space-y-6 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 1.5rem;
+  margin-bottom: 0;
+}
+
+.space-y-4 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 1rem;
+  margin-bottom: 0;
+}
+
+.button-container {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.wizard-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1.25rem;
+  border-radius: 0.25rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.wizard-button:disabled {
+  background-color: #e2e8f0;
+  color: #94a3b8;
+  cursor: not-allowed;
+  border: none;
+}
+
+.wizard-button-primary {
+  background-color: #0b57d0;
+  color: white;
+}
+
+.wizard-button-primary:not(:disabled):hover {
+  background-color: #0a4cb8;
+}
+
+.wizard-button-secondary {
+  background-color: white;
+  color: #0b57d0;
+  border-color: #c2c2c2;
+}
+
+.wizard-button-secondary:not(:disabled):hover {
+  background-color: #f0f5fe;
+}
+
+.wizard-button-tertiary {
+  background-color: transparent;
+  color: #475569;
+  border-color: #c2c2c2;
+}
+
+.wizard-button-tertiary:not(:disabled):hover {
+  background-color: #f1f5f9;
+}
+
+.wizard-button-spinner {
+  margin-right: 0.375rem;
+}

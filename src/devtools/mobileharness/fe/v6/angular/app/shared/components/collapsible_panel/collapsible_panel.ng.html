@@ -1,0 +1,14 @@
+<div class="collapsible-panel">
+  <header (click)="toggle()" class="panel-header" [class.collapsed]="!expanded">
+    <span>{{ title }}</span>
+    <ng-content select="[operations]"></ng-content>
+
+    <mat-icon class="expand-icon" [class.rotated]="!expanded">expand_more</mat-icon>
+  </header>
+
+  <div class="panel-content" [class.expanded]="expanded">
+    <div class="content">
+      <ng-content></ng-content>
+    </div>
+  </div>
+</div>

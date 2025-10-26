@@ -1,0 +1,223 @@
+// SCSS Variables
+$toggle-color: #007bff;
+$toggle-bg: #e9ecef;
+$toggle-border: #ced4da;
+$toggle-thumb-bg: #fff;
+$toggle-shadow: rgba(0, 0, 0, 0.1);
+$toggle-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+// Dark mode variables
+$toggle-dark-bg: #343a40;
+$toggle-dark-border: #495057;
+$toggle-dark-shadow: rgba(0, 0, 0, 0.3);
+
+// Size variables
+$toggle-small-width: 36px;
+$toggle-small-height: 20px;
+$toggle-small-thumb: 16px;
+
+$toggle-medium-width: 44px;
+$toggle-medium-height: 24px;
+$toggle-medium-thumb: 20px;
+
+$toggle-large-width: 52px;
+$toggle-large-height: 28px;
+$toggle-large-thumb: 24px;
+
+.toggle-switch-container {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+  background-color: $toggle-bg;
+  // border: 2px solid $toggle-border;
+  border-radius: 50px;
+  transition: $toggle-transition;
+  user-select: none;
+
+  // Hide native checkbox
+  .toggle-switch__input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+  }
+
+  // Thumb circle
+  .toggle-switch__thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    background-color: $toggle-thumb-bg;
+    border-radius: 50%;
+    box-shadow: 0 2px 4px $toggle-shadow;
+    transition: $toggle-transition;
+    width: 16px;
+    height: 16px;
+    // border: 1px solid #ddd;
+  }
+
+  // Checked state
+  &--checked {
+    background-color: $toggle-color;
+    border-color: $toggle-color;
+
+    .toggle-switch__thumb {
+      transform: translateX(20px);
+    }
+  }
+
+  // Disabled state
+  &--disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+
+    .toggle-switch__thumb {
+      background-color: #f8f9fa;
+    }
+  }
+
+  // Size variants
+  &--small {
+    width: $toggle-small-width;
+    height: $toggle-small-height;
+
+    .toggle-switch__thumb {
+      width: $toggle-small-thumb;
+      height: $toggle-small-thumb;
+      top: 2px;
+      left: 2px;
+    }
+
+    &.toggle-switch--checked .toggle-switch__thumb {
+      transform: translateX($toggle-small-thumb);
+    }
+  }
+
+  &--medium {
+    width: $toggle-medium-width;
+    height: $toggle-medium-height;
+
+    .toggle-switch__thumb {
+      width: $toggle-medium-thumb;
+      height: $toggle-medium-thumb;
+      top: 2px;
+      left: 2px;
+    }
+
+    &.toggle-switch--checked .toggle-switch__thumb {
+      transform: translateX($toggle-medium-thumb);
+    }
+  }
+
+  &--large {
+    width: $toggle-large-width;
+    height: $toggle-large-height;
+
+    .toggle-switch__thumb {
+      width: $toggle-large-thumb;
+      height: $toggle-large-thumb;
+      top: 2px;
+      left: 2px;
+    }
+
+    &.toggle-switch--checked .toggle-switch__thumb {
+      transform: translateX($toggle-large-thumb);
+    }
+  }
+
+  // Hover effects
+  &:not(&--disabled):hover {
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+
+    .toggle-switch__thumb {
+      box-shadow: 0 4px 8px $toggle-shadow;
+    }
+  }
+
+  // Focus state
+  &:focus-within {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+  }
+}
+
+// Label styles
+.toggle-switch__label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #495057;
+  cursor: pointer;
+  user-select: none;
+
+  &--left {
+    order: -1;
+  }
+
+  &--right {
+    order: 1;
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .toggle-switch {
+    &--small {
+      width: $toggle-small-width - 4px;
+      height: $toggle-small-height - 2px;
+
+      .toggle-switch__thumb {
+        width: $toggle-small-thumb - 2px;
+        height: $toggle-small-thumb - 2px;
+      }
+    }
+
+    &--medium {
+      width: $toggle-medium-width - 4px;
+      height: $toggle-medium-height - 2px;
+
+      .toggle-switch__thumb {
+        width: $toggle-medium-thumb - 2px;
+        height: $toggle-medium-thumb - 2px;
+      }
+    }
+
+    &--large {
+      width: $toggle-large-width - 4px;
+      height: $toggle-large-height - 2px;
+
+      .toggle-switch__thumb {
+        width: $toggle-large-thumb - 2px;
+        height: $toggle-large-thumb - 2px;
+      }
+    }
+  }
+
+  .toggle-switch__label {
+    font-size: 13px;
+  }
+}
+
+// Dark mode support
+@media (prefers-color-scheme: dark) {
+  // .toggle-switch {
+  //   background-color: $toggle-dark-bg;
+  //   border-color: $toggle-dark-border;
+
+  //   .toggle-switch__thumb {
+  //     background-color: $toggle-thumb-bg;
+  //     box-shadow: 0 2px 4px $toggle-dark-shadow;
+  //   }
+  // }
+
+  // .toggle-switch__label {
+  //   color: #e9ecef;
+  // }
+}

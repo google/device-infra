@@ -1,0 +1,132 @@
+<!--
+ Copyright 2025 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+<mat-toolbar class="app-toolbar">
+  <button
+    class="toggleSidenavButton toolbar-button"
+    mat-icon-button
+    (click)="sideNavExpanded = !sideNavExpanded"
+    matTooltip="Main menu"
+    aria-label="Toggle sidenav menu"
+  >
+    <mat-icon aria-label="Side nav toggle icon">menu</mat-icon>
+  </button>
+  <!-- <img src="boq-omnilabfrontend/images/logo-title.png" alt="Omnilab ATS Logo"> -->
+  <img src="https://www.gstatic.com/mobileharness/images/omnilab_mark_primary_l.png" alt="Omnilab ATS Logo">
+
+  <span class="title">OmniLab Console</span>
+  @if (showVersionInfo) {
+    <div class="version-info">
+      Version: {{ appData.labconsoleVersion }} <br />
+      ADB: {{ appData.adbVersion }} <br />
+      {{ appData.mttVersion }}
+    </div>
+  }
+</mat-toolbar>
+
+<mat-sidenav-container [class.collapsed]="!sideNavExpanded" class="app-sidenav-container">
+  <!--Sidenav menu-->
+  <mat-sidenav mode="side" opened role="navigation">
+    <div class="sidenav-container">
+      <mat-nav-list>
+        <h3 matSubheader>
+          <span>Overview</span>
+        </h3>
+
+        <a mat-list-item routerLink="/dev/device-harness" routerLinkActive="active" queryParamsHandling="preserve" [matTooltip]="'Dashboard'">
+          <mat-icon matListItemIcon>dashboard</mat-icon>
+          <span matListItemMeta>
+            <span>Dashboard</span>
+          </span>
+        </a>
+
+        <mat-divider></mat-divider>
+
+        <h3 matSubheader>
+          <span>Equipment</span>
+        </h3>
+
+        <a mat-list-item routerLink="/devices" routerLinkActive="active" queryParamsHandling="preserve" [matTooltip]="'Devices'">
+          <mat-icon matListItemIcon>phone_android</mat-icon>
+          <span matListItemMeta>
+            <span>Devices</span>
+          </span>
+        </a>
+
+        <a mat-list-item routerLink="/hosts" routerLinkActive="active" queryParamsHandling="preserve" [matTooltip]="'Hosts'">
+          <mat-icon matListItemIcon>dns</mat-icon>
+          <span matListItemMeta>
+            <span>Hosts</span>
+          </span>
+        </a>
+
+        <mat-divider></mat-divider>
+
+        <h3 matSubheader>
+          <span>Help</span>
+        </h3>
+
+        <a
+          mat-list-item
+          matTooltip="User Guide"
+          target="_blank"
+          href="https://source.android.com/compatibility/tests/development/android-test-station/ats-user-guide"
+        >
+          <mat-icon matListItemIcon>article</mat-icon>
+          <span matListItemMeta>
+            <span>User Guide</span>
+          </span>
+        </a>
+
+        <a
+          mat-list-item
+          matTooltip="FAQs"
+          target="_blank"
+          href="https://source.android.com/compatibility/tests/development/android-test-station/faq"
+        >
+          <mat-icon matListItemIcon>help_outline</mat-icon>
+          <span matListItemMeta>
+            <span>FAQs</span>
+          </span>
+        </a>
+        <a mat-list-item matTooltip="API Explorer" target="_blank" href="/_ah/api_docs">
+          <mat-icon matListItemIcon>code</mat-icon>
+          <span matListItemMeta>
+            <span>API Explorer</span>
+          </span>
+        </a>
+      </mat-nav-list>
+    </div>
+  </mat-sidenav>
+
+  <!--Routed content-->
+  <mat-sidenav-content>
+    <main>
+      <router-outlet></router-outlet>
+    </main>
+    <footer>
+      <div class="version-info">
+        Build: {{ appData.labconsoleVersion }}
+      </div>
+
+      <div class="copy-right-info">
+        <span> © 2025 Google &nbsp;|</span>
+        &nbsp;<a target="_blank" rel="noopener" aria-label="Terms of Service, opens in a new window" href="https://policies.google.com/terms">Terms of Service</a>
+&nbsp;|&nbsp;<a target="_blank" rel="noopener" aria-label="Privacy Policy, opens in a new window" href="https://policies.google.com/privacy">Privacy Policy</a>
+      </div>
+    </footer>
+  </mat-sidenav-content>
+</mat-sidenav-container>
