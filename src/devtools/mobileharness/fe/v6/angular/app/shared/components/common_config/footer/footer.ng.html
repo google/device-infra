@@ -1,0 +1,32 @@
+<footer class="config-footer">
+  @if (permissionResult$ | async; as permissionResult) {
+    @if (permissionResult.isChecking) {
+      <div class="permission-status">
+        <div class="spinner"></div>
+        <span>Checking permissions...</span>
+      </div>
+    } @else {
+      @if (permissionResult.hasPermission) {
+        <div class="permission-status success">
+          <i class="material-icons">check_circle</i>
+          <span>Current user has permission to configure this device.</span>
+        </div>
+      } @else {
+        <div class="permission-status failure">
+          <div style="display: flex; align-items: center">
+            <i class="material-icons">cancel</i>
+            <span>Current user does not have permission to configure this device.</span>
+          </div>
+          <a href="#" class="request-access-link">
+            <span class="request-access-link-text">Request Access</span>
+            <i class="material-icons">open_in_new</i>
+          </a>
+        </div>
+      }
+    }
+
+    <mat-dialog-actions align="end" class="dialog-actions">
+      <ng-content select="[footer-buttons]"></ng-content>
+    </mat-dialog-actions>
+  }
+</footer>

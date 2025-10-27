@@ -1,0 +1,609 @@
+// Styles for Device Overview Tab
+// Extracted and adapted from the prototype's style block.
+
+:host {
+  display: block;
+  font-family: 'Roboto', sans-serif;
+}
+
+.hidden {
+  display: none;
+}
+
+.overview-container {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  min-height: 100vh;
+
+  @media (min-width: 768px) {
+    flex-direction: row;
+  }
+}
+
+// Left Sticky Navigation
+.overview-nav-container {
+  width: 100%;
+  flex-shrink: 0;
+  align-self: flex-start;
+  max-height: calc(100vh - 4rem);
+  overflow-y: auto;
+
+  @media (min-width: 768px) {
+    width: 16rem; // w-64
+    position: sticky;
+    top: 2rem; // Adjust as needed
+  }
+}
+
+.overview-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem; // space-y-1
+  background-color: #f9fafb;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid #e5e7eb;
+
+  @media (min-width: 768px) {
+    background-color: transparent;
+    padding: 0;
+    border: none;
+  }
+}
+
+.overview-nav-link {
+  display: block;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-weight: 500;
+  color: #3c4043; // text-gray-700
+  text-decoration: none;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
+  border-left: 3px solid transparent;
+  font-size: 0.875rem;
+
+  &:hover {
+    background-color: #f3f4f6; // hover:bg-gray-100
+  }
+
+  &.active {
+    color: #1967d2; // text-blue-700
+    font-weight: 700;
+    background-color: #e8f0fe; // bg-blue-50
+    border-left-color: #1967d2; // border-blue-700
+  }
+}
+
+// Right Content Cards
+.overview-content {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem; // space-y-6
+  min-width: 0;
+}
+
+.overview-card {
+  background-color: #f0f4f9;
+  border-radius: 0.75rem;
+  border: 1px solid #e5e7eb;
+}
+
+.overview-card-header {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #e0e0e0;
+  font-size: 1.125rem;
+  font-weight: 500;
+  color: #1f2937;
+  margin: 0;
+}
+
+.overview-card-content {
+  padding: 1.5rem;
+
+  .mat-icon {
+    height: unset;
+    width: unset;
+    overflow: visible;
+  }
+}
+
+// Health & Activity Card
+.health-summary {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+
+    // Background and text colors are applied dynamically
+    .bg-green-100 {
+      background-color: #d1fae5;
+    }
+    .text-green-600 {
+      color: #16a34a;
+    }
+    .bg-blue-100 {
+      background-color: #dbeafe;
+    }
+    .text-blue-600 {
+      color: #2563eb;
+    }
+    .bg-amber-100 {
+      background-color: #fef3c7;
+    }
+    .text-amber-600 {
+      color: #d97706;
+    }
+    .bg-red-100 {
+      background-color: #fee2e2;
+    }
+    .text-red-600 {
+      color: #dc2626;
+    }
+}
+
+.summary-icon-bg {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  .summary-icon {
+    font-size: 24px;
+  }
+}
+
+.health-details {
+  border-left: 4px solid transparent;
+  padding-left: 0.75rem;
+  flex-grow: 1;
+
+  // Border colors applied dynamically
+  &.border-l-green-500 {
+    border-left-color: #22c55e;
+  }
+  &.border-l-blue-500 {
+    border-left-color: #3b82f6;
+  }
+  &.border-l-amber-500 {
+    border-left-color: #f59e0b;
+  }
+  &.border-l-red-500 {
+    border-left-color: #ef4444;
+  }
+}
+
+.health-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin:0;
+}
+
+.health-subtitle {
+  color: #6b7280;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+  margin-bottom: 0;
+}
+
+.last-in-service {
+  font-size: 0.875rem;
+  color: #4b5563;
+  margin-top: 0.5rem;
+
+  .font-medium {
+    font-weight: 500;
+    color: #374151;
+  }
+
+  .time-ago-chip {
+    display: inline-block;
+    background-color: #e5e7eb;
+    color: #374151;
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 0.25rem 0.5rem;
+    border-radius: 9999px;
+    margin-left: 0.5rem;
+  }
+}
+
+.diagnostics-details {
+  margin-top: 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid #e5e7eb;
+  background-color: #f9fafb;
+
+  summary {
+    cursor: pointer;
+    padding: 0.75rem 1rem;
+    font-weight: 500;
+    font-size: 0.875rem;
+    color: #1d4ed8;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    list-style: none; // Remove default marker
+
+    &:hover {
+      background-color: #eff6ff;
+    }
+    &::-webkit-details-marker {
+      display: none; // Chrome/Safari
+    }
+  }
+
+  .expand-icon {
+    transition: transform 0.2s ease-in-out;
+  }
+
+  &[open] > summary .expand-icon {
+    transform: rotate(180deg);
+  }
+}
+
+.diagnostics-content {
+  padding: 1rem;
+  border-top: 1px solid #e5e7eb;
+  font-size: 0.875rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+
+  .diag-type {
+    display: block;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 0.25rem;
+  }
+  .diag-text {
+    color: #4b5563;
+    line-height: 1.6;
+    margin: 0;
+
+    code {
+      font-family: 'Roboto Mono', monospace;
+      background-color: #e5e7eb;
+      padding: 0.1rem 0.3rem;
+      border-radius: 0.25rem;
+      font-size: 0.8em;
+    }
+  }
+}
+
+.detail-list-grid {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  gap: 1rem 1.25rem;
+  align-items: flex-start;
+  margin-top: 1.5rem;
+  font-size: 0.875rem;
+
+  dt {
+    font-weight: 500;
+    color: #374151;
+  }
+  dd {
+    min-width: 0;
+    color: #4b5563;
+  }
+}
+
+.chip-grid-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.type-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.type-chip-normal {
+  background-color: #e0e0e0;
+  color: #3c4043;
+}
+
+.type-chip-abnormal {
+  background-color: #d93025;
+  color: white;
+}
+
+.type-chip-critical-status {
+  background-color: #d93025;
+  color: white;
+}
+
+.no-types {
+  color: #d93025;
+  font-style: italic;
+  font-size: 0.875rem;
+}
+
+.task-dt {
+  align-self: flex-start;
+  padding-top: 0.25rem;
+}
+
+.task-dd {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.task-icon {
+  color: #2563eb;
+  margin-top: 0.25rem;
+  font-size: 18px;
+}
+
+.task-info {
+  font-size: 0.875rem;
+  min-width: 0;
+}
+
+.task-title {
+  font-weight: 600;
+  color: #1f2937;
+  word-break: break-all;
+}
+
+.task-link {
+  font-weight: normal;
+  color: #2563eb;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.task-jobid {
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  color: #6b7280;
+  word-break: break-all;
+}
+
+.spin-animation {
+  animation: spin 1.5s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// Basic Information Card
+.basic-info-grid-wrapper {
+  display: grid;
+  gap: 1.5rem 2rem;
+  grid-template-columns: 1fr;
+
+  @media (min-width: 1024px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.info-grid-tight {
+  display: grid;
+  grid-template-columns: 120px 1fr; // Adjusted column width
+  gap: 0.75rem 1.5rem;
+  align-items: flex-start;
+  font-size: 0.875rem;
+  margin: 0;
+
+  dt {
+    font-weight: 500;
+    color: #5f6368;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  dd {
+    color: #202124;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
+}
+
+.network-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  .wifi-icon {
+    color: #5f6368;
+    font-size: 20px;
+    cursor: default;
+  }
+
+  .internet-status {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+
+    .internet-icon {
+      font-size: 16px;
+    }
+    span {
+      font-size: 0.875rem;
+    }
+  }
+  .text-green-600 {
+    color: #16a34a;
+  }
+  .text-red-600 {
+    color: #dc2626;
+  }
+  .text-gray-500 {
+    color: #6b7280;
+  }
+}
+
+// Permissions Card
+.permissions-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.permission-type-title {
+  font-weight: 500;
+  font-size: 0.875rem;
+  color: #1f2937;
+  margin-bottom: 0.5rem;
+  margin-top: 0;
+}
+
+.no-permission {
+  color: #6b7280;
+  font-size: 0.875rem;
+  font-style: italic;
+}
+
+// Capabilities Card
+.capabilities-content {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.capabilities-title {
+  font-weight: 500;
+  color: #1f2937;
+  margin-bottom: 0.75rem;
+  font-size: 0.95rem;
+  margin-top: 0;
+}
+
+.no-capability {
+  color: #6b7280;
+  font-size: 0.875rem;
+  font-style: italic;
+}
+
+// Dimensions & Properties Cards
+.overview-search-input {
+  width: 100%;
+  padding: 0.5rem 1rem;
+  border-radius: 9999px;
+  border: 1px solid #d1d5db;
+  background-color: #f9fafb;
+  margin-bottom: 1rem;
+  transition: all 0.2s;
+  font-size: 0.875rem;
+
+  &:focus {
+    outline: none;
+    border-color: #1d4ed8;
+    box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.15);
+    background-color: white;
+  }
+}
+
+.dimension-section-title {
+  font-size: 1.125rem;
+  font-weight: 500;
+  color: #1f2937;
+  margin-bottom: 0.75rem;
+  margin-top: 0;
+}
+
+.data-source-group {
+  margin-bottom: 1rem;
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.dimension-source-title {
+  font-weight: 500;
+  color: #4b5563;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.data-block {
+  background-color: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1rem;
+  font-family: 'Roboto Mono', monospace;
+
+  &.scrollable {
+    max-height: 300px;
+    overflow-y: auto;
+  }
+}
+
+.data-block-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.25rem 1.5rem;
+  font-size: 0.8125rem; // Slightly smaller for mono
+  line-height: 1.6;
+  margin: 0;
+
+  .contents {
+    display: contents;
+  }
+
+  dt,
+  dd {
+    white-space: pre-wrap;
+    word-break: break-all;
+    padding: 2px 0;
+    color: #202124;
+  }
+
+  dt {
+    font-weight: 500;
+    color: #5f6368;
+  }
+
+  dd {
+    color: #3c4043;
+  }
+}
+
+.no-search-results {
+  color: #6b7280;
+  font-size: 0.875rem;
+  text-align: center;
+  padding: 1rem 0;
+  margin: 0;
+}
+
+.no-data {
+  color: #6b7280;
+  font-size: 0.875rem;
+  font-style: italic;
+  padding: 0.5rem 0;
+  margin: 0;
+}
+
+.mt-6 {
+  margin-top: 1.5rem;
+}

@@ -1,0 +1,71 @@
+@use '../../../../../shared/styles/configuration';
+
+.host-managed-content {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  padding: 1.5rem;
+  color: #374151;
+
+  .host-managed-description {
+    padding: 1rem;
+    color: #854d0e;
+    background-color: #fef9c3;
+    border-left: 4px solid #eab308;
+    border-radius: 0.375rem;
+    margin: 0;
+
+    .font-semibold {
+      font-weight: 600;
+    }
+
+    .description-text {
+      display: block;
+      margin-top: 0.25rem;
+    }
+
+    .text-black {
+      color: #000;
+      font-weight: bolder;
+    }
+  }
+
+  .host-managed-config {
+    margin: 1rem 0;
+    padding: 1rem;
+    background-color: #f9fafb;
+    border-radius: 0.5rem;
+    border: 1px solid #e5e7eb;
+    font-family: 'Roboto', sans-serif;
+
+    .host-managed-title {
+      font-weight: 500;
+      margin: 0 0 0.75rem;
+      font-size: 1rem;
+      line-height: 1.5rem;
+      color: #1f2937;
+    }
+
+    .host-managed-config-list {
+      font-size: 0.75rem;
+      line-height: 1rem;
+      gap: 1rem;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      display: grid;
+
+      .break-all {
+        word-break: break-all;
+      }
+    }
+  }
+}
+
+.actions-container {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+
+  a {
+    text-decoration: none;
+    font-family: 'Roboto', sans-serif;
+  }
+}

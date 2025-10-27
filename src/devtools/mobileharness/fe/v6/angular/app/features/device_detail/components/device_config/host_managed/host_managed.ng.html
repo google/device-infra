@@ -1,0 +1,30 @@
+<app-dialog title="Host-Managed Configuration" subtitle="" deviceId="{{ deviceId }}">
+  <mat-dialog-content class="host-managed-content">
+    <p class="host-managed-description">
+      <strong class="font-semibold">This device inherits its configuration from its host.</strong>
+      <span class="description-text">
+        To make changes, you must edit the configuration for the host
+        <strong class="text-black">host-x.google.com</strong> directly.
+      </span>
+    </p>
+    <div class="host-managed-config">
+      <h3 class="host-managed-title">Host Default Configuration</h3>
+      <div class="host-managed-config-list">
+        <div><strong>Owners:</strong> <div class="break-all">host-admin</div></div>
+        <div><strong>Wi-Fi:</strong> <div class="break-all">WL-MobileHarness</div></div>
+        <div>
+          <strong>Supported Dimensions:</strong> <div class="break-all">From Host Config</div>
+        </div>
+        <div><strong>Max Failures:</strong> 3</div>
+      </div>
+    </div>
+  </mat-dialog-content>
+  <ng-container footer-buttons>
+    <mat-dialog-actions align="end" class="actions-container">
+      <button mat-button mat-dialog-close class="wizard-button wizard-button-secondary"
+        >Close</button
+      >
+      <a href="#" class="wizard-button wizard-button-primary">Go to Host Configuration</a>
+    </mat-dialog-actions>
+  </ng-container>
+</app-dialog>
