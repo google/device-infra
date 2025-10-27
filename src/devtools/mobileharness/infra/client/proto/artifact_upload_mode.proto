@@ -1,0 +1,56 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package mobileharness.client;
+
+option java_package = "com.google.devtools.mobileharness.api.proto";
+option java_multiple_files = true;
+option java_outer_classname = "ArtifactUploadModeProto";
+
+// Controls how test artifacts are uploaded to Sponge.
+//
+// This preference is specified as a job parameter (see
+// JobInfo.PARAM_SPONGE_ARTIFACT_UPLOAD_MODE_PREFERENCE) and is primarily used
+// when tests are triggered via the gateway. The gateway reads this setting to
+// determine whether to upload artifacts as individual files, a single zip
+// archive, or both.
+//
+// This setting is not used when tests are triggered directly via blaze.
+enum SpongeArtifactUploadMode {
+  /**
+   * [Default] Uploads artifacts as both individual files and a single
+   * 'undeclared_outputs.zip' archive.
+   *
+   * <p>This is the legacy behavior and results in redundant uploads and verbose
+   * logging. It is maintained for backward compatibility.
+   */
+  ARCHIVE_AND_INDIVIDUAL_FILES = 0;
+
+  /**
+   * Uploads each artifact as a separate file. This is useful when you need to
+   * access individual artifacts directly in Sponge.
+   */
+  INDIVIDUAL_FILES_ONLY = 1;
+
+  /**
+   * Uploads all artifacts bundled into a single zip archive named
+   * 'undeclared_outputs.zip'. This is the most efficient method and is
+   * recommended for most use cases.
+   */
+  ARCHIVE_ONLY = 2;
+}

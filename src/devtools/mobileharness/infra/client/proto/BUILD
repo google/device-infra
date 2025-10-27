@@ -20,6 +20,9 @@ package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
         "//devtools/mobileharness/infra/client:__subpackages__",
+        "//java/com/google/devtools/mobileharness/infra/client/api/plugin/resultstore:__subpackages__",
+        "//java/com/google/wireless/qa/mobileharness/client/api/util/sponge:__subpackages__",
+        "//java/com/google/wireless/qa/mobileharness/shared/sponge:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/shared:__subpackages__",
     ],
 )
@@ -32,4 +35,14 @@ proto_library(
 java_proto_library(
     name = "device_java_proto",
     deps = [":device_proto"],
+)
+
+proto_library(
+    name = "artifact_upload_mode_proto",
+    srcs = ["artifact_upload_mode.proto"],
+)
+
+java_proto_library(
+    name = "artifact_upload_mode_java_proto",
+    deps = [":artifact_upload_mode_proto"],
 )
