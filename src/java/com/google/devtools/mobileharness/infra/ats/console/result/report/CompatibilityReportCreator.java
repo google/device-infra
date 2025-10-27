@@ -111,31 +111,6 @@ public class CompatibilityReportCreator {
    * Creates report and related files under directory {@code resultDir}, and a zip file for
    * directory {@code resultDir} and its contents later for upload.
    *
-   * <p>See more details in {@link #createReport(Result, Path, TestRecord, boolean, String, Map,
-   * List)}.
-   */
-  public void createReport(
-      Result report,
-      Path resultDir,
-      @Nullable TestRecord testRecord,
-      boolean includeHtmlInZip,
-      String testPlan,
-      Map<String, String> testReportProperties)
-      throws MobileHarnessException, InterruptedException {
-    createReport(
-        report,
-        resultDir,
-        testRecord,
-        includeHtmlInZip,
-        testPlan,
-        testReportProperties,
-        /* extraFilesOrDirsToZip= */ ImmutableList.of());
-  }
-
-  /**
-   * Creates report and related files under directory {@code resultDir}, and a zip file for
-   * directory {@code resultDir} and its contents later for upload.
-   *
    * <p>Things done in this method:
    *
    * <ol>

@@ -200,7 +200,8 @@ public final class CompatibilityReportCreatorTest {
         /* testRecord= */ null,
         /* includeHtmlInZip= */ false,
         /* testPlan= */ "cts",
-        /* testReportProperties= */ ImmutableMap.of());
+        /* testReportProperties= */ ImmutableMap.of(),
+        /* extraFilesOrDirsToZip= */ ImmutableList.of());
 
     assertThat(
             realLocalFileUtil.listFilePaths(xmlResultDir.toPath(), false).stream()
