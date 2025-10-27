@@ -1,0 +1,24 @@
+<div class="harness-container">
+  <aside class="harness-sidebar">
+    <h3 class="sidebar-title">Device Scenarios</h3>
+    <nav class="sidebar-nav">
+      @for (scenario of deviceScenarios; track scenario.id) {
+        <a [routerLink]="['/devices', scenario.id]" queryParamsHandling="preserve" class="nav-link">
+          {{ scenario.scenarioName }}
+        </a>
+      }
+    </nav>
+
+    <h3 class="sidebar-title">Host Scenarios</h3>
+    <nav class="sidebar-nav">
+      @for (scenario of hostScenarios; track scenario.hostName) {
+        <a [routerLink]="['/hosts', scenario.hostName]" queryParamsHandling="preserve" class="nav-link">
+          {{ scenario.scenarioName }}
+        </a>
+      }
+    </nav>
+  </aside>
+  <div class="harness-main">
+    <p class="placeholder-text">Select a scenario from the left sidebar to view the details.</p>
+  </div>
+</div>

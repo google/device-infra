@@ -1,0 +1,118 @@
+@use '@angular/material' as mat;
+@use '../../../../../../shared/styles/configuration';
+
+:host {
+  // @include mat.slide-toggle-overrides((
+  //   track-width: 3rem,
+  //   track-height: 1.5rem,
+  //   track-shape: 999px,
+
+  //   selected-track-color: #0b57d0 !important,
+  //   selected-focus-track-color: #0b57d0 !important,
+
+  //   unselected-track-color: #d1d5db,
+  //   unselected-handle-color: white,
+  //   unselected-hover-handle-color: white,
+  //   unselected-focus-handle-color: white,
+  //   unselected-pressed-handle-color: white,
+  // ));
+
+  @include mat.button-toggle-overrides((
+    selected-state-background-color: #e8f0fe,
+    selected-state-text-color: #1d4ed8,
+    height: 2.25rem,
+  ));
+
+  @include mat.form-field-overrides((
+    container-height: 38px,
+    container-vertical-padding: 6px,
+    outlined-outline-color: #cbd5e1,
+    outlined-focus-outline-color: #0b57d0,
+    outlined-hover-outline-color: #0b57d0,
+    outlined-container-shape:0.375rem,
+  ));
+
+  @include mat.option-overrides((
+    label-text-tracking: normal,
+  ));
+}
+
+.wifi-container {
+  h3 {
+    font-size: 1.25rem;
+    line-height: 1.75rem;
+  }
+
+  .text-xs {
+    font-size: 0.75rem;
+    line-height: 1rem;
+  }
+
+  .form-group {
+    margin-bottom: 1rem;
+  }
+
+  .form-field {
+    width: 100%;
+
+    mat-select {
+      font-size: 100%;
+      letter-spacing: normal;
+      font-weight: 480;
+    }
+
+    mat-option {
+      font-size: 100%;
+      letter-spacing: normal;
+      font-weight: 480;
+    }
+  }
+
+  .wifi-config-content {
+    max-width: 32rem;
+
+    .toggle-switch-label {
+      display: flex;
+      align-items: center;
+      border-radius: 0.5rem;
+      padding: 1rem;
+      border: 1px solid #e5e7eb;
+
+      .toggle-switch-text-container {
+        flex-grow: 1;
+
+        p {
+          margin-top: 0.25rem;
+        }
+      }
+    }
+
+    .wifi-config-details {
+      padding-top: 1rem;
+
+      mat-button-toggle-group {
+        border-radius: 999px;
+      }
+
+      .wifi-details-inputs {
+        padding-top: 1rem;
+      }
+
+      .hidden-network-container {
+        margin-top: 1rem;
+        padding-top: 0.5rem;
+
+        .container-flex {
+          display: flex;
+          align-items: center;
+          cursor: pointer;
+        }
+
+        .container-flex > :not([hidden]) ~ :not([hidden]) {
+          margin-left: 0.75rem;
+        }
+      }
+    }
+  }
+}
+
