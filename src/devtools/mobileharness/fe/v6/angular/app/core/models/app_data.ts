@@ -30,9 +30,23 @@ export declare interface AppData {
   readonly isDevMode?: boolean;
   /** Current labconsole version. */
   readonly labconsoleVersion?: string;
+  /**
+   * The url of lab console server. Do NOT pass value to this field, as it's a
+   * computed filed via labConsoleServerPort and overrideLabConsoleServerUrl.
+   * The compute logic is:
+   * # when overrideLabConsoleServerUrl is set, use it.
+   * # otherwise, use
+   * ${window.location.protocol}//${window.location.hostname}
+   *  :${labConsoleServerPort}
+   */
+  readonly labConsoleServerUrl?: string;
   /** The port of lab console server. */
   readonly labConsoleServerPort?: string;
-  /** The override lab console server url. */
+  /**
+   * The override lab console server url. If specified, will be used as the
+   * lab console server url, which means the labConsoleServerPort will be
+   * ignored.
+   */
   readonly overrideLabConsoleServerUrl?: string;
   /** The UI platform of the current instance. */
   readonly uiPlatform?: string;
@@ -42,15 +56,19 @@ export declare interface AppData {
   readonly email?: string;
   /** Current user's display name. */
   readonly userDisplayName?: string;
+  /** The mode in which the application was started. */
+  readonly startMode?: string;
 }
 
 
 const OSS_DEFAULTS = {
+  // for OSS, we use the localhost:8080 as the default lab console server url.
   overrideLabConsoleServerUrl: 'http://localhost:8080',
   uiPlatform: 'OSS',
   applicationId: 'lab-console-oss',
   email: '',
   userDisplayName: '',
+  startMode: 'ng-serve',
 };
 
 /**
@@ -63,17 +81,27 @@ export function getAppData(): AppData {
   const defaults = OSS_DEFAULTS;
 
   // normalize the data.
+  const labConsoleServerPort = rawData.labConsoleServerPort ?? '9007';
   return {
     adbVersion: rawData.adbVersion ?? '10.0',
     mttVersion: rawData.mttVersion ?? '20.0',
     isDevMode: rawData.isDevMode ?? false,
     labconsoleVersion: rawData.labconsoleVersion ?? '1.0',
-    labConsoleServerPort: rawData.labConsoleServerPort ?? '9007',
+    labConsoleServerPort,
+    // we should not set the default value for overrideLabConsoleServerUrl,
+    // because, as its name suggested, if the overrideLabConsoleServerUrl is not
+    // set, we should use the default lab console server url.
     overrideLabConsoleServerUrl: rawData.overrideLabConsoleServerUrl ??
         defaults.overrideLabConsoleServerUrl,
+    // compute the labConsoleServerUrl via labConsoleServerPort and
+    // overrideLabConsoleServerUrl.
+    labConsoleServerUrl: rawData.overrideLabConsoleServerUrl ??
+        `${window.location.protocol}//${window.location.hostname}:${
+                             labConsoleServerPort}`,
     uiPlatform: rawData.uiPlatform ?? defaults.uiPlatform,
     applicationId: rawData.applicationId ?? defaults.applicationId,
     email: rawData.email ?? defaults.email,
     userDisplayName: rawData.userDisplayName ?? defaults.userDisplayName,
+    startMode: rawData.startMode ?? defaults.startMode,
   };
 }

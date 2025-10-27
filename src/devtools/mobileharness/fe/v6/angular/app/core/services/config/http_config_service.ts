@@ -1,14 +1,18 @@
 import {HttpClient} from '@angular/common/http';
+import {inject, Injectable} from '@angular/core';
 import {Observable} from 'rxjs';
 
+import {APP_DATA, AppData} from '../../models/app_data';
 import {CheckDeviceWritePermissionResult, DeviceConfig, GetDeviceConfigResult, UpdateDeviceConfigRequest, UpdateDeviceConfigResult} from '../../models/device_config_models';
 import {CheckHostWritePermissionResult, GetHostConfigResult, UpdateHostConfigRequest, UpdateHostConfigResult} from '../../models/host_config_models';
 
 import {ConfigService} from './config_service';
 
 /** An implementation of the ConfigService that uses HTTP to fetch data. */
+@Injectable()
 export class HttpConfigService extends ConfigService {
-  private readonly apiUrl = '/api/v1';
+  private readonly appData: AppData = inject(APP_DATA);
+  private readonly apiUrl = `${this.appData.labConsoleServerUrl}/v6`;
 
   private readonly http: HttpClient;
 

@@ -1,16 +1,19 @@
 import {HttpClient} from '@angular/common/http';
+import {inject, Injectable} from '@angular/core';
 import {Observable} from 'rxjs';
 
+import {APP_DATA, AppData} from '../../models/app_data';
 import {DeviceOverview} from '../../models/device_overview';
 import {HealthinessStats, RecoveryTaskStats, TestResultStats} from '../../models/device_stats';
 
 import {DeviceService} from './device_service';
 
 /** An implementation of the DeviceService that uses HTTP to fetch data. */
+@Injectable()
 export class HttpDeviceService extends DeviceService {
-  // TODO: Read this from the app init data.
-  private readonly apiUrl = 'http://localhost:8788/v6/devices';
-  private readonly http;
+  private readonly appData: AppData = inject(APP_DATA);
+  private readonly apiUrl = `${this.appData.labConsoleServerUrl}/v6/devices`;
+  private readonly http: HttpClient;
 
   constructor(http: HttpClient) {
     super();
@@ -18,7 +21,6 @@ export class HttpDeviceService extends DeviceService {
   }
 
   override getDeviceOverview(id: string): Observable<DeviceOverview> {
-    // http://localhost:8788/v6/devices/123/overview
     return this.http.get<DeviceOverview>(`${this.apiUrl}/${id}/overview`);
   }
 
