@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.shared.util.cache.persistent;
 
+import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.errorprone.annotations.ImmutableTypeParameter;
@@ -25,6 +26,7 @@ import javax.annotation.Nullable;
 
 /** Builder for {@link PersistentCache}. */
 public final class CacheBuilder {
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private final Path rootPersistentDir;
   private final LocalFileUtil localFileUtil;
@@ -42,6 +44,7 @@ public final class CacheBuilder {
       if (rootDir == null || !isRootDirValid(rootDir)) {
         return null;
       }
+      logger.atInfo().log("Creating PersistentCache with rootDir: %s", rootDir);
       return new CacheBuilder(Path.of(rootDir), new LocalFileUtil(), InstantSource.system());
     }
 
