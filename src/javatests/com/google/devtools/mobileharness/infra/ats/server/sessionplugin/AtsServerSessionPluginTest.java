@@ -22,6 +22,7 @@ import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.endsWith;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.startsWith;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -820,6 +821,48 @@ public final class AtsServerSessionPluginTest {
 
     verify(localFileUtil)
         .writeToFile("/tmp/test_gen_file_dir/ats_module_run_result.textproto", "result: PASS\n");
+  }
+
+  @Test
+  public void onJobEnded_nonTradefedJobEndedWithError_atsModuleRunResultFileWritten()
+      throws Exception {
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(
+                        SessionRequest.newBuilder().setNewMultiCommandRequest(request).build()))
+                .build());
+    plugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+
+    Timing timing = new Timing();
+    when(jobInfo.timing()).thenReturn(timing);
+    when(jobInfo.status()).thenReturn(new Status(timing).set(TestStatus.DONE));
+    when(jobInfo.type()).thenReturn(JobType.newBuilder().setDriver("MoblyDriver").build());
+    Properties jobProperties = new Properties(timing);
+    jobProperties.add(Job.IS_XTS_NON_TF_JOB, "true");
+    when(jobInfo.properties()).thenReturn(jobProperties);
+
+    com.google.devtools.mobileharness.api.model.job.out.Result result =
+        mock(com.google.devtools.mobileharness.api.model.job.out.Result.class);
+    when(result.get())
+        .thenReturn(
+            ResultTypeWithCause.create(
+                com.google.devtools.mobileharness.api.model.proto.Test.TestResult.ERROR,
+                new MobileHarnessException(
+                    InfraErrorId.DM_RESERVE_BUSY_DEVICE, "Device is not available.")));
+    when(testInfo.resultWithCause()).thenReturn(result);
+    when(testInfo.getGenFileDir()).thenReturn("/tmp/test_gen_file_dir");
+
+    plugin.onJobEnded(new JobEndEvent(jobInfo, null));
+
+    verify(localFileUtil)
+        .writeToFile(
+            eq("/tmp/test_gen_file_dir/ats_module_run_result.textproto"),
+            startsWith(
+                "result: ERROR\n"
+                    + "cause: \"ERROR[cause=MobileHarnessException: Device is not available."
+                    + " [MH|INFRA_ISSUE|DM_RESERVE_BUSY_DEVICE|40308] [MobileHarnessException]"));
   }
 
   @Test
