@@ -147,6 +147,7 @@ public class AndroidInstrumentationTest {
             androidInstrumentationUtil,
             installApkStep);
     when(systemSettingManager.getDeviceSdkVersion(device)).thenReturn(DEFAULT_SDK_VERSION);
+    when(androidInstrumentationUtil.getTestArgs(any())).thenReturn(ImmutableMap.of());
   }
 
   @Test

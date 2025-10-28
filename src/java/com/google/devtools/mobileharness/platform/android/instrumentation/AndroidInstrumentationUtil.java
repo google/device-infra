@@ -737,25 +737,22 @@ public class AndroidInstrumentationUtil {
    * Relies on {@code androidx.test.services.storage.TestArgsContentProvider} being used in the test
    * runner.
    *
-   * @param serial serial number of the device
-   * @param testArgs the map to be propagated to the test
-   * @param deviceExternalStoragePath path on the device, likely /sdcard/googletest/internal_use/
-   * @param log output channel for logs to the end user
-   * @param errors output channel for errors to the end user
-   * @param forceAdbPush forces usage of adb push to push test args file to device as shell content
-   *     write is not working in some cases, for rooted devices adb push should always work
+   * @param params the parameters for preparing test args
    * @throws MobileHarnessException if fails to execute the commands or timeout
    * @throws InterruptedException if the thread executing the commands is interrupted
    */
-  public void prepareTestArgs(
-      String serial,
-      Map<String, String> testArgs,
-      @Nullable String deviceExternalStoragePath,
-      String hostTmpFileDir,
-      Log log,
-      Warnings warnings,
-      boolean forceAdbPush)
+  public void prepareTestArgs(PrepareTestArgsParams params)
       throws MobileHarnessException, InterruptedException {
+    String serial = params.serial();
+    ImmutableMap<String, String> testArgs = params.testArgs();
+    @Nullable String deviceExternalStoragePath = params.deviceExternalStoragePath().orElse(null);
+    String hostTmpFileDir = params.hostTmpFileDir();
+    Log log = params.log();
+    Warnings warnings = params.warnings();
+    boolean forceAdbPush = params.forceAdbPush();
+    boolean skipClearMediaProviderForMultiUserCase =
+        params.skipClearMediaProviderForMultiUserCase();
+
     // An empty line to separate the log.
     log.append("\n");
     if (deviceExternalStoragePath == null) {
@@ -822,8 +819,9 @@ public class AndroidInstrumentationUtil {
                   deviceExternalStoragePath,
                   ANDROID_TEST_DEVICE_PATH_INTERNAL_USE + ANDROID_TEST_TEST_ARGS_FILE_NAME);
           androidFileUtil.push(serial, sdkVersion, hostFilePath, deviceFilePath);
-          if (isMultiUserSpecialCase) {
-            // Based on b/406931839#comment3, try to force sync.
+          if (isMultiUserSpecialCase && !skipClearMediaProviderForMultiUserCase) {
+            // Based on b/406931839#comment3, try to force sync. But for case in b/447394794, users
+            // want to skip this step.
             String forceSyncCommand = "pm clear com.google.android.providers.media.module";
             try {
               String output = adb.runShell(serial, forceSyncCommand);
