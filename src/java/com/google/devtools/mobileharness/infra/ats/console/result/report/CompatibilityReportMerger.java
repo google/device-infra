@@ -151,28 +151,23 @@ public class CompatibilityReportMerger {
   public Optional<Result> mergeReports(
       List<Result> reports, boolean validateReports, boolean skipDeviceInfo)
       throws MobileHarnessException {
-    ImmutableList<Result> usableReports =
-        reports.stream()
-            .filter(
-                report ->
-                    skipDeviceInfo
-                        || (report.hasBuild()
-                            && !report.getBuild().getBuildFingerprint().isEmpty()))
-            .collect(toImmutableList());
-    logger.atInfo().log(
-        "Given reports number: %d, usable reports number: %d",
-        reports.size(), usableReports.size());
+    // Make sure at least one of the reports has build info.
     if (!skipDeviceInfo
-        && validateReports
-        && !validateReportsWithSameBuildFingerprint(usableReports)) {
+        && reports.stream().noneMatch(CompatibilityReportMerger::reportHasBuildInfo)) {
+      throw new MobileHarnessException(
+          ExtErrorId.REPORT_MERGER_NO_DEVICE_BUILD_FINGERPRINT_FOUND,
+          "Did not find any report with device build_fingerprint");
+    }
+
+    if (!skipDeviceInfo && validateReports && !validateReportsWithSameBuildFingerprint(reports)) {
       return Optional.empty();
     }
 
-    if (usableReports.isEmpty()) {
+    if (reports.isEmpty()) {
       return Optional.empty();
-    } else if (usableReports.size() == 1) {
+    } else if (reports.size() == 1) {
       // No need to merge
-      return Optional.of(usableReports.get(0));
+      return Optional.of(reports.get(0));
     }
 
     ImmutableList.Builder<Run> runs = ImmutableList.builder();
@@ -181,7 +176,7 @@ public class CompatibilityReportMerger {
     long passedInSummary = 0L;
     long failedInSummary = 0L;
     long warningInSummary = 0L;
-    for (Result report : usableReports) {
+    for (Result report : reports) {
       List<Run> runsInReport =
           report.hasRunHistory() ? report.getRunHistory().getRunList() : ImmutableList.of();
       runs.addAll(runsInReport);
@@ -212,10 +207,10 @@ public class CompatibilityReportMerger {
             .build();
 
     Result.Builder res = Result.newBuilder();
-    res.setBuild(getNewBuildInfo(usableReports))
+    res.setBuild(getNewBuildInfo(reports))
         .setSummary(summary)
         .addAllModuleInfo(mergedModuleList)
-        .addAllAttribute(getNewResultAttrs(usableReports));
+        .addAllAttribute(getNewResultAttrs(reports));
 
     if (!runs.build().isEmpty()) {
       res.setRunHistory(RunHistory.newBuilder().addAllRun(runs.build()));
@@ -371,20 +366,10 @@ public class CompatibilityReportMerger {
    */
   private Optional<Result> mergeParsedReports(
       List<ParseResult> reportParseResults, boolean skipDeviceInfo) throws MobileHarnessException {
-    // Filters parse results that have report and its build info has device build fingerprint
+    // Filters parse results that have report present.
     ImmutableList<ParseResult> parseResults =
         reportParseResults.stream()
-            .filter(
-                parseResult ->
-                    parseResult.report().isPresent()
-                        && (skipDeviceInfo
-                            || (parseResult.report().get().hasBuild()
-                                && !parseResult
-                                    .report()
-                                    .get()
-                                    .getBuild()
-                                    .getBuildFingerprint()
-                                    .isEmpty())))
+            .filter(parseResult -> parseResult.report().isPresent())
             .collect(toImmutableList());
     logger.atInfo().log(
         "Given reports number: %d, usable parsed results number: %d",
@@ -463,8 +448,13 @@ public class CompatibilityReportMerger {
         .collect(toImmutableList());
   }
 
-  private static BuildInfo getNewBuildInfo(List<Result> report) {
-    BuildInfo buildInfo = report.stream().findFirst().get().getBuild();
+  private static BuildInfo getNewBuildInfo(List<Result> reports) {
+    BuildInfo buildInfo =
+        reports.stream()
+            .filter(CompatibilityReportMerger::reportHasBuildInfo)
+            .findFirst()
+            .get()
+            .getBuild();
     ImmutableList<Attribute> attrs =
         buildInfo.getAttributeList().stream()
             .filter(
@@ -492,18 +482,17 @@ public class CompatibilityReportMerger {
     }
     Result firstReport =
         reports.stream()
-            .filter(
-                report -> report.hasBuild() && !report.getBuild().getBuildFingerprint().isEmpty())
+            .filter(CompatibilityReportMerger::reportHasBuildInfo)
             .findFirst()
             .orElse(null);
     if (firstReport == null) {
       throw new MobileHarnessException(
           ExtErrorId.REPORT_MERGER_NO_DEVICE_BUILD_FINGERPRINT_FOUND,
-          "Not found any report with info about device build_fingerprint");
+          "Did not find any report with device build_fingerprint");
     }
     String baseBuildFingerprint = getBuildFingerprint(firstReport);
     for (Result report : reports) {
-      if (!getBuildFingerprint(report).equals(baseBuildFingerprint)) {
+      if (reportHasBuildInfo(report) && !getBuildFingerprint(report).equals(baseBuildFingerprint)) {
         throw new MobileHarnessException(
             ExtErrorId.REPORT_MERGER_DIFF_DEVICE_BUILD_FINGERPRINT_FOUND,
             String.format(
@@ -513,6 +502,12 @@ public class CompatibilityReportMerger {
       }
     }
     return true;
+  }
+
+  private static boolean reportHasBuildInfo(Result report) {
+    return report.hasBuild()
+        && (!report.getBuild().getBuildFingerprint().isEmpty()
+            || !report.getBuild().getBuildFingerprintUnaltered().isEmpty());
   }
 
   /**

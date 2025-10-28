@@ -428,4 +428,26 @@ public final class CompatibilityReportMergerTest {
         .setMeasurements(Measurements.newBuilder().setSingleInt(value))
         .build();
   }
+
+  @Test
+  public void mergeReports_noReportHasBuildInfo_throwsException() {
+    Result report1 = Result.newBuilder().setBuild(BuildInfo.getDefaultInstance()).build();
+    Result report2 = Result.newBuilder().setBuild(BuildInfo.getDefaultInstance()).build();
+    Result report3 = Result.getDefaultInstance();
+
+    MobileHarnessException exception =
+        assertThrows(
+            MobileHarnessException.class,
+            () ->
+                reportMerger.mergeReports(
+                    ImmutableList.of(report1, report2, report3),
+                    /* validateReports= */ true,
+                    /* skipDeviceInfo= */ false));
+
+    assertThat(exception.getErrorId())
+        .isEqualTo(ExtErrorId.REPORT_MERGER_NO_DEVICE_BUILD_FINGERPRINT_FOUND);
+    assertThat(exception)
+        .hasMessageThat()
+        .contains("Did not find any report with device build_fingerprint");
+  }
 }

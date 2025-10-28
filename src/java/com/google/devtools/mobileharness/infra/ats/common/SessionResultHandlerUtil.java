@@ -57,7 +57,6 @@ import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
-import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.io.File;
@@ -407,9 +406,7 @@ public class SessionResultHandlerUtil {
     }
     ImmutableSet<String> skippedModuleIds = skippedModuleIdsBuilder.build();
 
-    boolean skipDeviceInfo =
-        sessionAllJobs.stream().anyMatch(SessionResultHandlerUtil::shouldSkipDeviceInfo)
-            || sessionRequestInfo.skipDeviceInfo().orElse(false);
+    boolean skipDeviceInfo = sessionRequestInfo.skipDeviceInfo().orElse(false);
     Optional<Result> mergedNonTradefedReport = Optional.empty();
     if (!moblyReportInfos.isEmpty()) {
       mergedNonTradefedReport =
@@ -599,22 +596,6 @@ public class SessionResultHandlerUtil {
     }
 
     return Optional.ofNullable(finalReport);
-  }
-
-  /**
-   * Decides whether the device info (build fingerprint) check should be skipped when merging
-   * reports.
-   *
-   * <p>The current criteria:
-   *
-   * <ul>
-   *   <li>If the non-TF/Mobly job had allocation failure, in which case no device was allocated so
-   *       there won't be build fingerprint info available.
-   * </ul>
-   */
-  private static boolean shouldSkipDeviceInfo(JobInfo jobInfo) {
-    return jobInfo.properties().getBoolean(Job.IS_XTS_NON_TF_JOB).orElse(false)
-        && jobInfo.properties().has(PropertyName.Job.ALLOCATION_FAIL_AFTER_START_TIMEOUT);
   }
 
   /**
