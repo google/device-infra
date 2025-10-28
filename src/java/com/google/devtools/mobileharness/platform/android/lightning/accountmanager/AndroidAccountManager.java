@@ -51,6 +51,8 @@ public class AndroidAccountManager {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
+  private static final String COMPLETED_WITH_WARNINGS = "Completed with warning(s)";
+
   /** Resource path of the account_manager.apk. Use the Java APIs from auth_test_support app. */
   public static final String ACCOUNT_MANAGER_APK_PATH =
       "/com/google/wireless/qa/mobileharness/tool/android/account/account_manager.apk";
@@ -308,6 +310,18 @@ public class AndroidAccountManager {
           ApkInstallArgs.builder().setApkPath(getApkPath(apkType, installSignedVersion)).build(),
           log);
     } catch (MobileHarnessException e) {
+      if (e.getMessage() != null && e.getMessage().contains(COMPLETED_WITH_WARNINGS)) {
+        // b/455567423 Vivo devices may throw error when installing the signed-account_manager.apk.
+        // We will ignore the error since the apk is successfully installed.
+        SharedLogUtil.logMsg(
+            logger,
+            Level.WARNING,
+            log,
+            e,
+            "Installation failed on device %s but completed with warning(s), ignore it.",
+            device.getDeviceId());
+        return;
+      }
       ErrorId errorId = AndroidErrorId.ANDROID_ACCOUNT_MANAGER_APK_INSTALL_ERROR;
       if (AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_INSUFFICIENT_STORAGE.equals(
           e.getErrorId())) {
