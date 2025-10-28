@@ -28,11 +28,11 @@ import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfo;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfo.TradefedInvocation;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfoFileUtil;
-import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfoFileUtil.XtsTradefedRuntimeInfoFileDetail;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
@@ -40,12 +40,13 @@ import com.google.devtools.mobileharness.shared.util.command.CommandResult;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -90,17 +91,8 @@ public class TradefedInvocationAgentTest {
                                     "-javaagent:%s=%s", AGENT_PATH, runtimeInfoFilePath))))
                 .showFullResultInException(true));
 
-    List<XtsTradefedRuntimeInfo> runtimeInfos = new ArrayList<>();
-    Instant lastModifiedTime = null;
-    while (commandProcess.isAlive()) {
-      Sleeper.defaultSleeper().sleep(Duration.ofMillis(200L));
-      Optional<XtsTradefedRuntimeInfoFileDetail> fileDetail =
-          xtsTradefedRuntimeInfoFileUtil.readInfo(runtimeInfoFilePath, lastModifiedTime);
-      if (fileDetail.isPresent()) {
-        lastModifiedTime = fileDetail.get().lastModifiedTime();
-        runtimeInfos.add(fileDetail.get().runtimeInfo());
-      }
-    }
+    List<XtsTradefedRuntimeInfo> runtimeInfos =
+        monitorRuntimeInfoFile(runtimeInfoFilePath, commandProcess);
 
     // runtimeInfos should contain three elements:
     // 1. The first is the initial invocation record when tradefed is running.
@@ -182,18 +174,8 @@ public class TradefedInvocationAgentTest {
                                     "-javaagent:%s=%s", AGENT_PATH, runtimeInfoFilePath))))
                 .showFullResultInException(true));
 
-    List<XtsTradefedRuntimeInfo> runtimeInfos = new ArrayList<>();
-    Instant lastModifiedTime = null;
-    while (commandProcess.isAlive()) {
-      Sleeper.defaultSleeper().sleep(Duration.ofMillis(200L));
-      Optional<XtsTradefedRuntimeInfoFileDetail> fileDetail =
-          xtsTradefedRuntimeInfoFileUtil.readInfo(runtimeInfoFilePath, lastModifiedTime);
-      if (fileDetail.isPresent()) {
-        lastModifiedTime = fileDetail.get().lastModifiedTime();
-        runtimeInfos.add(fileDetail.get().runtimeInfo());
-      }
-    }
-
+    List<XtsTradefedRuntimeInfo> runtimeInfos =
+        monitorRuntimeInfoFile(runtimeInfoFilePath, commandProcess);
     // runtimeInfos should contain three elements:
     // 1. The first is the initial invocation record when tradefed is running.
     // 2. The second is when tradefed completes, so it's an empty XtsTradefedRuntimeInfo with no
@@ -285,11 +267,11 @@ public class TradefedInvocationAgentTest {
                                     String.format("%s:%s", runtimeInfoFilePath, "true")))))
                 .showFullResultInException(true));
 
+    List<XtsTradefedRuntimeInfo> runtimeInfos =
+        monitorRuntimeInfoFile(runtimeInfoFilePath, commandProcess);
     CommandResult commandResult = commandProcess.await();
     assertThat(commandResult.exitCode()).isEqualTo(0);
-    Optional<XtsTradefedRuntimeInfoFileDetail> fileDetail =
-        xtsTradefedRuntimeInfoFileUtil.readInfo(runtimeInfoFilePath, /* lastModifiedTime= */ null);
-    List<TradefedInvocation> invocations = fileDetail.orElseThrow().runtimeInfo().invocations();
+    List<TradefedInvocation> invocations = Iterables.getLast(runtimeInfos).invocations();
     assertThat(invocations).hasSize(1);
     assertThat(invocations.get(0).deviceIds())
         .containsExactly(DEVICE_ID_TO_TRIGGER_UNCHECKED_INVOCATION_EXCEPTION);
@@ -319,16 +301,62 @@ public class TradefedInvocationAgentTest {
                                     String.format("%s:%s", runtimeInfoFilePath, "true")))))
                 .showFullResultInException(true));
 
+    List<XtsTradefedRuntimeInfo> runtimeInfos =
+        monitorRuntimeInfoFile(runtimeInfoFilePath, commandProcess);
     CommandResult commandResult = commandProcess.await();
     assertThat(commandResult.exitCode()).isEqualTo(0);
-    Optional<XtsTradefedRuntimeInfoFileDetail> fileDetail =
-        xtsTradefedRuntimeInfoFileUtil.readInfo(runtimeInfoFilePath, /* lastModifiedTime= */ null);
-    List<TradefedInvocation> invocations = fileDetail.orElseThrow().runtimeInfo().invocations();
+    List<TradefedInvocation> invocations = Iterables.getLast(runtimeInfos).invocations();
     assertThat(invocations).hasSize(1);
     // The device ID list is empty since for this case, the agent won't have access to the
     // invocation context.
     assertThat(invocations.get(0).deviceIds()).isEmpty();
     assertThat(invocations.get(0).errorMessage()).contains(INVOCATION_CHECKED_EXCEPTION_MESSAGE);
     assertThat(invocations.get(0).isRunning()).isFalse();
+  }
+
+  private List<XtsTradefedRuntimeInfo> monitorRuntimeInfoFile(Path path, CommandProcess process)
+      throws InterruptedException {
+    List<XtsTradefedRuntimeInfo> runtimeInfos = new ArrayList<>();
+    String lastContent = "";
+    while (process.isAlive()) {
+      Sleeper.defaultSleeper().sleep(Duration.ofMillis(10L));
+      lastContent = readInfoIfContentChanged(path, runtimeInfos, lastContent);
+    }
+    for (int i = 0; i < 100; ++i) { // 100*10ms = 1s after process ends
+      Sleeper.defaultSleeper().sleep(Duration.ofMillis(10L));
+      String previousContentInLoop = lastContent;
+      lastContent = readInfoIfContentChanged(path, runtimeInfos, lastContent);
+      if (lastContent.equals(previousContentInLoop)) {
+        break;
+      }
+    }
+    return runtimeInfos;
+  }
+
+  private String readInfoIfContentChanged(
+      Path path, List<XtsTradefedRuntimeInfo> infos, String lastContent) {
+    String currentContent;
+    try {
+      currentContent = Files.readString(path);
+    } catch (NoSuchFileException e) {
+      currentContent = "";
+    } catch (Exception e) {
+      logger.atWarning().withCause(e).log("Failed to read runtime info file %s", path);
+      return lastContent;
+    }
+
+    if (!currentContent.equals(lastContent)) {
+      if (!currentContent.isEmpty()) {
+        try {
+          xtsTradefedRuntimeInfoFileUtil
+              .readInfo(path, null)
+              .ifPresent(d -> infos.add(d.runtimeInfo()));
+        } catch (IOException | RuntimeException | Error e) {
+          logger.atWarning().withCause(e).log("Failed to parse runtime info file %s", path);
+        }
+      }
+      return currentContent;
+    }
+    return lastContent;
   }
 }
