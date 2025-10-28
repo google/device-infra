@@ -1,0 +1,98 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package devtools.mobileharness.fe.v6.service.proto.device;
+
+import "google/api/annotations.proto";
+import "google/protobuf/timestamp.proto";
+import "src/devtools/mobileharness/fe/v6/service/proto/device/device_resources.proto";
+import "src/devtools/mobileharness/fe/v6/service/proto/device/device_stats.proto";
+
+option java_package = "com.google.devtools.mobileharness.fe.v6.service.proto.device";
+option java_multiple_files = true;
+option java_outer_classname = "DeviceServiceProto";
+
+// Service definition for device-related operations.
+service DeviceService {
+  // Retrieves the detailed overview data for a specific device by its ID.
+  rpc GetDeviceOverview(GetDeviceOverviewRequest) returns (DeviceOverview) {
+    option (google.api.http) = {
+      get: "/v6/devices/{id}/overview"
+    };
+  }
+
+  // Retrieves healthiness statistics for a device within a given time range.
+  rpc GetDeviceHealthinessStats(GetDeviceHealthinessStatsRequest)
+      returns (HealthinessStats) {
+    option (google.api.http) = {
+      get: "/v6/devices/{id}/stats/healthiness"
+    };
+  }
+
+  // Retrieves test result statistics for a device within a given time range.
+  rpc GetDeviceTestResultStats(GetDeviceTestResultStatsRequest)
+      returns (TestResultStats) {
+    option (google.api.http) = {
+      get: "/v6/devices/{id}/stats/testresults"
+    };
+  }
+
+  // Retrieves recovery task statistics for a device within a given time range.
+  rpc GetDeviceRecoveryTaskStats(GetDeviceRecoveryTaskStatsRequest)
+      returns (RecoveryTaskStats) {
+    option (google.api.http) = {
+      get: "/v6/devices/{id}/stats/recoverytasks"
+    };
+  }
+}
+
+// Request message for GetDeviceOverview.
+message GetDeviceOverviewRequest {
+  // The unique identifier of the device.
+  string id = 1;
+}
+
+// Request message for GetDeviceHealthinessStats.
+message GetDeviceHealthinessStatsRequest {
+  // The device ID.
+  string id = 1;
+  // Start of the time range.
+  google.protobuf.Timestamp start_time = 2;
+  // End of the time range.
+  google.protobuf.Timestamp end_time = 3;
+}
+
+// Request message for GetDeviceTestResultStats.
+message GetDeviceTestResultStatsRequest {
+  // The device ID.
+  string id = 1;
+  // Start of the time range.
+  google.protobuf.Timestamp start_time = 2;
+  // End of the time range.
+  google.protobuf.Timestamp end_time = 3;
+}
+
+// Request message for GetDeviceRecoveryTaskStats.
+message GetDeviceRecoveryTaskStatsRequest {
+  // The device ID.
+  string id = 1;
+  // Start of the time range.
+  google.protobuf.Timestamp start_time = 2;
+  // End of the time range.
+  google.protobuf.Timestamp end_time = 3;
+}

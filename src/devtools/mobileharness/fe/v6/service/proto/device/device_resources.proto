@@ -1,0 +1,197 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package devtools.mobileharness.fe.v6.service.proto.device;
+
+import "google/protobuf/timestamp.proto";
+
+option java_package = "com.google.devtools.mobileharness.fe.v6.service.proto.device";
+option java_multiple_files = true;
+option java_outer_classname = "DeviceResourcesProto";
+
+// Represents the comprehensive data required to render the "Overview" tab
+// on the Device Detail Page.
+message DeviceOverview {
+  // The unique identifier of the device.
+  string id = 1;
+
+  // Information about the host machine this device is connected to.
+  HostInfo host = 2;
+
+  // Detailed information about the device's current health, activity, and
+  // status.
+  HealthAndActivityInfo health_and_activity = 3;
+
+  // Core hardware and software specifications of the device.
+  BasicDeviceInfo basic_info = 4;
+
+  // Permissions defining who can own and execute tests on the device.
+  PermissionInfo permissions = 5;
+
+  // Lists of supported drivers and decorators for the device.
+  CapabilitiesInfo capabilities = 6;
+
+  // Device dimensions used for test scheduling, grouped by their source.
+  Dimensions dimensions = 7;
+
+  // Additional device properties, as a simple key-value map.
+  map<string, string> properties = 8;
+}
+
+// Information about the host machine.
+message HostInfo {
+  // The hostname of the lab server.
+  string name = 1;
+  // The IP address of the lab server.
+  string ip = 2;
+}
+
+// High-level health state of the device.
+enum HealthState {
+  HEALTH_STATE_UNSPECIFIED = 0;
+  IN_SERVICE_IDLE = 1;
+  IN_SERVICE_BUSY = 2;
+  OUT_OF_SERVICE_RECOVERING = 3;
+  OUT_OF_SERVICE_TEMP_MAINT = 4;
+  OUT_OF_SERVICE_NEEDS_FIXING = 5;
+  UNKNOWN = 6;
+}
+
+// Contains all data related to the device's health, status, and current
+// activity.
+message HealthAndActivityInfo {
+  // The main title to display in the Health & Activity card.
+  string title = 1;
+
+  // A concise, human-readable explanation of the device's state.
+  string subtitle = 2;
+
+  // The high-level health state category.
+  HealthState state = 3;
+
+  // The raw device status from the underlying system.
+  message DeviceStatus {
+    // The status string, e.g., IDLE, BUSY, MISSING, FAILED, INIT, DIRTY.
+    string status = 1;
+    // Flag indicating if this raw status is considered critical.
+    bool is_critical = 2;
+  }
+  DeviceStatus device_status = 4;
+
+  // List of device types.
+  message DeviceType {
+    // The type string.
+    string type = 1;
+    // Flag indicating if this type suggests an abnormal or unhealthy state.
+    bool is_abnormal = 2;
+  }
+  repeated DeviceType device_types = 5;
+
+  // The timestamp of when the device was last considered "In Service".
+  google.protobuf.Timestamp last_in_service_time = 6;
+
+  // Details of the current task if the device is BUSY.
+  message CurrentTask {
+    // Type of the running task, e.g., "Test", "Recovery Task".
+    string type = 1;
+    // The unique identifier for the task.
+    string task_id = 2;
+    // Optional Job ID if the task is part of a larger job.
+    string job_id = 3;
+  }
+  CurrentTask current_task = 7;
+
+  // Structured diagnostic information.
+  message Diagnostics {
+    // Text describing the primary diagnosis of the issue.
+    string diagnosis = 1;
+    // Text providing more context or explanation about the diagnosis.
+    string explanation = 2;
+    // Suggested steps the user can take to resolve the issue.
+    string suggested_action = 3;
+  }
+  Diagnostics diagnostics = 8;
+}
+
+// Basic hardware, software, and real-time information about the device.
+message BasicDeviceInfo {
+  // Device model, e.g., "Pixel 8 Pro".
+  string model = 1;
+  // OS version, e.g., "14" for Android, "22.04" for Ubuntu.
+  string version = 2;
+  // Form factor of the device.
+  enum Form {
+    FORM_UNSPECIFIED = 0;
+    PHYSICAL = 1;
+    VIRTUAL = 2;
+    TESTBED = 3;
+    UNKNOWN = 4;
+  }
+  Form form = 3;
+  // Operating system, e.g., "Android", "Ubuntu Linux".
+  string os = 4;
+  // Battery level percentage (0-100), or -1 if not applicable.
+  int32 battery_level = 5;
+  // Network connectivity details.
+  message Network {
+    // WiFi signal strength in dBm, e.g., -65.
+    sint32 wifi_rssi = 1;
+    // Indicates if the device has internet access.
+    bool has_internet = 2;
+  }
+  Network network = 6;
+  // Hardware identifier, common for Android devices.
+  string hardware = 7;
+  // Build ID or version, common for Android devices.
+  string build = 8;
+}
+
+// Information about user and group permissions for the device.
+message PermissionInfo {
+  // List of users/groups who own the device.
+  repeated string owners = 1;
+  // List of users/groups who can execute tests on the device.
+  repeated string executors = 2;
+}
+
+// Lists of supported test drivers and decorators.
+message CapabilitiesInfo {
+  // Test drivers compatible with this device.
+  repeated string supported_drivers = 1;
+  // Decorators that can be applied to tests running on this device.
+  repeated string supported_decorators = 2;
+}
+
+// Represents one dimension of the device.
+message DeviceDimension {
+  string name = 1;
+  string value = 2;
+}
+
+// Represents a group of dimensions from a single source.
+message DimensionSourceGroup {
+  repeated DeviceDimension dimensions = 1;
+}
+
+// Device dimensions, categorized into 'supported' and 'required'.
+message Dimensions {
+  // Dimensions that describe the device's capabilities or attributes.
+  map<string, DimensionSourceGroup> supported = 1;
+  // Dimensions that a test job MUST specify to be allocated this device.
+  map<string, DimensionSourceGroup> required = 2;
+}
