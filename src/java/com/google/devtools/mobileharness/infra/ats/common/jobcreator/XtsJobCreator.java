@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Sets;
 import com.google.common.collect.Streams;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.ErrorId;
@@ -64,6 +65,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.Set;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
 
@@ -118,34 +120,19 @@ public abstract class XtsJobCreator {
       return ImmutableList.of();
     }
 
-    // This static lists are currently not used anymore.
-    ImmutableSet<String> staticMctsModules = sessionRequestHandlerUtil.getStaticMctsModules();
     ImmutableList<String> tfModules =
         sessionRequestHandlerUtil.getFilteredTradefedModules(sessionRequestInfo);
-
     ImmutableList<TradefedJobInfo> tradefedJobInfoList =
         createXtsTradefedTestJobInfo(sessionRequestInfo, tfModules);
 
     ImmutableList.Builder<JobInfo> jobInfos = ImmutableList.builder();
-    // We can add more types of dynamic modules lists here. Currently we only support MCTS cases.
-    // If we add more types of dynamic modules lists, we need to update here to be sth like:
-    // totalDynamicModuleVariables.put(staticNctsModules, XtsConstants.DYNAMIC_NCTS_JOB);
-
-    Map<String, ImmutableSet<String>> totalDynamicModuleVariables = new HashMap<>();
-    totalDynamicModuleVariables.put(XtsConstants.DYNAMIC_MCTS_JOB_NAME, staticMctsModules);
+    Set<String> allDynamicDownloadJobNames =
+        Sets.newHashSet(XtsConstants.DYNAMIC_MCTS_JOB_NAME, XtsConstants.STATIC_XTS_JOB_NAME);
 
     for (TradefedJobInfo tradefedJobInfo : tradefedJobInfoList) {
-      // Only enable dynamic download for CTS test plan currently.
-      // TODO Temporary disable dynamic download if the job is for module sharding.
-      if (!SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo)
-          && isCtsTestPlan(tradefedJobInfo.extraJobProperties())) {
-        createDynamicDownloadJobs(
-            jobInfos, tradefedJobInfo, totalDynamicModuleVariables, sessionRequestInfo);
-        // Only if none of the dynamic jobs are created, we'll create only one xTS job.
-        if (jobInfos.build().isEmpty()) {
-          jobInfos.add(
-              sessionRequestHandlerUtil.createXtsTradefedTestJob(
-                  sessionRequestInfo, tradefedJobInfo));
+      if (shouldCreateDynamicDownloadJobs(tradefedJobInfo, sessionRequestInfo)) {
+        for (String jobName : allDynamicDownloadJobNames) {
+          jobInfos.add(createDynamicJobInfo(sessionRequestInfo, tradefedJobInfo, jobName));
         }
       } else {
         jobInfos.add(
@@ -514,24 +501,13 @@ public abstract class XtsJobCreator {
         Job.PREV_SESSION_DEVICE_VENDOR_BUILD_FINGERPRINT, prevSessionDeviceVendorBuildFingerprint);
   }
 
-  private void createDynamicDownloadJobs(
-      ImmutableList.Builder<JobInfo> jobInfos,
-      TradefedJobInfo tradefedJobInfo,
-      Map<String, ImmutableSet<String>> totalDynamicModuleVariables,
-      SessionRequestInfo sessionRequestInfo)
-      throws MobileHarnessException, InterruptedException {
-    if (sessionRequestInfo.isXtsDynamicDownloadEnabled().orElse(false)) {
-      // Create two jobs: create a dynamic download job and a static job.
-      for (Map.Entry<String, ImmutableSet<String>> entry : totalDynamicModuleVariables.entrySet()) {
-        String jobName = entry.getKey();
-        jobInfos.add(createDynamicJobInfo(sessionRequestInfo, tradefedJobInfo, jobName));
-      }
-      if (!jobInfos.build().isEmpty()) {
-        jobInfos.add(
-            createDynamicJobInfo(
-                sessionRequestInfo, tradefedJobInfo, XtsConstants.STATIC_XTS_JOB_NAME));
-      }
-    }
+  private boolean shouldCreateDynamicDownloadJobs(
+      TradefedJobInfo tradefedJobInfo, SessionRequestInfo sessionRequestInfo) {
+    return sessionRequestInfo.isXtsDynamicDownloadEnabled().orElse(false)
+        // Only enable dynamic download for CTS test plan currently.
+        && isCtsTestPlan(tradefedJobInfo.extraJobProperties())
+        // Disable dynamic download if the job is for module sharding.
+        && !SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo);
   }
 
   private JobInfo createDynamicJobInfo(
