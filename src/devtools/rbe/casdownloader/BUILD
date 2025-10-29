@@ -25,6 +25,7 @@ go_binary(
     srcs = [
         "main.go",
     ],
+    embedsrcs = ["adc_credentials.sh"],
     deps = [
         "//src/devtools/rbe/casdownloader/cache",
         "//src/devtools/rbe/casdownloader/download",

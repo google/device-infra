@@ -7,10 +7,15 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"runtime"
 	"runtime/debug"
+	"strings"
 	"syscall"
 	"time"
+
+	_ "embed"
 
 	"flag"
 	
@@ -24,8 +29,11 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+//go:embed adc_credentials.sh
+var adcCredentialsScriptContent []byte
+
 const (
-	version = "1.23"
+	version = "1.24"
 	// The headers key of our RequestMetadata.
 	remoteHeadersKey = "build.bazel.remote.execution.v2.requestmetadata-bin"
 	// RBECASConcurrency is the default maximum number of concurrent upload and download operations for RBE clients.
@@ -213,6 +221,9 @@ func main() {
 	}
 	client, err := rbeclient.New(ctx, rbeclient.Opts{Instance: *casInstance, ServiceAddress: *casAddr, ServiceAccountJSON: *serviceAccount, UseApplicationDefault: *useADC, CASConcurrency: *casConcurrency, RPCTimeouts: rpcTimeouts})
 	if err != nil {
+		if strings.Contains(err.Error(), "rpc error: code = PermissionDenied") && *useADC == true {
+			logAdcCredentials()
+		}
 		log.Exit(err)
 	}
 	defer client.Close()
@@ -238,6 +249,29 @@ func main() {
 		log.Exit(err)
 	}
 	reportMemoryStats()
+}
+
+func logAdcCredentials() {
+	tmpDir, err := os.MkdirTemp("", "mybashscript")
+	if err != nil {
+		log.Errorf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	scriptPath := filepath.Join(tmpDir, "adc_credentials.sh")
+
+	if err := os.WriteFile(scriptPath, adcCredentialsScriptContent, 0700); err != nil {
+		log.Errorf("Failed to write script to temp file: %v", err)
+		return
+	}
+
+	log.Warningf("Attempting to log ADC credentials due to PermissionDenied...")
+	cmd := exec.Command(scriptPath)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Errorf("Failed to run adc_credentials.sh: %v", err)
+	}
+	log.Infof("adc_credentials.sh output: %s", output)
 }
 
 func createCache(disableCache bool, cacheDir string, cacheMaxSize int64, enableCacheLock bool, useHardlink bool) (cache.Cache, error) {
