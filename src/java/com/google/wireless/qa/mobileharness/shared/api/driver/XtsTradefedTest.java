@@ -224,10 +224,6 @@ public class XtsTradefedTest extends BaseDriver
   @Override
   public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
     XtsTradefedTestDriverSpec spec = testInfo.jobInfo().combinedSpec(this);
-    // TODO: Remove this logging after debugging.
-    logger.atInfo().log("spec: %s", spec);
-    logger.atInfo().log("params: %s", testInfo.jobInfo().params());
-    logger.atInfo().log("proto spec: %s", testInfo.jobInfo().protoSpec());
 
     String xtsType = spec.getXtsType();
 
@@ -246,10 +242,29 @@ public class XtsTradefedTest extends BaseDriver
           .alsoTo(logger)
           .log("Finished running %s test. xTS run command exit code: %s", xtsType, tfExitCode);
       setTestResult(testInfo, tfExitCode.orElse(null));
+      addTestResultPropertiesToJob(tmpXtsRootDir, xtsType, testInfo);
     } finally {
       scheduledThreadPool.shutdown();
       CompositeDeviceUtil.uncacheTestbed(getDevice());
       postTest(tmpXtsRootDir, testInfo, xtsType);
+    }
+  }
+
+  private void addTestResultPropertiesToJob(Path tmpXtsRootDir, String xtsType, TestInfo testInfo)
+      throws MobileHarnessException {
+    Path tmpXtsResultsDir = XtsDirUtil.getXtsResultsDir(tmpXtsRootDir, xtsType);
+    if (localFileUtil.isDirExist(tmpXtsResultsDir)) {
+      List<Path> resultDirs =
+          localFileUtil.listFilesOrDirs(
+              tmpXtsResultsDir,
+              path ->
+                  localFileUtil.isDirExist(path)
+                      && !previousResultDirNames.contains(path.getFileName().toString())
+                      && !Objects.equals(path.getFileName().toString(), "latest"));
+      Path testResultXmlPath = resultDirs.get(0).resolve("test_result.xml");
+      if (localFileUtil.isFileExist(testResultXmlPath)) {
+        testInfo.properties().add(XtsConstants.TRADEFED_JOBS_HAS_RESULT_FILE, "true");
+      }
     }
   }
 

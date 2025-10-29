@@ -27,7 +27,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ListMultimap;
-import com.google.common.collect.Sets;
 import com.google.common.collect.Streams;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.ErrorId;
@@ -65,7 +64,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
-import java.util.Set;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
 
@@ -126,8 +124,13 @@ public abstract class XtsJobCreator {
         createXtsTradefedTestJobInfo(sessionRequestInfo, tfModules);
 
     ImmutableList.Builder<JobInfo> jobInfos = ImmutableList.builder();
-    Set<String> allDynamicDownloadJobNames =
-        Sets.newHashSet(XtsConstants.DYNAMIC_MCTS_JOB_NAME, XtsConstants.STATIC_XTS_JOB_NAME);
+
+    // Make sure static job is created first and therefore executed first later in the queue. This
+    // list of job will be triggered in AtsServerSessionPlugin one by one. AtsServerSessionPlugin
+    // will make sure the static job is complete before starting the dynamic jobs, and skip
+    // dynamic jobs if static job failed.
+    ImmutableList<String> allDynamicDownloadJobNames =
+        ImmutableList.of(XtsConstants.STATIC_XTS_JOB_NAME, XtsConstants.DYNAMIC_MCTS_JOB_NAME);
 
     for (TradefedJobInfo tradefedJobInfo : tradefedJobInfoList) {
       if (shouldCreateDynamicDownloadJobs(tradefedJobInfo, sessionRequestInfo)) {
@@ -510,9 +513,27 @@ public abstract class XtsJobCreator {
         && !SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo);
   }
 
+  /**
+   * Revises the given {@link SessionRequestInfo} for a dynamic job.
+   *
+   * <p>Subclasses can override this method to customize the session request info for dynamic jobs.
+   * Currently this method is mainly used for removing the device actions in the dynamic download
+   * jobs.
+   *
+   * @param sessionRequestInfo the original session request info
+   * @return the revised session request info for the dynamic job
+   */
+  protected SessionRequestInfo reviseRequestInfoForDynamicJob(
+      SessionRequestInfo sessionRequestInfo) {
+    return sessionRequestInfo;
+  }
+
   private JobInfo createDynamicJobInfo(
       SessionRequestInfo sessionRequestInfo, TradefedJobInfo tradefedJobInfo, String jobName)
       throws MobileHarnessException, InterruptedException {
+    if (jobName.contains(XtsConstants.DYNAMIC_MCTS_JOB_NAME)) {
+      sessionRequestInfo = reviseRequestInfoForDynamicJob(sessionRequestInfo);
+    }
     String updatedJobName = tradefedJobInfo.jobConfig().getName() + "_" + jobName;
     TradefedJobInfo updatedTradefedJobInfo =
         TradefedJobInfo.of(

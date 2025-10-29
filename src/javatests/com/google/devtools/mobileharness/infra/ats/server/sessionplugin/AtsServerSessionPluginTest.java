@@ -753,6 +753,127 @@ public final class AtsServerSessionPluginTest {
   }
 
   @Test
+  public void onJobEnded_staticXtsJobPass_triggerNextJob() throws Exception {
+    request = request.toBuilder().addCommands(commandInfo).build();
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(
+                        SessionRequest.newBuilder().setNewMultiCommandRequest(request).build()))
+                .build());
+    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo, jobInfo2));
+    when(xtsJobCreator.createXtsTradefedTestJob(any()))
+        .thenReturn(ImmutableList.of(jobInfo))
+        .thenReturn(ImmutableList.of(jobInfo2));
+
+    plugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+    verify(sessionInfo).addJob(jobInfo);
+
+    properties.add(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED, "true");
+    properties.add(
+        XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME,
+        "command_name-" + XtsConstants.STATIC_XTS_JOB_NAME);
+    Timing timing = new Timing();
+    when(jobInfo.timing()).thenReturn(timing);
+    timing.start();
+    var unused = timing.end();
+    when(jobInfo.status()).thenReturn(new Status(timing).set(TestStatus.DONE));
+    Result result = new Result(timing.toNewTiming(), new Params(timing).toNewParams()).setPass();
+    when(jobInfo.resultWithCause()).thenReturn(result);
+    when(testInfo.resultWithCause()).thenReturn(result);
+    testProperties.add(XtsConstants.TRADEFED_TESTS_TOTAL, "1");
+    testProperties.add(XtsConstants.TRADEFED_JOBS_HAS_RESULT_FILE, "true");
+    JobType jobType = JobType.newBuilder().setDriver("XtsTradefedTest").build();
+    when(jobInfo.type()).thenReturn(jobType);
+
+    plugin.onJobEnded(new JobEndEvent(jobInfo, null));
+    verify(sessionInfo).addJob(jobInfo2);
+    verify(sessionInfo, never()).addJob(moblyJobInfo);
+    verify(sessionInfo, never()).addJob(moblyJobInfo2);
+  }
+
+  @Test
+  public void onJobEnded_staticXtsJobPassButNoResultFile_skipNextJob() throws Exception {
+    request = request.toBuilder().addCommands(commandInfo).build();
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(
+                        SessionRequest.newBuilder().setNewMultiCommandRequest(request).build()))
+                .build());
+    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo, jobInfo2));
+    when(xtsJobCreator.createXtsTradefedTestJob(any()))
+        .thenReturn(ImmutableList.of(jobInfo))
+        .thenReturn(ImmutableList.of(jobInfo2));
+
+    plugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+    verify(sessionInfo).addJob(jobInfo);
+
+    properties.add(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED, "true");
+    properties.add(
+        XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME,
+        "command_name-" + XtsConstants.STATIC_XTS_JOB_NAME);
+    Timing timing = new Timing();
+    when(jobInfo.timing()).thenReturn(timing);
+    timing.start();
+    var unused = timing.end();
+    when(jobInfo.status()).thenReturn(new Status(timing).set(TestStatus.DONE));
+    Result result = new Result(timing.toNewTiming(), new Params(timing).toNewParams()).setPass();
+    when(jobInfo.resultWithCause()).thenReturn(result);
+    when(testInfo.resultWithCause()).thenReturn(result);
+    testProperties.add(XtsConstants.TRADEFED_TESTS_TOTAL, "1");
+    JobType jobType = JobType.newBuilder().setDriver("XtsTradefedTest").build();
+    when(jobInfo.type()).thenReturn(jobType);
+
+    plugin.onJobEnded(new JobEndEvent(jobInfo, null));
+    verify(sessionInfo, never()).addJob(jobInfo2);
+  }
+
+  @Test
+  public void onJobEnded_staticXtsJobFail_skipNextJob() throws Exception {
+    request = request.toBuilder().addCommands(commandInfo).build();
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(
+                        SessionRequest.newBuilder().setNewMultiCommandRequest(request).build()))
+                .build());
+    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo, jobInfo2));
+    when(xtsJobCreator.createXtsTradefedTestJob(any()))
+        .thenReturn(ImmutableList.of(jobInfo))
+        .thenReturn(ImmutableList.of(jobInfo2));
+
+    plugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+    verify(sessionInfo).addJob(jobInfo);
+
+    properties.add(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED, "true");
+    properties.add(
+        XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME,
+        "command_name-" + XtsConstants.STATIC_XTS_JOB_NAME);
+    Timing timing = new Timing();
+    when(jobInfo.timing()).thenReturn(timing);
+    timing.start();
+    var unused = timing.end();
+    when(jobInfo.status()).thenReturn(new Status(timing).set(TestStatus.DONE));
+    Result result =
+        new Result(timing.toNewTiming(), new Params(timing).toNewParams())
+            .setNonPassing(
+                TestResult.FAIL,
+                new MobileHarnessException(BasicErrorId.NON_MH_EXCEPTION, "Job failed"));
+    when(jobInfo.resultWithCause()).thenReturn(result);
+    when(testInfo.resultWithCause()).thenReturn(result);
+    testProperties.add(XtsConstants.TRADEFED_TESTS_TOTAL, "1");
+    JobType jobType = JobType.newBuilder().setDriver("XtsTradefedTest").build();
+    when(jobInfo.type()).thenReturn(jobType);
+
+    plugin.onJobEnded(new JobEndEvent(jobInfo, null));
+    verify(sessionInfo, never()).addJob(jobInfo2);
+  }
+
+  @Test
   public void onJobEnded_nonTradefedJobEnded_onlyUpdateSessionOutput() throws Exception {
     when(sessionInfo.getSessionPluginExecutionConfig())
         .thenReturn(

@@ -21,6 +21,7 @@ import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doCallRealMethod;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -37,8 +38,10 @@ import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.ShardingMode;
+import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.DeviceActionConfigObject;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestEnvironment;
 import com.google.devtools.mobileharness.infra.ats.server.util.AtsServerSessionUtil;
+import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryArgs;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryGenerator;
@@ -50,10 +53,13 @@ import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
+import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
+import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.SubDeviceSpec;
 import java.io.File;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import javax.inject.Inject;
@@ -675,6 +681,145 @@ public final class ServerJobCreatorTest {
         () -> jobCreator.createXtsNonTradefedJobs(sessionRequestInfo));
 
     verify(sessionRequestHandlerUtil, never()).createXtsNonTradefedJobs(any(), any(), any());
+  }
+
+  @Test
+  public void reviseRequestInfoForDynamicJob_withoutTestEnvironment_doNothing() throws Exception {
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfo.builder()
+            .setTestPlan("cts")
+            .setCommandLineArgs("cts")
+            .setXtsType("cts")
+            .setXtsRootDir(xtsRootDir)
+            .build();
+
+    assertThat(jobCreator.reviseRequestInfoForDynamicJob(sessionRequestInfo))
+        .isEqualTo(sessionRequestInfo);
+  }
+
+  @Test
+  public void createXtsTradefedTestJob_dynamicDownloadEnabled_createsStaticJobFirst()
+      throws Exception {
+    String xtsRootDir = publicDir + "/session_session_id/file";
+    realLocalFileUtil.prepareParentDir(xtsRootDir);
+    DeviceActionConfigObject resultReporter =
+        DeviceActionConfigObject.newBuilder()
+            .setType(DeviceActionConfigObject.DeviceActionConfigObjectType.RESULT_REPORTER)
+            .build();
+    TestEnvironment testEnvironment =
+        TestEnvironment.newBuilder()
+            .addDeviceActionConfigObjects(
+                DeviceActionConfigObject.newBuilder()
+                    .setType(DeviceActionConfigObject.DeviceActionConfigObjectType.TARGET_PREPARER)
+                    .build())
+            .addDeviceActionConfigObjects(resultReporter)
+            .build();
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfo.builder()
+            .setTestPlan("cts")
+            .setCommandLineArgs("cts")
+            .setXtsType("cts")
+            .setAtsServerTestEnvironment(testEnvironment)
+            .setXtsRootDir(xtsRootDir)
+            .setAndroidXtsZip(ANDROID_XTS_ZIP_PATH)
+            .setIsXtsDynamicDownloadEnabled(true)
+            .build();
+    when(sessionRequestHandlerUtil.getStaticMctsModules())
+        .thenReturn(ImmutableSet.of("mcts-module"));
+    when(sessionRequestHandlerUtil.initializeJobConfig(any(), any(), any(), any()))
+        .thenReturn(JobConfig.newBuilder().setName("job_name").build());
+    ArgumentCaptor<SessionRequestInfo> sessionRequestInfoCaptor =
+        ArgumentCaptor.forClass(SessionRequestInfo.class);
+    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(
+            sessionRequestInfoCaptor.capture(), any()))
+        .thenAnswer(
+            invocation -> {
+              JobInfo jobInfo = mock(JobInfo.class);
+              when(jobInfo.properties()).thenReturn(new Properties(new Timing()));
+              return jobInfo;
+            });
+
+    ImmutableList<JobInfo> jobInfos = jobCreator.createXtsTradefedTestJob(sessionRequestInfo);
+
+    assertThat(jobInfos).hasSize(2);
+    assertThat(jobInfos.get(0).properties().get(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME))
+        .isEqualTo(XtsConstants.STATIC_XTS_JOB_NAME);
+    assertThat(jobInfos.get(1).properties().get(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME))
+        .isEqualTo(XtsConstants.DYNAMIC_MCTS_JOB_NAME);
+    List<SessionRequestInfo> capturedSrIs = sessionRequestInfoCaptor.getAllValues();
+    assertThat(
+            capturedSrIs.get(0).atsServerTestEnvironment().get().getDeviceActionConfigObjectsList())
+        .hasSize(2);
+    assertThat(
+            capturedSrIs.get(1).atsServerTestEnvironment().get().getDeviceActionConfigObjectsList())
+        .containsExactly(resultReporter);
+  }
+
+  @Test
+  public void createXtsTradefedTestJob_dynamicDownloadDisabled_createsOneJob() throws Exception {
+    String xtsRootDir = publicDir + "/session_session_id/file";
+    realLocalFileUtil.prepareParentDir(xtsRootDir);
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfo.builder()
+            .setTestPlan("cts")
+            .setCommandLineArgs("cts")
+            .setXtsType("cts")
+            .setAtsServerTestEnvironment(TestEnvironment.getDefaultInstance())
+            .setXtsRootDir(xtsRootDir)
+            .setAndroidXtsZip(ANDROID_XTS_ZIP_PATH)
+            .setIsXtsDynamicDownloadEnabled(false) // disabled
+            .build();
+    when(sessionRequestHandlerUtil.getStaticMctsModules())
+        .thenReturn(ImmutableSet.of("mcts-module"));
+    when(sessionRequestHandlerUtil.initializeJobConfig(any(), any(), any(), any()))
+        .thenReturn(JobConfig.newBuilder().setName("job_name").build());
+    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any(), any()))
+        .thenAnswer(
+            invocation -> {
+              JobInfo jobInfo = mock(JobInfo.class);
+              when(jobInfo.properties()).thenReturn(new Properties(new Timing()));
+              return jobInfo;
+            });
+
+    ImmutableList<JobInfo> jobInfos = jobCreator.createXtsTradefedTestJob(sessionRequestInfo);
+
+    assertThat(jobInfos).hasSize(1);
+    verify(sessionRequestHandlerUtil).createXtsTradefedTestJob(eq(sessionRequestInfo), any());
+  }
+
+  @Test
+  public void reviseRequestInfoForDynamicJob_withTestEnvironment_filterDeviceActions()
+      throws Exception {
+    DeviceActionConfigObject resultReporter =
+        DeviceActionConfigObject.newBuilder()
+            .setType(DeviceActionConfigObject.DeviceActionConfigObjectType.RESULT_REPORTER)
+            .build();
+    TestEnvironment testEnvironment =
+        TestEnvironment.newBuilder()
+            .addDeviceActionConfigObjects(
+                DeviceActionConfigObject.newBuilder()
+                    .setType(DeviceActionConfigObject.DeviceActionConfigObjectType.TARGET_PREPARER)
+                    .build())
+            .addDeviceActionConfigObjects(resultReporter)
+            .build();
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfo.builder()
+            .setTestPlan("cts")
+            .setCommandLineArgs("cts")
+            .setXtsType("cts")
+            .setXtsRootDir(xtsRootDir)
+            .setAtsServerTestEnvironment(testEnvironment)
+            .build();
+
+    SessionRequestInfo updatedSessionRequestInfo =
+        jobCreator.reviseRequestInfoForDynamicJob(sessionRequestInfo);
+    assertThat(updatedSessionRequestInfo.atsServerTestEnvironment()).isPresent();
+    assertThat(
+            updatedSessionRequestInfo
+                .atsServerTestEnvironment()
+                .get()
+                .getDeviceActionConfigObjectsList())
+        .containsExactly(resultReporter);
   }
 
   private int countOccurrences(String text, String pattern) {
