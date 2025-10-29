@@ -387,6 +387,22 @@ proto_library(
     deps = [":base_spec_proto"],
 )
 
+proto_library(
+    name = "android_flash_gki_decorator_spec_proto",
+    srcs = ["decorator/android_flash_gki_decorator_spec.proto"],
+    deps = [":base_spec_proto"],
+)
+
+java_proto_library(
+    name = "android_flash_gki_decorator_spec_java_proto",
+    deps = [":android_flash_gki_decorator_spec_proto"],
+)
+
+cc_proto_library(
+    name = "android_flash_gki_decorator_spec_cc_proto",
+    deps = [":android_flash_gki_decorator_spec_proto"],
+)
+
 cc_proto_library(
     name = "android_robo_test_spec_cc_proto",
     deps = [":android_robo_test_spec_proto"],

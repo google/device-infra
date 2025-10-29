@@ -1,0 +1,216 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto2";
+
+package mobileharness.shared.spec;
+
+import "src/java/com/google/wireless/qa/mobileharness/shared/proto/spec/base_spec.proto";
+
+option java_package = "com.google.wireless.qa.mobileharness.shared.proto.spec.decorator";
+option java_multiple_files = true;
+option java_outer_classname = "AndroidFlashGkiDecoratorSpecProto";
+
+// Specs for {@link AndroidFlashGkiDecoratorSpec}
+// Next tag: 33
+message AndroidFlashGkiDecoratorSpec {
+  extend DecoratorSpec {
+    optional AndroidFlashGkiDecoratorSpec ext = 1015;
+  }
+
+  optional int32 device_boot_time = 1 [
+    (field_detail) = {
+      help: "Max time to wait for device to boot. Set as 5 minutes by default."
+    },
+    default = 300000
+  ];
+
+  optional string gki_boot_image = 2 [(file_detail) = {
+    help: "Path of the provided GKI boot image (file, zip, or dir)."
+  }];
+
+  optional string ramdisk_image = 3 [(file_detail) = {
+    help: "Path of the provided ramdisk image (file, zip, or dir)."
+  }];
+
+  optional string initramfs_image = 4 [(file_detail) = {
+    help: "Path of the provided initramfs image (file, zip, or dir)."
+  }];
+
+  optional string vendor_boot_image = 5 [(file_detail) = {
+    help: "Path of the provided vendor boot image (file, zip, or dir)."
+  }];
+
+  optional string vendor_kernel_boot_image = 6 [(file_detail) = {
+    help: "Path of the provided vendor kernel boot image (file, zip, or dir)."
+  }];
+
+  optional string dtbo_image = 7 [(file_detail) = {
+    help: "Path of the provided dtbo image (file, zip, or dir)."
+  }];
+
+  optional string vendor_dlkm_image = 8 [(file_detail) = {
+    help: "Path of the provided vendor dlkm image (file, zip, or dir)."
+  }];
+
+  optional string system_dlkm_image = 9 [(file_detail) = {
+    help: "Path of the provided system dlkm image (file, zip, or dir)."
+  }];
+
+  optional string system_dlkm_archive = 10 [(file_detail) = {
+    help: "Path of the provided system dlkm archive "
+          "(e.g. system_dlkm_staging_archive.tar.gz)."
+  }];
+
+  optional string vbmeta_image = 11 [(file_detail) = {
+    help: "Path of the provided vbmeta image (file, zip, or dir)."
+  }];
+
+  optional string boot_image_file = 12 [
+    (field_detail) = {
+      help: "The boot image file to search for if gki_boot_image is a zip file "
+            "or directory, for example boot-5.4-gz.img."
+    },
+    default = "boot(.*).img"
+  ];
+
+  optional string vendor_boot_image_file = 13 [
+    (field_detail) = {
+      help: "The vendor boot image file name to search for if "
+            "vendor_boot_image is a zip file or directory, for example "
+            "vendor_boot.img."
+    },
+    default = "vendor_boot.img"
+  ];
+
+  optional string vendor_kernel_boot_image_file = 14 [
+    (field_detail) = {
+      help: "The vendor kernel boot image file name to search for if "
+            "vendor_kernel_boot_image is a zip file or directory, for "
+            "example vendor_kernel_boot.img."
+    },
+    default = "vendor_kernel_boot.img"
+  ];
+
+  optional string dtbo_image_file = 15 [
+    (field_detail) = {
+      help: "The dtbo image file name to search for if dtbo_image is a zip "
+            "file or directory, for example dtbo.img."
+    },
+    default = "dtbo.img"
+  ];
+
+  optional string vendor_dlkm_image_file = 16 [
+    (field_detail) = {
+      help: "The vendor dlkm image file name to search for if "
+            "vendor_dlkm_image is a zip file or directory, for example "
+            "vendor_dlkm.img."
+    },
+    default = "vendor_dlkm.img"
+  ];
+
+  optional string system_dlkm_image_file = 17 [
+    (field_detail) = {
+      help: "The system dlkm image file name to search for if "
+            "system_dlkm_image is "
+            "a zip file or directory, for example system_dlkm.img."
+    },
+    default = "system_dlkm.img"
+  ];
+
+  optional string vbmeta_image_file = 18 [
+    (field_detail) = {
+      help: "The vbmeta image file name to search for if vbmeta_image is "
+            "a zip file or directory, for example vbmeta.img."
+    },
+    default = "vbmeta.img"
+  ];
+
+  optional bool post_reboot_device_into_user_space = 19 [
+    (field_detail) = {
+      help: "Whether to boot the device in user space after flash."
+    },
+    default = true
+  ];
+
+  optional bool wipe_device_before_gki_flash = 20 [
+    (field_detail) = {
+      help: "Whether to wipe device before GKI boot image flash."
+    },
+    default = false
+  ];
+
+  optional bool disable_verity = 21 [
+    (field_detail) = { help: "Whether to use disable verity." },
+    default = false
+  ];
+
+  optional bool oem_disable_verity = 22 [
+    (field_detail) = { help: "Whether to run oem disable verity." },
+    default = false
+  ];
+
+  repeated string fastboot_flash_options = 23 [(field_detail) = {
+    help: "Additional options to pass with fastboot flash command."
+  }];
+
+  repeated string additional_fastboot_command = 24
+      [(field_detail) = { help: "Additional fastboot command to run." }];
+
+  optional int32 boot_header_version = 25 [
+    (field_detail) = {
+      help: "The version of the boot.img header. Set to 3 by default."
+    },
+    default = 3
+  ];
+
+  optional bool add_hash_footer = 26 [
+    (field_detail) = {
+      help: "Add hash footer to GKI boot image. More info at "
+            "https://android.googlesource.com/platform/external/avb/+/master/README.md"
+    },
+    default = false
+  ];
+
+  optional string security_patch_level = 27 [(field_detail) = {
+    help: "The security patch level to sign the boot image when add_hash_footer is enabled."
+  }];
+
+  optional string boot_image_key_path = 28 [
+    (field_detail) = {
+      help: "The key path in otatools to sign the boot image when add_hash_footer is enabled."
+    },
+    default = "external/avb/test/data/testkey_rsa4096.pem"
+  ];
+
+  optional string boot_image_algorithm = 29 [
+    (field_detail) = {
+      help: "The key algorithm to sign the boot image when add_hash_footer is enabled."
+    },
+    default = "SHA256_RSA4096"
+  ];
+
+  optional bool support_fastbootd = 30 [
+    (field_detail) = { help: "Whether the device supports fastbootd mode." },
+    default = true
+  ];
+
+  optional string kernel_image = 31
+      [(file_detail) = { help: "Path of the provided kernel image." }];
+
+  optional string otatools_zip = 32
+      [(file_detail) = { help: "Path of the provided otatools zip file." }];
+}
