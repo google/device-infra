@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.service.deviceconfig;
 
+import com.google.devtools.mobileharness.service.deviceconfig.storage.JdbcStorageClient;
 import com.google.devtools.mobileharness.service.deviceconfig.storage.LocalFileStorageClient;
 import com.google.devtools.mobileharness.service.deviceconfig.storage.StorageClient;
 import com.google.inject.AbstractModule;
@@ -26,6 +27,11 @@ public class DeviceConfigModule extends AbstractModule {
   @Override
   protected void configure() {
     // TODO: b/460296020 - Add a flag to control which storage client to use.
-    bind(StorageClient.class).to(LocalFileStorageClient.class);
+    boolean useLocalFileStorage = true;
+    if (useLocalFileStorage) {
+      bind(StorageClient.class).to(LocalFileStorageClient.class);
+    } else {
+      bind(StorageClient.class).to(JdbcStorageClient.class);
+    }
   }
 }
