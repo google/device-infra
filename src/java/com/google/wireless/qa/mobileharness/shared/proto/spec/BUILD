@@ -403,6 +403,22 @@ proto_library(
     deps = [":base_spec_proto"],
 )
 
+proto_library(
+    name = "driver/ios_gameloop_test_spec_proto",
+    srcs = ["driver/ios_gameloop_test_spec.proto"],
+    deps = [":base_spec_proto"],
+)
+
+cc_proto_library(
+    name = "driver/ios_gameloop_test_spec_cc_proto",
+    deps = [":driver/ios_gameloop_test_spec_proto"],
+)
+
+java_proto_library(
+    name = "driver/ios_gameloop_test_spec_java_proto",
+    deps = [":driver/ios_gameloop_test_spec_proto"],
+)
+
 java_proto_library(
     name = "android_logcat_monitoring_decorator_spec_java_proto",
     deps = [":android_logcat_monitoring_decorator_spec_proto"],
