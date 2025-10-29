@@ -477,6 +477,7 @@ public abstract class AndroidDeviceDelegate {
     device.addSupportedDecorator("AndroidMainlineModulesCheckDecorator");
     device.addSupportedDecorator("AndroidMinSdkVersionCheckDecorator");
     device.addSupportedDecorator("AndroidOrientationDecorator");
+    device.addSupportedDecorator("AndroidShippingApiLevelCheckDecorator");
     device.addSupportedDecorator("AndroidShowInstructionDecorator");
     device.addSupportedDecorator("AndroidStartAppsDecorator");
     device.addSupportedDecorator("AndroidSwitchLanguageDecorator");

@@ -241,6 +241,19 @@ java_proto_library(
 )
 
 proto_library(
+    name = "android_shipping_api_level_check_decorator_spec_proto",
+    srcs = ["decorator/android_shipping_api_level_check_decorator_spec.proto"],
+    deps = [
+        ":base_spec_proto",
+    ],
+)
+
+java_proto_library(
+    name = "android_shipping_api_level_check_decorator_spec_java_proto",
+    deps = [":android_shipping_api_level_check_decorator_spec_proto"],
+)
+
+proto_library(
     name = "android_show_instruction_decorator_spec_proto",
     srcs = ["decorator/android_show_instruction_decorator_spec.proto"],
     deps = [
