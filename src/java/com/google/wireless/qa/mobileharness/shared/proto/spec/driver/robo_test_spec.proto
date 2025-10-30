@@ -25,6 +25,9 @@ option java_multiple_files = true;
 
 // Spec for IosRoboTest driver.
 message RoboTestSpec {
+  optional int32 crawl_timeout_secs = 9
+      [(field_detail) = { help: "Timeout of the crawl in seconds." }];
+
   enum RoboscriptRecorder {
     NONE = 0;
     TEXT = 1;
