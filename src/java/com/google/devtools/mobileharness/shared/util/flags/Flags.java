@@ -748,6 +748,15 @@ public class Flags {
       converter = Flag.StringListConverter.class)
   public Flag<List<String>> deviceListToDebugAllocation = deviceListToDebugAllocationDefault;
 
+  private static final Flag<Duration> deviceRemovalThresholdDefault =
+      DurationFlag.value(Duration.ofDays(14));
+
+  @com.beust.jcommander.Parameter(
+      names = "--device_removal_threshold",
+      description = "Threshold for considering a device to be removed from Master.",
+      converter = DurationFlag.DurationConverter.class)
+  public Flag<Duration> deviceRemovalThreshold = deviceRemovalThresholdDefault;
+
   private static final Flag<Boolean> enforceMtaasDeviceCheckinGroupDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(
@@ -1264,6 +1273,17 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enforceSafeDischarge = enforceSafeDischargeDefault;
 
+  private static final Flag<Duration> ephemeralRemovalThresholdDefault =
+      DurationFlag.value(Duration.ofHours(1));
+
+  @com.beust.jcommander.Parameter(
+      names = "--ephemeral_removal_threshold",
+      description =
+          "If a MISSING ephemeral lab or device's last modify time is older than this"
+              + " threshold, it will be removed from Master.",
+      converter = DurationFlag.DurationConverter.class)
+  public Flag<Duration> ephemeralRemovalThreshold = ephemeralRemovalThresholdDefault;
+
   private static final Flag<String> externalResJarDefault = Flag.value("");
 
   @com.beust.jcommander.Parameter(
@@ -1484,6 +1504,27 @@ public class Flags {
       description = "Path of the text format protobuf lab device config file.",
       converter = Flag.StringConverter.class)
   public Flag<String> labDeviceConfigFile = labDeviceConfigFileDefault;
+
+  private static final Flag<Duration> labExpirationThresholdDefault =
+      DurationFlag.value(Duration.ofMinutes(4));
+
+  @com.beust.jcommander.Parameter(
+      names = "--lab_expiration_threshold",
+      description =
+          "If a lab's last modify time is older than this threshold, it will be marked as missing.",
+      converter = DurationFlag.DurationConverter.class)
+  public Flag<Duration> labExpirationThreshold = labExpirationThresholdDefault;
+
+  private static final Flag<Duration> labRemovalThresholdDefault =
+      DurationFlag.value(Duration.ofDays(30));
+
+  @com.beust.jcommander.Parameter(
+      names = "--lab_removal_threshold",
+      description =
+          "If a MISSING lab's last modify time is older than this threshold, it will be removed"
+              + " from Master.",
+      converter = DurationFlag.DurationConverter.class)
+  public Flag<Duration> labRemovalThreshold = labRemovalThresholdDefault;
 
   private static final Flag<String> localTenantDeviceConfigPathDefault = Flag.value("");
 
