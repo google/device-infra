@@ -70,6 +70,8 @@ java_library(
     srcs = ["AndroidRealDeviceProxyManager.java"],
     visibility = [
         "//:omnilab_fusion",
+        "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/api/devicemanager/detector:__pkg__",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",

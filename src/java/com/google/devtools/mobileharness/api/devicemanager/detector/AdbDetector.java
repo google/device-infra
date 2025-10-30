@@ -21,28 +21,40 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.devicemanager.detector.model.DetectionResult;
 import com.google.devtools.mobileharness.api.devicemanager.detector.model.DetectionResult.DetectionType;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.testrunner.device.cache.DeviceCacheManager;
+import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
+import com.google.devtools.mobileharness.platform.android.overtcp.OverTcpDeviceCache;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidRealDeviceProxyManager;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceState;
+import com.google.devtools.mobileharness.platform.testbed.TestbedUtil;
+import com.google.devtools.mobileharness.platform.testbed.config.GlobalTestbedLoader;
+import com.google.devtools.mobileharness.platform.testbed.config.TestbedConfig;
+import com.google.devtools.mobileharness.platform.testbed.config.TestbedLoader;
 import com.google.devtools.mobileharness.shared.util.command.CommandFailureException;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil.KillSignal;
+import com.google.wireless.qa.mobileharness.shared.api.device.AndroidRealDevice;
 import com.google.wireless.qa.mobileharness.shared.util.DeviceUtil;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /** Detector for adb. */
-public class BaseAdbDetector implements Detector {
+public class AdbDetector implements Detector {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   /**
@@ -65,20 +77,40 @@ public class BaseAdbDetector implements Detector {
    */
   private static final AtomicInteger adbAddressInUseErrorRounds = new AtomicInteger(0);
 
-  final AndroidAdbInternalUtil adbInternalUtil;
-  final SystemUtil systemUtil;
+  private final AndroidAdbInternalUtil adbInternalUtil;
+  private final OverTcpDeviceCache cache;
+  private final TestbedLoader testbedLoader;
+  private final TestbedUtil testbedUtil;
+  private final ApiConfig apiConfig;
+  private final SystemUtil systemUtil;
 
-  public BaseAdbDetector() {
-    this(new AndroidAdbInternalUtil(), new SystemUtil());
+  public AdbDetector() {
+    this(
+        new AndroidAdbInternalUtil(),
+        ApiConfig.getInstance(),
+        GlobalTestbedLoader.getInstance(),
+        new TestbedUtil(),
+        new SystemUtil());
   }
 
-  BaseAdbDetector(AndroidAdbInternalUtil adbInternalUtil, SystemUtil systemUtil) {
+  @VisibleForTesting
+  AdbDetector(
+      AndroidAdbInternalUtil adbInternalUtil,
+      ApiConfig apiConfig,
+      TestbedLoader testbedLoader,
+      TestbedUtil testbedUtil,
+      SystemUtil systemUtil) {
     this.adbInternalUtil = adbInternalUtil;
+    this.apiConfig = apiConfig;
+    this.testbedLoader = testbedLoader;
+    this.testbedUtil = testbedUtil;
+    this.cache = new OverTcpDeviceCache(adbInternalUtil, logger);
     this.systemUtil = systemUtil;
   }
 
   @Override
   public boolean precondition() throws InterruptedException {
+
     Optional<String> adbUnsupportedReason = adbInternalUtil.checkAdbSupport();
     if (adbUnsupportedReason.isEmpty()) {
       try {
@@ -143,11 +175,10 @@ public class BaseAdbDetector implements Detector {
   }
 
   /** Gets the cached device id from DeviceCache. */
-  Set<String> getCachedDevices() {
+  private ImmutableSet<String> getCachedDevices() {
     DeviceCacheManager deviceCacheManager = DeviceCacheManager.getInstance();
-    return Stream.concat(
-            deviceCacheManager.getCachedDevices("AndroidRealDevice").stream(),
-            deviceCacheManager.getCachedDevices("AndroidLocalEmulator").stream())
+    return Stream.of("AndroidRealDevice", "AndroidLocalEmulator")
+        .flatMap(type -> deviceCacheManager.getCachedDevices(type).stream())
         .collect(toImmutableSet());
   }
 
@@ -160,13 +191,44 @@ public class BaseAdbDetector implements Detector {
    * Returns whether the detector need to redetect the devices based on the detected id; e.g. need
    * to redetect when the overtcp configuration is updated.
    */
-  boolean needRedetectDevice(Map<String, DeviceState> ids) throws InterruptedException {
-    return false;
+  private boolean needRedetectDevice(Map<String, DeviceState> ids) throws InterruptedException {
+    return doesOverTcpDeviceChange(ids);
   }
 
   /** Returns whether the device id need to be kept. */
-  boolean needKeepDevice(String id) {
-    return true;
+  private boolean needKeepDevice(String id) {
+    return !AndroidRealDeviceProxyManager.isRealDeviceProxy(id);
+  }
+
+  /** Connects/Disconnects the devices which needs to be connected/disconnected. */
+  private boolean doesOverTcpDeviceChange(Map<String, DeviceState> ids)
+      throws InterruptedException {
+    Set<String> connectedId =
+        ids.entrySet().stream()
+            .filter(entry -> entry.getValue().equals(DeviceState.DEVICE))
+            .map(Map.Entry::getKey)
+            .collect(Collectors.toSet());
+    ImmutableSet<String> cachedDevices = getCachedDevices();
+    connectedId.addAll(cachedDevices);
+
+    // Reads over tcp device id from api config.
+    Set<String> newOverTcpIds = new HashSet<>(apiConfig.getOverTcpDeviceControlIds());
+    // Reads over tcp device id from testbed config.
+    try {
+      // The function will read file directly and AdbDetector should not do that, will migrate to
+      // read memory data instead of disk data after storing testbed config  in config server.
+      Collection<TestbedConfig> testbedConfigs = testbedLoader.getTestbedConfigs().values();
+      newOverTcpIds.addAll(
+          testbedUtil.getAllIdsOfType(testbedConfigs, AndroidRealDevice.class).stream()
+              .filter(DeviceUtil::isOverTcpDevice)
+              .collect(toImmutableList()));
+    } catch (MobileHarnessException e) {
+      logger.atWarning().withCause(e).log("Failed to read over tcp device from testbed configs");
+    }
+
+    return !cache
+        .update(newOverTcpIds, new HashSet<>(connectedId), cachedDevices)
+        .equals(connectedId);
   }
 
   private void killAllAdbIfNeeded(MobileHarnessException e) {

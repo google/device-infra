@@ -23,8 +23,8 @@ java_library(
     name = "all_detectors_and_dispatchers",
     srcs = ["AllDetectorsAndDispatchers.java"],
     deps = [
+        "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:adb",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:base",
-        "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:base_adb",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:failed_device",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:fastboot",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:no_op",

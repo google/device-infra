@@ -19,7 +19,7 @@ package com.google.devtools.mobileharness.infra.controller.device.bootstrap;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.google.common.collect.ImmutableList;
-import com.google.devtools.mobileharness.api.devicemanager.detector.BaseAdbDetector;
+import com.google.devtools.mobileharness.api.devicemanager.detector.AdbDetector;
 import com.google.devtools.mobileharness.api.devicemanager.detector.Detector;
 import com.google.devtools.mobileharness.api.devicemanager.detector.FailedDeviceDetector;
 import com.google.devtools.mobileharness.api.devicemanager.detector.FastbootDetector;
@@ -64,7 +64,7 @@ final class AllDetectorsAndDispatchers {
 
     // ADB detector.
     if (Flags.instance().detectAdbDevice.getNonNull()) {
-      detectorCandidates.add(createAdbDetectorOss());
+      detectorCandidates.add(new AdbDetector());
     }
 
     // Android JIT emulator detector.
@@ -79,10 +79,6 @@ final class AllDetectorsAndDispatchers {
       detectorCandidates.add(new NoOpDeviceDetector());
     }
     return detectorCandidates.build();
-  }
-
-  private static Detector createAdbDetectorOss() {
-    return new BaseAdbDetector();
   }
 
   public static void addDispatchersForLocalModeOss(DispatcherManager dispatcherManager) {

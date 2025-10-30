@@ -30,9 +30,11 @@ java_library(
     ],
     visibility = [
         "//:omnilab_fusion",
+        "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:__pkg__",
         "//src/java/com/google/devtools/mobileharness/platform/testbed:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:__pkg__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/api/devicemanager/detector:__pkg__",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
@@ -70,6 +72,7 @@ java_library(
     ],
     visibility = [
         "//:omnilab_fusion",
+        "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:__pkg__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:__pkg__",
     ],
     deps = [

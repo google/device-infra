@@ -50,21 +50,28 @@ java_library(
 )
 
 java_library(
-    name = "base_adb",
+    name = "adb",
     srcs = [
-        "BaseAdbDetector.java",
+        "AdbDetector.java",
     ],
     deps = [
         ":base",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector/model",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/testrunner/device/cache:device_cache_manager",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device/config",
+        "//src/java/com/google/devtools/mobileharness/platform/android/overtcp",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_internal_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:android_real_device_proxy_manager",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:enums",
+        "//src/java/com/google/devtools/mobileharness/platform/testbed:util",
+        "//src/java/com/google/devtools/mobileharness/platform/testbed/config:base",
+        "//src/java/com/google/devtools/mobileharness/platform/testbed/config:global_testbed_loader",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/system",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_real_device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/util:device",
         "@maven//:com_google_guava_guava",
     ],

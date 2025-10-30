@@ -22,6 +22,7 @@ java_library(
     srcs = glob(["*.java"]),
     visibility = [
         "//:omnilab_fusion",
+        "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:__pkg__",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
