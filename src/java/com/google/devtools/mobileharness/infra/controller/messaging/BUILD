@@ -70,6 +70,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/lab:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/service:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/api:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/controller/messaging:__subpackages__",
     ],
     deps = [
@@ -152,7 +153,10 @@ java_library(
 java_library(
     name = "messaging_service",
     srcs = ["MessagingService.java"],
-    visibility = ["//src/java/com/google/devtools/mobileharness/infra/lab:__pkg__"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/lab:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:__pkg__",
+    ],
     deps = [
         ":messaging_manager",
         "//src/devtools/mobileharness/api/messaging:messaging_java_proto",
@@ -171,6 +175,7 @@ java_library(
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/lab:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/api:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:__pkg__",
     ],
     deps = [
         ":annotations",

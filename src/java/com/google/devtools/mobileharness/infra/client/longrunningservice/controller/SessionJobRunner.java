@@ -19,18 +19,21 @@ package com.google.devtools.mobileharness.infra.client.longrunningservice.contro
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.client.api.ClientApi;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionDetailHolder;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
+import com.google.wireless.qa.mobileharness.client.api.event.internal.JobFirstAllocationEvent;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Job;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.concurrent.GuardedBy;
 import javax.inject.Inject;
 
@@ -46,7 +49,19 @@ public class SessionJobRunner {
   private final ExecMode execMode;
   private final Sleeper sleeper;
 
+  private final SessionActivationListener sessionActivationListener =
+      new SessionActivationListener();
+
+  /**
+   * Whether the session is activated, which means at least one test of one job of the session has
+   * got an allocation.
+   */
+  private final AtomicBoolean sessionActivated = new AtomicBoolean(false);
+
   private final Object lock = new Object();
+
+  /** Set in {@link #setSessionDetailHolder}. */
+  private volatile SessionDetailHolder sessionDetailHolder;
 
   @GuardedBy("lock")
   private boolean enableJobPolling = true;
@@ -61,9 +76,18 @@ public class SessionJobRunner {
     this.sleeper = sleeper;
   }
 
-  public void runJobs(SessionDetailHolder sessionDetailHolder, List<Object> sessionPlugins)
+  public void setSessionDetailHolder(SessionDetailHolder sessionDetailHolder) {
+    this.sessionDetailHolder = sessionDetailHolder;
+  }
+
+  public void runJobs(List<Object> sessionPlugins)
       throws MobileHarnessException, InterruptedException {
     List<String> allJobIds = new ArrayList<>();
+    ImmutableList<Object> allJobPlugins =
+        ImmutableList.<Object>builder()
+            .addAll(sessionPlugins)
+            .add(sessionActivationListener)
+            .build();
 
     try {
       while (true) {
@@ -84,13 +108,18 @@ public class SessionJobRunner {
                   .map(JobLocator::getId)
                   .collect(toImmutableList()));
 
+          if (sessionActivated.get()) {
+            // Sets HAS_ASSOCIATED_ALLOCATION for new jobs.
+            setHasAssociatedAllocationForJobs(newJobs);
+          }
+
           // Starts new jobs.
           for (JobInfo jobInfo : newJobs) {
             logger.atInfo().log(
                 "Starting job %s of session %s",
                 jobInfo.locator().getId(), sessionDetailHolder.getSessionId());
             jobInfo.properties().add(Job.CLIENT_TYPE, "olc");
-            clientApi.startJob(jobInfo, execMode, sessionPlugins);
+            clientApi.startJob(jobInfo, execMode, allJobPlugins);
           }
         }
 
@@ -128,5 +157,33 @@ public class SessionJobRunner {
 
   private void killJobs(List<String> jobIds) {
     jobIds.forEach(clientApi::killJob);
+  }
+
+  private static void setHasAssociatedAllocationForJobs(ImmutableList<JobInfo> jobs) {
+    for (JobInfo job : jobs) {
+      logger.atInfo().log("Setting HAS_ASSOCIATED_ALLOCATION for job %s.", job.locator().getId());
+      job.properties().add(Job.HAS_ASSOCIATED_ALLOCATION, "true");
+    }
+  }
+
+  /**
+   * A session-scope plugin that listens to the {@link JobFirstAllocationEvent} and sets the {@link
+   * #sessionActivated} flag.
+   */
+  private final class SessionActivationListener {
+    @Subscribe
+    private void onFirstTestAllocated(JobFirstAllocationEvent event) {
+      if (sessionActivated.compareAndSet(false, true)) {
+        logger.atInfo().log(
+            "Session [%s] activated by job [%s]'s test [%s] allocation.",
+            sessionDetailHolder.getSessionId(),
+            event.allocatedTest().jobInfo().locator().getId(),
+            event.allocatedTest().locator().getId());
+        setHasAssociatedAllocationForJobs(sessionDetailHolder.getAllJobs());
+        logger.atInfo().log(
+            "Finished setting HAS_ASSOCIATED_ALLOCATION for all jobs of session [%s].",
+            sessionDetailHolder.getSessionId());
+      }
+    }
   }
 }

@@ -138,6 +138,7 @@ public class SessionRunner implements Callable<Void> {
     this.sessionEnvironmentPreparer = sessionEnvironmentPreparer;
     this.sessionJobCreator = sessionJobCreator;
     this.sessionJobRunner = sessionJobRunner;
+    this.sessionJobRunner.setSessionDetailHolder(sessionDetailHolder);
     this.sessionPluginLoader = sessionPluginLoader;
     this.sessionPluginRunner = sessionPluginRunner;
     this.threadPool = threadPool;
@@ -237,7 +238,6 @@ public class SessionRunner implements Callable<Void> {
       }
       // Starts all jobs and wait until they finish.
       sessionJobRunner.runJobs(
-          sessionDetailHolder,
           sessionPlugins.stream()
               .map(SessionPlugin::subscriber)
               .map(Subscriber::subscriberObject)
