@@ -1,10 +1,8 @@
 import {CommonModule} from '@angular/common';
 import {
   ChangeDetectionStrategy,
-  Component,
-  Input,
-  OnInit,
-  inject,
+  Component, OnInit,
+  inject
 } from '@angular/core';
 import {MatButtonModule} from '@angular/material/button';
 import {MAT_DIALOG_DATA, MatDialogModule} from '@angular/material/dialog';

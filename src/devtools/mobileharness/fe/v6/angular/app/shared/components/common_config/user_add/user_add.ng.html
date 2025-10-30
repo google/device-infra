@@ -1,6 +1,6 @@
 <div class="user-add-container">
   <div class="chip-container">
-    <mat-chip-grid>
+    <mat-chip-grid #chipGrid>
       @if (users.length == 0) {
         <span class="empty-chip">None added.</span>
       }
@@ -16,7 +16,7 @@
   </div>
 
   <div class="add-chip-container">
-    <input
+    <input [matChipInputFor]="chipGrid"
       type="text"
       placeholder="Add user or group..."
       class="form-input add-input"

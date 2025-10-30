@@ -13,12 +13,12 @@ describe('App Component', () => {
     mttVersion: '1.0',
     isDevMode: false,
     labconsoleVersion: '1.0',
-    overrideLabConsoleServerUrl: 'https://example.com',
-    uiPlatform: 'BoqWebLite',
-    applicationId: 'example-staing',
-    email: 'tianch@google.com',
-    userDisplayName: 'Chen Tian',
-    labConsoleServerPort: '8888',
+    overrideLabConsoleServerUrl: 'http://localhost:8080',
+    uiPlatform: 'OSS',
+    applicationId: 'lab-console-oss',
+    email: '',
+    userDisplayName: '',
+    startMode: 'ng-serve',
   };
 
   beforeEach(async () => {
