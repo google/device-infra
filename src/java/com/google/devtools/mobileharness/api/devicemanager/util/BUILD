@@ -32,3 +32,15 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/util:reflection",
     ],
 )
+
+java_library(
+    name = "persistent_device_info_manager",
+    srcs = ["PersistentDeviceInfoManager.java"],
+    deps = [
+        "//src/devtools/mobileharness/api/devicemanager/proto:persistent_device_info_java_proto",
+        "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_text_format",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+    ],
+)
