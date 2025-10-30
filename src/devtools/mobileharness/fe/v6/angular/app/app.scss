@@ -141,14 +141,14 @@ $theme: mat.m2-define-light-theme(
 // Add background theme
 // $background-color: $white;
 $background-color: $labcosnole-bg;
-$background: map-get(mat.m2-get-color-config($theme), background);
-$background: map_merge(
+$background: map.get(mat.m2-get-color-config($theme), background);
+$background: map.merge(
   $background,
   (
     background: $background-color,
   )
 );
-$theme: map_merge(
+$theme: map.merge(
   $theme,
   (
     background: $background,
