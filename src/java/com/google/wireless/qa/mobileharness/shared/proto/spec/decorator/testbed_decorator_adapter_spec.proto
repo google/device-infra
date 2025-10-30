@@ -47,14 +47,10 @@ message DeviceSelector {
   // For backwards compadability with the Mobly definition.
   optional string device_label = 1;
   // The structure of this should match that of the linked proto.
-  // LINT.IfChange
   // Device type name.
   optional string type_name = 2;
   // A subdevice dimensions specification. Uses old format for compadability.
   repeated StrPair dimensions = 3;
-  // LINT.ThenChange(
-  //   //depot/google3/java/com/google/wireless/qa/mobileharness/shared/proto/job_config.proto
-  // )
 
   // Match a sub device by its id.
   optional string sub_device_id = 4;
