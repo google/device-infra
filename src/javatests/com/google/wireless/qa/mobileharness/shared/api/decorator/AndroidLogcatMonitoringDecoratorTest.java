@@ -24,7 +24,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
+import com.google.devtools.mobileharness.platform.android.dropbox.DropboxExtractor;
+import com.google.devtools.mobileharness.platform.android.dropbox.DropboxTag;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.CrashEvent;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.CrashedProcess;
@@ -46,6 +49,7 @@ import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.AndroidL
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.time.LocalDateTime;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -70,6 +74,7 @@ public class AndroidLogcatMonitoringDecoratorTest {
   @Mock private TestInfo testInfo;
   @Mock private JobInfo jobInfo;
   @Mock CountDownTimer timer;
+  @Mock DropboxExtractor dropboxExtractor;
 
   private LocalFileUtil localFileUtil;
   private Path genFilesDir;
@@ -87,7 +92,7 @@ public class AndroidLogcatMonitoringDecoratorTest {
     when(testInfo.log()).thenReturn(new Log(new Timing()));
     when(timer.remainingTimeJava()).thenReturn(Duration.ofSeconds(5));
     doNothing().when(decoratedDriver).run(testInfo);
-    when(adb.runShell(any(), any())).thenReturn("01-30 10:15:20:000");
+    when(adb.runShell(any(), any())).thenReturn("2025-01-30 10:15:20.000");
     when(adb.runShellAsync(any(), anyString(), any(), any())).thenReturn(commandProcess);
   }
 
@@ -103,15 +108,15 @@ public class AndroidLogcatMonitoringDecoratorTest {
 
     AndroidLogcatMonitoringDecorator decorator =
         new AndroidLogcatMonitoringDecorator(
-            decoratedDriver, testInfo, adb, logcatLineProxy, localFileUtil);
+            decoratedDriver, testInfo, adb, logcatLineProxy, localFileUtil, dropboxExtractor);
 
     decorator.run(testInfo);
 
-    verify(adb).runShell("deviceId", "date +%m-%d\\ %H:%M:%S.000");
+    verify(adb).runShell("deviceId", "date +%Y-%m-%d\\ %H:%M:%S.000");
     verify(adb)
         .runShellAsync(
             "deviceId",
-            "logcat -v threadtime -T \"01-30 10:15:20:000\"",
+            "logcat -v threadtime -T \"2025-01-30 10:15:20.000\"",
             Duration.ofSeconds(5),
             logcatLineProxy);
     verify(decoratedDriver).run(testInfo);
@@ -133,7 +138,7 @@ public class AndroidLogcatMonitoringDecoratorTest {
 
     AndroidLogcatMonitoringDecorator decorator =
         new AndroidLogcatMonitoringDecorator(
-            decoratedDriver, testInfo, adb, logcatLineProxy, localFileUtil);
+            decoratedDriver, testInfo, adb, logcatLineProxy, localFileUtil, dropboxExtractor);
 
     decorator.run(testInfo);
 
@@ -141,6 +146,69 @@ public class AndroidLogcatMonitoringDecoratorTest {
     Path unparsedLogcatPath = genFilesDir.resolve("unparsed_logcat.txt");
     assertThat(Files.exists(unparsedLogcatPath)).isTrue();
     assertThat(Files.readAllLines(unparsedLogcatPath)).containsExactly(line1, line2);
+  }
+
+  @Test
+  public void run_extractsDropboxEntries() throws Exception {
+    AndroidLogcatMonitoringDecoratorSpec spec =
+        AndroidLogcatMonitoringDecoratorSpec.newBuilder()
+            .addReportAsFailurePackages("com.test.app1")
+            .addReportAsFailurePackages("com.test.app2")
+            .addReportAsFailurePackages("com.test.app3")
+            .build();
+    when(jobInfo.combinedSpec(any(AndroidLogcatMonitoringDecorator.class))).thenReturn(spec);
+    when(logcatLineProxy.getUnparsedLines()).thenReturn(ImmutableList.of());
+    when(logcatLineProxy.getLogcatEventsFromProcessors())
+        .thenReturn(
+            ImmutableList.of(
+                // Should be extracted
+                new CrashEvent(
+                    new CrashedProcess(
+                        "com.test.app1", 1, ProcessCategory.FAILURE, LogcatEvent.CrashType.ANR),
+                    "crash_log1"),
+                // Should be extracted
+                new CrashEvent(
+                    new CrashedProcess(
+                        "com.test.app2", 2, ProcessCategory.FAILURE, LogcatEvent.CrashType.NATIVE),
+                    "crash_log2"),
+                // Should be extracted
+                new CrashEvent(
+                    new CrashedProcess(
+                        "com.test.app3",
+                        3,
+                        ProcessCategory.FAILURE,
+                        LogcatEvent.CrashType.ANDROID_RUNTIME),
+                    "crash_log3"),
+                // Should not be extracted as it is not a failure
+                new CrashEvent(
+                    new CrashedProcess(
+                        "com.test.ignored",
+                        4,
+                        ProcessCategory.IGNORED,
+                        LogcatEvent.CrashType.ANDROID_RUNTIME),
+                    "crash_log4")));
+    when(adb.runShell("deviceId", "date +%Y-%m-%d\\ %H:%M:%S.000"))
+        .thenReturn("2025-01-01 10:00:00.000");
+
+    AndroidLogcatMonitoringDecorator decorator =
+        new AndroidLogcatMonitoringDecorator(
+            decoratedDriver, testInfo, adb, logcatLineProxy, localFileUtil, dropboxExtractor);
+
+    decorator.run(testInfo);
+    verify(dropboxExtractor)
+        .extract(
+            "deviceId",
+            ImmutableSet.of("com.test.app1", "com.test.app2", "com.test.app3"),
+            ImmutableSet.of(
+                DropboxTag.DATA_APP_ANR,
+                DropboxTag.SYSTEM_APP_ANR,
+                DropboxTag.DATA_APP_NATIVE_CRASH,
+                DropboxTag.SYSTEM_APP_NATIVE_CRASH,
+                DropboxTag.SYSTEM_TOMBSTONE,
+                DropboxTag.DATA_APP_CRASH,
+                DropboxTag.SYSTEM_APP_CRASH),
+            LocalDateTime.of(2025, 1, 1, 10, 0, 0),
+            genFilesDir);
   }
 
   @Test
@@ -162,7 +230,7 @@ public class AndroidLogcatMonitoringDecoratorTest {
 
     AndroidLogcatMonitoringDecorator decorator =
         new AndroidLogcatMonitoringDecorator(
-            decoratedDriver, testInfo, adb, logcatLineProxy, localFileUtil);
+            decoratedDriver, testInfo, adb, logcatLineProxy, localFileUtil, dropboxExtractor);
 
     decorator.run(testInfo);
 

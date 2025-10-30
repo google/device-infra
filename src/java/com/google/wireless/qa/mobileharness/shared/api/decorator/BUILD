@@ -361,6 +361,7 @@ java_library(
         "//src/devtools/mobileharness/platform/android/logcat/proto:logcat_monitoring_report_java_proto",
         "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/platform/android/dropbox",
         "//src/java/com/google/devtools/mobileharness/platform/android/logcat",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",

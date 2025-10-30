@@ -1,0 +1,140 @@
+Drop box contents: 101 entries
+Max entries: 1000
+Low priority rate limit period: 2000 ms
+Low priority tags: {data_app_wtf, keymaster, system_server_wtf, system_app_strictmode, system_app_wtf, system_server_strictmode, data_app_strictmode, netstats}
+Searching for: data_app_native_crash
+
+========================================
+2025-10-24 15:13:55 data_app_native_crash (text, 7018 bytes)
+Process: com.test.app.native
+PID: 31426
+UID: 10309
+Frozen: false
+Flags: 0x3088be44
+Package: com.test.app.native v1 (1.0)
+Foreground: Yes
+Process-Runtime: 10179
+Build: google/oriole_64/oriole:13/T3B3.230413.009/10120928:user/release-keys
+Loading-Progress: 1.0
+Dropped-Count: 0
+
+*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+Build fingerprint: 'google/oriole_64/oriole:13/T3B3.230413.009/10120928:user/release-keys'
+Revision: 'MP1.0'
+ABI: 'arm64'
+Timestamp: 2024-02-20 15:13:54.810616738-0800
+Process uptime: 11s
+Cmdline: com.test.app.native
+pid: 31426, tid: 31426, name: testing.jetpack  >>> com.test.app.native <<<
+uid: 10309
+tagged_addr_ctrl: 0000000000000001 (PR_TAGGED_ADDR_ENABLE)
+signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x0000000000000000
+Cause: null pointer dereference
+    x0  00000000ffffffff  x1  0000000000000000  x2  0000000000000050  x3  0000000000000003
+    x4  0000007fe67c1a70  x5  0000000008d63a70  x6  1f6664721f666d68  x7  7f7f7f7f7f7f7f7f
+    x8  0000000000000000  x9  00000000deadbeef  x10 0000000000000002  x11 fffffffffffffffd
+    x12 0000007fe67c1ba0  x13 0000000000000026  x14 000000772a1d1538  x15 00001b073678d100
+    x16 00000079d55ee728  x17 00000079ed235890  x18 00000079f312e000  x19 b4000078b2a0e010
+    x20 0000000000000000  x21 0000000000000000  x22 00000076ca388c88  x23 000000000000106e
+    x24 000000773f800880  x25 0000007fe67c2f50  x26 0000000010380004  x27 0000000000000008
+    x28 0000007fe67c2e50  x29 0000007fe67c2e50
+    lr  000000772a1d16b4  sp  0000007fe67c2e30  pc  000000772a1d16c4  pst 0000000060001000
+backtrace:
+      #00 pc 00000000000006c4  /data/app/~~0-I1j4jvFeiPexOKq9-lWQ==/com.test.app.native-nXeWyXpPPuQsZcvB0D3QJw==/lib/arm64/libcrasher.so (Java_com_google_android_apps_mtaas_testing_jetpack_NativeCrashActivity_crash+44) (BuildId: 7f6886ec0bef02c164f5b6b410a42fab)
+      #01 pc 0000000000461554  /apex/com.android.art/lib64/libart.so (art_quick_generic_jni_trampoline+148) (BuildId: 289d75599f6112d5757113220599e90b)
+      #02 pc 000000000020a2b0  /apex/com.android.art/lib64/libart.so (nterp_helper+4016) (BuildId: 289d75599f6112d5757113220599e90b)
+      #03 pc 000000000112ec88  /data/app/~~0-I1j4jvFeiPexOKq9-lWQ==/com.test.app.native-nXeWyXpPPuQsZcvB0D3QJw==/oat/arm64/base.vdex (com.test.app.native.NativeCrashActivity.onCreate+28)
+      #04 pc 00000000004800b0  /system/framework/arm64/boot-framework.oat (android.app.Activity.performCreate+800) (BuildId: 830f4c055299aae1a5ce50ac9bc9d9d9589cb804)
+      #05 pc 00000000001f38f8  /system/framework/arm64/boot-framework.oat (android.app.Instrumentation.callActivityOnCreate+88) (BuildId: 830f4c055299aae1a5ce50ac9bc9d9d9589cb804)
+      #06 pc 00000000002d1da8  /system/framework/arm64/boot-framework.oat (android.app.ActivityThread.performLaunchActivity+2712) (BuildId: 830f4c055299aae1a5ce50ac9bc9d9d9589cb804)
+      #07 pc 00000000002d9088  /system/framework/arm64/boot-framework.oat (android.app.ActivityThread.handleLaunchActivity+520) (BuildId: 830f4c055299aae1a5ce50ac9bc9d9d9589cb804)
+      #08 pc 000000000048df44  /system/framework/arm64/boot-framework.oat (android.app.servertransaction.LaunchActivityItem.execute+484) (BuildId: 830f4c055299aae1a5ce50ac9bc9d9d9589cb804)
+      #09 pc 0000000000223d44  /system/framework/arm64/boot-framework.oat (android.app.servertransaction.TransactionExecutor.executeCallbacks+612) (BuildId: 830f4c055299aae1a5ce50ac9bc9d9d9589cb804)
+      #10 pc 0000000000223a64  /system/framework/arm64/boot-framework.oat (android.app.servertransaction.TransactionExecutor.execute+772) (BuildId: 830f4c055299aae1a5ce50ac9bc9d9d9589cb804)
+      #11 pc 00000000002b9f64  /system/framework/arm64/boot-framework.oat (android.app.ActivityThread$H.handleMessage+1204) (BuildId: 830f4c055299aae1a5ce50ac9bc9d9d9589cb804)
+      #12 pc 00000000004eb0b0  /system/framework/arm64/boot-framework.oat (android.os.Handler.dispatchMessage+192) (BuildId: 830f4c055299aae1a5ce50ac9bc9d9d9589cb804)
+      #13 pc 00000000004ee3e8  /system/framework/arm64/boot-framework.oat (android.os.Looper.loopOnce+1032) (BuildId: 830f4c055299aae1a5ce50ac9bc9d9d9589cb804)
+      #14 pc 00000000004edf40  /system/framework/arm64/boot-framework.oat (android.os.Looper.loop+560) (BuildId: 830f4c055299aae1a5ce50ac9bc9d9d9589cb804)
+      #15 pc 00000000002d0704  /system/framework/arm64/boot-framework.oat (android.app.ActivityThread.main+1236) (BuildId: 830f4c055299aae1a5ce50ac9bc9d9d9589cb804)
+      #16 pc 0000000000457e00  /apex/com.android.art/lib64/libart.so (art_quick_invoke_static_stub+576) (BuildId: 289d75599f6112d5757113220599e90b)
+      #17 pc 000000000048c038  /apex/com.android.art/lib64/libart.so (_jobject* art::InvokeMethod<(art::PointerSize)8>(art::ScopedObjectAccessAlreadyRunnable const&, _jobject*, _jobject*, _jobject*, unsigned long)+1560) (BuildId: 289d75599f6112d5757113220599e90b)
+      #18 pc 000000000048b9f8  /apex/com.android.art/lib64/libart.so (art::Method_invoke(_JNIEnv*, _jobject*, _jobject*, _jobjectArray*) (.__uniq.165753521025965369065708152063621506277)+48) (BuildId: 289d75599f6112d5757113220599e90b)
+      #19 pc 0000000000099148  /system/framework/arm64/boot.oat (art_jni_trampoline+120) (BuildId: f2624dff261ac721c71496a318ad91b6e6cd0231)
+      #20 pc 00000000007b5420  /system/framework/arm64/boot-framework.oat (com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run+144) (BuildId: 830f4c055299aae1a5ce50ac9bc9d9d9589cb804)
+      #21 pc 00000000007be5ac  /system/framework/arm64/boot-framework.oat (com.android.internal.os.ZygoteInit.main+3228) (BuildId: 830f4c055299aae1a5ce50ac9bc9d9d9589cb804)
+      #22 pc 0000000000457e00  /apex/com.android.art/lib64/libart.so (art_quick_invoke_static_stub+576) (BuildId: 289d75599f6112d5757113220599e90b)
+      #23 pc 000000000058bbc4  /apex/com.android.art/lib64/libart.so (art::JValue art::InvokeWithVarArgs<_jmethodID*>(art::ScopedObjectAccessAlreadyRunnable const&, _jobject*, _jmethodID*, std::__va_list)+912) (BuildId: 289d75599f6112d5757113220599e90b)
+      #24 pc 0000000000609af8  /apex/com.android.art/lib64/libart.so (art::JNI<true>::CallStaticVoidMethodV(_JNIEnv*, _jclass*, _jmethodID*, std::__va_list)+172) (BuildId: 289d75599f6112d5757113220599e90b)
+      #25 pc 00000000000bcce8  /system/lib64/libandroid_runtime.so (_JNIEnv::CallStaticVoidMethod(_jclass*, _jmethodID*, ...)+120) (BuildId: 48435380059f74cde3db281c74576169)
+      #26 pc 00000000000c8bf8  /system/lib64/libandroid_runtime.so (android::AndroidRuntime::start(char const*, android::Vector<android::String8> const&, bool)+840) (BuildId: 48435380059f74cde3db281c74576169)
+      #27 pc 0000000000002560  /system/bin/app_process64 (main+1280) (BuildId: 6f97a590777bd06f31784c7272763a35)
+      #28 pc 000000000004b600  /apex/com.android.runtime/lib64/bionic/libc.so (__libc_init+96) (BuildId: dc4001c2ef2dfc23467040797a96840c)
+
+========================================
+2025-10-24 15:46:14 data_app_native_crash (text, 7383 bytes)
+Process: com.test.app.native1
+PID: 2976
+UID: 10317
+Frozen: false
+Flags: 0x30a8be44
+Package: com.test.app.native v1 (1.0)
+Foreground: Yes
+Process-Runtime: 693
+Build: google/oriole_64/oriole:13/T3B3.230413.009/10120928:user/release-keys
+Loading-Progress: 1.0
+Dropped-Count: 0
+
+*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+Build fingerprint: 'google/oriole_64/oriole:13/T3B3.230413.009/10120928:user/release-keys'
+Revision: 'MP1.0'
+ABI: 'arm64'
+Timestamp: 2024-02-20 15:46:14.328832814-0800
+Process uptime: 2s
+Cmdline: com.test.app.native1
+pid: 2976, tid: 2976, name: testing.jetpack  >>> com.test.app.native1 <<<
+uid: 10317
+tagged_addr_ctrl: 0000000000000001 (PR_TAGGED_ADDR_ENABLE)
+signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x0000000000000000
+Cause: null pointer dereference
+    x0  00000000ffffffff  x1  0000000000000000  x2  0000000000000050  x3  0000000000000003
+    x4  0000007fe67c1980  x5  0000000008d9cac2  x6  1f6664721f666d68  x7  7f7f7f7f7f7f7f7f
+    x8  0000000000000000  x9  00000000deadbeef  x10 0000000000000002  x11 fffffffffffffffd
+    x12 0000007fe67c1ab0  x13 0000000000000026  x14 00000076c6932538  x15 00001b124f8f388c
+    x16 00000079d55ee728  x17 00000079ed235890  x18 00000079f312e000  x19 b4000078b2a0e010
+    x20 0000000000000000  x21 0000000000000000  x22 00000076cba86c3c  x23 000000000000106e
+    x24 000000773f800880  x25 0000007fe67c2e60  x26 0000000010300004  x27 0000000000000008
+    x28 0000007fe67c2d60  x29 0000007fe67c2d60
+    lr  00000076c69326b4  sp  0000007fe67c2d40  pc  00000076c69326c4  pst 0000000060001000
+backtrace:
+      #00 pc 00000000000006c4  /data/app/~~tg8zahD9GfumXbWbn92INg==/com.test.app.native-Gbugg6_zAZhuO0LE0dVVSA==/lib/arm64/libcrasher.so (Java_com_google_android_apps_mtaas_testing_jetpack_NativeCrashActivity_crash+44) (BuildId: 7f6886ec0bef02c164f5b6b410a42fab)
+      #01 pc 0000000000461554  /apex/com.android.art/lib64/libart.so (art_quick_generic_jni_trampoline+148) (BuildId: 289d75599f6112d5757113220599e90b)
+      #02 pc 000000000020a2b0  /apex/com.android.art/lib64/libart.so (nterp_helper+4016) (BuildId: 289d75599f6112d5757113220599e90b)
+      #03 pc 000000000112ec3c  /data/app/~~tg8zahD9GfumXbWbn92INg==/com.test.app.native-Gbugg6_zAZhuO0LE0dVVSA==/oat/arm64/base.vdex (com.test.app.native.NativeCrashActivity.onCreate+28)
+      #04 pc 00000000004800b0  /system/framework/arm64/boot-framework.oat (android.app.Activity.performCreate+800) (BuildId: 830f4c055299aae1a5ce50ac9bc9d9d9589cb804)
+      #05 pc 00000000001f38f8  /system/framework/arm64/boot-framework.oat (android.app.Instrumentation.callActivityOnCreate+88) (BuildId: 830f4c055299aae1a5ce50ac9bc9d9d9589cb804)
+      #06 pc 000000000020a2b0  /apex/com.android.art/lib64/libart.so (nterp_helper+4016) (BuildId: 289d75599f6112d5757113220599e90b)
+      #07 pc 00000000000b85aa  /data/app/~~21yvnrP76B_Vvs9rLs00rg==/com.test.app.native.tests-Eqm_d_1GdlEfssHPijpyQQ==/oat/arm64/base.vdex (androidx.test.runner.MonitoringInstrumentation.callActivityOnCreate+14)
+      #08 pc 00000000002d1da8  /system/framework/arm64/boot-framework.oat (android.app.ActivityThread.performLaunchActivity+2712) (BuildId: 830f4c055299aae1a5ce50ac9bc9d9d9589cb804)
+      #09 pc 00000000002d9088  /system/framework/arm64/boot-framework.oat (android.app.ActivityThread.handleLaunchActivity+520) (BuildId: 830f4c055299aae1a5ce50ac9bc9d9d9589cb804)
+      #10 pc 000000000048df44  /system/framework/arm64/boot-framework.oat (android.app.servertransaction.LaunchActivityItem.execute+484) (BuildId: 830f4c055299aae1a5ce50ac9bc9d9d9589cb804)
+      #11 pc 0000000000223d44  /system/framework/arm64/boot-framework.oat (android.app.servertransaction.TransactionExecutor.executeCallbacks+612) (BuildId: 830f4c055299aae1a5ce50ac9bc9d9d9589cb804)
+      #12 pc 0000000000223a64  /system/framework/arm64/boot-framework.oat (android.app.servertransaction.TransactionExecutor.execute+772) (BuildId: 830f4c055299aae1a5ce50ac9bc9d9d9589cb804)
+      #13 pc 00000000002b9f64  /system/framework/arm64/boot-framework.oat (android.app.ActivityThread$H.handleMessage+1204) (BuildId: 830f4c055299aae1a5ce50ac9bc9d9d9589cb804)
+      #14 pc 00000000004eb0b0  /system/framework/arm64/boot-framework.oat (android.os.Handler.dispatchMessage+192) (BuildId: 830f4c055299aae1a5ce50ac9bc9d9d9589cb804)
+      #15 pc 00000000004ee3e8  /system/framework/arm64/boot-framework.oat (android.os.Looper.loopOnce+1032) (BuildId: 830f4c055299aae1a5ce50ac9bc9d9d9589cb804)
+      #16 pc 00000000004edf40  /system/framework/arm64/boot-framework.oat (android.os.Looper.loop+560) (BuildId: 830f4c055299aae1a5ce50ac9bc9d9d9589cb804)
+      #17 pc 00000000002d0704  /system/framework/arm64/boot-framework.oat (android.app.ActivityThread.main+1236) (BuildId: 830f4c055299aae1a5ce50ac9bc9d9d9589cb804)
+      #18 pc 0000000000457e00  /apex/com.android.art/lib64/libart.so (art_quick_invoke_static_stub+576) (BuildId: 289d75599f6112d5757113220599e90b)
+      #19 pc 000000000048c038  /apex/com.android.art/lib64/libart.so (_jobject* art::InvokeMethod<(art::PointerSize)8>(art::ScopedObjectAccessAlreadyRunnable const&, _jobject*, _jobject*, _jobject*, unsigned long)+1560) (BuildId: 289d75599f6112d5757113220599e90b)
+      #20 pc 000000000048b9f8  /apex/com.android.art/lib64/libart.so (art::Method_invoke(_JNIEnv*, _jobject*, _jobject*, _jobjectArray*) (.__uniq.165753521025965369065708152063621506277)+48) (BuildId: 289d75599f6112d5757113220599e90b)
+      #21 pc 0000000000099148  /system/framework/arm64/boot.oat (art_jni_trampoline+120) (BuildId: f2624dff261ac721c71496a318ad91b6e6cd0231)
+      #22 pc 00000000007b5420  /system/framework/arm64/boot-framework.oat (com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run+144) (BuildId: 830f4c055299aae1a5ce50ac9bc9d9d9589cb804)
+      #23 pc 00000000007be5ac  /system/framework/arm64/boot-framework.oat (com.android.internal.os.ZygoteInit.main+3228) (BuildId: 830f4c055299aae1a5ce50ac9bc9d9d9589cb804)
+      #24 pc 0000000000457e00  /apex/com.android.art/lib64/libart.so (art_quick_invoke_static_stub+576) (BuildId: 289d75599f6112d5757113220599e90b)
+      #25 pc 000000000058bbc4  /apex/com.android.art/lib64/libart.so (art::JValue art::InvokeWithVarArgs<_jmethodID*>(art::ScopedObjectAccessAlreadyRunnable const&, _jobject*, _jmethodID*, std::__va_list)+912) (BuildId: 289d75599f6112d5757113220599e90b)
+      #26 pc 0000000000609af8  /apex/com.android.art/lib64/libart.so (art::JNI<true>::CallStaticVoidMethodV(_JNIEnv*, _jclass*, _jmethodID*, std::__va_list)+172) (BuildId: 289d75599f6112d5757113220599e90b)
+      #27 pc 00000000000bcce8  /system/lib64/libandroid_runtime.so (_JNIEnv::CallStaticVoidMethod(_jclass*, _jmethodID*, ...)+120) (BuildId: 48435380059f74cde3db281c74576169)
+      #28 pc 00000000000c8bf8  /system/lib64/libandroid_runtime.so (android::AndroidRuntime::start(char const*, android::Vector<android::String8> const&, bool)+840) (BuildId: 48435380059f74cde3db281c74576169)
+      #29 pc 0000000000002560  /system/bin/app_process64 (main+1280) (BuildId: 6f97a590777bd06f31784c7272763a35)
+      #30 pc 000000000004b600  /apex/com.android.runtime/lib64/bionic/libc.so (__libc_init+96) (BuildId: dc4001c2ef2dfc23467040797a96840c)
+

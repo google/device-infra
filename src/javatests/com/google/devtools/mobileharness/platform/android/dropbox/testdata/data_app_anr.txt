@@ -1,0 +1,199 @@
+Drop box contents: 72 entries
+Searching for: data_app_anr
+
+========================================
+2025-10-24 14:11:11 data_app_anr (compressed text, 22175 bytes)
+Process: com.test.app.anr
+PID: 4251
+Flags: 0x38a8be44
+Package: com.test.app.anr v0
+Foreground: Yes
+Subject: Broadcast of Intent { act=com.test.app.anr.ANR flg=0x10000010 cmp=com.test.app.anr/.AnrReceiver }
+Build: google/sdk_goog3_x86/generic_x86:8.0.0/OSR1.180418.003/4741120:userdebug/test-keys
+
+CPU usage from 234790ms to 0ms ago (2023-02-13 14:07:16.197 to 2023-02-13 14:11:11.037):
+  4.3% 1671/system_server: 2.8% user + 1.4% kernel / faults: 50954 minor 528 major
+  0.7% 1460/surfaceflinger: 0.1% user + 0.6% kernel / faults: 169 minor
+  0.6% 1453/android.hardware.sensors@1.0-service: 0.1% user + 0.5% kernel / faults: 26 minor
+  0.3% 1444/android.hardware.audio@2.0-service: 0% user + 0.3% kernel / faults: 165 minor
+  0.2% 1451/android.hardware.graphics.composer@2.1-service: 0.1% user + 0.1% kernel / faults: 70 minor
+  0.2% 1547/kworker/u9:3: 0% user + 0.2% kernel
+  0.2% 1590/audioserver: 0% user + 0.2% kernel / faults: 2537 minor
+ +0% 1770/com.google.android.inputmethod.latin: 0% user + 0% kernel
+ +0% 4251/com.test.app.anr: 0% user + 0% kernel
+5.4% TOTAL: 3.2% user + 1.8% kernel + 0.2% iowait + 0% irq + 0% softirq
+
+----- pid 4251 at 2023-02-13 14:11:11 -----
+Cmd line: com.test.app.anr
+Build fingerprint: 'google/sdk_goog3_x86/generic_x86:8.0.0/OSR1.180418.003/4741120:userdebug/test-keys'
+ABI: 'x86'
+Build type: optimized
+Zygote loaded classes=4675 post zygote classes=28
+Intern table: 42341 strong; 137 weak
+JNI: CheckJNI is off; globals=512 (plus 21 weak)
+Libraries: /system/lib/libandroid.so /system/lib/libcompiler_rt.so /system/lib/libjavacrypto.so /system/lib/libjnigraphics.so /system/lib/libmedia_jni.so /system/lib/libsoundpool.so /system/lib/libwebviewchromium_loader.so libjavacore.so libopenjdk.so (9)
+Heap: 8% free, 3MB/3MB; 19966 objects
+Dumping cumulative Gc timings
+Cumulative bytes moved 1934576
+Cumulative objects moved 48311
+Total number of allocations 19966
+Total bytes allocated 3MB
+Total bytes freed 0B
+Free memory 292KB
+Free memory until GC 292KB
+Free memory until OOME 188MB
+Total memory 3MB
+Max memory 192MB
+Zygote space size 580KB
+Total mutator paused time: 0
+Total time waiting for GC to complete: 348ns
+Total GC count: 0
+Total GC time: 0
+Total blocking GC count: 0
+Total blocking GC time: 0
+Registered native bytes allocated: 1325430
+/data/app/com.test.app.anr-kHJ-fbA57RIQB6YU9-qY8w==/oat/x86/base.odex: quicken
+Current JIT code cache size: 0B
+Current JIT data cache size: 0B
+
+suspend all histogram:    Sum: 12us 99% C.I. 0.080us-5us Avg: 2us Max: 5us
+DALVIK THREADS (13):
+"Signal Catcher" daemon prio=5 tid=3 Runnable
+  | group="system" sCount=0 dsCount=0 flags=0 obj=0x15100020 self=0xa955ac00
+  | sysTid=4257 nice=0 cgrp=default sched=0/0 handle=0x9f97e970
+  | state=R schedstat=( 1554850 33562 3 ) utm=0 stm=0 core=0 HZ=100
+  | stack=0x9f884000-0x9f886000 stackSize=1006KB
+  | held mutexes= "mutator lock"(shared held)
+  native: #00 pc 0047398b  /system/lib/libart.so (_ZN3art15DumpNativeStackERNSt3__113basic_ostreamIcNS0_11char_traitsIcEEEEiP12BacktraceMapPKcPNS_9ArtMethodEPv+203)
+  native: #01 pc 0056f48e  /system/lib/libart.so (_ZNK3art6Thread9DumpStackERNSt3__113basic_ostreamIcNS1_11char_traitsIcEEEEbP12BacktraceMapb+366)
+  native: #02 pc 00569d13  /system/lib/libart.so (_ZNK3art6Thread4DumpERNSt3__113basic_ostreamIcNS1_11char_traitsIcEEEEbP12BacktraceMapb+83)
+  native: #03 pc 0058c4aa  /system/lib/libart.so (_ZN3art14DumpCheckpoint3RunEPNS_6ThreadE+1210)
+  native: #04 pc 00582b0a  /system/lib/libart.so (_ZN3art10ThreadList13RunCheckpointEPNS_7ClosureES2_+570)
+  native: #05 pc 0058240e  /system/lib/libart.so (_ZN3art10ThreadList4DumpERNSt3__113basic_ostreamIcNS1_11char_traitsIcEEEEb+958)
+  native: #06 pc 00581f4b  /system/lib/libart.so (_ZN3art10ThreadList14DumpForSigQuitERNSt3__113basic_ostreamIcNS1_11char_traitsIcEEEE+1179)
+  native: #07 pc 0054a473  /system/lib/libart.so (_ZN3art7Runtime14DumpForSigQuitERNSt3__113basic_ostreamIcNS1_11char_traitsIcEEEE+243)
+  native: #08 pc 00557583  /system/lib/libart.so (_ZN3art13SignalCatcher13HandleSigQuitEv+2163)
+  native: #09 pc 00555e50  /system/lib/libart.so (_ZN3art13SignalCatcher3RunEPv+416)
+  native: #10 pc 000709b5  /system/lib/libc.so (_ZL15__pthread_startPv+53)
+  native: #11 pc 0002050b  /system/lib/libc.so (__start_thread+75)
+  native: #12 pc 0001eda6  /system/lib/libc.so (__bionic_clone+70)
+  (no managed stack frames)
+
+"main" prio=5 tid=1 Sleeping
+  | group="main" sCount=1 dsCount=0 flags=1 obj=0x7375f568 self=0xa955a000
+  | sysTid=4251 nice=-10 cgrp=default sched=0/0 handle=0xadd05518
+  | state=S schedstat=( 32134610 8406351 75 ) utm=1 stm=2 core=1 HZ=100
+  | stack=0xbf7ce000-0xbf7d0000 stackSize=8MB
+  | held mutexes=
+  at java.lang.Thread.sleep(Native method)
+  - sleeping on <0x01a419a8> (a java.lang.Object)
+  at java.lang.Thread.sleep(Thread.java:373)
+  - locked <0x01a419a8> (a java.lang.Object)
+  at java.lang.Thread.sleep(Thread.java:314)
+  at com.test.app.anr.AnrReceiver.onReceive(AnrReceiver.java:17)
+  at android.app.ActivityThread.handleReceiver(ActivityThread.java:3252)
+  at android.app.ActivityThread.-wrap17(ActivityThread.java:-1)
+  at android.app.ActivityThread$H.handleMessage(ActivityThread.java:1677)
+  at android.os.Handler.dispatchMessage(Handler.java:105)
+  at android.os.Looper.loop(Looper.java:164)
+  at android.app.ActivityThread.main(ActivityThread.java:6541)
+  at java.lang.reflect.Method.invoke(Native method)
+  at com.android.internal.os.Zygote$MethodAndArgsCaller.run(Zygote.java:240)
+  at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:767)
+
+
+[[TRUNCATED]]
+
+========================================
+2023-02-13 14:51:11 data_app_anr (compressed text, 21937 bytes)
+Process: com.test.app.anr2
+PID: 6718
+Flags: 0x3888be44
+Package: com.test.app.anr v0
+Foreground: Yes
+Subject: Broadcast of Intent { act=com.test.app.anr.ANR flg=0x10000010 cmp=com.test.app.anr/.AnrReceiver }
+Build: google/sdk_goog3_x86/generic_x86:8.0.0/OSR1.180418.003/4741120:userdebug/test-keys
+
+CPU usage from 166654ms to 0ms ago (2023-02-13 14:48:24.118 to 2023-02-13 14:51:10.771):
+  1.2% 1671/system_server: 0.5% user + 0.7% kernel / faults: 3825 minor
+  0.7% 1453/android.hardware.sensors@1.0-service: 0.2% user + 0.4% kernel
+  0.2% 1451/android.hardware.graphics.composer@2.1-service: 0.1% user + 0.1% kernel / faults: 11 minor
+  0.2% 2429/com.google.android.googlequicksearchbox:search: 0.1% user + 0% kernel / faults: 6748 minor
+  0.2% 1460/surfaceflinger: 0% user + 0.1% kernel / faults: 199 minor
+  0.1% 1590/audioserver: 0% user + 0.1% kernel / faults: 1489 minor
+  0.1% 1788/com.android.systemui: 0% user + 0% kernel / faults: 537 minor
+ +0% 6583/kworker/3:2: 0% user + 0% kernel
+ +0% 6718/com.test.app.anr: 0% user + 0% kernel
+1.1% TOTAL: 0.5% user + 0.5% kernel + 0% iowait + 0% softirq
+
+----- pid 6718 at 2023-02-13 14:51:10 -----
+Cmd line: com.test.app.anr
+Build fingerprint: 'google/sdk_goog3_x86/generic_x86:8.0.0/OSR1.180418.003/4741120:userdebug/test-keys'
+ABI: 'x86'
+Build type: optimized
+Zygote loaded classes=4675 post zygote classes=28
+Intern table: 42341 strong; 137 weak
+JNI: CheckJNI is off; globals=512 (plus 21 weak)
+Libraries: /system/lib/libandroid.so /system/lib/libcompiler_rt.so /system/lib/libjavacrypto.so /system/lib/libjnigraphics.so /system/lib/libmedia_jni.so /system/lib/libsoundpool.so /system/lib/libwebviewchromium_loader.so libjavacore.so libopenjdk.so (9)
+Heap: 69% free, 563KB/1864KB; 14701 objects
+Dumping cumulative Gc timings
+Start Dumping histograms for 1 iterations for concurrent copying
+ThreadListFlip:    Sum: 1.156ms 99% C.I. 1.156ms-1.156ms Avg: 1.156ms Max: 1.156ms
+VisitConcurrentRoots:    Sum: 825us 99% C.I. 825us-825us Avg: 825us Max: 825us
+ScanImmuneSpaces:    Sum: 226us 99% C.I. 226us-226us Avg: 226us Max: 226us
+FlipThreadRoots:    Sum: 206us 99% C.I. 206us-206us Avg: 206us Max: 206us
+ProcessMarkStack:    Sum: 144us 99% C.I. 144us-144us Avg: 144us Max: 144us
+SweepSystemWeaks:    Sum: 133us 99% C.I. 133us-133us Avg: 133us Max: 133us
+FlipOtherThreads:    Sum: 105us 99% C.I. 105us-105us Avg: 105us Max: 105us
+InitializePhase:    Sum: 97us 99% C.I. 97us-97us Avg: 97us Max: 97us
+MarkingPhase:    Sum: 78us 99% C.I. 78us-78us Avg: 78us Max: 78us
+GrayAllDirtyImmuneObjects:    Sum: 64us 99% C.I. 64us-64us Avg: 64us Max: 64us
+ClearFromSpace:    Sum: 58us 99% C.I. 58us-58us Avg: 58us Max: 58us
+
+
+suspend all histogram:    Sum: 1.149ms 99% C.I. 0.186us-1112.800us Avg: 164.142us Max: 1137us
+DALVIK THREADS (12):
+"Signal Catcher" daemon prio=5 tid=3 Runnable
+  | group="system" sCount=0 dsCount=0 flags=0 obj=0x15800088 self=0xa955ac00
+  | sysTid=6724 nice=0 cgrp=default sched=0/0 handle=0x9f97e970
+  | state=R schedstat=( 3029313 216597 3 ) utm=0 stm=0 core=3 HZ=100
+  | stack=0x9f884000-0x9f886000 stackSize=1006KB
+  | held mutexes= "mutator lock"(shared held)
+  native: #00 pc 0047398b  /system/lib/libart.so (_ZN3art15DumpNativeStackERNSt3__113basic_ostreamIcNS0_11char_traitsIcEEEEiP12BacktraceMapPKcPNS_9ArtMethodEPv+203)
+  native: #01 pc 0056f48e  /system/lib/libart.so (_ZNK3art6Thread9DumpStackERNSt3__113basic_ostreamIcNS1_11char_traitsIcEEEEbP12BacktraceMapb+366)
+  native: #02 pc 00569d13  /system/lib/libart.so (_ZNK3art6Thread4DumpERNSt3__113basic_ostreamIcNS1_11char_traitsIcEEEEbP12BacktraceMapb+83)
+  native: #03 pc 0058c4aa  /system/lib/libart.so (_ZN3art14DumpCheckpoint3RunEPNS_6ThreadE+1210)
+  native: #04 pc 00582b0a  /system/lib/libart.so (_ZN3art10ThreadList13RunCheckpointEPNS_7ClosureES2_+570)
+  native: #05 pc 0058240e  /system/lib/libart.so (_ZN3art10ThreadList4DumpERNSt3__113basic_ostreamIcNS1_11char_traitsIcEEEEb+958)
+  native: #06 pc 00581f4b  /system/lib/libart.so (_ZN3art10ThreadList14DumpForSigQuitERNSt3__113basic_ostreamIcNS1_11char_traitsIcEEEE+1179)
+  native: #07 pc 0054a473  /system/lib/libart.so (_ZN3art7Runtime14DumpForSigQuitERNSt3__113basic_ostreamIcNS1_11char_traitsIcEEEE+243)
+  native: #08 pc 00557583  /system/lib/libart.so (_ZN3art13SignalCatcher13HandleSigQuitEv+2163)
+  native: #09 pc 00555e50  /system/lib/libart.so (_ZN3art13SignalCatcher3RunEPv+416)
+  native: #10 pc 000709b5  /system/lib/libc.so (_ZL15__pthread_startPv+53)
+  native: #11 pc 0002050b  /system/lib/libc.so (__start_thread+75)
+  native: #12 pc 0001eda6  /system/lib/libc.so (__bionic_clone+70)
+  (no managed stack frames)
+
+"main" prio=5 tid=1 Sleeping
+  | group="main" sCount=1 dsCount=0 flags=1 obj=0x7375f568 self=0xa955a000
+  | sysTid=6718 nice=-10 cgrp=default sched=0/0 handle=0xadd05518
+  | state=S schedstat=( 24657623 9622771 111 ) utm=2 stm=0 core=3 HZ=100
+  | stack=0xbf7ce000-0xbf7d0000 stackSize=8MB
+  | held mutexes=
+  at java.lang.Thread.sleep(Native method)
+  - sleeping on <0x01a419a8> (a java.lang.Object)
+  at java.lang.Thread.sleep(Thread.java:373)
+  - locked <0x01a419a8> (a java.lang.Object)
+  at java.lang.Thread.sleep(Thread.java:314)
+  at com.test.app.anr.AnrReceiver.onReceive(AnrReceiver.java:17)
+  at android.app.ActivityThread.handleReceiver(ActivityThread.java:3252)
+  at android.app.ActivityThread.-wrap17(ActivityThread.java:-1)
+  at android.app.ActivityThread$H.handleMessage(ActivityThread.java:1677)
+  at android.os.Handler.dispatchMessage(Handler.java:105)
+  at android.os.Looper.loop(Looper.java:164)
+  at android.app.ActivityThread.main(ActivityThread.java:6541)
+  at java.lang.reflect.Method.invoke(Native method)
+  at com.android.internal.os.Zygote$MethodAndArgsCaller.run(Zygote.java:240)
+  at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:767)
+
+[[TRUNCATED]]

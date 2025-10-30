@@ -16,11 +16,22 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.decorator;
 
+import static com.google.devtools.mobileharness.platform.android.dropbox.DropboxTag.DATA_APP_ANR;
+import static com.google.devtools.mobileharness.platform.android.dropbox.DropboxTag.DATA_APP_CRASH;
+import static com.google.devtools.mobileharness.platform.android.dropbox.DropboxTag.DATA_APP_NATIVE_CRASH;
+import static com.google.devtools.mobileharness.platform.android.dropbox.DropboxTag.SYSTEM_APP_ANR;
+import static com.google.devtools.mobileharness.platform.android.dropbox.DropboxTag.SYSTEM_APP_CRASH;
+import static com.google.devtools.mobileharness.platform.android.dropbox.DropboxTag.SYSTEM_APP_NATIVE_CRASH;
+import static com.google.devtools.mobileharness.platform.android.dropbox.DropboxTag.SYSTEM_TOMBSTONE;
+
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.platform.android.dropbox.DropboxExtractor;
+import com.google.devtools.mobileharness.platform.android.dropbox.DropboxTag;
 import com.google.devtools.mobileharness.platform.android.logcat.AndroidRuntimeCrashDetector;
 import com.google.devtools.mobileharness.platform.android.logcat.AnrDetector;
 import com.google.devtools.mobileharness.platform.android.logcat.DeviceEventDetector;
@@ -28,6 +39,7 @@ import com.google.devtools.mobileharness.platform.android.logcat.DeviceEventDete
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.CrashEvent;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.DeviceEvent;
+import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.ProcessCategory;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatLineProxy;
 import com.google.devtools.mobileharness.platform.android.logcat.MonitoringConfig;
 import com.google.devtools.mobileharness.platform.android.logcat.NativeCrashDetector;
@@ -43,6 +55,8 @@ import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfiga
 import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.AndroidLogcatMonitoringDecoratorSpec;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import javax.inject.Inject;
 
 /** Decorator for monitoring for crashes, ANRs and device events in logcat. */
@@ -52,13 +66,18 @@ public class AndroidLogcatMonitoringDecorator extends BaseDecorator
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  private static final String DATE_COMMAND = "date +%m-%d\\ %H:%M:%S.000";
+  private static final String DATE_COMMAND = "date +%Y-%m-%d\\ %H:%M:%S.000";
+  private static final DateTimeFormatter DATE_TIME_FORMATTER =
+      DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
   private static final String UNPARSED_LOGCAT_FILE = "unparsed_logcat.txt";
   private static final String LOGCAT_MONITORING_REPORT_PROTO = "logcat_monitoring_report.proto";
 
   private final Adb adb;
   private final LogcatLineProxy logcatLineProxy;
   private final LocalFileUtil localFileUtil;
+  private final DropboxExtractor dropboxExtractor;
+
+  private LocalDateTime deviceTimeOnStart = null;
 
   @Inject
   AndroidLogcatMonitoringDecorator(
@@ -66,11 +85,13 @@ public class AndroidLogcatMonitoringDecorator extends BaseDecorator
       TestInfo testInfo,
       Adb adb,
       LogcatLineProxy logcatLineProxy,
-      LocalFileUtil localFileUtil) {
+      LocalFileUtil localFileUtil,
+      DropboxExtractor dropboxExtractor) {
     super(decorated, testInfo);
     this.adb = adb;
     this.logcatLineProxy = logcatLineProxy;
     this.localFileUtil = localFileUtil;
+    this.dropboxExtractor = dropboxExtractor;
   }
 
   @Override
@@ -98,14 +119,15 @@ public class AndroidLogcatMonitoringDecorator extends BaseDecorator
     logcatLineProxy.addLineProcessor(anrProcessor);
     logcatLineProxy.addLineProcessor(nativeCrashProcessor);
     logcatLineProxy.addLineProcessor(deviceEventDetector);
-    String currentDeviceTime = adb.runShell(deviceId, DATE_COMMAND);
 
-    testInfo.log().atInfo().alsoTo(logger).log("---- Device time: %s ----\n", currentDeviceTime);
+    String timeOnDevice = adb.runShell(deviceId, DATE_COMMAND);
+    deviceTimeOnStart = LocalDateTime.parse(timeOnDevice, DATE_TIME_FORMATTER);
+    testInfo.log().atInfo().alsoTo(logger).log("---- Device time: %s ----\n", deviceTimeOnStart);
 
     CommandProcess process =
         adb.runShellAsync(
             getDevice().getDeviceId(),
-            String.format("logcat -v threadtime -T \"%s\"", currentDeviceTime),
+            String.format("logcat -v threadtime -T \"%s\"", timeOnDevice),
             testInfo.jobInfo().timer().remainingTimeJava(),
             logcatLineProxy);
 
@@ -115,6 +137,7 @@ public class AndroidLogcatMonitoringDecorator extends BaseDecorator
       process.killAndThenKillForcibly(Duration.ofSeconds(5));
       writeMonitoringReport(testInfo);
       writeUnparsedLogcatLines(testInfo);
+      extractDropboxEntries(testInfo);
     }
   }
 
@@ -174,6 +197,44 @@ public class AndroidLogcatMonitoringDecorator extends BaseDecorator
       }
     }
     return reportBuilder.build();
+  }
+
+  private void extractDropboxEntries(TestInfo testInfo)
+      throws InterruptedException, MobileHarnessException {
+    ImmutableList<LogcatEvent> logcatEvents = logcatLineProxy.getLogcatEventsFromProcessors();
+    if (logcatEvents.isEmpty()) {
+      return;
+    }
+    var tagsBuilder = ImmutableSet.<DropboxTag>builder();
+    var packagesToScanBuilder = ImmutableSet.<String>builder();
+    for (var event : logcatEvents) {
+      if (event instanceof CrashEvent crashEvent) {
+        // Only extract dropbox entries which cause a test failure.
+        if (!crashEvent.process().category().equals(ProcessCategory.FAILURE)) {
+          continue;
+        }
+        packagesToScanBuilder.add(crashEvent.process().name());
+        switch (crashEvent.process().type()) {
+          case ANDROID_RUNTIME -> tagsBuilder.add(DATA_APP_CRASH, SYSTEM_APP_CRASH);
+          case NATIVE ->
+              tagsBuilder.add(DATA_APP_NATIVE_CRASH, SYSTEM_APP_NATIVE_CRASH, SYSTEM_TOMBSTONE);
+          case ANR -> tagsBuilder.add(DATA_APP_ANR, SYSTEM_APP_ANR);
+          case UNKNOWN -> {}
+        }
+      }
+    }
+    var tags = tagsBuilder.build();
+    var packagesToScan = packagesToScanBuilder.build();
+    if (packagesToScan.isEmpty() || tags.isEmpty()) {
+      return;
+    }
+
+    dropboxExtractor.extract(
+        getDevice().getDeviceId(),
+        packagesToScan,
+        tags,
+        deviceTimeOnStart,
+        Path.of(testInfo.getGenFileDir()));
   }
 
   private static ImmutableList<DeviceEventDetector.DeviceEventConfig> makeDeviceEventDetectorConfig(
