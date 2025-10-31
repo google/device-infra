@@ -27,8 +27,8 @@ import {MatToolbarModule} from '@angular/material/toolbar';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {RouterModule} from '@angular/router';
 import {ReplaySubject} from 'rxjs';
-
-import {APP_DATA, type AppData} from './core/models/app_data';
+// an example of using absolute path for source code import.
+import {APP_DATA, type AppData} from 'app/core/models/app_data';
 
 
 /** Homepage */

@@ -1,8 +1,8 @@
 import {HttpClient, provideHttpClient, withInterceptors} from '@angular/common/http';
 import {HttpTestingController, provideHttpClientTesting} from '@angular/common/http/testing';
 import {TestBed} from '@angular/core/testing';
-
-import {authInterceptor} from './auth_interceptor';
+// an example of using absolute path for test import.
+import {authInterceptor} from 'app/core/interceptors/auth_interceptor';
 
 describe('authInterceptor', () => {
   let httpMock: HttpTestingController;

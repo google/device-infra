@@ -48,8 +48,6 @@ export declare interface AppData {
    * ignored.
    */
   readonly overrideLabConsoleServerUrl?: string;
-  /** The UI platform of the current instance. */
-  readonly uiPlatform?: string;
   /** env type. */
   readonly applicationId?: string;
   /** Current user's email. */
@@ -64,7 +62,6 @@ export declare interface AppData {
 const OSS_DEFAULTS = {
   // for OSS, we use the localhost:8080 as the default lab console server url.
   overrideLabConsoleServerUrl: 'http://localhost:8080',
-  uiPlatform: 'OSS',
   applicationId: 'lab-console-oss',
   email: '',
   userDisplayName: '',
@@ -98,7 +95,6 @@ export function getAppData(): AppData {
     labConsoleServerUrl: rawData.overrideLabConsoleServerUrl ??
         `${window.location.protocol}//${window.location.hostname}:${
                              labConsoleServerPort}`,
-    uiPlatform: rawData.uiPlatform ?? defaults.uiPlatform,
     applicationId: rawData.applicationId ?? defaults.applicationId,
     email: rawData.email ?? defaults.email,
     userDisplayName: rawData.userDisplayName ?? defaults.userDisplayName,

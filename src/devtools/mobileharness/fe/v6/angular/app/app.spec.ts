@@ -14,7 +14,6 @@ describe('App Component', () => {
     isDevMode: false,
     labconsoleVersion: '1.0',
     overrideLabConsoleServerUrl: 'http://localhost:8080',
-    uiPlatform: 'OSS',
     applicationId: 'lab-console-oss',
     email: '',
     userDisplayName: '',
