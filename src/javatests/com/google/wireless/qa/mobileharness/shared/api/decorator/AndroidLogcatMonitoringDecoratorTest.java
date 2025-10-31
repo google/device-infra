@@ -17,6 +17,7 @@
 package com.google.wireless.qa.mobileharness.shared.api.decorator;
 
 import static com.google.common.truth.Truth.assertThat;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
@@ -26,6 +27,8 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
+import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.dropbox.DropboxExtractor;
 import com.google.devtools.mobileharness.platform.android.dropbox.DropboxTag;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent;
@@ -245,5 +248,88 @@ public class AndroidLogcatMonitoringDecoratorTest {
         .isEqualTo(LogcatMonitoringReport.Category.FAILURE);
     assertThat(report.getDeviceEventsList()).hasSize(1);
     assertThat(report.getDeviceEvents(0).getEventName()).isEqualTo("DEVICE_EVENT");
+  }
+
+  @Test
+  public void run_infraError_throwsException() throws Exception {
+    AndroidLogcatMonitoringDecoratorSpec spec =
+        AndroidLogcatMonitoringDecoratorSpec.newBuilder()
+            .addErrorOnCrashPackages("com.test.infra")
+            .build();
+    when(jobInfo.combinedSpec(any(AndroidLogcatMonitoringDecorator.class))).thenReturn(spec);
+    when(logcatLineProxy.getUnparsedLines()).thenReturn(ImmutableList.of());
+    when(logcatLineProxy.getLogcatEventsFromProcessors())
+        .thenReturn(
+            ImmutableList.of(
+                new CrashEvent(
+                    new CrashedProcess(
+                        "com.test.infra",
+                        1,
+                        ProcessCategory.ERROR,
+                        LogcatEvent.CrashType.ANDROID_RUNTIME),
+                    "crash_log")));
+
+    AndroidLogcatMonitoringDecorator decorator =
+        new AndroidLogcatMonitoringDecorator(
+            decoratedDriver, testInfo, adb, logcatLineProxy, localFileUtil, dropboxExtractor);
+
+    MobileHarnessException thrown =
+        assertThrows(MobileHarnessException.class, () -> decorator.run(testInfo));
+    assertThat(thrown.getErrorId())
+        .isEqualTo(AndroidErrorId.ANDROID_LOGCAT_MONITORING_DECORATOR_INFRA_PROCESS_CRASHED);
+  }
+
+  @Test
+  public void run_infraErrorAnr_doesNotThrowException() throws Exception {
+    AndroidLogcatMonitoringDecoratorSpec spec =
+        AndroidLogcatMonitoringDecoratorSpec.newBuilder()
+            .addErrorOnCrashPackages("com.test.infra")
+            .build();
+    when(jobInfo.combinedSpec(any(AndroidLogcatMonitoringDecorator.class))).thenReturn(spec);
+    when(logcatLineProxy.getUnparsedLines()).thenReturn(ImmutableList.of());
+    when(logcatLineProxy.getLogcatEventsFromProcessors())
+        .thenReturn(
+            ImmutableList.of(
+                new CrashEvent(
+                    new CrashedProcess(
+                        "com.test.infra", 1, ProcessCategory.ERROR, LogcatEvent.CrashType.ANR),
+                    "crash_log")));
+
+    AndroidLogcatMonitoringDecorator decorator =
+        new AndroidLogcatMonitoringDecorator(
+            decoratedDriver, testInfo, adb, logcatLineProxy, localFileUtil, dropboxExtractor);
+
+    decorator.run(testInfo);
+  }
+
+  @Test
+  public void run_orchestratorConnectionError_throwsException() throws Exception {
+    AndroidLogcatMonitoringDecoratorSpec spec =
+        AndroidLogcatMonitoringDecoratorSpec.newBuilder()
+            .addReportAsFailurePackages("com.test.app")
+            .build();
+    when(jobInfo.combinedSpec(any(AndroidLogcatMonitoringDecorator.class))).thenReturn(spec);
+    when(logcatLineProxy.getUnparsedLines()).thenReturn(ImmutableList.of());
+    when(logcatLineProxy.getLogcatEventsFromProcessors())
+        .thenReturn(
+            ImmutableList.of(
+                new CrashEvent(
+                    new CrashedProcess(
+                        "com.test.app",
+                        1,
+                        ProcessCategory.FAILURE,
+                        LogcatEvent.CrashType.ANDROID_RUNTIME),
+                    "OrchestratorServiceException: Cannot connect to"
+                        + " androidx.test.orchestrator.OrchestratorService")));
+
+    AndroidLogcatMonitoringDecorator decorator =
+        new AndroidLogcatMonitoringDecorator(
+            decoratedDriver, testInfo, adb, logcatLineProxy, localFileUtil, dropboxExtractor);
+
+    MobileHarnessException thrown =
+        assertThrows(MobileHarnessException.class, () -> decorator.run(testInfo));
+    assertThat(thrown.getErrorId())
+        .isEqualTo(
+            AndroidErrorId.ANDROID_LOGCAT_MONITORING_DECORATOR_ORCHESTRATOR_CONNECTION_FAILURE);
   }
 }

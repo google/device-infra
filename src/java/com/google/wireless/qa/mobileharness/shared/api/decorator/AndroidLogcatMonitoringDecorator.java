@@ -23,12 +23,15 @@ import static com.google.devtools.mobileharness.platform.android.dropbox.Dropbox
 import static com.google.devtools.mobileharness.platform.android.dropbox.DropboxTag.SYSTEM_APP_CRASH;
 import static com.google.devtools.mobileharness.platform.android.dropbox.DropboxTag.SYSTEM_APP_NATIVE_CRASH;
 import static com.google.devtools.mobileharness.platform.android.dropbox.DropboxTag.SYSTEM_TOMBSTONE;
+import static com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.CrashType.ANDROID_RUNTIME;
+import static com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.CrashType.ANR;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
+import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.dropbox.DropboxExtractor;
 import com.google.devtools.mobileharness.platform.android.dropbox.DropboxTag;
@@ -71,6 +74,9 @@ public class AndroidLogcatMonitoringDecorator extends BaseDecorator
       DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
   private static final String UNPARSED_LOGCAT_FILE = "unparsed_logcat.txt";
   private static final String LOGCAT_MONITORING_REPORT_PROTO = "logcat_monitoring_report.proto";
+
+  private static final String ORCHESTRATOR_CONNECTION_FAILURE_MESSAGE =
+      "Cannot connect to androidx.test.orchestrator.OrchestratorService";
 
   private final Adb adb;
   private final LogcatLineProxy logcatLineProxy;
@@ -138,6 +144,8 @@ public class AndroidLogcatMonitoringDecorator extends BaseDecorator
       writeMonitoringReport(testInfo);
       writeUnparsedLogcatLines(testInfo);
       extractDropboxEntries(testInfo);
+      checkForOrchestratorConnectionErrors();
+      checkForInfraError();
     }
   }
 
@@ -235,6 +243,44 @@ public class AndroidLogcatMonitoringDecorator extends BaseDecorator
         tags,
         deviceTimeOnStart,
         Path.of(testInfo.getGenFileDir()));
+  }
+
+  private void checkForInfraError() throws MobileHarnessException {
+    ImmutableList<LogcatEvent> logcatEvents = logcatLineProxy.getLogcatEventsFromProcessors();
+    if (logcatEvents.isEmpty()) {
+      return;
+    }
+    for (var event : logcatEvents) {
+      if (event instanceof CrashEvent crashEvent) {
+        if (crashEvent.process().category().equals(ProcessCategory.ERROR)
+            && !crashEvent.process().type().equals(ANR)) {
+          throw new MobileHarnessException(
+              AndroidErrorId.ANDROID_LOGCAT_MONITORING_DECORATOR_INFRA_PROCESS_CRASHED,
+              String.format("Crash detected in infra process: %s", crashEvent.process().name()));
+        }
+      }
+    }
+  }
+
+  private void checkForOrchestratorConnectionErrors() throws MobileHarnessException {
+    ImmutableList<LogcatEvent> logcatEvents = logcatLineProxy.getLogcatEventsFromProcessors();
+    if (logcatEvents.isEmpty()) {
+      return;
+    }
+    for (var event : logcatEvents) {
+      if (event instanceof CrashEvent crashEvent) {
+        var process = crashEvent.process();
+        if (process.category().equals(ProcessCategory.FAILURE)
+            && process.type().equals(ANDROID_RUNTIME)
+            && crashEvent.crashLogs().contains(ORCHESTRATOR_CONNECTION_FAILURE_MESSAGE)) {
+          throw new MobileHarnessException(
+              AndroidErrorId.ANDROID_LOGCAT_MONITORING_DECORATOR_ORCHESTRATOR_CONNECTION_FAILURE,
+              String.format(
+                  "%s failed to connect to androidx.test.orchestrator.OrchestratorService",
+                  crashEvent.process().name()));
+        }
+      }
+    }
   }
 
   private static ImmutableList<DeviceEventDetector.DeviceEventConfig> makeDeviceEventDetectorConfig(
