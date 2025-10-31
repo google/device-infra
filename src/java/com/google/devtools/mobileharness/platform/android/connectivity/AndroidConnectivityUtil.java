@@ -219,11 +219,13 @@ public class AndroidConnectivityUtil {
    * Used to analyze one wifi scan result entry. In Q after ag/5272319, it updates WPA2 to RSN.
    * Tested from API 15 to API 28.
    *
+   * <p>If OWE is present then password is not required like [RSN-OWE-CCMP-128][ESS][MFPR][MFPC].
+   *
    * <p>See [android]//frameworks/opt/net/wifi/service/java/com/android/server/wifi/util/\
    * InformationElementUtil#generateCapabilitiesString
    */
   private static final Pattern PATTERN_WIFI_SECURITY_MODE =
-      Pattern.compile("\\[(WPA|WPA2|WEP|RSN)(.*?)]");
+      Pattern.compile("\\[(WPA|WPA2|WEP|RSN)((?:(?!OWE).)*)\\]");
 
   /** Path of file on device for keeping saved SSIDs and PSKs, for API from 13 to 25. */
   @VisibleForTesting
