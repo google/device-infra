@@ -639,6 +639,9 @@ public class SessionRequestHandlerUtil {
         sessionRequestInfo.startTimeout().isZero()
             ? DEFAULT_TRADEFED_START_TIMEOUT
             : sessionRequestInfo.startTimeout();
+    logger.atInfo().log(
+        "Tradefed: job timeout = %d sec, test timeout = %d sec, start timeout = %d sec",
+        jobTimeout.toSeconds(), testTimeout.toSeconds(), startTimeout.toSeconds());
 
     String name = "xts-tradefed-test-job";
     Path jobGenDir = createJobGenDir(name);
@@ -968,6 +971,9 @@ public class SessionRequestHandlerUtil {
         sessionRequestInfo.startTimeout().isZero()
             ? DEFAULT_NON_TRADEFED_START_TIMEOUT
             : sessionRequestInfo.startTimeout();
+    logger.atInfo().log(
+        "Non-Tradefed: job timeout = %d sec, test timeout = %d sec, start timeout = %d sec",
+        jobTimeout.toSeconds(), testTimeout.toSeconds(), startTimeout.toSeconds());
 
     Path xtsRootDir = Path.of(sessionRequestInfo.xtsRootDir());
     String xtsType = sessionRequestInfo.xtsType();
