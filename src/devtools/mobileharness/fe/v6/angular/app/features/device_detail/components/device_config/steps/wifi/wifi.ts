@@ -1,26 +1,13 @@
 import {CommonModule} from '@angular/common';
-import {
-  ChangeDetectionStrategy,
-  Component,
-  EventEmitter,
-  Input,
-  OnChanges,
-  OnInit,
-  Output,
-  SimpleChanges,
-  signal,
-} from '@angular/core';
+import {ChangeDetectionStrategy, Component, EventEmitter, Input, OnChanges, OnInit, Output, signal, SimpleChanges} from '@angular/core';
 import {FormsModule, ReactiveFormsModule} from '@angular/forms';
-
-import {
-  MAT_BUTTON_TOGGLE_DEFAULT_OPTIONS,
-  MatButtonToggleChange,
-  MatButtonToggleModule,
-} from '@angular/material/button-toggle';
+import {MAT_BUTTON_TOGGLE_DEFAULT_OPTIONS, MatButtonToggleChange, MatButtonToggleModule} from '@angular/material/button-toggle';
 import {MatFormFieldModule} from '@angular/material/form-field';
 import {MatInputModule} from '@angular/material/input';
 import {MatSelectModule} from '@angular/material/select';
 import {MatSlideToggleModule} from '@angular/material/slide-toggle';
+
+import type {PartStatus} from '../../../../../../core/models/host_config_models';
 import {ToggleSwitch} from '../../../../../../shared/components/toggle_switch/toggle_switch';
 
 /**
@@ -35,12 +22,12 @@ import {ToggleSwitch} from '../../../../../../shared/components/toggle_switch/to
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule,
+    FormsModule,
+    ReactiveFormsModule,
     MatSlideToggleModule,
     MatButtonToggleModule,
     MatInputModule,
     MatSelectModule,
-    FormsModule,
-    ReactiveFormsModule,
     MatFormFieldModule,
     ToggleSwitch,
   ],
@@ -52,7 +39,13 @@ import {ToggleSwitch} from '../../../../../../shared/components/toggle_switch/to
   ],
 })
 export class Wifi implements OnInit, OnChanges {
+  @Input() type: 'device'|'host' = 'device';
   @Input() workflow: 'wizard' | 'settings' = 'wizard';
+  @Input()
+  uiStatus: PartStatus = {
+    visible: true,
+    editability: {editable: true},
+  };
 
   @Input() wifi = {type: 'none', ssid: 'GoogleGuest', psk: '', scanSsid: false};
   @Output() readonly wifiChange = new EventEmitter<{}>();

@@ -181,10 +181,12 @@ export class FakeConfigService extends ConfigService {
     }
 
     const currentScenario = this.mockHostScenarios[scenarioIndex];
-    let updatedConfig = deepCopy(currentScenario.hostConfigResult.hostConfig);
+    let updatedConfig = currentScenario.hostConfigResult.hostConfig;
 
     if (!updatedConfig) {
       updatedConfig = deepCopy(request.config);
+    } else {
+      updatedConfig = deepCopy(updatedConfig);
     }
 
     if (!request.scope) {

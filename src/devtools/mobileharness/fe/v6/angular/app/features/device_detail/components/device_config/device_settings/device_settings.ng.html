@@ -1,0 +1,84 @@
+<app-dialog
+  title="Device Configuration"
+  [subtitle]="`Editing configuration for <strong class='font-medium text-gray-700'>` + deviceId + `</strong>`"
+  height="90vh"
+  width="72rem"
+  footerType="none"
+>
+  <ng-content header-button>
+    <button matIconButton [matMenuTriggerFor]="menu">
+      <mat-icon>more_vert</mat-icon>
+    </button>
+    <mat-menu #menu="matMenu">
+      <button mat-menu-item (click)="reset()">
+        <mat-icon>delete_sweep</mat-icon>
+        <span class="config-menu-text">Clear All & Start Over</span>
+      </button>
+    </mat-menu>
+  </ng-content>
+
+  <div class="configuration-content">
+    <nav class="nav-bar">
+      @for (nav of navList; track nav.id) {
+        <a
+          href="#{{ nav.id }}"
+          class="nav-item"
+          [class.active]="nav.id === activeSection()"
+          (click)="setActiveSection($event, nav.id)"
+        >
+          <span class="material-icons">{{ nav.icon }}</span>
+          <span>{{ nav.label }}</span>
+        </a>
+      }
+    </nav>
+    <main class="configuration-content-main">
+      <div class="main-container">
+        @switch (activeSection()) {
+          @case ('permissions') {
+            <app-permissions
+              workflow="settings"
+              [(permissions)]="newConfig.permissions"
+            ></app-permissions>
+          }
+          @case ('wifi') {
+            <app-wifi workflow="settings" [(wifi)]="newConfig.wifi"></app-wifi>
+          }
+          @case ('dimensions') {
+            <app-dimensions
+              workflow="settings"
+              [(dimensions)]="newConfig.dimensions"
+              (hasError)="hasError = $event"
+            ></app-dimensions>
+          }
+          @case ('stability') {
+            <app-stability [(settings)]="newConfig.settings"></app-stability>
+          }
+        }
+      </div>
+
+      <app-footer [param]="{deviceId: deviceId, hostName: ''}" class="main-footer">
+        <ng-container footer-buttons>
+          <button
+            class="wizard-button wizard-button-secondary"
+            [disabled]="!isCategoryDirty(activeSection())"
+            (click)="discard()"
+          >
+            Discard Changes
+          </button>
+          <button
+            class="wizard-button wizard-button-primary"
+            [disabled]="!isCategoryDirty(activeSection()) || hasError || saving()"
+            (click)="save()"
+          >
+            @if (saving()) {
+              <mat-spinner [diameter]="20" class="wizard-button-spinner"></mat-spinner>
+              Saving...
+            } @else {
+              Save
+            }
+          </button>
+        </ng-container>
+      </app-footer>
+    </main>
+  </div>
+</app-dialog>

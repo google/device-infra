@@ -1,0 +1,10 @@
+@if (configResult$ | async; as configResult) {
+  @if (configResult.hostConfig) {
+    <app-host-settings [hostName]="data.hostName" [config]="configResult"></app-host-settings>
+  } @else {
+    <app-host-empty
+      [hostName]="data.hostName"
+      title="This host has an empty configuration. Choose how to begin."
+    ></app-host-empty>
+  }
+}

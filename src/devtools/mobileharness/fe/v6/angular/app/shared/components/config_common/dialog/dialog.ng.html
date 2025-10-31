@@ -1,0 +1,38 @@
+<div class="config-modal-container">
+  <div class="config-modal-card" [style.max-width]="width" [style.height]="height">
+    <header class="config-header">
+      <div class="header-title-container">
+        <h2 class="config-title">{{ title }}</h2>
+        <p class="config-subtitle" [innerHTML]="subtitle | safeHtmlPipe"></p>
+      </div>
+      <div class="header-menu-container">
+        <div class="header-menu">
+          <ng-content select="[header-button]"></ng-content>
+        </div>
+        <button mat-icon-button mat-dialog-close class="close-button">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+    </header>
+
+    <ng-content></ng-content>
+
+    @if (footerType === 'permission-check') {
+      <app-footer
+        [type]="type"
+        [param]="param"
+        (onPermissionChange)="onPermissionChange.emit($event)"
+      >
+        <ng-container *ngTemplateOutlet="actionsTemplate" footer-buttons></ng-container>
+      </app-footer>
+    }
+
+    @if (footerType === 'normal') {
+      <footer class="config-footer">
+        <mat-dialog-actions align="end">
+          <ng-container *ngTemplateOutlet="actionsTemplate"></ng-container>
+        </mat-dialog-actions>
+      </footer>
+    }
+  </div>
+</div>

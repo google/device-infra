@@ -1,0 +1,43 @@
+@use '../../../../../../shared/styles/configuration' as config;
+
+.settings-container {
+  max-width: 36rem;
+}
+
+.title {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+}
+
+.desc {
+  margin: 0.25rem 0 1.5rem 0;
+}
+
+.chip-container,
+.ssh-access-container {
+  .chip-title {
+    font-size: 1.125rem;
+    line-height: 1.75rem;
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+
+  .chip-desc {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    margin-top: 0.25rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  .note {
+    font-style: italic;
+    font-size: 0.75rem;
+    line-height: 1rem;
+  }
+}
+
+.ssh-access-container {
+  margin-top: 1.5rem;
+}
+

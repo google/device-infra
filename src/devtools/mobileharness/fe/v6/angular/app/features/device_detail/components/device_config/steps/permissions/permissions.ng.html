@@ -1,26 +1,45 @@
 <div class="permissions-container">
-  @if (workflow === 'wizard') {
-    <h3 class="font-semibold text-gray-800">Permissions</h3>
+  @if (title) {
+    <h3 class="font-semibold text-gray-800">
+      {{ title }}
+      @if (type === 'host') {
+        <mat-icon class="help-icon" [matTooltip]="hostTooltipText"> help_outline </mat-icon>
+      }
+    </h3>
+  }
+  @if (description) {
     <p class="font-margin text-gray-600">
-      Let's start by setting up who can manage and use this device.
+      {{ description }}
     </p>
   }
 
-  <div [class]="workflow === 'wizard' ? 'space-y-10' : 'space-y-8'">
+  <div [class]="type === 'device' && workflow === 'wizard' ? 'space-y-10' : 'space-y-8'">
     @for (permission of PERMISSIONS; track permission.type) {
       <div>
         <h4
           class="title-medium"
-          [class]="workflow === 'wizard' ? 'text-gray-800' : 'text-gray-700'"
+          [class]="type === 'device' && workflow === 'wizard' ? 'text-gray-800' : 'text-gray-700'"
         >
           {{ permission.title }}
+          <mat-icon class="help-icon" [matTooltip]="permission.iconTitle">
+            {{ permission.icon }}
+          </mat-icon>
         </h4>
         <p
-          [class]="workflow === 'wizard' ? 'wizard-question-text' : 'definition-text text-gray-600'"
+          [class]="
+            type === 'device' && workflow === 'wizard'
+              ? 'wizard-question-text'
+              : 'definition-text text-gray-600'
+          "
         >
           {{ permission.definition }}
         </p>
-        <app-user-add [(users)]="permission.users"></app-user-add>
+        <app-entry-chip
+          [(entries)]="permission.users"
+          [editable]="permission.editable"
+          [emptyLabel]="permission.emptyLabel"
+          [placeholder]="permission.placeholder"
+        ></app-entry-chip>
       </div>
     }
   </div>

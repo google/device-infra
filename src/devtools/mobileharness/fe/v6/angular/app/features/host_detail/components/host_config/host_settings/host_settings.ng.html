@@ -1,0 +1,190 @@
+<app-dialog
+  title="Host Configuration"
+  [subtitle]="`Editing configuration for <strong class='font-medium text-gray-700'>` + hostName + `</strong>`"
+  width="72rem"
+  height="90vh"
+  footerType="none"
+>
+  <ng-content header-button>
+    <button mat-icon-button [matMenuTriggerFor]="menu">
+      <mat-icon>more_vert</mat-icon>
+    </button>
+    <mat-menu #menu="matMenu">
+      <button mat-menu-item (click)="reset()">
+        <mat-icon>delete_sweep</mat-icon>
+        <span class="config-menu-text">Clear All & Start Over</span>
+      </button>
+    </mat-menu>
+  </ng-content>
+
+  <div class="content-container">
+    <nav class="nav-bar">
+      @for (item of navList; track item.id) {
+        @if (item.visibility()) {
+          @if (item.type === 'item') {
+            <a
+              href="#{{ item.id }}"
+              class="settings-nav-item"
+              [class.active]="item.id === activeSection()"
+              (click)="setActiveSection($event, item.id)"
+            >
+              <mat-icon class="nav-item-icon">{{ item.icon }}</mat-icon>
+              <span>{{ item.label }}</span>
+            </a>
+          }
+
+          @if(item.type === 'group') {
+            <div class="settings-nav-group">
+              <h4 class="settings-nav-group-title">{{ item.title }}</h4>
+              @for (child of item.children; track child.id) {
+                @if (child.visibility()) {
+                  <a
+                    href="#{{ child.id }}"
+                    class="settings-nav-item nav-item-child"
+                    [class.active]="child.id === activeSection()"
+                    (click)="setActiveSection($event, child.id)"
+                  >
+                    <mat-icon class="nav-item-child-icon">{{ child.icon }}</mat-icon>
+                    <span>{{ child.label }}</span>
+                  </a>
+                }
+              }
+            </div>
+          }
+        }
+      }
+    </nav>
+    <main class="content-main">
+      @if (!activeSectionEditibility().editable) {
+        <div class="pusher-banner">
+          <mat-icon>info</mat-icon>
+          <span>
+            {{ activeSectionEditibility().reason || 'Current selected section are not editable.' }}
+          </span>
+        </div>
+      }
+      <div class="main-container">
+        @switch (activeSection()) {
+          @case ('host-permissions') {
+            <app-host-permissions
+              workflow="settings"
+              [(permissions)]="hostConfig.permissions"
+              [uiStatus]="hostPermissionsUiStatus"
+            ></app-host-permissions>
+          }
+          @case ('config-mode') {
+            <app-config-mode
+              workflow="settings"
+              [(mode)]="hostConfig.deviceConfigMode"
+              [uiStatus]="config.uiStatus.deviceConfigMode"
+            ></app-config-mode>
+          }
+          @case ('permissions') {
+            <app-permissions
+              type="host"
+              workflow="settings"
+              [title]="
+                hostConfig.deviceConfigMode === 'PER_DEVICE'
+                  ? 'Default Device Config: Permissions'
+                  : 'Shared Device Config: Permissions'
+              "
+              [description]="'Manage permissions for devices on this host.'"
+              [hostTooltipText]="tooltipText()"
+              [(permissions)]="deviceConfig.permissions"
+              [uiStatus]="config.uiStatus.deviceConfig"
+            ></app-permissions>
+          }
+          @case ('wifi') {
+            <h3 class="settings-title font-semibold text-gray-800">
+              @if (hostConfig.deviceConfigMode === 'PER_DEVICE') {
+                Default Device Config: Wi-Fi
+              } @else {
+                Shared Device Config: Wi-Fi
+              }
+              <mat-icon class="help-icon" [matTooltip]="tooltipText()"> help_outline </mat-icon>
+            </h3>
+            <p class="font-margin text-gray-600">
+              Set the default Wi-Fi for devices on this host. This can be overridden by individual
+              tests.
+            </p>
+            <app-wifi
+              type="host"
+              workflow="settings"
+              [(wifi)]="deviceConfig.wifi"
+              [uiStatus]="config.uiStatus.deviceConfig"
+            ></app-wifi>
+          }
+          @case ('dimensions') {
+            <app-dimensions
+              type="host"
+              workflow="settings"
+              [title]="
+                hostConfig.deviceConfigMode === 'PER_DEVICE'
+                  ? 'Default Device Config: Dimensions'
+                  : 'Shared Device Config: Dimensions'
+              "
+              [tooltipText]="tooltipText()"
+              [(dimensions)]="deviceConfig.dimensions"
+              [uiStatus]="dimensionsUiStatus"
+              (hasError)="hasError = $event"
+            ></app-dimensions>
+          }
+          @case ('stability') {
+            <app-stability
+              type="host"
+              [title]="
+                hostConfig.deviceConfigMode === 'PER_DEVICE'
+                  ? 'Default Device Config: Stability & Reboot'
+                  : 'Shared Device Config: Stability & Reboot'
+              "
+              [hostTooltipText]="tooltipText()"
+              [(settings)]="deviceConfig.settings"
+              [uiStatus]="config.uiStatus.deviceConfig"
+            ></app-stability>
+          }
+          @case ('device-discovery') {
+            <app-device-discovery
+              workflow="settings"
+              [(deviceDiscovery)]="hostConfig.deviceDiscovery"
+              [uiStatus]="deviceDiscoveryUiStatus"
+              (hasError)="hasError = $event"
+            ></app-device-discovery>
+          }
+          @case ('host-properties') {
+            <app-host-properties
+              workflow="settings"
+              [(properties)]="hostConfig.hostProperties"
+              [uiStatus]="config.uiStatus.hostProperties"
+            ></app-host-properties>
+          }
+          @default {
+            <p class="font-margin text-gray-600"> There is no section visible for editing. </p>
+          }
+        }
+      </div>
+      <app-footer type="host" [param]="{deviceId: '', hostName: hostName}" class="main-footer">
+        <ng-container footer-buttons>
+          <button
+            class="wizard-button wizard-button-secondary"
+            [disabled]="!isCategoryDirty(activeSection())"
+            (click)="discard()"
+          >
+            Discard Changes
+          </button>
+          <button
+            class="wizard-button wizard-button-primary"
+            [disabled]="!isCategoryDirty(activeSection()) || hasError || saving()"
+            (click)="save()"
+          >
+            @if (saving()) {
+              <mat-spinner [diameter]="20" class="wizard-button-spinner"></mat-spinner>
+              Saving...
+            } @else {
+              Save
+            }
+          </button>
+        </ng-container>
+      </app-footer>
+    </main>
+  </div>
+</app-dialog>

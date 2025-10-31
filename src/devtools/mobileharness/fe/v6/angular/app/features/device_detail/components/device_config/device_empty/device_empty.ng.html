@@ -1,0 +1,79 @@
+<app-dialog
+  title="Configure Device"
+  subtitle="Device ID: {{ deviceId }}"
+  [param]="{deviceId: deviceId, hostName: hostName}"
+>
+  @if (hostMissing()) {
+    <mat-dialog-content class="device-config-content">
+      <div class="host-missing-container">
+        <i class="material-icons warning-icon">warning_amber</i>
+        <h3 class="host-missing-title">Host Configuration Not Found</h3>
+        <p class="host-missing-content">
+          The host for this device (<strong class="font-medium">{{ hostName }}</strong>)
+          does not have a default configuration set up yet.
+        </p>
+        <a
+          href="/hosts/{{ hostName }}"
+          class="wizard-button wizard-button-primary"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <i class="material-icons open-in-new-icon">open_in_new</i>
+          Configure Host
+        </a>
+      </div>
+    </mat-dialog-content>
+  } @else {
+    <mat-dialog-content class="config-content">
+      <div class="config-empty-container">
+        <h3 class="empty-config-title">{{ title }}</h3>
+        <div class="empty-config-grid">
+          <button class="choice-card" (click)="startNewConfig()">
+            <span mat-icon class="material-icons">add</span>
+            <p class="choice-card-title">Create New Configuration</p>
+          </button>
+          <button class="choice-card" (click)="copyFromHost()">
+            <span mat-icon class="material-icons">dns</span>
+            <p class="choice-card-title">Copy from Host</p>
+          </button>
+          <button class="choice-card" (click)="copyFromAnotherDevice()">
+            <span mat-icon class="material-icons">content_copy</span>
+            <p class="choice-card-title">Copy from Another Device</p>
+          </button>
+        </div>
+      </div>
+
+      <!-- Copy from another device -->
+      @if (copyFromAnother()) {
+        <div class="copy-from-container">
+          <label id="source-device-uuid-label" class="form-label">Enter source device UUID</label>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="form-field">
+            <input
+              matInput
+              type="text"
+              placeholder="e.g., 43021FDAQ000UM"
+              [(ngModel)]="anotherDeviceUuid"
+              aria-labelledby="source-device-uuid-label"
+            />
+          </mat-form-field>
+          <button
+            mat-button
+            class="load-button wizard-button wizard-button-primary"
+            (click)="loadAndReviewConfig()"
+          >
+            Load & Review Configuration
+          </button>
+          <p class="copy-error-message">
+            {{ copyFromAnotherErrorMessage() }}
+          </p>
+        </div>
+      }
+    </mat-dialog-content>
+  }
+
+  <ng-template #actionsTemplate>
+    <button mat-button mat-dialog-close class="wizard-button wizard-button-secondary">
+      Cancel
+    </button>
+  </ng-template>
+</app-dialog>
