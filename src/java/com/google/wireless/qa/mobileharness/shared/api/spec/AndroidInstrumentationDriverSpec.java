@@ -124,6 +124,17 @@ public interface AndroidInstrumentationDriverSpec {
    */
   String PARAM_ITER_ADB_SHELL_AFTER_INSTRUMENTATION = "iter_adb_shell_after_instrumentation";
 
+  /**
+   * Boolean parameter for skipping the test APK method infos extraction from the test APK. Reading
+   * method infos from test APK is both CPU and memory consuming, and having many concurrent test
+   * runs on a single host can exhaust the host resources and slow down or fail tests.
+   *
+   * <p>Method infos are needed to ensure that only "#testMethod[0]" will run for EACH iteration
+   * when using AndroidRepeatedTestRunner, so this parameter should never be set to true when using
+   * AndroidRepeatedTestRunner.
+   */
+  String PARAM_SKIP_TEST_APK_METHOD_INFOS = "skip_test_apk_method_infos";
+
   @ParamAnnotation(
       required = false,
       help =
