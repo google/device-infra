@@ -1,6 +1,6 @@
 import {ComponentFixture, TestBed} from '@angular/core/testing';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
-import {RouterTestingModule} from '@angular/router/testing';
+import {provideRouter} from '@angular/router';
 
 import {App} from './app';
 import {APP_DATA, type AppData} from './core/models/app_data';
@@ -26,10 +26,9 @@ describe('App Component', () => {
           imports: [
             App,
             NoopAnimationsModule,
-            RouterTestingModule,
           ],
           providers: [
-            // TODO: add this mocked test data
+            provideRouter([]),
             {
               provide: APP_DATA,
               useValue: appData,
