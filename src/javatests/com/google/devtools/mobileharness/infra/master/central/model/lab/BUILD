@@ -13,23 +13,32 @@
 # limitations under the License.
 #
 
-# Description:
-#   Shared deviceconstants used in OmniLab.
-
 load("@rules_java//java:defs.bzl", "java_library")
+load("//src/javatests/com/google/devtools/mobileharness/builddefs:junit_test_suites.bzl", "junit_test_suites")
 
 package(
     default_applicable_licenses = ["//:license"],
-    default_visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/master:__subpackages__",
-    ],
+    default_testonly = 1,
 )
 
 java_library(
-    name = "device_constants",
-    srcs = ["DeviceConstants.java"],
+    name = "lab",
+    srcs = glob(["*.java"]),
     deps = [
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
+        "//src/devtools/mobileharness/api/model/proto:test_java_proto",
+        "//src/devtools/mobileharness/infra/master/central/proto:device_java_proto",
+        "//src/devtools/mobileharness/infra/master/central/proto:lab_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab:locator",
+        "//src/java/com/google/devtools/mobileharness/infra/master/central/model/lab",
+        "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "@maven//:com_google_guava_guava",
+        "@maven//:junit_junit",
     ],
+)
+
+junit_test_suites(
+    name = "gen_tests",
+    sizes = ["small"],
+    deps = [":lab"],
 )
