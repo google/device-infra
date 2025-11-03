@@ -104,7 +104,7 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
   // the MCTS files.
   private static final ImmutableMap<String, ImmutableList<String>> INITIAL_RELEASE_VERSIONCODE_MAP =
       ImmutableMap.of(
-          "36", ImmutableList.of("2025-01", "2025-02", "2025-03", "2025-04", "2025-05"),
+          "36", ImmutableList.of("2025-01", "2025-02", "2025-03", "2025-04", "2025-05", "2025-11"),
           "37", ImmutableList.of("2026-01", "2026-02", "2026-03", "2026-04"));
 
   private static final String MAINLINE_AOSP_VERSION_KEY = "AOSP";
