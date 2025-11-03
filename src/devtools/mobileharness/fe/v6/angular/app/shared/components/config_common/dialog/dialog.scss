@@ -1,0 +1,86 @@
+@use '../../../../shared/styles/configuration';
+
+.config-modal-container {
+  padding: 1rem;
+  justify-content: center;
+  align-items: center;
+  display: flex;
+  inset: 0px;
+  position: fixed;
+  animation-duration: 0.3s;
+  animation-timing-function: ease-out;
+}
+
+.config-modal-card {
+  background-color: #fff;
+  display: flex;
+  flex-direction: column;
+  border-radius: 0.5rem;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+
+  .config-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid #e2e8f0;
+    position: relative;
+
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    .header-title-container {
+      flex-grow: 1;
+    }
+
+    .config-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      line-height: 1.75rem;
+      color: #1e293b;
+    }
+
+    .config-subtitle {
+      font-size: 0.875rem;
+      color: #64748b;
+      margin: 4px 0 0;
+    }
+
+    .header-menu-container {
+      gap: 0.25rem;
+      display: flex;
+      align-items: center;
+
+      .header-menu {
+        position: relative;
+      }
+
+      .close-button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #64748b;
+        transition: background-color 0.2s, color 0.2s;
+        cursor: pointer;
+        border: none;
+        background: transparent;
+      }
+      .close-button:hover {
+        background-color: #f1f5f9;
+      }
+    }
+  }
+
+  .config-footer {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid #e2e8f0;
+
+    mat-dialog-actions {
+      padding: 0;
+      gap: 0.75rem;
+    }
+  }
+}
+
+

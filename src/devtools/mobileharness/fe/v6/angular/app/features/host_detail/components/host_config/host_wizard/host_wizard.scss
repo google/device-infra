@@ -1,0 +1,77 @@
+@use '../../../../../shared/styles/configuration' as config;
+
+.default-title,
+.review-title {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+}
+
+.default-description,
+.review-description {
+  margin-top: 0.25rem;
+  margin-bottom: 1.5rem;
+}
+
+// Default Device Configuration - Permissions
+.default-permissions-title {
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+  display: flex;
+  align-items: center;
+}
+
+.default-permissions-chip-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.375rem;
+  background-color: #f8fafc;
+  min-height: 44px;
+
+  cursor: not-allowed;
+  margin-bottom: 0.5rem;
+
+
+  .default-empty-chip {
+    color: #6b7280;
+    padding-left: 0.5rem;
+    align-self: center;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+
+  .default-entry-chip {
+    background-color: #e9ecef;
+    color: #495057;
+  }
+}
+
+// Default Device Configuration - WiFi
+.default-wifi-title {
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+  margin-bottom: 0.75rem;
+  font-weight: 500;
+}
+
+// Review & Submit
+.review-container {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.step-content {
+  padding: 1.5rem;
+  overflow-y: auto;
+  flex-grow: 1;
+  min-height: 0px;
+  max-height: calc(90vh - 99px - 85px - 56px);
+}
+
+@media (min-width: 768px) {
+  .step-content {
+    padding: 2rem;
+  }
+}

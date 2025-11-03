@@ -1,0 +1,71 @@
+@if (data.source === 'new') {
+  <app-wizard-stepper
+    #stepper
+    title="Guided Setup"
+    [WIZARD_STEPS]="WIZARD_STEPS_NEW"
+    [nextStepDisabled]="hasError && errorStep === currentStep()"
+    [currentStep]="currentStep()"
+    (currentStepChange)="onCurrentStepChange($event)"
+    (apply)="submit()"
+  >
+    <ng-template #permissions>
+      <app-permissions
+        workflow="wizard"
+        title="Permissions"
+        description="Let's start by setting up who can manage and use this device."
+        [(permissions)]="config.permissions"
+      >
+      </app-permissions>
+    </ng-template>
+    <ng-template #wifi>
+      <app-wifi [(wifi)]="config.wifi" workflow="wizard"></app-wifi>
+    </ng-template>
+    <ng-template #dimensions>
+      <app-dimensions
+        workflow="wizard"
+        [(dimensions)]="config.dimensions"
+        (hasError)="hasError = $event; errorStep = $event ? 'dimensions' : ''"
+      ></app-dimensions>
+    </ng-template>
+    <ng-template #review>
+      <app-review-table
+        title="Review & Submit"
+        description="Excellent! You've completed the initial setup. You can always edit this configuration later
+      from the main settings page, which also contains more advanced options.<br /><br />Please
+      review the configuration below, and click 'Apply Changes' to save."
+        [dataSource]="dataSource"
+      ></app-review-table>
+    </ng-template>
+  </app-wizard-stepper>
+} @else {
+  <app-dialog
+    title="Review Configuration"
+    subtitle="For device: {{ data.deviceId }}"
+    width="72rem"
+    (onPermissionChange)="applyChangesDisabled.set(!$event.hasPermission)"
+  >
+    <main class="step-content">
+      <app-review-table
+        title="Review & Submit"
+        description="You are about to apply a copied configuration. Please review the settings below before
+      applying them to this device."
+        [dataSource]="dataSource"
+      ></app-review-table>
+    </main>
+    <ng-template #actionsTemplate>
+      <button mat-dialog-close class="wizard-button wizard-button-tertiary"> Cancel </button>
+      <button
+        class="wizard-button wizard-button-primary"
+        [disabled]="applyChangesDisabled() || verifying()"
+        (click)="submit()"
+      >
+        @if (verifying()) {
+          <mat-spinner [diameter]="20" class="wizard-button-spinner"></mat-spinner>
+          Verifying...
+        } @else {
+          Apply Changes
+        }
+      </button>
+    </ng-template>
+  </app-dialog>
+}

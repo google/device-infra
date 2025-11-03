@@ -1,0 +1,58 @@
+<div class="config-mode-container">
+  <h3 class="mode-title font-semibold text-gray-800">Device Configuration Mode</h3>
+  <p class="mode-subtitle text-gray-600">
+    @if (workflow === 'wizard') {
+      How should the devices connected to this host be configured?
+    } @else {
+      Choose how configurations are applied to devices connected to this host. Changing this mode
+      may impact existing devices.
+    }
+  </p>
+  <div class="mode-grid" [class.disabled]="!uiStatus.editability?.editable">
+    <button
+      class="choice-card"
+      [class.selected]="mode === 'PER_DEVICE'"
+      (click)="selectMode('PER_DEVICE')"
+      [disabled]="!uiStatus.editability?.editable"
+    >
+      <div class="choice-card-container">
+        <mat-icon class="title-icon">devices</mat-icon>
+        <div>
+          <p class="choice-card-title">Per-Device Configuration</p>
+          <p class="choice-card-detail text-gray-600">
+            @if (workflow === 'wizard') {
+              Each device has its own, independent configuration. You will set a
+              <strong class="font-semibold">default</strong> config for new or virtual devices.
+            } @else {
+              Each device has its own, independent configuration. The settings in the following
+              sections define the <strong class="font-semibold">default</strong> config for new
+              devices.
+            }
+          </p>
+        </div>
+      </div>
+    </button>
+    <button
+      class="choice-card"
+      [class.selected]="mode === 'SHARED'"
+      (click)="selectMode('SHARED')"
+      [disabled]="!uiStatus.editability?.editable"
+    >
+      <div class="choice-card-container">
+        <mat-icon class="title-icon">share</mat-icon>
+        <div>
+          <p class="choice-card-title">Shared Configuration</p>
+          <p class="choice-card-detail text-gray-600">
+            @if (workflow === 'wizard') {
+              All devices on this host use a single, shared configuration that you will define next.
+            } @else {
+              All devices on this host use a single,
+              <strong class="font-semibold">shared</strong> configuration defined in the following
+              sections. This will override all individual device settings.
+            }
+          </p>
+        </div>
+      </div>
+    </button>
+  </div>
+</div>

@@ -1,0 +1,47 @@
+<div class="entry-chip-container">
+  @if(editable) {
+    <div class="chip-container">
+      <mat-chip-grid #chipGrid>
+        @if (entries.length == 0) {
+          <span class="empty-chip">{{ emptyLabel }}</span>
+        }
+        @for (item of entries; track $index; let i = $index) {
+          <mat-chip-row class="entry-chip" [removable]="editable" (removed)="remove(i)">
+            <span class="entry-chip-content">{{ item }}</span>
+              <button class="chip-remove" matChipRemove>
+                <i class="material-icons">close</i>
+              </button>
+          </mat-chip-row>
+        }
+      </mat-chip-grid>
+    </div>
+
+    <div class="add-chip-container">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="form-field">
+        <input
+          matInput
+          type="text"
+          class="add-input"
+          [placeholder]="placeholder"
+          [attr.aria-label]="placeholder"
+          [(ngModel)]="entry"
+          [matChipInputFor]="chipGrid"
+        />
+      </mat-form-field>
+      <button class="wizard-button wizard-button-secondary" (click)="add()"> Add </button>
+    </div>
+  } @else {
+    <div class="chip-container">
+      <mat-chip-set>
+        @if (entries.length == 0) {
+          <span class="empty-chip">{{ emptyLabel }}</span>
+        }
+        @for (item of entries; track $index; let i = $index) {
+          <mat-chip class="entry-chip">
+            <span class="entry-chip-content">{{ item }}</span>
+          </mat-chip>
+        }
+      </mat-chip-set>
+    </div>
+  }
+</div>

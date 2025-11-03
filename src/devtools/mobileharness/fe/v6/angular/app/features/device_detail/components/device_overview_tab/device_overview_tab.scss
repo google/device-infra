@@ -1,9 +1,10 @@
 // Styles for Device Overview Tab
 // Extracted and adapted from the prototype's style block.
+$labconsole-font: 'Google Sans', Roboto, Arial, sans-serif;
 
 :host {
   display: block;
-  font-family: 'Roboto', sans-serif;
+  font-family: $labconsole-font;
 }
 
 .hidden {

@@ -1,0 +1,125 @@
+@use '../../../../../shared/styles/configuration' as config;
+
+.config-menu-text {
+  font-family: config.$labconsole-font;
+}
+
+.content-container {
+  display: flex;
+  flex-grow: 1;
+  min-height: 0;
+  padding: 0;
+  height: 90vh;
+  max-width: 72rem;
+  font-family: config.$labconsole-font;
+
+  .nav-bar {
+    padding: 1rem;
+    background-color: #f9fafb;
+    border-right: 1px solid #e5e7eb;
+    width: 16rem;
+    min-width: 16rem;
+
+    .settings-nav-group-title {
+      padding: .5rem 1rem;
+      font-size: 0.75rem;
+      line-height: 1rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05rem;
+      color: #6b7280;
+    }
+
+    .settings-nav-item {
+      display: flex;
+      align-items: center;
+      padding: .75rem 1rem;
+      border-radius: .375rem;
+      font-weight: 500;
+      color: #334155;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      text-decoration: none;
+
+      .nav-item-icon {
+        margin-right: 1rem;
+        font-size: 1.25rem;
+        line-height: 1.5rem;
+        color: #64748b;
+      }
+    }
+
+    .settings-nav-item:hover {
+      background-color: #f1f5f9
+    }
+
+    .settings-nav-item.active{
+      background-color:#eef4ff;
+      color:#1d4ed8;
+    }
+
+    .settings-nav-item.active .nav-item-icon,
+    .settings-nav-item.active .nav-item-child-icon {
+      color:#1d4ed8;
+    }
+
+    .nav-item-child {
+      margin-left: 1rem;
+    }
+
+    .nav-item-child-icon {
+      margin-right: 0.5rem;
+      font-size: 1rem;
+      line-height: 1.5rem;
+    }
+  }
+
+  .content-main {
+    padding: 1.5rem 1.5rem 0;
+    flex-direction: column;
+    flex-grow: 1;
+    display: flex;
+    min-height: 0;
+
+    .pusher-banner {
+      display: flex;
+      align-items: center;
+      padding: 1rem;
+      background-color: #e8f0fe;
+      color: #0b57d0;
+      border-radius: 0.5rem;
+      margin-bottom: 1.5rem;
+      font-weight: 500;
+
+      mat-icon {
+        font-size: 1rem;
+        margin-right: .75rem;
+        width: auto;
+        height: auto;
+      }
+    }
+
+    .main-container {
+      flex-grow: 1;
+      min-height: 0;
+
+      .settings-title {
+        display: flex;
+        align-items: center;
+        font-size: 1.25rem;
+        line-height: 1.75rem;
+      }
+    }
+
+    .main-footer {
+       margin: 0 -1.5rem;
+    }
+  }
+
+  // @media (min-width: 768px) {
+  //   .content-main {
+  //     padding: 2rem 2rem 0;
+  //   }
+  // }
+
+}

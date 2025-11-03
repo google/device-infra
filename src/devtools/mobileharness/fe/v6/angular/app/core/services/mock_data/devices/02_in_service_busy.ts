@@ -72,7 +72,7 @@ const CONFIG: DeviceConfig = {
  * device in a specific state.
  */
 export const SCENARIO_IN_SERVICE_BUSY: MockDeviceScenario = {
-  id: 'gLinux-host-001-device-02',
+  id: DEVICE_ID,
   scenarioName: 'In Service - Busy',
   overview: OVERVIEW,
   config: CONFIG,

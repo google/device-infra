@@ -1,0 +1,76 @@
+@use '../../../../../../shared/styles/configuration' as config;
+
+.mode-title {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+}
+
+.mode-subtitle {
+  margin-top: 0.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.mode-grid {
+  gap: 1.5rem;
+  display: grid;
+
+  .choice-card{
+    border: 1px solid #cbd5e1;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.2s;
+    background-color: #f8fafc;
+    font-size: 100%;
+
+    .choice-card-container {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+
+    .title-icon {
+      font-size: 2.5rem;
+      line-height: 2.25rem;
+      color: #0b57d0;
+      overflow: visible;
+      width: auto;
+      height: auto;
+    }
+
+    .choice-card-title {
+      font-weight: 600;
+      color: #1e293b;
+      margin-top: 0.5rem;
+    }
+
+    .choice-card-detail {
+      font-size: 0.875rem;
+      line-height: 1.25rem;
+      margin-top: 0.5rem;
+    }
+  }
+
+  .choice-card.selected {
+    border: 2px solid #3b82f6;
+  }
+
+  .choice-card:hover {
+    border-color: #0b57d0;
+    box-shadow: 0 2px 8px rgba(0,0,0,.1);
+    transform: translateY(-2px)
+  }
+}
+
+.disabled {
+  opacity: 0.7;
+  pointer-events: none;
+  cursor: default;
+}
+
+@media (min-width: 640px) {
+  .mode-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

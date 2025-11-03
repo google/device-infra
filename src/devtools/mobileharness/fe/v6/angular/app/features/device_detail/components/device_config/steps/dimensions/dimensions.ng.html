@@ -1,7 +1,13 @@
 <div class="dimension-editor-wrapper">
   <div class="dimension-editor-header">
-    @if (workflow === 'wizard') {
-      <h3 class="font-semibold text-gray-800">Dimensions</h3>
+    <h3 class="font-semibold text-gray-800">
+      {{ title }}
+      @if (type === 'host') {
+        <mat-icon class="help-icon" [matTooltip]="tooltipText"> help_outline </mat-icon>
+      }
+    </h3>
+
+    @if (type === 'device' && workflow === 'wizard') {
       <p class="text-gray-600 header-desc">
         Do you need to add any custom dimensions for advanced scheduling? <br />
         <strong>
@@ -9,58 +15,86 @@
           are unsure.
         </strong>
       </p>
-    } @else {
-      <h3 class="font-semibold text-gray-800">Dimensions</h3>
+    }
+
+    @if (type === 'host' && workflow === 'settings') {
+      <p class="font-margin text-gray-600">
+        Define custom dimensions for scheduling. These will be applied to all devices according to
+        the selected configuration mode.
+      </p>
     }
   </div>
 
   <div class="dimension-editor-content space-y-8">
     <div class="dimension-group">
-      <h4 class="font-medium text-gray-700 dim-title">Supported Dimensions</h4>
-      @if (workflow === 'wizard') {
-        <details class="wizard-details">
-          <summary>What are 'Supported Dimensions'?</summary>
-          <div class="wizard-details-content">
+      <h4 class="font-medium text-gray-700 dim-title">
+        Supported Dimensions
+        @if (type === 'host') {
+          <mat-icon class="help-icon" [matTooltip]="supportedTooltipText">help_outline</mat-icon>
+        }
+      </h4>
+      @if (type === 'device') {
+        @if (workflow === 'wizard') {
+          <details class="wizard-details">
+            <summary>What are 'Supported Dimensions'?</summary>
+            <div class="wizard-details-content">
+              These are additional dimensions that describe this device (e.g., 'label:
+              some_label').<br />
+              An OmniLab job can request these dimensions, along with system-provided ones, to find
+              and use this device.
+            </div>
+          </details>
+        } @else {
+          <p class="text-gray-600 dis-desc">
             These are additional dimensions that describe this device (e.g., 'label:
             some_label').<br />
             An OmniLab job can request these dimensions, along with system-provided ones, to find
             and use this device.
-          </div>
-        </details>
-      } @else {
-        <p class="text-gray-600 dis-desc">
-          These are additional dimensions that describe this device (e.g., 'label: some_label').<br />
-          An OmniLab job can request these dimensions, along with system-provided ones, to find and
-          use this device.
-        </p>
+          </p>
+        }
       }
-      <app-dimension-list
-        [(dimensions)]="dimensions.supported"
+      <app-metadata-list
+        emptyMessage="No dimensions of this type have been added."
+        addButtonLabel="Add Dimension"
+        [columns]="dimensionColumns"
+        [(metadataList)]="dimensions.supported"
         (hasError)="onHasErrorChanged('supported', $event)"
-      ></app-dimension-list>
+        [uiStatus]="uiStatus"
+      ></app-metadata-list>
     </div>
     <div class="dimension-group">
-      <h4 class="font-medium text-gray-700 dim-title">Required Dimensions</h4>
-      @if (workflow === 'wizard') {
-        <details class="wizard-details">
-          <summary>What are 'Required Dimensions'?</summary>
-          <div class="wizard-details-content">
+      <h4 class="font-medium text-gray-700 dim-title">
+        Required Dimensions
+        @if (type === 'host') {
+          <mat-icon class="help-icon" [matTooltip]="requiredTooltipText">help_outline</mat-icon>
+        }
+      </h4>
+      @if (type === 'device') {
+        @if (workflow === 'wizard') {
+          <details class="wizard-details">
+            <summary>What are 'Required Dimensions'?</summary>
+            <div class="wizard-details-content">
+              These are additional dimensions that a job MUST provide to use this device (e.g.,
+              'pool: some_pool').<br />
+              This protects a specialized device from being used by general jobs.
+            </div>
+          </details>
+        } @else {
+          <p class="text-gray-600 dis-desc">
             These are additional dimensions that a job MUST provide to use this device (e.g., 'pool:
             some_pool').<br />
             This protects a specialized device from being used by general jobs.
-          </div>
-        </details>
-      } @else {
-        <p class="text-gray-600 dis-desc">
-          These are additional dimensions that a job MUST provide to use this device (e.g., 'pool:
-          some_pool').<br />
-          This protects a specialized device from being used by general jobs.
-        </p>
+          </p>
+        }
       }
-      <app-dimension-list
-        [(dimensions)]="dimensions.required"
+      <app-metadata-list
+        emptyMessage="No dimensions of this type have been added."
+        addButtonLabel="Add Dimension"
+        [columns]="dimensionColumns"
+        [(metadataList)]="dimensions.required"
         (hasError)="onHasErrorChanged('required', $event)"
-      ></app-dimension-list>
+        [uiStatus]="uiStatus"
+      ></app-metadata-list>
     </div>
   </div>
 </div>

@@ -1,0 +1,59 @@
+<app-dialog
+  height="90vh"
+  [width]="width"
+  [title]="title"
+  [type]="type"
+  [subtitle]="subtitle()"
+  [footerType]="footerType"
+  (onPermissionChange)="applyChangesDisabled = !$event.hasPermission"
+>
+  <div class="stepper-section">
+    <mat-stepper
+      class="stepper-container"
+      #stepper
+      [selectedIndex]="currentStepIndex()"
+      (selectionChange)="onStepChange($event)"
+      linear
+    >
+      @for (step of WIZARD_STEPS; track step.id) {
+        <mat-step [label]="step.label">
+          <main class="step-content">
+            @if (step.id === currentStep) {
+              <ng-container [ngTemplateOutlet]="step.template"></ng-container>
+            }
+          </main>
+        </mat-step>
+      }
+    </mat-stepper>
+  </div>
+
+  <ng-template #actionsTemplate>
+    <button mat-dialog-close class="wizard-button wizard-button-tertiary"> Cancel </button>
+    @if (currentStepIndex() > 0) {
+      <button class="wizard-button wizard-button-secondary" (click)="previousStep()"> Back </button>
+    }
+    @if (currentStepIndex() < WIZARD_STEPS.length - 1) {
+      <button
+        class="wizard-button wizard-button-primary"
+        (click)="nextStep()"
+        [disabled]="nextStepDisabled"
+      >
+        Next
+      </button>
+    }
+    @if (currentStepIndex() === WIZARD_STEPS.length - 1) {
+      <button
+        class="wizard-button wizard-button-primary"
+        (click)="apply.emit()"
+        [disabled]="applyChangesDisabled || verifying()"
+      >
+        @if (verifying()) {
+          <mat-spinner [diameter]="20" class="wizard-button-spinner"></mat-spinner>
+          Verifying...
+        } @else {
+          Apply Changes
+        }
+      </button>
+    }
+  </ng-template>
+</app-dialog>

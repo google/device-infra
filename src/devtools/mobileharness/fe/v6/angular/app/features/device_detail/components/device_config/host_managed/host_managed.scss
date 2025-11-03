@@ -1,4 +1,4 @@
-@use '../../../../../shared/styles/configuration';
+@use '../../../../../shared/styles/configuration' as config;
 
 .host-managed-content {
   font-size: 0.875rem;
@@ -35,7 +35,7 @@
     background-color: #f9fafb;
     border-radius: 0.5rem;
     border: 1px solid #e5e7eb;
-    font-family: 'Roboto', sans-serif;
+    font-family: config.$labconsole-font;
 
     .host-managed-title {
       font-weight: 500;
@@ -66,6 +66,6 @@
 
   a {
     text-decoration: none;
-    font-family: 'Roboto', sans-serif;
+    font-family: config.$labconsole-font;
   }
 }

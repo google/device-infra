@@ -1,6 +1,44 @@
+@use '@angular/material' as mat;
+
+$labconsole-font: 'Google Sans', Roboto, Arial, sans-serif;
+
+:host {
+  @include mat.form-field-overrides((
+    container-height: 42px,
+    container-vertical-padding: 6px,
+    container-text-line-height: 2rem,
+    container-text-font: $labconsole-font,
+
+    outlined-outline-color: #cbd5e1,
+    outlined-focus-outline-color: #0b57d0,
+    outlined-hover-outline-color: #0b57d0,
+    outlined-container-shape:0.375rem,
+    outlined-disabled-input-text-color: #f1f5f9,
+    outlined-label-text-font: $labconsole-font,
+
+    filled-with-label-container-padding-top: 0px,
+    filled-with-label-container-padding-bottom: 0px,
+
+    subscript-text-font: $labconsole-font,
+  ));
+
+ @include mat.select-overrides((
+    trigger-text-size: 100%,
+    trigger-text-tracking: normal,
+    trigger-text-line-height: 30px,
+    trigger-text-font: $labconsole-font,
+  ));
+
+  @include mat.option-overrides((
+    label-text-tracking: normal,
+    label-text-font: $labconsole-font,
+  ));
+}
+
+
 h1, h2, h3, h4, h5, h6, p {
   margin: 0;
-  font-family: 'Roboto', sans-serif;
+  font-family: $labconsole-font;
 }
 
 *, ::after, ::before {
@@ -36,26 +74,46 @@ h1, h2, h3, h4, h5, h6, p {
   color: #6b7280;
 }
 
+.form-field {
+  width: 100%;
+}
+
 .form-label {
   display: block;
   font-size: 0.8rem;
   font-weight: 500;
+  font-family: $labconsole-font;
   color: #475569;
   margin-bottom: 0.25rem;
 }
 
 .form-input {
   width: 100%;
-  padding: 0.5rem 0.75rem;
+  padding: 0.5rem 0;
   border-radius: 0.375rem;
   border: 1px solid #cbd5e1;
   background: white;
   transition: all 0.2s;
   font-size: 100%;
-  font-family: 'Roboto', sans-serif;
+  font-family: $labconsole-font;
+  line-height: 1.5rem;
 }
 
+.form-input::placeholder {
+  color: #aaabad;
+  font-weight: normal;
+}
 
+.form-input:disabled {
+  background-color: #f1f5f9;
+  cursor: not-allowed;
+}
+
+.form-option {
+  font-size: 100%;
+  font-family: $labconsole-font;
+  letter-spacing: normal;
+}
 
 .space-y-10 > :not([hidden]) ~ :not([hidden]) {
   margin-top: 2.5rem;
@@ -77,6 +135,98 @@ h1, h2, h3, h4, h5, h6, p {
   margin-bottom: 0;
 }
 
+.pusher-banner-inline {
+  display: flex;
+  align-items: center;
+  padding: .75rem;
+  background-color: #f1f5f9;
+  color: #475569;
+  border-radius: .5rem;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+
+  mat-icon {
+    font-size: 1.1rem;
+    margin-right: .5rem;
+    width: auto;
+    height: auto;
+  }
+}
+
+.help-icon {
+  font-size: 1rem;
+  color: #94a3b8;
+  cursor: help;
+  margin-left: 0.5rem;
+  vertical-align: middle;
+  height: auto;
+  width: auto;
+}
+
+.config-content {
+  padding: 1.5rem;
+  overflow-y: auto;
+
+  .empty-config-title {
+    font-size: 0.875rem;
+    text-align: center;
+    color: #64748b;
+    margin: 4px 0 1.5rem 0;
+    font-weight: inherit;
+    letter-spacing: normal;
+  }
+
+  .empty-config-grid {
+    display: grid;
+    gap: 1rem;
+
+    .choice-card {
+      border: 1px solid #cbd5e1;
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background-color: #f8fafc;
+      font-size: 100%;
+    }
+    .choice-card:hover {
+      border-color: #0b57d0;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      transform: translateY(-2px);
+    }
+    .choice-card .material-icons {
+      font-size: 2.5rem;
+      color: #0b57d0;
+    }
+
+    .choice-card-title {
+      font-weight: 500;
+      color: #1e293b;
+      margin-top: 0.5rem;
+    }
+  }
+
+  .copy-from-container {
+    max-width: 28rem;
+    margin: 1rem auto auto;
+
+    .load-button {
+      width: 100%;
+      margin-top: 0.5rem;
+      line-height: 1.25rem;
+      letter-spacing: normal;
+    }
+
+    .copy-error-message {
+      color: #bf4444;
+      font-size: 0.75rem;
+      line-height: 1rem;
+      margin-top: 0.25rem;
+    }
+  }
+}
+
 .button-container {
   display: flex;
   align-items: center;
@@ -94,6 +244,7 @@ h1, h2, h3, h4, h5, h6, p {
   border: 1px solid transparent;
   font-size: 0.875rem;
   cursor: pointer;
+  letter-spacing: normal;
 }
 
 .wizard-button:disabled {

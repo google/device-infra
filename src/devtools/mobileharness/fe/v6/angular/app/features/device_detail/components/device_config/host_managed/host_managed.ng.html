@@ -1,30 +1,44 @@
-<app-dialog title="Host-Managed Configuration" subtitle="" deviceId="{{ deviceId }}">
+<app-dialog title="Host-Managed Configuration" [param]="{deviceId: deviceId, hostName: ''}">
   <mat-dialog-content class="host-managed-content">
     <p class="host-managed-description">
       <strong class="font-semibold">This device inherits its configuration from its host.</strong>
       <span class="description-text">
         To make changes, you must edit the configuration for the host
-        <strong class="text-black">host-x.google.com</strong> directly.
+        <strong class="text-black">{{ hostName }}</strong> directly.
       </span>
     </p>
     <div class="host-managed-config">
       <h3 class="host-managed-title">Host Default Configuration</h3>
       <div class="host-managed-config-list">
-        <div><strong>Owners:</strong> <div class="break-all">host-admin</div></div>
-        <div><strong>Wi-Fi:</strong> <div class="break-all">WL-MobileHarness</div></div>
         <div>
-          <strong>Supported Dimensions:</strong> <div class="break-all">From Host Config</div>
+          <strong>Owners:</strong>
+          @for (owner of hostDefaultConfig.permissions.owners; track owner) {
+            <div class="break-all">{{ owner }}</div>
+          }
         </div>
-        <div><strong>Max Failures:</strong> 3</div>
+        <div>
+          <strong>Wi-Fi:</strong>
+          <div class="break-all">{{ hostDefaultConfig.wifi.ssid }}</div>
+        </div>
+        <div>
+          <strong>Supported Dimensions:</strong>
+          @for (dimension of hostDefaultConfig.dimensions.supported; track dimension) {
+            <div class="break-all">{{ dimension.name }}: {{ dimension.value }}</div>
+          }
+        </div>
+        <div>
+          <strong>Max Consecutive Failures:</strong>
+          {{ hostDefaultConfig.settings.maxConsecutiveFail }}
+        </div>
       </div>
     </div>
   </mat-dialog-content>
-  <ng-container footer-buttons>
+  <ng-template #actionsTemplate>
     <mat-dialog-actions align="end" class="actions-container">
       <button mat-button mat-dialog-close class="wizard-button wizard-button-secondary"
         >Close</button
       >
-      <a href="#" class="wizard-button wizard-button-primary">Go to Host Configuration</a>
+      <a href="/hosts/{{ hostName }}" class="wizard-button wizard-button-primary">Go to Host Configuration</a>
     </mat-dialog-actions>
-  </ng-container>
+  </ng-template>
 </app-dialog>
