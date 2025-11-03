@@ -49,6 +49,7 @@ import com.google.devtools.mobileharness.infra.lab.Annotations.GlobalEventBus;
 import com.google.devtools.mobileharness.infra.lab.Annotations.RpcPort;
 import com.google.devtools.mobileharness.infra.lab.Annotations.ServViaStubby;
 import com.google.devtools.mobileharness.infra.lab.common.dir.DirUtil;
+import com.google.devtools.mobileharness.infra.lab.controller.ConfigServiceBasedDeviceConfigManager;
 import com.google.devtools.mobileharness.infra.lab.controller.DeviceConfigManager;
 import com.google.devtools.mobileharness.infra.lab.controller.FileClassifier;
 import com.google.devtools.mobileharness.infra.lab.controller.JobManager;
@@ -73,6 +74,9 @@ import com.google.devtools.mobileharness.infra.master.rpc.stub.JobSyncStub;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.LabSyncStub;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.grpc.JobSyncGrpcStub;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.grpc.LabSyncGrpcStub;
+import com.google.devtools.mobileharness.service.deviceconfig.rpc.stub.Annotation.DeviceConfigGrpcStub;
+import com.google.devtools.mobileharness.service.deviceconfig.rpc.stub.DeviceConfigStub;
+import com.google.devtools.mobileharness.service.deviceconfig.rpc.stub.grpc.DeviceConfigGrpcStubModule;
 import com.google.devtools.mobileharness.shared.constant.hostmanagement.HostPropertyConstants.HostPropertyKey;
 import com.google.devtools.mobileharness.shared.labinfo.LabInfoProvider;
 import com.google.devtools.mobileharness.shared.labinfo.LocalLabInfoProvider;
@@ -97,12 +101,14 @@ import com.google.devtools.mobileharness.shared.version.rpc.service.grpc.Version
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.Key;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessLogger;
 import com.google.wireless.qa.mobileharness.shared.api.device.BaseDevice;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Value;
 import com.google.wireless.qa.mobileharness.shared.constant.DirCommon;
 import com.google.wireless.qa.mobileharness.shared.constant.ExitCode;
+import com.google.wireless.qa.mobileharness.shared.util.DeviceUtil;
 import com.google.wireless.qa.mobileharness.shared.util.NetUtil;
 import io.grpc.BindableService;
 import io.grpc.netty.NettyServerBuilder;
@@ -200,6 +206,17 @@ public class LabServer {
           deviceConfigManager =
               new LocalFileBasedDeviceConfigManager(
                   deviceManager, deviceIdManager, apiConfig, new ApiConfigFileProcessor());
+        } else if (!DeviceUtil.inSharedLab()
+            && !hostName.contains(".borg.")
+            && !hostName.contains(".prod.")) {
+          deviceConfigManager =
+              new ConfigServiceBasedDeviceConfigManager(
+                  deviceManager,
+                  deviceIdManager,
+                  apiConfig,
+                  hostName,
+                  Guice.createInjector(new DeviceConfigGrpcStubModule())
+                      .getInstance(Key.get(DeviceConfigStub.class, DeviceConfigGrpcStub.class)));
         }
       }
       apiConfig.initialize(

@@ -38,7 +38,7 @@ public final class DeviceConfigGrpcStubModule extends AbstractModule {
 
   private final String configDnsName;
 
-  public DeviceConfigGrpcStubModule(String dnsNameFromSpec) {
+  public DeviceConfigGrpcStubModule() {
     configDnsName = Flags.instance().configServiceGrpcTarget.getNonNull();
 
     logger.atInfo().log("ConfigDnsName: %s", configDnsName);
