@@ -1,0 +1,42 @@
+@use '../../../../../../shared/styles/configuration' as config;
+
+.discovery-editor-wrapper {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.discovery-editor-header {
+  flex-shrink: 0;
+
+  .discovery-title {
+    display: flex;
+    align-items: center;
+    font-size: 1.25rem;
+    line-height: 1.75rem;
+  }
+}
+
+
+
+.discovery-editor-content{
+  flex-grow: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: .5rem .25rem;
+
+  .form-group {
+    margin-bottom: 1rem;
+  }
+
+  .chip-title {
+    font-size: 1.125rem;
+    line-height: 1.75rem;
+  }
+
+  .chip-desc {
+    font-size: .875rem;
+    line-height: 1.25rem;
+    margin: .25rem 0 .5rem 0;
+  }
+}

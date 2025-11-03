@@ -1,0 +1,108 @@
+<table
+  mat-table
+  [dataSource]="metadataList"
+  class="metadata-list-table"
+  multiTemplateDataRows
+  style="width: 100%; table-layout: fixed"
+>
+  @for (column of columns; track $index) {
+    <ng-container [matColumnDef]="column.columnDef">
+      <th mat-header-cell *matHeaderCellDef>
+        {{ column.header }}
+        @if (column.required) {
+          <span class="required-field">*</span>
+        }
+      </th>
+      <td mat-cell *matCellDef="let element; let i = dataIndex">
+        @if (column.type === 'input') {
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="form-field"
+            [class.mat-form-field-error]="(duplicate(i) && errorMessage[i] )|| (column.required && !element[column.cell])" >
+            <input
+              matInput
+              [type]="column.inputType || 'text'"
+              [placeholder]="column.placeholder || ''"
+              [(ngModel)]="element[column.cell]"
+              [required]="column.required || false"
+              (input)="onMetadataChanged()"
+              [disabled]="
+                uiStatus.sectionStatus.editability?.editable === false ||
+                uiStatus.itemEditabilityOverrides?.[i]?.editable === false
+              "
+              [attr.aria-label]="'Input field for ' + column.header"
+            />
+          </mat-form-field>
+        }
+
+        @if(column.type === 'select') {
+          <mat-form-field appearance="outline" subscriptSizing="dynamic"
+            class="form-field"
+            [class.mat-form-field-error]="duplicate(i) || (column.required && !element[column.cell])"
+            >
+            <mat-select
+              [(value)]="element[column.cell]"
+              (selectionChange)="onMetadataChanged()"
+              [disabled]="
+                uiStatus.sectionStatus.editability?.editable === false ||
+                uiStatus.itemEditabilityOverrides?.[i]?.editable === false
+              "
+            >
+              @for (option of column.options; track $index) {
+                <mat-option [value]="option">{{ option }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        }
+      </td>
+    </ng-container>
+  }
+
+  <ng-container matColumnDef="action">
+    <th mat-header-cell *matHeaderCellDef>ACTION</th>
+    <td mat-cell *matCellDef="let element; let i = dataIndex">
+      <button
+        mat-icon-button
+        title="Remove metadata"
+        (click)="remove(i)"
+        [disabled]="
+          uiStatus.sectionStatus.editability?.editable === false ||
+          uiStatus.itemEditabilityOverrides?.[i]?.editable === false
+        "
+      >
+        <mat-icon>delete</mat-icon>
+      </button>
+    </td>
+  </ng-container>
+
+  <!-- The error message is shown when there is an error in the current editing row. -->
+  <ng-container matColumnDef="error">
+    <td
+      mat-cell
+      *matCellDef="let element; let i = dataIndex"
+      [attr.colspan]="displayedColumns.length"
+    >
+      <mat-error class="error-message" [innerHTML]="errorMessage[i] | safeHtmlPipe"></mat-error>
+    </td>
+  </ng-container>
+
+  <!-- The empty message is shown when the metadata list is empty. -->
+  <ng-container matColumnDef="empty">
+    <td mat-footer-cell *matFooterCellDef [attr.colspan]="displayedColumns.length">
+      {{ emptyMessage }}
+    </td>
+  </ng-container>
+
+  <tr mat-header-row *matHeaderRowDef="displayedColumns" class="header-row text-gray-700"></tr>
+  <tr mat-row *matRowDef="let row; columns: displayedColumns" class="metadata-list-row"></tr>
+  <tr mat-row *matRowDef="let row; columns: ['error']; when: showErrorRow"></tr>
+
+  <tr
+    mat-footer-row
+    *matFooterRowDef="['empty']"
+    [hidden]="metadataList && metadataList.length > 0"
+  ></tr>
+</table>
+@if (uiStatus.sectionStatus.editability?.editable || false) {
+  <button class="add-metadata-button" type="button" mat-button (click)="add()">
+    <mat-icon>add</mat-icon>{{ addButtonLabel }}
+  </button>
+}

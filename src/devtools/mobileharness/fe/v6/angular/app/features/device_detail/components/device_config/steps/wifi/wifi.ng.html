@@ -1,5 +1,5 @@
 <div class="wifi-container">
-  @if (workflow === 'wizard') {
+  @if (type === 'device' && workflow === 'wizard') {
     <h3 class="font-semibold text-gray-800">Wi-Fi Configuration</h3>
     <p class="font-margin text-gray-600">
       Would you like to set up a default Wi-Fi network for this device? <br />
@@ -13,10 +13,12 @@
     <label class="toggle-switch-label">
       <div class="toggle-switch-text-container">
         <span class="font-medium text-gray-800">Enable Default Wi-Fi</span>
-        <p class="text-xs text-gray-500">
-          This sets the default network for the device. Tests may still connect to other networks as
-          needed. Disabling this does not block the device's Wi-Fi capability.
-        </p>
+        @if (type === 'device') {
+          <p class="text-xs text-gray-500">
+            This sets the default network for the device. Tests may still connect to other networks
+            as needed. Disabling this does not block the device's Wi-Fi capability.
+          </p>
+        }
       </div>
       <div class="toggle-switch-icon-container">
         <!-- <mat-slide-toggle
@@ -26,6 +28,7 @@
         ></mat-slide-toggle> -->
         <toggle-switch
           color="#0b57d0"
+          [disabled]="!uiStatus.editability?.editable"
           [checked]="wifiEnabled()"
           (checkedChange)="onWifiEnabledChange()"
         ></toggle-switch>
@@ -39,6 +42,7 @@
           [hideSingleSelectionIndicator]="true"
           (change)="onWifiTypeChange($event)"
           [(value)]="wifi.type"
+          [disabled]="!uiStatus.editability?.editable"
         >
           <mat-button-toggle value="pre-configured">Pre-configured</mat-button-toggle>
           <mat-button-toggle value="custom">Custom</mat-button-toggle>
@@ -48,9 +52,9 @@
           @if (wifi.type === 'pre-configured') {
             <label for="wifi-pre-configured-ssid" class="form-label">Select Network</label>
             <mat-form-field appearance="outline" class="form-field">
-              <mat-select [(value)]="wifi.ssid">
+              <mat-select [(value)]="wifi.ssid" [disabled]="!uiStatus.editability?.editable">
                 @for (option of PRECONFIGURED_WIFI; track $index) {
-                  <mat-option [value]="option">{{option}}</mat-option>
+                  <mat-option [value]="option" class="form-option">{{ option }}</mat-option>
                 }
               </mat-select>
             </mat-form-field>
@@ -58,20 +62,37 @@
           @if (wifi.type === 'custom') {
             <div id="custom-wifi-container">
               <div class="form-group">
-                <label for="wifi-custom-ssid" class="form-label">Network Name (SSID)</label>
-                <input matInput type="text" [(ngModel)]="wifi.ssid" class="form-input" />
+                <label id="wifi-custom-ssid" class="form-label">Network Name (SSID)</label>
+                <mat-form-field appearance="outline" class="form-field"  subscriptSizing="dynamic">
+                  <input
+                    matInput
+                    type="text"
+                    [(ngModel)]="wifi.ssid"
+                    [disabled]="!uiStatus.editability?.editable"
+                    aria-labelledby="wifi-custom-ssid"
+                  />
+                </mat-form-field>
               </div>
               <div class="form-group">
-                <label for="wifi-custom-psk" class="form-label">Password (PSK)</label>
-                <input matInput type="password" [(ngModel)]="wifi.psk" class="form-input" />
+                <label id="wifi-custom-psk" class="form-label">Password (PSK)</label>
+                <mat-form-field appearance="outline" class="form-field"  subscriptSizing="dynamic">
+                  <input
+                    matInput
+                    type="password"
+                    [(ngModel)]="wifi.psk"
+                    [disabled]="!uiStatus.editability?.editable"
+                    aria-labelledby="wifi-custom-psk"
+                  />
+                </mat-form-field>
               </div>
             </div>
           }
           <div class="hidden-network-container">
             <label class="container-flex">
               <toggle-switch
-                [checked]="wifi.scanSsid"
                 color="#0b57d0"
+                [disabled]="!uiStatus.editability?.editable"
+                [checked]="wifi.scanSsid"
                 (checkedChange)="onWifiScanSsidChange($event)"
               ></toggle-switch>
               <!-- <mat-slide-toggle [hideIcon]="true" [checked]="wifi.scanSsid"></mat-slide-toggle> -->

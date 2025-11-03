@@ -1,0 +1,28 @@
+  <h3 class="title-medium font-semibold text-gray-800">{{title}}</h3>
+  <p class="text-gray-600 review-desc" [innerHTML]="description | safeHtmlPipe"></p>
+
+  <table mat-table [dataSource]="dataSource" class="review-table" multiTemplateDataRows>
+    <ng-container matColumnDef="feature">
+      <th mat-header-cell *matHeaderCellDef>Feature</th>
+      <td mat-cell *matCellDef="let element"> {{ element.feature }} </td>
+    </ng-container>
+
+    <ng-container matColumnDef="value">
+      <th mat-header-cell *matHeaderCellDef>Applied Configuration</th>
+      <td mat-cell *matCellDef="let element" [innerHtml]="element.value | safeHtmlPipe"></td>
+    </ng-container>
+
+    <ng-container matColumnDef="title">
+      <td mat-cell *matCellDef="let element" [attr.colspan]="displayedColumns.length">
+        {{ element.feature }}
+      </td>
+    </ng-container>
+
+    <tr mat-header-row *matHeaderRowDef="displayedColumns" class="header-row text-gray-700"></tr>
+    <tr
+      mat-row
+      *matRowDef="let row; columns: ['title']; when: isTitleRow"
+      class="category-row"
+    ></tr>
+    <tr mat-row *matRowDef="let row; columns: displayedColumns; when: isDataRow"></tr>
+  </table>

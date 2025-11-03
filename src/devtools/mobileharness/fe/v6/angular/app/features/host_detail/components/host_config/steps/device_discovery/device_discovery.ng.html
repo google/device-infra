@@ -1,0 +1,40 @@
+<div class="discovery-editor-wrapper">
+  <div class="discovery-editor-header">
+    <h3 class="discovery-title font-semibold text-gray-800">Device Discovery</h3>
+    <p class="font-margin text-gray-600">
+      Configure how the lab server finds and connects to devices.
+    </p>
+  </div>
+  <div class="discovery-editor-content">
+    <div class="space-y-10">
+      @for (chip of chips; track $index) {
+        <div class="form-group">
+          <h4 class="chip-title font-medium text-gray-700">{{ chip.title }}</h4>
+          <p class="chip-desc text-gray-500">{{ chip.description }}</p>
+          <app-entry-chip
+            [entries]="chip.entries"
+            (entriesChange)="onChipChange(chip.key, $event)"
+            [editable]="uiStatus.sectionStatus.editability?.editable ?? true"
+            placeholder="Add new entry..."
+          ></app-entry-chip>
+        </div>
+      }
+
+      @for (metadata of metadataList; track $index) {
+        <div>
+          <h4 class="chip-title font-medium text-gray-700">{{ metadata.title }}</h4>
+          <p class="chip-desc text-gray-500">{{ metadata.description }}</p>
+          <app-metadata-list
+            [emptyMessage]="metadata.emptyMessage"
+            [addButtonLabel]="metadata.addButtonLabel"
+            [columns]="metadata.columns"
+            [metadataList]="metadata.list"
+            (metadataListChange)="onMetadataChange(metadata.key, $event)"
+            [uiStatus]="uiStatus"
+            (hasError)="onHasError($event, $index)"
+          ></app-metadata-list>
+        </div>
+      }
+    </div>
+  </div>
+</div>

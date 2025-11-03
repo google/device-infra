@@ -59,7 +59,7 @@ const CONFIG: DeviceConfig = {
  * simulate a device in a specific state.
  */
 export const SCENARIO_OUT_OF_SERVICE_MISSING: MockDeviceScenario = {
-  id: 'gLinux-host-001-device-06',
+  id: DEVICE_ID,
   scenarioName: 'Out of Service - Missing',
   overview: OVERVIEW,
   config: CONFIG,
