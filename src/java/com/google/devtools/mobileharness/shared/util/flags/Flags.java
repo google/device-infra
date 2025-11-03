@@ -1413,6 +1413,14 @@ public class Flags {
       converter = Flag.IntegerConverter.class)
   public Flag<Integer> gcsUtilThreads = gcsUtilThreadsDefault;
 
+  private static final Flag<String> internalServiceCredentialFileDefault = Flag.value(null);
+
+  @com.beust.jcommander.Parameter(
+      names = "--internal_service_cred_file",
+      description = "Path to the credential key file to access internal services.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> internalServiceCredentialFile = internalServiceCredentialFileDefault;
+
   private static final Flag<Duration> getTestStatusRpcCallIntervalDefault =
       DurationFlag.value(Duration.ofSeconds(5L));
 
