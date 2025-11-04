@@ -162,20 +162,75 @@ public class AndroidPackageManagerUtil {
   /** Output with exception. */
   @VisibleForTesting static final String OUTPUT_EXCEPTION = "Exception";
 
-  /** Output when the install app failed by no matching ABIS. */
-  public static final String OUTPUT_INSTALL_FAILED_NO_MATCHING_ABIS =
-      "INSTALL_FAILED_NO_MATCHING_ABIS";
+  /** Package contains native code, but none that is compatible with the device's CPU_ABI */
+  public static final String OUTPUT_INSTALL_FAILED_CPU_ABI_INCOMPATIBLE =
+      "INSTALL_FAILED_CPU_ABI_INCOMPATIBLE";
+
+  /** Package targets a deprecated SDK version. */
+  public static final String OUTPUT_INSTALL_FAILED_DEPRECATED_SDK_VERSION =
+      "INSTALL_FAILED_DEPRECATED_SDK_VERSION";
+
+  /** Package failed while optimizing and validating its dex files. */
+  public static final String OUTPUT_INSTALL_FAILED_DEXOPT = "INSTALL_FAILED_DEXOPT";
+
+  /**
+   * Output when the package install failed because the app is attempting to define a permission
+   * that is already defined by some existing package.
+   */
+  public static final String OUTPUT_INSTALL_FAILED_DUPLICATE_PERMISSION =
+      "INSTALL_FAILED_DUPLICATE_PERMISSION";
+
+  /** Output when the install app failed by invalid apk. */
+  public static final String OUTPUT_INSTALL_FAILED_INVALID_APK = "INSTALL_FAILED_INVALID_APK";
+
+  /** Package uses a feature that is not available. */
+  public static final String OUTPUT_INSTALL_FAILED_MISSING_FEATURE =
+      "INSTALL_FAILED_MISSING_FEATURE";
 
   /** Output when the install app failed by manifest's missing libraries. */
   public static final String OUTPUT_INSTALL_FAILED_MISSING_SHARED_LIBRARY =
       "INSTALL_FAILED_MISSING_SHARED_LIBRARY";
 
-  /** Output when the install app failed by update incompatible. */
-  public static final String OUTPUT_INSTALL_FAILED_UPDATE_INCOMPATIBLE =
-      "Failure [INSTALL_FAILED_UPDATE_INCOMPATIBLE";
+  /** Current SDK version is newer than that required by the package. */
+  public static final String OUTPUT_INSTALL_FAILED_NEWER_SDK = "INSTALL_FAILED_NEWER_SDK";
+
+  /** Output when the install app failed by no matching ABIS. */
+  public static final String OUTPUT_INSTALL_FAILED_NO_MATCHING_ABIS =
+      "INSTALL_FAILED_NO_MATCHING_ABIS";
+
+  /** Output when the install app failed by older sdk. */
+  public static final String OUTPUT_INSTALL_FAILED_OLDER_SDK = "INSTALL_FAILED_OLDER_SDK";
+
+  /**
+   * Old package has target SDK high enough to support runtime permission and the new package has
+   * target SDK low enough to not support runtime permissions.
+   */
+  public static final String OUTPUT_INSTALL_FAILED_PERMISSION_MODEL_DOWNGRADE =
+      "INSTALL_FAILED_PERMISSION_MODEL_DOWNGRADE";
+
+  /**
+   * Package requested a shared user which is already installed on the device and does not have
+   * matching signature.
+   */
+  public static final String OUTPUT_INSTALL_FAILED_SHARED_USER_INCOMPATIBLE =
+      "INSTALL_FAILED_SHARED_USER_INCOMPATIBLE";
+
+  /**
+   * Package has specified that it is a test-only package, but caller has not supplied the test-only
+   * flag.
+   */
+  public static final String OUTPUT_INSTALL_FAILED_TEST_ONLY = "INSTALL_FAILED_TEST_ONLY";
 
   /** Output when the install app failed by UID changed. */
   public static final String OUTPUT_INSTALL_FAILED_UID_CHANGED = "INSTALL_FAILED_UID_CHANGED";
+
+  /** Output when the install app failed by update incompatible. */
+  public static final String OUTPUT_INSTALL_FAILED_UPDATE_INCOMPATIBLE =
+      "INSTALL_FAILED_UPDATE_INCOMPATIBLE";
+
+  /** Package couldn't be installed because the verification did not succeed. */
+  public static final String OUTPUT_INSTALL_FAILED_VERIFICATION_FAILURE =
+      "INSTALL_FAILED_VERIFICATION_FAILURE";
 
   /** Output template when the install app failed due to no valid UID assigned. */
   public static final String OUTPUT_TEMPLATE_INSTALL_FAILED_UID_INVALID =
@@ -186,23 +241,45 @@ public class AndroidPackageManagerUtil {
   public static final String OUTPUT_INSTALL_FAILED_VERSION_DOWNGRADE =
       "INSTALL_FAILED_VERSION_DOWNGRADE";
 
+  /** Parser was unable to retrieve the AndroidManifest.xml file. */
+  public static final String OUTPUT_INSTALL_PARSE_FAILED_BAD_MANIFEST =
+      "INSTALL_PARSE_FAILED_BAD_MANIFEST";
+
+  /** Parser encountered a bad or missing package name in the manifest. */
+  public static final String OUTPUT_INSTALL_PARSE_FAILED_BAD_PACKAGE_NAME =
+      "INSTALL_PARSE_FAILED_BAD_PACKAGE_NAME";
+
+  /** Parser encountered a bad shared user id name in the manifest. */
+  public static final String OUTPUT_INSTALL_PARSE_FAILED_BAD_SHARED_USER_ID =
+      "INSTALL_PARSE_FAILED_BAD_SHARED_USER_ID";
+
+  /** Parser encountered a CertificateEncodingException in one of the files in the APK. */
+  public static final String OUTPUT_INSTALL_PARSE_FAILED_CERTIFICATE_ENCODING =
+      "INSTALL_PARSE_FAILED_CERTIFICATE_ENCODING";
+
+  /** Parser found inconsistent certificates on the files in the APK. */
+  public static final String OUTPUT_INSTALL_PARSE_FAILED_INCONSISTENT_CERTIFICATES =
+      "INSTALL_PARSE_FAILED_INCONSISTENT_CERTIFICATES";
+
+  /** Parser did not find any actionable tags (instrumentatino or application) in the manifest. */
+  public static final String OUTPUT_INSTALL_PARSE_FAILED_MANIFEST_EMPTY =
+      "INSTALL_PARSE_FAILED_MANIFEST_EMPTY";
+
   /** Output when the install app failed by manifest malformed. */
   public static final String OUTPUT_INSTALL_PARSE_FAILED_MANIFEST_MALFORMED =
       "INSTALL_PARSE_FAILED_MANIFEST_MALFORMED";
 
-  /** Output when the install app failed by invalid apk. */
-  public static final String OUTPUT_INSTALL_FAILED_INVALID_APK = "INSTALL_FAILED_INVALID_APK";
+  /** Parser did not find any certificates in the APK. */
+  public static final String OUTPUT_INSTALL_PARSE_FAILED_NO_CERTIFICATES =
+      "INSTALL_PARSE_FAILED_NO_CERTIFICATES";
 
-  /** Output when the install app failed by duplicate permission. */
-  public static final String OUTPUT_INSTALL_FAILED_DUPLICATE_PERMISSION =
-      "INSTALL_FAILED_DUPLICATE_PERMISSION";
+  /** Parser encountered an unexpected exception. */
+  public static final String OUTPUT_INSTALL_PARSE_FAILED_UNEXPECTED_EXCEPTION =
+      "INSTALL_PARSE_FAILED_UNEXPECTED_EXCEPTION";
 
   /** Output when the install app failed by duplicate permission. */
   public static final String OUTPUT_INSTALL_FAILED_INVALID_APK_SPLIT_NULL =
       "INSTALL_FAILED_INVALID_APK: Split null was defined multiple times";
-
-  /** Output when the install app failed by older sdk. */
-  public static final String OUTPUT_INSTALL_FAILED_OLDER_SDK = "INSTALL_FAILED_OLDER_SDK";
 
   /** Prefix out the output lines of the "adb shell pm list package -3" command. */
   @VisibleForTesting static final String OUTPUT_PACKAGE_PREFIX = "package:";
@@ -1891,6 +1968,65 @@ public class AndroidPackageManagerUtil {
    */
   private static void maybeThrowNonInfraInstallationError(String output, String apk)
       throws MobileHarnessException {
+    if (output.contains(OUTPUT_INSTALL_FAILED_CPU_ABI_INCOMPATIBLE)) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_CPU_ABI_INCOMPATIBLE,
+          String.format(
+              "Failed to install %s due to CPU ABI incompatible between app and device: %s",
+              apk, output));
+    }
+
+    if (output.contains(OUTPUT_INSTALL_FAILED_DEPRECATED_SDK_VERSION)) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_DEPRECATED_SDK_VERSION,
+          String.format("Failed to install %s due to deprecated SDK version: %s", apk, output));
+    }
+
+    if (output.contains(OUTPUT_INSTALL_FAILED_DEXOPT)) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_DEXOPT,
+          String.format("Failed to install %s due to dexopt error: %s", apk, output));
+    }
+
+    if (output.contains(OUTPUT_INSTALL_FAILED_DUPLICATE_PERMISSION)) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_DUPLICATE_PERMISSION,
+          String.format(
+              "Failed to install %s due to a defined permission is already defined by some existing"
+                  + " package: %s",
+              apk, output));
+    }
+
+    if (output.contains(OUTPUT_INSTALL_FAILED_INVALID_APK)) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_INVALID_APK,
+          String.format("Failed to install %s due to an invalid apk file: %s", apk, output));
+    }
+
+    if (output.contains(OUTPUT_INSTALL_FAILED_MISSING_FEATURE)) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_MISSING_FEATURE,
+          String.format(
+              "Failed to install %s due to a missing feature on the device: %s", apk, output));
+    }
+    if (output.contains(OUTPUT_INSTALL_FAILED_MISSING_SHARED_LIBRARY)) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_MISSING_SHARED_LIBRARY,
+          String.format(
+              "Failed to install %s due to missing shared libraries: %s%n"
+                  + "Please check <uses-library> element in your manifest.%n",
+              apk, output));
+    }
+
+    if (output.contains(OUTPUT_INSTALL_FAILED_NEWER_SDK)) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_NEWER_SDK,
+          String.format(
+              "Failed to install %s, because current SDK is newer than that required by the "
+                  + " package: %s",
+              apk, output));
+    }
+
     if (output.contains(OUTPUT_INSTALL_FAILED_NO_MATCHING_ABIS)) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_ABI_INCOMPATIBLE,
@@ -1902,13 +2038,71 @@ public class AndroidPackageManagerUtil {
               + " for more details.");
     }
 
-    if (output.contains(OUTPUT_INSTALL_FAILED_MISSING_SHARED_LIBRARY)) {
+    if (output.contains(OUTPUT_INSTALL_FAILED_OLDER_SDK)) {
       throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_MISSING_SHARED_LIBRARY,
+          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_OLDER_SDK,
+          String.format("Failed to install %s due to the older sdk: %s", apk, output));
+    }
+
+    if (output.contains(OUTPUT_INSTALL_FAILED_PERMISSION_MODEL_DOWNGRADE)) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_PERMISSION_MODEL_DOWNGRADE,
+          String.format("Failed to install %s due to permission model downgrade: %s", apk, output));
+    }
+
+    if (output.contains(OUTPUT_INSTALL_FAILED_SHARED_USER_INCOMPATIBLE)) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_SHARED_USER_INCOMPATIBLE,
+          String.format("Failed to install %s due to shared user incompatible: %s", apk, output));
+    }
+
+    if (output.contains(OUTPUT_INSTALL_FAILED_TEST_ONLY)) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_TEST_ONLY,
           String.format(
-              "Failed to install %s due to missing shared libraries: %s%n"
-                  + "Please check <uses-library> element in your manifest.%n",
-              apk, output));
+              "Failed to install %s due to test only flag set in the package: %s", apk, output));
+    }
+
+    if (output.contains(OUTPUT_INSTALL_FAILED_VERIFICATION_FAILURE)) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_FAILED_VERIFICATION_FAILURE,
+          String.format("Failed to install %s due to verification error: %s", apk, output));
+    }
+
+    if (output.contains(OUTPUT_INSTALL_PARSE_FAILED_BAD_MANIFEST)) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_PARSE_FAILED_BAD_MANIFEST,
+          String.format("Failed to install %s due to bad manifest: %s", apk, output));
+    }
+
+    if (output.contains(OUTPUT_INSTALL_PARSE_FAILED_BAD_PACKAGE_NAME)) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_PARSE_FAILED_BAD_PACKAGE_NAME,
+          String.format("Failed to install %s due to bad package name: %s", apk, output));
+    }
+
+    if (output.contains(OUTPUT_INSTALL_PARSE_FAILED_BAD_SHARED_USER_ID)) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_PARSE_FAILED_BAD_SHARED_USER_ID,
+          String.format("Failed to install %s due to bad shared user id: %s", apk, output));
+    }
+
+    if (output.contains(OUTPUT_INSTALL_PARSE_FAILED_CERTIFICATE_ENCODING)) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_PARSE_FAILED_CERTIFICATE_ENCODING,
+          String.format("Failed to install %s due to certificate encoding: %s", apk, output));
+    }
+
+    if (output.contains(OUTPUT_INSTALL_PARSE_FAILED_INCONSISTENT_CERTIFICATES)) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_PARSE_FAILED_INCONSISTENT_CERTIFICATES,
+          String.format("Failed to install %s due to inconsistent certificates: %s", apk, output));
+    }
+
+    if (output.contains(OUTPUT_INSTALL_PARSE_FAILED_MANIFEST_EMPTY)) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_PARSE_FAILED_MANIFEST_EMPTY,
+          String.format("Failed to install %s due to manifest empty: %s", apk, output));
     }
 
     if (output.contains(OUTPUT_INSTALL_PARSE_FAILED_MANIFEST_MALFORMED)) {
@@ -1917,22 +2111,16 @@ public class AndroidPackageManagerUtil {
           String.format("Failed to install %s due to the manifest marlformed: %s", apk, output));
     }
 
-    if (output.contains(OUTPUT_INSTALL_FAILED_INVALID_APK)) {
+    if (output.contains(OUTPUT_INSTALL_PARSE_FAILED_NO_CERTIFICATES)) {
       throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_INVALID_APK,
-          String.format("Failed to install %s due to the invalid apk: %s", apk, output));
+          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_PARSE_FAILED_NO_CERTIFICATES,
+          String.format("Failed to install %s due to no certificates: %s", apk, output));
     }
 
-    if (output.contains(OUTPUT_INSTALL_FAILED_DUPLICATE_PERMISSION)) {
+    if (output.contains(OUTPUT_INSTALL_PARSE_FAILED_UNEXPECTED_EXCEPTION)) {
       throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_DUPLICATE_PERMISSION,
-          String.format("Failed to install %s due to the duplicate permission: %s", apk, output));
-    }
-
-    if (output.contains(OUTPUT_INSTALL_FAILED_OLDER_SDK)) {
-      throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_OLDER_SDK,
-          String.format("Failed to install %s due to the older sdk: %s", apk, output));
+          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_PARSE_FAILED_UNEXPECTED_EXCEPTION,
+          String.format("Failed to install %s due to unexpected exception: %s", apk, output));
     }
   }
 
