@@ -72,6 +72,9 @@ public class AndroidLogcatMonitoringDecorator extends BaseDecorator
   private static final String DATE_COMMAND = "date +%Y-%m-%d\\ %H:%M:%S.000";
   private static final DateTimeFormatter DATE_TIME_FORMATTER =
       DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
+
+  // Directory within the test genFilesDir which holds all the decorator outputs.
+  private static final String DECORATOR_OUTPUTS_DIR = "logcat_monitoring";
   private static final String UNPARSED_LOGCAT_FILE = "unparsed_logcat.txt";
   private static final String LOGCAT_MONITORING_REPORT_PROTO = "logcat_monitoring_report.proto";
 
@@ -156,7 +159,7 @@ public class AndroidLogcatMonitoringDecorator extends BaseDecorator
     }
     var report = createReport(logcatEvents);
     testInfo.log().atInfo().alsoTo(logger).log("\n#### Logcat Monitoring Report ####\n%s", report);
-    Path reportPath = Path.of(testInfo.getGenFileDir(), LOGCAT_MONITORING_REPORT_PROTO);
+    Path reportPath = getDecoratorOutputsDir(testInfo).resolve(LOGCAT_MONITORING_REPORT_PROTO);
     localFileUtil.writeToFile(reportPath.toString(), report.toByteArray());
   }
 
@@ -165,7 +168,7 @@ public class AndroidLogcatMonitoringDecorator extends BaseDecorator
     if (unparsedLogcatLines.isEmpty()) {
       return;
     }
-    Path unparsedLogcatPath = Path.of(testInfo.getGenFileDir(), UNPARSED_LOGCAT_FILE);
+    Path unparsedLogcatPath = getDecoratorOutputsDir(testInfo).resolve(UNPARSED_LOGCAT_FILE);
     localFileUtil.writeToFile(
         unparsedLogcatPath.toString(), Joiner.on(System.lineSeparator()).join(unparsedLogcatLines));
   }
@@ -242,7 +245,7 @@ public class AndroidLogcatMonitoringDecorator extends BaseDecorator
         packagesToScan,
         tags,
         deviceTimeOnStart,
-        Path.of(testInfo.getGenFileDir()));
+        getDecoratorOutputsDir(testInfo));
   }
 
   private void checkForInfraError() throws MobileHarnessException {
@@ -281,6 +284,10 @@ public class AndroidLogcatMonitoringDecorator extends BaseDecorator
         }
       }
     }
+  }
+
+  private static Path getDecoratorOutputsDir(TestInfo testInfo) throws MobileHarnessException {
+    return Path.of(testInfo.getGenFileDir()).resolve(DECORATOR_OUTPUTS_DIR);
   }
 
   private static ImmutableList<DeviceEventDetector.DeviceEventConfig> makeDeviceEventDetectorConfig(

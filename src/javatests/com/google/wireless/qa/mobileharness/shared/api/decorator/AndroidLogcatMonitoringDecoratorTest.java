@@ -80,11 +80,12 @@ public class AndroidLogcatMonitoringDecoratorTest {
   @Mock DropboxExtractor dropboxExtractor;
 
   private LocalFileUtil localFileUtil;
-  private Path genFilesDir;
+  private Path decoratorOutputDir;
 
   @Before
   public void setUp() throws Exception {
-    genFilesDir = temporaryFolder.newFolder().toPath();
+    var genFilesDir = temporaryFolder.newFolder().toPath();
+    decoratorOutputDir = genFilesDir.resolve("logcat_monitoring");
     localFileUtil = new LocalFileUtil();
 
     when(decoratedDriver.getDevice()).thenReturn(device);
@@ -146,7 +147,7 @@ public class AndroidLogcatMonitoringDecoratorTest {
     decorator.run(testInfo);
 
     verify(logcatLineProxy).getUnparsedLines();
-    Path unparsedLogcatPath = genFilesDir.resolve("unparsed_logcat.txt");
+    Path unparsedLogcatPath = decoratorOutputDir.resolve("unparsed_logcat.txt");
     assertThat(Files.exists(unparsedLogcatPath)).isTrue();
     assertThat(Files.readAllLines(unparsedLogcatPath)).containsExactly(line1, line2);
   }
@@ -211,7 +212,7 @@ public class AndroidLogcatMonitoringDecoratorTest {
                 DropboxTag.DATA_APP_CRASH,
                 DropboxTag.SYSTEM_APP_CRASH),
             LocalDateTime.of(2025, 1, 1, 10, 0, 0),
-            genFilesDir);
+            decoratorOutputDir);
   }
 
   @Test
@@ -237,7 +238,7 @@ public class AndroidLogcatMonitoringDecoratorTest {
 
     decorator.run(testInfo);
 
-    Path reportPath = genFilesDir.resolve("logcat_monitoring_report.proto");
+    Path reportPath = decoratorOutputDir.resolve("logcat_monitoring_report.proto");
     assertThat(Files.exists(reportPath)).isTrue();
     LogcatMonitoringReport report =
         LogcatMonitoringReport.parseFrom(
