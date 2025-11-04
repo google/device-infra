@@ -71,6 +71,7 @@ public abstract class DetectionResult {
     SIMULATOR,
     STATIC_TESTBED,
     TTB,
+    LSUSB,
     VIDEO,
     WINDOWS,
   }
