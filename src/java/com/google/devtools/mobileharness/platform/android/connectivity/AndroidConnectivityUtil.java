@@ -207,6 +207,12 @@ public class AndroidConnectivityUtil {
   /** The target host if the device is in China. */
   @VisibleForTesting static final String HOST_FOR_IN_CHINA = "http://www.gstatic.com";
 
+  /** The target host to ping if the device is not in China. */
+  @VisibleForTesting static final String HOST_PING_FOR_NOT_IN_CHINA = "www.google.com";
+
+  /** The target host to ping if the device is in China. */
+  @VisibleForTesting static final String HOST_PING_FOR_IN_CHINA = "www.gstatic.com";
+
   /** Output of successfully using apk to ping. */
   private static final String PING_SUCCESS = "INSTRUMENTATION_RESULT: result=true";
 
@@ -676,7 +682,7 @@ public class AndroidConnectivityUtil {
    * @throws InterruptedException if current thread is interrupted during this method
    */
   public double pingSuccessRate(String serial, String host, int count) throws InterruptedException {
-    String shell = String.format(ADB_SHELL_TEMPLATE_PING, SHORT_PING_TIMEOUT.getSeconds(), host);
+    String shell = String.format(ADB_SHELL_TEMPLATE_PING, SHORT_PING_TIMEOUT.toSeconds(), host);
     int successCount = 0;
     for (int i = 0; i < count; i++) {
       String output = null;
@@ -713,24 +719,40 @@ public class AndroidConnectivityUtil {
           "Wifi util functionality is disabled. Skip pinging for device %s.", serial);
       return false;
     }
+    boolean wifiUtilPingFailed = false;
     String targetUrl = HOST_FOR_NOT_IN_CHINA;
+    String targetHostForShellPing = HOST_PING_FOR_NOT_IN_CHINA;
     try {
       if (netUtil.getLocalHostLocationType().equals(LocationType.IN_CHINA)) {
         targetUrl = HOST_FOR_IN_CHINA;
+        targetHostForShellPing = HOST_PING_FOR_IN_CHINA;
       }
+    } catch (MobileHarnessException e) {
+      logger.atWarning().log(
+          "Failed to get local host location type for device %s: %s",
+          serial, MoreThrowables.shortDebugString(e));
+      return false;
+    }
+
+    try {
       String output =
           adb.runShell(
               serial, String.format(ADB_SHELL_TEMPLATE_PING_URL, targetUrl), getLongPingTimeout());
       if (!output.contains(PING_SUCCESS)) {
         logger.atWarning().log(
             "Device %s is not able to ping %s, output=[%s] ", serial, targetUrl, output);
-        return false;
+        wifiUtilPingFailed = true;
       } else {
         return true;
       }
     } catch (MobileHarnessException e) {
       logger.atWarning().log(
           "Device %s failed to ping %s: %s", serial, targetUrl, MoreThrowables.shortDebugString(e));
+      wifiUtilPingFailed = true;
+    }
+    if (wifiUtilPingFailed) {
+      logger.atInfo().log("Device %s tries to ping (via shell) %s", serial, targetHostForShellPing);
+      return pingSuccessRate(serial, targetHostForShellPing, /* count= */ 5) > 0.5;
     }
     return false;
   }
