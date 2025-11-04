@@ -62,9 +62,6 @@ public class LabRpcProtoConverter {
     String testId = testInfo.locator().getId();
     JobInfo jobInfo = testInfo.jobInfo();
     return KickOffTestRequest.newBuilder()
-        .setJobId(jobInfo.locator().getId())
-        .setTestId(testId)
-        .setDeprecatedDeviceId(deviceLocators.get(0).getSerial())
         .addAllDeviceId(
             deviceLocators.stream().map(DeviceLocator::getSerial).collect(toImmutableList()))
         .setClientVersion(Version.CLIENT_VERSION.toString())
