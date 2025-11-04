@@ -152,7 +152,6 @@ message GetTestStatusResponse {
   // Current status of the test.
   optional mobileharness.shared.TestStatus test_status = 1;
 
-  optional mobileharness.shared.TestResult test_result = 2 [deprecated = true];
   optional stability.model.ExceptionDetail test_result_cause = 8;
   // Test result. When the result is PASS/FAIL/ERROR/TIMEOUT, it doesn't mean
   // the test is finished. The lab server may do some addition work like dumping
@@ -174,7 +173,7 @@ message GetTestStatusResponse {
   // field will not be set.
   repeated mobileharness.api.model.DeviceFeature device_feature = 7;
 
-  reserved 6;
+  reserved 2, 6;
 }
 
 message GetTestDetailRequest {

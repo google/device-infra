@@ -172,11 +172,7 @@ public class LabRpcProtoConverter {
   private static void setTestResultByGetTestStatusResponse(
       GetTestStatusResponse resp, TestInfo testInfo, Result testResult) {
     TestResult resultType;
-    if (resp.hasTestResultType()) {
-      resultType = resp.getTestResultType();
-    } else {
-      resultType = TestResult.valueOf(resp.getTestResult().name());
-    }
+    resultType = resp.getTestResultType();
     ExceptionProto.ExceptionDetail resultCause =
         resp.hasTestResultCause() ? resp.getTestResultCause() : null;
     setTestResultByResultCause(resultType, resultCause, testInfo, testResult);
