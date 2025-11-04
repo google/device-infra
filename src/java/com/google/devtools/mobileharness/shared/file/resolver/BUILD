@@ -22,6 +22,7 @@ package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
         "//:omnilab_fusion",
+        "//devtools/mobileharness/project:android_tv_team",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/job:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/lab:__pkg__",

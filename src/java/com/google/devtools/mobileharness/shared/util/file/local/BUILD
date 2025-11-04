@@ -20,6 +20,7 @@ package(
     default_visibility = [
         "//:deviceinfra_api_users",
         "//:omnilab_fusion",
+        "//devtools/mobileharness/project:android_tv_team",
     ],
 )
 
