@@ -109,6 +109,7 @@ py_proto_library(
 py_grpc_library(
     name = "session_service_py_grpc",
     srcs = [":session_service_proto"],
+    tags = ["deviceinfra_disable_in_kokoro"],
     deps = [":session_service_py_proto"],
 )
 

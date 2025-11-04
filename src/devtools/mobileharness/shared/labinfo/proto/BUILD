@@ -54,5 +54,6 @@ py_proto_library(
 py_grpc_library(
     name = "lab_info_service_py_grpc",
     srcs = [":lab_info_service_proto"],
+    tags = ["deviceinfra_disable_in_kokoro"],
     deps = [":lab_info_service_py_proto"],
 )

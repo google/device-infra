@@ -26,6 +26,7 @@ package(
 py_library(
     name = "grpc_error_util_lib",
     srcs = ["grpc_error_util.py"],
+    tags = ["deviceinfra_disable_in_kokoro"],
     deps = [
         "//src/devtools/common/metrics/stability/model/proto:error_py_proto",
         "//src/devtools/common/metrics/stability/rpc/proto:rpc_error_payload_py_proto",
@@ -38,6 +39,7 @@ py_test(
     srcs = [
         "grpc_error_util_test.py",
     ],
+    tags = ["deviceinfra_disable_in_kokoro"],
     deps = [
         ":grpc_error_util_lib",
         "@abseil-py//absl/testing:absltest",
