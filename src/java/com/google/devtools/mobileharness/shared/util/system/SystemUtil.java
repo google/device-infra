@@ -595,9 +595,6 @@ public class SystemUtil {
     // Parses the content under the header.
     for (i++; i < lines.length; i++) {
       String line = lines[i].trim();
-      if (!line.endsWith("(LISTEN)")) {
-        continue;
-      }
       @SuppressWarnings("StringSplitter")
       String[] words = line.split("\\s+");
       try {
