@@ -327,12 +327,20 @@ final class AtsServerSessionPlugin {
                                       .properties()
                                       .getBoolean(XtsConstants.TRADEFED_JOBS_HAS_RESULT_FILE)
                                       .orElse(false));
-          // The static xts job is the first job in the list, if the test failed, we don't
-          // execute any MCTS jobs.
+          // The static xts job is the first job in the list, if the test result is not complete, we
+          // don't execute any MCTS jobs.
           if (isStaticXtsJobAndFailed) {
+            logger.atInfo().log(
+                "Session [%s]: Static XTS job [%s] ended but result is not complete, clearing"
+                    + " remaining tradefed jobs.",
+                sessionInfo.getSessionId(), jobInfo.locator().getId());
             tradefedJobs.clear();
           } else {
-            sessionInfo.addJob(tradefedJobs.remove(0));
+            JobInfo nextJob = tradefedJobs.remove(0);
+            logger.atInfo().log(
+                "Session [%s]: Adding next tradefed job [%s] to session.",
+                sessionInfo.getSessionId(), nextJob.locator().getId());
+            sessionInfo.addJob(nextJob);
           }
         }
 
