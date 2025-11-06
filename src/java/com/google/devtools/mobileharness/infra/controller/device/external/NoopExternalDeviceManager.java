@@ -32,7 +32,11 @@ public class NoopExternalDeviceManager implements ExternalDeviceManager {
 
   @Override
   public DeviceReservation reserveDevice(
-      String deviceId, String deviceClass, Set<String> deviceTypes, Duration timeout) {
+      String deviceId,
+      String deviceClass,
+      Set<String> deviceTypes,
+      Duration maxWaitTime,
+      boolean allowUnavailableDevice) {
     return new DeviceReservation() {
       @Override
       public void close() {}

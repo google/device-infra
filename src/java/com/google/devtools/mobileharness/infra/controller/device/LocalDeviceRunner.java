@@ -264,7 +264,8 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
               device.getDeviceId(),
               device.getClass().getSimpleName(),
               device.getDeviceTypes(),
-              Duration.ofDays(1).minusMinutes(1));
+              Duration.ofDays(1).minusMinutes(1),
+              /* allowUnavailableDevice= */ true);
       prepareDevice();
       // Release the reservation if it can be successfully initialized.
       if (deviceReservation != null) {
@@ -282,7 +283,8 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
                   device.getDeviceId(),
                   device.getClass().getSimpleName(),
                   device.getDeviceTypes(),
-                  Duration.ofSeconds(5));
+                  Duration.ofSeconds(5),
+                  /* allowUnavailableDevice= */ false);
           if (!deviceReservation.getReservationId().isEmpty()) {
             device
                 .info()
@@ -360,7 +362,8 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
                   device.getDeviceId(),
                   device.getClass().getSimpleName(),
                   device.getDeviceTypes(),
-                  Duration.between(clock.instant(), expireTime))) {
+                  Duration.between(clock.instant(), expireTime),
+                  /* allowUnavailableDevice= */ false)) {
         device.tearDown();
 
         needReboot =
