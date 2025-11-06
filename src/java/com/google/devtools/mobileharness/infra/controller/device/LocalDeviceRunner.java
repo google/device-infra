@@ -414,7 +414,7 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
   private boolean isAvailableInExternalDeviceManager() {
     ExternalDeviceManager.DeviceStatus deviceStatus =
         externalDeviceManager.getDeviceStatus(
-            device.getDeviceId(), device.getClass().getSimpleName());
+            device.getDeviceId(), device.getClass().getSimpleName(), device.getDeviceTypes());
     return deviceStatus.equals(ExternalDeviceManager.DeviceStatus.IDLE);
   }
 
@@ -426,7 +426,7 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
     while (clock.instant().isBefore(expireTime)) {
       ExternalDeviceManager.DeviceStatus deviceStatus =
           externalDeviceManager.getDeviceStatus(
-              device.getDeviceId(), device.getClass().getSimpleName());
+              device.getDeviceId(), device.getClass().getSimpleName(), device.getDeviceTypes());
       if (deviceStatus.equals(ExternalDeviceManager.DeviceStatus.IDLE)
           || deviceStatus.equals(ExternalDeviceManager.DeviceStatus.NEAR_IDLE)) {
         return true;

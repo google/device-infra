@@ -22,6 +22,7 @@ import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * The device manager which can operate the devices controlled by non-MH lab server device manager.
@@ -41,8 +42,15 @@ public interface ExternalDeviceManager extends DrainHandler {
   DeviceReservation reserveDevice(String deviceId, String deviceType, Duration timeout)
       throws MobileHarnessException, InterruptedException;
 
-  /** Gets the device status. */
-  DeviceStatus getDeviceStatus(String deviceId, String deviceType);
+  /**
+   * Gets the device status.
+   *
+   * @param deviceId the device id to get the status
+   * @param deviceClass the device class name to get the status
+   * @param deviceTypes the device types to get the status
+   * @return the device status
+   */
+  DeviceStatus getDeviceStatus(String deviceId, String deviceClass, Set<String> deviceTypes);
 
   /**
    * Gets the extra dimensions provided by external device manager.

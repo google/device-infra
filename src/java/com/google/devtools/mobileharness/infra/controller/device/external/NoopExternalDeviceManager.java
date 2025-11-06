@@ -22,6 +22,7 @@ import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * A dummy external device manager which can be used when there's no another device manager on the
@@ -46,7 +47,8 @@ public class NoopExternalDeviceManager implements ExternalDeviceManager {
   }
 
   @Override
-  public DeviceStatus getDeviceStatus(String deviceId, String deviceType) {
+  public DeviceStatus getDeviceStatus(
+      String deviceId, String deviceClass, Set<String> deviceTypes) {
     return DeviceStatus.IDLE;
   }
 
