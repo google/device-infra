@@ -50,6 +50,7 @@ type downloadStats struct {
 	FileDownloadTimeMs int64  `json:"file_download_time_ms"`
 	ChunkRestoreTimeMs int64  `json:"chunk_restore_time_ms"`
 	DownloadError      string `json:"download_error"`
+	Notes              string `json:"notes"`
 }
 
 // prepareSymLinksAndDirs creates directories and symbolic links. It is executed before checking
@@ -434,6 +435,12 @@ func (d *DownloadJob) doDownloadInternal(ctx context.Context) error {
 			return err
 		}
 	}
+
+	if err := d.moveChunksIndexFileIfNeeded(); err != nil {
+		// This is optional and should not fail the download. Just log it.
+		log.Error(err)
+	}
+
 	fileDownloadTime := time.Since(start)
 	log.Infof("finished downloading files, took %s", fileDownloadTime)
 	d.downloadStats.FileDownloadTimeMs = fileDownloadTime.Milliseconds()
@@ -450,6 +457,31 @@ func (d *DownloadJob) doDownloadInternal(ctx context.Context) error {
 		log.Infof("finished restoring chunked files, took %s", chunkRestoreTime)
 		d.downloadStats.ChunkRestoreTimeMs = chunkRestoreTime.Milliseconds()
 	}
+
+	return nil
+}
+
+// Moves the index file to its primary location if not already there. Needed for very old builds.
+func (d *DownloadJob) moveChunksIndexFileIfNeeded() error {
+	chunkDir := filepath.Join(d.Dir, chunkerutil.ChunksDirName)
+	if _, err := os.Stat(chunkDir); err != nil {
+		return nil // skip if chunkDir does not exist.
+	}
+	primaryIndexFile := filepath.Join(chunkDir, chunkerutil.ChunksIndexFileName)
+	if _, err := os.Stat(primaryIndexFile); err == nil {
+		return nil // skip if primaryIndexFile already exists.
+	}
+	secondaryIndexFile := filepath.Join(d.Dir, chunkerutil.ChunksIndexFileName)
+	if _, err := os.Stat(secondaryIndexFile); err != nil {
+		return fmt.Errorf("no chunks index file found")
+	}
+	if err := os.Rename(secondaryIndexFile, primaryIndexFile); err != nil {
+		return fmt.Errorf("failed to move chunks index file: %v", err)
+	}
+
+	msg := fmt.Sprintf("Chunks index file moved from %s to %s.", secondaryIndexFile, primaryIndexFile)
+	log.Infof("%s", msg)
+	d.downloadStats.Notes = msg
 
 	return nil
 }

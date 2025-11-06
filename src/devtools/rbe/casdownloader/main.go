@@ -33,7 +33,7 @@ import (
 var adcCredentialsScriptContent []byte
 
 const (
-	version = "1.24"
+	version = "1.25"
 	// The headers key of our RequestMetadata.
 	remoteHeadersKey = "build.bazel.remote.execution.v2.requestmetadata-bin"
 	// RBECASConcurrency is the default maximum number of concurrent upload and download operations for RBE clients.
