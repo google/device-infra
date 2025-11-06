@@ -31,7 +31,8 @@ import java.util.Set;
 public class NoopExternalDeviceManager implements ExternalDeviceManager {
 
   @Override
-  public DeviceReservation reserveDevice(String deviceId, String deviceType, Duration timeout) {
+  public DeviceReservation reserveDevice(
+      String deviceId, String deviceClass, Set<String> deviceTypes, Duration timeout) {
     return new DeviceReservation() {
       @Override
       public void close() {}

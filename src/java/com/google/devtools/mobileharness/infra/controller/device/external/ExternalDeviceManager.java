@@ -33,13 +33,15 @@ public interface ExternalDeviceManager extends DrainHandler {
    * Reserves a device.
    *
    * @param deviceId the device id to be reserved
+   * @param deviceClass the device class name to be reserved
    * @param deviceTypes the device types to be reserved
    * @param timeout the timeout for the reservation to succeed. The actual timeout may a little
    *     longer than the assigned value depending on the implementation.
    * @return the DeviceReservation object representing a reservation.
    * @throws MobileHarnessException if failed to reserve a device.
    */
-  DeviceReservation reserveDevice(String deviceId, String deviceType, Duration timeout)
+  DeviceReservation reserveDevice(
+      String deviceId, String deviceClass, Set<String> deviceTypes, Duration timeout)
       throws MobileHarnessException, InterruptedException;
 
   /**

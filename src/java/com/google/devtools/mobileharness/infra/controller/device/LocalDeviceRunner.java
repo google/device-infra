@@ -263,6 +263,7 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
           externalDeviceManager.reserveDevice(
               device.getDeviceId(),
               device.getClass().getSimpleName(),
+              device.getDeviceTypes(),
               Duration.ofDays(1).minusMinutes(1));
       prepareDevice();
       // Release the reservation if it can be successfully initialized.
@@ -278,7 +279,10 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
           // Try to reserve device for 5 seconds. Even it failed, we can try in another iteration.
           deviceReservation =
               externalDeviceManager.reserveDevice(
-                  device.getDeviceId(), device.getClass().getSimpleName(), Duration.ofSeconds(5));
+                  device.getDeviceId(),
+                  device.getClass().getSimpleName(),
+                  device.getDeviceTypes(),
+                  Duration.ofSeconds(5));
           if (!deviceReservation.getReservationId().isEmpty()) {
             device
                 .info()
@@ -355,6 +359,7 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
               : externalDeviceManager.reserveDevice(
                   device.getDeviceId(),
                   device.getClass().getSimpleName(),
+                  device.getDeviceTypes(),
                   Duration.between(clock.instant(), expireTime))) {
         device.tearDown();
 
