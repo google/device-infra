@@ -65,6 +65,7 @@ public class AndroidLabTestSupportSettingsDecorator extends BaseDecorator
     AndroidLabTestSupportSettingsDecoratorSpec spec =
         testInfo.jobInfo().combinedSpec(this, deviceId);
     String labTestSupportApkPath = testInfo.jobInfo().files().getSingle(TAG_LAB_TEST_SUPPORT_APK);
+    int deviceSdkVersion = androidSystemSettingUtil.getDeviceSdkVersion(deviceId);
 
     apkInstaller.installApkIfNotExist(
         getDevice(),
@@ -74,7 +75,6 @@ public class AndroidLabTestSupportSettingsDecorator extends BaseDecorator
             .build(),
         testInfo.log());
 
-    int deviceSdkVersion = androidSystemSettingUtil.getDeviceSdkVersion(deviceId);
     if (spec.getDisableSmartLockForPasswordsAndFastPair()
         && !labTestSupportHelper.disableSmartLockForPasswordsAndFastPair(
             deviceId, deviceSdkVersion)) {
@@ -85,6 +85,13 @@ public class AndroidLabTestSupportSettingsDecorator extends BaseDecorator
               "Failed to disable the features of \"smart lock for passwords\" and \"fast pair with"
                   + " smartwatches/headphones\" on device %s",
               deviceId));
+    }
+
+    if (spec.getEnableAdsDebugLogging()
+        && !labTestSupportHelper.enableAdsDebuggingLogging(deviceId, deviceSdkVersion)) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_LAB_TEST_SUPPORT_SETTINGS_DECORATOR_ENABLE_ADS_DEBUG_LOGGING_ERROR,
+          String.format("Failed to enable ads debugging logging on device %s", deviceId));
     }
 
     getDecorated().run(testInfo);

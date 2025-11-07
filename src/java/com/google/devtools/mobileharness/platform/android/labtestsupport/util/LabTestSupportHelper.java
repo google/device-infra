@@ -41,6 +41,10 @@ public class LabTestSupportHelper {
   static final String LTS_CONFIG_PHENOTYPE_FLAGS_INSTRUMENTATION_RUNNER_NAME =
       LAB_TEST_SUPPORT_PACKAGE + ".ConfigurePhenotypeFlagsInstrumentation";
 
+  @VisibleForTesting
+  static final String LTS_ENABLE_ADS_DEBUG_LOGGING_INSTRUMENTATION_RUNNER_NAME =
+      LAB_TEST_SUPPORT_PACKAGE + ".EnableAdsDebugLoggingInstrumentation";
+
   private final AndroidAdbUtil androidAdbUtil;
   private final AndroidInstrumentationUtil androidInstrumentationUtil;
 
@@ -65,7 +69,8 @@ public class LabTestSupportHelper {
   public boolean disableSmartLockForPasswordsAndFastPair(String serial, int deviceSdkVersion)
       throws MobileHarnessException, InterruptedException {
     try {
-      return configurePhenotypeFlags(serial, deviceSdkVersion);
+      return runLtsInstrumentation(
+          serial, deviceSdkVersion, LTS_CONFIG_PHENOTYPE_FLAGS_INSTRUMENTATION_RUNNER_NAME);
     } catch (MobileHarnessException e) {
       throw new MobileHarnessException(
           AndroidErrorId.LAB_TEST_SUPPORT_DISABLE_SMART_LOCK_FOR_PASSWORDS_AND_FAST_PAIR_ERROR,
@@ -77,7 +82,20 @@ public class LabTestSupportHelper {
     }
   }
 
-  private boolean configurePhenotypeFlags(String serial, int deviceSdkVersion)
+  public boolean enableAdsDebuggingLogging(String serial, int deviceSdkVersion)
+      throws MobileHarnessException, InterruptedException {
+    try {
+      return runLtsInstrumentation(
+          serial, deviceSdkVersion, LTS_ENABLE_ADS_DEBUG_LOGGING_INSTRUMENTATION_RUNNER_NAME);
+    } catch (MobileHarnessException e) {
+      throw new MobileHarnessException(
+          AndroidErrorId.LAB_TEST_SUPPORT_ENABLE_ADS_DEBUG_LOGGING_ERROR,
+          String.format("Failed to enable ads debugging logging on device %s", serial),
+          e);
+    }
+  }
+
+  private boolean runLtsInstrumentation(String serial, int deviceSdkVersion, String runnerName)
       throws MobileHarnessException, InterruptedException {
     // This property is checked by the gms phenotype service.
     androidAdbUtil.setProperty(serial, ALLOW_LTS_PROP_NAME, "true");
@@ -87,7 +105,7 @@ public class LabTestSupportHelper {
             deviceSdkVersion,
             AndroidInstrumentationSetting.create(
                 LAB_TEST_SUPPORT_PACKAGE,
-                LTS_CONFIG_PHENOTYPE_FLAGS_INSTRUMENTATION_RUNNER_NAME,
+                runnerName,
                 /* className= */ null,
                 /* otherOptions= */ null,
                 /* async= */ false,
