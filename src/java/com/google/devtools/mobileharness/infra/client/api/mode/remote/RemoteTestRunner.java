@@ -1104,7 +1104,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
     return preferenceFromParam.orElse(
         defaultSandboxPreference
             ? ContainerModePreference.CONTAINER
-            : ContainerModePreference.NON_CONTAINER);
+            : ContainerModePreference.MANDATORY_NON_CONTAINER);
   }
 
   private SandboxSetting getSandboxSetting() {
