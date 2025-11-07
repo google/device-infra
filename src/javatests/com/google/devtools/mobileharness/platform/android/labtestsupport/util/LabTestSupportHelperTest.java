@@ -103,4 +103,50 @@ public final class LabTestSupportHelperTest {
         .isEqualTo(
             AndroidErrorId.LAB_TEST_SUPPORT_DISABLE_SMART_LOCK_FOR_PASSWORDS_AND_FAST_PAIR_ERROR);
   }
+
+  @Test
+  public void enableAdsDebuggingLogging_success() throws Exception {
+    when(androidInstrumentationUtil.instrument(any(), anyInt(), any(), any()))
+        .thenReturn("success=true");
+
+    assertThat(
+            labTestSupportHelper.enableAdsDebuggingLogging(DEVICE_ID, /* deviceSdkVersion= */ 34))
+        .isTrue();
+
+    verify(androidAdbUtil).setProperty(DEVICE_ID, LabTestSupportHelper.ALLOW_LTS_PROP_NAME, "true");
+    verify(androidInstrumentationUtil)
+        .instrument(
+            DEVICE_ID,
+            /* deviceSdkVersion= */ 34,
+            AndroidInstrumentationSetting.create(
+                LabTestSupportHelper.LAB_TEST_SUPPORT_PACKAGE,
+                LabTestSupportHelper.LTS_ENABLE_ADS_DEBUG_LOGGING_INSTRUMENTATION_RUNNER_NAME,
+                /* className= */ null,
+                /* otherOptions= */ null,
+                /* async= */ false,
+                /* showRawResults= */ false,
+                /* prefixAndroidTest= */ false,
+                /* noIsolatedStorage= */ false,
+                /* useTestStorageService= */ false,
+                /* enableCoverage= */ false),
+            /* timeout= */ Duration.ofMinutes(1));
+  }
+
+  @Test
+  public void enableAdsDebuggingLogging_instrumentationFailed_throwsException() throws Exception {
+    when(androidInstrumentationUtil.instrument(any(), anyInt(), any(), any()))
+        .thenThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_INSTRUMENTATION_COMMAND_EXEC_FAILED,
+                "instrumentation failed"));
+
+    assertThat(
+            assertThrows(
+                    MobileHarnessException.class,
+                    () ->
+                        labTestSupportHelper.enableAdsDebuggingLogging(
+                            DEVICE_ID, /* deviceSdkVersion= */ 34))
+                .getErrorId())
+        .isEqualTo(AndroidErrorId.LAB_TEST_SUPPORT_ENABLE_ADS_DEBUG_LOGGING_ERROR);
+  }
 }
