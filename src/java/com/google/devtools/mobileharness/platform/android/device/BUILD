@@ -42,3 +42,24 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+java_library(
+    name = "android_desktop_device_helper",
+    srcs = ["AndroidDesktopDeviceHelper.java"],
+    visibility = [
+        "//java/com/google/wireless/qa/mobileharness/shared/api:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/platform:__subpackages__",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector/flag",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/command",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local:res_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:base_device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@maven//:com_google_code_gson_gson",
+        "@maven//:com_google_errorprone_error_prone_annotations",
+        "@maven//:com_google_guava_guava",
+    ],
+)
