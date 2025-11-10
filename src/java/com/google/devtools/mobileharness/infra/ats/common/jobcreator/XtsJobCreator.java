@@ -48,6 +48,7 @@ import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryA
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryGenerator;
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.gson.Gson;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
@@ -130,7 +131,10 @@ public abstract class XtsJobCreator {
     // will make sure the static job is complete before starting the dynamic jobs, and skip
     // dynamic jobs if static job failed.
     ImmutableList<String> allDynamicDownloadJobNames =
-        ImmutableList.of(XtsConstants.STATIC_XTS_JOB_NAME, XtsConstants.DYNAMIC_MCTS_JOB_NAME);
+        Flags.instance().runDynamicDownloadMctsOnly.getNonNull()
+            ? ImmutableList.of(XtsConstants.DYNAMIC_MCTS_JOB_NAME)
+            : ImmutableList.of(
+                XtsConstants.STATIC_XTS_JOB_NAME, XtsConstants.DYNAMIC_MCTS_JOB_NAME);
 
     for (TradefedJobInfo tradefedJobInfo : tradefedJobInfoList) {
       if (shouldCreateDynamicDownloadJobs(tradefedJobInfo, sessionRequestInfo)) {

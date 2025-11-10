@@ -1974,6 +1974,14 @@ public class Flags {
       converter = Flag.IntegerConverter.class)
   public Flag<Integer> rpcPort = rpcPortDefault;
 
+  private static final Flag<Boolean> runDynamicDownloadMctsOnlyDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--run_dynamic_download_mcts_only",
+      description = "If true, only run dynamic download mcts. Default is false.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> runDynamicDownloadMctsOnly = runDynamicDownloadMctsOnlyDefault;
+
   private static final Flag<Integer> safeChargeLevelDefault = Flag.value(50);
 
   @com.beust.jcommander.Parameter(
