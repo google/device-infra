@@ -187,6 +187,9 @@ public enum ExtErrorId implements ErrorId {
   // NoOpDecorator: 91_051 ~ 91_060
   NO_OP_DECORATOR_TEST_FAILURE(91_051, ErrorType.CUSTOMER_ISSUE),
 
+  // Gem5 device: 91_061 ~ 91_100
+  GEM5_SIIMULATION_START_ERROR(91_061, ErrorType.CUSTOMER_ISSUE),
+
   EXT_PLACE_HOLDER_TO_BE_RENAMED(100_000, ErrorType.UNDETERMINED);
 
   public static final int MIN_CODE = InfraErrorId.MAX_CODE + 1;
