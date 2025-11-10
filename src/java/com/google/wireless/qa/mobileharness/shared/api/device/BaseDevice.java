@@ -460,18 +460,12 @@ public abstract class BaseDevice implements Device {
   }
 
   /**
-   * Add supported device type according to the driver name. If the driver class is not found, just
-   * ignores it.
+   * Add supported device type according to the driver name. If the driver class is not found,
+   * throw.
    */
-  public void addSupportedDriver(String driverClassSimpleName) throws InterruptedException {
-    Class<? extends Driver> driverClass;
-    try {
-      driverClass = ClassUtil.getDriverClass(driverClassSimpleName);
-    } catch (MobileHarnessException e) {
-      logger.atInfo().log("Driver %s not found. Ignored.", driverClassSimpleName);
-      return;
-    }
-    addSupportedDriver(driverClass);
+  public void addSupportedDriver(String driverClassSimpleName)
+      throws MobileHarnessException, InterruptedException {
+    addSupportedDriver(ClassUtil.getDriverClass(driverClassSimpleName));
   }
 
   /**
@@ -479,22 +473,17 @@ public abstract class BaseDevice implements Device {
    * system environment supports it.If the driver is not supported, it will be ignored and can not
    * be added.
    */
-  public void addSupportedDriver(Class<? extends Driver> driverClass) throws InterruptedException {
+  public void addSupportedDriver(Class<? extends Driver> driverClass)
+      throws MobileHarnessException, InterruptedException {
     if (info().supportedDrivers().contains(driverClass.getSimpleName())) {
       logger.atWarning().log("Driver %s already exists", driverClass.getCanonicalName());
       return;
     }
-    try {
-      Optional<Class<? extends EnvValidator>> envValidatorClass =
-          ClassUtil.getEnvValidatorClass(driverClass.getSimpleName());
-      if (envValidatorClass.isPresent()) {
-        // Runs the env validator.
-        validatorFactory.createEnvValidator(envValidatorClass.get()).validate(this);
-      }
-    } catch (MobileHarnessException e) {
-      logger.atInfo().log(
-          "Driver %s not supported: %s", driverClass.getSimpleName(), e.getMessage());
-      return;
+    Optional<Class<? extends EnvValidator>> envValidatorClass =
+        ClassUtil.getEnvValidatorClass(driverClass.getSimpleName());
+    if (envValidatorClass.isPresent()) {
+      // Runs the env validator.
+      validatorFactory.createEnvValidator(envValidatorClass.get()).validate(this);
     }
     info().supportedDrivers().add(driverClass.getSimpleName());
   }
