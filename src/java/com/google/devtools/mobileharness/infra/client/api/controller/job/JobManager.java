@@ -36,6 +36,7 @@ import com.google.devtools.mobileharness.infra.client.api.controller.allocation.
 import com.google.devtools.mobileharness.infra.client.api.controller.job.JobRunner.EventScope;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
 import com.google.devtools.mobileharness.infra.client.api.plugin.TestRetryHandler;
+import com.google.devtools.mobileharness.infra.client.api.util.uploader.ResultUploader;
 import com.google.devtools.mobileharness.infra.controller.messaging.MessageSender;
 import com.google.devtools.mobileharness.infra.controller.messaging.MessageSenderFinder;
 import com.google.devtools.mobileharness.infra.controller.test.event.TestExecutionEndedEvent;
@@ -76,19 +77,24 @@ public class JobManager implements Runnable, MessageSenderFinder {
   /** Some special internal plugins which needs to be executed before API/JAR plugins. */
   private final ImmutableList<Object> internalPlugins;
 
+  /** Uploader for test results, passed to each `JobRunner` created by this manager. */
+  private final List<ResultUploader> resultUploaders;
+
   @GuardedBy("itself")
   private final Map<String, JobRunnerAndFuture> jobRunners;
 
   public JobManager(
       ListeningExecutorService jobThreadPool,
+      List<ResultUploader> resultUploaders,
       EventBus globalInternalEventBus,
       List<Object> internalPlugins) {
-    this(jobThreadPool, globalInternalEventBus, internalPlugins, new HashMap<>());
+    this(jobThreadPool, resultUploaders, globalInternalEventBus, internalPlugins, new HashMap<>());
   }
 
   @VisibleForTesting
   JobManager(
       ListeningExecutorService jobThreadPool,
+      List<ResultUploader> resultUploaders,
       EventBus globalInternalEventBus,
       List<Object> internalPlugins,
       Map<String, JobRunnerAndFuture> jobRunners) {
@@ -118,7 +124,8 @@ public class JobManager implements Runnable, MessageSenderFinder {
         }
       }
       DeviceAllocator deviceAllocator = execMode.createDeviceAllocator(jobInfo, globalInternalBus);
-      JobRunner jobRunner = new JobRunner(jobInfo, deviceAllocator, execMode, globalInternalBus);
+      JobRunner jobRunner =
+          new JobRunner(jobInfo, deviceAllocator, execMode, resultUploaders, globalInternalBus);
 
       // Loads internal plugins.
       for (Object internalPlugin : internalPlugins) {
