@@ -53,6 +53,7 @@ import com.google.wireless.qa.mobileharness.shared.util.ArrayUtil;
 import com.google.wireless.qa.mobileharness.shared.util.DeviceUtil;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -1089,6 +1090,7 @@ public class AndroidPackageManagerUtil {
         dexMetadataPath != null ? new String[] {apkPath, dexMetadataPath} : new String[] {apkPath};
     String[] installCommand =
         installFiles.length > 1 ? ADB_ARGS_INSTALL_MULTIPLE : ADB_ARGS_INSTALL;
+
     if (sdkVersion >= 17) {
       installCommand = ArrayUtil.join(installCommand, "-d");
     }
@@ -1112,6 +1114,7 @@ public class AndroidPackageManagerUtil {
     // https://developer.android.com/studio/command-line/adb install [options] path section
     String[] installOnExternalCommand = ArrayUtil.join(installCommand, "--install-location", "2");
     installCommand = ArrayUtil.join(installCommand, installFiles);
+    logger.atWarning().log("[Debug] installCommand: %s", Arrays.toString(installCommand));
     installOnExternalCommand = ArrayUtil.join(installOnExternalCommand, installFiles);
 
     LineCallback lineCallback =
@@ -1132,6 +1135,7 @@ public class AndroidPackageManagerUtil {
               installCommand,
               installTimeout == null ? DEFAULT_INSTALL_TIMEOUT : installTimeout,
               lineCallback);
+      logger.atWarning().log("[Debug] output: %s", output);
     } catch (MobileHarnessException e) {
       installThrowsException = true;
       output = e.getMessage();
