@@ -230,6 +230,9 @@ public interface PropertyName {
      */
     HYBRID_UTP_SUMMARY_INCOMPATIBLE_REASON,
 
+    /** The runner used to run the test. */
+    IOS_RUNNER,
+
     /** Whether the test attempt is the final one. */
     IS_FINAL_ATTEMPT,
 
