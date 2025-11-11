@@ -1155,6 +1155,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableRdh = enableRdhDefault;
 
+  private static final Flag<Boolean> enableRepositoryRefactorInMasterDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enable_repository_refactor_in_master",
+      description = "Whether to enable repository refactor in master. Default is false.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableRepositoryRefactorInMaster = enableRepositoryRefactorInMasterDefault;
+
   private static final Flag<Boolean> enableRootDeviceDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(
