@@ -5,6 +5,7 @@
 import {DeviceConfig} from '../../models/device_config_models';
 import {DeviceOverview} from '../../models/device_overview';
 import {GetHostConfigResult} from '../../models/host_config_models';
+import {HostOverview} from '../../models/host_overview';
 
 /**
  * Defines the complete data set for a single mock device scenario.
@@ -27,4 +28,5 @@ export interface MockHostScenario {
   scenarioName: string;
   hostConfigResult: GetHostConfigResult;
   defaultDeviceConfig: DeviceConfig | null;
+  overview?: HostOverview;
 }

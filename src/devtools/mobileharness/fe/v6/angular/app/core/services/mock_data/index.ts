@@ -5,8 +5,6 @@
  * services throughout the application.
  */
 
-import {MockDeviceScenario, MockHostScenario} from './models';
-
 import {SCENARIO_IN_SERVICE_IDLE} from './devices/01_in_service_idle';
 import {SCENARIO_IN_SERVICE_BUSY} from './devices/02_in_service_busy';
 import {SCENARIO_OUT_OF_SERVICE_INIT} from './devices/03_out_of_service_init';
@@ -21,7 +19,6 @@ import {SCENARIO_OUT_OF_SERVICE_UNKNOWN_TIME} from './devices/11_out_of_service_
 import {SCENARIO_HOST_MANAGED_DEVICE} from './devices/12_host_managed_device';
 import {SCENARIO_EMPTY_CONFIG} from './devices/13_empty_config';
 import {SCENARIO_EMPTY_CONFIG_WITH_HOST} from './devices/14_empty_config_with_host';
-
 import {SCENARIO_HOST_NO_CONFIG} from './hosts/01_no_config';
 import {SCENARIO_HOST_BASIC_EDITABLE} from './hosts/02_basic_editable';
 import {SCENARIO_HOST_SHARED_MODE} from './hosts/03_shared_mode';
@@ -33,6 +30,18 @@ import {SCENARIO_HOST_DISCOVERY_HIDDEN} from './hosts/08_device_discovery_hidden
 import {SCENARIO_HOST_DEVICE_CONFIG_HIDDEN} from './hosts/09_device_config_hidden';
 import {SCENARIO_HOST_X_PROD} from './hosts/host_x_prod';
 import {SCENARIO_HOST_Z_PROD} from './hosts/host_z_prod';
+import {OVERVIEW_01} from './hosts/overview_01';
+import {OVERVIEW_02} from './hosts/overview_02';
+import {OVERVIEW_03} from './hosts/overview_03';
+import {OVERVIEW_04} from './hosts/overview_04';
+import {OVERVIEW_05} from './hosts/overview_05';
+import {OVERVIEW_06} from './hosts/overview_06';
+import {OVERVIEW_07} from './hosts/overview_07';
+import {OVERVIEW_08} from './hosts/overview_08';
+import {OVERVIEW_09} from './hosts/overview_09';
+import {OVERVIEW_10} from './hosts/overview_10';
+import {OVERVIEW_11} from './hosts/overview_11';
+import {MockDeviceScenario, MockHostScenario} from './models';
 
 /**
  * A comprehensive collection of mock device scenarios, each representing a
@@ -71,4 +80,15 @@ export const MOCK_HOST_SCENARIOS: MockHostScenario[] = [
   SCENARIO_HOST_DEVICE_CONFIG_HIDDEN,
   SCENARIO_HOST_X_PROD,
   SCENARIO_HOST_Z_PROD,
+  OVERVIEW_01,
+  OVERVIEW_02,
+  OVERVIEW_03,
+  OVERVIEW_04,
+  OVERVIEW_05,
+  OVERVIEW_06,
+  OVERVIEW_07,
+  OVERVIEW_08,
+  OVERVIEW_09,
+  OVERVIEW_10,
+  OVERVIEW_11,
 ];
