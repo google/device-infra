@@ -1358,6 +1358,8 @@ public class JobRunner implements Runnable {
             }
             hasNotStartedTests = true;
           }
+          testInfo.status().set(TestStatus.DONE);
+          testInfo.properties().add(PropertyName.Test.UNSTARTED_TEST, "true");
           break;
         case SUSPENDED:
           ErrorId errorId = InfraErrorId.CLIENT_JR_MNM_ALLOC_DEVICE_EXCEEDS_CEILING;

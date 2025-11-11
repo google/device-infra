@@ -369,6 +369,9 @@ public interface PropertyName {
     /** The MHFE link for the test. */
     TEST_LINK_IN_MHFE,
 
+    /** Whether the test is unstarted. Value type is boolean. */
+    UNSTARTED_TEST,
+
     /** The root path of the uploaded test gen files. */
     UPLOAD_GENFILES_ROOT_PATH,
 
