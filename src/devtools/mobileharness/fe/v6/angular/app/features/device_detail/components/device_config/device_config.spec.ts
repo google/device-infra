@@ -44,7 +44,5 @@ describe('DeviceConfig Component', () => {
             .dialogRef.componentInstance;
     dialogOpener.detectChanges();
     expect(comp).toBeTruthy();
-    // Example assertion, adjust as needed based on actual component content
-    // expect(fixture.nativeElement.querySelector('app-host-empty')).toBeTruthy();
   });
 });

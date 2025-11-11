@@ -21,48 +21,174 @@
           </div>
 
           <div class="header-actions">
-            <!-- Basic set of actions, responsive handling will be in CSS -->
-            <button
-              class="m3-action-button filled"
-              (click)="openConfiguration(device.id, device.host.name)"
-            >
-              <mat-icon>settings</mat-icon>Configuration
-            </button>
-            <button
-              class="m3-action-button filled"
-              (click)="takeScreenshot()"
-              [disabled]="!device.basicInfo.os.toLowerCase().includes('android')"
-            >
-              <mat-icon>screenshot</mat-icon>Screenshot
-            </button>
-            <button
-              class="m3-action-button filled"
-              (click)="remoteControl()"
-              [disabled]="!device.basicInfo.os.toLowerCase().includes('android')"
-            >
-              <mat-icon>important_devices</mat-icon>Remote Control
-            </button>
-            <button
-              class="m3-action-button filled"
-              (click)="flashDevice()"
-              [disabled]="!device.basicInfo.os.toLowerCase().includes('android')"
-            >
-              <mat-icon>flash_on</mat-icon>Flash
-            </button>
-            <button
-              class="m3-action-button filled"
-              (click)="getLogcat()"
-              [disabled]="!device.basicInfo.os.toLowerCase().includes('android')"
-            >
-              <mat-icon>description</mat-icon>Get Logcat
-            </button>
-            <button class="m3-action-button filled" (click)="quarantineDevice()">
-              <mat-icon>block</mat-icon>Quarantine
-            </button>
+            <!-- 2xl view -->
+            <div class="header-actions-2xl">
+              <button
+                class="m3-action-button filled"
+                (click)="openConfiguration(device.id, device.host.name)"
+              >
+                <mat-icon>settings</mat-icon>Configuration
+              </button>
+              <button
+                class="m3-action-button filled"
+                (click)="takeScreenshot()"
+                [disabled]="!device.basicInfo.os.toLowerCase().includes('android')"
+              >
+                <mat-icon>screenshot</mat-icon>Screenshot
+              </button>
+              <button
+                class="m3-action-button filled"
+                (click)="remoteControl()"
+                [disabled]="!device.basicInfo.os.toLowerCase().includes('android')"
+              >
+                <mat-icon>important_devices</mat-icon>Remote Control
+              </button>
+              <button
+                class="m3-action-button filled"
+                (click)="flashDevice()"
+                [disabled]="!device.basicInfo.os.toLowerCase().includes('android')"
+              >
+                <mat-icon>flash_on</mat-icon>Flash
+              </button>
+              <button
+                class="m3-action-button filled"
+                (click)="getLogcat()"
+                [disabled]="!device.basicInfo.os.toLowerCase().includes('android')"
+              >
+                <mat-icon>description</mat-icon>Get Logcat
+              </button>
+              <button class="m3-action-button filled" (click)="quarantineDevice()">
+                <mat-icon>block</mat-icon>Quarantine
+              </button>
+            </div>
+
+            <!-- xl view -->
+            <div class="header-actions-xl">
+              <button
+                class="m3-action-button filled"
+                (click)="openConfiguration(device.id, device.host.name)"
+              >
+                <mat-icon>settings</mat-icon>Configuration
+              </button>
+              <button
+                class="m3-action-button filled"
+                (click)="takeScreenshot()"
+                [disabled]="!device.basicInfo.os.toLowerCase().includes('android')"
+              >
+                <mat-icon>screenshot</mat-icon>Screenshot
+              </button>
+              <button
+                class="m3-action-button filled"
+                (click)="remoteControl()"
+                [disabled]="!device.basicInfo.os.toLowerCase().includes('android')"
+              >
+                <mat-icon>important_devices</mat-icon>Remote Control
+              </button>
+              <button
+                class="m3-action-button transparent dropdown-trigger"
+                [matMenuTriggerFor]="moreMenu"
+              >
+                <span>More</span>
+                <mat-icon>expand_more</mat-icon>
+              </button>
+              <mat-menu #moreMenu="matMenu">
+                <button
+                  mat-menu-item
+                  (click)="flashDevice()"
+                  [disabled]="!device.basicInfo.os.toLowerCase().includes('android')"
+                >
+                  <mat-icon class="dropdown-mat-icon">flash_on</mat-icon>
+                  <span>Flash</span>
+                </button>
+                <button
+                  mat-menu-item
+                  (click)="getLogcat()"
+                  [disabled]="!device.basicInfo.os.toLowerCase().includes('android')"
+                >
+                  <mat-icon class="dropdown-mat-icon">description</mat-icon>
+                  <span>Get Logcat</span>
+                </button>
+                <button mat-menu-item (click)="quarantineDevice()">
+                  <mat-icon class="dropdown-mat-icon">block</mat-icon>
+                  <span>Quarantine</span>
+                </button>
+              </mat-menu>
+            </div>
+
+            <!-- small view -->
+            <div class="header-actions-sm">
+              <button
+                class="m3-action-button filled"
+                (click)="openConfiguration(device.id, device.host.name)"
+              >
+                <mat-icon>settings</mat-icon>Configuration
+              </button>
+              <button
+                class="m3-action-button transparent dropdown-trigger"
+                [matMenuTriggerFor]="actionsMenu"
+              >
+                <span>Take Action</span>
+                <mat-icon>expand_more</mat-icon>
+              </button>
+              <mat-menu #actionsMenu="matMenu">
+                <button
+                  mat-menu-item
+                  (click)="takeScreenshot()"
+                  [disabled]="!device.basicInfo.os.toLowerCase().includes('android')"
+                >
+                  <mat-icon class="dropdown-mat-icon">screenshot</mat-icon>
+                  <span>Screenshot</span>
+                </button>
+                <button
+                  mat-menu-item
+                  (click)="remoteControl()"
+                  [disabled]="!device.basicInfo.os.toLowerCase().includes('android')"
+                >
+                  <mat-icon class="dropdown-mat-icon">important_devices</mat-icon>
+                  <span>Remote Control</span>
+                </button>
+                <button
+                  mat-menu-item
+                  (click)="flashDevice()"
+                  [disabled]="!device.basicInfo.os.toLowerCase().includes('android')"
+                >
+                  <mat-icon class="dropdown-mat-icon">flash_on</mat-icon>
+                  <span>Flash</span>
+                </button>
+                <button
+                  mat-menu-item
+                  (click)="getLogcat()"
+                  [disabled]="!device.basicInfo.os.toLowerCase().includes('android')"
+                >
+                  <mat-icon class="dropdown-mat-icon">description</mat-icon>
+                  <span>Get Logcat</span>
+                </button>
+                <button mat-menu-item (click)="quarantineDevice()">
+                  <mat-icon class="dropdown-mat-icon">block</mat-icon>
+                  <span>Quarantine</span>
+                </button>
+              </mat-menu>
+            </div>
           </div>
         </header>
 
         <div class="card-body">
+          <!-- Legacy Console Banner -->
+          <div class="legacy-page-banner">
+            <mat-icon class="legacy-page-banner-icon">info</mat-icon>
+            <span>
+                This is the new OmniLab Console. If needed, you can
+              <a
+                href="#"
+                id="legacy-link"
+                target="_blank"
+                class="legacy-link"
+                >
+                view this device in the legacy page
+                </a>.
+            </span>
+          </div>
+
           <!-- Device Title Bar -->
           <div class="device-title-bar">
             <div class="title-icon-wrapper">

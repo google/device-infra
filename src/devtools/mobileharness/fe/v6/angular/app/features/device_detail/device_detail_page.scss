@@ -76,6 +76,39 @@ $labconsole-font: 'Google Sans', Roboto, Arial, sans-serif;
   align-items: center;
   justify-content: flex-end;
   gap: 0.5rem;
+
+  .header-actions-2xl,
+  .header-actions-xl,
+  .header-actions-sm {
+    display: none;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  // sm: up to 1024px
+  .header-actions-sm {
+    display: flex;
+  }
+
+  // xl: 1024px to 1300px
+  @media (min-width: 1024px) {
+    .header-actions-sm {
+      display: none;
+    }
+    .header-actions-xl {
+      display: flex;
+    }
+  }
+
+  // 2xl: 1300px and up
+  @media (min-width: 1300px) {
+    .header-actions-xl {
+      display: none;
+    }
+    .header-actions-2xl {
+      display: flex;
+    }
+  }
 }
 
 // Basic styles for m3-action-button, more specific in component scss
@@ -112,6 +145,22 @@ $labconsole-font: 'Google Sans', Roboto, Arial, sans-serif;
     }
   }
 
+  &.transparent {
+    background-color: transparent;
+    color: #00458f;
+    &:hover {
+      background-color: rgba(0, 69, 143, 0.08);
+    }
+  }
+
+  &.dropdown-trigger {
+    padding: 0 8px 0 12px;
+    mat-icon {
+      margin-right: 0px;
+      margin-left: 6px;
+    }
+  }
+
   &:disabled {
     background-color: #f1f3f4 !important;
     color: #bdc1c6 !important;
@@ -122,6 +171,32 @@ $labconsole-font: 'Google Sans', Roboto, Arial, sans-serif;
 
 .card-body {
   padding: 1.5rem; // p-6
+}
+
+.legacy-page-banner {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  padding: 0.75rem;
+  background-color: #eff6ff;
+  color: #1967d2;
+  border: 1px solid #bfdbfe;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  margin-bottom: 1.5rem;
+
+  .legacy-page-banner-icon {
+    font-size: 1.25rem;
+    height: 1.25rem;
+    width: 1.25rem;
+    margin-right: 0.5rem;
+  }
+
+  .legacy-link {
+    color: #1967d2;
+    font-weight: 500;
+    text-decoration: underline;
+  }
 }
 
 .device-title-bar {

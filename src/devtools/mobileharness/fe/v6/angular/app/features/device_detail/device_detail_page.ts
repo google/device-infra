@@ -2,6 +2,7 @@ import {CommonModule} from '@angular/common';
 import {ChangeDetectionStrategy, Component, inject, signal} from '@angular/core';
 import {MatDialog} from '@angular/material/dialog';
 import {MatIconModule} from '@angular/material/icon';
+import {MatMenuModule} from '@angular/material/menu';
 import {ActivatedRoute, RouterModule} from '@angular/router';
 import {Observable, of} from 'rxjs';
 import {catchError, map, switchMap} from 'rxjs/operators';
@@ -27,7 +28,13 @@ interface DevicePageData {
 @Component({
   selector: 'app-device-detail-page',
   standalone: true,
-  imports: [CommonModule, RouterModule, MatIconModule, DeviceOverviewTab],
+  imports: [
+    CommonModule,
+    RouterModule,
+    MatIconModule,
+    DeviceOverviewTab,
+    MatMenuModule,
+  ],
   templateUrl: './device_detail_page.ng.html',
   styleUrl: './device_detail_page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
