@@ -1322,6 +1322,14 @@ public class Flags {
       converter = Flag.StringConverter.class)
   public Flag<String> fastbootPathFromUser = fastbootPathFromUserDefault;
 
+  private static final Flag<Integer> feGrpcPortDefault = Flag.value(8080);
+
+  @com.beust.jcommander.Parameter(
+      names = "--fe_grpc_port",
+      description = "gRPC port to listen on for FE servers.",
+      converter = Flag.IntegerConverter.class)
+  public Flag<Integer> feGrpcPort = feGrpcPortDefault;
+
   private static final Flag<Duration> fileExpireTimeDefault =
       DurationFlag.value(Duration.ofHours(3L));
 
