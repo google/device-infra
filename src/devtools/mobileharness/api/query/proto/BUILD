@@ -29,6 +29,7 @@ proto_library(
     srcs = ["device_query.proto"],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:device_proto",
+        "@protobuf//:field_mask_proto",
     ],
 )
 

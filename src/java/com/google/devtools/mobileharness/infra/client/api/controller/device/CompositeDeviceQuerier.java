@@ -16,12 +16,16 @@
 
 package com.google.devtools.mobileharness.infra.client.api.controller.device;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier.LabQueryResult;
 import com.google.protobuf.Descriptors.FieldDescriptor;
+import com.google.protobuf.FieldMask;
+import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfoMask;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryFilter;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryResult;
 import java.util.ArrayList;
@@ -46,10 +50,17 @@ public class CompositeDeviceQuerier implements DeviceQuerier {
   @Override
   public DeviceQueryResult queryDevice(DeviceQueryFilter deviceQueryFilter)
       throws MobileHarnessException, InterruptedException {
+    return queryDevice(deviceQueryFilter, DeviceInfoMask.getDefaultInstance());
+  }
+
+  @Override
+  public DeviceQueryResult queryDevice(
+      DeviceQueryFilter deviceQueryFilter, DeviceInfoMask deviceInfoMask)
+      throws MobileHarnessException, InterruptedException {
     List<DeviceQueryResult> deviceQueryResults = new ArrayList<>();
 
     for (DeviceQuerier deviceQuerier : deviceQuerierList) {
-      deviceQueryResults.add(deviceQuerier.queryDevice(deviceQueryFilter));
+      deviceQueryResults.add(deviceQuerier.queryDevice(deviceQueryFilter, deviceInfoMask));
     }
     return mergeDeviceQueryResults(deviceQueryResults);
   }
@@ -62,27 +73,38 @@ public class CompositeDeviceQuerier implements DeviceQuerier {
       List<String> selectedDrivers,
       List<String> selectedDecorators)
       throws MobileHarnessException, InterruptedException {
-    List<DeviceQueryResult> deviceQueryResults = new ArrayList<>();
+    DeviceInfoMask deviceInfoMask =
+        DeviceInfoMask.newBuilder()
+            .setFieldMask(
+                FieldMask.newBuilder()
+                    .addAllPaths(
+                        selectedDeviceInfoFields.stream()
+                            .map(FieldDescriptor::getName)
+                            .collect(toImmutableList()))
+                    .build())
+            .addAllSelectedDimensionName(selectedDimensionNames)
+            .addAllSelectedDriver(selectedDrivers)
+            .addAllSelectedDecorator(selectedDecorators)
+            .build();
 
-    for (DeviceQuerier deviceQuerier : deviceQuerierList) {
-      deviceQueryResults.add(
-          deviceQuerier.queryDevice(
-              deviceQueryFilter,
-              selectedDeviceInfoFields,
-              selectedDimensionNames,
-              selectedDrivers,
-              selectedDecorators));
-    }
-    return mergeDeviceQueryResults(deviceQueryResults);
+    return queryDevice(deviceQueryFilter, deviceInfoMask);
   }
 
   @Override
   public ListenableFuture<DeviceQueryResult> queryDeviceAsync(DeviceQueryFilter deviceQueryFilter)
       throws MobileHarnessException, InterruptedException {
+    return queryDeviceAsync(deviceQueryFilter, DeviceInfoMask.getDefaultInstance());
+  }
+
+  @Override
+  public ListenableFuture<DeviceQueryResult> queryDeviceAsync(
+      DeviceQueryFilter deviceQueryFilter, DeviceInfoMask deviceInfoMask)
+      throws MobileHarnessException, InterruptedException {
     List<ListenableFuture<DeviceQueryResult>> deviceQueryResultListenableFutures =
         new ArrayList<>();
     for (DeviceQuerier deviceQuerier : deviceQuerierList) {
-      deviceQueryResultListenableFutures.add(deviceQuerier.queryDeviceAsync(deviceQueryFilter));
+      deviceQueryResultListenableFutures.add(
+          deviceQuerier.queryDeviceAsync(deviceQueryFilter, deviceInfoMask));
     }
     return Futures.whenAllComplete(deviceQueryResultListenableFutures)
         .call(

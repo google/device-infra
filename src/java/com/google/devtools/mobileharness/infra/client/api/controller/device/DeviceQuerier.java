@@ -27,6 +27,7 @@ import com.google.protobuf.Descriptors.FieldDescriptor;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery;
+import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfoMask;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryFilter;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryResult;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.Dimension;
@@ -44,6 +45,15 @@ public interface DeviceQuerier {
    * @see DeviceQueryFilter
    */
   DeviceQueryResult queryDevice(DeviceQueryFilter deviceQueryFilter)
+      throws MobileHarnessException, InterruptedException;
+
+  /**
+   * Queries device information with a mask to filter the returned fields.
+   *
+   * @see DeviceQueryFilter
+   * @see DeviceInfoMask
+   */
+  DeviceQueryResult queryDevice(DeviceQueryFilter deviceQueryFilter, DeviceInfoMask deviceInfoMask)
       throws MobileHarnessException, InterruptedException;
 
   /**
@@ -68,6 +78,11 @@ public interface DeviceQuerier {
 
   /** Queries device information asynchronously. */
   ListenableFuture<DeviceQueryResult> queryDeviceAsync(DeviceQueryFilter deviceQueryFilter)
+      throws MobileHarnessException, InterruptedException;
+
+  /** Queries device information asynchronously with a mask to filter the returned fields. */
+  ListenableFuture<DeviceQueryResult> queryDeviceAsync(
+      DeviceQueryFilter deviceQueryFilter, DeviceInfoMask deviceInfoMask)
       throws MobileHarnessException, InterruptedException;
 
   /**

@@ -50,6 +50,7 @@ java_library(
         "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "@maven//:com_google_guava_guava",
+        "@maven//:com_google_protobuf_protobuf_java",
         "@protobuf//:protobuf_java",
     ],
 )

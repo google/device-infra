@@ -30,6 +30,7 @@ import com.google.devtools.mobileharness.infra.client.api.mode.local.DeviceInfoF
 import com.google.protobuf.Descriptors.FieldDescriptor;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo;
+import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfoMask;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryFilter;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryResult;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.Dimension;
@@ -52,6 +53,18 @@ class DeviceQuerierImpl implements DeviceQuerier {
 
   @Override
   public DeviceQueryResult queryDevice(DeviceQueryFilter deviceQueryFilter)
+      throws InterruptedException {
+    return queryDevice(deviceQueryFilter, DeviceInfoMask.getDefaultInstance());
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Note: {@code deviceInfoMask} is not supported yet for ATS Device Querier.
+   */
+  @Override
+  public DeviceQueryResult queryDevice(
+      DeviceQueryFilter deviceQueryFilter, DeviceInfoMask deviceInfoMask)
       throws InterruptedException {
     getUnchecked(remoteDeviceManager.getFirstDeviceOrTimeoutFuture());
     return DeviceQueryResult.newBuilder()
@@ -82,8 +95,21 @@ class DeviceQuerierImpl implements DeviceQuerier {
   @Override
   public ListenableFuture<DeviceQueryResult> queryDeviceAsync(DeviceQueryFilter deviceQueryFilter)
       throws MobileHarnessException, InterruptedException {
+    return queryDeviceAsync(deviceQueryFilter, DeviceInfoMask.getDefaultInstance());
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Note: {@code deviceInfoMask} is not supported yet for ATS Device Querier.
+   */
+  @Override
+  public ListenableFuture<DeviceQueryResult> queryDeviceAsync(
+      DeviceQueryFilter deviceQueryFilter, DeviceInfoMask deviceInfoMask)
+      throws MobileHarnessException, InterruptedException {
     return threadPool.submit(
-        threadRenaming(() -> queryDevice(deviceQueryFilter), () -> "device-querier"));
+        threadRenaming(
+            () -> queryDevice(deviceQueryFilter, deviceInfoMask), () -> "device-querier"));
   }
 
   @Override

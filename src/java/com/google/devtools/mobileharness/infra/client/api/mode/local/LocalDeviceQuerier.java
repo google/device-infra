@@ -33,6 +33,7 @@ import com.google.devtools.mobileharness.shared.util.network.localhost.LocalHost
 import com.google.protobuf.Descriptors.FieldDescriptor;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery;
+import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfoMask;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryFilter;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryResult;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.Dimension;
@@ -57,6 +58,18 @@ class LocalDeviceQuerier implements DeviceQuerier {
 
   @Override
   public DeviceQueryResult queryDevice(DeviceQueryFilter deviceQueryFilter)
+      throws MobileHarnessException, InterruptedException {
+    return queryDevice(deviceQueryFilter, DeviceInfoMask.getDefaultInstance());
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Note: {@code deviceInfoMask} is not supported yet for Local Device Querier.
+   */
+  @Override
+  public DeviceQueryResult queryDevice(
+      DeviceQueryFilter deviceQueryFilter, DeviceInfoMask deviceInfoMask)
       throws MobileHarnessException, InterruptedException {
     LocalDeviceManager deviceManager = getDeviceManager();
     firstDeviceLatch.await();
@@ -166,7 +179,14 @@ class LocalDeviceQuerier implements DeviceQuerier {
   @Override
   public ListenableFuture<DeviceQueryResult> queryDeviceAsync(DeviceQueryFilter deviceQueryFilter)
       throws MobileHarnessException, InterruptedException {
-    return immediateFuture(queryDevice(deviceQueryFilter));
+    return queryDeviceAsync(deviceQueryFilter, DeviceInfoMask.getDefaultInstance());
+  }
+
+  @Override
+  public ListenableFuture<DeviceQueryResult> queryDeviceAsync(
+      DeviceQueryFilter deviceQueryFilter, DeviceInfoMask deviceInfoMask)
+      throws MobileHarnessException, InterruptedException {
+    return immediateFuture(queryDevice(deviceQueryFilter, deviceInfoMask));
   }
 
   private LocalDeviceManager getDeviceManager()

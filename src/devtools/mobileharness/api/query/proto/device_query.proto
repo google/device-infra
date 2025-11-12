@@ -18,6 +18,7 @@ syntax = "proto3";
 
 package mobileharness.shared.query;
 
+import "google/protobuf/field_mask.proto";
 import "src/devtools/mobileharness/api/model/proto/device.proto";
 
 option java_package = "com.google.wireless.qa.mobileharness.shared.proto.query";
@@ -136,4 +137,16 @@ message Dimension {
   // a Mobile Harness job without dimension <"label", "moreto_demo"> will not
   // get the device even if all its other dimensions are matched.
   bool required = 3;
+}
+
+// Mask to select the fields returned in DeviceInfo.
+message DeviceInfoMask {
+  // Field mask for DeviceInfo fields.
+  google.protobuf.FieldMask field_mask = 1;
+  // If not empty, only return dimensions with these names.
+  repeated string selected_dimension_name = 2;
+  // If not empty, only return drivers with these names.
+  repeated string selected_driver = 3;
+  // If not empty, only return decorators with these names.
+  repeated string selected_decorator = 4;
 }
