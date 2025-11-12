@@ -1,20 +1,15 @@
 import {CommonModule} from '@angular/common';
 import {
-  AfterViewInit,
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
-  ElementRef,
   inject,
   Input,
   OnChanges,
   OnDestroy,
   OnInit,
-  QueryList,
-  Renderer2,
   signal,
   SimpleChanges,
-  ViewChildren,
 } from '@angular/core';
 import {FormsModule} from '@angular/forms';
 import {MatIconModule} from '@angular/material/icon';
@@ -26,6 +21,10 @@ import {
   type DimensionSourceGroup,
 } from '../../../../core/models/device_overview';
 import {CollapsiblePanel} from '../../../../shared/components/collapsible_panel/collapsible_panel';
+import {
+  NavItem,
+  OverviewPage,
+} from '../../../../shared/components/overview_page/overview_page';
 import {dateUtils} from '../../../../shared/utils/date_utils';
 import {objectUtils} from '../../../../shared/utils/object_utils';
 
@@ -53,30 +52,23 @@ interface DimensionItem {
 @Component({
   selector: 'app-device-overview-tab',
   standalone: true,
-  imports: [CommonModule, MatIconModule, CollapsiblePanel, FormsModule],
+  imports: [
+    CommonModule,
+    MatIconModule,
+    CollapsiblePanel,
+    FormsModule,
+    OverviewPage,
+  ],
   templateUrl: './device_overview_tab.ng.html',
   styleUrl: './device_overview_tab.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class DeviceOverviewTab
-  implements OnInit, AfterViewInit, OnDestroy, OnChanges
-{
+export class DeviceOverviewTab implements OnInit, OnDestroy, OnChanges {
   private readonly changeDetectorRef = inject(ChangeDetectorRef);
 
   @Input({required: true}) device!: DeviceOverview;
 
-  @ViewChildren('navLink') navLinks!: QueryList<ElementRef<HTMLAnchorElement>>;
-  @ViewChildren('overviewSection') sections!: QueryList<
-    ElementRef<HTMLElement>
-  >;
-
-  private observer?: IntersectionObserver;
-  private readonly renderer = inject(Renderer2);
-  private readonly elementRef = inject<ElementRef<HTMLElement>>(ElementRef);
-
-  activeSection = signal<string>('overview-health');
-
-  navList = [
+  navList: NavItem[] = [
     {
       id: 'overview-health',
       label: 'Health & Activity',
@@ -118,13 +110,6 @@ export class DeviceOverviewTab
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['device']) {
       // Reset active section when device changes, e.g., navigating between devices
-      this.activeSection.set('overview-health');
-      // Re-initialize observer if sections are re-rendered
-      if (this.navLinks && this.sections) {
-        setTimeout(() => {
-          this.setupIntersectionObserver();
-        }, 0);
-      }
     }
   }
 
@@ -134,24 +119,15 @@ export class DeviceOverviewTab
     this.filteredDimensions = [...this.flatDimensions];
 
     this.searchSubject
-        .pipe(
-            debounceTime(100), distinctUntilChanged(), takeUntil(this.destroy$))
-        .subscribe((searchTerm) => {
-          const filtered = this.filterDimensions(searchTerm);
-          this.filteredDimensions = [...filtered];
-          this.changeDetectorRef.detectChanges();
-        });
-  }
-
-  ngAfterViewInit(): void {
-    this.setupIntersectionObserver();
+      .pipe(debounceTime(100), distinctUntilChanged(), takeUntil(this.destroy$))
+      .subscribe((searchTerm) => {
+        const filtered = this.filterDimensions(searchTerm);
+        this.filteredDimensions = [...filtered];
+        this.changeDetectorRef.detectChanges();
+      });
   }
 
   ngOnDestroy(): void {
-    if (this.observer) {
-      this.observer.disconnect();
-    }
-
     this.searchSubject.complete();
     this.destroy$.next();
     this.destroy$.complete();
@@ -228,24 +204,24 @@ export class DeviceOverviewTab
   }
 
   private flattenDimensions(
-      items: Record<string, DimensionSourceGroup>|undefined,
-      section: 'supported'|'required',
-      ): void {
+    items: Record<string, DimensionSourceGroup> | undefined,
+    section: 'supported' | 'required',
+  ): void {
     if (!items) return;
 
-    const sectionItems = Object.entries(items).flatMap(
-        ([source, group]) => (group.dimensions || []).map((dimension) => {
-          const key = dimension.name || '';
-          const value = dimension.value || '';
-          return {
-            section,
-            source,
-            key,
-            value,
-            keyLower: key.toLowerCase(),
-            valueLower: value.toLowerCase(),
-          };
-        }),
+    const sectionItems = Object.entries(items).flatMap(([source, group]) =>
+      (group.dimensions || []).map((dimension) => {
+        const key = dimension.name || '';
+        const value = dimension.value || '';
+        return {
+          section,
+          source,
+          key,
+          value,
+          keyLower: key.toLowerCase(),
+          valueLower: value.toLowerCase(),
+        };
+      }),
     );
     this.flatDimensions.push(...sectionItems);
   }
@@ -264,17 +240,17 @@ export class DeviceOverviewTab
   getGroupedData(
     section: 'supported' | 'required',
   ): Record<string, DimensionItem[]> {
-    const grouped =
-        this.filteredDimensions.filter((item) => item.section === section)
-            .reduce(
-                (groups, item) => {
-                  const groupKey = item.source;
-                  groups[groupKey] = groups[groupKey] || [];
-                  groups[groupKey].push(item);
-                  return groups;
-                },
-                {} as Record<string, DimensionItem[]>,
-            );
+    const grouped = this.filteredDimensions
+      .filter((item) => item.section === section)
+      .reduce(
+        (groups, item) => {
+          const groupKey = item.source;
+          groups[groupKey] = groups[groupKey] || [];
+          groups[groupKey].push(item);
+          return groups;
+        },
+        {} as Record<string, DimensionItem[]>,
+      );
     return grouped;
   }
 
@@ -284,42 +260,5 @@ export class DeviceOverviewTab
 
   onDimensionsSearchChange(): void {
     this.searchSubject.next(this.dimensionsSearchTerm);
-  }
-
-  // Intersection observer related functions
-  private setupIntersectionObserver(): void {
-    if (this.observer) {
-      this.observer.disconnect();
-    }
-    const sections = this.sections?.toArray();
-    if (!sections || sections.length === 0) return;
-
-    const options = {
-      root: null, // viewport
-      rootMargin: '-20% 0px -75% 0px',
-      threshold: 0.1,
-    };
-
-    this.observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          this.activeSection.set(entry.target.id);
-        }
-      });
-    }, options);
-
-    sections.forEach((section) => {
-      this.observer?.observe(section.nativeElement);
-    });
-  }
-
-  scrollToSection(event: Event, sectionId: string): void {
-    event.preventDefault();
-    const sectionElement =
-      this.elementRef.nativeElement.querySelector(sectionId);
-    if (sectionElement) {
-      sectionElement.scrollIntoView({behavior: 'smooth', block: 'start'});
-      this.activeSection.set(sectionId.substring(1));
-    }
   }
 }

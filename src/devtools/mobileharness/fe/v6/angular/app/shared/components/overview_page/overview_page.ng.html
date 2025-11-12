@@ -1,0 +1,21 @@
+<div class="overview-container">
+  <!-- Left Sticky Navigation -->
+  <aside class="overview-nav-container">
+    <nav id="overview-nav" class="overview-nav">
+      @for (nav of navList(); track nav.id) {
+        <a
+          #navLink
+          href="#{{ nav.id }}"
+          class="overview-nav-link"
+          [class.active]="nav.id === activeSection()"
+          (click)="scrollToSection($event, '#' + nav.id)"
+          >{{ nav.label }}</a
+        >
+      }
+    </nav>
+  </aside>
+  <!-- End of Left Sticky Navigation -->
+  <div class="overview-content-cards">
+    <ng-content></ng-content>
+  </div>
+</div>

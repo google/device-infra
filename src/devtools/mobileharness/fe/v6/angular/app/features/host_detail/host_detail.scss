@@ -1,5 +1,18 @@
 $labconsole-font: 'Google Sans', Roboto, Arial, sans-serif;
 
+:host {
+  display: block;
+  background-color: #f8f9fa; // bg-gray-50
+  min-height: 100vh;
+  padding: 1.5rem; // p-6
+  font-family: $labconsole-font;
+}
+
+.page-container {
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
 .host-detail-container {
   max-width: 1600px;
   margin: 0 auto;
@@ -30,6 +43,7 @@ $labconsole-font: 'Google Sans', Roboto, Arial, sans-serif;
     min-width: 0;
     flex-grow: 1;
     font-family: $labconsole-font;
+    margin-right: 0.5rem;
 
     .chevron-icon {
       color: #d1d5db; // text-gray-400
@@ -158,7 +172,3 @@ $labconsole-font: 'Google Sans', Roboto, Arial, sans-serif;
     border: none;
   }
 }
-
-
-
-

@@ -1,371 +1,354 @@
-<div class="overview-container">
-  <!-- Left Sticky Navigation -->
-  <aside class="overview-nav-container">
-    <nav id="overview-nav" class="overview-nav">
-      @for (nav of navList; track nav.id) {
-        <a
-          #navLink
-          href="#{{ nav.id }}"
-          class="overview-nav-link"
-          [class.active]="nav.id === activeSection()"
-          (click)="scrollToSection($event, '#' + nav.id)"
-          >{{ nav.label }}</a
-        >
-      }
-    </nav>
-  </aside>
 
-  <!-- Right Content Cards -->
-  <div class="overview-content" id="overview-content">
-    @if (device) {
-      <!-- Health & Activity Card -->
-      <section #overviewSection id="overview-health" class="overview-card">
-        <h3 class="overview-card-header">Health & Activity</h3>
-        <div class="overview-card-content">
-          @let healthUI = getHealthStateUI(device.healthAndActivity.state);
-          <div class="health-summary">
-            <div class="summary-icon-bg {{ healthUI.iconBgColorClass }}">
-              <mat-icon
-                class="summary-icon {{ healthUI.iconColorClass }} {{ healthUI.isSpinning ? 'spin-animation' : '' }}"
-              >
-                {{ healthUI.icon }}
-              </mat-icon>
-            </div>
-            <div class="health-details {{ healthUI.borderColorClass }}">
-              <h3 class="health-title {{ healthUI.iconColorClass }}">
-                {{ device.healthAndActivity.title }}
-              </h3>
-              <p class="health-subtitle">{{ device.healthAndActivity.subtitle }}</p>
-              @if (
-                device.healthAndActivity.state !== 'IN_SERVICE_IDLE' && device.healthAndActivity.state !== 'IN_SERVICE_BUSY'
-              ) {
-                <div class="last-in-service">
-                  <span class="font-medium">Last in service:</span>
-                  {{ dateUtils.format(device.healthAndActivity.lastInServiceTime) }}
-
-                  @if (device.healthAndActivity.lastInServiceTime !== null) {
-                    <span class="time-ago-chip">
-                      {{ dateUtils.formatTimeAgo(device.healthAndActivity.lastInServiceTime) }}
-                    </span>
-                  }
-                </div>
-              }
-            </div>
+@if (device) {
+  <app-overview-page [navList]="navList">
+    <!-- Health & Activity Card -->
+    <section #overviewSection id="overview-health" class="overview-card">
+      <h3 class="overview-card-header">Health & Activity</h3>
+      <div class="overview-card-content">
+        @let healthUI = getHealthStateUI(device.healthAndActivity.state);
+        <div class="health-summary">
+          <div class="summary-icon-bg {{ healthUI.iconBgColorClass }}">
+            <mat-icon
+              class="summary-icon {{ healthUI.iconColorClass }} {{ healthUI.isSpinning ? 'spin-animation' : '' }}"
+            >
+              {{ healthUI.icon }}
+            </mat-icon>
           </div>
+          <div class="health-details {{ healthUI.borderColorClass }}">
+            <h3 class="health-title {{ healthUI.iconColorClass }}">
+              {{ device.healthAndActivity.title }}
+            </h3>
+            <p class="health-subtitle">{{ device.healthAndActivity.subtitle }}</p>
+            @if (
+              device.healthAndActivity.state !== 'IN_SERVICE_IDLE' && device.healthAndActivity.state !== 'IN_SERVICE_BUSY'
+            ) {
+              <div class="last-in-service">
+                <span class="font-medium">Last in service:</span>
+                {{ dateUtils.format(device.healthAndActivity.lastInServiceTime) }}
 
-          @if (device.healthAndActivity.diagnostics) {
-            <details class="diagnostics-details">
-              <summary class="diagnostics-summary">
-                <span>Show Diagnostics & Troubleshooting</span>
-                <mat-icon class="expand-icon">expand_more</mat-icon>
-              </summary>
-              <div class="diagnostics-content">
-                <div>
-                  <strong class="diag-type">Diagnosis</strong>
-                  <p
-                    class="diag-text"
-                    [innerHTML]="device.healthAndActivity.diagnostics.diagnosis"
-                  ></p>
-                </div>
-                <div>
-                  <strong class="diag-type">Explanation</strong>
-                  <p
-                    class="diag-text"
-                    [innerHTML]="device.healthAndActivity.diagnostics.explanation"
-                  ></p>
-                </div>
-                @if (device.healthAndActivity.diagnostics.suggestedAction) {
-                  <div>
-                    <strong class="diag-type">Suggested Action</strong>
-                    <p
-                      class="diag-text"
-                      [innerHTML]="device.healthAndActivity.diagnostics.suggestedAction"
-                    ></p>
-                  </div>
+                @if (device.healthAndActivity.lastInServiceTime !== null) {
+                  <span class="time-ago-chip">
+                    {{ dateUtils.formatTimeAgo(device.healthAndActivity.lastInServiceTime) }}
+                  </span>
                 }
               </div>
-            </details>
-          }
-
-          <dl class="detail-list-grid">
-            <dt>Type</dt>
-            <dd class="chip-grid-container">
-              @if (device.healthAndActivity.deviceTypes.length > 0) {
-                @for (type of device.healthAndActivity.deviceTypes; track $index) {
-                  <div
-                    class="type-chip {{ type.isAbnormal ? 'type-chip-abnormal' : 'type-chip-normal' }}"
-                  >
-                    {{ type.type }}
-                  </div>
-                }
-              } @else {
-                <span class="no-types">No types detected</span>
-              }
-            </dd>
-            <dt>Status</dt>
-            <dd>
-              <div
-                class="type-chip {{ device.healthAndActivity.deviceStatus.isCritical ? 'type-chip-critical-status' : 'type-chip-normal' }}"
-              >
-                {{ device.healthAndActivity.deviceStatus.status }}
-              </div>
-            </dd>
-            @if (device.healthAndActivity.currentTask; as task) {
-              <dt class="task-dt">Running</dt>
-              <dd class="task-dd">
-                <mat-icon
-                  class="task-icon"
-                  [class.spin-animation]="getHealthStateUI(device.healthAndActivity.state).isSpinning"
-                  >sync</mat-icon
-                >
-                <div class="task-info">
-                  <div class="task-title">
-                    {{ task.type }}:
-                    <a href="#" class="task-link" title="{{ task.taskId }}">{{ task.taskId }}</a>
-                  </div>
-                  @if (task.jobId) {
-                    <div class="task-jobid">
-                      Part of job:
-                      <a href="#" class="task-link" title="{{ task.jobId }}">{{ task.jobId }}</a>
-                    </div>
-                  }
-                </div>
-              </dd>
             }
+          </div>
+        </div>
+
+        @if (device.healthAndActivity.diagnostics) {
+          <details class="diagnostics-details">
+            <summary class="diagnostics-summary">
+              <span>Show Diagnostics & Troubleshooting</span>
+              <mat-icon class="expand-icon">expand_more</mat-icon>
+            </summary>
+            <div class="diagnostics-content">
+              <div>
+                <strong class="diag-type">Diagnosis</strong>
+                <p
+                  class="diag-text"
+                  [innerHTML]="device.healthAndActivity.diagnostics.diagnosis"
+                ></p>
+              </div>
+              <div>
+                <strong class="diag-type">Explanation</strong>
+                <p
+                  class="diag-text"
+                  [innerHTML]="device.healthAndActivity.diagnostics.explanation"
+                ></p>
+              </div>
+              @if (device.healthAndActivity.diagnostics.suggestedAction) {
+                <div>
+                  <strong class="diag-type">Suggested Action</strong>
+                  <p
+                    class="diag-text"
+                    [innerHTML]="device.healthAndActivity.diagnostics.suggestedAction"
+                  ></p>
+                </div>
+              }
+            </div>
+          </details>
+        }
+
+        <dl class="detail-list-grid">
+          <dt>Type</dt>
+          <dd class="chip-grid-container">
+            @if (device.healthAndActivity.deviceTypes.length > 0) {
+              @for (type of device.healthAndActivity.deviceTypes; track $index) {
+                <div
+                  class="type-chip {{ type.isAbnormal ? 'type-chip-abnormal' : 'type-chip-normal' }}"
+                >
+                  {{ type.type }}
+                </div>
+              }
+            } @else {
+              <span class="no-types">No types detected</span>
+            }
+          </dd>
+          <dt>Status</dt>
+          <dd>
+            <div
+              class="type-chip {{ device.healthAndActivity.deviceStatus.isCritical ? 'type-chip-critical-status' : 'type-chip-normal' }}"
+            >
+              {{ device.healthAndActivity.deviceStatus.status }}
+            </div>
+          </dd>
+          @if (device.healthAndActivity.currentTask; as task) {
+            <dt class="task-dt">Running</dt>
+            <dd class="task-dd">
+              <mat-icon
+                class="task-icon"
+                [class.spin-animation]="getHealthStateUI(device.healthAndActivity.state).isSpinning"
+                >sync</mat-icon
+              >
+              <div class="task-info">
+                <div class="task-title">
+                  {{ task.type }}:
+                  <a href="#" class="task-link" title="{{ task.taskId }}">{{ task.taskId }}</a>
+                </div>
+                @if (task.jobId) {
+                  <div class="task-jobid">
+                    Part of job:
+                    <a href="#" class="task-link" title="{{ task.jobId }}">{{ task.jobId }}</a>
+                  </div>
+                }
+              </div>
+            </dd>
+          }
+        </dl>
+      </div>
+    </section>
+
+    <!-- Basic Information Card -->
+    <section #overviewSection id="overview-system" class="overview-card">
+      <h3 class="overview-card-header">Basic Information</h3>
+      <div class="overview-card-content">
+        <div class="basic-info-grid-wrapper">
+          <dl class="info-grid-tight">
+            <dt title="Model">Model</dt>
+            <dd title="{{ device.basicInfo.model }}">{{ device.basicInfo.model || 'N/A' }}</dd>
+
+            <dt title="Version">Version</dt>
+            <dd title="{{ device.basicInfo.version }}">
+              {{ device.basicInfo.version || 'N/A' }}
+            </dd>
+
+            <dt title="Form">Form</dt>
+            <dd title="{{ device.basicInfo.form }}">{{ device.basicInfo.form || 'N/A' }}</dd>
+
+            <dt title="OS">OS</dt>
+            <dd title="{{ device.basicInfo.os }}">{{ device.basicInfo.os || 'N/A' }}</dd>
+          </dl>
+          <dl class="info-grid-tight">
+            <dt title="Battery">Battery</dt>
+            <dd>
+              {{ device.basicInfo.batteryLevel !== null ? device.basicInfo.batteryLevel + '%' : 'N/A' }}
+            </dd>
+
+            <dt title="Network">Network</dt>
+            <dd>
+              <div class="network-status">
+                @if (device.basicInfo.network.wifiRssi !== undefined) {
+                  @let wifiIcon =
+                  getWifiSignalIcon(device.basicInfo.network.wifiRssi);
+                  @let wifiQuality =
+                  getWifiQualityText(device.basicInfo.network.wifiRssi);
+                  <mat-icon
+                    class="wifi-icon"
+                    title="Signal: {{ wifiQuality }} ({{ device.basicInfo.network.wifiRssi }} dBm)"
+                  >
+                    {{ wifiIcon }}
+                  </mat-icon>
+                }
+                @if (device.basicInfo.network.hasInternet === true) {
+                  <div class="internet-status text-green-600">
+                    <mat-icon class="internet-icon">public</mat-icon>
+                    <span class="font-medium">Internet access</span>
+                  </div>
+                } @else if (device.basicInfo.network.hasInternet === false) {
+                  <div class="internet-status text-red-600">
+                    <mat-icon class="internet-icon">public_off</mat-icon>
+                    <span class="font-medium">No internet access</span>
+                  </div>
+                } @else {
+                  <div class="internet-status text-gray-500">
+                    <mat-icon class="internet-icon">signal_wifi_off</mat-icon>
+                    <span>Unknown</span>
+                  </div>
+                }
+              </div>
+            </dd>
+            <dt title="Hardware">Hardware</dt
+            ><dd
+              title="{{ device.basicInfo.hardware }}"
+              >{{ device.basicInfo.hardware || 'N/A' }}</dd
+            >
+            <dt title="Build">Build</dt
+            ><dd title="{{ device.basicInfo.build }}">{{ device.basicInfo.build || 'N/A' }}</dd>
           </dl>
         </div>
-      </section>
+      </div>
+    </section>
 
-      <!-- Basic Information Card -->
-      <section #overviewSection id="overview-system" class="overview-card">
-        <h3 class="overview-card-header">Basic Information</h3>
-        <div class="overview-card-content">
-          <div class="basic-info-grid-wrapper">
-            <dl class="info-grid-tight">
-              <dt title="Model">Model</dt>
-              <dd title="{{ device.basicInfo.model }}">{{ device.basicInfo.model || 'N/A' }}</dd>
+    <!-- Permissions Card -->
+    <section #overviewSection id="overview-permissions" class="overview-card">
+      <h3 class="overview-card-header">Permissions</h3>
+      <div class="overview-card-content permissions-content">
+        <div>
+          <h4 class="permission-type-title">Owners</h4>
+          <div class="chip-grid-container">
+            @if (device.permissions.owners && device.permissions.owners.length > 0) {
+              @for (owner of device.permissions.owners; track owner) {
+                <div class="type-chip type-chip-normal">{{ owner }}</div>
+              }
+            } @else {
+              <p class="no-permission">None</p>
+            }
+          </div>
+        </div>
+        <div>
+          <h4 class="permission-type-title">Executors</h4>
+          <div class="chip-grid-container">
+            @if (device.permissions.executors && device.permissions.executors.length > 0) {
+              @for (executor of device.permissions.executors; track executor) {
+                <div class="type-chip type-chip-normal">{{ executor }}</div>
+              }
+            } @else {
+              <p class="no-permission">None</p>
+            }
+          </div>
+        </div>
+      </div>
+    </section>
 
-              <dt title="Version">Version</dt>
-              <dd title="{{ device.basicInfo.version }}">
-                {{ device.basicInfo.version || 'N/A' }}
-              </dd>
+    <!-- Capabilities Card -->
+    <section #overviewSection id="overview-capabilities" class="overview-card">
+      <app-collapsible-panel [title]="'Capabilities'">
+        <div id="capabilities-content" class="overview-card-content capabilities-content">
+          <div>
+            <h4 class="capabilities-title"
+              >Supported Drivers ({{ device.capabilities.supportedDrivers.length }})</h4
+            >
+            <div class="chip-grid-container">
+              @if (device.capabilities.supportedDrivers.length > 0) {
+                @for (driver of device.capabilities.supportedDrivers; track driver) {
+                  <div class="type-chip type-chip-normal">{{ driver }}</div>
+                }
+              } @else {
+                <p class="no-capability">None</p>
+              }
+            </div>
+          </div>
+          <div>
+            <h4 class="capabilities-title"
+              >Supported Decorators ({{ device.capabilities.supportedDecorators.length }})</h4
+            >
+            <div class="chip-grid-container">
+              @if (device.capabilities.supportedDecorators.length > 0) {
+                @for (decorator of device.capabilities.supportedDecorators; track decorator) {
+                  <div class="type-chip type-chip-normal">{{ decorator }}</div>
+                }
+              } @else {
+                <p class="no-capability">None</p>
+              }
+            </div>
+          </div>
+        </div>
+      </app-collapsible-panel>
+    </section>
 
-              <dt title="Form">Form</dt>
-              <dd title="{{ device.basicInfo.form }}">{{ device.basicInfo.form || 'N/A' }}</dd>
+    <!-- Dimensions Card -->
+    <section #overviewSection id="overview-dimensions" class="overview-card">
+      <app-collapsible-panel [expanded]="true" [title]="'Dimensions'">
+        <div id="dimensions-content" class="overview-card-content text-sm">
+          @if (device.dimensions) {
+            <input
+              type="search"
+              id="dimensions-search"
+              class="overview-search-input"
+              placeholder="Filter dimensions by key or value..."
+              [(ngModel)]="dimensionsSearchTerm"
+              (ngModelChange)="onDimensionsSearchChange()"
+              aria-label="Search dimensions"
+            />
 
-              <dt title="OS">OS</dt>
-              <dd title="{{ device.basicInfo.os }}">{{ device.basicInfo.os || 'N/A' }}</dd>
-            </dl>
-            <dl class="info-grid-tight">
-              <dt title="Battery">Battery</dt>
-              <dd>
-                {{ device.basicInfo.batteryLevel !== null ? device.basicInfo.batteryLevel + '%' : 'N/A' }}
-              </dd>
+            @if (filteredDimensions.length === 0 && flatDimensions.length > 0) {
+              <div id="dimensions-no-results" class="no-search-results"
+                >No dimensions match your filter.</div
+              >
+            }
 
-              <dt title="Network">Network</dt>
-              <dd>
-                <div class="network-status">
-                  @if (device.basicInfo.network.wifiRssi !== undefined) {
-                    @let wifiIcon =
-                    getWifiSignalIcon(device.basicInfo.network.wifiRssi);
-                    @let wifiQuality =
-                    getWifiQualityText(device.basicInfo.network.wifiRssi);
-                    <mat-icon
-                      class="wifi-icon"
-                      title="Signal: {{ wifiQuality }} ({{ device.basicInfo.network.wifiRssi }} dBm)"
-                    >
-                      {{ wifiIcon }}
-                    </mat-icon>
-                  }
-                  @if (device.basicInfo.network.hasInternet === true) {
-                    <div class="internet-status text-green-600">
-                      <mat-icon class="internet-icon">public</mat-icon>
-                      <span class="font-medium">Internet access</span>
-                    </div>
-                  } @else if (device.basicInfo.network.hasInternet === false) {
-                    <div class="internet-status text-red-600">
-                      <mat-icon class="internet-icon">public_off</mat-icon>
-                      <span class="font-medium">No internet access</span>
-                    </div>
-                  } @else {
-                    <div class="internet-status text-gray-500">
-                      <mat-icon class="internet-icon">signal_wifi_off</mat-icon>
-                      <span>Unknown</span>
+            <ng-template #dimensionsContent let-type="type" let-title="title">
+              <h4 class="dimension-section-title">{{ title }}</h4>
+              @let groupedData = getGroupedData(type);
+
+              @if (objectUtils.objectKeys(groupedData).length > 0) {
+                <div [id]="type + '-dimensions-content'" class="dimensions-content">
+                  @for (source of objectUtils.objectKeys(groupedData); track source) {
+                    @let items = groupedData[source];
+
+                    <div class="data-source-group">
+                      <h5 class="dimension-source-title"> {{ source }} ({{ items.length }}) </h5>
+                      <div
+                        class="data-block"
+                        [class.scrollable]="source === 'Detected by OmniLab'"
+                      >
+                        <dl class="data-block-grid">
+                          @for (item of items; track trackByKeyAndValue($index, item)) {
+                            <div class="data-block-row contents">
+                              <dt>{{ item.key }}</dt>
+                              <dd>{{ item.value }}</dd>
+                            </div>
+                          }
+                        </dl>
+                      </div>
                     </div>
                   }
                 </div>
-              </dd>
-              <dt title="Hardware">Hardware</dt
-              ><dd
-                title="{{ device.basicInfo.hardware }}"
-                >{{ device.basicInfo.hardware || 'N/A' }}</dd
-              >
-              <dt title="Build">Build</dt
-              ><dd title="{{ device.basicInfo.build }}">{{ device.basicInfo.build || 'N/A' }}</dd>
-            </dl>
-          </div>
-        </div>
-      </section>
-
-      <!-- Permissions Card -->
-      <section #overviewSection id="overview-permissions" class="overview-card">
-        <h3 class="overview-card-header">Permissions</h3>
-        <div class="overview-card-content permissions-content">
-          <div>
-            <h4 class="permission-type-title">Owners</h4>
-            <div class="chip-grid-container">
-              @if (device.permissions.owners && device.permissions.owners.length > 0) {
-                @for (owner of device.permissions.owners; track owner) {
-                  <div class="type-chip type-chip-normal">{{ owner }}</div>
-                }
               } @else {
-                <p class="no-permission">None</p>
+                <p class="no-data">None</p>
               }
-            </div>
-          </div>
-          <div>
-            <h4 class="permission-type-title">Executors</h4>
-            <div class="chip-grid-container">
-              @if (device.permissions.executors && device.permissions.executors.length > 0) {
-                @for (executor of device.permissions.executors; track executor) {
-                  <div class="type-chip type-chip-normal">{{ executor }}</div>
-                }
-              } @else {
-                <p class="no-permission">None</p>
-              }
-            </div>
-          </div>
-        </div>
-      </section>
+            </ng-template>
 
-      <!-- Capabilities Card -->
-      <section #overviewSection id="overview-capabilities" class="overview-card">
-        <app-collapsible-panel [title]="'Capabilities'">
-          <div id="capabilities-content" class="overview-card-content capabilities-content">
-            <div>
-              <h4 class="capabilities-title"
-                >Supported Drivers ({{ device.capabilities.supportedDrivers.length }})</h4
-              >
-              <div class="chip-grid-container">
-                @if (device.capabilities.supportedDrivers.length > 0) {
-                  @for (driver of device.capabilities.supportedDrivers; track driver) {
-                    <div class="type-chip type-chip-normal">{{ driver }}</div>
-                  }
-                } @else {
-                  <p class="no-capability">None</p>
-                }
-              </div>
-            </div>
-            <div>
-              <h4 class="capabilities-title"
-                >Supported Decorators ({{ device.capabilities.supportedDecorators.length }})</h4
-              >
-              <div class="chip-grid-container">
-                @if (device.capabilities.supportedDecorators.length > 0) {
-                  @for (decorator of device.capabilities.supportedDecorators; track decorator) {
-                    <div class="type-chip type-chip-normal">{{ decorator }}</div>
-                  }
-                } @else {
-                  <p class="no-capability">None</p>
-                }
-              </div>
-            </div>
-          </div>
-        </app-collapsible-panel>
-      </section>
+            <ng-container
+              *ngTemplateOutlet="dimensionsContent; context: { type: 'supported', title: 'Supported Dimensions' }"
+            ></ng-container>
 
-      <!-- Dimensions Card -->
-      <section #overviewSection id="overview-dimensions" class="overview-card">
-        <app-collapsible-panel [expanded]="true" [title]="'Dimensions'">
-          <div id="dimensions-content" class="overview-card-content text-sm">
-            @if (device.dimensions) {
-              <input
-                type="search"
-                id="dimensions-search"
-                class="overview-search-input"
-                placeholder="Filter dimensions by key or value..."
-                [(ngModel)]="dimensionsSearchTerm"
-                (ngModelChange)="onDimensionsSearchChange()"
-                aria-label="Search dimensions"
-              />
-
-              @if (filteredDimensions.length === 0 && flatDimensions.length > 0) {
-                <div id="dimensions-no-results" class="no-search-results"
-                  >No dimensions match your filter.</div
-                >
-              }
-
-              <ng-template #dimensionsContent let-type="type" let-title="title">
-                <h4 class="dimension-section-title">{{ title }}</h4>
-                @let groupedData = getGroupedData(type);
-
-                @if (objectUtils.objectKeys(groupedData).length > 0) {
-                  <div [id]="type + '-dimensions-content'" class="dimensions-content">
-                    @for (source of objectUtils.objectKeys(groupedData); track source) {
-                      @let items = groupedData[source];
-
-                      <div class="data-source-group">
-                        <h5 class="dimension-source-title"> {{ source }} ({{ items.length }}) </h5>
-                        <div
-                          class="data-block"
-                          [class.scrollable]="source === 'Detected by OmniLab'"
-                        >
-                          <dl class="data-block-grid">
-                            @for (item of items; track trackByKeyAndValue($index, item)) {
-                              <div class="data-block-row contents">
-                                <dt>{{ item.key }}</dt>
-                                <dd>{{ item.value }}</dd>
-                              </div>
-                            }
-                          </dl>
-                        </div>
-                      </div>
-                    }
-                  </div>
-                } @else {
-                  <p class="no-data">None</p>
-                }
-              </ng-template>
-
+            <div class="mt-6">
               <ng-container
-                *ngTemplateOutlet="dimensionsContent; context: { type: 'supported', title: 'Supported Dimensions' }"
+                *ngTemplateOutlet="dimensionsContent; context: { type: 'required', title: 'Required Dimensions' }"
               ></ng-container>
+            </div>
+          } @else {
+            <p class="no-data">Not available.</p>
+          }
+        </div>
+      </app-collapsible-panel>
+    </section>
 
-              <div class="mt-6">
-                <ng-container
-                  *ngTemplateOutlet="dimensionsContent; context: { type: 'required', title: 'Required Dimensions' }"
-                ></ng-container>
-              </div>
-            } @else {
-              <p class="no-data">Not available.</p>
-            }
-          </div>
-        </app-collapsible-panel>
-      </section>
+    <!-- Properties Card -->
+    <section #overviewSection id="overview-properties" class="overview-card">
+      <app-collapsible-panel [title]="'Properties'">
+        <div id="properties-content" class="overview-card-content">
+          @if (device.properties && objectUtils.objectKeys(device.properties).length > 0) {
+            <div class="data-block">
+              <dl class="data-block-grid">
+                @for (key of objectUtils.objectKeys(device.properties); track key) {
+                  <div class="data-block-row contents">
+                    <dt>{{ key }}</dt>
+                    <dd>{{ device.properties[key] }}</dd>
+                  </div>
+                }
+              </dl>
+            </div>
+          } @else {
+            <p class="no-data">None specified.</p>
+          }
+        </div>
+      </app-collapsible-panel>
+    </section>
+  </app-overview-page>
+} @else {
+  <p>Device data not available.</p>
+}
 
-      <!-- Properties Card -->
-      <section #overviewSection id="overview-properties" class="overview-card">
-        <app-collapsible-panel [title]="'Properties'">
-          <div id="properties-content" class="overview-card-content">
-            @if (device.properties && objectUtils.objectKeys(device.properties).length > 0) {
-              <div class="data-block">
-                <dl class="data-block-grid">
-                  @for (key of objectUtils.objectKeys(device.properties); track key) {
-                    <div class="data-block-row contents">
-                      <dt>{{ key }}</dt>
-                      <dd>{{ device.properties[key] }}</dd>
-                    </div>
-                  }
-                </dl>
-              </div>
-            } @else {
-              <p class="no-data">None specified.</p>
-            }
-          </div>
-        </app-collapsible-panel>
-      </section>
-    } @else {
-      <p>Device data not available.</p>
-    }
-  </div>
-</div>

@@ -11,6 +11,15 @@
           <button class="m3-action-button filled" (click)="openConfiguration(data.hostName)">
             <mat-icon>settings</mat-icon>Configuration
           </button>
+           <button class="m3-action-button filled" (click)="releaseLabServer(data.hostName)">
+            <mat-icon>upgrade</mat-icon>Release Lab Server
+          </button>
+           <button class="m3-action-button filled" (click)="stopLabServer(data.hostName)">
+            <mat-icon>stop_circle</mat-icon>Stop Lab Server
+          </button>
+           <button class="m3-action-button filled" (click)="debugHost(data.hostName)">
+            <mat-icon>bug_report</mat-icon>Debug
+          </button>
         </div>
       </header>
 
@@ -29,6 +38,9 @@
           <div class="title-actions">
             <a></a>
           </div>
+        </div>
+        <div class="host-overview-content">
+          <app-host-overview></app-host-overview>
         </div>
       </div>
     </div>
