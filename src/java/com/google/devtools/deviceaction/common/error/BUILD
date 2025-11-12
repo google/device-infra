@@ -18,6 +18,7 @@ load("@rules_java//java:defs.bzl", "java_library")
 DEFAULT_VISIBILITY = [
     "//src/java/com/google/devtools/deviceaction:deviceaction_java_pkg",
     "//src/javatests/com/google/devtools/deviceaction:deviceaction_javatests_pkg",
+    "//java/com/google/devtools/omnilab/device/lab/server/fake:__pkg__",
 ]
 
 package(
