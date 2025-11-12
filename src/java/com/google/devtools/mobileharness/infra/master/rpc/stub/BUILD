@@ -79,7 +79,8 @@ java_library(
     srcs = ["LabInfoStub.java"],
     deps = [
         "//src/devtools/mobileharness/shared/labinfo/proto:lab_info_service_java_proto",
-        "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc",
+        "//src/java/com/google/devtools/common/metrics/stability/rpc:exception",
+        "@maven//:com_google_guava_guava",
     ],
 )
 

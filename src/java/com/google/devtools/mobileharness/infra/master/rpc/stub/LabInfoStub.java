@@ -16,12 +16,17 @@
 
 package com.google.devtools.mobileharness.infra.master.rpc.stub;
 
-import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.devtools.common.metrics.stability.rpc.RpcExceptionWithErrorId;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 
 /** Stub of LabInfoService. */
 public interface LabInfoStub {
 
-  GetLabInfoResponse getLabInfo(GetLabInfoRequest request) throws GrpcExceptionWithErrorId;
+  /** Gets lab info from Master synchronously. */
+  GetLabInfoResponse getLabInfo(GetLabInfoRequest request) throws RpcExceptionWithErrorId;
+
+  /** Gets lab info from Master asynchronously. */
+  ListenableFuture<GetLabInfoResponse> getLabInfoAsync(GetLabInfoRequest request);
 }

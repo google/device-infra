@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.infra.master.rpc.stub.grpc;
 import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
 import static com.google.devtools.mobileharness.shared.util.comm.stub.Stubs.withDeadline;
 
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcStubUtil;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
@@ -51,5 +52,11 @@ public class LabInfoGrpcStub implements LabInfoStub {
         request,
         InfraErrorId.MASTER_RPC_STUB_LAB_INFO_GET_LAB_INFO_ERROR,
         String.format("Failed to get lab info, request=%s", shortDebugString(request)));
+  }
+
+  @Override
+  public ListenableFuture<GetLabInfoResponse> getLabInfoAsync(GetLabInfoRequest request) {
+    // TODO: Implement this method.
+    throw new UnsupportedOperationException("Not implemented");
   }
 }
