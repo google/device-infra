@@ -55,6 +55,7 @@ java_library(
         "//src/java/com/google/devtools/common/metrics/stability/model:error_id",
         "@grpc-java//core",
         "@maven//:com_google_errorprone_error_prone_annotations",
+        "@maven//:com_google_guava_guava",
     ],
 )
 

@@ -18,7 +18,9 @@ package com.google.devtools.mobileharness.infra.master.rpc.stub.grpc;
 
 import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
 import static com.google.devtools.mobileharness.shared.util.comm.stub.Stubs.withDeadline;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcStubUtil;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
@@ -28,6 +30,7 @@ import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProt
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 import com.google.devtools.mobileharness.shared.util.comm.stub.MasterGrpcStubHelper;
 import io.grpc.ClientInterceptors;
+import io.grpc.Deadline;
 import java.time.Duration;
 import javax.inject.Inject;
 
@@ -35,11 +38,16 @@ import javax.inject.Inject;
 public class LabInfoGrpcStub implements LabInfoStub {
 
   private final LabInfoServiceGrpc.LabInfoServiceBlockingStub labInfoServiceBlockingStub;
+  private final LabInfoServiceGrpc.LabInfoServiceFutureStub labInfoServiceFutureStub;
 
   @Inject
   LabInfoGrpcStub(MasterGrpcStubHelper masterGrpcStubHelper) {
     this.labInfoServiceBlockingStub =
         LabInfoServiceGrpc.newBlockingStub(
+            ClientInterceptors.intercept(
+                masterGrpcStubHelper.getChannel(), masterGrpcStubHelper.getInterceptors()));
+    this.labInfoServiceFutureStub =
+        LabInfoServiceGrpc.newFutureStub(
             ClientInterceptors.intercept(
                 masterGrpcStubHelper.getChannel(), masterGrpcStubHelper.getInterceptors()));
   }
@@ -48,6 +56,15 @@ public class LabInfoGrpcStub implements LabInfoStub {
   public GetLabInfoResponse getLabInfo(GetLabInfoRequest request) throws GrpcExceptionWithErrorId {
     return GrpcStubUtil.invoke(
         withDeadline(labInfoServiceBlockingStub, Duration.ofSeconds(30L))::getLabInfo,
+        request,
+        InfraErrorId.MASTER_RPC_STUB_LAB_INFO_GET_LAB_INFO_ERROR,
+        String.format("Failed to get lab info, request=%s", shortDebugString(request)));
+  }
+
+  @Override
+  public ListenableFuture<GetLabInfoResponse> getLabInfoAsync(GetLabInfoRequest request) {
+    return GrpcStubUtil.invokeAsync(
+        labInfoServiceFutureStub.withDeadline(Deadline.after(30, SECONDS))::getLabInfo,
         request,
         InfraErrorId.MASTER_RPC_STUB_LAB_INFO_GET_LAB_INFO_ERROR,
         String.format("Failed to get lab info, request=%s", shortDebugString(request)));
