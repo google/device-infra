@@ -67,6 +67,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_text_format",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:master_grpc_stub_helper",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:stubs",
+        "@grpc-java//context",
         "@grpc-java//core",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
