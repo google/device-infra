@@ -16,10 +16,13 @@
 
 package com.google.devtools.mobileharness.platform.android.app.binary.devicedaemon.v2;
 
+import android.app.AlertDialog;
 import android.app.KeyguardManager;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Bundle;
 import android.util.Log;
+import android.widget.TextView;
 import com.google.devtools.mobileharness.platform.android.app.binary.devicedaemon.shared.DaemonBaseActivity;
 import com.google.devtools.mobileharness.platform.android.app.binary.devicedaemon.shared.ResId;
 
@@ -34,6 +37,18 @@ public class DaemonActivity extends DaemonBaseActivity {
   public void startDaemonService() {
     Intent myIntent = DaemonJobIntentService.newIntent(this);
     DaemonJobIntentService.start(this, myIntent);
+  }
+
+  @Override
+  protected void onCreate(Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
+    findViewById(resId.getDeviceId())
+        .setOnClickListener(
+            deviceIdView -> {
+              String msg = ((TextView) deviceIdView).getText().toString();
+              msg += "\nSwipe right, or tap outside dialogBox, to dismiss";
+              new AlertDialog.Builder(this).setTitle("Device ID").setMessage(msg).create().show();
+            });
   }
 
   @Override
