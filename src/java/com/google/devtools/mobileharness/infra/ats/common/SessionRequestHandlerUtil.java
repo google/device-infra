@@ -834,16 +834,22 @@ public class SessionRequestHandlerUtil {
   /**
    * Checks if non-tradefed jobs can be created based on the {@code SessionRequestInfo}.
    *
+   * <p>Non-tradefed jobs can be created if:
+   *
+   * <ul>
+   *   <li>The test plan is a retry.
+   *   <li>Or, no specific modules were requested.
+   *   <li>Or, at least one of the requested modules is a non-tradefed module.
+   * </ul>
+   *
    * @return true if non-tradefed jobs can be created.
    */
   public boolean canCreateNonTradefedJobs(SessionRequestInfo sessionRequestInfo) {
     if (isRunRetry(sessionRequestInfo.testPlan())) {
       return true;
     }
-    boolean noGivenModuleForNonTf =
-        !sessionRequestInfo.moduleNames().isEmpty()
-            && sessionRequestInfo.givenMatchedNonTfModules().isEmpty();
-    return !noGivenModuleForNonTf;
+    return sessionRequestInfo.moduleNames().isEmpty()
+        || !sessionRequestInfo.givenMatchedNonTfModules().isEmpty();
   }
 
   /**
