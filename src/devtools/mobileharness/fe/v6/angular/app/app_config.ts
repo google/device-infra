@@ -1,4 +1,8 @@
-import {HttpClient, provideHttpClient, withInterceptors} from '@angular/common/http';
+import {
+  HttpClient,
+  provideHttpClient,
+  withInterceptors,
+} from '@angular/common/http';
 import {ApplicationConfig, provideZonelessChangeDetection} from '@angular/core';
 import {provideAnimations} from '@angular/platform-browser/animations';
 import {ActivatedRoute, provideRouter} from '@angular/router';
@@ -12,7 +16,9 @@ import {HttpConfigService} from './core/services/config/http_config_service';
 import {DEVICE_SERVICE} from './core/services/device/device_service';
 import {FakeDeviceService} from './core/services/device/fake_device_service';
 import {HttpDeviceService} from './core/services/device/http_device_service';
-
+import {FakeHostService} from './core/services/host/fake_host_service';
+import {HOST_SERVICE} from './core/services/host/host_service';
+import {HttpHostService} from './core/services/host/http_host_service';
 
 /**
  * The application configuration.
@@ -26,17 +32,27 @@ export const appConfig: ApplicationConfig = {
       provide: DEVICE_SERVICE,
       useFactory: (route: ActivatedRoute, http: HttpClient) => {
         const useFakeData = route.snapshot.queryParams['fake_data'] === 'true';
-        return useFakeData ? new FakeDeviceService() :
-                             new HttpDeviceService(http);
+        return useFakeData
+          ? new FakeDeviceService()
+          : new HttpDeviceService(http);
       },
       deps: [ActivatedRoute, HttpClient],
+    },
+    {
+      provide: HOST_SERVICE,
+      useFactory: (route: ActivatedRoute) => {
+        const useFakeData = route.snapshot.queryParams['fake_data'] === 'true';
+        return useFakeData ? new FakeHostService() : new HttpHostService();
+      },
+      deps: [ActivatedRoute],
     },
     {
       provide: CONFIG_SERVICE,
       useFactory: (route: ActivatedRoute, http: HttpClient) => {
         const useFakeData = route.snapshot.queryParams['fake_data'] === 'true';
-        return useFakeData ? new FakeConfigService() :
-                             new HttpConfigService(http);
+        return useFakeData
+          ? new FakeConfigService()
+          : new HttpConfigService(http);
       },
       deps: [ActivatedRoute, HttpClient],
     },

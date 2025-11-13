@@ -1,29 +1,258 @@
 <app-overview-page [navList]="navList">
-  <section #overviewSection id="overview" class="overview-card">
-    <h3 class="overview-card-header">Overview</h3>
+  <app-info-card #overviewSection id="overview" title="Overview" [collapsible]="false">
     <div class="overview-card-content">
-      <div class="basic-info-grid-wrapper">
+      <div class="grid-wrapper">
+        <dl class="grid-tight">
+          <dt title="HostName">Host Name</dt>
+          <dd title="{{ host.hostName }}" class="overflow-ellipsis">{{ host.hostName || 'N/A' }}</dd>
+
+          <dt title="HostIP">Host IP</dt>
+          <dd title="{{ host.ip }}" class="overflow-ellipsis">{{ host.ip || 'N/A' }}</dd>
+        </dl>
+        <dl class="grid-tight">
+          <dt title="LabType">Lab Type</dt>
+          <dd title="{{ host.labTypeDisplayName }}">
+            <div class="lab-type-chip overflow-ellipsis">
+              {{ host.labTypeDisplayName || 'N/A' }}
+            </div>
+          </dd>
+          <dt title="OS">OS</dt>
+          <dd title="{{ host.os }}" class="overflow-ellipsis">{{ host.os || 'N/A' }}</dd>
+        </dl>
       </div>
     </div>
-  </section>
-  <section #overviewSection id="lab-server" class="overview-card">
-    <h3 class="overview-card-header">Lab Server</h3>
-    <div class="overview-card-content">
-
+  </app-info-card>
+  <app-info-card #overviewSection id="lab-server" title="Lab Server" [collapsible]="false">
+    <div operations class="operation-button">
+      <a href="#" target="_blank">
+        <mat-icon>article</mat-icon>
+        <span class="operation-text">View Log</span>
+        <mat-icon>open_in_new</mat-icon>
+      </a>
     </div>
-  </section>
-  <section #overviewSection id="device-list" class="overview-card">
-    <h3 class="overview-card-header">Devices</h3>
     <div class="overview-card-content">
+      <dl class="grid-tight">
+        <dt>State</dt>
+        @let connectivitySemantic = getStatusSemantic(host.labServer.connectivity);
+        <dd
+          class="grid-tight-dd {{ connectivitySemantic.colorClass }}"
+          title="{{ connectivitySemantic.tooltip }}"
+        >
+          <mat-icon matTooltip="{{ connectivitySemantic.tooltip }}">{{ connectivitySemantic.icon }}</mat-icon>
+          <span matTooltip="{{ connectivitySemantic.tooltip }}"
+            >{{ connectivitySemantic.text }}
+            {{ connectivitySemantic.duration ? '(' + connectivitySemantic.duration + ')' : ''
+            }}</span
+          >
+          <mat-icon matTooltip="{{ connectivitySemantic.tooltip }}" class="cursor-help">help_outline</mat-icon>
+        </dd>
 
+        @if (host.labServer.activity; as activity) {
+          @let activitySemantic = getLabActivitySemantic(activity);
+          <dt>Activity</dt>
+          <dd
+            class="grid-tight-dd {{ activitySemantic.colorClass }}"
+            title="{{ activitySemantic.tooltip }}"
+          >
+            <mat-icon matTooltip="{{ activitySemantic.tooltip }}" [class.spin-animation]="activitySemantic.isSpinning">{{
+              activitySemantic.icon
+            }}</mat-icon>
+            <span matTooltip="{{ activitySemantic.tooltip }}">{{ activitySemantic.text }}</span>
+            <mat-icon matTooltip="{{ activitySemantic.tooltip }}" class="cursor-help">help_outline</mat-icon>
+          </dd>
+        }
+
+        <dt>Version</dt>
+        <dd>{{ host.labServer.version }}</dd>
+
+        <dt>Pass Through Flags
+          <mat-icon
+            class="cursor-help"
+            matTooltip="Flags passed directly to the lab server instance on startup for custom configuration."
+            >help_outline</mat-icon
+          >
+        </dt>
+        <dd class="grid-tight-dd">
+          @if (host.labServer.passThroughFlags) {
+            <div class="monospace-block">{{ host.labServer.passThroughFlags }}</div>
+          } @else {
+            <span class="text-gray-500">None</span>
+          }
+          <button
+            mat-icon-button
+            data-action="release-lab-server"
+            attr.data-host-id="{{ host.hostName }}"
+            title="Edit Pass Through Flags (requires Lab Server restart)"
+            class="edit-flags-button"
+          >
+            <mat-icon>edit</mat-icon>
+          </button>
+        </dd>
+      </dl>
     </div>
-  </section>
-  <section #overviewSection id="daemon-server" class="overview-card">
-    <h3 class="overview-card-header">Daemon Server</h3>
+  </app-info-card>
+  <app-info-card #overviewSection id="device-list" title="Devices" [collapsible]="false">
     <div class="overview-card-content">
-
+      @if(host.devices.length > 0) {
+        <!-- <div class="device-table-toolbar">
+          <h4 class="device-count-header">
+            Total Devices <span class="device-count">({{ host.devices.length }})</span>
+          </h4>
+          <mat-form-field appearance="outline" class="device-filter-input">
+            <mat-icon matPrefix>filter_list</mat-icon>
+            <input
+              matInput
+              placeholder="Filter devices"
+              [(ngModel)]="deviceFilter"
+              (ngModelChange)="filterDevices()"
+            />
+          </mat-form-field>
+        </div>
+        <div class="device-table-container">
+          <table class="device-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Health</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Label</th>
+                <th>Required Dims</th>
+                <th>Model</th>
+                <th>Version</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for(device of filteredDevices; track device.id) {
+                <tr>
+                  <td class="device-id">
+                    <a routerLink="/devices/{{ device.id }}">{{ device.id }}</a>
+                  </td>
+                  <td>
+                    <div class="device-health">
+                      <mat-icon
+                        class="{{ device.serviceState.colorClass }}"
+                        title="{{ device.serviceState.text }}"
+                        >{{ device.serviceState.icon }}</mat-icon
+                      >
+                      <mat-icon class="cursor-help" title="{{ device.serviceState.tooltip }}"
+                        >help_outline</mat-icon
+                      >
+                    </div>
+                  </td>
+                  <td>
+                    @if(device.types.length == 0) {
+                      <span class="type-chip-abnormal">No types detected</span>
+                    } @else {
+                      <div class="device-type" title="{{ device.types.join(', ') }}">
+                        <span
+                          class="type-chip"
+                          [class.type-chip-abnormal]="isTypeAbnormal(device.types)"
+                          [class.type-chip-normal]="!isTypeAbnormal(device.types)"
+                          >{{ getFirstType(device.types) }}</span
+                        >
+                        @if(getRemainingTypeCount(device.types) > 0) {
+                          <span class="type-count"
+                            >+{{ getRemainingTypeCount(device.types) }}</span
+                          >
+                        }
+                      </div>
+                    }
+                  </td>
+                  <td>
+                    <span
+                      class="type-chip"
+                      [class.type-chip-critical-status]="device.isStatusCritical"
+                      [class.type-chip-normal]="!device.isStatusCritical"
+                      >{{ device.status }}</span
+                    >
+                  </td>
+                  <td>{{ device.label || '—' }}</td>
+                  <td>{{ device.required_dims || '—' }}</td>
+                  <td>{{ device.model }}</td>
+                  <td>{{ device.version }}</td>
+                  <td>
+                    <button mat-icon-button [matMenuTriggerFor]="menu" aria-label="Device actions">
+                      <mat-icon>more_vert</mat-icon>
+                    </button>
+                    <mat-menu #menu="matMenu">
+                      <button mat-menu-item>
+                        <mat-icon>screenshot</mat-icon>
+                        <span>Screenshot</span>
+                      </button>
+                      <button mat-menu-item>
+                        <mat-icon>important_devices</mat-icon>
+                        <span>Remote Control</span>
+                      </button>
+                      <button mat-menu-item>
+                        <mat-icon>flash_on</mat-icon>
+                        <span>Flash</span>
+                      </button>
+                    </mat-menu>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="9" class="no-devices-text">No devices match filter.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div> -->
+      } @else {
+        <p class="no-devices-text">No devices are connected to this host.</p>
+      }
     </div>
-  </section>
-  <section #overviewSection id="host-properties" class="overview-card">
-  </section>
+  </app-info-card>
+  <app-info-card #overviewSection id="daemon-server" title="Daemon Server" [collapsible]="false">
+    <div operations class="operation-button">
+      <a href="#" target="_blank">
+        <mat-icon>article</mat-icon>
+        <span class="operation-text">View Log</span>
+        <mat-icon>open_in_new</mat-icon>
+      </a>
+    </div>
+    <div class="overview-card-content">
+      <dl class="grid-tight">
+        <dt>State</dt>
+        @let daemonSemantic = getStatusSemantic(host.daemonServer.status);
+        <dd
+          class="grid-tight-dd {{ daemonSemantic.colorClass }}"
+          title="{{ daemonSemantic.tooltip }}"
+        >
+          <mat-icon matTooltip="{{ daemonSemantic.tooltip }}">
+            {{ daemonSemantic.icon }}
+          </mat-icon>
+          <span matTooltip="{{ daemonSemantic.tooltip }}">
+            {{ daemonSemantic.text }}
+            {{ daemonSemantic.duration ? '(' + daemonSemantic.duration + ')' : '' }}
+          </span>
+          <mat-icon matTooltip="{{ daemonSemantic.tooltip }}" class="cursor-help">
+            help_outline
+          </mat-icon>
+        </dd>
+        <dt>Version</dt>
+        <dd>{{ host.daemonServer.version }}</dd>
+      </dl>
+    </div>
+  </app-info-card>
+  <app-info-card #overviewSection id="host-properties" title="Host Properties">
+    <div id="properties-content" class="overview-card-content">
+      @if (host.properties && objectUtils.objectKeys(host.properties).length > 0) {
+        <div class="data-block">
+          <dl class="data-block-grid">
+            @for (key of objectUtils.objectKeys(host.properties); track key) {
+              <div class="data-block-row contents">
+                <dt>{{ key }}</dt>
+                <dd>{{ host.properties[key] }}</dd>
+              </div>
+            }
+          </dl>
+        </div>
+      } @else {
+        <p class="none-specified">None specified.</p>
+      }
+    </div>
+  </app-info-card>
 </app-overview-page>

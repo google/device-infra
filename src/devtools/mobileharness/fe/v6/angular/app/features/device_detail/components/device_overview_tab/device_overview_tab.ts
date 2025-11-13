@@ -20,7 +20,7 @@ import {
   HealthState,
   type DimensionSourceGroup,
 } from '../../../../core/models/device_overview';
-import {CollapsiblePanel} from '../../../../shared/components/collapsible_panel/collapsible_panel';
+import {InfoCard} from '../../../../shared/components/info_card/info_card';
 import {
   NavItem,
   OverviewPage,
@@ -52,13 +52,7 @@ interface DimensionItem {
 @Component({
   selector: 'app-device-overview-tab',
   standalone: true,
-  imports: [
-    CommonModule,
-    MatIconModule,
-    CollapsiblePanel,
-    FormsModule,
-    OverviewPage,
-  ],
+  imports: [CommonModule, MatIconModule, InfoCard, FormsModule, OverviewPage],
   templateUrl: './device_overview_tab.ng.html',
   styleUrl: './device_overview_tab.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

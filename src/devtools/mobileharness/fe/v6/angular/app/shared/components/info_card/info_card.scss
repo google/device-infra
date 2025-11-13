@@ -1,25 +1,43 @@
+
+@use '../../styles/configuration' as config;
+
+:host {
+  display: block;
+  overflow: hidden;
+  font-family: config.$labconsole-font;
+}
+
 .panel-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  cursor: pointer;
   padding: 1rem 1.5rem;
   font-size: 1.125rem;
   font-weight: 500;
   user-select: none;
   border-bottom: 1px solid #e0e0e0;
 
-  .expand-icon {
-    transition: transform 0.2s ease-in-out;
+  &.collapsible {
+    cursor: pointer;
   }
 
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .expand-icon {
+    transition: transform 0.2s ease-in-out;
+    margin-left: 0.5rem;
+  }
   .expand-icon.rotated {
     transform: rotate(-90deg);
   }
 }
 
 .panel-header.collapsed {
-  border-bottom: none;
+  border-bottom: 0;
 }
 
 .panel-content {

@@ -7,20 +7,23 @@ import {MatIconModule} from '@angular/material/icon';
  * It can be expanded and collapsed by clicking the expand icon.
  */
 @Component({
-  selector: 'app-collapsible-panel',
+  selector: 'app-info-card',
   standalone: true,
-  templateUrl: './collapsible_panel.ng.html',
-  styleUrl: './collapsible_panel.scss',
+  templateUrl: './info_card.ng.html',
+  styleUrl: './info_card.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, MatIconModule],
+  host: {'class': 'overview-card'},
 })
-export class CollapsiblePanel implements OnInit {
+export class InfoCard implements OnInit {
   @Input() expanded = true;
   @Input() title = '';
+  @Input() collapsible = true;
 
   ngOnInit() {}
 
   toggle(): void {
+    if (!this.collapsible) return;
     this.expanded = !this.expanded;
   }
 }

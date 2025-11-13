@@ -43,7 +43,6 @@ $labconsole-font: 'Google Sans', Roboto, Arial, sans-serif;
     min-width: 0;
     flex-grow: 1;
     font-family: $labconsole-font;
-    margin-right: 0.5rem;
 
     .chevron-icon {
       color: #d1d5db; // text-gray-400
@@ -60,6 +59,7 @@ $labconsole-font: 'Google Sans', Roboto, Arial, sans-serif;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      margin-right: 0.5rem;
     }
   }
 
@@ -69,6 +69,36 @@ $labconsole-font: 'Google Sans', Roboto, Arial, sans-serif;
     align-items: center;
     justify-content: flex-end;
     gap: 0.5rem;
+
+    .header-actions-2xl,
+    .header-actions-xl,
+    .header-actions-sm {
+      display: none;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    // sm: up to 1024px
+    .header-actions-sm {
+      display: flex;
+    }
+    // xl: 1024px to 1300px
+    @media (min-width: 1024px) {
+      .header-actions-sm {
+        display: none;
+      }
+      .header-actions-xl {
+        display: flex;
+      }
+    }
+    // 2xl: 1300px and up
+    @media (min-width: 1300px) {
+      .header-actions-xl {
+        display: none;
+      }
+      .header-actions-2xl {
+        display: flex;
+      }
+    }
   }
 
   .m3-action-button {
@@ -101,6 +131,22 @@ $labconsole-font: 'Google Sans', Roboto, Arial, sans-serif;
       &:hover {
         background-color: #d2e3fc;
         box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      }
+    }
+
+    &.transparent {
+      background-color: transparent;
+      color: #00458f;
+      &:hover {
+        background-color: rgba(0, 69, 143, 0.08);
+      }
+    }
+
+    &.dropdown-trigger {
+      padding: 0 8px 0 12px;
+      mat-icon {
+        margin-right: 0px;
+        margin-left: 6px;
       }
     }
 
@@ -140,7 +186,6 @@ $labconsole-font: 'Google Sans', Roboto, Arial, sans-serif;
       width: 24px;
     }
   }
-
   .host-title {
     font-size: 1.5rem;
     line-height: 2rem;

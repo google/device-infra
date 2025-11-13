@@ -1,9 +1,12 @@
-
-@if (device) {
-  <app-overview-page [navList]="navList">
+<app-overview-page [navList]="navList">
+  @if (device) {
     <!-- Health & Activity Card -->
-    <section #overviewSection id="overview-health" class="overview-card">
-      <h3 class="overview-card-header">Health & Activity</h3>
+    <app-info-card
+      #overviewSection
+      id="overview-health"
+      title="Health & Activity"
+      [collapsible]="false"
+    >
       <div class="overview-card-content">
         @let healthUI = getHealthStateUI(device.healthAndActivity.state);
         <div class="health-summary">
@@ -19,14 +22,12 @@
               {{ device.healthAndActivity.title }}
             </h3>
             <p class="health-subtitle">{{ device.healthAndActivity.subtitle }}</p>
-            @if (
-              device.healthAndActivity.state !== 'IN_SERVICE_IDLE' && device.healthAndActivity.state !== 'IN_SERVICE_BUSY'
-            ) {
+            @if ( device.healthAndActivity.state !== 'IN_SERVICE_IDLE' && device.healthAndActivity.state
+            !== 'IN_SERVICE_BUSY' ) {
               <div class="last-in-service">
                 <span class="font-medium">Last in service:</span>
-                {{ dateUtils.format(device.healthAndActivity.lastInServiceTime) }}
-
-                @if (device.healthAndActivity.lastInServiceTime !== null) {
+                {{ dateUtils.format(device.healthAndActivity.lastInServiceTime) }} @if
+                (device.healthAndActivity.lastInServiceTime !== null) {
                   <span class="time-ago-chip">
                     {{ dateUtils.formatTimeAgo(device.healthAndActivity.lastInServiceTime) }}
                   </span>
@@ -117,11 +118,15 @@
           }
         </dl>
       </div>
-    </section>
+    </app-info-card>
 
     <!-- Basic Information Card -->
-    <section #overviewSection id="overview-system" class="overview-card">
-      <h3 class="overview-card-header">Basic Information</h3>
+    <app-info-card
+      #overviewSection
+      id="overview-system"
+      title="Basic Information"
+      [collapsible]="false"
+    >
       <div class="overview-card-content">
         <div class="basic-info-grid-wrapper">
           <dl class="info-grid-tight">
@@ -142,16 +147,16 @@
           <dl class="info-grid-tight">
             <dt title="Battery">Battery</dt>
             <dd>
-              {{ device.basicInfo.batteryLevel !== null ? device.basicInfo.batteryLevel + '%' : 'N/A' }}
+              {{ device.basicInfo.batteryLevel !== null ? device.basicInfo.batteryLevel + '%' :
+              'N/A' }}
             </dd>
 
             <dt title="Network">Network</dt>
             <dd>
               <div class="network-status">
                 @if (device.basicInfo.network.wifiRssi !== undefined) {
-                  @let wifiIcon =
-                  getWifiSignalIcon(device.basicInfo.network.wifiRssi);
-                  @let wifiQuality =
+                  @let wifiIcon = getWifiSignalIcon(device.basicInfo.network.wifiRssi);
+                   @let wifiQuality =
                   getWifiQualityText(device.basicInfo.network.wifiRssi);
                   <mat-icon
                     class="wifi-icon"
@@ -159,8 +164,7 @@
                   >
                     {{ wifiIcon }}
                   </mat-icon>
-                }
-                @if (device.basicInfo.network.hasInternet === true) {
+                } @if (device.basicInfo.network.hasInternet === true) {
                   <div class="internet-status text-green-600">
                     <mat-icon class="internet-icon">public</mat-icon>
                     <span class="font-medium">Internet access</span>
@@ -188,11 +192,15 @@
           </dl>
         </div>
       </div>
-    </section>
+    </app-info-card>
 
     <!-- Permissions Card -->
-    <section #overviewSection id="overview-permissions" class="overview-card">
-      <h3 class="overview-card-header">Permissions</h3>
+    <app-info-card
+      #overviewSection
+      id="overview-permissions"
+      title="Permissions"
+      [collapsible]="false"
+    >
       <div class="overview-card-content permissions-content">
         <div>
           <h4 class="permission-type-title">Owners</h4>
@@ -219,136 +227,128 @@
           </div>
         </div>
       </div>
-    </section>
+    </app-info-card>
 
     <!-- Capabilities Card -->
-    <section #overviewSection id="overview-capabilities" class="overview-card">
-      <app-collapsible-panel [title]="'Capabilities'">
-        <div id="capabilities-content" class="overview-card-content capabilities-content">
-          <div>
-            <h4 class="capabilities-title"
-              >Supported Drivers ({{ device.capabilities.supportedDrivers.length }})</h4
-            >
-            <div class="chip-grid-container">
-              @if (device.capabilities.supportedDrivers.length > 0) {
-                @for (driver of device.capabilities.supportedDrivers; track driver) {
-                  <div class="type-chip type-chip-normal">{{ driver }}</div>
-                }
-              } @else {
-                <p class="no-capability">None</p>
+    <app-info-card #overviewSection id="overview-capabilities" title="Capabilities">
+      <div id="capabilities-content" class="overview-card-content capabilities-content">
+        <div>
+          <h4 class="capabilities-title"
+            >Supported Drivers ({{ device.capabilities.supportedDrivers.length }})</h4
+          >
+          <div class="chip-grid-container">
+            @if (device.capabilities.supportedDrivers.length > 0) {
+              @for (driver of device.capabilities.supportedDrivers; track driver) {
+                <div class="type-chip type-chip-normal">{{ driver }}</div>
               }
-            </div>
-          </div>
-          <div>
-            <h4 class="capabilities-title"
-              >Supported Decorators ({{ device.capabilities.supportedDecorators.length }})</h4
-            >
-            <div class="chip-grid-container">
-              @if (device.capabilities.supportedDecorators.length > 0) {
-                @for (decorator of device.capabilities.supportedDecorators; track decorator) {
-                  <div class="type-chip type-chip-normal">{{ decorator }}</div>
-                }
-              } @else {
-                <p class="no-capability">None</p>
-              }
-            </div>
+            } @else {
+              <p class="no-capability">None</p>
+            }
           </div>
         </div>
-      </app-collapsible-panel>
-    </section>
+        <div>
+          <h4 class="capabilities-title"
+            >Supported Decorators ({{ device.capabilities.supportedDecorators.length }})</h4
+          >
+          <div class="chip-grid-container">
+            @if (device.capabilities.supportedDecorators.length > 0) {
+              @for (decorator of device.capabilities.supportedDecorators; track decorator) {
+                <div class="type-chip type-chip-normal">{{ decorator }}</div>
+              }
+            } @else {
+              <p class="no-capability">None</p>
+            }
+          </div>
+        </div>
+      </div>
+    </app-info-card>
 
     <!-- Dimensions Card -->
-    <section #overviewSection id="overview-dimensions" class="overview-card">
-      <app-collapsible-panel [expanded]="true" [title]="'Dimensions'">
-        <div id="dimensions-content" class="overview-card-content text-sm">
-          @if (device.dimensions) {
-            <input
-              type="search"
-              id="dimensions-search"
-              class="overview-search-input"
-              placeholder="Filter dimensions by key or value..."
-              [(ngModel)]="dimensionsSearchTerm"
-              (ngModelChange)="onDimensionsSearchChange()"
-              aria-label="Search dimensions"
-            />
+    <app-info-card #overviewSection id="overview-dimensions" title="Dimensions" [expanded]="true">
+      <div id="dimensions-content" class="overview-card-content text-sm">
+        @if (device.dimensions) {
+          <input
+            type="search"
+            id="dimensions-search"
+            class="overview-search-input"
+            placeholder="Filter dimensions by key or value..."
+            [(ngModel)]="dimensionsSearchTerm"
+            (ngModelChange)="onDimensionsSearchChange()"
+            aria-label="Search dimensions"
+          />
 
-            @if (filteredDimensions.length === 0 && flatDimensions.length > 0) {
-              <div id="dimensions-no-results" class="no-search-results"
-                >No dimensions match your filter.</div
-              >
-            }
-
-            <ng-template #dimensionsContent let-type="type" let-title="title">
-              <h4 class="dimension-section-title">{{ title }}</h4>
-              @let groupedData = getGroupedData(type);
-
-              @if (objectUtils.objectKeys(groupedData).length > 0) {
-                <div [id]="type + '-dimensions-content'" class="dimensions-content">
-                  @for (source of objectUtils.objectKeys(groupedData); track source) {
-                    @let items = groupedData[source];
-
-                    <div class="data-source-group">
-                      <h5 class="dimension-source-title"> {{ source }} ({{ items.length }}) </h5>
-                      <div
-                        class="data-block"
-                        [class.scrollable]="source === 'Detected by OmniLab'"
-                      >
-                        <dl class="data-block-grid">
-                          @for (item of items; track trackByKeyAndValue($index, item)) {
-                            <div class="data-block-row contents">
-                              <dt>{{ item.key }}</dt>
-                              <dd>{{ item.value }}</dd>
-                            </div>
-                          }
-                        </dl>
-                      </div>
-                    </div>
-                  }
-                </div>
-              } @else {
-                <p class="no-data">None</p>
-              }
-            </ng-template>
-
-            <ng-container
-              *ngTemplateOutlet="dimensionsContent; context: { type: 'supported', title: 'Supported Dimensions' }"
-            ></ng-container>
-
-            <div class="mt-6">
-              <ng-container
-                *ngTemplateOutlet="dimensionsContent; context: { type: 'required', title: 'Required Dimensions' }"
-              ></ng-container>
-            </div>
-          } @else {
-            <p class="no-data">Not available.</p>
+          @if (filteredDimensions.length === 0 && flatDimensions.length > 0) {
+            <div id="dimensions-no-results" class="no-search-results"
+              >No dimensions match your filter.</div
+            >
           }
-        </div>
-      </app-collapsible-panel>
-    </section>
 
-    <!-- Properties Card -->
-    <section #overviewSection id="overview-properties" class="overview-card">
-      <app-collapsible-panel [title]="'Properties'">
-        <div id="properties-content" class="overview-card-content">
-          @if (device.properties && objectUtils.objectKeys(device.properties).length > 0) {
-            <div class="data-block">
-              <dl class="data-block-grid">
-                @for (key of objectUtils.objectKeys(device.properties); track key) {
-                  <div class="data-block-row contents">
-                    <dt>{{ key }}</dt>
-                    <dd>{{ device.properties[key] }}</dd>
+          <ng-template #dimensionsContent let-type="type" let-title="title">
+            <h4 class="dimension-section-title">{{ title }}</h4>
+            @let groupedData = getGroupedData(type); @if (objectUtils.objectKeys(groupedData).length
+            > 0) {
+              <div [id]="type + '-dimensions-content'" class="dimensions-content">
+                @for (source of objectUtils.objectKeys(groupedData); track source) {
+                  @let items = groupedData[source];
+
+                  <div class="data-source-group">
+                    <h5 class="dimension-source-title"> {{ source }} ({{ items.length }}) </h5>
+                    <div
+                      class="data-block"
+                      [class.scrollable]="source === 'Detected by OmniLab'"
+                    >
+                      <dl class="data-block-grid">
+                        @for (item of items; track trackByKeyAndValue($index, item)) {
+                          <div class="data-block-row contents">
+                            <dt>{{ item.key }}</dt>
+                            <dd>{{ item.value }}</dd>
+                          </div>
+                        }
+                      </dl>
+                    </div>
                   </div>
                 }
-              </dl>
-            </div>
-          } @else {
-            <p class="no-data">None specified.</p>
-          }
-        </div>
-      </app-collapsible-panel>
-    </section>
-  </app-overview-page>
-} @else {
-  <p>Device data not available.</p>
-}
+              </div>
+            } @else {
+              <p class="no-data">None</p>
+            }
+          </ng-template>
 
+          <ng-container
+            *ngTemplateOutlet="dimensionsContent; context: { type: 'supported', title: 'Supported Dimensions' }"
+          ></ng-container>
+
+          <div class="mt-6">
+            <ng-container
+              *ngTemplateOutlet="dimensionsContent; context: { type: 'required', title: 'Required Dimensions' }"
+            ></ng-container>
+          </div>
+        } @else {
+          <p class="no-data">Not available.</p>
+        }
+      </div>
+    </app-info-card>
+
+    <!-- Properties Card -->
+    <app-info-card #overviewSection id="overview-properties" title="Properties">
+      <div id="properties-content" class="overview-card-content">
+        @if (device.properties && objectUtils.objectKeys(device.properties).length > 0) {
+          <div class="data-block">
+            <dl class="data-block-grid">
+              @for (key of objectUtils.objectKeys(device.properties); track key) {
+                <div class="data-block-row contents">
+                  <dt>{{ key }}</dt>
+                  <dd>{{ device.properties[key] }}</dd>
+                </div>
+              }
+            </dl>
+          </div>
+        } @else {
+          <p class="no-data">None specified.</p>
+        }
+      </div>
+    </app-info-card>
+  } @else {
+    <p>Device data not available.</p>
+  }
+</app-overview-page>

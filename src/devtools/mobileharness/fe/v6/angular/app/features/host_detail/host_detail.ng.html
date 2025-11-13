@@ -1,48 +1,126 @@
 <div class="host-detail-container">
   @if (hostPageData$ | async; as data) {
-    <div class="main-card">
-      <header class="card-header">
-        <div class="header-host-id">
-          <span class="host-id-text">{{ data.hostName }}</span>
-          <span>({{ data.hostIP }})</span>
-        </div>
-
-        <div class="header-actions">
-          <button class="m3-action-button filled" (click)="openConfiguration(data.hostName)">
-            <mat-icon>settings</mat-icon>Configuration
-          </button>
-           <button class="m3-action-button filled" (click)="releaseLabServer(data.hostName)">
-            <mat-icon>upgrade</mat-icon>Release Lab Server
-          </button>
-           <button class="m3-action-button filled" (click)="stopLabServer(data.hostName)">
-            <mat-icon>stop_circle</mat-icon>Stop Lab Server
-          </button>
-           <button class="m3-action-button filled" (click)="debugHost(data.hostName)">
-            <mat-icon>bug_report</mat-icon>Debug
-          </button>
-        </div>
-      </header>
-
-      <div class="card-body">
-        <div class="host-title-bar">
-          <div class="title-icon-wrapper">
-            <mat-icon class="title-icon">dns</mat-icon>
+    @if (data.error) {
+      <div class="error-message">
+        <mat-icon class="error-icon">error_outline</mat-icon>
+        <p>{{ data.error }}</p>
+        <a routerLink="/dev/device-harness" class="m3-button">Back to Harness</a>
+      </div>
+    } @else if (data.host; as host) {
+      <div class="main-card">
+        <header class="card-header">
+          <div class="header-host-id">
+            <span class="host-id-text">{{ host.hostName }}</span>
+            <span>({{ host.ip }})</span>
           </div>
-          <h1 class="host-title" title="{{ data.hostName }}">
-            <span class="host-text-bold">Host: </span>
-            <span class="host-text">{{ data.hostName }}</span>
-          </h1>
-          <button class="copy-button" title="Copy host name to clipboard">
-            <mat-icon class="copy-icon">content_copy</mat-icon>
-          </button>
-          <div class="title-actions">
-            <a></a>
+
+          <div class="header-actions">
+            <!-- 2xl view -->
+            <div class="header-actions-2xl">
+              <button class="m3-action-button filled" (click)="openConfiguration(host.hostName)">
+                <mat-icon>settings</mat-icon>Configuration
+              </button>
+              <button class="m3-action-button filled" (click)="releaseLabServer(host.hostName)">
+                <mat-icon>upgrade</mat-icon>Release Lab Server
+              </button>
+              <button class="m3-action-button filled" (click)="stopLabServer(host.hostName)">
+                <mat-icon>stop_circle</mat-icon>Stop Lab Server
+              </button>
+              <button class="m3-action-button filled" (click)="debugHost(host.hostName)">
+                <mat-icon>bug_report</mat-icon>Debug
+              </button>
+              <button class="m3-action-button filled">
+                <mat-icon>article</mat-icon>Advanced Logs
+              </button>
+            </div>
+            <!-- xl view -->
+            <div class="header-actions-xl">
+              <button class="m3-action-button filled" (click)="openConfiguration(host.hostName)">
+                <mat-icon>settings</mat-icon>Configuration
+              </button>
+              <button class="m3-action-button filled" (click)="releaseLabServer(host.hostName)">
+                <mat-icon>upgrade</mat-icon>Release Lab Server
+              </button>
+              <button class="m3-action-button filled" (click)="stopLabServer(host.hostName)">
+                <mat-icon>stop_circle</mat-icon>Stop Lab Server
+              </button>
+              <button
+                class="m3-action-button transparent dropdown-trigger"
+                [matMenuTriggerFor]="moreMenu"
+              >
+                <span>More</span>
+                <mat-icon>expand_more</mat-icon>
+              </button>
+              <mat-menu #moreMenu="matMenu">
+                <button mat-menu-item>
+                  <mat-icon class="dropdown-mat-icon">bug_report</mat-icon>
+                  <span>Debug</span>
+                </button>
+                <button mat-menu-item>
+                  <mat-icon class="dropdown-mat-icon">article</mat-icon>
+                  <span>Advanced Logs</span>
+                </button>
+              </mat-menu>
+            </div>
+            <!-- sm view -->
+            <div class="header-actions-sm">
+              <button class="m3-action-button filled" (click)="openConfiguration(host.hostName)">
+                <mat-icon>settings</mat-icon>Configuration
+              </button>
+              <button
+                class="m3-action-button transparent dropdown-trigger"
+                [matMenuTriggerFor]="actionsMenu"
+              >
+                <span>More</span>
+                <mat-icon>expand_more</mat-icon>
+              </button>
+              <mat-menu #actionsMenu="matMenu">
+                <button mat-menu-item>
+                  <mat-icon class="dropdown-mat-icon">upgrade</mat-icon>
+                  <span>Release Lab Server</span>
+                </button>
+                <button mat-menu-item>
+                  <mat-icon class="dropdown-mat-icon">stop_circle</mat-icon>
+                  <span>Stop Lab Server</span>
+                </button>
+                <button mat-menu-item>
+                  <mat-icon class="dropdown-mat-icon">bug_report</mat-icon>
+                  <span>Debug</span>
+                </button>
+                <button mat-menu-item>
+                  <mat-icon class="dropdown-mat-icon">article</mat-icon>
+                  <span>Advanced Logs</span>
+                </button>
+              </mat-menu>
+            </div>
           </div>
-        </div>
-        <div class="host-overview-content">
-          <app-host-overview></app-host-overview>
+        </header>
+
+        <div class="card-body">
+          <div class="host-title-bar">
+            <div class="title-icon-wrapper">
+              <mat-icon class="title-icon">dns</mat-icon>
+            </div>
+            <h1 class="host-title" title="{{ host.hostName }}">
+              <span class="host-text-bold">Host: </span>
+              <span class="host-text">{{ host.hostName }}</span>
+            </h1>
+            <button class="copy-button" title="Copy host name to clipboard">
+              <mat-icon class="copy-icon">content_copy</mat-icon>
+            </button>
+            <div class="title-actions">
+              <a></a>
+            </div>
+          </div>
+          <div class="host-overview-content">
+            <app-host-overview-page [host]="host"></app-host-overview-page>
+          </div>
         </div>
       </div>
-    </div>
+    } @else {
+      <div class="loading-message">
+        <p>Loading host details...</p>
+      </div>
+    }
   }
 </div>

@@ -8,18 +8,20 @@ import {
 import {MatButtonModule} from '@angular/material/button';
 import {MatDialog} from '@angular/material/dialog';
 import {MatIconModule} from '@angular/material/icon';
-import {ActivatedRoute} from '@angular/router';
+import {MatMenuModule} from '@angular/material/menu';
+import {ActivatedRoute, RouterModule} from '@angular/router';
 import {Observable, of} from 'rxjs';
-import {map, switchMap} from 'rxjs/operators';
+import {catchError, map, switchMap} from 'rxjs/operators';
 
+import {type HostOverview} from '../../core/models/host_overview';
+import {HOST_SERVICE} from '../../core/services/host/host_service';
 import {HostConfig} from './components/host_config/host_config';
 import {HostEmpty} from './components/host_config/host_empty/host_empty';
 import {HostWizard} from './components/host_config/host_wizard/host_wizard';
-import {HostOverview} from './components/host_overview/host_overview';
+import {HostOverviewPage} from './components/host_overview/host_overview';
 
 interface HostPageData {
-  hostName: string;
-  hostIP?: string;
+  host: HostOverview | null;
   error?: string;
 }
 
@@ -32,25 +34,42 @@ interface HostPageData {
   templateUrl: './host_detail.ng.html',
   styleUrl: './host_detail.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, MatIconModule, MatButtonModule, HostOverview],
+  imports: [
+    CommonModule,
+    MatIconModule,
+    MatButtonModule,
+    HostOverviewPage,
+    MatMenuModule,
+    RouterModule,
+  ],
 })
 export class HostDetail implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly dialog = inject(MatDialog);
+  private readonly hostService = inject(HOST_SERVICE);
 
   readonly hostPageData$: Observable<HostPageData> = this.route.paramMap.pipe(
     map((params) => params.get('hostName')),
     switchMap((hostName: string | null) => {
       if (!hostName) {
         return of<HostPageData>({
-          hostName: '',
+          host: null,
           error: 'No host name provided in the route.',
         });
       }
-      return of<HostPageData>({
-        hostName,
-        hostIP: '192.168.1.101',
-      });
+
+      return this.hostService.getHostOverview(hostName).pipe(
+        map((hostOverview) => ({
+          host: hostOverview,
+        })),
+        catchError((err) => {
+          console.error(`Error fetching host ${hostName}:`, err);
+          return of<HostPageData>({
+            host: null,
+            error: `Failed to load host data for host: ${hostName}. ${err.message || ''}`,
+          });
+        }),
+      );
     }),
   );
 
