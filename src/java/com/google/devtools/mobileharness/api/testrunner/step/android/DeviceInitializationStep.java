@@ -187,15 +187,7 @@ public class DeviceInitializationStep {
     SharedLogUtil.logMsg(logger, log, "Starting device initialization for %s", deviceId);
 
     Duration sleepLength = Duration.ofSeconds(30);
-    int deviceInitAttempts =
-        testInfo == null
-            ? 1
-            : max(
-                1,
-                testInfo
-                    .jobInfo()
-                    .params()
-                    .getInt(PARAM_WAIT_FOR_DEVICE_INIT_ATTEMPTS, /* defaultValue= */ 3));
+    int deviceInitAttempts = getDeviceInitAttempts(testInfo, initializationArgs);
     Optional<Duration> deviceReadyTimeout = getDeviceReadyTimeout(testInfo);
     if (!skipCacheDevice) {
       cacheDevice(
@@ -336,5 +328,27 @@ public class DeviceInitializationStep {
       return initializationArgs.skipSetupWizard().get();
     }
     return false;
+  }
+
+  @VisibleForTesting
+  int getDeviceInitAttempts(
+      @Nullable TestInfo testInfo, @Nullable InitializationArgs initializationArgs)
+      throws MobileHarnessException {
+    if (testInfo == null) {
+      return 1;
+    }
+
+    if (initializationArgs != null && initializationArgs.deviceOnlineWaitAttempts().isPresent()) {
+      SharedLogUtil.logMsg(
+          logger, testInfo.log(), "Overriding device init attempts with deviceOnlineWaitAttempts.");
+      return max(1, initializationArgs.deviceOnlineWaitAttempts().get());
+    }
+    SharedLogUtil.logMsg(logger, testInfo.log(), "Using device init attempts from job info params");
+    return max(
+        1,
+        testInfo
+            .jobInfo()
+            .params()
+            .getInt(PARAM_WAIT_FOR_DEVICE_INIT_ATTEMPTS, /* defaultValue= */ 3));
   }
 }

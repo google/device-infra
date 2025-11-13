@@ -29,6 +29,12 @@ public abstract class InitializationArgs {
    */
   public abstract Optional<Boolean> skipSetupWizard();
 
+  /**
+   * Number of attempts to wait for device to initialize after flashing for each
+   * device_init_attempts.
+   */
+  public abstract Optional<Integer> deviceOnlineWaitAttempts();
+
   public static Builder builder() {
     return new AutoValue_InitializationArgs.Builder();
   }
@@ -38,6 +44,8 @@ public abstract class InitializationArgs {
   public abstract static class Builder {
 
     public abstract Builder setSkipSetupWizard(Boolean skipSetupWizard);
+
+    public abstract Builder setDeviceOnlineWaitAttempts(Integer deviceOnlineWaitAttempts);
 
     public abstract InitializationArgs build();
   }
