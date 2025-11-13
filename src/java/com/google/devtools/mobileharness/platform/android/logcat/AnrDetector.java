@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ExecutorService;
 import java.util.regex.Pattern;
 
 /**
@@ -61,9 +62,16 @@ public class AnrDetector implements LineProcessor {
   private final LinkedHashMap<CrashedProcess, List<String>> detectedAnrEvents =
       new LinkedHashMap<>();
   private final MonitoringConfig monitoringConfig;
+  private final ExecutorService executorService;
+  private final CrashDialogDetector crashDialogDetector;
 
-  public AnrDetector(MonitoringConfig monitoringConfig) {
+  public AnrDetector(
+      MonitoringConfig monitoringConfig,
+      CrashDialogDetector crashDialogDetector,
+      ExecutorService executorService) {
     this.monitoringConfig = monitoringConfig;
+    this.crashDialogDetector = crashDialogDetector;
+    this.executorService = executorService;
   }
 
   @Override
@@ -89,6 +97,8 @@ public class AnrDetector implements LineProcessor {
         return;
       }
       detectedAnrEvents.put(crashedProcess.get(), ImmutableList.copyOf(anrLines));
+      executorService.execute(
+          () -> crashDialogDetector.scan(monitoringConfig.reportAsFailurePackages()));
       anrLines.clear();
     }
   }

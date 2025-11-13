@@ -35,8 +35,10 @@ import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.dropbox.DropboxExtractor;
 import com.google.devtools.mobileharness.platform.android.dropbox.DropboxTag;
+import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
 import com.google.devtools.mobileharness.platform.android.logcat.AndroidRuntimeCrashDetector;
 import com.google.devtools.mobileharness.platform.android.logcat.AnrDetector;
+import com.google.devtools.mobileharness.platform.android.logcat.CrashDialogDetector;
 import com.google.devtools.mobileharness.platform.android.logcat.DeviceEventDetector;
 import com.google.devtools.mobileharness.platform.android.logcat.DeviceEventDetector.DeviceEventConfig;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent;
@@ -60,6 +62,8 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import javax.inject.Inject;
 
 /** Decorator for monitoring for crashes, ANRs and device events in logcat. */
@@ -84,7 +88,10 @@ public class AndroidLogcatMonitoringDecorator extends BaseDecorator
   private final Adb adb;
   private final LogcatLineProxy logcatLineProxy;
   private final LocalFileUtil localFileUtil;
+  private final AndroidFileUtil androidFileUtil;
   private final DropboxExtractor dropboxExtractor;
+
+  private final ExecutorService executorService = Executors.newSingleThreadExecutor();
 
   private LocalDateTime deviceTimeOnStart = null;
 
@@ -95,11 +102,13 @@ public class AndroidLogcatMonitoringDecorator extends BaseDecorator
       Adb adb,
       LogcatLineProxy logcatLineProxy,
       LocalFileUtil localFileUtil,
+      AndroidFileUtil androidFileUtil,
       DropboxExtractor dropboxExtractor) {
     super(decorated, testInfo);
     this.adb = adb;
     this.logcatLineProxy = logcatLineProxy;
     this.localFileUtil = localFileUtil;
+    this.androidFileUtil = androidFileUtil;
     this.dropboxExtractor = dropboxExtractor;
   }
 
@@ -119,9 +128,12 @@ public class AndroidLogcatMonitoringDecorator extends BaseDecorator
             spec.getReportAsFailurePackagesList(),
             spec.getErrorOnCrashPackagesList(),
             spec.getPackagesToIgnoreList());
-    var artProcessor = new AndroidRuntimeCrashDetector(monitoringConfig);
-    var anrProcessor = new AnrDetector(monitoringConfig);
-    var nativeCrashProcessor = new NativeCrashDetector(monitoringConfig);
+    var crashDialogDetector = new CrashDialogDetector(testInfo, getDevice(), adb);
+    var artProcessor =
+        new AndroidRuntimeCrashDetector(monitoringConfig, crashDialogDetector, executorService);
+    var anrProcessor = new AnrDetector(monitoringConfig, crashDialogDetector, executorService);
+    var nativeCrashProcessor =
+        new NativeCrashDetector(monitoringConfig, crashDialogDetector, executorService);
     var deviceEventDetector = new DeviceEventDetector(makeDeviceEventDetectorConfig(spec));
 
     logcatLineProxy.addLineProcessor(artProcessor);
@@ -147,6 +159,7 @@ public class AndroidLogcatMonitoringDecorator extends BaseDecorator
       writeMonitoringReport(testInfo);
       writeUnparsedLogcatLines(testInfo);
       extractDropboxEntries(testInfo);
+      extractCrashDialogScreenshot(testInfo, crashDialogDetector);
       checkForOrchestratorConnectionErrors();
       checkForInfraError();
     }
@@ -246,6 +259,17 @@ public class AndroidLogcatMonitoringDecorator extends BaseDecorator
         tags,
         deviceTimeOnStart,
         getDecoratorOutputsDir(testInfo));
+  }
+
+  private void extractCrashDialogScreenshot(
+      TestInfo testInfo, CrashDialogDetector crashDialogDetector)
+      throws MobileHarnessException, InterruptedException {
+    if (crashDialogDetector.crashDialogScreenshot().isPresent()) {
+      androidFileUtil.pull(
+          getDevice().getDeviceId(),
+          crashDialogDetector.crashDialogScreenshot().get(),
+          getDecoratorOutputsDir(testInfo).toString());
+    }
   }
 
   private void checkForInfraError() throws MobileHarnessException {
