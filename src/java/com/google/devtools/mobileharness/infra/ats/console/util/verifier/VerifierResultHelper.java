@@ -58,8 +58,7 @@ public class VerifierResultHelper {
   private static final int MAX_DETAIL_LENGTH = 100;
 
   private static final ImmutableSet<String> REPORT_LOGS =
-      ImmutableSet.of(
-          "config", "device-info-files", "report-log-files", "screenshots", "vintf-files");
+      ImmutableSet.of("config", "report-log-files", "screenshots", "vintf-files");
 
   @VisibleForTesting static final String CTS_VERIFIER_APK = "CtsVerifier.apk";
   @VisibleForTesting static final String VERIFIER_PACKAGE = "com.android.cts.verifier";

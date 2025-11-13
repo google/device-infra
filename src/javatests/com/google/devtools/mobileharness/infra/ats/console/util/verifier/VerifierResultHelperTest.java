@@ -215,7 +215,7 @@ public class VerifierResultHelperTest {
         folder.newFolder("xts_root").toPath(),
         resultPath);
 
-    verify(commandExecutor, times(4)).run(any());
+    verify(commandExecutor, times(2)).run(any());
     verify(commandExecutor)
         .run(
             Command.of(
@@ -226,26 +226,6 @@ public class VerifierResultHelperTest {
                         + " content://com.android.cts.verifier.testresultsprovider/logs/config <"
                         + " %s",
                     config.toAbsolutePath())));
-    verify(commandExecutor)
-        .run(
-            Command.of(
-                "bash",
-                "-c",
-                String.format(
-                    "/path/to/adb -s device shell content write --user 10 --uri"
-                        + " content://com.android.cts.verifier.testresultsprovider/logs/device-info-files/1.json"
-                        + " < %s",
-                    deviceInfo1.toAbsolutePath())));
-    verify(commandExecutor)
-        .run(
-            Command.of(
-                "bash",
-                "-c",
-                String.format(
-                    "/path/to/adb -s device shell content write --user 10 --uri"
-                        + " content://com.android.cts.verifier.testresultsprovider/logs/device-info-files/2.json"
-                        + " < %s",
-                    deviceInfo2.toAbsolutePath())));
     verify(commandExecutor)
         .run(
             Command.of(
