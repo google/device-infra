@@ -15,7 +15,6 @@
 
 # Android Instrumentation Test Result proto.
 
-load("@protobuf//bazel:java_lite_proto_library.bzl", "java_lite_proto_library")
 load("@protobuf//bazel:java_proto_library.bzl", "java_proto_library")
 load("@protobuf//bazel:proto_library.bzl", "proto_library")
 
@@ -34,11 +33,6 @@ java_proto_library(
     deps = [":error_proto"],
 )
 
-java_lite_proto_library(
-    name = "error_java_proto_lite",
-    deps = [":error_proto"],
-)
-
 proto_library(
     name = "test_case_proto",
     srcs = ["test_case.proto"],
@@ -47,11 +41,6 @@ proto_library(
 
 java_proto_library(
     name = "test_case_java_proto",
-    deps = [":test_case_proto"],
-)
-
-java_lite_proto_library(
-    name = "test_case_java_proto_lite",
     deps = [":test_case_proto"],
 )
 
@@ -70,11 +59,6 @@ java_proto_library(
     deps = [":test_result_proto"],
 )
 
-java_lite_proto_library(
-    name = "test_result_java_proto_lite",
-    deps = [":test_result_proto"],
-)
-
 proto_library(
     name = "test_status_proto",
     srcs = ["test_status.proto"],
@@ -82,11 +66,6 @@ proto_library(
 
 java_proto_library(
     name = "test_status_java_proto",
-    deps = [":test_status_proto"],
-)
-
-java_lite_proto_library(
-    name = "test_status_java_proto_lite",
     deps = [":test_status_proto"],
 )
 
@@ -101,10 +80,5 @@ proto_library(
 
 java_proto_library(
     name = "test_suite_result_java_proto",
-    deps = [":test_suite_result_proto"],
-)
-
-java_lite_proto_library(
-    name = "test_suite_result_java_proto_lite",
     deps = [":test_suite_result_proto"],
 )
