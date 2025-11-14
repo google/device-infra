@@ -177,6 +177,8 @@ public abstract class XtsJobCreator {
                 .orElse(null));
     if (SessionRequestHandlerUtil.isRunRetry(testPlan)) {
       extraJobProperties.put(Job.IS_RUN_RETRY, "true");
+      addPrevSessionPropertiesForRetry(
+          sessionRequestInfo, extraJobProperties, /* throwIfNoNonTfModule= */ false);
       if (useTfRetry) {
         logger.atInfo().log("Preparing for TF retry...");
         prepareTfRetry(sessionRequestInfo, driverParams, extraJobProperties, jobFiles);
@@ -418,31 +420,8 @@ public abstract class XtsJobCreator {
     SubPlan subPlan = null;
     if (SessionRequestHandlerUtil.isRunRetry(testPlan)) {
       extraJobProperties.put(Job.IS_RUN_RETRY, "true");
-      Optional<Path> testReportPropertiesFile =
-          getPrevSessionTestReportProperties(sessionRequestInfo);
-      if (testReportPropertiesFile.isPresent()) {
-        Properties testReportProperties = loadTestReportProperties(testReportPropertiesFile.get());
-        // If previous session doesn't have Non-TF module, skip the retry.
-        if (!Boolean.parseBoolean(
-            testReportProperties.getProperty(SuiteCommon.TEST_REPORT_PROPERTY_HAS_NON_TF_MODULE))) {
-          throw MobileHarnessExceptionFactory.createUserFacingException(
-              InfraErrorId.XTS_NO_MATCHED_NON_TF_MODULES_TO_RETRY,
-              "Previous session doesn't have non-tradefed module",
-              /* cause= */ null);
-        }
-        extraJobProperties.put(
-            Job.PREV_SESSION_HAS_TF_MODULE,
-            String.valueOf(
-                Boolean.parseBoolean(
-                    testReportProperties.getProperty(
-                        SuiteCommon.TEST_REPORT_PROPERTY_HAS_TF_MODULE))));
-        extraJobProperties.put(
-            Job.PREV_SESSION_HAS_NON_TF_MODULE,
-            String.valueOf(
-                Boolean.parseBoolean(
-                    testReportProperties.getProperty(
-                        SuiteCommon.TEST_REPORT_PROPERTY_HAS_NON_TF_MODULE))));
-      }
+      addPrevSessionPropertiesForRetry(
+          sessionRequestInfo, extraJobProperties, /* throwIfNoNonTfModule= */ true);
       subPlan = prepareRunRetrySubPlan(sessionRequestInfo, /* forTf= */ false);
       injectBuildFingerprint(extraJobProperties, subPlan);
     } else if (sessionRequestInfo.subPlanName().isPresent()) {
@@ -488,6 +467,42 @@ public abstract class XtsJobCreator {
           /* cause= */ null);
     }
     return subPlan;
+  }
+
+  /**
+   * Adds properties from the previous session's test report to {@code extraJobProperties} for a
+   * retry run.
+   */
+  private void addPrevSessionPropertiesForRetry(
+      SessionRequestInfo sessionRequestInfo,
+      ImmutableMap.Builder<XtsPropertyName, String> extraJobProperties,
+      boolean throwIfNoNonTfModule)
+      throws MobileHarnessException {
+    Optional<Path> testReportPropertiesFile =
+        getPrevSessionTestReportProperties(sessionRequestInfo);
+    if (testReportPropertiesFile.isEmpty()) {
+      return;
+    }
+    Properties testReportProperties = loadTestReportProperties(testReportPropertiesFile.get());
+
+    boolean hasTfModule =
+        Boolean.parseBoolean(
+            testReportProperties.getProperty(SuiteCommon.TEST_REPORT_PROPERTY_HAS_TF_MODULE));
+    boolean hasNonTfModule =
+        Boolean.parseBoolean(
+            testReportProperties.getProperty(SuiteCommon.TEST_REPORT_PROPERTY_HAS_NON_TF_MODULE));
+
+    if (throwIfNoNonTfModule && !hasNonTfModule) {
+      // If previous session doesn't have Non-TF module, throw exception to skip the retry.
+      throw MobileHarnessExceptionFactory.createUserFacingException(
+          InfraErrorId.XTS_NO_MATCHED_NON_TF_MODULES_TO_RETRY,
+          "Previous session doesn't have non-tradefed module",
+          /* cause= */ null);
+    }
+
+    extraJobProperties
+        .put(Job.PREV_SESSION_HAS_TF_MODULE, String.valueOf(hasTfModule))
+        .put(Job.PREV_SESSION_HAS_NON_TF_MODULE, String.valueOf(hasNonTfModule));
   }
 
   private void injectBuildFingerprint(
