@@ -10,7 +10,7 @@
  * Semantic state of host connectivity with the OmniLab master server.
  * Frontend uses this to determine icon and color.
  */
-export type HostConnectivityState = 'RUNNING'|'MISSING'|'UNKNOWN';
+export type HostConnectivityState = 'RUNNING' | 'MISSING' | 'UNKNOWN';
 
 /**
  * Represents the data needed to render the Host Connectivity card.
@@ -36,8 +36,16 @@ export interface HostConnectivityStatus {
  * Semantic state of Lab Server activity.
  * Frontend uses this to determine icon, color, and spinning animation.
  */
-export type LabServerActivityState =|'STARTED'|'STARTED_BUT_DISCONNECTED'|
-    'STARTING'|'ERROR'|'DRAINING'|'DRAINED'|'STOPPING'|'STOPPED'|'UNKNOWN';
+export type LabServerActivityState =
+  | 'STARTED'
+  | 'STARTED_BUT_DISCONNECTED'
+  | 'STARTING'
+  | 'ERROR'
+  | 'DRAINING'
+  | 'DRAINED'
+  | 'STOPPING'
+  | 'STOPPED'
+  | 'UNKNOWN';
 
 /**
  * Represents the data needed to render Lab Server activity.
@@ -68,14 +76,14 @@ export interface LabServerInfo {
   /** The version of the lab server software. */
   readonly version: string;
   /** Pass-through flags configured for the lab server. */
-  readonly passThroughFlags: string;
+  passThroughFlags: string;
 }
 
 /**
  * Semantic state of the Daemon server process.
  * Frontend uses this to determine icon and color.
  */
-export type DaemonServerState = 'RUNNING'|'MISSING'|'UNKNOWN';
+export type DaemonServerState = 'RUNNING' | 'MISSING' | 'UNKNOWN';
 
 /**
  * Represents the data needed to render Daemon server status.

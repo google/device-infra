@@ -43,7 +43,6 @@ import {objectUtils} from '../../../../shared/utils/object_utils';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule,
-    InfoCard,
     FormsModule,
     MatButtonModule,
     MatFormFieldModule,
@@ -51,8 +50,9 @@ import {objectUtils} from '../../../../shared/utils/object_utils';
     MatInputModule,
     MatMenuModule,
     MatTooltipModule,
-    OverviewPage,
     RouterLink,
+    OverviewPage,
+    InfoCard,
   ],
 })
 export class HostOverviewPage implements OnInit, OnChanges {
@@ -62,6 +62,8 @@ export class HostOverviewPage implements OnInit, OnChanges {
 
   deviceFilter = '';
   filteredDevices: readonly DeviceSummary[] = [];
+  isEditingFlags = false;
+  editedFlags = '';
 
   navList: NavItem[] = [
     {
@@ -208,5 +210,23 @@ export class HostOverviewPage implements OnInit, OnChanges {
         break;
     }
     return result;
+  }
+
+  startEditFlags() {
+    this.editedFlags = this.host.labServer.passThroughFlags;
+    this.isEditingFlags = true;
+  }
+
+  cancelEditFlags() {
+    this.isEditingFlags = false;
+  }
+
+  saveFlags() {
+    // In a real application, you would send this.editedFlags to a service.
+    // For this prototype, we just log it and switch the view.
+    console.log('New flags saved:', this.editedFlags);
+    this.host.labServer.passThroughFlags = this.editedFlags;
+    this.isEditingFlags = false;
+    alert('Flags saved!');
   }
 }
