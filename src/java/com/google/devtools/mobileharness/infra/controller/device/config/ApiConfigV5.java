@@ -287,7 +287,7 @@ public class ApiConfigV5 implements ApiConfig {
       if (!newDeviceConfig.equals(existedDeviceConfig)) {
         logger.atInfo().log(
             "Set device %s's DeviceConfig to %s ", deviceControlId, newDeviceConfig);
-        deviceConfigs.put(deviceConfig.getKey(), deviceConfig.getValue());
+        deviceConfigs.put(deviceControlId, newDeviceConfig);
         changedControlIdsBuilder.add(deviceControlId);
       }
     }
