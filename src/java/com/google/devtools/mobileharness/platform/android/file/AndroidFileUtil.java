@@ -84,9 +84,6 @@ public class AndroidFileUtil {
   /** ADB arg for remounting the device. */
   @VisibleForTesting static final String ADB_ARG_REMOUNT = "remount";
 
-  /** ADB shell command for getting the disk information. */
-  @VisibleForTesting static final String ADB_SHELL_GET_DISK_INFO = "df $EXTERNAL_STORAGE";
-
   /** ADB shell command for getting the external storage path. */
   @VisibleForTesting static final String ADB_SHELL_GET_EXTERNAL_STORAGE = "echo $EXTERNAL_STORAGE";
 
@@ -488,8 +485,8 @@ public class AndroidFileUtil {
 
   /**
    * Get the device internal or external storage information. For external storage, the path to
-   * check is "$EXTERNAL_STORAGE". For internal storage, the path to check is "/data". Note that the
-   * returned storage has non-negative values and it might be zero.
+   * check is getExternalStoragePath(serial, sdkVersion). For internal storage, the path to check is
+   * "/data". Note that the returned storage has non-negative values and it might be zero.
    *
    * @param serial serial number of the device
    * @param isExternal whether getting external storage or intenral storage info
@@ -506,7 +503,10 @@ public class AndroidFileUtil {
     if (isExternal) {
       getStorageInfoErrorId = AndroidErrorId.ANDROID_FILE_UTIL_GET_DISK_INFO_ERROR;
       invalidStorageInfoErrorId = AndroidErrorId.ANDROID_FILE_UTIL_INVALID_DISK_INFO;
-      runCommand = ADB_SHELL_GET_DISK_INFO;
+      runCommand =
+          "df "
+              + getExternalStoragePath(
+                  serial, androidSystemSettingUtil.getDeviceSdkVersion(serial));
       externalOrInternal = "EXTERNAL";
     } else {
       getStorageInfoErrorId = AndroidErrorId.ANDROID_FILE_UTIL_GET_INTERNAL_STORAGE_INFO_ERROR;

@@ -500,10 +500,17 @@ public final class AndroidFileUtilTest {
 
   @Test
   public void getStorageInfo_external_androidN() throws Exception {
-    when(adb.runShell(SERIAL, AndroidFileUtil.ADB_SHELL_GET_DISK_INFO))
+    String externalStoragePath = "/mnt/sdcard";
+    when(androidSystemSettingUtil.getDeviceSdkVersion(eq(SERIAL))).thenReturn(27);
+    when(adb.runShellWithRetry(
+            SERIAL,
+            AndroidFileUtil.ADB_SHELL_GET_EXTERNAL_STORAGE,
+            AndroidFileUtil.SHORT_COMMAND_TIMEOUT))
+        .thenReturn(externalStoragePath);
+    when(adb.runShell(SERIAL, "df /mnt/sdcard"))
         .thenReturn(
             "Filesystem     1K-blocks   Used  Available Use% Mounted on\n"
-                + "/dev/fuse           26225216   122120  26103096   1% /storage/emulated");
+                + "/dev/fuse           26225216   122120  26103096   1% /mnt/sdcard");
 
     StorageInfo storageInfo = androidFileUtil.getStorageInfo(SERIAL, true);
 
@@ -513,7 +520,14 @@ public final class AndroidFileUtilTest {
 
   @Test
   public void getStorageInfo_external_illegalCases() throws Exception {
-    when(adb.runShell(SERIAL, AndroidFileUtil.ADB_SHELL_GET_DISK_INFO))
+    String externalStoragePath = "/mnt/sdcard";
+    when(androidSystemSettingUtil.getDeviceSdkVersion(eq(SERIAL))).thenReturn(27);
+    when(adb.runShellWithRetry(
+            SERIAL,
+            AndroidFileUtil.ADB_SHELL_GET_EXTERNAL_STORAGE,
+            AndroidFileUtil.SHORT_COMMAND_TIMEOUT))
+        .thenReturn(externalStoragePath);
+    when(adb.runShell(SERIAL, "df /mnt/sdcard"))
         .thenReturn("Device not found")
         .thenReturn(
             "Filesystem               Size     Used     Free   Blksize\n"
