@@ -105,6 +105,8 @@ public class ServerJobCreator extends XtsJobCreator {
     }
     if (sessionRequestInfo.atsServerTestEnvironment().isPresent()) {
       generateTradefedTestConfigFile(sessionRequestInfo, driverParams, jobDeviceCount);
+      generateTradefedTestConfigFileForNoDeviceAction(
+          sessionRequestInfo, driverParams, jobDeviceCount);
     } else {
       throw MobileHarnessExceptionFactory.createUserFacingException(
           InfraErrorId.ATS_SERVER_MISSING_TEST_ENVIRONMENT_ERROR,
@@ -117,32 +119,59 @@ public class ServerJobCreator extends XtsJobCreator {
   private void generateTradefedTestConfigFile(
       SessionRequestInfo sessionRequestInfo, Map<String, String> driverParams, int jobDeviceCount)
       throws MobileHarnessException {
-    // Generate XML test config template for ClusterCommandLauncher.
-    Path commandPath = Path.of(sessionRequestInfo.xtsRootDir()).resolveSibling("command.xml");
+    doGenerateTradefedTestConfigFile(
+        sessionRequestInfo, driverParams, jobDeviceCount, /* hasDeviceAction= */ true);
+  }
+
+  private void generateTradefedTestConfigFileForNoDeviceAction(
+      SessionRequestInfo sessionRequestInfo, Map<String, String> driverParams, int jobDeviceCount)
+      throws MobileHarnessException {
+    doGenerateTradefedTestConfigFile(
+        sessionRequestInfo, driverParams, jobDeviceCount, /* hasDeviceAction= */ false);
+  }
+
+  private void doGenerateTradefedTestConfigFile(
+      SessionRequestInfo sessionRequestInfo,
+      Map<String, String> driverParams,
+      int jobDeviceCount,
+      boolean hasDeviceAction)
+      throws MobileHarnessException {
+    SessionRequestInfo requestInfoForConfig =
+        hasDeviceAction
+            ? sessionRequestInfo
+            : reviseRequestInfoForNoDeviceAction(sessionRequestInfo);
+    String configFileName = hasDeviceAction ? "command.xml" : "no_device_action_command.xml";
+    Path commandPath = Path.of(requestInfoForConfig.xtsRootDir()).resolveSibling(configFileName);
+    int deviceCountForXml =
+        SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo)
+            ? 1
+            : jobDeviceCount;
     try (OutputStream outputStream = new FileOutputStream(commandPath.toFile())) {
       TradefedConfigGenerator.generateXml(
           outputStream,
-          sessionRequestInfo.atsServerTestEnvironment().get(),
-          sessionRequestInfo.atsServerTestResources(),
-          SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo)
-              ? 1
-              : jobDeviceCount);
+          requestInfoForConfig.atsServerTestEnvironment().get(),
+          requestInfoForConfig.atsServerTestResources(),
+          deviceCountForXml);
     } catch (IOException | XmlPullParserException e) {
       throw new MobileHarnessException(
           InfraErrorId.ATS_SERVER_FAILED_TO_GENERATE_XML_TEST_CONFIG,
           "Failed to create XML test config for session",
           e);
     }
-    logger.atInfo().log("Generate TF config:\n%s", localFileUtil.readFile(commandPath));
-    if (sessionRequestInfo.remoteRunnerFilePathPrefix().isPresent()) {
+    logger.atInfo().log(
+        "Generate %sTF config:\n%s",
+        hasDeviceAction ? "" : "no device action version of ", localFileUtil.readFile(commandPath));
+    String driverParamsKey =
+        hasDeviceAction ? "xts_test_plan_file" : "no_device_action_xts_test_plan_file";
+    if (requestInfoForConfig.remoteRunnerFilePathPrefix().isPresent()) {
       driverParams.put(
-          "xts_test_plan_file",
+          driverParamsKey,
           PathUtil.join(
-              sessionRequestInfo.remoteRunnerFilePathPrefix().get(),
+              requestInfoForConfig.remoteRunnerFilePathPrefix().get(),
               PathUtil.makeRelative(
                   Flags.instance().atsStoragePath.getNonNull(), commandPath.toString())));
     } else {
-      driverParams.put("xts_test_plan_file", commandPath.toString());
+      driverParams.put(driverParamsKey, commandPath.toString());
     }
   }
 
@@ -294,13 +323,12 @@ public class ServerJobCreator extends XtsJobCreator {
   }
 
   /**
-   * Revises {@link SessionRequestInfo} for dynamic job.
+   * Revises {@link SessionRequestInfo} for a job with no device actions (except result reporters).
    *
    * <p>The dynamic download job's device action should be cleared, since those actions should be
    * executed in the static xts job that is triggered first.
    */
-  @Override
-  protected SessionRequestInfo reviseRequestInfoForDynamicJob(
+  private SessionRequestInfo reviseRequestInfoForNoDeviceAction(
       SessionRequestInfo sessionRequestInfo) {
     if (sessionRequestInfo.atsServerTestEnvironment().isPresent()) {
       // The dynamic download job's device action should be cleared, since those actions should
