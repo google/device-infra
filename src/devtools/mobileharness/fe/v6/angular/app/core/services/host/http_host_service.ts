@@ -3,7 +3,7 @@ import {inject, Injectable} from '@angular/core';
 import {Observable} from 'rxjs';
 
 import {APP_DATA, AppData} from '../../models/app_data';
-import {HostOverview} from '../../models/host_overview';
+import {DeviceSummary, HostOverview} from '../../models/host_overview';
 
 import {HostService} from './host_service';
 
@@ -20,5 +20,20 @@ export class HttpHostService extends HostService {
 
   override getHostOverview(hostName: string): Observable<HostOverview> {
     return this.http.get<HostOverview>(`${this.apiUrl}/${hostName}/overview`);
+  }
+
+  override getHostDeviceSummaries(
+    hostName: string,
+  ): Observable<DeviceSummary[]> {
+    return this.http.get<DeviceSummary[]>(`${this.apiUrl}/${hostName}/devices`);
+  }
+
+  override updatePassThroughFlags(
+    hostName: string,
+    flags: string,
+  ): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/${hostName}/passThroughFlags`, {
+      flags,
+    });
   }
 }

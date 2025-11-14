@@ -6,7 +6,7 @@ import {
 import {TestBed} from '@angular/core/testing';
 
 import {APP_DATA, AppData} from '../../models/app_data';
-import {HostOverview} from '../../models/host_overview';
+import {DeviceSummary, HostOverview} from '../../models/host_overview';
 
 import {HOST_SERVICE} from './host_service';
 import {HttpHostService} from './http_host_service';
@@ -51,5 +51,19 @@ describe('HttpHostService', () => {
     );
     expect(req.request.method).toBe('GET');
     req.flush(mockHostOverview);
+  });
+
+  it('should retrieve host device summaries', () => {
+    const mockDeviceSummaries: DeviceSummary[] = [
+      {id: 'device-1'} as DeviceSummary,
+    ];
+    service.getHostDeviceSummaries('test-host').subscribe((devices) => {
+      expect(devices).toEqual(mockDeviceSummaries);
+    });
+    const req = httpMock.expectOne(
+      'http://testdomain.com/v6/hosts/test-host/devices',
+    );
+    expect(req.request.method).toBe('GET');
+    req.flush(mockDeviceSummaries);
   });
 });

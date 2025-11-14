@@ -107,113 +107,11 @@
   </app-info-card>
   <app-info-card #overviewSection id="device-list" title="Devices" [collapsible]="false">
     <div class="overview-card-content">
-      @if(host.devices.length > 0) {
-        <!-- <div class="device-table-toolbar">
-          <h4 class="device-count-header">
-            Total Devices <span class="device-count">({{ host.devices.length }})</span>
-          </h4>
-          <mat-form-field appearance="outline" class="device-filter-input">
-            <mat-icon matPrefix>filter_list</mat-icon>
-            <input
-              matInput
-              placeholder="Filter devices"
-              [(ngModel)]="deviceFilter"
-              (ngModelChange)="filterDevices()"
-            />
-          </mat-form-field>
+      @if(deviceDataSource.data.length > 0) {
+        <div class="device-table-toolbar">
         </div>
         <div class="device-table-container">
-          <table class="device-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Health</th>
-                <th>Type</th>
-                <th>Status</th>
-                <th>Label</th>
-                <th>Required Dims</th>
-                <th>Model</th>
-                <th>Version</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for(device of filteredDevices; track device.id) {
-                <tr>
-                  <td class="device-id">
-                    <a routerLink="/devices/{{ device.id }}">{{ device.id }}</a>
-                  </td>
-                  <td>
-                    <div class="device-health">
-                      <mat-icon
-                        class="{{ device.serviceState.colorClass }}"
-                        title="{{ device.serviceState.text }}"
-                        >{{ device.serviceState.icon }}</mat-icon
-                      >
-                      <mat-icon class="cursor-help" title="{{ device.serviceState.tooltip }}"
-                        >help_outline</mat-icon
-                      >
-                    </div>
-                  </td>
-                  <td>
-                    @if(device.types.length == 0) {
-                      <span class="type-chip-abnormal">No types detected</span>
-                    } @else {
-                      <div class="device-type" title="{{ device.types.join(', ') }}">
-                        <span
-                          class="type-chip"
-                          [class.type-chip-abnormal]="isTypeAbnormal(device.types)"
-                          [class.type-chip-normal]="!isTypeAbnormal(device.types)"
-                          >{{ getFirstType(device.types) }}</span
-                        >
-                        @if(getRemainingTypeCount(device.types) > 0) {
-                          <span class="type-count"
-                            >+{{ getRemainingTypeCount(device.types) }}</span
-                          >
-                        }
-                      </div>
-                    }
-                  </td>
-                  <td>
-                    <span
-                      class="type-chip"
-                      [class.type-chip-critical-status]="device.isStatusCritical"
-                      [class.type-chip-normal]="!device.isStatusCritical"
-                      >{{ device.status }}</span
-                    >
-                  </td>
-                  <td>{{ device.label || '—' }}</td>
-                  <td>{{ device.required_dims || '—' }}</td>
-                  <td>{{ device.model }}</td>
-                  <td>{{ device.version }}</td>
-                  <td>
-                    <button mat-icon-button [matMenuTriggerFor]="menu" aria-label="Device actions">
-                      <mat-icon>more_vert</mat-icon>
-                    </button>
-                    <mat-menu #menu="matMenu">
-                      <button mat-menu-item>
-                        <mat-icon>screenshot</mat-icon>
-                        <span>Screenshot</span>
-                      </button>
-                      <button mat-menu-item>
-                        <mat-icon>important_devices</mat-icon>
-                        <span>Remote Control</span>
-                      </button>
-                      <button mat-menu-item>
-                        <mat-icon>flash_on</mat-icon>
-                        <span>Flash</span>
-                      </button>
-                    </mat-menu>
-                  </td>
-                </tr>
-              } @empty {
-                <tr>
-                  <td colspan="9" class="no-devices-text">No devices match filter.</td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div> -->
+        </div>
       } @else {
         <p class="no-devices-text">No devices are connected to this host.</p>
       }

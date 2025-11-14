@@ -220,153 +220,24 @@ $labconsole-font: 'Google Sans', Roboto, Arial, sans-serif;
   font-size: 0.875rem;
   line-height: 1.5;
 
-  dt,
-  dd {
+  dt {
     white-space: pre-wrap;
     word-break: break-all;
     padding: 2px 0;
-    color: #202124;
     display: inline; // override flex from grid-tight dd
-  }
-  dt {
     font-weight: 500;
     color: #5f6368;
   }
   dd {
+    white-space: pre-wrap;
+    word-break: break-all;
+    padding: 2px 0;
+    display: inline; // override flex from grid-tight dd
     color: #3c4043;
   }
   .contents {
     display: contents;
   }
-}
-
-.device-table-toolbar {
-  margin-bottom: 1rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.device-count-header {
-  font-size: 1rem;
-  font-weight: 500;
-  color: #3c4043;
-  margin: 0;
-}
-
-.device-count {
-  color: #5f6368;
-  font-weight: 400;
-}
-
-.device-filter-input {
-  width: 320px;
-}
-
-.device-table-container {
-  overflow-x: auto;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  background-color: white;
-}
-
-.device-table {
-  width: 100%;
-  border-collapse: collapse;
-  white-space: nowrap;
-
-  th {
-    padding: 0.75rem 1rem;
-    text-align: left;
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: #5f6368;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    background-color: #f8f9fa;
-    border-bottom: 1px solid #e0e0e0;
-  }
-
-  td {
-    padding: 0.75rem 1rem;
-    font-size: 0.875rem;
-    color: #3c4043;
-    border-bottom: 1px solid #eee;
-  }
-
-  tbody tr:last-child td {
-    border-bottom: 0;
-  }
-
-  tbody tr:hover {
-    background-color: #f8f9fa;
-  }
-}
-
-.device-id a {
-  color: #1a73e8;
-  text-decoration: none;
-  font-weight: 500;
-  &:hover {
-    text-decoration: underline;
-  }
-}
-
-.device-health {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  mat-icon {
-    font-size: 1.125rem;
-    width: 1.125rem;
-    height: 1.125rem;
-  }
-}
-
-.device-type {
-  display: flex;
-  align-items: center;
-}
-
-.type-chip {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 10px;
-  border-radius: 8px;
-  font-size: 0.8rem;
-  font-weight: 500;
-  line-height: 1;
-  white-space: nowrap;
-}
-
-.type-chip-normal {
-  background-color: #e0e0e0;
-  color: #3c4043;
-}
-
-.type-chip-abnormal {
-  background-color: #fce8e6;
-  color: #c5221f;
-  border: 1px solid #f6aea9;
-}
-
-.type-chip-critical-status {
-  background-color: #d93025;
-  color: white;
-}
-
-.type-count {
-  font-size: 0.8rem;
-  color: #5f6368;
-  margin-left: 0.25rem;
-}
-
-.no-devices-text {
-  padding: 2rem 1rem;
-  text-align: center;
-  font-size: 0.875rem;
-  color: #5f6368;
-  font-style: italic;
 }
 
 // Styles for Pass Through Flags inline editing
