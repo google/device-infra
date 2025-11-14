@@ -277,6 +277,7 @@ public class LabServer {
 
       // Starts controllers. The file cleaner should be the first one to start.
       // TODO: Start fileCleaner.
+
       logFailure(mainThreadPool.submit(testManager), Level.SEVERE, "Test manager fatal error");
       logFailure(mainThreadPool.submit(deviceManager), Level.SEVERE, "Device manager fatal error");
       // TODO: Start socketFileReceiver.
