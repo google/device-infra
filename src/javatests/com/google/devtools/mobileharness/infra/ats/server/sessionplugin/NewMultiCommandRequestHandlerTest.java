@@ -482,6 +482,7 @@ public final class NewMultiCommandRequestHandlerTest {
     String expectedCommandId =
         UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
     String retryCommandLine = "retry --retry 1";
+    String prevSessionId = UUID.randomUUID().toString();
     request =
         request.toBuilder()
             .clearCommands()
@@ -493,7 +494,8 @@ public final class NewMultiCommandRequestHandlerTest {
                         TestResource.newBuilder()
                             .setUrl(
                                 "file:///path/retry_previous_test_run_id/output/"
-                                    + "retry_previous_session_id/"
+                                    + prevSessionId
+                                    + "/"
                                     + expectedCommandId
                                     + "/2024.07.16_15.09.01.972_5844.zip")
                             .setName("2024.07.16_15.09.01.972_5844.zip")
@@ -529,9 +531,9 @@ public final class NewMultiCommandRequestHandlerTest {
     assertThat(sessionRequestInfo.jobTimeout()).isEqualTo(Duration.ofSeconds(2000));
     assertThat(sessionRequestInfo.deviceSerials()).containsExactly(DEVICE_ID_1, DEVICE_ID_2);
     assertThat(sessionRequestInfo.envVars()).containsExactly("env_key1", "env_value1");
-    assertThat(sessionRequestInfo.retrySessionId()).hasValue("retry_previous_session_id");
+    assertThat(sessionRequestInfo.retrySessionId()).hasValue(prevSessionId);
     String retryResultDir =
-        "/path/retry_previous_test_run_id/output/retry_previous_session_id/" + expectedCommandId;
+        "/path/retry_previous_test_run_id/output/" + prevSessionId + "/" + expectedCommandId;
     assertThat(sessionRequestInfo.retryResultDir()).hasValue(retryResultDir);
 
     // Verify that handler has mounted the zip file.
@@ -615,6 +617,91 @@ public final class NewMultiCommandRequestHandlerTest {
   }
 
   @Test
+  public void createTradefedJobs_fromRetrySessionWithNonUUIDSessionId_success() throws Exception {
+    when(clock.instant())
+        .thenReturn(
+            Instant.ofEpochMilli(1000L), Instant.ofEpochMilli(2000L), Instant.ofEpochMilli(3000L));
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+    doReturn(Path.of("/path/to/previous_result.pb")).when(localFileUtil).checkFile(any(Path.class));
+    String expectedCommandId =
+        UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
+    String retryCommandLine = "retry --retry 1";
+    String prevSessionId = "not-a-uuid";
+    request =
+        request.toBuilder()
+            .clearCommands()
+            .addCommands(commandInfo.toBuilder().setCommandLine(retryCommandLine))
+            .setPrevTestContext(
+                TestContext.newBuilder()
+                    .setCommandLine(commandInfo.getCommandLine())
+                    .addTestResource(
+                        TestResource.newBuilder()
+                            .setUrl(
+                                "file:///path/retry_previous_test_run_id/output/"
+                                    + prevSessionId
+                                    + "/"
+                                    + expectedCommandId
+                                    + "/2024.07.16_15.09.01.972_5844.zip")
+                            .setName("2022.07.16_15.09.01.972_5844.zip")
+                            .build())
+                    .build())
+            .build();
+    doNothing().when(localFileUtil).prepareDir(anyString());
+    doReturn("").when(localFileUtil).unzipFile(anyString(), anyString(), any(Duration.class));
+
+    // Trigger the handler.
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+
+    assertThat(createJobsResult.jobInfos()).containsExactly(jobInfo);
+    verify(xtsJobCreator).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
+
+    // Verify sessionRequestInfo has been correctly generated.
+    SessionRequestInfo sessionRequestInfo = sessionRequestInfoCaptor.getValue();
+    assertThat(sessionRequestInfo.testPlan()).isEqualTo("retry");
+    assertThat(sessionRequestInfo.retrySessionId()).isPresent();
+    assertThat(sessionRequestInfo.retrySessionId().get()).isNotEqualTo(prevSessionId);
+    assertThat(sessionRequestInfo.retryResultDir()).isPresent();
+    verify(localFileUtil).unzipFile(anyString(), anyString(), any(Duration.class));
+  }
+
+  @Test
+  public void createTradefedJobs_fromRetryContextWithNoResultZip_shouldSkip() throws Exception {
+    when(clock.instant())
+        .thenReturn(
+            Instant.ofEpochMilli(1000L), Instant.ofEpochMilli(2000L), Instant.ofEpochMilli(3000L));
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+    String expectedCommandId =
+        UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
+    request =
+        request.toBuilder()
+            .setPrevTestContext(
+                TestContext.newBuilder()
+                    .addTestResource(
+                        TestResource.newBuilder()
+                            .setUrl("file:///path/to/some/other/file.txt")
+                            .setName("other_file.txt")
+                            .build())
+                    .build())
+            .build();
+
+    // Trigger the handler.
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+
+    assertThat(createJobsResult.jobInfos()).containsExactly(jobInfo);
+    verify(xtsJobCreator).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
+
+    // Verify sessionRequestInfo has been correctly generated.
+    SessionRequestInfo sessionRequestInfo = sessionRequestInfoCaptor.getValue();
+    assertThat(sessionRequestInfo.testPlan()).isEqualTo("cts-plan");
+    assertThat(sessionRequestInfo.retrySessionId()).isEmpty();
+    assertThat(sessionRequestInfo.retryResultDir()).isEmpty();
+  }
+
+  @Test
   public void createTradefedJobs_fromRetryTestRun_success() throws Exception {
     when(clock.instant())
         .thenReturn(
@@ -623,6 +710,7 @@ public final class NewMultiCommandRequestHandlerTest {
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
     String expectedCommandId =
         UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
+    String prevSessionId = UUID.randomUUID().toString();
     doReturn(Path.of("/path/to/previous_result.pb")).when(localFileUtil).checkFile(any(Path.class));
     request =
         request.toBuilder()
@@ -632,7 +720,8 @@ public final class NewMultiCommandRequestHandlerTest {
                         TestResource.newBuilder()
                             .setUrl(
                                 "file:///path/retry_previous_test_run_id/output/"
-                                    + "retry_previous_session_id/"
+                                    + prevSessionId
+                                    + "/"
                                     + expectedCommandId
                                     + "/2024.07.16_15.09.01.972_5844.zip")
                             .setName("2024.07.16_15.09.01.972_5844.zip")
@@ -671,9 +760,9 @@ public final class NewMultiCommandRequestHandlerTest {
     assertThat(sessionRequestInfo.deviceSerials()).containsExactly(DEVICE_ID_1, DEVICE_ID_2);
     assertThat(sessionRequestInfo.shardCount()).hasValue(2);
     assertThat(sessionRequestInfo.envVars()).containsExactly("env_key1", "env_value1");
-    assertThat(sessionRequestInfo.retrySessionId()).hasValue("retry_previous_session_id");
+    assertThat(sessionRequestInfo.retrySessionId()).hasValue(prevSessionId);
     String retryResultDir =
-        "/path/retry_previous_test_run_id/output/retry_previous_session_id/" + commandId;
+        "/path/retry_previous_test_run_id/output/" + prevSessionId + "/" + commandId;
     assertThat(sessionRequestInfo.retryResultDir()).hasValue(retryResultDir);
 
     // Verify that handler has mounted the zip file.
