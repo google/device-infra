@@ -37,6 +37,7 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceConn
 import com.google.devtools.mobileharness.platform.android.shared.autovalue.UtilArgs;
 import com.google.devtools.mobileharness.platform.android.shared.constant.PackageConstants;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
+import com.google.devtools.mobileharness.platform.android.systemspec.AndroidSystemSpecUtil;
 import com.google.devtools.mobileharness.platform.android.systemstate.AndroidSystemStateUtil;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
@@ -110,6 +111,7 @@ public abstract class AndroidDeviceDelegate {
   private final AndroidSystemSettingUtil androidSystemSettingUtil;
   private final AndroidProcessUtil androidProcessUtil;
   private final AndroidDeviceHelper androidDeviceHelper;
+  private final AndroidSystemSpecUtil androidSystemSpecUtil;
 
   protected final BaseDevice device;
 
@@ -120,7 +122,8 @@ public abstract class AndroidDeviceDelegate {
       AndroidSystemStateUtil androidSystemStateUtil,
       AndroidPackageManagerUtil androidPackageManagerUtil,
       AndroidSystemSettingUtil androidSystemSettingUtil,
-      AndroidProcessUtil androidProcessUtil) {
+      AndroidProcessUtil androidProcessUtil,
+      AndroidSystemSpecUtil androidSystemSpecUtil) {
     this.device = device;
     this.am = am;
     this.androidAdbUtil = androidAdbUtil;
@@ -130,6 +133,7 @@ public abstract class AndroidDeviceDelegate {
     this.androidProcessUtil = androidProcessUtil;
     this.deviceId = device.getDeviceId();
     this.androidDeviceHelper = new AndroidDeviceHelper(androidAdbUtil);
+    this.androidSystemSpecUtil = androidSystemSpecUtil;
   }
 
   /** Ensures device is booted up and ready to respond. */
@@ -160,6 +164,9 @@ public abstract class AndroidDeviceDelegate {
     // Adds language and locale dimension from ActivityManager if any of them is missing.
     checkLocaleLanguageDimensions();
 
+    // Adds system spec dimensions.
+    updateSystemSpecDimensions();
+
     // Adds drivers/decorators only after the properties are read. Because the validators of the
     // drivers/decorators may depend on those properties.
     basicAndroidDeviceConfiguration(isRooted);
@@ -183,6 +190,21 @@ public abstract class AndroidDeviceDelegate {
     } else {
       updateLocaleLanguageDimensionsFromAm();
     }
+  }
+
+  @VisibleForTesting
+  void updateSystemSpecDimensions() {
+    androidSystemSpecUtil
+        .getKernelReleaseNumber(deviceId)
+        .ifPresent(this::updateKernelReleaseDimensions);
+  }
+
+  private void updateKernelReleaseDimensions(String kernelReleaseNumber) {
+    device.updateDimension(
+        Ascii.toLowerCase(Dimension.Name.KERNEL_RELEASE_NUMBER.name()), kernelReleaseNumber);
+    device.updateDimension(
+        Ascii.toLowerCase(Dimension.Name.IS_GKI_KERNEL.name()),
+        AndroidSystemSpecUtil.isGkiKernel(kernelReleaseNumber) ? "true" : "false");
   }
 
   private boolean hasDimension(AndroidProperty key) {
