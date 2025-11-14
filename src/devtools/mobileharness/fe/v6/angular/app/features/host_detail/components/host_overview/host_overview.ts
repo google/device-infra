@@ -1,7 +1,9 @@
+import {SelectionModel} from '@angular/cdk/collections';
 import {CommonModule} from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  inject,
   Input,
   OnChanges,
   OnInit,
@@ -9,12 +11,15 @@ import {
 } from '@angular/core';
 import {FormsModule} from '@angular/forms';
 import {MatButtonModule} from '@angular/material/button';
+import {MatCheckboxModule} from '@angular/material/checkbox';
 import {MatFormFieldModule} from '@angular/material/form-field';
 import {MatIconModule} from '@angular/material/icon';
 import {MatInputModule} from '@angular/material/input';
 import {MatMenuModule} from '@angular/material/menu';
+import {MatTableDataSource, MatTableModule} from '@angular/material/table';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {RouterLink} from '@angular/router';
+import {HealthState} from '../../../../core/models/device_overview';
 import {
   DaemonServerStatus,
   DeviceSummary,
@@ -22,6 +27,7 @@ import {
   LabServerActivity,
   type HostOverview,
 } from '../../../../core/models/host_overview';
+import {HOST_SERVICE} from '../../../../core/services/host/host_service';
 import {InfoCard} from '../../../../shared/components/info_card/info_card';
 import {
   NavItem,
@@ -45,10 +51,12 @@ import {objectUtils} from '../../../../shared/utils/object_utils';
     CommonModule,
     FormsModule,
     MatButtonModule,
+    MatCheckboxModule,
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
     MatMenuModule,
+    MatTableModule,
     MatTooltipModule,
     RouterLink,
     OverviewPage,
@@ -56,14 +64,29 @@ import {objectUtils} from '../../../../shared/utils/object_utils';
   ],
 })
 export class HostOverviewPage implements OnInit, OnChanges {
+  private readonly hostService = inject(HOST_SERVICE);
   readonly objectUtils = objectUtils;
   readonly dateUtils = dateUtils;
   @Input({required: true}) host!: HostOverview;
 
+  deviceDataSource = new MatTableDataSource<DeviceSummary>();
+  selection = new SelectionModel<DeviceSummary>(true, []);
   deviceFilter = '';
-  filteredDevices: readonly DeviceSummary[] = [];
   isEditingFlags = false;
   editedFlags = '';
+
+  displayedColumns: string[] = [
+    'select',
+    'id',
+    'health',
+    'type',
+    'status',
+    'label',
+    'required_dims',
+    'model',
+    'version',
+    'actions',
+  ];
 
   navList: NavItem[] = [
     {
@@ -89,13 +112,54 @@ export class HostOverviewPage implements OnInit, OnChanges {
   ];
 
   ngOnInit() {
-    // this.filterDevices();
+    this.hostService
+      .getHostDeviceSummaries(this.host.hostName)
+      .subscribe((devices) => {
+        this.deviceDataSource.data = devices;
+      });
   }
 
   ngOnChanges(changes: SimpleChanges) {
-    // if (changes['host']) {
-    //   this.filterDevices();
-    // }
+    if (changes['host']) {
+      this.selection.clear();
+      this.hostService
+        .getHostDeviceSummaries(this.host.hostName)
+        .subscribe((devices) => {
+          this.deviceDataSource.data = devices;
+        });
+    }
+  }
+
+  applyDeviceFilter(event: Event) {
+    const filterValue = (event.target as HTMLInputElement).value;
+    this.deviceDataSource.filter = filterValue.trim().toLowerCase();
+  }
+
+  isAllSelected() {
+    const numSelected = this.selection.selected.length;
+    const numRows = this.deviceDataSource.data.length;
+    return numSelected === numRows;
+  }
+
+  toggleAllRows() {
+    if (this.isAllSelected()) {
+      this.selection.clear();
+      return;
+    }
+    this.selection.select(...this.deviceDataSource.data);
+  }
+
+  checkboxLabel(row?: DeviceSummary): string {
+    if (!row) {
+      return `${this.isAllSelected() ? 'deselect' : 'select'} all`;
+    }
+    return `${this.selection.isSelected(row) ? 'deselect' : 'select'} row ${
+      row.id
+    }`;
+  }
+
+  isTypeAbnormal(types: Array<{type: string; isAbnormal: boolean}>): boolean {
+    return types.some((t) => t.isAbnormal);
   }
 
   // filterDevices() {
@@ -122,16 +186,22 @@ export class HostOverviewPage implements OnInit, OnChanges {
   //   );
   // }
 
-  getFirstType(types: readonly string[]): string {
+  getFirstType(types: Array<{type: string; isAbnormal: boolean}>): string {
     if (types.length === 0) return '';
-    const abnormalTypes = types.filter((t) =>
-      /failed|abnormal|disconnected|offline|unauthorized|fastboot/i.test(t),
-    );
-    return abnormalTypes.length > 0 ? abnormalTypes[0] : types[0];
+    const abnormalTypes = types.filter((t) => t.isAbnormal);
+    return abnormalTypes.length > 0 ? abnormalTypes[0].type : types[0].type;
   }
 
-  getRemainingTypeCount(types: readonly string[]): number {
+  getRemainingTypeCount(
+    types: Array<{type: string; isAbnormal: boolean}>,
+  ): number {
     return types.length > 1 ? types.length - 1 : 0;
+  }
+
+  getDeviceTypesString(
+    types: Array<{type: string; isAbnormal: boolean}>,
+  ): string {
+    return types.map((t) => t.type).join(', ');
   }
 
   getStatusSemantic(status: HostConnectivityStatus | DaemonServerStatus) {
@@ -161,6 +231,47 @@ export class HostOverviewPage implements OnInit, OnChanges {
         break;
     }
     return result;
+  }
+
+  getHealthSemantic(state: HealthState) {
+    switch (state) {
+      case 'IN_SERVICE_IDLE':
+        return {
+          icon: 'check_circle',
+          colorClass: 'text-green-600',
+          text: 'In Service (Idle)',
+        };
+      case 'IN_SERVICE_BUSY':
+        return {
+          icon: 'sync',
+          colorClass: 'text-blue-600',
+          text: 'In Service (Busy)',
+        };
+      case 'OUT_OF_SERVICE_RECOVERING':
+        return {
+          icon: 'autorenew',
+          colorClass: 'text-amber-600',
+          text: 'Out of Service (Recovering)',
+        };
+      case 'OUT_OF_SERVICE_TEMP_MAINT':
+        return {
+          icon: 'warning',
+          colorClass: 'text-amber-600',
+          text: 'Out of Service (Temp Maint)',
+        };
+      case 'OUT_OF_SERVICE_NEEDS_FIXING':
+        return {
+          icon: 'error',
+          colorClass: 'text-red-600',
+          text: 'Out of Service (Needs Fixing)',
+        };
+      default:
+        return {
+          icon: 'help_outline',
+          colorClass: 'text-gray-700',
+          text: 'Unknown',
+        };
+    }
   }
 
   getLabActivitySemantic(activity: LabServerActivity) {
@@ -222,11 +333,18 @@ export class HostOverviewPage implements OnInit, OnChanges {
   }
 
   saveFlags() {
-    // In a real application, you would send this.editedFlags to a service.
-    // For this prototype, we just log it and switch the view.
-    console.log('New flags saved:', this.editedFlags);
-    this.host.labServer.passThroughFlags = this.editedFlags;
-    this.isEditingFlags = false;
-    alert('Flags saved!');
+    this.hostService
+      .updatePassThroughFlags(this.host.hostName, this.editedFlags)
+      .subscribe({
+        next: () => {
+          this.host.labServer.passThroughFlags = this.editedFlags;
+          this.isEditingFlags = false;
+          alert('Flags saved!');
+        },
+        error: (err) => {
+          console.error('Failed to save flags:', err);
+          alert(`Failed to save flags: ${err.message}`);
+        },
+      });
   }
 }

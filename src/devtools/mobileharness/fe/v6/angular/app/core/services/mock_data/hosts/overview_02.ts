@@ -1,4 +1,4 @@
-import {HostOverview} from '../../../models/host_overview';
+import {DeviceSummary, HostOverview} from '../../../models/host_overview';
 import {MockHostScenario} from '../models';
 
 import {createDefaultUiStatus} from './ui_status_utils';
@@ -32,15 +32,32 @@ const overview: HostOverview = {
     },
     version: '24.08.01',
   },
-  devices: [],
   properties: {},
 };
+
+const deviceSummaries: DeviceSummary[] = [
+  {
+    id: 'ANDROID-FAILED-DEVICE',
+    healthState: {
+      health: 'OUT_OF_SERVICE_NEEDS_FIXING',
+      title: 'Out of Service (Needs Fixing)',
+      tooltip: 'Device needs fixing.',
+    },
+    types: [{type: 'AndroidDevice', isAbnormal: false}],
+    deviceStatus: {isCritical: true, status: 'FAILED'},
+    label: '',
+    requiredDims: 'pool:staging',
+    model: 'Pixel 6',
+    version: '13',
+  },
+];
 
 /** Mock host overview data. */
 export const OVERVIEW_02: MockHostScenario = {
   hostName: 'host-b-2.example.com',
   scenarioName: 'Overview 2: Unconfigured Satellite Host',
   overview,
+  deviceSummaries,
   hostConfigResult: {
     hostConfig: undefined,
     uiStatus: createDefaultUiStatus(),
