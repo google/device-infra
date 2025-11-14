@@ -22,6 +22,7 @@ import com.google.devtools.mobileharness.platform.android.packagemanager.Android
 import com.google.devtools.mobileharness.platform.android.process.AndroidProcessUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
+import com.google.devtools.mobileharness.platform.android.systemspec.AndroidSystemSpecUtil;
 import com.google.devtools.mobileharness.platform.android.systemstate.AndroidSystemStateUtil;
 import com.google.wireless.qa.mobileharness.shared.api.device.BaseDevice;
 
@@ -36,7 +37,8 @@ public class AndroidDeviceDelegateImpl extends AndroidDeviceDelegate {
         new AndroidSystemStateUtil(),
         new AndroidPackageManagerUtil(),
         new AndroidSystemSettingUtil(),
-        new AndroidProcessUtil());
+        new AndroidProcessUtil(),
+        new AndroidSystemSpecUtil());
   }
 
   @VisibleForTesting
@@ -47,7 +49,8 @@ public class AndroidDeviceDelegateImpl extends AndroidDeviceDelegate {
       AndroidSystemStateUtil androidSystemStateUtil,
       AndroidPackageManagerUtil androidPackageManagerUtil,
       AndroidSystemSettingUtil androidSystemSettingUtil,
-      AndroidProcessUtil androidProcessUtil) {
+      AndroidProcessUtil androidProcessUtil,
+      AndroidSystemSpecUtil androidSystemSpecUtil) {
     super(
         device,
         am,
@@ -55,7 +58,8 @@ public class AndroidDeviceDelegateImpl extends AndroidDeviceDelegate {
         androidSystemStateUtil,
         androidPackageManagerUtil,
         androidSystemSettingUtil,
-        androidProcessUtil);
+        androidProcessUtil,
+        androidSystemSpecUtil);
   }
 
   @Override

@@ -184,6 +184,16 @@ public class AndroidSystemSpecUtil {
   /** ADB shell command to get storage lifetime. This does not work in old android builds. */
   @VisibleForTesting static final String ADB_SHELL_GET_STORAGE_LIFETIME = "tradeinmode getstatus";
 
+  /** Linux shell command to get kernel release number. */
+  @VisibleForTesting static final String LINUX_SHELL_GET_KERNEL_RELEASE = "uname -r";
+
+  // GKI kernel release pattern: w.x.y-zzz-kmiGen-something-abBuildId See
+  // https://source.android.com/docs/core/architecture/kernel/gki-versioning#determine-release
+  // But the ending must be ab build id.
+  private static final Pattern GKI_KERNEL_RELEASE_NUMBER_PATTERN =
+      Pattern.compile(
+          "^(?<w>\\d+)[.](?<x>\\d+)[.](?<y>\\d+)-(?<zzz>(android\\d+|mainline))-(?<kmigen>\\d+)-.*(?<abid>ab\\d+)(-.+)?$");
+
   /** The pattern of storage lifetime. */
   private static final Pattern PATTERN_STORAGE_LIFETIME =
       Pattern.compile("\"useful_lifetime_remaining\":\\s*(\\d+)");
@@ -593,6 +603,21 @@ public class AndroidSystemSpecUtil {
           AndroidErrorId.ANDROID_SYSTEM_SPEC_USB_LOCATOR_INVALID_USB_ID,
           String.format("Invalid USB ID [%s] of device [%s]", usbId, serial));
     }
+  }
+
+  public Optional<String> getKernelReleaseNumber(String serial) {
+    try {
+      return Optional.of(adb.runShellWithRetry(serial, LINUX_SHELL_GET_KERNEL_RELEASE).trim());
+    } catch (MobileHarnessException e) {
+      return Optional.empty();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return Optional.empty();
+    }
+  }
+
+  public static boolean isGkiKernel(String kernelReleaseNumber) {
+    return GKI_KERNEL_RELEASE_NUMBER_PATTERN.matcher(kernelReleaseNumber).matches();
   }
 
   /** Checks whether the given device ID belongs to an emulator. */

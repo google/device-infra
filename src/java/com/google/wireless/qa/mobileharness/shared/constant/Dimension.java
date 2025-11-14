@@ -259,6 +259,10 @@ public final class Dimension {
      * 1.0G, this value will be LOW.
      */
     INTERNAL_STORAGE_STATUS,
+    /** Is the kernel GKI. The value can be one of [true, false]. */
+    IS_GKI_KERNEL,
+    /** The kernel release number of the device. */
+    KERNEL_RELEASE_NUMBER,
     /** Launcher 1 package. */
     LAUNCHER_1,
     /** Launcher 3 package. */

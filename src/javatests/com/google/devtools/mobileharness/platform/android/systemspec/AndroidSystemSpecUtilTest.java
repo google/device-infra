@@ -155,7 +155,7 @@ public class AndroidSystemSpecUtilTest {
 
     for (String abiString : testCases.keySet()) {
       when(adbUtil.getProperty(SERIAL, AndroidProperty.ABI)).thenReturn(abiString);
-      assertWithMessage("Convert " + abiString)
+      assertWithMessage("Convert %s", abiString)
           .that(systemSpecUtil.getDeviceAbi(SERIAL))
           .isEqualTo(testCases.get(abiString));
     }
@@ -629,6 +629,45 @@ public class AndroidSystemSpecUtilTest {
     when(adbUtil.getProperty(SERIAL, AndroidProperty.MEMORY_CLASS)).thenReturn(null);
 
     assertThat(systemSpecUtil.getMemoryClassInMb(SERIAL)).isEqualTo(0);
+  }
+
+  @Test
+  public void getKernelReleaseNumber_success() throws Exception {
+    when(adb.runShellWithRetry(SERIAL, AndroidSystemSpecUtil.LINUX_SHELL_GET_KERNEL_RELEASE))
+        .thenReturn("5.10.66-android13-0-00544-ged21d463f856\n");
+
+    assertThat(systemSpecUtil.getKernelReleaseNumber(SERIAL))
+        .hasValue("5.10.66-android13-0-00544-ged21d463f856");
+  }
+
+  @Test
+  public void getKernelReleaseNumber_failure() throws Exception {
+    when(adb.runShellWithRetry(SERIAL, AndroidSystemSpecUtil.LINUX_SHELL_GET_KERNEL_RELEASE))
+        .thenThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE, "Error"));
+
+    assertThat(systemSpecUtil.getKernelReleaseNumber(SERIAL)).isEmpty();
+  }
+
+  @Test
+  public void isGkiKernel_gkiKernel_returnsTrue() {
+    assertThat(AndroidSystemSpecUtil.isGkiKernel("5.4.42-android12-0-00544-ged21d463f856"))
+        .isFalse();
+    assertThat(AndroidSystemSpecUtil.isGkiKernel("5.10.42-android12-0-00544-ab1234567")).isTrue();
+    assertThat(AndroidSystemSpecUtil.isGkiKernel("6.1.141-android14-11-g134baef84790-ab13722573"))
+        .isTrue();
+    assertThat(
+            AndroidSystemSpecUtil.isGkiKernel("6.1.141-android14-11-g134baef84790-ab13722573-4k"))
+        .isTrue();
+    assertThat(AndroidSystemSpecUtil.isGkiKernel("6.16.9-xxxx-amd64")).isFalse();
+    assertThat(AndroidSystemSpecUtil.isGkiKernel("6.1.134-android14-11-ga4b2a2c52a04-ab13615798"))
+        .isTrue();
+    assertThat(AndroidSystemSpecUtil.isGkiKernel("6.1.134-mainline-11-ga4b2a2c52a04-ab13615798"))
+        .isTrue();
+    assertThat(
+            AndroidSystemSpecUtil.isGkiKernel("5.10.101-android12-9-00027-g1292f517889e-ab8602202"))
+        .isTrue();
   }
 
   @Test
