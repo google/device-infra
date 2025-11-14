@@ -157,8 +157,9 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
   public XtsDynamicDownloadInfo parse(TestInfo test, String deviceId)
       throws MobileHarnessException, InterruptedException {
     ImmutableList<String> preloadedMainlineModules = getPreloadedMainlineModules(deviceId);
-    ListMultimap<String, String> mctsNamesOfPreloadedMainlineModules =
-        getMctsNamesOfPreloadedMainlineModules(preloadedMainlineModules, deviceId);
+    String aospVersion = getAospVersion(deviceId);
+    ListMultimap<String, String> mctsNamesOfAllModules =
+        getMctsNamesOfAllMainlineModules(preloadedMainlineModules, deviceId, aospVersion);
     String deviceAbi = DEVICE_ABI_MAP.get(adbUtil.getProperty(deviceId, AndroidProperty.ABI));
     if (deviceAbi == null) {
       throw new MobileHarnessException(
@@ -166,12 +167,11 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
           String.format(
               "The ABI of device %s is not compatible with the xts dynamic downloader.", deviceId));
     }
-    String aospVersion = getAospVersion(deviceId);
 
     List<String> downloadLinkUrls = new ArrayList<>();
     // Add the Lorry download link url of MCTS file for preloaded mainline modules. For example:
     // https://dl.google.com/dl/android/xts/mcts/YYYY-MM/arm64/android-mcts-<module_name>.zip
-    if (mctsNamesOfPreloadedMainlineModules.containsKey(PRELOADED_KEY)) {
+    if (mctsNamesOfAllModules.containsKey(PRELOADED_KEY)) {
       String versioncode = getTvpVersion(deviceId, preloadedMainlineModules);
       String preloadedMainlineVersion =
           processModuleVersion(versioncode, MAINLINE_TVP_PKG, aospVersion, aospVersion);
@@ -187,7 +187,7 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
           String.format(
               "https://dl.google.com/dl/android/xts/mcts/%s/%s/mcts_test_list.txt",
               preloadedMainlineVersion, deviceAbi));
-      for (String mctsNameAndVersioncode : mctsNamesOfPreloadedMainlineModules.get(PRELOADED_KEY)) {
+      for (String mctsNameAndVersioncode : mctsNamesOfAllModules.get(PRELOADED_KEY)) {
         String moduleVersioncode =
             mctsNameAndVersioncode.substring(mctsNameAndVersioncode.indexOf(":") + 1);
         String downloadUrl =
@@ -203,7 +203,7 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
     }
     // Add the Lorry download link url of MCTS file for non-preloaded mainline modules. For example:
     // https://dl.google.com/dl/android/xts/mcts/{SDK_VERSION}/arm64/android-mcts-<module_name>.zip
-    for (String mctsName : mctsNamesOfPreloadedMainlineModules.get(NON_PRELOADED_KEY)) {
+    for (String mctsName : mctsNamesOfAllModules.get(NON_PRELOADED_KEY)) {
       String downloadUrl =
           String.format(
               "https://dl.google.com/dl/android/xts/mcts/%s/%s/%s.zip",
@@ -369,10 +369,19 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
     }
   }
 
-  private ListMultimap<String, String> getMctsNamesOfPreloadedMainlineModules(
-      ImmutableList<String> moduleList, String deviceId)
+  /**
+   * Gets the MCTS names of all mainline modules.
+   *
+   * @param moduleList the list of preloaded mainline modules on the device.
+   * @param deviceId the device serial number.
+   * @param aospVersion the AOSP version of the device.
+   * @return a ListMultimap, the key is PRELOADED_KEY or NON_PRELOADED_KEY, the value is a list of
+   *     MCTS names. For preloaded modules, the format of the value is "mctsName:versioncode". For
+   *     non-preloaded modules, the format of the value is "mctsName".
+   */
+  private ListMultimap<String, String> getMctsNamesOfAllMainlineModules(
+      ImmutableList<String> moduleList, String deviceId, String aospVersion)
       throws MobileHarnessException, InterruptedException {
-    String aospVersion = getAospVersion(deviceId);
     String configFilePath =
         resUtil.getResourceFile(
             getClass(),
@@ -442,13 +451,14 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
   String downloadPublicUrlFiles(String downloadUrl, String subDirName)
       throws MobileHarnessException, InterruptedException {
     synchronized (lock) {
-      // tmp/dynamic_download/android/xts/mcts/YYYY-MM/arm64/android-mcts-<module_name>.zip
+      // e.g.
+      // <xts_res_dir_root>/mcts_dynamic_download/android/xts/mcts/YYYY-MM/arm64/android-mcts-<module_name>.zip
       String dynamicDownloadDir =
           Flags.instance().xtsResDirRoot.getNonNull() + "/mcts_dynamic_download";
       String filePath = PathUtil.join(dynamicDownloadDir, subDirName);
       URLConnection connection = null;
       try {
-        // get the last modified time of the url, will be 0 if the url not exist.
+        // get the last modified time of the url, will be 0 if the url does not exist.
         URI uri = new URI(downloadUrl);
         URL url = uri.toURL();
         connection = url.openConnection();
@@ -563,6 +573,13 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
     }
   }
 
+  /**
+   * Gets the Train Version Package (TVP) version from the device.
+   *
+   * @param deviceId the device serial number.
+   * @param preloadedMainlineModules the list of preloaded mainline modules on the device.
+   * @return the TVP version string.
+   */
   private String getTvpVersion(String deviceId, ImmutableList<String> preloadedMainlineModules)
       throws MobileHarnessException, InterruptedException {
     // if the TVP version is 310000000, that means all the mainline modules were built
