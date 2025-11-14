@@ -232,8 +232,9 @@ public final class Dimension {
     /** Max CPU frequency in Ghz. Precision is 1 decimal place. */
     CPU_FREQ_IN_GHZ,
     /**
-     * The disk status of the device. The common value is OK. If free space is less than 1.0G, this
-     * value will be LOW.
+     * The disk status of the device. The common value is OK. If free space is less than {@link
+     * com.google.devtools.deviceinfra.ext.devicemanagement.device.platform.android.realdevice.AndroidRealDeviceConstants#FREE_EXTERNAL_STORAGE_ALERT_MB},
+     * this value will be LOW.
      */
     EXTERNAL_STORAGE_STATUS,
     /** FEATURE of the device. */
@@ -256,7 +257,8 @@ public final class Dimension {
     HARDWARE_UFS,
     /**
      * The internal storage status of the device. The common value is OK. If free space is less than
-     * 1.0G, this value will be LOW.
+     * {@link com.google.devtools.mobileharness.shared.util.flags.Flags#internalStorageAlertMb},
+     * this value will be LOW.
      */
     INTERNAL_STORAGE_STATUS,
     /** Launcher 1 package. */
