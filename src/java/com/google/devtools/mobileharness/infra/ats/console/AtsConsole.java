@@ -360,6 +360,10 @@ public class AtsConsole {
         preprocessedCommands = ImmutableList.of(tokens);
       }
 
+      if (preprocessingResult.isFromCommandFile()) {
+        consoleInfo.setIsFromCommandFile(true);
+      }
+
       // Executes the commands.
       for (ImmutableList<String> command : preprocessedCommands) {
         // Have a new CommandLine instance to work around the issue of ArgGroup not
@@ -369,6 +373,8 @@ public class AtsConsole {
         commandLine.execute(command.toArray(new String[0]));
         sleeper.sleep(Duration.ofMillis(100L));
       }
+
+      consoleInfo.setIsFromCommandFile(false);
     }
   }
 

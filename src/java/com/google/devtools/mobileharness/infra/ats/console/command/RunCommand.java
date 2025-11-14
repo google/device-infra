@@ -24,6 +24,7 @@ import static com.google.common.util.concurrent.Futures.immediateFailedFuture;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
+import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoDuration;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
@@ -384,6 +385,8 @@ public final class RunCommand implements Callable<Integer> {
 
   private static final Pattern LINE_DATETIME_START_PATTERN =
       Pattern.compile("^\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d");
+
+  private static final Duration CMDFILE_JOBS_START_TIMEOUT = Duration.ofDays(36500L);
 
   private static final AtomicInteger RUNNING_COMMAND_COUNT = new AtomicInteger(0);
 
@@ -830,6 +833,9 @@ public final class RunCommand implements Callable<Integer> {
     }
     if (Flags.instance().enableCtsVerifierResultReporter.getNonNull()) {
       runCommand.setEnableCtsVerifierResultReporter(true);
+    }
+    if (consoleInfo.isFromCommandFile()) {
+      runCommand.setJobStartTimeout(toProtoDuration(CMDFILE_JOBS_START_TIMEOUT));
     }
 
     ImmutableList<String> commandLineArgs = command.stream().skip(1L).collect(toImmutableList());
