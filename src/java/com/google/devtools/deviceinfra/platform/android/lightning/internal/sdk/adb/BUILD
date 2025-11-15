@@ -45,9 +45,7 @@ java_library(
 java_library(
     name = "annotations",
     srcs = ["Annotations.java"],
-    visibility = [
-        "//:deviceinfra_all_pkg",
-    ],
+    visibility = ["//visibility:private"],
     deps = ["@maven//:javax_inject_jsr330_api"],
 )
 
