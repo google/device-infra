@@ -581,28 +581,7 @@ final class NewMultiCommandRequestHandler {
         commandInfo.getEnableXtsDynamicDownload());
 
     if (request.hasPrevTestContext()) {
-      for (TestResource testResource : request.getPrevTestContext().getTestResourceList()) {
-        URL testResourceUrl = getTestResourceUrl(testResource);
-        logger.atInfo().log("testResourceUrl: %s", testResourceUrl);
-        if (testResourceUrl.getProtocol().equals("file")
-            && XtsConstants.RESULT_ZIP_FILENAME_PATTERN.matcher(testResource.getName()).matches()) {
-          Path prevResultZipPath;
-          try {
-            prevResultZipPath = Path.of(testResourceUrl.getPath());
-            localFileUtil.checkFile(prevResultZipPath);
-          } catch (MobileHarnessException e) {
-            logger.atWarning().withCause(e).log(
-                "Failed to parse previous session's output file, skip processing result for"
-                    + " previous session: %s. Will rerun the command directly.",
-                request.getRetryPreviousSessionId());
-            break;
-          }
-          sessionRequestInfoBuilder.setRetryResultDir(prevResultZipPath.getParent().toString());
-          String prevSessionId = prevResultZipPath.getParent().getParent().getFileName().toString();
-          sessionRequestInfoBuilder.setRetrySessionId(prevSessionId).setTestPlan("retry");
-          break;
-        }
-      }
+      processPrevTestContext(request, sessionInfo, sessionRequestInfoBuilder);
     }
 
     // Insert timeout.
@@ -622,6 +601,62 @@ final class NewMultiCommandRequestHandler {
         .setAtsServerTestResources(fileTestResources.build())
         .setAtsServerTestEnvironment(request.getTestEnvironment())
         .build();
+  }
+
+  private void processPrevTestContext(
+      NewMultiCommandRequest request,
+      SessionInfo sessionInfo,
+      SessionRequestInfo.Builder sessionRequestInfoBuilder)
+      throws MobileHarnessException, InterruptedException {
+    for (TestResource testResource : request.getPrevTestContext().getTestResourceList()) {
+      URL testResourceUrl = getTestResourceUrl(testResource);
+      Path fileName = Path.of(testResourceUrl.getPath()).getFileName();
+      if (testResourceUrl.getProtocol().equals("file")
+          && fileName != null
+          && XtsConstants.RESULT_ZIP_FILENAME_PATTERN.matcher(fileName.toString()).matches()) {
+        Path prevResultZipPath;
+        try {
+          prevResultZipPath = Path.of(testResourceUrl.getPath());
+          localFileUtil.checkFile(prevResultZipPath);
+        } catch (MobileHarnessException e) {
+          logger.atWarning().withCause(e).log(
+              "Failed to parse previous session's output file, skip processing result for"
+                  + " previous session: %s. Will rerun the command directly.",
+              request.getRetryPreviousSessionId());
+          break;
+        }
+        sessionRequestInfoBuilder.setRetryResultDir(prevResultZipPath.getParent().toString());
+        String prevSessionId = "";
+        try {
+          // Validate if the extracted prevSessionId is a UUID.
+          prevSessionId = prevResultZipPath.getParent().getParent().getFileName().toString();
+          UUID.fromString(prevSessionId);
+        } catch (IllegalArgumentException | NullPointerException e) {
+          // If not a UUID or path is invalid, generate one based on the file path to ensure a
+          // valid session ID.
+          logger.atInfo().log(
+              "Previous session ID [%s] is not a UUID or path is invalid, generating one from"
+                  + " path [%s].",
+              prevSessionId, prevResultZipPath);
+          prevSessionId =
+              UUID.nameUUIDFromBytes(prevResultZipPath.toString().getBytes(UTF_8)).toString();
+          String prevResultParentDir =
+              PathUtil.join(
+                  DirUtil.getPublicGenDir(),
+                  "session_" + sessionInfo.getSessionId(),
+                  "prev_result_dir");
+          localFileUtil.prepareDir(prevResultParentDir);
+          localFileUtil.unzipFile(prevResultZipPath.toString(), prevResultParentDir, UNZIP_TIMEOUT);
+          String prevResultDir =
+              PathUtil.join(
+                  prevResultParentDir,
+                  Files.getNameWithoutExtension(prevResultZipPath.getFileName().toString()));
+          sessionRequestInfoBuilder.setRetryResultDir(prevResultDir);
+        }
+        sessionRequestInfoBuilder.setRetrySessionId(prevSessionId).setTestPlan("retry");
+        break;
+      }
+    }
   }
 
   /**
