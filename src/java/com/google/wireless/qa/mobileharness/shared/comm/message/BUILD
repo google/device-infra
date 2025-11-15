@@ -65,10 +65,7 @@ java_library(
     srcs = [
         "TestMessageManager.java",
     ],
-    visibility = [
-        "//:deviceinfra_all_pkg",
-        "//:omnilab_fusion",
-    ],
+    visibility = ["//:deviceinfra_all_pkg"],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/messaging/message",
