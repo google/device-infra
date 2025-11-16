@@ -62,10 +62,7 @@ java_library(
 java_library(
     name = "lab_direct_test_runner_util",
     srcs = ["LabDirectTestRunnerUtil.java"],
-    visibility = [
-        "//:omnilab_fusion",
-        "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
-    ],
+    visibility = ["//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__"],
     deps = [
         ":manager",
         "//src/devtools/mobileharness/api/messaging:messaging_java_proto",
