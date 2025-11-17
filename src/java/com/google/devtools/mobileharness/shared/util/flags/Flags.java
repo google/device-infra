@@ -1460,9 +1460,8 @@ public class Flags {
       names = "--internal_storage_alert_mb",
       description =
           "The threshold for insufficient internal storage alert. If the internal storage is lower "
-              + "than the threshold, device will go to prepping state that cannot run tests and "
-              + "the dimension 'internal_storage_status' will go from 'ok' to 'low'. Unit is MB. "
-              + "Default is 200 MB.",
+              + "than the threshold, the device dimension 'internal_storage_status' will go from "
+              + "'ok' to 'low'. Unit is MB. Default is 200 MB.",
       converter = Flag.IntegerConverter.class)
   public Flag<Integer> internalStorageAlert = internalStorageAlertDefault;
 
