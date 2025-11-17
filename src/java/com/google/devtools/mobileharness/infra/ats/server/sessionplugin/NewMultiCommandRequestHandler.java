@@ -69,6 +69,7 @@ import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsCon
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfo.TradefedInvocation;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfoFileUtil;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfoFileUtil.XtsTradefedRuntimeInfoFileDetail;
+import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteInfoProvider;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
@@ -155,6 +156,7 @@ final class NewMultiCommandRequestHandler {
       new ConcurrentHashMap<>();
 
   private volatile String mountedXtsRootDir = "";
+  private volatile String prevSessionResultUnzipDir = "";
 
   @Inject
   NewMultiCommandRequestHandler(
@@ -581,28 +583,7 @@ final class NewMultiCommandRequestHandler {
         commandInfo.getEnableXtsDynamicDownload());
 
     if (request.hasPrevTestContext()) {
-      for (TestResource testResource : request.getPrevTestContext().getTestResourceList()) {
-        URL testResourceUrl = getTestResourceUrl(testResource);
-        logger.atInfo().log("testResourceUrl: %s", testResourceUrl);
-        if (testResourceUrl.getProtocol().equals("file")
-            && XtsConstants.RESULT_ZIP_FILENAME_PATTERN.matcher(testResource.getName()).matches()) {
-          Path prevResultZipPath;
-          try {
-            prevResultZipPath = Path.of(testResourceUrl.getPath());
-            localFileUtil.checkFile(prevResultZipPath);
-          } catch (MobileHarnessException e) {
-            logger.atWarning().withCause(e).log(
-                "Failed to parse previous session's output file, skip processing result for"
-                    + " previous session: %s. Will rerun the command directly.",
-                request.getRetryPreviousSessionId());
-            break;
-          }
-          sessionRequestInfoBuilder.setRetryResultDir(prevResultZipPath.getParent().toString());
-          String prevSessionId = prevResultZipPath.getParent().getParent().getFileName().toString();
-          sessionRequestInfoBuilder.setRetrySessionId(prevSessionId).setTestPlan("retry");
-          break;
-        }
-      }
+      processPrevTestContext(request, sessionInfo, sessionRequestInfoBuilder);
     }
 
     // Insert timeout.
@@ -616,12 +597,94 @@ final class NewMultiCommandRequestHandler {
       sessionRequestInfoBuilder.setShardingMode(commandInfo.getShardingMode());
     }
 
-    // TODO: Add consolidate the test environment and existing session request info
-    // fields.
     return sessionRequestInfoBuilder
         .setAtsServerTestResources(fileTestResources.build())
         .setAtsServerTestEnvironment(request.getTestEnvironment())
         .build();
+  }
+
+  private void processPrevTestContext(
+      NewMultiCommandRequest request,
+      SessionInfo sessionInfo,
+      SessionRequestInfo.Builder sessionRequestInfoBuilder)
+      throws MobileHarnessException, InterruptedException {
+    for (TestResource testResource : request.getPrevTestContext().getTestResourceList()) {
+      URL testResourceUrl = getTestResourceUrl(testResource);
+      logger.atInfo().log("testResourceUrl: %s", testResourceUrl);
+      Path fileName = Path.of(testResourceUrl.getPath()).getFileName();
+      if (testResourceUrl.getProtocol().equals("file")
+          && fileName != null
+          && XtsConstants.RESULT_ZIP_FILENAME_PATTERN.matcher(fileName.toString()).matches()) {
+        Path prevResultZipPath;
+        try {
+          prevResultZipPath = Path.of(testResourceUrl.getPath());
+          localFileUtil.checkFile(prevResultZipPath);
+        } catch (MobileHarnessException e) {
+          logger.atWarning().withCause(e).log(
+              "Failed to parse previous session's output file, skip processing result for"
+                  + " previous session: %s. Will rerun the command directly.",
+              request.getRetryPreviousSessionId());
+          break;
+        }
+
+        String prevSessionId = getPrevSessionIdFromResultZipPath(prevResultZipPath);
+        if (!prevSessionId.isEmpty()) {
+          sessionRequestInfoBuilder.setRetryResultDir(prevResultZipPath.getParent().toString());
+        } else {
+          logger.atInfo().log(
+              "Previous session ID is not a UUID or path is invalid, generating one from path"
+                  + " [%s].",
+              prevResultZipPath);
+          prevSessionId =
+              UUID.nameUUIDFromBytes(prevResultZipPath.toString().getBytes(UTF_8)).toString();
+          String prevResultParentDir =
+              PathUtil.join(
+                  DirUtil.getPublicGenDir(),
+                  "session_" + sessionInfo.getSessionId(),
+                  "prev_result_dir");
+          localFileUtil.prepareDir(prevResultParentDir);
+          localFileUtil.unzipFile(prevResultZipPath.toString(), prevResultParentDir, UNZIP_TIMEOUT);
+          prevSessionResultUnzipDir = prevResultParentDir;
+          String prevResultDir =
+              PathUtil.join(
+                  prevResultParentDir,
+                  Files.getNameWithoutExtension(prevResultZipPath.getFileName().toString()));
+          if (localFileUtil.isFileExist(
+              prevResultDir + "/" + SuiteCommon.TEST_RESULT_PB_FILE_NAME)) {
+            sessionRequestInfoBuilder.setRetryResultDir(prevResultDir);
+          } else {
+            logger.atWarning().log(
+                "Previous session result file does not exist in result zip file [%s], retrying the"
+                    + " command directly.",
+                prevResultZipPath);
+            break;
+          }
+        }
+        sessionRequestInfoBuilder.setRetrySessionId(prevSessionId).setTestPlan("retry");
+        break;
+      }
+    }
+  }
+
+  /**
+   * Extracts and validates the previous session ID from the given result zip file path.
+   *
+   * <p>The expected path structure for a retry result zip is
+   * ".../{session_id}/{command_id}/{timestamp}_{random_digits}.zip". This method attempts to
+   * extract the session ID from the parent's parent directory name and validates if it's a UUID.
+   *
+   * @param prevResultZipPath The path to the previous session's result zip file.
+   * @return The extracted previous session ID if valid, otherwise an empty string.
+   */
+  private String getPrevSessionIdFromResultZipPath(Path prevResultZipPath) {
+    try {
+      // Validate if the extracted prevSessionId is a UUID.
+      String prevSessionId = prevResultZipPath.getParent().getParent().getFileName().toString();
+      UUID.fromString(prevSessionId);
+      return prevSessionId;
+    } catch (IllegalArgumentException | NullPointerException e) {
+      return "";
+    }
   }
 
   /**
@@ -899,6 +962,16 @@ final class NewMultiCommandRequestHandler {
       } catch (MobileHarnessException e) {
         logger.atWarning().withCause(e).log(
             "Failed to unmount or unzip xts root directory: %s", mountedXtsRootDir);
+      }
+    }
+    if (!prevSessionResultUnzipDir.isEmpty()) {
+      try {
+        localFileUtil.removeFileOrDir(prevSessionResultUnzipDir);
+        prevSessionResultUnzipDir = "";
+      } catch (MobileHarnessException e) {
+        logger.atWarning().withCause(e).log(
+            "Failed to remove previous session result unzip directory: %s",
+            prevSessionResultUnzipDir);
       }
     }
   }
