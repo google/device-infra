@@ -3,6 +3,8 @@ import {NoopAnimationsModule} from '@angular/platform-browser/animations';
 import {provideRouter} from '@angular/router';
 
 import {HostOverview} from '../../../../core/models/host_overview';
+import {FakeHostService} from '../../../../core/services/host/fake_host_service';
+import {HOST_SERVICE} from '../../../../core/services/host/host_service';
 import {HostOverviewPage} from './host_overview';
 
 describe('HostOverview Component', () => {
@@ -27,7 +29,6 @@ describe('HostOverview Component', () => {
       },
       version: '4.175.0',
     },
-    devices: [],
     properties: {
       'test-type': 'instrumentation',
       'max-run-time': '3600',
@@ -45,7 +46,10 @@ describe('HostOverview Component', () => {
         HostOverviewPage,
         NoopAnimationsModule, // This makes test faster and more stable.
       ],
-      providers: [provideRouter([])],
+      providers: [
+        provideRouter([]),
+        {provide: HOST_SERVICE, useClass: FakeHostService},
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(HostOverviewPage);

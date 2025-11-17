@@ -1,6 +1,6 @@
 import {Injectable} from '@angular/core';
 import {Observable, of, throwError} from 'rxjs';
-import {HostOverview} from '../../models/host_overview';
+import {DeviceSummary, HostOverview} from '../../models/host_overview';
 import {MOCK_HOST_SCENARIOS} from '../mock_data';
 import {HostService} from './host_service';
 
@@ -27,6 +27,34 @@ export class FakeHostService extends HostService {
     const scenario = MOCK_HOST_SCENARIOS.find((s) => s.hostName === hostName);
     if (scenario && scenario.overview) {
       return of(scenario.overview);
+    } else {
+      return throwError(
+        () =>
+          new Error(
+            `Host with '${hostName}' not found or has no overview in mock data.`,
+          ),
+      );
+    }
+  }
+
+  override getHostDeviceSummaries(
+    hostName: string,
+  ): Observable<DeviceSummary[]> {
+    const scenario = MOCK_HOST_SCENARIOS.find((s) => s.hostName === hostName);
+    if (scenario && scenario.deviceSummaries) {
+      return of(scenario.deviceSummaries);
+    }
+    return of([]);
+  }
+
+  override updatePassThroughFlags(
+    hostName: string,
+    flags: string,
+  ): Observable<void> {
+    const scenario = MOCK_HOST_SCENARIOS.find((s) => s.hostName === hostName);
+    if (scenario && scenario.overview) {
+      scenario.overview.labServer.passThroughFlags = flags;
+      return of(undefined);
     } else {
       return throwError(
         () =>

@@ -6,6 +6,8 @@
  * uses this data to render the UI, including icons, colors, and layouts.
  */
 
+import {HealthState} from './device_overview';
+
 /**
  * Semantic state of host connectivity with the OmniLab master server.
  * Frontend uses this to determine icon and color.
@@ -117,12 +119,50 @@ export interface DaemonServerInfo {
 }
 
 /**
+ * Semantic state of the device health.
+ * Frontend uses this to determine icon and color.
+ */
+export interface DeviceHealthState {
+  /** The semantic state used by FE to determine styling (icon/color). */
+  readonly health: HealthState;
+  /** The display text for the state, e.g., "In Service", "Out of Service". */
+  readonly title: string;
+  /** Tooltip text explaining the current health state. */
+  readonly tooltip: string;
+}
+
+/**
  * A summary of a device connected to the host, for display in the device list.
  * Corresponds to DeviceSummary in host_resources.proto.
  */
 export interface DeviceSummary {
-  // TODO: Define device summary fields when device table design is
-  // finalized.
+  readonly id: string;
+  readonly healthState: DeviceHealthState;
+  readonly types: Array<{
+    /** The type string. */
+    type: string;
+    /**
+     * Backend-determined flag indicating if this type suggests an abnormal
+     * or unhealthy state (e.g., FailedAndroidDevice, DisconnectedDevice)
+     * and should be highlighted visually.
+     */
+    isAbnormal: boolean;
+  }>;
+  readonly deviceStatus: {
+    /** The status string, e.g., IDLE, BUSY, MISSING, FAILED, INIT, DIRTY. */
+    status: string;
+    /**
+     * Backend-determined flag indicating if this raw status is considered
+     * critical and should be highlighted visually (e.g., red chip).
+     */
+    isCritical: boolean;
+  };
+  readonly label: string;
+  // TODO: Consider if we need to display more complex form of required dimensions.
+  // The type of `requiredDims` may need to update.
+  readonly requiredDims: string;
+  readonly model: string;
+  readonly version: string;
 }
 
 /**
@@ -144,8 +184,6 @@ export interface HostOverview {
   readonly labServer: LabServerInfo;
   /** Daemon server information. */
   readonly daemonServer: DaemonServerInfo;
-  /** A list of summaries for devices connected to this host. */
-  readonly devices: readonly DeviceSummary[];
   /** A map of host-level properties for display. */
   readonly properties: {[key: string]: string};
   /** OS of the host machine, e.g., "gLinux", "macOS". */

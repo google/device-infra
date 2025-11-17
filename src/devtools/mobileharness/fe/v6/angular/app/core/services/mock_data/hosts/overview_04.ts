@@ -1,4 +1,4 @@
-import {HostOverview} from '../../../models/host_overview';
+import {DeviceSummary, HostOverview} from '../../../models/host_overview';
 import {MockHostScenario} from '../models';
 
 import {createDefaultUiStatus} from './ui_status_utils';
@@ -35,15 +35,35 @@ const overview: HostOverview = {
     },
     version: '24.07.05',
   },
-  devices: [],
   properties: {'cpu-arch': 'ARM64', 'gpu-type': 'none', 'ram-gb': '128'},
 };
+
+const deviceSummaries: DeviceSummary[] = [
+  {
+    id: 'ARM-DEVICE-01',
+    healthState: {
+      health: 'OUT_OF_SERVICE_NEEDS_FIXING',
+      title: 'Out of Service (Needs Fixing)',
+      tooltip: 'Device needs fixing.',
+    },
+    types: [
+      {type: 'LinuxDevice', isAbnormal: false},
+      {type: 'PhysicalDevice', isAbnormal: false},
+    ],
+    deviceStatus: {isCritical: true, status: 'MISSING'},
+    label: '',
+    requiredDims: 'pool:arm',
+    model: 'Ampere Altra',
+    version: 'Ubuntu 22.04',
+  },
+];
 
 /** Mock host overview data. */
 export const OVERVIEW_04: MockHostScenario = {
   hostName: 'host-d-4.example.com',
   scenarioName: 'Overview 4: Offline (Server Stopped)',
   overview,
+  deviceSummaries,
   hostConfigResult: {
     hostConfig: undefined,
     uiStatus: createDefaultUiStatus(),
