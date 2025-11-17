@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.infra.controller.device;
 
 import static com.google.devtools.mobileharness.shared.util.error.MoreThrowables.shortDebugStackTrace;
 import static java.util.concurrent.TimeUnit.MINUTES;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
@@ -415,7 +416,17 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
 
   /** Returns whether this device is available for running new test. */
   public boolean isAvailable() {
-    return isReady() && test == null && !isPrepping() && !isAllocated();
+    boolean isAvailable = isReady() && test == null && !isPrepping() && !isAllocated();
+    if (!isAvailable) {
+      logger.atInfo().atMostEvery(10, SECONDS).log(
+          "Device %s is NOT available: isReady=%s, test=%s, isPrepping=%s, isAllocated=%s",
+          device.getDeviceId(),
+          isReady(),
+          test == null ? "null" : test.getTestRunner().getTestExecutionUnit().locator(),
+          isPrepping(),
+          isAllocated());
+    }
+    return isAvailable;
   }
 
   /** If the device is IDLE in external device manager, it's of course available in external DM. */
@@ -423,7 +434,13 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
     ExternalDeviceManager.DeviceStatus deviceStatus =
         externalDeviceManager.getDeviceStatus(
             device.getDeviceId(), device.getClass().getSimpleName(), device.getDeviceTypes());
-    return deviceStatus.equals(ExternalDeviceManager.DeviceStatus.IDLE);
+    boolean isAvailable = deviceStatus.equals(ExternalDeviceManager.DeviceStatus.IDLE);
+    if (!isAvailable) {
+      logger.atInfo().atMostEvery(10, SECONDS).log(
+          "Device %s is NOT available in external device manager: deviceStatus=%s",
+          device.getDeviceId(), deviceStatus);
+    }
+    return isAvailable;
   }
 
   /**
@@ -452,25 +469,58 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
   /** Returns whether the current device is still alive. */
   @Override
   public boolean isAlive() {
-    return running
-        && !cancelled
-        && expireTime.isAfter(clock.instant())
-        && !Thread.currentThread().isInterrupted();
+    boolean isAlive =
+        running
+            && !cancelled
+            && expireTime.isAfter(clock.instant())
+            && !Thread.currentThread().isInterrupted();
+    if (!isAlive) {
+      logger.atInfo().atMostEvery(10, SECONDS).log(
+          "Device %s is NOT alive: running=%s, cancelled=%s, expireTime=%s, isInterrupted=%s",
+          device.getDeviceId(),
+          running,
+          cancelled,
+          expireTime,
+          Thread.currentThread().isInterrupted());
+    }
+    return isAlive;
   }
 
   /** Returns whether this device is ready. */
   public boolean isReady() {
-    return initialized && isAlive();
+    boolean isAlive = isAlive();
+    boolean isReady = initialized && isAlive;
+    if (!isReady) {
+      logger.atInfo().atMostEvery(10, SECONDS).log(
+          "Device %s is NOT ready: initialized=%s, isAlive=%s",
+          device.getDeviceId(), initialized, isAlive);
+    }
+    return isReady;
   }
 
   /** Returns whether this device is preparing. */
   public boolean isPrepping() {
-    return device.isPrepping()
-        || !device.getDimension(Dimension.Name.ALERT_LAB_DISK_USABLE_SIZE).isEmpty()
-        || !device.getDimension(Dimension.Name.CLOUDRPC_FAILURE).isEmpty()
-        || !device.getDimension(Dimension.Name.GCS_FAILURE).isEmpty()
-        || !device.getDimension(Dimension.Name.LAB_FILE_SYSTEM_IO_ERROR).isEmpty()
-        || !isAvailableInExternalDeviceManager();
+    boolean isPrepping =
+        device.isPrepping()
+            || !device.getDimension(Dimension.Name.ALERT_LAB_DISK_USABLE_SIZE).isEmpty()
+            || !device.getDimension(Dimension.Name.CLOUDRPC_FAILURE).isEmpty()
+            || !device.getDimension(Dimension.Name.GCS_FAILURE).isEmpty()
+            || !device.getDimension(Dimension.Name.LAB_FILE_SYSTEM_IO_ERROR).isEmpty()
+            || !isAvailableInExternalDeviceManager();
+    if (isPrepping) {
+      logger.atInfo().atMostEvery(10, SECONDS).log(
+          "Device %s is PREPPING: Device.isPrepping=%s, isAvailableInExternalDeviceManager=%s,"
+              + " alert_lab_disk_usable_size=%s, cloudrpc_failure=%s, gcs_failure=%s,"
+              + " lab_file_system_io_error=%s",
+          device.getDeviceId(),
+          device.isPrepping(),
+          device.getDimension(Dimension.Name.ALERT_LAB_DISK_USABLE_SIZE),
+          device.getDimension(Dimension.Name.CLOUDRPC_FAILURE),
+          device.getDimension(Dimension.Name.GCS_FAILURE),
+          device.getDimension(Dimension.Name.LAB_FILE_SYSTEM_IO_ERROR),
+          isAvailableInExternalDeviceManager());
+    }
+    return isPrepping;
   }
 
   /** Returns whether the current thread is stopped. */
