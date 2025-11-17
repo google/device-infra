@@ -53,9 +53,7 @@ java_library(
 java_library(
     name = "system_info_printer",
     srcs = ["SystemInfoPrinter.java"],
-    visibility = [
-        "//:deviceinfra_all_pkg",
-    ],
+    visibility = ["//:deviceinfra_all_pkg"],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/constant:log_record_importance",
