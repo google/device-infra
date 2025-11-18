@@ -328,31 +328,34 @@ public class AtsSessionPlugin {
             /* cause= */ null);
       }
 
-      // If have several tradefed jobs, add them to session one by one. Save the unstarted jobs in
-      // additionalTradefedJobs.
-      if (tradefedJobs.size() > 1) {
-        List<JobInfo> tradefedJobsToAdd = new ArrayList<>();
-        for (JobInfo tradefedJob : tradefedJobs) {
-          // To first execute the CTS job.
-          if (tradefedJob.locator().getName().contains(XtsConstants.STATIC_XTS_JOB_NAME)) {
-            tradefedJobsToAdd.add(tradefedJob);
-          } else {
-            synchronized (additionalTradefedJobs) {
-              additionalTradefedJobs.add(tradefedJob);
+      if (tradefedJobs.size() <= 1) {
+        addJobListToSession(tradefedJobs);
+      } else {
+        // If there are multiple tradefed jobs, add them to the session sequentially.
+        // Prioritize static XTS jobs. Other jobs are added to additional tradefed jobs list.
+        List<JobInfo> staticXtsJobs = new ArrayList<>();
+
+        synchronized (additionalTradefedJobs) {
+          tradefedJobs.forEach(
+              tradefedJob -> {
+                if (tradefedJob.locator().getName().contains(XtsConstants.STATIC_XTS_JOB_NAME)) {
+                  staticXtsJobs.add(tradefedJob);
+                } else {
+                  additionalTradefedJobs.add(tradefedJob);
+                }
+              });
+        }
+
+        if (!staticXtsJobs.isEmpty()) {
+          addJobListToSession(staticXtsJobs);
+        } else {
+          // No static XTS jobs found, add the first of the additional jobs.
+          synchronized (additionalTradefedJobs) {
+            if (!additionalTradefedJobs.isEmpty()) {
+              addJobListToSession(ImmutableList.of(additionalTradefedJobs.remove(0)));
             }
           }
         }
-
-        // No static CTS job found.
-        if (tradefedJobsToAdd.isEmpty()) {
-          synchronized (additionalTradefedJobs) {
-            tradefedJobsToAdd.add(additionalTradefedJobs.remove(0));
-          }
-        }
-
-        addJobListToSession(tradefedJobsToAdd);
-      } else {
-        addJobListToSession(tradefedJobs);
       }
 
       // Starts TF runtime info updater.
