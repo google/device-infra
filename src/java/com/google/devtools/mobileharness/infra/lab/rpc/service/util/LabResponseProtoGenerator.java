@@ -160,9 +160,10 @@ public class LabResponseProtoGenerator {
                             .addAllSubTestIdChain(message.subTestIdChain())
                             .build())
                 .collect(toImmutableList());
-    logger.atFiner().log(
-        "Test %s: status=%s, result=%s, buffered_message_size=%d",
-        testId, testStatus.name(), testResult, bufferedMessages.size());
+    logger.atInfo().log(
+        "Creating GetTestStatusResponse for Test %s: status=%s, result=%s,"
+            + " buffered_message_size=%d, log_size=%d",
+        testId, testStatus.name(), testResult, bufferedMessages.size(), testInfo.log().size());
 
     // Return Error state for any running tests when force clean up is enabled to avoid throwing
     // InfraError from the client side in this case.

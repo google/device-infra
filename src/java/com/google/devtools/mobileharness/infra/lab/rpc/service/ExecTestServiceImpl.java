@@ -232,6 +232,9 @@ public class ExecTestServiceImpl {
   public GetTestStatusResponse getTestStatus(GetTestStatusRequest req)
       throws MobileHarnessException {
     // Get root testInfo.
+    logger.atInfo().log(
+        "Getting test status: test %s, job %s, log offset %d, sub tests count %d",
+        req.getTestId(), req.getJobId(), req.getTestLogOffset(), req.getSubTestCount());
     TestInfo testInfo = testRunnerHolder.getTestInfo(req.getTestId());
     // Get device features.
     Optional<List<DeviceFeature>> deviceFeatures =
@@ -239,6 +242,8 @@ public class ExecTestServiceImpl {
     // Create {@link GetTestStatusResponse} with root testInfo.
     GetTestStatusResponse.Builder builder =
         createGetTestStatusResponse(testInfo, req, deviceFeatures);
+    logger.atInfo().log(
+        "Finished getting test status: test %s, job %s", req.getTestId(), req.getJobId());
     return builder.build();
   }
 
