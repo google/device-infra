@@ -22,6 +22,9 @@ package(
 java_library(
     name = "all_detectors_and_dispatchers",
     srcs = ["AllDetectorsAndDispatchers.java"],
+    visibility = [
+        "//src/javatests/com/google/devtools/mobileharness/infra/controller/device/bootstrap:__subpackages__",
+    ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:adb",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:base",
