@@ -42,6 +42,7 @@ import com.google.protobuf.Any;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
+import java.io.File;
 import java.util.Optional;
 import java.util.function.UnaryOperator;
 import org.junit.Before;
@@ -96,6 +97,9 @@ public final class AtsLocalSessionPluginTest {
     assertThat(jobInfo.subDeviceSpecs().getSubDevice(0).type()).isEqualTo("NoOpDevice");
     assertThat(jobInfo.subDeviceSpecs().getSubDevice(0).deviceRequirement().dimensions().isEmpty())
         .isTrue();
+    assertThat(jobInfo.params().get("xts_suite_info")).isEqualTo("suite_name=gts");
+    assertThat(jobInfo.params().get("xts_test_dir"))
+        .isEqualTo(new File(TEST_CONFIG_PATH).getParent());
   }
 
   @Test

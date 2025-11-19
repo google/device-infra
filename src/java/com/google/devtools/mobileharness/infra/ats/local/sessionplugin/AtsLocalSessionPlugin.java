@@ -20,6 +20,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -93,7 +94,8 @@ public class AtsLocalSessionPlugin {
     logger.atInfo().log("Handle configuration: %s", config);
     verifySessionConfig();
 
-    Configuration moduleConfig = ConfigurationXmlParser.parse(new File(config.getTestConfig()));
+    File moduleConfigFile = new File(config.getTestConfig());
+    Configuration moduleConfig = ConfigurationXmlParser.parse(moduleConfigFile);
     String className = ConfigurationUtil.getSimpleClassName(moduleConfig.getTest().getClazz());
     JobConfig.Builder jobConfig =
         JobConfig.newBuilder()
@@ -110,6 +112,12 @@ public class AtsLocalSessionPlugin {
             .addAllSubDeviceSpec(getSubDeviceSpecList(moduleConfig.getDevicesList())));
     // Fail fast if devices are not available
     jobConfig.setAllocationExitStrategy(AllocationExitStrategy.FAIL_FAST_NO_MATCH);
+    jobConfig.setParams(
+        StringMap.newBuilder()
+            // Use the config's parent directory as the xts test dir for searching implicit
+            // dependencies.
+            .putContent("xts_test_dir", moduleConfigFile.getParent())
+            .putContent("xts_suite_info", getSuiteInfoMap(moduleConfig)));
 
     JobInfo jobInfo = JobInfoCreator.createJobInfo(jobConfig.build(), ImmutableList.of(), "");
     ImmutableList<File> dependencies =
@@ -141,6 +149,17 @@ public class AtsLocalSessionPlugin {
           SubDeviceSpec.newBuilder().setType(type).setDimensions(dimensions).build());
     }
     return subDeviceSpecList.build();
+  }
+
+  private String getSuiteInfoMap(Configuration moduleConfig) {
+    // Gets the suite name from test-suite-tag.
+    String suiteName =
+        moduleConfig.getOptionsList().stream()
+            .filter(option -> option.getName().equals("test-suite-tag"))
+            .findFirst()
+            .map(option -> option.getValue())
+            .orElse("");
+    return Joiner.on(",").withKeyValueSeparator("=").join(ImmutableMap.of("suite_name", suiteName));
   }
 
   private AtsLocalSessionPluginOutput getPluginOutput(List<JobInfo> jobInfos) {

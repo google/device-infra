@@ -43,6 +43,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import javax.inject.Inject;
 import org.xmlpull.v1.XmlPullParserException;
@@ -86,7 +87,7 @@ public class AndroidAtsDynamicConfigPusherDecorator extends BaseDecorator
 
     xtsSuiteInfoMap = xtsSuiteInfoSplitter.split(spec.getXtsSuiteInfo());
     String suiteName = xtsSuiteInfoMap.get("suite_name");
-    String suiteVersion = xtsSuiteInfoMap.get("suite_version");
+    String suiteVersion = xtsSuiteInfoMap.getOrDefault("suite_version", "");
     if (spec.getConfigFilename().isEmpty()) {
       spec = spec.toBuilder().setConfigFilename(Ascii.toLowerCase(suiteName)).build();
     }
@@ -168,7 +169,7 @@ public class AndroidAtsDynamicConfigPusherDecorator extends BaseDecorator
       // com.android.compatibility.common.util.UrlReplacement.java
       String requestUrl =
           spec.getConfigUrl()
-              .replace("{suite-name}", xtsSuiteInfoMap.get("suite_name"))
+              .replace("{suite-name}", xtsSuiteInfoMap.get("suite_name").toUpperCase(Locale.ROOT))
               .replace("{module}", spec.getConfigFilename())
               .replace("{version}", spec.getVersion())
               .replace("{api-key}", spec.getApiKey());
