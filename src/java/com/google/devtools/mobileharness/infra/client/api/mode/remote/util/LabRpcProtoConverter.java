@@ -176,6 +176,13 @@ public class LabRpcProtoConverter {
     }
     ExceptionProto.ExceptionDetail resultCause =
         resp.hasTestResultCause() ? resp.getTestResultCause() : null;
+    // TODO: Remove this log after the bug is fixed.
+    if (resp.getTestResultType() != TestResult.PASS) {
+      logger.atInfo().log(
+          "GetTestStatusResponse test result type: %s, test result: %s",
+          resp.getTestResultType(), resp.getTestResult());
+    }
+
     setTestResultByResultCause(resultType, resultCause, testInfo, testResult);
   }
 
@@ -195,7 +202,7 @@ public class LabRpcProtoConverter {
         }
         break;
       case UNKNOWN:
-        logger.atFine().log("Ignore UNKNOWN test result from lab side");
+        logger.atInfo().log("Ignore UNKNOWN test result from lab side");
         break;
       default:
         if (resultCause == null) {
