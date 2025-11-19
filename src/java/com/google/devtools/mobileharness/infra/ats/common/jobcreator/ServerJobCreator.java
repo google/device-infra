@@ -31,7 +31,6 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionF
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName;
-import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.DeviceActionConfigObject;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestEnvironment;
 import com.google.devtools.mobileharness.infra.ats.server.sessionplugin.TradefedConfigGenerator;
@@ -249,19 +248,6 @@ public class ServerJobCreator extends XtsJobCreator {
             "Previous session doesn't have tradefed module",
             /* cause= */ null);
       }
-      extraJobProperties
-          .put(
-              Job.PREV_SESSION_HAS_TF_MODULE,
-              String.valueOf(
-                  Boolean.parseBoolean(
-                      testReportProperties.getProperty(
-                          SuiteCommon.TEST_REPORT_PROPERTY_HAS_TF_MODULE))))
-          .put(
-              Job.PREV_SESSION_HAS_NON_TF_MODULE,
-              String.valueOf(
-                  Boolean.parseBoolean(
-                      testReportProperties.getProperty(
-                          SuiteCommon.TEST_REPORT_PROPERTY_HAS_NON_TF_MODULE))));
     }
     TradefedResultFilesBundle tfRunRetryFilesBundle =
         findTfRunRetryFilesBundle(Path.of(sessionRequestInfo.retryResultDir().orElseThrow()));
