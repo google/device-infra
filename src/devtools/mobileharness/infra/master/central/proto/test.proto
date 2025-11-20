@@ -111,6 +111,11 @@ message AllocationWorkflowContext {
     // allocation.
     repeated .mobileharness.api.model.DeviceLocator allocated_device_locator =
         3;
+
+    // The network zone of the device leased from Scheduke.
+    // This is used to ensure that the Omnilab executor is allocated in the same
+    // network zone.
+    string network_zone = 4;
   }
 
   OmnilabContext omnilab_context = 1;
