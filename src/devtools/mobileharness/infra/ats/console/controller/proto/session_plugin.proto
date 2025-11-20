@@ -182,6 +182,9 @@ message RunCommand {
 
   // Optional. Exclude tests by test runners.
   repeated string exclude_runner = 35;
+
+  // Optional.
+  optional google.protobuf.Duration job_start_timeout = 36;
 }
 
 message RunCommandState {

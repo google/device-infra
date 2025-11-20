@@ -44,11 +44,16 @@ public class CommandPreprocessor {
 
     public abstract Optional<String> errorMessage();
 
+    public abstract boolean isFromCommandFile();
+
     public static PreprocessingResult of(
         @Nullable ImmutableList<ImmutableList<String>> modifiedCommands,
-        @Nullable String errorMessage) {
+        @Nullable String errorMessage,
+        boolean isFromCommandFile) {
       return new AutoValue_CommandPreprocessor_PreprocessingResult(
-          Optional.ofNullable(modifiedCommands), Optional.ofNullable(errorMessage));
+          Optional.ofNullable(modifiedCommands),
+          Optional.ofNullable(errorMessage),
+          isFromCommandFile);
     }
   }
 
@@ -65,10 +70,12 @@ public class CommandPreprocessor {
 
   public PreprocessingResult preprocess(ImmutableList<String> tokens) {
     if (tokens.size() < 2) {
-      return PreprocessingResult.of(/* modifiedCommands= */ null, /* errorMessage= */ null);
+      return PreprocessingResult.of(
+          /* modifiedCommands= */ null, /* errorMessage= */ null, /* isFromCommandFile= */ false);
     }
     if (!equalsIgnoreCase(tokens.get(0), "run")) {
-      return PreprocessingResult.of(/* modifiedCommands= */ null, /* errorMessage= */ null);
+      return PreprocessingResult.of(
+          /* modifiedCommands= */ null, /* errorMessage= */ null, /* isFromCommandFile= */ false);
     }
 
     // Try to resolve the alias (if any) first.
@@ -114,14 +121,19 @@ public class CommandPreprocessor {
       } catch (TokenizationException e) {
         return PreprocessingResult.of(
             /* modifiedCommands= */ null,
-            String.format("Failed to tokenize alias '%s': %s.", alias.get(), e.getMessage()));
+            String.format("Failed to tokenize alias '%s': %s.", alias.get(), e.getMessage()),
+            /* isFromCommandFile= */ false);
       }
       newTokens.addAll(aliasTokens);
     }
 
     return aliasFound
-        ? PreprocessingResult.of(ImmutableList.of(newTokens.build()), /* errorMessage= */ null)
-        : PreprocessingResult.of(/* modifiedCommands= */ null, /* errorMessage= */ null);
+        ? PreprocessingResult.of(
+            ImmutableList.of(newTokens.build()),
+            /* errorMessage= */ null,
+            /* isFromCommandFile= */ false)
+        : PreprocessingResult.of(
+            /* modifiedCommands= */ null, /* errorMessage= */ null, /* isFromCommandFile= */ false);
   }
 
   private static PreprocessingResult preprocessRunCommandCommand(
@@ -133,13 +145,17 @@ public class CommandPreprocessor {
     if (exitAfterRun) {
       commandsBuilder.add(EXIT_COMMAND);
     }
-    return PreprocessingResult.of(commandsBuilder.build(), /* errorMessage= */ null);
+    return PreprocessingResult.of(
+        commandsBuilder.build(), /* errorMessage= */ null, /* isFromCommandFile= */ false);
   }
 
   private PreprocessingResult preprocessRunCmdfileCommand(
       ImmutableList<String> tokens, boolean exitAfterRun) {
     if (tokens.size() < 3) {
-      return PreprocessingResult.of(/* modifiedCommands= */ null, "Cmdfile path is not specified");
+      return PreprocessingResult.of(
+          /* modifiedCommands= */ null,
+          "Cmdfile path is not specified",
+          /* isFromCommandFile= */ true);
     }
     ImmutableList.Builder<ImmutableList<String>> commandsBuilder = ImmutableList.builder();
     List<CommandLine> commandsFromFile;
@@ -148,7 +164,8 @@ public class CommandPreprocessor {
     } catch (MobileHarnessException e) {
       return PreprocessingResult.of(
           /* modifiedCommands= */ null,
-          String.format("Failed to read cmdfile: %s", shortDebugString(e)));
+          String.format("Failed to read cmdfile: %s", shortDebugString(e)),
+          /* isFromCommandFile= */ true);
     }
     String firstToken = tokens.get(0);
     ImmutableList<String> extraArgs = tokens.subList(3, tokens.size());
@@ -167,6 +184,7 @@ public class CommandPreprocessor {
     if (exitAfterRun) {
       commandsBuilder.add(EXIT_COMMAND);
     }
-    return PreprocessingResult.of(commandsBuilder.build(), /* errorMessage= */ null);
+    return PreprocessingResult.of(
+        commandsBuilder.build(), /* errorMessage= */ null, /* isFromCommandFile= */ true);
   }
 }

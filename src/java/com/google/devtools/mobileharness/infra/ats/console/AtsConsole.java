@@ -360,14 +360,19 @@ public class AtsConsole {
         preprocessedCommands = ImmutableList.of(tokens);
       }
 
-      // Executes the commands.
-      for (ImmutableList<String> command : preprocessedCommands) {
-        // Have a new CommandLine instance to work around the issue of ArgGroup not
-        // reset(b/332503867)
-        CommandLine commandLine = createCommandLine();
-        consoleInfo.setLastCommand(command);
-        commandLine.execute(command.toArray(new String[0]));
-        sleeper.sleep(Duration.ofMillis(100L));
+      consoleInfo.setFromCommandFile(preprocessingResult.isFromCommandFile());
+      try {
+        // Executes the commands.
+        for (ImmutableList<String> command : preprocessedCommands) {
+          // Have a new CommandLine instance to work around the issue of ArgGroup not
+          // reset(b/332503867)
+          CommandLine commandLine = createCommandLine();
+          consoleInfo.setLastCommand(command);
+          commandLine.execute(command.toArray(new String[0]));
+          sleeper.sleep(Duration.ofMillis(100L));
+        }
+      } finally {
+        consoleInfo.setFromCommandFile(false);
       }
     }
   }

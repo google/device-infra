@@ -55,6 +55,7 @@ import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteInf
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryType;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import java.nio.file.Path;
@@ -348,7 +349,8 @@ class RunCommandHandler {
             .setTestSuiteInfo(
                 TestSuiteInfoProvider.getTestSuiteInfo(
                     runCommand.getXtsRootDir(), runCommand.getXtsType()))
-            .setExcludeRunners(ImmutableSet.copyOf(runCommand.getExcludeRunnerList()));
+            .setExcludeRunners(ImmutableSet.copyOf(runCommand.getExcludeRunnerList()))
+            .setStartTimeout(TimeUtils.toJavaDuration(runCommand.getJobStartTimeout()));
     ImmutableMultimap.Builder<String, String> moduleMetadataIncludeFilters =
         ImmutableMultimap.builder();
     runCommand

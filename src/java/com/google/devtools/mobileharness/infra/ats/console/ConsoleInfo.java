@@ -43,6 +43,8 @@ public class ConsoleInfo {
 
   private volatile ImmutableList<String> lastCommand = ImmutableList.of();
 
+  private volatile boolean fromCommandFile;
+
   @Inject
   @VisibleForTesting
   public ConsoleInfo(@SystemProperties ImmutableMap<String, String> systemProperties) {
@@ -52,6 +54,14 @@ public class ConsoleInfo {
 
   public void setLastCommand(ImmutableList<String> lastCommand) {
     this.lastCommand = lastCommand;
+  }
+
+  public void setFromCommandFile(boolean fromCommandFile) {
+    this.fromCommandFile = fromCommandFile;
+  }
+
+  public boolean isFromCommandFile() {
+    return fromCommandFile;
   }
 
   public ImmutableList<String> getLastCommand() {
