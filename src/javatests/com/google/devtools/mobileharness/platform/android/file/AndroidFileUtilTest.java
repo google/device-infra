@@ -1074,6 +1074,43 @@ public final class AndroidFileUtilTest {
   }
 
   @Test
+  public void push_toSdcardAndroidDataFails_retriesToTempAndSucceeds() throws Exception {
+    int sdkVersion = 30;
+    String srcFileOrDirOnHost = "/var/www/infile";
+    String desFileOrDirOnDevice = "/sdcard/Android/data/outfile";
+    String tmpFileOnDevice = "/data/local/tmp/outfile";
+
+    when(fileUtil.isDirExist(srcFileOrDirOnHost)).thenReturn(false);
+    when(adb.runWithRetry(
+            eq(SERIAL),
+            aryEq(
+                new String[] {
+                  AndroidFileUtil.ADB_ARG_PUSH, srcFileOrDirOnHost, desFileOrDirOnDevice
+                }),
+            eq(PUSH_TIME_OUT)))
+        .thenThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE, "remote fchown failed"));
+    when(adb.runWithRetry(
+            eq(SERIAL),
+            aryEq(new String[] {AndroidFileUtil.ADB_ARG_PUSH, srcFileOrDirOnHost, tmpFileOnDevice}),
+            eq(PUSH_TIME_OUT)))
+        .thenReturn("");
+    when(adb.runShellWithRetry(
+            eq(SERIAL),
+            eq(
+                AndroidFileUtil.ADB_SHELL_RENAME_FILES
+                    + " "
+                    + tmpFileOnDevice
+                    + " "
+                    + desFileOrDirOnDevice)))
+        .thenReturn("");
+
+    androidFileUtil.push(
+        SERIAL, sdkVersion, srcFileOrDirOnHost, desFileOrDirOnDevice, PUSH_TIME_OUT);
+  }
+
+  @Test
   public void remount_checkResults() throws Exception {
     when(adb.run(eq(SERIAL), aryEq(new String[] {AndroidFileUtil.ADB_ARG_REMOUNT})))
         .thenReturn("remount succeeded")

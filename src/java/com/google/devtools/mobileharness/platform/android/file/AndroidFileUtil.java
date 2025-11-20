@@ -41,6 +41,7 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.util.DeviceUtil;
 import java.io.IOException;
 import java.io.StringReader;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -920,19 +921,7 @@ public class AndroidFileUtil {
       @Nullable Duration pushTimeout)
       throws MobileHarnessException, InterruptedException {
     if (!localFileUtil.isDirExist(srcFileOrDirOnHost)) {
-      try {
-        return adb.runWithRetry(
-            serial,
-            new String[] {ADB_ARG_PUSH, srcFileOrDirOnHost, desFileOrDirOnDevice},
-            pushTimeout);
-      } catch (MobileHarnessException e) {
-        throw new MobileHarnessException(
-            AndroidErrorId.ANDROID_FILE_UTIL_PUSH_FILE_ADB_ERROR,
-            String.format(
-                "Failed to push file %s to device %s:%s%n%s",
-                srcFileOrDirOnHost, serial, desFileOrDirOnDevice, e.getMessage()),
-            e);
-      }
+      return pushFile(serial, sdkVersion, srcFileOrDirOnHost, desFileOrDirOnDevice, pushTimeout);
     }
 
     String desDirPathOnDevice =
@@ -978,23 +967,12 @@ public class AndroidFileUtil {
       // Only get the file name into relative path.
       String relativePath = PathUtil.makeRelative(srcFileOrDirOnHost, srcFilePath);
       String desFilePath = PathUtil.join(desDirPathOnDevice, relativePath);
-      try {
-        log.append("\nPush: ")
-            .append(relativePath)
-            .append(" -> ")
-            .append(desFilePath)
-            .append(": ")
-            .append(
-                adb.runWithRetry(
-                    serial, new String[] {ADB_ARG_PUSH, srcFilePath, desFilePath}, pushTimeout));
-      } catch (MobileHarnessException e) {
-        throw new MobileHarnessException(
-            AndroidErrorId.ANDROID_FILE_UTIL_PUSH_FILE_ADB_ERROR,
-            String.format(
-                "Failed to push file %s to device %s:%s%n%s",
-                srcFilePath, serial, desFilePath, e.getMessage()),
-            e);
-      }
+      log.append("\nPush: ")
+          .append(relativePath)
+          .append(" -> ")
+          .append(desFilePath)
+          .append(": ")
+          .append(pushFile(serial, sdkVersion, srcFilePath, desFilePath, pushTimeout));
     }
     return log.toString();
   }
@@ -1176,6 +1154,49 @@ public class AndroidFileUtil {
 
     if (!info.isEmpty()) {
       throw new MobileHarnessException(AndroidErrorId.ANDROID_FILE_UTIL_CREATE_SYMLINK_ERROR, info);
+    }
+  }
+
+  /** Pushes a file to the device, handling known push issues. */
+  private String pushFile(
+      String serial,
+      int sdkVersion,
+      String srcFilePath,
+      String desFilePath,
+      @Nullable Duration timeout)
+      throws MobileHarnessException, InterruptedException {
+    try {
+      return adb.runWithRetry(
+          serial, new String[] {ADB_ARG_PUSH, srcFilePath, desFilePath}, timeout);
+    } catch (MobileHarnessException e) {
+      if (!((sdkVersion == 30 || sdkVersion == 31)
+          && desFilePath.startsWith("/sdcard/Android/data/")
+          && e.getMessage().contains("remote fchown failed"))) {
+        throw new MobileHarnessException(
+            AndroidErrorId.ANDROID_FILE_UTIL_PUSH_FILE_ADB_ERROR,
+            String.format(
+                "Failed to push file %s to device %s:%s%n%s",
+                srcFilePath, serial, desFilePath, e.getMessage()),
+            e);
+      }
+    }
+    // Pushing to /sdcard/Android/data can fail on some API 30 or 31 devices. The workaround is to
+    // push to a temporary location and then use adb shell to move it to the final location.
+    try {
+      String fileName = Path.of(desFilePath).getFileName().toString();
+      String tempDesFilePath = Path.of("/data/local/tmp").resolve(fileName).toString();
+      String pushOutput =
+          adb.runWithRetry(
+              serial, new String[] {ADB_ARG_PUSH, srcFilePath, tempDesFilePath}, timeout);
+      renameFiles(serial, tempDesFilePath, desFilePath);
+      return pushOutput;
+    } catch (MobileHarnessException e) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_FILE_UTIL_PUSH_FILE_ADB_ERROR,
+          String.format(
+              "Failed to push file %s with /sdcard/Android/data/ workaround to device %s:%s%n%s",
+              srcFilePath, serial, desFilePath, e.getMessage()),
+          e);
     }
   }
 
