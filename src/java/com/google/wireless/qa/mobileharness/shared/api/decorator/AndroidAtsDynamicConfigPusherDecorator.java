@@ -25,10 +25,13 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
+import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstallArgs;
+import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstaller;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.devtools.mobileharness.platform.android.xts.config.DynamicConfig;
 import com.google.devtools.mobileharness.platform.android.xts.config.DynamicConfigHandler;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.gson.JsonSyntaxException;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
@@ -58,9 +61,14 @@ public class AndroidAtsDynamicConfigPusherDecorator extends BaseDecorator
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
+  private static final String MANAGED_FILE_CONTENT_PROVIDER_APK_RES_PATH =
+      "/com/google/devtools/mobileharness/platform/android/app/binary/contentprovider/ManagedFileContentProvider.apk";
+
   private final LocalFileUtil localFileUtil;
   private final AndroidFileUtil androidFileUtil;
   private final AndroidSystemSettingUtil androidSystemSettingUtil;
+  private final ApkInstaller apkInstaller;
+  private final ResUtil resUtil;
   private final MapSplitter xtsSuiteInfoSplitter = Splitter.on(",").withKeyValueSeparator("=");
 
   private Map<String, String> xtsSuiteInfoMap;
@@ -72,11 +80,15 @@ public class AndroidAtsDynamicConfigPusherDecorator extends BaseDecorator
       TestInfo testInfo,
       LocalFileUtil localFileUtil,
       AndroidFileUtil androidFileUtil,
-      AndroidSystemSettingUtil androidSystemSettingUtil) {
+      AndroidSystemSettingUtil androidSystemSettingUtil,
+      ApkInstaller apkInstaller,
+      ResUtil resUtil) {
     super(decorated, testInfo);
     this.localFileUtil = localFileUtil;
     this.androidFileUtil = androidFileUtil;
     this.androidSystemSettingUtil = androidSystemSettingUtil;
+    this.apkInstaller = apkInstaller;
+    this.resUtil = resUtil;
   }
 
   @Override
@@ -110,6 +122,13 @@ public class AndroidAtsDynamicConfigPusherDecorator extends BaseDecorator
       deviceFilePushedPath = deviceDest;
       logger.atInfo().log("Pushed dynamic config file %s to device %s", deviceDest, deviceId);
     }
+    String apkPath =
+        resUtil.getResourceFile(
+            AndroidAtsDynamicConfigPusherDecorator.class,
+            MANAGED_FILE_CONTENT_PROVIDER_APK_RES_PATH);
+    String contentProvider =
+        apkInstaller.installApkIfNotExist(
+            getDevice(), ApkInstallArgs.builder().setApkPath(apkPath).build(), getTest().log());
 
     // TODO: Add host target support and config read support.
     try {
@@ -128,6 +147,10 @@ public class AndroidAtsDynamicConfigPusherDecorator extends BaseDecorator
               "Interrupted when cleaning up pushed file %s,", deviceFilePushedPath);
           Thread.currentThread().interrupt();
         }
+      }
+      if (!contentProvider.isEmpty() && spec.getCleanup()) {
+        apkInstaller.uninstallApk(
+            getDevice(), contentProvider, /* logFailures= */ true, /* log= */ null);
       }
     }
   }

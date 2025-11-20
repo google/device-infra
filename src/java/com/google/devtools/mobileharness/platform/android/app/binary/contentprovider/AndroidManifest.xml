@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="android.tradefed.contentprovider">
+
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.INTERACT_ACROSS_USERS" />
+    <!-- We need this permission see b/339295745 for context -->
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
+
+    <uses-sdk android:minSdkVersion="24"
+              android:targetSdkVersion="26" />
+
+    <application>
+        <provider
+            android:name="android.tradefed.contentprovider.ManagedFileContentProvider"
+            android:authorities="android.tradefed.contentprovider"
+            android:grantUriPermissions="true"
+            android:exported="true"
+            android:enabled="true"
+            />
+    </application>
+</manifest>
