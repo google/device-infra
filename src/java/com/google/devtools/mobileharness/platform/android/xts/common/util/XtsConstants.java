@@ -88,5 +88,17 @@ public class XtsConstants {
 
   public static final String XTS_FINAL_TEST_LOG_DIR_PROPERTY_KEY = "xts_final_test_log_dir";
 
+  /** A MH job property key for the AOSP version of the device allocated. */
+  public static final String DEVICE_AOSP_VERSION_PROPERTY_KEY = "device_aosp_version";
+
+  /** A MH job property key for the TVP (Train Version Package) version of the device allocated. */
+  public static final String DEVICE_TVP_VERSION_PROPERTY_KEY = "device_tvp_version";
+
+  /** A MH job property key for the ABI of the device allocated. */
+  public static final String DEVICE_ABI_PROPERTY_KEY = "device_abi";
+
+  /** A MH job property key for the MCTS modules info of the device allocated. */
+  public static final String DEVICE_MCTS_MODULES_INFO_PROPERTY_KEY = "device_mcts_modules_info";
+
   private XtsConstants() {}
 }

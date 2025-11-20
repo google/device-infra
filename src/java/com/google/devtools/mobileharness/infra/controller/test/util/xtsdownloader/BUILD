@@ -61,6 +61,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/lab",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
+        "@maven//:org_apache_commons_commons_lang3",
         "@protobuf//:protobuf_java",
     ],
 )
