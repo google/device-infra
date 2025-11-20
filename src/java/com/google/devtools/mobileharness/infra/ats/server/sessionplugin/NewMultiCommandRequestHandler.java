@@ -746,6 +746,7 @@ final class NewMultiCommandRequestHandler {
           commandToJobsMap.get(commandId).stream()
               .map(jobIdToJobMap::get)
               .collect(toImmutableList());
+      MobileHarnessException resultProcessingException = null; // Store result processing error
       try {
         SessionRequestInfo sessionRequestInfo =
             getSessionRequestInfo(request, commandDetail.getOriginalCommandInfo(), sessionInfo);
@@ -814,10 +815,15 @@ final class NewMultiCommandRequestHandler {
         }
       } catch (MobileHarnessException e) {
         logger.atWarning().withCause(e).log(
-            "Failed to process result for session %s", sessionInfo.getSessionId());
-        setCommandError(commandDetailBuilder, ErrorReason.RESULT_PROCESSING_ERROR, e);
+            "Failed to process result for session %s, command %s",
+            sessionInfo.getSessionId(), commandId);
+        resultProcessingException = e; // Store the exception
       }
 
+      // Check for Tradefed invocation errors first, as they are most important to users.
+      checkTradefedInvocationError(commandDetailBuilder, jobs, logDir);
+
+      // Determine final state if still not ERROR
       if (commandDetailBuilder.getState() == CommandState.UNKNOWN_STATE
           || commandDetailBuilder.getState() == CommandState.RUNNING) {
         if (commandDetailBuilder.getTotalModuleCount() > 0) {
@@ -877,7 +883,14 @@ final class NewMultiCommandRequestHandler {
             }
           }
         }
-        checkTradefedInvocationError(commandDetailBuilder, jobs, logDir);
+      }
+      // Add result processing error to the error message if the command is in ERROR state.
+      if (commandDetailBuilder.getState() == CommandState.ERROR
+          && resultProcessingException != null) {
+        commandDetailBuilder.setErrorMessage(
+            commandDetailBuilder.getErrorMessage()
+                + "\n\n--- Additional Result Processing Error ---\n"
+                + getStackTraceAsString(resultProcessingException));
       }
       commandDetailBuilder
           .setEndTime(Timestamps.fromMillis(clock.millis()))
@@ -1033,62 +1046,55 @@ final class NewMultiCommandRequestHandler {
             .filter(jobInfo -> jobInfo.properties().getBoolean(Job.IS_XTS_TF_JOB).orElse(false))
             .flatMap(jobInfo -> jobInfo.tests().getAll().values().stream())
             .collect(toImmutableList());
+    List<String> errorMessages = new ArrayList<>();
+    for (TestInfo tradefedTestInfo : tradefedTestInfos) {
+      Path testLogDir;
+      try {
+        testLogDir = sessionResultHandlerUtil.getTradefedInvocationLogDir(tradefedTestInfo, logDir);
+      } catch (MobileHarnessException e) {
+        logger.atWarning().withCause(e).log(
+            "Failed to get Tradefed invocation log dir for test %s",
+            tradefedTestInfo.locator().getId());
+        continue;
+      }
 
-    tradefedTestInfos.forEach(
-        tradefedTestInfo -> {
-          Path testLogDir;
-          try {
-            testLogDir =
-                sessionResultHandlerUtil.getTradefedInvocationLogDir(tradefedTestInfo, logDir);
-          } catch (MobileHarnessException e) {
-            logger.atWarning().withCause(e).log(
-                "Failed to get Tradefed invocation log dir for test %s",
-                tradefedTestInfo.locator().getId());
-            return;
-          }
+      Path runtimeInfoFilePath = testLogDir.resolve(XtsConstants.TRADEFED_RUNTIME_INFO_FILE_NAME);
+      if (!localFileUtil.isFileExist(runtimeInfoFilePath)) {
+        continue;
+      }
 
-          Path runtimeInfoFilePath =
-              testLogDir.resolve(XtsConstants.TRADEFED_RUNTIME_INFO_FILE_NAME);
-          if (!localFileUtil.isFileExist(runtimeInfoFilePath)) {
-            return;
-          }
+      Optional<XtsTradefedRuntimeInfoFileDetail> fileDetailOptional;
+      try {
+        fileDetailOptional =
+            xtsTradefedRuntimeInfoFileUtil.readInfo(
+                runtimeInfoFilePath, /* lastModifiedTime= */ null);
+      } catch (IOException | RuntimeException | Error e) {
+        logger.atWarning().withCause(e).log(
+            "Failed to read Tradefed runtime info of test %s from file %s",
+            tradefedTestInfo.locator().getId(), runtimeInfoFilePath);
+        continue;
+      }
 
-          Optional<XtsTradefedRuntimeInfoFileDetail> fileDetailOptional;
-          try {
-            fileDetailOptional =
-                xtsTradefedRuntimeInfoFileUtil.readInfo(
-                    runtimeInfoFilePath, /* lastModifiedTime= */ null);
-          } catch (IOException | RuntimeException | Error e) {
-            logger.atWarning().withCause(e).log(
-                "Failed to read Tradefed runtime info of test %s from file %s",
-                tradefedTestInfo.locator().getId(), runtimeInfoFilePath);
-            return;
-          }
+      if (fileDetailOptional.isEmpty()) {
+        continue;
+      }
 
-          if (fileDetailOptional.isEmpty()) {
-            return;
-          }
+      ImmutableList<TradefedInvocation> invocationsWithError =
+          fileDetailOptional.get().runtimeInfo().invocations().stream()
+              .filter(not(TradefedInvocation::isRunning))
+              .filter(invocation -> !isNullOrEmpty(invocation.errorMessage()))
+              .collect(toImmutableList());
 
-          ImmutableList<TradefedInvocation> invocationsWithError =
-              fileDetailOptional.get().runtimeInfo().invocations().stream()
-                  .filter(not(TradefedInvocation::isRunning))
-                  .filter(invocation -> !isNullOrEmpty(invocation.errorMessage()))
-                  .collect(toImmutableList());
-
-          if (!invocationsWithError.isEmpty()) {
-            String errorMessage = invocationsWithError.get(0).errorMessage();
-            String newErrorMessage =
-                commandDetailBuilder.getErrorMessage().isEmpty()
-                    ? errorMessage
-                    : commandDetailBuilder.getErrorMessage() + "\n" + errorMessage;
-            commandDetailBuilder.setErrorMessage(newErrorMessage);
-            if (commandDetailBuilder.getState() != CommandState.COMPLETED) {
-              commandDetailBuilder
-                  .setState(CommandState.ERROR)
-                  .setErrorReason(ErrorReason.TRADEFED_INVOCATION_ERROR);
-            }
-          }
-        });
+      if (!invocationsWithError.isEmpty()) {
+        errorMessages.add(invocationsWithError.get(0).errorMessage());
+      }
+    }
+    if (!errorMessages.isEmpty()) {
+      setCommandError(
+          commandDetailBuilder,
+          ErrorReason.TRADEFED_INVOCATION_ERROR,
+          String.join("\n", errorMessages));
+    }
   }
 
   private ErrorReason getErrorReason(MobileHarnessException e) {
