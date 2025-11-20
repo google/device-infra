@@ -40,6 +40,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionF
 import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.api.testrunner.device.cache.XtsDeviceCache;
+import com.google.devtools.mobileharness.infra.ats.common.AtsSessionPluginUtil;
 import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.infra.ats.common.jobcreator.XtsJobCreator;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionCancellation;
@@ -398,8 +399,9 @@ public class AtsSessionPlugin {
   @Subscribe
   public void onJobEnd(JobEndEvent jobEndEvent)
       throws MobileHarnessException, InterruptedException {
-    if (jobEndEvent.getJob().properties().getBoolean(Job.IS_XTS_NON_TF_JOB).orElse(false)) {
-      for (TestInfo testInfo : jobEndEvent.getJob().tests().getAll().values()) {
+    JobInfo currentJob = jobEndEvent.getJob();
+    if (currentJob.properties().getBoolean(Job.IS_XTS_NON_TF_JOB).orElse(false)) {
+      for (TestInfo testInfo : currentJob.tests().getAll().values()) {
         ResultTypeWithCause resultWithCause = testInfo.resultWithCause().get();
         ModuleRunResult.Builder resultBuilder =
             ModuleRunResult.newBuilder().setResult(resultWithCause.type());
@@ -416,7 +418,7 @@ public class AtsSessionPlugin {
     }
 
     synchronized (runningTradefedJobs) {
-      String jobId = jobEndEvent.getJob().locator().getId();
+      String jobId = currentJob.locator().getId();
       if (!runningTradefedJobs.containsKey(jobId)) {
         return;
       }
@@ -425,17 +427,14 @@ public class AtsSessionPlugin {
       // Add the additional tradefed jobs if needed.
       synchronized (additionalTradefedJobs) {
         if (!additionalTradefedJobs.isEmpty()) {
-          ImmutableSet<String> devicesOfCurrentJob = getDeviceSerials(jobEndEvent.getJob());
-          List<JobInfo> additionalTradefedJobsToAdd = new ArrayList<>();
-          for (JobInfo additionalTradefedJob : additionalTradefedJobs) {
-            // Add the device ids of the current job to the sub device specs of the additional
-            // tradefed job.
-            addDeviceIdsToSubDeviceSpecs(
-                additionalTradefedJob.subDeviceSpecs().getAllSubDevices(), devicesOfCurrentJob);
-          }
-          additionalTradefedJobsToAdd.add(additionalTradefedJobs.remove(0));
+          ImmutableSet<String> devicesOfCurrentJob = getDeviceSerials(currentJob);
+          JobInfo nextJobToAdd = additionalTradefedJobs.remove(0);
+          // Add the device ids of the current job to the sub device specs of the next tradefed job.
+          addDeviceIdsToSubDeviceSpecs(
+              nextJobToAdd.subDeviceSpecs().getAllSubDevices(), devicesOfCurrentJob);
+          AtsSessionPluginUtil.copyJobPropertiesForDynamicDownloadJobs(currentJob, nextJobToAdd);
 
-          addJobListToSession(additionalTradefedJobsToAdd);
+          addJobListToSession(ImmutableList.of(nextJobToAdd));
         }
       }
 

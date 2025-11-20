@@ -49,6 +49,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error:exception_factory",
         "//src/java/com/google/devtools/mobileharness/api/model/job/out",
         "//src/java/com/google/devtools/mobileharness/api/testrunner/device/cache:xts_device_cache",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:ats_session_plugin_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:xts_property_name",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/jobcreator:console_job_creator",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/jobcreator:xts_job_creator",

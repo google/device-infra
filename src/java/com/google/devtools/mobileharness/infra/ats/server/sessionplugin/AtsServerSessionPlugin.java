@@ -28,6 +28,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
+import com.google.devtools.mobileharness.infra.ats.common.AtsSessionPluginUtil;
 import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ResultProto.ModuleRunResult;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.AtsServerSessionNotification;
@@ -340,6 +341,7 @@ final class AtsServerSessionPlugin {
             logger.atInfo().log(
                 "Session [%s]: Adding next tradefed job [%s] to session.",
                 sessionInfo.getSessionId(), nextJob.locator().getId());
+            AtsSessionPluginUtil.copyJobPropertiesForDynamicDownloadJobs(jobInfo, nextJob);
             sessionInfo.addJob(nextJob);
           }
         }
