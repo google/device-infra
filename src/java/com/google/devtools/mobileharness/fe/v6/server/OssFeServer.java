@@ -20,6 +20,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.fe.v6.server.Annotations.ServerPort;
 import com.google.devtools.mobileharness.fe.v6.service.device.DeviceServiceGrpcImpl;
 import com.google.devtools.mobileharness.fe.v6.service.device.DeviceServiceModule;
+import com.google.devtools.mobileharness.fe.v6.service.shared.OssStubsModule;
 import com.google.devtools.mobileharness.fe.v6.shared.util.concurrent.OssExecutorModule;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.inject.AbstractModule;
@@ -79,6 +80,7 @@ public final class OssFeServer {
         Guice.createInjector(
             new OssExecutorModule(),
             new DeviceServiceModule(),
+            new OssStubsModule(),
             new AbstractModule() {
               @Override
               protected void configure() {

@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.fe.v6.service.device;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.devtools.mobileharness.fe.v6.service.device.handlers.GetDeviceOverviewHandler;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceOverview;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceHealthinessStatsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceOverviewRequest;
@@ -28,19 +29,25 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.device.HealthinessS
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.RecoveryTaskStats;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.TestResultStats;
 import javax.inject.Inject;
+import javax.inject.Singleton;
 
 /** Common implementation of {@link DeviceServiceLogic}. */
+@Singleton
 public final class DeviceServiceLogicImpl implements DeviceServiceLogic {
 
+  private final GetDeviceOverviewHandler getDeviceOverviewHandler;
+
   @Inject
-  DeviceServiceLogicImpl() {}
+  DeviceServiceLogicImpl(GetDeviceOverviewHandler getDeviceOverviewHandler) {
+    this.getDeviceOverviewHandler = getDeviceOverviewHandler;
+  }
 
   @Override
   public ListenableFuture<DeviceOverview> getDeviceOverview(GetDeviceOverviewRequest request) {
-    // TODO: Implement this method.
-    return immediateFuture(DeviceOverview.newBuilder().setId(request.getId()).build());
+    return getDeviceOverviewHandler.getDeviceOverview(request);
   }
 
+  // Methods for other RPCs (GetDeviceHealthinessStats, etc.)
   @Override
   public ListenableFuture<HealthinessStats> getDeviceHealthinessStats(
       GetDeviceHealthinessStatsRequest request) {

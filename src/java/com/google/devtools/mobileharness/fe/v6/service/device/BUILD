@@ -48,6 +48,28 @@ java_library(
 )
 
 java_library(
+    name = "configuration_provider",
+    srcs = ["ConfigurationProvider.java"],
+    deps = [
+        "//src/devtools/mobileharness/api/deviceconfig/proto:device_java_proto",
+        "//src/devtools/mobileharness/api/deviceconfig/proto:lab_java_proto",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "oss_configuration_provider_impl",
+    srcs = ["OssConfigurationProviderImpl.java"],
+    deps = [
+        ":configuration_provider",
+        "//src/devtools/mobileharness/api/deviceconfig/proto:device_java_proto",
+        "//src/devtools/mobileharness/api/deviceconfig/proto:lab_java_proto",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
     name = "device_service_logic_impl",
     srcs = ["DeviceServiceLogicImpl.java"],
     deps = [
@@ -55,6 +77,7 @@ java_library(
         "//src/devtools/mobileharness/fe/v6/service/proto/device:device_resources_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/device:device_service_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/device:device_stats_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/device/handlers:get_device_overview_handler",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
     ],
