@@ -111,10 +111,6 @@ public class LabRpcProtoConverter {
       @Nullable TestMessageManager testMessageManager,
       @Nullable TestMessagePoster testMessagePoster)
       throws MobileHarnessException {
-    // TODO: Remove this log after the bug is fixed.
-    logger.atInfo().log(
-        "GetTestStatusResponse test result type: %s, test result: %s, test result cause: %s",
-        resp.getTestResultType(), resp.getTestResult(), resp.getTestResultCause());
     String testId = testInfo.locator().getId();
     String remoteLog = resp.getTestLog();
     testInfo.log().append(remoteLog);
