@@ -13,25 +13,19 @@
 # limitations under the License.
 #
 
-# Android Instrumentation Test Result proto.
-
-load("@protobuf//bazel:java_proto_library.bzl", "java_proto_library")
-load("@protobuf//bazel:proto_library.bzl", "proto_library")
+load("@rules_kotlin//kotlin:jvm.bzl", "kt_jvm_library")
 
 package(
     default_applicable_licenses = ["//:license"],
-    default_visibility = ["//visibility:public"],
+    default_visibility = ["//:deviceinfra_all_pkg"],
 )
 
-proto_library(
-    name = "test_suite_result_proto",
-    srcs = ["test_suite_result.proto"],
+kt_jvm_library(
+    name = "javatime-ktx",
+    srcs = ["javaTimeConversionsExtensions.kt"],
+    visibility = ["//visibility:public"],
     deps = [
-        "@protobuf//:timestamp_proto",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
+        "@maven//:com_google_protobuf_protobuf_java",
     ],
-)
-
-java_proto_library(
-    name = "test_suite_result_java_proto",
-    deps = [":test_suite_result_proto"],
 )
