@@ -51,6 +51,7 @@
   min-height: 0;
   transition: visibility 0.5s;
   visibility: hidden;
+  overflow: hidden;
 }
 
 .panel-content.expanded {
