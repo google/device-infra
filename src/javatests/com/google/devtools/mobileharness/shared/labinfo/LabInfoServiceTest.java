@@ -23,15 +23,19 @@ import static org.mockito.Mockito.when;
 import com.google.common.truth.extensions.proto.FieldScope;
 import com.google.common.truth.extensions.proto.FieldScopes;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCondition;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
+import com.google.devtools.mobileharness.api.model.proto.Device.TempDimension;
+import com.google.devtools.mobileharness.api.model.proto.Job.JobLocator;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabLocator;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabPort;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabServerFeature;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabServerSetting;
 import com.google.devtools.mobileharness.api.model.proto.Lab.PortType;
+import com.google.devtools.mobileharness.api.model.proto.Test.TestLocator;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceGroup;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceGroupKey;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceGroupKey.HasDimensionValue;
@@ -67,6 +71,7 @@ import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProt
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
+import com.google.protobuf.util.Timestamps;
 import javax.inject.Inject;
 import org.junit.Before;
 import org.junit.Rule;
@@ -99,6 +104,28 @@ public class LabInfoServiceTest {
           .setLabServerSetting(LabServerSetting.newBuilder().addPort(LAB_PORT))
           .setLabServerFeature(LabServerFeature.getDefaultInstance())
           .build();
+
+  private static final TestLocator TEST_LOCATOR =
+      TestLocator.newBuilder()
+          .setId("test_id")
+          .setName("test_name")
+          .setJobLocator(JobLocator.newBuilder().setId("job_id").setName("job_name"))
+          .build();
+
+  private static final DeviceCondition DEVICE_CONDITION_1 =
+      DeviceCondition.newBuilder()
+          .setAllocatedTestLocator(TEST_LOCATOR)
+          .addTempDimension(
+              TempDimension.newBuilder()
+                  .setDimension(DeviceDimension.newBuilder().setName("key1").setValue("value1"))
+                  .setExpireTimestampMs(12345L)
+                  .setRequired(true))
+          .setLastHealthyTime(Timestamps.fromMillis(99999L))
+          .build();
+
+  private static final DeviceCondition DEVICE_CONDITION_2 =
+      DeviceCondition.newBuilder().setLastHealthyTime(Timestamps.fromMillis(88888L)).build();
+
   private static final DeviceInfo DEVICE_INFO_1 =
       DeviceInfo.newBuilder()
           .setDeviceLocator(
@@ -123,6 +150,7 @@ public class LabInfoServiceTest {
                               DeviceDimension.newBuilder()
                                   .setName("fake_dimension_name")
                                   .setValue("fake_dimension_value_1"))))
+          .setDeviceCondition(DEVICE_CONDITION_1)
           .build();
   private static final DeviceInfo DEVICE_INFO_2 =
       DeviceInfo.newBuilder()
@@ -139,6 +167,7 @@ public class LabInfoServiceTest {
                   .addDriver("NoOpDriver")
                   .addDecorator("NoOpDecorator")
                   .setCompositeDimension(DeviceCompositeDimension.getDefaultInstance()))
+          .setDeviceCondition(DEVICE_CONDITION_2)
           .build();
 
   @Bind @Mock private LabInfoProvider labInfoProvider;

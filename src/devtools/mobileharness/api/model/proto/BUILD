@@ -32,7 +32,9 @@ proto_library(
     srcs = ["device.proto"],
     deps = [
         ":lab_proto",
+        ":test_proto",
         "//src/devtools/common/metrics/stability/model/proto:error_proto",
+        "@protobuf//:timestamp_proto",
     ],
 )
 

@@ -26,7 +26,9 @@ java_library(
     srcs = glob(["*.java"]),
     deps = [
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
+        "//src/devtools/mobileharness/api/model/proto:job_java_proto",
         "//src/devtools/mobileharness/api/model/proto:lab_java_proto",
+        "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
         "//src/devtools/mobileharness/shared/labinfo/proto:lab_info_service_java_proto",
         "//src/java/com/google/devtools/mobileharness/shared/labinfo:lab_info_provider",
@@ -37,6 +39,7 @@ java_library(
         "@maven//:javax_inject_jsr330_api",
         "@maven//:junit_junit",
         "@maven//:org_mockito_mockito_core",
+        "@protobuf//:protobuf_java_util",
     ],
 )
 

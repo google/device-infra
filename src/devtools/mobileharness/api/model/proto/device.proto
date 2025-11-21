@@ -18,8 +18,10 @@ syntax = "proto3";
 
 package mobileharness.api.model;
 
+import "google/protobuf/timestamp.proto";
 import "src/devtools/common/metrics/stability/model/proto/exception.proto";
 import "src/devtools/mobileharness/api/model/proto/lab.proto";
+import "src/devtools/mobileharness/api/model/proto/test.proto";
 
 option java_package = "com.google.devtools.mobileharness.api.model.proto";
 option java_outer_classname = "Device";
@@ -119,4 +121,23 @@ enum DeviceLogType {
 message DeviceError {
   int64 timestamp_ms = 1;
   .stability.model.FlattenedExceptionDetail error = 2;
+}
+
+// Represents a temporary dimension on a device.
+message TempDimension {
+  DeviceDimension dimension = 1;  // Required
+  int64 expire_timestamp_ms = 2;  // Required
+  bool required = 3;
+}
+
+// Represents the dynamic condition of a device.
+message DeviceCondition {
+  // Optional. The test that is currently allocated to the device.
+  TestLocator allocated_test_locator = 1;
+
+  // Optional. Temporary dimensions on the device.
+  repeated TempDimension temp_dimension = 2;
+
+  // Optional. The timestamp of the last time when the device was healthy.
+  google.protobuf.Timestamp last_healthy_time = 3;
 }

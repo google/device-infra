@@ -334,6 +334,9 @@ message DeviceInfo {
   // Optional.
   mobileharness.api.model.DeviceFeature device_feature = 4;
 
+  // Optional.
+  mobileharness.api.model.DeviceCondition device_condition = 5;
+
   // TODO: Adds more fields.
 }
 
