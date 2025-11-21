@@ -71,14 +71,22 @@ enum AllocationWorkflowStatus {
   // The request has been accepted and is waiting for orchestration.
   NEW = 1;
 
-  // Waiting for the allocation to be completed.
-  PENDING = 2;
+  // Waiting for Omnilab allocation to be completed.
+  PENDING_OMNILAB = 2;
 
   // All required device allocations have successfully completed.
   ALLOCATED = 3;
 
   // The allocation workflow failed at one of the steps.
   FAILED = 4;
+
+  // Waiting for Scheduke allocation to be completed.
+  // This status is only used in HYBRID_CHROME_OS allocation.
+  PENDING_SCHEDUKE = 5;
+
+  // Scheduke allocation succeeded, waiting for Omnilab allocation to start.
+  // This status is only used in HYBRID_CHROME_OS allocation.
+  READY_FOR_OMNILAB = 6;
 }
 
 // Contains all intermediate data generated during the allocation workflow.
