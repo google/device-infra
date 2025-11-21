@@ -949,11 +949,11 @@ public class SessionResultHandlerUtil {
 
   private Path prepareLogOrResultDirForTest(TestInfo test, Path parentDir)
       throws MobileHarnessException {
-    String prefix = test.jobInfo().type().getDriver();
-    if (test.jobInfo().properties().getBoolean(Job.IS_XTS_NON_TF_JOB).orElse(false)) {
-      prefix = getExpandedNonTfModuleId(test.jobInfo()).replace(' ', '_');
-    }
-    Path targetDir = parentDir.resolve(getNonTradefedLogDirName(prefix, test.locator().getId()));
+    String prefix =
+        test.jobInfo().properties().getBoolean(Job.IS_XTS_NON_TF_JOB).orElse(false)
+            ? getExpandedNonTfModuleId(test.jobInfo()).replace(' ', '_')
+            : test.jobInfo().type().getDriver();
+    Path targetDir = parentDir.resolve(getLogDirNameForTest(prefix, test.locator().getId()));
     localFileUtil.prepareDir(targetDir);
     return targetDir;
   }
@@ -1294,8 +1294,8 @@ public class SessionResultHandlerUtil {
     return moduleName;
   }
 
-  /** Gets non-tradefed test log directory name. */
-  public static String getNonTradefedLogDirName(String moduleName, String testId) {
-    return moduleName + "_test_" + testId;
+  /** Gets the log directory name for a test. */
+  public static String getLogDirNameForTest(String prefix, String testId) {
+    return prefix + "_test_" + testId;
   }
 }
