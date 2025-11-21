@@ -16,6 +16,7 @@
 # Description:
 #   Proto definitions for Mobile Harness config service.
 
+load("@grpc-java//:java_grpc_library.bzl", "java_grpc_library")
 load("@protobuf//bazel:java_proto_library.bzl", "java_proto_library")
 load("@protobuf//bazel:proto_library.bzl", "proto_library")
 
@@ -92,4 +93,25 @@ proto_library(
 java_proto_library(
     name = "lab_device_java_proto",
     deps = [":lab_device_proto"],
+)
+
+proto_library(
+    name = "device_config_service_proto",
+    srcs = ["device_config_service.proto"],
+    deps = [
+        "//src/devtools/mobileharness/api/deviceconfig/proto:device_proto",
+        "//src/devtools/mobileharness/api/deviceconfig/proto:lab_proto",
+        "@protobuf//:field_mask_proto",
+    ],
+)
+
+java_proto_library(
+    name = "device_config_service_java_proto",
+    deps = [":device_config_service_proto"],
+)
+
+java_grpc_library(
+    name = "device_config_service_grpc",
+    srcs = [":device_config_service_proto"],
+    deps = [":device_config_service_java_proto"],
 )

@@ -1,0 +1,187 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+edition = "2023";
+
+package mobileharness.api.deviceconfig;
+
+import "google/protobuf/field_mask.proto";
+import "src/devtools/mobileharness/api/deviceconfig/proto/device.proto";
+import "src/devtools/mobileharness/api/deviceconfig/proto/lab.proto";
+
+option features.field_presence = IMPLICIT;
+option java_package = "com.google.devtools.mobileharness.api.deviceconfig.proto";
+option java_outer_classname = "DeviceConfigServiceProto";
+
+message GetDeviceConfigsRequest {
+  // The locators to help locating devices. Config of devices will be returned
+  // by different cases:
+  // 1. If the UUID isn't empty, the V5 device config will be returned.
+  // 2. If the UUID is empty, the config server tries to get it from the master:
+  //   2.1. if the UUID exists in master, the V5 device config will be returned.
+  //   2.2. if the UUID doesn't exist, the V4 device config will be returned.
+  // 3. If there is no host config or UUID-based config found, a project and
+  //    hardware-based config will be located.
+  repeated DeviceLocator device_locator = 1;
+}
+
+message GetDeviceConfigsResponse {
+  // All configurations indexed by device locators in the request.
+  repeated DeviceConfig device_config = 1;
+}
+
+message GetLabConfigRequest {
+  // The host name of the lab server.
+  string lab_host = 1;
+}
+
+message GetLabConfigResponse {
+  // The configuration of the lab server.
+  LabConfig lab_config = 1;
+}
+
+message DeleteDeviceConfigsRequest {
+  // The UUID of the devices to be deleted.
+  repeated string device_uuid = 1;
+}
+
+message DeleteDeviceConfigsResponse {
+  // The failed device UUID to error message mapping.
+  map<string, string> error_message = 1;
+}
+
+message DeleteLabConfigRequest {
+  // The host name of the lab server.
+  string lab_host = 1;
+}
+
+message DeleteLabConfigResponse {}
+
+message UpdateDeviceConfigsRequest {
+  // All locator and configuration of devices to be updated. The UUID of the
+  // device locator and the device config should be matched.
+  // 1. If the UUID isn't empty, the V5 device config will be updated.
+  // 2. If the control ID isn't empty, the V4 device config will be updated.
+  repeated DeviceLocatorConfigPair device_locator_config = 1;
+
+  // The client to update the config.
+  string client = 2;
+}
+
+message UpdateDeviceConfigsResponse {
+  // The failed device UUID or control ID to error message mappings.
+  map<string, string> error_message = 1;
+}
+
+message UpdateLabConfigRequest {
+  // The configuration of the lab to be updated.
+  LabConfig lab_config = 1;
+
+  // The client to update the config.
+  string client = 2;
+
+  // Mask of fields to update the LabConfig. If not set, all fields will be
+  // updated.
+  google.protobuf.FieldMask update_mask = 3;
+}
+
+message UpdateLabConfigResponse {}
+
+message CopyDeviceConfigsRequest {
+  // The source UUID of the device whose configuration is going to be copied.
+  string source_uuid = 1;
+
+  // The destination UUID of devices whose configuration will be overridden.
+  repeated string dest_uuid = 2;
+
+  // The client to copy the configs.
+  string client = 3;
+}
+
+message CopyDeviceConfigsResponse {
+  // The failed device UUID to error message mapping.
+  map<string, string> error_message = 1;
+}
+
+message CopyLabConfigsRequest {
+  // The source host name of the lab whose configuration will be copied.
+  string source_host = 1;
+
+  // The destination host name of labs whose configuration will be overridden.
+  repeated string dest_host = 2;
+
+  // The client to copy the configs.
+  string client = 3;
+}
+
+message CopyLabConfigsResponse {
+  // The failed lab host to error message mapping.
+  map<string, string> error_message = 1;
+}
+
+message UpdateLabConfigsRequest {
+  // The configurations of the labs to be updated.
+  repeated LabConfig lab_config = 1;
+
+  // The client to update the config.
+  string client = 2;
+
+  // Mask of fields to update the LabConfig. If not set, all fields will be
+  // updated.
+  google.protobuf.FieldMask update_mask = 3;
+}
+
+message UpdateLabConfigsResponse {
+  // The failed lab host to error message mapping.
+  map<string, string> error_message = 1;
+}
+
+// Stubby service for managing the DeviceConfig/LabConfig of Mobile Harness.
+service DeviceConfigService {
+  // Gets a list of configurations of devices.
+  rpc GetDeviceConfigs(GetDeviceConfigsRequest)
+      returns (GetDeviceConfigsResponse) {}
+
+  // Gets the configuration of a lab.
+  rpc GetLabConfig(GetLabConfigRequest) returns (GetLabConfigResponse) {}
+
+  // Deletes a list of configurations of devices.
+  rpc DeleteDeviceConfigs(DeleteDeviceConfigsRequest)
+      returns (DeleteDeviceConfigsResponse) {}
+
+  // Deletes the configuration of a lab.
+  rpc DeleteLabConfig(DeleteLabConfigRequest)
+      returns (DeleteLabConfigResponse) {}
+
+  // Updates a list of configurations of devices.
+  rpc UpdateDeviceConfigs(UpdateDeviceConfigsRequest)
+      returns (UpdateDeviceConfigsResponse) {}
+
+  // Updates the configuration of a lab.
+  rpc UpdateLabConfig(UpdateLabConfigRequest)
+      returns (UpdateLabConfigResponse) {}
+
+  // Copies the configuration of a device to multiple ones.
+  rpc CopyDeviceConfigs(CopyDeviceConfigsRequest)
+      returns (CopyDeviceConfigsResponse) {}
+
+  // Copies the configuration of a lab to multiple ones.
+  rpc CopyLabConfigs(CopyLabConfigsRequest) returns (CopyLabConfigsResponse) {}
+
+  // Updates a list of configurations of labs.
+  rpc UpdateLabConfigs(UpdateLabConfigsRequest)
+      returns (UpdateLabConfigsResponse) {}
+}
