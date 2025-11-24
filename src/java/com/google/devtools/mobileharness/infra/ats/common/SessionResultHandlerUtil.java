@@ -605,7 +605,7 @@ public class SessionResultHandlerUtil {
    * <p>The destination log files structure looks like:
    *
    * <pre>
-   * .../android-<xts>/logs/YYYY.MM.DD_HH.mm.ss/
+   * .../android-<xts>/logs/uuuu.MM.dd_HH.mm.ss.SSS_1234/
    *    inv_<invocation_id>/
    *      raw tradefed logs
    *      <driver>_test_<test_id>/
@@ -683,7 +683,7 @@ public class SessionResultHandlerUtil {
    * <p>The destination result files structure looks like:
    *
    * <pre>
-   * .../android-<xts>/results/YYYY.MM.DD_HH.mm.ss/
+   * .../android-<xts>/results/uuuu.MM.dd_HH.mm.ss.SSS_1234/
    *    the merged report relevant files (test_result.xml, html, checksum-suite.data, etc)
    *    config/
    *    device-info-files/
@@ -720,7 +720,7 @@ public class SessionResultHandlerUtil {
                   .stream()
                   .findFirst();
           if (tfGenResultDir.isEmpty()) {
-            logger.atInfo().log("Not found TF result dir in dir %s", genFileResultsDir);
+            logger.atInfo().log("TF result dir not found in dir %s", genFileResultsDir);
             continue;
           }
           List<Path> resultFilesOrDirs =
@@ -785,7 +785,7 @@ public class SessionResultHandlerUtil {
    * <p>The destination log files structure looks like:
    *
    * <pre>
-   * .../android-<xts>/logs/YYYY.MM.DD_HH.mm.ss/
+   * .../android-<xts>/logs/uuuu.MM.dd_HH.mm.ss.SSS_1234/
    *    inv_<invocation_id>/
    *      raw tradefed logs
    *      <driver>_test_<test_id>/
@@ -824,7 +824,7 @@ public class SessionResultHandlerUtil {
    * <p>The destination result files structure looks like:
    *
    * <pre>
-   * .../android-<xts>/results/YYYY.MM.DD_HH.mm.ss/
+   * .../android-<xts>/results/uuuu.MM.dd_HH.mm.ss.SSS_1234/
    *    the merged report relevant files (test_result.xml, html, checksum-suite.data, etc)
    *    config/
    *    device-info-files/
@@ -949,11 +949,11 @@ public class SessionResultHandlerUtil {
 
   private Path prepareLogOrResultDirForTest(TestInfo test, Path parentDir)
       throws MobileHarnessException {
-    String prefix = test.jobInfo().type().getDriver();
-    if (test.jobInfo().properties().getBoolean(Job.IS_XTS_NON_TF_JOB).orElse(false)) {
-      prefix = getExpandedNonTfModuleId(test.jobInfo()).replace(' ', '_');
-    }
-    Path targetDir = parentDir.resolve(getNonTradefedLogDirName(prefix, test.locator().getId()));
+    String prefix =
+        test.jobInfo().properties().getBoolean(Job.IS_XTS_NON_TF_JOB).orElse(false)
+            ? getExpandedNonTfModuleId(test.jobInfo()).replace(' ', '_')
+            : test.jobInfo().type().getDriver();
+    Path targetDir = parentDir.resolve(getLogDirNameForTest(prefix, test.locator().getId()));
     localFileUtil.prepareDir(targetDir);
     return targetDir;
   }
@@ -1294,8 +1294,8 @@ public class SessionResultHandlerUtil {
     return moduleName;
   }
 
-  /** Gets non-tradefed test log directory name. */
-  public static String getNonTradefedLogDirName(String moduleName, String testId) {
-    return moduleName + "_test_" + testId;
+  /** Gets the log directory name for a test. */
+  public static String getLogDirNameForTest(String prefix, String testId) {
+    return prefix + "_test_" + testId;
   }
 }

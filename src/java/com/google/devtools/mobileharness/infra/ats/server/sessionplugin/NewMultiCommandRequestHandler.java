@@ -980,7 +980,7 @@ final class NewMultiCommandRequestHandler {
     String moduleId = SessionResultHandlerUtil.getExpandedNonTfModuleId(jobInfo);
     for (TestInfo testInfo : jobInfo.tests().getAll().values()) {
       requestDetail.addNonTradefedLogDirNames(
-          SessionResultHandlerUtil.getNonTradefedLogDirName(
+          SessionResultHandlerUtil.getLogDirNameForTest(
               moduleId.replace(' ', '_'), testInfo.locator().getId()));
     }
   }
