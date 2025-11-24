@@ -25,6 +25,7 @@ kt_jvm_library(
     srcs = [
         "AmInstrumentationListener.kt",
         "AmInstrumentationParser.kt",
+        "AmInstrumentationResultBuilder.kt",
         "InstrumentationResult.kt",
         "TestIdentifier.kt",
         "TestResult.kt",
@@ -36,7 +37,13 @@ kt_jvm_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__subpackages__",
     ],
     deps = [
+        "//src/devtools/mobileharness/platform/android/instrumentation/result/proto:error_java_proto",
+        "//src/devtools/mobileharness/platform/android/instrumentation/result/proto:test_case_java_proto",
+        "//src/devtools/mobileharness/platform/android/instrumentation/result/proto:test_result_java_proto",
+        "//src/devtools/mobileharness/platform/android/instrumentation/result/proto:test_status_java_proto",
+        "//src/devtools/mobileharness/platform/android/instrumentation/result/proto:test_suite_result_java_proto",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time/kotlin:javatime-ktx",
         "@maven//:com_google_protobuf_protobuf_java",
     ],
 )
