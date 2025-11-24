@@ -18,8 +18,7 @@ syntax = "proto3";
 
 package mobileharness.platform.android.instrumentation;
 
-import "src/devtools/mobileharness/platform/android/instrumentation/result/proto/test_result.proto";
-import "src/devtools/mobileharness/platform/android/instrumentation/result/proto/test_status.proto";
+import "google/protobuf/timestamp.proto";
 
 option java_package = 'com.google.devtools.mobileharness.platform.android.instrumentation.result.proto';
 option java_outer_classname = "TestSuiteResultProto";
@@ -36,6 +35,9 @@ message TestSuiteResult {
 
   // A collection of TestResult messages generated while running the test.
   repeated TestResult test_result = 3;
+
+  // Error observed while running the test.
+  Error error = 4;
 }
 
 // Metadata for TestSuiteResult
@@ -45,4 +47,59 @@ message TestSuiteMetaData {
 
   // Number of test cases scheduled to be run.
   int32 scheduled_test_case_count = 2;
+}
+
+// Test status of a test suite or test case
+enum TestStatus {
+  TEST_STATUS_UNSPECIFIED = 0;
+  // Actual test suite/case ran successfully but there were tests that failed.
+  FAILED = 2;
+  // Actual test suite/case ran successfully and all the tests passed.
+  PASSED = 3;
+  // Assumption failure or test was filtered intentionally.
+  IGNORED = 4;
+  // There was an error executing the test. This could be because of a user
+  // configuration issue, an infrastructure issue or other. This should
+  // always be accompanied by a platform error that describes the error.
+  ERROR = 5;
+}
+
+// Test result encapsulates the result of a single test run.
+message TestResult {
+  // Test case for this test run
+  TestCase test_case = 1;
+
+  // Indicates the status of the test run and whether it passed, failed or was
+  // skipped etc.
+  TestStatus test_status = 2;
+
+  // Optional, only applicable if the test_status is a FAILURE OR ERROR
+  Error error = 3;
+}
+
+// Represents a test case
+message TestCase {
+  // Test case class name, e.g.: FooTest
+  string test_class = 1;
+  // Test case class name, e.g.: com.bar.foo
+  string test_package = 2;
+  // test case method name, e.g.: testFoo
+  string test_method = 3;
+  // Start time of test case
+  google.protobuf.Timestamp start_time = 6;
+  // End time of test case
+  google.protobuf.Timestamp end_time = 7;
+}
+
+// Test result error message encapsulates the error of a single testResult.
+// This is used only when the test ends in an Error or Failure
+message Error {
+  // Indicates the error message, e.g. Error message along with exception
+  string error_message = 1;
+
+  // Indicates the type of the error, e.g. AssertionError, XMLParserError
+  string error_type = 2;
+
+  // Indicates the stack trace along for the error
+  string stack_trace = 3;
 }

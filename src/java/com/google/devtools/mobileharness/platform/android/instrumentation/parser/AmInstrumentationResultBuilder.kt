@@ -51,7 +51,7 @@ class AmInstrumentationResultBuilder(private val testSuiteResultBuilder: TestSui
   }
 
   override fun instrumentationFailed(errorMessage: String) {
-    testSuiteResultBuilder.testStatus = ProtoTestStatus.FAILED
+    testSuiteResultBuilder.setError(Error.newBuilder().setErrorMessage(errorMessage).build())
   }
 
   override fun instrumentationEnded(instrumentationResult: InstrumentationResult) {

@@ -24,57 +24,10 @@ package(
 )
 
 proto_library(
-    name = "error_proto",
-    srcs = ["error.proto"],
-)
-
-java_proto_library(
-    name = "error_java_proto",
-    deps = [":error_proto"],
-)
-
-proto_library(
-    name = "test_case_proto",
-    srcs = ["test_case.proto"],
-    deps = ["@protobuf//:timestamp_proto"],
-)
-
-java_proto_library(
-    name = "test_case_java_proto",
-    deps = [":test_case_proto"],
-)
-
-proto_library(
-    name = "test_result_proto",
-    srcs = ["test_result.proto"],
-    deps = [
-        ":error_proto",
-        ":test_case_proto",
-        ":test_status_proto",
-    ],
-)
-
-java_proto_library(
-    name = "test_result_java_proto",
-    deps = [":test_result_proto"],
-)
-
-proto_library(
-    name = "test_status_proto",
-    srcs = ["test_status.proto"],
-)
-
-java_proto_library(
-    name = "test_status_java_proto",
-    deps = [":test_status_proto"],
-)
-
-proto_library(
     name = "test_suite_result_proto",
     srcs = ["test_suite_result.proto"],
     deps = [
-        ":test_result_proto",
-        ":test_status_proto",
+        "@protobuf//:timestamp_proto",
     ],
 )
 
