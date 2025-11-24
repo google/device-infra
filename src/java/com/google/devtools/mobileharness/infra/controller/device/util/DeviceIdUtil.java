@@ -26,7 +26,7 @@ public class DeviceIdUtil {
 
   /** Adds the device ID and the class name to the device dimensions. */
   public static void addDeviceIdAndClassNameToDimension(DeviceId deviceId, Device device) {
-    device.addDimension(Dimension.Name.ID, deviceId.controlId());
+    device.addDimension(Dimension.Name.ID, deviceId.uuid());
     device.addDimension(Dimension.Name.CONTROL_ID, deviceId.controlId());
     if (!Strings.isNullOrEmpty(deviceId.uuid())) {
       device.addDimension(Dimension.Name.UUID, deviceId.uuid());
