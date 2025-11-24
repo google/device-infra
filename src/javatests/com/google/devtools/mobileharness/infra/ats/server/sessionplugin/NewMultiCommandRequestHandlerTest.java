@@ -1330,7 +1330,7 @@ public final class NewMultiCommandRequestHandlerTest {
   }
 
   @Test
-  public void handleResultProcessing_processResultFailed_onlyCleanup() throws Exception {
+  public void handleResultProcessing_processResultFailed_commandError() throws Exception {
     setUpPassingJobAndTestResults();
     when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
@@ -1352,12 +1352,21 @@ public final class NewMultiCommandRequestHandlerTest {
         RequestDetail.newBuilder()
             .setOriginalRequest(request)
             .putAllCommandDetails(createJobsResult.commandDetails());
-    var unused = newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail);
+
+    HandleResultProcessingResult handleResultProcessingResult =
+        newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail);
+
     verify(sessionInfo)
         .putSessionProperty(
             SessionProperties.PROPERTY_KEY_SERVER_SESSION_LOG_PATH,
             outputFileUploadPath
                 + "/session_id/olc_server_session_logs/olc_server_session_log.txt");
+    assertThat(handleResultProcessingResult.commandDetails()).isNotEmpty();
+    CommandDetail commandDetail =
+        handleResultProcessingResult.commandDetails().values().iterator().next();
+    assertThat(commandDetail.getState()).isEqualTo(CommandState.ERROR);
+    assertThat(commandDetail.getErrorReason()).isEqualTo(ErrorReason.RESULT_PROCESSING_ERROR);
+    assertThat(commandDetail.getErrorMessage()).contains("Failed to find result file");
   }
 
   @Test
@@ -1429,7 +1438,8 @@ public final class NewMultiCommandRequestHandlerTest {
     String commandId =
         UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
     assertThat(commandDetail.getId()).isEqualTo(commandId);
-    assertThat(commandDetail.getState()).isEqualTo(CommandState.COMPLETED);
+    assertThat(commandDetail.getState()).isEqualTo(CommandState.ERROR);
+    assertThat(commandDetail.getErrorReason()).isEqualTo(ErrorReason.TRADEFED_INVOCATION_ERROR);
     assertThat(commandDetail.getErrorMessage()).isEqualTo(tradefedInvocationErrorMessage);
   }
 
@@ -1443,7 +1453,6 @@ public final class NewMultiCommandRequestHandlerTest {
     mockProcessResult(result);
 
     // Mock the content of the tradefed invocation runtime info log file.
-    String noValidTestCaseErrorMessage = "No valid test cases found in the result.";
     String tradefedInvocationErrorMessage = "example error message";
     when(xtsTradefedRuntimeInfoFileUtil.readInfo(any(), any()))
         .thenReturn(
@@ -1473,8 +1482,7 @@ public final class NewMultiCommandRequestHandlerTest {
     assertThat(commandDetail.getId()).isEqualTo(commandId);
     assertThat(commandDetail.getState()).isEqualTo(CommandState.ERROR);
     assertThat(commandDetail.getErrorReason()).isEqualTo(ErrorReason.TRADEFED_INVOCATION_ERROR);
-    assertThat(commandDetail.getErrorMessage())
-        .isEqualTo(noValidTestCaseErrorMessage + "\n" + tradefedInvocationErrorMessage);
+    assertThat(commandDetail.getErrorMessage()).isEqualTo(tradefedInvocationErrorMessage);
     assertThat(handleResultProcessingResult.errorReason())
         .hasValue(ErrorReason.TRADEFED_INVOCATION_ERROR);
     assertThat(handleResultProcessingResult.errorMessage())
@@ -1532,6 +1540,161 @@ public final class NewMultiCommandRequestHandlerTest {
   }
 
   @Test
+  public void handleResultProcessing_multipleTradefedErrors_failWithCombinedErrorMessage()
+      throws Exception {
+    setUpPassingJobAndTestResults();
+    ReportProto.Result result =
+        ReportProto.Result.newBuilder()
+            .setSummary(
+                ReportProto.Summary.newBuilder()
+                    .setPassed(9)
+                    .setFailed(1)
+                    .setModulesTotal(1)
+                    .build())
+            .build();
+    mockProcessResult(result);
+
+    // Mock the content of the tradefed invocation runtime info log file.
+    String tradefedInvocationErrorMessage1 = "example error message 1";
+    String tradefedInvocationErrorMessage2 = "example error message 2";
+    when(xtsTradefedRuntimeInfoFileUtil.readInfo(any(), any()))
+        .thenReturn(
+            Optional.of(
+                new XtsTradefedRuntimeInfoFileDetail(
+                    new XtsTradefedRuntimeInfo(
+                        ImmutableList.of(
+                            new TradefedInvocation(
+                                /* isRunning= */ false,
+                                ImmutableList.of(DEVICE_ID_1),
+                                "failed",
+                                tradefedInvocationErrorMessage1)),
+                        /* timestamp= */ Instant.now()),
+                    /* lastModifiedTime= */ Instant.now())))
+        .thenReturn(
+            Optional.of(
+                new XtsTradefedRuntimeInfoFileDetail(
+                    new XtsTradefedRuntimeInfo(
+                        ImmutableList.of(
+                            new TradefedInvocation(
+                                /* isRunning= */ false,
+                                ImmutableList.of(DEVICE_ID_2),
+                                "failed",
+                                tradefedInvocationErrorMessage2)),
+                        /* timestamp= */ Instant.now()),
+                    /* lastModifiedTime= */ Instant.now())));
+
+    JobInfo jobInfo2 = Mockito.mock(JobInfo.class);
+    TestInfo testInfo2 = Mockito.mock(TestInfo.class);
+    Properties properties2 = new Properties(new Timing());
+    properties2.add(Job.IS_XTS_TF_JOB, "true");
+    when(jobInfo2.locator()).thenReturn(new JobLocator("job_id_2", "job_name_2"));
+    when(jobInfo2.properties()).thenReturn(properties2);
+    when(jobInfo2.files()).thenReturn(files);
+    TestInfos testInfos2 = Mockito.mock(TestInfos.class);
+    when(jobInfo2.tests()).thenReturn(testInfos2);
+    when(testInfos2.getAll()).thenReturn(ImmutableListMultimap.of("test_id_2", testInfo2));
+    when(jobInfo2.result()).thenReturn(jobResult);
+    when(testInfo2.result()).thenReturn(testResult);
+    when(testInfo2.locator())
+        .thenReturn(
+            new TestLocator("test_id_2", "test_name_2", new JobLocator("job_id_2", "job_name_2")));
+
+    when(xtsJobCreator.createXtsTradefedTestJob(any()))
+        .thenReturn(ImmutableList.of(jobInfo, jobInfo2));
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+
+    // Add TF job.
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+    RequestDetail.Builder requestDetail =
+        RequestDetail.newBuilder()
+            .setOriginalRequest(request)
+            .putAllCommandDetails(createJobsResult.commandDetails());
+    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo, jobInfo2));
+    doAnswer(
+            invocation -> {
+              Path path = invocation.getArgument(0, Path.class);
+              LocalFileUtil localFileUtil = new LocalFileUtil();
+              localFileUtil.prepareDir(path);
+              Path resultFile = path.resolve("result.xml");
+              java.nio.file.Files.createFile(resultFile);
+              localFileUtil.zipDir(path.toString(), path + ".zip");
+              return Optional.of(result);
+            })
+        .when(sessionResultHandlerUtil)
+        .processResult(any(), any(), any(), any(), eq(ImmutableList.of(jobInfo, jobInfo2)), any());
+
+    HandleResultProcessingResult handleResultProcessingResult =
+        newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail);
+
+    assertThat(handleResultProcessingResult.commandDetails()).hasSize(1);
+    CommandDetail commandDetail =
+        handleResultProcessingResult.commandDetails().values().iterator().next();
+    assertThat(commandDetail.getState()).isEqualTo(CommandState.ERROR);
+    assertThat(commandDetail.getErrorReason()).isEqualTo(ErrorReason.TRADEFED_INVOCATION_ERROR);
+    assertThat(commandDetail.getErrorMessage())
+        .isEqualTo(tradefedInvocationErrorMessage1 + "\n" + tradefedInvocationErrorMessage2);
+  }
+
+  @Test
+  public void handleResultProcessing_tradefedErrorAndResultProcessingError_prioritizeTradefedError()
+      throws Exception {
+    setUpPassingJobAndTestResults();
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+
+    // 1. Simulate result processing error
+    MobileHarnessException resultProcessingException =
+        new MobileHarnessException(BasicErrorId.USER_PLUGIN_ERROR, "Result processing failed");
+    doThrow(resultProcessingException)
+        .when(sessionResultHandlerUtil)
+        .processResult(any(), any(), any(), any(), any(), any());
+
+    // 2. Simulate tradefed invocation error
+    String tradefedInvocationErrorMessage = "Tradefed invocation failed";
+    when(xtsTradefedRuntimeInfoFileUtil.readInfo(any(), any()))
+        .thenReturn(
+            Optional.of(
+                new XtsTradefedRuntimeInfoFileDetail(
+                    new XtsTradefedRuntimeInfo(
+                        ImmutableList.of(
+                            new TradefedInvocation(
+                                /* isRunning= */ false,
+                                ImmutableList.of(DEVICE_ID_1, DEVICE_ID_2),
+                                "failed",
+                                tradefedInvocationErrorMessage)),
+                        /* timestamp= */ Instant.now()),
+                    /* lastModifiedTime= */ Instant.now())));
+
+    // Add TF job.
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+    assertThat(createJobsResult.jobInfos()).containsExactly(jobInfo);
+
+    RequestDetail.Builder requestDetail =
+        RequestDetail.newBuilder()
+            .setOriginalRequest(request)
+            .putAllCommandDetails(createJobsResult.commandDetails());
+    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
+    HandleResultProcessingResult handleResultProcessingResult =
+        newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail);
+
+    // 3. Verify error prioritization and message combination
+    assertThat(handleResultProcessingResult.commandDetails()).hasSize(1);
+    CommandDetail commandDetail =
+        handleResultProcessingResult.commandDetails().values().iterator().next();
+    assertThat(commandDetail.getState()).isEqualTo(CommandState.ERROR);
+    assertThat(commandDetail.getErrorReason()).isEqualTo(ErrorReason.TRADEFED_INVOCATION_ERROR);
+    assertThat(commandDetail.getErrorMessage()).contains(tradefedInvocationErrorMessage);
+    assertThat(commandDetail.getErrorMessage()).contains("Result processing failed");
+    assertThat(handleResultProcessingResult.errorReason())
+        .hasValue(ErrorReason.TRADEFED_INVOCATION_ERROR);
+    assertThat(handleResultProcessingResult.errorMessage())
+        .hasValue(
+            NewMultiCommandRequestHandler.REQUEST_ERROR_MESSAGE_FOR_TRADEFED_INVOCATION_ERROR);
+  }
+
+  @Test
   public void handleResultProcessing_requestErrorExist_keepRequestError() throws Exception {
     setUpPassingJobAndTestResults();
     ReportProto.Result result =
@@ -1576,6 +1739,35 @@ public final class NewMultiCommandRequestHandlerTest {
 
     assertThat(handleResultProcessingResult.errorReason()).hasValue(ErrorReason.INVALID_REQUEST);
     assertThat(handleResultProcessingResult.errorMessage()).hasValue("Original request error");
+  }
+
+  @Test
+  public void handleResultProcessing_errorsDuringTradefedInvocationCheck_areIgnored()
+      throws Exception {
+    setUpPassingJobAndTestResults();
+    ReportProto.Result result =
+        ReportProto.Result.newBuilder()
+            .setSummary(
+                ReportProto.Summary.newBuilder()
+                    .setPassed(10)
+                    .setFailed(0)
+                    .setModulesTotal(1)
+                    .build())
+            .addModuleInfo(
+                ReportProto.Module.newBuilder().setName("module1").setFailedTests(0).build())
+            .build();
+    mockProcessResult(result);
+    when(sessionResultHandlerUtil.getTradefedInvocationLogDir(any(), any()))
+        .thenThrow(
+            new MobileHarnessException(BasicErrorId.LOCAL_FILE_OR_DIR_NOT_FOUND, "Dir not found"));
+
+    HandleResultProcessingResult handleResultProcessingResult =
+        createJobAndHandleResultProcessing(request);
+
+    assertThat(handleResultProcessingResult.commandDetails()).hasSize(1);
+    CommandDetail commandDetail =
+        handleResultProcessingResult.commandDetails().values().iterator().next();
+    assertThat(commandDetail.getState()).isEqualTo(CommandState.COMPLETED);
   }
 
   @Test
