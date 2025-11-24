@@ -136,11 +136,10 @@ message DeviceSignUp {
   .mobileharness.api.model.DeviceStatus status_from_dm = 6
       [features.field_presence = EXPLICIT];
 
-  // Optional: Whether the device is in the satellite lab.
-  bool is_satellite_lab = 7 [features.field_presence = EXPLICIT];
-
   // Optional: Exceptions on the device.
   .mobileharness.api.model.DeviceError device_error = 8;
+
+  reserved 7;
 }
 
 message DeviceHeartbeat {
@@ -157,6 +156,5 @@ message DeviceHeartbeat {
   .mobileharness.api.model.DeviceStatus status_from_dm = 4
       [features.field_presence = EXPLICIT];
 
-  // Optional: Whether the device is in the satellite lab.
-  bool is_satellite_lab = 5 [features.field_presence = EXPLICIT];
+  reserved 5;
 }
