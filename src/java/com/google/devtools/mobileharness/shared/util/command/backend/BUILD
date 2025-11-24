@@ -20,10 +20,7 @@ package(default_applicable_licenses = ["//:license"])
 java_library(
     name = "backend",
     srcs = glob(["*.java"]),
-    visibility = [
-        "//javatests/com/google/wireless/qa/mobileharness/shared/api/decorator:__subpackages__",
-        "//src/java/com/google/devtools/mobileharness/shared/util/command:__pkg__",
-    ],
+    visibility = ["//src/java/com/google/devtools/mobileharness/shared/util/command:__pkg__"],
     deps = [
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
