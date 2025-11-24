@@ -38,10 +38,16 @@ message LabFilter {
       StringMultimapMatchCondition condition = 1;
     }
 
+    // Condition to match release status of a lab.
+    message ReleaseStatusMatchCondition {
+      StringMatchCondition condition = 1;
+    }
+
     // An unset or unrecognized condition will always match.
     oneof condition {
       LabHostNameMatchCondition lab_host_name_match_condition = 1;
       PropertyMatchCondition property_match_condition = 2;
+      ReleaseStatusMatchCondition release_status_match_condition = 3;
     }
   }
 
