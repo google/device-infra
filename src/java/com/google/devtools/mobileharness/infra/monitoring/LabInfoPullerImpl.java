@@ -101,6 +101,7 @@ public final class LabInfoPullerImpl implements DataPuller<MonitoredRecord> {
         addAttribute(deviceEntry, "device_type", deviceInfo.getDeviceFeature().getTypeList());
         addAttribute(deviceEntry, "driver", deviceInfo.getDeviceFeature().getDriverList());
         addAttribute(deviceEntry, "decorator", deviceInfo.getDeviceFeature().getDecoratorList());
+        addAttribute(deviceEntry, "owner", deviceInfo.getDeviceFeature().getOwnerList());
         addAttribute(
             deviceEntry,
             "version",

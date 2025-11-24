@@ -262,6 +262,7 @@ public final class LabInfoPullerImplTest {
                 .addAttribute(Attribute.newBuilder().setName("driver").setValue(DEVICE_DRIVER_1))
                 .addAttribute(
                     Attribute.newBuilder().setName("decorator").setValue(DEVICE_DECORATOR_1))
+                .addAttribute(Attribute.newBuilder().setName("owner").setValue(DEVICE_OWNER_1))
                 .addAttribute(
                     Attribute.newBuilder().setName("version").setValue(DEVICE_SDK_VERSION_1))
                 .addAttribute(Attribute.newBuilder().setName("model").setValue(DEVICE_MODEL_1))
@@ -291,6 +292,7 @@ public final class LabInfoPullerImplTest {
                 .addAttribute(Attribute.newBuilder().setName("driver").setValue(DEVICE_DRIVER_2))
                 .addAttribute(
                     Attribute.newBuilder().setName("decorator").setValue(DEVICE_DECORATOR_2))
+                .addAttribute(Attribute.newBuilder().setName("owner").setValue(DEVICE_OWNER_2))
                 .addAttribute(
                     Attribute.newBuilder().setName("version").setValue(DEVICE_SOFTWARE_VERSION_2))
                 .addAttribute(Attribute.newBuilder().setName("model").setValue(DEVICE_MODEL_2))
