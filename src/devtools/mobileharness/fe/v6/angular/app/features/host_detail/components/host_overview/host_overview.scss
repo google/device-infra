@@ -166,6 +166,13 @@ $labconsole-font: 'Google Sans', Roboto, Arial, sans-serif;
   border: 1px solid #dee2e6;
 }
 
+.device-loading-bar {
+  @include mat.progress-bar-overrides((
+    active-indicator-color: #1967d2,
+    track-color: #e8f0fe,
+  ));
+}
+
 .spin-animation {
   animation: spin 1.5s linear infinite;
 }
@@ -339,6 +346,10 @@ $labconsole-font: 'Google Sans', Roboto, Arial, sans-serif;
 }
 
 // styles for device table
+.device-list-container {
+  min-height: 5rem;
+}
+
 .device-table-toolbar {
   height: 3rem;
   margin-bottom: 1rem;
@@ -388,7 +399,6 @@ $labconsole-font: 'Google Sans', Roboto, Arial, sans-serif;
       .action-button {
         background-color: #e8f0fe;
         color: #1967d2;
-        font-size: 0.75rem;
         line-height: 1rem;
         border-radius: 18px;
 
@@ -398,9 +408,11 @@ $labconsole-font: 'Google Sans', Roboto, Arial, sans-serif;
 
         span {
           font-weight: 500;
+          font-size: 0.8125rem;
+          font-family: Arial;
           color: #1967d2;
-          font-size: 0.75rem;
           line-height: 1rem;
+          letter-spacing: normal;
         }
 
         @media (max-width: 1200px) {
@@ -424,6 +436,8 @@ $labconsole-font: 'Google Sans', Roboto, Arial, sans-serif;
   }
 
   .device-filter-input {
+    @include mat.form-field-density(-4);
+    @include mat.input-density(-4);
     background-color: #fff;
     border-radius: 0.25rem;
 

@@ -113,73 +113,81 @@
     </div>
   </app-info-card>
   <app-info-card #overviewSection id="device-list" title="Devices" [collapsible]="false">
-    <div class="overview-card-content">
-      @if(deviceDataSource.data.length > 0) {
-        <div class="device-table-toolbar">
-          @if(selection.isEmpty()) {
-            <div class="device-toolbar-content">
-              <h4 class="device-toolbar-header">
-                Total Devices <span class="device-count">({{ deviceDataSource.data.length }})</span>
-              </h4>
-              <mat-form-field appearance="outline" class="device-filter-input" subscriptSizing="dynamic">
-                <mat-icon matPrefix>search</mat-icon>
-                <input matInput [(ngModel)]="deviceFilterInput" (ngModelChange)="applyDeviceFilter()" placeholder="Filter devices..." #input aria-label="Filter devices"/>
-              </mat-form-field>
-            </div>
-          } @else {
-            <div class="device-toolbar-content selected">
-              <button mat-icon-button (click)="selection.clear()" aria-label="Clear selection" class="clear-selection-button">
-                <mat-icon>close</mat-icon>
-              </button>
-
-              @if (deviceFilterValue) {
-                <span class="selected-text">{{selection.selected.length}} of {{deviceDataSource.filteredData.length}} filtered results selected (total: {{deviceDataSource.data.length}})</span>
-              } @else {
-                <span class="selected-text">{{selection.selected.length}} of {{deviceDataSource.data.length}} selected</span>
-              }
-
-              <div class="separator"></div>
-
-              <button mat-flat-button class="action-button" matTooltip="Configure">
-                <mat-icon>settings</mat-icon>
-                <span class="action-button-text">Configure</span>
-              </button>
-              <button mat-flat-button class="action-button" matTooltip="Remote Control">
-                <mat-icon>important_devices</mat-icon>
-                <span class="action-button-text">Remote Control</span>
-              </button>
-              @if(decommissionMissingCount() > 0) {
-                <button mat-flat-button class="action-button" [matTooltip]="'Decommission Missing (' + decommissionMissingCount() + ')'">
-                  <mat-icon>delete_sweep</mat-icon>
-                  <span class="action-button-text">Decommission Missing ({{decommissionMissingCount()}})</span>
+    @if(isDeviceLoading()) {
+      <mat-progress-bar mode="indeterminate" class="device-loading-bar"></mat-progress-bar>
+    } @else if(deviceDataSource.data.length > 0) {
+      <div class="overview-card-content">
+          <div class="device-table-toolbar">
+            @if(selection.isEmpty()) {
+              <div class="device-toolbar-content">
+                <h4 class="device-toolbar-header">
+                  Total Devices <span class="device-count">({{ deviceDataSource.data.length }})</span>
+                </h4>
+                <mat-form-field appearance="outline" class="device-filter-input" subscriptSizing="dynamic">
+                  <mat-icon matPrefix>search</mat-icon>
+                  <input matInput [(ngModel)]="deviceFilterInput" (ngModelChange)="applyDeviceFilter()" placeholder="Filter devices..." #input aria-label="Filter devices"/>
+                  <button matSuffix mat-icon-button
+                          aria-label="Clear filter"
+                          (click)="clearDeviceFilter()"
+                          [style.visibility]="deviceFilterInput ? 'visible' : 'hidden'">
+                    <mat-icon>close</mat-icon>
+                  </button>
+                </mat-form-field>
+              </div>
+            } @else {
+              <div class="device-toolbar-content selected">
+                <button mat-icon-button (click)="selection.clear()" aria-label="Clear selection" class="clear-selection-button">
+                  <mat-icon>close</mat-icon>
                 </button>
-              }
-            </div>
-          }
-        </div>
-        <div class="device-table-container">
-          <table mat-table [dataSource]="deviceDataSource">
-            <!-- Checkbox Column -->
-            <ng-container matColumnDef="select" sticky>
-              <th mat-header-cell *matHeaderCellDef class="sticky-start-header">
-                <mat-checkbox
-                  (change)="$event ? toggleAllRows() : null"
-                  [checked]="isAllSelected()"
-                  [indeterminate]="isPartiallySelected()"
-                  aria-label="Select all rows"
-                >
-                </mat-checkbox>
-              </th>
-              <td mat-cell *matCellDef="let row" class="sticky-start-cell">
-                <mat-checkbox
-                  (click)="$event.stopPropagation()"
-                  (change)="$event ? selection.toggle(row) : null"
-                  [checked]="selection.isSelected(row)"
-                  [aria-label]="checkboxLabel(row)"
-                >
-                </mat-checkbox>
-              </td>
-            </ng-container>
+
+                @if (deviceFilterValue) {
+                  <span class="selected-text">{{selection.selected.length}} of {{deviceDataSource.filteredData.length}} filtered results selected (total: {{deviceDataSource.data.length}})</span>
+                } @else {
+                  <span class="selected-text">{{selection.selected.length}} of {{deviceDataSource.data.length}} selected</span>
+                }
+
+                <div class="separator"></div>
+
+                <button mat-flat-button class="action-button" matTooltip="Configure">
+                  <mat-icon>settings</mat-icon>
+                  <span class="action-button-text">Configure</span>
+                </button>
+                <button mat-flat-button class="action-button" matTooltip="Remote Control">
+                  <mat-icon>important_devices</mat-icon>
+                  <span class="action-button-text">Remote Control</span>
+                </button>
+                @if(decommissionMissingCount() > 0) {
+                  <button mat-flat-button class="action-button" [matTooltip]="'Decommission Missing (' + decommissionMissingCount() + ')'">
+                    <mat-icon>delete_sweep</mat-icon>
+                    <span class="action-button-text">Decommission Missing ({{decommissionMissingCount()}})</span>
+                  </button>
+                }
+              </div>
+            }
+          </div>
+          <div class="device-table-container">
+            <table mat-table [dataSource]="deviceDataSource">
+              <!-- Checkbox Column -->
+              <ng-container matColumnDef="select" sticky>
+                <th mat-header-cell *matHeaderCellDef class="sticky-start-header">
+                  <mat-checkbox
+                    (change)="$event ? toggleAllRows() : null"
+                    [checked]="isAllSelected()"
+                    [indeterminate]="isPartiallySelected()"
+                    aria-label="Select all rows"
+                  >
+                  </mat-checkbox>
+                </th>
+                <td mat-cell *matCellDef="let row" class="sticky-start-cell">
+                  <mat-checkbox
+                    (click)="$event.stopPropagation()"
+                    (change)="$event ? selection.toggle(row) : null"
+                    [checked]="selection.isSelected(row)"
+                    [aria-label]="checkboxLabel(row)"
+                  >
+                  </mat-checkbox>
+                </td>
+              </ng-container>
 
             <!-- ID Column -->
             <ng-container matColumnDef="id">
@@ -196,21 +204,21 @@
               </td>
             </ng-container>
 
-            <!-- Health Column -->
-            <ng-container matColumnDef="health">
-              <th mat-header-cell *matHeaderCellDef>HEALTH</th>
-              <td mat-cell *matCellDef="let element">
-                @let healthSemantic = getHealthSemantic(element.healthState.health);
-                <div class="health-wrapper">
-                  <mat-icon
-                    class="{{healthSemantic.colorClass}} health-icon"
-                    matTooltip="{{element.healthState.title}}">
-                    {{healthSemantic.icon}}
-                  </mat-icon>
-                  <mat-icon class="cursor-help" matTooltip="{{element.healthState.tooltip}}">help_outline</mat-icon>
-                </div>
-              </td>
-            </ng-container>
+              <!-- Health Column -->
+              <ng-container matColumnDef="health">
+                <th mat-header-cell *matHeaderCellDef>HEALTH</th>
+                <td mat-cell *matCellDef="let element">
+                  @let healthSemantic = getHealthSemantic(element.healthState.health);
+                  <div class="health-wrapper">
+                    <mat-icon
+                      class="{{healthSemantic.colorClass}} health-icon"
+                      matTooltip="{{element.healthState.title}}">
+                      {{healthSemantic.icon}}
+                    </mat-icon>
+                    <mat-icon class="cursor-help" matTooltip="{{element.healthState.tooltip}}">help_outline</mat-icon>
+                  </div>
+                </td>
+              </ng-container>
 
             <!-- Type Column -->
             <ng-container matColumnDef="type">
@@ -238,19 +246,19 @@
               </td>
             </ng-container>
 
-            <!-- Status Column -->
-            <ng-container matColumnDef="status">
-              <th mat-header-cell *matHeaderCellDef>STATUS</th>
-              <td mat-cell *matCellDef="let element">
-                <div
-                  class="type-chip"
-                  [class.type-chip-abnormal]="element.deviceStatus.isCritical"
-                  [class.type-chip-normal]="!element.deviceStatus.isCritical"
-                >
-                  {{element.deviceStatus.status}}
-                </div>
-              </td>
-            </ng-container>
+              <!-- Status Column -->
+              <ng-container matColumnDef="status">
+                <th mat-header-cell *matHeaderCellDef>STATUS</th>
+                <td mat-cell *matCellDef="let element">
+                  <div
+                    class="type-chip"
+                    [class.type-chip-abnormal]="element.deviceStatus.isCritical"
+                    [class.type-chip-normal]="!element.deviceStatus.isCritical"
+                  >
+                    {{element.deviceStatus.status}}
+                  </div>
+                </td>
+              </ng-container>
 
             <!-- Label Column -->
             <ng-container matColumnDef="label">
@@ -304,47 +312,49 @@
               </td>
             </ng-container>
 
-            <!-- Actions Column -->
-            <ng-container matColumnDef="actions" stickyEnd>
-              <th mat-header-cell *matHeaderCellDef class="sticky-end-header">
-                <button mat-icon-button aria-label="Settings">
-                  <mat-icon class="material-symbols-outlined">settings</mat-icon>
-                </button>
-              </th>
-              <td mat-cell *matCellDef="let element" class="sticky-end-cell">
-                <button mat-icon-button [matMenuTriggerFor]="menu" aria-label="Device actions">
-                  <mat-icon>more_vert</mat-icon>
-                </button>
-                <mat-menu #menu="matMenu">
-                  <button mat-menu-item>
-                    <mat-icon>screenshot</mat-icon>
-                    <span>Screenshot</span>
+              <!-- Actions Column -->
+              <ng-container matColumnDef="actions" stickyEnd>
+                <th mat-header-cell *matHeaderCellDef class="sticky-end-header">
+                  <button mat-icon-button>
+                    <mat-icon class="material-symbols-outlined">settings</mat-icon>
                   </button>
-                  <button mat-menu-item>
-                    <mat-icon>important_devices</mat-icon>
-                    <span>Remote Control</span>
+                </th>
+                <td mat-cell *matCellDef="let element" class="sticky-end-cell">
+                  <button mat-icon-button [matMenuTriggerFor]="menu" aria-label="Device actions">
+                    <mat-icon>more_vert</mat-icon>
                   </button>
+                  <mat-menu #menu="matMenu">
                     <button mat-menu-item>
-                    <mat-icon>flash_on</mat-icon>
-                    <span>Flash</span>
-                  </button>
-                </mat-menu>
-              </td>
-            </ng-container>
+                      <mat-icon>screenshot</mat-icon>
+                      <span>Screenshot</span>
+                    </button>
+                    <button mat-menu-item>
+                      <mat-icon>important_devices</mat-icon>
+                      <span>Remote Control</span>
+                    </button>
+                      <button mat-menu-item>
+                      <mat-icon>flash_on</mat-icon>
+                      <span>Flash</span>
+                    </button>
+                  </mat-menu>
+                </td>
+              </ng-container>
 
-            <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true" class="sticky-header"></tr>
-            <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+              <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true" class="sticky-header"></tr>
+              <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
 
-            <!-- Row shown when there is no matching data. -->
-            <tr class="mat-row" *matNoDataRow>
-              <td class="mat-cell" [attr.colspan]="displayedColumns.length">No data matching the filter.</td>
-            </tr>
-          </table>
-        </div>
-      } @else {
+              <!-- Row shown when there is no matching data. -->
+              <tr class="mat-row" *matNoDataRow>
+                <td class="mat-cell" [attr.colspan]="displayedColumns.length">No data matching the filter.</td>
+              </tr>
+            </table>
+          </div>
+      </div>
+    } @else {
+      <div class="overview-card-content">
         <p class="no-devices-text">No devices are connected to this host.</p>
-      }
-    </div>
+      </div>
+    }
   </app-info-card>
   <app-info-card #overviewSection id="daemon-server" title="Daemon Server" [collapsible]="false">
     <div operations class="operation-button">

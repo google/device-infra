@@ -136,14 +136,14 @@ export class HostOverviewPage implements OnInit, OnChanges {
   }
 
   loadDevices() {
-    // this.isDeviceLoading.set(true);
+    this.isDeviceLoading.set(true);
     this.hostService
       .getHostDeviceSummaries(this.host.hostName)
-      // .pipe(delay(2000))
+      .pipe(delay(2000)) // TODO: Remove this delay after the real implementation is done.
       .subscribe({
         next: (devices) => {
           this.deviceDataSource.data = devices;
-          // this.isDeviceLoading.set(false);
+          this.isDeviceLoading.set(false);
         },
         error: (err) => {
           console.error('Failed to load devices:', err);
@@ -155,6 +155,11 @@ export class HostOverviewPage implements OnInit, OnChanges {
   applyDeviceFilter() {
     this.deviceFilterValue = this.deviceFilterInput.trim().toLowerCase();
     this.deviceDataSource.filter = this.deviceFilterValue;
+  }
+
+  clearDeviceFilter() {
+    this.deviceFilterInput = '';
+    this.applyDeviceFilter();
   }
 
   isAllSelected(): boolean {
