@@ -27,6 +27,8 @@ const OVERVIEW: DeviceOverview = {
       suggestedAction:
         'Check device logs for errors that occurred during the preparation phase. The device may need to be re-imaged or manually recovered.',
     },
+    isQuarantined: false,
+    quarantineExpiry: '',
   },
   basicInfo: {
     model: 'Pixel 6',

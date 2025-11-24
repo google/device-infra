@@ -24,6 +24,8 @@ const OVERVIEW: DeviceOverview = {
     deviceStatus: {status: 'FAILED', isCritical: true},
     deviceTypes: [{type: 'AndroidDevice', isAbnormal: false}],
     lastInServiceTime: '2025-07-24T12:30:00.000Z',
+    isQuarantined: false,
+    quarantineExpiry: '',
     diagnostics: {
       diagnosis: 'The device status is <strong>FAILED</strong>.',
       explanation:

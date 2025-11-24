@@ -1,9 +1,12 @@
 import {HttpClient, provideHttpClient} from '@angular/common/http';
-import {HttpTestingController, provideHttpClientTesting} from '@angular/common/http/testing';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+} from '@angular/common/http/testing';
 import {TestBed} from '@angular/core/testing';
 
 import {APP_DATA, AppData} from '../../models/app_data';
-import {DeviceOverview} from '../../models/device_overview';
+import {DeviceOverviewPageData} from '../../models/device_overview';
 
 import {DEVICE_SERVICE} from './device_service';
 import {HttpDeviceService} from './http_device_service';
@@ -24,7 +27,7 @@ describe('HttpDeviceService', () => {
         {
           provide: DEVICE_SERVICE,
           useFactory: (http: HttpClient, appData: AppData) =>
-              new HttpDeviceService(http),
+            new HttpDeviceService(http),
           deps: [HttpClient, APP_DATA],
         },
       ],
@@ -42,17 +45,20 @@ describe('HttpDeviceService', () => {
   });
 
   it('should retrieve a device overview', () => {
-    const mockDeviceOverview: DeviceOverview = {
-      id: 'test-device',
+    const mockDeviceOverview: DeviceOverviewPageData = {
+      overview: {
+        id: 'test-device',
+      },
       // Add other properties as needed
-    } as DeviceOverview;
+    } as DeviceOverviewPageData;
 
     service.getDeviceOverview('test-device').subscribe((overview) => {
       expect(overview).toEqual(mockDeviceOverview);
     });
 
     const req = httpMock.expectOne(
-        'http://testdomain.com/v6/devices/test-device/overview');
+      'http://testdomain.com/v6/devices/test-device/overview',
+    );
     expect(req.request.method).toBe('GET');
     req.flush(mockDeviceOverview);
   });

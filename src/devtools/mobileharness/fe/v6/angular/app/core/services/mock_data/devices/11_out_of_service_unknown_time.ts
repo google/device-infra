@@ -25,6 +25,8 @@ const OVERVIEW: DeviceOverview = {
       explanation: 'This means it has stopped sending heartbeats.',
       suggestedAction: 'Check device power and USB connection.',
     },
+    isQuarantined: false,
+    quarantineExpiry: '',
   },
   basicInfo: {
     model: 'Pixel 5',

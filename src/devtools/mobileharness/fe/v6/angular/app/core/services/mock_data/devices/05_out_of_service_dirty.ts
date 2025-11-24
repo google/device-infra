@@ -26,6 +26,8 @@ const OVERVIEW: DeviceOverview = {
       suggestedAction:
         'The device has been in DIRTY state for over an hour. This might indicate a problem with the cleanup process. Check device logs.',
     },
+    isQuarantined: false,
+    quarantineExpiry: '',
   },
   basicInfo: {
     model: 'Pixel Tablet',

@@ -25,6 +25,8 @@ const OVERVIEW: DeviceOverview = {
       'AndroidRealDevice',
     ].map((type) => ({type, isAbnormal: false})),
     lastInServiceTime: new Date().toISOString(),
+    isQuarantined: false,
+    quarantineExpiry: '',
   },
   basicInfo: {
     model: 'Pixel 8 Pro',

@@ -6,7 +6,8 @@
         <p>{{ data.error }}</p>
         <a routerLink="/dev/device-harness" class="m3-button">Back to Harness</a>
       </div>
-    } @else if (data.device; as device) {
+    } @else if (data.pageData; as pageData) {
+      @let device = pageData.overview;
       <div class="main-card">
         <header class="card-header">
           <div class="header-device-id">

@@ -1,6 +1,18 @@
 import {Injectable} from '@angular/core';
 import {Observable, of, throwError} from 'rxjs';
-import {DeviceOverview} from '../../models/device_overview';
+import {
+  DeviceHeaderInfo,
+  GetLogcatResponse,
+  QuarantineDeviceRequest,
+  QuarantineDeviceResponse,
+  RemoteControlRequest,
+  RemoteControlResponse,
+  TakeScreenshotResponse,
+} from '../../models/device_action';
+import {
+  DeviceOverview,
+  DeviceOverviewPageData,
+} from '../../models/device_overview';
 import {
   HealthinessStats,
   RecoveryTaskStats,
@@ -28,10 +40,24 @@ export class FakeDeviceService extends DeviceService {
    * @returns An Observable emitting the DeviceOverview data if found,
    *          or an error Observable if not found.
    */
-  override getDeviceOverview(id: string): Observable<DeviceOverview> {
+  override getDeviceOverview(id: string): Observable<DeviceOverviewPageData> {
     const scenario = MOCK_DEVICE_SCENARIOS.find((s) => s.id === id);
     if (scenario) {
-      return of(scenario.overview);
+      return of({
+        overview: scenario.overview,
+        headerInfo: this.getMockDeviceHeaderInfo(scenario.overview),
+      });
+    } else {
+      return throwError(
+        () => new Error(`Device with ID '${id}' not found in mock data.`),
+      );
+    }
+  }
+
+  override getDeviceHeaderInfo(id: string): Observable<DeviceHeaderInfo> {
+    const scenario = MOCK_DEVICE_SCENARIOS.find((s) => s.id === id);
+    if (scenario) {
+      return of(this.getMockDeviceHeaderInfo(scenario.overview));
     } else {
       return throwError(
         () => new Error(`Device with ID '${id}' not found in mock data.`),
@@ -90,6 +116,125 @@ export class FakeDeviceService extends DeviceService {
       `FakeService: Fetching Recovery Tasks for ${id} from ${startTime} to ${endTime}`,
     );
     return of();
+  }
+
+  override takeScreenshot(id: string): Observable<TakeScreenshotResponse> {
+    console.log(`FakeService: Taking screenshot for ${id}`);
+    return of({
+      screenshotUrl: 'https://screenshot.googleexampleplex.com/faked',
+      capturedAt: new Date().toISOString(),
+    });
+  }
+
+  override getLogcat(id: string): Observable<GetLogcatResponse> {
+    console.log(`FakeService: Getting logcat for ${id}`);
+    return of({
+      logUrl: 'https://example.com/logcat.txt',
+      capturedAt: new Date().toISOString(),
+    });
+  }
+
+  override quarantineDevice(
+    id: string,
+    req: QuarantineDeviceRequest,
+  ): Observable<QuarantineDeviceResponse> {
+    console.log(`FakeService: Quarantining ${id} for ${req.durationHours}h`);
+    const expiry = new Date();
+    expiry.setHours(expiry.getHours() + req.durationHours);
+    return of({quarantineExpiry: expiry.toISOString()});
+  }
+
+  override unquarantineDevice(id: string): Observable<void> {
+    console.log(`FakeService: Unquarantining ${id}`);
+    return of(undefined);
+  }
+
+  override remoteControl(
+    id: string,
+    req: RemoteControlRequest,
+  ): Observable<RemoteControlResponse> {
+    console.log(`FakeService: Remote controlling ${id} with req:`, req);
+    return of({
+      sessionUrl: `https://xcid.google.example.com/provider/mh/create/?deviceId=${id}`,
+    });
+  }
+
+  private getMockDeviceHeaderInfo(overview: DeviceOverview): DeviceHeaderInfo {
+    const isAndroid = overview.basicInfo.os === 'Android';
+    const isMissing =
+      overview.healthAndActivity.deviceStatus.status === 'MISSING';
+    const isIdle = overview.healthAndActivity.deviceStatus.status === 'IDLE';
+    const isFlashable = overview.healthAndActivity.deviceTypes.some(
+      (t) => t.type === 'AndroidFlashableDevice',
+    );
+    const screenshotable = overview.capabilities.supportedDecorators.includes(
+      'AndroidScreenshotDecorator',
+    );
+
+    const remoteControlEnabled = isAndroid && isIdle;
+    const screenshotEnabled = isAndroid && !isMissing && screenshotable;
+    const logcatEnabled = isAndroid && !isMissing;
+    const flashEnabled = isAndroid && isFlashable;
+
+    return {
+      id: overview.id,
+      host: overview.host,
+      quarantine: {
+        isQuarantined: overview.healthAndActivity.isQuarantined,
+        expiry: overview.healthAndActivity.quarantineExpiry,
+      },
+      actions: {
+        screenshot: {
+          enabled: screenshotEnabled,
+          visible: true,
+          tooltip: screenshotEnabled
+            ? 'Take screenshot'
+            : !isAndroid
+              ? 'Only for Android devices'
+              : isMissing
+                ? 'Device is missing'
+                : 'Screenshot not supported',
+        },
+        logcat: {
+          enabled: logcatEnabled,
+          visible: true,
+          tooltip: logcatEnabled
+            ? 'Get logcat'
+            : !isAndroid
+              ? 'Only for Android devices'
+              : 'Device is missing',
+        },
+        flash: {
+          enabled: flashEnabled,
+          visible: true,
+          tooltip: flashEnabled
+            ? 'Flash device'
+            : !isAndroid
+              ? 'Only for Android devices'
+              : 'Device not flashable',
+          params: {
+            deviceType: 'AndroidRealDevice',
+            requiredDimensions: '',
+          },
+        },
+        remoteControl: {
+          enabled: remoteControlEnabled,
+          visible: true,
+          tooltip: remoteControlEnabled
+            ? 'Remote control'
+            : !isAndroid
+              ? 'Only for Android devices'
+              : 'Device must be IDLE for remote control',
+          runAsOptions: [{value: 'test', label: 'test', isDefault: true}],
+          defaultRunAs: 'test',
+        },
+        quarantine: {
+          enabled: true,
+          visible: true,
+          tooltip: 'Quarantine device',
+        },
+      },
+    };
   }
 
   // Future methods like listDevices, updateDeviceConfig, etc., would be added here.

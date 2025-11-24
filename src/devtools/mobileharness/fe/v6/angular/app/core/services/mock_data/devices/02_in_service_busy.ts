@@ -25,6 +25,8 @@ const OVERVIEW: DeviceOverview = {
       taskId: 'a1b2c3d4-e5f6-4008-adf9-26d1a70e5f61',
       jobId: 'job-uuid-1111-2222-3333-4444',
     },
+    isQuarantined: false,
+    quarantineExpiry: '',
   },
   basicInfo: {
     model: 'N/A',

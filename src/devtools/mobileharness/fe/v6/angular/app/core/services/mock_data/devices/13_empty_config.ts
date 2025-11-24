@@ -19,6 +19,8 @@ const OVERVIEW: DeviceOverview = {
     deviceStatus: {status: 'IDLE', isCritical: false},
     deviceTypes: [{type: 'AndroidDevice', isAbnormal: false}],
     lastInServiceTime: new Date().toISOString(),
+    isQuarantined: false,
+    quarantineExpiry: '',
   },
   basicInfo: {
     model: 'Pixel 7a',

@@ -33,6 +33,8 @@ const OVERVIEW: DeviceOverview = {
       explanation:
         'An automated recovery task is running. If successful, the device will return to service automatically. No immediate action is required.',
     },
+    isQuarantined: false,
+    quarantineExpiry: '',
   },
   basicInfo: {
     model: 'Pixel 8',

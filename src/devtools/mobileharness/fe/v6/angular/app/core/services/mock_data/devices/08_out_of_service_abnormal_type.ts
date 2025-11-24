@@ -32,6 +32,8 @@ const OVERVIEW: DeviceOverview = {
       suggestedAction:
         'Try rebooting the device. If the abnormal types persist, consider quarantining the device for manual debugging or re-imaging.',
     },
+    isQuarantined: false,
+    quarantineExpiry: '',
   },
   basicInfo: {
     model: 'Pixel 7 Pro',

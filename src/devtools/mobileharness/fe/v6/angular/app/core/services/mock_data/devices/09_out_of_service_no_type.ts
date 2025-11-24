@@ -27,6 +27,8 @@ const OVERVIEW: DeviceOverview = {
       suggestedAction:
         'Ensure the device is properly flashed and has completed its initial setup. If the problem persists, quarantine the device for manual inspection.',
     },
+    isQuarantined: false,
+    quarantineExpiry: '',
   },
   basicInfo: {
     model: 'Unknown',

@@ -1,5 +1,10 @@
 import {CommonModule} from '@angular/common';
-import {ChangeDetectionStrategy, Component, inject, signal} from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  inject,
+  signal,
+} from '@angular/core';
 import {MatDialog} from '@angular/material/dialog';
 import {MatIconModule} from '@angular/material/icon';
 import {MatMenuModule} from '@angular/material/menu';
@@ -7,7 +12,7 @@ import {ActivatedRoute, RouterModule} from '@angular/router';
 import {Observable, of} from 'rxjs';
 import {catchError, map, switchMap} from 'rxjs/operators';
 
-import {DeviceOverview} from '../../core/models/device_overview';
+import {DeviceOverviewPageData} from '../../core/models/device_overview';
 import {DEVICE_SERVICE} from '../../core/services/device/device_service';
 
 import {DeviceConfig} from './components/device_config/device_config';
@@ -16,7 +21,7 @@ import {DeviceWizard} from './components/device_config/device_wizard/device_wiza
 import {DeviceOverviewTab} from './components/device_overview_tab/device_overview_tab';
 
 interface DevicePageData {
-  device: DeviceOverview | null;
+  pageData: DeviceOverviewPageData | null;
   error: string | null;
 }
 
@@ -38,7 +43,6 @@ interface DevicePageData {
   templateUrl: './device_detail_page.ng.html',
   styleUrl: './device_detail_page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-
 })
 export class DeviceDetailPage {
   private readonly route = inject(ActivatedRoute);
@@ -55,20 +59,22 @@ export class DeviceDetailPage {
       switchMap((id) => {
         if (!id) {
           return of<DevicePageData>({
-            device: null,
+            pageData: null,
             error: 'No device ID provided in the route.',
           });
         }
         return this.deviceService.getDeviceOverview(id).pipe(
-          map((device) => ({
-            device,
+          map((pageData) => ({
+            pageData,
             error: null,
           })),
           catchError((err) => {
             console.error(`Error fetching device ${id}:`, err);
             return of<DevicePageData>({
-              device: null,
-              error: `Failed to load device data for ID: ${id}. ${err.message || ''}`,
+              pageData: null,
+              error: `Failed to load device data for ID: ${id}. ${
+                err.message || ''
+              }`,
             });
           }),
         );
@@ -81,40 +87,39 @@ export class DeviceDetailPage {
 
   resetConfiguration(deviceId: string, hostName: string) {
     this.dialog
-        .open(DeviceEmpty, {
-          data: {
-            deviceId,
-            hostName,
-            title:
-                'You are about to clear the existing configuration for this device. Your current settings will be discarded. Please choose how you want to proceed.',
-          },
-          autoFocus: false,
-        })
-        .afterClosed()
-        .subscribe((result) => {
-          if (!result) {
-            return;
-          }
+      .open(DeviceEmpty, {
+        data: {
+          deviceId,
+          hostName,
+          title:
+            'You are about to clear the existing configuration for this device. Your current settings will be discarded. Please choose how you want to proceed.',
+        },
+        autoFocus: false,
+      })
+      .afterClosed()
+      .subscribe((result) => {
+        if (!result) {
+          return;
+        }
 
-          this.createorcopyConfiguration(
-              result.action,
-              result.deviceId,
-              result.config,
-          );
-        });
+        this.createorcopyConfiguration(
+          result.action,
+          result.deviceId,
+          result.config,
+        );
+      });
   }
 
   createorcopyConfiguration(
-      action: string,
-      deviceId: string,
-      config: DeviceConfig|null,
+    action: string,
+    deviceId: string,
+    config: DeviceConfig | null,
   ) {
     this.dialog.open(DeviceWizard, {
       data: {source: action, deviceId, config},
       autoFocus: false,
     });
   }
-
 
   // Mock action buttons from prototype
   openConfiguration(deviceId: string, hostName: string): void {
@@ -123,7 +128,7 @@ export class DeviceDetailPage {
       autoFocus: false,
     });
 
-    dialogRef.afterClosed().subscribe(result => {
+    dialogRef.afterClosed().subscribe((result) => {
       if (!result) {
         return;
       }

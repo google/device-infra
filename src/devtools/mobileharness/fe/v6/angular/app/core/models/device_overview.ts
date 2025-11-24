@@ -10,6 +10,8 @@
  *   by the backend.
  */
 
+import {DeviceHeaderInfo, HostInfo} from './device_action';
+
 /**
  * Represents the comprehensive data required to render the "Overview" tab
  * on the Device Detail Page.
@@ -47,17 +49,6 @@ export interface DeviceOverview {
 }
 
 // --- Helper Interfaces for DeviceOverview ---
-
-/**
- * Information about the host machine.
- */
-export interface HostInfo {
-  /** The hostname of the lab server. */
-  name: string;
-  /** The IP address of the lab server. */
-  ip: string;
-  // Future additions could include a link to the host's detail page.
-}
 
 /**
  * Enum-like union of strings representing the high-level health state of the device.
@@ -164,6 +155,8 @@ export interface HealthAndActivityInfo {
      */
     suggestedAction?: string;
   };
+  isQuarantined: boolean;
+  quarantineExpiry: string;
 }
 
 /**
@@ -239,4 +232,12 @@ export interface DimensionSourceGroup {
 export interface Dimensions {
   supported?: {[key: string]: DimensionSourceGroup};
   required?: {[key: string]: DimensionSourceGroup};
+}
+
+/**
+ * Data for device overview page.
+ */
+export interface DeviceOverviewPageData {
+  headerInfo: DeviceHeaderInfo;
+  overview: DeviceOverview;
 }

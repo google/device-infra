@@ -27,6 +27,8 @@ const OVERVIEW: DeviceOverview = {
       explanation:
         'This is usually part of a routine process like initialization or cleanup. The device is expected to become available shortly.',
     },
+    isQuarantined: false,
+    quarantineExpiry: '',
   },
   basicInfo: {
     model: 'Pixel Fold',
