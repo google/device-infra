@@ -77,16 +77,19 @@ public final class GetDeviceOverviewHandler {
   private final LabInfoStub labInfoStub;
   private final ConfigurationProvider configurationProvider;
   private final ListeningExecutorService executor;
+  private final HealthAndActivityBuilder healthAndActivityBuilder;
   private final AsyncLoadingCache<String, DeviceOverview> overviewCache;
 
   @Inject
   GetDeviceOverviewHandler(
       LabInfoStub labInfoStub,
       ConfigurationProvider configurationProvider,
-      ListeningExecutorService executor) {
+      ListeningExecutorService executor,
+      HealthAndActivityBuilder healthAndActivityBuilder) {
     this.labInfoStub = labInfoStub;
     this.configurationProvider = configurationProvider;
     this.executor = executor;
+    this.healthAndActivityBuilder = healthAndActivityBuilder;
     this.overviewCache =
         Caffeine.newBuilder()
             .expireAfterWrite(Duration.ofMinutes(5))
@@ -258,7 +261,8 @@ public final class GetDeviceOverviewHandler {
     // Dimensions
     builder.setDimensions(buildDimensions(deviceInfo, deviceConfigOpt, labConfigOpt));
 
-    // HealthAndActivityInfo - TODO: Implement in next task.
+    // HealthAndActivityInfo
+    builder.setHealthAndActivity(healthAndActivityBuilder.buildHealthAndActivityInfo(deviceInfo));
 
     return builder.build();
   }

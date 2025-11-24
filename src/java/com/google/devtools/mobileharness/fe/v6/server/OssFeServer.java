@@ -30,6 +30,7 @@ import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.protobuf.services.ProtoReflectionService;
 import java.io.IOException;
+import java.time.InstantSource;
 import javax.inject.Inject;
 
 /** Main class for the open-source FE gRPC server. */
@@ -87,6 +88,7 @@ public final class OssFeServer {
                 bind(Integer.class)
                     .annotatedWith(ServerPort.class)
                     .toInstance(Flags.instance().feGrpcPort.getNonNull());
+                bind(InstantSource.class).toInstance(InstantSource.system());
               }
             });
     OssFeServer server = injector.getInstance(OssFeServer.class);

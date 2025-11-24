@@ -21,9 +21,18 @@ package(
 )
 
 java_library(
+    name = "handlers",
+    exports = [
+        ":get_device_overview_handler",
+        ":health_and_activity_builder",
+    ],
+)
+
+java_library(
     name = "get_device_overview_handler",
     srcs = ["GetDeviceOverviewHandler.java"],
     deps = [
+        ":health_and_activity_builder",
         "//src/devtools/mobileharness/api/deviceconfig/proto:device_java_proto",
         "//src/devtools/mobileharness/api/deviceconfig/proto:lab_java_proto",
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
@@ -37,6 +46,20 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_github_ben_manes_caffeine_caffeine",
         "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "health_and_activity_builder",
+    srcs = ["HealthAndActivityBuilder.java"],
+    deps = [
+        "//src/devtools/mobileharness/api/model/proto:device_java_proto",
+        "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
+        "//src/devtools/mobileharness/fe/v6/service/proto/device:device_resources_java_proto",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
+        "@maven//:com_google_guava_guava",
+        "@maven//:com_google_protobuf_protobuf_java",
         "@maven//:javax_inject_jsr330_api",
     ],
 )
