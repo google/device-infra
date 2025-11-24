@@ -1,7 +1,22 @@
+@use '@angular/material' as mat;
+
 $labconsole-font: 'Google Sans', Roboto, Arial, sans-serif;
 
 :host {
   font-family: $labconsole-font;
+
+  @include mat.table-overrides((
+    row-item-label-text-font: $labconsole-font,
+  ));
+
+  @include mat.checkbox-overrides((
+    touch-target-size: 36px,
+    state-layer-size: 36px,
+    selected-icon-color: #1967d2,
+    selected-checkmark-color: #fff,
+    selected-hover-icon-color: #1967d2,
+    selected-focus-icon-color: #1967d2,
+  ));
 }
 
 .overflow-ellipsis {
@@ -81,8 +96,8 @@ $labconsole-font: 'Google Sans', Roboto, Arial, sans-serif;
   }
 
   a {
-    background-color: #dae2f9;
-    color: #00458f;
+    background-color: #e8f0fe;
+    color: #1967d2;
     font-size: 0.75rem;
     line-height: 1rem;
     display: inline-flex;
@@ -100,7 +115,8 @@ $labconsole-font: 'Google Sans', Roboto, Arial, sans-serif;
     padding:0.25rem 0.75rem;
 
     &:hover {
-      background-color: #c5d2f3;
+      background-color: #d2e3fc;
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, .05);
     }
   }
 
@@ -141,7 +157,6 @@ $labconsole-font: 'Google Sans', Roboto, Arial, sans-serif;
 }
 
 .monospace-block {
-  font-family: 'Roboto Mono', monospace;
   font-size: 0.875rem;
   background-color: #e9ecef;
   padding: 0.75rem 1rem;
@@ -250,7 +265,6 @@ $labconsole-font: 'Google Sans', Roboto, Arial, sans-serif;
 }
 
 .flags-textarea {
-  font-family: 'Roboto Mono', monospace;
   font-size: 0.875rem;
   background-color: #fff;
   padding: 0.75rem 1rem;
@@ -275,6 +289,7 @@ $labconsole-font: 'Google Sans', Roboto, Arial, sans-serif;
   display: flex;
   justify-content: flex-end;
   gap: 0.5rem;
+  align-items: center;
 }
 
 .flags-edit-button {
@@ -286,18 +301,259 @@ $labconsole-font: 'Google Sans', Roboto, Arial, sans-serif;
   cursor: pointer;
   transition: background-color 0.2s;
 
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
   &.cancel {
     background-color: transparent;
     color: #5f6368;
-    &:hover {
+    border: 1px solid #e0e0e0;
+    &:hover:not(:disabled) {
       background-color: #f1f3f4;
     }
   }
   &.save {
-    background-color: #1a73e8;
-    color: white;
-    &:hover {
-      background-color: #185abc;
+    // background-color: #1a73e8;
+    // color: white;
+    background-color: #e8f0fe;
+    color: #1967d2;
+    border: 1px solid #e0e0e0;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    &:hover:not(:disabled) {
+      background-color: #d2e3fc;
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, .05);
+    }
+
+    .button-spinner {
+      width: 1rem;
+      height: 1rem;
+      margin-right: 0.375rem;
     }
   }
 }
+
+// styles for device table
+.device-table-toolbar {
+  height: 3rem;
+  margin-bottom: 1rem;
+  position: relative;
+
+  .device-toolbar-content {
+    opacity: 1;
+    transition-duration: 200ms;
+    transition-property: opacity;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    justify-content: space-between;
+    align-items: center;
+    display: flex;
+    position: absolute;
+    inset: 0;
+
+    &.selected {
+      gap: 0.5rem;
+      justify-content: flex-start;
+      flex-wrap: wrap; // Allow wrapping
+      align-items: center;
+
+      .clear-selection-button {
+        padding: 12px 0;
+      }
+
+      .selected-text {
+        color: #4b5563;
+        font-weight: 500;
+        font-size: 0.875rem;
+        line-height: 1.25rem;
+      }
+
+      .actions-container {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .separator {
+        width: 1px;
+        height: 1.25rem;
+        background-color: #d1d5db;
+        margin: 0 0.25rem;
+      }
+
+      .action-button {
+        background-color: #e8f0fe;
+        color: #1967d2;
+        font-size: 0.75rem;
+        line-height: 1rem;
+        border-radius: 18px;
+
+        &:hover {
+          background-color: #d2e3fc;
+        }
+
+        span {
+          font-weight: 500;
+          color: #1967d2;
+          font-size: 0.75rem;
+          line-height: 1rem;
+        }
+
+        @media (max-width: 1200px) {
+          // hide text on small screens.
+          .action-button-text {
+            display: none;
+          }
+
+          mat-icon {
+            margin: 0;
+          }
+        }
+      }
+    }
+  }
+
+  .device-count {
+    color: #6b7280;
+    font-weight: 400;
+    margin-left: 0.25rem;
+  }
+
+  .device-filter-input {
+    background-color: #fff;
+    border-radius: 0.25rem;
+
+    mat-icon {
+      padding-right: 0.5rem;
+    }
+  }
+}
+
+.device-table-container {
+  width: 100%;
+  max-height: 50vh;
+  // min-height: 300px;
+  overflow-x: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+
+  scrollbar-width: thin;
+  scrollbar-color: #bdc1c6 transparent;
+
+  &::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-clip: padding-box;
+    background-color: #bdc1c6;
+    border-radius: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background-color: #9aa0a6;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .limit-width {
+    max-width: 15rem;
+    min-width: 10rem;
+  }
+
+  .truncate-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sticky-header {
+    background-color: rgb(243, 244, 246, 0.7);
+  }
+
+  .sticky-start-header, .sticky-end-header {
+    background-color: #f3f4f6;
+  }
+
+
+  // .sticky-start {
+  //   box-shadow: inset -1px 0 #e5e7eb;
+  // }
+
+  // .sticky-end {
+  //   box-shadow: inset 1px 0 #e5e7eb;
+  // }
+
+  .mat-column-select {
+    padding: 0 12px;
+  }
+
+  // styles for id column
+  .id-link {
+    text-decoration: none;
+    font-weight: 500;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  // styles for health column
+  .health-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .health-icon {
+    font-size: 1rem;
+    height: 1rem;
+    width: 1rem;
+  }
+
+  // styles for type/status column
+  .type-chip-wrapper {
+    display: flex;
+    align-items: center;
+  }
+
+  .type-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    line-height: 1;
+    white-space: nowrap;
+
+    &.type-chip-abnormal {
+      background-color: #d93025;
+      color: white;
+    }
+
+    &.type-chip-normal {
+      background-color: #e0e0e0;
+      color: #3c4043;
+    }
+  }
+
+  .type-count {
+    font-size: 0.75rem;
+    line-height: 1rem;
+    margin-left: 0.25rem;
+    color: #6b7280;
+  }
+
+  .mat-column-actions {
+    width: 2.5rem;
+  }
+}
+

@@ -6,7 +6,7 @@ $labconsole-font: 'Google Sans', Roboto, Arial, sans-serif;
   padding: 1rem 0;
   gap: 1.5rem;
 
-  @media (min-width: 768px) {
+  @media (min-width: 992px) {
     flex-direction: row;
   }
 }
@@ -19,7 +19,7 @@ $labconsole-font: 'Google Sans', Roboto, Arial, sans-serif;
   max-height: calc(100vh - 4rem);
   overflow-y: auto;
 
-  @media (min-width: 768px) {
+  @media (min-width: 992px) {
     width: 16rem; // w-64
     position: sticky;
     top: 2rem; // Adjust as needed
@@ -35,7 +35,7 @@ $labconsole-font: 'Google Sans', Roboto, Arial, sans-serif;
   border-radius: 0.5rem;
   border: 1px solid #e5e7eb;
 
-  @media (min-width: 768px) {
+  @media (min-width: 992px) {
     background-color: transparent;
     padding: 0;
     border: none;
