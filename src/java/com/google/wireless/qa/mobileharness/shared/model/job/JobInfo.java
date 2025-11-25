@@ -230,8 +230,20 @@ public class JobInfo extends JobScheduleUnit {
       help =
           "If this flag is true, the udeclared_output.zip won't be uploaded to Sponge. Only works"
               + " if the job is triggered via gateway. This param is only for PMW temperally usage,"
-              + " and will be removed in early 2024.")
+              + " and will be removed in early 2024. Please use"
+              + " sponge_artifact_upload_mode_in_gateway instead.")
   public static final String PARAM_SKIP_UPLOAD_UNDECLARED_OUTPUT = "skip_upload_undeclared_output";
+
+  @ParamAnnotation(
+      required = false,
+      help =
+          "The artifact upload mode to Sponge. See the enum {@link"
+              + " com.google.wireless.qa.mobileharness.shared.sponge.InvocationRenderV2Parameters.SpongeArtifactUploadMode"
+              + " SpongeArtifactUploadMode} Case is ignored. By default, it is"
+              + " SpongeArtifactUploadMode.ARCHIVE_AND_INDIVIDUAL_FILES. Only works if the job is"
+              + " triggered via gateway.")
+  public static final String PARAM_SPONGE_ARTIFACT_UPLOAD_MODE_IN_GATEWAY =
+      "sponge_artifact_upload_mode_in_gateway";
 
   @ParamAnnotation(
       required = false,
