@@ -24,6 +24,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
@@ -32,6 +33,10 @@ import com.google.devtools.mobileharness.api.model.job.out.Warnings;
 import com.google.devtools.mobileharness.api.model.proto.Test;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
+import com.google.devtools.mobileharness.platform.android.instrumentation.parser.AmInstrumentationParser;
+import com.google.devtools.mobileharness.platform.android.instrumentation.parser.AmInstrumentationResultBuilder;
+import com.google.devtools.mobileharness.platform.android.instrumentation.parser.TestTimeTrackerKt;
+import com.google.devtools.mobileharness.platform.android.instrumentation.result.proto.TestSuiteResult;
 import com.google.devtools.mobileharness.platform.android.lightning.apkfile.ApkAnalyzer;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstallArgs;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstaller;
@@ -47,6 +52,7 @@ import com.google.devtools.mobileharness.shared.util.base.StrUtil;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandException;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
+import com.google.devtools.mobileharness.shared.util.command.LineCallback;
 import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryException;
 import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryStrategy;
 import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryingCallable;
@@ -74,6 +80,7 @@ import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -190,6 +197,8 @@ public class AndroidInstrumentationUtil {
 
   /** Wait time for MediaProvider to reindex files after clearing its data. */
   private static final Duration MEDIA_PROVIDER_REINDEX_DELAY = Duration.ofSeconds(10);
+
+  private static final String INSTRUMENT_TEST_RESULT_FILE_BASE_NAME = "instrument_test_result";
 
   /** The result of the gtest process result. */
   @AutoValue
@@ -309,6 +318,35 @@ public class AndroidInstrumentationUtil {
       AndroidInstrumentationSetting instrumentationSetting,
       Duration timeout)
       throws MobileHarnessException, InterruptedException {
+    return instrument(
+        serial, deviceSdkVersion, instrumentationSetting, timeout, /* testInfo= */ null);
+  }
+
+  /**
+   * Runs instrument command within the time limited.
+   *
+   * <p>For command output, Adb uses "\r\n" as line separator on SDK<=23, while uses "\n" as line
+   * separator on SDK>23. It's callers' responsibility to parse it correctly.
+   *
+   * @param serial serial number of the device
+   * @param deviceSdkVersion sdk version of the device, to determine whether nohup is supported when
+   *     user want to async run instrument
+   * @param instrumentationSetting arguments to run "am instrument" command
+   * @param timeout max execution time
+   * @param testInfo test info of the test
+   * @return std/err output
+   * @throws MobileHarnessException if fails to execute the commands or timeout
+   * @throws InterruptedException if the thread executing the commands is interrupted
+   * @see <a href="https://developer.android.com/studio/command-line/adb#am">Instrument options</a>
+   */
+  @CanIgnoreReturnValue
+  public String instrument(
+      String serial,
+      @Nullable Integer deviceSdkVersion,
+      AndroidInstrumentationSetting instrumentationSetting,
+      Duration timeout,
+      @Nullable TestInfo testInfo)
+      throws MobileHarnessException, InterruptedException {
     StringBuilder command = new StringBuilder();
     String packageName = instrumentationSetting.packageName();
     String runnerName = instrumentationSetting.runnerName();
@@ -320,6 +358,8 @@ public class AndroidInstrumentationUtil {
     boolean noIsolatedStorage = instrumentationSetting.noIsolatedStorage();
     boolean useTestStorageService = instrumentationSetting.useTestStorageService();
     boolean enableCoverage = instrumentationSetting.enableCoverage();
+    TestSuiteResult.Builder testSuiteResultBuilder = null;
+    LineCallback instrumentationResultCallback = null;
 
     if (async) {
       command.append(ADB_SHELL_NOHUP_START);
@@ -351,6 +391,8 @@ public class AndroidInstrumentationUtil {
     command.append(" -w");
     if (showRawResults) {
       command.append(" -r");
+      testSuiteResultBuilder = TestSuiteResult.newBuilder();
+      instrumentationResultCallback = getInstrumentationResultCallback(testSuiteResultBuilder);
     }
     if (!StrUtil.isEmptyOrWhitespace(className)) {
       command.append(" -e class ");
@@ -391,13 +433,30 @@ public class AndroidInstrumentationUtil {
         var unused = adb.runShellAsync(serial, command.toString(), timeout);
         return "";
       } else {
-        String output = adb.runShell(serial, command.toString(), timeout).trim();
+        String output =
+            adb.runShell(serial, command.toString(), timeout, instrumentationResultCallback).trim();
         if (output.endsWith("=") && clock.instant().minusMillis(begin).toEpochMilli() < 3 * 1000) {
+          if (testSuiteResultBuilder != null) {
+            testSuiteResultBuilder.clear();
+            instrumentationResultCallback =
+                getInstrumentationResultCallback(testSuiteResultBuilder);
+          }
           logger.atWarning().log("Instrument acts unexpectedly: %s%nTry again.", output);
-          return adb.runShell(serial, command.toString(), timeout).trim();
-        } else {
-          return output;
+          output =
+              adb.runShell(serial, command.toString(), timeout, instrumentationResultCallback)
+                  .trim();
         }
+        if (testSuiteResultBuilder != null) {
+          localFileUtil.writeToFile(
+              PathUtil.join(
+                  testInfo.getGenFileDir(), INSTRUMENT_TEST_RESULT_FILE_BASE_NAME + ".textproto"),
+              testSuiteResultBuilder.build().toString());
+          localFileUtil.writeToFile(
+              PathUtil.join(
+                  testInfo.getGenFileDir(), INSTRUMENT_TEST_RESULT_FILE_BASE_NAME + ".pb"),
+              testSuiteResultBuilder.build().toByteArray());
+        }
+        return output;
       }
     } catch (MobileHarnessException e) {
       AndroidErrorId newId;
@@ -419,6 +478,24 @@ public class AndroidInstrumentationUtil {
               command),
           e);
     }
+  }
+
+  private LineCallback getInstrumentationResultCallback(
+      TestSuiteResult.Builder testSuiteResultBuilder) {
+    AmInstrumentationResultBuilder amInstrumentationResultBuilder =
+        new AmInstrumentationResultBuilder(testSuiteResultBuilder);
+
+    AmInstrumentationParser amInstrumentationparser =
+        new AmInstrumentationParser(
+            ImmutableSet.of(amInstrumentationResultBuilder),
+            () -> TestTimeTrackerKt.TestTimeTracker(Instant::now));
+    return new LineCallback() {
+      @Override
+      public LineCallback.Response onLine(String line) {
+        amInstrumentationparser.parse(line);
+        return LineCallback.Response.empty();
+      }
+    };
   }
 
   /**

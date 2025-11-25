@@ -476,7 +476,8 @@ public class AndroidInstrumentation extends BaseDriver
                     /* useTestStorageService= */ true,
                     job.params()
                         .getBool(AndroidInstrumentationDriverSpec.PARAM_ENABLE_COVERAGE, false)),
-                Duration.ofMillis(testTimeoutMs));
+                Duration.ofMillis(testTimeoutMs),
+                testInfo);
       } catch (MobileHarnessException e) {
         testInfo
             .log()
