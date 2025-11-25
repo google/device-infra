@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.shared.util.file.remote;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
@@ -49,11 +50,10 @@ import com.google.common.primitives.Bytes;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptions;
+import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.file.checksum.ChecksumUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
@@ -79,7 +79,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
-import java.util.concurrent.Executors;
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLException;
 
@@ -115,10 +114,8 @@ public class GcsUtil {
   /** Thread pool for uploading/downloading GSC file in parellel. */
   private static final class Holder {
     private static final ListeningExecutorService threadpool =
-        MoreExecutors.listeningDecorator(
-            Executors.newFixedThreadPool(
-                Flags.instance().gcsUtilThreads.getNonNull(),
-                new ThreadFactoryBuilder().setNameFormat("gcs-util-%d").build()));
+        ThreadPools.createStandardThreadPoolWithMaxSize(
+            "gcs-util", Flags.instance().gcsUtilThreads.getNonNull());
 
     static {
       Runtime.getRuntime()
@@ -599,8 +596,7 @@ public class GcsUtil {
               }));
     }
 
-    ListenableFuture<?> future =
-        Futures.whenAllSucceed(results).call(() -> null, Holder.threadpool);
+    ListenableFuture<?> future = Futures.whenAllSucceed(results).call(() -> null, directExecutor());
     try {
       future.get();
       logger.atInfo().log(

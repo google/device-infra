@@ -1421,7 +1421,7 @@ public class Flags {
       converter = Flag.StringConverter.class)
   public Flag<String> gcsResolverProjectId = gcsResolverProjectIdDefault;
 
-  private static final Flag<Integer> gcsUtilThreadsDefault = Flag.value(30);
+  private static final Flag<Integer> gcsUtilThreadsDefault = Flag.value(50);
 
   @com.beust.jcommander.Parameter(
       names = "--gcs_util_threads",
