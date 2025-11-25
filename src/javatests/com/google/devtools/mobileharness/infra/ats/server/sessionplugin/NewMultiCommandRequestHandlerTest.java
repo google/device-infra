@@ -1267,7 +1267,7 @@ public final class NewMultiCommandRequestHandlerTest {
     assertThat(commandDetail.getState()).isEqualTo(CommandState.ERROR);
     assertThat(commandDetail.getErrorMessage())
         .isEqualTo("test failed with exception [MH|UNDETERMINED|JOB_TIMEOUT|20103]");
-    assertThat(commandDetail.getErrorReason()).isEqualTo(ErrorReason.RESULT_PROCESSING_ERROR);
+    assertThat(commandDetail.getErrorReason()).isEqualTo(ErrorReason.OMNILAB_ERROR);
   }
 
   @Test
@@ -1294,7 +1294,7 @@ public final class NewMultiCommandRequestHandlerTest {
     assertThat(commandDetail.getState()).isEqualTo(CommandState.ERROR);
     assertThat(commandDetail.getErrorMessage())
         .isEqualTo("job failed with exception [MH|UNDETERMINED|JOB_TIMEOUT|20103]");
-    assertThat(commandDetail.getErrorReason()).isEqualTo(ErrorReason.RESULT_PROCESSING_ERROR);
+    assertThat(commandDetail.getErrorReason()).isEqualTo(ErrorReason.OMNILAB_ERROR);
   }
 
   @Test
@@ -1394,53 +1394,6 @@ public final class NewMultiCommandRequestHandlerTest {
     var unused = newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail);
     verify(sessionResultHandlerUtil, never())
         .processResult(any(), any(), any(), any(), any(), any());
-  }
-
-  @Test
-  public void handleResultProcessing_tradefedError_failWithErrorMessage() throws Exception {
-    setUpPassingJobAndTestResults();
-    ReportProto.Result result =
-        ReportProto.Result.newBuilder()
-            .setSummary(
-                ReportProto.Summary.newBuilder()
-                    .setPassed(9)
-                    .setFailed(1)
-                    .setModulesTotal(1)
-                    .build())
-            .build();
-    mockProcessResult(result);
-
-    // Mock the content of the tradefed invocation runtime info log file.
-    String tradefedInvocationErrorMessage = "example error message";
-    when(xtsTradefedRuntimeInfoFileUtil.readInfo(any(), any()))
-        .thenReturn(
-            Optional.of(
-                new XtsTradefedRuntimeInfoFileDetail(
-                    new XtsTradefedRuntimeInfo(
-                        ImmutableList.of(
-                            new TradefedInvocation(
-                                /* isRunning= */ false,
-                                ImmutableList.of(DEVICE_ID_1, DEVICE_ID_2),
-                                "failed",
-                                tradefedInvocationErrorMessage)),
-                        /* timestamp= */ Instant.now()),
-                    /* lastModifiedTime= */ Instant.now())));
-
-    HandleResultProcessingResult handleResultProcessingResult =
-        createJobAndHandleResultProcessing(request);
-
-    assertThat(handleResultProcessingResult.commandDetails()).hasSize(1);
-    CommandDetail commandDetail =
-        handleResultProcessingResult.commandDetails().values().iterator().next();
-    assertThat(commandDetail.getPassedTestCount()).isEqualTo(9);
-    assertThat(commandDetail.getFailedTestCount()).isEqualTo(1);
-    assertThat(commandDetail.getTotalTestCount()).isEqualTo(10);
-    String commandId =
-        UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
-    assertThat(commandDetail.getId()).isEqualTo(commandId);
-    assertThat(commandDetail.getState()).isEqualTo(CommandState.ERROR);
-    assertThat(commandDetail.getErrorReason()).isEqualTo(ErrorReason.TRADEFED_INVOCATION_ERROR);
-    assertThat(commandDetail.getErrorMessage()).isEqualTo(tradefedInvocationErrorMessage);
   }
 
   @Test
@@ -1545,12 +1498,7 @@ public final class NewMultiCommandRequestHandlerTest {
     setUpPassingJobAndTestResults();
     ReportProto.Result result =
         ReportProto.Result.newBuilder()
-            .setSummary(
-                ReportProto.Summary.newBuilder()
-                    .setPassed(9)
-                    .setFailed(1)
-                    .setModulesTotal(1)
-                    .build())
+            .setSummary(ReportProto.Summary.getDefaultInstance())
             .build();
     mockProcessResult(result);
 
@@ -1742,20 +1690,10 @@ public final class NewMultiCommandRequestHandlerTest {
   }
 
   @Test
-  public void handleResultProcessing_errorsDuringTradefedInvocationCheck_areIgnored()
+  public void handleResultProcessing_getTradefedInvocationLogDirError_commandError()
       throws Exception {
     setUpPassingJobAndTestResults();
-    ReportProto.Result result =
-        ReportProto.Result.newBuilder()
-            .setSummary(
-                ReportProto.Summary.newBuilder()
-                    .setPassed(10)
-                    .setFailed(0)
-                    .setModulesTotal(1)
-                    .build())
-            .addModuleInfo(
-                ReportProto.Module.newBuilder().setName("module1").setFailedTests(0).build())
-            .build();
+    ReportProto.Result result = ReportProto.Result.getDefaultInstance();
     mockProcessResult(result);
     when(sessionResultHandlerUtil.getTradefedInvocationLogDir(any(), any()))
         .thenThrow(
@@ -1767,7 +1705,10 @@ public final class NewMultiCommandRequestHandlerTest {
     assertThat(handleResultProcessingResult.commandDetails()).hasSize(1);
     CommandDetail commandDetail =
         handleResultProcessingResult.commandDetails().values().iterator().next();
-    assertThat(commandDetail.getState()).isEqualTo(CommandState.COMPLETED);
+    assertThat(commandDetail.getState()).isEqualTo(CommandState.ERROR);
+    assertThat(commandDetail.getErrorReason()).isEqualTo(ErrorReason.RESULT_PROCESSING_ERROR);
+    assertThat(commandDetail.getErrorMessage())
+        .isEqualTo("No valid test cases found in the result.");
   }
 
   @Test

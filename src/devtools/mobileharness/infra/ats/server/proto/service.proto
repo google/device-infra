@@ -200,6 +200,7 @@ enum ErrorReason {
   TOO_MANY_LOST_DEVICES = 5;
   RESULT_PROCESSING_ERROR = 6;
   TRADEFED_INVOCATION_ERROR = 7;
+  OMNILAB_ERROR = 8;
 }
 
 // Request detail returned by session service.

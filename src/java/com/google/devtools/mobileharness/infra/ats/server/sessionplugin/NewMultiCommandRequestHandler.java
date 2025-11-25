@@ -820,77 +820,49 @@ final class NewMultiCommandRequestHandler {
         resultProcessingException = e; // Store the exception
       }
 
-      // Check for Tradefed invocation errors first, as they are most important to users.
-      checkTradefedInvocationError(commandDetailBuilder, jobs, logDir);
-
-      // Determine final state if still not ERROR
+      // Determine final state.
+      // The error determination logic is as follows:
+      // 1. If command has module count > 0, then the command is considered completed and set state
+      // to COMPLETED, otherwise set state to ERROR.
+      // 2. If command has no modules, check if any tests or jobs failed, which mean the test didn't
+      // trigger successfully. If so, set state to ERROR.
+      // 3. If command has no modules and no test failures, check if there is a Tradefed invocation
+      // error. If so, set state to ERROR.
+      // 4. If command has no modules, no test failures, and no Tradefed invocation error, set
+      // state to ERROR with RESULT_PROCESSING_ERROR reason.
       if (commandDetailBuilder.getState() == CommandState.UNKNOWN_STATE
           || commandDetailBuilder.getState() == CommandState.RUNNING) {
         if (commandDetailBuilder.getTotalModuleCount() > 0) {
           commandDetailBuilder.setState(CommandState.COMPLETED);
         } else {
-          ImmutableList<TestInfo> failedTests =
-              jobs.stream()
-                  .flatMap(jobInfo -> jobInfo.tests().getAll().values().stream())
-                  .filter(
-                      testInfo ->
-                          testInfo.result().get() != TestResult.PASS
-                              && testInfo.result().get() != TestResult.SKIP)
-                  .collect(toImmutableList());
-          if (!failedTests.isEmpty()) {
-            TestInfo failedTest = failedTests.get(0);
-            String errorMessage =
-                failedTest
-                    .result()
-                    .toNewResult()
-                    .get()
-                    .causeException()
-                    .map(Throwable::getMessage)
-                    .orElse(
-                        String.format(
-                            "Test %s failed with result %s.",
-                            failedTest.locator().getId(), failedTest.result().get()));
+          Optional<String> failedTestErrorMessage = getFailedTestErrorMessage(jobs);
+          Optional<String> failedJobErrorMessage = getFailedJobErrorMessage(jobs);
+          Optional<String> tradefedInvocationErrorMessage =
+              getTradefedInvocationErrorMessage(jobs, logDir);
+          if (failedTestErrorMessage.isPresent()) {
             setCommandError(
-                commandDetailBuilder, ErrorReason.RESULT_PROCESSING_ERROR, errorMessage);
+                commandDetailBuilder, ErrorReason.OMNILAB_ERROR, failedTestErrorMessage.get());
+          } else if (failedJobErrorMessage.isPresent()) {
+            setCommandError(
+                commandDetailBuilder, ErrorReason.OMNILAB_ERROR, failedJobErrorMessage.get());
+          } else if (tradefedInvocationErrorMessage.isPresent()) {
+            setCommandError(
+                commandDetailBuilder,
+                ErrorReason.TRADEFED_INVOCATION_ERROR,
+                tradefedInvocationErrorMessage.get());
           } else {
-            ImmutableList<JobInfo> failedJobs =
-                jobs.stream()
-                    .filter(
-                        jobInfo ->
-                            jobInfo.result().get() != TestResult.PASS
-                                && jobInfo.result().get() != TestResult.SKIP)
-                    .collect(toImmutableList());
-            if (!failedJobs.isEmpty()) {
-              JobInfo failedJob = failedJobs.get(0);
-              setCommandError(
-                  commandDetailBuilder,
-                  ErrorReason.RESULT_PROCESSING_ERROR,
-                  failedJob
-                      .result()
-                      .toNewResult()
-                      .get()
-                      .causeException()
-                      .map(Throwable::getMessage)
-                      .orElse(
-                          String.format(
-                              "Job %s failed with result %s.",
-                              failedJob.locator().getId(), failedJob.result().get())));
-            } else {
-              setCommandError(
-                  commandDetailBuilder,
-                  ErrorReason.RESULT_PROCESSING_ERROR,
-                  "No valid test cases found in the result.");
-            }
+            setCommandError(
+                commandDetailBuilder,
+                ErrorReason.RESULT_PROCESSING_ERROR,
+                "No valid test cases found in the result.");
+          }
+          if (resultProcessingException != null) {
+            commandDetailBuilder.setErrorMessage(
+                commandDetailBuilder.getErrorMessage()
+                    + "\n\n--- Additional Result Processing Error ---\n"
+                    + getStackTraceAsString(resultProcessingException));
           }
         }
-      }
-      // Add result processing error to the error message if the command is in ERROR state.
-      if (commandDetailBuilder.getState() == CommandState.ERROR
-          && resultProcessingException != null) {
-        commandDetailBuilder.setErrorMessage(
-            commandDetailBuilder.getErrorMessage()
-                + "\n\n--- Additional Result Processing Error ---\n"
-                + getStackTraceAsString(resultProcessingException));
       }
       commandDetailBuilder
           .setEndTime(Timestamps.fromMillis(clock.millis()))
@@ -1035,12 +1007,63 @@ final class NewMultiCommandRequestHandler {
     }
   }
 
+  private Optional<String> getFailedTestErrorMessage(ImmutableList<JobInfo> jobs) {
+    ImmutableList<TestInfo> failedTests =
+        jobs.stream()
+            .flatMap(jobInfo -> jobInfo.tests().getAll().values().stream())
+            .filter(
+                testInfo ->
+                    testInfo.result().get() != TestResult.PASS
+                        && testInfo.result().get() != TestResult.SKIP)
+            .collect(toImmutableList());
+    if (!failedTests.isEmpty()) {
+      TestInfo failedTest = failedTests.get(0);
+      return Optional.of(
+          failedTest
+              .result()
+              .toNewResult()
+              .get()
+              .causeException()
+              .map(Throwable::getMessage)
+              .orElse(
+                  String.format(
+                      "Test %s failed with result %s.",
+                      failedTest.locator().getId(), failedTest.result().get())));
+    }
+    return Optional.empty();
+  }
+
+  private Optional<String> getFailedJobErrorMessage(ImmutableList<JobInfo> jobs) {
+    ImmutableList<JobInfo> failedJobs =
+        jobs.stream()
+            .filter(
+                jobInfo ->
+                    jobInfo.result().get() != TestResult.PASS
+                        && jobInfo.result().get() != TestResult.SKIP)
+            .collect(toImmutableList());
+    if (!failedJobs.isEmpty()) {
+      JobInfo failedJob = failedJobs.get(0);
+      return Optional.of(
+          failedJob
+              .result()
+              .toNewResult()
+              .get()
+              .causeException()
+              .map(Throwable::getMessage)
+              .orElse(
+                  String.format(
+                      "Job %s failed with result %s.",
+                      failedJob.locator().getId(), failedJob.result().get())));
+    }
+    return Optional.empty();
+  }
+
   /**
-   * Reads the Tradefed runtime info file and checks for the Tradefed invocation error message, and
-   * set it in the command detail proto if present.
+   * Reads the Tradefed runtime info file and returns the Tradefed invocation error message if
+   * present.
    */
-  private void checkTradefedInvocationError(
-      CommandDetail.Builder commandDetailBuilder, ImmutableList<JobInfo> jobs, Path logDir) {
+  private Optional<String> getTradefedInvocationErrorMessage(
+      ImmutableList<JobInfo> jobs, Path logDir) {
     ImmutableList<TestInfo> tradefedTestInfos =
         jobs.stream()
             .filter(jobInfo -> jobInfo.properties().getBoolean(Job.IS_XTS_TF_JOB).orElse(false))
@@ -1090,11 +1113,9 @@ final class NewMultiCommandRequestHandler {
       }
     }
     if (!errorMessages.isEmpty()) {
-      setCommandError(
-          commandDetailBuilder,
-          ErrorReason.TRADEFED_INVOCATION_ERROR,
-          String.join("\n", errorMessages));
+      return Optional.of(String.join("\n", errorMessages));
     }
+    return Optional.empty();
   }
 
   private ErrorReason getErrorReason(MobileHarnessException e) {
