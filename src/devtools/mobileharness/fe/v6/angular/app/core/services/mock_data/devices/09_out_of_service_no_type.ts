@@ -27,8 +27,6 @@ const OVERVIEW: DeviceOverview = {
       suggestedAction:
         'Ensure the device is properly flashed and has completed its initial setup. If the problem persists, quarantine the device for manual inspection.',
     },
-    isQuarantined: false,
-    quarantineExpiry: '',
   },
   basicInfo: {
     model: 'Unknown',
@@ -64,4 +62,5 @@ export const SCENARIO_OUT_OF_SERVICE_NO_TYPE: MockDeviceScenario = {
   scenarioName: 'Out of Service - No Type',
   overview: OVERVIEW,
   config: CONFIG,
+  isQuarantined: false,
 };

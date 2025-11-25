@@ -62,6 +62,7 @@ export type HealthState =
   | 'OUT_OF_SERVICE_RECOVERING' // Running an automated recovery process.
   | 'OUT_OF_SERVICE_TEMP_MAINT' // Temporarily unavailable due to routine maintenance (e.g., INIT, DIRTY < 1hr).
   | 'OUT_OF_SERVICE_NEEDS_FIXING' // In an error state requiring attention.
+  | 'IDLE_BUT_QUARANTINED' // Idle but quarantined.
   | 'UNKNOWN'; // Fallback for unexpected states.
 
 /**
@@ -155,8 +156,10 @@ export interface HealthAndActivityInfo {
      */
     suggestedAction?: string;
   };
-  isQuarantined: boolean;
-  quarantineExpiry: string;
+
+  // Deprecated: These fields are now in DeviceHeaderInfo.
+  // isQuarantined?: boolean;
+  // quarantineExpiry?: string;
 }
 
 /**

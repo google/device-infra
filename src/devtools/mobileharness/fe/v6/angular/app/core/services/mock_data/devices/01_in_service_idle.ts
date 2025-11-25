@@ -25,8 +25,6 @@ const OVERVIEW: DeviceOverview = {
       'AndroidRealDevice',
     ].map((type) => ({type, isAbnormal: false})),
     lastInServiceTime: new Date().toISOString(),
-    isQuarantined: false,
-    quarantineExpiry: '',
   },
   basicInfo: {
     model: 'Pixel 8 Pro',
@@ -116,4 +114,5 @@ export const SCENARIO_IN_SERVICE_IDLE: MockDeviceScenario = {
   scenarioName: 'In Service - Idle',
   overview: OVERVIEW,
   config: CONFIG,
+  isQuarantined: false,
 };

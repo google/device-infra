@@ -25,8 +25,6 @@ const OVERVIEW: DeviceOverview = {
       explanation: 'This means it has stopped sending heartbeats.',
       suggestedAction: 'Check device power and USB connection.',
     },
-    isQuarantined: false,
-    quarantineExpiry: '',
   },
   basicInfo: {
     model: 'Pixel 5',
@@ -64,4 +62,5 @@ export const SCENARIO_OUT_OF_SERVICE_UNKNOWN_TIME: MockDeviceScenario = {
   scenarioName: '11. Out of Service, Unknown Time (Critical)',
   overview: OVERVIEW,
   config: CONFIG,
+  isQuarantined: false,
 };

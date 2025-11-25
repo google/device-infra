@@ -19,8 +19,6 @@ const OVERVIEW: DeviceOverview = {
     deviceStatus: {status: 'IDLE', isCritical: false},
     deviceTypes: [{type: 'AndroidDevice', isAbnormal: false}],
     lastInServiceTime: new Date().toISOString(),
-    isQuarantined: false,
-    quarantineExpiry: '',
   },
   basicInfo: {
     model: 'Pixel 7a',
@@ -48,4 +46,5 @@ export const SCENARIO_EMPTY_CONFIG_WITH_HOST: MockDeviceScenario = {
   scenarioName: 'Empty Config with Host',
   overview: OVERVIEW,
   config: null,
+  isQuarantined: false,
 };

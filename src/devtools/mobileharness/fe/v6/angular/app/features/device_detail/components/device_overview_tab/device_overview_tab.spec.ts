@@ -54,8 +54,6 @@ describe('DeviceOverviewTab Component', () => {
         },
       ],
       lastInServiceTime: '2025-09-09T03:33:47.715Z',
-      isQuarantined: false,
-      quarantineExpiry: '',
     },
     dimensions: {
       supported: {

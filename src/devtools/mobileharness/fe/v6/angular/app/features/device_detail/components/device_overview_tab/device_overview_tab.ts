@@ -162,6 +162,14 @@ export class DeviceOverviewTab implements OnInit, OnDestroy, OnChanges {
           borderColorClass: 'border-l-amber-500',
           isSpinning: false,
         };
+      case 'IDLE_BUT_QUARANTINED':
+        return {
+          icon: 'block',
+          iconColorClass: 'text-red-600',
+          iconBgColorClass: 'bg-red-100',
+          borderColorClass: 'border-l-red-500',
+          isSpinning: false,
+        };
       case 'OUT_OF_SERVICE_NEEDS_FIXING':
       default:
         return {

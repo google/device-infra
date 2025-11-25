@@ -20,8 +20,6 @@ const OVERVIEW: DeviceOverview = {
     deviceStatus: {status: 'IDLE', isCritical: false},
     deviceTypes: [{type: 'AndroidDevice', isAbnormal: false}],
     lastInServiceTime: new Date().toISOString(),
-    isQuarantined: false,
-    quarantineExpiry: '',
   },
   basicInfo: {
     model: 'Pixel 8 Pro',
@@ -76,4 +74,5 @@ export const SCENARIO_HOST_MANAGED_DEVICE: MockDeviceScenario = {
   scenarioName: 'Host Managed Device',
   overview: OVERVIEW,
   config: CONFIG,
+  isQuarantined: false,
 };

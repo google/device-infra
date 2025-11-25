@@ -17,6 +17,8 @@ export interface MockDeviceScenario {
   scenarioName: string;
   overview: DeviceOverview;
   config: DeviceConfig | null;
+  isQuarantined: boolean;
+  quarantineExpiry?: string;
 }
 
 /**

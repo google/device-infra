@@ -33,8 +33,6 @@ const OVERVIEW: DeviceOverview = {
       explanation:
         'An automated recovery task is running. If successful, the device will return to service automatically. No immediate action is required.',
     },
-    isQuarantined: false,
-    quarantineExpiry: '',
   },
   basicInfo: {
     model: 'Pixel 8',
@@ -72,4 +70,5 @@ export const SCENARIO_OUT_OF_SERVICE_RECOVERING: MockDeviceScenario = {
   scenarioName: 'Out of Service - Recovering',
   overview: OVERVIEW,
   config: CONFIG,
+  isQuarantined: false,
 };

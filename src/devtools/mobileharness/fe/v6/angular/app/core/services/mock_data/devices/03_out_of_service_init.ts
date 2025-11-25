@@ -27,8 +27,6 @@ const OVERVIEW: DeviceOverview = {
       explanation:
         'This is usually part of a routine process like initialization or cleanup. The device is expected to become available shortly.',
     },
-    isQuarantined: false,
-    quarantineExpiry: '',
   },
   basicInfo: {
     model: 'Pixel Fold',
@@ -66,4 +64,5 @@ export const SCENARIO_OUT_OF_SERVICE_INIT: MockDeviceScenario = {
   scenarioName: 'Out of Service - Initializing',
   overview: OVERVIEW,
   config: CONFIG,
+  isQuarantined: false,
 };

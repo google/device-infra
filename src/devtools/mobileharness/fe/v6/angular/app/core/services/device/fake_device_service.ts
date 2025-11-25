@@ -5,20 +5,19 @@ import {
   GetLogcatResponse,
   QuarantineDeviceRequest,
   QuarantineDeviceResponse,
+  QuarantineInfo,
   RemoteControlRequest,
   RemoteControlResponse,
   TakeScreenshotResponse,
 } from '../../models/device_action';
-import {
-  DeviceOverview,
-  DeviceOverviewPageData,
-} from '../../models/device_overview';
+import {DeviceOverviewPageData} from '../../models/device_overview';
 import {
   HealthinessStats,
   RecoveryTaskStats,
   TestResultStats,
 } from '../../models/device_stats';
 import {MOCK_DEVICE_SCENARIOS} from '../mock_data';
+import {MockDeviceScenario} from '../mock_data/models';
 import {DeviceService} from './device_service';
 
 /**
@@ -45,7 +44,7 @@ export class FakeDeviceService extends DeviceService {
     if (scenario) {
       return of({
         overview: scenario.overview,
-        headerInfo: this.getMockDeviceHeaderInfo(scenario.overview),
+        headerInfo: this.getMockDeviceHeaderInfo(scenario),
       });
     } else {
       return throwError(
@@ -57,7 +56,7 @@ export class FakeDeviceService extends DeviceService {
   override getDeviceHeaderInfo(id: string): Observable<DeviceHeaderInfo> {
     const scenario = MOCK_DEVICE_SCENARIOS.find((s) => s.id === id);
     if (scenario) {
-      return of(this.getMockDeviceHeaderInfo(scenario.overview));
+      return of(this.getMockDeviceHeaderInfo(scenario));
     } else {
       return throwError(
         () => new Error(`Device with ID '${id}' not found in mock data.`),
@@ -159,7 +158,10 @@ export class FakeDeviceService extends DeviceService {
     });
   }
 
-  private getMockDeviceHeaderInfo(overview: DeviceOverview): DeviceHeaderInfo {
+  private getMockDeviceHeaderInfo(
+    scenario: MockDeviceScenario,
+  ): DeviceHeaderInfo {
+    const overview = scenario.overview;
     const isAndroid = overview.basicInfo.os === 'Android';
     const isMissing =
       overview.healthAndActivity.deviceStatus.status === 'MISSING';
@@ -175,14 +177,18 @@ export class FakeDeviceService extends DeviceService {
     const screenshotEnabled = isAndroid && !isMissing && screenshotable;
     const logcatEnabled = isAndroid && !isMissing;
     const flashEnabled = isAndroid && isFlashable;
+    const isQuarantined = scenario.isQuarantined;
+    const quarantineExpiry = scenario.quarantineExpiry || '';
+
+    const quarantine: QuarantineInfo = {
+      isQuarantined,
+      expiry: quarantineExpiry,
+    };
 
     return {
       id: overview.id,
       host: overview.host,
-      quarantine: {
-        isQuarantined: overview.healthAndActivity.isQuarantined,
-        expiry: overview.healthAndActivity.quarantineExpiry,
-      },
+      quarantine,
       actions: {
         screenshot: {
           enabled: screenshotEnabled,

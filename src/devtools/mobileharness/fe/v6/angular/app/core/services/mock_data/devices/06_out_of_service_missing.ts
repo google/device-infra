@@ -28,8 +28,6 @@ const OVERVIEW: DeviceOverview = {
       suggestedAction:
         'Check if the device is powered on and physically connected to the host via USB. Ensure the host machine is running correctly.',
     },
-    isQuarantined: true,
-    quarantineExpiry: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
   },
   basicInfo: {
     model: 'N/A',
@@ -65,4 +63,5 @@ export const SCENARIO_OUT_OF_SERVICE_MISSING: MockDeviceScenario = {
   scenarioName: 'Out of Service - Missing',
   overview: OVERVIEW,
   config: CONFIG,
+  isQuarantined: false,
 };

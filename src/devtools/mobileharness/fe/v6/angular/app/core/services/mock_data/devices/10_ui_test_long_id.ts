@@ -24,8 +24,6 @@ const OVERVIEW: DeviceOverview = {
     deviceStatus: {status: 'FAILED', isCritical: true},
     deviceTypes: [{type: 'AndroidDevice', isAbnormal: false}],
     lastInServiceTime: '2025-07-24T12:30:00.000Z',
-    isQuarantined: false,
-    quarantineExpiry: '',
     diagnostics: {
       diagnosis: 'The device status is <strong>FAILED</strong>.',
       explanation:
@@ -69,4 +67,5 @@ export const SCENARIO_UI_TEST_LONG_ID: MockDeviceScenario = {
   scenarioName: '10. UI Test, Long ID (Critical)',
   overview: OVERVIEW,
   config: CONFIG,
+  isQuarantined: false,
 };

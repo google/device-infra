@@ -32,8 +32,6 @@ const OVERVIEW: DeviceOverview = {
       suggestedAction:
         'Try rebooting the device. If the abnormal types persist, consider quarantining the device for manual debugging or re-imaging.',
     },
-    isQuarantined: false,
-    quarantineExpiry: '',
   },
   basicInfo: {
     model: 'Pixel 7 Pro',
@@ -71,4 +69,5 @@ export const SCENARIO_OUT_OF_SERVICE_ABNORMAL_TYPE: MockDeviceScenario = {
   scenarioName: 'Out of Service - Abnormal Type',
   overview: OVERVIEW,
   config: CONFIG,
+  isQuarantined: false,
 };
