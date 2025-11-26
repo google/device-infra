@@ -87,6 +87,12 @@ enum AllocationWorkflowStatus {
   // Scheduke allocation succeeded, waiting for Omnilab allocation to start.
   // This status is only used in HYBRID_CHROME_OS allocation.
   READY_FOR_OMNILAB = 6;
+
+  // The test is being released.
+  RELEASING = 7;
+
+  // The test has been released.
+  RELEASED = 8;
 }
 
 // Contains all intermediate data generated during the allocation workflow.
