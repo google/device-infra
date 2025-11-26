@@ -18,15 +18,25 @@ package com.google.devtools.mobileharness.fe.v6.service.device;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcServiceUtil;
-import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceOverview;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceOverviewPageData;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceServiceGrpc;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceHealthinessStatsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceOverviewRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceRecoveryTaskStatsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceTestResultStatsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetLogcatRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetLogcatResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HealthinessStats;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.QuarantineDeviceRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.QuarantineDeviceResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.RecoveryTaskStats;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.RemoteControlRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.RemoteControlResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.TakeScreenshotRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.TakeScreenshotResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.TestResultStats;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.UnquarantineDeviceRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.UnquarantineDeviceResponse;
 import io.grpc.stub.StreamObserver;
 import javax.inject.Inject;
 
@@ -44,7 +54,7 @@ public final class DeviceServiceGrpcImpl extends DeviceServiceGrpc.DeviceService
 
   @Override
   public void getDeviceOverview(
-      GetDeviceOverviewRequest request, StreamObserver<DeviceOverview> responseObserver) {
+      GetDeviceOverviewRequest request, StreamObserver<DeviceOverviewPageData> responseObserver) {
     GrpcServiceUtil.invokeAsync(
         request,
         responseObserver,
@@ -89,5 +99,66 @@ public final class DeviceServiceGrpcImpl extends DeviceServiceGrpc.DeviceService
         executor,
         DeviceServiceGrpc.getServiceDescriptor(),
         DeviceServiceGrpc.getGetDeviceRecoveryTaskStatsMethod());
+  }
+
+  @Override
+  public void takeScreenshot(
+      TakeScreenshotRequest request, StreamObserver<TakeScreenshotResponse> responseObserver) {
+    GrpcServiceUtil.invokeAsync(
+        request,
+        responseObserver,
+        logic::takeScreenshot,
+        executor,
+        DeviceServiceGrpc.getServiceDescriptor(),
+        DeviceServiceGrpc.getTakeScreenshotMethod());
+  }
+
+  @Override
+  public void getLogcat(
+      GetLogcatRequest request, StreamObserver<GetLogcatResponse> responseObserver) {
+    GrpcServiceUtil.invokeAsync(
+        request,
+        responseObserver,
+        logic::getLogcat,
+        executor,
+        DeviceServiceGrpc.getServiceDescriptor(),
+        DeviceServiceGrpc.getGetLogcatMethod());
+  }
+
+  @Override
+  public void quarantineDevice(
+      QuarantineDeviceRequest request, StreamObserver<QuarantineDeviceResponse> responseObserver) {
+    GrpcServiceUtil.invokeAsync(
+        request,
+        responseObserver,
+        logic::quarantineDevice,
+        executor,
+        DeviceServiceGrpc.getServiceDescriptor(),
+        DeviceServiceGrpc.getQuarantineDeviceMethod());
+  }
+
+  @Override
+  public void unquarantineDevice(
+      UnquarantineDeviceRequest request,
+      StreamObserver<UnquarantineDeviceResponse> responseObserver) {
+    GrpcServiceUtil.invokeAsync(
+        request,
+        responseObserver,
+        logic::unquarantineDevice,
+        executor,
+        DeviceServiceGrpc.getServiceDescriptor(),
+        DeviceServiceGrpc.getUnquarantineDeviceMethod());
+  }
+
+  @Override
+  public void remoteControl(
+      RemoteControlRequest request, StreamObserver<RemoteControlResponse> responseObserver) {
+    GrpcServiceUtil.invokeAsync(
+        request,
+        responseObserver,
+        logic::remoteControl,
+        executor,
+        DeviceServiceGrpc.getServiceDescriptor(),
+        DeviceServiceGrpc.getRemoteControlMethod());
   }
 }

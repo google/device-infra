@@ -20,14 +20,24 @@ import static com.google.common.util.concurrent.Futures.immediateFuture;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.fe.v6.service.device.handlers.GetDeviceOverviewHandler;
-import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceOverview;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceOverviewPageData;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceHealthinessStatsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceOverviewRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceRecoveryTaskStatsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceTestResultStatsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetLogcatRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetLogcatResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HealthinessStats;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.QuarantineDeviceRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.QuarantineDeviceResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.RecoveryTaskStats;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.RemoteControlRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.RemoteControlResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.TakeScreenshotRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.TakeScreenshotResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.TestResultStats;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.UnquarantineDeviceRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.UnquarantineDeviceResponse;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -43,7 +53,8 @@ public final class DeviceServiceLogicImpl implements DeviceServiceLogic {
   }
 
   @Override
-  public ListenableFuture<DeviceOverview> getDeviceOverview(GetDeviceOverviewRequest request) {
+  public ListenableFuture<DeviceOverviewPageData> getDeviceOverview(
+      GetDeviceOverviewRequest request) {
     return getDeviceOverviewHandler.getDeviceOverview(request);
   }
 
@@ -67,5 +78,37 @@ public final class DeviceServiceLogicImpl implements DeviceServiceLogic {
       GetDeviceRecoveryTaskStatsRequest request) {
     // TODO: Implement this method.
     return immediateFuture(RecoveryTaskStats.getDefaultInstance());
+  }
+
+  @Override
+  public ListenableFuture<TakeScreenshotResponse> takeScreenshot(TakeScreenshotRequest request) {
+    // TODO: Implement this method.
+    return immediateFuture(TakeScreenshotResponse.getDefaultInstance());
+  }
+
+  @Override
+  public ListenableFuture<GetLogcatResponse> getLogcat(GetLogcatRequest request) {
+    // TODO: Implement this method.
+    return immediateFuture(GetLogcatResponse.getDefaultInstance());
+  }
+
+  @Override
+  public ListenableFuture<QuarantineDeviceResponse> quarantineDevice(
+      QuarantineDeviceRequest request) {
+    // TODO: Implement this method.
+    return immediateFuture(QuarantineDeviceResponse.getDefaultInstance());
+  }
+
+  @Override
+  public ListenableFuture<UnquarantineDeviceResponse> unquarantineDevice(
+      UnquarantineDeviceRequest request) {
+    // TODO: Implement this method.
+    return immediateFuture(UnquarantineDeviceResponse.getDefaultInstance());
+  }
+
+  @Override
+  public ListenableFuture<RemoteControlResponse> remoteControl(RemoteControlRequest request) {
+    // TODO: Implement this method.
+    return immediateFuture(RemoteControlResponse.getDefaultInstance());
   }
 }

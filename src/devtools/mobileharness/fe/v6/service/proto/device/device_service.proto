@@ -30,7 +30,8 @@ option java_outer_classname = "DeviceServiceProto";
 // Service definition for device-related operations.
 service DeviceService {
   // Retrieves the detailed overview data for a specific device by its ID.
-  rpc GetDeviceOverview(GetDeviceOverviewRequest) returns (DeviceOverview) {
+  rpc GetDeviceOverview(GetDeviceOverviewRequest)
+      returns (DeviceOverviewPageData) {
     option (google.api.http) = {
       get: "/v6/devices/{id}/overview"
     };
@@ -57,6 +58,48 @@ service DeviceService {
       returns (RecoveryTaskStats) {
     option (google.api.http) = {
       get: "/v6/devices/{id}/stats/recoverytasks"
+    };
+  }
+
+  // Takes a screenshot of the device.
+  rpc TakeScreenshot(TakeScreenshotRequest) returns (TakeScreenshotResponse) {
+    option (google.api.http) = {
+      post: "/v6/devices/{id}:screenshot",
+      body: "*"
+    };
+  }
+
+  // Gets logcat from the device.
+  rpc GetLogcat(GetLogcatRequest) returns (GetLogcatResponse) {
+    option (google.api.http) = {
+      post: "/v6/devices/{id}:getLogcat",
+      body: "*"
+    };
+  }
+
+  // Quarantines the device.
+  rpc QuarantineDevice(QuarantineDeviceRequest)
+      returns (QuarantineDeviceResponse) {
+    option (google.api.http) = {
+      post: "/v6/devices/{id}:quarantine",
+      body: "*"
+    };
+  }
+
+  // Unquarantines the device.
+  rpc UnquarantineDevice(UnquarantineDeviceRequest)
+      returns (UnquarantineDeviceResponse) {
+    option (google.api.http) = {
+      post: "/v6/devices/{id}:unquarantine",
+      body: "*"
+    };
+  }
+
+  // Starts a remote control session for the device.
+  rpc RemoteControl(RemoteControlRequest) returns (RemoteControlResponse) {
+    option (google.api.http) = {
+      post: "/v6/devices/{id}:remoteControl",
+      body: "*"
     };
   }
 }
@@ -101,4 +144,97 @@ message GetDeviceRecoveryTaskStatsRequest {
   google.protobuf.Timestamp start_time = 2;
   // End of the time range.
   google.protobuf.Timestamp end_time = 3;
+}
+
+// Data for device overview page.
+message DeviceOverviewPageData {
+  // Information for device header.
+  DeviceHeaderInfo header_info = 1;
+  // Information for device overview page.
+  DeviceOverview overview = 2;
+}
+
+// Request for TakeScreenshot.
+message TakeScreenshotRequest {
+  // The device ID.
+  string id = 1;
+}
+
+// Response for TakeScreenshot.
+message TakeScreenshotResponse {
+  // The URL of the screenshot.
+  string screenshot_url = 1;
+  // The time when the screenshot was captured.
+  google.protobuf.Timestamp captured_at = 2;
+}
+
+// Request for GetLogcat.
+message GetLogcatRequest {
+  // The device ID.
+  string id = 1;
+}
+
+// Response for GetLogcat.
+message GetLogcatResponse {
+  // The URL of the logcat file.
+  string log_url = 1;
+  // The time when the logcat was captured.
+  google.protobuf.Timestamp captured_at = 2;
+}
+
+// Request for QuarantineDevice.
+message QuarantineDeviceRequest {
+  // The device ID.
+  string id = 1;
+  // The duration to quarantine the device in hours.
+  int32 duration_hours = 2;
+}
+
+// Response for QuarantineDevice.
+message QuarantineDeviceResponse {
+  // The time when the quarantine expires.
+  google.protobuf.Timestamp quarantine_expiry = 1;
+}
+
+// Request for UnquarantineDevice.
+message UnquarantineDeviceRequest {
+  // The device ID.
+  string id = 1;
+}
+
+// Response for UnquarantineDevice.
+message UnquarantineDeviceResponse {}
+
+// Options for flashing a device during remote control.
+message FlashOptions {
+  // The branch to flash.
+  string branch = 1;
+  // The build ID to flash.
+  string build_id = 2;
+  // The target to flash.
+  string target = 3;
+}
+
+// Request for RemoteControl.
+message RemoteControlRequest {
+  // The device ID.
+  string id = 1;
+  // The user to run the remote control session as.
+  string run_as = 2;
+  // The timeout for the remote control session in hours.
+  int32 timeout_hours = 3;
+  // The proxy type to use for the remote control session.
+  string proxy_type = 4;
+  // The video resolution to use for the remote control session.
+  string video_resolution = 5;
+  // The maximum video size to use for the remote control session.
+  string max_video_size = 6;
+  // The flash options to use for the remote control session.
+  FlashOptions flash_options = 7;
+}
+
+// Response for RemoteControl.
+message RemoteControlResponse {
+  // The URL of the remote control session.
+  string session_url = 1;
 }

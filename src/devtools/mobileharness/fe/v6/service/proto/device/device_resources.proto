@@ -70,6 +70,7 @@ enum HealthState {
   OUT_OF_SERVICE_TEMP_MAINT = 4;
   OUT_OF_SERVICE_NEEDS_FIXING = 5;
   UNKNOWN = 6;
+  IDLE_BUT_QUARANTINED = 7;
 }
 
 // Contains all data related to the device's health, status, and current
@@ -194,4 +195,60 @@ message Dimensions {
   map<string, DimensionSourceGroup> supported = 1;
   // Dimensions that a test job MUST specify to be allocated this device.
   map<string, DimensionSourceGroup> required = 2;
+}
+
+// State of an action button in device header.
+message ActionButtonState {
+  bool enabled = 1;
+  bool visible = 2;
+  string tooltip = 3;
+}
+
+// Parameters for flash action button.
+message FlashButtonParams {
+  string device_type = 1;
+  string required_dimensions = 2;
+}
+
+// State of flash action button.
+message FlashActionButtonState {
+  ActionButtonState state = 1;
+  FlashButtonParams params = 2;
+}
+
+// Option for runAs in remote control.
+message RunAsOption {
+  string value = 1;
+  string label = 2;
+  bool is_default = 3;
+}
+
+// State of remote control action button.
+message RemoteControlButtonState {
+  ActionButtonState state = 1;
+  repeated RunAsOption run_as_options = 2;
+  string default_run_as = 3;
+}
+
+// Quarantine information of device.
+message QuarantineInfo {
+  bool is_quarantined = 1;
+  google.protobuf.Timestamp expiry = 2;
+}
+
+// Actions for device header.
+message DeviceActions {
+  ActionButtonState screenshot = 1;
+  ActionButtonState logcat = 2;
+  FlashActionButtonState flash = 3;
+  RemoteControlButtonState remote_control = 4;
+  ActionButtonState quarantine = 5;
+}
+
+// Information for device header.
+message DeviceHeaderInfo {
+  string id = 1;
+  HostInfo host = 2;
+  QuarantineInfo quarantine = 3;
+  DeviceActions actions = 4;
 }

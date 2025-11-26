@@ -46,7 +46,9 @@ import com.google.devtools.mobileharness.fe.v6.service.device.ConfigurationProvi
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.BasicDeviceInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.BasicDeviceInfo.Form;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.CapabilitiesInfo;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceHeaderInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceOverview;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceOverviewPageData;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DimensionSourceGroup;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.Dimensions;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceOverviewRequest;
@@ -78,7 +80,7 @@ public final class GetDeviceOverviewHandler {
   private final ConfigurationProvider configurationProvider;
   private final ListeningExecutorService executor;
   private final HealthAndActivityBuilder healthAndActivityBuilder;
-  private final AsyncLoadingCache<String, DeviceOverview> overviewCache;
+  private final AsyncLoadingCache<String, DeviceOverviewPageData> overviewCache;
 
   @Inject
   GetDeviceOverviewHandler(
@@ -98,7 +100,8 @@ public final class GetDeviceOverviewHandler {
             .buildAsync(new DeviceOverviewLoader());
   }
 
-  public ListenableFuture<DeviceOverview> getDeviceOverview(GetDeviceOverviewRequest request) {
+  public ListenableFuture<DeviceOverviewPageData> getDeviceOverview(
+      GetDeviceOverviewRequest request) {
     String cacheKey = request.getUniverse() + ":" + request.getId();
     if (request.getForceRefresh()) {
       logger.atInfo().log("Force refreshing cache for %s", cacheKey);
@@ -107,10 +110,10 @@ public final class GetDeviceOverviewHandler {
     return JdkFutureAdapters.listenInPoolThread(overviewCache.get(cacheKey), executor);
   }
 
-  private class DeviceOverviewLoader implements AsyncCacheLoader<String, DeviceOverview> {
+  private class DeviceOverviewLoader implements AsyncCacheLoader<String, DeviceOverviewPageData> {
     @Override
-    public CompletableFuture<DeviceOverview> asyncLoad(String key, Executor executor) {
-      ListenableFuture<DeviceOverview> loadFuture = loadDeviceOverview(key);
+    public CompletableFuture<DeviceOverviewPageData> asyncLoad(String key, Executor executor) {
+      ListenableFuture<DeviceOverviewPageData> loadFuture = loadDeviceOverviewPageData(key);
       return toCompletableFuture(loadFuture);
     }
   }
@@ -134,7 +137,7 @@ public final class GetDeviceOverviewHandler {
     return completableFuture;
   }
 
-  private ListenableFuture<DeviceOverview> loadDeviceOverview(String key) {
+  private ListenableFuture<DeviceOverviewPageData> loadDeviceOverviewPageData(String key) {
     List<String> parts = Splitter.on(':').limit(2).splitToList(key);
     String universe = parts.get(0);
     String deviceId = parts.get(1);
@@ -205,11 +208,34 @@ public final class GetDeviceOverviewHandler {
                   finalDeviceConfigFuture,
                   deviceConfigOpt -> {
                     logger.atInfo().log("Building DeviceOverview for %s", key);
-                    return buildDeviceOverview(deviceId, deviceInfo, deviceConfigOpt, labConfigOpt);
+                    return buildDeviceOverviewPageData(
+                        deviceId, deviceInfo, deviceConfigOpt, labConfigOpt);
                   },
                   executor);
             },
             executor);
+  }
+
+  private DeviceOverviewPageData buildDeviceOverviewPageData(
+      String deviceId,
+      DeviceInfo deviceInfo,
+      Optional<DeviceConfig> deviceConfigOpt,
+      Optional<LabConfig> labConfigOpt) {
+    DeviceOverview overview =
+        buildDeviceOverview(deviceId, deviceInfo, deviceConfigOpt, labConfigOpt);
+    DeviceHeaderInfo headerInfo = buildDeviceHeaderInfo(deviceInfo, deviceConfigOpt, labConfigOpt);
+    return DeviceOverviewPageData.newBuilder()
+        .setOverview(overview)
+        .setHeaderInfo(headerInfo)
+        .build();
+  }
+
+  private DeviceHeaderInfo buildDeviceHeaderInfo(
+      DeviceInfo unusedDeviceInfo,
+      Optional<DeviceConfig> unusedDeviceConfigOpt,
+      Optional<LabConfig> unusedLabConfigOpt) {
+    // TODO: Build DeviceHeaderInfo based on device info and configs.
+    return DeviceHeaderInfo.getDefaultInstance();
   }
 
   private DeviceOverview buildDeviceOverview(

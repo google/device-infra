@@ -17,18 +17,28 @@
 package com.google.devtools.mobileharness.fe.v6.service.device;
 
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceOverview;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceOverviewPageData;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceHealthinessStatsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceOverviewRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceRecoveryTaskStatsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceTestResultStatsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetLogcatRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetLogcatResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HealthinessStats;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.QuarantineDeviceRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.QuarantineDeviceResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.RecoveryTaskStats;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.RemoteControlRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.RemoteControlResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.TakeScreenshotRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.TakeScreenshotResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.TestResultStats;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.UnquarantineDeviceRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.UnquarantineDeviceResponse;
 
 /** Interface for the core logic of the Device Service. */
 public interface DeviceServiceLogic {
-  ListenableFuture<DeviceOverview> getDeviceOverview(GetDeviceOverviewRequest request);
+  ListenableFuture<DeviceOverviewPageData> getDeviceOverview(GetDeviceOverviewRequest request);
 
   ListenableFuture<HealthinessStats> getDeviceHealthinessStats(
       GetDeviceHealthinessStatsRequest request);
@@ -38,4 +48,15 @@ public interface DeviceServiceLogic {
 
   ListenableFuture<RecoveryTaskStats> getDeviceRecoveryTaskStats(
       GetDeviceRecoveryTaskStatsRequest request);
+
+  ListenableFuture<TakeScreenshotResponse> takeScreenshot(TakeScreenshotRequest request);
+
+  ListenableFuture<GetLogcatResponse> getLogcat(GetLogcatRequest request);
+
+  ListenableFuture<QuarantineDeviceResponse> quarantineDevice(QuarantineDeviceRequest request);
+
+  ListenableFuture<UnquarantineDeviceResponse> unquarantineDevice(
+      UnquarantineDeviceRequest request);
+
+  ListenableFuture<RemoteControlResponse> remoteControl(RemoteControlRequest request);
 }

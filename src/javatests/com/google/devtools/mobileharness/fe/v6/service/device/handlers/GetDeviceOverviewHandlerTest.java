@@ -52,6 +52,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryR
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.DeviceView;
 import com.google.devtools.mobileharness.fe.v6.service.device.ConfigurationProvider;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceOverview;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceOverviewPageData;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DimensionSourceGroup;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceOverviewRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HealthAndActivityInfo;
@@ -178,13 +179,13 @@ public final class GetDeviceOverviewHandlerTest {
 
   @Test
   public void getDeviceOverview_success() throws Exception {
-    ListenableFuture<DeviceOverview> responseFuture =
+    ListenableFuture<DeviceOverviewPageData> responseFuture =
         getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST);
 
-    DeviceOverview response = responseFuture.get();
-    assertThat(response.getId()).isEqualTo(DEVICE_ID);
-    assertThat(response.getHost().getName()).isEqualTo(HOST_NAME);
-    assertThat(response.hasHealthAndActivity()).isTrue();
+    DeviceOverviewPageData response = responseFuture.get();
+    assertThat(response.getOverview().getId()).isEqualTo(DEVICE_ID);
+    assertThat(response.getOverview().getHost().getName()).isEqualTo(HOST_NAME);
+    assertThat(response.getOverview().hasHealthAndActivity()).isTrue();
 
     verify(labInfoStub).getLabInfoAsync(any(GetLabInfoRequest.class));
     verify(configurationProvider).getDeviceConfig(eq(DEVICE_ID), eq(UNIVERSE));
@@ -218,7 +219,7 @@ public final class GetDeviceOverviewHandlerTest {
     when(labInfoStub.getLabInfoAsync(any(GetLabInfoRequest.class)))
         .thenReturn(immediateFailedFuture(new StatusRuntimeException(Status.DEADLINE_EXCEEDED)));
 
-    ListenableFuture<DeviceOverview> responseFuture =
+    ListenableFuture<DeviceOverviewPageData> responseFuture =
         getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST);
 
     ExecutionException e = assertThrows(ExecutionException.class, responseFuture::get);
@@ -230,7 +231,7 @@ public final class GetDeviceOverviewHandlerTest {
     when(configurationProvider.getDeviceConfig(any(), any()))
         .thenReturn(immediateFailedFuture(new RuntimeException("Config error")));
 
-    ListenableFuture<DeviceOverview> responseFuture =
+    ListenableFuture<DeviceOverviewPageData> responseFuture =
         getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST);
 
     ExecutionException e = assertThrows(ExecutionException.class, responseFuture::get);
@@ -239,9 +240,9 @@ public final class GetDeviceOverviewHandlerTest {
 
   @Test
   public void getDeviceOverview_dimensions_onlyDetected() throws Exception {
-    ListenableFuture<DeviceOverview> responseFuture =
+    ListenableFuture<DeviceOverviewPageData> responseFuture =
         getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST);
-    DeviceOverview response = responseFuture.get();
+    DeviceOverview response = responseFuture.get().getOverview();
 
     ImmutableMap<String, DimensionSourceGroup> expectedSupported =
         ImmutableMap.of(
@@ -294,9 +295,9 @@ public final class GetDeviceOverviewHandlerTest {
     when(configurationProvider.getDeviceConfig(any(), any()))
         .thenReturn(immediateFuture(Optional.of(deviceConfig)));
 
-    ListenableFuture<DeviceOverview> responseFuture =
+    ListenableFuture<DeviceOverviewPageData> responseFuture =
         getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST);
-    DeviceOverview response = responseFuture.get();
+    DeviceOverview response = responseFuture.get().getOverview();
 
     ImmutableMap<String, DimensionSourceGroup> expectedSupported =
         ImmutableMap.of(
@@ -362,9 +363,9 @@ public final class GetDeviceOverviewHandlerTest {
     when(configurationProvider.getDeviceConfig(any(), any()))
         .thenReturn(immediateFuture(Optional.of(DeviceConfig.getDefaultInstance())));
 
-    ListenableFuture<DeviceOverview> responseFuture =
+    ListenableFuture<DeviceOverviewPageData> responseFuture =
         getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST);
-    DeviceOverview response = responseFuture.get();
+    DeviceOverview response = responseFuture.get().getOverview();
 
     ImmutableMap<String, DimensionSourceGroup> expectedSupported =
         ImmutableMap.of(
@@ -417,7 +418,11 @@ public final class GetDeviceOverviewHandlerTest {
   public void healthAndActivity_inService_idle() throws Exception {
     mockDeviceInfo(DEFAULT_DEVICE_INFO.toBuilder().setDeviceStatus(DeviceStatus.IDLE).build());
     HealthAndActivityInfo info =
-        getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST).get().getHealthAndActivity();
+        getDeviceOverviewHandler
+            .getDeviceOverview(DEFAULT_REQUEST)
+            .get()
+            .getOverview()
+            .getHealthAndActivity();
 
     assertThat(info.getTitle()).isEqualTo("In Service (Idle)");
     assertThat(info.getSubtitle()).isEqualTo("The device is healthy and ready for new tasks.");
@@ -434,7 +439,11 @@ public final class GetDeviceOverviewHandlerTest {
   public void healthAndActivity_inService_busy() throws Exception {
     mockDeviceInfo(DEFAULT_DEVICE_INFO.toBuilder().setDeviceStatus(DeviceStatus.BUSY).build());
     HealthAndActivityInfo info =
-        getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST).get().getHealthAndActivity();
+        getDeviceOverviewHandler
+            .getDeviceOverview(DEFAULT_REQUEST)
+            .get()
+            .getOverview()
+            .getHealthAndActivity();
 
     assertThat(info.getTitle()).isEqualTo("In Service (Busy)");
     assertThat(info.getSubtitle()).isEqualTo("The device is healthy and currently running a task.");
@@ -458,7 +467,11 @@ public final class GetDeviceOverviewHandlerTest {
             .build();
     mockDeviceInfo(quarantinedDevice);
     HealthAndActivityInfo info =
-        getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST).get().getHealthAndActivity();
+        getDeviceOverviewHandler
+            .getDeviceOverview(DEFAULT_REQUEST)
+            .get()
+            .getOverview()
+            .getHealthAndActivity();
 
     assertThat(info.getTitle()).isEqualTo("Quarantined");
     assertThat(info.getState()).isEqualTo(HealthState.OUT_OF_SERVICE_NEEDS_FIXING);
@@ -483,7 +496,11 @@ public final class GetDeviceOverviewHandlerTest {
             .build();
     mockDeviceInfo(recoveringDevice);
     HealthAndActivityInfo info =
-        getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST).get().getHealthAndActivity();
+        getDeviceOverviewHandler
+            .getDeviceOverview(DEFAULT_REQUEST)
+            .get()
+            .getOverview()
+            .getHealthAndActivity();
 
     assertThat(info.getTitle()).isEqualTo("Out of Service (Recovering)");
     assertThat(info.getState()).isEqualTo(HealthState.OUT_OF_SERVICE_RECOVERING);
@@ -506,7 +523,11 @@ public final class GetDeviceOverviewHandlerTest {
             .build();
     mockDeviceInfo(initDevice);
     HealthAndActivityInfo info =
-        getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST).get().getHealthAndActivity();
+        getDeviceOverviewHandler
+            .getDeviceOverview(DEFAULT_REQUEST)
+            .get()
+            .getOverview()
+            .getHealthAndActivity();
 
     assertThat(info.getTitle()).isEqualTo("Out of Service (may be temporary)");
     assertThat(info.getState()).isEqualTo(HealthState.OUT_OF_SERVICE_TEMP_MAINT);
@@ -530,7 +551,11 @@ public final class GetDeviceOverviewHandlerTest {
             .build();
     mockDeviceInfo(missingDevice);
     HealthAndActivityInfo info =
-        getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST).get().getHealthAndActivity();
+        getDeviceOverviewHandler
+            .getDeviceOverview(DEFAULT_REQUEST)
+            .get()
+            .getOverview()
+            .getHealthAndActivity();
 
     assertThat(info.getTitle()).isEqualTo("Out of Service (Needs Fixing)");
     assertThat(info.getState()).isEqualTo(HealthState.OUT_OF_SERVICE_NEEDS_FIXING);
@@ -553,7 +578,11 @@ public final class GetDeviceOverviewHandlerTest {
             .build();
     mockDeviceInfo(noTypeDevice);
     HealthAndActivityInfo info =
-        getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST).get().getHealthAndActivity();
+        getDeviceOverviewHandler
+            .getDeviceOverview(DEFAULT_REQUEST)
+            .get()
+            .getOverview()
+            .getHealthAndActivity();
 
     assertThat(info.getTitle()).isEqualTo("Out of Service (Needs Fixing)");
     assertThat(info.getState()).isEqualTo(HealthState.OUT_OF_SERVICE_NEEDS_FIXING);
