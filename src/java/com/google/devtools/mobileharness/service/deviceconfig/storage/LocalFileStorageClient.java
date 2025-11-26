@@ -28,7 +28,7 @@ import java.util.Optional;
 import javax.inject.Inject;
 
 /** A {@link StorageClient} that stores configs in local files. */
-final class LocalFileStorageClient implements StorageClient {
+public final class LocalFileStorageClient implements StorageClient {
 
   // TODO: b/460296020 - change this to a flag.
   private static final String ROOT_DIR = "/tmp/ats/config";
@@ -111,10 +111,10 @@ final class LocalFileStorageClient implements StorageClient {
   }
 
   private String getDeviceConfigPath(String deviceUuid) {
-    return PathUtil.join(ROOT_DIR, "device", deviceUuid, ".textproto");
+    return PathUtil.join(ROOT_DIR, "device", deviceUuid + ".textproto");
   }
 
   private String getLabConfigPath(String hostName) {
-    return PathUtil.join(ROOT_DIR, "lab", hostName, ".textproto");
+    return PathUtil.join(ROOT_DIR, "lab", hostName + ".textproto");
   }
 }
