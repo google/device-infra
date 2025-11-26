@@ -159,7 +159,7 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
   @Override
   @SuppressWarnings("BeforeSnippet")
   public XtsDynamicDownloadInfo parse(TestInfo test, @Nullable String deviceId)
-      throws MobileHarnessException, InterruptedException {
+      throws MobileHarnessException {
     String aospVersion = getAospVersion(deviceId, test);
     ListMultimap<String, String> mctsNamesOfAllModules =
         getMctsNamesOfAllMainlineModules(test, deviceId, aospVersion);
@@ -383,9 +383,9 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
   /**
    * Gets the MCTS names of all mainline modules.
    *
-   * <p>For static XTS job, the return value is also saved as part of the job properties.
+   * <p>For static XTS job, the return value is also saved as part of the test properties.
    *
-   * <p>For dynamic XTS job, it reads the MCTS modules info from the job properties, instead of
+   * <p>For dynamic XTS job, it reads the MCTS modules info from the test properties, instead of
    * calculating it again. The intention is to tolerate devices going offline so the plugin can
    * still proceed.
    *
@@ -397,9 +397,8 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
    *     non-preloaded modules, the format of the value is "mctsName".
    */
   private ListMultimap<String, String> getMctsNamesOfAllMainlineModules(
-      TestInfo testInfo, String deviceId, String aospVersion)
-      throws MobileHarnessException, InterruptedException {
-    if (isStaticXtsJob(testInfo)) {
+      TestInfo testInfo, String deviceId, String aospVersion) throws MobileHarnessException {
+    try {
       String configFilePath =
           resUtil.getResourceFile(
               getClass(),
@@ -445,18 +444,18 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
       nonPreloadMctsList.removeAll(preloadedModulesMcts);
       mctsNamesOfAllModules.putAll(NON_PRELOADED_KEY, nonPreloadMctsList);
 
-      // Save as part of the job properties.
+      // Save as part of the test properties.
       String serializedMctsModulesInfo =
           Base64.getEncoder().encodeToString(serialize((Serializable) mctsNamesOfAllModules));
       testInfo
-          .jobInfo()
           .properties()
           .add(XtsConstants.DEVICE_MCTS_MODULES_INFO_PROPERTY_KEY, serializedMctsModulesInfo);
       logger.atInfo().log("Read device MCTS modules info: %s", mctsNamesOfAllModules);
       return mctsNamesOfAllModules;
-    } else {
+    } catch (MobileHarnessException | InterruptedException e) {
+      logger.atInfo().withCause(e).log(
+          "Failed to get device MCTS modules info. Will try to read from test properties.");
       return testInfo
-          .jobInfo()
           .properties()
           .getOptional(XtsConstants.DEVICE_MCTS_MODULES_INFO_PROPERTY_KEY)
           .map(
@@ -468,14 +467,14 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
                     (ListMultimap<String, String>)
                         deserialize(Base64.getDecoder().decode(serializedMctsModulesInfo));
                 logger.atInfo().log(
-                    "Read device MCTS modules info from job properties: %s.", mctsModulesInfo);
+                    "Read device MCTS modules info from test properties: %s.", mctsModulesInfo);
                 return mctsModulesInfo;
               })
           .orElseThrow(
               () ->
                   new MobileHarnessException(
                       AndroidErrorId.XTS_DYNAMIC_DOWNLOADER_DEVICE_INFO_NOT_FOUND,
-                      "Did not get device MCTS modules info from job properties."));
+                      "Did not get device MCTS modules info from test properties."));
     }
   }
 
@@ -610,21 +609,22 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
       String propertyKey,
       String propertyDisplayName,
       DeviceInfoSupplier supplier)
-      throws MobileHarnessException, InterruptedException {
-    if (isStaticXtsJob(testInfo)) {
+      throws MobileHarnessException {
+    try {
       String value = supplier.get(deviceId);
-      testInfo.jobInfo().properties().add(propertyKey, value);
+      testInfo.properties().add(propertyKey, value);
       logger.atInfo().log("Read device %s %s: %s", deviceId, propertyDisplayName, value);
       return value;
-    } else {
+    } catch (MobileHarnessException | InterruptedException e) {
+      logger.atInfo().withCause(e).log(
+          "Failed to get device %s. Will try to read from test properties.", propertyDisplayName);
       return testInfo
-          .jobInfo()
           .properties()
           .getOptional(propertyKey)
           .map(
               value -> {
                 logger.atInfo().log(
-                    "Read device %s from job properties: %s", propertyDisplayName, value);
+                    "Read device %s from test properties: %s", propertyDisplayName, value);
                 return value;
               })
           .orElseThrow(
@@ -632,7 +632,7 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
                   new MobileHarnessException(
                       AndroidErrorId.XTS_DYNAMIC_DOWNLOADER_DEVICE_INFO_NOT_FOUND,
                       String.format(
-                          "Did not get device %s from job properties.", propertyDisplayName)));
+                          "Did not get device %s from test properties.", propertyDisplayName)));
     }
   }
 
@@ -643,17 +643,16 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
    *   For static XTS job:
    *   <li>It's currently coded as the first job to run (before the MCTS job).
    *   <li>Reads the SDK version from the device through adb.
-   *   <li>Stores the SDK version in the job properties.
+   *   <li>Stores the SDK version in the test properties.
    * </ul>
    *
    * <ul>
    *   For dynamic XTS job:
-   *   <li>Reads the SDK version from the job properties. The intention is to tolerate devices going
-   *       offline so the plugin can still proceed.
+   *   <li>Reads the SDK version from the test properties. The intention is to tolerate devices
+   *       going offline so the plugin can still proceed.
    * </ul>
    */
-  private String getAospVersion(String deviceId, TestInfo testInfo)
-      throws MobileHarnessException, InterruptedException {
+  private String getAospVersion(String deviceId, TestInfo testInfo) throws MobileHarnessException {
     return getOrFetchStringDeviceInfo(
         testInfo,
         deviceId,
@@ -669,17 +668,16 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
    *   For static XTS job:
    *   <li>It's currently coded as the first job to run (before the MCTS job).
    *   <li>Reads the ABI version from the device through adb.
-   *   <li>Stores the ABI version in the job properties.
+   *   <li>Stores the ABI version in the test properties.
    * </ul>
    *
    * <ul>
    *   For dynamic XTS job:
-   *   <li>Reads the ABI version from the job properties. The intention is to tolerate devices going
-   *       offline so the plugin can still proceed.
+   *   <li>Reads the ABI version from the test properties. The intention is to tolerate devices
+   *       going offline so the plugin can still proceed.
    * </ul>
    */
-  private String getAbiVersion(String deviceId, TestInfo testInfo)
-      throws MobileHarnessException, InterruptedException {
+  private String getAbiVersion(String deviceId, TestInfo testInfo) throws MobileHarnessException {
     return getOrFetchStringDeviceInfo(
         testInfo,
         deviceId,
@@ -715,13 +713,13 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
    *   For static XTS job:
    *   <li>It's currently coded as the first job to run (before the MCTS job).
    *   <li>Reads the TVP version from the device through adb.
-   *   <li>Stores the TVP version in the job properties.
+   *   <li>Stores the TVP version in the test properties.
    * </ul>
    *
    * <ul>
    *   For dynamic XTS job:
-   *   <li>Reads the TVP version from the job properties. The intention is to tolerate devices going
-   *       offline so the plugin can still proceed.
+   *   <li>Reads the TVP version from the test properties. The intention is to tolerate devices
+   *       going offline so the plugin can still proceed.
    * </ul>
    *
    * @param deviceId the device serial number.
@@ -729,8 +727,7 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
    * @param testInfo the test info.
    * @return the TVP version string.
    */
-  private String getTvpVersion(String deviceId, TestInfo testInfo)
-      throws MobileHarnessException, InterruptedException {
+  private String getTvpVersion(String deviceId, TestInfo testInfo) throws MobileHarnessException {
     return getOrFetchStringDeviceInfo(
         testInfo,
         deviceId,
