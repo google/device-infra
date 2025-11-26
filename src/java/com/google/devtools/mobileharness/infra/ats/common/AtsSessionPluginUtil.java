@@ -18,7 +18,7 @@ package com.google.devtools.mobileharness.infra.ats.common;
 
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
-import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
+import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 
 /** Utility class for ATS session plugins. */
 public final class AtsSessionPluginUtil {
@@ -26,19 +26,12 @@ public final class AtsSessionPluginUtil {
   private AtsSessionPluginUtil() {}
 
   /**
-   * Copies job properties needed by xTS dynamic download jobs from the current job to the next job.
-   * This is done so that the following xTS dynamic download jobs don't need to require devices to
-   * be online.
+   * Copies test properties needed by xTS dynamic download jobs from the current test to the next
+   * test. This is done so that the following xTS dynamic download jobs don't need to require
+   * devices to be online.
    */
-  public static void copyJobPropertiesForDynamicDownloadJobs(
-      JobInfo currentJob, JobInfo nextJobToAdd) {
-    if (!nextJobToAdd
-        .properties()
-        .getBoolean(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED)
-        .orElse(false)) {
-      return;
-    }
-
+  public static void copyTestPropertiesForDynamicDownloadJobs(
+      TestInfo currentTest, TestInfo nextTest) {
     ImmutableList.of(
             XtsConstants.DEVICE_ABI_PROPERTY_KEY,
             XtsConstants.DEVICE_AOSP_VERSION_PROPERTY_KEY,
@@ -46,9 +39,9 @@ public final class AtsSessionPluginUtil {
             XtsConstants.DEVICE_TVP_VERSION_PROPERTY_KEY)
         .forEach(
             propertyKey ->
-                currentJob
+                currentTest
                     .properties()
                     .getOptional(propertyKey)
-                    .ifPresent(value -> nextJobToAdd.properties().add(propertyKey, value)));
+                    .ifPresent(value -> nextTest.properties().add(propertyKey, value)));
   }
 }

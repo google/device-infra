@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.infra.ats.server.sessionplugin;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.devtools.mobileharness.infra.ats.common.AtsSessionPluginUtil.copyTestPropertiesForDynamicDownloadJobs;
 import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
 
 import com.google.common.base.Supplier;
@@ -28,7 +29,6 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
-import com.google.devtools.mobileharness.infra.ats.common.AtsSessionPluginUtil;
 import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ResultProto.ModuleRunResult;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.AtsServerSessionNotification;
@@ -341,7 +341,25 @@ final class AtsServerSessionPlugin {
             logger.atInfo().log(
                 "Session [%s]: Adding next tradefed job [%s] to session.",
                 sessionInfo.getSessionId(), nextJob.locator().getId());
-            AtsSessionPluginUtil.copyJobPropertiesForDynamicDownloadJobs(jobInfo, nextJob);
+            if (nextJob
+                .properties()
+                .getBoolean(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED)
+                .orElse(false)) {
+              // Copy test properties needed by xTS dynamic download jobs from the current test to
+              // the next tests.
+              jobInfo.tests().getAll().values().stream()
+                  .findFirst()
+                  .ifPresent(
+                      currentTest ->
+                          nextJob
+                              .tests()
+                              .getAll()
+                              .values()
+                              .forEach(
+                                  nextTest ->
+                                      copyTestPropertiesForDynamicDownloadJobs(
+                                          currentTest, nextTest)));
+            }
             sessionInfo.addJob(nextJob);
           }
         }

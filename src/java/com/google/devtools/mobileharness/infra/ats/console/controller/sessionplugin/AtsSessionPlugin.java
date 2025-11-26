@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.infra.ats.console.controller.sessionpl
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static com.google.devtools.mobileharness.infra.ats.common.AtsSessionPluginUtil.copyTestPropertiesForDynamicDownloadJobs;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
 import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
@@ -40,7 +41,6 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionF
 import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.api.testrunner.device.cache.XtsDeviceCache;
-import com.google.devtools.mobileharness.infra.ats.common.AtsSessionPluginUtil;
 import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.infra.ats.common.jobcreator.XtsJobCreator;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionCancellation;
@@ -432,7 +432,25 @@ public class AtsSessionPlugin {
           // Add the device ids of the current job to the sub device specs of the next tradefed job.
           addDeviceIdsToSubDeviceSpecs(
               nextJobToAdd.subDeviceSpecs().getAllSubDevices(), devicesOfCurrentJob);
-          AtsSessionPluginUtil.copyJobPropertiesForDynamicDownloadJobs(currentJob, nextJobToAdd);
+          if (nextJobToAdd
+              .properties()
+              .getBoolean(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED)
+              .orElse(false)) {
+            // Copy test properties needed by xTS dynamic download jobs from the current test to
+            // the next tests.
+            currentJob.tests().getAll().values().stream()
+                .findFirst()
+                .ifPresent(
+                    currentTest ->
+                        nextJobToAdd
+                            .tests()
+                            .getAll()
+                            .values()
+                            .forEach(
+                                nextTest ->
+                                    copyTestPropertiesForDynamicDownloadJobs(
+                                        currentTest, nextTest)));
+          }
 
           addJobListToSession(ImmutableList.of(nextJobToAdd));
         }

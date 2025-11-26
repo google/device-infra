@@ -21,7 +21,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
-import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
+import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
 import org.junit.Test;
@@ -37,53 +37,38 @@ public final class AtsSessionPluginUtilTest {
   private static final String MCTS_MODULES_INFO = "mcts_modules_info";
 
   @Test
-  public void copyJobPropertiesForDynamicDownloadJobs_dynamicDownloadEnabled() {
-    JobInfo currentJob = mockCurrentJob();
-    JobInfo nextJob = mockNextJob(/* isDynamicDownloadEnabled= */ true);
+  public void copyTestPropertiesForDynamicDownloadJobs() {
+    TestInfo currentTest = mockCurrentTest();
+    TestInfo nextTest = mockNextTest();
 
-    AtsSessionPluginUtil.copyJobPropertiesForDynamicDownloadJobs(currentJob, nextJob);
+    AtsSessionPluginUtil.copyTestPropertiesForDynamicDownloadJobs(currentTest, nextTest);
 
-    Properties nextJobProperties = nextJob.properties();
-    assertThat(nextJobProperties.get(XtsConstants.DEVICE_AOSP_VERSION_PROPERTY_KEY))
+    Properties nextTestProperties = nextTest.properties();
+    assertThat(nextTestProperties.get(XtsConstants.DEVICE_AOSP_VERSION_PROPERTY_KEY))
         .isEqualTo(AOSP_VERSION);
-    assertThat(nextJobProperties.get(XtsConstants.DEVICE_TVP_VERSION_PROPERTY_KEY))
+    assertThat(nextTestProperties.get(XtsConstants.DEVICE_TVP_VERSION_PROPERTY_KEY))
         .isEqualTo(TVP_VERSION);
-    assertThat(nextJobProperties.get(XtsConstants.DEVICE_ABI_PROPERTY_KEY)).isEqualTo(ABI);
-    assertThat(nextJobProperties.get(XtsConstants.DEVICE_MCTS_MODULES_INFO_PROPERTY_KEY))
+    assertThat(nextTestProperties.get(XtsConstants.DEVICE_ABI_PROPERTY_KEY)).isEqualTo(ABI);
+    assertThat(nextTestProperties.get(XtsConstants.DEVICE_MCTS_MODULES_INFO_PROPERTY_KEY))
         .isEqualTo(MCTS_MODULES_INFO);
   }
 
-  @Test
-  public void copyJobPropertiesForDynamicDownloadJobs_dynamicDownloadDisabled() {
-    JobInfo currentJob = mockCurrentJob();
-    JobInfo nextJob = mockNextJob(/* isDynamicDownloadEnabled= */ false);
-
-    AtsSessionPluginUtil.copyJobPropertiesForDynamicDownloadJobs(currentJob, nextJob);
-
-    Properties nextJobProperties = nextJob.properties();
-    assertThat(nextJobProperties.has(XtsConstants.DEVICE_AOSP_VERSION_PROPERTY_KEY)).isFalse();
-    assertThat(nextJobProperties.has(XtsConstants.DEVICE_TVP_VERSION_PROPERTY_KEY)).isFalse();
-    assertThat(nextJobProperties.has(XtsConstants.DEVICE_ABI_PROPERTY_KEY)).isFalse();
-    assertThat(nextJobProperties.has(XtsConstants.DEVICE_MCTS_MODULES_INFO_PROPERTY_KEY)).isFalse();
+  private TestInfo mockCurrentTest() {
+    TestInfo currentTest = mock(TestInfo.class);
+    Properties currentTestProperties = new Properties(new Timing());
+    currentTestProperties.add(XtsConstants.DEVICE_AOSP_VERSION_PROPERTY_KEY, AOSP_VERSION);
+    currentTestProperties.add(XtsConstants.DEVICE_TVP_VERSION_PROPERTY_KEY, TVP_VERSION);
+    currentTestProperties.add(XtsConstants.DEVICE_ABI_PROPERTY_KEY, ABI);
+    currentTestProperties.add(
+        XtsConstants.DEVICE_MCTS_MODULES_INFO_PROPERTY_KEY, MCTS_MODULES_INFO);
+    when(currentTest.properties()).thenReturn(currentTestProperties);
+    return currentTest;
   }
 
-  private JobInfo mockCurrentJob() {
-    JobInfo currentJob = mock(JobInfo.class);
-    Properties currentJobProperties = new Properties(new Timing());
-    currentJobProperties.add(XtsConstants.DEVICE_AOSP_VERSION_PROPERTY_KEY, AOSP_VERSION);
-    currentJobProperties.add(XtsConstants.DEVICE_TVP_VERSION_PROPERTY_KEY, TVP_VERSION);
-    currentJobProperties.add(XtsConstants.DEVICE_ABI_PROPERTY_KEY, ABI);
-    currentJobProperties.add(XtsConstants.DEVICE_MCTS_MODULES_INFO_PROPERTY_KEY, MCTS_MODULES_INFO);
-    when(currentJob.properties()).thenReturn(currentJobProperties);
-    return currentJob;
-  }
-
-  private JobInfo mockNextJob(boolean isDynamicDownloadEnabled) {
-    JobInfo nextJob = mock(JobInfo.class);
-    Properties nextJobProperties = new Properties(new Timing());
-    nextJobProperties.add(
-        XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED, String.valueOf(isDynamicDownloadEnabled));
-    when(nextJob.properties()).thenReturn(nextJobProperties);
-    return nextJob;
+  private TestInfo mockNextTest() {
+    TestInfo nextTest = mock(TestInfo.class);
+    Properties nextTestProperties = new Properties(new Timing());
+    when(nextTest.properties()).thenReturn(nextTestProperties);
+    return nextTest;
   }
 }
