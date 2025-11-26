@@ -483,8 +483,9 @@ public enum BasicErrorId implements ErrorId {
   VERSION_STUB_TOO_OLD(39_937, ErrorType.INFRA_ISSUE),
   VERSION_STUB_GET_VERSION_ERROR(39_938, ErrorType.INFRA_ISSUE),
 
-  // User plugin: 39_951 ~ 39_955
+  // User assets: 39_951 ~ 39_980
   USER_PLUGIN_ERROR(39_951, ErrorType.CUSTOMER_ISSUE),
+  USER_ASSET_ERROR(39_958, ErrorType.CUSTOMER_ISSUE),
 
   /**
    * @deprecated Please use USER_PLUGIN_SKIP_TEST or USER_PLUGIN_SKIP_JOB
