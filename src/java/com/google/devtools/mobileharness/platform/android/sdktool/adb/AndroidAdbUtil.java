@@ -26,6 +26,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
@@ -47,10 +48,14 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 
 /**
@@ -132,6 +137,9 @@ public class AndroidAdbUtil {
 
   /** Output of the "{@code adb shell getprop <KEY>}" command if {@code <KEY>} not found. */
   @VisibleForTesting static final String OUTPUT_KEY_NOT_FOUND = "not found";
+
+  /** Pattern for parsing lines from `adb shell getprop`, like `[ro.product.model]: [Pixel 6]`. */
+  private static final Pattern GETPROP_LINE_PATTERN = Pattern.compile("\\[(.+?)\\]: \\[(.+?)\\]");
 
   /** Short timeout for quick operations. */
   @VisibleForTesting static final Duration SHORT_COMMAND_TIMEOUT = Duration.ofSeconds(5);
@@ -616,6 +624,35 @@ public class AndroidAdbUtil {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_ADB_UTIL_FORWARD_TCP_PORT_ERROR, e.getMessage(), e);
     }
+  }
+
+  /**
+   * Gets all property values of a device by executing `adb shell getprop`.
+   *
+   * @param serial serial number of the device
+   * @return an immutable map containing all device properties
+   * @throws MobileHarnessException if error occurs when reading the device property
+   * @throws InterruptedException if the thread executing the commands is interrupted
+   */
+  public ImmutableMap<String, String> getAllProperties(String serial)
+      throws MobileHarnessException, InterruptedException {
+    String rawProps;
+    try {
+      rawProps = adb.runShellWithRetry(serial, ADB_SHELL_GET_PROPERTY, SHORT_COMMAND_TIMEOUT);
+    } catch (MobileHarnessException e) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_ADB_UTIL_GET_DEVICE_PROPERTY_ERROR,
+          "Failed to get all properties: " + e.getMessage(),
+          e);
+    }
+    Map<String, String> properties = new HashMap<>();
+    for (String line : LINE_SPLITTER.split(rawProps)) {
+      Matcher matcher = GETPROP_LINE_PATTERN.matcher(line.trim());
+      if (matcher.matches()) {
+        properties.put(matcher.group(1), matcher.group(2));
+      }
+    }
+    return ImmutableMap.copyOf(properties);
   }
 
   /**
