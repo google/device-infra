@@ -98,11 +98,11 @@ public final class MctsDynamicDownloadPluginTest {
     when(mockTestInfo.getTmpFileDir()).thenReturn("/tmp");
     when(mockTestInfo.properties()).thenReturn(testProperties);
     when(mockTestInfo.jobInfo().properties()).thenReturn(jobProperties);
-    when(jobProperties.getOptional(XtsConstants.DEVICE_AOSP_VERSION_PROPERTY_KEY))
+    when(testProperties.getOptional(XtsConstants.DEVICE_AOSP_VERSION_PROPERTY_KEY))
         .thenReturn(Optional.of("30"));
-    when(jobProperties.getOptional(XtsConstants.DEVICE_TVP_VERSION_PROPERTY_KEY))
+    when(testProperties.getOptional(XtsConstants.DEVICE_TVP_VERSION_PROPERTY_KEY))
         .thenReturn(Optional.of("351030004"));
-    when(jobProperties.getOptional(XtsConstants.DEVICE_ABI_PROPERTY_KEY))
+    when(testProperties.getOptional(XtsConstants.DEVICE_ABI_PROPERTY_KEY))
         .thenReturn(Optional.of("arm64-v8a"));
     ListMultimap<String, String> mctsModulesInfo = ArrayListMultimap.create();
     mctsModulesInfo.put("preloaded", "android-mcts-networking:2024-10");
@@ -131,7 +131,7 @@ public final class MctsDynamicDownloadPluginTest {
     mctsModulesInfo.put("non-preloaded", "android-mcts-uwb");
     mctsModulesInfo.put("non-preloaded", "android-mcts-healthfitness");
     mctsModulesInfo.put("non-preloaded", "android-mcts-rkpd");
-    when(jobProperties.getOptional(XtsConstants.DEVICE_MCTS_MODULES_INFO_PROPERTY_KEY))
+    when(testProperties.getOptional(XtsConstants.DEVICE_MCTS_MODULES_INFO_PROPERTY_KEY))
         .thenReturn(
             Optional.of(
                 Base64.getEncoder().encodeToString(serialize((Serializable) mctsModulesInfo))));
@@ -329,17 +329,17 @@ public final class MctsDynamicDownloadPluginTest {
 
     spyMctsDynamicDownloadPlugin.onTestStarting(mockEvent);
 
-    verify(jobProperties).add(XtsConstants.DEVICE_AOSP_VERSION_PROPERTY_KEY, "30");
-    verify(jobProperties).add(XtsConstants.DEVICE_TVP_VERSION_PROPERTY_KEY, "351030004");
-    verify(jobProperties).add(XtsConstants.DEVICE_ABI_PROPERTY_KEY, "arm64-v8a");
-    verify(jobProperties).add(eq(XtsConstants.DEVICE_MCTS_MODULES_INFO_PROPERTY_KEY), anyString());
+    verify(testProperties).add(XtsConstants.DEVICE_AOSP_VERSION_PROPERTY_KEY, "30");
+    verify(testProperties).add(XtsConstants.DEVICE_TVP_VERSION_PROPERTY_KEY, "351030004");
+    verify(testProperties).add(XtsConstants.DEVICE_ABI_PROPERTY_KEY, "arm64-v8a");
+    verify(testProperties).add(eq(XtsConstants.DEVICE_MCTS_MODULES_INFO_PROPERTY_KEY), anyString());
   }
 
   @Test
   public void onTestStarting_dynamicJobMissingAospVersion_throwsException() throws Exception {
     when(jobProperties.getOptional(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME))
         .thenReturn(Optional.of(XtsConstants.DYNAMIC_MCTS_JOB_NAME));
-    when(jobProperties.getOptional(XtsConstants.DEVICE_AOSP_VERSION_PROPERTY_KEY))
+    when(testProperties.getOptional(XtsConstants.DEVICE_AOSP_VERSION_PROPERTY_KEY))
         .thenReturn(Optional.empty());
 
     assertThrows(
@@ -350,7 +350,7 @@ public final class MctsDynamicDownloadPluginTest {
   public void onTestStarting_dynamicJobMissingTvpVersion_throwsException() throws Exception {
     when(jobProperties.getOptional(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME))
         .thenReturn(Optional.of(XtsConstants.DYNAMIC_MCTS_JOB_NAME));
-    when(jobProperties.getOptional(XtsConstants.DEVICE_TVP_VERSION_PROPERTY_KEY))
+    when(testProperties.getOptional(XtsConstants.DEVICE_TVP_VERSION_PROPERTY_KEY))
         .thenReturn(Optional.empty());
 
     assertThrows(
@@ -361,7 +361,7 @@ public final class MctsDynamicDownloadPluginTest {
   public void onTestStarting_dynamicJobMissingAbiVersion_throwsException() throws Exception {
     when(jobProperties.getOptional(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME))
         .thenReturn(Optional.of(XtsConstants.DYNAMIC_MCTS_JOB_NAME));
-    when(jobProperties.getOptional(XtsConstants.DEVICE_ABI_PROPERTY_KEY))
+    when(testProperties.getOptional(XtsConstants.DEVICE_ABI_PROPERTY_KEY))
         .thenReturn(Optional.empty());
 
     assertThrows(
@@ -372,7 +372,7 @@ public final class MctsDynamicDownloadPluginTest {
   public void onTestStarting_dynamicJobMissingMctsModulesInfo_throwsException() throws Exception {
     when(jobProperties.getOptional(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME))
         .thenReturn(Optional.of(XtsConstants.DYNAMIC_MCTS_JOB_NAME));
-    when(jobProperties.getOptional(XtsConstants.DEVICE_MCTS_MODULES_INFO_PROPERTY_KEY))
+    when(testProperties.getOptional(XtsConstants.DEVICE_MCTS_MODULES_INFO_PROPERTY_KEY))
         .thenReturn(Optional.empty());
 
     assertThrows(
