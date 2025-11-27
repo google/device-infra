@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.platform.android.xts.suite;
 
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
 
@@ -107,6 +108,24 @@ public class TestSuiteHelper {
     suiteModuleLoader.setOptionalParameterizedModules(allowOptionalParameterizedModules);
     suiteModuleLoader.setModuleParameter(forcedModuleParameter);
     return loadingStrategy(suiteModuleLoader, abis, ImmutableList.of(testsDir));
+  }
+
+  /**
+   * Loads the test module configurations based on the ABIs supported by the suite's build target
+   * architecture.
+   *
+   * <p>This method differs from {@link #loadTests(DeviceInfo)} as it doesn't consider device
+   * properties.
+   */
+  public Map<String, Configuration> loadTestsUsingAbisForArchFromSuite()
+      throws MobileHarnessException, InterruptedException {
+    setAbis(
+        getAbisForBuildTargetArchFromSuite().stream()
+            .filter(AbiUtil::isAbiSupportedByCompatibility)
+            .map(abi -> Abi.of(abi, AbiUtil.getBitness(abi)))
+            .collect(toImmutableSet()));
+
+    return loadTests(/* deviceInfo= */ null);
   }
 
   @VisibleForTesting

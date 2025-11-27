@@ -23,14 +23,10 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.proto.Sess
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Failure;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Success;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.ListModulesCommand;
-import com.google.devtools.mobileharness.platform.android.xts.common.util.AbiUtil;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
-import com.google.devtools.mobileharness.platform.android.xts.suite.Abi;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper;
 import com.google.devtools.mobileharness.platform.android.xts.suite.params.ModuleParameters;
-import java.util.LinkedHashSet;
 import java.util.Map;
-import java.util.Set;
 
 /** Handler for "list modules" commands. */
 class ListModulesCommandHandler {
@@ -46,16 +42,7 @@ class ListModulesCommandHandler {
           ModuleParameters.valueOf(Ascii.toUpperCase(command.getModuleParameter())));
     }
 
-    Set<String> abiStrings = testSuiteHelper.getAbisForBuildTargetArchFromSuite();
-    Set<Abi> abis = new LinkedHashSet<>();
-    for (String abi : abiStrings) {
-      if (AbiUtil.isAbiSupportedByCompatibility(abi)) {
-        abis.add(Abi.of(abi, AbiUtil.getBitness(abi)));
-      }
-    }
-    testSuiteHelper.setAbis(abis);
-
-    Map<String, Configuration> configs = testSuiteHelper.loadTests(/* deviceInfo= */ null);
+    Map<String, Configuration> configs = testSuiteHelper.loadTestsUsingAbisForArchFromSuite();
 
     return getListModuleOutput(configs, command.getXtsRootDir());
   }
