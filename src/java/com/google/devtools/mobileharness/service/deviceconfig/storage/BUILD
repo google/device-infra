@@ -46,3 +46,17 @@ java_library(
         "@protobuf//:protobuf_java",
     ],
 )
+
+java_library(
+    name = "jdbc_storage_client",
+    srcs = ["JdbcStorageClient.java"],
+    deps = [
+        ":storage_client",
+        "//src/devtools/mobileharness/api/deviceconfig/proto:device_java_proto",
+        "//src/devtools/mobileharness/api/deviceconfig/proto:lab_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/database:database_connections",
+        "//src/java/com/google/devtools/mobileharness/shared/util/database:table_util",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)

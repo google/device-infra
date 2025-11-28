@@ -24,6 +24,7 @@ java_library(
     name = "device_config_module",
     srcs = ["DeviceConfigModule.java"],
     deps = [
+        "//src/java/com/google/devtools/mobileharness/service/deviceconfig/storage:jdbc_storage_client",
         "//src/java/com/google/devtools/mobileharness/service/deviceconfig/storage:local_file_storage_client",
         "//src/java/com/google/devtools/mobileharness/service/deviceconfig/storage:storage_client",
         "@maven//:com_google_inject_guice",
