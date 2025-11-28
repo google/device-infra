@@ -38,6 +38,9 @@ public interface StubFactory {
 
   JobSyncStub createJobSyncStub(StubConfiguration stubConfiguration);
 
+  com.google.devtools.mobileharness.infra.master.rpc.stub.LabInfoStub createSharedLabInfoStub(
+      StubConfiguration stubConfiguration);
+
   /** Util to create an exception for unsupported stub configuration. */
   static IllegalArgumentException createUnsupportedConfigurationException(
       StubConfiguration stubConfiguration) {

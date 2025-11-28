@@ -72,9 +72,29 @@ final class GrpcDirectTargetFactory
   }
 
   @Override
+  public com.google.devtools.mobileharness.infra.master.rpc.stub.grpc.LabInfoGrpcStub
+          .BlockingInterface
+      createSharedLabInfoBlockingInterface(StubConfiguration stubConfiguration) {
+    return directTargetConfigures.createStubInterface(
+        com.google.devtools.mobileharness.infra.master.rpc.stub.grpc.LabInfoGrpcStub
+            ::newBlockingInterface,
+        stubConfiguration);
+  }
+
+  @Override
   public JobSyncGrpcStub.FutureInterface createJobSyncFutureInterface(
       StubConfiguration stubConfiguration) {
     return directTargetConfigures.createStubInterface(
         JobSyncGrpcStub::newFutureInterface, stubConfiguration);
+  }
+
+  @Override
+  public com.google.devtools.mobileharness.infra.master.rpc.stub.grpc.LabInfoGrpcStub
+          .FutureInterface
+      createSharedLabInfoFutureInterface(StubConfiguration stubConfiguration) {
+    return directTargetConfigures.createStubInterface(
+        com.google.devtools.mobileharness.infra.master.rpc.stub.grpc.LabInfoGrpcStub
+            ::newFutureInterface,
+        stubConfiguration);
   }
 }

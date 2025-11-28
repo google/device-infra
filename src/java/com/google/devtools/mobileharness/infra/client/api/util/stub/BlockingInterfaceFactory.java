@@ -39,4 +39,7 @@ interface BlockingInterfaceFactory {
 
   JobSyncGrpcStub.BlockingInterface createJobSyncBlockingInterface(
       StubConfiguration stubConfiguration);
+
+  com.google.devtools.mobileharness.infra.master.rpc.stub.grpc.LabInfoGrpcStub.BlockingInterface
+      createSharedLabInfoBlockingInterface(StubConfiguration stubConfiguration);
 }

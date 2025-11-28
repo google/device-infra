@@ -93,6 +93,16 @@ final class GrpcStubFactory implements StubFactory {
             .createJobSyncFutureInterface(stubConfiguration));
   }
 
+  @Override
+  public com.google.devtools.mobileharness.infra.master.rpc.stub.LabInfoStub
+      createSharedLabInfoStub(StubConfiguration stubConfiguration) {
+    return new com.google.devtools.mobileharness.infra.master.rpc.stub.grpc.LabInfoGrpcStub(
+        getBlockingInterfaceFactory(stubConfiguration)
+            .createSharedLabInfoBlockingInterface(stubConfiguration),
+        getFutureInterfaceFactory(stubConfiguration)
+            .createSharedLabInfoFutureInterface(stubConfiguration));
+  }
+
   private BlockingInterfaceFactory getBlockingInterfaceFactory(
       StubConfiguration stubConfiguration) {
     checkArgument(
