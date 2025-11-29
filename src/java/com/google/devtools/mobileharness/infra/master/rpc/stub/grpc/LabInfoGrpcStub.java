@@ -42,7 +42,7 @@ public class LabInfoGrpcStub implements LabInfoStub {
 
   /** Future interface for {@link LabInfoGrpcStub}. */
   public interface FutureInterface {
-    ListenableFuture<GetLabInfoResponse> getLabInfoAsync(GetLabInfoRequest request);
+    ListenableFuture<GetLabInfoResponse> getLabInfo(GetLabInfoRequest request);
   }
 
   private final BlockingInterface blockingInterface;
@@ -88,7 +88,7 @@ public class LabInfoGrpcStub implements LabInfoStub {
   @Override
   public ListenableFuture<GetLabInfoResponse> getLabInfoAsync(GetLabInfoRequest request) {
     return GrpcStubUtil.invokeAsync(
-        futureInterface::getLabInfoAsync,
+        futureInterface::getLabInfo,
         request,
         InfraErrorId.MASTER_RPC_STUB_LAB_INFO_GET_LAB_INFO_ERROR,
         String.format("Failed to get lab info, request=%s", shortDebugString(request)));
