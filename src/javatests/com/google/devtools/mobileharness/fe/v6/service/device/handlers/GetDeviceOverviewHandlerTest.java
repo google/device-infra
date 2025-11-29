@@ -58,7 +58,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceOve
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HealthAndActivityInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HealthAndActivityInfo.DeviceType;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HealthState;
-import com.google.devtools.mobileharness.infra.master.rpc.stub.LabInfoStub;
+import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 import com.google.inject.Guice;
@@ -139,7 +139,7 @@ public final class GetDeviceOverviewHandlerTest {
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
 
-  @Bind @Mock private LabInfoStub labInfoStub;
+  @Bind @Mock private LabInfoProvider labInfoProvider;
   @Bind @Mock private ConfigurationProvider configurationProvider;
 
   @Bind private ListeningExecutorService executorService = newDirectExecutorService();
@@ -152,7 +152,7 @@ public final class GetDeviceOverviewHandlerTest {
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
 
     // Default mock behaviors
-    when(labInfoStub.getLabInfoAsync(any(GetLabInfoRequest.class)))
+    when(labInfoProvider.getLabInfoAsync(any(GetLabInfoRequest.class), any()))
         .thenReturn(immediateFuture(DEFAULT_LAB_INFO_RESPONSE));
     when(configurationProvider.getDeviceConfig(any(), any()))
         .thenReturn(immediateFuture(Optional.empty()));
@@ -161,7 +161,7 @@ public final class GetDeviceOverviewHandlerTest {
   }
 
   private void mockDeviceInfo(DeviceInfo deviceInfo) {
-    when(labInfoStub.getLabInfoAsync(any(GetLabInfoRequest.class)))
+    when(labInfoProvider.getLabInfoAsync(any(GetLabInfoRequest.class), any()))
         .thenReturn(
             immediateFuture(
                 GetLabInfoResponse.newBuilder()
@@ -187,7 +187,7 @@ public final class GetDeviceOverviewHandlerTest {
     assertThat(response.getOverview().getHost().getName()).isEqualTo(HOST_NAME);
     assertThat(response.getOverview().hasHealthAndActivity()).isTrue();
 
-    verify(labInfoStub).getLabInfoAsync(any(GetLabInfoRequest.class));
+    verify(labInfoProvider).getLabInfoAsync(any(GetLabInfoRequest.class), eq(UNIVERSE));
     verify(configurationProvider).getDeviceConfig(eq(DEVICE_ID), eq(UNIVERSE));
     verify(configurationProvider).getLabConfig(eq(HOST_NAME), eq(UNIVERSE));
   }
@@ -197,7 +197,7 @@ public final class GetDeviceOverviewHandlerTest {
     getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST).get(); // First call
     getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST).get(); // Second call
 
-    verify(labInfoStub).getLabInfoAsync(any(GetLabInfoRequest.class));
+    verify(labInfoProvider).getLabInfoAsync(any(GetLabInfoRequest.class), eq(UNIVERSE));
     verify(configurationProvider).getDeviceConfig(eq(DEVICE_ID), eq(UNIVERSE));
     verify(configurationProvider).getLabConfig(eq(HOST_NAME), eq(UNIVERSE));
   }
@@ -209,14 +209,14 @@ public final class GetDeviceOverviewHandlerTest {
         .getDeviceOverview(DEFAULT_REQUEST.toBuilder().setForceRefresh(true).build())
         .get(); // Second call with force refresh
 
-    verify(labInfoStub, times(2)).getLabInfoAsync(any(GetLabInfoRequest.class));
+    verify(labInfoProvider, times(2)).getLabInfoAsync(any(GetLabInfoRequest.class), eq(UNIVERSE));
     verify(configurationProvider, times(2)).getDeviceConfig(eq(DEVICE_ID), eq(UNIVERSE));
     verify(configurationProvider, times(2)).getLabConfig(eq(HOST_NAME), eq(UNIVERSE));
   }
 
   @Test
-  public void getDeviceOverview_labInfoStubFails() throws Exception {
-    when(labInfoStub.getLabInfoAsync(any(GetLabInfoRequest.class)))
+  public void getDeviceOverview_labInfoProviderFails() throws Exception {
+    when(labInfoProvider.getLabInfoAsync(any(GetLabInfoRequest.class), any()))
         .thenReturn(immediateFailedFuture(new StatusRuntimeException(Status.DEADLINE_EXCEEDED)));
 
     ListenableFuture<DeviceOverviewPageData> responseFuture =

@@ -54,7 +54,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.device.Dimensions;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceOverviewRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HostInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.PermissionInfo;
-import com.google.devtools.mobileharness.infra.master.rpc.stub.LabInfoStub;
+import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 import java.time.Duration;
@@ -76,7 +76,7 @@ public final class GetDeviceOverviewHandler {
   private static final String DIMENSION_SOURCE_DEVICE_CONFIG = "From Device Config";
   private static final String DIMENSION_SOURCE_HOST_CONFIG = "From Host Config";
 
-  private final LabInfoStub labInfoStub;
+  private final LabInfoProvider labInfoProvider;
   private final ConfigurationProvider configurationProvider;
   private final ListeningExecutorService executor;
   private final HealthAndActivityBuilder healthAndActivityBuilder;
@@ -84,11 +84,11 @@ public final class GetDeviceOverviewHandler {
 
   @Inject
   GetDeviceOverviewHandler(
-      LabInfoStub labInfoStub,
+      LabInfoProvider labInfoProvider,
       ConfigurationProvider configurationProvider,
       ListeningExecutorService executor,
       HealthAndActivityBuilder healthAndActivityBuilder) {
-    this.labInfoStub = labInfoStub;
+    this.labInfoProvider = labInfoProvider;
     this.configurationProvider = configurationProvider;
     this.executor = executor;
     this.healthAndActivityBuilder = healthAndActivityBuilder;
@@ -102,7 +102,8 @@ public final class GetDeviceOverviewHandler {
 
   public ListenableFuture<DeviceOverviewPageData> getDeviceOverview(
       GetDeviceOverviewRequest request) {
-    String cacheKey = request.getUniverse() + ":" + request.getId();
+    String universe = request.getUniverse().isEmpty() ? "google_1p" : request.getUniverse();
+    String cacheKey = universe + ":" + request.getId();
     if (request.getForceRefresh()) {
       logger.atInfo().log("Force refreshing cache for %s", cacheKey);
       overviewCache.synchronous().invalidate(cacheKey);
@@ -146,7 +147,7 @@ public final class GetDeviceOverviewHandler {
     // 1. Fetch DeviceInfo
     logger.atInfo().log("Fetching DeviceInfo for %s", key);
     ListenableFuture<GetLabInfoResponse> getLabInfoResponseFuture =
-        labInfoStub.getLabInfoAsync(createGetLabInfoRequest(deviceId));
+        labInfoProvider.getLabInfoAsync(createGetLabInfoRequest(deviceId), universe);
 
     ListenableFuture<DeviceInfo> deviceInfoFuture =
         Futures.transform(

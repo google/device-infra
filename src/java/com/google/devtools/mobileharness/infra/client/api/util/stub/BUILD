@@ -52,6 +52,13 @@ java_library(
         "GrpcStubFactory.java",
         "StubFactory.java",
     ],
+    visibility = [
+        "//java/com/google/devtools/mobileharness/fe/v6/service:__subpackages__",
+        "//javatests/com/google/devtools/mobileharness/fe/v6/service:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/util/serverlocator:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/shared/util/comm/relay:__subpackages__",
+        "//src/java/com/google/wireless/qa/mobileharness/client/api/util/stub:__pkg__",
+    ],
     deps = [
         "//src/devtools/mobileharness/shared/util/comm/stub:stub_configuration_java_proto",
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/stub:exec_test",
@@ -78,6 +85,12 @@ java_library(
     srcs = [
         "GrpcStubFactoryModule.java",
         "StubFactoryModule.java",
+    ],
+    visibility = [
+        "//java/com/google/devtools/mobileharness/fe/v6/service:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/util/serverlocator:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/shared/util/comm/relay:__subpackages__",
+        "//src/java/com/google/wireless/qa/mobileharness/client/api/util/stub:__pkg__",
     ],
     deps = [
         ":stub_factory",

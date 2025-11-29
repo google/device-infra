@@ -14,28 +14,31 @@
 #
 
 load("@rules_java//java:java_library.bzl", "java_library")
+load("//src/javatests/com/google/devtools/mobileharness/builddefs:junit_test_suites.bzl", "junit_test_suites")
 
 package(
     default_applicable_licenses = ["//:license"],
-    default_visibility = ["//src/devtools/mobileharness/fe/v6:visibility"],
 )
 
 java_library(
-    name = "shared",
+    name = "tests",
+    testonly = 1,
     srcs = glob(["*.java"]),
     deps = [
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/device:configuration_provider",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/device:oss_configuration_provider_impl",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:lab_info_provider",
+        "//src/devtools/mobileharness/shared/labinfo/proto:lab_info_service_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers/oss:oss_lab_info_provider_impl",
-        "//src/java/com/google/devtools/mobileharness/infra/master/rpc/stub:annotation",
         "//src/java/com/google/devtools/mobileharness/infra/master/rpc/stub:lab_info",
-        "//src/java/com/google/devtools/mobileharness/infra/master/rpc/stub/grpc:lab_info",
-        "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:channel_factory",
-        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
-        "@grpc-java//core",
         "@maven//:com_google_guava_guava",
-        "@maven//:com_google_inject_guice",
-        "@maven//:javax_inject_jsr330_api",
+        "@maven//:com_google_truth_extensions_truth_proto_extension",
+        "@maven//:junit_junit",
+        "@maven//:org_mockito_mockito_core",
     ],
+)
+
+junit_test_suites(
+    name = "gen_tests",
+    sizes = [
+        "small",
+    ],
+    deps = [":tests"],
 )

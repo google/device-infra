@@ -21,21 +21,13 @@ package(
 )
 
 java_library(
-    name = "shared",
-    srcs = glob(["*.java"]),
+    name = "oss_lab_info_provider_impl",
+    srcs = ["OssLabInfoProviderImpl.java"],
     deps = [
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/device:configuration_provider",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/device:oss_configuration_provider_impl",
+        "//src/devtools/mobileharness/shared/labinfo/proto:lab_info_service_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:lab_info_provider",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers/oss:oss_lab_info_provider_impl",
-        "//src/java/com/google/devtools/mobileharness/infra/master/rpc/stub:annotation",
         "//src/java/com/google/devtools/mobileharness/infra/master/rpc/stub:lab_info",
-        "//src/java/com/google/devtools/mobileharness/infra/master/rpc/stub/grpc:lab_info",
-        "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:channel_factory",
-        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
-        "@grpc-java//core",
         "@maven//:com_google_guava_guava",
-        "@maven//:com_google_inject_guice",
         "@maven//:javax_inject_jsr330_api",
     ],
 )
