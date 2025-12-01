@@ -19,6 +19,11 @@ import {
 import {MOCK_DEVICE_SCENARIOS} from '../mock_data';
 import {MockDeviceScenario} from '../mock_data/models';
 import {DeviceService} from './device_service';
+import {
+  generateHealthinessStats,
+  generateRecoveryTaskStats,
+  generateTestResultStats,
+} from './fake_stats_utils';
 
 /**
  * A fake implementation of the DeviceService for development and testing.
@@ -78,9 +83,14 @@ export class FakeDeviceService extends DeviceService {
     console.log(
       `FakeService: Fetching Healthiness for ${id} from ${startTime} to ${endTime}`,
     );
-    // In a real scenario, we would check if the device exists.
-    // Here, we just return mock data based on the date range.
-    return of();
+    const scenario = MOCK_DEVICE_SCENARIOS.find((s) => s.id === id);
+    if (scenario) {
+      return of(generateHealthinessStats(startTime, endTime));
+    } else {
+      return throwError(
+        () => new Error(`Device with ID '${id}' not found in mock data.`),
+      );
+    }
   }
 
   /**
@@ -97,7 +107,14 @@ export class FakeDeviceService extends DeviceService {
     console.log(
       `FakeService: Fetching Test Results for ${id} from ${startTime} to ${endTime}`,
     );
-    return of();
+    const scenario = MOCK_DEVICE_SCENARIOS.find((s) => s.id === id);
+    if (scenario) {
+      return of(generateTestResultStats(startTime, endTime));
+    } else {
+      return throwError(
+        () => new Error(`Device with ID '${id}' not found in mock data.`),
+      );
+    }
   }
 
   /**
@@ -114,7 +131,14 @@ export class FakeDeviceService extends DeviceService {
     console.log(
       `FakeService: Fetching Recovery Tasks for ${id} from ${startTime} to ${endTime}`,
     );
-    return of();
+    const scenario = MOCK_DEVICE_SCENARIOS.find((s) => s.id === id);
+    if (scenario) {
+      return of(generateRecoveryTaskStats(startTime, endTime));
+    } else {
+      return throwError(
+        () => new Error(`Device with ID '${id}' not found in mock data.`),
+      );
+    }
   }
 
   override takeScreenshot(id: string): Observable<TakeScreenshotResponse> {
