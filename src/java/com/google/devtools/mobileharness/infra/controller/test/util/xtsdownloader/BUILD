@@ -29,7 +29,7 @@ java_library(
     deps = [
         "//src/devtools/mobileharness/infra/controller/test/util/xtsdownloader/proto:xts_dynamic_download_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event:lab_test_events",
     ],
 )
 

@@ -21,11 +21,11 @@ import static com.google.common.truth.Truth.assertThat;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Arrays.stream;
 import static org.apache.commons.lang3.SerializationUtils.serialize;
-import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -34,8 +34,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.ListMultimap;
+import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.api.testrunner.plugin.SkipTestException;
 import com.google.devtools.mobileharness.platform.android.packagemanager.AndroidPackageManagerUtil;
 import com.google.devtools.mobileharness.platform.android.packagemanager.ModuleInfo;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
@@ -286,9 +286,95 @@ public final class MctsDynamicDownloadPluginTest {
   }
 
   @Test
-  public void onTestStarting_dynamicJob_success() throws Exception {
+  public void onTestStarting_dynamicMctsJob_success() throws Exception {
     when(jobProperties.getOptional(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME))
         .thenReturn(Optional.of(XtsConstants.DYNAMIC_MCTS_JOB_NAME));
+    generateTestZipFilesForDynamicJob();
+
+    spyMctsDynamicDownloadPlugin.onTestStarting(mockEvent);
+
+    verifyDownloadAndUnzipFile();
+    verify(testProperties).add(XtsConstants.DEVICE_AOSP_VERSION_PROPERTY_KEY, "30");
+    verify(testProperties, times(2)).add(XtsConstants.DEVICE_TVP_VERSION_PROPERTY_KEY, "351030004");
+    verify(testProperties).add(XtsConstants.DEVICE_ABI_PROPERTY_KEY, "arm64-v8a");
+    verify(testProperties).add(eq(XtsConstants.DEVICE_MCTS_MODULES_INFO_PROPERTY_KEY), anyString());
+  }
+
+  @Test
+  public void onTestStarting_staticJob_success() throws Exception {
+    when(jobProperties.getOptional(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME))
+        .thenReturn(Optional.of(XtsConstants.STATIC_XTS_JOB_NAME));
+
+    spyMctsDynamicDownloadPlugin.onTestStarting(mockEvent);
+
+    verify(testProperties).add(XtsConstants.DEVICE_AOSP_VERSION_PROPERTY_KEY, "30");
+    verify(testProperties).add(XtsConstants.DEVICE_TVP_VERSION_PROPERTY_KEY, "351030004");
+    verify(testProperties).add(XtsConstants.DEVICE_ABI_PROPERTY_KEY, "arm64-v8a");
+    verify(testProperties).add(eq(XtsConstants.DEVICE_MCTS_MODULES_INFO_PROPERTY_KEY), anyString());
+  }
+
+  @Test
+  public void onTestStarting_fetchDeviceAospVersionThrowsException_fallbackToProperties()
+      throws Exception {
+    when(jobProperties.getOptional(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME))
+        .thenReturn(Optional.of(XtsConstants.STATIC_XTS_JOB_NAME));
+    when(mockAdbUtil.getProperty(any(), eq(AndroidProperty.SDK_VERSION)))
+        .thenThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_ADB_UTIL_GET_DEVICE_PROPERTY_ERROR, "error"));
+
+    spyMctsDynamicDownloadPlugin.onTestStarting(mockEvent);
+
+    verify(testProperties).getOptional(XtsConstants.DEVICE_AOSP_VERSION_PROPERTY_KEY);
+  }
+
+  @Test
+  public void onTestStarting_fetchDeviceTvpVersionThrowsException_fallbackToProperties()
+      throws Exception {
+    when(jobProperties.getOptional(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME))
+        .thenReturn(Optional.of(XtsConstants.STATIC_XTS_JOB_NAME));
+    when(mockAndroidPackageManagerUtil.getAppVersionCode(
+            any(), eq("com.google.android.modulemetadata")))
+        .thenThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_PKG_MNGR_UTIL_DUMPSYS_ERROR, "error"));
+
+    spyMctsDynamicDownloadPlugin.onTestStarting(mockEvent);
+
+    verify(testProperties).getOptional(XtsConstants.DEVICE_TVP_VERSION_PROPERTY_KEY);
+  }
+
+  @Test
+  public void onTestStarting_fetchDeviceAbiVersionThrowsException_fallbackToProperties()
+      throws Exception {
+    when(jobProperties.getOptional(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME))
+        .thenReturn(Optional.of(XtsConstants.STATIC_XTS_JOB_NAME));
+    when(mockAdbUtil.getProperty(any(), eq(AndroidProperty.ABI)))
+        .thenThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_PKG_MNGR_UTIL_DUMPSYS_ERROR, "error"));
+
+    spyMctsDynamicDownloadPlugin.onTestStarting(mockEvent);
+
+    verify(testProperties).getOptional(XtsConstants.DEVICE_ABI_PROPERTY_KEY);
+  }
+
+  @Test
+  public void onTestStarting_fetchDeviceMctsModulesInfoThrowsException_fallbackToProperties()
+      throws Exception {
+    when(jobProperties.getOptional(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME))
+        .thenReturn(Optional.of(XtsConstants.STATIC_XTS_JOB_NAME));
+    when(mockAndroidPackageManagerUtil.getAppVersionCode(any(), any()))
+        .thenThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_PKG_MNGR_UTIL_DUMPSYS_ERROR, "error"));
+
+    spyMctsDynamicDownloadPlugin.onTestStarting(mockEvent);
+
+    verify(testProperties).getOptional(XtsConstants.DEVICE_MCTS_MODULES_INFO_PROPERTY_KEY);
+  }
+
+  private void generateTestZipFilesForDynamicJob() throws IOException {
     generateTestZipFile("android-mcts-networking", "networking.txt", "/tmp");
     generateTestZipFile("android-mcts-conscrypt", "conscrypt.txt", "/tmp");
     generateTestZipFile("android-mcts-configinfrastructure", "configinfrastructure.txt", "/tmp");
@@ -316,71 +402,9 @@ public final class MctsDynamicDownloadPluginTest {
     generateTestZipFile("android-mcts-uwb", "uwb.txt", "/tmp");
     generateTestZipFile("android-mcts-healthfitness", "healthfitness.txt", "/tmp");
     generateTestZipFile("android-mcts-rkpd", "rkpd.txt", "/tmp");
-
-    spyMctsDynamicDownloadPlugin.onTestStarting(mockEvent);
-
-    verifyDownloadAndUnzipFile();
-  }
-
-  @Test
-  public void onTestStarting_staticJob_success() throws Exception {
-    when(jobProperties.getOptional(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME))
-        .thenReturn(Optional.of(XtsConstants.STATIC_XTS_JOB_NAME));
-
-    spyMctsDynamicDownloadPlugin.onTestStarting(mockEvent);
-
-    verify(testProperties).add(XtsConstants.DEVICE_AOSP_VERSION_PROPERTY_KEY, "30");
-    verify(testProperties).add(XtsConstants.DEVICE_TVP_VERSION_PROPERTY_KEY, "351030004");
-    verify(testProperties).add(XtsConstants.DEVICE_ABI_PROPERTY_KEY, "arm64-v8a");
-    verify(testProperties).add(eq(XtsConstants.DEVICE_MCTS_MODULES_INFO_PROPERTY_KEY), anyString());
-  }
-
-  @Test
-  public void onTestStarting_dynamicJobMissingAospVersion_throwsException() throws Exception {
-    when(jobProperties.getOptional(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME))
-        .thenReturn(Optional.of(XtsConstants.DYNAMIC_MCTS_JOB_NAME));
-    when(testProperties.getOptional(XtsConstants.DEVICE_AOSP_VERSION_PROPERTY_KEY))
-        .thenReturn(Optional.empty());
-
-    assertThrows(
-        SkipTestException.class, () -> spyMctsDynamicDownloadPlugin.onTestStarting(mockEvent));
-  }
-
-  @Test
-  public void onTestStarting_dynamicJobMissingTvpVersion_throwsException() throws Exception {
-    when(jobProperties.getOptional(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME))
-        .thenReturn(Optional.of(XtsConstants.DYNAMIC_MCTS_JOB_NAME));
-    when(testProperties.getOptional(XtsConstants.DEVICE_TVP_VERSION_PROPERTY_KEY))
-        .thenReturn(Optional.empty());
-
-    assertThrows(
-        SkipTestException.class, () -> spyMctsDynamicDownloadPlugin.onTestStarting(mockEvent));
-  }
-
-  @Test
-  public void onTestStarting_dynamicJobMissingAbiVersion_throwsException() throws Exception {
-    when(jobProperties.getOptional(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME))
-        .thenReturn(Optional.of(XtsConstants.DYNAMIC_MCTS_JOB_NAME));
-    when(testProperties.getOptional(XtsConstants.DEVICE_ABI_PROPERTY_KEY))
-        .thenReturn(Optional.empty());
-
-    assertThrows(
-        SkipTestException.class, () -> spyMctsDynamicDownloadPlugin.onTestStarting(mockEvent));
-  }
-
-  @Test
-  public void onTestStarting_dynamicJobMissingMctsModulesInfo_throwsException() throws Exception {
-    when(jobProperties.getOptional(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME))
-        .thenReturn(Optional.of(XtsConstants.DYNAMIC_MCTS_JOB_NAME));
-    when(testProperties.getOptional(XtsConstants.DEVICE_MCTS_MODULES_INFO_PROPERTY_KEY))
-        .thenReturn(Optional.empty());
-
-    assertThrows(
-        SkipTestException.class, () -> spyMctsDynamicDownloadPlugin.onTestStarting(mockEvent));
   }
 
   private void verifyDownloadAndUnzipFile() throws Exception {
-
     File directory = new File("/tmp/android/xts/mcts/testcases");
     File[] files = directory.listFiles();
 

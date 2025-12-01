@@ -158,26 +158,25 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
 
   @Override
   @SuppressWarnings("BeforeSnippet")
-  public XtsDynamicDownloadInfo parse(TestInfo test, @Nullable String deviceId)
-      throws MobileHarnessException, InterruptedException {
-    String aospVersion = getAospVersion(deviceId, test);
+  public XtsDynamicDownloadInfo parse(LocalTestStartingEvent event) throws MobileHarnessException {
+    TestInfo test = event.getTest();
+    String aospVersion = getAospVersion(event);
     ListMultimap<String, String> mctsNamesOfAllModules =
-        getMctsNamesOfAllMainlineModules(test, deviceId, aospVersion);
+        getMctsNamesOfAllMainlineModules(event, aospVersion);
 
-    String deviceAbiRaw = getAbiVersion(deviceId, test);
+    String deviceAbiRaw = getAbiVersion(event);
     String deviceAbi = DEVICE_ABI_MAP.get(deviceAbiRaw);
     if (deviceAbi == null) {
       throw new MobileHarnessException(
           AndroidErrorId.XTS_DYNAMIC_DOWNLOADER_DEVICE_ABI_NOT_SUPPORT,
-          String.format(
-              "The ABI of device %s is not compatible with the xts dynamic downloader.", deviceId));
+          "The ABI of device is not compatible with the xts dynamic downloader.");
     }
 
     List<String> downloadLinkUrls = new ArrayList<>();
     // Add the Lorry download link url of MCTS file for preloaded mainline modules. For example:
     // https://dl.google.com/dl/android/xts/mcts/YYYY-MM/arm64/android-mcts-<module_name>.zip
     if (mctsNamesOfAllModules.containsKey(PRELOADED_KEY)) {
-      String versioncode = getTvpVersion(deviceId, test);
+      String versioncode = getTvpVersion(event);
       String preloadedMainlineVersion =
           processModuleVersion(versioncode, MAINLINE_TVP_PKG, aospVersion, aospVersion);
       test.properties()
@@ -224,8 +223,9 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
 
   @Override
   public void downloadXtsFiles(
-      XtsDynamicDownloadInfo xtsDynamicDownloadInfo, TestInfo testInfo, @Nullable String deviceId)
+      XtsDynamicDownloadInfo xtsDynamicDownloadInfo, LocalTestStartingEvent event)
       throws MobileHarnessException, InterruptedException {
+    TestInfo testInfo = event.getTest();
     List<String> downloadUrlList = new ArrayList<>(xtsDynamicDownloadInfo.getDownloadUrlList());
     // Download the MCTS full test list.
     if (downloadUrlList.get(1).contains("mcts_test_list")) {
@@ -289,7 +289,7 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
     }
     // Download the JDK file.
     // Use train version to match JDK version.
-    String jdkVersion = getTvpVersion(deviceId, testInfo).substring(0, 2);
+    String jdkVersion = getTvpVersion(event).substring(0, 2);
     String jdkFileTargetPath = TMP_MCTS_TOOL_PATH + "/" + jdkVersion + "/jdk.zip";
     logger.atInfo().log("Start to download JDK files: %s", jdkFileTargetPath);
     String jdkFilePath =
@@ -316,30 +316,9 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
                   + " https://android.googlesource.com/platform/cts/+/main/tools/mcts/download_mcts.sh"
                   + " to use the script to manually download the files in advance to skip the"
                   + " downloading step)");
-      String targetDeviceId = null;
-      if (isStaticXtsJob(event.getTest())) {
-        // Get all online devices first, then check against requested locators.
-        Set<String> onlineDeviceSerials =
-            adbInternalUtil.getDeviceSerialsByState(DeviceState.DEVICE, /* timeout= */ null);
 
-        // Find the first online device of the allocation, or throw an exception if none are found.
-        // We need to ensure at least one device is online in this plugin to fetch the device build
-        // info, or it will cause the current job to fail then missing test modules in the final
-        // result.
-        targetDeviceId =
-            event.getAllocation().getAllDeviceLocators().stream()
-                .map(DeviceLocator::getSerial)
-                .filter(onlineDeviceSerials::contains)
-                .findFirst()
-                .orElseThrow(
-                    () ->
-                        new MobileHarnessException(
-                            AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE,
-                            "No online device found for the current job."));
-      }
-
-      XtsDynamicDownloadInfo xtsDynamicDownloadInfo = parse(event.getTest(), targetDeviceId);
-      downloadXtsFiles(xtsDynamicDownloadInfo, event.getTest(), targetDeviceId);
+      XtsDynamicDownloadInfo xtsDynamicDownloadInfo = parse(event);
+      downloadXtsFiles(xtsDynamicDownloadInfo, event);
 
       logger.atInfo().with(IMPORTANCE, IMPORTANT).log("Finished MCTS test modules preparation.");
     } catch (MobileHarnessException e) {
@@ -366,6 +345,24 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
         .equals(XtsConstants.STATIC_XTS_JOB_NAME);
   }
 
+  private String getDeviceId(LocalTestStartingEvent event)
+      throws MobileHarnessException, InterruptedException {
+    // Get all online devices first, then check against requested locators.
+    Set<String> onlineDeviceSerials =
+        adbInternalUtil.getDeviceSerialsByState(DeviceState.DEVICE, /* timeout= */ null);
+
+    // Find the first online device of the allocation, or throw an exception if none are found.
+    return event.getAllocation().getAllDeviceLocators().stream()
+        .map(DeviceLocator::getSerial)
+        .filter(onlineDeviceSerials::contains)
+        .findFirst()
+        .orElseThrow(
+            () ->
+                new MobileHarnessException(
+                    AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE,
+                    "No online device found for the current job."));
+  }
+
   private ImmutableList<String> getPreloadedMainlineModules(String deviceId)
       throws InterruptedException {
     try {
@@ -383,23 +380,26 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
   /**
    * Gets the MCTS names of all mainline modules.
    *
-   * <p>For static XTS job, the return value is also saved as part of the test properties.
+   * <p>This method retrieves the list of preloaded mainline modules from the device and categorizes
+   * them into preloaded and non-preloaded lists. The result is a ListMultimap where keys are {@link
+   * #PRELOADED_KEY} and {@link #NON_PRELOADED_KEY}.
    *
-   * <p>For dynamic XTS job, it reads the MCTS modules info from the test properties, instead of
-   * calculating it again. The intention is to tolerate devices going offline so the plugin can
-   * still proceed.
+   * <ul>
+   *   <li>For {@link #PRELOADED_KEY}, the values are strings in the format "mctsName:versioncode".
+   *   <li>For {@link #NON_PRELOADED_KEY}, the values are strings representing the mctsName.
+   * </ul>
    *
-   * @param moduleList the list of preloaded mainline modules on the device.
-   * @param deviceId the device serial number.
-   * @param aospVersion the AOSP version of the device.
-   * @return a ListMultimap, the key is PRELOADED_KEY or NON_PRELOADED_KEY, the value is a list of
-   *     MCTS names. For preloaded modules, the format of the value is "mctsName:versioncode". For
-   *     non-preloaded modules, the format of the value is "mctsName".
+   * <p>The return value is cached as part of the test properties. If a subsequent invocation of
+   * this method encounters an exception (e.g., device goes offline), the cached value from the test
+   * properties will be returned, allowing the plugin to proceed.
+   *
+   * @param event The test starting event, used to access test properties and device information.
+   * @param aospVersion The AOSP version of the device.
    */
   private ListMultimap<String, String> getMctsNamesOfAllMainlineModules(
-      TestInfo testInfo, String deviceId, String aospVersion)
-      throws MobileHarnessException, InterruptedException {
-    if (isStaticXtsJob(testInfo)) {
+      LocalTestStartingEvent event, String aospVersion) throws MobileHarnessException {
+    TestInfo testInfo = event.getTest();
+    try {
       String configFilePath =
           resUtil.getResourceFile(
               getClass(),
@@ -422,6 +422,7 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
       Set<String> preloadedModulesMctsAndVersioncode = new HashSet<>();
       Map<String, String> modulePackageToModuleInfoMap =
           moduleInfoMap.getModulePackageToModuleInfoMap();
+      String deviceId = getDeviceId(event);
       ImmutableList<String> preloadedMainlineModules = getPreloadedMainlineModules(deviceId);
       for (String moduleName : preloadedMainlineModules) {
         if (modulePackageToModuleInfoMap.containsKey(moduleName)) {
@@ -453,7 +454,9 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
           .add(XtsConstants.DEVICE_MCTS_MODULES_INFO_PROPERTY_KEY, serializedMctsModulesInfo);
       logger.atInfo().log("Read device MCTS modules info: %s", mctsNamesOfAllModules);
       return mctsNamesOfAllModules;
-    } else {
+    } catch (MobileHarnessException | InterruptedException e) {
+      logger.atInfo().withCause(e).log(
+          "Failed to get device MCTS modules info. Will try to read from test properties.");
       return testInfo
           .properties()
           .getOptional(XtsConstants.DEVICE_MCTS_MODULES_INFO_PROPERTY_KEY)
@@ -603,18 +606,21 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
   }
 
   private String getOrFetchStringDeviceInfo(
-      TestInfo testInfo,
-      @Nullable String deviceId,
+      LocalTestStartingEvent event,
       String propertyKey,
       String propertyDisplayName,
       DeviceInfoSupplier supplier)
-      throws MobileHarnessException, InterruptedException {
-    if (isStaticXtsJob(testInfo)) {
+      throws MobileHarnessException {
+    TestInfo testInfo = event.getTest();
+    try {
+      String deviceId = getDeviceId(event);
       String value = supplier.get(deviceId);
       testInfo.properties().add(propertyKey, value);
       logger.atInfo().log("Read device %s %s: %s", deviceId, propertyDisplayName, value);
       return value;
-    } else {
+    } catch (MobileHarnessException | InterruptedException e) {
+      logger.atInfo().withCause(e).log(
+          "Failed to get device %s. Will try to read from test properties.", propertyDisplayName);
       return testInfo
           .properties()
           .getOptional(propertyKey)
@@ -634,26 +640,19 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
   }
 
   /**
-   * Gets the AOSP version of the device.
+   * Gets the AOSP version (Android SDK level) of the device.
    *
-   * <ul>
-   *   For static XTS job:
-   *   <li>It's currently coded as the first job to run (before the MCTS job).
-   *   <li>Reads the SDK version from the device through adb.
-   *   <li>Stores the SDK version in the test properties.
-   * </ul>
+   * <p>This method first attempts to fetch the SDK version directly from the device using ADB. If
+   * successful, the value is cached in the test properties for future use. If a subsequent
+   * invocation of this method encounters an exception (e.g., device goes offline), the cached value
+   * from the test properties will be returned, allowing the plugin to proceed.
    *
-   * <ul>
-   *   For dynamic XTS job:
-   *   <li>Reads the SDK version from the test properties. The intention is to tolerate devices
-   *       going offline so the plugin can still proceed.
-   * </ul>
+   * @throws MobileHarnessException if the AOSP version cannot be fetched from the device and is not
+   *     found in the test properties.
    */
-  private String getAospVersion(String deviceId, TestInfo testInfo)
-      throws MobileHarnessException, InterruptedException {
+  private String getAospVersion(LocalTestStartingEvent event) throws MobileHarnessException {
     return getOrFetchStringDeviceInfo(
-        testInfo,
-        deviceId,
+        event,
         XtsConstants.DEVICE_AOSP_VERSION_PROPERTY_KEY,
         "AOSP version",
         (d) -> adbUtil.getProperty(d, AndroidProperty.SDK_VERSION));
@@ -662,24 +661,17 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
   /**
    * Gets the ABI version of the device.
    *
-   * <ul>
-   *   For static XTS job:
-   *   <li>It's currently coded as the first job to run (before the MCTS job).
-   *   <li>Reads the ABI version from the device through adb.
-   *   <li>Stores the ABI version in the test properties.
-   * </ul>
+   * <p>This method first attempts to fetch the ABI version directly from the device using ADB. If
+   * successful, the value is cached in the test properties for future use. If a subsequent
+   * invocation of this method encounters an exception (e.g., device goes offline), the cached value
+   * from the test properties will be returned, allowing the plugin to proceed.
    *
-   * <ul>
-   *   For dynamic XTS job:
-   *   <li>Reads the ABI version from the test properties. The intention is to tolerate devices
-   *       going offline so the plugin can still proceed.
-   * </ul>
+   * @throws MobileHarnessException if the ABI version cannot be fetched from the device and is not
+   *     found in the test properties.
    */
-  private String getAbiVersion(String deviceId, TestInfo testInfo)
-      throws MobileHarnessException, InterruptedException {
+  private String getAbiVersion(LocalTestStartingEvent event) throws MobileHarnessException {
     return getOrFetchStringDeviceInfo(
-        testInfo,
-        deviceId,
+        event,
         XtsConstants.DEVICE_ABI_PROPERTY_KEY,
         "ABI version",
         (d) -> adbUtil.getProperty(d, AndroidProperty.ABI));
@@ -708,29 +700,17 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
   /**
    * Gets the Train Version Package (TVP) version from the device.
    *
-   * <ul>
-   *   For static XTS job:
-   *   <li>It's currently coded as the first job to run (before the MCTS job).
-   *   <li>Reads the TVP version from the device through adb.
-   *   <li>Stores the TVP version in the test properties.
-   * </ul>
+   * <p>This method first attempts to fetch the TVP version directly from the device using ADB. If
+   * successful, the value is cached in the test properties for future use. If a subsequent
+   * invocation of this method encounters an exception (e.g., device goes offline), the cached value
+   * from the test properties will be returned, allowing the plugin to proceed.
    *
-   * <ul>
-   *   For dynamic XTS job:
-   *   <li>Reads the TVP version from the test properties. The intention is to tolerate devices
-   *       going offline so the plugin can still proceed.
-   * </ul>
-   *
-   * @param deviceId the device serial number.
-   * @param preloadedMainlineModules the list of preloaded mainline modules on the device.
-   * @param testInfo the test info.
-   * @return the TVP version string.
+   * @throws MobileHarnessException if the TVP version cannot be fetched from the device and is not
+   *     found in the test properties.
    */
-  private String getTvpVersion(String deviceId, TestInfo testInfo)
-      throws MobileHarnessException, InterruptedException {
+  private String getTvpVersion(LocalTestStartingEvent event) throws MobileHarnessException {
     return getOrFetchStringDeviceInfo(
-        testInfo,
-        deviceId,
+        event,
         XtsConstants.DEVICE_TVP_VERSION_PROPERTY_KEY,
         "TVP version",
         (d) -> {

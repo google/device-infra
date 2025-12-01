@@ -26,7 +26,6 @@ java_library(
     srcs = glob(["*.java"]),
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/devtools/mobileharness/api/testrunner/plugin:exception",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/util/xtsdownloader:mcts_dynamic_download_plugin",
         "//src/java/com/google/devtools/mobileharness/platform/android/packagemanager:android_package_manager_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/packagemanager:info",
