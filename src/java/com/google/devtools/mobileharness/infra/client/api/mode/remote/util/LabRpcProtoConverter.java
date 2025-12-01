@@ -196,7 +196,7 @@ public class LabRpcProtoConverter {
         }
         break;
       case UNKNOWN:
-        logger.atInfo().log("Ignore UNKNOWN test result from lab side");
+        logger.atFine().log("Ignore UNKNOWN test result from lab side");
         break;
       default:
         if (resultCause == null) {
