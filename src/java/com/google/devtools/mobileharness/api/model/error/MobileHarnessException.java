@@ -27,8 +27,18 @@ public class MobileHarnessException extends Exception implements ErrorIdProvider
 
   private final ErrorId errorId;
 
+  /**
+   * An error message that is safe to display to external users or in environments with PII
+   * restrictions.
+   *
+   * <p><b>WARNING:</b> This message MUST NOT contain any Personally Identifiable Information (PII),
+   * user data, or Google-internal sensitive information, code names, or internal system details.
+   * Treat this message as if it will be publicly visible.
+   */
+  @Nullable private final String externalErrorMessage;
+
   public MobileHarnessException(ErrorId errorId, String message) {
-    this(errorId, message, /* cause= */ null);
+    this(errorId, message, /* cause= */ (Throwable) null);
   }
 
   public MobileHarnessException(ErrorId errorId, String message, @Nullable Throwable cause) {
@@ -37,7 +47,39 @@ public class MobileHarnessException extends Exception implements ErrorIdProvider
         message,
         cause,
         !message.endsWith(getMessageSuffix(errorId)),
-        /* clearStackTrace= */ false);
+        /* clearStackTrace= */ false,
+        /* externalErrorMessage= */ null);
+  }
+
+  /**
+   * Constructs a new MobileHarnessException.
+   *
+   * @param externalErrorMessage An error message safe for external display. MUST NOT contain PII or
+   *     Google-sensitive information. See warning on the {@link #externalErrorMessage} field.
+   */
+  private MobileHarnessException(
+      ErrorId errorId, String message, @Nullable String externalErrorMessage) {
+    this(errorId, message, /* cause= */ null, externalErrorMessage);
+  }
+
+  /**
+   * Constructs a new MobileHarnessException.
+   *
+   * @param externalErrorMessage An error message safe for external display. MUST NOT contain PII or
+   *     Google-sensitive information. See warning on the {@link #externalErrorMessage} field.
+   */
+  private MobileHarnessException(
+      ErrorId errorId,
+      String message,
+      @Nullable Throwable cause,
+      @Nullable String externalErrorMessage) {
+    this(
+        errorId,
+        message,
+        cause,
+        !message.endsWith(getMessageSuffix(errorId)),
+        /* clearStackTrace= */ false,
+        externalErrorMessage);
   }
 
   /** Do NOT make it public. */
@@ -46,17 +88,55 @@ public class MobileHarnessException extends Exception implements ErrorIdProvider
       String message,
       @Nullable Throwable cause,
       boolean addErrorIdToMessage,
-      boolean clearStackTrace) {
+      boolean clearStackTrace,
+      @Nullable String externalErrorMessage) {
     super(addErrorIdToMessage ? message + getMessageSuffix(errorId) : message, cause);
     this.errorId = errorId;
+    this.externalErrorMessage = externalErrorMessage;
     if (clearStackTrace) {
       setStackTrace(EMPTY_STACK_TRACE);
     }
   }
 
+  /**
+   * Creates a new MobileHarnessException with an error message safe for external display.
+   *
+   * <p><b>WARNING:</b> The {@code externalErrorMessage} MUST NOT contain PII or Google-sensitive
+   * information. See warning on the {@link #externalErrorMessage} field.
+   */
+  public static MobileHarnessException createWithExternalMessage(
+      ErrorId errorId, String message, @Nullable String externalErrorMessage) {
+    return new MobileHarnessException(errorId, message, externalErrorMessage);
+  }
+
+  /**
+   * Creates a new MobileHarnessException with an error message safe for external display.
+   *
+   * <p><b>WARNING:</b> The {@code externalErrorMessage} MUST NOT contain PII or Google-sensitive
+   * information. See warning on the {@link #externalErrorMessage} field.
+   */
+  public static MobileHarnessException createWithExternalMessage(
+      ErrorId errorId,
+      String message,
+      @Nullable Throwable cause,
+      @Nullable String externalErrorMessage) {
+    return new MobileHarnessException(errorId, message, cause, externalErrorMessage);
+  }
+
   @Override
   public ErrorId getErrorId() {
     return errorId;
+  }
+
+  /**
+   * Returns the error message that is safe to display to external users.
+   *
+   * <p><b>WARNING:</b> Ensure that the creation of this message adheres to the restrictions
+   * outlined on the {@link #externalErrorMessage} field.
+   */
+  @Nullable
+  public String getExternalErrorMessage() {
+    return externalErrorMessage;
   }
 
   @Override
