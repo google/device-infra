@@ -26,6 +26,7 @@ import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.S
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestEnvironment;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestResource;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
+import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper.DeviceInfo;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteInfo;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryType;
 import java.time.Duration;
@@ -50,6 +51,8 @@ public abstract class SessionRequestInfo {
   public abstract Optional<String> androidXtsZipDownloadUrl();
 
   public abstract ImmutableList<String> deviceSerials();
+
+  public abstract Optional<DeviceInfo> deviceInfo();
 
   public abstract ImmutableList<String> excludeDeviceSerials();
 
@@ -107,6 +110,7 @@ public abstract class SessionRequestInfo {
   /** Key is config file absolute path. */
   public abstract ImmutableMap<String, Configuration> v2ConfigsMap();
 
+  /** Key is expanded module name (e.g. `arm64-v8a CtsBatteryHealthTestCases`). */
   public abstract ImmutableMap<String, Configuration> expandedModules();
 
   public abstract boolean enableModuleParameter();
@@ -173,6 +177,7 @@ public abstract class SessionRequestInfo {
     return new AutoValue_SessionRequestInfo.Builder()
         .setModuleNames(ImmutableList.of())
         .setDeviceSerials(ImmutableList.of())
+        .setDeviceInfo(Optional.empty())
         .setExcludeDeviceSerials(ImmutableList.of())
         .setProductTypes(ImmutableList.of())
         .setDeviceProperties(ImmutableMap.of())
@@ -215,6 +220,8 @@ public abstract class SessionRequestInfo {
     public abstract Builder setDeviceSerials(List<String> deviceSerials);
 
     public abstract Builder setExcludeDeviceSerials(List<String> excludeDeviceSerials);
+
+    public abstract Builder setDeviceInfo(Optional<DeviceInfo> deviceInfo);
 
     public abstract Builder setProductTypes(List<String> productTypes);
 

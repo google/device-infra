@@ -598,6 +598,7 @@ final class NewMultiCommandRequestHandler {
     }
 
     return sessionRequestInfoBuilder
+        .setDeviceInfo(sessionRequestHandlerUtil.getDeviceInfo(sessionRequestInfoBuilder.build()))
         .setAtsServerTestResources(fileTestResources.build())
         .setAtsServerTestEnvironment(request.getTestEnvironment())
         .build();

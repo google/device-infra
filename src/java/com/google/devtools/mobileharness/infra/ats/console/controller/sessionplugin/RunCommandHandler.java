@@ -51,6 +51,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.constan
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
+import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper.DeviceInfo;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteInfoProvider;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryType;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -417,6 +418,9 @@ class RunCommandHandler {
     sessionInfo
         .getSessionProperty(SessionProperties.PROPERTY_KEY_SESSION_CLIENT_ID)
         .ifPresent(builder::setSessionClientId);
+
+    Optional<DeviceInfo> deviceInfo = sessionRequestHandlerUtil.getDeviceInfo(builder.build());
+    builder.setDeviceInfo(deviceInfo);
     return sessionRequestHandlerUtil.addNonTradefedModuleInfo(builder.build());
   }
 }

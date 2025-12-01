@@ -191,6 +191,7 @@ java_library(
         "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",
         "//src/devtools/mobileharness/infra/ats/server/proto:service_java_proto",
         "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:test_suite_helper",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:test_suite_info",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:retry_type",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",

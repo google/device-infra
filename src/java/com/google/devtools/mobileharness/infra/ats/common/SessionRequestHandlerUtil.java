@@ -705,7 +705,7 @@ public class SessionRequestHandlerUtil {
         getTestSuiteHelper(xtsRootDir.toString(), xtsType, sessionRequestInfo);
     updatedSessionRequestInfo.setExpandedModules(
         ImmutableMap.copyOf(
-            testSuiteHelper.loadTests(getDeviceInfo(sessionRequestInfo).orElse(null))));
+            testSuiteHelper.loadTests(sessionRequestInfo.deviceInfo().orElse(null))));
 
     ImmutableList<String> modules = sessionRequestInfo.moduleNames();
     ImmutableSet<String> allNonTfModules = getNonTfModules(configsMap);
@@ -719,7 +719,7 @@ public class SessionRequestHandlerUtil {
         && !SessionRequestHandlerUtil.isRunRetry(sessionRequestInfo.testPlan());
   }
 
-  private Optional<DeviceInfo> getDeviceInfo(SessionRequestInfo sessionRequestInfo)
+  public Optional<DeviceInfo> getDeviceInfo(SessionRequestInfo sessionRequestInfo)
       throws MobileHarnessException, InterruptedException {
     Optional<DeviceInfo> deviceInfo =
         Flags.instance().enableAtsMode.getNonNull()
