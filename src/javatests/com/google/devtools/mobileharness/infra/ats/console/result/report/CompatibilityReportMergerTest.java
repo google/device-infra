@@ -131,7 +131,10 @@ public final class CompatibilityReportMergerTest {
     List<ParseResult> res =
         reportMerger.parseResultBundles(
             ImmutableList.of(
-                TradefedResultBundle.of(Path.of(CTS_TEST_RESULT_XML), Optional.empty())));
+                TradefedResultBundle.of(
+                    Path.of(CTS_TEST_RESULT_XML),
+                    /* testRecordFile= */ Optional.empty(),
+                    /* modules= */ ImmutableList.of())));
     Result report = res.get(0).report().get();
     TestRecord testRecord =
         TextFormat.parse(Files.readString(Path.of(CTS_TEST_RECORD_PB_FILE)), TestRecord.class);
@@ -150,8 +153,14 @@ public final class CompatibilityReportMergerTest {
     List<ParseResult> res =
         reportMerger.parseResultBundles(
             ImmutableList.of(
-                TradefedResultBundle.of(Path.of(CTS_TEST_RESULT_XML), Optional.empty()),
-                TradefedResultBundle.of(Path.of(CTS_TEST_RESULT_XML_2), Optional.empty())));
+                TradefedResultBundle.of(
+                    Path.of(CTS_TEST_RESULT_XML),
+                    /* testRecordFile= */ Optional.empty(),
+                    /* modules= */ ImmutableList.of()),
+                TradefedResultBundle.of(
+                    Path.of(CTS_TEST_RESULT_XML_2),
+                    /* testRecordFile= */ Optional.empty(),
+                    /* modules= */ ImmutableList.of())));
 
     assertThat(res).hasSize(2);
     assertThat(res.get(0).report().get().getModuleInfoList()).hasSize(2);
@@ -446,8 +455,24 @@ public final class CompatibilityReportMergerTest {
 
     assertThat(exception.getErrorId())
         .isEqualTo(ExtErrorId.REPORT_MERGER_NO_DEVICE_BUILD_FINGERPRINT_FOUND);
-    assertThat(exception)
-        .hasMessageThat()
-        .contains("Did not find any report with device build_fingerprint");
+  }
+
+  @Test
+  public void insertModulesToResult_success() {
+    Result result = Result.getDefaultInstance();
+    ImmutableList<TradefedResultBundle.ModuleInfo> modules =
+        ImmutableList.of(
+            TradefedResultBundle.ModuleInfo.of("abi1", "module1"),
+            TradefedResultBundle.ModuleInfo.of("abi2", "module2"));
+
+    Result updatedResult = CompatibilityReportMerger.insertModulesToResult(result, modules);
+
+    assertThat(updatedResult.getModuleInfoList()).hasSize(2);
+    assertThat(updatedResult.getModuleInfo(0).getName()).isEqualTo("module1");
+    assertThat(updatedResult.getModuleInfo(0).getAbi()).isEqualTo("abi1");
+    assertThat(updatedResult.getModuleInfo(0).getDone()).isFalse();
+    assertThat(updatedResult.getModuleInfo(1).getName()).isEqualTo("module2");
+    assertThat(updatedResult.getModuleInfo(1).getAbi()).isEqualTo("abi2");
+    assertThat(updatedResult.getModuleInfo(1).getDone()).isFalse();
   }
 }

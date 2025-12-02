@@ -42,6 +42,7 @@ import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.Dev
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestEnvironment;
 import com.google.devtools.mobileharness.infra.ats.server.util.AtsServerSessionUtil;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
+import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper.DeviceInfo;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryArgs;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryGenerator;
@@ -210,6 +211,12 @@ public final class ServerJobCreatorTest {
             .setAndroidXtsZip(ANDROID_XTS_ZIP_PATH)
             .setRemoteRunnerFilePathPrefix("ats-file-server::")
             .setModuleNames(ImmutableList.of("mock_module"))
+            .setDeviceInfo(
+                Optional.of(
+                    DeviceInfo.builder()
+                        .setDeviceId("mock_device_id")
+                        .setSupportedAbiList("arm64-v8a,armeabi-v7a")
+                        .build()))
             .build();
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
 
@@ -238,7 +245,13 @@ public final class ServerJobCreatorTest {
             "no_device_action_xts_test_plan_file",
             "ats-file-server::/public_dir/session_session_id/no_device_action_command.xml");
     assertThat(tradefedJobInfoList.get(0).extraJobProperties())
-        .containsExactly(Job.XTS_TEST_PLAN, "cts");
+        .containsExactly(
+            Job.XTS_TEST_PLAN,
+            "cts",
+            Job.FILTERED_TRADEFED_MODULES,
+            "mock_module",
+            Job.DEVICE_SUPPORTED_ABI_LIST,
+            "arm64-v8a,armeabi-v7a");
     String commandXmlContent =
         realLocalFileUtil.readFile(Path.of(publicDir, "session_session_id/command.xml"));
     assertThat(commandXmlContent).contains("TargetPreparer");
@@ -298,7 +311,13 @@ public final class ServerJobCreatorTest {
             "no_device_action_xts_test_plan_file",
             publicDir + "/session_session_id/no_device_action_command.xml");
     assertThat(tradefedJobInfoList.get(0).extraJobProperties())
-        .containsExactly(Job.XTS_TEST_PLAN, "cts");
+        .containsExactly(
+            Job.XTS_TEST_PLAN,
+            "cts",
+            Job.FILTERED_TRADEFED_MODULES,
+            "mock_module",
+            Job.DEVICE_SUPPORTED_ABI_LIST,
+            "");
     String commandXmlContent =
         realLocalFileUtil.readFile(Path.of(publicDir, "session_session_id/command.xml"));
     assertThat(commandXmlContent).contains("TF_DEVICE_0");
@@ -762,6 +781,8 @@ public final class ServerJobCreatorTest {
               when(jobInfo.properties()).thenReturn(new Properties(new Timing()));
               return jobInfo;
             });
+    when(sessionRequestHandlerUtil.getFilteredTradefedModules(any()))
+        .thenReturn(ImmutableList.of());
 
     ImmutableList<JobInfo> jobInfos = jobCreator.createXtsTradefedTestJob(sessionRequestInfo);
 
@@ -807,6 +828,8 @@ public final class ServerJobCreatorTest {
               when(jobInfo.properties()).thenReturn(new Properties(new Timing()));
               return jobInfo;
             });
+    when(sessionRequestHandlerUtil.getFilteredTradefedModules(any()))
+        .thenReturn(ImmutableList.of());
 
     ImmutableList<JobInfo> jobInfos = jobCreator.createXtsTradefedTestJob(sessionRequestInfo);
 
@@ -846,6 +869,8 @@ public final class ServerJobCreatorTest {
               when(jobInfo.properties()).thenReturn(new Properties(new Timing()));
               return jobInfo;
             });
+    when(sessionRequestHandlerUtil.getFilteredTradefedModules(any()))
+        .thenReturn(ImmutableList.of());
 
     ImmutableList<JobInfo> jobInfos = jobCreator.createXtsTradefedTestJob(sessionRequestInfo);
 

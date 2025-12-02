@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.infra.ats.common;
 
 import static com.google.common.base.Strings.isNullOrEmpty;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
@@ -24,6 +25,7 @@ import static java.util.stream.Collectors.toCollection;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Ascii;
+import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -697,8 +699,6 @@ public class SessionResultHandlerUtil {
    *        mobly_run_result_attributes.textproto
    *        ...
    * </pre>
-   *
-   * @return the path to the tradefed test result xml file if any
    */
   @CanIgnoreReturnValue
   private Optional<TradefedResultBundle> copyTradefedTestResultFiles(
@@ -774,8 +774,28 @@ public class SessionResultHandlerUtil {
                         .toString()
                         .equals(SessionHandlerHelper.TEST_RECORD_PROTOBUFFER_FILE_NAME))
             .findFirst();
+    // Retrieve the list of filtered (by include/exclude filters and the given module names)
+    // expanded module names (e.g. `arm64-v8a CtsBatteryHealthTestCases`) for the Tradefed test,
+    // from test properties.
+    ImmutableList<TradefedResultBundle.ModuleInfo> filteredExpandedTradefedModules =
+        Splitter.on(",")
+            .omitEmptyStrings()
+            .splitToStream(
+                tradefedTestInfo
+                    .properties()
+                    .getOptional(
+                        XtsConstants.TRADEFED_FILTERED_EXPANDED_MODULES_FOR_TEST_PROPERTY_KEY)
+                    .orElse(""))
+            .map(AbiUtil::parseId)
+            .map(
+                id ->
+                    TradefedResultBundle.ModuleInfo.of(/* abi= */ id.get(0), /* name= */ id.get(1)))
+            .collect(toImmutableList());
     return Optional.ofNullable(testResultXmlFile)
-        .map(value -> TradefedResultBundle.of(value, testRecordFile));
+        .map(
+            resultXmlFile ->
+                TradefedResultBundle.of(
+                    resultXmlFile, testRecordFile, filteredExpandedTradefedModules));
   }
 
   /**

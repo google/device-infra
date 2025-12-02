@@ -162,6 +162,14 @@ public abstract class XtsJobCreator {
     String xtsType = sessionRequestInfo.xtsType();
     int shardCount = sessionRequestInfo.shardCount().orElse(0);
     ImmutableMap.Builder<XtsPropertyName, String> extraJobProperties = ImmutableMap.builder();
+    extraJobProperties
+        .put(Job.FILTERED_TRADEFED_MODULES, String.join(",", tfModules))
+        .put(
+            Job.DEVICE_SUPPORTED_ABI_LIST,
+            sessionRequestInfo
+                .deviceInfo()
+                .flatMap(deviceInfo -> deviceInfo.supportedAbiList())
+                .orElse(""));
 
     Map<String, String> driverParams = new HashMap<>();
     ListMultimap<String, String> jobFiles = ArrayListMultimap.create();

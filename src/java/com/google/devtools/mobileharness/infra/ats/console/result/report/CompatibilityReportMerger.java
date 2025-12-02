@@ -106,7 +106,10 @@ public class CompatibilityReportMerger {
       throws MobileHarnessException, InterruptedException {
     return mergeResultBundles(
             reportXmlFiles.stream()
-                .map(file -> TradefedResultBundle.of(file, Optional.empty()))
+                .map(
+                    reportXmlFile ->
+                        TradefedResultBundle.of(
+                            reportXmlFile, Optional.empty(), /* modules= */ ImmutableList.of()))
                 .collect(toImmutableList()),
             skipDeviceInfo)
         .report();
@@ -574,15 +577,37 @@ public class CompatibilityReportMerger {
     Path xmlReportFile = resultBundle.xmlReportFile();
     Optional<Result> report = reportParser.parse(xmlReportFile, /* shallow= */ false);
     ImmutableSet<String> skippedModuleIds = ImmutableSet.of();
-    if (resultBundle.testRecordFile().isPresent() && report.isPresent()) {
-      Optional<TestRecord> testRecord = readTestRecord(resultBundle.testRecordFile().get());
-      if (testRecord.isPresent()) {
-        report = Optional.of(insertMetadataFromTestRecord(report.get(), testRecord.get()));
-        skippedModuleIds = getSkippedModuleIds(testRecord.get());
+    if (report.isPresent()) {
+      // Insert the metadata from the test record (if present) to the report.
+      if (resultBundle.testRecordFile().isPresent()) {
+        Optional<TestRecord> testRecord = readTestRecord(resultBundle.testRecordFile().get());
+        if (testRecord.isPresent()) {
+          report = Optional.of(insertMetadataFromTestRecord(report.get(), testRecord.get()));
+          skippedModuleIds = getSkippedModuleIds(testRecord.get());
+        }
+      }
+
+      // If the result doesn't have any module info populated, this means Tradefed wasn't able to
+      // populate the module info in the result XML file. In this case, we will insert the modules
+      // info from the result bundle, so the final XML report is more complete and accurate for
+      // retrying.
+      if (report.get().getModuleInfoCount() == 0) {
+        report = Optional.of(insertModulesToResult(report.get(), resultBundle.modules()));
       }
     }
 
     return ParseResult.of(Optional.of(xmlReportFile), report, skippedModuleIds);
+  }
+
+  @VisibleForTesting
+  static Result insertModulesToResult(
+      Result result, ImmutableList<TradefedResultBundle.ModuleInfo> modules) {
+    Result.Builder resultBuilder = result.toBuilder();
+    for (TradefedResultBundle.ModuleInfo module : modules) {
+      resultBuilder.addModuleInfo(
+          Module.newBuilder().setName(module.name()).setAbi(module.abi()).setDone(false).build());
+    }
+    return resultBuilder.build();
   }
 
   @VisibleForTesting
@@ -735,14 +760,22 @@ public class CompatibilityReportMerger {
     public abstract ImmutableSet<String> skippedModuleIds();
   }
 
-  /** A bundle of a Tradefed result including the XML file and the test record file. */
+  /**
+   * A bundle of a Tradefed result including:
+   *
+   * <ul>
+   *   <li>Test report XML file.
+   *   <li>Optional test record file.
+   *   <li>List of modules for this test.
+   */
   @AutoValue
   public abstract static class TradefedResultBundle {
 
-    /** Creates a {@link ParseResult}. */
-    public static TradefedResultBundle of(Path xmlReportFile, Optional<Path> testRecordFile) {
+    /** Creates a {@link TradefedResultBundle}. */
+    public static TradefedResultBundle of(
+        Path xmlReportFile, Optional<Path> testRecordFile, ImmutableList<ModuleInfo> modules) {
       return new AutoValue_CompatibilityReportMerger_TradefedResultBundle(
-          xmlReportFile, testRecordFile);
+          xmlReportFile, testRecordFile, modules);
     }
 
     /** Path of the XML report file. */
@@ -750,5 +783,23 @@ public class CompatibilityReportMerger {
 
     /** Path of the test_record.pb which is optional. */
     public abstract Optional<Path> testRecordFile();
+
+    /** List of modules for this test. */
+    public abstract ImmutableList<ModuleInfo> modules();
+
+    /** Data class for a module. */
+    @AutoValue
+    public abstract static class ModuleInfo {
+      /** Creates a {@link Module}. */
+      public static ModuleInfo of(String abi, String name) {
+        return new AutoValue_CompatibilityReportMerger_TradefedResultBundle_ModuleInfo(abi, name);
+      }
+
+      /** Abi of the module. */
+      public abstract String abi();
+
+      /** Name of the module. */
+      public abstract String name();
+    }
   }
 }

@@ -48,5 +48,12 @@ public interface XtsPropertyName extends PropertyName {
     XTS_COMMAND_ID,
 
     XTS_TEST_PLAN,
+
+    // Property name for the list of tradefed modules filtered by include/exclude filters and the
+    // given module names.
+    FILTERED_TRADEFED_MODULES,
+
+    /** Device's supported abi list. From Android device property `ro.product.cpu.abilist`. */
+    DEVICE_SUPPORTED_ABI_LIST,
   }
 }

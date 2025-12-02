@@ -36,6 +36,7 @@ import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.ShardingMode;
+import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper.DeviceInfo;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader.TradefedResultFilesBundle;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryArgs;
@@ -104,6 +105,12 @@ public final class ConsoleJobCreatorTest {
             .setXtsType("cts")
             .setXtsRootDir(XTS_ROOT_DIR_PATH)
             .setModuleNames(ImmutableList.of("mock_module"))
+            .setDeviceInfo(
+                Optional.of(
+                    DeviceInfo.builder()
+                        .setDeviceId("mock_device_id")
+                        .setSupportedAbiList("arm64-v8a,armeabi-v7a")
+                        .build()))
             .build();
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
 
@@ -128,7 +135,13 @@ public final class ConsoleJobCreatorTest {
             "xts_test_plan",
             "cts");
     assertThat(tradefedJobInfoList.get(0).extraJobProperties())
-        .containsExactly(Job.XTS_TEST_PLAN, "cts");
+        .containsExactly(
+            Job.XTS_TEST_PLAN,
+            "cts",
+            Job.FILTERED_TRADEFED_MODULES,
+            "mock_module",
+            Job.DEVICE_SUPPORTED_ABI_LIST,
+            "arm64-v8a,armeabi-v7a");
   }
 
   @Test
@@ -193,7 +206,13 @@ public final class ConsoleJobCreatorTest {
             "run_command_args",
             "-m module1 --shard-count 2 --logcat-on-failure");
     assertThat(tradefedJobInfoList.get(0).extraJobProperties())
-        .containsExactly(Job.XTS_TEST_PLAN, "cts");
+        .containsExactly(
+            Job.XTS_TEST_PLAN,
+            "cts",
+            Job.FILTERED_TRADEFED_MODULES,
+            "module1",
+            Job.DEVICE_SUPPORTED_ABI_LIST,
+            "");
   }
 
   @SuppressWarnings("unchecked")
@@ -235,7 +254,13 @@ public final class ConsoleJobCreatorTest {
             "run_command_args",
             "-m module1 -t \"test1\" --shard-count 2 --logcat-on-failure");
     assertThat(tradefedJobInfoList.get(0).extraJobProperties())
-        .containsExactly(Job.XTS_TEST_PLAN, "cts");
+        .containsExactly(
+            Job.XTS_TEST_PLAN,
+            "cts",
+            Job.FILTERED_TRADEFED_MODULES,
+            "module1",
+            Job.DEVICE_SUPPORTED_ABI_LIST,
+            "");
   }
 
   @SuppressWarnings("unchecked")

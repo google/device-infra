@@ -63,6 +63,13 @@ public class XtsConstants {
   /** The job name of static xTS job. */
   public static final String STATIC_XTS_JOB_NAME = "STATIC_XTS";
 
+  /**
+   * MH test property key for the a tradefed test's filtered expanded module names (e.g. arm64-v8a
+   * CtsBatteryHealthTestCases).
+   */
+  public static final String TRADEFED_FILTERED_EXPANDED_MODULES_FOR_TEST_PROPERTY_KEY =
+      "tradefed_filtered_expanded_modules_for_test";
+
   /** MH test property keys of path relative to the xts dynamic download dir. */
   public static final String XTS_DYNAMIC_DOWNLOAD_PATH_TEST_PROPERTY_KEY =
       "xts_dynamic_download_path";

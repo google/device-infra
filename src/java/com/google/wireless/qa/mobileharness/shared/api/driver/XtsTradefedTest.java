@@ -24,10 +24,12 @@ import static com.google.devtools.mobileharness.shared.util.concurrent.Callables
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 import static java.lang.Math.min;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.joining;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.base.Joiner;
+import com.google.common.base.Splitter;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -42,6 +44,7 @@ import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
+import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.infra.ats.server.sessionplugin.TradefedConfigGenerator;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogRecorder;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecord;
@@ -51,7 +54,10 @@ import com.google.devtools.mobileharness.platform.android.shared.emulator.Androi
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsCommandUtil;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
+import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
 import com.google.devtools.mobileharness.platform.android.xts.message.proto.TestMessageProto.XtsTradefedRunCancellation;
+import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper;
+import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper.DeviceInfo;
 import com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
@@ -233,6 +239,7 @@ public class XtsTradefedTest extends BaseDriver
       tmpXtsRootDir = prepareXtsWorkDir(xtsType);
       setUpXtsWorkDir(spec, getXtsRootDir(spec, testInfo), tmpXtsRootDir, xtsType, testInfo);
       logger.atInfo().log("xTS Tradefed temp working root directory is %s", tmpXtsRootDir);
+      saveFilteredExpandedModuleNames(testInfo, tmpXtsRootDir, xtsType);
 
       Optional<Integer> tfExitCode = runXtsCommand(testInfo, spec, tmpXtsRootDir, xtsType);
 
@@ -248,6 +255,61 @@ public class XtsTradefedTest extends BaseDriver
       CompositeDeviceUtil.uncacheTestbed(getDevice());
       postTest(tmpXtsRootDir, testInfo, xtsType);
     }
+  }
+
+  /**
+   * Saves the filtered expanded module names (e.g. `arm64-v8a CtsBatteryHealthTestCases`) to the
+   * test properties.
+   *
+   * <p>This is done so that the result processing logic later may use this list to genearte the
+   * result files with correct module info when it's not available from tradefed generated result
+   * files (due to errors encountered by the tf process etc.).
+   */
+  private void saveFilteredExpandedModuleNames(
+      TestInfo testInfo, Path tmpXtsRootDir, String xtsType)
+      throws MobileHarnessException, InterruptedException {
+    TestSuiteHelper suiteHelper = new TestSuiteHelper(tmpXtsRootDir.toString(), xtsType);
+    // It's a map of expanded module names (e.g. `arm64-v8a CtsBatteryHealthTestCases`) to their
+    // configurations.
+    Map<String, Configuration> configs =
+        suiteHelper.loadTests(
+            DeviceInfo.builder()
+                .setDeviceId(getDevice().getDeviceId())
+                .setSupportedAbiList(
+                    testInfo
+                        .jobInfo()
+                        .properties()
+                        .getOptional(Job.DEVICE_SUPPORTED_ABI_LIST)
+                        .orElse(""))
+                .build());
+
+    // Filtered by include/exclude filters and the given module names.
+    // Non-expanded, e.g. `CtsBatteryHealthTestCases`.
+    List<String> filteredTradefedModules =
+        Splitter.on(",")
+            .omitEmptyStrings()
+            .splitToList(
+                testInfo
+                    .jobInfo()
+                    .properties()
+                    .getOptional(Job.FILTERED_TRADEFED_MODULES)
+                    .orElse(""));
+
+    // List of expanded module names (e.g. `arm64-v8a CtsBatteryHealthTestCases`), separated by
+    // comma.
+    String filteredExpandedModules =
+        configs.entrySet().stream()
+            .filter(
+                entry ->
+                    filteredTradefedModules.contains(entry.getValue().getMetadata().getXtsModule()))
+            .map(Entry::getKey)
+            .collect(joining(","));
+
+    testInfo
+        .properties()
+        .add(
+            XtsConstants.TRADEFED_FILTERED_EXPANDED_MODULES_FOR_TEST_PROPERTY_KEY,
+            filteredExpandedModules);
   }
 
   private void addTestResultPropertiesToJob(Path tmpXtsRootDir, String xtsType, TestInfo testInfo)
