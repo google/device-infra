@@ -1,0 +1,41 @@
+<app-dialog
+  title="Screenshot"
+  subtitle="Device: {{ data.deviceId }} | Captured: {{ getDisplayTimestamp() }}"
+  width="60rem"
+  height="80vh"
+  footerType="normal"
+>
+  <div class="screenshot-content">
+    <div
+      id="screenshot-image-container"
+      class="image-container"
+      (click)="toggleZoom($event)"
+    >
+      <img
+        id="screenshot-image"
+        [src]="data.screenshotUrl"
+        alt="Device screenshot"
+        class="screenshot-image"
+      />
+    </div>
+  </div>
+  <ng-template #actionsTemplate>
+    <button class="dialog-button dialog-button-secondary" (click)="viewInNewTab()">
+      <mat-icon>open_in_new</mat-icon>
+      View in new tab
+    </button>
+    <button
+      class="dialog-button dialog-button-secondary"
+      (click)="downloadImage()"
+      [disabled]="isDownloading()"
+    >
+      @if (isDownloading()) {
+        <mat-progress-spinner mode="indeterminate" diameter="16"></mat-progress-spinner>
+      } @else {
+        <mat-icon>download</mat-icon>
+      }
+      Download
+    </button>
+    <button mat-dialog-close class="dialog-button dialog-button-primary">Close</button>
+  </ng-template>
+</app-dialog>

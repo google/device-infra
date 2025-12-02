@@ -3,7 +3,12 @@ import {
   provideHttpClient,
   withInterceptors,
 } from '@angular/common/http';
-import {ApplicationConfig, provideZonelessChangeDetection} from '@angular/core';
+import {
+  ApplicationConfig,
+  importProvidersFrom,
+  provideZonelessChangeDetection,
+} from '@angular/core';
+import {MatSnackBarModule} from '@angular/material/snack-bar';
 import {provideAnimations} from '@angular/platform-browser/animations';
 import {ActivatedRoute, provideRouter} from '@angular/router';
 
@@ -26,6 +31,7 @@ import {HttpHostService} from './core/services/host/http_host_service';
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZonelessChangeDetection(),
+    importProvidersFrom(MatSnackBarModule),
     provideRouter(routes),
     provideHttpClient(withInterceptors([authInterceptor])),
     {

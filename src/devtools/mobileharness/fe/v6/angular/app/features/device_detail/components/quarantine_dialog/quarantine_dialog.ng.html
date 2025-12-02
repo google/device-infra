@@ -1,0 +1,44 @@
+<app-dialog
+  [title]="dialogData.title"
+  [subtitle]="'Device ID: ' + dialogData.deviceId"
+  width="48rem"
+  height="auto"
+  footerType="normal"
+>
+  <mat-dialog-content class="quarantine-dialog-content">
+    <p [innerHTML]="dialogData.description"></p>
+    @if(dialogData.currentExpiry) {
+      <p class="current-expiry-text">
+        Current auto-unquarantine time: <strong>{{dialogData.currentExpiry | date:'MMM d, h:mm a'}}</strong>
+      </p>
+    }
+     <div class="form-group">
+        <label for="q-duration" class="form-label">Quarantine Duration (1-168 hours)</label>
+        <input type="number" id="q-duration" class="form-input" min="1" max="168" #durationInput (input)="onDurationChange()" [(ngModel)]="durationHours">
+        @if (durationError) {
+          <mat-error class="input-error-message">{{durationError}}</mat-error>
+        }
+         <div class="quick-buttons">
+            <button (click)="setDuration(1)">1 hour</button>
+            <button (click)="setDuration(8)">8 hours</button>
+            <button (click)="setDuration(24)">1 day</button>
+         </div>
+        @if (expiryTime) {
+          <p class="expiry-preview-text">Device will be automatically unquarantined around: <strong>{{expiryTime}}</strong></p>
+        }
+    </div>
+  </mat-dialog-content>
+  <ng-template #actionsTemplate>
+    <button mat-dialog-close class="dialog-button dialog-button-secondary">Cancel</button>
+    <button
+      class="dialog-button dialog-button-primary"
+      (click)="applyQuarantine()"
+      [disabled]="quarantining()"
+    >
+      @if (quarantining()) {
+        <mat-progress-spinner mode="indeterminate" diameter="16"></mat-progress-spinner>
+      }
+      {{dialogData.confirmText}}
+    </button>
+  </ng-template>
+</app-dialog>

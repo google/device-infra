@@ -71,4 +71,11 @@ export const SCENARIO_OUT_OF_SERVICE_RECOVERING: MockDeviceScenario = {
   overview: OVERVIEW,
   config: CONFIG,
   isQuarantined: false,
+  actionVisibility: {
+    screenshot: true,
+    logcat: true,
+    flash: true,
+    remoteControl: true,
+    quarantine: true,
+  },
 };

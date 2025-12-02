@@ -21,156 +21,7 @@
             <span class="device-id-text" title="Device ID: {{ device.id }}">{{ device.id }}</span>
           </div>
 
-          <div class="header-actions">
-            <!-- 2xl view -->
-            <div class="header-actions-2xl">
-              <button
-                class="m3-action-button filled"
-                (click)="openConfiguration(device.id, device.host.name)"
-              >
-                <mat-icon>settings</mat-icon>Configuration
-              </button>
-              <button
-                class="m3-action-button filled"
-                (click)="takeScreenshot()"
-                [disabled]="!device.basicInfo.os.toLowerCase().includes('android')"
-              >
-                <mat-icon>screenshot</mat-icon>Screenshot
-              </button>
-              <button
-                class="m3-action-button filled"
-                (click)="remoteControl()"
-                [disabled]="!device.basicInfo.os.toLowerCase().includes('android')"
-              >
-                <mat-icon>important_devices</mat-icon>Remote Control
-              </button>
-              <button
-                class="m3-action-button filled"
-                (click)="flashDevice()"
-                [disabled]="!device.basicInfo.os.toLowerCase().includes('android')"
-              >
-                <mat-icon>flash_on</mat-icon>Flash
-              </button>
-              <button
-                class="m3-action-button filled"
-                (click)="getLogcat()"
-                [disabled]="!device.basicInfo.os.toLowerCase().includes('android')"
-              >
-                <mat-icon>description</mat-icon>Get Logcat
-              </button>
-              <button class="m3-action-button filled" (click)="quarantineDevice()">
-                <mat-icon>block</mat-icon>Quarantine
-              </button>
-            </div>
-
-            <!-- xl view -->
-            <div class="header-actions-xl">
-              <button
-                class="m3-action-button filled"
-                (click)="openConfiguration(device.id, device.host.name)"
-              >
-                <mat-icon>settings</mat-icon>Configuration
-              </button>
-              <button
-                class="m3-action-button filled"
-                (click)="takeScreenshot()"
-                [disabled]="!device.basicInfo.os.toLowerCase().includes('android')"
-              >
-                <mat-icon>screenshot</mat-icon>Screenshot
-              </button>
-              <button
-                class="m3-action-button filled"
-                (click)="remoteControl()"
-                [disabled]="!device.basicInfo.os.toLowerCase().includes('android')"
-              >
-                <mat-icon>important_devices</mat-icon>Remote Control
-              </button>
-              <button
-                class="m3-action-button transparent dropdown-trigger"
-                [matMenuTriggerFor]="moreMenu"
-              >
-                <span>More</span>
-                <mat-icon>expand_more</mat-icon>
-              </button>
-              <mat-menu #moreMenu="matMenu">
-                <button
-                  mat-menu-item
-                  (click)="flashDevice()"
-                  [disabled]="!device.basicInfo.os.toLowerCase().includes('android')"
-                >
-                  <mat-icon class="dropdown-mat-icon">flash_on</mat-icon>
-                  <span>Flash</span>
-                </button>
-                <button
-                  mat-menu-item
-                  (click)="getLogcat()"
-                  [disabled]="!device.basicInfo.os.toLowerCase().includes('android')"
-                >
-                  <mat-icon class="dropdown-mat-icon">description</mat-icon>
-                  <span>Get Logcat</span>
-                </button>
-                <button mat-menu-item (click)="quarantineDevice()">
-                  <mat-icon class="dropdown-mat-icon">block</mat-icon>
-                  <span>Quarantine</span>
-                </button>
-              </mat-menu>
-            </div>
-
-            <!-- small view -->
-            <div class="header-actions-sm">
-              <button
-                class="m3-action-button filled"
-                (click)="openConfiguration(device.id, device.host.name)"
-              >
-                <mat-icon>settings</mat-icon>Configuration
-              </button>
-              <button
-                class="m3-action-button transparent dropdown-trigger"
-                [matMenuTriggerFor]="actionsMenu"
-              >
-                <span>Take Action</span>
-                <mat-icon>expand_more</mat-icon>
-              </button>
-              <mat-menu #actionsMenu="matMenu">
-                <button
-                  mat-menu-item
-                  (click)="takeScreenshot()"
-                  [disabled]="!device.basicInfo.os.toLowerCase().includes('android')"
-                >
-                  <mat-icon class="dropdown-mat-icon">screenshot</mat-icon>
-                  <span>Screenshot</span>
-                </button>
-                <button
-                  mat-menu-item
-                  (click)="remoteControl()"
-                  [disabled]="!device.basicInfo.os.toLowerCase().includes('android')"
-                >
-                  <mat-icon class="dropdown-mat-icon">important_devices</mat-icon>
-                  <span>Remote Control</span>
-                </button>
-                <button
-                  mat-menu-item
-                  (click)="flashDevice()"
-                  [disabled]="!device.basicInfo.os.toLowerCase().includes('android')"
-                >
-                  <mat-icon class="dropdown-mat-icon">flash_on</mat-icon>
-                  <span>Flash</span>
-                </button>
-                <button
-                  mat-menu-item
-                  (click)="getLogcat()"
-                  [disabled]="!device.basicInfo.os.toLowerCase().includes('android')"
-                >
-                  <mat-icon class="dropdown-mat-icon">description</mat-icon>
-                  <span>Get Logcat</span>
-                </button>
-                <button mat-menu-item (click)="quarantineDevice()">
-                  <mat-icon class="dropdown-mat-icon">block</mat-icon>
-                  <span>Quarantine</span>
-                </button>
-              </mat-menu>
-            </div>
-          </div>
+          <app-device-action-bar #actionBar [pageData]="pageData"></app-device-action-bar>
         </header>
 
         <div class="card-body">
@@ -192,30 +43,51 @@
 
           <!-- Device Title Bar -->
           <div class="device-title-bar">
-            <div class="title-icon-wrapper">
-              <mat-icon class="title-icon">important_devices</mat-icon>
-            </div>
-            <div class="title-text-wrapper">
-              <div class="title-main">
-                <h1 class="device-title" title="{{ device.id }}">{{ device.id }}</h1>
-                <button
-                  (click)="copyToClipboard(device.id)"
-                  class="copy-button"
-                  title="Copy device ID"
-                >
-                  <mat-icon class="copy-icon">content_copy</mat-icon>
-                </button>
+            <div class="title-bar-content-wrapper">
+              <div class="title-icon-wrapper">
+                <mat-icon class="title-icon">important_devices</mat-icon>
               </div>
-              <div class="title-subtitle">
-                <span>Connected to Host:</span>
-                <a
-                  [routerLink]="['/hosts', device.host.name]"
-                  class="host-link-inline"
-                  title="{{ device.host.name }}"
-                  >{{ device.host.name }}</a
-                >
+              <div class="title-text-wrapper">
+                <div class="title-main">
+                  <h1 class="device-title" title="{{ device.id }}">{{ device.id }}</h1>
+                  <button
+                    (click)="copyToClipboard(device.id)"
+                    class="copy-button"
+                    title="Copy device ID"
+                  >
+                    <mat-icon class="copy-icon">content_copy</mat-icon>
+                  </button>
+                </div>
+                <div class="title-subtitle">
+                  <span>Connected to Host:</span>
+                  <a
+                    [routerLink]="['/hosts', device.host.name]"
+                    class="host-link-inline"
+                    title="{{ device.host.name }}"
+                    >{{ device.host.name }}</a
+                  >
+                </div>
               </div>
             </div>
+            @if(pageData.headerInfo.quarantine.isQuarantined) {
+              <div class="quarantine-banner">
+                <div class="quarantine-banner-info">
+                    <mat-icon>report_problem</mat-icon>
+                    <div>
+                        Device is <strong>Quarantined</strong> and unavailable for tests.
+                        @if(pageData.headerInfo.quarantine.expiry) {
+                          <span class="block text-xs">Auto-unquarantine around: {{ pageData.headerInfo.quarantine.expiry | date:'MMM d, h:mm a' }}{{formatRemainingTime(pageData.headerInfo.quarantine.expiry)}}</span>
+                        }
+                    </div>
+                </div>
+                <div class="quarantine-banner-actions">
+                    <button class="m3-action-button transparent" title="Change quarantine duration" (click)="changeQuarantine(pageData.overview.id)">Change Duration</button>
+                    <button class="m3-action-button transparent" title="Make device available for tests" (click)="unquarantineDevice(pageData.overview.id)">
+                        Unquarantine
+                    </button>
+                </div>
+              </div>
+            }
           </div>
 
           <!-- Tabs -->

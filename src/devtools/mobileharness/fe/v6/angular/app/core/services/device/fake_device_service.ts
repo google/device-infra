@@ -1,5 +1,6 @@
 import {Injectable} from '@angular/core';
 import {Observable, of, throwError} from 'rxjs';
+import {delay} from 'rxjs/operators';
 import {
   DeviceHeaderInfo,
   GetLogcatResponse,
@@ -50,7 +51,7 @@ export class FakeDeviceService extends DeviceService {
       return of({
         overview: scenario.overview,
         headerInfo: this.getMockDeviceHeaderInfo(scenario),
-      });
+      }).pipe(delay(1000));
     } else {
       return throwError(
         () => new Error(`Device with ID '${id}' not found in mock data.`),
@@ -61,7 +62,7 @@ export class FakeDeviceService extends DeviceService {
   override getDeviceHeaderInfo(id: string): Observable<DeviceHeaderInfo> {
     const scenario = MOCK_DEVICE_SCENARIOS.find((s) => s.id === id);
     if (scenario) {
-      return of(this.getMockDeviceHeaderInfo(scenario));
+      return of(this.getMockDeviceHeaderInfo(scenario)).pipe(delay(1000));
     } else {
       return throwError(
         () => new Error(`Device with ID '${id}' not found in mock data.`),
@@ -85,11 +86,11 @@ export class FakeDeviceService extends DeviceService {
     );
     const scenario = MOCK_DEVICE_SCENARIOS.find((s) => s.id === id);
     if (scenario) {
-      return of(generateHealthinessStats(startTime, endTime));
+      return of(generateHealthinessStats(startTime, endTime)).pipe(delay(1000));
     } else {
       return throwError(
         () => new Error(`Device with ID '${id}' not found in mock data.`),
-      );
+      ).pipe(delay(1000));
     }
   }
 
@@ -109,11 +110,11 @@ export class FakeDeviceService extends DeviceService {
     );
     const scenario = MOCK_DEVICE_SCENARIOS.find((s) => s.id === id);
     if (scenario) {
-      return of(generateTestResultStats(startTime, endTime));
+      return of(generateTestResultStats(startTime, endTime)).pipe(delay(1000));
     } else {
       return throwError(
         () => new Error(`Device with ID '${id}' not found in mock data.`),
-      );
+      ).pipe(delay(1000));
     }
   }
 
@@ -133,28 +134,32 @@ export class FakeDeviceService extends DeviceService {
     );
     const scenario = MOCK_DEVICE_SCENARIOS.find((s) => s.id === id);
     if (scenario) {
-      return of(generateRecoveryTaskStats(startTime, endTime));
+      return of(generateRecoveryTaskStats(startTime, endTime)).pipe(
+        delay(1000),
+      );
     } else {
       return throwError(
         () => new Error(`Device with ID '${id}' not found in mock data.`),
-      );
+      ).pipe(delay(1000));
     }
   }
 
   override takeScreenshot(id: string): Observable<TakeScreenshotResponse> {
     console.log(`FakeService: Taking screenshot for ${id}`);
     return of({
-      screenshotUrl: 'https://screenshot.googleexampleplex.com/faked',
+      screenshotUrl:
+        'http://0.0.0.0:8000/device_detail/action_bar/resource/screenshot-demo.png',
       capturedAt: new Date().toISOString(),
-    });
+    }).pipe(delay(1000));
   }
 
   override getLogcat(id: string): Observable<GetLogcatResponse> {
     console.log(`FakeService: Getting logcat for ${id}`);
     return of({
-      logUrl: 'https://example.com/logcat.txt',
+      logUrl:
+        'http://0.0.0.0:8000/device_detail/action_bar/resource/logcat-demo.log',
       capturedAt: new Date().toISOString(),
-    });
+    }).pipe(delay(1000));
   }
 
   override quarantineDevice(
@@ -164,12 +169,12 @@ export class FakeDeviceService extends DeviceService {
     console.log(`FakeService: Quarantining ${id} for ${req.durationHours}h`);
     const expiry = new Date();
     expiry.setHours(expiry.getHours() + req.durationHours);
-    return of({quarantineExpiry: expiry.toISOString()});
+    return of({quarantineExpiry: expiry.toISOString()}).pipe(delay(1000));
   }
 
   override unquarantineDevice(id: string): Observable<void> {
     console.log(`FakeService: Unquarantining ${id}`);
-    return of(undefined);
+    return of(undefined).pipe(delay(1000));
   }
 
   override remoteControl(
@@ -179,7 +184,7 @@ export class FakeDeviceService extends DeviceService {
     console.log(`FakeService: Remote controlling ${id} with req:`, req);
     return of({
       sessionUrl: `https://xcid.google.example.com/provider/mh/create/?deviceId=${id}`,
-    });
+    }).pipe(delay(1000));
   }
 
   private getMockDeviceHeaderInfo(
@@ -209,6 +214,13 @@ export class FakeDeviceService extends DeviceService {
       expiry: quarantineExpiry,
     };
 
+    const screenshotVisible = scenario.actionVisibility?.screenshot ?? true;
+    const logcatVisible = scenario.actionVisibility?.logcat ?? true;
+    const flashVisible = scenario.actionVisibility?.flash ?? true;
+    const remoteControlVisible =
+      scenario.actionVisibility?.remoteControl ?? true;
+    const quarantineVisible = scenario.actionVisibility?.quarantine ?? true;
+
     return {
       id: overview.id,
       host: overview.host,
@@ -216,7 +228,7 @@ export class FakeDeviceService extends DeviceService {
       actions: {
         screenshot: {
           enabled: screenshotEnabled,
-          visible: true,
+          visible: screenshotVisible,
           tooltip: screenshotEnabled
             ? 'Take screenshot'
             : !isAndroid
@@ -227,7 +239,7 @@ export class FakeDeviceService extends DeviceService {
         },
         logcat: {
           enabled: logcatEnabled,
-          visible: true,
+          visible: logcatVisible,
           tooltip: logcatEnabled
             ? 'Get logcat'
             : !isAndroid
@@ -236,7 +248,7 @@ export class FakeDeviceService extends DeviceService {
         },
         flash: {
           enabled: flashEnabled,
-          visible: true,
+          visible: flashVisible,
           tooltip: flashEnabled
             ? 'Flash device'
             : !isAndroid
@@ -249,7 +261,7 @@ export class FakeDeviceService extends DeviceService {
         },
         remoteControl: {
           enabled: remoteControlEnabled,
-          visible: true,
+          visible: remoteControlVisible,
           tooltip: remoteControlEnabled
             ? 'Remote control'
             : !isAndroid
@@ -260,8 +272,8 @@ export class FakeDeviceService extends DeviceService {
         },
         quarantine: {
           enabled: true,
-          visible: true,
-          tooltip: 'Quarantine device',
+          visible: quarantineVisible,
+          tooltip: isQuarantined ? 'Unquarantine device' : 'Quarantine device',
         },
       },
     };

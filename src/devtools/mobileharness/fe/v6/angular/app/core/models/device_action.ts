@@ -136,3 +136,43 @@ export interface QuarantineDeviceRequest {
 export interface QuarantineDeviceResponse {
   quarantineExpiry: string;
 }
+
+/** Data for screenshot dialog. */
+export interface ScreenshotDialogData {
+  deviceId: string;
+  screenshotUrl: string;
+  capturedAt: string;
+}
+
+/** Data for logcat dialog. */
+export interface LogcatDialogData {
+  deviceId: string;
+  logContent: string;
+  capturedAt: string;
+  logUrl: string;
+}
+
+/** Data for flash dialog. */
+export interface FlashDialogData {
+  deviceId: string;
+  hostName: string;
+  deviceType: string;
+  requiredDimensions: string;
+}
+
+/** Data for quarantine dialog. */
+export interface QuarantineDialogData {
+  deviceId: string;
+  isUpdate: boolean;
+  currentExpiry?: string;
+  title: string;
+  description: string;
+  confirmText: string;
+}
+
+/** Data for remote control dialog. */
+export interface RemoteControlDialogData {
+  deviceId: string;
+  runAsOptions: RunAsOption[];
+  defaultRunAs: string;
+}

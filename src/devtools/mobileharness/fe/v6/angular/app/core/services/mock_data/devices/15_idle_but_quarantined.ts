@@ -87,4 +87,11 @@ export const SCENARIO_IDLE_BUT_QUARANTINED: MockDeviceScenario = {
   config: CONFIG,
   isQuarantined: true,
   quarantineExpiry: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
+  actionVisibility: {
+    screenshot: true,
+    logcat: true,
+    flash: true,
+    remoteControl: true,
+    quarantine: true,
+  },
 };

@@ -20,6 +20,10 @@ import {SCENARIO_HOST_MANAGED_DEVICE} from './devices/12_host_managed_device';
 import {SCENARIO_EMPTY_CONFIG} from './devices/13_empty_config';
 import {SCENARIO_EMPTY_CONFIG_WITH_HOST} from './devices/14_empty_config_with_host';
 import {SCENARIO_IDLE_BUT_QUARANTINED} from './devices/15_idle_but_quarantined';
+import {SCENARIO_LINUX_DEVICE} from './devices/16_linux_device';
+import {SCENARIO_ANDROID_MISSING} from './devices/17_android_missing';
+import {SCENARIO_ANDROID_BUSY_NO_FLASH} from './devices/18_android_busy_no_flash';
+import {SCENARIO_ANDROID_NO_SCREENSHOT} from './devices/19_android_no_screenshot';
 import {SCENARIO_HOST_NO_CONFIG} from './hosts/01_no_config';
 import {SCENARIO_HOST_BASIC_EDITABLE} from './hosts/02_basic_editable';
 import {SCENARIO_HOST_SHARED_MODE} from './hosts/03_shared_mode';
@@ -65,6 +69,10 @@ export const MOCK_DEVICE_SCENARIOS: MockDeviceScenario[] = [
   SCENARIO_EMPTY_CONFIG,
   SCENARIO_EMPTY_CONFIG_WITH_HOST,
   SCENARIO_IDLE_BUT_QUARANTINED,
+  SCENARIO_LINUX_DEVICE,
+  SCENARIO_ANDROID_MISSING,
+  SCENARIO_ANDROID_BUSY_NO_FLASH,
+  SCENARIO_ANDROID_NO_SCREENSHOT,
 ];
 
 /**

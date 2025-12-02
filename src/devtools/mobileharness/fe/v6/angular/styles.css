@@ -1,1 +1,58 @@
 /* You can add global styles to this file, and also import other style files */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spin-animation {
+  animation: spin 1.5s linear infinite;
+}
+
+/* Base styles for all custom snackbars */
+.mat-mdc-snack-bar-container.custom-snackbar .mdc-snackbar__surface {
+  padding: 0 16px; /* Adjust padding as Material defaults might be too large */
+}
+
+.custom-snackbar .snackbar-content mat-icon {
+  margin-right: 12px;
+}
+
+/* Success Type */
+.snackbar-success .mdc-snackbar__surface {
+  background-color: #388e3c !important;
+}
+.snackbar-success .snackbar-content,
+.snackbar-success .snackbar-content mat-icon {
+  color: white !important;
+}
+
+/* Error Type */
+.snackbar-error .mdc-snackbar__surface {
+  background-color: #d32f2f !important;
+}
+.snackbar-error .snackbar-content,
+.snackbar-error .snackbar-content mat-icon {
+  color: white !important;
+}
+
+/* Info Type */
+.snackbar-info .mdc-snackbar__surface {
+  background-color: #1976d2 !important;
+}
+.snackbar-info .snackbar-content,
+.snackbar-info .snackbar-content mat-icon {
+  color: white !important;
+}
+
+/* In-Progress Type */
+.snackbar-inprogress .mdc-snackbar__surface {
+  background-color: #424242 !important;
+}
+.snackbar-inprogress .snackbar-content,
+.snackbar-inprogress .snackbar-content mat-icon {
+  color: #f5f5f5 !important;
+}

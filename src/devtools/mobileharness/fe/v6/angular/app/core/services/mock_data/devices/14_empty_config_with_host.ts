@@ -47,4 +47,11 @@ export const SCENARIO_EMPTY_CONFIG_WITH_HOST: MockDeviceScenario = {
   overview: OVERVIEW,
   config: null,
   isQuarantined: false,
+  actionVisibility: {
+    screenshot: true,
+    logcat: true,
+    flash: true,
+    remoteControl: true,
+    quarantine: true,
+  },
 };

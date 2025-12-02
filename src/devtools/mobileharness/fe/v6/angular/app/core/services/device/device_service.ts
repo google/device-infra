@@ -79,7 +79,7 @@ export abstract class DeviceService {
   abstract takeScreenshot(id: string): Observable<TakeScreenshotResponse>;
 
   /**
-   * Gets logcat from the device.
+   * Retrieves logcat from the device.
    */
   abstract getLogcat(id: string): Observable<GetLogcatResponse>;
 

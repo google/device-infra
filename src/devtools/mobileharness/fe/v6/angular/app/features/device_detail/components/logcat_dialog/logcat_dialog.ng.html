@@ -1,0 +1,44 @@
+<app-dialog
+  title="Logcat"
+  subtitle="Device: {{ data.deviceId }} | Log snapshot captured at {{ getDisplayTimestamp() }}. This is not a live log stream."
+  width="80rem"
+  height="80vh"
+  footerType="normal"
+>
+  <mat-dialog-content class="logcat-dialog-content">
+    <mat-form-field appearance="outline" subscriptSizing="dynamic" class="logcat-search-field">
+      <mat-icon matPrefix>search</mat-icon>
+      <input
+        matInput
+        [(ngModel)]="searchTerm"
+        (ngModelChange)="filterLogs()"
+        placeholder="Search logs (case-insensitive)..."
+        aria-label="Search logs"
+      />
+    </mat-form-field>
+    <div class="logcat-viewer">
+      @for(line of filteredLogLines(); track $index) {
+      <div>{{ line }}</div>
+      }
+    </div>
+  </mat-dialog-content>
+  <ng-template #actionsTemplate>
+    <button class="dialog-button dialog-button-secondary" (click)="viewInNewTab()">
+      <mat-icon>open_in_new</mat-icon>
+      View in new tab
+    </button>
+    <button
+      class="dialog-button dialog-button-secondary"
+      (click)="downloadLog()"
+      [disabled]="isDownloading()"
+    >
+      @if (isDownloading()) {
+        <mat-progress-spinner mode="indeterminate" diameter="16"></mat-progress-spinner>
+      } @else {
+        <mat-icon>download</mat-icon>
+      }
+      Download log
+    </button>
+    <button mat-dialog-close class="dialog-button dialog-button-primary">Close</button>
+  </ng-template>
+</app-dialog>

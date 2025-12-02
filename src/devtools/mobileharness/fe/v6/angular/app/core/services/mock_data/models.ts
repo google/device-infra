@@ -27,6 +27,13 @@ export interface MockDeviceScenario {
   healthinessStats?: HealthinessStats;
   testResultStats?: TestResultStats;
   recoveryTaskStats?: RecoveryTaskStats;
+  actionVisibility?: {
+    screenshot?: boolean;
+    logcat?: boolean;
+    flash?: boolean;
+    remoteControl?: boolean;
+    quarantine?: boolean;
+  };
 }
 
 /**

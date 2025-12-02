@@ -29,6 +29,21 @@ export const dateUtils = {
   },
 
   /**
+   * Formats a date object to a YYYYMMDD_hhmm string.
+   * @param date The date object or string to format.
+   * @return The formatted date string.
+   */
+  formatFileTimestamp: (date: Date | string): string => {
+    const d = typeof date === 'string' ? new Date(date) : date;
+    const YYYY = d.getFullYear();
+    const MM = String(d.getMonth() + 1).padStart(2, '0');
+    const DD = String(d.getDate()).padStart(2, '0');
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    return `${YYYY}${MM}${DD}_${hh}${mm}`;
+  },
+
+  /**
    * Formats a date object to a string.
    *
    * @param date The date object to format.

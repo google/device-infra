@@ -1,0 +1,194 @@
+@use 'configuration' as config;
+
+// Common styles for buttons used in dialog footers.
+.dialog-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1.25rem;
+  border-radius: 0.25rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+  font-size: 0.875rem;
+  cursor: pointer;
+  letter-spacing: normal;
+  font-family: config.$labconsole-font;
+}
+
+.dialog-button mat-icon:not(:last-child) {
+  margin-right: 8px;
+  font-size: 18px;
+  height: 18px;
+  width: 18px;
+}
+
+.dialog-button mat-icon:last-child:not(:first-child) {
+  margin-left: 8px;
+  font-size: 18px;
+  height: 18px;
+  width: 18px;
+}
+
+// For buttons with icon on left
+.dialog-button:has(mat-icon:first-child:not(:last-child)) {
+  padding-left: 16px;
+}
+
+// For buttons with icon on right
+.dialog-button:has(mat-icon:last-child:not(:first-child)) {
+  padding-right: 16px;
+}
+
+.dialog-button:disabled {
+  background-color: #e2e8f0;
+  color: #94a3b8;
+  cursor: not-allowed;
+  border: none;
+}
+
+.dialog-button-primary {
+  background-color: #0b57d0;
+  color: white;
+}
+
+.dialog-button-primary:not(:disabled):hover {
+  background-color: #0a4cb8;
+}
+
+.dialog-button-secondary {
+  background-color: white;
+  color: #0b57d0;
+  border-color: #c2c2c2;
+}
+
+.dialog-button-secondary:not(:disabled):hover {
+  background-color: #f0f5fe;
+}
+
+.dialog-button-tertiary {
+  background-color: transparent;
+  color: #475569;
+  border-color: #c2c2c2;
+}
+
+.dialog-button-tertiary:not(:disabled):hover {
+  background-color: #f1f5f9;
+}
+
+// Basic styles for m3-action-button, more specific in component scss
+.m3-action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px 0 8px;
+  height: 36px;
+  border-radius: 18px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  transition:
+    background-color 0.2s,
+    color 0.2s,
+    box-shadow 0.2s;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  cursor: pointer;
+
+  mat-icon {
+    font-size: 16px;
+    height: 16px;
+    width: 16px;
+    margin-right: 6px;
+  }
+
+  &.filled {
+    background-color: #e8f0fe; // lighter blue
+    color: #1967d2; // darker blue
+    &:hover {
+      background-color: #d2e3fc;
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    }
+  }
+
+  &.transparent {
+    background-color: transparent;
+    color: #00458f;
+    &:hover {
+      background-color: rgba(0, 69, 143, 0.08);
+    }
+  }
+
+  &.dropdown-trigger {
+    padding: 0 8px 0 12px;
+    mat-icon {
+      margin-right: 0px;
+      margin-left: 6px;
+    }
+  }
+
+  &:disabled {
+    background-color: #f1f3f4;
+    color: #bdc1c6;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+}
+
+.m3-split-button-group {
+  display: inline-flex;
+  border-radius: 18px;
+  overflow: hidden;
+  vertical-align: middle;
+  background-color: #e8f0fe;
+  color: #1967d2;
+  height: 36px;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.m3-split-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  border: none;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  transition: background-color 0.2s;
+  cursor: pointer;
+  padding: 0 12px;
+  background-color: transparent;
+  color: inherit;
+}
+
+.m3-split-button:hover {
+  background-color: #d2e3fc;
+}
+
+.m3-split-button mat-icon {
+  font-size: 16px;
+  height: 16px;
+  width: 16px;
+}
+
+.m3-split-button.main-action {
+  padding-left: 12px;
+  padding-right: 8px;
+  mat-icon {
+    margin-right: 6px;
+  }
+}
+
+.m3-split-button.dropdown-action {
+  padding: 0 6px;
+  border-left: 1px solid rgba(0, 69, 143, 0.2);
+  mat-icon {
+    font-size: 22px;
+    height: 22px;
+    width: 22px;
+    margin: 0;
+  }
+}
+
+.dropdown-mat-icon {
+  margin-right: 12px;
+}

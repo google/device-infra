@@ -4,20 +4,19 @@ import {
   Component,
   inject,
   signal,
+  ViewChild,
 } from '@angular/core';
-import {MatDialog} from '@angular/material/dialog';
 import {MatIconModule} from '@angular/material/icon';
 import {MatMenuModule} from '@angular/material/menu';
+import {MatTooltipModule} from '@angular/material/tooltip';
 import {ActivatedRoute, RouterModule} from '@angular/router';
 import {Observable, of} from 'rxjs';
 import {catchError, map, switchMap} from 'rxjs/operators';
 
 import {DeviceOverviewPageData} from '../../core/models/device_overview';
 import {DEVICE_SERVICE} from '../../core/services/device/device_service';
-
-import {DeviceConfig} from './components/device_config/device_config';
-import {DeviceEmpty} from './components/device_config/device_empty/device_empty';
-import {DeviceWizard} from './components/device_config/device_wizard/device_wizard';
+import {SnackBarService} from '../../shared/services/snackbar_service';
+import {DeviceActionBar} from './components/device_action_bar/device_action_bar';
 import {DeviceOverviewTab} from './components/device_overview_tab/device_overview_tab';
 
 interface DevicePageData {
@@ -38,16 +37,19 @@ interface DevicePageData {
     RouterModule,
     MatIconModule,
     DeviceOverviewTab,
+    DeviceActionBar,
     MatMenuModule,
+    MatTooltipModule,
   ],
   templateUrl: './device_detail_page.ng.html',
   styleUrl: './device_detail_page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DeviceDetailPage {
+  @ViewChild(DeviceActionBar) actionBar!: DeviceActionBar;
   private readonly route = inject(ActivatedRoute);
   private readonly deviceService = inject(DEVICE_SERVICE);
-  private readonly dialog = inject(MatDialog);
+  private readonly snackBar = inject(SnackBarService);
 
   activeTab = signal<'overview' | 'test-history' | 'health' | 'record'>(
     'overview',
@@ -85,93 +87,43 @@ export class DeviceDetailPage {
     this.activeTab.set(tab);
   }
 
-  resetConfiguration(deviceId: string, hostName: string) {
-    this.dialog
-      .open(DeviceEmpty, {
-        data: {
-          deviceId,
-          hostName,
-          title:
-            'You are about to clear the existing configuration for this device. Your current settings will be discarded. Please choose how you want to proceed.',
-        },
-        autoFocus: false,
-      })
-      .afterClosed()
-      .subscribe((result) => {
-        if (!result) {
-          return;
-        }
-
-        this.createorcopyConfiguration(
-          result.action,
-          result.deviceId,
-          result.config,
-        );
-      });
+  unquarantineDevice(deviceId: string) {
+    this.actionBar.quarantineDevice(deviceId);
   }
 
-  createorcopyConfiguration(
-    action: string,
-    deviceId: string,
-    config: DeviceConfig | null,
-  ) {
-    this.dialog.open(DeviceWizard, {
-      data: {source: action, deviceId, config},
-      autoFocus: false,
-    });
+  changeQuarantine(deviceId: string) {
+    this.actionBar.changeQuarantine(deviceId);
   }
 
-  // Mock action buttons from prototype
-  openConfiguration(deviceId: string, hostName: string): void {
-    const dialogRef = this.dialog.open(DeviceConfig, {
-      data: {deviceId, hostName},
-      autoFocus: false,
-    });
+  formatRemainingTime(expiry: string | undefined): string {
+    if (!expiry) return '';
+    const diffMs = new Date(expiry).getTime() - new Date().getTime();
+    if (diffMs <= 0) return ' (Expired)';
 
-    dialogRef.afterClosed().subscribe((result) => {
-      if (!result) {
-        return;
-      }
+    const diffSeconds = Math.floor(diffMs / 1000);
+    const diffMinutes = Math.floor(diffSeconds / 60);
+    const diffHours = Math.floor(diffMinutes / 60);
+    const diffDays = Math.floor(diffHours / 24);
 
-      if (result.action === 'reset') {
-        this.resetConfiguration(result.deviceId, hostName);
-        return;
-      }
-
-      if (result.action === 'new' || result.action === 'copy') {
-        this.createorcopyConfiguration(result.action, deviceId, result.config);
-      }
-    });
-  }
-
-  takeScreenshot(): void {
-    alert('Screenshot action');
-  }
-
-  remoteControl(): void {
-    alert('Remote Control action');
-  }
-
-  flashDevice(): void {
-    alert('Flash action');
-  }
-
-  getLogcat(): void {
-    alert('Get Logcat action');
-  }
-
-  quarantineDevice(): void {
-    alert('Quarantine action');
+    if (diffDays > 0) {
+      return ` (${diffDays} day${diffDays > 1 ? 's' : ''} left)`;
+    } else if (diffHours > 0) {
+      return ` (${diffHours} hour${diffHours > 1 ? 's' : ''} left)`;
+    } else if (diffMinutes > 0) {
+      return ` (${diffMinutes} minute${diffMinutes > 1 ? 's' : ''} left)`;
+    } else {
+      return ` (less than 1 minute left)`;
+    }
   }
 
   copyToClipboard(text: string): void {
     navigator.clipboard
       .writeText(text)
       .then(() => {
-        // Ideally, show a temporary success message
-        console.log('Copied to clipboard:', text);
+        this.snackBar.showSuccess('Copied to clipboard!');
       })
       .catch((err) => {
+        this.snackBar.showError('Failed to copy text.');
         console.error('Failed to copy text: ', err);
       });
   }

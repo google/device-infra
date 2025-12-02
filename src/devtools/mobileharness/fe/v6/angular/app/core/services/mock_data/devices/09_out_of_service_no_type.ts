@@ -63,4 +63,11 @@ export const SCENARIO_OUT_OF_SERVICE_NO_TYPE: MockDeviceScenario = {
   overview: OVERVIEW,
   config: CONFIG,
   isQuarantined: false,
+  actionVisibility: {
+    screenshot: true,
+    logcat: true,
+    flash: true,
+    remoteControl: true,
+    quarantine: true,
+  },
 };

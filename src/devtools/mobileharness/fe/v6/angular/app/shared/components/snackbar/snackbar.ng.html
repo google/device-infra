@@ -1,0 +1,9 @@
+<div class="snackbar-content">
+  <div class="main-content">
+    <mat-icon [class.spin-animation]="shouldSpin()">{{ data.icon }}</mat-icon>
+    <span>{{ data.message }}</span>
+  </div>
+  <button mat-icon-button (click)="dismiss()" class="close-button" aria-label="Close">
+    <mat-icon class="close-icon">close</mat-icon>
+  </button>
+</div>

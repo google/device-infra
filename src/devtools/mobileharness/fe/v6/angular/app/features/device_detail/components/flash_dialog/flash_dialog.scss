@@ -1,0 +1,110 @@
+@use '../../../../shared/styles/configuration' as config;
+@use '../../../../shared/styles/action_bar';
+
+.flash-dialog-content {
+  font-family: config.$labconsole-font;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: #4b5563;
+
+  .rc-description {
+    background-color: #e8f0fe;
+    border-left: 4px solid #1967d2;
+    color: #1967d2;
+    padding: 1rem;
+    border-radius: 0.375rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    font-size: 0.875rem;
+
+    mat-icon {
+      margin-right: 0.75rem;
+      flex-shrink: 0;
+    }
+  }
+
+  p {
+    margin-bottom: 1rem;
+  }
+
+  .flash-ul {
+    list-style: disc;
+    list-style-position: inside;
+    font-size: 0.8rem;
+    line-height: 1rem;
+    margin-bottom: 1rem;
+    padding-left: 0.5rem;
+  }
+
+  .flash-code {
+    background-color: #f3f4f6;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: inherit;
+    line-height: 1rem;
+  }
+
+  .flash-link {
+    color: #2563eb;
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  .flash-step-title {
+    margin-bottom: 0.5rem;
+    display: block;
+
+    .flash-step-subtitle {
+      font-size: 0.75rem;
+      line-height: 1rem;
+      margin-left: 0.25rem;
+      color: #6b7280;
+    }
+  }
+
+  .flash-build-details {
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+
+    @media (min-width: 768px) {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  .flash-code-block {
+    // gray-50
+    background-color: #f8f9fa;
+    // slate-900
+    color: #1e293b;
+    font-family: 'Roboto Mono', monospace;
+    font-size: 0.8rem;
+    line-height: 1.6;
+    white-space: pre;
+    overflow: auto;
+    border-radius: 6px;
+    padding: 1rem;
+    // gray-300
+    border: 1px solid #e0e0e0;
+  }
+
+  .help-icon {
+    color: #94a3b8;
+    cursor: help;
+  }
+}
+
+.dialog-button.dialog-button-secondary {
+  border: none;
+
+  mat-icon {
+    font-size: 16px;
+    height: 16px;
+    width: 16px;
+  }
+}

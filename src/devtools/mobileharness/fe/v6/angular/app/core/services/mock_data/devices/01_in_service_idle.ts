@@ -115,4 +115,11 @@ export const SCENARIO_IN_SERVICE_IDLE: MockDeviceScenario = {
   overview: OVERVIEW,
   config: CONFIG,
   isQuarantined: false,
+  actionVisibility: {
+    screenshot: true,
+    logcat: true,
+    flash: true,
+    remoteControl: true,
+    quarantine: true,
+  },
 };

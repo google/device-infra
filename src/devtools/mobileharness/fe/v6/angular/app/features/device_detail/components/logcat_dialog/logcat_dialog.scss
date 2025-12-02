@@ -1,0 +1,39 @@
+@use '../../../../shared/styles/configuration' as config;
+@use '../../../../shared/styles/action_bar';
+
+.logcat-dialog-content {
+  font-family: config.$labconsole-font;
+  display: flex;
+  flex-direction: column;
+  // flex-grow: 1;
+  padding: 1rem 1.5rem;
+  max-height: unset;
+
+  .logcat-search-field {
+    width: 100%;
+    margin-bottom: 0.75rem;
+  }
+
+  .logcat-viewer {
+    background-color: #1e1e1e;
+    color: #d4d4d4;
+    font-family: 'Roboto Mono', monospace;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    white-space: pre;
+    overflow: auto;
+    border-radius: 6px;
+    flex-grow: 1;
+    padding: 1rem;
+  }
+}
+
+:host ::ng-deep .dialog-button.dialog-button-secondary {
+  border: none;
+
+  mat-icon {
+    font-size: 14px;
+    height: 14px;
+    width: 14px;
+  }
+}

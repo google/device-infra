@@ -1,0 +1,69 @@
+<app-dialog
+  title="Flash Device via Flashstation"
+  subtitle='Device ID: {{ data.deviceId }}'
+  width="48rem"
+  height="auto"
+  footerType="normal"
+>
+  <mat-dialog-content class="flash-dialog-content">
+    <p>
+      This tool helps you flash device
+      <strong class="text-gray-900">{{ data.deviceId }}</strong> using Flashstation by generating a
+      command-line script.
+    </p>
+    <ul class="flash-ul">
+      <li>During flashing, device status will be <strong>BUSY</strong>.</li>
+      <li>
+        If you are not a device owner, you may need to add
+        <code class="flash-code">--run_as=YOUR_MDB_GROUP</code> to the command.
+      </li>
+    </ul>
+    <div>
+      <p class="flash-step-title"
+        ><strong>1. Enter Build Details</strong>
+      </p>
+      <div class="flash-build-details">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Branch Name</mat-label>
+          <input
+            matInput
+            [(ngModel)]="branch"
+            (ngModelChange)="updateCommand()"
+            placeholder="e.g., git_main"
+          />
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Build ID</mat-label>
+          <input
+            matInput
+            [(ngModel)]="buildId"
+            (ngModelChange)="updateCommand()"
+            placeholder="e.g., 12345678"
+          />
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Build Target</mat-label>
+          <input
+            matInput
+            [(ngModel)]="buildTarget"
+            (ngModelChange)="updateCommand()"
+            placeholder="e.g., husky-next-userdebug"
+          />
+        </mat-form-field>
+      </div>
+    </div>
+
+    <div>
+      <p class="flash-step-title"><strong>2. Copy and Run Command</strong></p>
+      <p>Run the following command in a <strong>gLinux terminal</strong> from a google3 workspace root:</p>
+      <pre class="flash-code-block">{{ command() }}</pre>
+    </div>
+  </mat-dialog-content>
+  <ng-template #actionsTemplate>
+    <button (click)="copyCommand()" class="dialog-button dialog-button-secondary">
+      <mat-icon>content_copy</mat-icon>
+      Copy Command
+    </button>
+    <button mat-dialog-close class="dialog-button dialog-button-primary">Close</button>
+  </ng-template>
+</app-dialog>

@@ -15,7 +15,13 @@
  */
 
 import {CommonModule} from '@angular/common';
-import {ChangeDetectionStrategy, Component, inject, OnDestroy, ViewEncapsulation} from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  inject,
+  OnDestroy,
+  ViewEncapsulation,
+} from '@angular/core';
 import {MatButtonModule, MatIconButton} from '@angular/material/button';
 import {MatDividerModule} from '@angular/material/divider';
 import {MatIconModule} from '@angular/material/icon';
@@ -26,9 +32,11 @@ import {MatToolbarModule} from '@angular/material/toolbar';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {RouterModule} from '@angular/router';
 // an example of using absolute path for source code import.
-import {APP_DATA, type AppData} from 'app/core/models/app_data';
+import {
+  APP_DATA,
+  type AppData,
+} from 'app/core/models/app_data';
 import {ReplaySubject} from 'rxjs';
-
 
 /** Homepage */
 @Component({

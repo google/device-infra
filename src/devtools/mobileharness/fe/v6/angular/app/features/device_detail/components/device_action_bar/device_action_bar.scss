@@ -1,0 +1,59 @@
+@use '../../../../shared/styles/action_bar';
+
+:host {
+  display: contents;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spin-animation {
+  animation: spin 1.5s linear infinite;
+}
+
+.header-actions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+
+  .header-actions-2xl,
+  .header-actions-xl,
+  .header-actions-sm {
+    display: none;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  // sm: up to 1024px
+  .header-actions-sm {
+    display: flex;
+  }
+
+  // xl: 1024px to 1300px
+  @media (min-width: 1024px) {
+    .header-actions-sm {
+      display: none;
+    }
+    .header-actions-xl {
+      display: flex;
+    }
+  }
+
+  // 2xl: 1300px and up
+  @media (min-width: 1300px) {
+    .header-actions-xl {
+      display: none;
+    }
+    .header-actions-2xl {
+      display: flex;
+    }
+  }
+}

@@ -1,3 +1,5 @@
+@use '../../shared/styles/action_bar';
+
 $labconsole-font: 'Google Sans', Roboto, Arial, sans-serif;
 
 :host {
@@ -8,9 +10,13 @@ $labconsole-font: 'Google Sans', Roboto, Arial, sans-serif;
   font-family: $labconsole-font;
 }
 
-.page-container {
-  max-width: 1600px;
-  margin: 0 auto;
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .main-card {
@@ -70,105 +76,6 @@ $labconsole-font: 'Google Sans', Roboto, Arial, sans-serif;
   }
 }
 
-.header-actions {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.5rem;
-
-  .header-actions-2xl,
-  .header-actions-xl,
-  .header-actions-sm {
-    display: none;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  // sm: up to 1024px
-  .header-actions-sm {
-    display: flex;
-  }
-
-  // xl: 1024px to 1300px
-  @media (min-width: 1024px) {
-    .header-actions-sm {
-      display: none;
-    }
-    .header-actions-xl {
-      display: flex;
-    }
-  }
-
-  // 2xl: 1300px and up
-  @media (min-width: 1300px) {
-    .header-actions-xl {
-      display: none;
-    }
-    .header-actions-2xl {
-      display: flex;
-    }
-  }
-}
-
-// Basic styles for m3-action-button, more specific in component scss
-.m3-action-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 12px 0 8px;
-  height: 36px;
-  border-radius: 18px;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  transition:
-    background-color 0.2s,
-    color 0.2s,
-    box-shadow 0.2s;
-  border: 1px solid transparent;
-  white-space: nowrap;
-  cursor: pointer;
-
-  mat-icon {
-    font-size: 16px;
-    height: 16px;
-    width: 16px;
-    margin-right: 6px;
-  }
-
-  &.filled {
-    background-color: #e8f0fe; // lighter blue
-    color: #1967d2; // darker blue
-    &:hover {
-      background-color: #d2e3fc;
-      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    }
-  }
-
-  &.transparent {
-    background-color: transparent;
-    color: #00458f;
-    &:hover {
-      background-color: rgba(0, 69, 143, 0.08);
-    }
-  }
-
-  &.dropdown-trigger {
-    padding: 0 8px 0 12px;
-    mat-icon {
-      margin-right: 0px;
-      margin-left: 6px;
-    }
-  }
-
-  &:disabled {
-    background-color: #f1f3f4 !important;
-    color: #bdc1c6 !important;
-    cursor: not-allowed;
-    pointer-events: none;
-  }
-}
-
 .card-body {
   padding: 1.5rem; // p-6
 }
@@ -200,10 +107,13 @@ $labconsole-font: 'Google Sans', Roboto, Arial, sans-serif;
 }
 
 .device-title-bar {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
   margin-bottom: 1.5rem; // mb-6
+
+  .title-bar-content-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
 
   .title-icon-wrapper {
     width: 3rem; // w-12
@@ -281,6 +191,47 @@ $labconsole-font: 'Google Sans', Roboto, Arial, sans-serif;
       &:hover {
         text-decoration: underline;
       }
+    }
+  }
+}
+
+.quarantine-banner {
+  background-color: #fef7e0; // Google Yellow 50
+  border-left: 4px solid #f9ab00; // Google Yellow 600
+  color: #e37400; // Google Yellow 900
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1rem;
+  font-size: 0.875rem;
+
+  .material-icons:first-child {
+    color: #f9ab00; // Google Yellow 600
+    flex-shrink: 0;
+    margin-right: 0.75rem;
+  }
+
+  strong {
+    font-weight: 500;
+    color: #c26401; // Darker Yellow for contrast
+  }
+
+  .quarantine-banner-info {
+    display: flex;
+    align-items: flex-start;
+  }
+
+  .quarantine-banner-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+
+    button {
+      color: #1967d2;
     }
   }
 }

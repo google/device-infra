@@ -1,0 +1,68 @@
+@use '../../../../shared/styles/configuration' as config;
+@use '../../../../shared/styles/action_bar';
+
+.screenshot-content {
+  padding: 1rem;
+  background-color: #f1f3f4;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: padding 0.1s ease-out;
+}
+
+.screenshot-content.zoomed {
+  padding: 0;
+}
+
+.image-container {
+  height: 100%;
+  width: 100%;
+  overflow: auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  // Default state is fitted (zoomed-out), so click to zoom-in
+  cursor: zoom-in;
+}
+
+.screenshot-image {
+  border-radius: 0.375rem;
+  border: 1px solid #dadce0;
+  transition: all 0.1s ease-out;
+  display: block;
+  // Default state: fit inside container
+  object-fit: contain;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.image-container.zoomed {
+  // Click to zoom-out (fit)
+  cursor: zoom-out;
+  // Align to top-left
+  justify-content: flex-start;
+  align-items: flex-start;
+}
+
+// When .zoomed, image is fit-to-width
+.image-container.zoomed .screenshot-image {
+  width: 100%;
+  height: auto;
+  max-width: none;
+  max-height: none;
+  border-radius: 0;
+  border: none;
+  object-fit: fill;
+}
+
+:host ::ng-deep .dialog-button.dialog-button-secondary {
+  border: none;
+
+  mat-icon {
+    font-size: 14px;
+    height: 14px;
+    width: 14px;
+  }
+}
