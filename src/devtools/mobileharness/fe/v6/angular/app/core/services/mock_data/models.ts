@@ -3,7 +3,7 @@
  */
 
 import {DeviceConfig} from '../../models/device_config_models';
-import {DeviceOverview} from '../../models/device_overview';
+import {DeviceOverview, TestbedConfig} from '../../models/device_overview';
 import {
   HealthinessStats,
   RecoveryTaskStats,
@@ -34,6 +34,7 @@ export interface MockDeviceScenario {
     remoteControl?: boolean;
     quarantine?: boolean;
   };
+  testbedConfig?: TestbedConfig;
 }
 
 /**
