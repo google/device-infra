@@ -37,6 +37,8 @@ java_library(
         ":annotations",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/device:device_service_grpc_impl",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/device:device_service_module",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/host:host_service_grpc_impl",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/host:host_service_module",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared",
         "//src/java/com/google/devtools/mobileharness/fe/v6/shared/util/concurrent:oss_executor_module",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
