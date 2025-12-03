@@ -30,6 +30,7 @@ java_library(
     name = "allocation",
     srcs = glob(["*.java"]),
     deps = [
+        "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/job:locator",
         "//src/java/com/google/devtools/mobileharness/api/model/lab:locator",
         "@maven//:com_google_guava_guava",
