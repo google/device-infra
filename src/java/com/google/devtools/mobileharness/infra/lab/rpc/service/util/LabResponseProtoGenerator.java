@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.infra.lab.rpc.service.util;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static java.util.stream.Collectors.joining;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
@@ -38,8 +39,10 @@ import com.google.wireless.qa.mobileharness.lab.proto.ExecTestServ.SubTestGenDat
 import com.google.wireless.qa.mobileharness.lab.proto.ExecTestServ.SubTestStatusResponse;
 import com.google.wireless.qa.mobileharness.lab.proto.ExecTestServ.TestMessage;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
+import com.google.wireless.qa.mobileharness.shared.proto.Common.StrPair;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestStatus;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -75,6 +78,10 @@ public class LabResponseProtoGenerator {
       TestInfo testInfo, boolean encodeFilePath, GetTestGenDataRequest req)
       throws MobileHarnessException, InterruptedException {
     String testId = testInfo.locator().getId();
+    String subTestLogPostfix =
+        String.format(
+            " for %s %s(%s)",
+            testInfo.isRootTest() ? "test" : "sub_test", testInfo.locator().getName(), testId);
     // Test properties.
     GetTestGenDataResponse.Builder builder =
         GetTestGenDataResponse.newBuilder()
@@ -105,6 +112,15 @@ public class LabResponseProtoGenerator {
           builder.getTestWarningExceptionDetailCount(),
           builder.getGenFileRelatedPathCount());
     }
+
+    List<StrPair> testProperties = new ArrayList<>(builder.getTestPropertyList());
+    StrPairUtil.sort(testProperties);
+    logger.atInfo().log(
+        "Generated test properties%s:\n%s",
+        subTestLogPostfix,
+        testProperties.stream()
+            .map(testProp -> String.format("- %s = %s", testProp.getName(), testProp.getValue()))
+            .collect(joining("\n")));
 
     // Create {@link SubTestGenDataResponse} with requested sub-testInfo.
     // These sub-testInfo are already known by client.
