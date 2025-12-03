@@ -195,7 +195,7 @@ public class LocalTestRunner extends BaseTestRunner<LocalTestRunner> {
   @Override
   protected void runTest(TestInfo testInfo, Allocation allocation)
       throws MobileHarnessException, InterruptedException {
-    testFlow.runTest(testInfo, driver);
+    testFlow.runTest(testInfo, driver, devices);
     updateDeviceStatus(checkDevice(testInfo, allocation));
   }
 

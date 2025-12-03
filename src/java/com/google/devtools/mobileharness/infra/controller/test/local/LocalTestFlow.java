@@ -291,7 +291,7 @@ public class LocalTestFlow {
   }
 
   /** Actual execution of a test. */
-  void runTest(TestInfo testInfo, Driver driver)
+  void runTest(TestInfo testInfo, Driver driver, List<Device> devices)
       throws MobileHarnessException, InterruptedException {
     try (InfoLogImportanceScope ignored = new InfoLogImportanceScope()) {
       testInfo
@@ -303,6 +303,8 @@ public class LocalTestFlow {
               testInfo.locator().getName(), testInfo.locator().getId());
       driver.run(testInfo);
     }
+
+    updateTestPropertyWithDeviceDimensions(testInfo, devices);
   }
 
   /** Device clean up after actually running a test. */
