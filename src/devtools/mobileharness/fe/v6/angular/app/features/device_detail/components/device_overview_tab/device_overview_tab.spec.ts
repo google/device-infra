@@ -1,4 +1,6 @@
+import {ChangeDetectionStrategy, Component} from '@angular/core';
 import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {By} from '@angular/platform-browser';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
 import {provideRouter} from '@angular/router';
 import {firstValueFrom, timer} from 'rxjs';
@@ -6,6 +8,16 @@ import {firstValueFrom, timer} from 'rxjs';
 import {DeviceOverview} from '../../../../core/models/device_overview';
 
 import {DeviceOverviewTab} from './device_overview_tab';
+
+@Component({
+  standalone: true,
+  imports: [DeviceOverviewTab],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `<app-device-overview-tab [device]="device"></app-device-overview-tab>`,
+})
+class TestHostComponent {
+  device!: DeviceOverview;
+}
 
 describe('DeviceOverviewTab Component', () => {
   const mockDevice: DeviceOverview = {
@@ -82,21 +94,24 @@ describe('DeviceOverviewTab Component', () => {
     },
   };
 
-  let fixture: ComponentFixture<DeviceOverviewTab>;
+  let fixture: ComponentFixture<TestHostComponent>;
   let component: DeviceOverviewTab;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [
         DeviceOverviewTab,
+        TestHostComponent,
         NoopAnimationsModule, // This makes test faster and more stable.
       ],
       providers: [provideRouter([])],
     }).compileComponents();
-    fixture = TestBed.createComponent(DeviceOverviewTab);
-    component = fixture.componentInstance;
-    component.device = mockDevice;
+    fixture = TestBed.createComponent(TestHostComponent);
+    fixture.componentInstance.device = mockDevice;
     fixture.detectChanges();
+    component = fixture.debugElement.query(
+      By.directive(DeviceOverviewTab),
+    ).componentInstance;
   });
 
   it('should be created', () => {
@@ -109,7 +124,7 @@ describe('DeviceOverviewTab Component', () => {
     // Wait for the debounceTime (100ms) plus a small buffer.
     await firstValueFrom(timer(150));
     fixture.detectChanges();
-    expect(component.filteredDimensions).toEqual([
+    expect(component.filteredDimensions()).toEqual([
       {
         section: 'supported',
         source: 'From Device Config',
@@ -119,6 +134,33 @@ describe('DeviceOverviewTab Component', () => {
         valueLower: 'pixel-prod',
       },
     ]);
+  });
+
+  it('should search capabilities', async () => {
+    // Search drivers
+    component.driversSearchTerm = 'mobly';
+    component.onDriversSearchChange();
+    // Wait for the debounceTime (100ms) plus a small buffer.
+    await firstValueFrom(timer(150));
+    fixture.detectChanges();
+
+    // Check drivers filtered
+    expect(component.filteredDrivers()).toEqual(['MoblyAospTest', 'MoblyTest']);
+    // Check decorators not affected (shows all)
+    expect(component.filteredDecorators().length).toBe(5);
+
+    // Search decorators
+    component.decoratorsSearchTerm = 'bugreport';
+    component.onDecoratorsSearchChange();
+    await firstValueFrom(timer(150));
+    fixture.detectChanges();
+
+    // Check decorators filtered
+    expect(component.filteredDecorators()).toEqual([
+      'AndroidBugreportDecorator',
+    ]);
+    // Drivers should remain filtered by previous search
+    expect(component.filteredDrivers()).toEqual(['MoblyAospTest', 'MoblyTest']);
   });
 
   it('should return IN_SERVICE_BUSY when device is busy', async () => {
