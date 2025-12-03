@@ -29,9 +29,8 @@ option java_outer_classname = "HostResourcesProto";
 message HostOverview {
   string host_name = 1;
   string ip = 2;
-  // The display name for the lab type, e.g., "Core Lab", "Satellite Lab
-  // (SLaaS)".
-  string lab_type_display_name = 3;
+  // The display names for the lab type, e.g., ["Satellite Lab", "ATE Lab"].
+  repeated string lab_type_display_names = 3;
   // Lab server process information.
   LabServerInfo lab_server = 4;
   // Daemon server process information.

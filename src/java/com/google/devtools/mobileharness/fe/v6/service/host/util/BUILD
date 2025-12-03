@@ -21,20 +21,11 @@ package(
 )
 
 java_library(
-    name = "get_host_overview_handler",
-    srcs = ["GetHostOverviewHandler.java"],
+    name = "host_types",
+    srcs = ["HostTypes.java"],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:lab_java_proto",
-        "//src/devtools/mobileharness/api/query/proto:filter_java_proto",
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
-        "//src/devtools/mobileharness/fe/v6/service/proto/host:host_resources_java_proto",
-        "//src/devtools/mobileharness/fe/v6/service/proto/host:host_service_java_proto",
-        "//src/devtools/mobileharness/shared/labinfo/proto:lab_info_service_java_proto",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/provider",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/util:host_types",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:lab_info_provider",
-        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_guava_guava",
-        "@maven//:javax_inject_jsr330_api",
     ],
 )

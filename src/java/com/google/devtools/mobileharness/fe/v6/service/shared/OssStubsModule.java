@@ -20,6 +20,8 @@ import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 
 import com.google.devtools.mobileharness.fe.v6.service.device.ConfigurationProvider;
 import com.google.devtools.mobileharness.fe.v6.service.device.OssConfigurationProviderImpl;
+import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostAuxiliaryInfoProvider;
+import com.google.devtools.mobileharness.fe.v6.service.host.provider.OssHostAuxiliaryInfoProviderImpl;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.oss.OssLabInfoProviderImpl;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.LabInfoStub;
@@ -43,6 +45,7 @@ public final class OssStubsModule extends AbstractModule {
 
     bind(ConfigurationProvider.class).to(OssConfigurationProviderImpl.class).in(Singleton.class);
     bind(LabInfoProvider.class).to(OssLabInfoProviderImpl.class).in(Singleton.class);
+    bind(HostAuxiliaryInfoProvider.class).to(OssHostAuxiliaryInfoProviderImpl.class);
   }
 
   @Provides

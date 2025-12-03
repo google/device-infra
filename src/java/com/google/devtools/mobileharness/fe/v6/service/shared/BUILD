@@ -26,6 +26,7 @@ java_library(
     deps = [
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/device:configuration_provider",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/device:oss_configuration_provider_impl",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/provider",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:lab_info_provider",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers/oss:oss_lab_info_provider_impl",
         "//src/java/com/google/devtools/mobileharness/infra/master/rpc/stub:annotation",
