@@ -21,6 +21,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.api.model.job.TestLocator;
 import com.google.devtools.mobileharness.api.model.lab.DeviceLocator;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import java.util.Collection;
 import java.util.Objects;
 
@@ -33,6 +34,9 @@ public class Allocation implements Cloneable {
   /** A list of locators for the allocated devices. */
   private final ImmutableList<DeviceLocator> devices;
 
+  /** A list of features for the allocated devices. */
+  private final ImmutableList<DeviceFeature> deviceFeatures;
+
   /** Creates an allocation which assigns the given device to the given test. */
   public Allocation(TestLocator testLocator, DeviceLocator deviceLocator) {
     this(testLocator, ImmutableList.of(deviceLocator));
@@ -43,10 +47,22 @@ public class Allocation implements Cloneable {
    * should have at least one device.
    */
   public Allocation(TestLocator testLocator, Collection<DeviceLocator> deviceLocators) {
+    this(testLocator, deviceLocators, ImmutableList.of());
+  }
+
+  /**
+   * Creates an allocation which assigns the given device list to the given test. The allocation
+   * should have at least one device.
+   */
+  public Allocation(
+      TestLocator testLocator,
+      Collection<DeviceLocator> deviceLocators,
+      Collection<DeviceFeature> deviceFeatures) {
     test = Preconditions.checkNotNull(testLocator);
     Preconditions.checkState(
         !deviceLocators.isEmpty(), "One allocation should have at least one device.");
     devices = ImmutableList.copyOf(deviceLocators);
+    this.deviceFeatures = ImmutableList.copyOf(deviceFeatures);
   }
 
   /** Gets the test whom the devices are assigned to. */
@@ -69,27 +85,33 @@ public class Allocation implements Cloneable {
     return devices;
   }
 
+  /** Gets features for all the devices of this allocation. */
+  public ImmutableList<DeviceFeature> getAllDeviceFeatures() {
+    return deviceFeatures;
+  }
+
   @Override
   public String toString() {
     return MoreObjects.toStringHelper(this)
         .add("test", getTest())
         .add("devices", getAllDevices())
+        .add("deviceFeatures", getAllDeviceFeatures())
         .omitNullValues()
         .toString();
   }
 
   @Override
   public boolean equals(Object other) {
-    if (!(other instanceof Allocation)) {
+    if (!(other instanceof Allocation otherAlloc)) {
       return false;
     }
-    Allocation otherAlloc = (Allocation) other;
     return Objects.equals(getTest(), otherAlloc.getTest())
-        && Objects.equals(getAllDevices(), otherAlloc.getAllDevices());
+        && Objects.equals(getAllDevices(), otherAlloc.getAllDevices())
+        && Objects.equals(getAllDeviceFeatures(), otherAlloc.getAllDeviceFeatures());
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(getTest(), getAllDevices());
+    return Objects.hash(getTest(), getAllDevices(), getAllDeviceFeatures());
   }
 }

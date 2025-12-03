@@ -27,6 +27,7 @@ java_library(
     name = "allocation",
     srcs = ["Allocation.java"],
     deps = [
+        "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/service/moss/proto:slg_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/allocation",
         "//src/java/com/google/devtools/mobileharness/api/model/job:locator",
