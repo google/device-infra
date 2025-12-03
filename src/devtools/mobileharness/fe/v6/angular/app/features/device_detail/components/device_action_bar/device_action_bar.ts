@@ -182,7 +182,10 @@ export class DeviceActionBar {
   }
 
   quarantineDevice(deviceId: string): void {
-    const {isQuarantined} = this.pageData.headerInfo.quarantine;
+    const {isQuarantined} = this.pageData.headerInfo?.quarantine ?? {
+      isQuarantined: false,
+      expiry: '',
+    };
     if (isQuarantined) {
       const unquarantineDialogRef = this.dialog.open(ConfirmDialog, {
         data: {
@@ -227,7 +230,10 @@ export class DeviceActionBar {
   }
 
   changeQuarantine(deviceId: string): void {
-    const {expiry} = this.pageData.headerInfo.quarantine;
+    const {expiry} = this.pageData.headerInfo?.quarantine ?? {
+      isQuarantined: false,
+      expiry: '',
+    };
     this.dialog.open(QuarantineDialog, {
       data: {
         deviceId,

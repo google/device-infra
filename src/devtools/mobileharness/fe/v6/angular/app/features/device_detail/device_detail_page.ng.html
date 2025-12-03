@@ -69,14 +69,14 @@
                 </div>
               </div>
             </div>
-            @if(pageData.headerInfo.quarantine.isQuarantined) {
+            @if(pageData.headerInfo.quarantine?.isQuarantined) {
               <div class="quarantine-banner">
                 <div class="quarantine-banner-info">
                     <mat-icon>report_problem</mat-icon>
                     <div>
                         Device is <strong>Quarantined</strong> and unavailable for tests.
-                        @if(pageData.headerInfo.quarantine.expiry) {
-                          <span class="block text-xs">Auto-unquarantine around: {{ pageData.headerInfo.quarantine.expiry | date:'MMM d, h:mm a' }}{{formatRemainingTime(pageData.headerInfo.quarantine.expiry)}}</span>
+                        @if(pageData.headerInfo.quarantine?.expiry) {
+                          <span class="block text-xs">Auto-unquarantine around: {{ pageData.headerInfo.quarantine?.expiry | date:'MMM d, h:mm a' }}{{formatRemainingTime(pageData.headerInfo.quarantine?.expiry)}}</span>
                         }
                     </div>
                 </div>

@@ -74,9 +74,9 @@ export interface DeviceActions {
  */
 export interface DeviceHeaderInfo {
   id: string;
-  host: HostInfo;
-  quarantine: QuarantineInfo;
-  actions: DeviceActions;
+  host?: HostInfo;
+  quarantine?: QuarantineInfo;
+  actions?: DeviceActions;
 }
 
 /**
