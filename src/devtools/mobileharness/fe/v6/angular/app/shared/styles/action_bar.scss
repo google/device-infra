@@ -1,4 +1,4 @@
-@use 'configuration' as config;
+@use 'typography';
 
 // Common styles for buttons used in dialog footers.
 .dialog-button {
@@ -13,7 +13,7 @@
   font-size: 0.875rem;
   cursor: pointer;
   letter-spacing: normal;
-  font-family: config.$labconsole-font;
+  font-family: typography.$labconsole-font;
 }
 
 .dialog-button mat-icon:not(:last-child) {

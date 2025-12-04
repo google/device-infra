@@ -1,8 +1,8 @@
-@use '../../../../shared/styles/configuration' as config;
+@use '../../../../shared/styles/typography';
 @use '../../../../shared/styles/action_bar';
 
 .logcat-dialog-content {
-  font-family: config.$labconsole-font;
+  font-family: typography.$labconsole-font;
   display: flex;
   flex-direction: column;
   // flex-grow: 1;

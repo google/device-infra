@@ -1,8 +1,8 @@
-@use '../../../../shared/styles/configuration' as config;
+@use '../../../../shared/styles/typography';
 @use '../../../../shared/styles/action_bar';
 
 .quarantine-dialog-content {
-  font-family: config.$labconsole-font;
+  font-family: typography.$labconsole-font;
   font-size: 0.875rem;
   line-height: 1.25rem;
   color: #4b5563;

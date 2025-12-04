@@ -25,6 +25,7 @@ import {
 import {DEVICE_SERVICE} from '../../../../core/services/device/device_service';
 import {Dialog} from '../../../../shared/components/config_common/dialog/dialog';
 import {ToggleSwitch} from '../../../../shared/components/toggle_switch/toggle_switch';
+import {SnackBarService} from '../../../../shared/services/snackbar_service';
 
 /**
  * Remote control dialog component.
@@ -53,6 +54,7 @@ import {ToggleSwitch} from '../../../../shared/components/toggle_switch/toggle_s
 export class RemoteControlDialog implements OnInit {
   private readonly deviceService = inject(DEVICE_SERVICE);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly snackBar = inject(SnackBarService);
   readonly data: RemoteControlDialogData = inject(MAT_DIALOG_DATA);
 
   runAs: string;
@@ -126,7 +128,7 @@ export class RemoteControlDialog implements OnInit {
     return true;
   }
 
-  validate(): boolean {
+  isFormValid(): boolean {
     const isTimeoutValid = this.validateTimeout();
     const isFlashBranchValid = this.validateFlashBranch();
     const isFlashBuildIdValid = this.validateFlashBuildId();
@@ -139,8 +141,17 @@ export class RemoteControlDialog implements OnInit {
     );
   }
 
+  // This method is called to show errors on blur.
+  validate(): void {
+    this.validateTimeout();
+    this.validateFlashBranch();
+    this.validateFlashBuildId();
+    this.validateFlashBuildTarget();
+  }
+
   startSession() {
-    if (!this.validate()) {
+    if (!this.isFormValid()) {
+      this.snackBar.showError('Please correct the errors in the form.');
       return;
     }
     this.startingSession.set(true);

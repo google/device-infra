@@ -29,7 +29,6 @@ import {SnackBarService} from '../../../../shared/services/snackbar_service';
   standalone: true,
   templateUrl: './screenshot_dialog.ng.html',
   styleUrl: './screenshot_dialog.scss',
-  // encapsulation: ViewEncapsulation.None,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule,

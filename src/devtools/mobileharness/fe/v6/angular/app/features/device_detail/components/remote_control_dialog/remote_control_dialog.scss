@@ -1,4 +1,4 @@
-@use '../../../../shared/styles/configuration' as config;
+@use '../../../../shared/styles/typography';
 @use '../../../../shared/styles/action_bar';
 
 .rc-label {
@@ -19,7 +19,7 @@
 }
 
 .rc-dialog-content {
-  font-family: config.$labconsole-font;
+  font-family: typography.$labconsole-font;
   padding: 1.5rem;
 
   .rc-description {
