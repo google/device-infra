@@ -15,12 +15,14 @@
 
 load("@protobuf//bazel:java_proto_library.bzl", "java_proto_library")
 load("@protobuf//bazel:proto_library.bzl", "proto_library")
+load("@protobuf//bazel:py_proto_library.bzl", "py_proto_library")
 
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/monitoring:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/monitoring:__pkg__",
+        "//wireless/android/test_tools/dual_home_lab/monarch_proxy:__subpackages__",
     ],
 )
 
@@ -32,6 +34,11 @@ proto_library(
 
 java_proto_library(
     name = "monitored_record_java_proto",
+    deps = [":monitored_record_proto"],
+)
+
+py_proto_library(
+    name = "monitored_record_py_pb2",
     deps = [":monitored_record_proto"],
 )
 
