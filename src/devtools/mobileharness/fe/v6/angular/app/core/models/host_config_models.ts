@@ -26,7 +26,10 @@ export interface HostPermissions {
 /**
  * Device configuration mode for the host.
  */
-export type DeviceConfigMode = 'PER_DEVICE' | 'SHARED';
+export type DeviceConfigMode =
+  | 'NODEVICE_CONFIG_MODE_UNSPECIFIEDNE'
+  | 'PER_DEVICE'
+  | 'SHARED';
 
 /**
  * Specifications for Maneki device detection.
@@ -140,6 +143,7 @@ export interface GetHostConfigResult {
  * Enum representing the top-level sections (UI tabs) of the HostConfig object for partial updates.
  */
 export enum HostConfigSection {
+  HOST_CONFIG_SECTION_UNSPECIFIED = 'HOST_CONFIG_SECTION_UNSPECIFIED',
   HOST_PERMISSIONS = 'HOST_PERMISSIONS',
   DEVICE_CONFIG_MODE = 'DEVICE_CONFIG_MODE',
   DEVICE_CONFIG = 'DEVICE_CONFIG',
@@ -181,6 +185,7 @@ export interface UpdateHostConfigResult {
   success: boolean;
   error?: {
     code:
+      | 'CODE_UNSPECIFIED'
       | 'SELF_LOCKOUT_DETECTED'
       | 'PERMISSION_DENIED'
       | 'VALIDATION_ERROR'

@@ -118,6 +118,7 @@ export interface UpdateDeviceConfigResult {
   /** Details about the error if the update failed. */
   error?: {
     code:
+      | 'CODE_UNSPECIFIED'
       | 'SELF_LOCKOUT_DETECTED'
       | 'PERMISSION_DENIED'
       | 'VALIDATION_ERROR'
@@ -130,7 +131,7 @@ export interface UpdateDeviceConfigResult {
  * Enum representing the distinct sections of the device configuration dialog.
  */
 export enum ConfigSection {
-  UNKNOWN = 'UNKNOWN',
+  DEVICE_CONFIG_SECTION_UNKNOWN = 'DEVICE_CONFIG_SECTION_UNKNOWN',
   PERMISSIONS = 'PERMISSIONS',
   WIFI = 'WIFI',
   DIMENSIONS = 'DIMENSIONS',
