@@ -42,7 +42,6 @@ proto_library(
     deps = [
         "//src/devtools/common/metrics/stability/model/proto:error_proto",
         "//src/devtools/mobileharness/api/model/proto:device_proto",
-        "//src/devtools/mobileharness/api/model/proto:error_proto",
         "//src/devtools/mobileharness/api/model/proto:job_proto",
         "//src/devtools/mobileharness/infra/container/proto:mode_setting_proto",
         "//src/devtools/mobileharness/infra/container/proto:sandbox_setting_proto",

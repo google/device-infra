@@ -21,7 +21,6 @@ package mobileharness.service.moss;
 import "src/devtools/common/metrics/stability/model/proto/error_id.proto";
 import "src/devtools/common/metrics/stability/model/proto/error_type.proto";
 import "src/devtools/common/metrics/stability/model/proto/exception.proto";
-import "src/devtools/mobileharness/api/model/proto/error.proto";
 import "src/devtools/mobileharness/api/model/proto/job.proto";
 import "src/devtools/mobileharness/api/model/proto/test.proto";
 import "src/java/com/google/wireless/qa/mobileharness/shared/proto/common.proto";

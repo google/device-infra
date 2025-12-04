@@ -25,8 +25,6 @@ package(
     ],
 )
 
-exports_files(["error.proto"])
-
 proto_library(
     name = "device_proto",
     srcs = ["device.proto"],
@@ -46,22 +44,6 @@ py_proto_library(
 java_proto_library(
     name = "device_java_proto",
     deps = [":device_proto"],
-)
-
-proto_library(
-    name = "error_proto",
-    srcs = ["error.proto"],
-    deps = ["//src/devtools/common/metrics/stability/model/proto:error_proto"],
-)
-
-cc_proto_library(
-    name = "error_cc_proto",
-    deps = [":error_proto"],
-)
-
-java_proto_library(
-    name = "error_java_proto",
-    deps = [":error_proto"],
 )
 
 proto_library(

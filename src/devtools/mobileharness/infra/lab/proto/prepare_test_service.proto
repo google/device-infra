@@ -22,7 +22,6 @@ import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 import "src/devtools/common/metrics/stability/model/proto/exception.proto";
 import "src/devtools/mobileharness/api/model/proto/device.proto";
-import "src/devtools/mobileharness/api/model/proto/error.proto";
 import "src/devtools/mobileharness/api/model/proto/job.proto";
 import "src/devtools/mobileharness/infra/container/proto/mode_setting.proto";
 import "src/devtools/mobileharness/infra/container/proto/sandbox_setting.proto";
