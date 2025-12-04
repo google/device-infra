@@ -1,0 +1,611 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.google.wireless.qa.mobileharness.shared.api.driver;
+
+import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
+
+import com.google.common.base.Ascii;
+import com.google.common.base.Joiner;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ListMultimap;
+import com.google.common.flogger.FluentLogger;
+import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.platform.android.shared.emulator.AndroidJitEmulatorUtil;
+import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsCommandUtil;
+import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
+import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
+import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.shared.util.path.PathUtil;
+import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+import com.google.wireless.qa.mobileharness.shared.api.device.Device;
+import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
+import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
+import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.XtsTradefedTestDriverSpec;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+/** An implementation of {@link TradefedRunStrategy} for xTS runs. */
+final class XtsRunStrategy implements TradefedRunStrategy {
+
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
+  // The max zip file is around 20GB, disk write speed is 100MB/s, and normally no more than 10
+  // tests are doing unzip operation at the same time, therefore each test can unzip at 10MB/s speed
+  // on average, and each test takes on average 34 minutes to finish unzipping. Adding some buffer
+  // so that most tests can finish within timeout limit.
+  private static final Duration ANDROID_XTS_ZIP_UNCOMPRESS_TIMEOUT = Duration.ofHours(2L);
+
+  private static final ImmutableSet<String> EXCLUDED_JAR_FILES =
+      ImmutableSet.of(
+          "ats_console_deploy.jar",
+          "ats_olc_server_deploy.jar",
+          "ats_olc_server_local_mode_deploy.jar");
+  private static final ImmutableList<String> EXCLUDED_JAR_FILE_PATTERNS =
+      ImmutableList.of("art-run-test.*", "art-gtest-jars.*");
+
+  private static final String TF_PATH_KEY = "TF_PATH";
+
+  private static final ImmutableSet<String> DYNAMIC_JOB_TEST_DEPENDENCIES =
+      ImmutableSet.of("CtsPreconditions", "CtsDeviceInfo");
+
+  // Will remove these cases from MCTS.
+  private static final ImmutableSet<String> STATIC_JOB_TEST_DEPENDENCIES =
+      ImmutableSet.of(
+          "cts-dalvik-host-test-runner",
+          "net-tests-utils-host-common",
+          "CtsBackupHostTestCases",
+          "compatibility-host-provider-preconditions");
+  private static final String STATIC_MCTS_LIST_FILE_PATH =
+      "/devtools/mobileharness/infra/controller/test/util/xtsdownloader/configs/mcts_list.txt";
+
+  private final LocalFileUtil localFileUtil;
+  private final ResUtil resUtil;
+  private final SystemUtil systemUtil;
+  private final Clock clock;
+  private ImmutableSet<String> previousResultDirNames = ImmutableSet.of();
+
+  XtsRunStrategy(LocalFileUtil localFileUtil, ResUtil resUtil, SystemUtil systemUtil, Clock clock) {
+    this.localFileUtil = localFileUtil;
+    this.resUtil = resUtil;
+    this.systemUtil = systemUtil;
+    this.clock = clock;
+  }
+
+  @Override
+  public void setUpWorkDir(
+      XtsTradefedTestDriverSpec spec, Path workDir, String xtsType, TestInfo testInfo)
+      throws MobileHarnessException, InterruptedException {
+    Path sourceXtsRootDir = getXtsRootDir(spec, testInfo);
+    Path dir = workDir.resolve(String.format("android-%s", xtsType));
+    // We need to prepare /xts-root-dir/android-xts/testcases since we create symlink to all the
+    // sub test case directories.
+    localFileUtil.prepareDir(Path.of(dir.toString(), "testcases"));
+    localFileUtil.grantFileOrDirFullAccess(workDir);
+
+    Path sourceXtsBundledJdkDir = XtsDirUtil.getXtsJdkDir(sourceXtsRootDir, xtsType);
+    Path sourceXtsBundledTestcasesDir = XtsDirUtil.getXtsTestCasesDir(sourceXtsRootDir, xtsType);
+    Path sourceXtsBundledToolsDir = XtsDirUtil.getXtsToolsDir(sourceXtsRootDir, xtsType);
+    Path sourceXtsBundledLibDir = XtsDirUtil.getXtsLibDir(sourceXtsRootDir, xtsType);
+    Path sourceXtsBundledLib64Dir = XtsDirUtil.getXtsLib64Dir(sourceXtsRootDir, xtsType);
+
+    Path linkJdkDir = XtsDirUtil.getXtsJdkDir(workDir, xtsType);
+    Path linkTestcasesDir = XtsDirUtil.getXtsTestCasesDir(workDir, xtsType);
+    Path linkToolsDir = XtsDirUtil.getXtsToolsDir(workDir, xtsType);
+    Path linkLibDir = XtsDirUtil.getXtsLibDir(workDir, xtsType);
+    Path linkLib64Dir = XtsDirUtil.getXtsLib64Dir(workDir, xtsType);
+
+    if (Flags.instance().xtsJdkDir.getNonNull().isEmpty()) {
+      // Create symlinks for the downloaded JDK only for the dynamic download jobs.
+      if (testInfo.properties().has(XtsConstants.XTS_DYNAMIC_DOWNLOAD_PATH_JDK_PROPERTY_KEY)) {
+        Path downloadedJdkPath =
+            Path.of(
+                testInfo.getTmpFileDir()
+                    + testInfo
+                        .properties()
+                        .get(XtsConstants.XTS_DYNAMIC_DOWNLOAD_PATH_JDK_PROPERTY_KEY));
+        createSymlink(linkJdkDir, downloadedJdkPath);
+        logger.atInfo().log("Use the downloaded JDK files from %s", downloadedJdkPath);
+      } else {
+        createSymlink(linkJdkDir, sourceXtsBundledJdkDir);
+      }
+    } else {
+      // Create symlinks for the JDK passed in via the flag by the user.
+      logger.atInfo().log(
+          "Use the JDK files from %s passed in via the flag --xts_jdk_dir",
+          Flags.instance().xtsJdkDir.getNonNull());
+      Path jdkDir = Path.of(Flags.instance().xtsJdkDir.getNonNull());
+      localFileUtil.grantFileOrDirFullAccess(jdkDir);
+      createSymlink(linkJdkDir, jdkDir);
+    }
+
+    // Create symlinks for the test cases.
+    // For dynamic download jobs, create symlinks to the dynamic downloaded test cases.
+    // For non dynamic download jobs, create symlinks to the original static test cases.
+    if (isXtsDynamicDownloaderEnabled(testInfo)) {
+      Set<String> xtsDynamicDownloadTestList = new HashSet<>();
+      Set<String> missingTestList = new HashSet<>(DYNAMIC_JOB_TEST_DEPENDENCIES);
+      String testListProperty =
+          testInfo.properties().get(XtsConstants.XTS_DYNAMIC_DOWNLOAD_PATH_TEST_LIST_PROPERTY_KEY);
+      String preloadMainlineVersion =
+          testInfo.properties().get(XtsConstants.PRELOAD_MAINLINE_VERSION_TEST_PROPERTY_KEY);
+      if (testListProperty != null && preloadMainlineVersion != null) {
+        if (localFileUtil.isFileOrDirExist(testListProperty)) {
+          xtsDynamicDownloadTestList.addAll(getStringSetFromResourceFile(testListProperty));
+          // Save the test list file to the test gen file dir and further in xts/logs.
+          localFileUtil.copyFileOrDir(
+              testListProperty,
+              testInfo.getGenFileDir()
+                  + "/"
+                  + preloadMainlineVersion
+                  + "_"
+                  + PathUtil.basename(testListProperty));
+        }
+      } else {
+        xtsDynamicDownloadTestList.addAll(
+            getStringSetFromResourceFile(getStaticMctsListFilePath()));
+      }
+
+      if (testInfo
+          .jobInfo()
+          .properties()
+          .getOptional(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME)
+          .orElse("")
+          .equals(XtsConstants.DYNAMIC_MCTS_JOB_NAME)) {
+        if (testInfo.properties().has(XtsConstants.XTS_DYNAMIC_DOWNLOAD_PATH_TEST_PROPERTY_KEY)) {
+          // Integrates the dynamic downloaded test cases with the temp XTS workspace.
+          missingTestList.addAll(
+              createSymlinksForDynamicDownloadTestCases(
+                  linkTestcasesDir,
+                  Path.of(
+                      testInfo.getTmpFileDir()
+                          + testInfo
+                              .properties()
+                              .get(XtsConstants.XTS_DYNAMIC_DOWNLOAD_PATH_TEST_PROPERTY_KEY)),
+                  /* isDynamicDownload= */ true,
+                  xtsDynamicDownloadTestList));
+          // Also include the test dependencies for dynamic download test cases.
+          logger.atInfo().log("Missing dynamic download test list: %s", missingTestList);
+          createSymlinksForDynamicDownloadTestCases(
+              linkTestcasesDir,
+              sourceXtsBundledTestcasesDir,
+              /* isDynamicDownload= */ true,
+              missingTestList);
+        } else {
+          createSymlinksForTestCases(linkTestcasesDir, sourceXtsBundledTestcasesDir);
+        }
+      }
+
+      if (testInfo
+          .jobInfo()
+          .properties()
+          .getOptional(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME)
+          .orElse("")
+          .equals(XtsConstants.STATIC_XTS_JOB_NAME)) {
+        // Integrates the static test cases with the temp XTS workspace.
+        createSymlinksForDynamicDownloadTestCases(
+            linkTestcasesDir,
+            sourceXtsBundledTestcasesDir,
+            /* isDynamicDownload= */ false,
+            xtsDynamicDownloadTestList);
+      }
+    } else {
+      createSymlinksForTestCases(linkTestcasesDir, sourceXtsBundledTestcasesDir);
+    }
+
+    // Create symlinks for the tools and libs.
+    createSymlink(linkToolsDir, sourceXtsBundledToolsDir);
+    createSymlink(linkLibDir, sourceXtsBundledLibDir);
+    createSymlink(linkLib64Dir, sourceXtsBundledLib64Dir);
+
+    if (useTfRunRetry(spec, testInfo)) {
+      // When using TF "run retry", TF looks for the corresponding previous result dir per given
+      // session index. So it needs to link the previous session's result dir to the work dir so TF
+      // can locate the prev result to complete the retry.
+      Path resultsDirInTmpXtsWorkDir = XtsDirUtil.getXtsResultsDir(workDir, xtsType);
+
+      String prevSessionResultDirName = "0";
+      Path linkPrevSessionResultDir = resultsDirInTmpXtsWorkDir.resolve(prevSessionResultDirName);
+      previousResultDirNames = ImmutableSet.of(prevSessionResultDirName);
+
+      localFileUtil.prepareDir(resultsDirInTmpXtsWorkDir);
+      // Link the result dir so TF can load prev results and merge files
+      createSymlink(
+          linkPrevSessionResultDir, Path.of(spec.getPrevSessionTestResultXml()).getParent());
+
+      // Link subplan dir so TF can use the subplan for retry
+      Path sourceXtsSubPlansDir = XtsDirUtil.getXtsSubPlansDir(sourceXtsRootDir, xtsType);
+      if (localFileUtil.isDirExist(sourceXtsSubPlansDir)) {
+        Path linkSubPlansDir = XtsDirUtil.getXtsSubPlansDir(workDir, xtsType);
+        createSymlink(linkSubPlansDir, sourceXtsSubPlansDir);
+      }
+    }
+
+    if (isRunWithSubPlan(spec)) {
+      Path subplansDirInTmpXtsWorkDir = XtsDirUtil.getXtsSubPlansDir(workDir, xtsType);
+      localFileUtil.prepareDir(subplansDirInTmpXtsWorkDir);
+      localFileUtil.grantFileOrDirFullAccess(subplansDirInTmpXtsWorkDir);
+      localFileUtil.copyFileOrDir(
+          spec.getSubplanXml(), subplansDirInTmpXtsWorkDir.toAbsolutePath().toString());
+      // Also copy the subplan xml file the test GenFileDir for debugging if needed
+      localFileUtil.copyFileOrDir(spec.getSubplanXml(), testInfo.getGenFileDir());
+    }
+  }
+
+  @Override
+  public String getConcatenatedJarPath(Path workDir, XtsTradefedTestDriverSpec spec, String xtsType)
+      throws MobileHarnessException {
+    ImmutableList<Pattern> excludedJarFilePatterns =
+        EXCLUDED_JAR_FILE_PATTERNS.stream().map(Pattern::compile).collect(toImmutableList());
+    Set<String> leadingJarsSet = getLeadingJarsInClasspath(spec);
+
+    ListMultimap<String, Path> foundLeadingJars = ArrayListMultimap.create();
+    ImmutableList.Builder<Path> restOfJars = ImmutableList.builder();
+    try {
+      Path linkXtsToolsDir = XtsDirUtil.getXtsToolsDir(workDir, xtsType);
+      Path linkXtsToolsDirRealPath = linkXtsToolsDir.toRealPath();
+      Path linkXtsTestcasesDir = XtsDirUtil.getXtsTestCasesDir(workDir, xtsType);
+      Path linkXtsTestcasesDirRealPath = linkXtsTestcasesDir.toRealPath();
+
+      localFileUtil
+          .listFilePaths(
+              linkXtsToolsDirRealPath,
+              /* recursively= */ false,
+              path ->
+                  path.getFileName().toString().endsWith(".jar")
+                      && !EXCLUDED_JAR_FILES.contains(path.getFileName().toString()))
+          .forEach(
+              jar -> {
+                Path newJarPath = replacePathPrefix(jar, linkXtsToolsDirRealPath, linkXtsToolsDir);
+                if (leadingJarsSet.contains(jar.getFileName().toString())) {
+                  foundLeadingJars.put(jar.getFileName().toString(), newJarPath);
+                } else {
+                  restOfJars.add(newJarPath);
+                }
+              });
+      // In setUpXtsWorkDir, it created symlinks for files and directories directly under the
+      // "testcases" folder.
+      // Currently we cannot list files within a symlinked sub-directory, so we handle sub-files
+      // and
+      // sub-directories separately.
+      localFileUtil
+          .listFilesOrDirs(
+              linkXtsTestcasesDirRealPath,
+              fileOrDir ->
+                  Files.isRegularFile(fileOrDir)
+                      && fileOrDir.getFileName().toString().endsWith(".jar")
+                      && isJarFileIncluded(
+                          fileOrDir.getFileName().toString(), excludedJarFilePatterns))
+          .forEach(
+              jar -> {
+                if (leadingJarsSet.contains(jar.getFileName().toString())) {
+                  foundLeadingJars.put(jar.getFileName().toString(), jar);
+                } else {
+                  restOfJars.add(jar);
+                }
+              });
+
+      List<Path> linkXtsTestcasesSubDirPaths = localFileUtil.listDirs(linkXtsTestcasesDirRealPath);
+      for (Path linkXtsTestcasesSubDirPath : linkXtsTestcasesSubDirPaths) {
+        Path linkXtsTestcasesSubDirRealPath = linkXtsTestcasesSubDirPath.toRealPath();
+        localFileUtil
+            .listFilePaths(
+                linkXtsTestcasesSubDirRealPath,
+                /* recursively= */ true,
+                path ->
+                    path.getFileName().toString().endsWith(".jar")
+                        && isJarFileIncluded(
+                            path.getFileName().toString(), excludedJarFilePatterns))
+            .forEach(
+                jar -> {
+                  Path newJarPath =
+                      replacePathPrefix(
+                          jar, linkXtsTestcasesSubDirRealPath.getParent(), linkXtsTestcasesDir);
+                  if (leadingJarsSet.contains(jar.getFileName().toString())) {
+                    foundLeadingJars.put(jar.getFileName().toString(), newJarPath);
+                  } else {
+                    restOfJars.add(newJarPath);
+                  }
+                });
+      }
+
+      ImmutableList.Builder<Path> result = ImmutableList.builder();
+      for (String leadingJar : leadingJarsSet) {
+        result.addAll(foundLeadingJars.get(leadingJar));
+      }
+      result.addAll(restOfJars.build());
+
+      return Joiner.on(':').join(result.build());
+    } catch (IOException e) {
+      throw new MobileHarnessException(
+          AndroidErrorId.XTS_TRADEFED_LIST_JARS_ERROR,
+          "Failed to list jars in tools and testcases directories.",
+          e);
+    }
+  }
+
+  @Override
+  public ImmutableMap<String, String> getEnvironment(
+      Path workDir, String xtsType, XtsTradefedTestDriverSpec spec, Device device, String envPath)
+      throws MobileHarnessException, InterruptedException {
+    Map<String, String> environmentToTradefedConsole = new HashMap<>();
+    environmentToTradefedConsole.put(
+        "LD_LIBRARY_PATH", getConcatenatedLdLibraryPath(workDir, xtsType));
+    environmentToTradefedConsole.put("PATH", envPath);
+    environmentToTradefedConsole.put("TF_WORK_DIR", workDir.toString());
+    if (device.hasDimension(Dimension.Name.DEVICE_CLASS_NAME, "AndroidJitEmulator")) {
+      environmentToTradefedConsole.put(
+          "TF_GLOBAL_CONFIG", AndroidJitEmulatorUtil.getHostConfigPath());
+    }
+    if (!spec.getEnvVars().isEmpty()) {
+      String envVarJson = spec.getEnvVars();
+      Map<String, String> envVar =
+          new Gson().fromJson(envVarJson, new TypeToken<Map<String, String>>() {}.getType());
+      for (Map.Entry<String, String> entry : envVar.entrySet()) {
+        if (entry.getKey().isEmpty() || entry.getValue().isEmpty()) {
+          continue;
+        }
+        String value = entry.getValue().replace("${TF_WORK_DIR}", workDir.toString());
+        if (entry.getKey().equals(TF_PATH_KEY)) {
+          // For xTS, override TF_PATH since the original TF_PATH may be unavailable due to symlink.
+          environmentToTradefedConsole.put(
+              TF_PATH_KEY, getConcatenatedJarPath(workDir, spec, xtsType));
+        } else {
+          // This will override the existing entry if it exists.
+          environmentToTradefedConsole.put(entry.getKey(), value);
+        }
+      }
+    }
+
+    return ImmutableMap.copyOf(environmentToTradefedConsole);
+  }
+
+  @Override
+  public String getJavaPath(Path workDir, String xtsType) {
+    return XtsCommandUtil.getJavaBinary(xtsType, workDir).toString();
+  }
+
+  @Override
+  public String getMainClass() {
+    return "com.android.compatibility.common.tradefed.command.CompatibilityConsole";
+  }
+
+  @Override
+  public ImmutableList<String> getJvmDefines(Path workDir, String xtsType) {
+    return ImmutableList.of(String.format("-D%s_ROOT=%s", Ascii.toUpperCase(xtsType), workDir));
+  }
+
+  private Path getXtsRootDir(XtsTradefedTestDriverSpec spec, TestInfo testInfo)
+      throws MobileHarnessException {
+    if (spec.hasXtsRootDir()) {
+      return Path.of(spec.getXtsRootDir());
+    } else if (spec.hasAndroidXtsZip()) {
+      // Unzip android-xts zip file and return the xts root dir
+      Path androidXtsZip = Path.of(spec.getAndroidXtsZip());
+      long startTime = clock.instant().toEpochMilli();
+      try {
+        String unzippedPath =
+            PathUtil.join(
+                testInfo.getTmpFileDir(), androidXtsZip.toString().replace('.', '_') + "_unzipped");
+        localFileUtil.prepareDir(unzippedPath);
+        // TODO: cache the unzip result to reduce lab disk usage.
+        localFileUtil.unzipFile(
+            androidXtsZip.toString(), unzippedPath, ANDROID_XTS_ZIP_UNCOMPRESS_TIMEOUT);
+        return Path.of(unzippedPath);
+      } catch (MobileHarnessException | InterruptedException e) {
+        if (e instanceof InterruptedException) {
+          Thread.currentThread().interrupt();
+        }
+        throw new MobileHarnessException(
+            AndroidErrorId.XTS_TRADEFED_GET_XTS_ROOT_DIR_ERROR,
+            "Failed to unzip " + androidXtsZip,
+            e);
+      } finally {
+        logger.atInfo().log(
+            "Unzipping %s took %d seconds",
+            androidXtsZip,
+            Duration.between(Instant.ofEpochMilli(startTime), clock.instant()).toSeconds());
+      }
+    }
+    throw new MobileHarnessException(
+        AndroidErrorId.XTS_TRADEFED_GET_XTS_ROOT_DIR_ERROR,
+        "Failed to get the xts root dir. Full spec: " + shortDebugString(spec));
+  }
+
+  @CanIgnoreReturnValue
+  private static Path createSymlink(Path link, Path target) throws MobileHarnessException {
+    try {
+      // if the link already existed, we have to remove it before creating
+      Files.deleteIfExists(link);
+      Files.createSymbolicLink(link, target);
+    } catch (IOException ioe) {
+      throw new MobileHarnessException(
+          AndroidErrorId.XTS_TRADEFED_CREATE_SYMLINK_ERROR,
+          String.format("Failed to create symbolic link [%s] to [%s]", link, target),
+          ioe);
+    } catch (UnsupportedOperationException uoe) {
+      throw new MobileHarnessException(
+          AndroidErrorId.XTS_TRADEFED_CREATE_SYMLINK_UNSUPPORTED_ERROR,
+          String.format(
+              "Failed to create symbolic link [%s] to [%s] - unsupported operation", link, target),
+          uoe);
+    }
+    return link;
+  }
+
+  private void createSymlinksForTestCases(Path link, Path target) throws MobileHarnessException {
+    try {
+      localFileUtil.checkFileOrDir(target);
+    } catch (MobileHarnessException e) {
+      // File does not exist, no need to integrate.
+      logger.atWarning().log("%s does not exist.", target);
+      return;
+    }
+
+    // Create symlink to the immediate subfiles and subdirectories of the xts test cases
+    List<String> subTestCases = localFileUtil.listFileOrDirPaths(target.toString());
+    for (String subTestCase : subTestCases) {
+      Path subTestCasePath = Path.of(subTestCase);
+      Path tmpXtsTestcasePath = link.resolve(subTestCasePath.getFileName().toString());
+      createSymlink(tmpXtsTestcasePath, subTestCasePath);
+    }
+    logger.atInfo().log(
+        "Finished integrating the test cases [%s] with the temp XTS workspace [%s].", target, link);
+  }
+
+  @CanIgnoreReturnValue
+  private Set<String> createSymlinksForDynamicDownloadTestCases(
+      Path link, Path target, boolean isDynamicDownload, Set<String> dynamicDownloadTestList)
+      throws MobileHarnessException {
+    try {
+      localFileUtil.checkFileOrDir(target);
+    } catch (MobileHarnessException e) {
+      // File does not exist, no need to integrate.
+      logger.atWarning().log("%s does not exist.", target);
+      return dynamicDownloadTestList;
+    }
+
+    // Create symlink to the immediate subfiles and subdirectories of the xts test cases.
+    // For dynamic download jobs, only create symlinks for the test cases in the test list.
+    // For non dynamic download jobs, create symlinks for the test cases not in the test list.
+    List<String> subTestCases = localFileUtil.listFileOrDirPaths(target.toString());
+    Set<String> foundTests = new HashSet<>();
+    for (String subTestCase : subTestCases) {
+      Path subTestCasePath = Path.of(subTestCase);
+      String subTestCaseName = subTestCasePath.getFileName().toString();
+      foundTests.add(subTestCaseName);
+      boolean shouldCreateSymlink =
+          isDynamicDownload
+              ? dynamicDownloadTestList.contains(subTestCaseName)
+              : !dynamicDownloadTestList.contains(subTestCaseName)
+                  || STATIC_JOB_TEST_DEPENDENCIES.contains(subTestCaseName);
+
+      if (shouldCreateSymlink) {
+        Path tmpXtsTestcasePath = link.resolve(subTestCasePath.getFileName().toString());
+        createSymlink(tmpXtsTestcasePath, subTestCasePath);
+      }
+    }
+
+    logger.atInfo().log(
+        "Finished integrating the test cases [%s] with the temp XTS workspace [%s].", target, link);
+
+    // Return the test cases that are present in the test list but are missing in the dynamic
+    // download folder.
+    dynamicDownloadTestList.removeAll(foundTests);
+    return dynamicDownloadTestList;
+  }
+
+  /** Returns {@code true} if xts dynamic downloader is enabled. */
+  private static boolean isXtsDynamicDownloaderEnabled(TestInfo testInfo) {
+    return testInfo
+        .jobInfo()
+        .properties()
+        .getBoolean(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED)
+        .orElse(false);
+  }
+
+  private ImmutableSet<String> getStringSetFromResourceFile(String filePath)
+      throws MobileHarnessException {
+    return localFileUtil.readLineListFromFile(filePath).stream()
+        .map(String::trim)
+        .filter(line -> !line.isEmpty())
+        .collect(toImmutableSet());
+  }
+
+  private static boolean useTfRunRetry(XtsTradefedTestDriverSpec spec, TestInfo testInfo) {
+    return !spec.getXtsType().isEmpty()
+        && spec.getXtsTestPlan().equals("retry")
+        && !spec.getPrevSessionTestResultXml().isEmpty()
+        && testInfo.jobInfo().files().isTagNotEmpty("prev_session_test_record_pb_files");
+  }
+
+  /**
+   * Checks if it's passed with a subplan xml file to run the tradefed.
+   *
+   * <p>There are two cases that a subplan xml file passed to this driver. #1 is "run retry" which
+   * creates a subplan xml file and passes it to the driver and its test plan is "retry". #2 is
+   * running with a given subplan name, which may create a modified subplan xml file and pass it to
+   * the driver.
+   */
+  private static boolean isRunWithSubPlan(XtsTradefedTestDriverSpec spec) {
+    return !spec.getSubplanXml().isEmpty();
+  }
+
+  private String getStaticMctsListFilePath() throws MobileHarnessException {
+    return resUtil.getResourceFile(getClass(), STATIC_MCTS_LIST_FILE_PATH);
+  }
+
+  private boolean isJarFileIncluded(
+      String fileName, ImmutableList<Pattern> excludedJarFilePatterns) {
+    return excludedJarFilePatterns.stream()
+        .map(pattern -> pattern.matcher(fileName))
+        .noneMatch(Matcher::matches);
+  }
+
+  private static Set<String> getLeadingJarsInClasspath(XtsTradefedTestDriverSpec spec) {
+    LinkedHashSet<String> leadingJarsSet = new LinkedHashSet<>();
+    // Always put tradefed.jar at the beginning
+    leadingJarsSet.add("tradefed.jar");
+    if (!spec.getLeadingJarsInClasspathList().isEmpty()) {
+      leadingJarsSet.addAll(spec.getLeadingJarsInClasspathList());
+    }
+    return leadingJarsSet;
+  }
+
+  private static Path replacePathPrefix(Path path, Path currentPrefix, Path newPrefix) {
+    return Path.of(path.toString().replaceFirst(currentPrefix.toString(), newPrefix.toString()));
+  }
+
+  private String getConcatenatedLdLibraryPath(Path tmpXtsRootDir, String xtsType) {
+    List<String> libPathSegments = new ArrayList<>();
+    libPathSegments.add(XtsDirUtil.getXtsLibDir(tmpXtsRootDir, xtsType).toString());
+    libPathSegments.add(XtsDirUtil.getXtsLib64Dir(tmpXtsRootDir, xtsType).toString());
+    String existingLdLibraryPath = systemUtil.getEnv("LD_LIBRARY_PATH");
+    if (existingLdLibraryPath != null) {
+      libPathSegments.add(existingLdLibraryPath);
+    }
+    return Joiner.on(':').join(libPathSegments);
+  }
+
+  @Override
+  public ImmutableSet<String> getPreviousResultDirNames() {
+    return previousResultDirNames;
+  }
+}
