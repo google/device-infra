@@ -18,6 +18,7 @@ syntax = "proto2";
 
 package mobileharness.gateway;
 
+import "google/protobuf/timestamp.proto";
 import "src/devtools/mobileharness/api/model/proto/job.proto";
 import "src/java/com/google/wireless/qa/mobileharness/shared/proto/common.proto";
 import "src/java/com/google/wireless/qa/mobileharness/shared/proto/job.proto";
