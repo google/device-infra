@@ -32,6 +32,7 @@ public abstract class ListPackagesArgs {
 
   private static final String ADB_SHELL_LIST_PACKAGES = "pm list packages";
   private static final String ARG_SHOW_VERSION_CODE = "--show-versioncode";
+  private static final String ARG_SHOW_UID = "-U";
   private static final String ARG_USER = "--user";
 
   /** Filter to only list the packages of the given type. */
@@ -42,6 +43,9 @@ public abstract class ListPackagesArgs {
 
   /** Whether to show the version code. */
   public abstract boolean showVersionCode();
+
+  /** Whether to show the UID. */
+  public abstract boolean showUid();
 
   /** Filter to only those whose name contains this string. */
   public abstract Optional<String> nameFilter();
@@ -59,6 +63,9 @@ public abstract class ListPackagesArgs {
     statusFilter().ifPresent(filter -> argList.add(filter.getOption()));
     if (showVersionCode()) {
       argList.add(ARG_SHOW_VERSION_CODE);
+    }
+    if (showUid()) {
+      argList.add(ARG_SHOW_UID);
     }
     return ImmutableList.copyOf(argList);
   }
@@ -83,7 +90,7 @@ public abstract class ListPackagesArgs {
 
   /** Gets default ListPackagesArgs builder instance. */
   public static Builder builder() {
-    return new AutoValue_ListPackagesArgs.Builder().setShowVersionCode(false);
+    return new AutoValue_ListPackagesArgs.Builder().setShowVersionCode(false).setShowUid(false);
   }
 
   /** Auto value builder for {@link ListPackagesArgs}. */
@@ -94,6 +101,8 @@ public abstract class ListPackagesArgs {
     public abstract Builder setStatusFilter(StatusFilter statusFilter);
 
     public abstract Builder setShowVersionCode(boolean showVersionCode);
+
+    public abstract Builder setShowUid(boolean showUid);
 
     public abstract Builder setNameFilter(String nameFilter);
 
