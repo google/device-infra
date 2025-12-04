@@ -1,0 +1,182 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package devtools.mobileharness.fe.v6.service.proto.config;
+
+import "google/api/annotations.proto";
+import "src/devtools/mobileharness/fe/v6/service/proto/config/config_resources.proto";
+
+option java_package = "com.google.devtools.mobileharness.fe.v6.service.proto.config";
+option java_multiple_files = true;
+option java_outer_classname = "ConfigServiceProto";
+
+// Service definition for configuration management operations.
+service ConfigService {
+  // Retrieves the configuration for a specific device.
+  rpc GetDeviceConfig(GetDeviceConfigRequest)
+      returns (GetDeviceConfigResponse) {
+    option (google.api.http) = {
+      get: "/v6/devices/{device_id}/config"
+    };
+  }
+
+  // Checks if the current user has permission to modify device configuration.
+  rpc CheckDeviceWritePermission(CheckDeviceWritePermissionRequest)
+      returns (CheckDeviceWritePermissionResponse) {
+    option (google.api.http) = {
+      get: "/v6/devices/{device_id}/config/writepermission"
+    };
+  }
+
+  // Updates the configuration for a specific device.
+  rpc UpdateDeviceConfig(UpdateDeviceConfigRequest)
+      returns (UpdateDeviceConfigResponse) {
+    option (google.api.http) = {
+      post: "/v6/devices/{device_id}/config",
+      body: "*"
+    };
+  }
+
+  // Retrieves the default DeviceConfig set at the host level.
+  rpc GetHostDefaultDeviceConfig(GetHostDefaultDeviceConfigRequest)
+      returns (GetHostDefaultDeviceConfigResponse) {
+    option (google.api.http) = {
+      get: "/v6/hosts/{host_name}/defaultdeviceconfig"
+    };
+  }
+
+  // Retrieves the configuration and UI control status for a specific host.
+  rpc GetHostConfig(GetHostConfigRequest) returns (GetHostConfigResponse) {
+    option (google.api.http) = {
+      get: "/v6/hosts/{host_name}/config"
+    };
+  }
+
+  // Checks if the current user has permission to modify host configuration.
+  rpc CheckHostWritePermission(CheckHostWritePermissionRequest)
+      returns (CheckHostWritePermissionResponse) {
+    option (google.api.http) = {
+      get: "/v6/hosts/{host_name}/config/writepermission"
+    };
+  }
+
+  // Updates the configuration for a specific host.
+  rpc UpdateHostConfig(UpdateHostConfigRequest)
+      returns (UpdateHostConfigResponse) {
+    option (google.api.http) = {
+      post: "/v6/hosts/{host_name}/config",
+      body: "*"
+    };
+  }
+}
+
+// Request for GetDeviceConfig.
+message GetDeviceConfigRequest {
+  string device_id = 1;
+}
+
+// Response for GetDeviceConfig.
+message GetDeviceConfigResponse {
+  DeviceConfig device_config = 1;
+  bool is_host_managed = 2;
+  string host_name = 3;
+}
+
+// Request for CheckDeviceWritePermission.
+message CheckDeviceWritePermissionRequest {
+  string device_id = 1;
+}
+
+// Response for CheckDeviceWritePermission.
+message CheckDeviceWritePermissionResponse {
+  bool has_permission = 1;
+  string user_name = 2;
+}
+
+// Error details for update operations.
+message UpdateError {
+  enum Code {
+    CODE_UNSPECIFIED = 0;
+    SELF_LOCKOUT_DETECTED = 1;
+    PERMISSION_DENIED = 2;
+    VALIDATION_ERROR = 3;
+    UNKNOWN = 4;
+  }
+  Code code = 1;
+  string message = 2;
+}
+
+// Request for UpdateDeviceConfig.
+message UpdateDeviceConfigRequest {
+  string device_id = 1;
+  DeviceConfig config = 2;
+  DeviceConfigSection section = 3;
+  UpdateOptions options = 4;
+}
+
+// Response for UpdateDeviceConfig.
+message UpdateDeviceConfigResponse {
+  bool success = 1;
+  UpdateError error = 2;
+}
+
+// Request for GetHostDefaultDeviceConfig.
+message GetHostDefaultDeviceConfigRequest {
+  string host_name = 1;
+}
+
+// Response for GetHostDefaultDeviceConfig.
+message GetHostDefaultDeviceConfigResponse {
+  DeviceConfig device_config = 1;
+}
+
+// Request for GetHostConfig.
+message GetHostConfigRequest {
+  string host_name = 1;
+}
+
+// Response for GetHostConfig.
+message GetHostConfigResponse {
+  HostConfig host_config = 1;
+  HostConfigUiStatus ui_status = 2;
+}
+
+// Request for CheckHostWritePermission.
+message CheckHostWritePermissionRequest {
+  string host_name = 1;
+}
+
+// Response for CheckHostWritePermission.
+message CheckHostWritePermissionResponse {
+  bool has_permission = 1;
+  string user_name = 2;
+}
+
+// Request for UpdateHostConfig.
+message UpdateHostConfigRequest {
+  string host_name = 1;
+  HostConfig config = 2;
+  HostConfigUpdateScope scope = 3;
+  UpdateOptions options = 4;
+}
+
+// Response for UpdateHostConfig.
+message UpdateHostConfigResponse {
+  bool success = 1;
+  UpdateError error = 2;
+}

@@ -1,0 +1,217 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package devtools.mobileharness.fe.v6.service.proto.config;
+
+option java_package = "com.google.devtools.mobileharness.fe.v6.service.proto.config";
+option java_multiple_files = true;
+option java_outer_classname = "ConfigResourcesProto";
+
+// Represents a single dimension name-value pair.
+message DeviceDimension {
+  string name = 1;
+  string value = 2;
+}
+
+// Defines who can control and use a device.
+message PermissionInfo {
+  // List of users or groups who have full control over the device,
+  // including changing its configuration.
+  repeated string owners = 1;
+  // List of users or groups who are allowed to execute tests on the device.
+  repeated string executors = 2;
+}
+
+// Configuration for the device's default Wi-Fi network.
+message WifiConfig {
+  // Type of Wi-Fi configuration.
+  // 'none': No default Wi-Fi is set.
+  // 'pre-configured': Uses a known network from a predefined list.
+  // 'custom': Uses a custom SSID and PSK.
+  string type = 1;
+  // The network name (SSID). Relevant for 'pre-configured' and 'custom'.
+  string ssid = 2;
+  // The password (PSK) for the network. Relevant for 'custom'.
+  string psk = 3;
+  // Whether the network is hidden (does not broadcast its SSID).
+  bool scan_ssid = 4;
+}
+
+// Settings related to device stability and reboot behavior during testing.
+message StabilitySettings {
+  // The maximum number of consecutive test failures on this device
+  // before the device is rebooted.
+  int32 max_consecutive_fail = 1;
+  // The maximum number of tests (passed or failed) that can run on this device
+  // between reboots.
+  int32 max_consecutive_test = 2;
+}
+
+// The core interface representing the complete device configuration displayed
+// in the UI.
+message DeviceConfig {
+  message Dimensions {
+    repeated DeviceDimension supported = 1;
+    repeated DeviceDimension required = 2;
+  }
+  PermissionInfo permissions = 1;
+  WifiConfig wifi = 2;
+  Dimensions dimensions = 3;
+  StabilitySettings settings = 4;
+}
+
+// Enum representing the distinct sections of the device configuration dialog.
+enum DeviceConfigSection {
+  DEVICE_CONFIG_SECTION_UNKNOWN = 0;
+  PERMISSIONS = 1;
+  WIFI = 2;
+  DIMENSIONS = 3;
+  STABILITY = 4;
+  ALL = 5;
+}
+
+// Defines a principal (user or group) allowed to SSH as a specific login user.
+message SshPrincipal {
+  // The username on the host machine (e.g., 'root', 'mobileharness')
+  string login_user = 1;
+  // List of users or MDB groups allowed to assume the loginUser role
+  repeated string principals = 2;
+}
+
+// Permissions for the host.
+message HostPermissions {
+  // Users/groups who can edit this host config.
+  repeated string host_admins = 1;
+  repeated SshPrincipal ssh_access =
+      2;  // Defines SSH access rules. Will be [] if no rules are set.
+}
+
+// Device configuration mode for the host.
+enum DeviceConfigMode {
+  DEVICE_CONFIG_MODE_UNSPECIFIED = 0;
+  PER_DEVICE = 1;
+  SHARED = 2;
+}
+
+// Specifications for Maneki device detection.
+message ManekiSpec {
+  string type = 1;
+  string mac_address = 2;
+}
+
+// Settings for device discovery.
+message DeviceDiscoverySettings {
+  message OverSshDevice {
+    string ip_address = 1;
+    string username = 2;
+    string password = 3;
+    string ssh_device_type = 4;
+  }
+  repeated string monitored_device_uuids = 1;
+  repeated string testbed_uuids = 2;
+  repeated string misc_device_uuids = 3;
+  repeated string over_tcp_ips = 4;
+  repeated OverSshDevice over_ssh_devices = 5;
+  repeated ManekiSpec maneki_specs = 6;
+}
+
+// Represents a single host property key-value pair.
+message HostProperty {
+  string key = 1;
+  string value = 2;
+}
+
+// The main interface for host configuration.
+message HostConfig {
+  HostPermissions permissions = 1;
+  DeviceConfigMode device_config_mode = 2;
+  DeviceConfig device_config = 3;
+  repeated HostProperty host_properties = 4;
+  DeviceDiscoverySettings device_discovery = 5;
+}
+
+// Describes the editability of a visible part.
+message Editability {
+  bool editable = 1;
+  // Message explaining why editable is false.
+  string reason = 2;
+}
+
+// Represents the UI control status of a single configuration part.
+message PartStatus {
+  // True if the part should be visible in the UI.
+  bool visible = 1;
+  // Details about editability, only relevant and expected if visible is true.
+  Editability editability = 2;
+}
+
+// Defines the UI status for the Host Properties section.
+message HostPropertiesUiStatus {
+  // Status of the Host Properties section as a whole.
+  // visible: controls if the section is shown.
+  // editability.editable: controls if the "Add Property" button is enabled.
+  PartStatus section_status = 1;
+
+  // Optional overrides for the editability of specific HostProperty items,
+  // keyed by their index in the HostConfig.hostProperties array.
+  // Items NOT in this map are considered editable by default.
+  map<int32, Editability> item_editability_overrides = 2;
+}
+
+// Defines which parts of the HostConfig are visible and editable in the Lab
+// Console UI. This is derived from the backend's management mode and host type.
+message HostConfigUiStatus {
+  // Corresponds to parts within the HOST_PERMISSIONS section
+  PartStatus host_admins = 1;
+  PartStatus ssh_access = 2;
+
+  // Corresponds to the DEVICE_CONFIG_MODE section
+  PartStatus device_config_mode = 3;
+
+  // Corresponds to the DEVICE_CONFIG section
+  PartStatus device_config = 4;
+
+  // Corresponds to the HOST_PROPERTIES section
+  HostPropertiesUiStatus host_properties = 5;
+
+  // Corresponds to the DEVICE_DISCOVERY section
+  PartStatus device_discovery = 6;
+}
+
+// Enum representing the top-level sections (UI tabs) of the HostConfig object
+// for partial updates.
+enum HostConfigSection {
+  HOST_CONFIG_SECTION_UNSPECIFIED = 0;
+  HOST_PERMISSIONS = 1;
+  DEVICE_CONFIG_MODE = 2;
+  DEVICE_CONFIG = 3;
+  HOST_PROPERTIES = 4;
+  DEVICE_DISCOVERY = 5;
+}
+
+// Defines the scope of a partial update.
+message HostConfigUpdateScope {
+  HostConfigSection section = 1;
+  DeviceConfigSection device_config_section =
+      2;  // Relevant only if section is DEVICE_CONFIG
+}
+
+// Options for the update request.
+message UpdateOptions {
+  bool override_self_lockout = 1;
+}
