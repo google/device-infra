@@ -1623,6 +1623,39 @@ public class Flags {
   public Flag<Long> lowerLimitOfJvmMaxMemoryAllowForAllocationDiagnostic =
       lowerLimitOfJvmMaxMemoryAllowForAllocationDiagnosticDefault;
 
+  /** The backend type of the master central database. */
+  public enum MasterCentralDatabaseBackend {
+    INFRA_SPANNER,
+    MYSQL
+  }
+
+  private static final Flag<MasterCentralDatabaseBackend> masterCentralDatabaseBackendDefault =
+      Flag.value(MasterCentralDatabaseBackend.MYSQL);
+
+  @com.beust.jcommander.Parameter(
+      names = "--master_central_database_backend",
+      description = "The backend type of the master central database.")
+  public Flag<MasterCentralDatabaseBackend> masterCentralDatabaseBackend =
+      masterCentralDatabaseBackendDefault;
+
+  private static final Flag<Map<String, String>> masterCentralDatabaseJdbcPropertyDefault =
+      Flag.value(ImmutableMap.of());
+
+  @com.beust.jcommander.Parameter(
+      names = "--master_central_database_jdbc_property",
+      description = "Master central database JDBC property. e.g. user=root,password=password",
+      converter = Flag.StringMapConverter.class)
+  public Flag<Map<String, String>> masterCentralDatabaseJdbcProperty =
+      masterCentralDatabaseJdbcPropertyDefault;
+
+  private static final Flag<String> masterCentralDatabaseJdbcUrlDefault = Flag.value(null);
+
+  @com.beust.jcommander.Parameter(
+      names = "--master_central_database_jdbc_url",
+      description = "Master central database JDBC URL, e.g. jdbc:mysql://localhost/master_db.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> masterCentralDatabaseJdbcUrl = masterCentralDatabaseJdbcUrlDefault;
+
   private static final Flag<String> masterGrpcTargetDefault = Flag.value("localhost:9990");
 
   @com.beust.jcommander.Parameter(
