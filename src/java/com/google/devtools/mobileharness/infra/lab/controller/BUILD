@@ -30,6 +30,7 @@ java_library(
     name = "device_config_manager",
     srcs = ["DeviceConfigManager.java"],
     deps = [
+        ":lab_dimension_manager",
         "//src/devtools/mobileharness/api/deviceconfig/proto:device_java_proto",
         "//src/devtools/mobileharness/api/deviceconfig/proto:lab_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",

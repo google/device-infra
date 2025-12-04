@@ -217,6 +217,8 @@ public abstract class DeviceConfigManager implements Runnable {
     }
     logger.atFine().log("Update local lab config to %s.", remoteLabConfig);
     apiConfig.setLabConfig(remoteLabConfig.get());
+
+    addHostGroupToLabDimensions(remoteLabConfig.get());
   }
 
   /** Loads the lab config from the config storage, like config service, local file, etc. */
@@ -237,4 +239,16 @@ public abstract class DeviceConfigManager implements Runnable {
   /** Do extra work after device config is updated to local. */
   protected abstract void onDeviceConfigUpdatedToLocal()
       throws MobileHarnessException, InterruptedException;
+
+  private void addHostGroupToLabDimensions(LabConfig labConfig) {
+    logger.atFine().log("Update host_group to lab dimensions.");
+    labConfig.getHostProperties().getHostPropertyList().stream()
+        .filter(property -> property.getKey().equals("host_group"))
+        .forEach(
+            property -> {
+              LabDimensionManager.getInstance()
+                  .getSupportedLocalDimensions()
+                  .add(property.getKey(), property.getValue());
+            });
+  }
 }
