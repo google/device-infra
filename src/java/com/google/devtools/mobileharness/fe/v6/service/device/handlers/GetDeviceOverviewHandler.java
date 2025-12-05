@@ -51,6 +51,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceOvervi
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceOverviewPageData;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DimensionSourceGroup;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.Dimensions;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceHeaderInfoRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceOverviewRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HostInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.PermissionInfo;
@@ -80,6 +81,7 @@ public final class GetDeviceOverviewHandler {
   private final ConfigurationProvider configurationProvider;
   private final ListeningExecutorService executor;
   private final HealthAndActivityBuilder healthAndActivityBuilder;
+  private final DeviceHeaderBuilder deviceHeaderBuilder;
   private final AsyncLoadingCache<String, DeviceOverviewPageData> overviewCache;
 
   @Inject
@@ -87,17 +89,28 @@ public final class GetDeviceOverviewHandler {
       LabInfoProvider labInfoProvider,
       ConfigurationProvider configurationProvider,
       ListeningExecutorService executor,
-      HealthAndActivityBuilder healthAndActivityBuilder) {
+      HealthAndActivityBuilder healthAndActivityBuilder,
+      DeviceHeaderBuilder deviceHeaderBuilder) {
     this.labInfoProvider = labInfoProvider;
     this.configurationProvider = configurationProvider;
     this.executor = executor;
     this.healthAndActivityBuilder = healthAndActivityBuilder;
+    this.deviceHeaderBuilder = deviceHeaderBuilder;
     this.overviewCache =
         Caffeine.newBuilder()
             .expireAfterWrite(Duration.ofMinutes(5))
             .maximumSize(1000)
             .executor(executor)
             .buildAsync(new DeviceOverviewLoader());
+  }
+
+  public ListenableFuture<DeviceHeaderInfo> getDeviceHeaderInfo(
+      GetDeviceHeaderInfoRequest request) {
+    String universe = request.getUniverse().isEmpty() ? "google_1p" : request.getUniverse();
+    return Futures.transform(
+        fetchDeviceInfo(request.getId(), universe),
+        deviceHeaderBuilder::buildDeviceHeaderInfo,
+        executor);
   }
 
   public ListenableFuture<DeviceOverviewPageData> getDeviceOverview(
@@ -145,29 +158,7 @@ public final class GetDeviceOverviewHandler {
     logger.atInfo().log("Loading device overview for %s", key);
 
     // 1. Fetch DeviceInfo
-    logger.atInfo().log("Fetching DeviceInfo for %s", key);
-    ListenableFuture<GetLabInfoResponse> getLabInfoResponseFuture =
-        labInfoProvider.getLabInfoAsync(createGetLabInfoRequest(deviceId), universe);
-
-    ListenableFuture<DeviceInfo> deviceInfoFuture =
-        Futures.transform(
-            getLabInfoResponseFuture,
-            response -> {
-              logger.atInfo().log("Received DeviceInfo response for %s", key);
-              return response
-                  .getLabQueryResult()
-                  .getDeviceView()
-                  .getGroupedDevices()
-                  .getDeviceList()
-                  .getDeviceInfoList()
-                  .stream()
-                  .findFirst()
-                  .orElseThrow(
-                      () ->
-                          new RuntimeException(
-                              "Device not found: " + deviceId + " in universe: " + universe));
-            },
-            executor);
+    ListenableFuture<DeviceInfo> deviceInfoFuture = fetchDeviceInfo(deviceId, universe);
 
     // 2. Start ConfigProvider fetches early
     logger.atInfo().log("Fetching DeviceConfig for %s", key);
@@ -217,6 +208,31 @@ public final class GetDeviceOverviewHandler {
             executor);
   }
 
+  private ListenableFuture<DeviceInfo> fetchDeviceInfo(String deviceId, String universe) {
+    logger.atInfo().log("Fetching DeviceInfo for %s in %s", deviceId, universe);
+    ListenableFuture<GetLabInfoResponse> getLabInfoResponseFuture =
+        labInfoProvider.getLabInfoAsync(createGetLabInfoRequest(deviceId), universe);
+
+    return Futures.transform(
+        getLabInfoResponseFuture,
+        response -> {
+          logger.atInfo().log("Received DeviceInfo response for %s", deviceId);
+          return response
+              .getLabQueryResult()
+              .getDeviceView()
+              .getGroupedDevices()
+              .getDeviceList()
+              .getDeviceInfoList()
+              .stream()
+              .findFirst()
+              .orElseThrow(
+                  () ->
+                      new RuntimeException(
+                          "Device not found: " + deviceId + " in universe: " + universe));
+        },
+        executor);
+  }
+
   private DeviceOverviewPageData buildDeviceOverviewPageData(
       String deviceId,
       DeviceInfo deviceInfo,
@@ -224,19 +240,11 @@ public final class GetDeviceOverviewHandler {
       Optional<LabConfig> labConfigOpt) {
     DeviceOverview overview =
         buildDeviceOverview(deviceId, deviceInfo, deviceConfigOpt, labConfigOpt);
-    DeviceHeaderInfo headerInfo = buildDeviceHeaderInfo(deviceInfo, deviceConfigOpt, labConfigOpt);
+    DeviceHeaderInfo headerInfo = deviceHeaderBuilder.buildDeviceHeaderInfo(deviceInfo);
     return DeviceOverviewPageData.newBuilder()
         .setOverview(overview)
         .setHeaderInfo(headerInfo)
         .build();
-  }
-
-  private DeviceHeaderInfo buildDeviceHeaderInfo(
-      DeviceInfo unusedDeviceInfo,
-      Optional<DeviceConfig> unusedDeviceConfigOpt,
-      Optional<LabConfig> unusedLabConfigOpt) {
-    // TODO: Build DeviceHeaderInfo based on device info and configs.
-    return DeviceHeaderInfo.getDefaultInstance();
   }
 
   private DeviceOverview buildDeviceOverview(
