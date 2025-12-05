@@ -156,7 +156,7 @@ message TestProfile {
   // Empty but can be extended.
 }
 
-// NEXT ID TO USE: 18
+// NEXT ID TO USE: 19
 message TestCondition {
   // Required:
   .mobileharness.api.model.TestResult result = 1;
@@ -164,9 +164,15 @@ message TestCondition {
   // Required:
   .mobileharness.api.model.TestStatus status = 2;
 
-  // Optional: the allocated devices, if the test has successfully allocated
-  // any device. This info will be preserved after the test is finished.
+  // Optional: the allocated devices locators, if the test has successfully
+  // allocated any device. This info will be preserved after the test is
+  // allocated.
   repeated .mobileharness.api.model.DeviceLocator allocated_device_locator = 3;
+
+  // Optional: the allocated devices features, if the test has successfully
+  // allocated any device. This info will be preserved after the test is
+  // allocated.
+  repeated .mobileharness.api.model.DeviceFeature allocated_device_feature = 18;
 
   // Required: When the test is firstly added, or reopened to Master. We use
   // this time to calculate the scheduler latency when this test gets an

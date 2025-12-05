@@ -69,7 +69,7 @@ message JobCondition {
 }
 
 // Allocation conditions of a job.
-// Next ID: 7
+// Next ID: 8
 message JobAllocations {
   message TestAllocation {
     // Required.
@@ -78,6 +78,9 @@ message JobAllocations {
     // At least one device is included.
     repeated .mobileharness.api.model.DeviceLocator allocated_device_locator =
         2;
+
+    repeated .mobileharness.api.model.DeviceFeature allocated_device_feature =
+        7;
 
     // Allocation latency stats.
     message Stats {
