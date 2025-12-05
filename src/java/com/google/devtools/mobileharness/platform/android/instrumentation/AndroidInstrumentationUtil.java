@@ -352,7 +352,7 @@ public class AndroidInstrumentationUtil {
     boolean noIsolatedStorage = instrumentationSetting.noIsolatedStorage();
     boolean useTestStorageService = instrumentationSetting.useTestStorageService();
     boolean enableCoverage = instrumentationSetting.enableCoverage();
-
+    boolean useOrchestrator = instrumentationSetting.useOrchestrator();
     LineCallback instrumentationResultCallback =
         (lineCallbackFactory != null) ? lineCallbackFactory.get() : null;
 
@@ -360,7 +360,7 @@ public class AndroidInstrumentationUtil {
       command.append(ADB_SHELL_NOHUP_START);
     }
 
-    if (prefixAndroidTest) {
+    if (prefixAndroidTest || useOrchestrator) {
       /*
        According to the Javadoc of ShellCommandClient in
        //depot/google3/third_party/android/androidx_test/services/shellexecutor/java/androidx/test/services/shellexecutor/ShellCommandClient.java
@@ -410,10 +410,18 @@ public class AndroidInstrumentationUtil {
       command.append(" -e coverageFile ").append(convertClassNameToCoverageFileName(className));
     }
 
-    command.append(' ');
-    command.append(packageName);
-    command.append('/');
-    command.append(runnerName);
+    final String testRunner;
+    if (useOrchestrator) {
+      command
+          .append(" -e targetInstrumentation ")
+          .append(packageName)
+          .append("/")
+          .append(runnerName);
+      testRunner = "androidx.test.orchestrator/androidx.test.orchestrator.AndroidTestOrchestrator";
+    } else {
+      testRunner = packageName + "/" + runnerName;
+    }
+    command.append(" ").append(testRunner);
 
     if (async) {
       command.append(ADB_SHELL_NOHUP_END);
