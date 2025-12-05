@@ -328,6 +328,15 @@ public interface PropertyName {
     /** Update token of the ResultDB invocation. */
     RESULTDB_UPDATE_TOKEN,
 
+    /** Root invocation ID of the ResultDB root invocation. */
+    RESULTDB_ROOT_INVOCATION_ID,
+
+    /** Work unit ID of the ResultDB work unit. */
+    RESULTDB_WORK_UNIT_ID,
+
+    /** Update token of the ResultDB work unit. */
+    RESULTDB_WORK_UNIT_UPDATE_TOKEN,
+
     /** Whether the test is started because a forgoing container-mode test fails. */
     RETRY_AFTER_CONTAINER_FAILS,
 
