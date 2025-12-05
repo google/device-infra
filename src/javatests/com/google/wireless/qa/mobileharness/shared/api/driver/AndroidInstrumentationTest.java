@@ -167,7 +167,7 @@ public class AndroidInstrumentationTest {
             /* noIsolatedStorage= */ false,
             /* useTestStorageService= */ true);
     when(androidInstrumentationUtil.instrument(
-            DEVICE_ID, DEFAULT_SDK_VERSION, setting, TEST_TIMEOUT))
+            DEVICE_ID, DEFAULT_SDK_VERSION, setting, TEST_TIMEOUT, null))
         .thenReturn(instrumentationLog);
 
     driver.run(testInfo);
@@ -211,7 +211,7 @@ public class AndroidInstrumentationTest {
             /* noIsolatedStorage= */ false,
             /* useTestStorageService= */ true);
     when(androidInstrumentationUtil.instrument(
-            DEVICE_ID, DEFAULT_SDK_VERSION, setting, TEST_TIMEOUT))
+            DEVICE_ID, DEFAULT_SDK_VERSION, setting, TEST_TIMEOUT, null))
         .thenReturn(instrumentationLog);
 
     driver.run(testInfo);
@@ -240,7 +240,7 @@ public class AndroidInstrumentationTest {
             /* noIsolatedStorage= */ true,
             /* useTestStorageService= */ true);
     when(androidInstrumentationUtil.instrument(
-            DEVICE_ID, DEFAULT_SDK_VERSION, setting, TEST_TIMEOUT))
+            DEVICE_ID, DEFAULT_SDK_VERSION, setting, TEST_TIMEOUT, null))
         .thenReturn(instrumentationLog);
 
     driver.run(testInfo);
@@ -276,7 +276,11 @@ public class AndroidInstrumentationTest {
             /* noIsolatedStorage= */ false,
             /* useTestStorageService= */ true);
     when(androidInstrumentationUtil.instrument(
-            DEVICE_ID, DEFAULT_SDK_VERSION, setting, TEST_TIMEOUT))
+            eq(DEVICE_ID),
+            eq(DEFAULT_SDK_VERSION),
+            eq(setting),
+            eq(TEST_TIMEOUT),
+            ArgumentMatchers.isNotNull()))
         .thenReturn(instrumentationLog);
 
     driver.run(testInfo);
@@ -286,6 +290,13 @@ public class AndroidInstrumentationTest {
         .writeToFile(
             PathUtil.join(GEN_FILE_DIR_PATH, DEFAULT_INSTRUMENTATION_LOG_FILE_NAME),
             instrumentationLog);
+    verify(fileUtil)
+        .writeToFile(
+            eq(PathUtil.join(GEN_FILE_DIR_PATH, "instrument_test_result.textproto")),
+            any(String.class));
+    verify(fileUtil)
+        .writeToFile(
+            eq(PathUtil.join(GEN_FILE_DIR_PATH, "instrument_test_result.pb")), any(byte[].class));
   }
 
   @Test
@@ -313,7 +324,7 @@ public class AndroidInstrumentationTest {
             /* noIsolatedStorage= */ false,
             /* useTestStorageService= */ true);
     when(androidInstrumentationUtil.instrument(
-            DEVICE_ID, DEFAULT_SDK_VERSION, setting, TEST_TIMEOUT))
+            DEVICE_ID, DEFAULT_SDK_VERSION, setting, TEST_TIMEOUT, null))
         .thenReturn(instrumentationLog);
 
     driver.run(testInfo);
@@ -362,7 +373,7 @@ public class AndroidInstrumentationTest {
             /* noIsolatedStorage= */ false,
             /* useTestStorageService= */ true);
     when(androidInstrumentationUtil.instrument(
-            DEVICE_ID, DEFAULT_SDK_VERSION, setting, TEST_TIMEOUT))
+            DEVICE_ID, DEFAULT_SDK_VERSION, setting, TEST_TIMEOUT, null))
         .thenReturn(instrumentationLog);
 
     driver.run(testInfo);
@@ -392,7 +403,7 @@ public class AndroidInstrumentationTest {
             /* noIsolatedStorage= */ false,
             /* useTestStorageService= */ true);
     when(androidInstrumentationUtil.instrument(
-            DEVICE_ID, DEFAULT_SDK_VERSION, setting, TEST_TIMEOUT))
+            DEVICE_ID, DEFAULT_SDK_VERSION, setting, TEST_TIMEOUT, null))
         .thenReturn(instrumentationLog);
 
     driver.run(testInfo);
@@ -417,7 +428,7 @@ public class AndroidInstrumentationTest {
             /* noIsolatedStorage= */ false,
             /* useTestStorageService= */ true);
     when(androidInstrumentationUtil.instrument(
-            DEVICE_ID, DEFAULT_SDK_VERSION, setting, TEST_TIMEOUT))
+            DEVICE_ID, DEFAULT_SDK_VERSION, setting, TEST_TIMEOUT, null))
         .thenReturn(instrumentationLog);
 
     driver.run(testInfo);
@@ -445,7 +456,7 @@ public class AndroidInstrumentationTest {
             /* noIsolatedStorage= */ false,
             /* useTestStorageService= */ true);
     when(androidInstrumentationUtil.instrument(
-            DEVICE_ID, DEFAULT_SDK_VERSION, setting, TEST_TIMEOUT))
+            DEVICE_ID, DEFAULT_SDK_VERSION, setting, TEST_TIMEOUT, null))
         .thenThrow(exception);
 
     assertThrows(MobileHarnessException.class, () -> driver.run(testInfo));
@@ -466,7 +477,7 @@ public class AndroidInstrumentationTest {
             /* noIsolatedStorage= */ false,
             /* useTestStorageService= */ true);
     when(androidInstrumentationUtil.instrument(
-            DEVICE_ID, DEFAULT_SDK_VERSION, setting, TEST_TIMEOUT))
+            DEVICE_ID, DEFAULT_SDK_VERSION, setting, TEST_TIMEOUT, null))
         .thenReturn(instrumentationLog);
 
     driver.run(testInfo);
@@ -494,7 +505,7 @@ public class AndroidInstrumentationTest {
             /* noIsolatedStorage= */ false,
             /* useTestStorageService= */ true);
     when(androidInstrumentationUtil.instrument(
-            DEVICE_ID, DEFAULT_SDK_VERSION, setting, TEST_TIMEOUT))
+            DEVICE_ID, DEFAULT_SDK_VERSION, setting, TEST_TIMEOUT, null))
         .thenReturn(instrumentationLog);
 
     driver.run(testInfo);
@@ -521,7 +532,7 @@ public class AndroidInstrumentationTest {
             /* noIsolatedStorage= */ false,
             /* useTestStorageService= */ true);
     when(androidInstrumentationUtil.instrument(
-            DEVICE_ID, DEFAULT_SDK_VERSION, setting, TEST_TIMEOUT))
+            DEVICE_ID, DEFAULT_SDK_VERSION, setting, TEST_TIMEOUT, null))
         .thenReturn(instrumentationLog);
 
     driver.run(testInfo);
@@ -640,13 +651,22 @@ public class AndroidInstrumentationTest {
             /* noIsolatedStorage= */ false,
             /* useTestStorageService= */ true);
     when(androidInstrumentationUtil.instrument(
-            eq(DEVICE_ID), eq(DEFAULT_SDK_VERSION), eq(setting), eq(TEST_TIMEOUT)))
+            eq(DEVICE_ID),
+            eq(DEFAULT_SDK_VERSION),
+            eq(setting),
+            eq(TEST_TIMEOUT),
+            ArgumentMatchers.isNull()))
         .thenReturn("");
 
     driver.run(testInfo);
 
     verify(androidInstrumentationUtil)
-        .instrument(eq(DEVICE_ID), eq(DEFAULT_SDK_VERSION), eq(setting), eq(TEST_TIMEOUT));
+        .instrument(
+            eq(DEVICE_ID),
+            eq(DEFAULT_SDK_VERSION),
+            eq(setting),
+            eq(TEST_TIMEOUT),
+            ArgumentMatchers.isNull());
   }
 
   private AndroidInstrumentationSetting mockInstrumentSetting(

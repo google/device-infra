@@ -47,6 +47,7 @@ import com.google.devtools.mobileharness.shared.util.base.StrUtil;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandException;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
+import com.google.devtools.mobileharness.shared.util.command.LineCallback;
 import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryException;
 import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryStrategy;
 import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryingCallable;
@@ -81,6 +82,7 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.annotation.Nullable;
@@ -309,6 +311,36 @@ public class AndroidInstrumentationUtil {
       AndroidInstrumentationSetting instrumentationSetting,
       Duration timeout)
       throws MobileHarnessException, InterruptedException {
+    return instrument(
+        serial, deviceSdkVersion, instrumentationSetting, timeout, /* lineCallbackFactory= */ null);
+  }
+
+  /**
+   * Runs instrument command within the time limited.
+   *
+   * <p>For command output, Adb uses "\r\n" as line separator on SDK<=23, while uses "\n" as line
+   * separator on SDK>23. It's callers' responsibility to parse it correctly.
+   *
+   * @param serial serial number of the device
+   * @param deviceSdkVersion sdk version of the device, to determine whether nohup is supported when
+   *     user want to async run instrument
+   * @param instrumentationSetting arguments to run "am instrument" command
+   * @param timeout max execution time
+   * @param lineCallbackFactory a factory to create a callback to be called when a line is received
+   *     from the adb instrument command execution.
+   * @return std/err output
+   * @throws MobileHarnessException if fails to execute the commands or timeout
+   * @throws InterruptedException if the thread executing the commands is interrupted
+   * @see <a href="https://developer.android.com/studio/command-line/adb#am">Instrument options</a>
+   */
+  @CanIgnoreReturnValue
+  public String instrument(
+      String serial,
+      @Nullable Integer deviceSdkVersion,
+      AndroidInstrumentationSetting instrumentationSetting,
+      Duration timeout,
+      @Nullable Supplier<LineCallback> lineCallbackFactory)
+      throws MobileHarnessException, InterruptedException {
     StringBuilder command = new StringBuilder();
     String packageName = instrumentationSetting.packageName();
     String runnerName = instrumentationSetting.runnerName();
@@ -320,6 +352,9 @@ public class AndroidInstrumentationUtil {
     boolean noIsolatedStorage = instrumentationSetting.noIsolatedStorage();
     boolean useTestStorageService = instrumentationSetting.useTestStorageService();
     boolean enableCoverage = instrumentationSetting.enableCoverage();
+
+    LineCallback instrumentationResultCallback =
+        (lineCallbackFactory != null) ? lineCallbackFactory.get() : null;
 
     if (async) {
       command.append(ADB_SHELL_NOHUP_START);
@@ -391,13 +426,18 @@ public class AndroidInstrumentationUtil {
         var unused = adb.runShellAsync(serial, command.toString(), timeout);
         return "";
       } else {
-        String output = adb.runShell(serial, command.toString(), timeout).trim();
+        String output =
+            adb.runShell(serial, command.toString(), timeout, instrumentationResultCallback).trim();
         if (output.endsWith("=") && clock.instant().minusMillis(begin).toEpochMilli() < 3 * 1000) {
+          if (lineCallbackFactory != null) {
+            instrumentationResultCallback = lineCallbackFactory.get();
+          }
           logger.atWarning().log("Instrument acts unexpectedly: %s%nTry again.", output);
-          return adb.runShell(serial, command.toString(), timeout).trim();
-        } else {
-          return output;
+          output =
+              adb.runShell(serial, command.toString(), timeout, instrumentationResultCallback)
+                  .trim();
         }
+        return output;
       }
     } catch (MobileHarnessException e) {
       AndroidErrorId newId;

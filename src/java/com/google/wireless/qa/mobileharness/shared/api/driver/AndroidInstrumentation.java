@@ -32,11 +32,16 @@ import com.google.devtools.mobileharness.platform.android.event.util.AppInstallE
 import com.google.devtools.mobileharness.platform.android.instrumentation.AndroidInstrumentationSetting;
 import com.google.devtools.mobileharness.platform.android.instrumentation.AndroidInstrumentationUtil;
 import com.google.devtools.mobileharness.platform.android.instrumentation.PrepareTestArgsParams;
+import com.google.devtools.mobileharness.platform.android.instrumentation.parser.AmInstrumentationParser;
+import com.google.devtools.mobileharness.platform.android.instrumentation.parser.AmInstrumentationResultBuilder;
+import com.google.devtools.mobileharness.platform.android.instrumentation.parser.TestTimeTrackerKt;
+import com.google.devtools.mobileharness.platform.android.instrumentation.result.proto.TestSuiteResult;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstallArgs;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstaller;
 import com.google.devtools.mobileharness.platform.android.lightning.systemsetting.SystemSettingManager;
 import com.google.devtools.mobileharness.platform.android.packagemanager.AndroidPackageManagerUtil;
 import com.google.devtools.mobileharness.shared.util.base.StrUtil;
+import com.google.devtools.mobileharness.shared.util.command.LineCallback;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.wireless.qa.mobileharness.shared.android.Aapt;
@@ -56,11 +61,13 @@ import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfiga
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.AndroidInstrumentationSpec;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Supplier;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 
@@ -445,6 +452,23 @@ public class AndroidInstrumentation extends BaseDriver
         }
       }
 
+      Supplier<LineCallback> lineCallbackFactory = null;
+      TestSuiteResult.Builder testSuiteResultBuilder = null;
+      if (showRawResults) {
+        testSuiteResultBuilder = TestSuiteResult.newBuilder();
+
+        // This builder is final so it can be captured by the lambda.
+        final TestSuiteResult.Builder finalBuilder = testSuiteResultBuilder;
+
+        // Create the factory that provides new LineCallback instances.
+        lineCallbackFactory =
+            () -> {
+              // For each new callback, clear the builder to reset the state.
+              finalBuilder.clear();
+              return getInstrumentationResultCallback(finalBuilder);
+            };
+      }
+
       // Actually run the instrument.
       long testTimeoutMs = testInfo.timer().remainingTimeJava().toMillis();
       if (instrumentTimeoutMs != null) {
@@ -476,7 +500,8 @@ public class AndroidInstrumentation extends BaseDriver
                     /* useTestStorageService= */ true,
                     job.params()
                         .getBool(AndroidInstrumentationDriverSpec.PARAM_ENABLE_COVERAGE, false)),
-                Duration.ofMillis(testTimeoutMs));
+                Duration.ofMillis(testTimeoutMs),
+                lineCallbackFactory);
       } catch (MobileHarnessException e) {
         testInfo
             .log()
@@ -503,6 +528,15 @@ public class AndroidInstrumentation extends BaseDriver
                 new MobileHarnessException(
                     AndroidErrorId.ANDROID_INSTRUMENTATION_WRITE_FILE_ERROR, e.getMessage()),
                 logger);
+      }
+
+      if (testSuiteResultBuilder != null) {
+        fileUtil.writeToFile(
+            PathUtil.join(testInfo.getGenFileDir(), "instrument_test_result.textproto"),
+            testSuiteResultBuilder.build().toString());
+        fileUtil.writeToFile(
+            PathUtil.join(testInfo.getGenFileDir(), "instrument_test_result.pb"),
+            testSuiteResultBuilder.build().toByteArray());
       }
 
       // Checks the result.
@@ -849,6 +883,24 @@ public class AndroidInstrumentation extends BaseDriver
                             .PARAM_SKIP_CLEAR_MEDIA_PROVIDER_FOR_MULTI_USER_CASE,
                         false))
             .build());
+  }
+
+  private LineCallback getInstrumentationResultCallback(
+      TestSuiteResult.Builder testSuiteResultBuilder) {
+    AmInstrumentationResultBuilder amInstrumentationResultBuilder =
+        new AmInstrumentationResultBuilder(testSuiteResultBuilder);
+
+    AmInstrumentationParser amInstrumentationparser =
+        new AmInstrumentationParser(
+            ImmutableSet.of(amInstrumentationResultBuilder),
+            () -> TestTimeTrackerKt.TestTimeTracker(Instant::now));
+    return new LineCallback() {
+      @Override
+      public LineCallback.Response onLine(String line) {
+        amInstrumentationparser.parse(line);
+        return LineCallback.Response.empty();
+      }
+    };
   }
 
   protected ImmutableSet<String> getBuildApks(TestInfo testInfo)
