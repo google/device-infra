@@ -631,6 +631,7 @@ public class JobInfo extends JobScheduleUnit {
       deviceRequirements.addDeviceRequirement(deviceRequirement);
     }
     jobFeatureBuilder.setDeviceRequirements(deviceRequirements);
+    jobFeatureBuilder.setOriginalSubmitTimestamp(setting().getOriginalSubmitTimestamp());
     return jobFeatureBuilder.build();
   }
 

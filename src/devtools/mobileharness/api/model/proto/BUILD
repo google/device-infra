@@ -49,6 +49,7 @@ java_proto_library(
 proto_library(
     name = "job_proto",
     srcs = ["job.proto"],
+    deps = ["@protobuf//:timestamp_proto"],
 )
 
 java_proto_library(
