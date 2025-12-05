@@ -275,6 +275,11 @@ export class FakeDeviceService extends DeviceService {
           visible: quarantineVisible,
           tooltip: isQuarantined ? 'Unquarantine device' : 'Quarantine device',
         },
+        configuration: {
+          enabled: true,
+          visible: true,
+          tooltip: 'Configure device',
+        },
       },
     };
   }

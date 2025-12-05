@@ -55,6 +55,32 @@ export class DeviceActionBar {
   gettingLogcat = signal(false);
   unquarantining = signal(false);
 
+  get actions() {
+    return this.pageData.headerInfo.actions;
+  }
+
+  get quarantineInfo() {
+    return this.pageData.headerInfo.quarantine;
+  }
+
+  get deviceId() {
+    return this.pageData.overview.id;
+  }
+
+  get hostName() {
+    return this.pageData.overview.host.name;
+  }
+
+  get isAndroid() {
+    return this.pageData.overview.basicInfo.os
+      .toLowerCase()
+      .includes('android');
+  }
+
+  get deviceType() {
+    return this.pageData.overview.healthAndActivity.deviceTypes[0]?.type || '';
+  }
+
   openConfiguration(deviceId: string, hostName: string): void {
     const dialogRef = this.dialog.open(DeviceConfig, {
       data: {deviceId, hostName},
@@ -182,7 +208,7 @@ export class DeviceActionBar {
   }
 
   quarantineDevice(deviceId: string): void {
-    const {isQuarantined} = this.pageData.headerInfo?.quarantine ?? {
+    const {isQuarantined} = this.quarantineInfo ?? {
       isQuarantined: false,
       expiry: '',
     };
@@ -230,7 +256,7 @@ export class DeviceActionBar {
   }
 
   changeQuarantine(deviceId: string): void {
-    const {expiry} = this.pageData.headerInfo?.quarantine ?? {
+    const {expiry} = this.quarantineInfo ?? {
       isQuarantined: false,
       expiry: '',
     };
