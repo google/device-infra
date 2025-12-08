@@ -232,33 +232,76 @@
     <!-- Capabilities Card -->
     <app-info-card #overviewSection id="overview-capabilities" title="Capabilities">
       <div id="capabilities-content" class="overview-card-content capabilities-content">
-        <div>
-          <h4 class="capabilities-title"
-            >Supported Drivers ({{ device.capabilities.supportedDrivers.length }})</h4
-          >
-          <div class="chip-grid-container">
-            @if (device.capabilities.supportedDrivers.length > 0) {
-              @for (driver of device.capabilities.supportedDrivers; track driver) {
-                <div class="type-chip type-chip-normal">{{ driver }}</div>
+        <!-- Supported Drivers Section -->
+        <div class="capability-section">
+          <h4 class="capabilities-title">
+            Supported Drivers ({{ filteredDrivers().length }})
+          </h4>
+          @if (device.capabilities && device.capabilities.supportedDrivers.length) {
+            <mat-form-field appearance="outline" class="overview-search-field" subscriptSizing="dynamic">
+              <input
+                matInput
+                placeholder="Filter drivers..."
+                [(ngModel)]="driversSearchTerm"
+                (ngModelChange)="onDriversSearchChange()"
+                aria-label="Search drivers"
+              />
+              @if (driversSearchTerm) {
+                <button matSuffix mat-icon-button aria-label="Clear" (click)="driversSearchTerm = ''; onDriversSearchChange()">
+                  <mat-icon>close</mat-icon>
+                </button>
               }
-            } @else {
-              <p class="no-capability">None</p>
-            }
-          </div>
+            </mat-form-field>
+            <div class="capability-list-container">
+              @if (filteredDrivers().length > 0) {
+                <ul class="capability-list">
+                  @for (driver of filteredDrivers(); track driver) {
+                    <li class="capability-item">{{ driver }}</li>
+                  }
+                </ul>
+              } @else {
+                <p class="no-capability">No matching drivers</p>
+              }
+            </div>
+          } @else {
+            <p class="no-data">None</p>
+          }
         </div>
-        <div>
-          <h4 class="capabilities-title"
-            >Supported Decorators ({{ device.capabilities.supportedDecorators.length }})</h4
-          >
-          <div class="chip-grid-container">
-            @if (device.capabilities.supportedDecorators.length > 0) {
-              @for (decorator of device.capabilities.supportedDecorators; track decorator) {
-                <div class="type-chip type-chip-normal">{{ decorator }}</div>
+
+        <!-- Supported Decorators Section -->
+        <div class="capability-section">
+          <h4 class="capabilities-title">
+            Supported Decorators ({{ filteredDecorators().length }})
+          </h4>
+          @if (device.capabilities && device.capabilities.supportedDecorators.length) {
+            <mat-form-field appearance="outline" class="overview-search-field" subscriptSizing="dynamic">
+              <input
+                matInput
+                placeholder="Filter decorators..."
+                [(ngModel)]="decoratorsSearchTerm"
+                (ngModelChange)="onDecoratorsSearchChange()"
+                aria-label="Search decorators"
+              />
+              @if (decoratorsSearchTerm) {
+                <button matSuffix mat-icon-button aria-label="Clear" (click)="decoratorsSearchTerm = ''; onDecoratorsSearchChange()">
+                  <mat-icon>close</mat-icon>
+                </button>
               }
-            } @else {
-              <p class="no-capability">None</p>
-            }
-          </div>
+            </mat-form-field>
+            <div class="capability-list-container">
+              @if (filteredDecorators().length > 0) {
+                <ul class="capability-list">
+                  @for (decorator of filteredDecorators(); track decorator) {
+                    <li class="capability-item">{{ decorator }}</li>
+                  }
+                </ul>
+              } @else {
+                <p class="no-capability">No matching decorators</p>
+              }
+            </div>
+          } @else {
+            <p class="no-data">None</p>
+          }
         </div>
       </div>
     </app-info-card>
@@ -267,26 +310,35 @@
     <app-info-card #overviewSection id="overview-dimensions" title="Dimensions" [expanded]="true">
       <div id="dimensions-content" class="overview-card-content text-sm">
         @if (device.dimensions) {
-          <input
-            type="search"
-            id="dimensions-search"
-            class="overview-search-input"
-            placeholder="Filter dimensions by key or value..."
-            [(ngModel)]="dimensionsSearchTerm"
-            (ngModelChange)="onDimensionsSearchChange()"
-            aria-label="Search dimensions"
-          />
+          <mat-form-field
+            appearance="outline"
+            class="overview-search-field"
+            subscriptSizing="dynamic"
+          >
+            <input
+              matInput
+              id="dimensions-search"
+              placeholder="Filter dimensions by key or value..."
+              [(ngModel)]="dimensionsSearchTerm"
+              (ngModelChange)="onDimensionsSearchChange()"
+              aria-label="Search dimensions"
+            />
+            @if (dimensionsSearchTerm) {
+              <button matSuffix mat-icon-button aria-label="Clear" (click)="dimensionsSearchTerm = ''; onDimensionsSearchChange()">
+                <mat-icon>close</mat-icon>
+              </button>
+            }
+          </mat-form-field>
 
-          @if (filteredDimensions.length === 0 && flatDimensions.length > 0) {
+          @if (filteredDimensions().length === 0 && flatDimensions.length > 0) {
             <div id="dimensions-no-results" class="no-search-results"
               >No dimensions match your filter.</div
             >
           }
 
-          <ng-template #dimensionsContent let-type="type" let-title="title">
+          <ng-template #dimensionsContent let-data="data" let-title="title" let-type="type">
             <h4 class="dimension-section-title">{{ title }}</h4>
-            @let groupedData = getGroupedData(type); @if (objectUtils.objectKeys(groupedData).length
-            > 0) {
+            @let groupedData = data; @if (objectUtils.objectKeys(groupedData).length > 0) {
               <div [id]="type + '-dimensions-content'" class="dimensions-content">
                 @for (source of objectUtils.objectKeys(groupedData); track source) {
                   @let items = groupedData[source];
@@ -315,12 +367,26 @@
           </ng-template>
 
           <ng-container
-            *ngTemplateOutlet="dimensionsContent; context: { type: 'supported', title: 'Supported Dimensions' }"
+            *ngTemplateOutlet="
+              dimensionsContent;
+              context: {
+                type: 'supported',
+                title: 'Supported Dimensions',
+                data: groupedSupportedDimensions()
+              }
+            "
           ></ng-container>
 
           <div class="mt-6">
             <ng-container
-              *ngTemplateOutlet="dimensionsContent; context: { type: 'required', title: 'Required Dimensions' }"
+              *ngTemplateOutlet="
+                dimensionsContent;
+                context: {
+                  type: 'required',
+                  title: 'Required Dimensions',
+                  data: groupedRequiredDimensions()
+                }
+              "
             ></ng-container>
           </div>
         } @else {
@@ -344,7 +410,7 @@
             </dl>
           </div>
         } @else {
-          <p class="no-data">None specified.</p>
+          <p class="no-data">None</p>
         }
       </div>
     </app-info-card>

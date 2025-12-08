@@ -1,4 +1,3 @@
-import {setAnchorHref, windowOpen} from 'safevalues/dom';
 
 /**
  * Creates a safe object URL from a Blob, using the appropriate API for the environment.
@@ -12,15 +11,14 @@ export function createSafeObjectURL(blob: Blob): string {
  */
 export function openInNewTab(url: string | URL) {
   const urlString = url.toString();
-  windowOpen(window, urlString, '_blank');
+  window.open(urlString, '_blank');
 }
 
 /**
  * Sets the href of an anchor element safely, using the appropriate API for the environment.
  */
 export function setSafeHref(anchor: HTMLAnchorElement, url: string | URL) {
-  const urlString = url.toString();
-  setAnchorHref(anchor, urlString);
+  anchor.href = url.toString();
 }
 
 /**

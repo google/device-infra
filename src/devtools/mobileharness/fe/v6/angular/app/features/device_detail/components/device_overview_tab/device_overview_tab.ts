@@ -1,9 +1,8 @@
 import {CommonModule} from '@angular/common';
 import {
   ChangeDetectionStrategy,
-  ChangeDetectorRef,
   Component,
-  inject,
+  computed,
   Input,
   OnChanges,
   OnDestroy,
@@ -12,7 +11,10 @@ import {
   SimpleChanges,
 } from '@angular/core';
 import {FormsModule} from '@angular/forms';
+import {MatButtonModule} from '@angular/material/button';
+import {MatFormFieldModule} from '@angular/material/form-field';
 import {MatIconModule} from '@angular/material/icon';
+import {MatInputModule} from '@angular/material/input';
 import {Subject} from 'rxjs';
 import {debounceTime, distinctUntilChanged, takeUntil} from 'rxjs/operators';
 import type {DeviceOverview} from '../../../../core/models/device_overview';
@@ -52,14 +54,21 @@ interface DimensionItem {
 @Component({
   selector: 'app-device-overview-tab',
   standalone: true,
-  imports: [CommonModule, MatIconModule, InfoCard, FormsModule, OverviewPage],
+  imports: [
+    CommonModule,
+    FormsModule,
+    MatButtonModule,
+    MatIconModule,
+    MatInputModule,
+    MatFormFieldModule,
+    OverviewPage,
+    InfoCard,
+  ],
   templateUrl: './device_overview_tab.ng.html',
   styleUrl: './device_overview_tab.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DeviceOverviewTab implements OnInit, OnDestroy, OnChanges {
-  private readonly changeDetectorRef = inject(ChangeDetectorRef);
-
   @Input({required: true}) device!: DeviceOverview;
 
   navList: NavItem[] = [
@@ -93,36 +102,64 @@ export class DeviceOverviewTab implements OnInit, OnDestroy, OnChanges {
   readonly dateUtils = dateUtils;
 
   flatDimensions: DimensionItem[] = [];
-  filteredDimensions: DimensionItem[] = [];
+  filteredDimensions = signal<DimensionItem[]>([]);
+
+  readonly groupedSupportedDimensions = computed(() =>
+    this.getGroupedData('supported'),
+  );
+  readonly groupedRequiredDimensions = computed(() =>
+    this.getGroupedData('required'),
+  );
 
   dimensionsSearchTerm = '';
   private readonly searchSubject = new Subject<string>();
-  private readonly destroy$ = new Subject<void>();
 
-  filteredDimensions$ = signal<DimensionItem[]>([]);
+  // Capabilities filtering
+  driversSearchTerm = '';
+  decoratorsSearchTerm = '';
+  private readonly driversSearchSubject = new Subject<string>();
+  private readonly decoratorsSearchSubject = new Subject<string>();
+  filteredDrivers = signal<string[]>([]);
+  filteredDecorators = signal<string[]>([]);
+
+  private readonly destroy$ = new Subject<void>();
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['device']) {
       // Reset active section when device changes, e.g., navigating between devices
+      this.initCapabilities();
+      this.initFlatDimensions();
+      this.filteredDimensions.set(
+        this.filterDimensions(this.dimensionsSearchTerm),
+      );
     }
   }
 
   ngOnInit(): void {
-    // Initialize flat dimensions
-    this.initFlatDimensions();
-    this.filteredDimensions = [...this.flatDimensions];
-
     this.searchSubject
       .pipe(debounceTime(100), distinctUntilChanged(), takeUntil(this.destroy$))
       .subscribe((searchTerm) => {
         const filtered = this.filterDimensions(searchTerm);
-        this.filteredDimensions = [...filtered];
-        this.changeDetectorRef.detectChanges();
+        this.filteredDimensions.set([...filtered]);
+      });
+
+    this.driversSearchSubject
+      .pipe(debounceTime(100), distinctUntilChanged(), takeUntil(this.destroy$))
+      .subscribe((searchTerm) => {
+        this.filterDrivers(searchTerm);
+      });
+
+    this.decoratorsSearchSubject
+      .pipe(debounceTime(100), distinctUntilChanged(), takeUntil(this.destroy$))
+      .subscribe((searchTerm) => {
+        this.filterDecorators(searchTerm);
       });
   }
 
   ngOnDestroy(): void {
     this.searchSubject.complete();
+    this.driversSearchSubject.complete();
+    this.decoratorsSearchSubject.complete();
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -242,7 +279,7 @@ export class DeviceOverviewTab implements OnInit, OnDestroy, OnChanges {
   getGroupedData(
     section: 'supported' | 'required',
   ): Record<string, DimensionItem[]> {
-    const grouped = this.filteredDimensions
+    const grouped = this.filteredDimensions()
       .filter((item) => item.section === section)
       .reduce(
         (groups, item) => {
@@ -262,5 +299,57 @@ export class DeviceOverviewTab implements OnInit, OnDestroy, OnChanges {
 
   onDimensionsSearchChange(): void {
     this.searchSubject.next(this.dimensionsSearchTerm);
+  }
+
+  // Capabilities related functions
+  private initCapabilities(): void {
+    if (this.device && this.device.capabilities) {
+      // Re-apply filter if search term exists
+      if (this.driversSearchTerm) {
+        this.filterDrivers(this.driversSearchTerm);
+      } else {
+        this.filteredDrivers.set([
+          ...this.device.capabilities.supportedDrivers,
+        ]);
+      }
+
+      if (this.decoratorsSearchTerm) {
+        this.filterDecorators(this.decoratorsSearchTerm);
+      } else {
+        this.filteredDecorators.set([
+          ...this.device.capabilities.supportedDecorators,
+        ]);
+      }
+    }
+  }
+
+  private filterDrivers(searchTerm: string): void {
+    const lowerTerm = searchTerm.toLowerCase();
+    if (!this.device || !this.device.capabilities) return;
+
+    this.filteredDrivers.set(
+      this.device.capabilities.supportedDrivers.filter((d) =>
+        d.toLowerCase().includes(lowerTerm),
+      ),
+    );
+  }
+
+  private filterDecorators(searchTerm: string): void {
+    const lowerTerm = searchTerm.toLowerCase();
+    if (!this.device || !this.device.capabilities) return;
+
+    this.filteredDecorators.set(
+      this.device.capabilities.supportedDecorators.filter((d) =>
+        d.toLowerCase().includes(lowerTerm),
+      ),
+    );
+  }
+
+  onDriversSearchChange(): void {
+    this.driversSearchSubject.next(this.driversSearchTerm);
+  }
+
+  onDecoratorsSearchChange(): void {
+    this.decoratorsSearchSubject.next(this.decoratorsSearchTerm);
   }
 }

@@ -1,6 +1,8 @@
+@use '@angular/material' as mat;
+
 // Styles for Device Overview Tab
 // Extracted and adapted from the prototype's style block.
-$labconsole-font: 'Google Sans', Roboto, Arial, sans-serif;
+$labconsole-font: Roboto, sans-serif;
 
 :host {
   display: block;
@@ -311,7 +313,7 @@ $labconsole-font: 'Google Sans', Roboto, Arial, sans-serif;
 
   dt {
     font-weight: 500;
-    color: #5f6368;
+    color: #374151;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -386,7 +388,18 @@ $labconsole-font: 'Google Sans', Roboto, Arial, sans-serif;
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+
+  .overview-search-field {
+    margin-bottom: 0.5rem;
+  }
+}
+
+.capability-section {
+  margin-bottom: 1.5rem;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
 }
 
 .capabilities-title {
@@ -397,28 +410,78 @@ $labconsole-font: 'Google Sans', Roboto, Arial, sans-serif;
   margin-top: 0;
 }
 
+.capability-list-container {
+  background-color: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1rem;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.capability-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 0.5rem 1rem;
+}
+
+.capability-item {
+  padding: 0.25rem 0;
+  font-size: 0.875rem;
+  color: #3c4043;
+
+  &:hover {
+    // Add visual feedback on hover if needed, but keep it subtle
+    color: #6b7280;
+  }
+}
+
 .no-capability {
   color: #6b7280;
   font-size: 0.875rem;
   font-style: italic;
+  padding: 0.5rem;
+  text-align: center;
 }
 
 // Dimensions & Properties Cards
-.overview-search-input {
+.overview-search-field {
   width: 100%;
-  padding: 0.5rem 1rem;
-  border-radius: 9999px;
-  border: 1px solid #d1d5db;
-  background-color: #f9fafb;
   margin-bottom: 1rem;
-  transition: all 0.2s;
-  font-size: 0.875rem;
+  background-color: white;
 
-  &:focus {
-    outline: none;
-    border-color: #1d4ed8;
-    box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.15);
-    background-color: white;
+  @include mat.form-field-overrides((
+    container-height: 40px,
+  ));
+
+  // The overrides mixin might not cover all internal padding adjustments needed for centering
+  // in all versions, but avoids deep piercing where possible.
+  // If specific internal alignment is still off without ng-deep, standard class targeting
+  // without ViewEncapsulation.None (if used) or specific non-deep selectors should be preferred
+  // but mat-form-field internals are hard to style without it or mixins.
+  // Assuming the overrides above handle the main height.
+  // For centering, if density is not enough, we might need density mixins.
+  @include mat.form-field-density(-4);
+
+  // Adjust suffix button to prevent layout shift and fit in 40px height
+  button[matSuffix] {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 4px; // Add some spacing
+    margin-right: 8px; // Move away from the right edge
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
   }
 }
 
@@ -450,7 +513,6 @@ $labconsole-font: 'Google Sans', Roboto, Arial, sans-serif;
   border: 1px solid #e0e0e0;
   border-radius: 8px;
   padding: 1rem;
-  font-family: 'Roboto Mono', monospace;
 
   &.scrollable {
     max-height: 300px;
@@ -462,7 +524,7 @@ $labconsole-font: 'Google Sans', Roboto, Arial, sans-serif;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 0.25rem 1.5rem;
-  font-size: 0.8125rem; // Slightly smaller for mono
+  font-size: 0.875rem; // Slightly smaller for mono
   line-height: 1.6;
   margin: 0;
 
@@ -475,12 +537,11 @@ $labconsole-font: 'Google Sans', Roboto, Arial, sans-serif;
     white-space: pre-wrap;
     word-break: break-all;
     padding: 2px 0;
-    color: #202124;
   }
 
   dt {
     font-weight: 500;
-    color: #5f6368;
+    color: #202124;
   }
 
   dd {
