@@ -30,8 +30,10 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.Priority;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.Timeout;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
+import javax.annotation.Nullable;
 
 /** Immutable settings of a job. */
 public class JobSetting {
@@ -109,6 +111,9 @@ public class JobSetting {
   /** Job repeat run setting. */
   private final Repeat repeat;
 
+  /** Job submit timestamp. */
+  @Nullable private final Instant originalSubmitTime;
+
   /** Builder for building a JobSetting instance. */
   public static class Builder {
     private Timeout timeout;
@@ -122,6 +127,7 @@ public class JobSetting {
     private boolean hasTestSubdirs = true;
     private LocalFileUtil localFileUtil;
     private Repeat repeat;
+    private Instant originalSubmitTime;
 
     private Builder() {}
 
@@ -204,6 +210,12 @@ public class JobSetting {
       this.allocationExitStrategy = allocationExitStrategy;
       return this;
     }
+
+    @CanIgnoreReturnValue
+    public Builder setOriginalSubmitTime(Instant originalSubmitTime) {
+      this.originalSubmitTime = originalSubmitTime;
+      return this;
+    }
   }
 
   public static Builder newBuilder() {
@@ -234,6 +246,7 @@ public class JobSetting {
             .setRetryLevel(Level.valueOf(jobSettingProto.getRetry().getRetryLevel().name()))
             .build();
     this.repeat = jobSettingProto.getRepeat();
+    this.originalSubmitTime = null;
   }
 
   private JobSetting(Builder builder) {
@@ -312,6 +325,7 @@ public class JobSetting {
     } else {
       repeat = Repeat.getDefaultInstance();
     }
+    this.originalSubmitTime = builder.originalSubmitTime;
   }
 
   /** Gets the job priority setting. */
@@ -404,5 +418,10 @@ public class JobSetting {
   private static String getDefaultTmpDir() {
     // https://bazel.build/reference/test-encyclopedia#test-interaction-filesystem
     return System.getenv("TEST_TMPDIR");
+  }
+
+  /** Gets the original submit time. */
+  public Instant getOriginalSubmitTime() {
+    return originalSubmitTime;
   }
 }
