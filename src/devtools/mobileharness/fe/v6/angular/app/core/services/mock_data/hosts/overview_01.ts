@@ -39,7 +39,13 @@ const overview: HostOverview = {
   hostName: 'host-a-1.example.com',
   ip: '192.168.1.101',
   os: 'gLinux',
-  labTypeDisplayName: 'Satellite Lab (SLaaS)',
+  labTypeDisplayNames: [
+    'Satellite Lab',
+    'SLaaS',
+    'Core Lab',
+    'Mobly',
+    'Android',
+  ],
   labServer: {
     connectivity: {
       state: 'RUNNING',
@@ -168,6 +174,63 @@ const deviceSummaries: DeviceSummary[] = [
     requiredDims: 'pool:arm',
     model: 'Ampere Altra',
     version: 'Ubuntu 22.04',
+  },
+  {
+    id: 'TESTBED-01',
+    healthState: {
+      health: 'IN_SERVICE_IDLE',
+      title: 'In Service (Idle)',
+      tooltip: 'Device is healthy and ready for tasks.',
+    },
+    types: [
+      {type: 'TestbedDevice', isAbnormal: false},
+      {type: 'AndroidDevice', isAbnormal: false},
+      {type: 'AndroidFlashableDevice', isAbnormal: false},
+      {type: 'AndroidOnlineDevice', isAbnormal: false},
+      {type: 'AndroidRealDevice', isAbnormal: false},
+    ],
+    deviceStatus: {isCritical: false, status: 'IDLE'},
+    label: 'golden-pixel',
+    requiredDims: 'pool:prod',
+    model: 'Pixel 8 Pro',
+    version: '14',
+    subDevices: [
+      {
+        id: 'sub-device-01',
+        types: [
+          {type: 'NormalTestbedDevice', isAbnormal: false},
+          {type: 'TestbedDevice', isAbnormal: false},
+          {type: 'MoblyDevice', isAbnormal: false},
+        ],
+        dimensions: [
+          {name: 'model', value: 'Pixel 8 Pro'},
+          {name: 'version', value: '14'},
+          {name: 'pool', value: 'prod'},
+        ],
+      },
+      {
+        id: '41081FDAS000YB',
+        types: [
+          {type: 'AbnormalAndroidFlashableDevice', isAbnormal: true},
+          {type: 'AndroidFlashableDevice', isAbnormal: false},
+          {type: 'AndroidOnlineDevice', isAbnormal: false},
+          {type: 'AndroidDevice', isAbnormal: false},
+        ],
+        dimensions: [
+          {name: 'model', value: 'Pixel 8'},
+          {name: 'version', value: '15'},
+          {name: 'pool', value: 'staging'},
+          {name: 'label', value: 'golden-pixel'},
+          {name: 'container', value: 'docker'},
+          {name: 'host_name', value: 'host-a-1.example.com'},
+          {name: 'host_ip', value: '192.168.1.101'},
+          {name: 'host_os', value: 'gLinux'},
+          {name: 'host_os_version', value: '22.04'},
+          {name: 'host_ip', value: '192.168.1.101'},
+          {name: 'host_name', value: 'host-a-1.example.com'},
+        ],
+      },
+    ],
   },
 ];
 
