@@ -29,6 +29,7 @@ public class DeviceIdUtil {
     device.addDimension(Dimension.Name.ID, deviceId.controlId());
     device.addDimension(Dimension.Name.CONTROL_ID, deviceId.controlId());
     if (!Strings.isNullOrEmpty(deviceId.uuid())) {
+      device.addDimension(Dimension.Name.ID, deviceId.uuid());
       device.addDimension(Dimension.Name.UUID, deviceId.uuid());
       device.addDimension(Dimension.Name.UUID_VOLATILE, String.valueOf(deviceId.isUuidVolatile()));
     }
