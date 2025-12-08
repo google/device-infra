@@ -67,6 +67,7 @@ export interface DeviceActions {
   flash: FlashActionButtonState;
   remoteControl: RemoteControlButtonState;
   quarantine: ActionButtonState;
+  configuration: ActionButtonState;
 }
 
 /**

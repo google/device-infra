@@ -1,18 +1,23 @@
 <div class="header-actions">
   <!-- 2xl view -->
   <div class="header-actions-2xl">
-    <button
-      class="m3-action-button filled"
-      (click)="openConfiguration(pageData.overview.id, pageData.overview.host.name)"
-    >
-      <mat-icon>settings</mat-icon>Configuration
-    </button>
-    @if (pageData.headerInfo.actions?.screenshot?.visible) {
+    @if (actions?.configuration?.visible) {
       <button
         class="m3-action-button filled"
-        (click)="takeScreenshot(pageData.overview.id)"
-        [disabled]="!pageData.headerInfo.actions?.screenshot?.enabled || takingScreenshot()"
-        [matTooltip]="pageData.headerInfo.actions?.screenshot?.tooltip"
+        (click)="openConfiguration(deviceId, hostName)"
+        [disabled]="!actions?.configuration?.enabled"
+        [matTooltip]="actions?.configuration?.tooltip || ''"
+        data-testid="configuration-button-2xl"
+      >
+        <mat-icon>settings</mat-icon>Configuration
+      </button>
+    }
+    @if (actions?.screenshot?.visible) {
+      <button
+        class="m3-action-button filled"
+        (click)="takeScreenshot(deviceId)"
+        [disabled]="!actions?.screenshot?.enabled || takingScreenshot()"
+        [matTooltip]="actions?.screenshot?.tooltip || ''"
         data-testid="screenshot-button-2xl"
       >
         @if (takingScreenshot()) {
@@ -22,33 +27,33 @@
         }
       </button>
     }
-    @if (pageData.headerInfo.actions?.remoteControl?.visible) {
+    @if (actions?.remoteControl?.visible) {
       <button
         class="m3-action-button filled"
-        (click)="remoteControl(pageData.overview.id, pageData.headerInfo.actions?.remoteControl?.runAsOptions || [], pageData.headerInfo.actions?.remoteControl?.defaultRunAs || '')"
-        [disabled]="!pageData.headerInfo.actions?.remoteControl?.enabled"
-        [matTooltip]="pageData.headerInfo.actions?.remoteControl?.tooltip"
+        (click)="remoteControl(deviceId, actions?.remoteControl?.runAsOptions || [], actions?.remoteControl?.defaultRunAs || '')"
+        [disabled]="!actions?.remoteControl?.enabled"
+        [matTooltip]="actions?.remoteControl?.tooltip || ''"
         data-testid="remote-control-button-2xl"
       >
         <mat-icon>important_devices</mat-icon>Remote Control
       </button>
     }
-    @if (pageData.headerInfo.actions?.flash?.visible) {
+    @if (actions?.flash?.visible) {
       <button
         class="m3-action-button filled"
-        (click)="flashDevice(pageData.overview.id, pageData.overview.host.name, pageData.overview.healthAndActivity.deviceTypes[0]?.type || '', '')"
-        [disabled]="!pageData.overview.basicInfo.os.toLowerCase().includes('android')"
+        (click)="flashDevice(deviceId, hostName, deviceType, '')"
+        [disabled]="!isAndroid"
         data-testid="flash-button-2xl"
       >
         <mat-icon>flash_on</mat-icon>Flash
       </button>
     }
-    @if (pageData.headerInfo.actions?.logcat?.visible) {
+    @if (actions?.logcat?.visible) {
       <button
         class="m3-action-button filled"
-        (click)="getLogcat(pageData.overview.id)"
-        [disabled]="!pageData.headerInfo.actions?.logcat?.enabled || gettingLogcat()"
-        [matTooltip]="pageData.headerInfo.actions?.logcat?.tooltip"
+        (click)="getLogcat(deviceId)"
+        [disabled]="!actions?.logcat?.enabled || gettingLogcat()"
+        [matTooltip]="actions?.logcat?.tooltip || ''"
         data-testid="logcat-button-2xl"
       >
         @if (gettingLogcat()) {
@@ -58,10 +63,10 @@
         }
       </button>
     }
-    @if (pageData.headerInfo.actions?.quarantine?.visible) {
-      @if (pageData.headerInfo.quarantine?.isQuarantined) {
+    @if (actions?.quarantine?.visible) {
+      @if (quarantineInfo?.isQuarantined) {
         <div class="m3-split-button-group" data-testid="quarantine-group-2xl">
-          <button class="m3-split-button main-action" (click)="quarantineDevice(pageData.overview.id)" [disabled]="unquarantining()">
+          <button class="m3-split-button main-action" (click)="quarantineDevice(deviceId)" [disabled]="unquarantining()">
             @if (unquarantining()) {
               <mat-icon class="spin-animation">sync</mat-icon>Working...
             } @else {
@@ -72,14 +77,14 @@
             <mat-icon>arrow_drop_down</mat-icon>
           </button>
           <mat-menu #quarantineMenu2xl="matMenu">
-            <button mat-menu-item (click)="changeQuarantine(pageData.overview.id)">
+            <button mat-menu-item (click)="changeQuarantine(deviceId)">
               <mat-icon>edit_calendar</mat-icon>
               <span>Change Duration</span>
             </button>
           </mat-menu>
         </div>
       } @else {
-        <button class="m3-action-button filled" (click)="quarantineDevice(pageData.overview.id)" data-testid="quarantine-group-2xl">
+        <button class="m3-action-button filled" (click)="quarantineDevice(deviceId)" data-testid="quarantine-group-2xl">
           <mat-icon>block</mat-icon>Quarantine
         </button>
       }
@@ -88,18 +93,23 @@
 
   <!-- xl view -->
   <div class="header-actions-xl">
-    <button
-      class="m3-action-button filled"
-      (click)="openConfiguration(pageData.overview.id, pageData.overview.host.name)"
-    >
-      <mat-icon>settings</mat-icon>Configuration
-    </button>
-    @if (pageData.headerInfo.actions?.screenshot?.visible) {
+    @if (actions?.configuration?.visible) {
       <button
         class="m3-action-button filled"
-        (click)="takeScreenshot(pageData.overview.id)"
-        [disabled]="!pageData.headerInfo.actions?.screenshot?.enabled || takingScreenshot()"
-        [matTooltip]="pageData.headerInfo.actions?.screenshot?.tooltip"
+        (click)="openConfiguration(deviceId, hostName)"
+        [disabled]="!actions?.configuration?.enabled"
+        [matTooltip]="actions?.configuration?.tooltip || ''"
+        data-testid="configuration-button-xl"
+      >
+        <mat-icon>settings</mat-icon>Configuration
+      </button>
+    }
+    @if (actions?.screenshot?.visible) {
+      <button
+        class="m3-action-button filled"
+        (click)="takeScreenshot(deviceId)"
+        [disabled]="!actions?.screenshot?.enabled || takingScreenshot()"
+        [matTooltip]="actions?.screenshot?.tooltip || ''"
         data-testid="screenshot-button-xl"
       >
         @if (takingScreenshot()) {
@@ -109,12 +119,12 @@
         }
       </button>
     }
-    @if (pageData.headerInfo.actions?.remoteControl?.visible) {
+    @if (actions?.remoteControl?.visible) {
       <button
         class="m3-action-button filled"
-        (click)="remoteControl(pageData.overview.id, pageData.headerInfo.actions?.remoteControl?.runAsOptions || [], pageData.headerInfo.actions?.remoteControl?.defaultRunAs || '')"
-        [disabled]="!pageData.headerInfo.actions?.remoteControl?.enabled"
-        [matTooltip]="pageData.headerInfo.actions?.remoteControl?.tooltip"
+        (click)="remoteControl(deviceId, actions?.remoteControl?.runAsOptions || [], actions?.remoteControl?.defaultRunAs || '')"
+        [disabled]="!actions?.remoteControl?.enabled"
+        [matTooltip]="actions?.remoteControl?.tooltip || ''"
         data-testid="remote-control-button-xl"
       >
         <mat-icon>important_devices</mat-icon>Remote Control
@@ -128,32 +138,32 @@
       <mat-icon>expand_more</mat-icon>
     </button>
     <mat-menu #moreMenu="matMenu">
-      @if (pageData.headerInfo.actions?.flash?.visible) {
+      @if (actions?.flash?.visible) {
         <button
           mat-menu-item
-          (click)="flashDevice(pageData.overview.id, pageData.overview.host.name, pageData.overview.healthAndActivity.deviceTypes[0]?.type || '', '')"
-          [disabled]="!pageData.overview.basicInfo.os.toLowerCase().includes('android')"
+          (click)="flashDevice(deviceId, hostName, deviceType, '')"
+          [disabled]="!isAndroid"
           data-testid="flash-menu-item-xl"
         >
           <mat-icon class="dropdown-mat-icon">flash_on</mat-icon>
           <span>Flash</span>
         </button>
       }
-      @if (pageData.headerInfo.actions?.logcat?.visible) {
+      @if (actions?.logcat?.visible) {
         <button
           mat-menu-item
-          (click)="getLogcat(pageData.overview.id)"
-          [disabled]="!pageData.headerInfo.actions?.logcat?.enabled || gettingLogcat()"
-          [matTooltip]="pageData.headerInfo.actions?.logcat?.tooltip"
+          (click)="getLogcat(deviceId)"
+          [disabled]="!actions?.logcat?.enabled || gettingLogcat()"
+          [matTooltip]="actions?.logcat?.tooltip || ''"
           data-testid="logcat-menu-item-xl"
         >
           <mat-icon class="dropdown-mat-icon">description</mat-icon>
           <span>Get Logcat</span>
         </button>
       }
-      @if (pageData.headerInfo.actions?.quarantine?.visible) {
-        @if (pageData.headerInfo.quarantine?.isQuarantined) {
-          <button mat-menu-item (click)="quarantineDevice(pageData.overview.id)" [disabled]="unquarantining()" data-testid="quarantine-menu-item-xl">
+      @if (actions?.quarantine?.visible) {
+        @if (quarantineInfo?.isQuarantined) {
+          <button mat-menu-item (click)="quarantineDevice(deviceId)" [disabled]="unquarantining()" data-testid="quarantine-menu-item-xl">
             @if (unquarantining()) {
               <span>
                 <mat-icon class="spin-animation dropdown-mat-icon">sync</mat-icon>
@@ -166,12 +176,12 @@
               </span>
             }
           </button>
-          <button mat-menu-item (click)="changeQuarantine(pageData.overview.id)">
+          <button mat-menu-item (click)="changeQuarantine(deviceId)">
             <mat-icon class="dropdown-mat-icon">edit_calendar</mat-icon>
             <span>Change Duration</span>
           </button>
         } @else {
-          <button mat-menu-item (click)="quarantineDevice(pageData.overview.id)" data-testid="quarantine-menu-item-xl">
+          <button mat-menu-item (click)="quarantineDevice(deviceId)" data-testid="quarantine-menu-item-xl">
             <mat-icon class="dropdown-mat-icon">block</mat-icon>
             <span>Quarantine</span>
           </button>
@@ -182,12 +192,17 @@
 
   <!-- small view -->
   <div class="header-actions-sm">
-    <button
-      class="m3-action-button filled"
-      (click)="openConfiguration(pageData.overview.id, pageData.overview.host.name)"
-    >
-      <mat-icon>settings</mat-icon>Configuration
-    </button>
+    @if (actions?.configuration?.visible) {
+      <button
+        class="m3-action-button filled"
+        (click)="openConfiguration(deviceId, hostName)"
+        [disabled]="!actions?.configuration?.enabled"
+        [matTooltip]="actions?.configuration?.tooltip || ''"
+        data-testid="configuration-button-sm"
+      >
+        <mat-icon>settings</mat-icon>Configuration
+      </button>
+    }
     <button
       class="m3-action-button transparent dropdown-trigger"
       [matMenuTriggerFor]="actionsMenu"
@@ -196,56 +211,56 @@
       <mat-icon>expand_more</mat-icon>
     </button>
     <mat-menu #actionsMenu="matMenu">
-      @if (pageData.headerInfo.actions?.screenshot?.visible) {
+      @if (actions?.screenshot?.visible) {
         <button
           mat-menu-item
-          (click)="takeScreenshot(pageData.overview.id)"
-          [disabled]="!pageData.headerInfo.actions?.screenshot?.enabled || takingScreenshot()"
-          [matTooltip]="pageData.headerInfo.actions?.screenshot?.tooltip"
+          (click)="takeScreenshot(deviceId)"
+          [disabled]="!actions?.screenshot?.enabled || takingScreenshot()"
+          [matTooltip]="actions?.screenshot?.tooltip || ''"
           data-testid="screenshot-menu-item-sm"
         >
           <mat-icon class="dropdown-mat-icon">screenshot</mat-icon>
           <span>Screenshot</span>
         </button>
       }
-      @if (pageData.headerInfo.actions?.remoteControl?.visible) {
+      @if (actions?.remoteControl?.visible) {
         <button
           mat-menu-item
-          (click)="remoteControl(pageData.overview.id, pageData.headerInfo.actions?.remoteControl?.runAsOptions || [], pageData.headerInfo.actions?.remoteControl?.defaultRunAs || '')"
-          [disabled]="!pageData.headerInfo.actions?.remoteControl?.enabled"
-          [matTooltip]="pageData.headerInfo.actions?.remoteControl?.tooltip"
+          (click)="remoteControl(deviceId, actions?.remoteControl?.runAsOptions || [], actions?.remoteControl?.defaultRunAs || '')"
+          [disabled]="!actions?.remoteControl?.enabled"
+          [matTooltip]="actions?.remoteControl?.tooltip || ''"
           data-testid="remote-control-menu-item-sm"
         >
           <mat-icon class="dropdown-mat-icon">important_devices</mat-icon>
           <span>Remote Control</span>
         </button>
       }
-      @if (pageData.headerInfo.actions?.flash?.visible) {
+      @if (actions?.flash?.visible) {
         <button
           mat-menu-item
-          (click)="flashDevice(pageData.overview.id, pageData.overview.host.name, pageData.overview.healthAndActivity.deviceTypes[0]?.type || '', '')"
-          [disabled]="!pageData.overview.basicInfo.os.toLowerCase().includes('android')"
+          (click)="flashDevice(deviceId, hostName, deviceType, '')"
+          [disabled]="!isAndroid"
           data-testid="flash-menu-item-sm"
         >
           <mat-icon class="dropdown-mat-icon">flash_on</mat-icon>
           <span>Flash</span>
         </button>
       }
-      @if (pageData.headerInfo.actions?.logcat?.visible) {
+      @if (actions?.logcat?.visible) {
         <button
           mat-menu-item
-          (click)="getLogcat(pageData.overview.id)"
-          [disabled]="!pageData.headerInfo.actions?.logcat?.enabled || gettingLogcat()"
-          [matTooltip]="pageData.headerInfo.actions?.logcat?.tooltip"
+          (click)="getLogcat(deviceId)"
+          [disabled]="!actions?.logcat?.enabled || gettingLogcat()"
+          [matTooltip]="actions?.logcat?.tooltip || ''"
           data-testid="logcat-menu-item-sm"
         >
           <mat-icon class="dropdown-mat-icon">description</mat-icon>
           <span>Get Logcat</span>
         </button>
       }
-      @if (pageData.headerInfo.actions?.quarantine?.visible) {
-        @if (pageData.headerInfo.quarantine?.isQuarantined) {
-          <button mat-menu-item (click)="quarantineDevice(pageData.overview.id)" [disabled]="unquarantining()" data-testid="quarantine-menu-item-sm">
+      @if (actions?.quarantine?.visible) {
+        @if (quarantineInfo?.isQuarantined) {
+          <button mat-menu-item (click)="quarantineDevice(deviceId)" [disabled]="unquarantining()" data-testid="quarantine-menu-item-sm">
             @if (unquarantining()) {
               <span>
                 <mat-icon class="spin-animation dropdown-mat-icon">sync</mat-icon>
@@ -258,12 +273,12 @@
               </span>
             }
           </button>
-          <button mat-menu-item (click)="changeQuarantine(pageData.overview.id)">
+          <button mat-menu-item (click)="changeQuarantine(deviceId)">
             <mat-icon class="dropdown-mat-icon">edit_calendar</mat-icon>
             <span>Change Duration</span>
           </button>
         } @else {
-          <button mat-menu-item (click)="quarantineDevice(pageData.overview.id)" data-testid="quarantine-menu-item-sm">
+          <button mat-menu-item (click)="quarantineDevice(deviceId)" data-testid="quarantine-menu-item-sm">
             <mat-icon class="dropdown-mat-icon">block</mat-icon>
             <span>Quarantine</span>
           </button>
