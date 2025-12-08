@@ -232,6 +232,11 @@ public interface AndroidInstrumentationDriverSpec {
 
   @ParamAnnotation(
       required = false,
+      help = "Whether to use orchestrator to run the instrumentation. By default, this is false.")
+  String PARAM_USE_ORCHESTRATOR = "use_orchestrator";
+
+  @ParamAnnotation(
+      required = false,
       help =
           "Set test result to FAIL if no tests ran. For example, user specified test methods do not"
               + " exist, or using Parameterized runner with ShardLevel.METHOD. By default, this is"

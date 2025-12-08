@@ -363,7 +363,8 @@ public class AndroidInstrumentation extends BaseDriver
                   .getBool(AndroidInstrumentationDriverSpec.PARAM_PREFIX_ANDROID_TEST, false),
               noIsolatedStorage,
               /* useTestStorageService= */ true,
-              job.params().getBool(AndroidInstrumentationDriverSpec.PARAM_ENABLE_COVERAGE, false)),
+              job.params().getBool(AndroidInstrumentationDriverSpec.PARAM_ENABLE_COVERAGE, false),
+              job.params().getBool(AndroidInstrumentationDriverSpec.PARAM_USE_ORCHESTRATOR, false)),
           Duration.ofMillis(testTimeoutMs));
     } catch (MobileHarnessException e) {
       if (e.getErrorId() == AndroidErrorId.ANDROID_INSTRUMENTATION_COMMAND_EXEC_TIMEOUT) {
@@ -480,6 +481,7 @@ public class AndroidInstrumentation extends BaseDriver
                   + " - test target: %s%n - timeout: %d ms%n - options: %s",
               testTarget, testTimeoutMs, StrUtil.DEFAULT_MAP_JOINER.join(optionMap));
       testInfo.log().atInfo().alsoTo(logger).log("%s", message);
+
       String output;
       MobileHarnessException mhException = null;
       try {
@@ -499,7 +501,9 @@ public class AndroidInstrumentation extends BaseDriver
                     noIsolatedStorage,
                     /* useTestStorageService= */ true,
                     job.params()
-                        .getBool(AndroidInstrumentationDriverSpec.PARAM_ENABLE_COVERAGE, false)),
+                        .getBool(AndroidInstrumentationDriverSpec.PARAM_ENABLE_COVERAGE, false),
+                    job.params()
+                        .getBool(AndroidInstrumentationDriverSpec.PARAM_USE_ORCHESTRATOR, false)),
                 Duration.ofMillis(testTimeoutMs),
                 lineCallbackFactory);
       } catch (MobileHarnessException e) {

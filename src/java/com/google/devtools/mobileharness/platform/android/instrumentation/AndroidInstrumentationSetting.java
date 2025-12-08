@@ -38,6 +38,32 @@ public abstract class AndroidInstrumentationSetting {
       boolean noIsolatedStorage,
       boolean useTestStorageService,
       boolean enableCoverage) {
+    return create(
+        packageName,
+        runnerName,
+        className,
+        otherOptions,
+        async,
+        showRawResults,
+        prefixAndroidTest,
+        noIsolatedStorage,
+        useTestStorageService,
+        enableCoverage,
+        /* useOrchestrator= */ false);
+  }
+
+  public static AndroidInstrumentationSetting create(
+      String packageName,
+      String runnerName,
+      @Nullable String className,
+      @Nullable Map<String, String> otherOptions,
+      boolean async,
+      boolean showRawResults,
+      boolean prefixAndroidTest,
+      boolean noIsolatedStorage,
+      boolean useTestStorageService,
+      boolean enableCoverage,
+      boolean useOrchestrator) {
     return new AutoValue_AndroidInstrumentationSetting(
         checkNotNull(packageName),
         checkNotNull(runnerName),
@@ -48,7 +74,8 @@ public abstract class AndroidInstrumentationSetting {
         prefixAndroidTest,
         noIsolatedStorage,
         useTestStorageService,
-        enableCoverage);
+        enableCoverage,
+        useOrchestrator);
   }
 
   /** The Android package name of the test package. */
@@ -85,4 +112,7 @@ public abstract class AndroidInstrumentationSetting {
 
   /** Whether to enable coverage for the instrumentation command. */
   public abstract boolean enableCoverage();
+
+  /** Whether to use orchestrator to run tests. */
+  public abstract boolean useOrchestrator();
 }
