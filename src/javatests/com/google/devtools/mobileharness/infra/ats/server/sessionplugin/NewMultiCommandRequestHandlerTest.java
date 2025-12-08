@@ -1298,6 +1298,32 @@ public final class NewMultiCommandRequestHandlerTest {
   }
 
   @Test
+  public void handleResultProcessing_noopCommandWithZeroResult_treatAsCompleted() throws Exception {
+    commandInfo = commandInfo.toBuilder().setCommandLine("util/timewaster").build();
+    request = request.toBuilder().clearCommands().addCommands(commandInfo).build();
+    setUpPassingJobAndTestResults();
+    ReportProto.Result result =
+        ReportProto.Result.newBuilder()
+            .setSummary(ReportProto.Summary.newBuilder().setPassed(0).setFailed(0).build())
+            .build();
+    mockProcessResult(result);
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
+    HandleResultProcessingResult handleResultProcessingResult =
+        createJobAndHandleResultProcessing(request);
+
+    assertThat(handleResultProcessingResult.commandDetails()).hasSize(1);
+    CommandDetail commandDetail =
+        handleResultProcessingResult.commandDetails().values().iterator().next();
+    assertThat(commandDetail.getPassedTestCount()).isEqualTo(0);
+    assertThat(commandDetail.getFailedTestCount()).isEqualTo(0);
+    assertThat(commandDetail.getTotalTestCount()).isEqualTo(0);
+    String commandId =
+        UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
+    assertThat(commandDetail.getId()).isEqualTo(commandId);
+    assertThat(commandDetail.getState()).isEqualTo(CommandState.COMPLETED);
+  }
+
+  @Test
   public void handleResultProcessing_getMalformedOutputURL_onlyCleanup() throws Exception {
     setUpPassingJobAndTestResults();
     when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));

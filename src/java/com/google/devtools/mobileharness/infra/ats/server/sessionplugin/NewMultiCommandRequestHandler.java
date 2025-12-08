@@ -128,6 +128,8 @@ final class NewMultiCommandRequestHandler {
 
   private static final String ATS_GOOGLE_CLOUD_STORAGE_PREFIX = "mtt:///google_cloud_storage/";
 
+  private static final String NOOP_TEST_COMMAND_LINE = "util/timewaster";
+
   @VisibleForTesting
   static final String REQUEST_ERROR_MESSAGE_FOR_TRADEFED_INVOCATION_ERROR =
       "Tradefed invocation had an error.";
@@ -829,8 +831,9 @@ final class NewMultiCommandRequestHandler {
       // trigger successfully. If so, set state to ERROR.
       // 3. If command has no modules and no test failures, check if there is a Tradefed invocation
       // error. If so, set state to ERROR.
-      // 4. If command has no modules, no test failures, and no Tradefed invocation error, set
-      // state to ERROR with RESULT_PROCESSING_ERROR reason.
+      // 4. If command has no modules, no test failures, and no Tradefed invocation error:
+      //    a. If the command line indicates it's a NO-OP command, set state to COMPLETED.
+      //    b. Otherwise, set state to ERROR with RESULT_PROCESSING_ERROR reason.
       if (commandDetailBuilder.getState() == CommandState.UNKNOWN_STATE
           || commandDetailBuilder.getState() == CommandState.RUNNING) {
         if (commandDetailBuilder.getTotalModuleCount() > 0) {
@@ -852,10 +855,14 @@ final class NewMultiCommandRequestHandler {
                 ErrorReason.TRADEFED_INVOCATION_ERROR,
                 tradefedInvocationErrorMessage.get());
           } else {
-            setCommandError(
-                commandDetailBuilder,
-                ErrorReason.RESULT_PROCESSING_ERROR,
-                "No valid test cases found in the result.");
+            if (commandDetailBuilder.getCommandLine().contains(NOOP_TEST_COMMAND_LINE)) {
+              commandDetailBuilder.setState(CommandState.COMPLETED);
+            } else {
+              setCommandError(
+                  commandDetailBuilder,
+                  ErrorReason.RESULT_PROCESSING_ERROR,
+                  "No valid test cases found in the result.");
+            }
           }
           if (resultProcessingException != null) {
             commandDetailBuilder.setErrorMessage(
