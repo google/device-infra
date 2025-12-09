@@ -181,6 +181,30 @@ public class AndroidAdbInternalUtil {
         String.format("Failed to disconnect from device IP %s: %s", deviceIp, output));
   }
 
+  /**
+   * Reconnects to {@code deviceId} from the host side.
+   *
+   * <p>Should only be called when device is managed by Mobile Harness.
+   *
+   * @throws MobileHarnessException if failed to reconnect to the device or timeout
+   * @throws InterruptedException if current thread is interrupted during this method
+   */
+  public void reconnect(String deviceId) throws MobileHarnessException, InterruptedException {
+    String output;
+    try {
+      output = adb.run(deviceId, new String[] {"reconnect"}).trim();
+    } catch (MobileHarnessException e) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_ADB_INTERNAL_UTIL_RECONNECT_CMD_ERROR, e.getMessage(), e);
+    }
+    if (output.startsWith("reconnecting ")) {
+      return;
+    }
+    throw new MobileHarnessException(
+        AndroidErrorId.ANDROID_ADB_INTERNAL_UTIL_RECONNECT_ERROR,
+        String.format("Failed to reconnect to device %s: %s", deviceId, output));
+  }
+
   /** Gets information of the current ADB binary. */
   public AdbInfo getAdbInfo() throws MobileHarnessException, InterruptedException {
     String adbVersion = getAdbVersion();
