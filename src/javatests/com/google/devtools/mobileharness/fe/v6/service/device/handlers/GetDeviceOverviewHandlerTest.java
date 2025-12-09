@@ -53,10 +53,10 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryR
 import com.google.devtools.mobileharness.fe.v6.service.device.ConfigurationProvider;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceOverview;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceOverviewPageData;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceType;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DimensionSourceGroup;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceOverviewRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HealthAndActivityInfo;
-import com.google.devtools.mobileharness.fe.v6.service.proto.device.HealthAndActivityInfo.DeviceType;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HealthState;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;

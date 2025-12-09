@@ -24,6 +24,8 @@ import {SCENARIO_LINUX_DEVICE} from './devices/16_linux_device';
 import {SCENARIO_ANDROID_MISSING} from './devices/17_android_missing';
 import {SCENARIO_ANDROID_BUSY_NO_FLASH} from './devices/18_android_busy_no_flash';
 import {SCENARIO_ANDROID_NO_SCREENSHOT} from './devices/19_android_no_screenshot';
+import {SCENARIO_TESTBED_DEVICE} from './devices/20_testbed_device';
+import {SCENARIO_TESTBED_EVEN_SUBDEVICES} from './devices/21_testbed_even_subdevices';
 import {SCENARIO_HOST_NO_CONFIG} from './hosts/01_no_config';
 import {SCENARIO_HOST_BASIC_EDITABLE} from './hosts/02_basic_editable';
 import {SCENARIO_HOST_SHARED_MODE} from './hosts/03_shared_mode';
@@ -73,6 +75,8 @@ export const MOCK_DEVICE_SCENARIOS: MockDeviceScenario[] = [
   SCENARIO_ANDROID_MISSING,
   SCENARIO_ANDROID_BUSY_NO_FLASH,
   SCENARIO_ANDROID_NO_SCREENSHOT,
+  SCENARIO_TESTBED_DEVICE,
+  SCENARIO_TESTBED_EVEN_SUBDEVICES,
 ];
 
 /**

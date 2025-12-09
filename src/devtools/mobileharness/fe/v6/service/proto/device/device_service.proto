@@ -102,6 +102,19 @@ service DeviceService {
       body: "*"
     };
   }
+
+  // Gets testbed config for the device.
+  rpc GetTestbedConfig(GetTestbedConfigRequest) returns (TestbedConfig) {
+    option (google.api.http) = {
+      get: "/v6/devices/{id}/testbedConfig"
+    };
+  }
+}
+
+// Request message for GetTestbedConfig.
+message GetTestbedConfigRequest {
+  // The device ID.
+  string id = 1;
 }
 
 // Request message for GetDeviceOverview.

@@ -46,6 +46,11 @@ export interface DeviceOverview {
    * Unlike dimensions, each property key has only a single string value.
    */
   properties: Record<string, string>;
+
+  /**
+   * If the device is a testbed, this contains information about its sub-devices.
+   */
+  subDevices?: SubDeviceInfo[];
 }
 
 // --- Helper Interfaces for DeviceOverview ---
@@ -235,6 +240,32 @@ export interface DimensionSourceGroup {
 export interface Dimensions {
   supported?: {[key: string]: DimensionSourceGroup};
   required?: {[key: string]: DimensionSourceGroup};
+}
+
+/**
+ * Information about a sub-device in a testbed.
+ */
+export interface SubDeviceInfo {
+  id: string;
+  types: Array<{
+    /** The type string. */
+    type: string;
+    /**
+     * Backend-determined flag indicating if this type suggests an abnormal
+     * or unhealthy state (e.g., FailedAndroidDevice, DisconnectedDevice)
+     * and should be highlighted visually.
+     */
+    isAbnormal: boolean;
+  }>;
+  dimensions?: DeviceDimension[];
+}
+
+/**
+ * Testbed configuration in YAML format.
+ */
+export interface TestbedConfig {
+  yamlContent: string;
+  codeSearchLink: string;
 }
 
 /**

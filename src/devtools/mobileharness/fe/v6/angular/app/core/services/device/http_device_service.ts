@@ -12,7 +12,10 @@ import {
   RemoteControlResponse,
   TakeScreenshotResponse,
 } from '../../models/device_action';
-import {DeviceOverviewPageData} from '../../models/device_overview';
+import {
+  DeviceOverviewPageData,
+  TestbedConfig,
+} from '../../models/device_overview';
 import {
   HealthinessStats,
   RecoveryTaskStats,
@@ -118,5 +121,9 @@ export class HttpDeviceService extends DeviceService {
       `${this.apiUrl}/${id}:remoteControl`,
       req,
     );
+  }
+
+  override getTestbedConfig(id: string): Observable<TestbedConfig> {
+    return this.http.get<TestbedConfig>(`${this.apiUrl}/${id}/testbedConfig`);
   }
 }

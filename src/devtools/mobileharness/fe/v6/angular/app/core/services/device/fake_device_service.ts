@@ -11,7 +11,10 @@ import {
   RemoteControlResponse,
   TakeScreenshotResponse,
 } from '../../models/device_action';
-import {DeviceOverviewPageData} from '../../models/device_overview';
+import {
+  DeviceOverviewPageData,
+  TestbedConfig,
+} from '../../models/device_overview';
 import {
   HealthinessStats,
   RecoveryTaskStats,
@@ -190,6 +193,21 @@ export class FakeDeviceService extends DeviceService {
     return of({
       sessionUrl: `https://xcid.google.example.com/provider/mh/create/?deviceId=${id}`,
     }).pipe(delay(1000));
+  }
+
+  override getTestbedConfig(id: string): Observable<TestbedConfig> {
+    console.log(`FakeService: Getting testbed config for ${id}`);
+    const scenario = MOCK_DEVICE_SCENARIOS.find((s) => s.id === id);
+    if (scenario) {
+      return of({
+        yamlContent: scenario.testbedConfig?.yamlContent || '',
+        codeSearchLink: scenario.testbedConfig?.codeSearchLink || '',
+      });
+    } else {
+      return throwError(
+        () => new Error(`Device with ID '${id}' not found in mock data.`),
+      );
+    }
   }
 
   private getMockDeviceHeaderInfo(

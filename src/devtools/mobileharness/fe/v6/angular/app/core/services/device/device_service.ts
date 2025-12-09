@@ -9,7 +9,10 @@ import {
   RemoteControlResponse,
   TakeScreenshotResponse,
 } from '../../models/device_action';
-import {DeviceOverviewPageData} from '../../models/device_overview';
+import {
+  DeviceOverviewPageData,
+  TestbedConfig,
+} from '../../models/device_overview';
 import {
   HealthinessStats,
   RecoveryTaskStats,
@@ -103,4 +106,9 @@ export abstract class DeviceService {
     id: string,
     req: RemoteControlRequest,
   ): Observable<RemoteControlResponse>;
+
+  /**
+   * Gets testbed config for the device.
+   */
+  abstract getTestbedConfig(id: string): Observable<TestbedConfig>;
 }

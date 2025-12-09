@@ -51,6 +51,18 @@ message DeviceOverview {
 
   // Additional device properties, as a simple key-value map.
   map<string, string> properties = 8;
+
+  // If the device is a testbed, this contains information about its
+  // sub-devices.
+  repeated SubDeviceInfo sub_devices = 9;
+}
+
+// Device type information.
+message DeviceType {
+  // The type string.
+  string type = 1;
+  // Flag indicating if this type suggests an abnormal or unhealthy state.
+  bool is_abnormal = 2;
 }
 
 // Information about the host machine.
@@ -94,13 +106,6 @@ message HealthAndActivityInfo {
   }
   DeviceStatus device_status = 4;
 
-  // List of device types.
-  message DeviceType {
-    // The type string.
-    string type = 1;
-    // Flag indicating if this type suggests an abnormal or unhealthy state.
-    bool is_abnormal = 2;
-  }
   repeated DeviceType device_types = 5;
 
   // The timestamp of when the device was last considered "In Service".
@@ -195,6 +200,19 @@ message Dimensions {
   map<string, DimensionSourceGroup> supported = 1;
   // Dimensions that a test job MUST specify to be allocated this device.
   map<string, DimensionSourceGroup> required = 2;
+}
+
+// Information about a sub-device in a testbed.
+message SubDeviceInfo {
+  string id = 1;
+  repeated DeviceType types = 2;
+  repeated DeviceDimension dimensions = 3;
+}
+
+// Testbed configuration in YAML format.
+message TestbedConfig {
+  string yaml_content = 1;
+  string code_search_link = 2;
 }
 
 // State of an action button in device header.
