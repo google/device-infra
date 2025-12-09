@@ -499,6 +499,17 @@ public enum BasicErrorId implements ErrorId {
   USER_PLUGIN_SKIP_JOB_BY_INTERRUPTED_EXCEPTION(39_956, ErrorType.CUSTOMER_ISSUE),
   USER_PLUGIN_SKIP_TEST_BY_INTERRUPTED_EXCEPTION(39_957, ErrorType.CUSTOMER_ISSUE),
 
+  // Customer asset: 39_971 ~ 39_980
+  /**
+   * INTERNAL USE ONLY for CustomerAssetException. This ErrorId is used as the wrapper ID for
+   * exceptions of type CustomerAssetException, indicating the error root cause is a
+   * customer-provided asset.
+   *
+   * <p>WARNING: DO NOT use this ErrorId directly when throwing an exception. Use one of the
+   * existing {@code CustomerAssetException.create()} methods.
+   */
+  INTERNAL_CUSTOMER_ASSET_WRAPPER(39_971, ErrorType.CUSTOMER_ISSUE),
+
   // Command: 39_981 ~ 40_000
   COMMAND_START_ERROR(39_997, ErrorType.UNDETERMINED), // can be caused by bad start timeout config
   COMMAND_EXEC_FAIL(39_998, ErrorType.UNDETERMINED),
