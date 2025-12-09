@@ -1362,7 +1362,7 @@ public class Flags {
 
   @com.beust.jcommander.Parameter(
       names = "--file_transfer_cloud_cache_ttl",
-      description = "TTL of File Transfer caches in Google Cloud Storage. Default is 1 day.",
+      description = "TTL of File Transfer caches in Google Cloud Storage. Default is 12 hours.",
       converter = DurationFlag.DurationConverter.class)
   public Flag<Duration> fileTransferCloudCacheTtl = fileTransferCloudCacheTtlDefault;
 
