@@ -55,7 +55,8 @@ export interface RemoteControlButtonState extends ActionButtonState {
  */
 export interface QuarantineInfo {
   isQuarantined: boolean;
-  expiry: string; // ISO 8601 date string, or '' if not quarantined
+  // ISO 8601 date string(e.g. "1972-01-01T10:00:20.021Z"), or '' if not quarantined
+  expiry: string;
 }
 
 /**
@@ -128,7 +129,8 @@ export interface RemoteControlResponse {
  * Request for QuarantineDevice API.
  */
 export interface QuarantineDeviceRequest {
-  durationHours: number;
+  /** The timestamp in ISO 8601 format with UTC timezone when the quarantine should expire. */
+  endTime: string;
 }
 
 /**

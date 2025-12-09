@@ -166,10 +166,15 @@ export class FakeDeviceService extends DeviceService {
     id: string,
     req: QuarantineDeviceRequest,
   ): Observable<QuarantineDeviceResponse> {
-    console.log(`FakeService: Quarantining ${id} for ${req.durationHours}h`);
-    const expiry = new Date();
-    expiry.setHours(expiry.getHours() + req.durationHours);
-    return of({quarantineExpiry: expiry.toISOString()}).pipe(delay(1000));
+    if (!req.endTime) {
+      return throwError(
+        () =>
+          new Error('Invalid quarantine request, missing parameter "endTime".'),
+      );
+    }
+    console.log(`FakeService: Quarantining ${id} until ${req.endTime}`);
+    // The fake service can just echo back the requested expiry time.
+    return of({quarantineExpiry: req.endTime}).pipe(delay(1000));
   }
 
   override unquarantineDevice(id: string): Observable<void> {

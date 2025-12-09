@@ -76,13 +76,13 @@
                     <div>
                         Device is <strong>Quarantined</strong> and unavailable for tests.
                         @if(pageData.headerInfo.quarantine?.expiry) {
-                          <span class="block text-xs">Auto-unquarantine around: {{ pageData.headerInfo.quarantine?.expiry | date:'MMM d, h:mm a' }}{{formatRemainingTime(pageData.headerInfo.quarantine?.expiry)}}</span>
+                          <span class="block text-xs">Auto-unquarantine around: {{ getFormattedQuarantineExpiry(pageData.headerInfo.quarantine!.expiry) }}{{formatRemainingTime(pageData.headerInfo.quarantine?.expiry)}}</span>
                         }
                     </div>
                 </div>
                 <div class="quarantine-banner-actions">
-                    <button class="m3-action-button transparent" title="Change quarantine duration" (click)="changeQuarantine(pageData.overview.id)">Change Duration</button>
-                    <button class="m3-action-button transparent" title="Make device available for tests" (click)="unquarantineDevice(pageData.overview.id)">
+                    <button class="m3-action-button transparent" title="Change quarantine duration" (click)="changeQuarantine()">Change Duration</button>
+                    <button class="m3-action-button transparent" title="Make device available for tests" (click)="unquarantineDevice()">
                         Unquarantine
                     </button>
                 </div>

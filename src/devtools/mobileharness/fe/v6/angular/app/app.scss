@@ -169,7 +169,7 @@ $theme: map.merge(
 @include mat.progress-bar-theme($theme);
 @include mat.icon-button-theme($theme);
 @include mat.paginator-theme($theme);
-@include mat.tabs-theme($theme);
+// @include mat.tabs-theme($theme);
 @include mat.list-theme($theme);
 @include mat.autocomplete-theme($theme);
 @include mat.menu-theme($theme);
@@ -216,6 +216,20 @@ $stepper-theme: mat.m2-define-light-theme(
 );
 @include mat.stepper-theme($stepper-theme);
 
+$tabs-primary: mat.m2-define-palette(mat.$m2-blue-palette, 600);
+$tabs-accent: mat.m2-define-palette(mat.$m2-blue-palette, 100);
+$tabs-theme: mat.m2-define-light-theme(
+  (
+    color: (
+      primary: $tabs-primary,
+      accent: $tabs-accent,
+    ),
+    density: 0,
+    typography: $typography,
+  )
+);
+@include mat.tabs-theme($tabs-theme);
+
 $input-primary: mat.m2-define-palette(mat.$m2-blue-palette, 600);
 $input-accent: mat.m2-define-palette(mat.$m2-blue-palette, 600);
 
@@ -227,6 +241,11 @@ $warn: mat.m2-define-palette(mat.$m2-amber-palette);
 a {
   color: $text-link;
   text-decoration: none;
+}
+
+// Override global a tag style for tab labels
+.mat-mdc-tab-link {
+  color: inherit;
 }
 
 body {

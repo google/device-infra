@@ -59,7 +59,7 @@ describe('DeviceActionBar', () => {
           enabled: true,
           visible: true,
           tooltip: '',
-          params: {deviceType: '', requiredDimensions: ''},
+          params: {deviceType: 'AndroidRealDevice', requiredDimensions: ''},
         },
         remoteControl: {
           enabled: true,
@@ -135,6 +135,32 @@ describe('DeviceActionBar', () => {
     expect(configButton.disabled).toBeTrue();
   });
 
+  it('should disable flash button if enabled is false', () => {
+    component.pageData = {
+      ...mockPageData,
+      headerInfo: {
+        ...mockPageData.headerInfo,
+        actions: {
+          ...mockPageData.headerInfo.actions!,
+          flash: {
+            enabled: false,
+            visible: true,
+            tooltip: 'Disabled',
+            params: {deviceType: 'AndroidRealDevice', requiredDimensions: ''},
+          },
+        },
+      },
+    };
+    const cdr = fixture.debugElement.injector.get(ChangeDetectorRef);
+    cdr.markForCheck();
+    fixture.detectChanges();
+    const flashButton = fixture.nativeElement.querySelector(
+      '[data-testid="flash-button-2xl"]',
+    ) as HTMLButtonElement;
+    expect(flashButton).toBeTruthy();
+    expect(flashButton.disabled).toBeTrue();
+  });
+
   it('should call takeScreenshot and open dialog on success', () => {
     spyOn(deviceService, 'takeScreenshot').and.returnValue(
       of({
@@ -165,7 +191,7 @@ describe('DeviceActionBar', () => {
 
   it('should open RemoteControlDialog when remote control button is clicked', () => {
     const remoteControlButton = fixture.nativeElement.querySelector(
-      '[data-testid="remote-control-button-2xl"]',
+      '[data-testid="remoteControl-button-2xl"]',
     );
     remoteControlButton.click();
 
@@ -243,7 +269,7 @@ describe('DeviceActionBar', () => {
 
   it('should open QuarantineDialog when quarantine button is clicked', () => {
     const quarantineButton = fixture.nativeElement.querySelector(
-      '[data-testid="quarantine-group-2xl"]',
+      '[data-testid="quarantine-button-2xl"]',
     );
     quarantineButton.click();
 

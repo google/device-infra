@@ -1,190 +1,182 @@
 <div class="header-actions">
   <!-- 2xl view -->
   <div class="header-actions-2xl">
-    @if (actions?.configuration?.visible) {
-      <button
-        class="m3-action-button filled"
-        (click)="openConfiguration(deviceId, hostName)"
-        [disabled]="!actions?.configuration?.enabled"
-        [matTooltip]="actions?.configuration?.tooltip || ''"
-        data-testid="configuration-button-2xl"
-      >
-        <mat-icon>settings</mat-icon>Configuration
-      </button>
-    }
-    @if (actions?.screenshot?.visible) {
-      <button
-        class="m3-action-button filled"
-        (click)="takeScreenshot(deviceId)"
-        [disabled]="!actions?.screenshot?.enabled || takingScreenshot()"
-        [matTooltip]="actions?.screenshot?.tooltip || ''"
-        data-testid="screenshot-button-2xl"
-      >
-        @if (takingScreenshot()) {
-          <mat-icon class="spin-animation">sync</mat-icon>Taking...
-        } @else {
-          <mat-icon>screenshot</mat-icon>Screenshot
-        }
-      </button>
-    }
-    @if (actions?.remoteControl?.visible) {
-      <button
-        class="m3-action-button filled"
-        (click)="remoteControl(deviceId, actions?.remoteControl?.runAsOptions || [], actions?.remoteControl?.defaultRunAs || '')"
-        [disabled]="!actions?.remoteControl?.enabled"
-        [matTooltip]="actions?.remoteControl?.tooltip || ''"
-        data-testid="remote-control-button-2xl"
-      >
-        <mat-icon>important_devices</mat-icon>Remote Control
-      </button>
-    }
-    @if (actions?.flash?.visible) {
-      <button
-        class="m3-action-button filled"
-        (click)="flashDevice(deviceId, hostName, deviceType, '')"
-        [disabled]="!isAndroid"
-        data-testid="flash-button-2xl"
-      >
-        <mat-icon>flash_on</mat-icon>Flash
-      </button>
-    }
-    @if (actions?.logcat?.visible) {
-      <button
-        class="m3-action-button filled"
-        (click)="getLogcat(deviceId)"
-        [disabled]="!actions?.logcat?.enabled || gettingLogcat()"
-        [matTooltip]="actions?.logcat?.tooltip || ''"
-        data-testid="logcat-button-2xl"
-      >
-        @if (gettingLogcat()) {
-          <mat-icon class="spin-animation">sync</mat-icon>Fetching...
-        } @else {
-          <mat-icon>description</mat-icon>Get Logcat
-        }
-      </button>
-    }
+    <ng-container *ngTemplateOutlet="actionItem; context: {
+      key: 'configuration',
+      icon: 'settings',
+      label: 'Configuration',
+      handler: onConfiguration,
+      mode: 'button',
+      suffix: '2xl'
+    }"></ng-container>
+
+    <ng-container *ngTemplateOutlet="actionItem; context: {
+      key: 'screenshot',
+      icon: 'screenshot',
+      label: 'Screenshot',
+      handler: onScreenshot,
+      mode: 'button',
+      loading: takingScreenshot(),
+      loadingLabel: 'Taking...',
+      suffix: '2xl'
+    }"></ng-container>
+
+    <ng-container *ngTemplateOutlet="actionItem; context: {
+      key: 'remoteControl',
+      icon: 'important_devices',
+      label: 'Remote Control',
+      handler: onRemoteControl,
+      mode: 'button',
+      suffix: '2xl'
+    }"></ng-container>
+
+    <ng-container *ngTemplateOutlet="actionItem; context: {
+      key: 'flash',
+      icon: 'flash_on',
+      label: 'Flash',
+      handler: onFlash,
+      mode: 'button',
+      suffix: '2xl'
+    }"></ng-container>
+
+    <ng-container *ngTemplateOutlet="actionItem; context: {
+      key: 'logcat',
+      icon: 'description',
+      label: 'Get Logcat',
+      handler: onLogcat,
+      mode: 'button',
+      loading: gettingLogcat(),
+      loadingLabel: 'Fetching...',
+      suffix: '2xl'
+    }"></ng-container>
+
     @if (actions?.quarantine?.visible) {
       @if (quarantineInfo?.isQuarantined) {
         <div class="m3-split-button-group" data-testid="quarantine-group-2xl">
-          <button class="m3-split-button main-action" (click)="quarantineDevice(deviceId)" [disabled]="unquarantining()">
+          <button class="m3-split-button main-action" (click)="onQuarantine()" [disabled]="!actions?.quarantine?.enabled || unquarantining()" [matTooltip]="actions?.quarantine?.tooltip || ''">
             @if (unquarantining()) {
               <mat-icon class="spin-animation">sync</mat-icon>Working...
             } @else {
               <mat-icon>play_circle_outline</mat-icon>Unquarantine
             }
           </button>
-          <button class="m3-split-button dropdown-action" [matMenuTriggerFor]="quarantineMenu2xl" matTooltip="Quarantine options" [disabled]="unquarantining()">
+          <button class="m3-split-button dropdown-action" [matMenuTriggerFor]="quarantineMenu2xl" matTooltip="Quarantine options" [disabled]="!actions?.quarantine?.enabled || unquarantining()">
             <mat-icon>arrow_drop_down</mat-icon>
           </button>
           <mat-menu #quarantineMenu2xl="matMenu">
-            <button mat-menu-item (click)="changeQuarantine(deviceId)">
-              <mat-icon>edit_calendar</mat-icon>
-              <span>Change Duration</span>
-            </button>
+            <ng-container *ngTemplateOutlet="actionItem; context: {
+              key: 'quarantine',
+              icon: 'edit_calendar',
+              label: 'Change Duration',
+              handler: onChangeQuarantine,
+              mode: 'menu',
+              suffix: '2xl'
+            }"></ng-container>
           </mat-menu>
         </div>
       } @else {
-        <button class="m3-action-button filled" (click)="quarantineDevice(deviceId)" data-testid="quarantine-group-2xl">
-          <mat-icon>block</mat-icon>Quarantine
-        </button>
+        <ng-container *ngTemplateOutlet="actionItem; context: {
+          key: 'quarantine',
+          icon: 'block',
+          label: 'Quarantine',
+          handler: onQuarantine,
+          mode: 'button',
+          suffix: '2xl'
+        }"></ng-container>
       }
     }
   </div>
 
   <!-- xl view -->
   <div class="header-actions-xl">
-    @if (actions?.configuration?.visible) {
-      <button
-        class="m3-action-button filled"
-        (click)="openConfiguration(deviceId, hostName)"
-        [disabled]="!actions?.configuration?.enabled"
-        [matTooltip]="actions?.configuration?.tooltip || ''"
-        data-testid="configuration-button-xl"
-      >
-        <mat-icon>settings</mat-icon>Configuration
-      </button>
-    }
-    @if (actions?.screenshot?.visible) {
-      <button
-        class="m3-action-button filled"
-        (click)="takeScreenshot(deviceId)"
-        [disabled]="!actions?.screenshot?.enabled || takingScreenshot()"
-        [matTooltip]="actions?.screenshot?.tooltip || ''"
-        data-testid="screenshot-button-xl"
-      >
-        @if (takingScreenshot()) {
-          <mat-icon class="spin-animation">sync</mat-icon>Taking...
-        } @else {
-          <mat-icon>screenshot</mat-icon>Screenshot
-        }
-      </button>
-    }
-    @if (actions?.remoteControl?.visible) {
-      <button
-        class="m3-action-button filled"
-        (click)="remoteControl(deviceId, actions?.remoteControl?.runAsOptions || [], actions?.remoteControl?.defaultRunAs || '')"
-        [disabled]="!actions?.remoteControl?.enabled"
-        [matTooltip]="actions?.remoteControl?.tooltip || ''"
-        data-testid="remote-control-button-xl"
-      >
-        <mat-icon>important_devices</mat-icon>Remote Control
-      </button>
-    }
+    <ng-container *ngTemplateOutlet="actionItem; context: {
+      key: 'configuration',
+      icon: 'settings',
+      label: 'Configuration',
+      handler: onConfiguration,
+      mode: 'button',
+      suffix: 'xl'
+    }"></ng-container>
+
+    <ng-container *ngTemplateOutlet="actionItem; context: {
+      key: 'screenshot',
+      icon: 'screenshot',
+      label: 'Screenshot',
+      handler: onScreenshot,
+      mode: 'button',
+      loading: takingScreenshot(),
+      loadingLabel: 'Taking...',
+      suffix: 'xl'
+    }"></ng-container>
+
+    <ng-container *ngTemplateOutlet="actionItem; context: {
+      key: 'remoteControl',
+      icon: 'important_devices',
+      label: 'Remote Control',
+      handler: onRemoteControl,
+      mode: 'button',
+      suffix: 'xl'
+    }"></ng-container>
+
     <button
       class="m3-action-button transparent dropdown-trigger"
       [matMenuTriggerFor]="moreMenu"
+      matTooltip="Show more actions"
     >
       <span>More</span>
       <mat-icon>expand_more</mat-icon>
     </button>
     <mat-menu #moreMenu="matMenu">
-      @if (actions?.flash?.visible) {
-        <button
-          mat-menu-item
-          (click)="flashDevice(deviceId, hostName, deviceType, '')"
-          [disabled]="!isAndroid"
-          data-testid="flash-menu-item-xl"
-        >
-          <mat-icon class="dropdown-mat-icon">flash_on</mat-icon>
-          <span>Flash</span>
-        </button>
-      }
-      @if (actions?.logcat?.visible) {
-        <button
-          mat-menu-item
-          (click)="getLogcat(deviceId)"
-          [disabled]="!actions?.logcat?.enabled || gettingLogcat()"
-          [matTooltip]="actions?.logcat?.tooltip || ''"
-          data-testid="logcat-menu-item-xl"
-        >
-          <mat-icon class="dropdown-mat-icon">description</mat-icon>
-          <span>Get Logcat</span>
-        </button>
-      }
+      <ng-container *ngTemplateOutlet="actionItem; context: {
+        key: 'flash',
+        icon: 'flash_on',
+        label: 'Flash',
+        handler: onFlash,
+        mode: 'menu',
+        suffix: 'xl'
+      }"></ng-container>
+
+      <ng-container *ngTemplateOutlet="actionItem; context: {
+        key: 'logcat',
+        icon: 'description',
+        label: 'Get Logcat',
+        handler: onLogcat,
+        mode: 'menu',
+        loading: gettingLogcat(),
+        loadingLabel: 'Fetching...',
+        suffix: 'xl'
+      }"></ng-container>
+
       @if (actions?.quarantine?.visible) {
         @if (quarantineInfo?.isQuarantined) {
-          <button mat-menu-item (click)="quarantineDevice(deviceId)" [disabled]="unquarantining()" data-testid="quarantine-menu-item-xl">
-            @if (unquarantining()) {
-              <span>
-                <mat-icon class="spin-animation dropdown-mat-icon">sync</mat-icon>
-                <span>Working...</span>
-              </span>
-            } @else {
-              <span>
-                <mat-icon class="dropdown-mat-icon">play_circle_outline</mat-icon>
-                <span>Unquarantine</span>
-              </span>
-            }
-          </button>
-          <button mat-menu-item (click)="changeQuarantine(deviceId)">
-            <mat-icon class="dropdown-mat-icon">edit_calendar</mat-icon>
-            <span>Change Duration</span>
-          </button>
+          <ng-container *ngTemplateOutlet="actionItem; context: {
+            key: 'quarantine',
+            icon: 'play_circle_outline',
+            label: 'Unquarantine',
+            handler: onQuarantine,
+            mode: 'menu',
+            loading: unquarantining(),
+            loadingLabel: 'Working...',
+            suffix: 'xl'
+          }"></ng-container>
+
+          <ng-container *ngTemplateOutlet="actionItem; context: {
+            key: 'quarantine',
+            icon: 'edit_calendar',
+            label: 'Change Duration',
+            handler: onChangeQuarantine,
+            mode: 'menu',
+            suffix: 'xl'
+          }"></ng-container>
         } @else {
-          <button mat-menu-item (click)="quarantineDevice(deviceId)" data-testid="quarantine-menu-item-xl">
-            <mat-icon class="dropdown-mat-icon">block</mat-icon>
-            <span>Quarantine</span>
-          </button>
+          <ng-container *ngTemplateOutlet="actionItem; context: {
+            key: 'quarantine',
+            icon: 'block',
+            label: 'Quarantine',
+            handler: onQuarantine,
+            mode: 'menu',
+            suffix: 'xl'
+          }"></ng-container>
         }
       }
     </mat-menu>
@@ -192,98 +184,146 @@
 
   <!-- small view -->
   <div class="header-actions-sm">
-    @if (actions?.configuration?.visible) {
-      <button
-        class="m3-action-button filled"
-        (click)="openConfiguration(deviceId, hostName)"
-        [disabled]="!actions?.configuration?.enabled"
-        [matTooltip]="actions?.configuration?.tooltip || ''"
-        data-testid="configuration-button-sm"
-      >
-        <mat-icon>settings</mat-icon>Configuration
-      </button>
-    }
+    <ng-container *ngTemplateOutlet="actionItem; context: {
+      key: 'configuration',
+      icon: 'settings',
+      label: 'Configuration',
+      handler: onConfiguration,
+      mode: 'button',
+      suffix: 'sm'
+    }"></ng-container>
+
     <button
       class="m3-action-button transparent dropdown-trigger"
       [matMenuTriggerFor]="actionsMenu"
+      matTooltip="Show more actions"
     >
       <span>Take Action</span>
       <mat-icon>expand_more</mat-icon>
     </button>
     <mat-menu #actionsMenu="matMenu">
-      @if (actions?.screenshot?.visible) {
-        <button
-          mat-menu-item
-          (click)="takeScreenshot(deviceId)"
-          [disabled]="!actions?.screenshot?.enabled || takingScreenshot()"
-          [matTooltip]="actions?.screenshot?.tooltip || ''"
-          data-testid="screenshot-menu-item-sm"
-        >
-          <mat-icon class="dropdown-mat-icon">screenshot</mat-icon>
-          <span>Screenshot</span>
-        </button>
-      }
-      @if (actions?.remoteControl?.visible) {
-        <button
-          mat-menu-item
-          (click)="remoteControl(deviceId, actions?.remoteControl?.runAsOptions || [], actions?.remoteControl?.defaultRunAs || '')"
-          [disabled]="!actions?.remoteControl?.enabled"
-          [matTooltip]="actions?.remoteControl?.tooltip || ''"
-          data-testid="remote-control-menu-item-sm"
-        >
-          <mat-icon class="dropdown-mat-icon">important_devices</mat-icon>
-          <span>Remote Control</span>
-        </button>
-      }
-      @if (actions?.flash?.visible) {
-        <button
-          mat-menu-item
-          (click)="flashDevice(deviceId, hostName, deviceType, '')"
-          [disabled]="!isAndroid"
-          data-testid="flash-menu-item-sm"
-        >
-          <mat-icon class="dropdown-mat-icon">flash_on</mat-icon>
-          <span>Flash</span>
-        </button>
-      }
-      @if (actions?.logcat?.visible) {
-        <button
-          mat-menu-item
-          (click)="getLogcat(deviceId)"
-          [disabled]="!actions?.logcat?.enabled || gettingLogcat()"
-          [matTooltip]="actions?.logcat?.tooltip || ''"
-          data-testid="logcat-menu-item-sm"
-        >
-          <mat-icon class="dropdown-mat-icon">description</mat-icon>
-          <span>Get Logcat</span>
-        </button>
-      }
+      <ng-container *ngTemplateOutlet="actionItem; context: {
+        key: 'screenshot',
+        icon: 'screenshot',
+        label: 'Screenshot',
+        handler: onScreenshot,
+        mode: 'menu',
+        loading: takingScreenshot(),
+        loadingLabel: 'Taking...',
+        suffix: 'sm'
+      }"></ng-container>
+
+      <ng-container *ngTemplateOutlet="actionItem; context: {
+        key: 'remoteControl',
+        icon: 'important_devices',
+        label: 'Remote Control',
+        handler: onRemoteControl,
+        mode: 'menu',
+        suffix: 'sm'
+      }"></ng-container>
+
+      <ng-container *ngTemplateOutlet="actionItem; context: {
+        key: 'flash',
+        icon: 'flash_on',
+        label: 'Flash',
+        handler: onFlash,
+        mode: 'menu',
+        suffix: 'sm'
+      }"></ng-container>
+
+      <ng-container *ngTemplateOutlet="actionItem; context: {
+        key: 'logcat',
+        icon: 'description',
+        label: 'Get Logcat',
+        handler: onLogcat,
+        mode: 'menu',
+        loading: gettingLogcat(),
+        loadingLabel: 'Fetching...',
+        suffix: 'sm'
+      }"></ng-container>
+
       @if (actions?.quarantine?.visible) {
         @if (quarantineInfo?.isQuarantined) {
-          <button mat-menu-item (click)="quarantineDevice(deviceId)" [disabled]="unquarantining()" data-testid="quarantine-menu-item-sm">
-            @if (unquarantining()) {
-              <span>
-                <mat-icon class="spin-animation dropdown-mat-icon">sync</mat-icon>
-                <span>Working...</span>
-              </span>
-            } @else {
-              <span>
-                <mat-icon class="dropdown-mat-icon">play_circle_outline</mat-icon>
-                <span>Unquarantine</span>
-              </span>
-            }
-          </button>
-          <button mat-menu-item (click)="changeQuarantine(deviceId)">
-            <mat-icon class="dropdown-mat-icon">edit_calendar</mat-icon>
-            <span>Change Duration</span>
-          </button>
+          <ng-container *ngTemplateOutlet="actionItem; context: {
+            key: 'quarantine',
+            icon: 'play_circle_outline',
+            label: 'Unquarantine',
+            handler: onQuarantine,
+            mode: 'menu',
+            loading: unquarantining(),
+            loadingLabel: 'Working...',
+            suffix: 'sm'
+          }"></ng-container>
+
+          <ng-container *ngTemplateOutlet="actionItem; context: {
+            key: 'quarantine',
+            icon: 'edit_calendar',
+            label: 'Change Duration',
+            handler: onChangeQuarantine,
+            mode: 'menu',
+            suffix: 'sm'
+          }"></ng-container>
         } @else {
-          <button mat-menu-item (click)="quarantineDevice(deviceId)" data-testid="quarantine-menu-item-sm">
-            <mat-icon class="dropdown-mat-icon">block</mat-icon>
-            <span>Quarantine</span>
-          </button>
+          <ng-container *ngTemplateOutlet="actionItem; context: {
+            key: 'quarantine',
+            icon: 'block',
+            label: 'Quarantine',
+            handler: onQuarantine,
+            mode: 'menu',
+            suffix: 'sm'
+          }"></ng-container>
         }
       }
     </mat-menu>
   </div>
 </div>
+
+<ng-template #actionItem
+  let-key="key"
+  let-icon="icon"
+  let-label="label"
+  let-handler="handler"
+  let-mode="mode"
+  let-loading="loading"
+  let-loadingLabel="loadingLabel"
+  let-suffix="suffix"
+>
+  @let action = getAction(key);
+  @if (action?.visible) {
+    @if (mode === 'button') {
+      <button
+        class="m3-action-button filled"
+        (click)="handler()"
+        [disabled]="!action?.enabled || (loading ?? false)"
+        [matTooltip]="action?.tooltip || ''"
+        [attr.data-testid]="key + '-button-' + suffix"
+      >
+        @if (loading) {
+          <mat-icon class="spin-animation">sync</mat-icon>{{loadingLabel}}
+        } @else {
+          <mat-icon>{{icon}}</mat-icon>{{label}}
+        }
+      </button>
+    } @else {
+      <button
+        mat-menu-item
+        (click)="handler()"
+        [disabled]="!action?.enabled || (loading ?? false)"
+        [matTooltip]="action?.tooltip || ''"
+        [attr.data-testid]="key + '-menu-item-' + suffix"
+      >
+        @if (loading) {
+           <span>
+             <mat-icon class="spin-animation dropdown-mat-icon">sync</mat-icon>
+             <span>{{loadingLabel}}</span>
+           </span>
+        } @else {
+          <ng-container>
+            <mat-icon class="dropdown-mat-icon">{{icon}}</mat-icon>
+            <span>{{label}}</span>
+          </ng-container>
+        }
+      </button>
+    }
+  }
+</ng-template>

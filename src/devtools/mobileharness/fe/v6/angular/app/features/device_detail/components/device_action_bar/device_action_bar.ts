@@ -14,10 +14,11 @@ import {MatTooltipModule} from '@angular/material/tooltip';
 import {Observable} from 'rxjs';
 import {finalize} from 'rxjs/operators';
 import {
+  ActionButtonState,
+  DeviceActions,
   LogcatDialogData,
   QuarantineDialogData,
   RemoteControlDialogData,
-  RunAsOption,
   ScreenshotDialogData,
 } from '../../../../core/models/device_action';
 import type {DeviceOverviewPageData} from '../../../../core/models/device_overview';
@@ -71,17 +72,29 @@ export class DeviceActionBar {
     return this.pageData.overview.host.name;
   }
 
-  get isAndroid() {
-    return this.pageData.overview.basicInfo.os
-      .toLowerCase()
-      .includes('android');
+  readonly onConfiguration = this.openConfiguration.bind(this);
+
+  readonly onScreenshot = this.takeScreenshot.bind(this);
+
+  readonly onRemoteControl = this.remoteControl.bind(this);
+
+  readonly onFlash = this.flashDevice.bind(this);
+
+  readonly onLogcat = this.getLogcat.bind(this);
+
+  readonly onQuarantine = this.quarantineDevice.bind(this);
+
+  readonly onChangeQuarantine = this.changeQuarantine.bind(this);
+
+  getAction(key: keyof DeviceActions): ActionButtonState | undefined {
+    return (this.actions as unknown as Record<string, ActionButtonState>)?.[
+      key
+    ];
   }
 
-  get deviceType() {
-    return this.pageData.overview.healthAndActivity.deviceTypes[0]?.type || '';
-  }
-
-  openConfiguration(deviceId: string, hostName: string): void {
+  openConfiguration(): void {
+    const deviceId = this.deviceId;
+    const hostName = this.hostName;
     const dialogRef = this.dialog.open(DeviceConfig, {
       data: {deviceId, hostName},
       autoFocus: false,
@@ -139,7 +152,8 @@ export class DeviceActionBar {
     });
   }
 
-  takeScreenshot(deviceId: string): void {
+  takeScreenshot(): void {
+    const deviceId = this.deviceId;
     this.handleAsyncAction(
       this.takingScreenshot,
       'Taking screenshot...',
@@ -158,28 +172,31 @@ export class DeviceActionBar {
     );
   }
 
-  remoteControl(
-    deviceId: string,
-    runAsOptions: RunAsOption[],
-    defaultRunAs: string,
-  ): void {
+  remoteControl(): void {
+    const opts = this.actions?.remoteControl;
     this.dialog.open(RemoteControlDialog, {
-      data: {deviceId, runAsOptions, defaultRunAs} as RemoteControlDialogData,
+      data: {
+        deviceId: this.deviceId,
+        runAsOptions: opts?.runAsOptions || [],
+        defaultRunAs: opts?.defaultRunAs || '',
+      } as RemoteControlDialogData,
     });
   }
 
-  flashDevice(
-    deviceId: string,
-    hostName: string,
-    deviceType: string,
-    requiredDimensions: string,
-  ): void {
+  flashDevice(): void {
+    const params = this.actions?.flash?.params;
     this.dialog.open(FlashDialog, {
-      data: {deviceId, hostName, deviceType, requiredDimensions},
+      data: {
+        deviceId: this.deviceId,
+        hostName: this.hostName,
+        deviceType: params?.deviceType || '',
+        requiredDimensions: params?.requiredDimensions || '',
+      },
     });
   }
 
-  getLogcat(deviceId: string): void {
+  getLogcat(): void {
+    const deviceId = this.deviceId;
     this.handleAsyncAction(
       this.gettingLogcat,
       'Getting logcat...',
@@ -207,7 +224,8 @@ export class DeviceActionBar {
     );
   }
 
-  quarantineDevice(deviceId: string): void {
+  quarantineDevice(): void {
+    const deviceId = this.deviceId;
     const {isQuarantined} = this.quarantineInfo ?? {
       isQuarantined: false,
       expiry: '',
@@ -255,7 +273,8 @@ export class DeviceActionBar {
     }
   }
 
-  changeQuarantine(deviceId: string): void {
+  changeQuarantine(): void {
+    const deviceId = this.deviceId;
     const {expiry} = this.quarantineInfo ?? {
       isQuarantined: false,
       expiry: '',

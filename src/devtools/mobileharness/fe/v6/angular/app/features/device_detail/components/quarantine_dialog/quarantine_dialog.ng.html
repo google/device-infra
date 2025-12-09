@@ -5,35 +5,55 @@
   height="auto"
   footerType="normal"
 >
-  <mat-dialog-content class="quarantine-dialog-content">
+  <mat-dialog-content class="quarantine-dialog-content dialog-content">
     <p [innerHTML]="dialogData.description"></p>
     @if(dialogData.currentExpiry) {
       <p class="current-expiry-text">
-        Current auto-unquarantine time: <strong>{{dialogData.currentExpiry | date:'MMM d, h:mm a'}}</strong>
+        Current auto-unquarantine time: <strong>{{formattedCurrentExpiry}}</strong>
       </p>
     }
-     <div class="form-group">
-        <label for="q-duration" class="form-label">Quarantine Duration (1-168 hours)</label>
-        <input type="number" id="q-duration" class="form-input" min="1" max="168" #durationInput (input)="onDurationChange()" [(ngModel)]="durationHours">
-        @if (durationError) {
-          <mat-error class="input-error-message">{{durationError}}</mat-error>
-        }
-         <div class="quick-buttons">
-            <button (click)="setDuration(1)">1 hour</button>
-            <button (click)="setDuration(8)">8 hours</button>
-            <button (click)="setDuration(24)">1 day</button>
-         </div>
-        @if (expiryTime) {
-          <p class="expiry-preview-text">Device will be automatically unquarantined around: <strong>{{expiryTime}}</strong></p>
-        }
-    </div>
+    <mat-tab-group class="h-full" mat-stretch-tabs="false" mat-align-tabs="start" [(selectedIndex)]="selectedTabIndex" (selectedIndexChange)="onTabChange()">
+      <mat-tab label="By Duration">
+        <div class="form-group">
+          <label for="q-duration" class="form-label">Quarantine Duration</label>
+          <p class="form-label-description">Range: 10 minutes to 7 days (10,080 minutes).</p>
+          <div class="duration-input-wrapper">
+            <input type="number" id="q-duration" class="form-input" min="10" max="10080" #durationInput (input)="onDurationChange()" [(ngModel)]="durationMinutes">
+            <span class="duration-input-unit">minutes</span>
+          </div>
+          @if (durationError) {
+            <mat-error class="input-error-message">{{durationError}}</mat-error>
+          }
+           <div class="quick-buttons">
+              <button (click)="setDuration(10)">10 min</button>
+              <button (click)="setDuration(30)">30 min</button>
+              <button (click)="setDuration(60)">1 hour</button>
+              <button (click)="setDuration(480)">8 hours</button>
+              <button (click)="setDuration(1440)">1 day</button>
+           </div>
+          @if (expiryTime) {
+            <p class="expiry-preview-text">Device will be automatically unquarantined around: <strong>{{expiryTime}}</strong></p>
+          }
+        </div>
+      </mat-tab>
+      <mat-tab label="By End Time">
+        <div class="form-group">
+          <label for="q-end-time" class="form-label">Auto-unquarantine at</label>
+          <input type="datetime-local" id="q-end-time" class="form-input" (change)="onEndTimeChange()" [(ngModel)]="endTime">
+          <span class="end-time-input-hint">{{timeZoneOffset}}</span>
+          @if (endTimeError) {
+            <mat-error class="input-error-message">{{endTimeError}}</mat-error>
+          }
+        </div>
+      </mat-tab>
+    </mat-tab-group>
   </mat-dialog-content>
   <ng-template #actionsTemplate>
     <button mat-dialog-close class="dialog-button dialog-button-secondary">Cancel</button>
     <button
       class="dialog-button dialog-button-primary"
       (click)="applyQuarantine()"
-      [disabled]="quarantining()"
+      [disabled]="!isFormValid() || quarantining()"
     >
       @if (quarantining()) {
         <mat-progress-spinner mode="indeterminate" diameter="16"></mat-progress-spinner>

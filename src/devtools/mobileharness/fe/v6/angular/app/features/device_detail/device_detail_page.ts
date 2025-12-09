@@ -13,6 +13,7 @@ import {ActivatedRoute, RouterModule} from '@angular/router';
 import {Observable, of} from 'rxjs';
 import {catchError, map, switchMap} from 'rxjs/operators';
 
+import {dateUtils} from 'app/shared/utils/date_utils';
 import {DeviceOverviewPageData} from '../../core/models/device_overview';
 import {DEVICE_SERVICE} from '../../core/services/device/device_service';
 import {SnackBarService} from '../../shared/services/snackbar_service';
@@ -87,12 +88,12 @@ export class DeviceDetailPage {
     this.activeTab.set(tab);
   }
 
-  unquarantineDevice(deviceId: string) {
-    this.actionBar.quarantineDevice(deviceId);
+  unquarantineDevice() {
+    this.actionBar.quarantineDevice();
   }
 
-  changeQuarantine(deviceId: string) {
-    this.actionBar.changeQuarantine(deviceId);
+  changeQuarantine() {
+    this.actionBar.changeQuarantine();
   }
 
   formatRemainingTime(expiry: string | undefined): string {
@@ -126,5 +127,9 @@ export class DeviceDetailPage {
         this.snackBar.showError('Failed to copy text.');
         console.error('Failed to copy text: ', err);
       });
+  }
+
+  getFormattedQuarantineExpiry(expiry: string): string {
+    return dateUtils.format(expiry);
   }
 }

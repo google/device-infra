@@ -47,6 +47,8 @@ export class ScreenshotDialog implements OnInit {
   ngOnInit() {}
 
   getDisplayTimestamp(): string {
+    // We don't need to explicitly tell the timezone here, because the date
+    // string already contains the timezone.
     return dateUtils.format(this.data.capturedAt);
   }
 
