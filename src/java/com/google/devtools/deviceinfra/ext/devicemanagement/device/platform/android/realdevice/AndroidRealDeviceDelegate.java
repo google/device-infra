@@ -495,8 +495,6 @@ public abstract class AndroidRealDeviceDelegate {
     // The periodical check also applies to device initialization.
     checkOnlineModeDevice();
 
-    checkExtraSupport();
-
     if (!ifEnableFullStackFeatures()) {
       logger.atInfo().log("Device %s is ready", deviceId);
       return;
@@ -681,9 +679,6 @@ public abstract class AndroidRealDeviceDelegate {
   /** Adds extra supported drivers and decorators to the device. */
   protected abstract void addExtraRealDeviceBasicSupportedDriversDecorators()
       throws InterruptedException;
-
-  /** Checks if device provides extra supports. */
-  protected abstract void checkExtraSupport() throws InterruptedException;
 
   /** Returns {@code true} if it enables full stack features. */
   protected abstract boolean ifEnableFullStackFeatures();

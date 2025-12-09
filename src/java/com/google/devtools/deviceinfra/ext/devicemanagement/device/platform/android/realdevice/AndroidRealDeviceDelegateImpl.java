@@ -190,11 +190,6 @@ public class AndroidRealDeviceDelegateImpl extends AndroidRealDeviceDelegate {
   }
 
   @Override
-  protected void checkExtraSupport() throws InterruptedException {
-    // Do nothing by default
-  }
-
-  @Override
   protected boolean ifEnableFullStackFeatures() {
     return true;
   }
