@@ -1,0 +1,61 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto2";
+
+package mobileharness.shared.spec;
+
+import "src/java/com/google/wireless/qa/mobileharness/shared/proto/spec/base_spec.proto";
+
+option java_package = "com.google.wireless.qa.mobileharness.shared.proto.spec.decorator";
+option java_multiple_files = true;
+option java_outer_classname = "AndroidFlashGkiDecoratorSpecProto";
+
+// Specs for {@link AndroidFlashGkiDecoratorSpec}
+// Next tag: 6
+message AndroidFlashGkiDecoratorSpec {
+  extend DecoratorSpec {
+    optional AndroidFlashGkiDecoratorSpec ext = 1015;
+  }
+
+  optional string gki_boot_image = 1 [(file_detail) = {
+    help: "Path of the provided GKI boot image (file, zip, or dir)."
+  }];
+
+  optional string system_dlkm_image = 2 [(file_detail) = {
+    help: "Path of the provided system dlkm image (file, zip, or dir)."
+  }];
+
+  optional string boot_image_file = 3 [
+    (field_detail) = {
+      help: "The boot image file name/regex to search for if gki_boot_image is "
+            "a zip file or directory, for example boot-5.4-gz.img."
+    },
+    default = "boot(.*).img"
+  ];
+
+  optional bool post_reboot_device_into_user_space = 4 [
+    (field_detail) = {
+      help: "Whether to boot the device in user space after flash."
+    },
+    default = true
+  ];
+
+  optional bool support_fastbootd = 5 [
+    (field_detail) = { help: "Whether the device supports fastbootd mode." },
+    default = true
+  ];
+}
