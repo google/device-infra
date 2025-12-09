@@ -127,8 +127,7 @@ message CreateTestResponse {
     // The final container mode of the test.
     bool is_container_mode = 1;
 
-    // The final sandbox mode of the test.
-    // Since MH lab server 4.71.
+    // Sandbox mode has been disabled for security reasons. See b/466784015
     bool is_sandbox_mode = 2;
 
     stability.model.ExceptionDetail exception_detail = 4;
