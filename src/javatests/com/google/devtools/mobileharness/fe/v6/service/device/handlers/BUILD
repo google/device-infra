@@ -48,6 +48,7 @@ java_library(
         "@maven//:javax_inject_jsr330_api",
         "@maven//:junit_junit",
         "@maven//:org_mockito_mockito_core",
+        "@protobuf//:protobuf_java_util",
     ],
 )
 

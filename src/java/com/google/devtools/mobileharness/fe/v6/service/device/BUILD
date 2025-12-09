@@ -74,6 +74,7 @@ java_library(
     srcs = ["DeviceServiceLogicImpl.java"],
     deps = [
         ":device_service_logic",
+        "//src/devtools/mobileharness/fe/v6/service/proto/device:device_resources_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/device:device_service_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/device:device_stats_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/device/handlers",
