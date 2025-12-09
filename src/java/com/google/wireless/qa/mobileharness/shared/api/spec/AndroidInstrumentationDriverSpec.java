@@ -48,6 +48,11 @@ public interface AndroidInstrumentationDriverSpec {
 
   @FileAnnotation(
       required = false,
+      help = "The orchestrator.apk. Required if use_orchestrator is true.")
+  String TAG_ORCHESTRATOR_APK = "orchestrator_apk";
+
+  @FileAnnotation(
+      required = false,
       help =
           "The test data. It should be rooted at Google3. You can access it by "
               + "AndroidTestUtil.getTestDataInputStream(). See https://sites.google.com/a/"

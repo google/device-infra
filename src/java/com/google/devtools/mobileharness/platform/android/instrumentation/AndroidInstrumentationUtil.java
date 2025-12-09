@@ -682,7 +682,7 @@ public class AndroidInstrumentationUtil {
     return instrumentations;
   }
 
-  /** Prepares basic services apk and test services apk on the device. */
+  /** Prepares basic services apk, test services apk, and orchestrator apk on the device. */
   public void prepareServicesApks(
       TestInfo testInfo,
       Device device,
@@ -690,7 +690,7 @@ public class AndroidInstrumentationUtil {
       @Nullable AppInstallStartHandler appInstallStartHandler,
       @Nullable AppInstallFinishHandler appInstallFinishHandler)
       throws MobileHarnessException, InterruptedException {
-    // Installs the basic_services.apk and test_services.apk to support AndroidTestUtil methods.
+    // Installs the basic_services.apk to support AndroidTestUtil methods.
     String basicServiceApkPath =
         testInfo
                 .jobInfo()
@@ -703,6 +703,17 @@ public class AndroidInstrumentationUtil {
                 .files()
                 .getSingle(AndroidInstrumentationDriverSpec.TAG_BASIC_SERVICES_APK);
     String basicServicePackageName = aapt.getApkPackageName(basicServiceApkPath);
+    ApkInstallArgs basicServiceApkInstallArgs =
+        createServiceApkInstallArgs(basicServiceApkPath, deviceSdkVersion, testInfo);
+    installServiceApk(
+        device,
+        basicServiceApkInstallArgs,
+        testInfo,
+        basicServicePackageName,
+        appInstallStartHandler,
+        appInstallFinishHandler);
+
+    // Installs the test_services.apk to support AndroidTestUtil methods.
     String testServicesApkPath =
         testInfo
                 .jobInfo()
@@ -715,54 +726,37 @@ public class AndroidInstrumentationUtil {
                 .files()
                 .getSingle(AndroidInstrumentationDriverSpec.TAG_TEST_SERVICES_APK);
     String testServicePackageName = aapt.getApkPackageName(testServicesApkPath);
+    ApkInstallArgs testServicesApkInstallArgs =
+        createServiceApkInstallArgs(testServicesApkPath, deviceSdkVersion, testInfo);
+    installServiceApk(
+        device,
+        testServicesApkInstallArgs,
+        testInfo,
+        testServicePackageName,
+        appInstallStartHandler,
+        appInstallFinishHandler);
 
-    /*
-     * Install (or force a re-install for) basic services and test services app depending on
-     * AndroidInstrumentationDriverSpec.PARAM_FORCE_REINSTALL_BASIC_SERVICE_APK. Some other apps
-     * will access test files via this service app by ContentProvider in last test run. Forcing
-     * service app reinstall will break such access to make it easier for cleaning the googletest
-     * folder later. Related story: b/20096164 (hard to clean), b/24283449 (caused by cleaning
-     * failing in MNC).
-     */
-    ApkInstallArgs.Builder basicServiceBuilder =
-        ApkInstallArgs.builder()
-            .setApkPath(basicServiceApkPath)
-            .setGrantPermissions(true)
-            .setSkipDowngrade(false);
-    ApkInstallArgs.Builder testServiceBuilder =
-        ApkInstallArgs.builder()
-            .setApkPath(testServicesApkPath)
-            .setGrantPermissions(true)
-            .setSkipDowngrade(false);
-    if (testInfo
+    // Install the orchestrator apk if it is set.
+    if (!testInfo
         .jobInfo()
-        .params()
-        .getBool(
-            AndroidInstrumentationDriverSpec.PARAM_FORCE_REINSTALL_BASIC_SERVICE_APK,
-            DEFAULT_FORCE_REINSTALL_BASIC_SERVICE_APK)) {
-      basicServiceBuilder = basicServiceBuilder.setSkipIfCached(false);
-      testServiceBuilder = testServiceBuilder.setSkipIfCached(false);
-    }
-
-    if (deviceSdkVersion >= AndroidVersion.ANDROID_11.getStartSdkVersion()) {
-      basicServiceBuilder.setForceQueryable(true);
-      testServiceBuilder.setForceQueryable(true);
-    }
-
-    if (appInstallStartHandler != null) {
-      appInstallStartHandler.onAppInstallStart(testInfo, basicServicePackageName);
-    }
-    apkInstaller.installApk(device, basicServiceBuilder.build(), testInfo.log());
-    if (appInstallFinishHandler != null) {
-      appInstallFinishHandler.onAppInstallFinish(testInfo, basicServicePackageName);
-    }
-
-    if (appInstallStartHandler != null) {
-      appInstallStartHandler.onAppInstallStart(testInfo, testServicePackageName);
-    }
-    apkInstaller.installApk(device, testServiceBuilder.build(), testInfo.log());
-    if (appInstallFinishHandler != null) {
-      appInstallFinishHandler.onAppInstallFinish(testInfo, testServicePackageName);
+        .files()
+        .get(AndroidInstrumentationDriverSpec.TAG_ORCHESTRATOR_APK)
+        .isEmpty()) {
+      var orchestratorApkPath =
+          testInfo
+              .jobInfo()
+              .files()
+              .getSingle(AndroidInstrumentationDriverSpec.TAG_ORCHESTRATOR_APK);
+      var orchestratorPackageName = aapt.getApkPackageName(orchestratorApkPath);
+      var orchestratorApkInstallArgs =
+          createServiceApkInstallArgs(orchestratorApkPath, deviceSdkVersion, testInfo);
+      installServiceApk(
+          device,
+          orchestratorApkInstallArgs,
+          testInfo,
+          orchestratorPackageName,
+          appInstallStartHandler,
+          appInstallFinishHandler);
     }
 
     if (testInfo
@@ -777,6 +771,53 @@ public class AndroidInstrumentationUtil {
         enableManageExternalStorageForApk(device.getDeviceId(), testServicePackageName);
       }
     }
+  }
+
+  private void installServiceApk(
+      Device device,
+      ApkInstallArgs apkInstallArgs,
+      TestInfo testInfo,
+      String packageName,
+      @Nullable AppInstallStartHandler appInstallStartHandler,
+      @Nullable AppInstallFinishHandler appInstallFinishHandler)
+      throws MobileHarnessException, InterruptedException {
+    if (appInstallStartHandler != null) {
+      appInstallStartHandler.onAppInstallStart(testInfo, packageName);
+    }
+    apkInstaller.installApk(device, apkInstallArgs, testInfo.log());
+    if (appInstallFinishHandler != null) {
+      appInstallFinishHandler.onAppInstallFinish(testInfo, packageName);
+    }
+  }
+
+  private ApkInstallArgs createServiceApkInstallArgs(
+      String apkPath, int deviceSdkVersion, TestInfo testInfo) {
+    ApkInstallArgs.Builder builder =
+        ApkInstallArgs.builder()
+            .setApkPath(apkPath)
+            .setGrantPermissions(true)
+            .setSkipDowngrade(false);
+
+    /*
+     * Install (or force a re-install for) basic services and test services app depending on
+     * AndroidInstrumentationDriverSpec.PARAM_FORCE_REINSTALL_BASIC_SERVICE_APK. Some other apps
+     * will access test files via this service app by ContentProvider in last test run. Forcing
+     * service app reinstall will break such access to make it easier for cleaning the googletest
+     * folder later. Related story: b/20096164 (hard to clean), b/24283449 (caused by cleaning
+     * failing in MNC).
+     */
+    if (testInfo
+        .jobInfo()
+        .params()
+        .getBool(
+            AndroidInstrumentationDriverSpec.PARAM_FORCE_REINSTALL_BASIC_SERVICE_APK,
+            DEFAULT_FORCE_REINSTALL_BASIC_SERVICE_APK)) {
+      builder.setSkipIfCached(false);
+    }
+    if (deviceSdkVersion >= AndroidVersion.ANDROID_11.getStartSdkVersion()) {
+      builder.setForceQueryable(true);
+    }
+    return builder.build();
   }
 
   /**
