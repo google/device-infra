@@ -6,6 +6,7 @@ import {
   inject,
 } from '@angular/core';
 import {MAT_DIALOG_DATA} from '@angular/material/dialog';
+import {map} from 'rxjs/operators';
 import {CONFIG_SERVICE} from '../../../../core/services/config/config_service';
 import {HostEmpty} from './host_empty/host_empty';
 import {HostSettings} from './host_settings/host_settings';
@@ -28,7 +29,19 @@ export class HostConfig implements OnInit {
 
   private readonly configService = inject(CONFIG_SERVICE);
 
-  readonly configResult$ = this.configService.getHostConfig(this.data.hostName);
+  readonly configResult$ = this.configService
+    .getHostConfig(this.data.hostName)
+    .pipe(
+      map((result) => {
+        if (
+          result.hostConfig?.deviceConfigMode ===
+          'NODEVICE_CONFIG_MODE_UNSPECIFIEDNE'
+        ) {
+          result.hostConfig.deviceConfigMode = 'PER_DEVICE';
+        }
+        return result;
+      }),
+    );
 
   ngOnInit() {}
 }

@@ -1,7 +1,39 @@
+import {DeviceConfig} from '../../../models/device_config_models';
+import {HostConfig} from '../../../models/host_config_models';
 import {DeviceSummary, HostOverview} from '../../../models/host_overview';
 import {MockHostScenario} from '../models';
 
 import {createDefaultUiStatus} from './ui_status_utils';
+
+const DEFAULT_DEVICE_CONFIG: DeviceConfig = {
+  permissions: {owners: ['admin1'], executors: ['user1']},
+  wifi: {type: 'none', ssid: '', psk: '', scanSsid: false},
+  dimensions: {supported: [], required: []},
+  settings: {maxConsecutiveFail: 5, maxConsecutiveTest: 10000},
+};
+
+const HOST_CONFIG: HostConfig = {
+  permissions: {
+    hostAdmins: ['admin1', 'derekchen'],
+    sshAccess: [],
+  },
+  deviceConfigMode: 'PER_DEVICE',
+  deviceConfig: DEFAULT_DEVICE_CONFIG,
+  hostProperties: [
+    {key: 'cpu-arch', value: 'x86_64'},
+    {key: 'gpu-type', value: 'NVIDIA-A100'},
+    {key: 'ram-gb', value: '256'},
+    {key: 'storage-type', value: 'SSD'},
+  ],
+  deviceDiscovery: {
+    monitoredDeviceUuids: [],
+    testbedUuids: [],
+    miscDeviceUuids: [],
+    overTcpIps: [],
+    overSshDevices: [],
+    manekiSpecs: [],
+  },
+};
 
 const overview: HostOverview = {
   hostName: 'host-a-1.example.com',
@@ -146,8 +178,8 @@ export const OVERVIEW_01: MockHostScenario = {
   overview,
   deviceSummaries,
   hostConfigResult: {
-    hostConfig: undefined,
+    hostConfig: HOST_CONFIG,
     uiStatus: createDefaultUiStatus(),
   },
-  defaultDeviceConfig: null,
+  defaultDeviceConfig: DEFAULT_DEVICE_CONFIG,
 };
