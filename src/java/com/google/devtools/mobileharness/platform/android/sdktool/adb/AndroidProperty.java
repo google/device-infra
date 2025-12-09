@@ -51,10 +51,8 @@ public enum AndroidProperty {
   CODENAME("ro.build.version.codename"),
   COLOR("ro.boot.hardware.color"),
   DEVICE("ro.product.vendor.device", "ro.vendor.product.device", "ro.product.device"),
-  DEVKEY_ALLOW("ro.boot.devkey-allow"),
   @DoNotAddToDimension
   DISABLE_CALL("ro.telephony.disable-call"),
-  DPM_STATE("ro.boot.dpm_state"),
   @DoNotAddToDimension
   FLAVOR("ro.build.flavor"),
   GSM_OPERATOR_ALPHA("gsm.operator.alpha"),
