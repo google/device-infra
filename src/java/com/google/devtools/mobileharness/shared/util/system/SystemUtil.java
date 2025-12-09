@@ -542,17 +542,21 @@ public class SystemUtil {
   }
 
   /**
-   * Gets the IDs of the processes which are listening the given port.
+   * Gets the IDs of the processes which are listening the given ports.
    *
+   * @param ports the ports to check, separated by comma or as a port range, e.g. "12345,65432" or
+   *     "12345-65432"
    * @return the IDs of the processes, or empty if there is no process listening the given port
    */
-  public Set<Integer> getProcessesByPort(int port)
+  public Set<Integer> getProcessesByPort(String ports)
       throws MobileHarnessException, InterruptedException {
     Set<Integer> processIds = new HashSet<>();
     String output;
     try {
       output =
-          executor.exec(Command.of("lsof", "-i", ":" + port)).stdoutWithoutTrailingLineTerminator();
+          executor
+              .exec(Command.of("lsof", "-i", ":" + ports))
+              .stdoutWithoutTrailingLineTerminator();
     } catch (CommandException e) {
       // If there is no process using the given port, the above command will throw out exception.
       // Catches it and return the empty set.
@@ -607,6 +611,16 @@ public class SystemUtil {
       }
     }
     return processIds;
+  }
+
+  /**
+   * Gets the IDs of the processes which are listening the given port.
+   *
+   * @return the IDs of the processes, or empty if there is no process listening the given port
+   */
+  public Set<Integer> getProcessesByPort(int port)
+      throws MobileHarnessException, InterruptedException {
+    return getProcessesByPort(String.valueOf(port));
   }
 
   /**
