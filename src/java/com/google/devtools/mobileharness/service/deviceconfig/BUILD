@@ -24,10 +24,19 @@ java_library(
     name = "device_config_module",
     srcs = ["DeviceConfigModule.java"],
     deps = [
+        ":annotations",
         "//src/java/com/google/devtools/mobileharness/service/deviceconfig/storage:local_file_storage_client",
         "//src/java/com/google/devtools/mobileharness/service/deviceconfig/storage:storage_client",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "@maven//:com_google_inject_guice",
+        "@maven//:javax_inject_jsr330_api",
     ],
+)
+
+java_library(
+    name = "annotations",
+    srcs = ["Annotations.java"],
+    deps = ["@maven//:javax_inject_jsr330_api"],
 )
 
 java_library(
@@ -35,8 +44,10 @@ java_library(
     srcs = ["DeviceConfigServer.java"],
     runtime_deps = ["@grpc-java//netty"],
     deps = [
+        ":annotations",
         ":device_config_module",
         "//src/java/com/google/devtools/mobileharness/service/deviceconfig/rpc/service/grpc:device_config_grpc_impl",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@grpc-java//core",
         "@grpc-java//services:reflection",

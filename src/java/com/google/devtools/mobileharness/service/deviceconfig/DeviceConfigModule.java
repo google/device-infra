@@ -18,7 +18,10 @@ package com.google.devtools.mobileharness.service.deviceconfig;
 
 import com.google.devtools.mobileharness.service.deviceconfig.storage.LocalFileStorageClient;
 import com.google.devtools.mobileharness.service.deviceconfig.storage.StorageClient;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.inject.AbstractModule;
+import com.google.inject.Provides;
+import javax.inject.Singleton;
 
 /** The Guice module for device config service. */
 public class DeviceConfigModule extends AbstractModule {
@@ -27,5 +30,12 @@ public class DeviceConfigModule extends AbstractModule {
   protected void configure() {
     // TODO: b/460296020 - Add a flag to control which storage client to use.
     bind(StorageClient.class).to(LocalFileStorageClient.class);
+  }
+
+  @Provides
+  @Singleton
+  @Annotations.ServerPort
+  int provideServerPort() {
+    return Flags.instance().configServiceGrpcPort.getNonNull();
   }
 }

@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.service.deviceconfig;
 
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.service.deviceconfig.rpc.service.grpc.DeviceConfigGrpcImpl;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.inject.Guice;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
@@ -27,28 +28,27 @@ import javax.inject.Inject;
 
 /** The starter of the DeviceConfigServer. */
 final class DeviceConfigServer {
-  // TODO: b/460296020 - use a flag to specify the port.
-  private static final Integer CONFIG_SERVER_GRPC_PORT = 10000;
-
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
+  private final int port;
   private final DeviceConfigGrpcImpl deviceConfigService;
   private volatile Server grpcServer;
 
   @Inject
-  DeviceConfigServer(DeviceConfigGrpcImpl deviceConfigService) {
+  DeviceConfigServer(DeviceConfigGrpcImpl deviceConfigService, @Annotations.ServerPort int port) {
     this.deviceConfigService = deviceConfigService;
+    this.port = port;
   }
 
   /** Starts the device config server and blocks until it's terminated. */
   public void start() throws IOException {
     grpcServer =
-        ServerBuilder.forPort(CONFIG_SERVER_GRPC_PORT)
+        ServerBuilder.forPort(port)
             .addService(deviceConfigService)
             .addService(ProtoReflectionService.newInstance())
             .build();
     grpcServer.start();
-    logger.atInfo().log("Device config server started on port %d", CONFIG_SERVER_GRPC_PORT);
+    logger.atInfo().log("Device config server started on port %d", port);
 
     Runtime.getRuntime().addShutdownHook(new Thread(this::stop));
   }
@@ -69,6 +69,8 @@ final class DeviceConfigServer {
   }
 
   public static void main(String[] args) throws InterruptedException, IOException {
+    Flags.parse(args);
+
     DeviceConfigServer deviceConfigServer =
         Guice.createInjector(new DeviceConfigModule()).getInstance(DeviceConfigServer.class);
     deviceConfigServer.start();

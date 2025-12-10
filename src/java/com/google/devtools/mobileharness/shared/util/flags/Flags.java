@@ -626,6 +626,14 @@ public class Flags {
       converter = Flag.IntegerConverter.class)
   public Flag<Integer> commandPort = commandPortDefault;
 
+  private static final Flag<Integer> configServiceGrpcPortDefault = Flag.value(8081);
+
+  @com.beust.jcommander.Parameter(
+      names = "--config_service_grpc_port",
+      description = "gRPC port of the config service.",
+      converter = Flag.IntegerConverter.class)
+  public Flag<Integer> configServiceGrpcPort = configServiceGrpcPortDefault;
+
   private static final Flag<Boolean> connectToLabServerUsingIpDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(
