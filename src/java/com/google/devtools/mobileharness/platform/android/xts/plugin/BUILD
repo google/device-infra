@@ -66,3 +66,20 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+java_library(
+    name = "ats_device_recovery_plugin",
+    srcs = ["AtsDeviceRecoveryPlugin.java"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/platform/android/systemstate:system_state_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event:lab_test_events",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/controller/plugin",
+        "@maven//:com_google_guava_guava",
+    ],
+)

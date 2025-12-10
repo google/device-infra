@@ -52,6 +52,7 @@ import com.google.devtools.mobileharness.infra.controller.test.util.atsfileserve
 import com.google.devtools.mobileharness.infra.controller.test.util.testlogcollector.TestLogCollectorPlugin;
 import com.google.devtools.mobileharness.infra.controller.test.util.xtsdownloader.MctsDynamicDownloadPlugin;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
+import com.google.devtools.mobileharness.platform.android.xts.plugin.AtsDeviceRecoveryPlugin;
 import com.google.devtools.mobileharness.platform.android.xts.plugin.NonTradefedReportGenerator;
 import com.google.devtools.mobileharness.platform.android.xts.plugin.XtsDeviceCompatibilityChecker;
 import com.google.devtools.mobileharness.platform.testbed.adhoc.controller.AdhocTestbedDriverFactory;
@@ -153,6 +154,11 @@ public class LocalTestFlow {
     if (isAtsFileServerUploaderEnabled(testInfo)) {
       builtinPluginsBuilder.add(
           PluginItem.create(new AtsFileServerUploaderPlugin(), EventScope.CLASS_INTERNAL));
+    }
+    // TODO: Refactor to not add platform specific plugin here directly.
+    if (isAtsModeEnabled()) {
+      builtinPluginsBuilder.add(
+          PluginItem.create(new AtsDeviceRecoveryPlugin(), EventScope.CLASS_INTERNAL));
     }
     builtinPluginsBuilder.add(
         PluginItem.create(new TestCommandHistorySaver(), EventScope.CLASS_INTERNAL),
@@ -754,8 +760,12 @@ public class LocalTestFlow {
   }
 
   private static boolean isAtsFileServerUploaderEnabled(TestInfo testInfo) {
-    return Flags.instance().enableAtsFileServerUploader.getNonNull()
+    return isAtsModeEnabled()
         && Objects.equals(testInfo.jobInfo().properties().get(Job.CLIENT_TYPE), "olc");
+  }
+
+  private static boolean isAtsModeEnabled() {
+    return Flags.instance().enableAtsMode.getNonNull();
   }
 
   private static boolean isTestLogCollectorEnabled() {

@@ -401,6 +401,15 @@ public class Flags {
       converter = DurationFlag.DurationConverter.class)
   public Flag<Duration> atsDdaLeaseExpirationTime = atsDdaLeaseExpirationTimeDefault;
 
+  private static final Flag<Duration> atsDeviceRecoveryTimeoutDefault =
+      DurationFlag.value(Duration.ofMinutes(5L));
+
+  @com.beust.jcommander.Parameter(
+      names = "--ats_device_recovery_timeout",
+      description = "The timeout for ATS pre and post test device recovery. Default is 5 minutes.",
+      converter = DurationFlag.DurationConverter.class)
+  public Flag<Duration> atsDeviceRecoveryTimeout = atsDeviceRecoveryTimeoutDefault;
+
   private static final Flag<Duration> atsDeviceRemovalTimeDefault =
       DurationFlag.value(Duration.ofDays(7L));
 
@@ -902,7 +911,8 @@ public class Flags {
 
   @com.beust.jcommander.Parameter(
       names = "--enable_ats_mode",
-      description = "Enable ATS mode if it's true.",
+      description =
+          "Enable ATS mode if it's true. This flag is intended to serve ATS UI traffic only.",
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableAtsMode = enableAtsModeDefault;
 
@@ -1080,14 +1090,6 @@ public class Flags {
       description = "For file cleaner, enable/disable checkFileSystemIo in each check interval.",
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableFileSystemIoCheck = enableFileSystemIoCheckDefault;
-
-  private static final Flag<Boolean> enableAtsFileServerUploaderDefault = Flag.value(false);
-
-  @com.beust.jcommander.Parameter(
-      names = "--enable_ats_file_server_uploader",
-      description = "Whether to enable ATS file server uploader. Default is false.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableAtsFileServerUploader = enableAtsFileServerUploaderDefault;
 
   private static final Flag<Boolean> enableFastbootDetectorDefault = Flag.value(true);
 
