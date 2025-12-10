@@ -7,7 +7,7 @@ const overview: HostOverview = {
   hostName: 'host-d-4.example.com',
   ip: '192.168.3.103',
   os: 'gLinux',
-  labTypeDisplayName: 'Satellite Lab',
+  labTypeDisplayNames: ['Satellite Lab'],
   labServer: {
     connectivity: {
       state: 'MISSING',

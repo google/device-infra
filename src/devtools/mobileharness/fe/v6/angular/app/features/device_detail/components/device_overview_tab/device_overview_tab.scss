@@ -1,12 +1,20 @@
 @use '@angular/material' as mat;
-
-// Styles for Device Overview Tab
-// Extracted and adapted from the prototype's style block.
-$labconsole-font: Roboto, sans-serif;
+@use  '../../../../shared/styles/overview.scss' as overview;
 
 :host {
   display: block;
-  font-family: $labconsole-font;
+  font-family: overview.$labconsole-font;
+}
+
+::ng-deep .testbed-config-dialog-panel {
+  @include mat.dialog-overrides((
+    container-shape: 16px,
+    headline-padding: 0 24px 9px 0,
+    subhead-tracking: 0,
+    subhead-font: overview.$labconsole-font,
+    supporting-text-tracking: 0,
+    supporting-text-font: overview.$labconsole-font,
+  ));
 }
 
 .hidden {
@@ -228,6 +236,11 @@ $labconsole-font: Roboto, sans-serif;
   color: white;
 }
 
+.type-chip-busy {
+  background-color: #e8f0fe;
+  color: #1a73e8;
+}
+
 .no-types {
   color: #d93025;
   font-style: italic;
@@ -362,6 +375,81 @@ $labconsole-font: Roboto, sans-serif;
   }
 }
 
+// Sub-device Cards
+.sub-device-cards-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+
+  .info-card.sub-device-card {
+    background-color: #fff;
+  }
+
+  &.sub-device-grid {
+    @media screen and (min-width: 1440px) {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+    }
+  }
+}
+
+.sub-device-details-grid {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  gap: 0.75rem 1.5rem;
+  align-items: flex-start;
+  font-size: 0.875rem;
+
+  dt {
+    font-weight: 500;
+    color: #5f6368;
+    padding-top: 0.25rem;
+  }
+
+  dd {
+    color: #202124;
+    min-width: 0;
+    margin: 0;
+  }
+}
+
+.sub-device-search-field {
+  width: 100%;
+  margin-bottom: 0.5rem;
+  background-color: white;
+
+  @include mat.form-field-density(-4);
+  @include mat.form-field-overrides((
+    container-height: 36px,
+    container-vertical-padding: 0,
+  ));
+
+  .mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+
+  // Ensure suffix button doesn't cause layout shifts
+  button[matSuffix] {
+    width: 28px; // Reduce width slightly
+    height: 28px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 2px;
+    margin-right: 4px;
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+  }
+}
+
 // Permissions Card
 .permissions-content {
   display: flex;
@@ -453,29 +541,23 @@ $labconsole-font: Roboto, sans-serif;
   margin-bottom: 1rem;
   background-color: white;
 
+  // @include mat.form-field-density(-2);
+
   @include mat.form-field-overrides((
-    container-height: 40px,
+    container-height: 36px,
+    container-vertical-padding: 0,
   ));
 
-  // The overrides mixin might not cover all internal padding adjustments needed for centering
-  // in all versions, but avoids deep piercing where possible.
-  // If specific internal alignment is still off without ng-deep, standard class targeting
-  // without ViewEncapsulation.None (if used) or specific non-deep selectors should be preferred
-  // but mat-form-field internals are hard to style without it or mixins.
-  // Assuming the overrides above handle the main height.
-  // For centering, if density is not enough, we might need density mixins.
-  @include mat.form-field-density(-4);
-
-  // Adjust suffix button to prevent layout shift and fit in 40px height
+  // Adjust suffix button to prevent layout shift
   button[matSuffix] {
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     padding: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-left: 4px; // Add some spacing
-    margin-right: 8px; // Move away from the right edge
+    margin-left: 2px;
+    margin-right: 6px;
 
     mat-icon {
       font-size: 18px;
@@ -568,3 +650,12 @@ $labconsole-font: Roboto, sans-serif;
 .mt-6 {
   margin-top: 1.5rem;
 }
+
+.sub-device-search-field,
+.overview-search-field {
+  .filter-input {
+    line-height: 36px;
+  }
+}
+
+

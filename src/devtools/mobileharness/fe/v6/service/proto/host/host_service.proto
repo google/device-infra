@@ -33,6 +33,23 @@ service HostService {
       get: "/v6/hosts/{host_name}/overview"
     };
   }
+
+  // Retrieves device summaries for a specific host.
+  rpc GetHostDeviceSummaries(GetHostDeviceSummariesRequest)
+      returns (GetHostDeviceSummariesResponse) {
+    option (google.api.http) = {
+      get: "/v6/hosts/{host_name}/device_summaries"
+    };
+  }
+
+  // Updates the pass through flags for a specific host.
+  rpc UpdatePassThroughFlags(UpdatePassThroughFlagsRequest)
+      returns (UpdatePassThroughFlagsResponse) {
+    option (google.api.http) = {
+      post: "/v6/hosts/{host_name}/update_pass_through_flags"
+      body: "*"
+    };
+  }
 }
 
 // Request message for GetHostOverview.
@@ -40,3 +57,26 @@ message GetHostOverviewRequest {
   // The unique name of the host.
   string host_name = 1;
 }
+
+// Request message for GetHostDeviceSummaries.
+message GetHostDeviceSummariesRequest {
+  // The unique name of the host.
+  string host_name = 1;
+}
+
+// Response message for GetHostDeviceSummaries.
+message GetHostDeviceSummariesResponse {
+  // The list of device summaries.
+  repeated DeviceSummary device_summaries = 1;
+}
+
+// Request message for UpdatePassThroughFlags.
+message UpdatePassThroughFlagsRequest {
+  // The unique name of the host.
+  string host_name = 1;
+  // The new pass through flags.
+  string flags = 2;
+}
+
+// Response message for UpdatePassThroughFlags.
+message UpdatePassThroughFlagsResponse {}

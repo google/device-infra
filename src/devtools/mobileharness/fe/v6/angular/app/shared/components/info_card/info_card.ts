@@ -13,7 +13,7 @@ import {MatIconModule} from '@angular/material/icon';
   styleUrl: './info_card.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, MatIconModule],
-  host: {'class': 'overview-card'},
+  host: {'class': 'info-card'},
 })
 export class InfoCard implements OnInit {
   @Input() expanded = true;
