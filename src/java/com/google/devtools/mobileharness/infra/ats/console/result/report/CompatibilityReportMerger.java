@@ -154,14 +154,6 @@ public class CompatibilityReportMerger {
   public Optional<Result> mergeReports(
       List<Result> reports, boolean validateReports, boolean skipDeviceInfo)
       throws MobileHarnessException {
-    // Make sure at least one of the reports has build info.
-    if (!skipDeviceInfo
-        && reports.stream().noneMatch(CompatibilityReportMerger::reportHasBuildInfo)) {
-      throw new MobileHarnessException(
-          ExtErrorId.REPORT_MERGER_NO_DEVICE_BUILD_FINGERPRINT_FOUND,
-          "Did not find any report with device build_fingerprint");
-    }
-
     if (!skipDeviceInfo && validateReports && !validateReportsWithSameBuildFingerprint(reports)) {
       return Optional.empty();
     }
@@ -456,8 +448,8 @@ public class CompatibilityReportMerger {
         reports.stream()
             .filter(CompatibilityReportMerger::reportHasBuildInfo)
             .findFirst()
-            .get()
-            .getBuild();
+            .map(Result::getBuild)
+            .orElse(BuildInfo.getDefaultInstance());
     ImmutableList<Attribute> attrs =
         buildInfo.getAttributeList().stream()
             .filter(
@@ -489,9 +481,8 @@ public class CompatibilityReportMerger {
             .findFirst()
             .orElse(null);
     if (firstReport == null) {
-      throw new MobileHarnessException(
-          ExtErrorId.REPORT_MERGER_NO_DEVICE_BUILD_FINGERPRINT_FOUND,
-          "Did not find any report with device build_fingerprint");
+      // If none of the reports have build info, it's ok and we'll skip the validation.
+      return true;
     }
     String baseBuildFingerprint = getBuildFingerprint(firstReport);
     for (Result report : reports) {
