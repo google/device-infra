@@ -27,3 +27,11 @@ export function setSafeHref(anchor: HTMLAnchorElement, url: string | URL) {
 export function revokeObjectURL(url: string) {
   URL.revokeObjectURL(url);
 }
+
+/**
+ * Opens a code search query in a new tab.
+ */
+export function openCodeSearch(query: string) {
+  const url = `https://cs.opensource.google/search?q=${query}`;
+  openInNewTab(url);
+}

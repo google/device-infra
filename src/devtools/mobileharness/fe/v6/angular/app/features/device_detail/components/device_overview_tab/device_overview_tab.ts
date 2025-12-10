@@ -1,8 +1,10 @@
+import {BreakpointObserver} from '@angular/cdk/layout';
 import {CommonModule} from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  inject,
   Input,
   OnChanges,
   OnDestroy,
@@ -12,6 +14,7 @@ import {
 } from '@angular/core';
 import {FormsModule} from '@angular/forms';
 import {MatButtonModule} from '@angular/material/button';
+import {MatDialog, MatDialogModule} from '@angular/material/dialog';
 import {MatFormFieldModule} from '@angular/material/form-field';
 import {MatIconModule} from '@angular/material/icon';
 import {MatInputModule} from '@angular/material/input';
@@ -20,8 +23,11 @@ import {debounceTime, distinctUntilChanged, takeUntil} from 'rxjs/operators';
 import type {DeviceOverview} from '../../../../core/models/device_overview';
 import {
   HealthState,
+  type DeviceDimension,
   type DimensionSourceGroup,
+  type SubDeviceInfo,
 } from '../../../../core/models/device_overview';
+import {DEVICE_SERVICE} from '../../../../core/services/device/device_service';
 import {InfoCard} from '../../../../shared/components/info_card/info_card';
 import {
   NavItem,
@@ -29,6 +35,7 @@ import {
 } from '../../../../shared/components/overview_page/overview_page';
 import {dateUtils} from '../../../../shared/utils/date_utils';
 import {objectUtils} from '../../../../shared/utils/object_utils';
+import {TestbedConfigViewer} from '../testbed_config_viewer/testbed_config_viewer';
 
 interface HealthStateUI {
   icon: string;
@@ -61,6 +68,7 @@ interface DimensionItem {
     MatIconModule,
     MatInputModule,
     MatFormFieldModule,
+    MatDialogModule,
     OverviewPage,
     InfoCard,
   ],
@@ -69,37 +77,20 @@ interface DimensionItem {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DeviceOverviewTab implements OnInit, OnDestroy, OnChanges {
+  private readonly breakpointObserver = inject(BreakpointObserver);
+  private readonly dialog = inject(MatDialog);
+  private readonly deviceService = inject(DEVICE_SERVICE);
+
   @Input({required: true}) device!: DeviceOverview;
 
-  navList: NavItem[] = [
-    {
-      id: 'overview-health',
-      label: 'Health & Activity',
-    },
-    {
-      id: 'overview-system',
-      label: 'Basic Information',
-    },
-    {
-      id: 'overview-permissions',
-      label: 'Permissions',
-    },
-    {
-      id: 'overview-capabilities',
-      label: 'Capabilities',
-    },
-    {
-      id: 'overview-dimensions',
-      label: 'Dimensions',
-    },
-    {
-      id: 'overview-properties',
-      label: 'Properties',
-    },
-  ];
+  navList: NavItem[] = [];
 
   readonly objectUtils = objectUtils;
   readonly dateUtils = dateUtils;
+
+  // Dimensions filtering
+  dimensionsSearchTerm = '';
+  private readonly searchSubject = new Subject<string>();
 
   flatDimensions: DimensionItem[] = [];
   filteredDimensions = signal<DimensionItem[]>([]);
@@ -111,9 +102,6 @@ export class DeviceOverviewTab implements OnInit, OnDestroy, OnChanges {
     this.getGroupedData('required'),
   );
 
-  dimensionsSearchTerm = '';
-  private readonly searchSubject = new Subject<string>();
-
   // Capabilities filtering
   driversSearchTerm = '';
   decoratorsSearchTerm = '';
@@ -122,20 +110,32 @@ export class DeviceOverviewTab implements OnInit, OnDestroy, OnChanges {
   filteredDrivers = signal<string[]>([]);
   filteredDecorators = signal<string[]>([]);
 
+  isSubDeviceCollapsible = signal(true);
+
+  // Sub-device filtering
+  subDeviceDimensionSearchTerms: Record<string, string> = {};
+
   private readonly destroy$ = new Subject<void>();
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['device']) {
-      // Reset active section when device changes, e.g., navigating between devices
+    if (changes['device'] && this.device) {
+      this.navList = this.getNavList();
+
       this.initCapabilities();
       this.initFlatDimensions();
       this.filteredDimensions.set(
         this.filterDimensions(this.dimensionsSearchTerm),
       );
+
+      this.updateCollapsibleBasedOnScreenWidth(
+        this.breakpointObserver.isMatched('(min-width: 1440px)'),
+      );
     }
   }
 
   ngOnInit(): void {
+    this.navList = this.getNavList();
+
     this.searchSubject
       .pipe(debounceTime(100), distinctUntilChanged(), takeUntil(this.destroy$))
       .subscribe((searchTerm) => {
@@ -154,6 +154,65 @@ export class DeviceOverviewTab implements OnInit, OnDestroy, OnChanges {
       .subscribe((searchTerm) => {
         this.filterDecorators(searchTerm);
       });
+
+    this.breakpointObserver
+      .observe('(min-width: 1440px)')
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((result) => {
+        this.updateCollapsibleBasedOnScreenWidth(result.matches);
+      });
+  }
+
+  updateCollapsibleBasedOnScreenWidth(isWide: boolean): void {
+    if (
+      this.device?.subDevices &&
+      this.device.subDevices.length > 0 &&
+      this.device.subDevices.length % 2 === 0
+    ) {
+      this.isSubDeviceCollapsible.set(!isWide);
+    } else {
+      this.isSubDeviceCollapsible.set(true);
+    }
+  }
+
+  getNavList(): NavItem[] {
+    const list: NavItem[] = [
+      {
+        id: 'overview-health',
+        label: 'Health & Activity',
+      },
+      {
+        id: 'overview-system',
+        label: 'Basic Information',
+      },
+    ];
+    // Add sub-devices nav item if there are sub-devices.
+    if (this.device.subDevices && this.device.subDevices.length > 0) {
+      list.push({
+        id: 'overview-subdevices',
+        label: 'Sub-Devices',
+      });
+    }
+
+    list.push(
+      {
+        id: 'overview-permissions',
+        label: 'Permissions',
+      },
+      {
+        id: 'overview-capabilities',
+        label: 'Capabilities',
+      },
+      {
+        id: 'overview-dimensions',
+        label: 'Dimensions',
+      },
+      {
+        id: 'overview-properties',
+        label: 'Properties',
+      },
+    );
+    return list;
   }
 
   ngOnDestroy(): void {
@@ -351,5 +410,33 @@ export class DeviceOverviewTab implements OnInit, OnDestroy, OnChanges {
 
   onDecoratorsSearchChange(): void {
     this.decoratorsSearchSubject.next(this.decoratorsSearchTerm);
+  }
+
+  showTestbedConfig(event: MouseEvent) {
+    event.stopPropagation();
+    this.deviceService.getTestbedConfig(this.device.id).subscribe((config) => {
+      this.dialog.open(TestbedConfigViewer, {
+        width: '800px',
+        data: {
+          deviceId: this.device.id,
+          yamlContent: config.yamlContent,
+          codeSearchLink: config.codeSearchLink,
+        },
+        autoFocus: false,
+        panelClass: 'testbed-config-dialog-panel',
+      });
+    });
+  }
+
+  getFilteredSubDeviceDimensions(sub: SubDeviceInfo): DeviceDimension[] {
+    const term =
+      this.subDeviceDimensionSearchTerms[sub.id]?.toLowerCase() || '';
+    const dims = sub.dimensions || [];
+    if (!term) return dims;
+    return dims.filter(
+      (d) =>
+        (d.name?.toLowerCase() || '').includes(term) ||
+        (d.value?.toLowerCase() || '').includes(term),
+    );
   }
 }
