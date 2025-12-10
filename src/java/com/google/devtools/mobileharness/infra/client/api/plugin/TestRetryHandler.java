@@ -36,7 +36,6 @@ import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.DeviceAllocator;
 import com.google.devtools.mobileharness.infra.client.api.util.result.ClientAllocErrorUtil;
 import com.google.devtools.mobileharness.infra.container.proto.ModeSettingProto.ContainerModePreference;
-import com.google.devtools.mobileharness.infra.container.proto.ModeSettingProto.SandboxModePreference;
 import com.google.devtools.mobileharness.infra.controller.test.local.utp.common.UtpMode;
 import com.google.devtools.mobileharness.infra.controller.test.local.utp.proto.IncompatibleReasonProto.InfraIncompatibleReason;
 import com.google.wireless.qa.mobileharness.client.api.event.JobStartEvent;
@@ -154,10 +153,10 @@ public class TestRetryHandler {
       // Use cases:
       // 1) Show the tests failed because of UTP:
       //    NONPASSING_BEFORE_RETRY_PASS=true && UTP_MODE=UMTS_UTP/MH_HYBRID_UTP
-      // 2) Show the tests failed because of Sandbox:
-      //    NONPASSING_BEFORE_RETRY_PASS=true & SANDBOX_MODE/CONTAINER_MODE=true
+      // 2) Show the tests failed because of Container:
+      //    NONPASSING_BEFORE_RETRY_PASS=true & CONTAINER_MODE=true
       // 3) Show the failed/error tests that are saved by a general retry:
-      //    NONPASSING_BEFORE_RETRY_PASS=true & SANDBOX_MODE&CONTAINER_MODE=false & UTP_MODE=null
+      //    NONPASSING_BEFORE_RETRY_PASS=true & CONTAINER_MODE=false & UTP_MODE=null
       foregoingTest
           .get()
           .properties()
@@ -176,7 +175,7 @@ public class TestRetryHandler {
       // 2) Show the pass retry attempts after a container fail/error runs:
       //    PASS_AFTER_RETRY=true && RETRY_REASON=POTENTIAL_CONTAINER_ISSUE
       // 3) Show the failed/error tests that are saved by a general retry:
-      //    NONPASSING_BEFORE_RETRY_PASS=true & SANDBOX_MODE&CONTAINER_MODE=false & UTP_MODE=null
+      //    NONPASSING_BEFORE_RETRY_PASS=true & CONTAINER_MODE=false & UTP_MODE=null
       // 4) Show the INFRA_ISSUE tests that are saved by an extra retry:
       //    PASS_AFTER_RETRY=true && RETRY_REASON=EXTRA_RETRY_FOR_INFRA_ISSUE
       currentTestInfo.properties().add(Test.PASS_AFTER_RETRY, Boolean.TRUE.toString());
@@ -244,8 +243,7 @@ public class TestRetryHandler {
     } else if (validAttemptNum == retrySetting.getTestAttempts()
         && !DRIVER_BLOCK_LIST_FOR_INFRA_ERROR_EXTRA_RETRY.contains(jobInfo.type().getDriver())
         && validAttemptNum
-            == getAllAttempts(jobInfo, currentTestInfo)
-                .size() /* no auto retry for UTP/sandbox */) {
+            == getAllAttempts(jobInfo, currentTestInfo).size() /* no auto retry for UTP */) {
       // Have another retry for the INFRA_ISSUE even when the max attempt number is reached.
       if (testResult != TestResult.PASS && testResult != TestResult.SKIP && cause.isPresent()) {
         if (criticalErrorId.getType() == ErrorType.INFRA_ISSUE
@@ -410,25 +408,14 @@ public class TestRetryHandler {
               Ascii.toLowerCase(InfraIncompatibleReason.TEST_RETRY.name()));
     }
 
-    // RETRY_AFTER_SANDBOX_FAILS will fallback to container-mode + non-sandbox-mode test.
     // RETRY_AFTER_CONTAINER_FAILS will fallback to non-container-mode test.
     boolean isCurrentContainerMode =
         currentTestInfo.properties().getBoolean(Test.CONTAINER_MODE).orElse(false);
-    boolean isCurrentSandboxMode =
-        currentTestInfo.properties().getBoolean(Test.SANDBOX_MODE).orElse(false);
-    if (isCurrentSandboxMode) {
-      logger.atInfo().log("Retry sandbox-mode test [%s] after it got error.", currentTestId);
-      newTestInfo.properties().add(Test.RETRY_AFTER_SANDBOX_FAILS, "true");
-    } else if (isCurrentContainerMode) {
+    if (isCurrentContainerMode) {
       logger.atInfo().log("Retry container-mode test [%s] after it got error.", currentTestId);
       newTestInfo.properties().add(Test.RETRY_AFTER_CONTAINER_FAILS, "true");
     }
 
-    // If the foregoing test is non-sandbox/non-container, make the next test
-    // non-sandbox/non-container.
-    if (!isCurrentSandboxMode) {
-      newTestInfo.properties().add(Test.SANDBOX_MODE, "false");
-    }
     if (!isCurrentContainerMode) {
       newTestInfo.properties().add(Test.CONTAINER_MODE, "false");
     }
@@ -444,7 +431,7 @@ public class TestRetryHandler {
         .flatMap(testId -> Optional.ofNullable(testInfo.jobInfo().tests().getById(testId)));
   }
 
-  // We want to make retry after container/sandbox/UTP failure user-invisible. Therefore, we only
+  // We want to make retry after containersandbox/UTP failure user-invisible. Therefore, we only
   // consider tests which are not potentially container/UTP error as valid attempts.
   private static boolean isValidAttempt(TestInfo testInfo) {
     return !isPotentialContainerError(testInfo)
@@ -463,7 +450,7 @@ public class TestRetryHandler {
    */
   private static boolean isPotentialContainerError(TestInfo testInfo) {
     TestResult testResult = testInfo.resultWithCause().get().type();
-    return !isMandatorySandboxOrContainerMode(testInfo.jobInfo())
+    return !isMandatoryContainerMode(testInfo.jobInfo())
         && testInfo.properties().getBoolean(Test.CONTAINER_MODE).orElse(false)
         && testResult != TestResult.PASS
         && testResult != TestResult.FAIL
@@ -547,26 +534,19 @@ public class TestRetryHandler {
   }
 
   /**
-   * Checks whether the user specifies the parameter "sandbox_mode_preference" as
-   * "mandatory_sandbox" or the parameter "container_mode_preference" as "mandatory_conteiner".
+   * Checks whether the user specifies the parameter "container_mode_preference" as
+   * "mandatory_conteiner".
    *
-   * <p>If yes, we consider the user only wants to execute the test in container/sandbox. Therefore,
-   * we won't retry the test in MH stacks.
+   * <p>If yes, we consider the user only wants to execute the test in container. Therefore, we
+   * won't retry the test in MH stacks.
    */
-  private static boolean isMandatorySandboxOrContainerMode(JobInfo jobInfo) {
+  private static boolean isMandatoryContainerMode(JobInfo jobInfo) {
     return Ascii.equalsIgnoreCase(
-            SandboxModePreference.MANDATORY_SANDBOX.name(),
-            jobInfo
-                .params()
-                .get(
-                    JobInfo.PARAM_SANDBOX_MODE_PREFERENCE,
-                    SandboxModePreference.SANDBOX_MODE_PREFERENCE_UNSPECIFIED.name()))
-        || Ascii.equalsIgnoreCase(
-            ContainerModePreference.MANDATORY_CONTAINER.name(),
-            jobInfo
-                .params()
-                .get(
-                    JobInfo.PARAM_CONTAINER_MODE_PREFERENCE,
-                    ContainerModePreference.CONTAINER_MODE_PREFERENCE_UNSPECIFIED.name()));
+        ContainerModePreference.MANDATORY_CONTAINER.name(),
+        jobInfo
+            .params()
+            .get(
+                JobInfo.PARAM_CONTAINER_MODE_PREFERENCE,
+                ContainerModePreference.CONTAINER_MODE_PREFERENCE_UNSPECIFIED.name()));
   }
 }
