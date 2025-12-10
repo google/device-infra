@@ -53,7 +53,6 @@ java_library(
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
         "//src/devtools/mobileharness/infra/client/api/proto:resource_federation_java_proto",
         "//src/devtools/mobileharness/infra/container/proto:mode_setting_java_proto",
-        "//src/devtools/mobileharness/infra/container/proto:sandbox_setting_java_proto",
         "//src/devtools/mobileharness/infra/container/proto:test_engine_java_proto",
         "//src/devtools/mobileharness/infra/lab/proto:prepare_test_service_java_proto",
         "//src/devtools/mobileharness/shared/trace/proto:span_java_proto",

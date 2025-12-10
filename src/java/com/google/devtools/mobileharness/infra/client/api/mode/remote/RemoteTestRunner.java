@@ -44,7 +44,6 @@ import com.google.devtools.mobileharness.infra.client.api.proto.ResourceFederati
 import com.google.devtools.mobileharness.infra.client.api.util.longevity.LongevityTestHelper;
 import com.google.devtools.mobileharness.infra.container.proto.ModeSettingProto.ContainerModePreference;
 import com.google.devtools.mobileharness.infra.container.proto.ModeSettingProto.SandboxModePreference;
-import com.google.devtools.mobileharness.infra.container.proto.SandboxSettingProto.SandboxSetting;
 import com.google.devtools.mobileharness.infra.container.proto.TestEngine.ResolveFileStatus;
 import com.google.devtools.mobileharness.infra.container.proto.TestEngine.TestEngineLocator;
 import com.google.devtools.mobileharness.infra.container.proto.TestEngine.TestEngineStatus;
@@ -274,33 +273,21 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
     boolean defaultSandboxPreference = getDefaultSandboxPreference(testInfo);
     ContainerModePreference containerModePreference =
         getContainerModePreference(defaultSandboxPreference);
-    SandboxModePreference sandboxModePreference =
-        getSandboxModePreference(defaultSandboxPreference);
 
     if (SharedPoolJobUtil.isUsingSharedPool(testInfo.jobInfo())) {
       containerModePreference = ContainerModePreference.MANDATORY_NON_CONTAINER;
-      sandboxModePreference = SandboxModePreference.MANDATORY_NON_SANDBOX;
     }
 
-    logger.atInfo().log(
-        "container_mode_preference=%s, sandbox_mode_preference=%s",
-        containerModePreference, sandboxModePreference);
+    logger.atInfo().log("container_mode_preference=%s", containerModePreference);
 
     // Sends the test metadata to lab server.
     CreateTestResponse createTestResponse =
-        prepareTest(
-            testInfo,
-            allocation.getAllDeviceLocators(),
-            containerModePreference,
-            sandboxModePreference);
+        prepareTest(testInfo, allocation.getAllDeviceLocators(), containerModePreference);
 
     // Validates container/sandbox modes.
     boolean isContainerMode = createTestResponse.getContainerInfo().getIsContainerMode();
-    boolean isSandboxMode = createTestResponse.getContainerInfo().getIsSandboxMode();
     testInfo.properties().add(PropertyName.Test.CONTAINER_MODE, Boolean.toString(isContainerMode));
-    testInfo.properties().add(PropertyName.Test.SANDBOX_MODE, Boolean.toString(isSandboxMode));
-    logger.atInfo().log(
-        "Is container mode: %s, is sandbox mode: %s", isContainerMode, isSandboxMode);
+    logger.atInfo().log("Is container mode: %s, is sandbox mode: false", isContainerMode);
     if ((containerModePreference == ContainerModePreference.MANDATORY_CONTAINER && !isContainerMode)
         || (containerModePreference == ContainerModePreference.MANDATORY_NON_CONTAINER
             && isContainerMode)) {
@@ -309,15 +296,6 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
           String.format(
               "Client container mode preference is [%s] but lab final container mode is [%s]",
               containerModePreference, isContainerMode ? "container" : "non-container"));
-    }
-    if ((sandboxModePreference == SandboxModePreference.MANDATORY_SANDBOX && !isSandboxMode)
-        || (sandboxModePreference == SandboxModePreference.MANDATORY_NON_SANDBOX
-            && isSandboxMode)) {
-      throw new MobileHarnessException(
-          InfraErrorId.TE_DENIED_MANDATORY_SANDBOX_PREFERENCE,
-          String.format(
-              "Client sandbox mode preference is [%s] but lab final sandbox mode is [%s]",
-              sandboxModePreference, isSandboxMode ? "sandbox" : "non-sandbox"));
     }
 
     waitUntilTestEngineReadyTask =
@@ -606,8 +584,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
   private CreateTestResponse prepareTest(
       TestInfo testInfo,
       List<DeviceLocator> deviceLocators,
-      ContainerModePreference containerModePreference,
-      SandboxModePreference sandboxModePreference)
+      ContainerModePreference containerModePreference)
       throws MobileHarnessException, InterruptedException {
     ImmutableList<String> hostNames =
         deviceLocators.stream()
@@ -655,11 +632,10 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
             .setContainerSetting(
                 ContainerSetting.newBuilder()
                     .setContainerModePreference(containerModePreference)
-                    .setSandboxModePreference(sandboxModePreference)
+                    .setSandboxModePreference(SandboxModePreference.MANDATORY_NON_SANDBOX)
                     .setNeedStartingLicense(false)
                     .setSyncStartingTimeoutMs(
-                        LAB_SERVER_TEST_ENGINE_SYNC_STARTING_TIMEOUT.toMillis())
-                    .setSandboxSetting(getSandboxSetting()))
+                        LAB_SERVER_TEST_ENGINE_SYNC_STARTING_TIMEOUT.toMillis()))
             .setParentSpan(getParentSpan())
             .build();
     PrepareTestStub prepareTestStub = getPrepareTestStub();
@@ -1107,75 +1083,6 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
             : ContainerModePreference.MANDATORY_NON_CONTAINER);
   }
 
-  private SandboxSetting getSandboxSetting() {
-    return SandboxSetting.newBuilder()
-        .setSandboxMemoryMb(
-            getTestInfo()
-                .jobInfo()
-                .params()
-                .toNewParams()
-                .get(JobInfo.PARAM_SANDBOX_MEMORY_MB)
-                .map(Integer::parseInt)
-                .orElse(0))
-        .build();
-  }
-
-  /**
-   * If this test is created because a foregoing sandbox mode test fails, we run it as non-sandbox
-   * mode for higher test success rate.
-   */
-  @VisibleForTesting
-  SandboxModePreference getSandboxModePreference(boolean defaultSandboxPreference) {
-    Optional<SandboxModePreference> preferenceFromParam =
-        getTestInfo()
-            .jobInfo()
-            .params()
-            .toNewParams()
-            .get(JobInfo.PARAM_SANDBOX_MODE_PREFERENCE)
-            .filter(((Predicate<String>) String::isEmpty).negate())
-            .map(String::toUpperCase)
-            .flatMap(
-                paramValue -> {
-                  Optional<SandboxModePreference> parsedResult =
-                      Enums.getIfPresent(SandboxModePreference.class, paramValue).toJavaUtil();
-                  if (parsedResult.isEmpty()) {
-                    logger.atWarning().log("Unrecognized SandboxModePreference [%s]", paramValue);
-                  }
-                  return parsedResult;
-                });
-    if (preferenceFromParam.isPresent() && isMandatory(preferenceFromParam.get())) {
-      return preferenceFromParam.get();
-    }
-
-    if (getTestInfo()
-        .properties()
-        .getBoolean(PropertyName.Test.RETRY_AFTER_SANDBOX_FAILS)
-        .orElse(false)) {
-      getTestInfo()
-          .log()
-          .atInfo()
-          .alsoTo(logger)
-          .log(
-              "Use mandatory non sandbox mode preference when retrying after sandbox test"
-                  + " failed");
-      return SandboxModePreference.MANDATORY_NON_SANDBOX;
-    }
-    if (!getTestInfo().properties().getBoolean(PropertyName.Test.SANDBOX_MODE).orElse(true)) {
-      getTestInfo()
-          .log()
-          .atInfo()
-          .alsoTo(logger)
-          .log(
-              "Use mandatory non sandbox mode preference when the foregoing test runs as"
-                  + " non-sandbox.");
-      return SandboxModePreference.MANDATORY_NON_SANDBOX;
-    }
-    return preferenceFromParam.orElse(
-        defaultSandboxPreference
-            ? SandboxModePreference.SANDBOX
-            : SandboxModePreference.NON_SANDBOX);
-  }
-
   private static Timeout getTestTimeout(
       com.google.devtools.mobileharness.api.model.job.in.Timeout jobTimeout) {
     com.google.devtools.mobileharness.api.model.job.in.Timeout labServerTestTimeout =
@@ -1185,11 +1092,6 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
         .setTestTimeoutMs(labServerTestTimeout.testTimeout().toMillis())
         .setStartTimeoutMs(labServerTestTimeout.startTimeout().toMillis())
         .build();
-  }
-
-  private static boolean isMandatory(SandboxModePreference preference) {
-    return preference.equals(SandboxModePreference.MANDATORY_NON_SANDBOX)
-        || preference.equals(SandboxModePreference.MANDATORY_SANDBOX);
   }
 
   private static boolean isMandatory(ContainerModePreference preference) {
