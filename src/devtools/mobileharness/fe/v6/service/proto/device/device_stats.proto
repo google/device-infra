@@ -27,37 +27,41 @@ message HealthinessStats {
   // Time series data for daily healthiness breakdown.
   repeated DailyHealthiness daily_stats = 1;
   // Aggregated data over the selected period.
-  AggregatedHealthiness aggregated_stats = 2;
+  HealthinessSummary aggregated_stats = 2;
 }
 
 // Healthiness breakdown for a single day.
 message DailyHealthiness {
   // The date in YYYY-MM-DD format.
   string date = 1;
-  float idle = 2;
-  float busy = 3;
-  float lameduck = 4;
-  float init = 5;
-  float dying = 6;
-  float dirty = 7;
-  float prepping = 8;
-  float missing = 9;
-  float failed = 10;
-  float others = 11;
+  HealthinessSummary healthiness_summary = 2;
 }
 
-// Aggregated healthiness statistics over the selected period.
-message AggregatedHealthiness {
+// Healthiness statistics summary over the selected period.
+message HealthinessSummary {
   // Total percentage of time the device was considered "In Service".
   float in_service_percent = 1;
   // Total percentage of time the device was considered "Out of Service".
   float out_of_service_percent = 2;
-  // Breakdown of time spent in each status.
-  message StatusBreakdown {
-    string status = 1;
+
+  // Represents a breakdown of a specific healthiness category.
+  message Breakdown {
+    // The healthiness category. This is a secondary classification and not a
+    // direct mapping to a device status.
+    string category = 1;
     float percent = 2;
   }
-  repeated StatusBreakdown status_breakdown = 3;
+
+  // Breakdown of "In Service" time.
+  // Expected categories: "IDLE", "BUSY".
+  repeated Breakdown in_service_breakdown = 3;
+
+  // Breakdown of "Out of Service" time.
+  // Expected categories: "LAMEDUCK", "INIT", "DYING", "DIRTY", "PREPPING",
+  // "MISSING", "FAILED", and "OTHERS".
+  // The "OTHERS" category is for out-of-service reasons other than device
+  // status, like abnormal device type.
+  repeated Breakdown out_of_service_breakdown = 4;
 }
 
 // Represents the data for the Test Result Statistics card.
