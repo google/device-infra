@@ -3,7 +3,7 @@ import {DeviceOverview, TestbedConfig} from '../../../models/device_overview';
 import {MockDeviceScenario} from '../models';
 
 const DEVICE_ID = 'TESTBED-EVEN-002';
-const HOST_NAME = 'host-tb-2.example.google.com';
+const HOST_NAME = 'host-tb-2.example.com';
 
 /** Mock device config for TESTBED-EVEN-002. */
 const CONFIG: DeviceConfig = {
@@ -74,8 +74,19 @@ const OVERVIEW: DeviceOverview = {
       dimensions: [
         {name: 'mh_device_type', value: 'MiscDevice'},
         {name: 'mh_device_type', value: 'MiscTestbedSubDevice'},
-        {name: 'host_ip', value: '100.107.0.8'},
+        {name: 'host_ip', value: '100.95.189.25'},
         {name: 'host_os', value: 'Linux'},
+        {name: 'lab_type', value: 'satellite'},
+        {name: 'supports_adhoc', value: 'true'},
+        {name: 'lab_location', value: 'sjc'},
+        {name: 'location_type', value: 'not_in_china'},
+        {name: 'dm_type', value: 'mh'},
+        {name: 'lab_supports_container', value: 'true'},
+        {name: 'host_os_version', value: 'Ubuntu 20.04.6 LTS'},
+        {name: 'host_version', value: '4.342.0'},
+        {name: 'mobly_type', value: 'Attenuator'},
+        {name: 'lab_supports_sandbox', value: 'true'},
+        {name: 'host_name', value: 'aw-zo3.sjc.corp.example.com'},
       ],
     },
     {
@@ -153,7 +164,7 @@ export const MOCK_TESTBED_CONFIG_TESTBED_DEVICE: TestbedConfig = {
       type: AndroidRealDevice
       dimensions:
           pool: ondemand-vpn-mobly-attenuator`,
-  codeSearchLink: `configs/devtools/deviceinfra/service/deviceconfig/testbed/staging/testing/testbed_even_subdevices.yaml`,
+  codeSearchLink: `configs/devtools/deviceinfra/service/deviceconfig/testbed/prod/pixel-bluetooth/pqm-bt-rangne-test-2-lab/sunfish_conductive_bds.yaml`,
 };
 
 /** Mock device scenario for TESTBED-EVEN-002. */

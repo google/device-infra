@@ -1,12 +1,11 @@
 @use '@angular/material' as mat;
-
-$labconsole-font: Roboto, sans-serif;
+@use  '../../../../shared/styles/overview.scss' as overview;
 
 :host {
-  font-family: $labconsole-font;
+  font-family: overview.$labconsole-font;
 
   @include mat.table-overrides((
-    row-item-label-text-font: $labconsole-font,
+    row-item-label-text-font: overview.$labconsole-font,
   ));
 
   @include mat.checkbox-overrides((
@@ -17,22 +16,6 @@ $labconsole-font: Roboto, sans-serif;
     selected-hover-icon-color: #1967d2,
     selected-focus-icon-color: #1967d2,
   ));
-}
-
-.overflow-ellipsis {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.grid-wrapper {
-  display: grid;
-  gap: 1rem 3rem;
-  grid-template-columns: 1fr;
-
-  @media (min-width: 1024px) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
 
 .grid-tight {
@@ -64,6 +47,10 @@ $labconsole-font: Roboto, sans-serif;
       gap: 0.5rem;
     }
 
+    &.lab-type-wrapper {
+      flex-wrap: wrap;
+    }
+
     > mat-icon {
       font-size: 16px;
       height: 16px;
@@ -82,49 +69,6 @@ $labconsole-font: Roboto, sans-serif;
     font-weight: 500;
     line-height: 1;
     white-space: nowrap;
-  }
-}
-
-.operation-button {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-left: auto;
-
-  .operation-text {
-    margin: 0 6px;
-  }
-
-  a {
-    background-color: #e8f0fe;
-    color: #1967d2;
-    font-size: 0.75rem;
-    line-height: 1rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    height: 26px;
-    border-radius: 18px;
-    font-weight: 500;
-    transition: background-color 0.2s, color 0.2s;
-    border: 1px solid transparent;
-    white-space: nowrap;
-    cursor: pointer;
-    text-decoration: none;
-
-    padding:0.25rem 0.75rem;
-
-    &:hover {
-      background-color: #d2e3fc;
-      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, .05);
-    }
-  }
-
-  mat-icon {
-    font-size: 0.875rem;
-    vertical-align: middle;
-    height: 0.875rem;
-    width: 0.875rem;
   }
 }
 
@@ -173,26 +117,7 @@ $labconsole-font: Roboto, sans-serif;
   ));
 }
 
-.spin-animation {
-  animation: spin 1.5s linear infinite;
-}
 
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.cursor-help {
-  color: #6b7280;
-  cursor: help;
-  font-size: 16px;
-  height: 16px;
-  width: 16px;
-}
 
 .edit-flags-button {
   width: 40px;
@@ -227,40 +152,7 @@ $labconsole-font: Roboto, sans-serif;
   padding: 0 0.25rem;
 }
 
-.data-block {
-  background-color: #f8f9fa;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 1rem;
-  font-family: 'Roboto Mono', monospace;
-}
 
-.data-block-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 0.25rem 1.5rem;
-  font-size: 0.875rem;
-  line-height: 1.5;
-
-  dt {
-    white-space: pre-wrap;
-    word-break: break-all;
-    padding: 2px 0;
-    display: inline; // override flex from grid-tight dd
-    font-weight: 500;
-    color: #5f6368;
-  }
-  dd {
-    white-space: pre-wrap;
-    word-break: break-all;
-    padding: 2px 0;
-    display: inline; // override flex from grid-tight dd
-    color: #3c4043;
-  }
-  .contents {
-    display: contents;
-  }
-}
 
 // Styles for Pass Through Flags inline editing
 .flags-edit-container {
@@ -455,28 +347,6 @@ $labconsole-font: Roboto, sans-serif;
   border: 1px solid #e5e7eb;
   border-radius: 0.5rem;
 
-  scrollbar-width: thin;
-  scrollbar-color: #bdc1c6 transparent;
-
-  &::-webkit-scrollbar {
-    height: 8px;
-    width: 8px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background-clip: padding-box;
-    background-color: #bdc1c6;
-    border-radius: 4px;
-  }
-
-  &::-webkit-scrollbar-thumb:hover {
-    background-color: #9aa0a6;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
   .limit-width {
     max-width: 15rem;
     min-width: 10rem;
@@ -489,7 +359,7 @@ $labconsole-font: Roboto, sans-serif;
   }
 
   .sticky-header {
-    background-color: rgb(243, 244, 246, 0.7);
+    background-color: rgb(243, 244, 246);
   }
 
   .sticky-start-header, .sticky-end-header {
@@ -538,26 +408,7 @@ $labconsole-font: Roboto, sans-serif;
     align-items: center;
   }
 
-  .type-chip {
-    display: inline-flex;
-    align-items: center;
-    padding: 4px 10px;
-    border-radius: 8px;
-    font-size: 0.8rem;
-    font-weight: 500;
-    line-height: 1;
-    white-space: nowrap;
 
-    &.type-chip-abnormal {
-      background-color: #d93025;
-      color: white;
-    }
-
-    &.type-chip-normal {
-      background-color: #e0e0e0;
-      color: #3c4043;
-    }
-  }
 
   .type-count {
     font-size: 0.75rem;
@@ -566,8 +417,168 @@ $labconsole-font: Roboto, sans-serif;
     color: #6b7280;
   }
 
+  ::ng-deep .type-chip-more {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    border: 1px solid #e0e0e0;
+    color: #3c4043;
+    font-family: inherit;
+    margin-left: 4px;
+    background-color: transparent;
+
+    &:hover {
+      background-color: #e9ecef;
+    }
+  }
+
   .mat-column-actions {
     width: 2.5rem;
+  }
+
+  // styles for expand column
+  .mat-column-expand {
+    width: 32px;
+    padding: 0;
+    text-align: center;
+
+    button {
+      width: 24px;
+      height: 24px;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      vertical-align: middle;
+
+      mat-icon {
+        font-size: 24px;
+        width: 24px;
+        height: 24px;
+        color: #5f6368;
+        transition: transform 0.2s ease-in-out;
+
+        &.expanded {
+          transform: rotate(90deg);
+        }
+      }
+    }
+  }
+
+  .mat-column-expandedDetail {
+    padding: 0;
+  }
+
+  tr.detail-row {
+    height: 0;
+  }
+
+  tr.element-row:not(.expanded-row):hover {
+    background: #f5f5f5;
+  }
+
+  tr.element-row:not(.expanded-row):active {
+    background: #efefef;
+  }
+
+  .element-row td {
+    border-bottom-width: 0;
+    cursor: pointer;
+  }
+
+  .element-detail {
+    overflow: hidden;
+    display: flex;
+    max-height: 0;
+    transition: max-height 225ms ease-in-out;
+
+    &.expanded {
+      max-height: 1000px;
+    }
+  }
+
+  .sub-device-wrapper {
+    padding: 0.5rem 2rem 0.5rem 6rem;
+    background-color: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    width: 100%;
+  }
+
+  .sub-device-table {
+    width: 100%;
+    background-color: transparent;
+
+    th.mat-header-cell {
+      padding: 0.75rem;
+      text-align: left;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #475569;
+      text-transform: none;
+      letter-spacing: normal;
+      background-color: transparent;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    td.mat-cell {
+      padding: 0.75rem;
+      vertical-align: top;
+      border-bottom: 1px solid #f1f5f9;
+      font-size: 0.875rem;
+      color: #334155;
+    }
+
+    tr:last-child td.mat-cell {
+      border-bottom: 0;
+    }
+
+    tr.mat-row {
+      transition: background-color 0.15s ease-in-out;
+
+      &:hover {
+        background-color: #eef4ff;
+      }
+    }
+
+    .sub-device-id {
+      font-family: 'Roboto Mono', monospace;
+      font-size: 0.8rem;
+    }
+  }
+
+  .sub-device-dims {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  ::ng-deep .sub-device-dim-chip {
+    display: inline-block;
+    background-color: #e8f0fe;
+    color: #1967d2;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    line-height: 1.4;
+    font-family: 'Roboto Mono', monospace;
+    border: none;
+
+    &.more {
+      background-color: #bfdbfe;
+      color: #1e40af;
+      font-weight: 500;
+      cursor: pointer;
+
+      &:hover {
+        background-color: #93c5fd;
+      }
+    }
   }
 }
 

@@ -76,19 +76,10 @@ $labconsole-font: Roboto, sans-serif;
   flex-direction: column;
   gap: 1.5rem;
 
-  ::ng-deep .overview-card {
+  ::ng-deep .info-card {
     background-color: #f0f4f9;
     border-radius: 0.75rem;
     border: 1px solid #e5e7eb;
-  }
-
-  ::ng-deep .overview-card-header {
-    padding: 1rem 1.5rem;
-    border-bottom: 1px solid #e0e0e0;
-    font-size: 1.125rem;
-    font-weight: 500;
-    color: #1f2937;
-    margin: 0;
   }
 
   ::ng-deep .overview-card-content {

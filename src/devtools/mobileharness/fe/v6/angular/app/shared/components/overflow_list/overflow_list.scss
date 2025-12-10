@@ -1,0 +1,26 @@
+.chip-wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.chip-more {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  border: 1px solid #e0e0e0;
+  color: #3c4043;
+  font-family: inherit;
+  background-color: transparent;
+
+  &:hover {
+    background-color: #e9ecef;
+  }
+}
