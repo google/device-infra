@@ -265,7 +265,6 @@ public class PrepareTestServiceImpl {
             .setContainerInfo(
                 ContainerInfo.newBuilder()
                     .setIsContainerMode(proxyTestRunner.isContainerMode())
-                    .setIsSandboxMode(proxyTestRunner.isSandboxMode())
                     .build())
             .setGetTestEngineStatusResponse(
                 getGetTestEngineStatusResponse(

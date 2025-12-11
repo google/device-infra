@@ -109,11 +109,6 @@ public class ProxyToDirectTestRunner extends AbstractProxyTestRunner<ProxyToDire
   }
 
   @Override
-  public final boolean isSandboxMode() {
-    return false;
-  }
-
-  @Override
   public Optional<TestEngineLocator> getTestEngineLocator() {
     return Optional.of(testEngineLocator);
   }

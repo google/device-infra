@@ -51,9 +51,6 @@ public interface ProxyTestRunner extends TestRunner, TestRunnerTiming {
   /** Whether the test runs in container mode. */
   boolean isContainerMode();
 
-  /** Whether the test runs in sandbox mode. */
-  boolean isSandboxMode();
-
   Optional<TestEngineLocator> getTestEngineLocator();
 
   /**
