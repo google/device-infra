@@ -20,6 +20,10 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceLocator;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceLocatorConfigPair;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.DeleteDeviceConfigsRequest;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.DeleteDeviceConfigsResponse;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.DeleteLabConfigRequest;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.DeleteLabConfigResponse;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.GetDeviceConfigsRequest;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.GetDeviceConfigsResponse;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.GetLabConfigRequest;
@@ -83,6 +87,18 @@ public final class DeviceConfigServiceImpl {
     return UpdateDeviceConfigsResponse.getDefaultInstance();
   }
 
+  public DeleteDeviceConfigsResponse deleteDeviceConfigs(DeleteDeviceConfigsRequest request) {
+    for (String deviceUuid : request.getDeviceUuidList()) {
+      try {
+        storageClient.deleteDeviceConfig(deviceUuid);
+      } catch (MobileHarnessException e) {
+        logger.atWarning().withCause(e).log(
+            "Failed to delete device config for device %s", deviceUuid);
+      }
+    }
+    return DeleteDeviceConfigsResponse.getDefaultInstance();
+  }
+
   public GetLabConfigResponse getLabConfig(GetLabConfigRequest request) {
     String hostName = request.getLabHost();
     try {
@@ -107,5 +123,15 @@ public final class DeviceConfigServiceImpl {
     }
 
     return UpdateLabConfigResponse.getDefaultInstance();
+  }
+
+  public DeleteLabConfigResponse deleteLabConfig(DeleteLabConfigRequest request) {
+    String hostName = request.getLabHost();
+    try {
+      storageClient.deleteLabConfig(hostName);
+    } catch (MobileHarnessException e) {
+      logger.atWarning().withCause(e).log("Failed to delete lab config for host %s", hostName);
+    }
+    return DeleteLabConfigResponse.getDefaultInstance();
   }
 }

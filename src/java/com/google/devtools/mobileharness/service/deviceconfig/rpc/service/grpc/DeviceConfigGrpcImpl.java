@@ -17,6 +17,10 @@
 package com.google.devtools.mobileharness.service.deviceconfig.rpc.service.grpc;
 
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceGrpc.DeviceConfigServiceImplBase;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.DeleteDeviceConfigsRequest;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.DeleteDeviceConfigsResponse;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.DeleteLabConfigRequest;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.DeleteLabConfigResponse;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.GetDeviceConfigsRequest;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.GetDeviceConfigsResponse;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.GetLabConfigRequest;
@@ -54,6 +58,14 @@ public final class DeviceConfigGrpcImpl extends DeviceConfigServiceImplBase {
   }
 
   @Override
+  public void deleteDeviceConfigs(
+      DeleteDeviceConfigsRequest request,
+      StreamObserver<DeleteDeviceConfigsResponse> responseObserver) {
+    responseObserver.onNext(deviceConfigServiceImpl.deleteDeviceConfigs(request));
+    responseObserver.onCompleted();
+  }
+
+  @Override
   public void getLabConfig(
       GetLabConfigRequest request, StreamObserver<GetLabConfigResponse> responseObserver) {
     responseObserver.onNext(deviceConfigServiceImpl.getLabConfig(request));
@@ -64,6 +76,13 @@ public final class DeviceConfigGrpcImpl extends DeviceConfigServiceImplBase {
   public void updateLabConfig(
       UpdateLabConfigRequest request, StreamObserver<UpdateLabConfigResponse> responseObserver) {
     responseObserver.onNext(deviceConfigServiceImpl.updateLabConfig(request));
+    responseObserver.onCompleted();
+  }
+
+  @Override
+  public void deleteLabConfig(
+      DeleteLabConfigRequest request, StreamObserver<DeleteLabConfigResponse> responseObserver) {
+    responseObserver.onNext(deviceConfigServiceImpl.deleteLabConfig(request));
     responseObserver.onCompleted();
   }
 }
