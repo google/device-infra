@@ -35,6 +35,8 @@ java_library(
     runtime_deps = ["@grpc-java//netty"],
     deps = [
         ":annotations",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/config:config_service_grpc_impl",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/config:config_service_module",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/device:device_service_grpc_impl",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/device:device_service_module",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/host:host_service_grpc_impl",

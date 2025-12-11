@@ -18,6 +18,8 @@ package com.google.devtools.mobileharness.fe.v6.server;
 
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.fe.v6.server.Annotations.ServerPort;
+import com.google.devtools.mobileharness.fe.v6.service.config.ConfigServiceGrpcImpl;
+import com.google.devtools.mobileharness.fe.v6.service.config.ConfigServiceModule;
 import com.google.devtools.mobileharness.fe.v6.service.device.DeviceServiceGrpcImpl;
 import com.google.devtools.mobileharness.fe.v6.service.device.DeviceServiceModule;
 import com.google.devtools.mobileharness.fe.v6.service.host.HostServiceGrpcImpl;
@@ -42,13 +44,18 @@ public final class OssFeServer {
   private final int port;
   private final DeviceServiceGrpcImpl deviceService;
   private final HostServiceGrpcImpl hostService;
+  private final ConfigServiceGrpcImpl configService;
   private volatile Server grpcServer;
 
   @Inject
   OssFeServer(
-      DeviceServiceGrpcImpl deviceService, HostServiceGrpcImpl hostService, @ServerPort int port) {
+      DeviceServiceGrpcImpl deviceService,
+      HostServiceGrpcImpl hostService,
+      ConfigServiceGrpcImpl configService,
+      @ServerPort int port) {
     this.deviceService = deviceService;
     this.hostService = hostService;
+    this.configService = configService;
     this.port = port;
   }
 
@@ -58,6 +65,7 @@ public final class OssFeServer {
         ServerBuilder.forPort(port)
             .addService(deviceService)
             .addService(hostService)
+            .addService(configService)
             .addService(ProtoReflectionService.newInstance())
             .build();
     grpcServer.start();
@@ -88,6 +96,7 @@ public final class OssFeServer {
             new OssExecutorModule(),
             new DeviceServiceModule(),
             new HostServiceModule(),
+            new ConfigServiceModule(),
             new OssStubsModule(),
             new AbstractModule() {
               @Override
