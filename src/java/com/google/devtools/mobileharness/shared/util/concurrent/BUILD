@@ -122,6 +122,7 @@ java_library(
     srcs = ["ThreadPools.java"],
     deps = [
         ":thread_factory_util",
+        "//java/com/google/common/context",
         "//src/java/com/google/devtools/mobileharness/shared/context:invocation_context_executors",
         "@maven//:com_google_guava_guava",
     ],
