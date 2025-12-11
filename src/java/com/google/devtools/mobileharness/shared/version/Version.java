@@ -21,7 +21,7 @@ import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import java.util.List;
 
-/** The versions of the Mobile Harness components. This isn't GWT compatible. */
+/** The versions of the Mobile Harness components. */
 public final class Version implements Comparable<Version> {
 
   public static final Version CLIENT_VERSION = new Version(4, 32, 0);
