@@ -48,7 +48,6 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLogType;
 import com.google.devtools.mobileharness.api.model.proto.Device.PostTestDeviceOp;
 import com.google.devtools.mobileharness.api.testrunner.device.cache.DeviceCache;
-import com.google.devtools.mobileharness.infra.container.sandbox.device.DeviceSandboxController;
 import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
 import com.google.devtools.mobileharness.infra.controller.device.util.ConditionedDeviceConfigUtil;
 import com.google.devtools.mobileharness.platform.android.app.devicedaemon.DeviceDaemonApkInfoProvider;
@@ -1138,13 +1137,6 @@ public abstract class AndroidRealDeviceDelegate {
     }
     return false;
   }
-
-  /** Gets the sandbox controller. */
-  public DeviceSandboxController getSandboxController() {
-    return getSandboxControllerImpl();
-  }
-
-  protected abstract DeviceSandboxController getSandboxControllerImpl();
 
   /** Android real device preparations before running the test. */
   public void preRunTest(TestInfo testInfo) throws MobileHarnessException, InterruptedException {

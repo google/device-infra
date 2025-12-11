@@ -25,8 +25,6 @@ import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.a
 import com.google.devtools.deviceinfra.platform.android.sdk.fastboot.Fastboot;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.lab.LabLocator;
-import com.google.devtools.mobileharness.infra.container.sandbox.device.DeviceSandboxController;
-import com.google.devtools.mobileharness.infra.container.sandbox.device.NoOpDeviceSandboxController;
 import com.google.devtools.mobileharness.platform.android.app.devicedaemon.DeviceDaemonHelper;
 import com.google.devtools.mobileharness.platform.android.app.mtaastools.MtaasToolsInstantiator;
 import com.google.devtools.mobileharness.platform.android.app.telephony.TelephonyHelper;
@@ -63,7 +61,6 @@ public class AndroidRealDeviceDelegateImpl extends AndroidRealDeviceDelegate {
 
   private final AndroidAdbInternalUtil androidAdbInternalUtil;
   private final AndroidConnectivityUtil connectivityUtil;
-  private final NoOpDeviceSandboxController noOpDeviceSandboxController;
 
   private static AndroidDeviceDelegate getAndroidDeviceDelegate(AndroidDevice device) {
     return new AndroidDeviceDelegateImpl(device);
@@ -158,7 +155,6 @@ public class AndroidRealDeviceDelegateImpl extends AndroidRealDeviceDelegate {
         telephonyHelper);
     this.androidAdbInternalUtil = androidAdbInternalUtil;
     this.connectivityUtil = connectivityUtil;
-    this.noOpDeviceSandboxController = new NoOpDeviceSandboxController(device);
     this.deviceId = device.getDeviceId();
   }
 
@@ -234,11 +230,6 @@ public class AndroidRealDeviceDelegateImpl extends AndroidRealDeviceDelegate {
   protected boolean extraChecksForOnlineModeDevice() throws InterruptedException {
     // Do nothing by default
     return false;
-  }
-
-  @Override
-  protected DeviceSandboxController getSandboxControllerImpl() {
-    return noOpDeviceSandboxController;
   }
 
   @Override

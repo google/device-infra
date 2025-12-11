@@ -22,8 +22,6 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.lab.DeviceInfo;
 import com.google.devtools.mobileharness.api.model.proto.Device.PostTestDeviceOp;
-import com.google.devtools.mobileharness.infra.container.sandbox.device.DeviceSandboxController;
-import com.google.devtools.mobileharness.infra.container.sandbox.device.NoOpDeviceSandboxController;
 import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.wireless.qa.mobileharness.shared.api.validator.ValidatorFactory;
@@ -39,8 +37,6 @@ import javax.annotation.Nullable;
  * --no_op_device_num is set, all other devices will be disabled.
  */
 public class NoOpDevice extends BaseDevice {
-
-  private final DeviceSandboxController sandboxController = new NoOpDeviceSandboxController(this);
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -94,11 +90,6 @@ public class NoOpDevice extends BaseDevice {
         addDimension(Dimension.Name.DEVICE_PRIORITY, "0");
       }
     }
-  }
-
-  @Override
-  public DeviceSandboxController getSandboxController() {
-    return sandboxController;
   }
 
   @Override

@@ -26,8 +26,6 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLogType;
 import com.google.devtools.mobileharness.api.model.proto.Device.PostTestDeviceOp;
-import com.google.devtools.mobileharness.infra.container.sandbox.device.DeviceSandboxController;
-import com.google.devtools.mobileharness.infra.container.sandbox.device.UnsupportedDeviceSandboxController;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Common.StrPair;
@@ -520,17 +518,6 @@ public interface Device {
                         .collect(toImmutableList()))
                 .build())
         .build();
-  }
-
-  /** Gets the controller for passing through this device to a MH sandbox. */
-  default DeviceSandboxController getSandboxController() {
-    return new UnsupportedDeviceSandboxController(
-        info().deviceId().controlId(), getClass().getSimpleName());
-  }
-
-  /** Sets up this device for MH sandbox. */
-  default void setUpForSandbox(List<String> deviceTypes) {
-    // By default, it does nothing.
   }
 
   /** Returns whether this device supports MH container. */

@@ -451,14 +451,6 @@ public abstract class BaseDevice implements Device {
     return genFileDir;
   }
 
-  /** Explicitly add supported device types in MH sandbox. */
-  @Override
-  public void setUpForSandbox(List<String> deviceTypes) {
-    for (String deviceType : deviceTypes) {
-      addSupportedDeviceType(deviceType);
-    }
-  }
-
   /**
    * Add supported device type according to the driver name. If the driver class is not found, just
    * ignores it.
