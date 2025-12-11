@@ -67,8 +67,6 @@ public final class Dimension {
     DEVICE_SUPPORTS_CONTAINER,
     /** Whether a device is supports running on Moreto. */
     DEVICE_SUPPORTS_MORETO,
-    /** Whether a device supports running test in sandbox mode. */
-    DEVICE_SUPPORTS_SANDBOX,
     /**
      * Whether the device is allowed to boot with dev-key signed bootloader. Applicable to P25
      * devices only.
@@ -384,8 +382,6 @@ public final class Dimension {
     ALERT_LAB_DISK_USABLE_SIZE,
     /** Whether the lab the device is connected to supports container-mode test. */
     LAB_SUPPORTS_CONTAINER,
-    /** Whether the lab the device is connected to supports sandbox-mode test. */
-    LAB_SUPPORTS_SANDBOX,
     /** Whether the lab the device is connected to has an IO issue. */
     LAB_FILE_SYSTEM_IO_ERROR,
     /** Shared performance pool */

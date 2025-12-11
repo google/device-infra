@@ -95,8 +95,6 @@ public class TestbedDevice extends BaseDevice implements CompositeDevice {
           Ascii.toLowerCase(Name.SUPPORTS_ADHOC.name()),
           Ascii.toLowerCase(Name.LAB_SUPPORTS_CONTAINER.name()),
           Ascii.toLowerCase(Name.DEVICE_SUPPORTS_CONTAINER.name()),
-          Ascii.toLowerCase(Name.LAB_SUPPORTS_SANDBOX.name()),
-          Ascii.toLowerCase(Name.DEVICE_SUPPORTS_SANDBOX.name()),
           Ascii.toLowerCase(Name.SCREENSHOT_ABLE.name()));
 
   /**
