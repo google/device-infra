@@ -271,13 +271,35 @@ func removeLeftOverFiles(files []*client.TreeOutput) {
 	}
 }
 
+// downloadFilesWithAbsolutePath takes a map of digests to TreeOutput with absolute paths,
+// converts these paths to be relative to d.Dir, and then calls d.Client.DownloadFiles.
+func (d *DownloadJob) downloadFilesWithAbsolutePath(ctx context.Context, toDownload map[digest.Digest]*client.TreeOutput) error {
+	toDownloadRelative := make(map[digest.Digest]*client.TreeOutput, len(toDownload))
+	for dg, output := range toDownload {
+		// Convert absolute output.Path to be relative to d.Dir
+		relPath, err := filepath.Rel(d.Dir, output.Path)
+		if err != nil {
+			return fmt.Errorf("failed to make path relative for %s: %v", output.Path, err)
+		}
+		// Create a new TreeOutput with the relative path
+		relOutput := *output // Shallow copy
+		relOutput.Path = relPath
+		toDownloadRelative[dg] = &relOutput
+	}
+
+	// Call d.Client.DownloadFiles with d.Dir as destDir and relative paths.
+	// We ignore the returned map as it's not used by the callers.
+	_, err := d.Client.DownloadFiles(ctx, d.Dir, toDownloadRelative)
+	return err
+}
+
 func (d *DownloadJob) downloadWithoutLocalCache(ctx context.Context, outputs []*client.TreeOutput) error {
 	toDownload := make(map[digest.Digest]*client.TreeOutput)
 	for _, output := range outputs {
 		toDownload[output.Digest] = output
 	}
 	start := time.Now()
-	if _, err := d.Client.DownloadFiles(ctx, "", toDownload); err != nil {
+	if err := d.downloadFilesWithAbsolutePath(ctx, toDownload); err != nil {
 		removeLeftOverFiles(outputs)
 		return fmt.Errorf("failed to download files: %v", err)
 	}
@@ -308,7 +330,7 @@ func (d *DownloadJob) downloadWithLocalCache(ctx context.Context, cache cache.Ca
 	log.Infof("start downloading %d files, estimated size %v", len(toDownload), units.Size(sumSize))
 
 	start = time.Now()
-	if _, err := d.Client.DownloadFiles(ctx, "", toDownload); err != nil {
+	if err := d.downloadFilesWithAbsolutePath(ctx, toDownload); err != nil {
 		removeLeftOverFiles(outputs)
 		return fmt.Errorf("failed to download files: %v", err)
 	}
