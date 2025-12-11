@@ -40,7 +40,10 @@ message StrPair {
 }
 
 // Error information.
+// Deprecated. Use stability.model.FlattenedExceptionDetail instead.
 message ErrorInfo {
+  option deprecated = true;
+
   optional int32 code = 1;      // required.
   optional string message = 2;  // required.
   optional string stack_trace = 3;
