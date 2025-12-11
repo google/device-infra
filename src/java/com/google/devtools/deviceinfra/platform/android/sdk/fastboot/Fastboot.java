@@ -35,6 +35,8 @@ import com.google.devtools.mobileharness.platform.android.shared.constant.Splitt
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandException;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
+import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
+import com.google.devtools.mobileharness.shared.util.command.CommandStartException;
 import com.google.devtools.mobileharness.shared.util.command.LineCallback;
 import com.google.devtools.mobileharness.shared.util.command.LineCallback.Response;
 import com.google.devtools.mobileharness.shared.util.quota.QuotaManager;
@@ -99,16 +101,23 @@ public class Fastboot {
 
   private final Sleeper sleeper;
 
+  private final String workDirectory;
+
   /** Command output callback for capturing fastboot command output. */
   private LineCallback outputCallback;
 
   public Fastboot() {
+    this(new CommandExecutor(), "");
+  }
+
+  public Fastboot(CommandExecutor cmdExecutor, String workDirectory) {
     this(
         Suppliers.memoize(() -> new FastbootInitializer().initializeFastbootEnvironment()),
         QuotaManager.getInstance(),
-        new CommandExecutor(),
+        cmdExecutor,
         new SystemUtil(),
-        Sleeper.defaultSleeper());
+        Sleeper.defaultSleeper(),
+        workDirectory);
   }
 
   @VisibleForTesting
@@ -117,12 +126,14 @@ public class Fastboot {
       QuotaManager quotaManager,
       CommandExecutor cmdExecutor,
       SystemUtil systemUtil,
-      Sleeper sleeper) {
+      Sleeper sleeper,
+      String workDirectory) {
     this.fastbootParamSupplier = fastbootParamSupplier;
     this.quotaManager = quotaManager;
     this.cmdExecutor = cmdExecutor;
     this.systemUtil = systemUtil;
     this.sleeper = sleeper;
+    this.workDirectory = workDirectory;
   }
 
   /** Interface for specifying logic to run on retry. */
@@ -214,7 +225,7 @@ public class Fastboot {
               retryTask);
     } catch (MobileHarnessException e) {
       // Bootloader downgrade will not return OKAY message.
-      if (Partition.BOOTLOADER == partition
+      if (partition == Partition.BOOTLOADER
           && e.getErrorId().equals(AndroidErrorId.ANDROID_FASTBOOT_COMMAND_EXEC_ERROR)) {
         return output;
       } else {
@@ -656,17 +667,17 @@ public class Fastboot {
         try {
           Command cmd =
               Command.of(
-                      ArrayUtils.addAll(
-                          new String[] {
-                            fastbootParamSupplier
-                                .get()
-                                .fastbootPath()
-                                .orElseThrow(this::getInitializationException)
-                          },
-                          args))
+                      fastbootParamSupplier
+                          .get()
+                          .fastbootPath()
+                          .orElseThrow(this::getInitializationException),
+                      Arrays.asList(args))
                   .timeout(timeout);
           if (outputCallback != null) {
             cmd = cmd.onStdout(outputCallback);
+          }
+          if (!workDirectory.isEmpty()) {
+            cmd = cmd.workDir(workDirectory);
           }
           String output = cmdExecutor.exec(cmd).stdoutWithoutTrailingLineTerminator();
           if (error != null) {
@@ -699,6 +710,38 @@ public class Fastboot {
       if (flashSemaphore) {
         lease.release();
       }
+    }
+  }
+
+  /**
+   * Runs the given fastboot {@link Command} asynchronously with the initialized fastboot path.
+   *
+   * <p>This method is for advanced usage of Fastboot.
+   *
+   * @param command the fastboot command to run
+   * @return the {@link CommandProcess} of the command
+   * @throws MobileHarnessException on failure to start the command
+   */
+  public CommandProcess runAsync(Command command) throws MobileHarnessException {
+    checkFastboot();
+    // Override the executable with the default fastboot path.
+    command =
+        command.executable(
+            fastbootParamSupplier
+                .get()
+                .fastbootPath()
+                .orElseThrow(this::getInitializationException));
+    if (command.getStdoutLineCallback().isEmpty() && outputCallback != null) {
+      command = command.onStdout(outputCallback);
+    }
+    if (!workDirectory.isEmpty()) {
+      command = command.workDir(workDirectory);
+    }
+    try {
+      return cmdExecutor.start(command);
+    } catch (CommandStartException e) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_FASTBOOT_COMMAND_START_ERROR, e.getMessage(), e);
     }
   }
 
