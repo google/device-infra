@@ -175,7 +175,8 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
    *
    * <p>The task that waits until the test engine becomes ready.
    */
-  @VisibleForTesting volatile ListenableFuture<TestEngineLocator> waitUntilTestEngineReadyTask;
+  @VisibleForTesting
+  volatile ListenableFuture<TestEngineLocator> waitUntilTestEngineAndLabResolvedFilesReadyTask;
 
   /** Set in {@link #runTest}. It is non-null when {@link #testKickedOff} is true. */
   @Nullable private volatile TestEngineLocator testEngineLocator;
@@ -298,10 +299,10 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
               containerModePreference, isContainerMode ? "container" : "non-container"));
     }
 
-    waitUntilTestEngineReadyTask =
+    waitUntilTestEngineAndLabResolvedFilesReadyTask =
         threadPool.submit(
             () ->
-                waitUntilTestEngineReady(
+                waitUntilTestEngineAndLabResolvedFilesReady(
                     createTestResponse.getGetTestEngineStatusResponse(), testInfo));
 
     return createTestResponse.getDeviceFeatureList();
@@ -361,9 +362,9 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
         sendTestFiles(testInfo);
       }
 
-      logger.atInfo().log("Waiting until test engine becomes ready...");
+      logger.atInfo().log("Waiting until test engine and lab-resolved files become ready...");
       try {
-        testEngineLocator = waitUntilTestEngineReadyTask.get();
+        testEngineLocator = waitUntilTestEngineAndLabResolvedFilesReadyTask.get();
         if (testEngineLocator != null) {
           testInfo
               .properties()
@@ -372,10 +373,10 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
                   requireNonNull(testEngineLocator).toString());
         }
       } catch (ExecutionException e) {
-        throw new MobileHarnessException(
-            InfraErrorId.CLIENT_REMOTE_MODE_TEST_ENGINE_NOT_READY, "Test engine is not ready", e);
+        MobileHarnessExceptions.rethrow(
+            e, InfraErrorId.CLIENT_REMOTE_MODE_TEST_ENGINE_OR_LAB_RESOLVED_FILES_NOT_READY);
       }
-      logger.atInfo().log("Test engine is ready");
+      logger.atInfo().log("Test engine and lab-resolved files are ready");
 
       kickOffTest(testInfo, deviceLocators);
 
@@ -412,8 +413,9 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
 
       testMessageForwarder.close();
 
-      if (waitUntilTestEngineReadyTask != null && !waitUntilTestEngineReadyTask.isDone()) {
-        waitUntilTestEngineReadyTask.cancel(/* mayInterruptIfRunning= */ true);
+      if (waitUntilTestEngineAndLabResolvedFilesReadyTask != null
+          && !waitUntilTestEngineAndLabResolvedFilesReadyTask.isDone()) {
+        waitUntilTestEngineAndLabResolvedFilesReadyTask.cancel(/* mayInterruptIfRunning= */ true);
       }
 
       Instant executeInstant = getTestRunnerExecuteInstant().orElseThrow(AssertionError::new);
@@ -689,7 +691,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
             .contains(filePath);
   }
 
-  private TestEngineLocator waitUntilTestEngineReady(
+  private TestEngineLocator waitUntilTestEngineAndLabResolvedFilesReady(
       GetTestEngineStatusResponse response, TestInfo testInfo)
       throws MobileHarnessException, InterruptedException {
     int count = 0;
