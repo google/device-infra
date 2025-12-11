@@ -15,12 +15,16 @@
 
 load("@rules_java//java:defs.bzl", "java_library")
 
-package(default_applicable_licenses = ["//:license"])
+package(
+    default_applicable_licenses = ["//:license"],
+    default_visibility = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/command:__pkg__",
+    ],
+)
 
 java_library(
     name = "backend",
     srcs = glob(["*.java"]),
-    visibility = ["//src/java/com/google/devtools/mobileharness/shared/util/command:__pkg__"],
     deps = [
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
