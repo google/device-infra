@@ -16,6 +16,8 @@
 
 package com.google.wireless.qa.mobileharness.shared.model.job;
 
+import static com.google.protobuf.util.JavaTimeConversions.toProtoTimestamp;
+
 import com.google.common.base.Joiner;
 import com.google.common.base.Joiner.MapJoiner;
 import com.google.common.base.Preconditions;
@@ -631,6 +633,10 @@ public class JobInfo extends JobScheduleUnit {
       deviceRequirements.addDeviceRequirement(deviceRequirement);
     }
     jobFeatureBuilder.setDeviceRequirements(deviceRequirements);
+    if (setting().getOriginalSubmitTime() != null) {
+      jobFeatureBuilder.setOriginalSubmitTimestamp(
+          toProtoTimestamp(setting().getOriginalSubmitTime()));
+    }
     return jobFeatureBuilder.build();
   }
 
