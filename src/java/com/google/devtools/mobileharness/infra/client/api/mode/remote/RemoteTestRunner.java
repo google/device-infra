@@ -270,10 +270,10 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
         .alsoTo(logger)
         .log("========= Client: CheckDevice (%s) =========", testInfo.locator().getId());
 
-    // Gets container/sandbox mode preferences.
-    boolean defaultSandboxPreference = getDefaultSandboxPreference(testInfo);
+    // Gets container mode preferences.
+    boolean defaultContainerPreference = getDefaultContainerPreference(testInfo);
     ContainerModePreference containerModePreference =
-        getContainerModePreference(defaultSandboxPreference);
+        getContainerModePreference(defaultContainerPreference);
 
     if (SharedPoolJobUtil.isUsingSharedPool(testInfo.jobInfo())) {
       containerModePreference = ContainerModePreference.MANDATORY_NON_CONTAINER;
@@ -285,7 +285,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
     CreateTestResponse createTestResponse =
         prepareTest(testInfo, allocation.getAllDeviceLocators(), containerModePreference);
 
-    // Validates container/sandbox modes.
+    // Validates container modes.
     boolean isContainerMode = createTestResponse.getContainerInfo().getIsContainerMode();
     testInfo.properties().add(PropertyName.Test.CONTAINER_MODE, Boolean.toString(isContainerMode));
     logger.atInfo().log("Is container mode: %s, is sandbox mode: false", isContainerMode);
@@ -494,14 +494,11 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
         labServerLocator, testEngineLocator, resourceFederation);
   }
 
-  /**
-   * Gets the default sandbox preference to help determine the container mode preference and sandbox
-   * mode preference.
-   */
-  private boolean getDefaultSandboxPreference(TestInfo testInfo) {
-    boolean defaultSandboxPreference = false;
-    logger.atInfo().log("Default sandbox preference: %s", defaultSandboxPreference);
-    return defaultSandboxPreference;
+  /** Gets the default container preference to help determine the container mode preference. */
+  private boolean getDefaultContainerPreference(TestInfo testInfo) {
+    boolean defaultContainerPreference = false;
+    logger.atInfo().log("Default container preference: %s", defaultContainerPreference);
+    return defaultContainerPreference;
   }
 
   /** Gets the {@link ParentSpan} of the current instance, empty by default. */
@@ -1034,7 +1031,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
   }
 
   @VisibleForTesting
-  ContainerModePreference getContainerModePreference(boolean defaultSandboxPreference) {
+  ContainerModePreference getContainerModePreference(boolean defaultContainerPreference) {
     Optional<ContainerModePreference> preferenceFromParam =
         getTestInfo()
             .jobInfo()
@@ -1065,7 +1062,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
           .atInfo()
           .alsoTo(logger)
           .log(
-              "Use mandatory non container mode preference when retrying after sandbox test"
+              "Use mandatory non container mode preference when retrying after container test"
                   + " failed");
       return ContainerModePreference.MANDATORY_NON_CONTAINER;
     }
@@ -1080,7 +1077,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
       return ContainerModePreference.MANDATORY_NON_CONTAINER;
     }
     return preferenceFromParam.orElse(
-        defaultSandboxPreference
+        defaultContainerPreference
             ? ContainerModePreference.CONTAINER
             : ContainerModePreference.MANDATORY_NON_CONTAINER);
   }
