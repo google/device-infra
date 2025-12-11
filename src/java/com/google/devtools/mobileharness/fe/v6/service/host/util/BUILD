@@ -29,3 +29,31 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+java_library(
+    name = "lab_activities",
+    srcs = ["LabActivities.java"],
+    deps = [
+        "//src/devtools/mobileharness/fe/v6/service/proto/host:host_resources_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/provider",
+    ],
+)
+
+java_library(
+    name = "host_connectivity_statuses",
+    srcs = ["HostConnectivityStatuses.java"],
+    deps = [
+        "//src/devtools/mobileharness/api/model/proto:lab_java_proto",
+        "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
+        "//src/devtools/mobileharness/fe/v6/service/proto/host:host_resources_java_proto",
+    ],
+)
+
+java_library(
+    name = "daemon_statuses",
+    srcs = ["DaemonStatuses.java"],
+    deps = [
+        "//src/devtools/mobileharness/fe/v6/service/proto/host:host_resources_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/provider",
+    ],
+)

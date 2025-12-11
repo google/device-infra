@@ -34,7 +34,10 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.LabViewRequest;
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostAuxiliaryInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostReleaseInfo;
+import com.google.devtools.mobileharness.fe.v6.service.host.util.DaemonStatuses;
+import com.google.devtools.mobileharness.fe.v6.service.host.util.HostConnectivityStatuses;
 import com.google.devtools.mobileharness.fe.v6.service.host.util.HostTypes;
+import com.google.devtools.mobileharness.fe.v6.service.host.util.LabActivities;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DaemonServerInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostOverviewRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostConnectivityStatus;
@@ -150,24 +153,21 @@ public final class GetHostOverviewHandler {
   }
 
   private LabServerInfo buildLabServerInfo(
-      Optional<LabInfo> unusedLabInfoOpt,
+      Optional<LabInfo> labInfoOpt,
       Optional<HostReleaseInfo> hostReleaseInfoOpt,
       Optional<String> passThroughFlagsOpt) {
     LabServerInfo.Builder builder = LabServerInfo.newBuilder();
 
-    // TODO: Implement HostConnectivityStatus logic
-    builder.setConnectivity(HostConnectivityStatus.getDefaultInstance());
+    HostConnectivityStatus connectivityStatus = HostConnectivityStatuses.create(labInfoOpt);
+    builder.setConnectivity(connectivityStatus);
 
-    // TODO: Implement LabServerInfo.Activity logic
-    builder.setActivity(LabServerInfo.Activity.getDefaultInstance());
+    Optional<HostReleaseInfo.ComponentInfo> labReleaseOpt =
+        hostReleaseInfoOpt.flatMap(HostReleaseInfo::labServerReleaseInfo);
 
-    hostReleaseInfoOpt
-        .flatMap(HostReleaseInfo::labServerReleaseInfo)
-        .ifPresent(
-            info -> {
-              info.version().ifPresent(builder::setVersion);
-              // TODO: Use info.status() to determine ActivityState
-            });
+    if (labReleaseOpt.isPresent()) {
+      labReleaseOpt.get().version().ifPresent(builder::setVersion);
+    }
+    builder.setActivity(LabActivities.create(labReleaseOpt, connectivityStatus));
 
     passThroughFlagsOpt.ifPresent(builder::setPassThroughFlags);
 
@@ -177,16 +177,12 @@ public final class GetHostOverviewHandler {
   private DaemonServerInfo buildDaemonServerInfo(Optional<HostReleaseInfo> hostReleaseInfoOpt) {
     DaemonServerInfo.Builder builder = DaemonServerInfo.newBuilder();
 
-    // TODO: Implement DaemonServerInfo.Status logic
-    builder.setStatus(DaemonServerInfo.Status.getDefaultInstance());
+    Optional<HostReleaseInfo.ComponentInfo> daemonReleaseOpt =
+        hostReleaseInfoOpt.flatMap(HostReleaseInfo::daemonServerReleaseInfo);
 
-    hostReleaseInfoOpt
-        .flatMap(HostReleaseInfo::daemonServerReleaseInfo)
-        .ifPresent(
-            info -> {
-              info.version().ifPresent(builder::setVersion);
-              // TODO: Use info.status() to determine DaemonServerInfo.State
-            });
-    return builder.build();
+    if (daemonReleaseOpt.isPresent()) {
+      daemonReleaseOpt.get().version().ifPresent(builder::setVersion);
+    }
+    return builder.setStatus(DaemonStatuses.create(daemonReleaseOpt)).build();
   }
 }
