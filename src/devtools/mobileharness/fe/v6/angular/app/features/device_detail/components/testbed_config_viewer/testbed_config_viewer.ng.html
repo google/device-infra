@@ -1,0 +1,34 @@
+<app-dialog
+  title="Testbed Configuration File"
+  [subtitle]="'Device ID: ' + data.deviceId"
+  width="800px"
+  height="80vh"
+  footerType="normal"
+>
+  <mat-dialog-content class="dialog-content scroll-container">
+    <p>
+      The following YAML content defines this testbed device, including its name, and lists all
+      sub-devices and their specific properties and dimensions recognized by Mobly.
+    </p>
+    <div class="yaml-container">
+      @for(line of lines; track $index; let i = $index) {
+        <div class="line">
+          <span class="line-number">{{ i + 1 }}</span>
+          <span class="line-content">{{ line }}</span>
+        </div>
+      }
+    </div>
+  </mat-dialog-content>
+
+  <ng-template #actionsTemplate>
+    <div class="dialog-button-container">
+      <a
+        (click)="openInCodeSearch()"
+        class="dialog-button dialog-button-secondary cursor-pointer"
+      >
+        <mat-icon class="open-in-new-icon">open_in_new</mat-icon>
+        Open in Code Search
+      </a>
+    </div>
+  </ng-template>
+</app-dialog>

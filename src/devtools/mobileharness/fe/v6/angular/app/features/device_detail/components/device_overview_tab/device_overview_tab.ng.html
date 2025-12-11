@@ -5,8 +5,7 @@
       #overviewSection
       id="overview-health"
       title="Health & Activity"
-      [collapsible]="false"
-    >
+      [collapsible]="false">
       <div class="overview-card-content">
         @let healthUI = getHealthStateUI(device.healthAndActivity.state);
         <div class="health-summary">
@@ -125,8 +124,7 @@
       #overviewSection
       id="overview-system"
       title="Basic Information"
-      [collapsible]="false"
-    >
+      [collapsible]="false">
       <div class="overview-card-content">
         <div class="basic-info-grid-wrapper">
           <dl class="info-grid-tight">
@@ -194,13 +192,87 @@
       </div>
     </app-info-card>
 
+    <!-- Sub-Devices Card -->
+    @if (device.subDevices && device.subDevices.length > 0) {
+      <app-info-card
+        #overviewSection
+        id="overview-subdevices"
+        title="Sub-Devices ({{device.subDevices.length}})">
+
+        <div operations class="operation-button">
+          <a (click)="showTestbedConfig($event)">
+            <mat-icon>article</mat-icon>
+            <span class="operation-text">View Testbed YAML</span>
+          </a>
+        </div>
+        <div class="overview-card-content no-padding">
+          <div class="sub-device-cards-wrapper">
+            @for (sub of device.subDevices; track sub.id) {
+              <app-info-card [title]="sub.id" [collapsible]="isSubDeviceCollapsible()" class="sub-device-card">
+                <div class="overview-card-content">
+                  <dl class="sub-device-details-grid">
+                    <dt>Types</dt>
+                    <dd class="chip-grid-container">
+                      @for(type of sub.types; track type) {
+                        <div class="type-chip {{ type.isAbnormal ? 'type-chip-abnormal' : 'type-chip-normal' }}">
+                          {{ type.type }}
+                        </div>
+                      }
+                    </dd>
+                    @if(sub.dimensions && sub.dimensions.length > 0) {
+                      <dt>Dimensions</dt>
+                      <dd>
+                        <mat-form-field appearance="outline" class="sub-device-search-field" subscriptSizing="dynamic">
+                          <mat-icon matPrefix>search</mat-icon>
+                          <input
+                            matInput
+                            class="filter-input"
+                            placeholder="Filter dimensions..."
+                            [(ngModel)]="subDeviceDimensionSearchTerms[sub.id]"
+                            (click)="$event.stopPropagation()"
+                            aria-label="Search dimensions"
+                            />
+                          @if (subDeviceDimensionSearchTerms[sub.id]) {
+                            <button
+                              matSuffix
+                              mat-icon-button
+                              aria-label="Clear"
+                              (click)="subDeviceDimensionSearchTerms[sub.id] = ''; $event.stopPropagation()">
+                              <mat-icon>close</mat-icon>
+                            </button>
+                          }
+                        </mat-form-field>
+                        <div class="data-block scrollable scroll-container">
+                          @if (getFilteredSubDeviceDimensions(sub).length > 0) {
+                          <dl class="data-block-grid">
+                            @for(dim of getFilteredSubDeviceDimensions(sub); track $index) {
+                              <div class="data-block-row contents">
+                                <dt>{{dim.name}}</dt>
+                                <dd>{{dim.value}}</dd>
+                              </div>
+                            }
+                          </dl>
+                          } @else {
+                            <p class="no-data">No matching search results</p>
+                          }
+                        </div>
+                      </dd>
+                    }
+                  </dl>
+                </div>
+              </app-info-card>
+            }
+          </div>
+        </div>
+      </app-info-card>
+    }
+
     <!-- Permissions Card -->
     <app-info-card
       #overviewSection
       id="overview-permissions"
       title="Permissions"
-      [collapsible]="false"
-    >
+      [collapsible]="false">
       <div class="overview-card-content permissions-content">
         <div>
           <h4 class="permission-type-title">Owners</h4>
@@ -241,6 +313,7 @@
             <mat-form-field appearance="outline" class="overview-search-field" subscriptSizing="dynamic">
               <input
                 matInput
+                class="filter-input"
                 placeholder="Filter drivers..."
                 [(ngModel)]="driversSearchTerm"
                 (ngModelChange)="onDriversSearchChange()"
@@ -277,6 +350,7 @@
             <mat-form-field appearance="outline" class="overview-search-field" subscriptSizing="dynamic">
               <input
                 matInput
+                class="filter-input"
                 placeholder="Filter decorators..."
                 [(ngModel)]="decoratorsSearchTerm"
                 (ngModelChange)="onDecoratorsSearchChange()"
@@ -318,6 +392,7 @@
             <input
               matInput
               id="dimensions-search"
+              class="filter-input"
               placeholder="Filter dimensions by key or value..."
               [(ngModel)]="dimensionsSearchTerm"
               (ngModelChange)="onDimensionsSearchChange()"
@@ -348,6 +423,7 @@
                     <div
                       class="data-block"
                       [class.scrollable]="source === 'Detected by OmniLab'"
+                      [class.scroll-container]="source === 'Detected by OmniLab'"
                     >
                       <dl class="data-block-grid">
                         @for (item of items; track trackByKeyAndValue($index, item)) {

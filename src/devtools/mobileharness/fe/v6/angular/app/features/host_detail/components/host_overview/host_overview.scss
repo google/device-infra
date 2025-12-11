@@ -1,12 +1,11 @@
 @use '@angular/material' as mat;
-
-$labconsole-font: Roboto, sans-serif;
+@use  '../../../../shared/styles/overview.scss' as overview;
 
 :host {
-  font-family: $labconsole-font;
+  font-family: overview.$labconsole-font;
 
   @include mat.table-overrides((
-    row-item-label-text-font: $labconsole-font,
+    row-item-label-text-font: overview.$labconsole-font,
   ));
 
   @include mat.checkbox-overrides((
@@ -82,49 +81,6 @@ $labconsole-font: Roboto, sans-serif;
     font-weight: 500;
     line-height: 1;
     white-space: nowrap;
-  }
-}
-
-.operation-button {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-left: auto;
-
-  .operation-text {
-    margin: 0 6px;
-  }
-
-  a {
-    background-color: #e8f0fe;
-    color: #1967d2;
-    font-size: 0.75rem;
-    line-height: 1rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    height: 26px;
-    border-radius: 18px;
-    font-weight: 500;
-    transition: background-color 0.2s, color 0.2s;
-    border: 1px solid transparent;
-    white-space: nowrap;
-    cursor: pointer;
-    text-decoration: none;
-
-    padding:0.25rem 0.75rem;
-
-    &:hover {
-      background-color: #d2e3fc;
-      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, .05);
-    }
-  }
-
-  mat-icon {
-    font-size: 0.875rem;
-    vertical-align: middle;
-    height: 0.875rem;
-    width: 0.875rem;
   }
 }
 
@@ -454,28 +410,6 @@ $labconsole-font: Roboto, sans-serif;
   overflow-x: auto;
   border: 1px solid #e5e7eb;
   border-radius: 0.5rem;
-
-  scrollbar-width: thin;
-  scrollbar-color: #bdc1c6 transparent;
-
-  &::-webkit-scrollbar {
-    height: 8px;
-    width: 8px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background-clip: padding-box;
-    background-color: #bdc1c6;
-    border-radius: 4px;
-  }
-
-  &::-webkit-scrollbar-thumb:hover {
-    background-color: #9aa0a6;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
 
   .limit-width {
     max-width: 15rem;

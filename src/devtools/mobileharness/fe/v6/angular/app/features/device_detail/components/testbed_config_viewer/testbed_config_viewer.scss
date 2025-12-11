@@ -1,0 +1,63 @@
+@use  '../../../../shared/styles/overview.scss' as overview;
+
+:host {
+  display: block;
+  font-family: overview.$labconsole-font;
+}
+
+.dialog-content {
+  color: #3c4043;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  padding: 1.5rem;
+
+  p {
+    margin-bottom: 1rem;
+  }
+}
+
+.yaml-container {
+  background-color: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 1rem;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  margin-top: 1rem;
+  color: #1f2937;
+  white-space: pre;
+  counter-reset: line;;
+
+  .line {
+    display: flex;
+    white-space: pre;
+  }
+
+  .line-number {
+    width: 30px;
+    color: #80868b;
+    text-align: right;
+    margin-right: 1rem;
+    flex-shrink: 0;
+  }
+
+  .line-content {
+    flex-grow: 1;
+  }
+}
+
+.dialog-button.dialog-button-secondary {
+  border: none;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.875rem;
+  cursor: pointer;
+
+  .open-in-new-icon {
+    font-size: 16px;
+    height: 16px;
+    width: 16px;
+    margin-right: 0.25rem;
+  }
+}

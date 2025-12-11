@@ -2,12 +2,14 @@ import {
   AfterViewInit,
   ChangeDetectionStrategy,
   Component,
+  effect,
   ElementRef,
   inject,
   input,
   OnDestroy,
   OnInit,
   signal,
+  untracked,
 } from '@angular/core';
 
 /** The interface for navigation item. */
@@ -33,6 +35,18 @@ export class OverviewPage implements OnInit, AfterViewInit, OnDestroy {
 
   activeSection = signal<string>('');
   private observer?: IntersectionObserver;
+  private readonly intersectingSections = new Set<string>();
+
+  constructor() {
+    effect(() => {
+      this.navList();
+      untracked(() => {
+        setTimeout(() => {
+          this.setupIntersectionObserver();
+        });
+      });
+    });
+  }
 
   ngOnInit() {
     if (this.navList().length > 0) {
@@ -64,6 +78,7 @@ export class OverviewPage implements OnInit, AfterViewInit, OnDestroy {
     if (this.observer) {
       this.observer.disconnect();
     }
+    this.intersectingSections.clear();
     const sections: Element[] = [];
     this.navList().forEach((item) => {
       const element = this.elementRef.nativeElement.querySelector(
@@ -78,16 +93,25 @@ export class OverviewPage implements OnInit, AfterViewInit, OnDestroy {
 
     const options = {
       root: null, // viewport
-      rootMargin: '-20% 0px -75% 0px',
-      threshold: 0.1,
+      rootMargin: '-10% 0px -85% 0px',
+      threshold: 0,
     };
 
     this.observer = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
-          this.activeSection.set(entry.target.id);
+          this.intersectingSections.add(entry.target.id);
+        } else {
+          this.intersectingSections.delete(entry.target.id);
         }
       });
+
+      for (const navItem of this.navList()) {
+        if (this.intersectingSections.has(navItem.id)) {
+          this.activeSection.set(navItem.id);
+          return;
+        }
+      }
     }, options);
 
     sections.forEach((section) => {

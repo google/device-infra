@@ -3,9 +3,10 @@ import {ComponentFixture, TestBed} from '@angular/core/testing';
 import {By} from '@angular/platform-browser';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
 import {provideRouter} from '@angular/router';
-import {firstValueFrom, timer} from 'rxjs';
+import {firstValueFrom, of, timer} from 'rxjs';
 
 import {DeviceOverview} from '../../../../core/models/device_overview';
+import {DEVICE_SERVICE} from '../../../../core/services/device/device_service';
 
 import {DeviceOverviewTab} from './device_overview_tab';
 
@@ -92,6 +93,24 @@ describe('DeviceOverviewTab Component', () => {
       'network-requirement': 'full',
       'encryption-state': 'encrypted',
     },
+    subDevices: [
+      {
+        id: 'sub-device-1',
+        types: [{type: 'AndroidRealDevice', isAbnormal: false}],
+        dimensions: [
+          {name: 'uuid', value: '11111'},
+          {name: 'model', value: 'pixel'},
+        ],
+      },
+      {
+        id: 'sub-device-2',
+        types: [{type: 'AndroidRealDevice', isAbnormal: false}],
+        dimensions: [
+          {name: 'uuid', value: '22222'},
+          {name: 'model', value: 'pixel'},
+        ],
+      },
+    ],
   };
 
   let fixture: ComponentFixture<TestHostComponent>;
@@ -104,7 +123,15 @@ describe('DeviceOverviewTab Component', () => {
         TestHostComponent,
         NoopAnimationsModule, // This makes test faster and more stable.
       ],
-      providers: [provideRouter([])],
+      providers: [
+        provideRouter([]),
+        {
+          provide: DEVICE_SERVICE,
+          useValue: {
+            getTestbedConfig: () => of({}),
+          },
+        },
+      ],
     }).compileComponents();
     fixture = TestBed.createComponent(TestHostComponent);
     fixture.componentInstance.device = mockDevice;
