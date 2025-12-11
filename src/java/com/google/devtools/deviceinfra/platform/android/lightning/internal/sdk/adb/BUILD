@@ -25,7 +25,6 @@ java_library(
         "//:omnilab_fusion",
     ],
     deps = [
-        ":annotations",
         ":constants",
         "//src/devtools/mobileharness/platform/android/sdktool/proto:adb_java_proto",
         "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb/initializer:adb_initializer",
@@ -40,13 +39,6 @@ java_library(
         "@maven//:com_google_guava_guava",
         "@maven//:org_apache_commons_commons_lang3",
     ],
-)
-
-java_library(
-    name = "annotations",
-    srcs = ["Annotations.java"],
-    visibility = ["//visibility:private"],
-    deps = ["@maven//:javax_inject_jsr330_api"],
 )
 
 java_library(

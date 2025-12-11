@@ -21,8 +21,6 @@ import com.google.common.base.Strings;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
-import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Annotations.AdbCommandExecutorSupplier;
-import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Annotations.AdbParamSupplier;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.initializer.AdbInitializer;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -100,9 +98,7 @@ public class Adb {
   }
 
   @VisibleForTesting
-  Adb(
-      @AdbParamSupplier Supplier<AdbParam> adbParamSupplier,
-      @AdbCommandExecutorSupplier Supplier<CommandExecutor> commandExecutorSupplier) {
+  Adb(Supplier<AdbParam> adbParamSupplier, Supplier<CommandExecutor> commandExecutorSupplier) {
     this.adbParamSupplier = adbParamSupplier;
     this.commandExecutorSupplier = commandExecutorSupplier;
   }
@@ -700,10 +696,10 @@ public class Adb {
         throw new MobileHarnessException(
             AndroidErrorId.ANDROID_ADB_SYNC_CMD_START_ERROR, e.getMessage(), e);
       }
-      if (e instanceof CommandFailureException) {
+      if (e instanceof CommandFailureException commandFailureException) {
         // Exit code 134 means the program received SIGABRT, as a result of a failed assertion.
-        if (((CommandFailureException) e).result() != null
-            && ((CommandFailureException) e).result().exitCode() == 134) {
+        if (commandFailureException.result() != null
+            && commandFailureException.result().exitCode() == 134) {
           throw new MobileHarnessException(
               AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_ASSERTION_FAILURE, e.getMessage(), e);
         } else {
@@ -765,12 +761,12 @@ public class Adb {
     private final String tag;
 
     /** Creates a callback to print to the ADB logger. */
-    public OutputCallbackImpl() {
+    OutputCallbackImpl() {
       this("");
     }
 
     /** Creates a callback to print to the ADB logger with the given tag. */
-    public OutputCallbackImpl(String tag) {
+    OutputCallbackImpl(String tag) {
       this.tag = Strings.isNullOrEmpty(tag) ? "" : String.format("%s ", tag);
     }
 
