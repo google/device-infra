@@ -275,8 +275,14 @@ public class ApkInstaller {
     }
   }
 
+  /** Installs an APK that is already on the device using pm install. */
+  public void installRemoteApk(Device device, ApkInstallArgs installArgs)
+      throws MobileHarnessException, InterruptedException {
+    installApk(device, installArgs, /* isRemote= */ true, /* log= */ null);
+  }
+
   /**
-   * Installs the APK into the android device.
+   * Installs a local APK by pushing it onto the android device.
    *
    * <p>Logs will be appended to the test's info. Once installed, it will set the device property to
    * avoid installing the same apk again when flag {@link Flags#instance()}.{@link
@@ -290,6 +296,13 @@ public class ApkInstaller {
    */
   @CanIgnoreReturnValue
   public String installApk(Device device, ApkInstallArgs installArgs, @Nullable LogCollector<?> log)
+      throws MobileHarnessException, InterruptedException {
+    return installApk(device, installArgs, /* isRemote= */ false, log);
+  }
+
+  @CanIgnoreReturnValue
+  private String installApk(
+      Device device, ApkInstallArgs installArgs, boolean isRemote, @Nullable LogCollector<?> log)
       throws MobileHarnessException, InterruptedException {
     String apkPath = installArgs.apkPath();
     String dexMetadataPath = installArgs.dexMetadataPath().orElse(null);
@@ -407,6 +420,7 @@ public class ApkInstaller {
           dexMetadataPath,
           isGms || grantPermissions,
           forceNoStreaming,
+          isRemote,
           installArgs.installTimeout().orElse(null),
           log,
           extraArgs.toArray(new String[0]));
@@ -827,6 +841,7 @@ public class ApkInstaller {
       @Nullable String dexMetadataPath,
       boolean grantPermissions,
       boolean forceNoStreaming,
+      boolean isRemoteInstall,
       @Nullable Duration installTimeout,
       @Nullable LogCollector<?> log,
       String... extraArgs)
@@ -835,14 +850,19 @@ public class ApkInstaller {
     boolean installThrowsException = false;
     String installExceptionMsg = "";
     try {
-      androidPackageManagerUtil.installApk(
-          utilArgs,
-          apkPath,
-          dexMetadataPath,
-          grantPermissions,
-          forceNoStreaming,
-          installTimeout,
-          extraArgs);
+      if (isRemoteInstall) {
+        androidPackageManagerUtil.installRemoteApk(
+            utilArgs, apkPath, dexMetadataPath, grantPermissions, installTimeout, extraArgs);
+      } else {
+        androidPackageManagerUtil.installApk(
+            utilArgs,
+            apkPath,
+            dexMetadataPath,
+            grantPermissions,
+            forceNoStreaming,
+            installTimeout,
+            extraArgs);
+      }
     } catch (MobileHarnessException e) {
       installThrowsException = true;
       installExceptionMsg = e.getMessage();
@@ -879,14 +899,19 @@ public class ApkInstaller {
     }
     // Retry to install the apk again
     SharedLogUtil.logMsg(logger, log, "Retry to install apk %s on device %s...", apkPath, serial);
-    androidPackageManagerUtil.installApk(
-        utilArgs,
-        apkPath,
-        dexMetadataPath,
-        grantPermissions,
-        forceNoStreaming,
-        installTimeout,
-        extraArgs);
+    if (isRemoteInstall) {
+      androidPackageManagerUtil.installRemoteApk(
+          utilArgs, apkPath, dexMetadataPath, grantPermissions, installTimeout, extraArgs);
+    } else {
+      androidPackageManagerUtil.installApk(
+          utilArgs,
+          apkPath,
+          dexMetadataPath,
+          grantPermissions,
+          forceNoStreaming,
+          installTimeout,
+          extraArgs);
+    }
   }
 
   /** Helper method for installing multiple packages on device. */
