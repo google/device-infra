@@ -23,10 +23,16 @@ package(
 java_library(
     name = "device_config_module",
     srcs = ["DeviceConfigModule.java"],
+    runtime_deps = [
+        "@maven//:com_mysql_mysql_connector_j",
+    ],
     deps = [
         ":annotations",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/service/deviceconfig/storage:jdbc_storage_client",
         "//src/java/com/google/devtools/mobileharness/service/deviceconfig/storage:local_file_storage_client",
         "//src/java/com/google/devtools/mobileharness/service/deviceconfig/storage:storage_client",
+        "//src/java/com/google/devtools/mobileharness/shared/util/database:database_connections",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "@maven//:com_google_inject_guice",
         "@maven//:javax_inject_jsr330_api",

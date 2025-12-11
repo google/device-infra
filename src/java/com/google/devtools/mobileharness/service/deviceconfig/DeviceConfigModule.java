@@ -16,11 +16,15 @@
 
 package com.google.devtools.mobileharness.service.deviceconfig;
 
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.service.deviceconfig.storage.JdbcStorageClient;
 import com.google.devtools.mobileharness.service.deviceconfig.storage.LocalFileStorageClient;
 import com.google.devtools.mobileharness.service.deviceconfig.storage.StorageClient;
+import com.google.devtools.mobileharness.shared.util.database.DatabaseConnections;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
+import java.util.Properties;
 import javax.inject.Singleton;
 
 /** The Guice module for device config service. */
@@ -29,7 +33,26 @@ public class DeviceConfigModule extends AbstractModule {
   @Override
   protected void configure() {
     // TODO: b/460296020 - Add a flag to control which storage client to use.
-    bind(StorageClient.class).to(LocalFileStorageClient.class);
+    boolean useLocalFileStorage = false;
+    if (useLocalFileStorage) {
+      bind(StorageClient.class).to(LocalFileStorageClient.class);
+    } else {
+      bind(StorageClient.class).to(JdbcStorageClient.class);
+    }
+  }
+
+  @Provides
+  @Singleton
+  DatabaseConnections provideDatabaseConnections() throws MobileHarnessException {
+    Properties properties = new Properties();
+    properties.put("user", "root");
+    properties.put("password", "");
+
+    DatabaseConnections databaseConnections = new DatabaseConnections();
+    // TODO: b/460296020 - Add a flag to control the database connection string.
+    databaseConnections.initialize(
+        "jdbc:mysql:///ats_db", properties, /* statementCacheSize= */ 100);
+    return databaseConnections;
   }
 
   @Provides
