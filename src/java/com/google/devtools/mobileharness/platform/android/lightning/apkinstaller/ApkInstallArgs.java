@@ -80,7 +80,7 @@ public abstract class ApkInstallArgs {
     return new AutoValue_ApkInstallArgs.Builder();
   }
 
-  abstract Builder toBuilder();
+  public abstract Builder toBuilder();
 
   /** Add skipDowngrade to existing arguments. */
   public ApkInstallArgs withSkipDowngrade(boolean skipDowngrade) {
