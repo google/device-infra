@@ -24,6 +24,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceRec
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceTestResultStatsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetLogcatRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetLogcatResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetTestbedConfigRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HealthinessStats;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.QuarantineDeviceRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.QuarantineDeviceResponse;
@@ -33,6 +34,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.device.RemoteContro
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.TakeScreenshotRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.TakeScreenshotResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.TestResultStats;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.TestbedConfig;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.UnquarantineDeviceRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.UnquarantineDeviceResponse;
 
@@ -59,4 +61,6 @@ public interface DeviceServiceLogic {
       UnquarantineDeviceRequest request);
 
   ListenableFuture<RemoteControlResponse> remoteControl(RemoteControlRequest request);
+
+  ListenableFuture<TestbedConfig> getTestbedConfig(GetTestbedConfigRequest request);
 }
