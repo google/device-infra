@@ -188,6 +188,11 @@ public class ErrorModelConverter {
         .build();
   }
 
+  /** Converts a {@link Throwable} to {@link FlattenedExceptionDetail}. */
+  public static FlattenedExceptionDetail toFlattenedExceptionDetail(Throwable throwable) {
+    return toFlattenedExceptionDetail(toExceptionDetail(throwable));
+  }
+
   public static String getCompleteStackTrace(ExceptionDetail detail) {
     return Throwables.getStackTraceAsString(toDeserializedException(detail));
   }
