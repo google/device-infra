@@ -14,8 +14,11 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.api.model.error;
+package com.google.devtools.mobileharness.api.testrunner.driver;
 
+import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
+import com.google.devtools.mobileharness.api.model.error.ErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import javax.annotation.Nullable;
 
 /**
@@ -26,7 +29,7 @@ import javax.annotation.Nullable;
  *
  * <p>Always use the static factory methods to create instances of this class.
  */
-public class CustomerAssetException extends MobileHarnessException {
+public class CustomerAssetInvalidException extends MobileHarnessException {
 
   /**
    * Internal constructor. Forces use of static factory methods.
@@ -34,34 +37,36 @@ public class CustomerAssetException extends MobileHarnessException {
    * @param message The internal debug message for this wrapper.
    * @param specificCause The underlying, more specific MobileHarnessException.
    */
-  private CustomerAssetException(String message, MobileHarnessException specificCause) {
-    super(BasicErrorId.INTERNAL_CUSTOMER_ASSET_WRAPPER, message, specificCause);
+  private CustomerAssetInvalidException(String message, MobileHarnessException specificCause) {
+    super(BasicErrorId.CUSTOMER_ASSET_INVALID_EXCEPTION_WRAPPER, message, specificCause);
   }
 
   /**
-   * Creates a new CustomerAssetException.
+   * Creates a new CustomerAssetInvalidException.
    *
    * @param specificErrorId The detailed ErrorId describing the asset failure.
    * @param internalMessage The detailed internal debug message.
    * @param cause The underlying cause for the specific exception, if any.
    */
-  public static CustomerAssetException create(
+  public static CustomerAssetInvalidException create(
       ErrorId specificErrorId, String internalMessage, @Nullable Throwable cause) {
-    // Create the specific exception which will become the cause of the CustomerAssetException.
+    // Create the specific exception which will become the cause of the
+    // CustomerAssetInvalidException.
     MobileHarnessException specificException =
         new MobileHarnessException(specificErrorId, internalMessage, cause);
 
-    return new CustomerAssetException(
-        "Customer Asset Error: " + internalMessage, specificException);
+    return new CustomerAssetInvalidException(
+        "Customer Asset Invalid Error: " + internalMessage, specificException);
   }
 
   /**
-   * Creates a new CustomerAssetException without an underlying cause for the specific error.
+   * Creates a new CustomerAssetInvalidException without an underlying cause for the specific error.
    *
    * @param specificErrorId The detailed ErrorId describing the asset failure.
    * @param internalMessage The detailed internal debug message.
    */
-  public static CustomerAssetException create(ErrorId specificErrorId, String internalMessage) {
+  public static CustomerAssetInvalidException create(
+      ErrorId specificErrorId, String internalMessage) {
     return create(specificErrorId, internalMessage, null);
   }
 }

@@ -433,14 +433,6 @@ public enum BasicErrorId implements ErrorId {
   RPC_GRPC_EXCEPTION_STATUS_CODE_UNAVAILABLE(39_765, ErrorType.INFRA_ISSUE),
   RPC_GRPC_EXCEPTION_STATUS_CODE_UNAUTHENTICATED(39_766, ErrorType.INFRA_ISSUE),
 
-  // RPC: 39_951 ~ 39_975
-  RPC_STUBBY_EXCEPTION_WITHOUT_STATUS_CODE(39_961, ErrorType.INFRA_ISSUE),
-  RPC_STUBBY_EXCEPTION_WITHOUT_ERROR_DETAIL(39_963, ErrorType.INFRA_ISSUE),
-  RPC_GRPC_EXCEPTION_WITHOUT_ERROR_DETAIL(39_972, ErrorType.INFRA_ISSUE),
-
-  // Event: 39_976 ~ 39_980
-  EVENT_HANDLER_ERROR(39_976, ErrorType.UNDETERMINED),
-
   // Shared utilities
   // Base64: 39_801 ~ 39_810
   BASE64_ARGUMENT_ERROR(39_801, ErrorType.UNDETERMINED),
@@ -483,7 +475,7 @@ public enum BasicErrorId implements ErrorId {
   VERSION_STUB_TOO_OLD(39_937, ErrorType.INFRA_ISSUE),
   VERSION_STUB_GET_VERSION_ERROR(39_938, ErrorType.INFRA_ISSUE),
 
-  // User plugin: 39_951 ~ 39_955
+  // User plugin: 39_951 ~ 39_960
   USER_PLUGIN_ERROR(39_951, ErrorType.CUSTOMER_ISSUE),
 
   /**
@@ -499,18 +491,35 @@ public enum BasicErrorId implements ErrorId {
   USER_PLUGIN_SKIP_JOB_BY_INTERRUPTED_EXCEPTION(39_956, ErrorType.CUSTOMER_ISSUE),
   USER_PLUGIN_SKIP_TEST_BY_INTERRUPTED_EXCEPTION(39_957, ErrorType.CUSTOMER_ISSUE),
 
-  // Customer asset: 39_971 ~ 39_980
+  // RPC: 39_961 ~ 39_975
+  RPC_STUBBY_EXCEPTION_WITHOUT_STATUS_CODE(39_961, ErrorType.INFRA_ISSUE),
+  RPC_STUBBY_EXCEPTION_WITHOUT_ERROR_DETAIL(39_963, ErrorType.INFRA_ISSUE),
+  RPC_GRPC_EXCEPTION_WITHOUT_ERROR_DETAIL(39_972, ErrorType.INFRA_ISSUE),
+
+  // Event: 39_976 ~ 39_980
+  EVENT_HANDLER_ERROR(39_976, ErrorType.UNDETERMINED),
+
+  // Customer asset: 39_981 ~ 39_990
   /**
-   * INTERNAL USE ONLY for CustomerAssetException. This ErrorId is used as the wrapper ID for
-   * exceptions of type CustomerAssetException, indicating the error root cause is a
+   * INTERNAL USE ONLY for CustomerAssetInvalidException. This ErrorId is used as the wrapper ID for
+   * exceptions of type CustomerAssetInvalidException, indicating the error root cause is a
    * customer-provided asset.
    *
    * <p>WARNING: DO NOT use this ErrorId directly when throwing an exception. Use one of the
-   * existing {@code CustomerAssetException.create()} methods.
+   * existing {@code CustomerAssetInvalidException.create()} methods.
    */
-  INTERNAL_CUSTOMER_ASSET_WRAPPER(39_971, ErrorType.CUSTOMER_ISSUE),
+  CUSTOMER_ASSET_INVALID_EXCEPTION_WRAPPER(39_981, ErrorType.CUSTOMER_ISSUE),
+  /**
+   * INTERNAL USE ONLY for CustomerTestExecutionTimeoutException. This ErrorId is used as the
+   * wrapper ID for exceptions of type CustomerTestExecutionTimeoutException, indicating the error
+   * root cause is a customer-provided timeout.
+   *
+   * <p>WARNING: DO NOT use this ErrorId directly when throwing an exception. Use one of the
+   * existing {@code CustomerTestExecutionTimeoutException.create()} methods.
+   */
+  CUSTOMER_TEST_EXECUTION_TIMEOUT_EXCEPTION_WRAPPER(39_982, ErrorType.CUSTOMER_ISSUE),
 
-  // Command: 39_981 ~ 40_000
+  // Command: 39_991 ~ 40_000
   COMMAND_START_ERROR(39_997, ErrorType.UNDETERMINED), // can be caused by bad start timeout config
   COMMAND_EXEC_FAIL(39_998, ErrorType.UNDETERMINED),
   COMMAND_EXEC_TIMEOUT(39_999, ErrorType.UNDETERMINED),
