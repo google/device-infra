@@ -100,6 +100,11 @@ public class AndroidPackageManagerUtil {
   /** ADB shell command for cleaning a package. Should be followed by the package name. */
   @VisibleForTesting static final String ADB_SHELL_CLEAR_PACKAGE = "pm clear";
 
+  /** ADB shell command for installing a package. */
+  @VisibleForTesting
+  static final ImmutableList<String> ADB_SHELL_INSTALL_PACKAGE =
+      ImmutableList.of("pm", "install", "-r", "-t");
+
   /** ADB shell command for uninstalling a package. Should be followed by the package name. */
   @VisibleForTesting static final String ADB_SHELL_UNINSTALL_PACKAGE = "pm uninstall";
 
@@ -986,6 +991,38 @@ public class AndroidPackageManagerUtil {
   }
 
   /**
+   * Installs the given apk to a specific device. If the installation fails (both installation on
+   * internal storage and external storage), will try to uninstall and re-install again.
+   *
+   * @param utilArgs args with serial, sdkVersion and userId
+   * @param apkPath on device path of the apk package
+   * @param grantPermissions whether to grant runtime permissions
+   * @param installTimeout timeout for APK installation
+   * @param extraArgs extra arguments to the install command
+   * @throws MobileHarnessException if error occurs
+   * @throws InterruptedException if the thread executing the commands is interrupted
+   */
+  public void installRemoteApk(
+      UtilArgs utilArgs,
+      String packageName,
+      String apkPath,
+      boolean grantPermissions,
+      @Nullable Duration installTimeout,
+      String... extraArgs)
+      throws MobileHarnessException, InterruptedException {
+    installApk(
+        utilArgs,
+        packageName,
+        apkPath,
+        null,
+        grantPermissions,
+        /* forceNoStreaming= */ false,
+        /* isRemoteInstall= */ true,
+        installTimeout,
+        extraArgs);
+  }
+
+  /**
    * Installs the given apk to a specific device for user USER_ALL using default timeout value. If
    * the installation fails, will try to uninstall and re-install again.
    *
@@ -1080,6 +1117,29 @@ public class AndroidPackageManagerUtil {
           AndroidErrorId.ANDROID_PKG_MNGR_UTIL_GET_PACKAGE_NAME_ERROR, e.getMessage(), e);
     }
 
+    installApk(
+        utilArgs,
+        packageName,
+        apkPath,
+        dexMetadataPath,
+        grantPermissions,
+        forceNoStreaming,
+        /* isRemoteInstall= */ false,
+        installTimeout,
+        extraArgs);
+  }
+
+  private void installApk(
+      UtilArgs utilArgs,
+      String packageName,
+      String apkPath,
+      @Nullable String dexMetadataPath,
+      boolean grantPermissions,
+      boolean forceNoStreaming,
+      boolean isRemoteInstall,
+      @Nullable Duration installTimeout,
+      String... extraArgs)
+      throws MobileHarnessException, InterruptedException {
     // Installs the apk.
     // "-d" only works with 17+ devices to allow app downgrade.
     // "-g" only works with 23+ devices to grant all required permissions.
@@ -1088,7 +1148,9 @@ public class AndroidPackageManagerUtil {
     String[] installFiles =
         dexMetadataPath != null ? new String[] {apkPath, dexMetadataPath} : new String[] {apkPath};
     String[] installCommand =
-        installFiles.length > 1 ? ADB_ARGS_INSTALL_MULTIPLE : ADB_ARGS_INSTALL;
+        isRemoteInstall
+            ? ADB_SHELL_INSTALL_PACKAGE.toArray(new String[0])
+            : installFiles.length > 1 ? ADB_ARGS_INSTALL_MULTIPLE : ADB_ARGS_INSTALL;
     if (sdkVersion >= 17) {
       installCommand = ArrayUtil.join(installCommand, "-d");
     }
@@ -1126,12 +1188,11 @@ public class AndroidPackageManagerUtil {
     String outputByExternal = null;
     boolean installThrowsException = false;
     try {
+      var timeout = installTimeout == null ? DEFAULT_INSTALL_TIMEOUT : installTimeout;
       output =
-          adb.run(
-              serial,
-              installCommand,
-              installTimeout == null ? DEFAULT_INSTALL_TIMEOUT : installTimeout,
-              lineCallback);
+          isRemoteInstall
+              ? adb.runShell(serial, installCommand, timeout, lineCallback)
+              : adb.run(serial, installCommand, timeout, lineCallback);
     } catch (MobileHarnessException e) {
       installThrowsException = true;
       output = e.getMessage();
@@ -1151,13 +1212,12 @@ public class AndroidPackageManagerUtil {
       }
 
       try {
+        var timeout = installTimeout == null ? DEFAULT_INSTALL_TIMEOUT : installTimeout;
         // If install failed, tries using external storage space (i.e. sdcard) to install
         outputByExternal =
-            adb.run(
-                serial,
-                installOnExternalCommand,
-                installTimeout == null ? DEFAULT_INSTALL_TIMEOUT : installTimeout,
-                lineCallback);
+            isRemoteInstall
+                ? adb.runShell(serial, installOnExternalCommand, timeout, lineCallback)
+                : adb.run(serial, installOnExternalCommand, timeout, lineCallback);
         if (outputByExternal.contains(OUTPUT_SUCCESS)) {
           logger.atInfo().log(
               "Successfully installed apk %s to device %s:%n%s on [External Storage]",
@@ -1251,12 +1311,11 @@ public class AndroidPackageManagerUtil {
 
     // Retries to install the apk again.
     try {
+      var timeout = installTimeout == null ? DEFAULT_INSTALL_TIMEOUT : installTimeout;
       output =
-          adb.run(
-              serial,
-              installCommand,
-              installTimeout == null ? DEFAULT_INSTALL_TIMEOUT : installTimeout,
-              lineCallback);
+          isRemoteInstall
+              ? adb.runShell(serial, installCommand, timeout, lineCallback)
+              : adb.run(serial, installCommand, timeout, lineCallback);
     } catch (MobileHarnessException e) {
       // For the second time, will throw whatever exception even if we got the error
       // INSTALL_FAILED_PERMISSION_MODEL_DOWNGRADE
