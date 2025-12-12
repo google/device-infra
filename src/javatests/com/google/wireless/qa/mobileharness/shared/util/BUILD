@@ -23,8 +23,11 @@ java_library(
     testonly = 1,
     srcs = glob(["*.java"]),
     deps = [
+        "//java/com/google/testing/serverutil:portpicker",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",  # deviceinfra:google-only(internal)
         "//src/java/com/google/devtools/mobileharness/shared/util/network",
+        "//src/java/com/google/devtools/mobileharness/shared/util/system",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/util:base",
         "//src/java/com/google/wireless/qa/mobileharness/shared/util:luhn",
         "//src/java/com/google/wireless/qa/mobileharness/shared/util:net_util",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
