@@ -60,8 +60,8 @@ public final class LabInfoPullerImpl implements DataPuller<MonitoredRecord> {
   public ImmutableList<MonitoredRecord> pull() throws MobileHarnessException {
     ImmutableList.Builder<MonitoredRecord> builder = ImmutableList.builder();
     Timestamp timestamp = TimeUtils.toProtoTimestamp(Instant.now());
-    for (LabData labData :
-        labInfoProvider.getLabInfos(Filter.getDefaultInstance()).getLabDataList()) {
+    Filter.Builder filterBuilder = Filter.newBuilder();
+    for (LabData labData : labInfoProvider.getLabInfos(filterBuilder.build()).getLabDataList()) {
       MonitoredRecord.Builder record = MonitoredRecord.newBuilder().setTimestamp(timestamp);
 
       List<HostProperty> hostPropertyList =
