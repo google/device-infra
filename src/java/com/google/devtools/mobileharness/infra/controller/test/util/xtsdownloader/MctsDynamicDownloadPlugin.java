@@ -41,6 +41,7 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdb
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceState;
+import com.google.devtools.mobileharness.platform.android.systemspec.AndroidSystemSpecUtil;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
@@ -92,6 +93,10 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
 
   private static final String NON_PRELOADED_KEY = "non-preloaded";
 
+  private static final ImmutableSet<String> ANDROID_14_TV_THREAD_MODULES =
+      ImmutableSet.of(
+          "android-mcts-networkstack", "android-mcts-tethering", "android-mcts-dnsresolver");
+
   // Only consider the Module released in Android V+ and not beta version. For the month of platform
   // initial release ONLY, 5th digit >= 4 indicates platform beta (or mainline beta if >=8 or daily
   // if => 9), refer to b/413266608 for more details.
@@ -137,12 +142,14 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
   private final LocalFileUtil fileUtil;
   private final ResUtil resUtil = new ResUtil();
   private final AndroidAdbInternalUtil adbInternalUtil;
+  private final AndroidSystemSpecUtil androidSystemSpecUtil;
 
   public MctsDynamicDownloadPlugin() {
     this.adbUtil = new AndroidAdbUtil();
     this.fileUtil = new LocalFileUtil();
     this.androidPackageManagerUtil = new AndroidPackageManagerUtil();
     this.adbInternalUtil = new AndroidAdbInternalUtil();
+    this.androidSystemSpecUtil = new AndroidSystemSpecUtil();
   }
 
   @VisibleForTesting
@@ -154,6 +161,7 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
     this.androidPackageManagerUtil = androidPackageManagerUtil;
     this.fileUtil = new LocalFileUtil();
     this.adbInternalUtil = adbInternalUtil;
+    this.androidSystemSpecUtil = new AndroidSystemSpecUtil();
   }
 
   @Override
@@ -424,6 +432,25 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
           moduleInfoMap.getModulePackageToModuleInfoMap();
       String deviceId = getDeviceId(event);
       ImmutableList<String> preloadedMainlineModules = getPreloadedMainlineModules(deviceId);
+      boolean isAndroid14TvThread = false;
+      if (aospVersion.equals("34")) {
+        try {
+          if (androidSystemSpecUtil
+                  .getSystemFeatures(deviceId)
+                  .contains("android.software.leanback")
+              && androidSystemSpecUtil
+                  .getSystemFeatures(deviceId)
+                  .contains("android.hardware.thread_network")) {
+            isAndroid14TvThread = true;
+            logger.atInfo().log(
+                "Android 14 TV with thread network feature detected, will use 2025-08 train for"
+                    + " relevant modules.");
+          }
+        } catch (MobileHarnessException | InterruptedException e) {
+          logger.atWarning().withCause(e).log(
+              "Failed to check for TV/Thread features, proceeding without module overrides.");
+        }
+      }
       for (String moduleName : preloadedMainlineModules) {
         if (modulePackageToModuleInfoMap.containsKey(moduleName)) {
           String mctsName = modulePackageToModuleInfoMap.get(moduleName);
@@ -434,6 +461,10 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
             String moduleVersioncode =
                 processModuleVersion(
                     moduleVersion, moduleName, MAINLINE_AOSP_VERSION_KEY, aospVersion);
+            if (isAndroid14TvThread && ANDROID_14_TV_THREAD_MODULES.contains(mctsName)) {
+              moduleVersioncode = "2025-08";
+              logger.atInfo().log("Overriding version for %s to 2025-08", mctsName);
+            }
             preloadedModulesMctsAndVersioncode.add(mctsName + ':' + moduleVersioncode);
           }
         }
