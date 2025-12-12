@@ -205,12 +205,17 @@ public abstract class XtsJobCreator {
             runRetryTfSubPlan.getPreviousSessionDeviceBuildFingerprint().orElse("").isEmpty();
       }
     } else if (sessionRequestInfo.subPlanName().isPresent()) {
+      Path subPlanPath =
+          prepareSubPlanPath(
+              xtsRootDir, xtsType, sessionRequestInfo.subPlanName().get(), sessionRequestInfo);
+      SubPlan subPlan = SessionHandlerHelper.loadSubPlan(subPlanPath.toFile());
       Path tfSubPlan =
           prepareTfSubPlan(
+              subPlanPath,
+              subPlan,
               xtsRootDir,
               sessionRequestInfo.xtsType(),
-              sessionRequestInfo.subPlanName().get(),
-              sessionRequestInfo);
+              sessionRequestInfo.subPlanName().get());
       driverParams.put("subplan_xml", tfSubPlan.toAbsolutePath().toString());
     }
 
@@ -349,8 +354,7 @@ public abstract class XtsJobCreator {
     return tradefedJobInfos.build();
   }
 
-  /** Prepares a sub plan file for a tradefed job. */
-  private Path prepareTfSubPlan(
+  private Path prepareSubPlanPath(
       Path xtsRootDir, String xtsType, String subPlanName, SessionRequestInfo sessionRequestInfo)
       throws MobileHarnessException, InterruptedException {
     Path subPlanPath = SessionHandlerHelper.getSubPlanFilePath(xtsRootDir, xtsType, subPlanName);
@@ -370,9 +374,13 @@ public abstract class XtsJobCreator {
         logger.atInfo().log("Uses existing subplan backup file %s", subPlanBackupPath);
       }
     }
-    subPlanPath = subPlanBackupPath == null ? subPlanPath : subPlanBackupPath;
-    SubPlan subPlan = SessionHandlerHelper.loadSubPlan(subPlanPath.toFile());
+    return subPlanBackupPath == null ? subPlanPath : subPlanBackupPath;
+  }
 
+  /** Prepares a sub plan file for a tradefed job. */
+  private Path prepareTfSubPlan(
+      Path subPlanPath, SubPlan subPlan, Path xtsRootDir, String xtsType, String subPlanName)
+      throws MobileHarnessException, InterruptedException {
     if (!subPlan.hasAnyTfIncludeFilters() && !subPlan.hasAnyTfExcludeFilters()) {
       throw MobileHarnessExceptionFactory.createUserFacingException(
           InfraErrorId.OLCS_NO_CORRESPONDING_FILTER_FOUND_IN_SUBPLAN,
@@ -435,48 +443,28 @@ public abstract class XtsJobCreator {
       subPlan = prepareRunRetrySubPlan(sessionRequestInfo, /* forTf= */ false);
       injectBuildFingerprint(extraJobProperties, subPlan);
     } else if (sessionRequestInfo.subPlanName().isPresent()) {
-      subPlan =
-          prepareNonTfSubPlan(
+      Path subPlanPath =
+          prepareSubPlanPath(
               xtsRootDir,
               sessionRequestInfo.xtsType(),
               sessionRequestInfo.subPlanName().get(),
               sessionRequestInfo);
+      subPlan = SessionHandlerHelper.loadSubPlan(subPlanPath.toFile());
+      validateNonTfSubPlan(subPlan);
     }
 
     return sessionRequestHandlerUtil.createXtsNonTradefedJobs(
         sessionRequestInfo, subPlan, extraJobProperties.buildOrThrow());
   }
 
-  /** Prepares a sub plan file for a non-tradefed job. */
-  private SubPlan prepareNonTfSubPlan(
-      Path xtsRootDir, String xtsType, String subPlanName, SessionRequestInfo sessionRequestInfo)
-      throws MobileHarnessException, InterruptedException {
-    Path subPlanPath = SessionHandlerHelper.getSubPlanFilePath(xtsRootDir, xtsType, subPlanName);
-    SessionHandlerHelper.checkSubPlanFileExist(subPlanPath.toFile());
-    Path subPlanBackupPath = null;
-    // Prepares and uses the subplan backup file in case the original subplan file is modified
-    // during the test.
-    if (sessionRequestInfo.subPlanNameBackup().isPresent()) {
-      subPlanBackupPath =
-          SessionHandlerHelper.getSubPlanFilePath(
-              xtsRootDir, xtsType, sessionRequestInfo.subPlanNameBackup().get());
-      if (!subPlanBackupPath.toFile().exists()) {
-        logger.atInfo().log("Creating subplan backup file %s", subPlanBackupPath);
-        localFileUtil.copyFileOrDirWithOverridingCopyOptions(
-            subPlanPath, subPlanBackupPath, ImmutableList.of("-rf"));
-      } else {
-        logger.atInfo().log("Uses existing subplan backup file %s", subPlanBackupPath);
-      }
-    }
-    subPlanPath = subPlanBackupPath == null ? subPlanPath : subPlanBackupPath;
-    SubPlan subPlan = SessionHandlerHelper.loadSubPlan(subPlanPath.toFile());
+  /** Validates a sub plan for a non-tradefed job. */
+  private void validateNonTfSubPlan(SubPlan subPlan) throws MobileHarnessException {
     if (!subPlan.hasAnyNonTfIncludeFilters() && !subPlan.hasAnyNonTfExcludeFilters()) {
       throw MobileHarnessExceptionFactory.createUserFacingException(
           InfraErrorId.OLCS_NO_CORRESPONDING_FILTER_FOUND_IN_SUBPLAN,
           "No include or exclude filters found for non-TF modules and tests",
           /* cause= */ null);
     }
-    return subPlan;
   }
 
   /**
