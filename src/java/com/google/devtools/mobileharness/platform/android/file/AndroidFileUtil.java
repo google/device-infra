@@ -1170,7 +1170,8 @@ public class AndroidFileUtil {
           serial, new String[] {ADB_ARG_PUSH, srcFilePath, desFilePath}, timeout);
     } catch (MobileHarnessException e) {
       if (!((sdkVersion == 30 || sdkVersion == 31)
-          && desFilePath.startsWith("/sdcard/Android/data/")
+          && (desFilePath.startsWith("/sdcard/Android/data/")
+              || desFilePath.startsWith("/sdcard/Android/obb/"))
           && e.getMessage().contains("remote fchown failed"))) {
         throw new MobileHarnessException(
             AndroidErrorId.ANDROID_FILE_UTIL_PUSH_FILE_ADB_ERROR,
@@ -1180,8 +1181,8 @@ public class AndroidFileUtil {
             e);
       }
     }
-    // Pushing to /sdcard/Android/data can fail on some API 30 or 31 devices. The workaround is to
-    // push to a temporary location and then use adb shell to move it to the final location.
+    // Pushing to /sdcard/Android/{data,obb} can fail on some API 30 or 31 devices. The workaround
+    // is to push to a temporary location and then use adb shell to move it to the final location.
     try {
       String fileName = Path.of(desFilePath).getFileName().toString();
       String tempDesFilePath = Path.of("/data/local/tmp").resolve(fileName).toString();
