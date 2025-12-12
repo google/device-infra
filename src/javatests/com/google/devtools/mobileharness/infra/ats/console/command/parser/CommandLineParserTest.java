@@ -19,10 +19,13 @@ package com.google.devtools.mobileharness.infra.ats.console.command.parser;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
+import com.google.devtools.mobileharness.shared.util.junit.rule.SetFlagsOss;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -30,7 +33,9 @@ import org.junit.runners.JUnit4;
 @RunWith(JUnit4.class)
 public final class CommandLineParserTest {
 
-  CommandLineParser commandLineParser;
+  @Rule public final SetFlagsOss setFlags = new SetFlagsOss();
+
+  private CommandLineParser commandLineParser;
 
   @Before
   public void setUp() throws Exception {
@@ -39,6 +44,28 @@ public final class CommandLineParserTest {
 
   @Test
   public void parseCommandLine_success() throws Exception {
+    String tfCommand1 = "cts -m module1 -t testCase1 --shard-count 1";
+    SessionRequestInfo.Builder requestInfoBuilder1 = commandLineParser.parseCommandLine(tfCommand1);
+
+    // Fill required fields in order to build the builder.
+    SessionRequestInfo requestInfo1 =
+        requestInfoBuilder1
+            .setCommandLineArgs(tfCommand1)
+            .setXtsRootDir("xts_root_dir")
+            .setXtsType("cts")
+            .build();
+
+    assertThat(requestInfo1.testPlan()).isEqualTo("cts");
+    assertThat(requestInfo1.moduleNames()).containsExactly("module1");
+    assertThat(requestInfo1.testName()).hasValue("testCase1");
+    assertThat(requestInfo1.shardCount()).hasValue(1);
+  }
+
+  @Test
+  public void parseCommandLine_embeddedMode_success() throws Exception {
+    setFlags.setAllFlags(ImmutableMap.of("ats_console_olc_server_embedded_mode", "true"));
+    commandLineParser = new CommandLineParser();
+
     String tfCommand1 = "cts -m module1 -t testCase1 --shard-count 1";
     SessionRequestInfo.Builder requestInfoBuilder1 = commandLineParser.parseCommandLine(tfCommand1);
 

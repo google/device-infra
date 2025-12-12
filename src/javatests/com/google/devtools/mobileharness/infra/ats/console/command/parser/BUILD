@@ -29,6 +29,8 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_info",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/command/parser:command_line_parser",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
+        "//src/javatests/com/google/devtools/mobileharness/shared/util/junit/rule:set_flags_oss",
+        "@maven//:com_google_guava_guava",
         "@maven//:junit_junit",
     ],
 )

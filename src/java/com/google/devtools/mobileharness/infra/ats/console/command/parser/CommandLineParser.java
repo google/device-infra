@@ -28,14 +28,23 @@ import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.FlagsString;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.OlcServerGrpcInProcessChannelModule;
 import com.google.devtools.mobileharness.infra.ats.console.AtsConsoleModule;
 import com.google.devtools.mobileharness.infra.ats.console.GuiceFactory;
 import com.google.devtools.mobileharness.infra.ats.console.command.RunCommand;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.OlcServices;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.inject.CommonModule;
 import com.google.devtools.mobileharness.shared.util.shell.ShellUtils.TokenizationException;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
+import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.Module;
+import com.google.inject.Provides;
+import io.grpc.BindableService;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
@@ -105,19 +114,31 @@ public final class CommandLineParser {
     // Parses flags.
     runCommandParseResult = new RunCommandParseResult();
 
-    injector =
-        Guice.createInjector(
-            new AtsConsoleModule(
-                "command-line-parser-" + UUID.randomUUID(),
-                FlagsString.of("", ImmutableList.of()),
-                ImmutableList.of(),
-                systemProperties,
-                /* consoleLineReader= */ null,
-                System.out,
-                System.err,
-                runCommandParseResult,
-                /* parseCommandOnly= */ true),
-            new CommonModule());
+    List<Module> modules = new ArrayList<>();
+    modules.add(
+        new AtsConsoleModule(
+            "command-line-parser-" + UUID.randomUUID(),
+            FlagsString.of("", ImmutableList.of()),
+            ImmutableList.of(),
+            systemProperties,
+            /* consoleLineReader= */ null,
+            System.out,
+            System.err,
+            runCommandParseResult,
+            /* parseCommandOnly= */ true));
+    modules.add(new CommonModule());
+    if (Flags.instance().atsConsoleOlcServerEmbeddedMode.getNonNull()) {
+      modules.add(
+          new AbstractModule() {
+            @Provides
+            @OlcServices
+            ImmutableList<BindableService> provideOlcServices() {
+              return ImmutableList.of();
+            }
+          });
+      modules.add(new OlcServerGrpcInProcessChannelModule());
+    }
+    injector = Guice.createInjector(modules);
   }
 
   /**
