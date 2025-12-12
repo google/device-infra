@@ -36,6 +36,14 @@ java_library(
 java_library(
     name = "customer_test_execution_timeout_exception",
     srcs = ["CustomerTestExecutionTimeoutException.java"],
+    visibility = [
+        "//java/com/google/devtools/mobileharness/api/testrunner/driver:__pkg__",
+        "//java/com/google/devtools/mobileharness/infra/controller/test/local/utp/driver:__pkg__",
+        "//java/com/google/wireless/qa/mobileharness/shared/api:__pkg__",
+        "//javatests/com/google/devtools/mobileharness/api/testrunner/driver:__pkg__",
+        "//javatests/com/google/devtools/mobileharness/infra/controller/test/local/utp/driver:__pkg__",
+        "//javatests/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
+    ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "@maven//:com_google_code_findbugs_jsr305",
