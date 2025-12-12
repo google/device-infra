@@ -49,7 +49,6 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/allocation",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/util:job_info_util",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
