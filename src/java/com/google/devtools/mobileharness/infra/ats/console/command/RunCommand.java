@@ -511,6 +511,7 @@ public final class RunCommand implements Callable<Integer> {
 
     return sessionRequestBuilder
         .setModuleArgs(moduleArgs)
+        .setHtmlInZip(htmlInZip)
         .setExtraArgs(extraArgs)
         .setExcludeRunners(excludeRunners);
   }
