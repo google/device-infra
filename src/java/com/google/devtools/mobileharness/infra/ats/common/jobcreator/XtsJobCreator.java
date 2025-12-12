@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.infra.ats.common.jobcreator;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static java.util.stream.Collectors.joining;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
@@ -65,6 +66,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.Set;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
 
@@ -162,8 +164,22 @@ public abstract class XtsJobCreator {
     String xtsType = sessionRequestInfo.xtsType();
     int shardCount = sessionRequestInfo.shardCount().orElse(0);
     ImmutableMap.Builder<XtsPropertyName, String> extraJobProperties = ImmutableMap.builder();
+
+    Path subPlanPath = null;
+    SubPlan subPlan = null;
+    String filteredTradefedModules;
+    if (sessionRequestInfo.subPlanName().isPresent()) {
+      subPlanPath =
+          prepareSubPlanPath(
+              xtsRootDir, xtsType, sessionRequestInfo.subPlanName().get(), sessionRequestInfo);
+      subPlan = SessionHandlerHelper.loadSubPlan(subPlanPath.toFile());
+      filteredTradefedModules = filterTradefedModulesBySubPlan(tfModules, subPlan);
+    } else {
+      filteredTradefedModules = String.join(",", tfModules);
+    }
+
     extraJobProperties
-        .put(Job.FILTERED_TRADEFED_MODULES, String.join(",", tfModules))
+        .put(Job.FILTERED_TRADEFED_MODULES, filteredTradefedModules)
         .put(
             Job.DEVICE_SUPPORTED_ABI_LIST,
             sessionRequestInfo
@@ -204,11 +220,9 @@ public abstract class XtsJobCreator {
         prevSessionSkipDeviceInfo =
             runRetryTfSubPlan.getPreviousSessionDeviceBuildFingerprint().orElse("").isEmpty();
       }
-    } else if (sessionRequestInfo.subPlanName().isPresent()) {
-      Path subPlanPath =
-          prepareSubPlanPath(
-              xtsRootDir, xtsType, sessionRequestInfo.subPlanName().get(), sessionRequestInfo);
-      SubPlan subPlan = SessionHandlerHelper.loadSubPlan(subPlanPath.toFile());
+    } else if (sessionRequestInfo.subPlanName().isPresent()
+        && subPlanPath != null
+        && subPlan != null) {
       Path tfSubPlan =
           prepareTfSubPlan(
               subPlanPath,
@@ -352,6 +366,19 @@ public abstract class XtsJobCreator {
     }
 
     return tradefedJobInfos.build();
+  }
+
+  private String filterTradefedModulesBySubPlan(ImmutableList<String> tfModules, SubPlan subPlan) {
+    Set<String> includeFilters = subPlan.getIncludeFiltersMultimap().keySet();
+    Set<String> excludeFilters = subPlan.getExcludeFiltersMultimap().keySet();
+    return tfModules.stream()
+        .filter(
+            module ->
+                includeFilters.stream().anyMatch(includeFilter -> includeFilter.contains(module)))
+        .filter(
+            module ->
+                excludeFilters.stream().noneMatch(excludeFilter -> excludeFilter.contains(module)))
+        .collect(joining(","));
   }
 
   private Path prepareSubPlanPath(

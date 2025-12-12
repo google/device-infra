@@ -51,6 +51,7 @@ import com.google.wireless.qa.mobileharness.shared.api.spec.XtsTradefedTestSpec;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.SubDeviceSpec;
 import java.io.File;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
@@ -140,6 +141,63 @@ public final class ConsoleJobCreatorTest {
             "cts",
             Job.FILTERED_TRADEFED_MODULES,
             "mock_module",
+            Job.DEVICE_SUPPORTED_ABI_LIST,
+            "arm64-v8a,armeabi-v7a");
+  }
+
+  @SuppressWarnings("unchecked") // safe by specification
+  @Test
+  public void createXtsTradefedTestJob_withSubPlan() throws Exception {
+    File xtsRootDir = folder.newFolder("xts_root_dir");
+    File subplansDir = folder.newFolder("xts_root_dir", "android-cts", "subplans");
+    Path subPlanPath = new File(subplansDir, "sub_plan_name.xml").toPath();
+    Files.writeString(
+        subPlanPath,
+        """
+        <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+        <subPlan>
+            <Entry include="armeabi-v7a MockModule2 TestName"/>
+        </subPlan>
+        """);
+
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfo.builder()
+            .setTestPlan("cts")
+            .setCommandLineArgs("cts")
+            .setXtsType("cts")
+            .setXtsRootDir(xtsRootDir.getAbsolutePath())
+            .setSubPlanName("sub_plan_name")
+            .setDeviceInfo(
+                Optional.of(
+                    DeviceInfo.builder()
+                        .setDeviceId("mock_device_id")
+                        .setSupportedAbiList("arm64-v8a,armeabi-v7a")
+                        .build()))
+            .build();
+    ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
+
+    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any(), any()))
+        .thenReturn(JobConfig.getDefaultInstance());
+
+    ImmutableList<TradefedJobInfo> tradefedJobInfoList =
+        jobCreator.createXtsTradefedTestJobInfo(
+            sessionRequestInfo, ImmutableList.of("MockModule1", "MockModule2"));
+
+    assertThat(tradefedJobInfoList).hasSize(1);
+    verify(sessionRequestHandlerUtil)
+        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any(), any());
+    Map<String, String> driverParams = driverParamsCaptor.getValue();
+    assertThat(driverParams).containsEntry("xts_type", "cts");
+    assertThat(driverParams).containsEntry("xts_root_dir", xtsRootDir.getAbsolutePath());
+    assertThat(driverParams).containsEntry("xts_test_plan", "cts");
+    assertThat(driverParams).doesNotContainKey("run_command_args");
+    assertThat(driverParams.get("subplan_xml")).endsWith("sub_plan_name.xml");
+    assertThat(tradefedJobInfoList.get(0).extraJobProperties())
+        .containsExactly(
+            Job.XTS_TEST_PLAN,
+            "cts",
+            Job.FILTERED_TRADEFED_MODULES,
+            "MockModule2",
             Job.DEVICE_SUPPORTED_ABI_LIST,
             "arm64-v8a,armeabi-v7a");
   }

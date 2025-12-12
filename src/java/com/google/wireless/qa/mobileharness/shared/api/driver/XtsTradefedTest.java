@@ -283,7 +283,7 @@ public class XtsTradefedTest extends BaseDriver
                         .orElse(""))
                 .build());
 
-    // Filtered by include/exclude filters and the given module names.
+    // Filtered by include/exclude filters, the given module names, and subplan.
     // Non-expanded, e.g. `CtsBatteryHealthTestCases`.
     List<String> filteredTradefedModules =
         Splitter.on(",")

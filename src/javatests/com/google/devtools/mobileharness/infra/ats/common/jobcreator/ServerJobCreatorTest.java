@@ -532,7 +532,13 @@ public final class ServerJobCreatorTest {
             .setAtsServerTestEnvironment(TestEnvironment.getDefaultInstance())
             .setAndroidXtsZip(xtsZipPath.getAbsolutePath())
             .setSubPlanName("subplan1")
-            .setModuleNames(ImmutableList.of("mock_module"))
+            .setModuleNames(ImmutableList.of("CtsAccelerationTestCases", "OtherTestModule"))
+            .setDeviceInfo(
+                Optional.of(
+                    DeviceInfo.builder()
+                        .setDeviceId("mock_device_id")
+                        .setSupportedAbiList("arm64-v8a,armeabi-v7a")
+                        .build()))
             .build();
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
 
@@ -543,7 +549,7 @@ public final class ServerJobCreatorTest {
 
     ImmutableList<TradefedJobInfo> tradefedJobInfoList =
         jobCreator.createXtsTradefedTestJobInfo(
-            sessionRequestInfo, ImmutableList.of("mock_module"));
+            sessionRequestInfo, ImmutableList.of("CtsAccelerationTestCases", "OtherTestModule"));
 
     assertThat(tradefedJobInfoList).hasSize(1);
     verify(sessionRequestHandlerUtil)
@@ -552,7 +558,7 @@ public final class ServerJobCreatorTest {
     assertThat(driverParamsMap)
         .containsAtLeast(
             "run_command_args",
-            "-m mock_module",
+            "-m CtsAccelerationTestCases -m OtherTestModule",
             "xts_type",
             "cts",
             "android_xts_zip",
@@ -561,6 +567,15 @@ public final class ServerJobCreatorTest {
             "cts");
     assertThat(driverParamsMap.get("subplan_xml"))
         .containsMatch(subPlansDir.resolve("subplan1_tf_auto_gen_\\d+\\.xml").toString());
+    assertThat(tradefedJobInfoList.get(0).extraJobProperties())
+        .containsExactly(
+            Job.XTS_TEST_PLAN,
+            "cts",
+            // CtsAccelerationTestCases is in the subplan1.xml:
+            Job.FILTERED_TRADEFED_MODULES,
+            "CtsAccelerationTestCases",
+            Job.DEVICE_SUPPORTED_ABI_LIST,
+            "arm64-v8a,armeabi-v7a");
   }
 
   @SuppressWarnings("unchecked")

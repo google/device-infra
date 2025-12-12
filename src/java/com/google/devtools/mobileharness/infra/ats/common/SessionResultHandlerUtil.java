@@ -774,9 +774,9 @@ public class SessionResultHandlerUtil {
                         .toString()
                         .equals(SessionHandlerHelper.TEST_RECORD_PROTOBUFFER_FILE_NAME))
             .findFirst();
-    // Retrieve the list of filtered (by include/exclude filters and the given module names)
-    // expanded module names (e.g. `arm64-v8a CtsBatteryHealthTestCases`) for the Tradefed test,
-    // from test properties.
+    // Retrieve the list of filtered (by include/exclude filters, the given module names, or
+    // subplan) expanded module names (e.g. `arm64-v8a CtsBatteryHealthTestCases`) for the Tradefed
+    // test, from test properties.
     ImmutableList<TradefedResultBundle.ModuleInfo> filteredExpandedTradefedModules =
         Splitter.on(",")
             .omitEmptyStrings()
