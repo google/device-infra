@@ -643,6 +643,20 @@ public class Flags {
       converter = Flag.IntegerConverter.class)
   public Flag<Integer> configServiceGrpcPort = configServiceGrpcPortDefault;
 
+  /** Backend storage type for the config service. */
+  public enum ConfigServiceStorageType {
+    LOCAL_FILE,
+    JDBC_CONNECTOR
+  }
+
+  private static final Flag<ConfigServiceStorageType> configServiceStorageTypeDefault =
+      Flag.value(ConfigServiceStorageType.LOCAL_FILE);
+
+  @com.beust.jcommander.Parameter(
+      names = "--config_service_storage_type",
+      description = "Type of the backend storage for the config service.")
+  public Flag<ConfigServiceStorageType> configServiceStorageType = configServiceStorageTypeDefault;
+
   private static final Flag<Boolean> connectToLabServerUsingIpDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(

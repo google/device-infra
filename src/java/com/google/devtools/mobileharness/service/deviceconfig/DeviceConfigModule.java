@@ -32,12 +32,9 @@ public class DeviceConfigModule extends AbstractModule {
 
   @Override
   protected void configure() {
-    // TODO: b/460296020 - Add a flag to control which storage client to use.
-    boolean useLocalFileStorage = false;
-    if (useLocalFileStorage) {
-      bind(StorageClient.class).to(LocalFileStorageClient.class);
-    } else {
-      bind(StorageClient.class).to(JdbcStorageClient.class);
+    switch (Flags.instance().configServiceStorageType.getNonNull()) {
+      case LOCAL_FILE -> bind(StorageClient.class).to(LocalFileStorageClient.class);
+      case JDBC_CONNECTOR -> bind(StorageClient.class).to(JdbcStorageClient.class);
     }
   }
 
