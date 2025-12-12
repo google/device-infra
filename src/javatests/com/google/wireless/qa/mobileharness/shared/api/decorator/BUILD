@@ -19,7 +19,6 @@ load("//src/javatests/com/google/devtools/mobileharness/builddefs:junit_test_sui
 package(
     default_applicable_licenses = ["//:license"],
     default_testonly = 1,
-    default_visibility = ["//:deviceinfra_all_pkg"],
 )
 
 java_library(
