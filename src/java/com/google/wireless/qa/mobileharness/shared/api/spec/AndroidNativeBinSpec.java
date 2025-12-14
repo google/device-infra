@@ -30,7 +30,8 @@ public interface AndroidNativeBinSpec {
 
   @FileAnnotation(
       required = true,
-      help = "The binary file. The binary will be executed during the test.")
+      help = "The binary file. The binary will be executed during the test.",
+      usedInClient = true)
   public static final String TAG_BIN = "bin";
 
   @FileAnnotation(
