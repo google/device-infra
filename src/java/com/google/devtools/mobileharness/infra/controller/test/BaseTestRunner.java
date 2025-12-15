@@ -363,6 +363,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
         // If job is not timeout but test timeout, TestManager has already marked the test as
         // TIMEOUT and can not be overwritten here.
         MobileHarnessException cause;
+        TestResult testResult = Test.TestResult.ERROR;
 
         String componentName = getComponentName();
         if (componentName.equals("lab") || componentName.equals("local")) {
@@ -390,8 +391,9 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
                   InfraErrorId.TR_TEST_INTERRUPTED_WHEN_USER_KILL_JOB,
                   "Test interrupted because it's manually killed by user.",
                   e);
+          testResult = Test.TestResult.ABORT;
         }
-        testInfo.resultWithCause().setNonPassing(Test.TestResult.ERROR, cause);
+        testInfo.resultWithCause().setNonPassing(testResult, cause);
         testException = e;
       }
       testInfo
