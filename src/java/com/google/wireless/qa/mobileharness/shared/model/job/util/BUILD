@@ -50,3 +50,12 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+java_library(
+    name = "job_info_util",
+    srcs = ["JobInfoUtil.java"],
+    deps = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@maven//:com_google_guava_guava",
+    ],
+)

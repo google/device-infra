@@ -213,6 +213,21 @@ public class JobInfo extends JobScheduleUnit {
   @ParamAnnotation(
       required = false,
       help =
+          "Sandbox memory (MB). If it is 0 or not specified, default value from lab server will be"
+              + " used.\n")
+  public static final String PARAM_SANDBOX_MEMORY_MB = "sandbox_memory_mb";
+
+  @ParamAnnotation(
+      required = false,
+      help =
+          "Sandbox mode preference for testing/debugging/backward-compatibility."
+              + " See the enum SandboxModePreference. Case is ignored. By default, it is"
+              + "SandboxModePreference.NON_SANDBOX.\n")
+  public static final String PARAM_SANDBOX_MODE_PREFERENCE = "sandbox_mode_preference";
+
+  @ParamAnnotation(
+      required = false,
+      help =
           "If this flag is true, the udeclared_output.zip won't be uploaded to Sponge. Only works"
               + " if the job is triggered via gateway. This param is only for PMW temperally usage,"
               + " and will be removed in early 2024. Please use"
