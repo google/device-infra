@@ -56,6 +56,7 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import javax.inject.Singleton;
 
@@ -117,6 +118,13 @@ public class SystemUtil {
 
   @VisibleForTesting static final String GUITAR_CHANGELIST_ENV_VAR = "GUITAR_CHANGELIST";
   private static final Pattern CHANGELIST_PATTERN = Pattern.compile("^\\d+$");
+
+  // Matches a comma separated list of ports, e.g. "1234,5678".
+  private static final Pattern PORT_LIST_PATTERN = Pattern.compile("^\\d{1,5}(,\\d{1,5})*$");
+
+  // Matches a port range, e.g. "1234-5678".
+  private static final Pattern PORT_RANGE_PATTERN = Pattern.compile("^\\d{1,5}-\\d{1,5}$");
+
   private static volatile boolean processIsShuttingDown;
 
   private String osName = System.getProperty("os.name");
@@ -542,17 +550,26 @@ public class SystemUtil {
   }
 
   /**
-   * Gets the IDs of the processes which are listening the given port.
+   * Gets the IDs of the processes which are listening the given ports.
    *
+   * @param ports the ports to check, separated by comma or as a port range, e.g. "12345,65432" or
+   *     "12345-65432"
    * @return the IDs of the processes, or empty if there is no process listening the given port
    */
-  public Set<Integer> getProcessesByPort(int port)
+  private Set<Integer> getProcessesByPortsString(String ports)
       throws MobileHarnessException, InterruptedException {
+    // Safety check to avoid injecting arbitrary commands.
+    if (!PORT_LIST_PATTERN.matcher(ports).matches()
+        && !PORT_RANGE_PATTERN.matcher(ports).matches()) {
+      return new HashSet<>();
+    }
     Set<Integer> processIds = new HashSet<>();
     String output;
     try {
       output =
-          executor.exec(Command.of("lsof", "-i", ":" + port)).stdoutWithoutTrailingLineTerminator();
+          executor
+              .exec(Command.of("lsof", "-i", ":" + ports))
+              .stdoutWithoutTrailingLineTerminator();
     } catch (CommandException e) {
       // If there is no process using the given port, the above command will throw out exception.
       // Catches it and return the empty set.
@@ -607,6 +624,37 @@ public class SystemUtil {
       }
     }
     return processIds;
+  }
+
+  /**
+   * Gets the IDs of the processes which are listening the given port.
+   *
+   * @return the IDs of the processes, or empty if there is no process listening the given port
+   */
+  public Set<Integer> getProcessesByPortRange(Integer startPort, Integer endPort)
+      throws MobileHarnessException, InterruptedException {
+    return getProcessesByPortsString(String.format("%d-%d", startPort, endPort));
+  }
+
+  /**
+   * Gets the IDs of the processes which are listening the given port.
+   *
+   * @return the IDs of the processes, or empty if there is no process listening the given port
+   */
+  public Set<Integer> getProcessesByPorts(List<Integer> ports)
+      throws MobileHarnessException, InterruptedException {
+    String portsString = ports.stream().map(String::valueOf).collect(Collectors.joining(","));
+    return getProcessesByPortsString(portsString);
+  }
+
+  /**
+   * Gets the IDs of the processes which are listening the given port.
+   *
+   * @return the IDs of the processes, or empty if there is no process listening the given port
+   */
+  public Set<Integer> getProcessesByPort(int port)
+      throws MobileHarnessException, InterruptedException {
+    return getProcessesByPortsString(String.valueOf(port));
   }
 
   /**
