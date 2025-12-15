@@ -17,10 +17,20 @@
 package com.google.devtools.mobileharness.fe.v6.service.host;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostDeviceSummariesRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostDeviceSummariesResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostOverviewRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostOverview;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.UpdatePassThroughFlagsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.UpdatePassThroughFlagsResponse;
 
 /** Interface for the core logic of the Host Service. */
 public interface HostServiceLogic {
   ListenableFuture<HostOverview> getHostOverview(GetHostOverviewRequest request);
+
+  ListenableFuture<GetHostDeviceSummariesResponse> getHostDeviceSummaries(
+      GetHostDeviceSummariesRequest request);
+
+  ListenableFuture<UpdatePassThroughFlagsResponse> updatePassThroughFlags(
+      UpdatePassThroughFlagsRequest request);
 }

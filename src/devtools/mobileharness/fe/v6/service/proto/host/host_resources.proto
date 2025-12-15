@@ -19,6 +19,7 @@ syntax = "proto3";
 package devtools.mobileharness.fe.v6.service.proto.host;
 
 import "google/protobuf/timestamp.proto";
+import "src/devtools/mobileharness/fe/v6/service/proto/device/device_resources.proto";
 
 option java_package = "com.google.devtools.mobileharness.fe.v6.service.proto.host";
 option java_multiple_files = true;
@@ -35,12 +36,10 @@ message HostOverview {
   LabServerInfo lab_server = 4;
   // Daemon server process information.
   DaemonServerInfo daemon_server = 5;
-  // List of devices connected to this host.
-  repeated DeviceSummary devices = 6;
   // Host-level properties.
-  map<string, string> properties = 7;
+  map<string, string> properties = 6;
   // OS of the host machine, e.g., "gLinux", "macOS".
-  string os = 8;
+  string os = 7;
 }
 
 // Host-level connectivity status with OmniLab master.
@@ -123,8 +122,28 @@ message DaemonServerInfo {
   string version = 2;
 }
 
+// Semantic state of the device health.
+// Frontend uses this to determine icon and color.
+message DeviceHealthState {
+  // The semantic state used by FE to determine styling (icon/color).
+  device.HealthState health = 1;
+  // The display text for the state, e.g., "In Service", "Out of Service".
+  string title = 2;
+  // Tooltip text explaining the current health state.
+  string tooltip = 3;
+}
+
 // A summary of a device connected to the host, for display in the device list.
 message DeviceSummary {
-  // TODO: Define device summary fields when device table design is
-  // finalized.
+  string id = 1;
+  DeviceHealthState health_state = 2;
+  repeated device.DeviceType types = 3;
+  device.HealthAndActivityInfo.DeviceStatus device_status = 4;
+  string label = 5;
+  // TODO: Consider if we need to display more complex form of
+  // required dimensions. The type of `required_dims` may need to update.
+  string required_dims = 6;
+  string model = 7;
+  string version = 8;
+  repeated device.SubDeviceInfo sub_devices = 9;
 }

@@ -7,7 +7,7 @@ const overview: HostOverview = {
   hostName: 'pusher-host-k-11.example.com',
   ip: '192.168.11.111',
   os: 'gLinux',
-  labTypeDisplayName: 'Satellite Lab',
+  labTypeDisplayNames: ['Satellite Lab'],
   labServer: {
     connectivity: {
       state: 'RUNNING',

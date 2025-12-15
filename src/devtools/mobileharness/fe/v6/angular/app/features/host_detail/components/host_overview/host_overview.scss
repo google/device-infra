@@ -24,16 +24,6 @@
   white-space: nowrap;
 }
 
-.grid-wrapper {
-  display: grid;
-  gap: 1rem 3rem;
-  grid-template-columns: 1fr;
-
-  @media (min-width: 1024px) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
 .grid-tight {
   display: grid;
   grid-template-columns: 150px 1fr;
@@ -61,6 +51,10 @@
     &.grid-tight-dd {
       font-weight: 500;
       gap: 0.5rem;
+    }
+
+    &.lab-type-wrapper {
+      flex-wrap: wrap;
     }
 
     > mat-icon {

@@ -16,10 +16,16 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.host;
 
+import static com.google.common.util.concurrent.Futures.immediateFuture;
+
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.GetHostOverviewHandler;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostDeviceSummariesRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostDeviceSummariesResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostOverviewRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostOverview;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.UpdatePassThroughFlagsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.UpdatePassThroughFlagsResponse;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -37,5 +43,19 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
   @Override
   public ListenableFuture<HostOverview> getHostOverview(GetHostOverviewRequest request) {
     return getHostOverviewHandler.getHostOverview(request);
+  }
+
+  @Override
+  public ListenableFuture<GetHostDeviceSummariesResponse> getHostDeviceSummaries(
+      GetHostDeviceSummariesRequest request) {
+    // TODO: Implement this method.
+    return immediateFuture(GetHostDeviceSummariesResponse.getDefaultInstance());
+  }
+
+  @Override
+  public ListenableFuture<UpdatePassThroughFlagsResponse> updatePassThroughFlags(
+      UpdatePassThroughFlagsRequest request) {
+    // TODO: Implement this method.
+    return immediateFuture(UpdatePassThroughFlagsResponse.getDefaultInstance());
   }
 }

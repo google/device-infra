@@ -6,7 +6,7 @@
  * uses this data to render the UI, including icons, colors, and layouts.
  */
 
-import {HealthState} from './device_overview';
+import {HealthState, SubDeviceInfo} from './device_overview';
 
 /**
  * Semantic state of host connectivity with the OmniLab master server.
@@ -163,6 +163,7 @@ export interface DeviceSummary {
   readonly requiredDims: string;
   readonly model: string;
   readonly version: string;
+  readonly subDevices?: SubDeviceInfo[];
 }
 
 /**
@@ -179,7 +180,7 @@ export interface HostOverview {
    * The user-friendly lab type name, derived by the backend,
    * e.g., "Core Lab", "Satellite Lab (SLaaS)".
    */
-  readonly labTypeDisplayName: string;
+  readonly labTypeDisplayNames: string[];
   /** Lab server information. */
   readonly labServer: LabServerInfo;
   /** Daemon server information. */

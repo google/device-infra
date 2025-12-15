@@ -1,25 +1,32 @@
 <app-overview-page [navList]="navList">
   <app-info-card #overviewSection id="overview" title="Overview" [collapsible]="false">
     <div class="overview-card-content">
-      <div class="grid-wrapper">
-        <dl class="grid-tight">
-          <dt title="HostName">Host Name</dt>
-          <dd title="{{ host.hostName }}" class="overflow-ellipsis">{{ host.hostName || 'N/A' }}</dd>
+      <dl class="grid-tight">
+        <dt title="HostName">Host Name</dt>
+        <dd title="{{ host.hostName }}" class="overflow-ellipsis">{{ host.hostName || 'N/A' }}</dd>
 
-          <dt title="HostIP">Host IP</dt>
-          <dd title="{{ host.ip }}" class="overflow-ellipsis">{{ host.ip || 'N/A' }}</dd>
-        </dl>
-        <dl class="grid-tight">
-          <dt title="LabType">Lab Type</dt>
-          <dd title="{{ host.labTypeDisplayName }}">
-            <div class="lab-type-chip overflow-ellipsis">
-              {{ host.labTypeDisplayName || 'N/A' }}
+        <dt title="HostIP">Host IP</dt>
+        <dd title="{{ host.ip }}" class="overflow-ellipsis">{{ host.ip || 'N/A' }}</dd>
+
+        <dt title="OS">OS</dt>
+        <dd title="{{ host.os }}" class="overflow-ellipsis">{{ host.os || 'N/A' }}</dd>
+
+        <dt title="LabType">Lab Type</dt>
+        <dd class="lab-type-wrapper">
+          @if (host.labTypeDisplayNames.length > 0) {
+            @for (labType of host.labTypeDisplayNames; track labType) {
+              <div class="lab-type-chip overflow-ellipsis" title="{{ labType }}">
+                {{ labType }}
+              </div>
+            }
+          } @else {
+            <div class="lab-type-chip overflow-ellipsis" title="N/A">
+              N/A
             </div>
-          </dd>
-          <dt title="OS">OS</dt>
-          <dd title="{{ host.os }}" class="overflow-ellipsis">{{ host.os || 'N/A' }}</dd>
-        </dl>
-      </div>
+          }
+        </dd>
+
+      </dl>
     </div>
   </app-info-card>
   <app-info-card #overviewSection id="lab-server" title="Lab Server" [collapsible]="false">

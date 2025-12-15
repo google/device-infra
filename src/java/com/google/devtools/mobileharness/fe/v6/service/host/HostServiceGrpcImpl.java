@@ -18,9 +18,13 @@ package com.google.devtools.mobileharness.fe.v6.service.host;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcServiceUtil;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostDeviceSummariesRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostDeviceSummariesResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostOverviewRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostOverview;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostServiceGrpc;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.UpdatePassThroughFlagsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.UpdatePassThroughFlagsResponse;
 import io.grpc.stub.StreamObserver;
 import javax.inject.Inject;
 
@@ -46,5 +50,31 @@ public final class HostServiceGrpcImpl extends HostServiceGrpc.HostServiceImplBa
         executor,
         HostServiceGrpc.getServiceDescriptor(),
         HostServiceGrpc.getGetHostOverviewMethod());
+  }
+
+  @Override
+  public void getHostDeviceSummaries(
+      GetHostDeviceSummariesRequest request,
+      StreamObserver<GetHostDeviceSummariesResponse> responseObserver) {
+    GrpcServiceUtil.invokeAsync(
+        request,
+        responseObserver,
+        logic::getHostDeviceSummaries,
+        executor,
+        HostServiceGrpc.getServiceDescriptor(),
+        HostServiceGrpc.getGetHostDeviceSummariesMethod());
+  }
+
+  @Override
+  public void updatePassThroughFlags(
+      UpdatePassThroughFlagsRequest request,
+      StreamObserver<UpdatePassThroughFlagsResponse> responseObserver) {
+    GrpcServiceUtil.invokeAsync(
+        request,
+        responseObserver,
+        logic::updatePassThroughFlags,
+        executor,
+        HostServiceGrpc.getServiceDescriptor(),
+        HostServiceGrpc.getUpdatePassThroughFlagsMethod());
   }
 }
