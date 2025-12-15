@@ -656,6 +656,7 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
     this.allocationEndTime = allocationEndTime;
     if (allocationEndTime.equals(Instant.EPOCH)) {
       // It's deallocated, do nothing.
+      postDeviceChangeEvent("Deallocated.");
       return;
     }
     if (checking.compareAndSet(false, true)) {
