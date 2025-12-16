@@ -1,21 +1,28 @@
 import {
-  AggregatedHealthiness,
   AggregatedRecoveryTasks,
   AggregatedTestResults,
   DailyHealthiness,
   DailyRecoveryTasks,
   DailyTestResults,
   HealthinessStats,
+  HealthinessSummary,
   RecoveryTaskStats,
   TestResultStats,
 } from '../../models/device_stats';
+
+function formatDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
 
 function getDates(
   startDate: string,
   endDate: string,
 ): {start: Date; days: number} {
-  const start = new Date(startDate);
-  const end = new Date(endDate);
+  const start = new Date(startDate + 'T00:00:00');
+  const end = new Date(endDate + 'T00:00:00');
 
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     throw new Error('Invalid start or end date');
@@ -25,23 +32,70 @@ function getDates(
     throw new Error('Start date must be before end date');
   }
 
-  start.setHours(0, 0, 0, 0);
-  end.setHours(0, 0, 0, 0);
-
-  const days = Math.floor((end.getTime() - start.getTime()) / 86400000) + 1;
+  const days = Math.round((end.getTime() - start.getTime()) / 86400000) + 1;
   return {start, days};
 }
 
-/** Generates mock healthiness stats. */
+function createHealthinessSummary(
+  idle: number,
+  busy: number,
+  lameduck: number,
+  init: number,
+  dying: number,
+  dirty: number,
+  prepping: number,
+  missing: number,
+  failed: number,
+  others: number,
+): HealthinessSummary {
+  const inServiceTotal = idle + busy;
+  const outOfServiceTotal =
+    lameduck + init + dying + dirty + prepping + missing + failed + others;
+  const total = inServiceTotal + outOfServiceTotal;
+
+  return {
+    inServicePercent: total ? (inServiceTotal / total) * 100 : 0,
+    outOfServicePercent: total ? (outOfServiceTotal / total) * 100 : 0,
+    inServiceBreakdown: [
+      {category: 'IDLE', percent: total ? (idle / total) * 100 : 0},
+      {category: 'BUSY', percent: total ? (busy / total) * 100 : 0},
+    ].filter((i) => i.percent > 0),
+    outOfServiceBreakdown: [
+      {category: 'LAMEDUCK', percent: total ? (lameduck / total) * 100 : 0},
+      {category: 'INIT', percent: total ? (init / total) * 100 : 0},
+      {category: 'DYING', percent: total ? (dying / total) * 100 : 0},
+      {category: 'DIRTY', percent: total ? (dirty / total) * 100 : 0},
+      {category: 'PREPPING', percent: total ? (prepping / total) * 100 : 0},
+      {category: 'MISSING', percent: total ? (missing / total) * 100 : 0},
+      {category: 'FAILED', percent: total ? (failed / total) * 100 : 0},
+      {category: 'OTHERS', percent: total ? (others / total) * 100 : 0},
+    ].filter((i) => i.percent > 0),
+  };
+}
+
+/** Generates mock healthiness stats. date YYYY-MM-DD. */
 export function generateHealthinessStats(
   startDate: string,
   endDate: string,
 ): HealthinessStats {
-  const DAY_IN_MS = 86400000; // 24 * 60 * 60 * 1000
   const {start, days} = getDates(startDate, endDate);
 
+  const accumulated = {
+    idle: 0,
+    busy: 0,
+    lameduck: 0,
+    init: 0,
+    dying: 0,
+    dirty: 0,
+    prepping: 0,
+    missing: 0,
+    failed: 0,
+    others: 0,
+  };
+
   const dailyStats: DailyHealthiness[] = Array.from({length: days}, (_, i) => {
-    const date = new Date(start.getTime() + i * DAY_IN_MS);
+    const date = new Date(start);
+    date.setDate(start.getDate() + i);
 
     let rem = 100;
     const idle = Math.random() * (rem * 0.7);
@@ -62,61 +116,48 @@ export function generateHealthinessStats(
     rem -= missing;
     const failed = Math.random() < 0.15 ? Math.random() * (rem * 0.25) : 0;
     rem -= failed;
+    const others = rem;
+
+    accumulated.idle += idle;
+    accumulated.busy += busy;
+    accumulated.lameduck += lameduck;
+    accumulated.init += init;
+    accumulated.dying += dying;
+    accumulated.dirty += dirty;
+    accumulated.prepping += prepping;
+    accumulated.missing += missing;
+    accumulated.failed += failed;
+    accumulated.others += others;
+
     return {
-      date: date.toISOString().substring(0, 10),
-      idle,
-      busy,
-      lameduck,
-      init,
-      dying,
-      dirty,
-      prepping,
-      missing,
-      failed,
-      others: rem,
+      date: formatDate(date),
+      healthinessSummary: createHealthinessSummary(
+        idle,
+        busy,
+        lameduck,
+        init,
+        dying,
+        dirty,
+        prepping,
+        missing,
+        failed,
+        others,
+      ),
     };
   });
 
-  const totalIdle = dailyStats.reduce((sum, day) => sum + day.idle, 0);
-  const totalBusy = dailyStats.reduce((sum, day) => sum + day.busy, 0);
-  const totalLameduck = dailyStats.reduce((sum, day) => sum + day.lameduck, 0);
-  const totalInit = dailyStats.reduce((sum, day) => sum + day.init, 0);
-  const totalDying = dailyStats.reduce((sum, day) => sum + day.dying, 0);
-  const totalDirty = dailyStats.reduce((sum, day) => sum + day.dirty, 0);
-  const totalPrepping = dailyStats.reduce((sum, day) => sum + day.prepping, 0);
-  const totalMissing = dailyStats.reduce((sum, day) => sum + day.missing, 0);
-  const totalFailed = dailyStats.reduce((sum, day) => sum + day.failed, 0);
-  const totalOthers = dailyStats.reduce((sum, day) => sum + day.others, 0);
-
-  const inServiceTotal = totalIdle + totalBusy;
-  const outOfServiceTotal =
-    totalLameduck +
-    totalInit +
-    totalDying +
-    totalDirty +
-    totalPrepping +
-    totalMissing +
-    totalFailed +
-    totalOthers;
-
-  const total = inServiceTotal + outOfServiceTotal;
-
-  const aggregatedStats: AggregatedHealthiness = {
-    inServicePercent: total ? (inServiceTotal / total) * 100 : 0,
-    outOfServicePercent: total ? (outOfServiceTotal / total) * 100 : 0,
-    statusBreakdown: [
-      {status: 'IDLE', percent: total ? (totalIdle / total) * 100 : 0},
-      {status: 'BUSY', percent: total ? (totalBusy / total) * 100 : 0},
-      {status: 'LAMEDUCK', percent: total ? (totalLameduck / total) * 100 : 0},
-      {status: 'INIT', percent: total ? (totalInit / total) * 100 : 0},
-      {status: 'DYING', percent: total ? (totalDying / total) * 100 : 0},
-      {status: 'DIRTY', percent: total ? (totalDirty / total) * 100 : 0},
-      {status: 'PREPPING', percent: total ? (totalPrepping / total) * 100 : 0},
-      {status: 'MISSING', percent: total ? (totalMissing / total) * 100 : 0},
-      {status: 'FAILED', percent: total ? (totalFailed / total) * 100 : 0},
-      {status: 'OTHERS', percent: total ? (totalOthers / total) * 100 : 0},
-    ].filter((item) => item.percent > 0),
-  };
+  const aggregatedStats = createHealthinessSummary(
+    accumulated.idle,
+    accumulated.busy,
+    accumulated.lameduck,
+    accumulated.init,
+    accumulated.dying,
+    accumulated.dirty,
+    accumulated.prepping,
+    accumulated.missing,
+    accumulated.failed,
+    accumulated.others,
+  );
 
   return {dailyStats, aggregatedStats};
 }
@@ -126,11 +167,10 @@ export function generateTestResultStats(
   startDate: string,
   endDate: string,
 ): TestResultStats {
-  const DAY_IN_MS = 86400000; // 24 * 60 * 60 * 1000
-
   const {start, days} = getDates(startDate, endDate);
   const dailyStats: DailyTestResults[] = Array.from({length: days}, (_, i) => {
-    const date = new Date(start.getTime() + i * DAY_IN_MS);
+    const date = new Date(start);
+    date.setDate(start.getDate() + i);
 
     const total = 50 + Math.floor(Math.random() * 150);
     let rem = total;
@@ -144,7 +184,7 @@ export function generateTestResultStats(
     rem -= timeout;
 
     return {
-      date: date.toISOString().substring(0, 10),
+      date: formatDate(date),
       pass,
       fail,
       error,
@@ -205,19 +245,18 @@ export function generateRecoveryTaskStats(
   startDate: string,
   endDate: string,
 ): RecoveryTaskStats {
-  const DAY_IN_MS = 86400000; // 24 * 60 * 60 * 1000
-
   const {start, days} = getDates(startDate, endDate);
   const dailyStats: DailyRecoveryTasks[] = Array.from(
     {length: days},
     (_, i) => {
-      const date = new Date(start.getTime() + i * DAY_IN_MS);
+      const date = new Date(start);
+      date.setDate(start.getDate() + i);
 
       const total = 5 + Math.floor(Math.random() * 20);
       const success = Math.floor(Math.random() * total * 0.8);
       const fail = total - success;
       return {
-        date: date.toISOString().substring(0, 10),
+        date: formatDate(date),
         success,
         fail,
       };

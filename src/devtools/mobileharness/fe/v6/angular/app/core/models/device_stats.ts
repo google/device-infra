@@ -10,40 +10,44 @@ export interface HealthinessStats {
   /** Time series data for daily healthiness breakdown. */
   dailyStats: DailyHealthiness[];
   /** Aggregated data over the selected period. */
-  aggregatedStats: AggregatedHealthiness;
+  aggregatedStats: HealthinessSummary;
 }
 
 /**
  * Healthiness breakdown for a single day.
- * Values represent the percentage of time spent in each state (summing to 100).
  */
 export interface DailyHealthiness {
-  /** The date in ISO string format (YYYY-MM-DD). */
+  /** The date in YYYY-MM-DD format. */
   date: string;
-  idle: number;
-  busy: number;
-  lameduck: number;
-  init: number;
-  dying: number;
-  dirty: number;
-  prepping: number;
-  missing: number;
-  failed: number;
-  others: number;
+  healthinessSummary: HealthinessSummary;
 }
 
 /**
- * Aggregated healthiness statistics over the selected period.
+ * Healthiness statistics summary over the selected period.
  */
-export interface AggregatedHealthiness {
+export interface HealthinessSummary {
   /** Total percentage of time the device was considered "In Service". */
   inServicePercent: number;
   /** Total percentage of time the device was considered "Out of Service". */
   outOfServicePercent: number;
-  /** Breakdown of time spent in each status. */
-  statusBreakdown: Array<{
-    status: string; // e.g., 'IDLE', 'BUSY', 'FAILED'
-    percent: number; // Percentage of the total period
+
+  /**
+   * Breakdown of "In Service" time.
+   * Expected categories: "IDLE", "BUSY".
+   */
+  inServiceBreakdown: Array<{
+    category: string;
+    percent: number;
+  }>;
+
+  /**
+   * Breakdown of "Out of Service" time.
+   * Expected categories: "LAMEDUCK", "INIT", "DYING", "DIRTY", "PREPPING",
+   * "MISSING", "FAILED", and "OTHERS".
+   */
+  outOfServiceBreakdown: Array<{
+    category: string;
+    percent: number;
   }>;
 }
 
@@ -64,7 +68,7 @@ export interface TestResultStats {
  * Values represent counts.
  */
 export interface DailyTestResults {
-  /** The date in ISO string format (YYYY-MM-DD). */
+  /** The date in YYYY-MM-DD format. */
   date: string;
   pass: number;
   fail: number;
@@ -104,7 +108,7 @@ export interface RecoveryTaskStats {
  * Values represent counts.
  */
 export interface DailyRecoveryTasks {
-  /** The date in ISO string format (YYYY-MM-DD). */
+  /** The date in YYYY-MM-DD format. */
   date: string;
   success: number;
   fail: number;
