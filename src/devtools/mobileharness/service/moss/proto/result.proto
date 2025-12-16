@@ -19,7 +19,6 @@ syntax = "proto2";
 package mobileharness.service.moss;
 
 import "src/devtools/common/metrics/stability/model/proto/error_id.proto";
-import "src/devtools/common/metrics/stability/model/proto/error_type.proto";
 import "src/devtools/common/metrics/stability/model/proto/exception.proto";
 import "src/devtools/mobileharness/api/model/proto/job.proto";
 import "src/devtools/mobileharness/api/model/proto/test.proto";
@@ -191,8 +190,13 @@ message JobSummary {
   repeated FileDetail run_file = 14;
   repeated FileDetail gen_file = 15;
   optional int32 total_test_count = 16;
-  repeated ErrorInfo warning = 17;
-  optional ErrorInfo result_cause = 18;
+
+  // TODO: Add the new fields and mark this as deprecated.
+  repeated ErrorInfo deprecated_warning = 17;
+
+  // TODO: Add the new fields and mark this as deprecated.
+  optional ErrorInfo deprecated_result_cause = 18;
+
   optional DeviceRequirements device_requirements = 19;
 
   reserved 9;
