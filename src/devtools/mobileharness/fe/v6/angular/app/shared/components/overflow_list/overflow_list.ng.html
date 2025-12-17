@@ -1,0 +1,15 @@
+<div class="chip-wrapper">
+  @for (item of displayedItems(); track $index) {
+    <ng-container *ngTemplateOutlet="itemTemplate; context: {$implicit: item}"></ng-container>
+  }
+  @if (remainingCount() > 0) {
+    <button class="chip-more"
+            [class]="moreButtonClass"
+            cdkOverlayOrigin
+            #trigger="cdkOverlayOrigin"
+            (mouseenter)="onMoreHover(trigger)"
+            (mouseleave)="onMoreLeave($event)">
+      +{{remainingCount()}} more
+    </button>
+  }
+</div>

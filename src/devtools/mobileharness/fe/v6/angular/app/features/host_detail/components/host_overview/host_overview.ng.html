@@ -173,7 +173,7 @@
             }
           </div>
           <div class="device-table-container scroll-container">
-            <table mat-table [dataSource]="deviceDataSource">
+            <table mat-table [dataSource]="deviceDataSource" multiTemplateDataRows>
               <!-- Checkbox Column -->
               <ng-container matColumnDef="select" sticky>
                 <th mat-header-cell *matHeaderCellDef class="sticky-start-header">
@@ -196,20 +196,33 @@
                 </td>
               </ng-container>
 
-            <!-- ID Column -->
-            <ng-container matColumnDef="id">
-              <th mat-header-cell *matHeaderCellDef>ID</th>
-              <td mat-cell *matCellDef="let element" class="limit-width">
-                <a
-                  [routerLink]="['/devices', element.id]"
-                  class="id-link truncate-text"
-                  title="{{element.id}}"
-                  matTooltip="{{element.id}}"
-                  matTooltipPositionAtOrigin="true">
-                  {{element.id}}
-                  </a>
-              </td>
-            </ng-container>
+              <!-- Expand Column -->
+              <ng-container matColumnDef="expand">
+                <th mat-header-cell *matHeaderCellDef aria-label="row actions">&nbsp;</th>
+                <td mat-cell *matCellDef="let element">
+                  @if(isTestbed(element)) {
+                    <button mat-icon-button aria-label="expand row"
+                      (click)="toggleRow(element); $event.stopPropagation()">
+                      <mat-icon class="expand-icon" [class.expanded]="expandedElement === element">chevron_right</mat-icon>
+                    </button>
+                  }
+                </td>
+              </ng-container>
+
+              <!-- ID Column -->
+              <ng-container matColumnDef="id">
+                <th mat-header-cell *matHeaderCellDef>ID</th>
+                <td mat-cell *matCellDef="let element" class="limit-width">
+                  <a
+                    [routerLink]="['/devices', element.id]"
+                    class="id-link truncate-text"
+                    title="{{element.id}}"
+                    matTooltip="{{element.id}}"
+                    matTooltipPositionAtOrigin="true">
+                    {{element.id}}
+                    </a>
+                </td>
+              </ng-container>
 
               <!-- Health Column -->
               <ng-container matColumnDef="health">
@@ -227,31 +240,36 @@
                 </td>
               </ng-container>
 
-            <!-- Type Column -->
-            <ng-container matColumnDef="type">
-              <th mat-header-cell *matHeaderCellDef>TYPE</th>
-              <td mat-cell *matCellDef="let element">
-                @if(element.types.length > 0) {
-                  <div
-                      class="type-chip-wrapper"
-                      title="{{getDeviceTypesString(element.types)}}"
-                      matTooltip="{{getDeviceTypesString(element.types)}}"
-                      matTooltipPositionAtOrigin="true">
-                    <div
-                      class="type-chip"
-                      [class.type-chip-abnormal]="isTypeAbnormal(element.types)"
-                      [class.type-chip-normal]="!isTypeAbnormal(element.types)">
-                      {{getFirstType(element.types)}}
+              <!-- Type Column -->
+              <ng-container matColumnDef="type">
+                <th mat-header-cell *matHeaderCellDef>TYPE</th>
+                <td mat-cell *matCellDef="let element">
+                  @if(element.types.length > 0) {
+                    <div class="type-chip-wrapper">
+                      <div
+                        class="type-chip"
+                        [class.type-chip-abnormal]="isTypeAbnormal(element.types)"
+                        [class.type-chip-normal]="!isTypeAbnormal(element.types)"
+                      >
+                        {{getFirstType(element.types)}}
+                      </div>
+                      @if(element.types.length > 1) {
+                        <button
+                          class="type-chip-more"
+                          cdkOverlayOrigin
+                          #trigger="cdkOverlayOrigin"
+                          (mouseenter)="onTypeHover(trigger, element.id, element.types)"
+                          (mouseleave)="handleMouseLeave($event)"
+                        >
+                          +{{ element.types.length - 1 }} more
+                        </button>
+                      }
                     </div>
-                    @if(getRemainingTypeCount(element.types); as count) {
-                      <span class="type-count">+{{count}}</span>
-                    }
-                  </div>
-                } @else {
-                  —
-                }
-              </td>
-            </ng-container>
+                  } @else {
+                    —
+                  }
+                </td>
+              </ng-container>
 
               <!-- Status Column -->
               <ng-container matColumnDef="status">
@@ -267,57 +285,57 @@
                 </td>
               </ng-container>
 
-            <!-- Label Column -->
-            <ng-container matColumnDef="label">
-              <th mat-header-cell *matHeaderCellDef>LABEL</th>
-              <td mat-cell *matCellDef="let element" class="limit-width">
-                <span
-                  class="truncate-text"
-                  title="{{element.label}}"
-                  matTooltip="{{element.label}}"
-                  matTooltipPositionAtOrigin="true"
-                >{{element.label || '—'}}</span>
-              </td>
-            </ng-container>
+              <!-- Label Column -->
+              <ng-container matColumnDef="label">
+                <th mat-header-cell *matHeaderCellDef>LABEL</th>
+                <td mat-cell *matCellDef="let element" class="limit-width">
+                  <span
+                    class="truncate-text"
+                    title="{{element.label}}"
+                    matTooltip="{{element.label}}"
+                    matTooltipPositionAtOrigin="true"
+                  >{{element.label || '—'}}</span>
+                </td>
+              </ng-container>
 
-            <!-- Required Dims Column -->
-            <ng-container matColumnDef="requiredDims">
-              <th mat-header-cell *matHeaderCellDef>REQUIRED DIMS</th>
-              <td mat-cell *matCellDef="let element" class="limit-width">
-                <span
-                  class="truncate-text"
-                  title="{{element.requiredDims}}"
-                  matTooltip="{{element.requiredDims}}"
-                  matTooltipPositionAtOrigin="true"
-                >{{element.requiredDims || '—'}}</span>
-              </td>
-            </ng-container>
+              <!-- Required Dims Column -->
+              <ng-container matColumnDef="requiredDims">
+                <th mat-header-cell *matHeaderCellDef>REQUIRED DIMS</th>
+                <td mat-cell *matCellDef="let element" class="limit-width">
+                  <span
+                    class="truncate-text"
+                    title="{{element.requiredDims}}"
+                    matTooltip="{{element.requiredDims}}"
+                    matTooltipPositionAtOrigin="true"
+                  >{{element.requiredDims || '—'}}</span>
+                </td>
+              </ng-container>
 
-            <!-- Model Column -->
-            <ng-container matColumnDef="model">
-              <th mat-header-cell *matHeaderCellDef>MODEL</th>
-              <td mat-cell *matCellDef="let element" class="limit-width">
-                <span
-                  class="truncate-text"
-                  title="{{element.model}}"
-                  matTooltip="{{element.model}}"
-                  matTooltipPositionAtOrigin="true"
-                >{{element.model || '—'}}</span>
-              </td>
-            </ng-container>
+              <!-- Model Column -->
+              <ng-container matColumnDef="model">
+                <th mat-header-cell *matHeaderCellDef>MODEL</th>
+                <td mat-cell *matCellDef="let element" class="limit-width">
+                  <span
+                    class="truncate-text"
+                    title="{{element.model}}"
+                    matTooltip="{{element.model}}"
+                    matTooltipPositionAtOrigin="true"
+                  >{{element.model || '—'}}</span>
+                </td>
+              </ng-container>
 
-            <!-- Version Column -->
-            <ng-container matColumnDef="version">
-              <th mat-header-cell *matHeaderCellDef>VERSION</th>
-              <td mat-cell *matCellDef="let element" class="limit-width">
-                <span
-                  class="truncate-text"
-                  title="{{element.version}}"
-                  matTooltip="{{element.version}}"
-                  matTooltipPositionAtOrigin="true"
-                >{{element.version || '—'}}</span>
-              </td>
-            </ng-container>
+              <!-- Version Column -->
+              <ng-container matColumnDef="version">
+                <th mat-header-cell *matHeaderCellDef>VERSION</th>
+                <td mat-cell *matCellDef="let element" class="limit-width">
+                  <span
+                    class="truncate-text"
+                    title="{{element.version}}"
+                    matTooltip="{{element.version}}"
+                    matTooltipPositionAtOrigin="true"
+                  >{{element.version || '—'}}</span>
+                </td>
+              </ng-container>
 
               <!-- Actions Column -->
               <ng-container matColumnDef="actions" stickyEnd>
@@ -347,8 +365,81 @@
                 </td>
               </ng-container>
 
+              <ng-container matColumnDef="expandedDetail">
+                <td mat-cell *matCellDef="let element" [attr.colspan]="displayedColumns.length">
+                  <div class="element-detail"
+                       [class.expanded]="element === expandedElement">
+                       @if(element.subDevices) {
+                         <div class="sub-device-wrapper">
+                           <table mat-table [dataSource]="element.subDevices" class="sub-device-table">
+                             <!-- Sub-Device ID Column -->
+                             <ng-container matColumnDef="id">
+                               <th mat-header-cell *matHeaderCellDef> SUB-DEVICE ID </th>
+                               <td mat-cell *matCellDef="let sub" class="sub-device-id"> {{sub.id}} </td>
+                             </ng-container>
+
+                             <!-- Type Column -->
+                             <ng-container matColumnDef="type">
+                               <th mat-header-cell *matHeaderCellDef> TYPE </th>
+                               <td mat-cell *matCellDef="let sub">
+                                 <app-overflow-list
+                                   [items]="sub.types"
+                                   [limit]="1"
+                                   [itemTemplate]="typeTemplate"
+                                   moreButtonClass="type-chip-more"
+                                   (showOverlay)="onTypeHover($event, sub.id, sub.types)"
+                                   (hideOverlay)="handleMouseLeave($event)">
+                                 </app-overflow-list>
+                                 <ng-template #typeTemplate let-type>
+                                   <div
+                                     class="type-chip"
+                                     [class.type-chip-abnormal]="isTypeAbnormal([type])"
+                                     [class.type-chip-normal]="!isTypeAbnormal([type])"
+                                   >
+                                     {{type.type}}
+                                   </div>
+                                 </ng-template>
+                               </td>
+                             </ng-container>
+
+                             <!-- Dimensions Column -->
+                             <ng-container matColumnDef="dimensions">
+                               <th mat-header-cell *matHeaderCellDef> DIMENSIONS </th>
+                               <td mat-cell *matCellDef="let sub">
+                                 @if(sub.dimensions && sub.dimensions.length > 0) {
+                                   <app-overflow-list
+                                     [items]="sub.dimensions"
+                                     [limit]="2"
+                                     [itemTemplate]="dimTemplate"
+                                     moreButtonClass="sub-device-dim-chip more"
+                                     (showOverlay)="onDimHover($event, sub.id, sub.dimensions)"
+                                     (hideOverlay)="handleMouseLeave($event)">
+                                   </app-overflow-list>
+                                   <ng-template #dimTemplate let-dim>
+                                     <span class="sub-device-dim-chip"><b>{{dim.name}}</b>: {{dim.value}}</span>
+                                   </ng-template>
+                                 } @else {
+                                   -
+                                 }
+                               </td>
+                             </ng-container>
+
+                             <tr mat-header-row *matHeaderRowDef="subDeviceDisplayedColumns"></tr>
+                             <tr mat-row *matRowDef="let row; columns: subDeviceDisplayedColumns;"></tr>
+                           </table>
+                         </div>
+                       }
+                  </div>
+                </td>
+              </ng-container>
+
               <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true" class="sticky-header"></tr>
-              <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+              <tr mat-row *matRowDef="let element; columns: displayedColumns;"
+                  class="element-row"
+                  [class.expanded-row]="expandedElement === element"
+                  (click)="isTestbed(element) ? toggleRow(element) : null">
+              </tr>
+              <tr mat-row *matRowDef="let row; columns: ['expandedDetail']" class="detail-row"></tr>
 
               <!-- Row shown when there is no matching data. -->
               <tr class="mat-row" *matNoDataRow>
@@ -414,3 +505,16 @@
     </div>
   </app-info-card>
 </app-overview-page>
+
+@if (activeOverlay(); as overlay) {
+  <ng-template cdkConnectedOverlay
+               [cdkConnectedOverlayOrigin]="overlay.origin"
+               [cdkConnectedOverlayOpen]="true"
+               [cdkConnectedOverlayPositions]="overlayPositions"
+               (overlayOutsideClick)="closeOverlay()"
+               (detach)="closeOverlay()">
+    <div (mouseenter)="onOverlayEnter()" (mouseleave)="handleMouseLeave($event)">
+      <app-searchable-list-overlay [data]="overlay.data" (closeOverlay)="closeOverlay()"></app-searchable-list-overlay>
+    </div>
+  </ng-template>
+}

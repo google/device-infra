@@ -1,0 +1,38 @@
+<div class="overlay-container">
+  <div class="header">
+    <h3 class="title">All {{ data.title }} @if(data.subtitle) { for {{data.subtitle}} }</h3>
+    <button mat-icon-button (click)="close()" class="close-button" aria-label="Close overlay">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <div class="overlay-content">
+    <mat-form-field appearance="outline" class="search-field" subscriptSizing="dynamic">
+      <input matInput [ngModel]="searchFilter()" (ngModelChange)="searchFilter.set($event)" placeholder="Search..." aria-label="Search">
+      @if (searchFilter()) {
+        <button matSuffix mat-icon-button aria-label="Clear" class="clear-button" (click)="searchFilter.set('')">
+          <mat-icon>close</mat-icon>
+        </button>
+      }
+    </mat-form-field>
+
+    <div class="list-container scroll-container" [class.simple-list]="data.type === 'simple'" [class.chip-list-container]="data.type === 'chip'">
+      @for (item of filteredItems(); track $index) {
+        @if (data.type === 'chip') {
+          @let chip = $any(item);
+          <div class="type-chip" [class]="chip.cssClass">
+            {{chip.label}}
+          </div>
+        } @else if (data.type === 'simple') {
+          <div class="item-value full-width">{{item}}</div>
+        } @else {
+          @let kv = $any(item);
+          <div class="item-name">{{kv.name}}</div>
+          <div class="item-value">{{kv.value}}</div>
+        }
+      } @empty {
+        <div class="no-results">No results match your search.</div>
+      }
+    </div>
+  </div>
+</div>

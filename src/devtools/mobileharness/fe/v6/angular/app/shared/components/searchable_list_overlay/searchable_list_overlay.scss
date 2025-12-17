@@ -1,0 +1,125 @@
+@use '@angular/material' as mat;
+@use '../../styles/overview';
+
+.overlay-container {
+  display: flex;
+  flex-direction: column;
+  width: 32rem;
+  max-height: 60vh;
+  box-sizing: border-box;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15); // Elevated shadow
+  border: 1px solid #e0e0e0;
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.title {
+  margin: 0;
+  font-size: 1rem; // 16px
+  font-weight: 500;
+  color: #202124;
+}
+
+.close-button {
+  color: #5f6368;
+  width: 32px;
+  height: 32px;
+  padding: 4px;
+
+  mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+}
+
+.overlay-content {
+  padding: 0.75rem;
+
+  @include mat.form-field-overrides((
+    container-height: 32px,
+    container-vertical-padding: 8px,
+    outlined-outline-color: #e0e0e0,
+    outlined-hover-outline-color: #1967d2,
+    outlined-focus-outline-color: #1967d2,
+  ));
+
+  .search-field {
+    width: 100%;
+    margin-bottom: 0.75rem;
+
+    .clear-button {
+      width: 24px;
+      height: 24px;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 0.5rem;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+    }
+  }
+
+  .list-container {
+    overflow-y: auto;
+    max-height: calc(40vh - 120px); // Adjust based on header/search height
+    padding: 0.5rem;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+    gap: 0.25rem 1rem; // 4px row, 16px col
+    font-size: 14px;
+    background-color: #f9fafb;
+    border-radius: 0.375rem;
+    border: 1px solid #e5e7eb;
+
+    &.simple-list {
+      grid-template-columns: 1fr;
+    }
+
+    &.chip-list-container {
+      display: flex;
+      flex-wrap: wrap;
+      align-content: flex-start;
+      gap: 8px;
+    }
+  }
+
+  .item-name {
+    color: #5f6368;
+    font-weight: 500;
+    padding: 4px 0;
+    word-break: break-word;
+  }
+
+  .item-value {
+    color: #202124;
+    padding: 4px 0;
+    word-break: break-word;
+
+    &.full-width {
+      grid-column: 1 / -1;
+    }
+  }
+}
+
+.no-results {
+  padding: 16px;
+  text-align: center;
+  color: #5f6368;
+  font-style: italic;
+  grid-column: 1 / -1;
+}

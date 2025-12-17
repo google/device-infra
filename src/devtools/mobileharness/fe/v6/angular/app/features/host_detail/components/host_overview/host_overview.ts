@@ -1,8 +1,14 @@
 import {SelectionModel} from '@angular/cdk/collections';
+import {
+  CdkOverlayOrigin,
+  ConnectedPosition,
+  OverlayModule,
+} from '@angular/cdk/overlay';
 import {CommonModule} from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   inject,
   Input,
   OnChanges,
@@ -10,6 +16,7 @@ import {
   signal,
   SimpleChanges,
 } from '@angular/core';
+import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {FormsModule} from '@angular/forms';
 import {MatButtonModule} from '@angular/material/button';
 import {MatCheckboxModule} from '@angular/material/checkbox';
@@ -24,7 +31,10 @@ import {MatTableDataSource, MatTableModule} from '@angular/material/table';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {RouterLink} from '@angular/router';
 import {delay} from 'rxjs/operators';
-import {HealthState} from '../../../../core/models/device_overview';
+import {
+  HealthState,
+  type DeviceDimension,
+} from '../../../../core/models/device_overview';
 import {
   DaemonServerStatus,
   DeviceSummary,
@@ -35,12 +45,74 @@ import {
 import {HOST_SERVICE} from '../../../../core/services/host/host_service';
 import {ConfirmDialog} from '../../../../shared/components/confirm_dialog/confirm_dialog';
 import {InfoCard} from '../../../../shared/components/info_card/info_card';
+import {OverflowList} from '../../../../shared/components/overflow_list/overflow_list';
 import {
   NavItem,
   OverviewPage,
 } from '../../../../shared/components/overview_page/overview_page';
+import {
+  SearchableListOverlayComponent,
+  SearchableListOverlayData,
+} from '../../../../shared/components/searchable_list_overlay/searchable_list_overlay';
 import {dateUtils} from '../../../../shared/utils/date_utils';
 import {objectUtils} from '../../../../shared/utils/object_utils';
+
+const HEALTH_SEMANTIC_MAP: Record<
+  string,
+  {icon: string; colorClass: string; text: string}
+> = {
+  'IN_SERVICE_IDLE': {
+    icon: 'check_circle',
+    colorClass: 'text-green-600',
+    text: 'In Service (Idle)',
+  },
+  'IN_SERVICE_BUSY': {
+    icon: 'sync',
+    colorClass: 'text-blue-600',
+    text: 'In Service (Busy)',
+  },
+  'OUT_OF_SERVICE_RECOVERING': {
+    icon: 'autorenew',
+    colorClass: 'text-amber-600',
+    text: 'Out of Service (Recovering)',
+  },
+  'OUT_OF_SERVICE_TEMP_MAINT': {
+    icon: 'warning',
+    colorClass: 'text-amber-600',
+    text: 'Out of Service (Temp Maint)',
+  },
+  'OUT_OF_SERVICE_NEEDS_FIXING': {
+    icon: 'error',
+    colorClass: 'text-red-600',
+    text: 'Out of Service (Needs Fixing)',
+  },
+};
+
+const DEFAULT_HEALTH_SEMANTIC = {
+  icon: 'help_outline',
+  colorClass: 'text-gray-700',
+  text: 'Unknown',
+};
+
+const LAB_ACTIVITY_SEMANTIC_MAP: Record<
+  string,
+  {icon: string; colorClass: string; isSpinning?: boolean}
+> = {
+  'STARTED': {icon: 'check', colorClass: 'text-green-600'},
+  'STARTED_BUT_DISCONNECTED': {icon: 'warning', colorClass: 'text-amber-600'},
+  'STARTING': {icon: 'sync', colorClass: 'text-blue-600', isSpinning: true},
+  'ERROR': {icon: 'error_outline', colorClass: 'text-red-600'},
+  'DRAINING': {icon: 'timelapse', colorClass: 'text-amber-600'},
+  'DRAINED': {icon: 'hourglass_empty', colorClass: 'text-gray-600'},
+  'STOPPING': {icon: 'sync', colorClass: 'text-blue-600', isSpinning: true},
+  'STOPPED': {icon: 'stop_circle', colorClass: 'text-gray-700'},
+};
+
+const STATUS_SEMANTIC_MAP: Record<string, {icon: string; colorClass: string}> =
+  {
+    'RUNNING': {icon: 'check_circle', colorClass: 'text-green-600'},
+    'MISSING': {icon: 'error', colorClass: 'text-red-600'},
+  };
 
 /**
  * Component for displaying an overview of a host, including its basic
@@ -67,14 +139,19 @@ import {objectUtils} from '../../../../shared/utils/object_utils';
     MatProgressSpinnerModule,
     MatTableModule,
     MatTooltipModule,
+    OverlayModule,
     RouterLink,
     OverviewPage,
     InfoCard,
+    SearchableListOverlayComponent,
+    OverflowList,
   ],
 })
 export class HostOverviewPage implements OnInit, OnChanges {
   private readonly dialog = inject(MatDialog);
   private readonly hostService = inject(HOST_SERVICE);
+  private readonly destroyRef = inject(DestroyRef);
+
   readonly objectUtils = objectUtils;
   readonly dateUtils = dateUtils;
   @Input({required: true}) host!: HostOverview;
@@ -87,9 +164,87 @@ export class HostOverviewPage implements OnInit, OnChanges {
   editedFlags = '';
   isDeviceLoading = signal(false);
   isSavingFlags = signal(false);
+  expandedElement: DeviceSummary | null = null;
+
+  // --- Dimensions Overlay State ---
+  activeOverlay = signal<{
+    origin: CdkOverlayOrigin;
+    data: SearchableListOverlayData;
+  } | null>(null);
+
+  // Timer to delay hiding the overlay, allowing user to move mouse into it
+  private overlayHideTimer: ReturnType<typeof setTimeout> | null = null;
+
+  readonly overlayPositions: ConnectedPosition[] = [
+    // Priority 1: Right-aligned below
+    {
+      originX: 'end',
+      originY: 'bottom',
+      overlayX: 'end',
+      overlayY: 'top',
+      offsetY: 8,
+    },
+    // Priority 1: Right-aligned above
+    {
+      originX: 'end',
+      originY: 'top',
+      overlayX: 'end',
+      overlayY: 'bottom',
+      offsetY: -8,
+    },
+    // Priority 2: Left-aligned below
+    {
+      originX: 'start',
+      originY: 'bottom',
+      overlayX: 'start',
+      overlayY: 'top',
+      offsetY: 8,
+    },
+    // Priority 2: Left-aligned above
+    {
+      originX: 'start',
+      originY: 'top',
+      overlayX: 'start',
+      overlayY: 'bottom',
+      offsetY: -8,
+    },
+    // Fallback: Centered below
+    {
+      originX: 'center',
+      originY: 'bottom',
+      overlayX: 'center',
+      overlayY: 'top',
+      offsetY: 8,
+    },
+    // Fallback: Centered above
+    {
+      originX: 'center',
+      originY: 'top',
+      overlayX: 'center',
+      overlayY: 'bottom',
+      offsetY: -8,
+    },
+    // Fallback: Open to the left of the origin (button on the right of overlay)
+    {
+      originX: 'start',
+      originY: 'bottom',
+      overlayX: 'end',
+      overlayY: 'top',
+      offsetY: 8,
+    },
+    // Fallback: Open to the right of the origin (button on the left of overlay)
+    {
+      originX: 'end',
+      originY: 'bottom',
+      overlayX: 'start',
+      overlayY: 'top',
+      offsetY: 8,
+    },
+  ];
 
   displayedColumns: string[] = [
     'select',
+    'expand',
     'id',
     'health',
     'type',
@@ -100,6 +255,8 @@ export class HostOverviewPage implements OnInit, OnChanges {
     'version',
     'actions',
   ];
+
+  subDeviceDisplayedColumns: string[] = ['id', 'type', 'dimensions'];
 
   navList: NavItem[] = [
     {
@@ -139,7 +296,7 @@ export class HostOverviewPage implements OnInit, OnChanges {
     this.isDeviceLoading.set(true);
     this.hostService
       .getHostDeviceSummaries(this.host.hostName)
-      .pipe(delay(2000)) // TODO: Remove this delay after the real implementation is done.
+      .pipe(delay(2000), takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (devices) => {
           this.deviceDataSource.data = devices;
@@ -201,8 +358,107 @@ export class HostOverviewPage implements OnInit, OnChanges {
     ).length;
   }
 
+  toggleRow(element: DeviceSummary) {
+    this.expandedElement = this.expandedElement === element ? null : element;
+  }
+
+  isTestbed(element: DeviceSummary): boolean {
+    return (
+      element.types.some((t) => t.type === 'TestbedDevice') &&
+      !!element.subDevices &&
+      element.subDevices.length > 0
+    );
+  }
+
   isTypeAbnormal(types: Array<{type: string; isAbnormal: boolean}>): boolean {
     return types.some((t) => t.isAbnormal);
+  }
+
+  onDimHover(
+    trigger: CdkOverlayOrigin,
+    subDeviceId: string,
+    dimensions: DeviceDimension[],
+  ) {
+    this.clearHideTimer();
+    // Only update if it's a different overlay
+    if (
+      this.activeOverlay()?.data.subtitle !== subDeviceId ||
+      this.activeOverlay()?.data.title !== 'Dimensions'
+    ) {
+      this.activeOverlay.set({
+        origin: trigger,
+        data: {
+          subtitle: subDeviceId,
+          type: 'key-value',
+          items: dimensions.map((d) => ({
+            name: d.name ?? '',
+            value: d.value ?? '',
+          })),
+          title: 'Dimensions',
+        },
+      });
+    }
+  }
+
+  onTypeHover(
+    trigger: CdkOverlayOrigin,
+    subDeviceId: string,
+    types: Array<{type: string; isAbnormal: boolean}>,
+  ) {
+    this.clearHideTimer();
+    const chipItems = types.map((t) => ({
+      label: t.type,
+      cssClass: t.isAbnormal ? 'type-chip-abnormal' : 'type-chip-normal',
+    }));
+    // Only update if it's a different overlay
+    if (
+      this.activeOverlay()?.data.subtitle !== subDeviceId ||
+      this.activeOverlay()?.data.title !== 'Device Types'
+    ) {
+      this.activeOverlay.set({
+        origin: trigger,
+        data: {
+          subtitle: subDeviceId,
+          type: 'chip',
+          items: chipItems,
+          title: 'Device Types',
+        },
+      });
+    }
+  }
+
+  handleMouseLeave(event?: MouseEvent) {
+    this.scheduleHideOverlay(event?.target as Element);
+  }
+
+  onOverlayEnter() {
+    this.clearHideTimer();
+  }
+
+  closeOverlay() {
+    this.clearHideTimer();
+    this.activeOverlay.set(null);
+  }
+
+  private scheduleHideOverlay(container?: Element | null) {
+    this.clearHideTimer();
+    this.overlayHideTimer = setTimeout(() => {
+      if (
+        container?.contains &&
+        document.activeElement &&
+        container.contains(document.activeElement)
+      ) {
+        return;
+      }
+      this.closeOverlay();
+    }, 200);
+  }
+
+  private clearHideTimer() {
+    if (this.overlayHideTimer) {
+      clearTimeout(this.overlayHideTimer);
+      this.overlayHideTimer = null;
+    }
   }
 
   getFirstType(types: Array<{type: string; isAbnormal: boolean}>): string {
@@ -214,7 +470,7 @@ export class HostOverviewPage implements OnInit, OnChanges {
   getRemainingTypeCount(
     types: Array<{type: string; isAbnormal: boolean}>,
   ): number {
-    return types.length > 1 ? types.length - 1 : 0;
+    return Math.max(0, types.length - 1);
   }
 
   getDeviceTypesString(
@@ -224,122 +480,34 @@ export class HostOverviewPage implements OnInit, OnChanges {
   }
 
   getStatusSemantic(status: HostConnectivityStatus | DaemonServerStatus) {
-    const result = {
-      icon: 'help_outline',
-      colorClass: 'text-gray-700',
+    const config = STATUS_SEMANTIC_MAP[status.state];
+    const duration =
+      status.state === 'MISSING' && status.missingStartTime
+        ? this.dateUtils.formatTimeAgo(status.missingStartTime)
+        : '';
+
+    return {
+      icon: config?.icon ?? 'help_outline',
+      colorClass: config?.colorClass ?? 'text-gray-700',
       text: status.title,
-      duration: '',
+      duration,
       tooltip: status.tooltip,
     };
-
-    switch (status.state) {
-      case 'RUNNING':
-        result.icon = 'check_circle';
-        result.colorClass = 'text-green-600';
-        break;
-      case 'MISSING':
-        result.icon = 'error';
-        result.colorClass = 'text-red-600';
-        if (status.missingStartTime) {
-          result.duration = this.dateUtils.formatTimeAgo(
-            status.missingStartTime,
-          );
-        }
-        break;
-      default:
-        break;
-    }
-    return result;
   }
 
   getHealthSemantic(state: HealthState) {
-    switch (state) {
-      case 'IN_SERVICE_IDLE':
-        return {
-          icon: 'check_circle',
-          colorClass: 'text-green-600',
-          text: 'In Service (Idle)',
-        };
-      case 'IN_SERVICE_BUSY':
-        return {
-          icon: 'sync',
-          colorClass: 'text-blue-600',
-          text: 'In Service (Busy)',
-        };
-      case 'OUT_OF_SERVICE_RECOVERING':
-        return {
-          icon: 'autorenew',
-          colorClass: 'text-amber-600',
-          text: 'Out of Service (Recovering)',
-        };
-      case 'OUT_OF_SERVICE_TEMP_MAINT':
-        return {
-          icon: 'warning',
-          colorClass: 'text-amber-600',
-          text: 'Out of Service (Temp Maint)',
-        };
-      case 'OUT_OF_SERVICE_NEEDS_FIXING':
-        return {
-          icon: 'error',
-          colorClass: 'text-red-600',
-          text: 'Out of Service (Needs Fixing)',
-        };
-      default:
-        return {
-          icon: 'help_outline',
-          colorClass: 'text-gray-700',
-          text: 'Unknown',
-        };
-    }
+    return HEALTH_SEMANTIC_MAP[state] || DEFAULT_HEALTH_SEMANTIC;
   }
 
   getLabActivitySemantic(activity: LabServerActivity) {
-    const result = {
-      icon: 'help_outline',
-      colorClass: 'text-gray-700',
+    const config = LAB_ACTIVITY_SEMANTIC_MAP[activity.state];
+    return {
+      icon: config?.icon ?? 'help_outline',
+      colorClass: config?.colorClass ?? 'text-gray-700',
       text: activity.title,
-      isSpinning: false,
+      isSpinning: config?.isSpinning ?? false,
       tooltip: activity.tooltip,
     };
-    switch (activity.state) {
-      case 'STARTED':
-        result.icon = 'check';
-        result.colorClass = 'text-green-600';
-        break;
-      case 'STARTED_BUT_DISCONNECTED':
-        result.icon = 'warning';
-        result.colorClass = 'text-amber-600';
-        break;
-      case 'STARTING':
-        result.icon = 'sync';
-        result.isSpinning = true;
-        result.colorClass = 'text-blue-600';
-        break;
-      case 'ERROR':
-        result.icon = 'error_outline';
-        result.colorClass = 'text-red-600';
-        break;
-      case 'DRAINING':
-        result.icon = 'timelapse';
-        result.colorClass = 'text-amber-600';
-        break;
-      case 'DRAINED':
-        result.icon = 'hourglass_empty';
-        result.colorClass = 'text-gray-600';
-        break;
-      case 'STOPPING':
-        result.icon = 'sync';
-        result.isSpinning = true;
-        result.colorClass = 'text-blue-600';
-        break;
-      case 'STOPPED':
-        result.icon = 'stop_circle';
-        result.colorClass = 'text-gray-700';
-        break;
-      default:
-        break;
-    }
-    return result;
   }
 
   startEditFlags() {
@@ -360,7 +528,7 @@ export class HostOverviewPage implements OnInit, OnChanges {
     this.isSavingFlags.set(true);
     this.hostService
       .updatePassThroughFlags(this.host.hostName, this.editedFlags)
-      .pipe(delay(2000)) // TODO: Remove this delay after the real implementation is done.
+      .pipe(delay(2000), takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
           this.host.labServer.passThroughFlags = this.editedFlags;
@@ -390,11 +558,14 @@ export class HostOverviewPage implements OnInit, OnChanges {
       disableClose: true,
     });
 
-    restartDialogRef.afterClosed().subscribe((result) => {
-      if (result === 'primary') {
-        // TODO: Implement restart lab server logic.
-        alert('Restarting lab server');
-      }
-    });
+    restartDialogRef
+      .afterClosed()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((result) => {
+        if (result === 'primary') {
+          // TODO: Implement restart lab server logic.
+          alert('Restarting lab server');
+        }
+      });
   }
 }
