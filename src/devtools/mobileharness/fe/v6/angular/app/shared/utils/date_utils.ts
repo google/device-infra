@@ -44,6 +44,39 @@ export const dateUtils = {
   },
 
   /**
+   * Formats a date object to a YYYY-MM-DD string.
+   *
+   * @param date The date object to format.
+   * @return The formatted date string.
+   */
+  formatDate: (date: Date): string => {
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  },
+
+  /**
+   * Formats a date range.
+   *
+   * @param start The start date.
+   * @param end The end date.
+   * @param options The format options to use.
+   * @return The formatted date range string.
+   */
+  formatDateRange: (
+    start: Date,
+    end: Date,
+    options: Intl.DateTimeFormatOptions = {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    },
+  ): string => {
+    return `${start.toLocaleDateString('en-US', options)} - ${end.toLocaleDateString('en-US', options)}`;
+  },
+
+  /**
    * Formats a date object to a string.
    *
    * @param date The date object to format.
