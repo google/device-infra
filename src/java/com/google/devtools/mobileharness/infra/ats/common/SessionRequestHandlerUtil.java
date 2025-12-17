@@ -1067,7 +1067,22 @@ public class SessionRequestHandlerUtil {
         }
 
         ImmutableList.Builder<String> matchedTestCases = ImmutableList.builder();
-        if (!includeTestCaseMap.isEmpty() || !excludeTestCaseMap.isEmpty()) {
+        if (entry.getValue().getOptionsList().stream()
+            .anyMatch(option -> option.getName().equals("test_path"))) {
+          // TODO: remove once exclude filter is supported.
+          if (!excludeTestCaseMap.isEmpty()) {
+            logger.atWarning().log(
+                "Ignore exclude filter as it is not supported for modules with \"test_path\""
+                    + " option.");
+          }
+          for (Entry<String, Collection<String>> testCaseEntry : includeTestCaseMap.entrySet()) {
+            if (testCaseEntry.getValue().isEmpty()) {
+              matchedTestCases.add(testCaseEntry.getKey());
+            } else {
+              matchedTestCases.addAll(testCaseEntry.getValue());
+            }
+          }
+        } else if (!includeTestCaseMap.isEmpty() || !excludeTestCaseMap.isEmpty()) {
           try {
             ImmutableSetMultimap<String, String> allTestCases =
                 moblyTestLoader.getTestNamesInModule(
@@ -1272,6 +1287,10 @@ public class SessionRequestHandlerUtil {
 
   /**
    * Parses the test name and adds it to the filter map.
+   *
+   * <p>The key of the filter map is the test class name. The value is a collection of specific test
+   * case names in the format "TestClassName.TestCaseName". An empty collection indicates that the
+   * entire test class is included or excluded.
    *
    * <p>For include filter, includes specified test cases if test class and test case are both
    * specified. For exclude filter, excludes the whole test class if test class and test case are

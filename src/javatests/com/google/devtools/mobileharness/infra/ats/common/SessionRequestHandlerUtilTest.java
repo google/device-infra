@@ -52,6 +52,7 @@ import com.google.devtools.mobileharness.platform.android.xts.config.ModuleConfi
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.ConfigurationMetadata;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Device;
+import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Option;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper;
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -1328,6 +1329,65 @@ public final class SessionRequestHandlerUtilTest {
     assertThat(jobInfos.get(1).params().get("option")).isNull();
     assertThat(jobInfos.get(0).files().get("config")).containsExactly(file1, file2);
     assertThat(jobInfos.get(1).files().get("config")).isEmpty();
+  }
+
+  @Test
+  public void createXtsNonTradefedJobs_withTestPathOption_ignoreExcludeFilters() throws Exception {
+    setUpForCreateXtsNonTradefedJobs();
+    Configuration config1 =
+        defaultConfigurationBuilder()
+            .addOptions(Option.newBuilder().setName("test_path").setValue("path/to/test"))
+            .setMetadata(
+                ConfigurationMetadata.newBuilder().setXtsModule("module1").setIsConfigV2(true))
+            .build();
+    when(configurationUtil.getConfigsV2FromDirs(any()))
+        .thenReturn(ImmutableMap.of("/path/to/config1", config1));
+    when(testSuiteHelper.loadTests(any())).thenReturn(ImmutableMap.of("module1", config1));
+
+    // With include filters for one test class and one test case.
+    SessionRequestInfo sessionRequestInfo =
+        sessionRequestHandlerUtil.addNonTradefedModuleInfo(
+            defaultSessionRequestInfoBuilder()
+                .setIncludeFilters(
+                    ImmutableList.of("module1 test_class1", "module1 test_class2#test2"))
+                .build());
+    ImmutableList<JobInfo> jobInfos =
+        sessionRequestHandlerUtil.createXtsNonTradefedJobs(
+            sessionRequestInfo, null, ImmutableMap.of());
+
+    assertThat(jobInfos).hasSize(1);
+    assertThat(jobInfos.get(0).params().get(MOBLY_TEST_SELECTOR_KEY).split(" "))
+        .asList()
+        .containsExactly("test_class1", "test_class2.test2");
+
+    // With exclude filters, they should be ignored, result should be same.
+    sessionRequestInfo =
+        sessionRequestHandlerUtil.addNonTradefedModuleInfo(
+            defaultSessionRequestInfoBuilder()
+                .setIncludeFilters(
+                    ImmutableList.of("module1 test_class1", "module1 test_class2#test2"))
+                .setExcludeFilters(ImmutableList.of("module1 test_class1"))
+                .build());
+    jobInfos =
+        sessionRequestHandlerUtil.createXtsNonTradefedJobs(
+            sessionRequestInfo, null, ImmutableMap.of());
+
+    assertThat(jobInfos).hasSize(1);
+    assertThat(jobInfos.get(0).params().get(MOBLY_TEST_SELECTOR_KEY).split(" "))
+        .asList()
+        .containsExactly("test_class1", "test_class2.test2");
+
+    // Without include filters, MOBLY_TEST_SELECTOR_KEY should not be set.
+    sessionRequestInfo =
+        sessionRequestHandlerUtil.addNonTradefedModuleInfo(
+            defaultSessionRequestInfoBuilder()
+                .setExcludeFilters(ImmutableList.of("module1 test_class1"))
+                .build());
+    jobInfos =
+        sessionRequestHandlerUtil.createXtsNonTradefedJobs(
+            sessionRequestInfo, null, ImmutableMap.of());
+    assertThat(jobInfos).hasSize(1);
+    assertThat(jobInfos.get(0).params().get(MOBLY_TEST_SELECTOR_KEY)).isNull();
   }
 
   @Test
