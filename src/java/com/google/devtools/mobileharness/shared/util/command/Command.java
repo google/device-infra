@@ -683,6 +683,9 @@ public abstract class Command {
    * execute your callback logic and use {@link CommandExecutor#start(Command)}, {@link
    * CommandProcess#stdinWriter()} and {@link CommandProcess#kill()} if necessary.
    *
+   * <p><b>*WARNING*</b>: If {@link #writeStdoutTo(Path)} is set, setting this callback will have no
+   * effect.
+   *
    * @see <a href="#line-callback">Command Line Callback</a>
    * @see LineCallback
    */
@@ -714,12 +717,47 @@ public abstract class Command {
    * execute your callback logic and use {@link CommandExecutor#start(Command)}, {@link
    * CommandProcess#stdinWriter()} and {@link CommandProcess#kill()} if necessary.
    *
+   * <p>*
+   *
+   * <p><b>*WARNING*</b>: If {@link #writeStderrTo(Path)} is set, setting this callback will have no
+   * effect.
+   *
    * @see <a href="#line-callback">Command Line Callback</a>
    * @see LineCallback
    */
   @CheckReturnValue
   public Command onStderr(LineCallback stderrLineCallback) {
     return toBuilder().stderrLineCallback(stderrLineCallback).build();
+  }
+
+  /**
+   * Returns a command that behaves equivalently to this command, but with the specified stdout
+   * output written to {@code path}.
+   *
+   * <p>This should be used to write bytes to file when the output doesn't have lines.
+   *
+   * <p><b>Setting up line consumers {@link #onStdout(LineCallback)} will have no affect.</b>
+   *
+   * <p>The file does not need to exist beforehand.
+   */
+  @CheckReturnValue
+  public Command writeStdoutTo(Path path) {
+    return toBuilder().stdoutPath(Optional.of(path)).build();
+  }
+
+  /**
+   * Returns a command that behaves equivalently to this command, but with the specified stderr
+   * output written to {@code path}.
+   *
+   * <p>This should be used to write bytes to file when the output doesn't have lines.
+   *
+   * <p><b>Setting up line consumers {@link #onStderr(LineCallback)} will have no affect.</b>
+   *
+   * <p>The file does not need to exist beforehand.
+   */
+  @CheckReturnValue
+  public Command writeStderrTo(Path path) {
+    return toBuilder().stderrPath(Optional.of(path)).build();
   }
 
   /**
@@ -991,6 +1029,12 @@ public abstract class Command {
   /** See {@link #onStderr(LineCallback)}. */
   public abstract Optional<LineCallback> getStderrLineCallback();
 
+  /** See {@link #writeStdoutTo(Path)}. */
+  public abstract Optional<Path> getStdoutPath();
+
+  /** See {@link #writeStderrTo(Path)}. */
+  public abstract Optional<Path> getStderrPath();
+
   /** See {@link #onExit(Consumer)}. */
   public abstract Optional<Consumer<CommandResult>> getExitCallback();
 
@@ -1080,6 +1124,10 @@ public abstract class Command {
 
     abstract Builder stderrLineCallback(LineCallback stderrLineCallback);
 
+    abstract Builder stdoutPath(Optional<Path> value);
+
+    abstract Builder stderrPath(Optional<Path> value);
+
     abstract Builder exitCallback(Consumer<CommandResult> exitCallback);
 
     abstract Builder successExitCodes(Set<Integer> getSuccessExitCodes);
@@ -1109,6 +1157,8 @@ public abstract class Command {
         .extraEnvironment(ImmutableMap.of())
         .needStdoutInResult(DEFAULT_NEED_STDOUT_IN_RESULT)
         .needStderrInResult(DEFAULT_NEED_STDERR_IN_RESULT)
+        .stderrPath(Optional.empty())
+        .stdoutPath(Optional.empty())
         .showFullResultInException(DEFAULT_SHOW_FULL_RESULT_IN_EXCEPTION);
   }
 }

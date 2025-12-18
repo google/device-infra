@@ -22,13 +22,13 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
-import com.google.common.io.ByteSink;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.controller.test.TestContext.TestContextRunnable;
 import com.google.devtools.mobileharness.shared.util.command.LineCallback.Response;
+import com.google.devtools.mobileharness.shared.util.command.backend.OutputSink;
 import com.google.devtools.mobileharness.shared.util.command.history.CommandRecord;
 import com.google.devtools.mobileharness.shared.util.command.history.CommandRecorder;
 import com.google.devtools.mobileharness.shared.util.command.io.LineCollector;
@@ -289,18 +289,43 @@ public class CommandExecutor {
             ? Optional.of(getRemainingTime(command, startTimeout.get()))
             : Optional.empty();
 
-    // Creates output readers and collectors.
+    // Unless explicitly set by the caller the default is always true
     boolean redirectStderr = command.getRedirectStderr().orElse(getDefaultRedirectStderr());
-    LineReader stdoutReader = new LineReader();
-    LineReader stderrReader = new LineReader();
-    LineCollector stdoutCollector =
-        new LineCollector(/* numSource= */ redirectStderr ? 2 : 1, command.getNeedStdoutInResult());
-    LineCollector stderrCollector =
-        new LineCollector(/* numSource= */ redirectStderr ? 0 : 1, command.getNeedStderrInResult());
+
+    OutputSink stdoutSink;
+    LineCollector stdoutCollector;
+    if (command.getStdoutPath().isPresent()) {
+      // Output to file
+      stdoutCollector = null;
+      stdoutSink = OutputSink.toFile(command.getStdoutPath().get());
+    } else {
+      // Set up line reader and collector
+      LineReader stdoutReader = new LineReader();
+      stdoutSink = OutputSink.toStream(stdoutReader);
+      stdoutCollector =
+          new LineCollector(
+              /* numSource= */ redirectStderr ? 2 : 1, command.getNeedStdoutInResult());
+    }
+
+    OutputSink stderrSink;
+    LineCollector stderrCollector;
+    if (command.getStderrPath().isPresent()) {
+      // Output to file
+      stderrCollector = null;
+      stderrSink = OutputSink.toFile(command.getStderrPath().get());
+    } else {
+      // Set up line reader for the backend command
+      LineReader stderrReader = new LineReader();
+      stderrSink = OutputSink.toStream(stderrReader);
+      // Set up collector.
+      stderrCollector =
+          new LineCollector(
+              /* numSource= */ redirectStderr ? 0 : 1, command.getNeedStderrInResult());
+    }
 
     // Creates backend command.
     com.google.devtools.mobileharness.shared.util.command.backend.Command backendCommand =
-        getBackendCommand(command, stdoutReader, stderrReader);
+        getBackendCommand(command, stdoutSink, stderrSink);
 
     // Starts backend process.
     com.google.devtools.mobileharness.shared.util.command.backend.CommandProcess backendProcess;
@@ -333,25 +358,41 @@ public class CommandExecutor {
     // Writes initial input.
     writeToStdin(commandProcess, command.getInput().orElse(null));
 
-    // Sets line consumers.
-    stdoutCollector.setLineConsumer(
-        new LineConsumer(
-            commandProcess, command.getStdoutLineCallback().orElse(null), startTimeoutTaskFuture));
-    stderrCollector.setLineConsumer(
-        new LineConsumer(
-            commandProcess, command.getStderrLineCallback().orElse(null), startTimeoutTaskFuture));
+    // Sets line consumers and starts reading stdout.
+    if (stdoutCollector != null) {
+      stdoutCollector.setLineConsumer(
+          new LineConsumer(
+              commandProcess,
+              command.getStdoutLineCallback().orElse(null),
+              startTimeoutTaskFuture));
+      threadPool.execute(
+          new TestContextRunnable(
+              () ->
+                  readOutput(
+                      (LineReader) stdoutSink.streamSupplier(),
+                      stdoutCollector,
+                      commandProcess.command())));
+    }
 
-    // Starts reading outputs.
-    threadPool.execute(
-        new TestContextRunnable(
-            () -> readOutput(stdoutReader, stdoutCollector, commandProcess.command())));
-    threadPool.execute(
-        new TestContextRunnable(
-            () ->
-                readOutput(
-                    stderrReader,
-                    redirectStderr ? stdoutCollector : stderrCollector,
-                    commandProcess.command())));
+    // Sets line consumers and starts reading stderr only if necessary.
+    if (stderrCollector != null) {
+      stderrCollector.setLineConsumer(
+          new LineConsumer(
+              commandProcess,
+              command.getStderrLineCallback().orElse(null),
+              startTimeoutTaskFuture));
+      // If output is already redirected to stderr and is being written to a file, do not launch
+      // thread to scan stderr lines.
+      if (!(redirectStderr && stdoutCollector == null)) {
+        threadPool.execute(
+            new TestContextRunnable(
+                () ->
+                    readOutput(
+                        (LineReader) stderrSink.streamSupplier(),
+                        redirectStderr ? stdoutCollector : stderrCollector,
+                        commandProcess.command())));
+      }
+    }
 
     // Schedules post run task.
     threadPool.execute(
@@ -430,7 +471,7 @@ public class CommandExecutor {
   // @com.google.errorprone.annotations.Immutable
   @SuppressWarnings("Immutable")
   private com.google.devtools.mobileharness.shared.util.command.backend.Command getBackendCommand(
-      Command command, ByteSink stdoutSink, ByteSink stderrSink) {
+      Command command, OutputSink stdoutSink, OutputSink stderrSink) {
     return com.google.devtools.mobileharness.shared.util.command.backend.Command.command(
             command.getExecutable(), command.getArguments().toArray(new String[0]))
         .withSuccessCondition(result -> command.getSuccessExitCodes().contains(result.exitCode()))

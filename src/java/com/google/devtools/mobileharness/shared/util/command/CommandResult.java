@@ -87,6 +87,8 @@ public class CommandResult {
    * exec(Command.of("echo", "Hello")).stdout()</code> will return "Hello\n" rather than "Hello". If
    * you want a result without trailing line terminator, please use {@link
    * #stdoutWithoutTrailingLineTerminator()} instead.
+   *
+   * <p><b>If {@link Command#writeStdoutTo(Path)} is set, this will return an empty string.</b>
    */
   public String stdout() {
     return stdout;
@@ -98,6 +100,8 @@ public class CommandResult {
    * <p>Note that the trailing "\n" in stderr will <b>NOT</b> be omitted if any. If * you want a
    * result without trailing line terminator, please use {@link
    * #stderrWithoutTrailingLineTerminator()} instead.
+   *
+   * <p><b>If {@link Command#writeStderrTo(Path)} is set, this will return an empty string.</b>
    */
   public String stderr() {
     return stderr;

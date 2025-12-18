@@ -50,8 +50,8 @@ public class CommandProcess {
 
   private final com.google.devtools.mobileharness.shared.util.command.backend.CommandProcess
       backendProcess;
-  private final LineCollector stdoutCollector;
-  private final LineCollector stderrCollector;
+  @Nullable private final LineCollector stdoutCollector;
+  @Nullable private final LineCollector stderrCollector;
   private final Duration finalizedTimeout;
   @Nullable private final Duration finalizedStartTimeout;
 
@@ -66,8 +66,8 @@ public class CommandProcess {
   CommandProcess(
       Command command,
       com.google.devtools.mobileharness.shared.util.command.backend.CommandProcess backendProcess,
-      LineCollector stdoutCollector,
-      LineCollector stderrCollector,
+      @Nullable LineCollector stdoutCollector,
+      @Nullable LineCollector stderrCollector,
       Duration finalizedTimeout,
       @Nullable Duration finalizedStartTimeout) {
     this.command = command;
@@ -97,14 +97,14 @@ public class CommandProcess {
       throws CommandFailureException, InterruptedException, CommandTimeoutException {
     try {
       int exitCode = backendProcess.await().exitCode();
-      String stdout = stdoutCollector.waitForAllLines();
-      String stderr = stderrCollector.waitForAllLines();
+      String stdout = waitForCollector(stdoutCollector, null);
+      String stderr = waitForCollector(stderrCollector, null);
       return getResult(stdout, stderr, exitCode, /* backendFailureException= */ null);
     } catch (
         com.google.devtools.mobileharness.shared.util.command.backend.CommandFailureException e) {
       int exitCode = e.result().exitCode();
-      String stdout = stdoutCollector.waitForAllLines();
-      String stderr = stderrCollector.waitForAllLines();
+      String stdout = waitForCollector(stdoutCollector, null);
+      String stderr = waitForCollector(stderrCollector, null);
       return getResult(stdout, stderr, exitCode, e);
     }
   }
@@ -133,18 +133,14 @@ public class CommandProcess {
     try {
       int exitCode =
           backendProcess.await(Duration.between(Clock.systemUTC().instant(), deadline)).exitCode();
-      String stdout =
-          stdoutCollector.waitForAllLines(Duration.between(Clock.systemUTC().instant(), deadline));
-      String stderr =
-          stderrCollector.waitForAllLines(Duration.between(Clock.systemUTC().instant(), deadline));
+      String stdout = waitForCollector(stdoutCollector, timeout);
+      String stderr = waitForCollector(stderrCollector, timeout);
       return getResult(stdout, stderr, exitCode, /* backendFailureException= */ null);
     } catch (
         com.google.devtools.mobileharness.shared.util.command.backend.CommandFailureException e) {
       int exitCode = e.result().exitCode();
-      String stdout =
-          stdoutCollector.waitForAllLines(Duration.between(Clock.systemUTC().instant(), deadline));
-      String stderr =
-          stderrCollector.waitForAllLines(Duration.between(Clock.systemUTC().instant(), deadline));
+      String stdout = waitForCollector(stdoutCollector, timeout);
+      String stderr = waitForCollector(stderrCollector, timeout);
       return getResult(stdout, stderr, exitCode, e);
     }
   }
@@ -225,9 +221,11 @@ public class CommandProcess {
 
   /** Returns whether the command process is alive or handling stdout/stderr. */
   public boolean isAlive() {
-    return backendProcess.isAlive()
-        || stdoutCollector.notAllSourceClosed()
-        || stderrCollector.notAllSourceClosed();
+    boolean stdoutCollectorReading =
+        stdoutCollector != null && stdoutCollector.notAllSourceClosed();
+    boolean stderrCollectorReading =
+        stderrCollector != null && stderrCollector.notAllSourceClosed();
+    return backendProcess.isAlive() || stdoutCollectorReading || stderrCollectorReading;
   }
 
   /**
@@ -270,8 +268,12 @@ public class CommandProcess {
    * @see Response#stopReadingOutput()
    */
   public void stopReadingOutput() {
-    stdoutCollector.stopConsumingLines();
-    stderrCollector.stopConsumingLines();
+    if (stdoutCollector != null) {
+      stdoutCollector.stopConsumingLines();
+    }
+    if (stderrCollector != null) {
+      stderrCollector.stopConsumingLines();
+    }
   }
 
   /**
@@ -286,6 +288,18 @@ public class CommandProcess {
 
   void setSuccessfulStart(boolean successfulStart) {
     successfulStartFuture.set(successfulStart);
+  }
+
+  private String waitForCollector(LineCollector collector, @Nullable Duration timeout)
+      throws InterruptedException {
+    if (collector == null) {
+      return "";
+    }
+    if (timeout == null) {
+      return collector.waitForAllLines();
+    } else {
+      return collector.waitForAllLines(timeout);
+    }
   }
 
   private CommandResult getResult(
