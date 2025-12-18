@@ -18,7 +18,6 @@ package com.google.devtools.mobileharness.platform.android.xts.plugin;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.Subscribe;
@@ -38,6 +37,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator;
 import java.util.Set;
+import javax.inject.Inject;
 
 /** A lab plugin to ensure allocated devices are compatible with the xTS test suite. */
 @Plugin(type = PluginType.LAB)
@@ -48,21 +48,11 @@ public final class XtsDeviceCompatibilityChecker {
   private final AndroidAdbUtil androidAdbUtil;
   private final AndroidAdbInternalUtil androidAdbInternalUtil;
 
-  public XtsDeviceCompatibilityChecker() {
-    this(new AndroidAdbUtil(), new AndroidAdbInternalUtil());
-  }
-
-  @VisibleForTesting
+  @Inject
   XtsDeviceCompatibilityChecker(
       AndroidAdbUtil androidAdbUtil, AndroidAdbInternalUtil androidAdbInternalUtil) {
     this.androidAdbUtil = androidAdbUtil;
     this.androidAdbInternalUtil = androidAdbInternalUtil;
-  }
-
-  /** Returns true if the job is enabled for the xTS device compatibility checker. */
-  public static boolean isEnabled(JobInfo jobInfo) {
-    return jobInfo.properties().getBoolean(Job.IS_XTS_TF_JOB).orElse(false)
-        || jobInfo.properties().getBoolean(Job.IS_XTS_NON_TF_JOB).orElse(false);
   }
 
   @Subscribe

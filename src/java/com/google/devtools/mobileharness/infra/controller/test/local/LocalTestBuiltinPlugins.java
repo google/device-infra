@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.infra.controller.test.local;
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunner;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunner.EventScope;
 import com.google.devtools.mobileharness.infra.controller.test.PluginLoadingResult.PluginItem;
@@ -26,12 +27,12 @@ import com.google.devtools.mobileharness.infra.controller.test.util.TestCommandH
 import com.google.devtools.mobileharness.infra.controller.test.util.testlogcollector.TestLogCollectorPlugin;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.plugin.NonTradefedReportGenerator;
-import com.google.devtools.mobileharness.platform.android.xts.plugin.XtsDeviceCompatibilityChecker;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.reflection.ReflectionUtil;
 import com.google.inject.Guice;
 import com.google.inject.ProvisionException;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Job;
+import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.util.Objects;
 
@@ -74,9 +75,12 @@ class LocalTestBuiltinPlugins {
     builtinPluginsBuilder.add(
         PluginItem.create(new TestCommandHistorySaver(), EventScope.CLASS_INTERNAL),
         PluginItem.create(new NonTradefedReportGenerator(), EventScope.INTERNAL_PLUGIN));
-    if (XtsDeviceCompatibilityChecker.isEnabled(testInfo.jobInfo())) {
+    if (isXtsDeviceCompatibilityCheckerEnabled(testInfo.jobInfo())) {
       builtinPluginsBuilder.add(
-          PluginItem.create(new XtsDeviceCompatibilityChecker(), EventScope.INTERNAL_PLUGIN));
+          PluginItem.create(
+              createBuiltinPlugin(
+                  "com.google.devtools.mobileharness.platform.android.xts.plugin.XtsDeviceCompatibilityChecker"),
+              EventScope.INTERNAL_PLUGIN));
     }
 
     ImmutableList<PluginItem<?>> builtinPlugins = builtinPluginsBuilder.build();
@@ -139,5 +143,10 @@ class LocalTestBuiltinPlugins {
 
   private static boolean isTestLogCollectorEnabled() {
     return Flags.instance().enableTestLogCollector.getNonNull();
+  }
+
+  private static boolean isXtsDeviceCompatibilityCheckerEnabled(JobInfo jobInfo) {
+    return jobInfo.properties().getBoolean(XtsPropertyName.Job.IS_XTS_TF_JOB).orElse(false)
+        || jobInfo.properties().getBoolean(XtsPropertyName.Job.IS_XTS_NON_TF_JOB).orElse(false);
   }
 }
