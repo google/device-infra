@@ -134,6 +134,7 @@ message FieldDetail {
 message FileDetail {
   optional bool is_required = 1;
   optional string help = 2;
+  optional bool used_in_client = 3;
 }
 
 // A file item.
