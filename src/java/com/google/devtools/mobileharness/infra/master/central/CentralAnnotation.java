@@ -31,5 +31,10 @@ public final class CentralAnnotation {
   @Retention(RetentionPolicy.RUNTIME)
   public @interface EnableInfoCache {}
 
+  /** Annotation for the database connections. */
+  @Qualifier
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface CentralDatabaseConnections {}
+
   private CentralAnnotation() {}
 }

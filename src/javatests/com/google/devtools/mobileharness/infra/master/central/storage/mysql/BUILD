@@ -14,24 +14,34 @@
 #
 
 load("@rules_java//java:defs.bzl", "java_library")
+load("//src/javatests/com/google/devtools/mobileharness/builddefs:junit_test_suites.bzl", "junit_test_suites")
 
 package(
     default_applicable_licenses = ["//:license"],
-    default_visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/master/central/storage:__subpackages__",
-    ],
+    default_testonly = 1,
 )
 
 java_library(
-    name = "lab_repository",
-    srcs = [
-        "LabRepository.java",
-    ],
+    name = "mysql",
+    srcs = glob(["*.java"]),
     deps = [
         "//src/devtools/mobileharness/infra/master/central/proto:lab_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/lab:locator",
+        "//src/java/com/google/devtools/mobileharness/infra/master/central/storage:transaction_config",
         "//src/java/com/google/devtools/mobileharness/infra/master/central/storage:transaction_context",
-        "@maven//:com_google_errorprone_error_prone_annotations",
+        "//src/java/com/google/devtools/mobileharness/infra/master/central/storage:transaction_worker",
+        "//src/java/com/google/devtools/mobileharness/infra/master/central/storage/mysql",
+        "//src/java/com/google/devtools/mobileharness/infra/master/central/storage/mysql:lab_table_client",
+        "//src/java/com/google/devtools/mobileharness/shared/util/database:database_connections",
+        "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
+        "@maven//:junit_junit",
+        "@maven//:org_mockito_mockito_core",
     ],
+)
+
+junit_test_suites(
+    name = "gen_tests",
+    sizes = ["small"],
+    deps = [":mysql"],
 )
