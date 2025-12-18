@@ -185,6 +185,9 @@ message RunCommand {
 
   // Optional.
   optional google.protobuf.Duration job_start_timeout = 36;
+
+  // Optional. Whether to enable default logs for TF tests.
+  optional bool enable_default_logs = 37;
 }
 
 message RunCommandState {

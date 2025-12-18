@@ -173,6 +173,8 @@ public abstract class SessionRequestInfo {
 
   public abstract boolean allowPartialDeviceMatch();
 
+  public abstract boolean enableDefaultLogs();
+
   public static Builder builder() {
     return new AutoValue_SessionRequestInfo.Builder()
         .setModuleNames(ImmutableList.of())
@@ -202,7 +204,8 @@ public abstract class SessionRequestInfo {
         .setXtsSuiteInfo(ImmutableMap.of())
         .setAtsServerTestResources(ImmutableList.of())
         .setExcludeRunners(ImmutableSet.of())
-        .setAllowPartialDeviceMatch(false);
+        .setAllowPartialDeviceMatch(false)
+        .setEnableDefaultLogs(false);
   }
 
   public abstract Builder toBuilder();
@@ -326,6 +329,8 @@ public abstract class SessionRequestInfo {
     public abstract Builder setAtsServerTestEnvironment(TestEnvironment atsServerTestEnvironment);
 
     public abstract Builder setAllowPartialDeviceMatch(boolean allowPartialDeviceMatch);
+
+    public abstract Builder setEnableDefaultLogs(boolean enableDefaultLogs);
 
     protected abstract SessionRequestInfo autoBuild();
 

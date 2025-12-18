@@ -254,6 +254,11 @@ public abstract class XtsJobCreator {
         sessionRequestInfo.reportSystemCheckers()
             ? Optional.of("--report-system-checkers")
             : Optional.empty();
+    Optional<String> enableDefaultLogsArg =
+        Optional.of(
+            String.format(
+                "--enable-default-logs %s",
+                sessionRequestInfo.enableDefaultLogs() ? "true" : "false"));
     Optional<String> skipDeviceInfoArg =
         prevSessionSkipDeviceInfo ? Optional.of("--skip-device-info true") : Optional.empty();
     if (sessionRequestInfo.skipDeviceInfo().isPresent()) {
@@ -332,6 +337,7 @@ public abstract class XtsJobCreator {
                                           entry.getKey(), entry.getValue())),
                           reportSystemCheckersArg.stream(),
                           skipDeviceInfoArg.stream(),
+                          enableDefaultLogsArg.stream(),
                           sessionRequestInfo.moduleArgs().stream()
                               .map(arg -> arg.replace("\"", "\\\""))
                               .map(arg -> String.format("--module-arg \"%s\"", arg)),

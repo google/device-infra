@@ -128,7 +128,7 @@ public final class ConsoleJobCreatorTest {
     assertThat(driverParamsCaptor.getValue())
         .containsExactly(
             "run_command_args",
-            "-m mock_module",
+            "-m mock_module --enable-default-logs false",
             "xts_type",
             "cts",
             "xts_root_dir",
@@ -190,7 +190,7 @@ public final class ConsoleJobCreatorTest {
     assertThat(driverParams).containsEntry("xts_type", "cts");
     assertThat(driverParams).containsEntry("xts_root_dir", xtsRootDir.getAbsolutePath());
     assertThat(driverParams).containsEntry("xts_test_plan", "cts");
-    assertThat(driverParams).doesNotContainKey("run_command_args");
+    assertThat(driverParams).containsEntry("run_command_args", "--enable-default-logs false");
     assertThat(driverParams.get("subplan_xml")).endsWith("sub_plan_name.xml");
     assertThat(tradefedJobInfoList.get(0).extraJobProperties())
         .containsExactly(
@@ -262,7 +262,7 @@ public final class ConsoleJobCreatorTest {
             "env_vars",
             "{\"env_key1\":\"env_value1\"}",
             "run_command_args",
-            "-m module1 --shard-count 2 --logcat-on-failure");
+            "-m module1 --shard-count 2 --enable-default-logs false --logcat-on-failure");
     assertThat(tradefedJobInfoList.get(0).extraJobProperties())
         .containsExactly(
             Job.XTS_TEST_PLAN,
@@ -310,7 +310,8 @@ public final class ConsoleJobCreatorTest {
             "env_vars",
             "{\"env_key1\":\"env_value1\"}",
             "run_command_args",
-            "-m module1 -t \"test1\" --shard-count 2 --logcat-on-failure");
+            "-m module1 -t \"test1\" --shard-count 2 --enable-default-logs false"
+                + " --logcat-on-failure");
     assertThat(tradefedJobInfoList.get(0).extraJobProperties())
         .containsExactly(
             Job.XTS_TEST_PLAN,
@@ -319,6 +320,33 @@ public final class ConsoleJobCreatorTest {
             "module1",
             Job.DEVICE_SUPPORTED_ABI_LIST,
             "");
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test
+  public void createXtsTradefedTestJob_enableDefaultLogsTrue() throws Exception {
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfo.builder()
+            .setTestPlan("cts")
+            .setCommandLineArgs("cts")
+            .setXtsType("cts")
+            .setXtsRootDir(XTS_ROOT_DIR_PATH)
+            .setModuleNames(ImmutableList.of("module1"))
+            .setEnableDefaultLogs(true)
+            .build();
+    ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
+
+    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any(), any()))
+        .thenReturn(JobConfig.getDefaultInstance());
+
+    ImmutableList<TradefedJobInfo> tradefedJobInfoList =
+        jobCreator.createXtsTradefedTestJobInfo(sessionRequestInfo, ImmutableList.of("module1"));
+
+    assertThat(tradefedJobInfoList).hasSize(1);
+    verify(sessionRequestHandlerUtil)
+        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any(), any());
+    assertThat(driverParamsCaptor.getValue())
+        .containsEntry("run_command_args", "-m module1 --enable-default-logs true");
   }
 
   @SuppressWarnings("unchecked")
@@ -353,11 +381,13 @@ public final class ConsoleJobCreatorTest {
         .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any(), any());
 
     Map<String, String> driverParamsMap = driverParamsCaptor.getValue();
-    assertThat(driverParamsMap).hasSize(5);
+    assertThat(driverParamsMap).hasSize(6);
     assertThat(driverParamsMap)
         .containsAtLeast(
             "xts_type",
             "cts",
+            "run_command_args",
+            "--enable-default-logs false",
             "xts_root_dir",
             xtsRootDir.getAbsolutePath(),
             "xts_test_plan",
@@ -411,11 +441,13 @@ public final class ConsoleJobCreatorTest {
     verify(sessionRequestHandlerUtil)
         .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any(), any());
     Map<String, String> driverParamsMap = driverParamsCaptor.getValue();
-    assertThat(driverParamsMap).hasSize(5);
+    assertThat(driverParamsMap).hasSize(6);
     assertThat(driverParamsMap)
         .containsAtLeast(
             "xts_type",
             "cts",
+            "run_command_args",
+            "--enable-default-logs false",
             "xts_root_dir",
             xtsRootDir.getAbsolutePath(),
             "xts_test_plan",
@@ -489,7 +521,7 @@ public final class ConsoleJobCreatorTest {
     assertThat(driverParamsCaptor.getValue())
         .containsExactly(
             "run_command_args",
-            "-m mock_module[instant]",
+            "-m mock_module[instant] --enable-default-logs false",
             "xts_type",
             "cts",
             "xts_root_dir",

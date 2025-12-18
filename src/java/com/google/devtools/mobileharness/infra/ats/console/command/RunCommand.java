@@ -358,6 +358,13 @@ public final class RunCommand implements Callable<Integer> {
   @Option(names = "--exclude-runner", description = "Exclude tests by test runners.")
   private List<String> excludeRunnerOpt;
 
+  @Option(
+      names = {"--enable-default-logs"},
+      arity = "0..1",
+      paramLabel = "<enable_default_logs>",
+      description = "Whether to enable default logs. Default is false.")
+  private boolean enableDefaultLogs;
+
   @ArgGroup(exclusive = true, multiplicity = "0..1")
   private DeviceTypeOptionsGroup deviceTypeOptionsGroup;
 
@@ -488,7 +495,9 @@ public final class RunCommand implements Callable<Integer> {
         .setModuleMetadataExcludeFilters(
             this.moduleMetadataExcludeFilters == null
                 ? ImmutableMultimap.of()
-                : ImmutableMultimap.copyOf(this.moduleMetadataExcludeFilters));
+                : ImmutableMultimap.copyOf(this.moduleMetadataExcludeFilters))
+        .setHtmlInZip(htmlInZip)
+        .setEnableDefaultLogs(enableDefaultLogs);
     if (this.shardCount > 0) {
       sessionRequestBuilder.setShardCount(this.shardCount);
     }
@@ -511,7 +520,6 @@ public final class RunCommand implements Callable<Integer> {
 
     return sessionRequestBuilder
         .setModuleArgs(moduleArgs)
-        .setHtmlInZip(htmlInZip)
         .setExtraArgs(extraArgs)
         .setExcludeRunners(excludeRunners);
   }
@@ -840,6 +848,7 @@ public final class RunCommand implements Callable<Integer> {
     if (consoleInfo.isFromCommandFile()) {
       runCommand.setJobStartTimeout(toProtoDuration(CMDFILE_JOBS_START_TIMEOUT));
     }
+    runCommand.setEnableDefaultLogs(enableDefaultLogs);
 
     ImmutableList<String> commandLineArgs = command.stream().skip(1L).collect(toImmutableList());
     runCommand.setInitialState(

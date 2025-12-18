@@ -233,7 +233,7 @@ public final class ServerJobCreatorTest {
     assertThat(driverParamsCaptor.getValue())
         .containsExactly(
             "run_command_args",
-            "-m mock_module",
+            "-m mock_module --enable-default-logs false",
             "xts_type",
             "cts",
             "android_xts_zip",
@@ -299,7 +299,7 @@ public final class ServerJobCreatorTest {
     assertThat(driverParamsCaptor.getValue())
         .containsExactly(
             "run_command_args",
-            "-m mock_module",
+            "-m mock_module --enable-default-logs false",
             "xts_type",
             "cts",
             "android_xts_zip",
@@ -330,6 +330,38 @@ public final class ServerJobCreatorTest {
     assertThat(dynamicCommandXmlContent).contains("TF_DEVICE_0");
     assertThat(dynamicCommandXmlContent).contains("TF_DEVICE_1");
     assertThat(countOccurrences(dynamicCommandXmlContent, "TF_DEVICE_")).isEqualTo(2);
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test
+  public void createXtsTradefedTestJob_enableDefaultLogsTrue() throws Exception {
+    String xtsRootDir = publicDir + "/session_session_id/file";
+    realLocalFileUtil.prepareParentDir(xtsRootDir);
+    TestEnvironment testEnvironment = TestEnvironment.getDefaultInstance();
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfo.builder()
+            .setTestPlan("cts")
+            .setCommandLineArgs("cts")
+            .setXtsType("cts")
+            .setAtsServerTestEnvironment(testEnvironment)
+            .setXtsRootDir(xtsRootDir)
+            .setAndroidXtsZip(ANDROID_XTS_ZIP_PATH)
+            .setModuleNames(ImmutableList.of("mock_module"))
+            .setEnableDefaultLogs(true)
+            .build();
+    ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
+
+    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any(), any()))
+        .thenReturn(JobConfig.getDefaultInstance());
+
+    ImmutableList<TradefedJobInfo> tradefedJobInfoList =
+        jobCreator.createXtsTradefedTestJobInfo(
+            sessionRequestInfo, ImmutableList.of("mock_module"));
+    assertThat(tradefedJobInfoList).hasSize(1);
+    verify(sessionRequestHandlerUtil)
+        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any(), any());
+    assertThat(driverParamsCaptor.getValue())
+        .containsEntry("run_command_args", "-m mock_module --enable-default-logs true");
   }
 
   @SuppressWarnings("unchecked")
@@ -370,11 +402,13 @@ public final class ServerJobCreatorTest {
         .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any(), any());
 
     Map<String, String> driverParamsMap = driverParamsCaptor.getValue();
-    assertThat(driverParamsMap).hasSize(7);
+    assertThat(driverParamsMap).hasSize(8);
     assertThat(driverParamsMap)
         .containsAtLeast(
             "xts_type",
             "cts",
+            "run_command_args",
+            "--enable-default-logs false",
             "android_xts_zip",
             xtsZipPath.getAbsolutePath(),
             "xts_test_plan",
@@ -435,11 +469,13 @@ public final class ServerJobCreatorTest {
     verify(sessionRequestHandlerUtil)
         .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any(), any());
     Map<String, String> driverParamsMap = driverParamsCaptor.getValue();
-    assertThat(driverParamsMap).hasSize(7);
+    assertThat(driverParamsMap).hasSize(8);
     assertThat(driverParamsMap)
         .containsAtLeast(
             "xts_type",
             "cts",
+            "run_command_args",
+            "--enable-default-logs false",
             "android_xts_zip",
             xtsZipPath.getAbsolutePath(),
             "xts_test_plan",
@@ -496,11 +532,13 @@ public final class ServerJobCreatorTest {
     verify(sessionRequestHandlerUtil)
         .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any(), any());
     Map<String, String> driverParamsMap = driverParamsCaptor.getValue();
-    assertThat(driverParamsMap).hasSize(7);
+    assertThat(driverParamsMap).hasSize(8);
     assertThat(driverParamsMap)
         .containsAtLeast(
             "xts_type",
             "cts",
+            "run_command_args",
+            "--enable-default-logs false",
             "android_xts_zip",
             xtsZipPath.getAbsolutePath(),
             "xts_test_plan",
@@ -558,7 +596,7 @@ public final class ServerJobCreatorTest {
     assertThat(driverParamsMap)
         .containsAtLeast(
             "run_command_args",
-            "-m CtsAccelerationTestCases -m OtherTestModule",
+            "-m CtsAccelerationTestCases -m OtherTestModule --enable-default-logs false",
             "xts_type",
             "cts",
             "android_xts_zip",
@@ -618,7 +656,7 @@ public final class ServerJobCreatorTest {
     assertThat(driverParamsMap)
         .containsAtLeast(
             "run_command_args",
-            "-m mock_module",
+            "-m mock_module --enable-default-logs false",
             "xts_type",
             "cts",
             "android_xts_zip",

@@ -414,6 +414,7 @@ class RunCommandHandler {
     if (runCommand.getEnableXtsDynamicDownload()) {
       builder.setIsXtsDynamicDownloadEnabled(true);
     }
+    builder.setEnableDefaultLogs(runCommand.getEnableDefaultLogs());
 
     sessionInfo
         .getSessionProperty(SessionProperties.PROPERTY_KEY_SESSION_CLIENT_ID)
