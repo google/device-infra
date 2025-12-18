@@ -89,6 +89,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.inject.Inject;
 import org.jline.reader.LineReader;
 import org.jline.reader.LineReaderBuilder;
@@ -193,11 +194,12 @@ public class AtsConsole {
 
     // Adds shutdown hook.
     Runtime.getRuntime()
-        .addShutdownHook(new Thread(atsConsole::onShutdown, "ats-console-shutdown-hook"));
+        .addShutdownHook(new Thread(atsConsole::tryOnShutdown, "ats-console-shutdown-hook"));
 
-    // Starts ATS console.
+    // Runs ATS console.
     try (NonThrowingAutoCloseable ignored = threadRenaming("ats-console-main-thread")) {
       atsConsole.run();
+      atsConsole.tryOnShutdown();
       System.exit(0);
     } catch (MobileHarnessException | InterruptedException | RuntimeException | Error e) {
       atsConsole.consoleUtil.printlnStderr(
@@ -226,6 +228,9 @@ public class AtsConsole {
   private final CommandCompleter commandCompleter;
   private final CommandPreprocessor commandPreprocessor;
   private final OlcServerRunner olcServerRunner;
+
+  /** Whether {@link #tryOnShutdown()} has been called. */
+  private final AtomicBoolean shutdown = new AtomicBoolean();
 
   /** Set before {@link #run}; */
   @VisibleForTesting public volatile Injector injector;
@@ -385,7 +390,11 @@ public class AtsConsole {
         .setUnmatchedOptionsArePositionalParams(true);
   }
 
-  private void onShutdown() {
+  private void tryOnShutdown() {
+    if (!shutdown.compareAndSet(false, true)) {
+      return;
+    }
+
     // Dump logs.
     System.out.println(LogDumper.dumpLog(LogDirsType.USED));
 
