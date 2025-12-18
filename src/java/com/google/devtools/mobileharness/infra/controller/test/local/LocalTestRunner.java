@@ -65,6 +65,7 @@ public class LocalTestRunner extends BaseTestRunner<LocalTestRunner> {
 
   private final ImmutableList<Device> devices;
   private final LocalTestFlow testFlow;
+  private final LocalTestBuiltinPlugins builtinPlugins = new LocalTestBuiltinPlugins();
   private Driver driver;
   private final SettableFuture<PluginLoadingResult> pluginLoadingResultFuture =
       SettableFuture.create();
@@ -129,7 +130,7 @@ public class LocalTestRunner extends BaseTestRunner<LocalTestRunner> {
     try {
       List<PluginItem<?>> pluginItems = new ArrayList<>();
       pluginItems.addAll(this.initialPluginItems);
-      pluginItems.addAll(testFlow.loadBuiltInPlugin(testInfo, this));
+      pluginItems.addAll(builtinPlugins.loadBuiltInPlugin(testInfo, this));
 
       pluginItems.addAll(testFlow.loadPlugin(testInfo, this));
       PluginLoadingResult pluginLoadingResult = PluginLoadingResult.create(pluginItems);
