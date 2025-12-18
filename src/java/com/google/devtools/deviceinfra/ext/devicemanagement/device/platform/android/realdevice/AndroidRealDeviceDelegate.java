@@ -1811,6 +1811,11 @@ public abstract class AndroidRealDeviceDelegate {
           "Wifi util functionality is disabled. Skip connecting device %s to wifi.", serial);
       return;
     }
+    if (DeviceUtil.inSharedLab()) {
+      logger.atInfo().log(
+          "Ignoring attempt to connect device %s to WiFi while not managing devices.", serial);
+      return;
+    }
     WifiUtil wifiUtil = new WifiUtil();
     apkInstaller.installApkIfVersionMismatched(
         device, ApkInstallArgs.builder().setApkPath(wifiUtil.getWifiUtilApkPath()).build(), null);

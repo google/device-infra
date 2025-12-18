@@ -47,7 +47,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/shell",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
         "//src/java/com/google/wireless/qa/mobileharness/shared/log",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/util:device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/util:net_util",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_errorprone_error_prone_annotations",

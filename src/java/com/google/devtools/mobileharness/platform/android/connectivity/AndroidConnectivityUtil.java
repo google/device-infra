@@ -49,7 +49,6 @@ import com.google.devtools.mobileharness.shared.util.shell.ShellUtils;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.log.LogCollector;
-import com.google.wireless.qa.mobileharness.shared.util.DeviceUtil;
 import com.google.wireless.qa.mobileharness.shared.util.NetUtil;
 import com.google.wireless.qa.mobileharness.shared.util.NetUtil.LocationType;
 import java.time.Clock;
@@ -288,72 +287,6 @@ public class AndroidConnectivityUtil {
   /**
    * Connects to wifi network. Note you must install the WifiUtil.apk before using this method.
    *
-   * @param serial serial number of the device
-   * @param sdkVersion SDK version of device
-   * @param wifiSsid the ssid of the wifi
-   * @param wifiPsk the password of the wifi
-   * @return {@code true} if device connects to given wifi SSID successfully, otherwise {@code
-   *     false}
-   * @throws MobileHarnessException if fails to execute the commands or timeout
-   * @throws InterruptedException if current thread is interrupted during this method
-   */
-  public boolean connectToWifi(
-      String serial,
-      int sdkVersion,
-      String wifiSsid,
-      @Nullable String wifiPsk,
-      @Nullable LogCollector<?> log)
-      throws MobileHarnessException, InterruptedException {
-    ConnectToWifiArgs.Builder builder =
-        ConnectToWifiArgs.builder()
-            .setSerial(serial)
-            .setSdkVersion(sdkVersion)
-            .setWifiSsid(wifiSsid)
-            .setScanSsid(false)
-            .setWaitTimeout(DEFAULT_CONNECT_SSID_TIMEOUT);
-    if (!Strings.isNullOrEmpty(wifiPsk)) {
-      builder.setWifiPsk(wifiPsk);
-    }
-    return connectToWifi(builder.build(), log);
-  }
-
-  /**
-   * Connects to wifi network. Note you must install the WifiUtil.apk before using this method.
-   *
-   * @param serial serial number of the device
-   * @param sdkVersion SDK version of device
-   * @param wifiSsid the ssid of the wifi
-   * @param wifiPsk the password of the wifi
-   * @param scanSsid whether to scan for hidden SSID
-   * @return {@code true} if device connects to given wifi SSID successfully, otherwise {@code
-   *     false}
-   * @throws MobileHarnessException if fails to execute the commands or timeout
-   * @throws InterruptedException if current thread is interrupted during this method
-   */
-  public boolean connectToWifi(
-      String serial,
-      int sdkVersion,
-      String wifiSsid,
-      @Nullable String wifiPsk,
-      boolean scanSsid,
-      @Nullable LogCollector<?> log)
-      throws MobileHarnessException, InterruptedException {
-    ConnectToWifiArgs.Builder builder =
-        ConnectToWifiArgs.builder()
-            .setSerial(serial)
-            .setSdkVersion(sdkVersion)
-            .setWifiSsid(wifiSsid)
-            .setScanSsid(scanSsid)
-            .setWaitTimeout(DEFAULT_CONNECT_SSID_TIMEOUT);
-    if (!Strings.isNullOrEmpty(wifiPsk)) {
-      builder.setWifiPsk(wifiPsk);
-    }
-    return connectToWifi(builder.build(), log);
-  }
-
-  /**
-   * Connects to wifi network. Note you must install the WifiUtil.apk before using this method.
-   *
    * @param args args indicating how to connect the device to wifi
    * @return {@code true} if device connects to given wifi SSID successfully, otherwise {@code
    *     false}
@@ -379,19 +312,6 @@ public class AndroidConnectivityUtil {
     boolean scanSsid = args.scanSsid().orElse(false);
     Duration waitTimeout = args.waitTimeout().orElse(DEFAULT_CONNECT_SSID_TIMEOUT);
     boolean forceTryConnect = args.forceTryConnect().orElse(false);
-
-    if (DeviceUtil.inSharedLab()) {
-      // TODO:shouldManageDevices check should be moved to higher level API while
-      // AndroidConnectivityUtil can focus on managing device wifi/network.
-      SharedLogUtil.logMsg(
-          logger,
-          Level.SEVERE,
-          log,
-          /* cause= */ null,
-          "Ignoring attempt to connect device %s to WiFi while not managing devices.",
-          serial);
-      return false;
-    }
 
     wifiSsid = ShellUtils.shellEscape(wifiSsid);
     if (!Strings.isNullOrEmpty(wifiPsk)) {
