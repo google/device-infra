@@ -172,7 +172,7 @@ message DeviceRequirement {
   repeated mobileharness.shared.StrPair dimension = 3;
 }
 
-// Next ID: 22
+// Next ID: 24
 message JobSummary {
   optional string id = 1;
   optional string name = 2;
@@ -191,11 +191,19 @@ message JobSummary {
   repeated FileDetail gen_file = 15;
   optional int32 total_test_count = 16;
 
-  // TODO: Add the new fields and mark this as deprecated.
-  repeated ErrorInfo deprecated_warning = 17;
+  // Deprecated. Use warning instead.
+  repeated ErrorInfo deprecated_warning = 17 [deprecated = true];
 
-  // TODO: Add the new fields and mark this as deprecated.
-  optional ErrorInfo deprecated_result_cause = 18;
+  // Deprecated. Use result_cause instead.
+  optional ErrorInfo deprecated_result_cause = 18 [deprecated = true];
+
+  // The warnings of during the test execution. Even the passing test can also
+  // have warnings.
+  repeated stability.model.FlattenedExceptionDetail warning = 22;
+
+  // The error causing the non-passing result. It is null if the
+  // session result is PASS.
+  optional stability.model.FlattenedExceptionDetail result_cause = 23;
 
   optional DeviceRequirements device_requirements = 19;
 
