@@ -16,7 +16,7 @@
 load("@rules_kotlin//kotlin:core.bzl", "define_kt_toolchain", "kt_javac_options", "kt_kotlinc_options")
 load("@rules_license//rules:license.bzl", "license")
 
-package(default_applicable_licenses = ["//:license"])
+package(default_applicable_licenses = [":license"])
 
 license(
     name = "license",
