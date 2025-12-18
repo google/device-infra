@@ -26,10 +26,16 @@ import com.google.wireless.qa.mobileharness.shared.api.annotation.ParamAnnotatio
  * the wizard tool of MH FE.
  */
 public interface AndroidInstrumentationDriverSpec {
-  @FileAnnotation(required = true, help = "The test apk, which contains your test code.")
+  @FileAnnotation(
+      required = true,
+      help = "The test apk, which contains your test code.",
+      usedInClient = true)
   String TAG_TEST_APK = "test_apk";
 
-  @FileAnnotation(required = false, help = "The build apk, which contains your app under test.")
+  @FileAnnotation(
+      required = false,
+      help = "The build apk, which contains your app under test.",
+      usedInClient = true)
   String TAG_BUILD_APK = "build_apk";
 
   @FileAnnotation(

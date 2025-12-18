@@ -38,4 +38,7 @@ public @interface FileAnnotation {
 
   /** Whether there should be files marked with this file tag. */
   boolean required() default true;
+
+  /** Whether the file is used in the client. */
+  boolean usedInClient() default false;
 }
