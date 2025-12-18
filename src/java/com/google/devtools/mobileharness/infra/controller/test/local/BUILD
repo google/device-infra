@@ -60,6 +60,11 @@ java_library(
     srcs = ["LocalTestFlow.java"],
     visibility = [
     ],
+    runtime_deps = [
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test/util/atsfileserveruploader:ats_file_server_uploader_plugin",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test/util/xtsdownloader:mcts_dynamic_download_plugin",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/plugin:ats_device_recovery_plugin",
+    ],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
@@ -72,11 +77,8 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:direct_test_runner",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/local/utp/controller:test_flow_converter",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/util:test_command_history_saver",
-        "//src/java/com/google/devtools/mobileharness/infra/controller/test/util/atsfileserveruploader:ats_file_server_uploader_plugin",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/util/testlogcollector:test_log_collector_plugin",
-        "//src/java/com/google/devtools/mobileharness/infra/controller/test/util/xtsdownloader:mcts_dynamic_download_plugin",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_constants",
-        "//src/java/com/google/devtools/mobileharness/platform/android/xts/plugin:ats_device_recovery_plugin",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/plugin:nontradefed_report_generator",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/plugin:xts_device_compatibility_checker",
         "//src/java/com/google/devtools/mobileharness/platform/testbed/adhoc/controller:adhoc_testbed_driver",
@@ -85,6 +87,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:tag",
         "//src/java/com/google/devtools/mobileharness/shared/util/message:str_pair",
+        "//src/java/com/google/devtools/mobileharness/shared/util/reflection:reflection_util",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:base",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
@@ -97,5 +100,6 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:common_java_proto",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
+        "@maven//:com_google_inject_guice",
     ],
 )

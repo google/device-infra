@@ -48,11 +48,8 @@ import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunner.
 import com.google.devtools.mobileharness.infra.controller.test.PluginLoadingResult.PluginItem;
 import com.google.devtools.mobileharness.infra.controller.test.local.utp.controller.TestFlowConverter;
 import com.google.devtools.mobileharness.infra.controller.test.util.TestCommandHistorySaver;
-import com.google.devtools.mobileharness.infra.controller.test.util.atsfileserveruploader.AtsFileServerUploaderPlugin;
 import com.google.devtools.mobileharness.infra.controller.test.util.testlogcollector.TestLogCollectorPlugin;
-import com.google.devtools.mobileharness.infra.controller.test.util.xtsdownloader.MctsDynamicDownloadPlugin;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
-import com.google.devtools.mobileharness.platform.android.xts.plugin.AtsDeviceRecoveryPlugin;
 import com.google.devtools.mobileharness.platform.android.xts.plugin.NonTradefedReportGenerator;
 import com.google.devtools.mobileharness.platform.android.xts.plugin.XtsDeviceCompatibilityChecker;
 import com.google.devtools.mobileharness.platform.testbed.adhoc.controller.AdhocTestbedDriverFactory;
@@ -61,6 +58,9 @@ import com.google.devtools.mobileharness.shared.util.concurrent.ConcurrencyUtil.
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.logging.MobileHarnessLogTag;
 import com.google.devtools.mobileharness.shared.util.message.StrPairUtil;
+import com.google.devtools.mobileharness.shared.util.reflection.ReflectionUtil;
+import com.google.inject.Guice;
+import com.google.inject.ProvisionException;
 import com.google.wireless.qa.mobileharness.shared.api.ClassUtil;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.Decorator;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
@@ -102,20 +102,18 @@ public class LocalTestFlow {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  private final DriverFactory driverFactory;
-
-  private final AdhocTestbedDriverFactory adhocTestbedDriverFactory;
-
-  private final ListeningExecutorService testThreadPool;
-
-  private final TestFlowConverter testFlowConverter;
-
   private static final String UTP_DRIVER_NAME = "UtpDriver";
 
   private static final ImmutableList<String> COMMON_DIMENSIONS_IN_TESTBED =
       ImmutableList.of(
           Ascii.toLowerCase(Dimension.Name.HOST_NAME.name()),
           Ascii.toLowerCase(Dimension.Name.HOST_VERSION.name()));
+
+  private final DriverFactory driverFactory;
+  private final AdhocTestbedDriverFactory adhocTestbedDriverFactory;
+  private final ListeningExecutorService testThreadPool;
+  private final TestFlowConverter testFlowConverter;
+  private final ReflectionUtil reflectionUtil = new ReflectionUtil();
 
   public LocalTestFlow(ListeningExecutorService threadPool, TestFlowConverter testFlowConverter) {
     this(threadPool, new DriverFactory(), new AdhocTestbedDriverFactory(), testFlowConverter);
@@ -138,12 +136,16 @@ public class LocalTestFlow {
    *
    * @return the loaded plugin items
    */
-  ImmutableList<PluginItem<?>> loadBuiltInPlugin(TestInfo testInfo, DirectTestRunner testRunner) {
+  ImmutableList<PluginItem<?>> loadBuiltInPlugin(TestInfo testInfo, DirectTestRunner testRunner)
+      throws MobileHarnessException {
     // Loads built-in plugins.
     ImmutableList.Builder<PluginItem<?>> builtinPluginsBuilder = ImmutableList.builder();
     if (isXtsDynamicDownloaderEnabled(testInfo)) {
       builtinPluginsBuilder.add(
-          PluginItem.create(new MctsDynamicDownloadPlugin(), EventScope.INTERNAL_PLUGIN));
+          PluginItem.create(
+              createBuiltinPlugin(
+                  "com.google.devtools.mobileharness.infra.controller.test.util.xtsdownloader.MctsDynamicDownloadPlugin"),
+              EventScope.INTERNAL_PLUGIN));
     }
     // This should be registered before AtsFileServerUploaderPlugin to make sure collected logs
     // are uploaded to the client.
@@ -153,12 +155,17 @@ public class LocalTestFlow {
     }
     if (isAtsFileServerUploaderEnabled(testInfo)) {
       builtinPluginsBuilder.add(
-          PluginItem.create(new AtsFileServerUploaderPlugin(), EventScope.CLASS_INTERNAL));
+          PluginItem.create(
+              createBuiltinPlugin(
+                  "com.google.devtools.mobileharness.infra.controller.test.util.atsfileserveruploader.AtsFileServerUploaderPlugin"),
+              EventScope.CLASS_INTERNAL));
     }
-    // TODO: Refactor to not add platform specific plugin here directly.
     if (isAtsModeEnabled()) {
       builtinPluginsBuilder.add(
-          PluginItem.create(new AtsDeviceRecoveryPlugin(), EventScope.CLASS_INTERNAL));
+          PluginItem.create(
+              createBuiltinPlugin(
+                  "com.google.devtools.mobileharness.platform.android.xts.plugin.AtsDeviceRecoveryPlugin"),
+              EventScope.CLASS_INTERNAL));
     }
     builtinPluginsBuilder.add(
         PluginItem.create(new TestCommandHistorySaver(), EventScope.CLASS_INTERNAL),
@@ -670,13 +677,15 @@ public class LocalTestFlow {
         .atInfo()
         .alsoTo(logger)
         .log(
-            "------------------------- Starting new test -------------------------\n"
-                + "Start test [%s] on device(s) %s:\n"
-                + " + Test Name: %s\n"
-                + " + Test ID: %s\n"
-                + " + Job Name: %s\n"
-                + " + Job ID: %s\n"
-                + " + Device Information:%s",
+            """
+            ------------------------- Starting new test -------------------------
+            Start test [%s] on device(s) %s:
+             + Test Name: %s
+             + Test ID: %s
+             + Job Name: %s
+             + Job ID: %s
+             + Device Information:%s\
+            """,
             testInfo.locator().getName(),
             deviceIds,
             testInfo.locator().getName(),
@@ -748,6 +757,38 @@ public class LocalTestFlow {
       }
     }
     return dimensionValuesByKey;
+  }
+
+  /**
+   * Instantiates a built-in plugin by its class name.
+   *
+   * <p>The class should be able to be injected by Guice.
+   *
+   * @throws MobileHarnessException if the class name is not found or an error occurs when
+   *     instantiating the class
+   */
+  private Object createBuiltinPlugin(String className) throws MobileHarnessException {
+    Class<?> clazz;
+    try {
+      clazz = reflectionUtil.loadClass(className, Object.class, getClass().getClassLoader());
+    } catch (
+        @SuppressWarnings("UnusedException") // Info in ClassNotFoundException is useless.
+        ClassNotFoundException e) {
+      throw new MobileHarnessException(
+          InfraErrorId.TR_PLUGIN_BUILTIN_PLUGIN_CLASS_NOT_FOUND_ERROR,
+          String.format(
+              "Built-in plugin [%s] is not found. Is it added to runtime_deps of LocalMode or"
+                  + " LabServer?",
+              className));
+    }
+    try {
+      return Guice.createInjector().getInstance(clazz);
+    } catch (ProvisionException e) {
+      throw new MobileHarnessException(
+          InfraErrorId.TR_PLUGIN_BUILTIN_PLUGIN_INSTANTIATION_ERROR,
+          String.format("Failed to instantiate built-in plugin [%s]", className),
+          e);
+    }
   }
 
   /** Returns {@code true} if xts dynamic downloader is enabled. */
