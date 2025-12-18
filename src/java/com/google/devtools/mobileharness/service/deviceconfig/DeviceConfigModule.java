@@ -58,4 +58,11 @@ public class DeviceConfigModule extends AbstractModule {
   int provideServerPort() {
     return Flags.instance().configServiceGrpcPort.getNonNull();
   }
+
+  @Provides
+  @Singleton
+  @Annotations.LocalStorageRootDir
+  String provideLocalStorageRootDir() {
+    return Flags.instance().configServiceLocalStorageDir.getNonNull();
+  }
 }

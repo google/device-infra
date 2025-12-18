@@ -28,5 +28,10 @@ public final class Annotations {
   @Retention(RetentionPolicy.RUNTIME)
   public @interface ServerPort {}
 
+  /** Annotation for binding the local storage root directory. */
+  @Qualifier
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface LocalStorageRootDir {}
+
   private Annotations() {}
 }

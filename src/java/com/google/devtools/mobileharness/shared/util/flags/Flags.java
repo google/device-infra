@@ -643,6 +643,15 @@ public class Flags {
       converter = Flag.IntegerConverter.class)
   public Flag<Integer> configServiceGrpcPort = configServiceGrpcPortDefault;
 
+  private static final Flag<String> configServiceLocalStorageDirDefault =
+      Flag.value("/tmp/ats/config");
+
+  @com.beust.jcommander.Parameter(
+      names = "--config_service_local_storage_dir",
+      description = "Local storage directory of the config service.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> configServiceLocalStorageDir = configServiceLocalStorageDirDefault;
+
   /** Backend storage type for the config service. */
   public enum ConfigServiceStorageType {
     LOCAL_FILE,

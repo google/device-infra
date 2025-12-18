@@ -21,6 +21,7 @@ import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.service.deviceconfig.Annotations.LocalStorageRootDir;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.protobuf.TextFormat;
@@ -29,15 +30,13 @@ import javax.inject.Inject;
 
 /** A {@link StorageClient} that stores configs in local files. */
 public final class LocalFileStorageClient implements StorageClient {
-
-  // TODO: b/460296020 - change this to a flag.
-  private static final String ROOT_DIR = "/tmp/ats/config";
-
+  private final String rootDir;
   private final LocalFileUtil localFileUtil;
 
   @Inject
-  LocalFileStorageClient(LocalFileUtil localFileUtil) {
+  LocalFileStorageClient(LocalFileUtil localFileUtil, @LocalStorageRootDir String rootDir) {
     this.localFileUtil = localFileUtil;
+    this.rootDir = rootDir;
   }
 
   @Override
@@ -111,10 +110,10 @@ public final class LocalFileStorageClient implements StorageClient {
   }
 
   private String getDeviceConfigPath(String deviceUuid) {
-    return PathUtil.join(ROOT_DIR, "device", deviceUuid + ".textproto");
+    return PathUtil.join(rootDir, "device", deviceUuid + ".textproto");
   }
 
   private String getLabConfigPath(String hostName) {
-    return PathUtil.join(ROOT_DIR, "lab", hostName + ".textproto");
+    return PathUtil.join(rootDir, "lab", hostName + ".textproto");
   }
 }
