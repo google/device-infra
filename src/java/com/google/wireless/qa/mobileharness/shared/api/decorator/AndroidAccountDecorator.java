@@ -39,6 +39,13 @@ import com.google.devtools.mobileharness.platform.android.accountmanager.Android
 import com.google.devtools.mobileharness.platform.android.lightning.accountmanager.AddAccountArgs;
 import com.google.devtools.mobileharness.platform.android.lightning.accountmanager.AndroidAccountManager;
 import com.google.devtools.mobileharness.platform.android.lightning.systemstate.SystemStateManager;
+import com.google.devtools.mobileharness.platform.android.process.AndroidProcessUtil;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.IntentArgs;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.WaitArgs;
+import com.google.devtools.mobileharness.platform.android.shared.autovalue.UtilArgs;
+import com.google.devtools.mobileharness.platform.android.systemspec.AndroidSystemSpecUtil;
+import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.device.AndroidDevice;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
@@ -52,6 +59,8 @@ import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfiga
 import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.AndroidAccountDecoratorSpec;
 import com.google.wireless.qa.mobileharness.shared.util.DeviceUtil;
 import com.google.wireless.qa.mobileharness.shared.util.GoogleAccountDecoratorUtil;
+import java.time.Clock;
+import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.IntStream;
@@ -67,10 +76,19 @@ public class AndroidAccountDecorator extends BaseDecorator
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
+  private static final String AUTH_SUPPORT_APK_SERVICED_COMPONENT_NAME =
+      "com.google.android.apps.auth.test.support/.services.AccountService";
+
   /** Max attempts to set account. */
   @VisibleForTesting static final int ATTEMPTS = 10;
 
   @VisibleForTesting static final String VALIDATOR_NAME = "AndroidAccountDecoratorValidator";
+
+  private final Sleeper sleeper;
+
+  private final AndroidSystemSpecUtil systemSpecUtil;
+
+  private final AndroidProcessUtil androidProcessUtil;
 
   private final SystemStateManager systemStateManager;
 
@@ -83,7 +101,14 @@ public class AndroidAccountDecorator extends BaseDecorator
    * framework.
    */
   public AndroidAccountDecorator(Driver decoratedDriver, TestInfo testInfo) {
-    this(decoratedDriver, testInfo, new SystemStateManager(), new AndroidAccountManager());
+    this(
+        decoratedDriver,
+        testInfo,
+        new SystemStateManager(),
+        new AndroidSystemSpecUtil(),
+        new AndroidProcessUtil(),
+        new AndroidAccountManager(),
+        Sleeper.defaultSleeper());
   }
 
   @VisibleForTesting
@@ -91,10 +116,16 @@ public class AndroidAccountDecorator extends BaseDecorator
       Driver decoratedDriver,
       TestInfo testInfo,
       SystemStateManager systemStateManager,
-      AndroidAccountManager androidAccountManager) {
+      AndroidSystemSpecUtil systemSpecUtil,
+      AndroidProcessUtil androidProcessUtil,
+      AndroidAccountManager androidAccountManager,
+      Sleeper sleeper) {
     super(decoratedDriver, testInfo);
     this.systemStateManager = systemStateManager;
+    this.systemSpecUtil = systemSpecUtil;
+    this.androidProcessUtil = androidProcessUtil;
     this.androidAccountManager = androidAccountManager;
+    this.sleeper = sleeper;
   }
 
   @Override
@@ -161,6 +192,7 @@ public class AndroidAccountDecorator extends BaseDecorator
     removeExistingAndGetAccountsToUpdate(device, forceRemove, accountsToAdd, testInfo.log());
 
     try {
+      tryStartAuthAccountService(deviceId, testInfo);
       loginAccounts(testInfo, accountsToAdd, credentialTypes);
       // And empty line to separate the log.
       testInfo.log().atInfo().alsoTo(logger).log("\n");
@@ -185,6 +217,52 @@ public class AndroidAccountDecorator extends BaseDecorator
         }
       } catch (MobileHarnessException e) {
         testInfo.warnings().addAndLog(e, logger);
+      }
+    }
+  }
+
+  private void tryStartAuthAccountService(String deviceId, TestInfo testInfo)
+      throws InterruptedException, MobileHarnessException {
+    // On emulators, the auth_test_support_debug.apk sometime is frozen or killed. Try to
+    // proactively start the service to avoid login error. See b/466982406#comment9
+    if (systemSpecUtil.isEmulator(deviceId) && !systemSpecUtil.isCuttlefishEmulator(deviceId)) {
+      // Wait for auth support apk to be ready. removeExistingAndGetAccountsToUpdate installs the
+      // auth_test_support_debug.apk. However, the service may not be ready to start immediately.
+      boolean authServiceStarted =
+          AndroidAdbUtil.waitForDeviceReady(
+              UtilArgs.builder().setSerial(deviceId).build(),
+              utilArgs -> {
+                try {
+                  androidProcessUtil.startService(
+                      utilArgs,
+                      IntentArgs.builder()
+                          .setComponent(AUTH_SUPPORT_APK_SERVICED_COMPONENT_NAME)
+                          .build());
+                  return true;
+                } catch (MobileHarnessException e) {
+                  logger.atInfo().log(
+                      "Failed to start auth support service on device %s, will retry...",
+                      utilArgs.serial());
+                  return false;
+                } catch (InterruptedException e) {
+                  Thread.currentThread().interrupt();
+                  return false;
+                }
+              },
+              WaitArgs.builder()
+                  .setSleeper(sleeper)
+                  .setClock(Clock.systemUTC())
+                  .setCheckReadyInterval(Duration.ofSeconds(5))
+                  .setCheckReadyTimeout(Duration.ofSeconds(30))
+                  .build());
+      if (!authServiceStarted) {
+        testInfo
+            .log()
+            .atWarning()
+            .alsoTo(logger)
+            .log(
+                "Auth support service failed to start on device %s after multiple retries.",
+                deviceId);
       }
     }
   }
