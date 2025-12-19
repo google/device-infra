@@ -14,12 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.infra.master.central.storage;
+package com.google.devtools.mobileharness.shared.storage.transaction;
 
-import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-
-/** A transaction worker which could throw MobileHarnessException and return a value. */
-public interface TransactionWorker<R> {
-
-  public R doWork(TransactionContext context) throws MobileHarnessException;
-}
+/** Marker interface for transaction context, to be implemented by each specific Database type. */
+public interface TransactionContext {}
