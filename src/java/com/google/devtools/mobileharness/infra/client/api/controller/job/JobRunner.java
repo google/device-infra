@@ -770,6 +770,9 @@ public class JobRunner implements Runnable {
             // 1) Client plugins specified via "client_plugin_jar" file.
             EventScope.JAR_PLUGIN);
         skipJob = checkPluginExceptions(/* postRunJob= */ false);
+        if (!skipJob) {
+          resolveJobFiles(jobInfo);
+        }
       } else {
         logger.atInfo().log("Skip sending JobStartEvent because it is a resumed job");
       }
