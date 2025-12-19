@@ -31,7 +31,7 @@ java_library(
         "//src/devtools/mobileharness/infra/master/central/proto:lab_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/lab:locator",
-        "//src/java/com/google/devtools/mobileharness/infra/master/central/storage:transaction_context",
+        "//src/java/com/google/devtools/mobileharness/shared/storage/transaction:transaction_context",
         "@maven//:com_google_errorprone_error_prone_annotations",
     ],
 )
