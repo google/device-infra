@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.infra.master.central.storage;
+package com.google.devtools.mobileharness.shared.storage.transaction;
 
 import com.google.auto.value.AutoValue;
 import com.google.devtools.mobileharness.api.model.error.ErrorId;

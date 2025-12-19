@@ -19,7 +19,7 @@ package com.google.devtools.mobileharness.infra.master.central.storage.lab;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.lab.LabLocator;
 import com.google.devtools.mobileharness.infra.master.central.proto.Lab.LabServerCondition;
-import com.google.devtools.mobileharness.infra.master.central.storage.TransactionContext;
+import com.google.devtools.mobileharness.shared.storage.transaction.TransactionContext;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.util.Optional;
 

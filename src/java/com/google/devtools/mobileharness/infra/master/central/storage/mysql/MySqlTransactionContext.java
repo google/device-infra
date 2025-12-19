@@ -16,7 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.master.central.storage.mysql;
 
-import com.google.devtools.mobileharness.infra.master.central.storage.TransactionContext;
+import com.google.devtools.mobileharness.shared.storage.transaction.TransactionContext;
 import java.sql.Connection;
 
 /** MySQL implementation of {@link TransactionContext}. */
