@@ -33,9 +33,11 @@ import com.google.devtools.mobileharness.platform.android.lightning.systemstate.
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.log.LogCollector;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -82,6 +84,8 @@ public class AndroidAccountManager {
 
   private final AndroidSystemSettingUtil systemSettingUtil;
 
+  private final Sleeper sleeper;
+
   // Whether to force install the signed version disregarding the build installed in the device.
   // Workaround solution for {@link b/199420696}.
   private boolean forceInstallSignedVersion = false;
@@ -92,7 +96,8 @@ public class AndroidAccountManager {
         new ApkInstaller(),
         new ResUtil(),
         new SystemStateManager(),
-        new AndroidSystemSettingUtil());
+        new AndroidSystemSettingUtil(),
+        Sleeper.defaultSleeper());
   }
 
   @VisibleForTesting
@@ -101,12 +106,14 @@ public class AndroidAccountManager {
       ApkInstaller apkInstaller,
       ResUtil resUtil,
       SystemStateManager systemStateManager,
-      AndroidSystemSettingUtil systemSettingUtil) {
+      AndroidSystemSettingUtil systemSettingUtil,
+      Sleeper sleeper) {
     this.androidAccountManagerUtil = androidAccountManagerUtil;
     this.apkInstaller = apkInstaller;
     this.resUtil = resUtil;
     this.systemStateManager = systemStateManager;
     this.systemSettingUtil = systemSettingUtil;
+    this.sleeper = sleeper;
   }
 
   /**
@@ -243,6 +250,13 @@ public class AndroidAccountManager {
             accountToDelete,
             deviceId);
       }
+
+      if (!accountsToDelete.isEmpty()) {
+        // Sleep after removing accounts, we had race conditions when add account is called
+        // immediately after remove account: b/466294977#comment6
+        sleeper.sleep(Duration.ofSeconds(5));
+      }
+
     } catch (MobileHarnessException e) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_ACCOUNT_MANAGER_REMOVE_ACCOUNT_ERROR, e.getMessage(), e);
