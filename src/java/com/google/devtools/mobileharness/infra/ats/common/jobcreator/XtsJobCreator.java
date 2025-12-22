@@ -255,10 +255,9 @@ public abstract class XtsJobCreator {
             ? Optional.of("--report-system-checkers")
             : Optional.empty();
     Optional<String> enableDefaultLogsArg =
-        Optional.of(
-            String.format(
-                "--enable-default-logs %s",
-                sessionRequestInfo.enableDefaultLogs() ? "true" : "false"));
+        sessionRequestInfo
+            .enableDefaultLogs()
+            .map(value -> String.format("--enable-default-logs %s", value ? "true" : "false"));
     Optional<String> skipDeviceInfoArg =
         prevSessionSkipDeviceInfo ? Optional.of("--skip-device-info true") : Optional.empty();
     if (sessionRequestInfo.skipDeviceInfo().isPresent()) {

@@ -363,7 +363,7 @@ public final class RunCommand implements Callable<Integer> {
       arity = "0..1",
       paramLabel = "<enable_default_logs>",
       description = "Whether to enable default logs. Default is false.")
-  private boolean enableDefaultLogs;
+  private Boolean enableDefaultLogs = null;
 
   @ArgGroup(exclusive = true, multiplicity = "0..1")
   private DeviceTypeOptionsGroup deviceTypeOptionsGroup;
@@ -496,8 +496,7 @@ public final class RunCommand implements Callable<Integer> {
             this.moduleMetadataExcludeFilters == null
                 ? ImmutableMultimap.of()
                 : ImmutableMultimap.copyOf(this.moduleMetadataExcludeFilters))
-        .setHtmlInZip(htmlInZip)
-        .setEnableDefaultLogs(enableDefaultLogs);
+        .setHtmlInZip(htmlInZip);
     if (this.shardCount > 0) {
       sessionRequestBuilder.setShardCount(this.shardCount);
     }
@@ -516,6 +515,9 @@ public final class RunCommand implements Callable<Integer> {
     }
     if (isSkipDeviceInfo().isPresent()) {
       sessionRequestBuilder.setSkipDeviceInfo(isSkipDeviceInfo().get());
+    }
+    if (enableDefaultLogs != null) {
+      sessionRequestBuilder.setEnableDefaultLogs(enableDefaultLogs);
     }
 
     return sessionRequestBuilder
@@ -848,7 +850,7 @@ public final class RunCommand implements Callable<Integer> {
     if (consoleInfo.isFromCommandFile()) {
       runCommand.setJobStartTimeout(toProtoDuration(CMDFILE_JOBS_START_TIMEOUT));
     }
-    runCommand.setEnableDefaultLogs(enableDefaultLogs);
+    runCommand.setEnableDefaultLogs(Boolean.TRUE.equals(enableDefaultLogs));
 
     ImmutableList<String> commandLineArgs = command.stream().skip(1L).collect(toImmutableList());
     runCommand.setInitialState(

@@ -112,6 +112,7 @@ public final class ConsoleJobCreatorTest {
                         .setDeviceId("mock_device_id")
                         .setSupportedAbiList("arm64-v8a,armeabi-v7a")
                         .build()))
+            .setEnableDefaultLogs(false)
             .build();
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
 
@@ -173,6 +174,7 @@ public final class ConsoleJobCreatorTest {
                         .setDeviceId("mock_device_id")
                         .setSupportedAbiList("arm64-v8a,armeabi-v7a")
                         .build()))
+            .setEnableDefaultLogs(false)
             .build();
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
 
@@ -239,6 +241,7 @@ public final class ConsoleJobCreatorTest {
             .setModuleNames(ImmutableList.of("module1"))
             .setShardCount(2)
             .setExtraArgs(ImmutableList.of("--logcat-on-failure"))
+            .setEnableDefaultLogs(false)
             .build();
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
 
@@ -287,6 +290,7 @@ public final class ConsoleJobCreatorTest {
             .setTestName("test1")
             .setShardCount(2)
             .setExtraArgs(ImmutableList.of("--logcat-on-failure"))
+            .setEnableDefaultLogs(false)
             .build();
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
 
@@ -364,6 +368,7 @@ public final class ConsoleJobCreatorTest {
             .setXtsType("cts")
             .setXtsRootDir(xtsRootDir.getAbsolutePath())
             .setRetrySessionIndex(0)
+            .setEnableDefaultLogs(false)
             .build();
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
 
@@ -415,6 +420,7 @@ public final class ConsoleJobCreatorTest {
             .setRetrySessionIndex(0)
             .setIncludeFilters(ImmutableList.of("armeabi-v7a ModuleA android.test.Foo#test1"))
             .setExcludeFilters(ImmutableList.of("armeabi-v7a ModuleB android.test.Foo#test1"))
+            .setEnableDefaultLogs(false)
             .build();
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
     ArgumentCaptor<RetryArgs> retryArgsCaptor = ArgumentCaptor.forClass(RetryArgs.class);
@@ -492,6 +498,7 @@ public final class ConsoleJobCreatorTest {
             .setXtsRootDir(XTS_ROOT_DIR_PATH)
             .setRetrySessionIndex(0)
             .setModuleNames(ImmutableList.of("mock_module[instant]"))
+            .setEnableDefaultLogs(false)
             .build();
     when(previousResultLoader.getPrevSessionTestReportProperties(any(Path.class), anyInt(), any()))
         .thenReturn(Optional.empty());

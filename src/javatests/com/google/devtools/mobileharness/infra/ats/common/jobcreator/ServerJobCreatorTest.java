@@ -233,7 +233,7 @@ public final class ServerJobCreatorTest {
     assertThat(driverParamsCaptor.getValue())
         .containsExactly(
             "run_command_args",
-            "-m mock_module --enable-default-logs false",
+            "-m mock_module",
             "xts_type",
             "cts",
             "android_xts_zip",
@@ -299,7 +299,7 @@ public final class ServerJobCreatorTest {
     assertThat(driverParamsCaptor.getValue())
         .containsExactly(
             "run_command_args",
-            "-m mock_module --enable-default-logs false",
+            "-m mock_module",
             "xts_type",
             "cts",
             "android_xts_zip",
@@ -402,13 +402,11 @@ public final class ServerJobCreatorTest {
         .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any(), any());
 
     Map<String, String> driverParamsMap = driverParamsCaptor.getValue();
-    assertThat(driverParamsMap).hasSize(8);
+    assertThat(driverParamsMap).hasSize(7);
     assertThat(driverParamsMap)
         .containsAtLeast(
             "xts_type",
             "cts",
-            "run_command_args",
-            "--enable-default-logs false",
             "android_xts_zip",
             xtsZipPath.getAbsolutePath(),
             "xts_test_plan",
@@ -469,13 +467,11 @@ public final class ServerJobCreatorTest {
     verify(sessionRequestHandlerUtil)
         .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any(), any());
     Map<String, String> driverParamsMap = driverParamsCaptor.getValue();
-    assertThat(driverParamsMap).hasSize(8);
+    assertThat(driverParamsMap).hasSize(7);
     assertThat(driverParamsMap)
         .containsAtLeast(
             "xts_type",
             "cts",
-            "run_command_args",
-            "--enable-default-logs false",
             "android_xts_zip",
             xtsZipPath.getAbsolutePath(),
             "xts_test_plan",
@@ -532,13 +528,11 @@ public final class ServerJobCreatorTest {
     verify(sessionRequestHandlerUtil)
         .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any(), any());
     Map<String, String> driverParamsMap = driverParamsCaptor.getValue();
-    assertThat(driverParamsMap).hasSize(8);
+    assertThat(driverParamsMap).hasSize(7);
     assertThat(driverParamsMap)
         .containsAtLeast(
             "xts_type",
             "cts",
-            "run_command_args",
-            "--enable-default-logs false",
             "android_xts_zip",
             xtsZipPath.getAbsolutePath(),
             "xts_test_plan",
@@ -596,7 +590,7 @@ public final class ServerJobCreatorTest {
     assertThat(driverParamsMap)
         .containsAtLeast(
             "run_command_args",
-            "-m CtsAccelerationTestCases -m OtherTestModule --enable-default-logs false",
+            "-m CtsAccelerationTestCases -m OtherTestModule",
             "xts_type",
             "cts",
             "android_xts_zip",
@@ -656,7 +650,7 @@ public final class ServerJobCreatorTest {
     assertThat(driverParamsMap)
         .containsAtLeast(
             "run_command_args",
-            "-m mock_module --enable-default-logs false",
+            "-m mock_module",
             "xts_type",
             "cts",
             "android_xts_zip",
