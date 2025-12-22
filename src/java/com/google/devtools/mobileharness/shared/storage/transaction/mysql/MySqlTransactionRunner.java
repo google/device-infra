@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.infra.master.central.storage.mysql;
+package com.google.devtools.mobileharness.shared.storage.transaction.mysql;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.infra.master.central.CentralAnnotation.CentralDatabaseConnections;
+import com.google.devtools.mobileharness.shared.storage.Annotations;
 import com.google.devtools.mobileharness.shared.storage.transaction.TransactionConfig;
 import com.google.devtools.mobileharness.shared.storage.transaction.TransactionRunner;
 import com.google.devtools.mobileharness.shared.storage.transaction.TransactionWorker;
@@ -35,7 +35,7 @@ public final class MySqlTransactionRunner implements TransactionRunner {
   private final DatabaseConnections databaseConnections;
 
   @Inject
-  MySqlTransactionRunner(@CentralDatabaseConnections DatabaseConnections databaseConnections) {
+  MySqlTransactionRunner(@Annotations.DatabaseConnections DatabaseConnections databaseConnections) {
     this.databaseConnections = databaseConnections;
   }
 

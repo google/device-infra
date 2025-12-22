@@ -18,9 +18,10 @@ package com.google.devtools.mobileharness.infra.master.central.storage.mysql;
 
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.infra.master.central.CentralAnnotation.CentralDatabaseConnections;
 import com.google.devtools.mobileharness.infra.master.central.storage.lab.LabRepository;
+import com.google.devtools.mobileharness.shared.storage.Annotations;
 import com.google.devtools.mobileharness.shared.storage.transaction.TransactionRunner;
+import com.google.devtools.mobileharness.shared.storage.transaction.mysql.MySqlTransactionRunner;
 import com.google.devtools.mobileharness.shared.util.database.DatabaseConnections;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.inject.AbstractModule;
@@ -41,7 +42,7 @@ public class CentralStorageMySqlModule extends AbstractModule {
 
   @Provides
   @Singleton
-  @CentralDatabaseConnections
+  @Annotations.DatabaseConnections
   DatabaseConnections provideDatabaseConnections() throws MobileHarnessException {
     String jdbcUrl = Flags.instance().masterCentralDatabaseJdbcUrl.getNonNull();
     Properties properties = new Properties();

@@ -25,6 +25,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.lab.LabLocator;
 import com.google.devtools.mobileharness.infra.master.central.proto.Lab.LabServerCondition;
 import com.google.devtools.mobileharness.shared.storage.transaction.TransactionContext;
+import com.google.devtools.mobileharness.shared.storage.transaction.mysql.MySqlTransactionContext;
 import java.sql.Connection;
 import java.util.Optional;
 import org.junit.Before;

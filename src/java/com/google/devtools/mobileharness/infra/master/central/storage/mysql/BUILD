@@ -30,11 +30,12 @@ java_library(
         "//java/com/google/devtools/mobileharness/infra/master/central:__subpackages__",
     ],
     deps = [
-        ":mysql",
+        ":lab_repository",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/devtools/mobileharness/infra/master/central:annotation",
         "//src/java/com/google/devtools/mobileharness/infra/master/central/storage/lab:lab_repository",
+        "//src/java/com/google/devtools/mobileharness/shared/storage:annotations",
         "//src/java/com/google/devtools/mobileharness/shared/storage/transaction:transaction_runner",
+        "//src/java/com/google/devtools/mobileharness/shared/storage/transaction/mysql:mysql_transaction_runner",
         "//src/java/com/google/devtools/mobileharness/shared/util/database:database_connections",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
@@ -44,27 +45,19 @@ java_library(
 )
 
 java_library(
-    name = "mysql",
+    name = "lab_repository",
     srcs = [
         "MySqlLabRepository.java",
-        "MySqlTransactionContext.java",
-        "MySqlTransactionRunner.java",
     ],
     deps = [
         ":lab_table_client",
         "//src/devtools/mobileharness/infra/master/central/proto:lab_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/lab:locator",
-        "//src/java/com/google/devtools/mobileharness/infra/master/central:annotation",
         "//src/java/com/google/devtools/mobileharness/infra/master/central/storage/lab:lab_repository",
-        "//src/java/com/google/devtools/mobileharness/shared/storage/transaction:transaction_config",
         "//src/java/com/google/devtools/mobileharness/shared/storage/transaction:transaction_context",
-        "//src/java/com/google/devtools/mobileharness/shared/storage/transaction:transaction_runner",
-        "//src/java/com/google/devtools/mobileharness/shared/storage/transaction:transaction_worker",
-        "//src/java/com/google/devtools/mobileharness/shared/util/database:database_connections",
-        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/storage/transaction/mysql:mysql_transaction_context",
         "@maven//:com_google_errorprone_error_prone_annotations",
-        "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
     ],
 )

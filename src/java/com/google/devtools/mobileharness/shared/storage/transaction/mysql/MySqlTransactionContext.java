@@ -14,24 +14,21 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.infra.master.central.storage.mysql;
+package com.google.devtools.mobileharness.shared.storage.transaction.mysql;
 
-import static com.google.common.truth.Truth.assertThat;
-import static org.mockito.Mockito.mock;
-
+import com.google.devtools.mobileharness.shared.storage.transaction.TransactionContext;
 import java.sql.Connection;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
 
-@RunWith(JUnit4.class)
-public final class MySqlTransactionContextTest {
+/** MySQL implementation of {@link TransactionContext}. */
+public final class MySqlTransactionContext implements TransactionContext {
 
-  @Test
-  public void getConnection_returnsConnection() {
-    Connection mockConnection = mock(Connection.class);
-    MySqlTransactionContext context = new MySqlTransactionContext(mockConnection);
+  private final Connection connection;
 
-    assertThat(context.getConnection()).isSameInstanceAs(mockConnection);
+  public MySqlTransactionContext(Connection connection) {
+    this.connection = connection;
+  }
+
+  public Connection getConnection() {
+    return connection;
   }
 }

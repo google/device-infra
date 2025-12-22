@@ -19,49 +19,36 @@ package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/master/central/storage:__subpackages__",
-        "//src/java/com/google/devtools/mobileharness/shared/storage/transaction:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/master/central/storage:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/shared/storage/transaction:__subpackages__",
     ],
 )
 
 java_library(
-    name = "transaction_context",
+    name = "mysql_transaction_context",
     srcs = [
-        "TransactionContext.java",
+        "MySqlTransactionContext.java",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/storage/transaction:transaction_context",
     ],
 )
 
 java_library(
-    name = "transaction_runner",
+    name = "mysql_transaction_runner",
     srcs = [
-        "TransactionRunner.java",
+        "MySqlTransactionRunner.java",
     ],
     deps = [
-        ":transaction_config",
-        ":transaction_worker",
+        ":mysql_transaction_context",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
-    ],
-)
-
-java_library(
-    name = "transaction_worker",
-    srcs = [
-        "TransactionWorker.java",
-    ],
-    deps = [
-        ":transaction_context",
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
-    ],
-)
-
-java_library(
-    name = "transaction_config",
-    srcs = ["TransactionConfig.java"],
-    deps = [
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
-        "@maven//:com_google_code_findbugs_jsr305",
+        "//src/java/com/google/devtools/mobileharness/shared/storage:annotations",
+        "//src/java/com/google/devtools/mobileharness/shared/storage/transaction:transaction_config",
+        "//src/java/com/google/devtools/mobileharness/shared/storage/transaction:transaction_runner",
+        "//src/java/com/google/devtools/mobileharness/shared/storage/transaction:transaction_worker",
+        "//src/java/com/google/devtools/mobileharness/shared/util/database:database_connections",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
     ],
 )

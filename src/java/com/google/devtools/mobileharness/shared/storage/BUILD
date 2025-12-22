@@ -18,12 +18,13 @@ load("@rules_java//java:defs.bzl", "java_library")
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
-        "//java/com/google/devtools/mobileharness/infra/master/central:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/master/central/storage:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/shared/storage:__subpackages__",
     ],
 )
 
 java_library(
-    name = "annotation",
-    srcs = ["CentralAnnotation.java"],
+    name = "annotations",
+    srcs = ["Annotations.java"],
     deps = ["@maven//:javax_inject_jsr330_api"],
 )

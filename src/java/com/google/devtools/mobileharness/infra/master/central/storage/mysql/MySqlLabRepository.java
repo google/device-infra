@@ -21,6 +21,7 @@ import com.google.devtools.mobileharness.api.model.lab.LabLocator;
 import com.google.devtools.mobileharness.infra.master.central.proto.Lab.LabServerCondition;
 import com.google.devtools.mobileharness.infra.master.central.storage.lab.LabRepository;
 import com.google.devtools.mobileharness.shared.storage.transaction.TransactionContext;
+import com.google.devtools.mobileharness.shared.storage.transaction.mysql.MySqlTransactionContext;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.util.Optional;
 import javax.inject.Inject;

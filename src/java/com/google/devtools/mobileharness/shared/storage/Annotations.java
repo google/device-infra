@@ -14,21 +14,19 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.infra.master.central.storage.mysql;
+package com.google.devtools.mobileharness.shared.storage;
 
-import com.google.devtools.mobileharness.shared.storage.transaction.TransactionContext;
-import java.sql.Connection;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import javax.inject.Qualifier;
 
-/** MySQL implementation of {@link TransactionContext}. */
-public final class MySqlTransactionContext implements TransactionContext {
+/** Annotations used by the storage modules of Mobile Harness. */
+public final class Annotations {
 
-  private final Connection connection;
+  /** Annotation for the database connections. */
+  @Qualifier
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface DatabaseConnections {}
 
-  public MySqlTransactionContext(Connection connection) {
-    this.connection = connection;
-  }
-
-  public Connection getConnection() {
-    return connection;
-  }
+  private Annotations() {}
 }
