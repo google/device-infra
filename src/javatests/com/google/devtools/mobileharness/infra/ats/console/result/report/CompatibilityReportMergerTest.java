@@ -279,7 +279,8 @@ public final class CompatibilityReportMergerTest {
                     Optional.of(Path.of(MOBLY_RESULT_ATTR_FILE_1)),
                     Optional.of(DEVICE_BUILD_FINGERPRINT),
                     Optional.of(Path.of(MOBLY_BUILD_ATTR_FILE_1)),
-                    Optional.of(Path.of(MODULE_RESULT_FILE_1))),
+                    Optional.of(Path.of(MODULE_RESULT_FILE_1)),
+                    /* regardAbortAsFail= */ false),
                 MoblyReportInfo.of(
                     "mobly-package-2",
                     "module-abi",
@@ -288,7 +289,8 @@ public final class CompatibilityReportMergerTest {
                     Optional.of(Path.of(MOBLY_RESULT_ATTR_FILE_2)),
                     Optional.of(DEVICE_BUILD_FINGERPRINT),
                     Optional.of(Path.of(MOBLY_BUILD_ATTR_FILE_2)),
-                    Optional.of(Path.of(MODULE_RESULT_FILE_2)))));
+                    Optional.of(Path.of(MODULE_RESULT_FILE_2)),
+                    /* regardAbortAsFail= */ false)));
 
     assertThat(res).hasSize(2);
     assertThat(res.get(0).report().get().getModuleInfoList()).hasSize(1);
@@ -308,7 +310,8 @@ public final class CompatibilityReportMergerTest {
                     Optional.of(Path.of(MOBLY_RESULT_ATTR_FILE_1)),
                     Optional.of(DEVICE_BUILD_FINGERPRINT),
                     Optional.of(Path.of(MOBLY_BUILD_ATTR_FILE_1)),
-                    Optional.of(Path.of(MODULE_RESULT_FILE_1))),
+                    Optional.of(Path.of(MODULE_RESULT_FILE_1)),
+                    /* regardAbortAsFail= */ false),
                 MoblyReportInfo.of(
                     "mobly-package-2",
                     "module-abi",
@@ -317,7 +320,8 @@ public final class CompatibilityReportMergerTest {
                     Optional.of(Path.of(MOBLY_RESULT_ATTR_FILE_2)),
                     Optional.of(DEVICE_BUILD_FINGERPRINT),
                     Optional.of(Path.of(MOBLY_BUILD_ATTR_FILE_2)),
-                    Optional.of(Path.of(MODULE_RESULT_FILE_2)))),
+                    Optional.of(Path.of(MODULE_RESULT_FILE_2)),
+                    /* regardAbortAsFail= */ false)),
             /* skipDeviceInfo= */ false);
 
     assertThat(res).isPresent();

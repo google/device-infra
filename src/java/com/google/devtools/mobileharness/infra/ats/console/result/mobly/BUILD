@@ -58,6 +58,7 @@ java_library(
     deps = [
         "//src/devtools/mobileharness/infra/ats/console/result/proto:result_java_proto",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
     ],

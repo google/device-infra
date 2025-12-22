@@ -389,7 +389,10 @@ public class SessionResultHandlerUtil {
                               res.resultAttributesFile(),
                               res.deviceBuildFingerprint(),
                               res.buildAttributesFile(),
-                              res.moduleResultFile())));
+                              res.moduleResultFile(),
+                              test.jobInfo()
+                                  .params()
+                                  .getBool(MoblyReportInfo.PARAM_REGARD_ABORT_AS_FAIL, false))));
               return null;
             },
             String.format(

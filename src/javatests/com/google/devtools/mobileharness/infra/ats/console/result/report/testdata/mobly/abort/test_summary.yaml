@@ -1,0 +1,86 @@
+---
+Requested Tests:
+- test_hello_world1_1
+- test_hello_world1_2
+- test_hello_world1_3
+- test_hello_world2_1
+Type: TestNameList
+...
+---
+Begin Time: 1765357261801
+Details: Aware test is disabled or aware is not available in the device
+End Time: 1765357263927
+Extra Errors: {}
+Extras: null
+Parent: null
+Result: SKIP
+Retry Parent: null
+Signature: test_hello_world1_1-1765357261801
+Stacktrace: "Aware test is disabled or aware is not available in the device"
+Termination Signal Type: TestSkip
+Test Class: HelloWorldTest1
+Test Name: test_hello_world1_1
+Type: Record
+UID: null
+...
+
+---
+Begin Time: null
+Details: 'Test class aborted due to: 5G AP is not ready for this test.'
+End Time: null
+Extra Errors: {}
+Extras: null
+Parent: null
+Result: SKIP
+Retry Parent: null
+Signature: null
+Stacktrace: "Test class aborted due to: 5G AP is not ready for this test."
+Termination Signal Type: TestAbortClass
+Test Class: HelloWorldTest1
+Test Name: test_hello_world1_2
+Type: Record
+UID: null
+...
+---
+Begin Time: 1765358519321
+Details: 'Test class aborted due to: 5G AP is not ready for this test.'
+End Time: 1765358531466
+Extra Errors: {}
+Extras: null
+Parent: null
+Result: ERROR
+Retry Parent: null
+Signature: test_hello_world1_3-1765358519321
+Stacktrace: "Test class aborted due to: 5G AP is not ready for this test."
+Termination Signal Type: TestAbortClass
+Test Class: HelloWorldTest1
+Test Name: test_hello_world1_3
+Type: Record
+UID: null
+...
+---
+Begin Time: 1765357221894
+Details: null
+End Time: 1765357235896
+Extra Errors: {}
+Extras: null
+Parent: null
+Result: SKIP
+Retry Parent: null
+Signature: test_hello_world2_1-1765357221894
+Stacktrace: "Aborting all tests due to 5G AP is not ready for this test."
+Termination Signal Type: TestAbortAll
+Test Class: HelloWorldTest2
+Test Name: test_hello_world2_1
+Type: Record
+UID: null
+...
+---
+Error: 1
+Executed: 4
+Failed: 0
+Passed: 0
+Requested: 4
+Skipped: 3
+Type: Summary
+...

@@ -71,6 +71,9 @@ public abstract class MoblyTestEntry implements MoblyYamlDocEntry {
 
   public abstract Optional<String> getUid();
 
+  /** Termination signal type for the test. */
+  public abstract Optional<String> getTerminationSignalType();
+
   /**
    * List of extra errors for a given test. If no extra errors exist, an empty list will be
    * returned.
@@ -78,8 +81,7 @@ public abstract class MoblyTestEntry implements MoblyYamlDocEntry {
   public abstract ImmutableList<ExtraError> getExtraErrors();
 
   public static Builder builder() {
-    return new com.google.devtools.mobileharness.infra.ats.console.result.mobly
-        .AutoValue_MoblyTestEntry.Builder();
+    return new AutoValue_MoblyTestEntry.Builder();
   }
 
   /** MoblyTestEntry Builder class. */
@@ -106,6 +108,8 @@ public abstract class MoblyTestEntry implements MoblyYamlDocEntry {
     public abstract Builder setExtras(String value);
 
     public abstract Builder setUid(String value);
+
+    public abstract Builder setTerminationSignalType(String value);
 
     protected abstract ImmutableList.Builder<ExtraError> extraErrorsBuilder();
 

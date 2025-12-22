@@ -58,6 +58,7 @@ public class MoblyYamlParser {
   private static final String RESULT_DETAILS = "Details";
   private static final String RESULT_EXTRAS = "Extras";
   private static final String RESULT_RETRY_PARENT = "Retry Parent";
+  private static final String RESULT_TERMINATION_SIGNAL_TYPE = "Termination Signal Type";
 
   // Key constants found within the body of "Extra Errors".
   public static final String RESULT_EXTRA_ERRORS_DETAILS = "Details";
@@ -205,6 +206,9 @@ public class MoblyYamlParser {
     }
     if (record.get(RESULT_SIGNATURE) != null) {
       builder.setSignature(String.valueOf(record.get(RESULT_SIGNATURE)));
+    }
+    if (record.get(RESULT_TERMINATION_SIGNAL_TYPE) != null) {
+      builder.setTerminationSignalType(String.valueOf(record.get(RESULT_TERMINATION_SIGNAL_TYPE)));
     }
 
     return builder.build();

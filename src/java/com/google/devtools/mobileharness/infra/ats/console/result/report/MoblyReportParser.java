@@ -23,6 +23,7 @@ import com.google.auto.value.AutoValue;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMultimap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
@@ -66,6 +67,9 @@ import javax.inject.Inject;
 public class MoblyReportParser {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
+  private static final ImmutableSet<String> MOBLY_ABORT_SIGNAL_TYPE =
+      ImmutableSet.of("TestAbortClass", "TestAbortAll");
 
   private final LocalFileUtil localFileUtil;
   private final MoblyYamlParser moblyYamlParser;
@@ -187,16 +191,24 @@ public class MoblyReportParser {
           // Do not handle other MoblyYamlDocEntry at this moment.
         }
       }
-      Module module =
-          moduleBuilder
-              .setRuntimeMillis(runtime)
-              .addAllTestCase(getTestCases(testEntriesMapBuilder.build()))
-              .build();
+      moduleBuilder
+          .setRuntimeMillis(runtime)
+          .addAllTestCase(
+              getTestCases(testEntriesMapBuilder.build(), moblyReportInfo.regardAbortAsFail()));
+      if (moblyReportInfo.regardAbortAsFail()) {
+        moduleBuilder.setFailedTests(
+            (int)
+                moduleBuilder.getTestCaseList().stream()
+                    .flatMap(testCase -> testCase.getTestList().stream())
+                    .filter(test -> test.getResult().equals(getTestStatus(MoblyResult.FAIL)))
+                    .count());
+      }
+      Module module = moduleBuilder.build();
       resultBuilder
           .setSummary(
               Summary.newBuilder()
                   .setPassed(module.getPassed())
-                  .setFailed(failedTestsInModule)
+                  .setFailed(module.getFailedTests())
                   .setModulesDone(module.getDone() ? 1 : 0)
                   .setModulesTotal(1))
           .addModuleInfo(module);
@@ -232,17 +244,22 @@ public class MoblyReportParser {
    * belong to the same module.
    */
   private static ImmutableList<TestCase> getTestCases(
-      ImmutableMultimap<String, MoblyTestEntry> testEntries) {
+      ImmutableMultimap<String, MoblyTestEntry> testEntries, boolean regardAbortAsFail) {
     ImmutableList.Builder<TestCase> testCases = ImmutableList.builder();
     for (Map.Entry<String, Collection<MoblyTestEntry>> entry : testEntries.asMap().entrySet()) {
       TestCase.Builder testCaseBuilder = TestCase.newBuilder().setName(entry.getKey());
       ImmutableList.Builder<Test> testListBuilder = ImmutableList.builder();
       for (MoblyTestEntry testEntry : entry.getValue()) {
+        MoblyResult result = testEntry.getResult();
+        if (regardAbortAsFail
+            && result == MoblyResult.SKIP
+            && testEntry.getTerminationSignalType().isPresent()
+            && MOBLY_ABORT_SIGNAL_TYPE.contains(testEntry.getTerminationSignalType().get())) {
+          result = MoblyResult.FAIL;
+        }
         Test.Builder testBuilder =
-            Test.newBuilder()
-                .setName(testEntry.getTestName())
-                .setResult(getTestStatus(testEntry.getResult()));
-        if (testEntry.getResult() == MoblyResult.SKIP) {
+            Test.newBuilder().setName(testEntry.getTestName()).setResult(getTestStatus(result));
+        if (result == MoblyResult.SKIP) {
           testBuilder.setSkipped(true);
         }
         if (testEntry.getStacktrace().isPresent()) {
@@ -269,6 +286,8 @@ public class MoblyReportParser {
   @AutoValue
   public abstract static class MoblyReportInfo {
 
+    public static final String PARAM_REGARD_ABORT_AS_FAIL = "regard_abort_as_fail";
+
     /** Creates a {@link ParseResult}. */
     public static MoblyReportInfo of(
         String moblyPackageName,
@@ -278,7 +297,8 @@ public class MoblyReportParser {
         Optional<Path> resultAttributesFile,
         Optional<String> deviceBuildFingerprint,
         Optional<Path> buildAttributesFile,
-        Optional<Path> moduleResultFile) {
+        Optional<Path> moduleResultFile,
+        boolean regardAbortAsFail) {
       return new AutoValue_MoblyReportParser_MoblyReportInfo(
           moblyPackageName,
           moduleAbi,
@@ -287,7 +307,8 @@ public class MoblyReportParser {
           resultAttributesFile,
           deviceBuildFingerprint,
           buildAttributesFile,
-          moduleResultFile);
+          moduleResultFile,
+          regardAbortAsFail);
     }
 
     /** The name of Mobly package to which the {@code moblySummaryFile} belongs to. */
@@ -331,5 +352,8 @@ public class MoblyReportParser {
      * which is used as a backup result from ATS if the Mobly result file wasn't created.
      */
     public abstract Optional<Path> moduleResultFile();
+
+    /** Whether to regard abort test cases as fail. */
+    public abstract boolean regardAbortAsFail();
   }
 }
