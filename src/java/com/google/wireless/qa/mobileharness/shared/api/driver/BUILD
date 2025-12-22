@@ -243,7 +243,9 @@ java_library(
 
 java_library(
     name = "xts_tradefed_test",
-    srcs = ["XtsTradefedTest.java"],
+    srcs = [
+        "XtsTradefedTest.java",
+    ],
     resources = [
         "//src/devtools/mobileharness/infra/controller/test/util/xtsdownloader/configs:mcts_list",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/agent:tradefed_invocation_agent_deploy.jar",
@@ -259,6 +261,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error:exception_factory",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:xts_property_name",
         "//src/java/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:tradefed_config_generator",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/tradefed:tradefed_run_strategy_lib",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:log_recorder",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_internal_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/shared/emulator:android_jit_emulator_util",
@@ -278,7 +281,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local:res_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "//src/java/com/google/devtools/mobileharness/shared/util/path",
         "//src/java/com/google/devtools/mobileharness/shared/util/shell",
         "//src/java/com/google/devtools/mobileharness/shared/util/system",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
@@ -294,8 +296,6 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:xts_tradefed_test_spec_java_proto",
         "@maven//:com_google_code_findbugs_jsr305",
-        "@maven//:com_google_code_gson_gson",
-        "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
         "@maven//:org_apache_commons_commons_text",

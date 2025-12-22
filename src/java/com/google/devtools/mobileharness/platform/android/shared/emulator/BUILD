@@ -34,6 +34,7 @@ java_library(
     srcs = ["AndroidJitEmulatorUtil.java"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/tradefed:__pkg__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/shared/emulator:__subpackages__",
     ],
