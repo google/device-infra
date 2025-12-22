@@ -600,7 +600,9 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
     ImmutableList<ResolveFileItem> labResolveFiles = getLabResolveFiles(jobInfo);
     logger.atInfo().log("List lab resolve files: %s", labResolveFiles);
 
-    logger.atInfo().log("Prepare test %s with devices %s", testInfo.locator(), deviceLocators);
+    logger.atInfo().log(
+        "Prepare test %s with devices %s feature is %s",
+        testInfo.locator(), deviceLocators, getAllocation().getAllDeviceFeatures());
     CreateTestRequest createTestRequest =
         CreateTestRequest.newBuilder()
             .setVersionCheckRequest(
@@ -609,6 +611,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
                     .setMinServiceVersion(Version.MIN_LAB_VERSION.toString()))
             .addAllDeviceId(
                 deviceLocators.stream().map(DeviceLocator::getSerial).collect(toImmutableList()))
+            .addAllAllocatedDevices(getAllocation().getAllDeviceFeatures())
             .setJob(
                 CreateTestRequest.Job.newBuilder()
                     .setJobId(jobInfo.locator().getId())

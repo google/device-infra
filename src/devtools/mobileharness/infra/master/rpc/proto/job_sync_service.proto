@@ -88,8 +88,11 @@ message GetAllocationsResponse {
   message Allocation {
     // Required.
     string test_id = 1;
-    // Required: at least one device is provided.
+    // Required: at least one device locator is provided.
     repeated .mobileharness.api.model.DeviceLocator device_locator = 2;
+    // Required: at least one device feature is provided, which will be
+    // consistent with the device locator.
+    repeated .mobileharness.api.model.DeviceFeature allocated_devices = 5;
 
     // Allocation latency stats.
     message Stats {

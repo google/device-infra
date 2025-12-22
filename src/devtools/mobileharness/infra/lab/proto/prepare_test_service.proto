@@ -47,6 +47,10 @@ message CreateTestRequest {
   // The span of the method which calls this RPC call.
   mobileharness.shared.trace.ParentSpan parent_span = 6;
 
+  // Information about allocated devices, used in device decoupling mode.
+  // If provided, must be in the same order and size of device_id field.
+  repeated mobileharness.api.model.DeviceFeature allocated_devices = 7;
+
   message Job {
     // Required.
     string job_id = 1;

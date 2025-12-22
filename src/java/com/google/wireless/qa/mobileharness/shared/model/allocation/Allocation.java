@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.SetMultimap;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.service.moss.proto.Slg.AllocationProto;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestLocator;
 import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator;
@@ -54,6 +55,10 @@ public class Allocation implements Cloneable {
    */
   private volatile ImmutableList<Multimap<String, String>> dimensionsList;
 
+  // A list of device features for each allocated device.  This field is currently only for ensuring
+  // data transmission within OmniLab and cannot guarantee a value in all scenarios.
+  private final ImmutableList<DeviceFeature> deviceFeatures;
+
   /** Creates an allocation which assigns the given single device to the given test. */
   public Allocation(
       TestLocator testLocator,
@@ -70,6 +75,15 @@ public class Allocation implements Cloneable {
       TestLocator testLocator,
       List<DeviceLocator> deviceLocators,
       List<Multimap<String, String>> dimensionsList) {
+    this(testLocator, deviceLocators, dimensionsList, ImmutableList.of());
+  }
+
+  /** Creates an allocation which assigns the given device list to the given test. */
+  public Allocation(
+      TestLocator testLocator,
+      List<DeviceLocator> deviceLocators,
+      List<Multimap<String, String>> dimensionsList,
+      List<DeviceFeature> deviceFeatures) {
     test = Preconditions.checkNotNull(testLocator);
     Preconditions.checkNotNull(deviceLocators);
     Preconditions.checkState(!deviceLocators.isEmpty()); // Should have at least one device.
@@ -82,6 +96,7 @@ public class Allocation implements Cloneable {
       dimensionsListBuilder.add(ImmutableSetMultimap.copyOf(deviceDimension));
     }
     this.dimensionsList = dimensionsListBuilder.build();
+    this.deviceFeatures = ImmutableList.copyOf(deviceFeatures);
   }
 
   public Allocation(
@@ -89,7 +104,8 @@ public class Allocation implements Cloneable {
     this(
         new TestLocator(newAllocation.getTest()),
         newAllocation.getAllDevices().stream().map(DeviceLocator::new).collect(Collectors.toList()),
-        Collections.nCopies(newAllocation.getAllDevices().size(), ImmutableMultimap.of()));
+        Collections.nCopies(newAllocation.getAllDevices().size(), ImmutableMultimap.of()),
+        newAllocation.getAllDeviceFeatures());
   }
 
   /**
@@ -125,6 +141,7 @@ public class Allocation implements Cloneable {
               dimensionsListBuilder.add(ImmutableSetMultimap.copyOf(dimensionMultiMap));
             });
     this.dimensionsList = dimensionsListBuilder.build();
+    this.deviceFeatures = ImmutableList.of();
   }
 
   /** Returns whether the (multiple) allocated devices need to be combined into a single testbed. */
@@ -211,6 +228,7 @@ public class Allocation implements Cloneable {
   public com.google.devtools.mobileharness.api.model.allocation.Allocation toNewAllocation() {
     return new com.google.devtools.mobileharness.api.model.allocation.Allocation(
         test.toNewTestLocator(),
-        devices.stream().map(DeviceLocator::toNewDeviceLocator).collect(Collectors.toList()));
+        devices.stream().map(DeviceLocator::toNewDeviceLocator).collect(toImmutableList()),
+        deviceFeatures);
   }
 }
