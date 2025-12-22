@@ -16,6 +16,8 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.driver;
 
+import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_TEST_END_EPOCH_MS;
+import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_TEST_START_EPOCH_MS;
 import static java.lang.String.format;
 
 import com.google.common.base.Ascii;
@@ -60,6 +62,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.AndroidInstrumentationSpec;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -118,6 +121,8 @@ public class AndroidInstrumentation extends BaseDriver
   /** For broadcasting messages when starting/finishing install an app. */
   private final TestMessageUtil testMessageUtil;
 
+  private final Clock clock;
+
   @Inject
   AndroidInstrumentation(
       Device device,
@@ -130,7 +135,8 @@ public class AndroidInstrumentation extends BaseDriver
       LocalFileUtil fileUtil,
       TestMessageUtil testMessageUtil,
       AndroidInstrumentationUtil androidInstrumentationUtil,
-      InstallApkStep installApkStep) {
+      InstallApkStep installApkStep,
+      Clock clock) {
     super(device, testInfo);
     this.androidPackageManagerUtil = androidPackageManagerUtil;
     this.adb = adb;
@@ -141,6 +147,7 @@ public class AndroidInstrumentation extends BaseDriver
     this.testMessageUtil = testMessageUtil;
     this.androidInstrumentationUtil = androidInstrumentationUtil;
     this.installApkStep = installApkStep;
+    this.clock = clock;
   }
 
   @Override
@@ -481,6 +488,11 @@ public class AndroidInstrumentation extends BaseDriver
                   + " - test target: %s%n - timeout: %d ms%n - options: %s",
               testTarget, testTimeoutMs, StrUtil.DEFAULT_MAP_JOINER.join(optionMap));
       testInfo.log().atInfo().alsoTo(logger).log("%s", message);
+      testInfo
+          .properties()
+          .add(
+              ANDROID_INSTRUMENTATION_TEST_START_EPOCH_MS,
+              Long.toString(clock.instant().toEpochMilli()));
 
       String output;
       MobileHarnessException mhException = null;
@@ -517,6 +529,11 @@ public class AndroidInstrumentation extends BaseDriver
         output = e.getMessage();
       }
 
+      testInfo
+          .properties()
+          .add(
+              ANDROID_INSTRUMENTATION_TEST_END_EPOCH_MS,
+              Long.toString(clock.instant().toEpochMilli()));
       testInfo.log().atInfo().alsoTo(logger).log("Finish instrumentation: %s", output);
       // Also log to file.
       String instrumentLogFileName =
