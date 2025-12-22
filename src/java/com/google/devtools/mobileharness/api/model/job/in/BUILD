@@ -135,7 +135,6 @@ java_library(
     name = "timeout",
     srcs = ["Timeout.java"],
     visibility = [
-        "//:omnilab_fusion",
         "//java/com/google/devtools/mobileharness/infra/lab/rpc/service:__pkg__",
     ],
     deps = [
