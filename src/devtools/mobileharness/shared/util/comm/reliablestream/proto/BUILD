@@ -16,12 +16,7 @@
 load("@protobuf//bazel:java_proto_library.bzl", "java_proto_library")
 load("@protobuf//bazel:proto_library.bzl", "proto_library")
 
-package(
-    default_applicable_licenses = ["//:license"],
-    default_visibility = [
-        "//:deviceinfra_all_pkg",
-    ],
-)
+package(default_applicable_licenses = ["//:license"])
 
 proto_library(
     name = "stream_proto",
