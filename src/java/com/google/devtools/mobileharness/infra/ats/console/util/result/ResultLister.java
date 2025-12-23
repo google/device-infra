@@ -66,6 +66,7 @@ public class ResultLister {
             "Session",
             "Pass",
             "Fail",
+            "Warning",
             "Modules Complete",
             "Result Directory",
             "Test Plan",
@@ -92,6 +93,7 @@ public class ResultLister {
               Integer.toString(i),
               Long.toString(result.getSummary().getPassed()),
               Long.toString(result.getSummary().getFailed()),
+              Long.toString(result.getSummary().getWarning()),
               String.format(
                   "%d of %d",
                   result.getSummary().getModulesDone(), result.getSummary().getModulesTotal()),

@@ -86,6 +86,12 @@
                             </td>
                         </tr>
                         <tr>
+                            <td class="rowtitle">Tests Warning</td>
+                            <td>
+                                <xsl:value-of select="Result/Summary/@warning"/>
+                            </td>
+                        </tr>
+                        <tr>
                             <td class="rowtitle">Modules Done</td>
                             <td>
                                 <xsl:value-of select="Result/Summary/@modules_done"/>
@@ -132,6 +138,7 @@
                             <th>Module</th>
                             <th>Passed</th>
                             <th>Failed</th>
+                            <th>Warning</th>
                             <th>Assumption Failure</th>
                             <th>Ignored</th>
                             <th>Total Tests</th>
@@ -169,6 +176,9 @@
                                     <xsl:value-of select="count(TestCase/Test[@result = 'fail'])"/>
                                 </td>
                                 <td>
+                                    <xsl:value-of select="count(TestCase/Test[@result = 'warning'])"/>
+                                </td>
+                                <td>
                                     <xsl:value-of select="count(TestCase/Test[@result = 'ASSUMPTION_FAILURE'])"/>
                                 </td>
                                 <td>
@@ -191,6 +201,11 @@
                 <xsl:call-template name="filteredResultTestReport">
                     <xsl:with-param name="header" select="'Failed Tests'" />
                     <xsl:with-param name="resultFilter" select="'fail'" />
+                </xsl:call-template>
+
+                <xsl:call-template name="filteredResultTestReport">
+                    <xsl:with-param name="header" select="'Warning Tests'" />
+                    <xsl:with-param name="resultFilter" select="'warning'" />
                 </xsl:call-template>
 
                 <xsl:call-template name="filteredResultTestReport">
@@ -325,6 +340,26 @@
 
             <xsl:if test="@result='fail'">
                 <td class="failed">
+                    <div style="text-align: center; margin-left:auto; margin-right:auto;">
+                        <xsl:value-of select="@result"/>
+                    </div>
+                </td>
+                <td class="failuredetails">
+                    <div class="details">
+                        <xsl:choose>
+                            <xsl:when test="boolean($fullStackTrace)=true()">
+                                <xsl:value-of select="Failure/StackTrace"/>
+                            </xsl:when>
+                            <xsl:otherwise>
+                                <xsl:value-of select="Failure/@message"/>
+                            </xsl:otherwise>
+                        </xsl:choose>
+                    </div>
+                </td>
+            </xsl:if>
+
+            <xsl:if test="@result='warning'">
+                <td class="warning">
                     <div style="text-align: center; margin-left:auto; margin-right:auto;">
                         <xsl:value-of select="@result"/>
                     </div>

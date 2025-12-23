@@ -37,41 +37,32 @@ public enum TestStatus {
 
   /** Converts our test status to a format compatible with CTS backend. */
   public static String convertToTestStatusCompatibilityString(TestStatus status) {
-    switch (status) {
-      case PASSED:
-        return "pass";
-      case FAILURE:
-        return "fail";
-      default:
-        return status.toString();
-    }
+    return switch (status) {
+      case PASSED -> "pass";
+      case FAILURE -> "fail";
+      case WARNING -> "warning";
+      default -> status.toString();
+    };
   }
 
   public static TestStatus convertFromTestStatusCompatibilityString(String status) {
-    switch (status) {
-      case "pass":
-        return TestStatus.PASSED;
-      case "fail":
-        return TestStatus.FAILURE;
-      default:
-        return TestStatus.valueOf(status);
-    }
+    return switch (status) {
+      case "pass" -> TestStatus.PASSED;
+      case "fail" -> TestStatus.FAILURE;
+      case "warning" -> TestStatus.WARNING;
+      default -> TestStatus.valueOf(status);
+    };
   }
 
   public static String convertMoblyResultToTestStatusCompatibilityString(MoblyResult moblyResult) {
-    switch (moblyResult) {
-      case PASS:
-        return "pass";
-      case FAIL:
-      case ERROR:
-        return "fail";
-      case SKIP:
-        // Skipped Mobly test is considered as ignored in the report
-        return TestStatus.IGNORED.toString();
-      case NULL:
-        return TestStatus.INCOMPLETE.toString();
-      default:
-        return moblyResult.toString();
-    }
+    return switch (moblyResult) {
+      case PASS -> "pass";
+      case FAIL, ERROR -> "fail";
+      case SKIP ->
+          // Skipped Mobly test is considered as ignored in the report
+          TestStatus.IGNORED.toString();
+      case NULL -> TestStatus.INCOMPLETE.toString();
+      default -> moblyResult.toString();
+    };
   }
 }

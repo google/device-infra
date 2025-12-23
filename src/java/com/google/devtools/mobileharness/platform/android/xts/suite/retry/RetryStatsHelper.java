@@ -61,8 +61,10 @@ public class RetryStatsHelper {
         if (test.getResult()
                 .equals(TestStatus.convertToTestStatusCompatibilityString(TestStatus.FAILURE))
             || test.getResult()
-                .equals(TestStatus.convertToTestStatusCompatibilityString(TestStatus.SKIPPED))) {
-          // Retry skipped test as well
+                .equals(TestStatus.convertToTestStatusCompatibilityString(TestStatus.SKIPPED))
+            || test.getResult()
+                .equals(TestStatus.convertToTestStatusCompatibilityString(TestStatus.WARNING))) {
+          // Retry skipped and warning test as well
           failedTests.add(fullTestName.append(test.getName()).toString());
         }
       }
