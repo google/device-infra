@@ -21,6 +21,7 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
 import java.util.Map;
+import java.util.Optional;
 import javax.annotation.Nullable;
 
 /**
@@ -152,6 +153,16 @@ public class Dimensions {
   @Nullable
   public String get(Dimension.Name name) {
     return newDimensions.get(name).orElse(null);
+  }
+
+  /** Gets the dimension value of the given dimension name. */
+  public Optional<String> getOptional(String name) {
+    return newDimensions.get(name);
+  }
+
+  /** Gets the dimension value of the given dimension name. */
+  public Optional<String> getOptional(Dimension.Name name) {
+    return newDimensions.get(name);
   }
 
   private void touch() {
