@@ -441,6 +441,7 @@ public class ApiConfigV5 implements ApiConfig {
   }
 
   private BasicDeviceConfig getBasicDeviceConfig(String deviceControlId) {
+    // TODO: merge LabProjectConfigProto.TenantDeviceConfig.device_config.basic_config
     DeviceConfig deviceConfig = deviceConfigs.get(deviceControlId);
     Optional<DeviceId> deviceId = deviceIdManager.getDeviceIdFromControlId(deviceControlId);
 
