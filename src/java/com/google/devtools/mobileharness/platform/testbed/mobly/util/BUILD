@@ -24,7 +24,8 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
     ],
     deps = [
-        ":install_mobly_test_deps_args",
+        ":install_python_pkg_deps_args",
+        ":mobly_python_venv_util",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_constants",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
@@ -70,12 +71,30 @@ java_library(
 )
 
 java_library(
-    name = "install_mobly_test_deps_args",
-    srcs = ["InstallMoblyTestDepsArgs.java"],
+    name = "install_python_pkg_deps_args",
+    srcs = ["InstallPythonPkgDepsArgs.java"],
     visibility = [
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
     ],
     deps = ["//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value"],
+)
+
+java_library(
+    name = "mobly_python_venv_util",
+    srcs = ["MoblyPythonVenvUtil.java"],
+    visibility = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
+        "//src/javatests/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
+    ],
+    deps = [
+        ":install_python_pkg_deps_args",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/command",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+    ],
 )
 
 java_library(

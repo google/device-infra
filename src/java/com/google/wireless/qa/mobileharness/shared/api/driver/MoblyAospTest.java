@@ -20,7 +20,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.platform.testbed.mobly.util.InstallMoblyTestDepsArgs;
+import com.google.devtools.mobileharness.platform.testbed.mobly.util.InstallPythonPkgDepsArgs;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyAospTestSetupUtil;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -138,11 +138,11 @@ public class MoblyAospTest extends MoblyTest implements MoblyAospTestSpec {
     String testCaseSelector = testInfo.jobInfo().params().get(TEST_SELECTOR_KEY);
     String pythonVersion = testInfo.jobInfo().params().get(PARAM_PYTHON_VERSION);
 
-    InstallMoblyTestDepsArgs.Builder installMoblyTestDepsArgsBuilder =
-        InstallMoblyTestDepsArgs.builder().setDefaultTimeout(Duration.ofMinutes(30));
+    InstallPythonPkgDepsArgs.Builder installPythonPkgDepsArgsBuilder =
+        InstallPythonPkgDepsArgs.builder().setDefaultTimeout(Duration.ofMinutes(30));
 
     if (testInfo.jobInfo().params().getOptional(PARAM_PY_PKG_INDEX_URL).isPresent()) {
-      installMoblyTestDepsArgsBuilder.setIndexUrl(
+      installPythonPkgDepsArgsBuilder.setIndexUrl(
           testInfo.jobInfo().params().getOptional(PARAM_PY_PKG_INDEX_URL).get());
     }
 
@@ -154,7 +154,7 @@ public class MoblyAospTest extends MoblyTest implements MoblyAospTestSpec {
         testPath,
         testCaseSelector,
         pythonVersion,
-        installMoblyTestDepsArgsBuilder.build());
+        installPythonPkgDepsArgsBuilder.build());
   }
 
   /**

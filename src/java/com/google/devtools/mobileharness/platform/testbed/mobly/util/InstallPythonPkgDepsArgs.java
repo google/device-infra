@@ -20,9 +20,9 @@ import com.google.auto.value.AutoValue;
 import java.time.Duration;
 import java.util.Optional;
 
-/** Args for installing Mobly test deps. */
+/** Args for installing Python package deps. */
 @AutoValue
-public abstract class InstallMoblyTestDepsArgs {
+public abstract class InstallPythonPkgDepsArgs {
 
   /** Default timeout in seconds for "pip install". */
   public abstract Optional<Duration> defaultTimeout();
@@ -31,16 +31,16 @@ public abstract class InstallMoblyTestDepsArgs {
   public abstract Optional<String> indexUrl();
 
   public static Builder builder() {
-    return new AutoValue_InstallMoblyTestDepsArgs.Builder();
+    return new AutoValue_InstallPythonPkgDepsArgs.Builder();
   }
 
-  /** Builder for {@link InstallMoblyTestDepsArgs}. */
+  /** Builder for {@link InstallPythonPkgDepsArgs}. */
   @AutoValue.Builder
   public abstract static class Builder {
     public abstract Builder setDefaultTimeout(Duration defaultTimeout);
 
     public abstract Builder setIndexUrl(String indexUrl);
 
-    public abstract InstallMoblyTestDepsArgs build();
+    public abstract InstallPythonPkgDepsArgs build();
   }
 }
