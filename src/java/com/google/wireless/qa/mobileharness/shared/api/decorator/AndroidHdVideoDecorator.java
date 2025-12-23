@@ -41,6 +41,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.util.LinkedList;
 import java.util.Queue;
+import javax.inject.Inject;
 
 /**
  * Driver decorator for recording the Android real device screen with high resolution at the last
@@ -118,6 +119,10 @@ public class AndroidHdVideoDecorator extends AsyncTimerDecorator implements Andr
 
   @VisibleForTesting Duration screenRecordTimeLimit;
 
+  @VisibleForTesting boolean useContinuousVideo = false;
+
+  @VisibleForTesting int sdkVersion;
+
   /**
    * Running recording processes on device.
    *
@@ -135,23 +140,7 @@ public class AndroidHdVideoDecorator extends AsyncTimerDecorator implements Andr
 
   private final Stopwatch stopwatch;
 
-  /**
-   * Constructor. Do NOT modify the parameter list. This constructor is required by the
-   * driver/decorator framework.
-   */
-  public AndroidHdVideoDecorator(Driver decoratedDriver, TestInfo testInfo) {
-    this(
-        decoratedDriver,
-        testInfo,
-        new AndroidSystemSettingUtil(),
-        new AndroidFileUtil(),
-        new AndroidMediaUtil(),
-        Clock.systemUTC());
-  }
-
-  /** Constructor for testing only. */
-  @VisibleForTesting
-  @SuppressWarnings("JdkObsolete")
+  @Inject
   public AndroidHdVideoDecorator(
       Driver decoratedDriver,
       TestInfo testInfo,
@@ -208,19 +197,21 @@ public class AndroidHdVideoDecorator extends AsyncTimerDecorator implements Andr
     oldestClipIdToKeep = currentClipId;
     videoSize = jobInfo.params().get(PARAM_VIDEO_SIZE, null);
     bugreport = jobInfo.params().getBool(PARAM_BUGREPORT, /* defaultValue= */ false);
+    useContinuousVideo =
+        testInfo.jobInfo().params().getBool(PARAM_USE_CONTINUOUS_VIDEO, /* defaultValue= */ false);
     screenRecordTimeLimit = null;
+    try {
+      sdkVersion = systemSettingUtil.getDeviceSdkVersion(deviceId);
+    } catch (MobileHarnessException e) {
+      testInfo
+          .log()
+          .atWarning()
+          .withCause(e)
+          .alsoTo(logger)
+          .log("Failed to get device sdk version, skip setting time limit.");
+    }
+
     if (jobInfo.params().has(PARAM_SCREENRECORD_TIME_LIMIT_SECONDS)) {
-      int sdkVersion = 0;
-      try {
-        sdkVersion = systemSettingUtil.getDeviceSdkVersion(deviceId);
-      } catch (MobileHarnessException e) {
-        testInfo
-            .log()
-            .atWarning()
-            .withCause(e)
-            .alsoTo(logger)
-            .log("Failed to get device sdk version, skip setting time limit.");
-      }
       if (sdkVersion >= 34) {
         screenRecordTimeLimit =
             Duration.ofSeconds(jobInfo.params().getLong(PARAM_SCREENRECORD_TIME_LIMIT_SECONDS, 0L));
@@ -235,7 +226,7 @@ public class AndroidHdVideoDecorator extends AsyncTimerDecorator implements Andr
       }
     }
 
-    prepareWorkingDir(testInfo, systemSettingUtil.getDeviceSdkVersion(deviceId));
+    prepareWorkingDir(testInfo, sdkVersion);
 
     // Removes previous video files.
     logger.atInfo().log("Remove previous video files");
@@ -325,7 +316,7 @@ public class AndroidHdVideoDecorator extends AsyncTimerDecorator implements Andr
   }
 
   private void killRecordingProcesses(String deviceId, TestInfo testInfo)
-      throws InterruptedException {
+      throws InterruptedException, MobileHarnessException {
     logger.atInfo().log("Kill recording processes");
     if (recordVrVideo) {
       try {
@@ -355,7 +346,6 @@ public class AndroidHdVideoDecorator extends AsyncTimerDecorator implements Andr
   @Override
   void onEnd(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
     String deviceId = getDevice().getDeviceId();
-
     try {
       // Stops screen recording.
       testInfo.log().atInfo().alsoTo(logger).log("Stop screen recording");
@@ -424,6 +414,10 @@ public class AndroidHdVideoDecorator extends AsyncTimerDecorator implements Andr
   /** Get the video clip path with the given ID on device. */
   private String getClipPathOnDevice(String clipId) {
     return String.format(templateClipPath, clipId);
+  }
+
+  private boolean isUsingContinuousVideo() {
+    return useContinuousVideo && sdkVersion < 34;
   }
 
   private void prepareWorkingDir(TestInfo testInfo, int sdkVersion)

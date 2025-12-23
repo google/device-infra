@@ -87,6 +87,13 @@ public interface AndroidHdVideoSpec {
   public static final String PARAM_SCREENRECORD_TIME_LIMIT_SECONDS =
       "screenrecord_time_limit_seconds";
 
+  @ParamAnnotation(
+      required = false,
+      help =
+          "Try capturing continuous video if available on device API level <= 33. This will create"
+              + " a MPEGTS stream written to a file \"video.ts\" in the test's genFileDir.")
+  public static final String PARAM_USE_CONTINUOUS_VIDEO = "use_continuous_video";
+
   /** The overlap recording time between two video clips. */
   public static final long OVERLAP_RECORDING_TIME_MS = Duration.ofSeconds(5L).toMillis();
 }
