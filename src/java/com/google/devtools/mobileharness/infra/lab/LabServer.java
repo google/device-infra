@@ -478,12 +478,6 @@ public class LabServer {
     }
 
     // Supported dimensions
-    if (systemUtil.isOnLinux()) {
-      // By default, all newly upgraded Linux labs will support container-mode tests.
-      LabDimensionManager.getInstance()
-          .getSupportedLocalDimensions()
-          .add(Name.LAB_SUPPORTS_CONTAINER, Value.TRUE);
-    }
 
     LabDimensionManager.getInstance()
         .getSupportedLocalDimensions()
