@@ -643,6 +643,15 @@ public class Flags {
       converter = Flag.IntegerConverter.class)
   public Flag<Integer> configServiceGrpcPort = configServiceGrpcPortDefault;
 
+  private static final Flag<String> configServiceJdbcUrlDefault =
+      Flag.value("jdbc:mysql:///ats_db");
+
+  @com.beust.jcommander.Parameter(
+      names = "--config_service_jdbc_url",
+      description = "The JDBC URL of the config service backend storage.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> configServiceJdbcUrl = configServiceJdbcUrlDefault;
+
   private static final Flag<String> configServiceLocalStorageDirDefault =
       Flag.value("/tmp/ats/config");
 

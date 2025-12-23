@@ -46,9 +46,8 @@ public class DeviceConfigModule extends AbstractModule {
     properties.put("password", "");
 
     DatabaseConnections databaseConnections = new DatabaseConnections();
-    // TODO: b/460296020 - Add a flag to control the database connection string.
-    databaseConnections.initialize(
-        "jdbc:mysql:///ats_db", properties, /* statementCacheSize= */ 100);
+    String jdbcUrl = Flags.instance().configServiceJdbcUrl.getNonNull();
+    databaseConnections.initialize(jdbcUrl, properties, /* statementCacheSize= */ 100);
     return databaseConnections;
   }
 
