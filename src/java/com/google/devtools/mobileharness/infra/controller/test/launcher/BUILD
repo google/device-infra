@@ -16,6 +16,74 @@
 load("@rules_java//java:defs.bzl", "java_library")
 
 java_library(
+    name = "launcher_provider",
+    srcs = ["LauncherProvider.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
+    ],
+    deps = [
+        "//src/devtools/mobileharness/api/model/proto:job_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/container/controller:proxy_test_runner",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test:abstract_test_runner",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
+    ],
+)
+
+java_library(
+    name = "test_runner_thread_pool",
+    srcs = ["TestRunnerThreadPool.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
+    ],
+    deps = ["@maven//:javax_inject_jsr330_api"],
+)
+
+java_library(
+    name = "local_device_test_runner_launcher_provider",
+    srcs = ["LocalDeviceTestRunnerLauncherProvider.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
+    ],
+    deps = [
+        ":launcher_provider",
+        ":local_device_test_runner_launcher",
+        "//src/devtools/mobileharness/api/model/proto:job_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/container/controller:proxy_test_runner",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device:test_executor",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device:test_executor_provider",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test:abstract_test_runner",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "thread_pool_test_runner_launcher_provider",
+    srcs = ["ThreadPoolTestRunnerLauncherProvider.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
+    ],
+    deps = [
+        ":launcher_provider",
+        ":test_runner_thread_pool",
+        ":thread_pool_test_runner_launcher",
+        "//src/devtools/mobileharness/api/model/proto:job_java_proto",
+        "//src/java/com/google/devtools/mobileharness/infra/container/controller:proxy_test_runner",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test:abstract_test_runner",
+        "//src/java/com/google/devtools/mobileharness/infra/lab:annotations",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
     name = "local_device_test_runner_launcher",
     srcs = ["LocalDeviceTestRunnerLauncher.java"],
     visibility = [
