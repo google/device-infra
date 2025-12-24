@@ -63,6 +63,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/util/atsfileserveruploader:ats_file_server_uploader_plugin",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/util/xtsdownloader:mcts_dynamic_download_plugin",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/plugin:ats_device_recovery_plugin",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/plugin:nontradefed_report_generator",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/plugin:xts_device_compatibility_checker",
     ],
     deps = [
@@ -72,7 +73,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/util:test_command_history_saver",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/util/testlogcollector:test_log_collector_plugin",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_constants",
-        "//src/java/com/google/devtools/mobileharness/platform/android/xts/plugin:nontradefed_report_generator",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/reflection:reflection_util",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",

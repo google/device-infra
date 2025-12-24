@@ -26,7 +26,6 @@ import com.google.devtools.mobileharness.infra.controller.test.PluginLoadingResu
 import com.google.devtools.mobileharness.infra.controller.test.util.TestCommandHistorySaver;
 import com.google.devtools.mobileharness.infra.controller.test.util.testlogcollector.TestLogCollectorPlugin;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
-import com.google.devtools.mobileharness.platform.android.xts.plugin.NonTradefedReportGenerator;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.reflection.ReflectionUtil;
 import com.google.inject.Guice;
@@ -73,8 +72,14 @@ class LocalTestBuiltinPlugins {
               EventScope.CLASS_INTERNAL));
     }
     builtinPluginsBuilder.add(
-        PluginItem.create(new TestCommandHistorySaver(), EventScope.CLASS_INTERNAL),
-        PluginItem.create(new NonTradefedReportGenerator(), EventScope.INTERNAL_PLUGIN));
+        PluginItem.create(new TestCommandHistorySaver(), EventScope.CLASS_INTERNAL));
+    if (isXtsNonTradefedJob(testInfo.jobInfo())) {
+      builtinPluginsBuilder.add(
+          PluginItem.create(
+              createBuiltinPlugin(
+                  "com.google.devtools.mobileharness.platform.android.xts.plugin.NonTradefedReportGenerator"),
+              EventScope.INTERNAL_PLUGIN));
+    }
     if (isXtsDeviceCompatibilityCheckerEnabled(testInfo.jobInfo())) {
       builtinPluginsBuilder.add(
           PluginItem.create(
@@ -123,7 +128,6 @@ class LocalTestBuiltinPlugins {
     }
   }
 
-  /** Returns {@code true} if xts dynamic downloader is enabled. */
   private static boolean isXtsDynamicDownloaderEnabled(TestInfo testInfo) {
     return testInfo
         .jobInfo()
@@ -148,5 +152,9 @@ class LocalTestBuiltinPlugins {
   private static boolean isXtsDeviceCompatibilityCheckerEnabled(JobInfo jobInfo) {
     return jobInfo.properties().getBoolean(XtsPropertyName.Job.IS_XTS_TF_JOB).orElse(false)
         || jobInfo.properties().getBoolean(XtsPropertyName.Job.IS_XTS_NON_TF_JOB).orElse(false);
+  }
+
+  private static boolean isXtsNonTradefedJob(JobInfo jobInfo) {
+    return jobInfo.params().getBool("run_certification_test_suite", false);
   }
 }
