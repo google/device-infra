@@ -89,8 +89,10 @@ java_library(
     name = "device_factory",
     srcs = ["DeviceFactory.java"],
     deps = [
+        ":base_device",
         ":device",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab:device_info",
         "//src/java/com/google/devtools/mobileharness/infra/container/annotation",
     ],
 )

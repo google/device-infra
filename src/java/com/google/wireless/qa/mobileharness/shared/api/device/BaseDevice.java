@@ -71,6 +71,31 @@ import javax.annotation.Nullable;
 })
 public abstract class BaseDevice implements Device {
 
+  /** Allows AllocatedDeviceProvider to override DeviceInfo creation for device decoupling. */
+  private static final ThreadLocal<DeviceInfo> deviceInfoOverride = new ThreadLocal<>();
+
+  /**
+   * Sets the DeviceInfo override for the current thread.
+   *
+   * <p><b>WARNING</b>: This method should ONLY be used by AllocatedDeviceProvider to override
+   * DeviceInfo creation for device/test decoupling.
+   *
+   * @param deviceInfo the DeviceInfo to set
+   */
+  static void setDeviceInfoOverride(DeviceInfo deviceInfo) {
+    deviceInfoOverride.set(deviceInfo);
+  }
+
+  /**
+   * Clears the DeviceInfo override for the current thread.
+   *
+   * <p><b>WARNING</b>: This method should ONLY be used by AllocatedDeviceProvider to clear the
+   * DeviceInfo override after the device is no longer needed.
+   */
+  static void clearDeviceInfoOverride() {
+    deviceInfoOverride.remove();
+  }
+
   /** Device property name of the device communication details. */
   public static final String PROP_COMMUNICATION = "communication";
 
@@ -127,9 +152,12 @@ public abstract class BaseDevice implements Device {
     this(
         apiConfig,
         validatorFactory,
-        managedDeviceInfo
-            ? DeviceInfoManager.getInstance().getOrCreate(deviceId, apiConfig)
-            : LiteDeviceInfoFactory.create(deviceId));
+        Optional.ofNullable(deviceInfoOverride.get())
+            .orElseGet(
+                () ->
+                    managedDeviceInfo
+                        ? DeviceInfoManager.getInstance().getOrCreate(deviceId, apiConfig)
+                        : LiteDeviceInfoFactory.create(deviceId)));
   }
 
   @VisibleForTesting

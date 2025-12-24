@@ -18,6 +18,7 @@ package com.google.wireless.qa.mobileharness.shared.api.device;
 
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.lab.DeviceInfo;
 import com.google.devtools.mobileharness.infra.container.annotation.ProcessIncompatible;
 import java.lang.reflect.Constructor;
 
@@ -49,6 +50,27 @@ public class DeviceFactory {
       return deviceConstructor.newInstance(deviceControlId);
     } catch (ReflectiveOperationException e) {
       throw new MobileHarnessException(BasicErrorId.REFLECTION_CREATE_DEVICE_ERROR, errMsg, e);
+    }
+  }
+
+  /**
+   * Creates a new {@link Device} instance accroding to the given {@link Device} class type and
+   * {@link DeviceInfo}.
+   *
+   * @param deviceClass {@link Device} class type
+   * @param deviceControlId device control ID
+   * @param deviceInfo device info to use when creating the device
+   * @return a new {@link Device} instance with the given ID
+   * @throws MobileHarnessException if fails to create a new {@link Device} instance
+   */
+  public Device createDevice(
+      Class<? extends Device> deviceClass, String deviceControlId, DeviceInfo deviceInfo)
+      throws MobileHarnessException {
+    try {
+      BaseDevice.setDeviceInfoOverride(deviceInfo);
+      return createDevice(deviceClass, deviceControlId);
+    } finally {
+      BaseDevice.clearDeviceInfoOverride();
     }
   }
 }
