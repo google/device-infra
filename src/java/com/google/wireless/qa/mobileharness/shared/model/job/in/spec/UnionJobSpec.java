@@ -65,4 +65,15 @@ public class UnionJobSpec implements JobSpecWrapper {
     }
     return (T) builder.build();
   }
+
+  @Override
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+    for (JobSpecWrapper wrapper : wrappers) {
+      if (wrapper != null) {
+        sb.append(wrapper);
+      }
+    }
+    return sb.toString();
+  }
 }
