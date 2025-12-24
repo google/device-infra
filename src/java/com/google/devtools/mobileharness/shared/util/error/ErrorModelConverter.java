@@ -20,6 +20,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.google.common.base.Throwables;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto;
+import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.FlattenedExceptionDetail;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.ErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -85,8 +86,7 @@ public class ErrorModelConverter {
             .toDeserializedException(detail));
   }
 
-  public static ErrorInfo toLegacyErrorInfo(ExceptionProto.ExceptionDetail detail) {
-    ExceptionProto.ExceptionSummary summary = detail.getSummary();
+  public static ErrorInfo toLegacyErrorInfo(ExceptionProto.ExceptionSummary summary) {
     ErrorInfo.Builder errorInfo = ErrorInfo.newBuilder();
     if (summary.getErrorId().getCode() != 0) {
       errorInfo.setCode(summary.getErrorId().getCode());
@@ -100,8 +100,15 @@ public class ErrorModelConverter {
     return errorInfo
         .setType(summary.getErrorId().getType())
         .setNamespace(summary.getErrorId().getNamespace())
-        .setStackTrace(getCompleteStackTrace(detail))
         .build();
+  }
+
+  public static ErrorInfo toLegacyErrorInfo(ExceptionProto.ExceptionDetail detail) {
+    return toLegacyErrorInfo(detail.getSummary());
+  }
+
+  public static ErrorInfo toLegacyErrorInfo(FlattenedExceptionDetail flattenedExceptionDetail) {
+    return toLegacyErrorInfo(flattenedExceptionDetail.getSummary());
   }
 
   private static StackTraceElement[] getStackTrace(ExceptionProto.ExceptionSummary summary) {

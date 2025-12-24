@@ -191,10 +191,12 @@ message JobSummary {
   repeated FileDetail gen_file = 15;
   optional int32 total_test_count = 16;
 
-  // Deprecated. Use warning instead.
+  // Deprecated. Use warning instead. This field can be removed after 1) all
+  // Client >= 4.33.0 and 2) after 2026-3-24.
   repeated ErrorInfo deprecated_warning = 17 [deprecated = true];
 
-  // Deprecated. Use result_cause instead.
+  // Deprecated. Use result_cause instead. This field can be removed after 1)
+  // all Client >= 4.33.0 and 2) after 2026-3-24.
   optional ErrorInfo deprecated_result_cause = 18 [deprecated = true];
 
   // The warnings of during the test execution. Even the passing test can also

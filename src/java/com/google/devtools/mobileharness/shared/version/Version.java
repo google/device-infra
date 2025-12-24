@@ -24,7 +24,7 @@ import java.util.List;
 /** The versions of the Mobile Harness components. */
 public final class Version implements Comparable<Version> {
 
-  public static final Version CLIENT_VERSION = new Version(4, 32, 0);
+  public static final Version CLIENT_VERSION = new Version(4, 33, 0);
 
   public static final Version MIN_CLIENT_VERSION = new Version(4, 29, 0);
 
