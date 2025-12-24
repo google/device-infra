@@ -426,6 +426,20 @@ java_library(
 )
 
 java_library(
+    name = "android_network_activity_logging_decorator",
+    srcs = ["AndroidNetworkActivityLoggingDecorator.java"],
+    deps = [
+        ":base_decorator",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:android_network_activity_logging_decorator_spec_java_proto",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
     name = "android_orientation_decorator",
     srcs = ["AndroidOrientationDecorator.java"],
     deps = [

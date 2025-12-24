@@ -158,6 +158,16 @@ java_library(
 )
 
 java_library(
+    name = "android_network_activity_logging_job_validator",
+    srcs = ["AndroidNetworkActivityLoggingJobValidator.java"],
+    deps = [
+        ":job_validator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "android_orientation_decorator_job_validator",
     srcs = ["AndroidOrientationDecoratorJobValidator.java"],
     deps = [
