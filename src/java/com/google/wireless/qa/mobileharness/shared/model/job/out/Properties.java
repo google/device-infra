@@ -292,4 +292,9 @@ public class Properties {
   public String remove(PropertyName key) {
     return remove(Ascii.toLowerCase(key.toString()));
   }
+
+  @Override
+  public String toString() {
+    return properties.toString();
+  }
 }
