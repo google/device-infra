@@ -83,6 +83,10 @@ enum ConverterIncompatibleReason {
   // Range: 10_211 ~ 10_220
   IOS_ROBO_TEST_UNSUPPORTED = 10211;
 
+  // IosRealDevice
+  // Range: 10_221 ~ 10_240
+  IOS_REAL_DEVICE_UNSUPPORTED = 10221;
+
   // ******************************
   // Decorator converters.
   // Range: 20_001 ~ MAX
@@ -111,16 +115,19 @@ enum ConverterIncompatibleReason {
   IDSL_LOG_LEVEL_UNSUPPORTED = 20102;
   IDSL_WAIT_SYSLOG_AFTER_TEST_SEC_UNSUPPORTED = 20103;
   IDSL_NOT_SUPPORT_NATIVE_XCTEST = 20104;
+  IDSL_DISABLED = 20105;
 
   // IosFilePullerDecorator (IDFPULL = IOS_DECORATOR_FILE_PULLER)
   // Range: 20_201 ~ 20_300
   IDFPULL_NOT_REAL_DEVICE = 20201;
   IDFPULL_NOT_SUPPORT_NATIVE_XCTEST = 20202;
+  IDFPULL_DISABLED = 20203;
 
   // IosFilePusherDecorator (IDFPUSH = IOS_DECORATOR_FILE_PUSHER)
   // Range: 20_301 ~ 20_400
   IDFPUSH_NOT_REAL_DEVICE = 20301;
   IDFPUSH_NOT_SUPPORT_NATIVE_XCTEST = 20302;
+  IDFPUSH_DISABLED = 20303;
 
   // IosGoogleAccountDecorator (IDGA = IOS_DECORATOR_GOOGLE_ACCOUNT)
   // Range: 20_401 ~ 20_500
