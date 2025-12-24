@@ -42,6 +42,7 @@ import com.google.devtools.mobileharness.infra.client.api.plugin.JobReporter;
 import com.google.devtools.mobileharness.infra.client.api.util.lister.TestLister;
 import com.google.devtools.mobileharness.infra.controller.messaging.MessagingManagerHolder;
 import com.google.devtools.mobileharness.shared.util.network.NetworkUtil;
+import com.google.devtools.mobileharness.shared.util.system.ShutdownHookManager;
 import com.google.devtools.mobileharness.shared.version.Version;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageManager;
@@ -95,13 +96,13 @@ public class ClientApi {
         .forEach(globalInternalEventBus::register);
 
     if (shutdownJobThreadWhenShutdownProcess) {
-      Runtime.getRuntime()
+      ShutdownHookManager.getInstance()
           .addShutdownHook(
-              new Thread(
-                  () -> {
-                    jobThreadPool.shutdownNow();
-                    envThreadPool.shutdownNow();
-                  }));
+              () -> {
+                jobThreadPool.shutdownNow();
+                envThreadPool.shutdownNow();
+              },
+              "client-api-shutdown");
     }
 
     clientHostnameSupplier =

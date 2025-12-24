@@ -83,6 +83,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/message:str_pair",
         "//src/java/com/google/devtools/mobileharness/shared/util/network/localhost",
+        "//src/java/com/google/devtools/mobileharness/shared/util/system:shutdown_hook_manager",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",

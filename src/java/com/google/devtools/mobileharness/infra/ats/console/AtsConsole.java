@@ -71,6 +71,7 @@ import com.google.devtools.mobileharness.shared.util.logging.flogger.FloggerForm
 import com.google.devtools.mobileharness.shared.util.port.PortProber;
 import com.google.devtools.mobileharness.shared.util.reflection.ReflectionUtil;
 import com.google.devtools.mobileharness.shared.util.shell.ShellUtils.TokenizationException;
+import com.google.devtools.mobileharness.shared.util.system.ShutdownHookManager;
 import com.google.devtools.mobileharness.shared.util.system.SystemInfoPrinter;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.Guice;
@@ -89,7 +90,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicBoolean;
 import javax.inject.Inject;
 import org.jline.reader.LineReader;
 import org.jline.reader.LineReaderBuilder;
@@ -193,13 +193,13 @@ public class AtsConsole {
     LogRecorder.getInstance().initialize(atsConsole.logRecordPrinter::printLogRecord);
 
     // Adds shutdown hook.
-    Runtime.getRuntime()
-        .addShutdownHook(new Thread(atsConsole::tryOnShutdown, "ats-console-shutdown-hook"));
+    ShutdownHookManager.getInstance()
+        .addShutdownHook(atsConsole::onShutdown, "ats-console-shutdown");
 
     // Runs ATS console.
     try (NonThrowingAutoCloseable ignored = threadRenaming("ats-console-main-thread")) {
       atsConsole.run();
-      atsConsole.tryOnShutdown();
+      ShutdownHookManager.getInstance().shutdown();
       System.exit(0);
     } catch (MobileHarnessException | InterruptedException | RuntimeException | Error e) {
       atsConsole.consoleUtil.printlnStderr(
@@ -228,9 +228,6 @@ public class AtsConsole {
   private final CommandCompleter commandCompleter;
   private final CommandPreprocessor commandPreprocessor;
   private final OlcServerRunner olcServerRunner;
-
-  /** Whether {@link #tryOnShutdown()} has been called. */
-  private final AtomicBoolean shutdown = new AtomicBoolean();
 
   /** Set before {@link #run}; */
   @VisibleForTesting public volatile Injector injector;
@@ -390,11 +387,7 @@ public class AtsConsole {
         .setUnmatchedOptionsArePositionalParams(true);
   }
 
-  private void tryOnShutdown() {
-    if (!shutdown.compareAndSet(false, true)) {
-      return;
-    }
-
+  private void onShutdown() {
     // Dump logs.
     System.out.println(LogDumper.dumpLog(LogDirsType.USED));
 

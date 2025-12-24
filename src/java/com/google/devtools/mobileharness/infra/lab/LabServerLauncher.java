@@ -31,6 +31,7 @@ import com.google.devtools.mobileharness.shared.logging.parameter.StackdriverLog
 import com.google.devtools.mobileharness.shared.util.concurrent.ExternalServiceManager;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.logging.flogger.FloggerFormatter;
+import com.google.devtools.mobileharness.shared.util.system.ShutdownHookManager;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.version.Version;
 import com.google.inject.AbstractModule;
@@ -93,7 +94,8 @@ public class LabServerLauncher {
       LabServerLauncher labServerLauncher = new LabServerLauncher(allLabArgs);
 
       // Adds shutdown hook.
-      Runtime.getRuntime().addShutdownHook(new Thread(labServerLauncher::onShutdown));
+      ShutdownHookManager.getInstance()
+          .addShutdownHook(labServerLauncher::onShutdown, "lab-server-launcher-shutdown");
 
       // Runs lab server.
       labServerLauncher.run();

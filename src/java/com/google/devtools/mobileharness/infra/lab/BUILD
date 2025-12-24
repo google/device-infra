@@ -183,6 +183,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging/flogger:flogger_formatter",
         "//src/java/com/google/devtools/mobileharness/shared/util/system",
+        "//src/java/com/google/devtools/mobileharness/shared/util/system:shutdown_hook_manager",
         "//src/java/com/google/devtools/mobileharness/shared/version",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:exit_code",
         "//src/java/com/google/wireless/qa/mobileharness/shared/util:base",

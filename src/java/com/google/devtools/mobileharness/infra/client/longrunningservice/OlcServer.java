@@ -30,6 +30,7 @@ import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.inject.CommonModule;
 import com.google.devtools.mobileharness.shared.util.logging.flogger.FloggerFormatter;
 import com.google.devtools.mobileharness.shared.util.signal.Signals;
+import com.google.devtools.mobileharness.shared.util.system.ShutdownHookManager;
 import com.google.devtools.mobileharness.shared.util.system.SystemInfoPrinter;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -86,7 +87,8 @@ public class OlcServer {
     systemInfoPrinter.printSystemInfo(DEBUG);
 
     // Adds shutdown hook.
-    Runtime.getRuntime().addShutdownHook(new Thread(serverRunner::onShutdown));
+    ShutdownHookManager.getInstance()
+        .addShutdownHook(serverRunner::onShutdown, "olc-server-shutdown");
 
     // Monitors known signals.
     if (Flags.instance().monitorSignals.getNonNull()) {

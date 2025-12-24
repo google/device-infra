@@ -67,6 +67,7 @@ import com.google.devtools.mobileharness.shared.file.resolver.FileResolver;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadFactoryUtil;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.shared.util.system.ShutdownHookManager;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
@@ -132,7 +133,8 @@ public class LocalMode implements ExecMode {
           final ListeningScheduledExecutorService scheduledThreadPool =
               ThreadPools.createStandardScheduledThreadPool(
                   "local-mode-scheduled-thread-pool", /* corePoolSize= */ 1);
-          Runtime.getRuntime().addShutdownHook(new Thread(localEnvThreadPool::shutdownNow));
+          ShutdownHookManager.getInstance()
+              .addShutdownHook(localEnvThreadPool::shutdownNow, "local-mode-shutdown");
 
           ApiConfig.getInstance()
               .initialize(

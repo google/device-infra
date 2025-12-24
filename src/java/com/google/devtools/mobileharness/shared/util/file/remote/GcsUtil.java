@@ -57,6 +57,7 @@ import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.file.checksum.ChecksumUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.shared.util.system.ShutdownHookManager;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.protobuf.ByteString;
@@ -118,13 +119,13 @@ public class GcsUtil {
             "gcs-util", Flags.instance().gcsUtilThreads.getNonNull());
 
     static {
-      Runtime.getRuntime()
+      ShutdownHookManager.getInstance()
           .addShutdownHook(
-              new Thread(
-                  () -> {
-                    logger.atInfo().log("shutdown GcsUtil thread pool.");
-                    threadpool.shutdownNow();
-                  }));
+              () -> {
+                logger.atInfo().log("Shutting down GcsUtil thread pool.");
+                threadpool.shutdownNow();
+              },
+              "gcs-util-shutdown");
     }
   }
 
