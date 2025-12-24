@@ -239,7 +239,17 @@ public class XtsTradefedTest extends BaseDriver
       tmpXtsRootDir = prepareXtsWorkDir(xtsType);
       setUpXtsWorkDir(spec, getXtsRootDir(spec, testInfo), tmpXtsRootDir, xtsType, testInfo);
       logger.atInfo().log("xTS Tradefed temp working root directory is %s", tmpXtsRootDir);
-      saveFilteredExpandedModuleNames(testInfo, tmpXtsRootDir, xtsType);
+
+      try {
+        saveFilteredExpandedModuleNames(testInfo, tmpXtsRootDir, xtsType);
+      } catch (MobileHarnessException e) {
+        logger.atWarning().withCause(e).log(
+            "Failed when saving filtered expanded module names. Non-fatal; continuing test.");
+      } catch (InterruptedException e) {
+        logger.atWarning().withCause(e).log(
+            "Interrupted when saving filtered expanded module names. Non-fatal; continuing test.");
+        Thread.currentThread().interrupt();
+      }
 
       Optional<Integer> tfExitCode = runXtsCommand(testInfo, spec, tmpXtsRootDir, xtsType);
 
