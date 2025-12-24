@@ -5,6 +5,18 @@
 // This tells Karma to use the Chrome browser downloaded by Puppeteer
 process.env.CHROME_BIN = require('puppeteer').executablePath();
 
+process.on('uncaughtException', (err) => {
+  if (err.code === 'ERR_SERVER_NOT_RUNNING') {
+    console.error(
+        'Caught ERR_SERVER_NOT_RUNNING from karma.',
+        err);
+        console.error(err);
+      } else {
+        console.error('Caught unhandled exception:', err);
+      }
+  process.exit(1);
+});
+
 /**
  * Karma configuration.
  * @param {!Object} config
