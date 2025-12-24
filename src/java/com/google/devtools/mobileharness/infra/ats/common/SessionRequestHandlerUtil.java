@@ -721,6 +721,10 @@ public class SessionRequestHandlerUtil {
 
   public Optional<DeviceInfo> getDeviceInfo(SessionRequestInfo sessionRequestInfo)
       throws MobileHarnessException, InterruptedException {
+    // Wait for devices to be ready for ATS server requests.
+    if (sessionRequestInfo.isAtsServerRequest() && !sessionRequestInfo.deviceSerials().isEmpty()) {
+      waitForRequestedDevicesToBeReady(sessionRequestInfo);
+    }
     Optional<DeviceInfo> deviceInfo =
         Flags.instance().enableAtsMode.getNonNull()
             ? getDeviceInfoFromMaster(sessionRequestInfo)

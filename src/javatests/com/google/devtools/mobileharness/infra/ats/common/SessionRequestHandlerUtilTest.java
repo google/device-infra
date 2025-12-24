@@ -1649,4 +1649,33 @@ public final class SessionRequestHandlerUtilTest {
     assertThat(SessionRequestHandlerUtil.getSimCardTypeDimensionValue(moduleMetadata))
         .hasValue("UICC_SIM_CARD");
   }
+
+  @Test
+  public void getDeviceInfo_atsServerRequest_waitForDevices() throws Exception {
+    SessionRequestInfo sessionRequestInfo =
+        defaultSessionRequestInfoBuilder()
+            .setIsAtsServerRequest(true)
+            .setDeviceSerials(ImmutableList.of("device_id_1"))
+            .build();
+
+    when(deviceQuerier.queryDevice(any()))
+        .thenReturn(DeviceQueryResult.getDefaultInstance()) // First call, no devices
+        .thenReturn(DeviceQueryResult.getDefaultInstance()) // Second call, no devices
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder()
+                        .setId("device_id_1")
+                        .addDimension(
+                            Dimension.newBuilder().setName("uuid").setValue("device_id_1"))
+                        .addType("AndroidOnlineDevice"))
+                .build()); // Third call, device found
+
+    var unused = sessionRequestHandlerUtil.getDeviceInfo(sessionRequestInfo);
+
+    verify(sleeper, times(2)).sleep(Duration.ofSeconds(30));
+    // Verify that deviceQuerier.queryDevice(any()) is called 4 times: 3 times in
+    // waitForRequestedDevicesToBeReady and 1 time in getDeviceInfoFromMaster.
+    verify(deviceQuerier, times(4)).queryDevice(any());
+  }
 }
