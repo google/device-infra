@@ -129,12 +129,13 @@ public class MoblyAospTest extends MoblyTest implements MoblyAospTestSpec {
     Path moblyUnzipDir = Path.of(testInfo.getTmpFileDir(), "mobly");
     localFileUtil.prepareDir(moblyUnzipDir);
     localFileUtil.grantFileOrDirFullAccess(moblyUnzipDir.toString());
-    Path venvPath = Path.of(testInfo.getTmpFileDir(), "venv");
+    Path venvPath = getVenvPath(testInfo);
     Path configPath = Path.of(configFile.getPath());
     String testPath = testInfo.jobInfo().params().get(PARAM_TEST_PATH);
-    if (testPath != null && !testPath.isEmpty()) {
+    if (testPath != null && !testPath.isEmpty() && localFileUtil.isFileOrDirExist(testPath)) {
       localFileUtil.grantFileOrDirFullAccess(testPath);
     }
+    String testExecutionCommand = testInfo.jobInfo().params().get(PARAM_TEST_EXECUTION_COMMAND);
     String testCaseSelector = testInfo.jobInfo().params().get(TEST_SELECTOR_KEY);
     String pythonVersion = testInfo.jobInfo().params().get(PARAM_PYTHON_VERSION);
 
@@ -146,12 +147,19 @@ public class MoblyAospTest extends MoblyTest implements MoblyAospTestSpec {
           testInfo.jobInfo().params().getOptional(PARAM_PY_PKG_INDEX_URL).get());
     }
 
+    if (testbedName == null) {
+      throw new MobileHarnessException(
+          ExtErrorId.MOBLY_TESTBED_NAME_EMPTY_ERROR, "Testbed name was not set.");
+    }
+
     return setupUtil.setupEnvAndGenerateTestCommand(
         moblyPkg,
         moblyUnzipDir,
         venvPath,
         configPath,
+        testbedName,
         testPath,
+        testExecutionCommand,
         testCaseSelector,
         pythonVersion,
         installPythonPkgDepsArgsBuilder.build());
@@ -180,5 +188,14 @@ public class MoblyAospTest extends MoblyTest implements MoblyAospTestSpec {
     logger.atInfo().log("Processing Mobly test output without converter.");
     postTestProcessor.processTestOutput(
         testInfo, getDevice(), Path.of(testInfo.getGenFileDir()).resolve(RAW_MOBLY_LOG_ALL_IN_ONE));
+  }
+
+  Path getVenvPath(TestInfo testInfo) throws MobileHarnessException {
+    return Path.of(testInfo.getTmpFileDir(), "venv");
+  }
+
+  @Override
+  Path getVenvBinPath(TestInfo testInfo) throws MobileHarnessException {
+    return getVenvPath(testInfo).resolve("bin");
   }
 }

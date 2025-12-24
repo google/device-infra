@@ -449,6 +449,11 @@ public class MoblyTest extends BaseDriver implements MoblyTestSpec {
       paths.add(systemPath);
     }
 
+    Path venvPath = getVenvBinPath(testInfo);
+    if (venvPath != null) {
+      paths.add(venvPath.toString());
+    }
+
     String path = Joiner.on(':').join(paths.build());
 
     /* Path to {@code genFileDir} for the test, these are fetched into undeclared outputs at the
@@ -669,6 +674,11 @@ public class MoblyTest extends BaseDriver implements MoblyTestSpec {
       cmdElements.add("--verbose");
     }
     return cmdElements.toArray(new String[0]);
+  }
+
+  @Nullable
+  Path getVenvBinPath(TestInfo testInfo) throws MobileHarnessException {
+    return null;
   }
 
   /**
