@@ -64,6 +64,18 @@ message HealthinessSummary {
   repeated Breakdown out_of_service_breakdown = 4;
 }
 
+// Common statistics containing count and percentage.
+message Stats {
+  int32 count = 1;
+  float percent = 2;
+}
+
+// Common breakdown message containing category and stats.
+message CategoryStats {
+  string category = 1;
+  Stats stats = 2;
+}
+
 // Represents the data for the Test Result Statistics card.
 message TestResultStats {
   // Time series data for daily test results.
@@ -86,14 +98,16 @@ message DailyTestResults {
 // Aggregated test result statistics over the selected period.
 message AggregatedTestResults {
   int32 total_tests = 1;
-  int32 completion_count = 2;
-  int32 non_completion_count = 3;
-  message ResultBreakdown {
-    string result = 1;
-    int32 count = 2;
-    float percent = 3;
-  }
-  repeated ResultBreakdown result_breakdown = 4;
+  Stats completion_stats = 2;
+  Stats non_completion_stats = 3;
+
+  // Breakdown of "Completion" tests.
+  // Expected categories: "PASS", "FAIL".
+  repeated CategoryStats completion_breakdown = 4;
+
+  // Breakdown of "Non-Completion" tests.
+  // Expected categories: "ERROR", "TIMEOUT", "OTHER".
+  repeated CategoryStats non_completion_breakdown = 5;
 }
 
 // Represents the data for the Recovery Task Statistics card.
@@ -115,10 +129,6 @@ message DailyRecoveryTasks {
 // Aggregated recovery task statistics over the selected period.
 message AggregatedRecoveryTasks {
   int32 total_tasks = 1;
-  message OutcomeBreakdown {
-    string outcome = 1;
-    int32 count = 2;
-    float percent = 3;
-  }
-  repeated OutcomeBreakdown outcome_breakdown = 2;
+  // Expected categories: "SUCCESS", "FAIL".
+  repeated CategoryStats outcome_breakdown = 2;
 }

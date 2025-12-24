@@ -1,6 +1,8 @@
 import {Injectable} from '@angular/core';
 import {Observable, of, throwError} from 'rxjs';
 import {delay} from 'rxjs/operators';
+
+import {GoogleDate} from '../../../shared/utils/date_utils';
 import {
   DeviceHeaderInfo,
   GetLogcatResponse,
@@ -76,20 +78,17 @@ export class FakeDeviceService extends DeviceService {
   /**
    * Retrieves healthiness statistics for a device within a given time range.
    * @param id The device ID.
-   * @param startTime ISO 8601 string representing the start of the range.
-   * @param endTime ISO 8601 string representing the end of the range.
+   * @param startDate The start date of the range.
+   * @param endDate The end date of the range.
    */
   override getDeviceHealthinessStats(
     id: string,
-    startTime: string,
-    endTime: string,
+    startDate: GoogleDate,
+    endDate: GoogleDate,
   ): Observable<HealthinessStats> {
-    console.log(
-      `FakeService: Fetching Healthiness for ${id} from ${startTime} to ${endTime}`,
-    );
     const scenario = MOCK_DEVICE_SCENARIOS.find((s) => s.id === id);
     if (scenario) {
-      return of(generateHealthinessStats(startTime, endTime)).pipe(delay(1000));
+      return of(generateHealthinessStats(startDate, endDate)).pipe(delay(1000));
     } else {
       return throwError(
         () => new Error(`Device with ID '${id}' not found in mock data.`),
@@ -100,20 +99,17 @@ export class FakeDeviceService extends DeviceService {
   /**
    * Retrieves test result statistics for a device within a given time range.
    * @param id The device ID.
-   * @param startTime ISO 8601 string representing the start of the range.
-   * @param endTime ISO 8601 string representing the end of the range.
+   * @param startDate The start date of the range.
+   * @param endDate The end date of the range.
    */
   override getDeviceTestResultStats(
     id: string,
-    startTime: string,
-    endTime: string,
+    startDate: GoogleDate,
+    endDate: GoogleDate,
   ): Observable<TestResultStats> {
-    console.log(
-      `FakeService: Fetching Test Results for ${id} from ${startTime} to ${endTime}`,
-    );
     const scenario = MOCK_DEVICE_SCENARIOS.find((s) => s.id === id);
     if (scenario) {
-      return of(generateTestResultStats(startTime, endTime)).pipe(delay(1000));
+      return of(generateTestResultStats(startDate, endDate)).pipe(delay(1000));
     } else {
       return throwError(
         () => new Error(`Device with ID '${id}' not found in mock data.`),
@@ -124,20 +120,17 @@ export class FakeDeviceService extends DeviceService {
   /**
    * Retrieves recovery task statistics for a device within a given time range.
    * @param id The device ID.
-   * @param startTime ISO 8601 string representing the start of the range.
-   * @param endTime ISO 8601 string representing the end of the range.
+   * @param startDate The start date of the range.
+   * @param endDate The end date of the range.
    */
   override getDeviceRecoveryTaskStats(
     id: string,
-    startTime: string,
-    endTime: string,
+    startDate: GoogleDate,
+    endDate: GoogleDate,
   ): Observable<RecoveryTaskStats> {
-    console.log(
-      `FakeService: Fetching Recovery Tasks for ${id} from ${startTime} to ${endTime}`,
-    );
     const scenario = MOCK_DEVICE_SCENARIOS.find((s) => s.id === id);
     if (scenario) {
-      return of(generateRecoveryTaskStats(startTime, endTime)).pipe(
+      return of(generateRecoveryTaskStats(startDate, endDate)).pipe(
         delay(1000),
       );
     } else {

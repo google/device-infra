@@ -78,17 +78,30 @@ export interface DailyTestResults {
 }
 
 /**
+ * Common statistics containing count and percentage.
+ */
+export interface Stats {
+  count: number;
+  percent: number;
+}
+
+/**
+ * Common breakdown message containing category and stats.
+ */
+export interface CategoryStats {
+  category: string;
+  stats: Stats;
+}
+
+/**
  * Aggregated test result statistics over the selected period.
  */
 export interface AggregatedTestResults {
   totalTests: number;
-  completionCount: number; // pass + fail
-  nonCompletionCount: number; // error + timeout + other
-  resultBreakdown: Array<{
-    result: string; // e.g., 'PASS', 'FAIL', 'ERROR'
-    count: number;
-    percent: number; // Percentage of totalTests
-  }>;
+  completionStats: Stats;
+  nonCompletionStats: Stats;
+  completionBreakdown: CategoryStats[];
+  nonCompletionBreakdown: CategoryStats[];
 }
 
 // -----------------------------------------------------------------------------
@@ -119,9 +132,5 @@ export interface DailyRecoveryTasks {
  */
 export interface AggregatedRecoveryTasks {
   totalTasks: number;
-  outcomeBreakdown: Array<{
-    outcome: string; // 'SUCCESS' or 'FAIL'
-    count: number;
-    percent: number; // Percentage of totalTasks
-  }>;
+  outcomeBreakdown: CategoryStats[];
 }

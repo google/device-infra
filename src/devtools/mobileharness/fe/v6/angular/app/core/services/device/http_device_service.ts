@@ -2,6 +2,7 @@ import {HttpClient} from '@angular/common/http';
 import {inject, Injectable} from '@angular/core';
 import {Observable} from 'rxjs';
 
+import {GoogleDate} from '../../../shared/utils/date_utils';
 import {APP_DATA, AppData} from '../../models/app_data';
 import {
   DeviceHeaderInfo,
@@ -48,39 +49,60 @@ export class HttpDeviceService extends DeviceService {
 
   override getDeviceHealthinessStats(
     id: string,
-    startTime: string,
-    endTime: string,
+    startDate: GoogleDate,
+    endDate: GoogleDate,
   ): Observable<HealthinessStats> {
     return this.http.get<HealthinessStats>(
       `${this.apiUrl}/${id}/stats/healthiness`,
       {
-        params: {startTime, endTime},
+        params: {
+          'start_date.year': startDate.year,
+          'start_date.month': startDate.month,
+          'start_date.day': startDate.day,
+          'end_date.year': endDate.year,
+          'end_date.month': endDate.month,
+          'end_date.day': endDate.day,
+        },
       },
     );
   }
 
   override getDeviceTestResultStats(
     id: string,
-    startTime: string,
-    endTime: string,
+    startDate: GoogleDate,
+    endDate: GoogleDate,
   ): Observable<TestResultStats> {
     return this.http.get<TestResultStats>(
       `${this.apiUrl}/${id}/stats/testresults`,
       {
-        params: {startTime, endTime},
+        params: {
+          'start_date.year': startDate.year,
+          'start_date.month': startDate.month,
+          'start_date.day': startDate.day,
+          'end_date.year': endDate.year,
+          'end_date.month': endDate.month,
+          'end_date.day': endDate.day,
+        },
       },
     );
   }
 
   override getDeviceRecoveryTaskStats(
     id: string,
-    startTime: string,
-    endTime: string,
+    startDate: GoogleDate,
+    endDate: GoogleDate,
   ): Observable<RecoveryTaskStats> {
     return this.http.get<RecoveryTaskStats>(
       `${this.apiUrl}/${id}/stats/recoverytasks`,
       {
-        params: {startTime, endTime},
+        params: {
+          'start_date.year': startDate.year,
+          'start_date.month': startDate.month,
+          'start_date.day': startDate.day,
+          'end_date.year': endDate.year,
+          'end_date.month': endDate.month,
+          'end_date.day': endDate.day,
+        },
       },
     );
   }

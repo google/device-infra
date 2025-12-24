@@ -1,5 +1,6 @@
 import {InjectionToken} from '@angular/core';
 import {Observable} from 'rxjs';
+import {GoogleDate} from '../../../shared/utils/date_utils';
 import {
   DeviceHeaderInfo,
   GetLogcatResponse,
@@ -43,37 +44,37 @@ export abstract class DeviceService {
   /**
    * Retrieves healthiness statistics for a device within a given time range.
    * @param id The device ID.
-   * @param startTime ISO 8601 string representing the start of the range.
-   * @param endTime ISO 8601 string representing the end of the range.
+   * @param startDate The start date of the range.
+   * @param endDate The end date of the range.
    */
   abstract getDeviceHealthinessStats(
     id: string,
-    startTime: string,
-    endTime: string,
+    startDate: GoogleDate,
+    endDate: GoogleDate,
   ): Observable<HealthinessStats>;
 
   /**
    * Retrieves test result statistics for a device within a given time range.
    * @param id The device ID.
-   * @param startTime ISO 8601 string representing the start of the range.
-   * @param endTime ISO 8601 string representing the end of the range.
+   * @param startDate The start date of the range.
+   * @param endDate The end date of the range.
    */
   abstract getDeviceTestResultStats(
     id: string,
-    startTime: string,
-    endTime: string,
+    startDate: GoogleDate,
+    endDate: GoogleDate,
   ): Observable<TestResultStats>;
 
   /**
    * Retrieves recovery task statistics for a device within a given time range.
    * @param id The device ID.
-   * @param startTime ISO 8601 string representing the start of the range.
-   * @param endTime ISO 8601 string representing the end of the range.
+   * @param startDate The start date of the range.
+   * @param endDate The end date of the range.
    */
   abstract getDeviceRecoveryTaskStats(
     id: string,
-    startTime: string,
-    endTime: string,
+    startDate: GoogleDate,
+    endDate: GoogleDate,
   ): Observable<RecoveryTaskStats>;
 
   /**

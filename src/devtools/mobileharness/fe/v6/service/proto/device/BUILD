@@ -52,6 +52,7 @@ proto_library(
         ":device_resources_proto",
         ":device_stats_proto",
         "@googleapis//google/api:annotations_proto",
+        "@googleapis//google/type:date_proto",
         "@protobuf//:timestamp_proto",
     ],
 )

@@ -1,3 +1,4 @@
+import {GoogleDate} from '../../../shared/utils/date_utils';
 import {
   AggregatedRecoveryTasks,
   AggregatedTestResults,
@@ -18,11 +19,11 @@ function formatDate(date: Date): string {
 }
 
 function getDates(
-  startDate: string,
-  endDate: string,
+  startDate: GoogleDate,
+  endDate: GoogleDate,
 ): {start: Date; days: number} {
-  const start = new Date(startDate + 'T00:00:00');
-  const end = new Date(endDate + 'T00:00:00');
+  const start = new Date(startDate.year, startDate.month - 1, startDate.day);
+  const end = new Date(endDate.year, endDate.month - 1, endDate.day);
 
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     throw new Error('Invalid start or end date');
@@ -75,8 +76,8 @@ function createHealthinessSummary(
 
 /** Generates mock healthiness stats. date YYYY-MM-DD. */
 export function generateHealthinessStats(
-  startDate: string,
-  endDate: string,
+  startDate: GoogleDate,
+  endDate: GoogleDate,
 ): HealthinessStats {
   const {start, days} = getDates(startDate, endDate);
 
@@ -164,8 +165,8 @@ export function generateHealthinessStats(
 
 /** Generates mock test result stats. */
 export function generateTestResultStats(
-  startDate: string,
-  endDate: string,
+  startDate: GoogleDate,
+  endDate: GoogleDate,
 ): TestResultStats {
   const {start, days} = getDates(startDate, endDate);
   const dailyStats: DailyTestResults[] = Array.from({length: days}, (_, i) => {
@@ -206,35 +207,53 @@ export function generateTestResultStats(
 
   const aggregatedStats: AggregatedTestResults = {
     totalTests,
-    completionCount,
-    nonCompletionCount,
-    resultBreakdown: [
+    completionStats: {
+      count: completionCount,
+      percent: totalTests ? (completionCount / totalTests) * 100 : 0,
+    },
+    nonCompletionStats: {
+      count: nonCompletionCount,
+      percent: totalTests ? (nonCompletionCount / totalTests) * 100 : 0,
+    },
+    completionBreakdown: [
       {
-        result: 'PASS',
-        count: totalPass,
-        percent: totalTests ? (totalPass / totalTests) * 100 : 0,
+        category: 'PASS',
+        stats: {
+          count: totalPass,
+          percent: totalTests ? (totalPass / totalTests) * 100 : 0,
+        },
       },
       {
-        result: 'FAIL',
-        count: totalFail,
-        percent: totalTests ? (totalFail / totalTests) * 100 : 0,
+        category: 'FAIL',
+        stats: {
+          count: totalFail,
+          percent: totalTests ? (totalFail / totalTests) * 100 : 0,
+        },
+      },
+    ].filter((item) => item.stats.count > 0),
+    nonCompletionBreakdown: [
+      {
+        category: 'ERROR',
+        stats: {
+          count: totalError,
+          percent: totalTests ? (totalError / totalTests) * 100 : 0,
+        },
       },
       {
-        result: 'ERROR',
-        count: totalError,
-        percent: totalTests ? (totalError / totalTests) * 100 : 0,
+        category: 'TIMEOUT',
+        stats: {
+          count: totalTimeout,
+          percent: totalTests ? (totalTimeout / totalTests) * 100 : 0,
+        },
       },
       {
-        result: 'TIMEOUT',
-        count: totalTimeout,
-        percent: totalTests ? (totalTimeout / totalTests) * 100 : 0,
+        category: 'OTHER',
+        stats: {
+          count: totalOther,
+          percent: totalTests ? (totalOther / totalTests) * 100 : 0,
+        },
       },
-      {
-        result: 'OTHER',
-        count: totalOther,
-        percent: totalTests ? (totalOther / totalTests) * 100 : 0,
-      },
-    ].filter((item) => item.count > 0),
+    ].filter((item) => item.stats.count > 0),
   };
 
   return {dailyStats, aggregatedStats};
@@ -242,8 +261,8 @@ export function generateTestResultStats(
 
 /** Generates mock recovery task stats. */
 export function generateRecoveryTaskStats(
-  startDate: string,
-  endDate: string,
+  startDate: GoogleDate,
+  endDate: GoogleDate,
 ): RecoveryTaskStats {
   const {start, days} = getDates(startDate, endDate);
   const dailyStats: DailyRecoveryTasks[] = Array.from(
@@ -271,16 +290,20 @@ export function generateRecoveryTaskStats(
     totalTasks,
     outcomeBreakdown: [
       {
-        outcome: 'SUCCESS',
-        count: totalSuccess,
-        percent: totalTasks ? (totalSuccess / totalTasks) * 100 : 0,
+        category: 'SUCCESS',
+        stats: {
+          count: totalSuccess,
+          percent: totalTasks ? (totalSuccess / totalTasks) * 100 : 0,
+        },
       },
       {
-        outcome: 'FAIL',
-        count: totalFail,
-        percent: totalTasks ? (totalFail / totalTasks) * 100 : 0,
+        category: 'FAIL',
+        stats: {
+          count: totalFail,
+          percent: totalTasks ? (totalFail / totalTasks) * 100 : 0,
+        },
       },
-    ].filter((item) => item.count > 0),
+    ].filter((item) => item.stats.count > 0),
   };
 
   return {dailyStats, aggregatedStats};

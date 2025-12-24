@@ -7,6 +7,7 @@ import {TestBed} from '@angular/core/testing';
 
 import {APP_DATA, AppData} from '../../models/app_data';
 import {DeviceOverviewPageData} from '../../models/device_overview';
+import {HealthinessStats} from '../../models/device_stats';
 
 import {DEVICE_SERVICE} from './device_service';
 import {HttpDeviceService} from './http_device_service';
@@ -61,5 +62,31 @@ describe('HttpDeviceService', () => {
     );
     expect(req.request.method).toBe('GET');
     req.flush(mockDeviceOverview);
+  });
+
+  it('should retrieve healthiness stats with correct date params', () => {
+    const startDate = {year: 2023, month: 10, day: 25};
+    const endDate = {year: 2023, month: 10, day: 26};
+    const mockStats: HealthinessStats = {} as HealthinessStats;
+
+    service
+      .getDeviceHealthinessStats('test-device', startDate, endDate)
+      .subscribe((stats) => {
+        expect(stats).toEqual(mockStats);
+      });
+
+    const req = httpMock.expectOne(
+      (request) =>
+        request.url ===
+          'http://testdomain.com/v6/devices/test-device/stats/healthiness' &&
+        request.params.get('start_date.year') === '2023' &&
+        request.params.get('start_date.month') === '10' &&
+        request.params.get('start_date.day') === '25' &&
+        request.params.get('end_date.year') === '2023' &&
+        request.params.get('end_date.month') === '10' &&
+        request.params.get('end_date.day') === '26',
+    );
+    expect(req.request.method).toBe('GET');
+    req.flush(mockStats);
   });
 });

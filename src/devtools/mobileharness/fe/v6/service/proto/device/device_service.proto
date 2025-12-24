@@ -20,6 +20,7 @@ package devtools.mobileharness.fe.v6.service.proto.device;
 
 import "google/api/annotations.proto";
 import "google/protobuf/timestamp.proto";
+import "google/type/date.proto";
 import "src/devtools/mobileharness/fe/v6/service/proto/device/device_resources.proto";
 import "src/devtools/mobileharness/fe/v6/service/proto/device/device_stats.proto";
 
@@ -133,30 +134,30 @@ message GetDeviceOverviewRequest {
 message GetDeviceHealthinessStatsRequest {
   // The device ID.
   string id = 1;
-  // Start of the time range.
-  google.protobuf.Timestamp start_time = 2;
-  // End of the time range.
-  google.protobuf.Timestamp end_time = 3;
+  // Start of the date range.
+  google.type.Date start_date = 2;
+  // End of the date range.
+  google.type.Date end_date = 3;
 }
 
 // Request message for GetDeviceTestResultStats.
 message GetDeviceTestResultStatsRequest {
   // The device ID.
   string id = 1;
-  // Start of the time range.
-  google.protobuf.Timestamp start_time = 2;
-  // End of the time range.
-  google.protobuf.Timestamp end_time = 3;
+  // Start of the date range.
+  google.type.Date start_date = 2;
+  // End of the date range.
+  google.type.Date end_date = 3;
 }
 
 // Request message for GetDeviceRecoveryTaskStats.
 message GetDeviceRecoveryTaskStatsRequest {
   // The device ID.
   string id = 1;
-  // Start of the time range.
-  google.protobuf.Timestamp start_time = 2;
-  // End of the time range.
-  google.protobuf.Timestamp end_time = 3;
+  // Start of the date range.
+  google.type.Date start_date = 2;
+  // End of the date range.
+  google.type.Date end_date = 3;
 }
 
 // Data for device overview page.
