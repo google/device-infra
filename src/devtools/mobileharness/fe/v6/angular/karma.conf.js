@@ -5,6 +5,21 @@
 // This tells Karma to use the Chrome browser downloaded by Puppeteer
 process.env.CHROME_BIN = require('puppeteer').executablePath();
 
+console.info('tiantc: process.env.CHROME_BIN: ', process.env.CHROME_BIN);
+// process.on('uncaughtException', (err) => {
+//   if (err.code === 'ERR_SERVER_NOT_RUNNING') {
+//     console.error('Caught ERR_SERVER_NOT_RUNNING. Ignoring to prevent pipeline break.', err);
+//     console.error(err);
+//     // Ideally, log this and trigger a non-zero exit code later if possible
+//     // without immediately crashing.
+//     // process.exit(1); // Consider exiting after logging, rather than continuing
+//   } else {
+//     console.error('Caught unhandled exception:', err);
+//     // For other uncaught exceptions, it's safer to exit.
+//     process.exit(1);
+//   }
+// });
+
 /**
  * Karma configuration.
  * @param {!Object} config
