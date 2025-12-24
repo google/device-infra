@@ -51,6 +51,20 @@ java_library(
 )
 
 java_library(
+    name = "shutdown_hook_manager",
+    srcs = ["ShutdownHookManager.java"],
+    visibility = [
+        "//:deviceinfra_all_pkg",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_errorprone_error_prone_annotations",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "system_info_printer",
     srcs = ["SystemInfoPrinter.java"],
     visibility = ["//:deviceinfra_all_pkg"],
