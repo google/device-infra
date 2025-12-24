@@ -97,6 +97,7 @@ java_library(
     srcs = ["DeviceHelperFactory.java"],
     visibility = [
         "//:omnilab_fusion",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device/provider:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/service:__subpackages__",
     ],
