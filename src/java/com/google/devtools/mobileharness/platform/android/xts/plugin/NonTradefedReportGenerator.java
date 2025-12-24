@@ -33,7 +33,6 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdb
 import com.google.devtools.mobileharness.shared.util.base.StrUtil;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
-import com.google.wireless.qa.mobileharness.shared.api.annotation.ParamAnnotation;
 import com.google.wireless.qa.mobileharness.shared.controller.event.TestEndingEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.plugin.Plugin;
 import com.google.wireless.qa.mobileharness.shared.controller.plugin.Plugin.PluginType;
@@ -51,16 +50,6 @@ import java.util.Map;
 @Plugin(type = PluginType.LAB)
 public final class NonTradefedReportGenerator {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
-
-  @ParamAnnotation(
-      required = false,
-      help = "Whether to run certification test suite. Default to false.")
-  public static final String PARAM_RUN_CERTIFICATION_TEST_SUITE = "run_certification_test_suite";
-
-  @ParamAnnotation(
-      required = false,
-      help = "xTS suite info. Should be key value pairs like 'key1=value1,key2=value2'.")
-  public static final String PARAM_XTS_SUITE_INFO = "xts_suite_info";
 
   private final Clock clock;
   private final Adb adb;
@@ -135,7 +124,9 @@ public final class NonTradefedReportGenerator {
     JobInfo jobInfo = testInfo.jobInfo();
 
     boolean runCertificationTestSuite =
-        jobInfo.params().getBool(PARAM_RUN_CERTIFICATION_TEST_SUITE, false);
+        jobInfo
+            .params()
+            .getBool(NonTradefedReportGeneratorConstants.PARAM_RUN_CERTIFICATION_TEST_SUITE, false);
     if (!runCertificationTestSuite) {
       return;
     }
@@ -161,7 +152,8 @@ public final class NonTradefedReportGenerator {
     Map<String, String> suiteInfoMap =
         new HashMap<>(
             StrUtil.toMap(
-                jobInfo.params().get(PARAM_XTS_SUITE_INFO, ""), /* allowDelimiterInValue= */ true));
+                jobInfo.params().get(NonTradefedReportGeneratorConstants.PARAM_XTS_SUITE_INFO, ""),
+                /* allowDelimiterInValue= */ true));
     CertificationSuiteInfo suiteInfo = certificationSuiteInfoFactory.createSuiteInfo(suiteInfoMap);
 
     try {

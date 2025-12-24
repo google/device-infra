@@ -26,6 +26,7 @@ import com.google.devtools.mobileharness.infra.controller.test.PluginLoadingResu
 import com.google.devtools.mobileharness.infra.controller.test.util.TestCommandHistorySaver;
 import com.google.devtools.mobileharness.infra.controller.test.util.testlogcollector.TestLogCollectorPlugin;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
+import com.google.devtools.mobileharness.platform.android.xts.plugin.NonTradefedReportGeneratorConstants;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.reflection.ReflectionUtil;
 import com.google.inject.Guice;
@@ -155,6 +156,8 @@ class LocalTestBuiltinPlugins {
   }
 
   private static boolean isXtsNonTradefedJob(JobInfo jobInfo) {
-    return jobInfo.params().getBool("run_certification_test_suite", false);
+    return jobInfo
+        .params()
+        .getBool(NonTradefedReportGeneratorConstants.PARAM_RUN_CERTIFICATION_TEST_SUITE, false);
   }
 }

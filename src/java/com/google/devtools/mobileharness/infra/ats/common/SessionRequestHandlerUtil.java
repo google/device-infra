@@ -71,6 +71,7 @@ import com.google.devtools.mobileharness.platform.android.xts.config.proto.Confi
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Device;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.DeviceConfigurationProto.DeviceConfigurations;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.DeviceConfigurationProto.ModuleDeviceConfiguration;
+import com.google.devtools.mobileharness.platform.android.xts.plugin.NonTradefedReportGeneratorConstants;
 import com.google.devtools.mobileharness.platform.android.xts.suite.ModuleArg;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteTestFilter;
@@ -137,18 +138,6 @@ public class SessionRequestHandlerUtil {
    * com.google.wireless.qa.mobileharness.shared.api.driver.MoblyTest#TEST_SELECTOR_KEY}.
    */
   public static final String MOBLY_TEST_SELECTOR_KEY = "test_case_selector";
-
-  /**
-   * The same as {@link
-   * com.google.devtools.mobileharness.platform.android.xts.plugin.NonTradefedReportGenerator#PARAM_RUN_CERTIFICATION_TEST_SUITE}.
-   */
-  public static final String PARAM_RUN_CERTIFICATION_TEST_SUITE = "run_certification_test_suite";
-
-  /**
-   * The same as {@link
-   * com.google.devtools.mobileharness.platform.android.xts.plugin.NonTradefedReportGenerator#PARAM_XTS_SUITE_INFO}.
-   */
-  public static final String PARAM_XTS_SUITE_INFO = "xts_suite_info";
 
   /**
    * The same as {@link
@@ -1203,7 +1192,6 @@ public class SessionRequestHandlerUtil {
   /**
    * Applies the metadata filter to see if the module should run.
    *
-   * @param config The {@link Configuration} being evaluated.
    * @param includeFilters the metadata include filter
    * @param excludeFilters the metadata exclude filter
    * @return True if the module should run, false otherwise.
@@ -1390,11 +1378,13 @@ public class SessionRequestHandlerUtil {
     if (!matchedTestCases.isEmpty()) {
       jobInfo.params().add(MOBLY_TEST_SELECTOR_KEY, Joiner.on(" ").join(matchedTestCases));
     }
-    jobInfo.params().add(PARAM_RUN_CERTIFICATION_TEST_SUITE, "true");
+    jobInfo
+        .params()
+        .add(NonTradefedReportGeneratorConstants.PARAM_RUN_CERTIFICATION_TEST_SUITE, "true");
     jobInfo
         .params()
         .add(
-            PARAM_XTS_SUITE_INFO,
+            NonTradefedReportGeneratorConstants.PARAM_XTS_SUITE_INFO,
             generateXtsSuiteInfoMap(
                 xtsRootDir.toAbsolutePath().toString(),
                 xtsType,

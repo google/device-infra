@@ -18,7 +18,7 @@ package com.google.devtools.mobileharness.infra.ats.common;
 
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil.MOBLY_TEST_SELECTOR_KEY;
-import static com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil.PARAM_XTS_SUITE_INFO;
+import static com.google.devtools.mobileharness.platform.android.xts.plugin.NonTradefedReportGeneratorConstants.PARAM_XTS_SUITE_INFO;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;

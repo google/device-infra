@@ -16,8 +16,8 @@
 
 package com.google.devtools.mobileharness.platform.android.xts.plugin;
 
-import static com.google.devtools.mobileharness.platform.android.xts.plugin.NonTradefedReportGenerator.PARAM_RUN_CERTIFICATION_TEST_SUITE;
-import static com.google.devtools.mobileharness.platform.android.xts.plugin.NonTradefedReportGenerator.PARAM_XTS_SUITE_INFO;
+import static com.google.devtools.mobileharness.platform.android.xts.plugin.NonTradefedReportGeneratorConstants.PARAM_RUN_CERTIFICATION_TEST_SUITE;
+import static com.google.devtools.mobileharness.platform.android.xts.plugin.NonTradefedReportGeneratorConstants.PARAM_XTS_SUITE_INFO;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
