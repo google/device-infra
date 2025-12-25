@@ -127,6 +127,7 @@ maven.install(
         "androidx.core:core:1.6.0",
         "com.beust:jcommander:1.82",
         "com.github.ben-manes.caffeine:caffeine:3.1.8",
+        "com.github.purejavacomm:purejavacomm:1.0.2.RELEASE",
         "com.google.api-client:google-api-client:1.35.2",
         "com.google.api.grpc:grpc-google-cloud-logging-v2:0.112.0",
         "com.google.api.grpc:grpc-google-cloud-pubsub-v1:1.123.5",

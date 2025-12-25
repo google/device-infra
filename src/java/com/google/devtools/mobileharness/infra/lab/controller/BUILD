@@ -16,7 +16,7 @@
 # Description:
 #   The controller for Mobile Harness lab.
 
-load("@rules_java//java:defs.bzl", "java_library")
+load("@rules_java//java:defs.bzl", "java_binary", "java_library")
 
 package(
     default_applicable_licenses = ["//:license"],
@@ -231,4 +231,21 @@ java_library(
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
     ],
+)
+
+java_library(
+    name = "recover_bot_proxy",
+    srcs = ["RecoverBotProxy.java"],
+    deps = [
+        "@maven//:com_github_purejavacomm_purejavacomm",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_code_gson_gson",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_binary(
+    name = "recover_bot_proxy_bin",
+    main_class = "com.google.devtools.mobileharness.infra.lab.controller.RecoverBotProxy",
+    runtime_deps = [":recover_bot_proxy"],
 )
