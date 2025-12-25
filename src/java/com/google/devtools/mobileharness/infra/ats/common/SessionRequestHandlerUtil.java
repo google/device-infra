@@ -47,6 +47,7 @@ import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Maps;
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.deviceinfra.ext.devicemanagement.device.platform.android.realdevice.AndroidRealDeviceConstants;
 import com.google.devtools.deviceinfra.shared.util.file.remote.constant.RemoteFileType;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -87,6 +88,8 @@ import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.gson.Gson;
 import com.google.inject.Provider;
 import com.google.protobuf.TextFormat.ParseException;
+import com.google.wireless.qa.mobileharness.shared.api.spec.MoblyTestSpec;
+import com.google.wireless.qa.mobileharness.shared.api.step.android.InstallApkStepConstants;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Value;
@@ -132,25 +135,6 @@ public class SessionRequestHandlerUtil {
   public static final String ANDROID_REAL_DEVICE_TYPE = "AndroidRealDevice";
   public static final String ANDROID_LOCAL_EMULATOR_TYPE = "AndroidLocalEmulator";
   public static final String ANDROID_DEVICE_TYPE = "AndroidDevice";
-
-  /**
-   * The same as {@link
-   * com.google.wireless.qa.mobileharness.shared.api.driver.MoblyTest#TEST_SELECTOR_KEY}.
-   */
-  public static final String MOBLY_TEST_SELECTOR_KEY = "test_case_selector";
-
-  /**
-   * The same as {@link
-   * com.google.devtools.deviceinfra.ext.devicemanagement.device.platform.android.realdevice.AndroidRealDeviceConstants#PARAM_CLEAR_GSERVICES_OVERRIDES}.
-   */
-  public static final String PARAM_CLEAR_GSERVICES_OVERRIDES = "clear_gservices_overrides";
-
-  /**
-   * The same as {@link
-   * com.google.wireless.qa.mobileharness.shared.api.step.android.InstallApkStepConstants#PARAM_CHECK_INSTALLED_GMS_CORE_VERSION}.
-   */
-  public static final String PARAM_CHECK_INSTALLED_GMS_CORE_VERSION =
-      "check_installed_gms_core_version";
 
   private static final String COMPATIBILITY_TEST_SUITE_CLASS_NAME =
       "com.android.compatibility.common.tradefed.testtype.suite.CompatibilityTestSuite";
@@ -1376,7 +1360,7 @@ public class SessionRequestHandlerUtil {
     }
     jobInfo.properties().add(Job.SKIP_COLLECTING_DEVICE_INFO, Boolean.toString(skipDeviceInfo));
     if (!matchedTestCases.isEmpty()) {
-      jobInfo.params().add(MOBLY_TEST_SELECTOR_KEY, Joiner.on(" ").join(matchedTestCases));
+      jobInfo.params().add(MoblyTestSpec.TEST_SELECTOR_KEY, Joiner.on(" ").join(matchedTestCases));
     }
     jobInfo
         .params()
@@ -1403,9 +1387,9 @@ public class SessionRequestHandlerUtil {
   /** Injects common params to the job info for both tradefed and non-tradefed jobs. */
   private void injectCommonParams(JobInfo jobInfo) {
     // Skip to clear gservice flag overrides.
-    jobInfo.params().add(PARAM_CLEAR_GSERVICES_OVERRIDES, "false");
+    jobInfo.params().add(AndroidRealDeviceConstants.PARAM_CLEAR_GSERVICES_OVERRIDES, "false");
     // Skip to check installed gms core version.
-    jobInfo.params().add(PARAM_CHECK_INSTALLED_GMS_CORE_VERSION, "false");
+    jobInfo.params().add(InstallApkStepConstants.PARAM_CHECK_INSTALLED_GMS_CORE_VERSION, "false");
   }
 
   private String generateXtsSuiteInfoMap(

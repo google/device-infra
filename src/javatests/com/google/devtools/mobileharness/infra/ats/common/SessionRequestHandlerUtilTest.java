@@ -17,7 +17,6 @@
 package com.google.devtools.mobileharness.infra.ats.common;
 
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil.MOBLY_TEST_SELECTOR_KEY;
 import static com.google.devtools.mobileharness.platform.android.xts.plugin.NonTradefedReportGeneratorConstants.PARAM_XTS_SUITE_INFO;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -63,6 +62,7 @@ import com.google.gson.reflect.TypeToken;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
+import com.google.wireless.qa.mobileharness.shared.api.spec.MoblyTestSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.StringMap;
@@ -988,11 +988,11 @@ public final class SessionRequestHandlerUtilTest {
             sessionRequestInfo, null, ImmutableMap.of());
 
     assertThat(jobInfos).hasSize(3);
-    assertThat(jobInfos.get(0).params().get(MOBLY_TEST_SELECTOR_KEY)).isNull();
-    assertThat(jobInfos.get(1).params().get(MOBLY_TEST_SELECTOR_KEY).split(" "))
+    assertThat(jobInfos.get(0).params().get(MoblyTestSpec.TEST_SELECTOR_KEY)).isNull();
+    assertThat(jobInfos.get(1).params().get(MoblyTestSpec.TEST_SELECTOR_KEY).split(" "))
         .asList()
         .containsExactly("test_class1.test1", "test_class2.test2", "test_class2.test3");
-    assertThat(jobInfos.get(2).params().get(MOBLY_TEST_SELECTOR_KEY))
+    assertThat(jobInfos.get(2).params().get(MoblyTestSpec.TEST_SELECTOR_KEY))
         .isEqualTo("test_class2.test3");
   }
 
@@ -1063,7 +1063,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
             sessionRequestInfo, null, ImmutableMap.of());
     assertThat(jobInfos).hasSize(1);
-    assertThat(jobInfos.get(0).params().get(MOBLY_TEST_SELECTOR_KEY).split(" "))
+    assertThat(jobInfos.get(0).params().get(MoblyTestSpec.TEST_SELECTOR_KEY).split(" "))
         .asList()
         .containsExactly("test_class1.test1", "test_class2.test3");
 
@@ -1121,7 +1121,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
             sessionRequestInfo, null, ImmutableMap.of());
     assertThat(jobInfos).hasSize(1);
-    assertThat(jobInfos.get(0).params().get(MOBLY_TEST_SELECTOR_KEY))
+    assertThat(jobInfos.get(0).params().get(MoblyTestSpec.TEST_SELECTOR_KEY))
         .isEqualTo("test_class1.test1");
 
     // Test invalid class name
@@ -1167,11 +1167,11 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
             sessionRequestInfo, subPlan, ImmutableMap.of());
     assertThat(jobInfos).hasSize(2);
-    assertThat(jobInfos.get(0).params().get(MOBLY_TEST_SELECTOR_KEY).split(" "))
+    assertThat(jobInfos.get(0).params().get(MoblyTestSpec.TEST_SELECTOR_KEY).split(" "))
         .asList()
         .containsExactly("FooTest.test1", "FooTest.test2");
     assertThat(jobInfos.get(0).params().get(PARAM_XTS_SUITE_INFO)).contains("suite_plan=cts");
-    assertThat(jobInfos.get(1).params().get(MOBLY_TEST_SELECTOR_KEY)).isNull();
+    assertThat(jobInfos.get(1).params().get(MoblyTestSpec.TEST_SELECTOR_KEY)).isNull();
     assertThat(jobInfos.get(1).params().get(PARAM_XTS_SUITE_INFO)).contains("suite_plan=cts");
 
     // Same result as above
@@ -1186,11 +1186,11 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
             sessionRequestInfo, subPlan, ImmutableMap.of());
     assertThat(jobInfos).hasSize(2);
-    assertThat(jobInfos.get(0).params().get(MOBLY_TEST_SELECTOR_KEY).split(" "))
+    assertThat(jobInfos.get(0).params().get(MoblyTestSpec.TEST_SELECTOR_KEY).split(" "))
         .asList()
         .containsExactly("FooTest.test1", "FooTest.test2");
     assertThat(jobInfos.get(0).params().get(PARAM_XTS_SUITE_INFO)).contains("suite_plan=cts");
-    assertThat(jobInfos.get(1).params().get(MOBLY_TEST_SELECTOR_KEY)).isNull();
+    assertThat(jobInfos.get(1).params().get(MoblyTestSpec.TEST_SELECTOR_KEY)).isNull();
     assertThat(jobInfos.get(1).params().get(PARAM_XTS_SUITE_INFO)).contains("suite_plan=cts");
   }
 
@@ -1302,7 +1302,7 @@ public final class SessionRequestHandlerUtilTest {
             sessionRequestInfo, subPlan, ImmutableMap.of());
 
     assertThat(jobInfos).hasSize(1);
-    assertThat(jobInfos.get(0).params().get(MOBLY_TEST_SELECTOR_KEY))
+    assertThat(jobInfos.get(0).params().get(MoblyTestSpec.TEST_SELECTOR_KEY))
         .isEqualTo("test_class3.test3");
   }
 
@@ -1356,7 +1356,7 @@ public final class SessionRequestHandlerUtilTest {
             sessionRequestInfo, null, ImmutableMap.of());
 
     assertThat(jobInfos).hasSize(1);
-    assertThat(jobInfos.get(0).params().get(MOBLY_TEST_SELECTOR_KEY).split(" "))
+    assertThat(jobInfos.get(0).params().get(MoblyTestSpec.TEST_SELECTOR_KEY).split(" "))
         .asList()
         .containsExactly("test_class1", "test_class2.test2");
 
@@ -1373,11 +1373,11 @@ public final class SessionRequestHandlerUtilTest {
             sessionRequestInfo, null, ImmutableMap.of());
 
     assertThat(jobInfos).hasSize(1);
-    assertThat(jobInfos.get(0).params().get(MOBLY_TEST_SELECTOR_KEY).split(" "))
+    assertThat(jobInfos.get(0).params().get(MoblyTestSpec.TEST_SELECTOR_KEY).split(" "))
         .asList()
         .containsExactly("test_class1", "test_class2.test2");
 
-    // Without include filters, MOBLY_TEST_SELECTOR_KEY should not be set.
+    // Without include filters, MoblyTestSpec.TEST_SELECTOR_KEY should not be set.
     sessionRequestInfo =
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(
             defaultSessionRequestInfoBuilder()
@@ -1387,7 +1387,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
             sessionRequestInfo, null, ImmutableMap.of());
     assertThat(jobInfos).hasSize(1);
-    assertThat(jobInfos.get(0).params().get(MOBLY_TEST_SELECTOR_KEY)).isNull();
+    assertThat(jobInfos.get(0).params().get(MoblyTestSpec.TEST_SELECTOR_KEY)).isNull();
   }
 
   @Test
@@ -1449,11 +1449,11 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
             sessionRequestInfo, subPlan, ImmutableMap.of());
     assertThat(jobInfos).hasSize(2);
-    assertThat(jobInfos.get(0).params().get(MOBLY_TEST_SELECTOR_KEY).split(" "))
+    assertThat(jobInfos.get(0).params().get(MoblyTestSpec.TEST_SELECTOR_KEY).split(" "))
         .asList()
         .containsExactly("FooTest.test2");
     assertThat(jobInfos.get(0).params().get(PARAM_XTS_SUITE_INFO)).contains("suite_plan=cts");
-    assertThat(jobInfos.get(1).params().get(MOBLY_TEST_SELECTOR_KEY).split(" "))
+    assertThat(jobInfos.get(1).params().get(MoblyTestSpec.TEST_SELECTOR_KEY).split(" "))
         .asList()
         .containsExactly("FooTest.test1", "FooTest.test3");
     assertThat(jobInfos.get(1).params().get(PARAM_XTS_SUITE_INFO)).contains("suite_plan=cts");
