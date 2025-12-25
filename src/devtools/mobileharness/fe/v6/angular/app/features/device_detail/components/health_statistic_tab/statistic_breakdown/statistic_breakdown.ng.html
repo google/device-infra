@@ -1,0 +1,81 @@
+<div class="breakdown-section">
+  <div class="breakdown-header">
+    <div class="breakdown-title-group">
+      <h4 class="chart-title">{{ title }}</h4>
+      <p class="chart-subtitle date-range-label">{{ selectedPeriodStr }} (PDT)</p>
+    </div>
+    <div class="toggle-group">
+      <button class="toggle-btn" [class.active]="view === 'table'" (click)="toggleView('table')">
+        Table
+      </button>
+      <button class="toggle-btn" [class.active]="view === 'chart'" (click)="toggleView('chart')">
+        Chart
+      </button>
+    </div>
+  </div>
+
+  @if (tableData.length > 0) {
+    @if (view === 'table') {
+      <div class="table-container">
+        <table mat-table [dataSource]="tableData" class="breakdown-table health-table">
+          <!-- Label Column -->
+          <ng-container matColumnDef="label">
+            <th mat-header-cell *matHeaderCellDef class="label-cell">
+              @if (tableColumns.includes('count')) {
+                RESULT
+              }
+            </th>
+            <td mat-cell *matCellDef="let row" [class.pl-6]="row.type === 'detail' && !tableColumns.includes('count')" [class.pl-10]="row.type === 'detail' && tableColumns.includes('count')" [class.pl-4]="row.type === 'summary' && tableColumns.includes('count')" class="label-cell">
+              @if (row.color) {
+                <span class="color-dot" [style.background-color]="row.color"></span>
+              }
+              <span [style.color]="row.type === 'summary' && tableColumns.includes('count') ? '#000' : 'inherit'" [class.summary-text]="row.type === 'summary'" [style.font-weight]="(row.type === 'summary' || row.type === 'total') ? 700 : 'normal'">
+                {{ row.label }}
+              </span>
+            </td>
+          </ng-container>
+
+          <!-- Value Column (For Health) -->
+          <ng-container matColumnDef="value">
+            <th mat-header-cell *matHeaderCellDef class="value-cell"></th>
+            <td mat-cell *matCellDef="let row" class="value-cell">
+              <span [class.summary-value]="row.type === 'summary'">
+                {{ row.value | number:'1.1-1' }}%
+              </span>
+            </td>
+          </ng-container>
+
+          <!-- Count Column (For Test/Recovery) -->
+          <ng-container matColumnDef="count">
+            <th mat-header-cell *matHeaderCellDef class="value-cell">COUNT</th>
+            <td mat-cell *matCellDef="let row" class="value-cell" [style.color]="row.type === 'summary' ? '#000' : 'inherit'" [class.summary-value]="row.type === 'summary'" [style.font-weight]="row.type === 'summary' || row.type === 'total' ? 700 : 'normal'">
+              {{ row.count }}
+            </td>
+          </ng-container>
+
+          <!-- Percentage Column (For Test/Recovery) -->
+          <ng-container matColumnDef="percentage">
+            <th mat-header-cell *matHeaderCellDef class="value-cell">PERCENTAGE</th>
+            <td mat-cell *matCellDef="let row" class="value-cell" [style.color]="row.type === 'summary' ? '#000' : 'inherit'" [class.summary-value]="row.type === 'summary'" [style.font-weight]="row.type === 'summary' || row.type === 'total' ? 700 : 'normal'">
+              {{ row.percent | number:'1.1-1' }}%
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="tableColumns; sticky: true" [style.display]="tableColumns.includes('count') ? 'table-row' : 'none'"></tr>
+          <tr mat-row *matRowDef="let row; columns: tableColumns" [class.total-row]="row.type === 'total'" [class.detail-row-bg]="row.type === 'detail'"></tr>
+        </table>
+      </div>
+    } @else {
+      <div class="charts-container">
+        @for (chart of charts; track chart.title) {
+          <div>
+            <h5 class="chart-subtitle">{{ chart.title }}</h5>
+            <div #chartContainer class="pie-chart-container"></div>
+          </div>
+        }
+      </div>
+    }
+  } @else {
+    <p class="no-data-msg">No data available.</p>
+  }
+</div>

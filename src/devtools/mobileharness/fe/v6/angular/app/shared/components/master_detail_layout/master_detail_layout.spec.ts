@@ -2,21 +2,21 @@ import {ComponentFixture, TestBed} from '@angular/core/testing';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
 import {provideRouter} from '@angular/router';
 
-import {OverviewPage} from './overview_page';
+import {MasterDetailLayout} from './master_detail_layout';
 
-describe('OverviewPage Component', () => {
-  let fixture: ComponentFixture<OverviewPage>;
-  let component: OverviewPage;
+describe('MasterDetailLayout Component', () => {
+  let fixture: ComponentFixture<MasterDetailLayout>;
+  let component: MasterDetailLayout;
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [
-        OverviewPage,
+        MasterDetailLayout,
         NoopAnimationsModule, // This makes test faster and more stable.
       ],
       providers: [provideRouter([])],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(OverviewPage);
+    fixture = TestBed.createComponent(MasterDetailLayout);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

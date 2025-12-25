@@ -45,11 +45,11 @@ import {
 import {HOST_SERVICE} from '../../../../core/services/host/host_service';
 import {ConfirmDialog} from '../../../../shared/components/confirm_dialog/confirm_dialog';
 import {InfoCard} from '../../../../shared/components/info_card/info_card';
-import {OverflowList} from '../../../../shared/components/overflow_list/overflow_list';
 import {
+  MasterDetailLayout,
   NavItem,
-  OverviewPage,
-} from '../../../../shared/components/overview_page/overview_page';
+} from '../../../../shared/components/master_detail_layout/master_detail_layout';
+import {OverflowList} from '../../../../shared/components/overflow_list/overflow_list';
 import {
   SearchableListOverlayComponent,
   SearchableListOverlayData,
@@ -141,7 +141,7 @@ const STATUS_SEMANTIC_MAP: Record<string, {icon: string; colorClass: string}> =
     MatTooltipModule,
     OverlayModule,
     RouterLink,
-    OverviewPage,
+    MasterDetailLayout,
     InfoCard,
     SearchableListOverlayComponent,
     OverflowList,

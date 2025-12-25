@@ -1,0 +1,81 @@
+<app-master-detail-layout [navList]="navList">
+  <app-info-card
+    #statisticSection
+    id="health-statistic"
+    title="Device Healthiness Statistics"
+    [collapsible]="false">
+    <ng-container operations>
+      <app-date-range-picker (dateRangeChange)="onDateRangeChange('health', $event)"></app-date-range-picker>
+    </ng-container>
+    @if (loadingHealth()) {
+      <mat-progress-bar mode="indeterminate" class="progress-bar"></mat-progress-bar>
+    }
+    <div class="info-card-content" [style.opacity]="loadingHealth() ? 0.5 : 1">
+      <div class="chart-section">
+          <h4 class="chart-title">Daily Healthiness Trend</h4>
+          <div #healthChartSummary class="chart-container"></div>
+        </div>
+        <div class="chart-section">
+          <h4 class="chart-title">Daily Healthiness Breakdown</h4>
+          <div #healthChartDetail class="chart-container"></div>
+        </div>
+        <app-statistic-breakdown
+          title="Total Healthiness Breakdown"
+          [selectedPeriodStr]="healthDateRangeString"
+          [tableData]="healthDataSource"
+          [tableColumns]="['label', 'value']"
+          [charts]="healthBreakdownCharts"
+        ></app-statistic-breakdown>
+      </div>
+  </app-info-card>
+  <app-info-card
+    #statisticSection
+    id="test-result-statistic"
+    title="Test Result Statistics"
+    [collapsible]="false">
+    <ng-container operations>
+      <app-date-range-picker (dateRangeChange)="onDateRangeChange('test', $event)"></app-date-range-picker>
+    </ng-container>
+    @if (loadingTest()) {
+      <mat-progress-bar mode="indeterminate" class="progress-bar"></mat-progress-bar>
+    }
+    <div class="info-card-content" [style.opacity]="loadingTest() ? 0.5 : 1">
+      <div class="chart-section">
+          <h4 class="chart-title">Daily Test Results Trend</h4>
+          <div #testChart class="chart-container"></div>
+        </div>
+        <app-statistic-breakdown
+          title="Total Test Result Breakdown"
+          [selectedPeriodStr]="testDateRangeString"
+          [tableData]="testDataSource"
+          [tableColumns]="['label', 'count', 'percentage']"
+          [charts]="testBreakdownCharts"
+        ></app-statistic-breakdown>
+      </div>
+  </app-info-card>
+  <app-info-card
+    #statisticSection
+    id="recovery-task-statistic"
+    title="Recovery Task Statistics"
+    [collapsible]="false">
+    <ng-container operations>
+      <app-date-range-picker (dateRangeChange)="onDateRangeChange('recovery', $event)"></app-date-range-picker>
+    </ng-container>
+    @if (loadingRecovery()) {
+      <mat-progress-bar mode="indeterminate" class="progress-bar"></mat-progress-bar>
+    }
+    <div class="info-card-content" [style.opacity]="loadingRecovery() ? 0.5 : 1">
+      <div class="chart-section">
+          <h4 class="chart-title">Daily Recovery Task Trend</h4>
+          <div #recoveryChart class="chart-container"></div>
+        </div>
+        <app-statistic-breakdown
+          title="Total Recovery Task Breakdown"
+          [selectedPeriodStr]="recoveryDateRangeString"
+          [tableData]="recoveryDataSource"
+          [tableColumns]="['label', 'count', 'percentage']"
+          [charts]="recoveryBreakdownCharts"
+        ></app-statistic-breakdown>
+      </div>
+  </app-info-card>
+</app-master-detail-layout>
