@@ -1,13 +1,12 @@
-<app-master-detail-layout [navList]="navList">
+<app-overview-page [navList]="navList">
   @if (device) {
     <!-- Health & Activity Card -->
     <app-info-card
       #overviewSection
       id="overview-health"
       title="Health & Activity"
-      [collapsible]="false"
-    >
-      <div class="info-card-content">
+      [collapsible]="false">
+      <div class="overview-card-content">
         @let healthUI = getHealthStateUI(device.healthAndActivity.state);
         <div class="health-summary">
           <div class="summary-icon-bg {{ healthUI.iconBgColorClass }}">
@@ -125,9 +124,8 @@
       #overviewSection
       id="overview-system"
       title="Basic Information"
-      [collapsible]="false"
-    >
-      <div class="info-card-content">
+      [collapsible]="false">
+      <div class="overview-card-content">
         <div class="basic-info-grid-wrapper">
           <dl class="info-grid-tight">
             <dt title="Model">Model</dt>
@@ -207,7 +205,7 @@
             <span class="operation-text">View Testbed YAML</span>
           </a>
         </div>
-        <div class="info-card-content no-padding">
+        <div class="overview-card-content no-padding">
           <div class="sub-device-cards-wrapper">
             @for (sub of device.subDevices; track sub.id) {
               <app-info-card [title]="sub.id" [collapsible]="isSubDeviceCollapsible()" class="sub-device-card">
@@ -274,9 +272,8 @@
       #overviewSection
       id="overview-permissions"
       title="Permissions"
-      [collapsible]="false"
-    >
-      <div class="info-card-content permissions-content">
+      [collapsible]="false">
+      <div class="overview-card-content permissions-content">
         <div>
           <h4 class="permission-type-title">Owners</h4>
           <div class="chip-grid-container">
@@ -306,7 +303,7 @@
 
     <!-- Capabilities Card -->
     <app-info-card #overviewSection id="overview-capabilities" title="Capabilities">
-      <div id="capabilities-content" class="info-card-content capabilities-content">
+      <div id="capabilities-content" class="overview-card-content capabilities-content">
         <!-- Supported Drivers Section -->
         <div class="capability-section">
           <h4 class="capabilities-title">
@@ -385,7 +382,7 @@
 
     <!-- Dimensions Card -->
     <app-info-card #overviewSection id="overview-dimensions" title="Dimensions" [expanded]="true">
-      <div id="dimensions-content" class="info-card-content text-sm">
+      <div id="dimensions-content" class="overview-card-content text-sm">
         @if (device.dimensions) {
           <mat-form-field
             appearance="outline"
@@ -476,7 +473,7 @@
 
     <!-- Properties Card -->
     <app-info-card #overviewSection id="overview-properties" title="Properties">
-      <div id="properties-content" class="info-card-content">
+      <div id="properties-content" class="overview-card-content">
         @if (device.properties && objectUtils.objectKeys(device.properties).length > 0) {
           <div class="data-block">
             <dl class="data-block-grid">
@@ -496,4 +493,4 @@
   } @else {
     <p>Device data not available.</p>
   }
-</app-master-detail-layout>
+</app-overview-page>

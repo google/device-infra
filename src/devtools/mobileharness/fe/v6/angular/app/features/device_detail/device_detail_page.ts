@@ -19,7 +19,6 @@ import {DEVICE_SERVICE} from '../../core/services/device/device_service';
 import {SnackBarService} from '../../shared/services/snackbar_service';
 import {DeviceActionBar} from './components/device_action_bar/device_action_bar';
 import {DeviceOverviewTab} from './components/device_overview_tab/device_overview_tab';
-import {HealthStatisticTab} from './components/health_statistic_tab/health_statistic_tab';
 
 interface DevicePageData {
   pageData: DeviceOverviewPageData | null;
@@ -38,10 +37,9 @@ interface DevicePageData {
     CommonModule,
     RouterModule,
     MatIconModule,
-    MatMenuModule,
     DeviceOverviewTab,
     DeviceActionBar,
-    HealthStatisticTab,
+    MatMenuModule,
     MatTooltipModule,
   ],
   templateUrl: './device_detail_page.ng.html',

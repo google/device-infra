@@ -14,7 +14,7 @@ import {
 } from '@angular/core';
 import {FormsModule} from '@angular/forms';
 import {MatButtonModule} from '@angular/material/button';
-import {MatDialog} from '@angular/material/dialog';
+import {MatDialog, MatDialogModule} from '@angular/material/dialog';
 import {MatFormFieldModule} from '@angular/material/form-field';
 import {MatIconModule} from '@angular/material/icon';
 import {MatInputModule} from '@angular/material/input';
@@ -22,17 +22,17 @@ import {Subject} from 'rxjs';
 import {debounceTime, distinctUntilChanged, takeUntil} from 'rxjs/operators';
 import type {DeviceOverview} from '../../../../core/models/device_overview';
 import {
-  DeviceDimension,
-  DimensionSourceGroup,
   HealthState,
-  SubDeviceInfo,
+  type DeviceDimension,
+  type DimensionSourceGroup,
+  type SubDeviceInfo,
 } from '../../../../core/models/device_overview';
 import {DEVICE_SERVICE} from '../../../../core/services/device/device_service';
 import {InfoCard} from '../../../../shared/components/info_card/info_card';
 import {
-  MasterDetailLayout,
   NavItem,
-} from '../../../../shared/components/master_detail_layout/master_detail_layout';
+  OverviewPage,
+} from '../../../../shared/components/overview_page/overview_page';
 import {dateUtils} from '../../../../shared/utils/date_utils';
 import {objectUtils} from '../../../../shared/utils/object_utils';
 import {TestbedConfigViewer} from '../testbed_config_viewer/testbed_config_viewer';
@@ -63,12 +63,13 @@ interface DimensionItem {
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     MatButtonModule,
-    MatFormFieldModule,
     MatIconModule,
     MatInputModule,
-    FormsModule,
-    MasterDetailLayout,
+    MatFormFieldModule,
+    MatDialogModule,
+    OverviewPage,
     InfoCard,
   ],
   templateUrl: './device_overview_tab.ng.html',

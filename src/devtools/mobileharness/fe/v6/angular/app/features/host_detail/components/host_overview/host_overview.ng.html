@@ -1,33 +1,32 @@
-<app-master-detail-layout [navList]="navList">
+<app-overview-page [navList]="navList">
   <app-info-card #overviewSection id="overview" title="Overview" [collapsible]="false">
-    <div class="info-card-content">
-      <div class="grid-wrapper">
-        <dl class="grid-tight">
-          <dt title="HostName">Host Name</dt>
-          <dd title="{{ host.hostName }}" class="overflow-ellipsis">{{ host.hostName || 'N/A' }}</dd>
+    <div class="overview-card-content">
+      <dl class="grid-tight">
+        <dt title="HostName">Host Name</dt>
+        <dd title="{{ host.hostName }}" class="overflow-ellipsis">{{ host.hostName || 'N/A' }}</dd>
 
-          <dt title="HostIP">Host IP</dt>
-          <dd title="{{ host.ip }}" class="overflow-ellipsis">{{ host.ip || 'N/A' }}</dd>
+        <dt title="HostIP">Host IP</dt>
+        <dd title="{{ host.ip }}" class="overflow-ellipsis">{{ host.ip || 'N/A' }}</dd>
 
-          <dt title="OS">OS</dt>
-          <dd title="{{ host.os }}" class="overflow-ellipsis">{{ host.os || 'N/A' }}</dd>
+        <dt title="OS">OS</dt>
+        <dd title="{{ host.os }}" class="overflow-ellipsis">{{ host.os || 'N/A' }}</dd>
 
-          <dt title="LabType">Lab Type</dt>
-          <dd class="lab-type-wrapper">
-            @if (host.labTypeDisplayNames.length > 0) {
-              @for (labType of host.labTypeDisplayNames; track labType) {
-                <div class="lab-type-chip overflow-ellipsis" title="{{ labType }}">
-                  {{ labType }}
-                </div>
-              }
-            } @else {
-              <div class="lab-type-chip overflow-ellipsis" title="N/A">
-                N/A
+        <dt title="LabType">Lab Type</dt>
+        <dd class="lab-type-wrapper">
+          @if (host.labTypeDisplayNames.length > 0) {
+            @for (labType of host.labTypeDisplayNames; track labType) {
+              <div class="lab-type-chip overflow-ellipsis" title="{{ labType }}">
+                {{ labType }}
               </div>
             }
-          </dd>
-        </dl>
-      </div>
+          } @else {
+            <div class="lab-type-chip overflow-ellipsis" title="N/A">
+              N/A
+            </div>
+          }
+        </dd>
+
+      </dl>
     </div>
   </app-info-card>
   <app-info-card #overviewSection id="lab-server" title="Lab Server" [collapsible]="false">
@@ -38,7 +37,7 @@
         <mat-icon>open_in_new</mat-icon>
       </a>
     </div>
-    <div class="info-card-content">
+    <div class="overview-card-content">
       <dl class="grid-tight">
         <dt>State</dt>
         @let connectivitySemantic = getStatusSemantic(host.labServer.connectivity);
@@ -124,7 +123,7 @@
     @if(isDeviceLoading()) {
       <mat-progress-bar mode="indeterminate" class="device-loading-bar"></mat-progress-bar>
     } @else if(deviceDataSource.data.length > 0) {
-      <div class="info-card-content">
+      <div class="overview-card-content">
           <div class="device-table-toolbar">
             @if(selection.isEmpty()) {
               <div class="device-toolbar-content">
@@ -450,7 +449,7 @@
           </div>
       </div>
     } @else {
-      <div class="info-card-content">
+      <div class="overview-card-content">
         <p class="no-devices-text">No devices are connected to this host.</p>
       </div>
     }
@@ -463,7 +462,7 @@
         <mat-icon>open_in_new</mat-icon>
       </a>
     </div>
-    <div class="info-card-content">
+    <div class="overview-card-content">
       <dl class="grid-tight">
         <dt>State</dt>
         @let daemonSemantic = getStatusSemantic(host.daemonServer.status);
@@ -488,7 +487,7 @@
     </div>
   </app-info-card>
   <app-info-card #overviewSection id="host-properties" title="Host Properties">
-    <div id="properties-content" class="info-card-content">
+    <div id="properties-content" class="overview-card-content">
       @if (host.properties && objectUtils.objectKeys(host.properties).length > 0) {
         <div class="data-block">
           <dl class="data-block-grid">
@@ -505,7 +504,7 @@
       }
     </div>
   </app-info-card>
-</app-master-detail-layout>
+</app-overview-page>
 
 @if (activeOverlay(); as overlay) {
   <ng-template cdkConnectedOverlay

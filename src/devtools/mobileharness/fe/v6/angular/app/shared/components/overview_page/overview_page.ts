@@ -22,13 +22,13 @@ export interface NavItem {
  * A common component for overview page with left navigation and right content.
  */
 @Component({
-  selector: 'app-master-detail-layout',
+  selector: 'app-overview-page',
   standalone: true,
-  templateUrl: './master_detail_layout.ng.html',
-  styleUrl: './master_detail_layout.scss',
+  templateUrl: './overview_page.ng.html',
+  styleUrl: './overview_page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class MasterDetailLayout implements OnInit, AfterViewInit, OnDestroy {
+export class OverviewPage implements OnInit, AfterViewInit, OnDestroy {
   private readonly elementRef = inject<ElementRef<HTMLElement>>(ElementRef);
 
   readonly navList = input<NavItem[]>([]);

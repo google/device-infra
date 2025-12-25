@@ -1,6 +1,6 @@
 $labconsole-font: Roboto, sans-serif;
 
-.master-detail-layout-container {
+.overview-container {
   display: flex;
   flex-direction: column;
   padding: 1rem 0;
@@ -12,7 +12,7 @@ $labconsole-font: Roboto, sans-serif;
 }
 
 // Left Sticky Navigation
-.master-detail-layout-nav-container {
+.overview-nav-container {
   width: 100%;
   flex-shrink: 0;
   align-self: flex-start;
@@ -26,7 +26,7 @@ $labconsole-font: Roboto, sans-serif;
   }
 }
 
-.master-detail-layout-nav {
+.overview-nav {
   display: flex;
   flex-direction: column;
   gap: 0.25rem; // space-y-1
@@ -42,7 +42,7 @@ $labconsole-font: Roboto, sans-serif;
   }
 }
 
-.master-detail-layout-nav-link {
+.overview-nav-link {
   display: flex;
   align-items: center;
   height: 1.5rem;
@@ -69,7 +69,7 @@ $labconsole-font: Roboto, sans-serif;
   }
 }
 
-.master-detail-layout-content-cards {
+.overview-content-cards {
   flex-grow: 1;
   min-width: 0;
   display: flex;
@@ -82,16 +82,7 @@ $labconsole-font: Roboto, sans-serif;
     border: 1px solid #e5e7eb;
   }
 
-  ::ng-deep .info-card-header {
-    padding: 1rem 1.5rem;
-    border-bottom: 1px solid #e0e0e0;
-    font-size: 1.125rem;
-    font-weight: 500;
-    color: #1f2937;
-    margin: 0;
-  }
-
-  ::ng-deep .info-card-content {
+  ::ng-deep .overview-card-content {
     padding: 1.5rem;
 
     .mat-icon {
