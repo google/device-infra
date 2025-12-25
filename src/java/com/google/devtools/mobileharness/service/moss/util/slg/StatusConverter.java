@@ -32,11 +32,12 @@ final class StatusConverter {
 
   /** Gets a {@link Status} by the given {@link Timing} and {@link TestStatus}. */
   static Status fromProto(Timing timing, TestStatus testStatus) {
-    return JobOutInternalFactory.createStatus(timing, TestStatusConverter.doBackward(testStatus));
+    return JobOutInternalFactory.createStatus(
+        timing, TestStatusConverter.convertDevtoolsProtoToQaProto(testStatus));
   }
 
   /** Gets a {@link TestStatus} to represent the given {@link Status}. */
   static TestStatus toProto(Status status) {
-    return TestStatusConverter.doForward(status.get());
+    return TestStatusConverter.convertQaProtoToDevtoolsProto(status.get());
   }
 }

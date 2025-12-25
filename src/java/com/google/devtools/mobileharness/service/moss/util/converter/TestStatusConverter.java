@@ -26,8 +26,11 @@ public final class TestStatusConverter {
 
   private TestStatusConverter() {}
 
-  /** Converts the given {@link Job.TestStatus} to the {@link TestStatus}. */
-  public static TestStatus doForward(Job.TestStatus testStatus) {
+  /**
+   * Converts a {@link com.google.wireless.qa.mobileharness.shared.proto.Job.TestStatus} proto to a
+   * {@link com.google.devtools.mobileharness.api.model.proto.Test.TestStatus} proto.
+   */
+  public static TestStatus convertQaProtoToDevtoolsProto(Job.TestStatus testStatus) {
     switch (testStatus) {
       case NEW:
         return TestStatus.NEW;
@@ -43,8 +46,11 @@ public final class TestStatusConverter {
     return TestStatus.UNRECOGNIZED;
   }
 
-  /** Converts the given {@link TestStatus} to the {@link Job.TestStatus}. */
-  public static Job.TestStatus doBackward(TestStatus testStatus) {
+  /**
+   * Converts a {@link com.google.devtools.mobileharness.api.model.proto.Test.TestStatus} proto to a
+   * {@link com.google.wireless.qa.mobileharness.shared.proto.Job.TestStatus} proto.
+   */
+  public static Job.TestStatus convertDevtoolsProtoToQaProto(TestStatus testStatus) {
     switch (testStatus) {
       case NEW:
         return Job.TestStatus.NEW;

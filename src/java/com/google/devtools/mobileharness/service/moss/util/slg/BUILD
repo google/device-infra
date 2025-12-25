@@ -31,7 +31,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/scheduler/simple/persistence:__subpackages__",
     ],
     deps = [
-        "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
         "//src/devtools/mobileharness/api/model/proto:job_java_proto",
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/devtools/mobileharness/service/moss/proto:result_java_proto",
@@ -51,7 +50,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/path",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/log",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/allocation",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/allocation:allocation_factory",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
