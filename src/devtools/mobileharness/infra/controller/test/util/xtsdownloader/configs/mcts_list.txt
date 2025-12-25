@@ -67,7 +67,6 @@ CtsIkeTestCases
 CtsMediaProviderTestCases
 CtsMediaProviderTranscodeTests
 CtsModernMediaProviderTests
-CtsMultiDeviceGenericRangingTests
 CtsNativeNetDnsTestCases
 CtsNearbyFastPairTestCases
 CtsNetHttpTestCases
@@ -122,10 +121,8 @@ CtsTestAppWithQueryAllPackagesPermission
 CtsTetheringTest
 CtsTfliteNnapiDelegateTestCases
 CtsThreadNetworkTestCases
-CtsUwbMultiDeviceFiraRangingTests
 CtsUwbMultiDeviceTestCase_FiraRangingTests
 CtsUwbMultiDeviceTestCase_UwbManagerTests
-CtsUwbMultiDeviceUwbManagerTests
 CtsUwbTestCases
 CtsVcnTestCases
 CtsWifiTestCases
