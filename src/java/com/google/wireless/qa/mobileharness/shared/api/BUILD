@@ -25,6 +25,7 @@ package(
 
 ################################################################################
 # Test sets containing runtime_deps of driver/decorator/device/validator/lister
+# and local test built-in plugins.
 ################################################################################
 
 # runtime_deps for OSS lab server tests.
@@ -37,13 +38,14 @@ java_library(
     ],
 )
 
-# runtime_deps for xTS tests.
+# Lab-side runtime_deps for xTS tests.
 java_library(
     name = "xts_test",
     runtime_deps = [
         ":xts_test_client",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:android_jit_emulator_detector",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/dispatcher:android_jit_emulator_dispatcher",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/plugin:ats_device_recovery_plugin",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_adb_shell_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_ats_dynamic_config_pusher_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_clean_apps_decorator",
@@ -80,7 +82,7 @@ java_library(
     ],
 )
 
-# runtime_deps for partner tests.
+# Lab-side runtime_deps for partner tests.
 java_library(
     name = "partner_test",
     runtime_deps = [
@@ -136,7 +138,7 @@ java_library(
     ],
 )
 
-# runtime_deps for no-op tests.
+# Lab-side runtime_deps for no-op tests.
 java_library(
     name = "no_op_test",
     runtime_deps = [
