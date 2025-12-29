@@ -105,7 +105,9 @@ public class MoblyPythonVenvUtil {
   /** Installs Python package dependencies. */
   @VisibleForTesting
   void installPythonPkgDeps(
-      Path venvPythonBin, Path pkgDir, @Nullable InstallPythonPkgDepsArgs installPythonPkgDepsArgs)
+      Path venvPythonBin,
+      Path pkgOrDir,
+      @Nullable InstallPythonPkgDepsArgs installPythonPkgDepsArgs)
       throws MobileHarnessException, InterruptedException {
     Duration cmdTimeout = Duration.ofMinutes(10);
     List<String> pipCmd = new ArrayList<>();
@@ -123,17 +125,22 @@ public class MoblyPythonVenvUtil {
       pipCmd.add("-i");
       pipCmd.add(installPythonPkgDepsArgs.indexUrl().get());
     }
-    String requirementsFile = pkgDir.resolve(REQUIREMENTS_TXT).toString();
-    String pyprojectFile = pkgDir.resolve(PYPROJECT_TOML).toString();
-    if (localFileUtil.isFileExist(requirementsFile)) {
-      pipCmd.add("-r");
-      pipCmd.add(requirementsFile);
-    } else if (localFileUtil.isFileExist(pyprojectFile)) {
-      pipCmd.add(pkgDir.toString());
+    // If the package is a whl file, install it directly.
+    // Otherwise, look for requirements.txt or pyproject.toml in the unzipped directory.
+    if (localFileUtil.isFileExist(pkgOrDir.toString()) && pkgOrDir.toString().endsWith(".whl")) {
+      pipCmd.add(pkgOrDir.toString());
     } else {
-      logger.atInfo().log(
-          "No requirements.txt or pyproject.toml file found. Skipping deps install.");
-      return;
+      String requirementsFile = pkgOrDir.resolve(REQUIREMENTS_TXT).toString();
+      String pyprojectFile = pkgOrDir.resolve(PYPROJECT_TOML).toString();
+      if (localFileUtil.isFileExist(requirementsFile)) {
+        pipCmd.add("-r");
+        pipCmd.add(requirementsFile);
+      } else if (localFileUtil.isFileExist(pyprojectFile)) {
+        pipCmd.add(pkgOrDir.toString());
+      } else {
+        logger.atInfo().log("No requirements.txt, pyproject.toml found. Skipping deps install.");
+        return;
+      }
     }
     logger.atInfo().log(
         "Installing Python package dependencies with command: %s.", Joiner.on(" ").join(pipCmd));

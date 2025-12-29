@@ -31,7 +31,9 @@ public interface MoblyAospTestSpec {
 
   @ParamAnnotation(
       required = false,
-      help = "Relative path of Mobly test/suite within the test package.")
+      help =
+          "Relative path of Mobly test/suite. It can be a .py file within the test package or an"
+              + "installed python executable relative to the venv/bin directory.")
   public static final String PARAM_TEST_PATH = "test_path";
 
   @ParamAnnotation(
@@ -44,4 +46,12 @@ public interface MoblyAospTestSpec {
 
   @ParamAnnotation(required = false, help = "Base URL of Python Package Index.")
   public static final String PARAM_PY_PKG_INDEX_URL = "python_pkg_index_url";
+
+  @ParamAnnotation(
+      required = false,
+      help =
+          "The main command to run the mobly test with extra runner and params, for example, use"
+              + " the mobly android partner runner with command 'mobly_runner mobly_test_suite -i'."
+              + " If not set, the mobly test bin will be used.")
+  public static final String PARAM_TEST_EXECUTION_COMMAND = "test_execution_command";
 }
