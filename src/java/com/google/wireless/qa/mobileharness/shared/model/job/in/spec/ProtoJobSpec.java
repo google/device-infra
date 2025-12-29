@@ -105,4 +105,9 @@ public class ProtoJobSpec implements JobSpecWrapper {
     this.jobSpec = jobSpec;
     return this;
   }
+
+  @Override
+  public String toString() {
+    return jobSpec.toString();
+  }
 }

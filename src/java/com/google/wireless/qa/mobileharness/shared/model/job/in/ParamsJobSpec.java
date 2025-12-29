@@ -184,4 +184,9 @@ public class ParamsJobSpec implements JobSpecWrapper {
       return Optional.empty();
     }
   }
+
+  @Override
+  public String toString() {
+    return params.toString();
+  }
 }
