@@ -49,7 +49,6 @@ public class JobSyncGrpcStub implements JobSyncStub {
 
   private final NonThrowingAutoCloseable closeable;
   private final BlockingInterface jobSyncGrpcBlockingStub;
-  private final FutureInterface jobSyncGrpcFutureStub;
 
   @Inject
   public JobSyncGrpcStub(MasterGrpcStubHelper helper) {
@@ -65,7 +64,6 @@ public class JobSyncGrpcStub implements JobSyncStub {
       FutureInterface futureStub) {
     this.closeable = closeable;
     this.jobSyncGrpcBlockingStub = blockingStub;
-    this.jobSyncGrpcFutureStub = futureStub;
   }
 
   @Override
@@ -98,8 +96,12 @@ public class JobSyncGrpcStub implements JobSyncStub {
   }
 
   @Override
-  public ListenableFuture<CloseTestResponse> closeTest(CloseTestRequest request) {
-    return jobSyncGrpcFutureStub.closeTest(request);
+  public CloseTestResponse closeTest(CloseTestRequest request) throws GrpcExceptionWithErrorId {
+    return GrpcStubUtil.invoke(
+        jobSyncGrpcBlockingStub::closeTest,
+        request,
+        InfraErrorId.MASTER_RPC_STUB_JOB_SYNC_CLOSE_TEST_ERROR,
+        String.format("Failed to close test %s", request.getTestId()));
   }
 
   @Override

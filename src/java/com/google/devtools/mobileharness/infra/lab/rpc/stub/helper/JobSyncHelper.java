@@ -30,7 +30,6 @@ import com.google.devtools.mobileharness.infra.master.rpc.stub.JobSyncStub;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
 import javax.inject.Inject;
 
 /** RPC stub helper for talking to MobileHarness Master V5 JobSyncService. */
@@ -61,13 +60,11 @@ public class JobSyncHelper {
       TestResult testResult,
       DeviceLocator deviceLocator,
       boolean deviceDirty)
-      throws InterruptedException {
+      throws MobileHarnessException {
     String target =
         String.format(
             "test %s on device %s, DeviceDirty=%s", testLocator.id(), deviceLocator, deviceDirty);
     logger.atInfo().log("Close %s", target);
-    // Releases device in an async rpc call because it can be invoked when the test runner thread is
-    // interrupted. See b/17142244.
     CloseTestRequest req =
         CloseTestRequest.newBuilder()
             .setJobId(testLocator.jobLocator().id())
@@ -79,9 +76,12 @@ public class JobSyncHelper {
             .setTimestampMsFromLab(Instant.now().toEpochMilli())
             .build();
     try {
-      jobSyncStub.closeTest(req).get();
-    } catch (ExecutionException e) {
-      logger.atWarning().withCause(e).log("Failed to close %s", target);
+      var unused = jobSyncStub.closeTest(req);
+    } catch (RpcExceptionWithErrorId e) {
+      throw new MobileHarnessException(
+          InfraErrorId.LAB_JOB_SYNC_CLOSE_TEST_ERROR,
+          String.format("Failed to close test %s", testLocator.id()),
+          e);
     }
   }
 

@@ -16,7 +16,6 @@
 
 package com.google.devtools.mobileharness.infra.master.rpc.stub;
 
-import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.common.metrics.stability.rpc.RpcExceptionWithErrorId;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.JobSyncServiceProto.AddExtraTestsRequest;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.JobSyncServiceProto.AddExtraTestsResponse;
@@ -72,11 +71,11 @@ public interface JobSyncStub extends AutoCloseable {
   }
 
   /** Closes the test and releases the device. */
-  ListenableFuture<CloseTestResponse> closeTest(CloseTestRequest request);
+  CloseTestResponse closeTest(CloseTestRequest request) throws RpcExceptionWithErrorId;
 
   /** Closes the test and releases the device with the impersonation user. */
-  default ListenableFuture<CloseTestResponse> closeTest(
-      CloseTestRequest request, @Nullable String impersonationUser) {
+  default CloseTestResponse closeTest(CloseTestRequest request, @Nullable String impersonationUser)
+      throws RpcExceptionWithErrorId {
     return closeTest(request);
   }
 
