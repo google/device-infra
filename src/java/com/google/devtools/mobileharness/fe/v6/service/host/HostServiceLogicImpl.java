@@ -20,10 +20,16 @@ import static com.google.common.util.concurrent.Futures.immediateFuture;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.GetHostOverviewHandler;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.CheckRemoteControlEligibilityRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.CheckRemoteControlEligibilityResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.DecommissionMissingDevicesRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.DecommissionMissingDevicesResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostDeviceSummariesRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostDeviceSummariesResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostOverviewRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostOverview;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.RemoteControlDevicesRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.RemoteControlDevicesResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.UpdatePassThroughFlagsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.UpdatePassThroughFlagsResponse;
 import javax.inject.Inject;
@@ -57,5 +63,26 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
       UpdatePassThroughFlagsRequest request) {
     // TODO: Implement this method.
     return immediateFuture(UpdatePassThroughFlagsResponse.getDefaultInstance());
+  }
+
+  @Override
+  public ListenableFuture<DecommissionMissingDevicesResponse> decommissionMissingDevices(
+      DecommissionMissingDevicesRequest request) {
+    // TODO: Implement this method.
+    return immediateFuture(DecommissionMissingDevicesResponse.getDefaultInstance());
+  }
+
+  @Override
+  public ListenableFuture<CheckRemoteControlEligibilityResponse> checkRemoteControlEligibility(
+      CheckRemoteControlEligibilityRequest request) {
+    // TODO: Implement this method.
+    return immediateFuture(CheckRemoteControlEligibilityResponse.getDefaultInstance());
+  }
+
+  @Override
+  public ListenableFuture<RemoteControlDevicesResponse> remoteControlDevices(
+      RemoteControlDevicesRequest request) {
+    // TODO: Implement this method.
+    return immediateFuture(RemoteControlDevicesResponse.getDefaultInstance());
   }
 }

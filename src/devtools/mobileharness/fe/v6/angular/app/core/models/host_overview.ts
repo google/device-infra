@@ -164,6 +164,7 @@ export interface DeviceSummary {
   readonly model: string;
   readonly version: string;
   readonly subDevices?: SubDeviceInfo[];
+  readonly isACIDSupport?: boolean;
 }
 
 /**
@@ -189,4 +190,135 @@ export interface HostOverview {
   readonly properties: {[key: string]: string};
   /** OS of the host machine, e.g., "gLinux", "macOS". */
   readonly os: string;
+}
+
+/**
+ * Types of proxy supported by devices for remote control.
+ */
+export enum DeviceProxyType {
+  NONE = 0,
+  /**
+   * Represents ADB + Video streaming capability, typically provided by ACID.
+   * This type is available if 'AcidRemoteDriver' is listed in device's supportedDrivers.
+   */
+  ADB_AND_VIDEO = 1,
+  ADB_ONLY = 2,
+  USB_IP = 3,
+  SSH = 4,
+  VIDEO = 5,
+}
+
+/**
+ * Reason code for a device being ineligible for remote control.
+ */
+export type IneligibilityReasonCode =
+  | 'PERMISSION_DENIED' // 用户对设备缺乏权限
+  | 'DEVICE_NOT_IDLE' // 设备状态不是IDLE (例如: BUSY, MISSING)
+  | 'DEVICE_TYPE_NOT_SUPPORTED' // 设备类型不支持(例如: FailedDevice, AbnormalTestbedDevice, 或在多选模式下非AndroidRealDevice)
+  | 'HOST_OS_NOT_SUPPORTED' // 主机操作系统是MacOS
+  | 'ACID_NOT_SUPPORTED'; // 设备不支持AcidRemoteDriver
+
+/**
+ * Represents a device that is not eligible for remote control, including the reason.
+ */
+export interface IneligibleDevice {
+  deviceId: string;
+  reasonCode: IneligibilityReasonCode;
+  /**
+   * User-friendly message explaining why it's ineligible,
+   * e.g., "Device is busy", "Permission denied", "Remote control not supported on MacOS hosts",
+   * "Device does not support ACID remote control".
+   */
+  message: string;
+}
+
+/**
+ * Represents a device that is eligible for remote control.
+ */
+export interface EligibleDevice {
+  deviceId: string;
+  /**
+   * All proxy types supported by this device.
+   * If the device is eligible, this list will include at least ADB_AND_VIDEO.
+   */
+  supportedProxyTypes: DeviceProxyType[];
+  /**
+   * All users or groups ('user/ldap', 'mdb/group') who have permission for THIS device.
+   */
+  runAsCandidates: string[];
+}
+
+/**
+ * Options for creating a remote control session, applicable only if
+ * eligibleDevices list is not empty.
+ */
+export interface SessionOptions {
+  /**
+   * List of proxy types supported by ALL devices in the eligibleDevices list.
+   * This list is used to populate the "Connection Type" dropdown in the dialog.
+   * If ADB_AND_VIDEO is required, but not in this list, bulk session may not be possible
+   * depending on UI implementation.
+   */
+  commonProxyTypes: DeviceProxyType[];
+  /**
+   * List of identities (e.g., 'qiupingf', 'mdb/team-group') that have permission
+   * to access ALL devices in the eligibleDevices list.
+   * This list is used to populate the 'Run As' dropdown in the dialog.
+   */
+  commonRunAsCandidates: string[];
+  /**
+   * Maximum allowed session duration in hours.
+   */
+  maxDurationHours: number;
+}
+
+/**
+ * Response structure for checkRemoteControlEligibility API.
+ */
+export interface CheckRemoteControlEligibilityResponse {
+  /** List of devices eligible for remote control based on the validation rules. */
+  eligibleDevices: EligibleDevice[];
+  /** List of devices ineligible for remote control, with reasons. */
+  ineligibleDevices: IneligibleDevice[];
+  /**
+   * Session configuration options. This field is populated only if
+   * eligibleDevices is not empty, meaning at least one device can be controlled.
+   */
+  sessionOptions?: SessionOptions;
+}
+
+/**
+ * Flash options for remote control.
+ */
+export interface FlashOptions {
+  branch: string;
+  buildId: string;
+  target: string;
+}
+
+/**
+ * Configuration for controlling a single device within a batch request.
+ */
+export interface DeviceRemoteControlConfig {
+  deviceId: string;
+  runAs: string;
+}
+
+/**
+ * Request for RemoteControlDevices API for multiple devices.
+ */
+export interface RemoteControlDevicesRequest {
+  deviceConfigs: DeviceRemoteControlConfig[];
+  durationSeconds: number;
+  proxyType: DeviceProxyType;
+  videoResolution?: 'DEFAULT' | 'HIGH' | 'LOW';
+  maxVideoSize?: 'DEFAULT' | '1024';
+  flashOptions?: FlashOptions;
+}
+
+/**
+ * Response for RemoteControlDevices API.
+ */
+export interface RemoteControlDevicesResponse {
+  sessions: Array<{deviceId: string; sessionUrl: string}>;
 }

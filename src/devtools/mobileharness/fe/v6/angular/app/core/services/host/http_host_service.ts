@@ -3,7 +3,13 @@ import {inject, Injectable} from '@angular/core';
 import {Observable} from 'rxjs';
 
 import {APP_DATA, AppData} from '../../models/app_data';
-import {DeviceSummary, HostOverview} from '../../models/host_overview';
+import {
+  CheckRemoteControlEligibilityResponse,
+  DeviceSummary,
+  HostOverview,
+  RemoteControlDevicesRequest,
+  RemoteControlDevicesResponse,
+} from '../../models/host_overview';
 
 import {HostService} from './host_service';
 
@@ -35,5 +41,39 @@ export class HttpHostService extends HostService {
     return this.http.post<void>(`${this.apiUrl}/${hostName}/passThroughFlags`, {
       flags,
     });
+  }
+
+  override decommissionMissingDevices(
+    hostName: string,
+    deviceControlIds: string[],
+  ): Observable<void> {
+    return this.http.post<void>(
+      `${this.apiUrl}/${hostName}/decommissionMissingDevices`,
+      {
+        deviceControlIds,
+      },
+    );
+  }
+
+  override checkRemoteControlEligibility(
+    hostName: string,
+    deviceControlIds: string[],
+  ): Observable<CheckRemoteControlEligibilityResponse> {
+    return this.http.post<CheckRemoteControlEligibilityResponse>(
+      `${this.apiUrl}/${hostName}/checkRemoteControlEligibility`,
+      {
+        deviceControlIds,
+      },
+    );
+  }
+
+  override remoteControlDevices(
+    hostName: string,
+    req: RemoteControlDevicesRequest,
+  ): Observable<RemoteControlDevicesResponse> {
+    return this.http.post<RemoteControlDevicesResponse>(
+      `${this.apiUrl}/${hostName}/remoteControlDevices`,
+      req,
+    );
   }
 }
