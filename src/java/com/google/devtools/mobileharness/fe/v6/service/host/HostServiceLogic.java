@@ -17,6 +17,10 @@
 package com.google.devtools.mobileharness.fe.v6.service.host;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.CheckCommonRemoteControlProxyRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.CheckCommonRemoteControlProxyResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.DecommissionMissingDevicesRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.DecommissionMissingDevicesResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostDeviceSummariesRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostDeviceSummariesResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostOverviewRequest;
@@ -33,4 +37,10 @@ public interface HostServiceLogic {
 
   ListenableFuture<UpdatePassThroughFlagsResponse> updatePassThroughFlags(
       UpdatePassThroughFlagsRequest request);
+
+  ListenableFuture<DecommissionMissingDevicesResponse> decommissionMissingDevices(
+      DecommissionMissingDevicesRequest request);
+
+  ListenableFuture<CheckCommonRemoteControlProxyResponse> checkCommonRemoteControlProxy(
+      CheckCommonRemoteControlProxyRequest request);
 }

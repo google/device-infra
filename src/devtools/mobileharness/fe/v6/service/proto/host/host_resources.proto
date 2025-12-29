@@ -146,4 +146,26 @@ message DeviceSummary {
   string model = 7;
   string version = 8;
   repeated device.SubDeviceInfo sub_devices = 9;
+  bool is_acid_support = 10;
+}
+
+// Types of proxy supported by devices.
+enum DeviceProxyType {
+  DEVICE_PROXY_TYPE_UNSPECIFIED = 0;
+  ADB_AND_VIDEO = 1;
+  ADB_ONLY = 2;
+  USB_IP = 3;
+  SSH = 4;
+  VIDEO = 5;
+}
+
+// Mapping of device IDs to their supported proxy types.
+message DeviceProxyCapabilities {
+  // Key is device_id.
+  map<string, DeviceProxyTypeList> device_capabilities = 1;
+}
+
+// Wrapper for repeated DeviceProxyType, since map values cannot be repeated.
+message DeviceProxyTypeList {
+  repeated DeviceProxyType proxy_types = 1;
 }

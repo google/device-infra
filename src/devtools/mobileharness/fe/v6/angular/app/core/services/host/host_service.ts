@@ -1,7 +1,11 @@
 import {InjectionToken} from '@angular/core';
 import {Observable} from 'rxjs';
 
-import {DeviceSummary, HostOverview} from '../../models/host_overview';
+import {
+  CheckProxyResponse,
+  DeviceSummary,
+  HostOverview,
+} from '../../models/host_overview';
 
 /**
  * Injection token for the HostService.
@@ -31,4 +35,26 @@ export abstract class HostService {
     hostName: string,
     flags: string,
   ): Observable<void>;
+
+  /**
+   * Decommissions missing devices on a specific host.
+   * @param hostName The name of the host.
+   * @param deviceControlIds The list of device control IDs to decommission.
+   * @return An Observable emitting when the operation is complete.
+   */
+  abstract decommissionMissingDevices(
+    hostName: string,
+    deviceControlIds: string[],
+  ): Observable<void>;
+
+  /**
+   * Checks for common remote control proxies for the given devices on the host.
+   * @param hostName The name of the host.
+   * @param deviceControlIds The list of device control IDs to check.
+   * @return An Observable emitting the CheckProxyResponse.
+   */
+  abstract checkCommonRemoteControlProxy(
+    hostName: string,
+    deviceControlIds: string[],
+  ): Observable<CheckProxyResponse>;
 }

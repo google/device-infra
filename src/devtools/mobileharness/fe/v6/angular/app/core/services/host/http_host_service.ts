@@ -3,7 +3,11 @@ import {inject, Injectable} from '@angular/core';
 import {Observable} from 'rxjs';
 
 import {APP_DATA, AppData} from '../../models/app_data';
-import {DeviceSummary, HostOverview} from '../../models/host_overview';
+import {
+  CheckProxyResponse,
+  DeviceSummary,
+  HostOverview,
+} from '../../models/host_overview';
 
 import {HostService} from './host_service';
 
@@ -35,5 +39,29 @@ export class HttpHostService extends HostService {
     return this.http.post<void>(`${this.apiUrl}/${hostName}/passThroughFlags`, {
       flags,
     });
+  }
+
+  override decommissionMissingDevices(
+    hostName: string,
+    deviceControlIds: string[],
+  ): Observable<void> {
+    return this.http.post<void>(
+      `${this.apiUrl}/${hostName}/decommissionMissingDevices`,
+      {
+        deviceControlIds,
+      },
+    );
+  }
+
+  override checkCommonRemoteControlProxy(
+    hostName: string,
+    deviceControlIds: string[],
+  ): Observable<CheckProxyResponse> {
+    return this.http.post<CheckProxyResponse>(
+      `${this.apiUrl}/${hostName}/checkCommonRemoteControlProxy`,
+      {
+        deviceControlIds,
+      },
+    );
   }
 }

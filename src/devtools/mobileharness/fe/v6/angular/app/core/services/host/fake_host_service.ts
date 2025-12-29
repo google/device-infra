@@ -1,6 +1,12 @@
 import {Injectable} from '@angular/core';
 import {Observable, of, throwError} from 'rxjs';
-import {DeviceSummary, HostOverview} from '../../models/host_overview';
+
+import {
+  CheckProxyResponse,
+  DeviceProxyType,
+  DeviceSummary,
+  HostOverview,
+} from '../../models/host_overview';
 import {MOCK_HOST_SCENARIOS} from '../mock_data';
 import {HostService} from './host_service';
 
@@ -63,5 +69,52 @@ export class FakeHostService extends HostService {
           ),
       );
     }
+  }
+
+  override decommissionMissingDevices(
+    hostName: string,
+    deviceControlIds: string[],
+  ): Observable<void> {
+    const scenario = MOCK_HOST_SCENARIOS.find((s) => s.hostName === hostName);
+    if (scenario && scenario.deviceSummaries) {
+      scenario.deviceSummaries = scenario.deviceSummaries.filter(
+        (d) => !deviceControlIds.includes(d.id),
+      );
+      return of(undefined);
+    } else {
+      return throwError(
+        () =>
+          new Error(
+            `Host with '${hostName}' not found or has no devices in mock data.`,
+          ),
+      );
+    }
+  }
+
+  override checkCommonRemoteControlProxy(
+    hostName: string,
+    deviceControlIds: string[],
+  ): Observable<CheckProxyResponse> {
+    if (
+      hostName === 'host-rc-proxy-mismatch.example.com' &&
+      deviceControlIds.length > 1
+    ) {
+      const capabilities: {[deviceId: string]: DeviceProxyType[]} = {};
+      deviceControlIds.forEach((id) => {
+        // Mock mismatch: First device supports ADB, others support nothing (simplification)
+        capabilities[id] =
+          id === deviceControlIds[0]
+            ? [DeviceProxyType.ADB_AND_VIDEO, DeviceProxyType.USB_IP]
+            : [DeviceProxyType.SSH];
+      });
+      return of({
+        commonProxyTypes: [],
+        deviceCapabilities: capabilities,
+      });
+    }
+    return of({
+      commonProxyTypes: [DeviceProxyType.ADB_AND_VIDEO],
+      deviceCapabilities: {}, // Can be empty if common types exist, or populated
+    });
   }
 }
