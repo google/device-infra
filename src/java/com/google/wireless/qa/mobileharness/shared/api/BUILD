@@ -43,9 +43,9 @@ java_library(
     name = "xts_test",
     runtime_deps = [
         ":xts_test_client",
+        ":xts_test_lab_plugin",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:android_jit_emulator_detector",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/dispatcher:android_jit_emulator_dispatcher",
-        "//src/java/com/google/devtools/mobileharness/platform/android/xts/plugin:ats_device_recovery_plugin",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_adb_shell_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_ats_dynamic_config_pusher_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_clean_apps_decorator",
@@ -66,6 +66,18 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/module:xts_tradefed_test_module",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/env:android_device_settings_decorator_env_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/env:android_switch_user_decorator_env_validator",
+    ],
+)
+
+# Lab-side runtime_deps for xTS local test runner built-in plugins.
+java_library(
+    name = "xts_test_lab_plugin",
+    runtime_deps = [
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test/util/atsfileserveruploader:ats_file_server_uploader_plugin",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test/util/xtsdownloader:mcts_dynamic_download_plugin",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/plugin:ats_device_recovery_plugin",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/plugin:non_tradefed_report_generator",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/plugin:xts_device_compatibility_checker",
     ],
 )
 

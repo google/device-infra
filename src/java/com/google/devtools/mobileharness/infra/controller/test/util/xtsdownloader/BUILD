@@ -17,10 +17,6 @@ load("@rules_java//java:defs.bzl", "java_library")
 
 package(
     default_applicable_licenses = ["//:license"],
-    default_visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/controller/test/local:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/controller/test/util/xtsdownloader:__subpackages__",
-    ],
 )
 
 java_library(
@@ -38,6 +34,10 @@ java_library(
     srcs = ["MctsDynamicDownloadPlugin.java"],
     resources = [
         "//src/devtools/mobileharness/infra/controller/test/util/xtsdownloader/configs:config_proto_files",
+    ],
+    visibility = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/controller/test/util/xtsdownloader:__subpackages__",
     ],
     deps = [
         ":xts_dynamic_download_plugin",

@@ -19,8 +19,8 @@ java_library(
     name = "non_tradefed_report_generator",
     srcs = ["NonTradefedReportGenerator.java"],
     visibility = [
-        "//src/java/com/google/devtools/mobileharness:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness:__subpackages__",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/plugin:__subpackages__",
     ],
     deps = [
         ":non_tradefed_report_generator_constants",
@@ -60,8 +60,8 @@ java_library(
     name = "xts_device_compatibility_checker",
     srcs = ["XtsDeviceCompatibilityChecker.java"],
     visibility = [
-        "//src/java/com/google/devtools/mobileharness:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness:__subpackages__",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/plugin:__subpackages__",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",

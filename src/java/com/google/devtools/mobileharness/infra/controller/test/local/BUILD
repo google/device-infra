@@ -60,10 +60,6 @@ java_library(
     name = "local_test_builtin_plugins",
     srcs = ["LocalTestBuiltinPlugins.java"],
     runtime_deps = [
-        "//src/java/com/google/devtools/mobileharness/infra/controller/test/util/atsfileserveruploader:ats_file_server_uploader_plugin",
-        "//src/java/com/google/devtools/mobileharness/infra/controller/test/util/xtsdownloader:mcts_dynamic_download_plugin",
-        "//src/java/com/google/devtools/mobileharness/platform/android/xts/plugin:non_tradefed_report_generator",
-        "//src/java/com/google/devtools/mobileharness/platform/android/xts/plugin:xts_device_compatibility_checker",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",

@@ -17,15 +17,15 @@ load("@rules_java//java:defs.bzl", "java_library")
 
 package(
     default_applicable_licenses = ["//:license"],
-    default_visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/controller/test/local:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/controller/test/util/atsfileserveruploader:__subpackages__",
-    ],
 )
 
 java_library(
     name = "ats_file_server_uploader_plugin",
     srcs = ["AtsFileServerUploaderPlugin.java"],
+    visibility = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/controller/test/util/atsfileserveruploader:__subpackages__",
+    ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/testrunner/plugin:exception",
