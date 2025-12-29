@@ -526,6 +526,12 @@ public interface PropertyName {
        * TestInfo.getGenFileDir) for Android instrumentation test.
        */
       ANDROID_INSTRUMENTATION_LOG_FILENAMES,
+
+      /** The epoch time when the Android instrumentation test execution ends. */
+      ANDROID_INSTRUMENTATION_TEST_END_EPOCH_MS,
+
+      /** The epoch time when the Android instrumentation test execution starts. */
+      ANDROID_INSTRUMENTATION_TEST_START_EPOCH_MS,
     }
 
     /** AndroidFlashstationDecorator property name constants. */

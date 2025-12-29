@@ -17,6 +17,8 @@
 package com.google.wireless.qa.mobileharness.shared.api.driver;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_TEST_END_EPOCH_MS;
+import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_TEST_START_EPOCH_MS;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -65,7 +67,9 @@ import com.google.wireless.qa.mobileharness.shared.model.job.JobSetting;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfoMocker;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestLocator;
+import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -94,6 +98,7 @@ public class AndroidInstrumentationTest {
   @Mock private AndroidInstrumentationUtil androidInstrumentationUtil;
   @Mock private LocalFileUtil fileUtil;
   @Mock private TestMessageUtil testMessageUtil;
+  @Bind @Mock private Clock clock;
   @Bind @Mock private Sleeper sleeper;
   private final TestInfo testInfo = TestInfoMocker.mockTestInfo();
   private final JobInfo jobInfo = spy(testInfo.jobInfo());
@@ -145,9 +150,11 @@ public class AndroidInstrumentationTest {
             fileUtil,
             testMessageUtil,
             androidInstrumentationUtil,
-            installApkStep);
+            installApkStep,
+            clock);
     when(systemSettingManager.getDeviceSdkVersion(device)).thenReturn(DEFAULT_SDK_VERSION);
     when(androidInstrumentationUtil.getTestArgs(any())).thenReturn(ImmutableMap.of());
+    when(clock.instant()).thenReturn(Instant.ofEpochMilli(1L)).thenReturn(Instant.ofEpochMilli(2L));
   }
 
   @Test
@@ -177,6 +184,10 @@ public class AndroidInstrumentationTest {
         .writeToFile(
             PathUtil.join(GEN_FILE_DIR_PATH, DEFAULT_INSTRUMENTATION_LOG_FILE_NAME),
             instrumentationLog);
+    assertThat(testInfo.properties().get(ANDROID_INSTRUMENTATION_TEST_START_EPOCH_MS))
+        .isEqualTo("1");
+    assertThat(testInfo.properties().get(ANDROID_INSTRUMENTATION_TEST_END_EPOCH_MS)).isEqualTo("2");
+
     verify(androidInstrumentationUtil)
         .prepareServicesApks(eq(testInfo), eq(device), eq(DEFAULT_SDK_VERSION), any(), any());
     verify(androidInstrumentationUtil).enableLegacyStorageForApk(DEVICE_ID, TEST_PACKAGE);
