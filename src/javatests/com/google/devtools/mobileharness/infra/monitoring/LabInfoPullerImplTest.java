@@ -158,6 +158,18 @@ public final class LabInfoPullerImplTest {
                               DeviceDimension.newBuilder()
                                   .setName(DEVICE_SUPPORTED_DIMENSION_NAME)
                                   .setValue(DEVICE_SUPPORTED_DIMENSION_VALUE))
+                          .addSupportedDimension(
+                              DeviceDimension.newBuilder().setName("status").setValue("HACKED"))
+                          .addSupportedDimension(
+                              DeviceDimension.newBuilder().setName("owner").setValue("hacker"))
+                          .addSupportedDimension(
+                              DeviceDimension.newBuilder()
+                                  .setName("driver")
+                                  .setValue("hack_driver"))
+                          .addSupportedDimension(
+                              DeviceDimension.newBuilder()
+                                  .setName("device_type")
+                                  .setValue("inexist_device_type"))
                           .addRequiredDimension(
                               DeviceDimension.newBuilder()
                                   .setName(DEVICE_REQUIRED_DIMENSION_NAME)
@@ -257,12 +269,12 @@ public final class LabInfoPullerImplTest {
         .containsExactly(
             MonitoredEntry.newBuilder()
                 .putIdentifier("device_id", DEVICE_ID_1)
-                .addAttribute(Attribute.newBuilder().setName("status").setValue("BUSY"))
-                .addAttribute(Attribute.newBuilder().setName("device_type").setValue(DEVICE_TYPE_1))
-                .addAttribute(Attribute.newBuilder().setName("driver").setValue(DEVICE_DRIVER_1))
                 .addAttribute(
                     Attribute.newBuilder().setName("decorator").setValue(DEVICE_DECORATOR_1))
+                .addAttribute(Attribute.newBuilder().setName("device_type").setValue(DEVICE_TYPE_1))
+                .addAttribute(Attribute.newBuilder().setName("driver").setValue(DEVICE_DRIVER_1))
                 .addAttribute(Attribute.newBuilder().setName("owner").setValue(DEVICE_OWNER_1))
+                .addAttribute(Attribute.newBuilder().setName("status").setValue("BUSY"))
                 .addAttribute(
                     Attribute.newBuilder().setName("version").setValue(DEVICE_SDK_VERSION_1))
                 .addAttribute(Attribute.newBuilder().setName("model").setValue(DEVICE_MODEL_1))
@@ -287,12 +299,12 @@ public final class LabInfoPullerImplTest {
                 .build(),
             MonitoredEntry.newBuilder()
                 .putIdentifier("device_id", DEVICE_ID_2)
-                .addAttribute(Attribute.newBuilder().setName("status").setValue("IDLE"))
-                .addAttribute(Attribute.newBuilder().setName("device_type").setValue(DEVICE_TYPE_2))
-                .addAttribute(Attribute.newBuilder().setName("driver").setValue(DEVICE_DRIVER_2))
                 .addAttribute(
                     Attribute.newBuilder().setName("decorator").setValue(DEVICE_DECORATOR_2))
+                .addAttribute(Attribute.newBuilder().setName("device_type").setValue(DEVICE_TYPE_2))
+                .addAttribute(Attribute.newBuilder().setName("driver").setValue(DEVICE_DRIVER_2))
                 .addAttribute(Attribute.newBuilder().setName("owner").setValue(DEVICE_OWNER_2))
+                .addAttribute(Attribute.newBuilder().setName("status").setValue("IDLE"))
                 .addAttribute(
                     Attribute.newBuilder().setName("version").setValue(DEVICE_SOFTWARE_VERSION_2))
                 .addAttribute(Attribute.newBuilder().setName("model").setValue(DEVICE_MODEL_2))

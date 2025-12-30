@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.infra.monitoring;
 
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
@@ -42,6 +43,11 @@ import java.util.stream.Stream;
 
 /** Pulls lab info from LabInfoProvider. */
 public final class LabInfoPullerImpl implements DataPuller<MonitoredRecord> {
+
+  // TODO: This is a temp solution. Reserved dimension keys should be supported at device config
+  // service.
+  private static final ImmutableSet<String> RESERVED_DIMENSION_NAMES =
+      ImmutableSet.of("decorator", "device_type", "driver", "owner", "status");
 
   private final LabInfoProvider labInfoProvider;
 
@@ -97,11 +103,11 @@ public final class LabInfoPullerImpl implements DataPuller<MonitoredRecord> {
             MonitoredEntry.newBuilder()
                 .putIdentifier("device_id", deviceInfo.getDeviceLocator().getId());
 
-        addAttribute(deviceEntry, "status", Optional.of(deviceInfo.getDeviceStatus().toString()));
+        addAttribute(deviceEntry, "decorator", deviceInfo.getDeviceFeature().getDecoratorList());
         addAttribute(deviceEntry, "device_type", deviceInfo.getDeviceFeature().getTypeList());
         addAttribute(deviceEntry, "driver", deviceInfo.getDeviceFeature().getDriverList());
-        addAttribute(deviceEntry, "decorator", deviceInfo.getDeviceFeature().getDecoratorList());
         addAttribute(deviceEntry, "owner", deviceInfo.getDeviceFeature().getOwnerList());
+        addAttribute(deviceEntry, "status", Optional.of(deviceInfo.getDeviceStatus().toString()));
         addAttribute(
             deviceEntry,
             "version",
@@ -112,9 +118,12 @@ public final class LabInfoPullerImpl implements DataPuller<MonitoredRecord> {
                         dimensionList, Ascii.toLowerCase(Dimension.Name.SOFTWARE_VERSION.name())))
                 .flatMap(Optional::stream)
                 .findFirst());
-        dimensionList.forEach(
-            dimension ->
-                addAttribute(deviceEntry, dimension.getName(), Optional.of(dimension.getValue())));
+        dimensionList.stream()
+            .filter(dimension -> !RESERVED_DIMENSION_NAMES.contains(dimension.getName()))
+            .forEach(
+                dimension ->
+                    addAttribute(
+                        deviceEntry, dimension.getName(), Optional.of(dimension.getValue())));
         deviceProperties
             .getPropertyList()
             .forEach(
