@@ -112,7 +112,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Predicate;
-import java.util.stream.Stream;
 import javax.annotation.Nullable;
 
 /** For executing a single test allocated by calling remote lab. */
@@ -667,12 +666,18 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
 
   /** Returns whether the file should be resolved in the client. */
   private static boolean resolveInClient(String filePath, Params jobParams) {
-    if (Flags.instance().enableClientFileTransfer.getNonNull()) {
-      return Stream.of(RemoteFileType.ATS_FILE_SERVER.prefix()).noneMatch(filePath::startsWith)
-          && !cachePersistentFileInLab(filePath, jobParams);
-    } else {
+    if (!Flags.instance().enableClientFileTransfer.getNonNull()) {
       return false;
     }
+
+    if (filePath.startsWith(RemoteFileType.ATS_FILE_SERVER.prefix())) {
+      return false;
+    }
+
+    if (cachePersistentFileInLab(filePath, jobParams)) {
+      return false;
+    }
+    return true;
   }
 
   private static ResolveFileItem createResolveFileItem(
