@@ -20,6 +20,8 @@ import static com.google.common.util.concurrent.Futures.immediateFuture;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.GetHostOverviewHandler;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.DecommissionMissingDevicesRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.DecommissionMissingDevicesResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostDeviceSummariesRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostDeviceSummariesResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostOverviewRequest;
@@ -57,5 +59,12 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
       UpdatePassThroughFlagsRequest request) {
     // TODO: Implement this method.
     return immediateFuture(UpdatePassThroughFlagsResponse.getDefaultInstance());
+  }
+
+  @Override
+  public ListenableFuture<DecommissionMissingDevicesResponse> decommissionMissingDevices(
+      DecommissionMissingDevicesRequest request) {
+    // TODO: Implement this method.
+    return immediateFuture(DecommissionMissingDevicesResponse.getDefaultInstance());
   }
 }
