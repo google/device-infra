@@ -162,7 +162,11 @@ java_library(
     srcs = ["AndroidNetworkActivityLoggingJobValidator.java"],
     deps = [
         ":job_validator",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/platform/android/shared:application_ids",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:android_network_activity_logging_decorator_spec_java_proto",
         "@maven//:com_google_guava_guava",
     ],
 )
