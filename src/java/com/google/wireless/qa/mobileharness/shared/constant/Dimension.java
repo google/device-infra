@@ -253,6 +253,8 @@ public final class Dimension {
     HARDWARE,
     /** The hardware UFS of the device. */
     HARDWARE_UFS,
+    /** The display panel vendor of the device. */
+    DISPLAY_PANEL_VENDOR,
     /**
      * The internal storage status of the device. The common value is OK. If free space is less than
      * {@link com.google.devtools.mobileharness.shared.util.flags.Flags#internalStorageAlertMb},

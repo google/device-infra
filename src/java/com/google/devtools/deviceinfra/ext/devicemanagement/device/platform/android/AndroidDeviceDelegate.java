@@ -165,7 +165,7 @@ public abstract class AndroidDeviceDelegate {
     checkLocaleLanguageDimensions();
 
     // Adds system spec dimensions.
-    updateSystemSpecDimensions();
+    updateSystemSpecDimensions(isRooted);
 
     // Adds drivers/decorators only after the properties are read. Because the validators of the
     // drivers/decorators may depend on those properties.
@@ -193,10 +193,15 @@ public abstract class AndroidDeviceDelegate {
   }
 
   @VisibleForTesting
-  void updateSystemSpecDimensions() {
+  void updateSystemSpecDimensions(boolean isRooted) throws InterruptedException {
     androidSystemSpecUtil
         .getKernelReleaseNumber(deviceId)
         .ifPresent(this::updateKernelReleaseDimensions);
+    if (isRooted) {
+      androidSystemSpecUtil
+          .getDisplayPanelVendor(deviceId)
+          .ifPresent(vendor -> device.updateDimension(Dimension.Name.DISPLAY_PANEL_VENDOR, vendor));
+    }
   }
 
   private void updateKernelReleaseDimensions(String kernelReleaseNumber) {
