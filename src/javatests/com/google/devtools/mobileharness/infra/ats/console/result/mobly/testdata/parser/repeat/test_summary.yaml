@@ -1,0 +1,103 @@
+---
+Requested Tests:
+- test_hello_world1_1
+Type: TestNameList
+---
+Type: Record
+Begin Time: 1663584277766
+End Time: 1663584280787
+Test Class: HelloWorldTestRepeat
+Test Name: test_hello_world1_1_1
+Result: FAIL
+Signature: test_hello_world1_1_1-1663584277766
+Stacktrace: "failure stacktrace"
+Details: "failure details"
+Parent: null
+---
+Type: Record
+Begin Time: 1663584280794
+End Time: 1663584283819
+Test Name: test_hello_world1_1_2
+Result: PASS
+Signature: test_hello_world1_1_2-1663584280794
+Test Class: HelloWorldTestRepeat
+Parent:
+    parent: test_hello_world1_1_1-1663584277766
+    type: REPEAT
+---
+Type: Record
+Begin Time: 1663584283820
+End Time: 1663584284820
+Test Class: HelloWorldTestRepeat
+Test Name: teardown_class
+Result: ERROR
+Signature: teardown_class-1663584283820
+Stacktrace: "teardown stacktrace"
+Details: "teardown details"
+---
+Requested Tests:
+- test_hello_world2_1
+Type: TestNameList
+---
+Type: Record
+Begin Time: 1663584277766
+End Time: 1663584280787
+Test Class: HelloWorldTestRepeatAllPass
+Test Name: test_hello_world2_1_1
+Result: PASS
+Signature: test_hello_world2_1_1-1663584277766
+---
+Type: Record
+Begin Time: 1663584280794
+End Time: 1663584283819
+Test Class: HelloWorldTestRepeatAllPass
+Test Name: test_hello_world2_1_2
+Result: PASS
+Signature: test_hello_world2_1_2-1663584280794
+Parent:
+    parent: test_hello_world2_1_1-1663584277766
+    type: REPEAT
+---
+Type: Record
+Begin Time: 1663584283820
+End Time: 1663584284821
+Test Class: HelloWorldTestRepeatAllPass
+Test Name: test_hello_world2_1_3
+Result: PASS
+Signature: test_hello_world2_1_3-1663584283820
+Parent:
+    parent: test_hello_world2_1_2-1663584280794
+    type: REPEAT
+---
+Requested Tests:
+- test_hello_world3_1
+Type: TestNameList
+---
+Type: Record
+Begin Time: 1663584277766
+End Time: 1663584280787
+Test Class: HelloWorldTestRepeatFailNoTeardown
+Test Name: test_hello_world3_1_1
+Result: PASS
+Signature: test_hello_world3_1_1-1663584277766
+---
+Type: Record
+Begin Time: 1663584280794
+End Time: 1663584283819
+Test Class: HelloWorldTestRepeatFailNoTeardown
+Test Name: test_hello_world3_1_2
+Result: FAIL
+Signature: test_hello_world3_1_2-1663584280794
+Stacktrace: "failure stacktrace"
+Details: "failure details"
+Parent:
+    parent: test_hello_world3_1_1-1663584277766
+    type: REPEAT
+---
+Type: Summary
+Requested: 3
+Executed: 7
+Passed: 5
+Failed: 2
+Error: 1
+Skipped: 0

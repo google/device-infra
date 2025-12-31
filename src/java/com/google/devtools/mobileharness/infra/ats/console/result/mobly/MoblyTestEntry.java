@@ -62,12 +62,12 @@ public abstract class MoblyTestEntry implements MoblyYamlDocEntry {
   public abstract Optional<String> getExtras();
 
   /**
-   * The signature of the previous iteration of this retry.
+   * The signature of the previous iteration and the type of this retry.
    *
    * <p>Only set for retry iterations. Parsers can use this field to construct the chain of
    * execution for each retried test.
    */
-  public abstract Optional<String> getRetryParent();
+  public abstract Optional<Parent> getParent();
 
   public abstract Optional<String> getUid();
 
@@ -83,6 +83,8 @@ public abstract class MoblyTestEntry implements MoblyYamlDocEntry {
   public static Builder builder() {
     return new AutoValue_MoblyTestEntry.Builder();
   }
+
+  public abstract Builder toBuilder();
 
   /** MoblyTestEntry Builder class. */
   @AutoValue.Builder
@@ -103,7 +105,7 @@ public abstract class MoblyTestEntry implements MoblyYamlDocEntry {
 
     public abstract Builder setStacktrace(String value);
 
-    public abstract Builder setRetryParent(String value);
+    public abstract Builder setParent(Parent value);
 
     public abstract Builder setExtras(String value);
 
@@ -120,6 +122,24 @@ public abstract class MoblyTestEntry implements MoblyYamlDocEntry {
     }
 
     public abstract MoblyTestEntry build();
+  }
+
+  /** Type of parent for a retried/repeated test case. */
+  public enum TestParentType {
+    RETRY,
+    REPEAT;
+  }
+
+  /** Parent of a retried/repeated test case. */
+  @AutoValue
+  public abstract static class Parent {
+    public abstract String getParentSignature();
+
+    public abstract TestParentType getType();
+
+    public static Parent create(String parentSignature, TestParentType type) {
+      return new AutoValue_MoblyTestEntry_Parent(parentSignature, type);
+    }
   }
 
   /** A container class for the extra errors produced from a Mobly test run. */

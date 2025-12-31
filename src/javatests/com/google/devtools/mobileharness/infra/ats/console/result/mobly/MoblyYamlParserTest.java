@@ -44,6 +44,12 @@ public final class MoblyYamlParserTest {
       TestRunfilesUtil.getRunfilesLocation(
           "result/mobly/testdata/parser/setup_class_error/test_summary.yaml");
 
+  private static final String GEN_FILE_DIR_RETRY =
+      TestRunfilesUtil.getRunfilesLocation("result/mobly/testdata/parser/retry/test_summary.yaml");
+
+  private static final String GEN_FILE_DIR_REPEAT =
+      TestRunfilesUtil.getRunfilesLocation("result/mobly/testdata/parser/repeat/test_summary.yaml");
+
   private MoblyYamlParser parser;
 
   @Before
@@ -220,6 +226,102 @@ public final class MoblyYamlParserTest {
                 .setSkipped(1)
                 .setPassed(0)
                 .setError(2)
+                .build());
+  }
+
+  @Test
+  public void parseRetryTest() throws Exception {
+    ImmutableList<MoblyYamlDocEntry> results = parser.parse(GEN_FILE_DIR_RETRY);
+
+    assertThat(results).hasSize(2);
+
+    assertThat(results.get(0)).isInstanceOf(MoblyTestEntry.class);
+    MoblyTestEntry entry = (MoblyTestEntry) results.get(0);
+    assertThat(entry.getBeginTime()).hasValue(1663584277766L);
+    assertThat(entry.getEndTime()).hasValue(1663584283819L);
+    assertThat(entry.getResult()).isEqualTo(MoblyResult.PASS);
+    assertThat(entry.getTestClass()).isEqualTo("HelloWorldTest1");
+    assertThat(entry.getTestName()).isEqualTo("test_hello_world1_1");
+
+    assertThat(results.get(1)).isInstanceOf(MoblySummaryEntry.class);
+    MoblySummaryEntry summaryEntry = (MoblySummaryEntry) results.get(1);
+    assertThat(summaryEntry)
+        .isEqualTo(
+            MoblySummaryEntry.builder()
+                .setRequested(1)
+                .setExecuted(2)
+                .setPassed(1)
+                .setFailed(0)
+                .setError(0)
+                .setSkipped(0)
+                .build());
+  }
+
+  @Test
+  public void parseRepeatTest() throws Exception {
+    ImmutableList<MoblyYamlDocEntry> results = parser.parse(GEN_FILE_DIR_REPEAT);
+
+    assertThat(results).hasSize(4);
+
+    assertThat(results.get(0)).isInstanceOf(MoblyTestEntry.class);
+    MoblyTestEntry entry1 = (MoblyTestEntry) results.get(0);
+    assertThat(entry1.getTestClass()).isEqualTo("HelloWorldTestRepeat");
+    assertThat(entry1.getTestName()).isEqualTo("test_hello_world1_1");
+    assertThat(entry1.getResult()).isEqualTo(MoblyResult.ERROR);
+    assertThat(entry1.getBeginTime()).hasValue(1663584277766L);
+    assertThat(entry1.getEndTime()).hasValue(1663584284820L);
+    assertThat(entry1.getDetails())
+        .hasValue(
+            """
+            teardown details
+
+            ----------------------------------------------
+
+            Last failure: failure details
+
+            Refer to the test_summary.yaml for all attempts.\
+            """);
+    assertThat(entry1.getStacktrace())
+        .hasValue(
+            """
+            teardown stacktrace
+
+            ----------------------------------------------
+
+            Last failure:
+
+            failure stacktrace
+
+            Refer to the test_summary.yaml for all attempts.\
+            """);
+
+    assertThat(results.get(1)).isInstanceOf(MoblyTestEntry.class);
+    MoblyTestEntry entry2 = (MoblyTestEntry) results.get(1);
+    assertThat(entry2.getTestClass()).isEqualTo("HelloWorldTestRepeatAllPass");
+    assertThat(entry2.getTestName()).isEqualTo("test_hello_world2_1");
+    assertThat(entry2.getResult()).isEqualTo(MoblyResult.PASS);
+    assertThat(entry2.getBeginTime()).hasValue(1663584277766L);
+    assertThat(entry2.getEndTime()).hasValue(1663584284821L);
+
+    assertThat(results.get(2)).isInstanceOf(MoblyTestEntry.class);
+    MoblyTestEntry entry3 = (MoblyTestEntry) results.get(2);
+    assertThat(entry3.getTestClass()).isEqualTo("HelloWorldTestRepeatFailNoTeardown");
+    assertThat(entry3.getTestName()).isEqualTo("test_hello_world3_1");
+    assertThat(entry3.getResult()).isEqualTo(MoblyResult.PASS);
+    assertThat(entry3.getBeginTime()).hasValue(1663584277766L);
+    assertThat(entry3.getEndTime()).hasValue(1663584283819L);
+
+    assertThat(results.get(3)).isInstanceOf(MoblySummaryEntry.class);
+    MoblySummaryEntry summaryEntry = (MoblySummaryEntry) results.get(3);
+    assertThat(summaryEntry)
+        .isEqualTo(
+            MoblySummaryEntry.builder()
+                .setRequested(3)
+                .setExecuted(7)
+                .setPassed(2)
+                .setFailed(0)
+                .setError(1)
+                .setSkipped(0)
                 .build());
   }
 }

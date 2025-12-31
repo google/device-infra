@@ -384,7 +384,8 @@ public final class MoblyTestInfoMapHelperTest {
             .setResult(MoblyResult.FAIL)
             .setTestClass("TestClass")
             .setSignature(TEST_SIGNATURE)
-            .setRetryParent(RETRY_PARENT)
+            .setParent(
+                MoblyTestEntry.Parent.create(RETRY_PARENT, MoblyTestEntry.TestParentType.RETRY))
             .build();
 
     mapper.map(testInfo, entry);

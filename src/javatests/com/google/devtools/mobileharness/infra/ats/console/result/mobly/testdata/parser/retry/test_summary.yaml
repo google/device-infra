@@ -1,0 +1,33 @@
+---
+Requested Tests:
+- test_hello_world1_1
+Type: TestNameList
+---
+Type: Record
+Begin Time: 1663584277766
+End Time: 1663584280787
+Test Class: HelloWorldTest1
+Test Name: test_hello_world1_1_1
+Result: FAIL
+Signature: test_hello_world1_1_1-1663584277766
+Stacktrace: "some stacktrace"
+Details: "some details"
+---
+Type: Record
+Begin Time: 1663584280794
+End Time: 1663584283819
+Test Class: HelloWorldTest1
+Test Name: test_hello_world1_1_2
+Result: PASS
+Signature: test_hello_world1_1_2-1663584280794
+Parent:
+    parent: test_hello_world1_1_1-1663584277766
+    type: RETRY
+---
+Type: Summary
+Requested: 1
+Executed: 2
+Passed: 1
+Failed: 1
+Error: 0
+Skipped: 0

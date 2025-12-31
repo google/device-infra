@@ -377,11 +377,12 @@ public class MoblyTestInfoMapHelper {
               MoblyConstant.TestProperty.MOBLY_END_TIME_KEY,
               Long.toString(moblyEntry.getEndTime().get()));
     }
-    if (moblyEntry.getRetryParent().isPresent()) {
+    if (moblyEntry.getParent().isPresent()) {
       testInfo
           .properties()
           .add(
-              MoblyConstant.TestProperty.MOBLY_RETRY_PARENT_KEY, moblyEntry.getRetryParent().get());
+              MoblyConstant.TestProperty.MOBLY_RETRY_PARENT_KEY,
+              moblyEntry.getParent().get().getParentSignature());
     }
     if (moblyEntry.getSignature().isPresent()) {
       testInfo

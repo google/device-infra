@@ -16,6 +16,9 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.result.mobly;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
+import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
@@ -25,8 +28,11 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Nullable;
 import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.SafeConstructor;
@@ -57,7 +63,7 @@ public class MoblyYamlParser {
   private static final String RESULT_UID = "UID";
   private static final String RESULT_DETAILS = "Details";
   private static final String RESULT_EXTRAS = "Extras";
-  private static final String RESULT_RETRY_PARENT = "Retry Parent";
+  private static final String RESULT_PARENT = "Parent";
   private static final String RESULT_TERMINATION_SIGNAL_TYPE = "Termination Signal Type";
 
   // Key constants found within the body of "Extra Errors".
@@ -77,8 +83,6 @@ public class MoblyYamlParser {
 
   private static final String SUMMARY_REQUESTED = "Requested";
   private static final String SUMMARY_EXECUTED = "Executed";
-  private static final String SUMMARY_PASSED = "Passed";
-  private static final String SUMMARY_FAILED = "Failed";
 
   // Special names for Mobly test stages, reported in the same way as a test case record
   private static final String STAGE_SETUP_CLASS = "setup_class";
@@ -110,19 +114,25 @@ public class MoblyYamlParser {
 
     String currentTestClass = null;
     boolean hasSetupClassError = false;
-    int errorTestCount = 0;
-    int skippedTestCount = 0;
+    List<MoblyTestEntry> rootTestEntries = new ArrayList<>();
+    Map<String, MoblyTestEntry> parentSignatureToChild = new HashMap<>();
+    MoblyTestEntry teardownClassEntry = null;
 
     // Parse all yaml documents
     for (Object document : yamlDocuments) {
       @SuppressWarnings("unchecked") // snakeyaml only supports this return value atm
       Map<String, Object> documentMap = (Map<String, Object>) document;
       switch (String.valueOf(documentMap.get(RESULT_TYPE))) {
-        case RESULT_TYPE_RECORD:
-          // Reset hasSetupClassError upon encountering a new test class.
+        case RESULT_TYPE_RECORD -> {
           String newTestClass = String.valueOf(documentMap.get(RESULT_TESTCLASS));
           if (!newTestClass.equals(currentTestClass)) {
+            // Merge and add results for the previous test class.
+            results.addAll(
+                mergeAndResetTestEntries(
+                    parentSignatureToChild, rootTestEntries, teardownClassEntry));
+            // Reset hasSetupClassError and teardownClassEntry upon encountering a new test class.
             hasSetupClassError = false;
+            teardownClassEntry = null;
             currentTestClass = newTestClass;
           }
           String testName = String.valueOf(documentMap.get(RESULT_TESTNAME));
@@ -131,31 +141,39 @@ public class MoblyYamlParser {
             hasSetupClassError = true;
             continue;
           }
-          if (testName.equals(STAGE_TEARDOWN_CLASS) || testName.equals(STAGE_CLEAN_UP)) {
+          if (testName.equals(STAGE_CLEAN_UP)) {
+            continue;
+          }
+          if (testName.equals(STAGE_TEARDOWN_CLASS)) {
+            teardownClassEntry = parseRecord(documentMap, /* hasSetupClassError= */ false);
             continue;
           }
           MoblyTestEntry testEntry = parseRecord(documentMap, hasSetupClassError);
-          // Count the number of error and skipped tests since the result may be overridden.
-          if (testEntry.getResult() == MoblyResult.ERROR) {
-            errorTestCount++;
-          } else if (testEntry.getResult() == MoblyResult.SKIP) {
-            skippedTestCount++;
+          if (testEntry.getParent().isPresent()) {
+            parentSignatureToChild.put(testEntry.getParent().get().getParentSignature(), testEntry);
+          } else {
+            rootTestEntries.add(testEntry);
           }
-          results.add(testEntry);
-          break;
-        case RESULT_TYPE_CONTROLLERINFO:
-          results.add(parseControllerInfo(documentMap));
-          break;
-        case RESULT_TYPE_USERDATA:
-          results.add(parseUserData(documentMap));
-          break;
-        case RESULT_TYPE_SUMMARY:
-          results.add(parseSummary(documentMap, errorTestCount, skippedTestCount));
-          break;
-        case RESULT_TYPE_TESTNAMELIST:
+        }
+        case RESULT_TYPE_CONTROLLERINFO -> results.add(parseControllerInfo(documentMap));
+        case RESULT_TYPE_USERDATA -> results.add(parseUserData(documentMap));
+        case RESULT_TYPE_SUMMARY -> {
+          // Merge and add results for the final test class before parsing the summary.
+          results.addAll(
+              mergeAndResetTestEntries(
+                  parentSignatureToChild, rootTestEntries, teardownClassEntry));
+          results.add(
+              parseSummary(
+                  documentMap,
+                  results.build().stream()
+                      .filter(entry -> entry instanceof MoblyTestEntry)
+                      .map(entry -> (MoblyTestEntry) entry)
+                      .collect(toImmutableList())));
+        }
+        case RESULT_TYPE_TESTNAMELIST -> {
           // Do nothing. We don't care about this for now
-          break;
-        default:
+        }
+        default -> {
           StringBuilder errStrBuilder = new StringBuilder();
           if (documentMap.get(RESULT_TYPE) == null) {
             errStrBuilder.append("Yaml document is missing Type value!");
@@ -166,11 +184,98 @@ public class MoblyYamlParser {
           errStrBuilder.append(" Document content: ");
           errStrBuilder.append(documentMap);
           logger.atWarning().log("%s", errStrBuilder);
-          break;
+        }
       }
     }
 
     return results.build();
+  }
+
+  private ImmutableList<MoblyTestEntry> mergeAndResetTestEntries(
+      Map<String, MoblyTestEntry> parentSignatureToChild,
+      List<MoblyTestEntry> rootTestEntries,
+      @Nullable MoblyTestEntry teardownClassEntry) {
+    ImmutableList.Builder<MoblyTestEntry> mergedTestEntriesBuilder = ImmutableList.builder();
+    for (MoblyTestEntry rootTestEntry : rootTestEntries) {
+      if (rootTestEntry.getSignature().isEmpty()
+          || !parentSignatureToChild.containsKey(rootTestEntry.getSignature().get())) {
+        mergedTestEntriesBuilder.add(rootTestEntry);
+        continue;
+      }
+      MoblyTestEntry child = parentSignatureToChild.get(rootTestEntry.getSignature().get());
+      if (child.getParent().get().getType() == MoblyTestEntry.TestParentType.RETRY) {
+        // rootTestEntry is retried. Follow chain to last retry and add that one.
+        while (parentSignatureToChild.containsKey(child.getSignature().get())) {
+          child = parentSignatureToChild.get(child.getSignature().get());
+        }
+        MoblyTestEntry mergedTestEntry =
+            child.toBuilder()
+                .setTestName(getOriginalTestName(child.getTestName()))
+                .setBeginTime(rootTestEntry.getBeginTime().get())
+                .build();
+        mergedTestEntriesBuilder.add(mergedTestEntry);
+      } else if (child.getParent().get().getType() == MoblyTestEntry.TestParentType.REPEAT) {
+        // rootTestEntry is repeated. Use the teardown_class result as the result.
+        MoblyTestEntry lastFailure =
+            isFailure(child.getResult())
+                ? child
+                : (isFailure(rootTestEntry.getResult()) ? rootTestEntry : null);
+        while (parentSignatureToChild.containsKey(child.getSignature().get())) {
+          child = parentSignatureToChild.get(child.getSignature().get());
+          if (isFailure(child.getResult())) {
+            lastFailure = child;
+          }
+        }
+        if (teardownClassEntry != null) {
+          MoblyTestEntry.Builder mergedTestEntry =
+              teardownClassEntry.toBuilder()
+                  .setTestName(getOriginalTestName(child.getTestName()))
+                  .setBeginTime(rootTestEntry.getBeginTime().get());
+          if (lastFailure != null) {
+            mergedTestEntry
+                .setDetails(
+                    String.format(
+                        """
+                        %s
+
+                        ----------------------------------------------
+
+                        Last failure: %s
+
+                        Refer to the test_summary.yaml for all attempts.\
+                        """,
+                        teardownClassEntry.getDetails().get(), lastFailure.getDetails().get()))
+                .setStacktrace(
+                    String.format(
+                        """
+                        %s
+
+                        ----------------------------------------------
+
+                        Last failure:
+
+                        %s
+
+                        Refer to the test_summary.yaml for all attempts.\
+                        """,
+                        teardownClassEntry.getStacktrace().get(),
+                        lastFailure.getStacktrace().get()));
+          }
+          mergedTestEntriesBuilder.add(mergedTestEntry.build());
+        } else {
+          // If teardown_class is not found, set the result to PASS.
+          mergedTestEntriesBuilder.add(
+              child.toBuilder()
+                  .setBeginTime(rootTestEntry.getBeginTime().get())
+                  .setResult(MoblyResult.PASS)
+                  .setTestName(getOriginalTestName(child.getTestName()))
+                  .build());
+        }
+      }
+    }
+    rootTestEntries.clear();
+    parentSignatureToChild.clear();
+    return mergedTestEntriesBuilder.build();
   }
 
   /**
@@ -201,8 +306,14 @@ public class MoblyYamlParser {
     if (record.get(RESULT_UID) != null) {
       builder.setUid(String.valueOf(record.get(RESULT_UID)));
     }
-    if (record.get(RESULT_RETRY_PARENT) != null) {
-      builder.setRetryParent(String.valueOf(record.get(RESULT_RETRY_PARENT)));
+    if (record.get(RESULT_PARENT) != null) {
+      @SuppressWarnings("unchecked") // snakeyaml only supports this return value atm
+      Map<String, Object> parentMap = (Map<String, Object>) record.get(RESULT_PARENT);
+      builder.setParent(
+          MoblyTestEntry.Parent.create(
+              String.valueOf(parentMap.get("parent")),
+              MoblyTestEntry.TestParentType.valueOf(
+                  Ascii.toUpperCase(String.valueOf(parentMap.get("type"))))));
     }
     if (record.get(RESULT_SIGNATURE) != null) {
       builder.setSignature(String.valueOf(record.get(RESULT_SIGNATURE)));
@@ -244,27 +355,20 @@ public class MoblyYamlParser {
     String testName = String.valueOf(record.get(RESULT_TESTNAME));
     String result = String.valueOf(record.get(RESULT_RESULT));
     switch (result) {
-      case RESULT_PASS:
-        builder.setResult(MoblyResult.PASS);
-        break;
-      case RESULT_FAIL:
-        builder.setResult(MoblyResult.FAIL);
-        break;
-      case RESULT_ERROR:
-        builder.setResult(MoblyResult.ERROR);
-        break;
-      case RESULT_SKIP:
-        builder.setResult(MoblyResult.SKIP);
-        break;
-      case RESULT_NULL:
+      case RESULT_PASS -> builder.setResult(MoblyResult.PASS);
+      case RESULT_FAIL -> builder.setResult(MoblyResult.FAIL);
+      case RESULT_ERROR -> builder.setResult(MoblyResult.ERROR);
+      case RESULT_SKIP -> builder.setResult(MoblyResult.SKIP);
+      case RESULT_NULL -> {
         // When a user manually interrupts a test, Mobly sets test result as null.
         builder.setResult(MoblyResult.NULL);
         builder.setDetails("Test was interrupted manually.");
-        break;
-      default:
+      }
+      default -> {
         logger.atSevere().log("Unrecognized result for test %s", testName);
         throw new MobileHarnessException(
             ExtErrorId.MOBLY_OUTPUT_PARSING_ERROR, "Unrecognized result: " + result);
+      }
     }
   }
 
@@ -357,13 +461,26 @@ public class MoblyYamlParser {
   }
 
   private MoblySummaryEntry parseSummary(
-      Map<String, Object> record, int errorTestCount, int skippedTestCount) {
+      Map<String, Object> record, List<MoblyTestEntry> testEntries) {
     try {
+      int passedTestCount = 0;
+      int failedTestCount = 0;
+      int errorTestCount = 0;
+      int skippedTestCount = 0;
+      for (MoblyTestEntry testEntry : testEntries) {
+        switch (testEntry.getResult()) {
+          case PASS -> passedTestCount++;
+          case FAIL -> failedTestCount++;
+          case ERROR -> errorTestCount++;
+          case SKIP -> skippedTestCount++;
+          default -> {}
+        }
+      }
       return MoblySummaryEntry.builder()
           .setRequested(Integer.parseInt(String.valueOf(record.get(SUMMARY_REQUESTED))))
           .setExecuted(Integer.parseInt(String.valueOf(record.get(SUMMARY_EXECUTED))))
-          .setPassed(Integer.parseInt(String.valueOf(record.get(SUMMARY_PASSED))))
-          .setFailed(Integer.parseInt(String.valueOf(record.get(SUMMARY_FAILED))))
+          .setPassed(passedTestCount)
+          .setFailed(failedTestCount)
           .setError(errorTestCount)
           .setSkipped(skippedTestCount)
           .build();
@@ -371,5 +488,17 @@ public class MoblyYamlParser {
       logger.atSevere().withCause(e).log("Failed to parse summary stats: %s", e.getMessage());
       return MoblySummaryEntry.builder().build();
     }
+  }
+
+  private String getOriginalTestName(String testName) {
+    int lastIndexOf = testName.lastIndexOf("_");
+    if (lastIndexOf != -1) {
+      return testName.substring(0, lastIndexOf);
+    }
+    return testName;
+  }
+
+  private boolean isFailure(MoblyResult result) {
+    return result == MoblyResult.FAIL || result == MoblyResult.ERROR;
   }
 }
