@@ -99,7 +99,6 @@ public class ThreadPoolTestRunnerLauncher<T extends TestRunner> extends TestRunn
     @Override
     public void run() {
       String testId = getTestRunner().getTestExecutionUnit().locator().id();
-      String jobId = getTestRunner().getTestExecutionUnit().job().locator().id();
       TestExecutionResult result =
           TestExecutionResult.create(TestResult.UNKNOWN, PostTestDeviceOp.REBOOT);
       try {
