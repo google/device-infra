@@ -20,6 +20,7 @@ package com.google.devtools.mobileharness.platform.android.sdktool.adb;
 public enum KeyEvent {
   HOME(3),
   BACK(4),
+  POWER(26),
   MENU(82);
 
   /** Key value of the Android key event. */
