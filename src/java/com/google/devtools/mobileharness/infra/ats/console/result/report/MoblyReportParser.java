@@ -24,7 +24,6 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -266,8 +265,11 @@ public class MoblyReportParser {
           String stackTrace = testEntry.getStacktrace().get();
           testBuilder.setFailure(
               TestFailure.newBuilder()
-                  // Use the first line of stack trace as error message
-                  .setMsg(Iterables.get(Splitter.on('\n').split(stackTrace), 0))
+                  .setMsg(
+                      testEntry
+                          .getDetails()
+                          // Use the first line of stack trace as error message if no details
+                          .orElse(Splitter.on('\n').splitToList(stackTrace).get(0)))
                   .setStackTrace(StackTrace.newBuilder().setContent(stackTrace)));
         }
         testListBuilder.add(testBuilder.build());

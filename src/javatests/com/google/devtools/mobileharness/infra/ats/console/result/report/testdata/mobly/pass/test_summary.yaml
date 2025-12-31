@@ -44,9 +44,11 @@ Type: Record
 UID: null
 ---
 Result: ERROR
+Details: 'FAIL: low successe rate'
 Test Class: HelloWorldTest2
 Test Name: test_hello_world2_2
 Type: Record
+Stacktrace: "Traceback (most recent call last):\n"
 UID: null
 ---
 Error: 1

@@ -143,7 +143,14 @@ public final class MoblyReportParserTest {
                         .addTest(
                             ReportProto.Test.newBuilder()
                                 .setResult("fail")
-                                .setName("test_hello_world2_2")))
+                                .setName("test_hello_world2_2")
+                                .setFailure(
+                                    TestFailure.newBuilder()
+                                        .setMsg("FAIL: low successe rate")
+                                        .setStackTrace(
+                                            StackTrace.newBuilder()
+                                                .setContent(
+                                                    "Traceback (most recent call last):\n")))))
                 .build());
   }
 
