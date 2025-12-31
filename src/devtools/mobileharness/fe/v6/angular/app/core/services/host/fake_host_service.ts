@@ -64,4 +64,24 @@ export class FakeHostService extends HostService {
       );
     }
   }
+
+  override decommissionMissingDevices(
+    hostName: string,
+    deviceControlIds: string[],
+  ): Observable<void> {
+    const scenario = MOCK_HOST_SCENARIOS.find((s) => s.hostName === hostName);
+    if (scenario && scenario.deviceSummaries) {
+      scenario.deviceSummaries = scenario.deviceSummaries.filter(
+        (d) => !deviceControlIds.includes(d.id),
+      );
+      return of(undefined);
+    } else {
+      return throwError(
+        () =>
+          new Error(
+            `Host with '${hostName}' not found or has no devices in mock data.`,
+          ),
+      );
+    }
+  }
 }

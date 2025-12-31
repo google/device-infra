@@ -4,14 +4,27 @@
   </mat-icon>
 
   <h3 class="text-gray-800">{{ data.title }}</h3>
-  <p class="text-gray-600">{{ data.content }}</p>
+
+  @if (data.contentHtml) {
+    <div class="html-content" [innerHTML]="data.contentHtml | safeHtmlPipe"></div>
+  } @else {
+    <p class="text-gray-600">{{ data.content }}</p>
+  }
+
   <mat-dialog-actions align="center" class="sub-modal-actions">
     @if (data.secondaryButtonLabel) {
-      <button class="wizard-button wizard-button-secondary" [mat-dialog-close]="'secondary'">
+      <button class="wizard-button wizard-button-secondary" [mat-dialog-close]="'secondary'" [disabled]="isLoading()">
         {{ data.secondaryButtonLabel }}
       </button>
     }
-    <button class="wizard-button wizard-button-primary" [mat-dialog-close]="'primary'">
+    <button class="wizard-button"
+            [class.wizard-button-primary]="data.type !== 'error'"
+            [class.wizard-button-error]="data.type === 'error'"
+            (click)="onConfirm()"
+            [disabled]="isLoading()">
+      @if (isLoading()) {
+        <mat-spinner diameter="20" class="button-spinner"></mat-spinner>
+      }
       {{ data.primaryButtonLabel }}
     </button>
   </mat-dialog-actions>

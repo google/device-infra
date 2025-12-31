@@ -31,4 +31,15 @@ export abstract class HostService {
     hostName: string,
     flags: string,
   ): Observable<void>;
+
+  /**
+   * Decommissions missing devices on a specific host.
+   * @param hostName The name of the host.
+   * @param deviceControlIds The list of device control IDs to decommission.
+   * @return An Observable emitting when the operation is complete.
+   */
+  abstract decommissionMissingDevices(
+    hostName: string,
+    deviceControlIds: string[],
+  ): Observable<void>;
 }
