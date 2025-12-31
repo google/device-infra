@@ -33,7 +33,7 @@
           />
         </mat-form-field>
         <button
-          class="load-button wizard-button wizard-button-primary"
+          class="load-button"
           (click)="loadAndReviewConfig()"
         >
           Load & Review Configuration
@@ -46,7 +46,7 @@
   </mat-dialog-content>
 
   <ng-template #actionsTemplate>
-    <button mat-button mat-dialog-close class="wizard-button wizard-button-tertiary">
+    <button mat-button mat-dialog-close class="cancel-button">
       Cancel
     </button>
   </ng-template>

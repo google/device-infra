@@ -1,8 +1,22 @@
 import {CommonModule} from '@angular/common';
-import {ChangeDetectionStrategy, Component, inject, OnInit} from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  inject,
+  OnInit,
+  signal,
+  TemplateRef,
+} from '@angular/core';
 import {MatButtonModule} from '@angular/material/button';
-import {MAT_DIALOG_DATA, MatDialogModule} from '@angular/material/dialog';
+import {
+  MAT_DIALOG_DATA,
+  MatDialogModule,
+  MatDialogRef,
+} from '@angular/material/dialog';
 import {MatIconModule} from '@angular/material/icon';
+import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
+import {Observable} from 'rxjs';
+import {finalize} from 'rxjs/operators';
 
 /**
  * A dialog to confirm the user's action.
@@ -13,17 +27,55 @@ import {MatIconModule} from '@angular/material/icon';
   templateUrl: './confirm_dialog.ng.html',
   styleUrl: './confirm_dialog.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, MatButtonModule, MatIconModule, MatDialogModule],
+  imports: [
+    CommonModule,
+    MatButtonModule,
+    MatIconModule,
+    MatDialogModule,
+    MatProgressSpinnerModule,
+  ],
 })
 export class ConfirmDialog implements OnInit {
   readonly data = inject<{
-    title: string; content: string;
+    title: string;
+    content?: string;
+    contentTemplate?: TemplateRef<{}>;
+    contentTemplateContext?: {};
     type: 'info' | 'success' | 'warning' | 'error';
     primaryButtonLabel: string;
     secondaryButtonLabel: string;
+    onConfirm?: () => Observable<void>;
   }>(MAT_DIALOG_DATA);
 
+  private readonly dialogRef = inject(MatDialogRef<ConfirmDialog>);
+
+  isLoading = signal(false);
+
   ngOnInit() {}
+
+  onConfirm() {
+    if (this.data.onConfirm) {
+      this.isLoading.set(true);
+      this.data
+        .onConfirm()
+        .pipe(
+          finalize(() => {
+            this.isLoading.set(false);
+          }),
+        )
+        .subscribe({
+          next: () => {
+            this.dialogRef.close('primary');
+          },
+          error: () => {
+            // Optional: Handle error or keep dialog open
+            // For now, we assume the caller handles error reporting (e.g. snackbar)
+          },
+        });
+    } else {
+      this.dialogRef.close('primary');
+    }
+  }
 
   get iconUI() {
     switch (this.data.type) {
