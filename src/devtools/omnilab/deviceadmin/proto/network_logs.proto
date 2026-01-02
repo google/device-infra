@@ -1,0 +1,60 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+edition = "2023";
+
+package devtools.omnilab.deviceadmin.proto;
+
+import "google/protobuf/timestamp.proto";
+
+option features.field_presence = IMPLICIT;
+option java_package = 'com.google.devtools.omnilab.deviceadmin.proto';
+option java_outer_classname = 'NetworkLogsProto';
+option java_multiple_files = true;
+
+// NetworkEvent represents an event captured by the Device Admin app.
+// It is a proto-representation of the android.app.admin.NetworkEvent class.
+message NetworkEvent {
+  // The timestamp of the event being reported.
+  google.protobuf.Timestamp timestamp = 1;
+
+  // The package of the UID that caused the event.
+  string package_id = 2;
+
+  oneof data {
+    ConnectEvent connect = 3;
+    DnsEvent dns = 4;
+  }
+}
+
+// A TCP connect event initiated through the standard network stack.
+message ConnectEvent {
+  // The remote endpoint address.
+  string host_address = 1;
+
+  // The remote endpoint port.
+  int32 port = 2;
+}
+
+// A DNS lookup event initiated through the standard network stack.
+message DnsEvent {
+  // The hostname that was looked up.
+  string hostname = 1;
+
+  // The IP addresses returned. Based on size may only be a subset of all
+  // addresses as decided by the OS.
+  repeated string host_addresses = 2;
+}
