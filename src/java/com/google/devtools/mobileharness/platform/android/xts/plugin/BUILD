@@ -96,3 +96,21 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+java_library(
+    name = "mobly_resultstore_upload_plugin",
+    srcs = ["MoblyResultstoreUploadPlugin.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test/local:__pkg__",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/platform/testbed/mobly/util:mobly_python_venv_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/command",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event:client_test_events",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/controller/plugin",
+        "@maven//:com_google_guava_guava",
+    ],
+)

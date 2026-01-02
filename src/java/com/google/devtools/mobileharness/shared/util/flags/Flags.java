@@ -1173,6 +1173,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableMessagingService = enableMessagingServiceDefault;
 
+  private static final Flag<Boolean> enableMoblyResultstoreUploadDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enable_mobly_resultstore_upload",
+      description = "Whether to enable Mobly result store upload. Default is false.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableMoblyResultstoreUpload = enableMoblyResultstoreUploadDefault;
+
   private static final Flag<Boolean> enablePersistentCacheDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(

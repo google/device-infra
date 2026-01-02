@@ -414,6 +414,9 @@ class RunCommandHandler {
     if (runCommand.getEnableXtsDynamicDownload()) {
       builder.setIsXtsDynamicDownloadEnabled(true);
     }
+    if (runCommand.getEnableMoblyResultstoreUpload()) {
+      builder.setIsMoblyResultstoreUploadEnabled(true);
+    }
     builder.setEnableDefaultLogs(runCommand.getEnableDefaultLogs());
 
     sessionInfo

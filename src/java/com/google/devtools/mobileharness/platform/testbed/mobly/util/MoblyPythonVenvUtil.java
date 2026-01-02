@@ -57,8 +57,7 @@ public class MoblyPythonVenvUtil {
   }
 
   /** Locate the path to the system Python binary. */
-  @VisibleForTesting
-  Path getPythonPath(@Nullable String pythonVersion)
+  public Path getPythonPath(@Nullable String pythonVersion)
       throws MobileHarnessException, InterruptedException {
     if (pythonVersion == null) {
       pythonVersion = "python3";
@@ -82,8 +81,7 @@ public class MoblyPythonVenvUtil {
   }
 
   /** Creates the Python virtual environment for installing package dependencies. */
-  @VisibleForTesting
-  Path createVenv(Path sysPythonBin, Path venvPath)
+  public Path createVenv(Path sysPythonBin, Path venvPath)
       throws MobileHarnessException, InterruptedException {
     logger.atInfo().log("Creating Python venv at %s", venvPath);
     List<String> venvCmd = new ArrayList<>();
@@ -154,5 +152,33 @@ public class MoblyPythonVenvUtil {
               + "'requirements.txt'/'setup.cfg'/'pyproject.toml' file.",
           e);
     }
+  }
+
+  /** Installs a Python package from PyPI. */
+  public void installPackageFromPypi(Path venvPythonBin, String pypiPkgName)
+      throws MobileHarnessException, InterruptedException {
+    Duration cmdTimeout = Duration.ofMinutes(10);
+    List<String> pipCmd = new ArrayList<>();
+    pipCmd.add(venvPythonBin.toString());
+    pipCmd.add("-m");
+    pipCmd.add("pip");
+    pipCmd.add("install");
+    pipCmd.add(pypiPkgName);
+    logger.atInfo().log(
+        "Installing Python package %s from PyPI with command: %s.",
+        pypiPkgName, Joiner.on(" ").join(pipCmd));
+    try {
+      executor.run(Command.of(pipCmd).timeout(cmdTimeout.plusMinutes(1)));
+    } catch (CommandException e) {
+      throw new MobileHarnessException(
+          ExtErrorId.MOBLY_AOSP_PIP_INSTALL_ERROR,
+          String.format("Failed to install Python package %s from PyPI.", pypiPkgName),
+          e);
+    }
+  }
+
+  /** Resolves the path to an executable in the virtual environment's bin folder. */
+  public Path resolveVenvBin(Path venvPath, String binName) {
+    return venvPath.resolve("bin").resolve(binName);
   }
 }

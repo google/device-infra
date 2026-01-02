@@ -817,6 +817,9 @@ public final class RunCommand implements Callable<Integer> {
     if (Flags.instance().enableXtsDynamicDownloader.getNonNull()) {
       runCommand.setEnableXtsDynamicDownload(true);
     }
+    if (Flags.instance().enableMoblyResultstoreUpload.getNonNull()) {
+      runCommand.setEnableMoblyResultstoreUpload(true);
+    }
     if (deviceTypeOptionsGroup != null) {
       if (deviceTypeOptionsGroup.runTestOnEmulator) {
         runCommand.setDeviceType(DeviceType.EMULATOR);

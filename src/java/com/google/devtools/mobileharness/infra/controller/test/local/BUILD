@@ -60,6 +60,7 @@ java_library(
     name = "local_test_builtin_plugins",
     srcs = ["LocalTestBuiltinPlugins.java"],
     runtime_deps = [
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/plugin:mobly_resultstore_upload_plugin",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",

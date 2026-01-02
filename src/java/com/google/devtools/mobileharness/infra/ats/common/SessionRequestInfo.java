@@ -159,6 +159,8 @@ public abstract class SessionRequestInfo {
 
   public abstract Optional<Boolean> isXtsDynamicDownloadEnabled();
 
+  public abstract Optional<Boolean> isMoblyResultstoreUploadEnabled();
+
   public abstract ImmutableMap<String, String> xtsSuiteInfo();
 
   public abstract Optional<TestSuiteInfo> testSuiteInfo();
@@ -315,6 +317,9 @@ public abstract class SessionRequestInfo {
     public abstract Builder setSkipDeviceInfo(boolean skipDeviceInfo);
 
     public abstract Builder setIsXtsDynamicDownloadEnabled(boolean isXtsDynamicDownloadEnabled);
+
+    public abstract Builder setIsMoblyResultstoreUploadEnabled(
+        boolean isMoblyResultstoreUploadEnabled);
 
     public abstract Builder setXtsSuiteInfo(ImmutableMap<String, String> xtsSuiteInfo);
 

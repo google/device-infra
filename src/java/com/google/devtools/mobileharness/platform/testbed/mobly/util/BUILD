@@ -84,7 +84,9 @@ java_library(
     name = "mobly_python_venv_util",
     srcs = ["MoblyPythonVenvUtil.java"],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/plugin:__pkg__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/testbed/mobly/util:__pkg__",
         "//src/javatests/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
     ],
     deps = [

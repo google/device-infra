@@ -65,6 +65,7 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdb
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.AbiUtil;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.MoblyTestLoader;
+import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import com.google.devtools.mobileharness.platform.android.xts.config.ConfigurationUtil;
 import com.google.devtools.mobileharness.platform.android.xts.config.ModuleConfigurationHelper;
@@ -1165,6 +1166,9 @@ public class SessionRequestHandlerUtil {
         }
         addSessionClientIdToJobInfo(jobInfo, sessionRequestInfo);
         extraJobProperties.forEach((key, value) -> jobInfo.properties().add(key, value));
+        if (sessionRequestInfo.isMoblyResultstoreUploadEnabled().orElse(false)) {
+          jobInfo.properties().add(XtsConstants.IS_MOBLY_RESULTSTORE_UPLOAD_ENABLED, "true");
+        }
         printCreatedJobInfo(jobInfo, /* isTf= */ false);
         jobInfos.add(jobInfo);
       }

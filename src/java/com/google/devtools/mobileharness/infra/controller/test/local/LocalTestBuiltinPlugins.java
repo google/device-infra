@@ -88,6 +88,13 @@ class LocalTestBuiltinPlugins {
                   "com.google.devtools.mobileharness.platform.android.xts.plugin.XtsDeviceCompatibilityChecker"),
               EventScope.INTERNAL_PLUGIN));
     }
+    if (isMoblyResultstoreUploadEnabled(testInfo)) {
+      builtinPluginsBuilder.add(
+          PluginItem.create(
+              createBuiltinPlugin(
+                  "com.google.devtools.mobileharness.platform.android.xts.plugin.MoblyResultstoreUploadPlugin"),
+              EventScope.INTERNAL_PLUGIN));
+    }
 
     ImmutableList<PluginItem<?>> builtinPlugins = builtinPluginsBuilder.build();
     for (PluginItem<?> pluginItem : builtinPlugins) {
@@ -134,6 +141,14 @@ class LocalTestBuiltinPlugins {
         .jobInfo()
         .properties()
         .getBoolean(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED)
+        .orElse(false);
+  }
+
+  private static boolean isMoblyResultstoreUploadEnabled(TestInfo testInfo) {
+    return testInfo
+        .jobInfo()
+        .properties()
+        .getBoolean(XtsConstants.IS_MOBLY_RESULTSTORE_UPLOAD_ENABLED)
         .orElse(false);
   }
 
