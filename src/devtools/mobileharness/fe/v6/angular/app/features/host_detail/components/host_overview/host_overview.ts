@@ -16,7 +16,7 @@ import {
   signal,
   SimpleChanges,
 } from '@angular/core';
-import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
+import {takeUntilDestroyed, toSignal} from '@angular/core/rxjs-interop';
 import {FormsModule} from '@angular/forms';
 import {MatButtonModule} from '@angular/material/button';
 import {MatCheckboxModule} from '@angular/material/checkbox';
@@ -30,7 +30,7 @@ import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 import {MatTableDataSource, MatTableModule} from '@angular/material/table';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {RouterLink} from '@angular/router';
-import {delay} from 'rxjs/operators';
+import {delay, map, tap} from 'rxjs/operators';
 import {
   HealthState,
   type DeviceDimension,
@@ -54,6 +54,7 @@ import {
   SearchableListOverlayComponent,
   SearchableListOverlayData,
 } from '../../../../shared/components/searchable_list_overlay/searchable_list_overlay';
+import {SnackBarService} from '../../../../shared/services/snackbar_service';
 import {dateUtils} from '../../../../shared/utils/date_utils';
 import {objectUtils} from '../../../../shared/utils/object_utils';
 
@@ -151,19 +152,34 @@ export class HostOverviewPage implements OnInit, OnChanges {
   private readonly dialog = inject(MatDialog);
   private readonly hostService = inject(HOST_SERVICE);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly snackBar = inject(SnackBarService);
 
   readonly objectUtils = objectUtils;
   readonly dateUtils = dateUtils;
   @Input({required: true}) host!: HostOverview;
 
-  deviceDataSource = new MatTableDataSource<DeviceSummary>();
-  selection = new SelectionModel<DeviceSummary>(true, []);
-  deviceFilterInput = '';
-  deviceFilterValue = '';
   isEditingFlags = false;
   editedFlags = '';
-  isDeviceLoading = signal(false);
   isSavingFlags = signal(false);
+
+  deviceDataSource = new MatTableDataSource<DeviceSummary>();
+  selection = new SelectionModel<DeviceSummary>(true, []);
+
+  decommissionMissingCount = toSignal(
+    this.selection.changed.pipe(
+      map(
+        () =>
+          this.selection.selected.filter(
+            (device) => device.deviceStatus.status === 'MISSING',
+          ).length,
+      ),
+    ),
+    {initialValue: 0},
+  );
+
+  deviceFilterInput = '';
+  deviceFilterValue = '';
+  isDeviceLoading = signal(false);
   expandedElement: DeviceSummary | null = null;
 
   // --- Dimensions Overlay State ---
@@ -352,10 +368,76 @@ export class HostOverviewPage implements OnInit, OnChanges {
     }`;
   }
 
-  decommissionMissingCount(): number {
-    return this.selection.selected.filter(
+  decommissionMissing() {
+    const missingDevices = this.selection.selected.filter(
       (device) => device.deviceStatus.status === 'MISSING',
-    ).length;
+    );
+
+    if (missingDevices.length === 0) {
+      return;
+    }
+
+    const itemsHtml = missingDevices
+      .map(
+        (d) =>
+          `<li class="item-row"><span class="item-dot"></span>${d.id}</li>`,
+      )
+      .join('');
+
+    const contentHtml = `
+      <div class="decommission-box">
+        <p class="text-gray-600">This will <b>permanently remove</b> the selected devices from the Lab Console inventory. This action cannot be undone.</p>
+        <div class="items-list-container">
+          <p class="items-list-label">
+              <span class="material-icons info-icon-small">info</span> Devices to be decommissioned:
+          </p>
+          <div class="items-scroll-container custom-scrollbar">
+            <ul class="items-list">
+              ${itemsHtml}
+            </ul>
+          </div>
+        </div>
+        <p class="note-text text-gray-500">If these devices connect again later, they will be discovered as new devices.</p>
+      </div>
+    `;
+
+    const dialogData = {
+      title: `Decommission ${missingDevices.length} Device${
+        missingDevices.length > 1 ? 's' : ''
+      }?`,
+      contentHtml,
+      type: 'error',
+      primaryButtonLabel: 'Decommission',
+      secondaryButtonLabel: 'Cancel',
+      onConfirm: () =>
+        this.hostService
+          .decommissionMissingDevices(
+            this.host.hostName,
+            missingDevices.map((d) => d.id),
+          )
+          .pipe(
+            delay(1000),
+            tap(() => {
+              const decommissionedIds = new Set(
+                missingDevices.map((d) => d.id),
+              );
+
+              this.deviceDataSource.data = this.deviceDataSource.data.filter(
+                (d) => !decommissionedIds.has(d.id),
+              );
+
+              this.selection.clear();
+              this.snackBar.showSuccess(
+                `${missingDevices.length} devices decommissioned successfully.`,
+              );
+            }),
+          ),
+    };
+
+    this.dialog.open(ConfirmDialog, {
+      data: dialogData,
+      disableClose: true,
+    });
   }
 
   toggleRow(element: DeviceSummary) {

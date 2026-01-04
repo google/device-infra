@@ -164,7 +164,7 @@
                   <span class="action-button-text">Remote Control</span>
                 </button>
                 @if(decommissionMissingCount() > 0) {
-                  <button mat-flat-button class="action-button" [matTooltip]="'Decommission Missing (' + decommissionMissingCount() + ')'">
+                  <button mat-flat-button class="action-button" [matTooltip]="'Decommission Missing (' + decommissionMissingCount() + ')'" (click)="decommissionMissing()">
                     <mat-icon>delete_sweep</mat-icon>
                     <span class="action-button-text">Decommission Missing ({{decommissionMissingCount()}})</span>
                   </button>
