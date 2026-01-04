@@ -30,6 +30,7 @@ import com.google.devtools.mobileharness.shared.file.resolver.cache.ResolvedFile
 import com.google.devtools.mobileharness.shared.util.concurrent.TimestampedFuture;
 import com.google.errorprone.annotations.Immutable;
 import com.google.errorprone.annotations.ThreadSafe;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import java.time.Instant;
 import java.time.InstantSource;
 import java.util.Optional;
@@ -54,6 +55,9 @@ public final class LocalCache implements ResolvedFileCache {
   private final Executor executor;
   private final InstantSource instantSource;
 
+  private final Object lock = new Object();
+
+  @GuardedBy("lock")
   private final CacheLoader cacheLoader;
 
   /** The files and parameters to be resolved. */
@@ -88,7 +92,13 @@ public final class LocalCache implements ResolvedFileCache {
       logger.atInfo().log("%s has not been resolved before. Need to resolve.", key);
       // If not cached, resolve and set the resolved result to future.
       resolveResultFuture.setFuture(
-          Futures.submit(() -> cacheLoader.load(resolveSource), executor));
+          Futures.submit(
+              () -> {
+                synchronized (lock) {
+                  return cacheLoader.load(resolveSource);
+                }
+              },
+              executor));
       return CachedResolveResult.create(cachedResolveResult, /* isCachedData= */ false);
     } else {
       return CachedResolveResult.create(previousResult, /* isCachedData= */ true);
