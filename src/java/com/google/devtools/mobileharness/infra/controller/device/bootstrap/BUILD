@@ -35,7 +35,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/dispatcher:android_local_emulator",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/dispatcher:android_real_device",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/dispatcher:base",
-        "//src/java/com/google/devtools/mobileharness/api/devicemanager/dispatcher:failed_device",  # unuseddeps: keep
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/dispatcher:no_op_device",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/util:class_util",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
