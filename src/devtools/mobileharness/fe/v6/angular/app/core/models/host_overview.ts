@@ -164,6 +164,7 @@ export interface DeviceSummary {
   readonly model: string;
   readonly version: string;
   readonly subDevices?: SubDeviceInfo[];
+  readonly isACIDSupport?: boolean;
 }
 
 /**
@@ -189,4 +190,31 @@ export interface HostOverview {
   readonly properties: {[key: string]: string};
   /** OS of the host machine, e.g., "gLinux", "macOS". */
   readonly os: string;
+}
+
+/**
+ * Types of proxy supported by devices.
+ */
+export enum DeviceProxyType {
+  NONE = 0, // DEVICE_PROXY_TYPE_UNSPECIFIED
+  ADB_AND_VIDEO = 1,
+  ADB_ONLY = 2,
+  USB_IP = 3,
+  SSH = 4,
+  VIDEO = 5,
+}
+
+/**
+ * Mapping of device IDs to their supported proxy types.
+ */
+export interface DeviceProxyCapabilities {
+  [deviceId: string]: DeviceProxyType[];
+}
+
+/**
+ * Response for CheckCommonRemoteControlProxy API.
+ */
+export interface CheckProxyResponse {
+  commonProxyTypes: DeviceProxyType[];
+  deviceCapabilities: DeviceProxyCapabilities;
 }
