@@ -28,7 +28,7 @@ message DeviceProfile {
   .mobileharness.api.model.DeviceFeature feature = 1;  // Required.
 }
 
-// Next ID: 18
+// Next ID: 19
 message DeviceCondition {
   // Optional. Device allocation in Master. Client and Lab Server may have delay
   // to get this allocation info.
@@ -101,6 +101,9 @@ message DeviceCondition {
 
   // Optional: The last sign up time. This is the Lab Server side time.
   int64 last_sign_up_time_ms_from_lab = 17;
+
+  // Optional: The last known good values of persisted dimensions.
+  repeated .mobileharness.api.model.DeviceDimension persisted_dimension = 18;
 }
 
 message TempDimension {
