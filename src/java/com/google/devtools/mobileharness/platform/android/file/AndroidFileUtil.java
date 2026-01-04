@@ -311,13 +311,14 @@ public class AndroidFileUtil {
         int currentUser = androidUserUtil.getCurrentUser(serial, sdkVersion);
         logger.atInfo().log(
             "Device %s current user: %s, sdk version: %s", serial, currentUser, sdkVersion);
-        if (currentUser == SYSTEM_USER
-            || sdkVersion < AndroidVersion.ANDROID_11.getStartSdkVersion()) {
-          externalStoragePath = "/storage/emulated/" + currentUser;
-        } else {
-          // special cases for multi user devices, especially, auto OS.
+        if (currentUser != SYSTEM_USER
+            && sdkVersion == AndroidVersion.ANDROID_11.getStartSdkVersion()) {
+          // Special case for multi user devices in Android R. Refer to b/152866706 for more
+          // details.
           externalStoragePath =
               MULTI_USER_EXTERNAL_STORAGE_PATH_PREFIX + currentUser + "/emulated/" + currentUser;
+        } else {
+          externalStoragePath = "/storage/emulated/" + currentUser;
         }
       }
     } catch (MobileHarnessException e) {
