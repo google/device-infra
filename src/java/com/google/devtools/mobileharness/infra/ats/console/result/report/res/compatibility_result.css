@@ -129,6 +129,13 @@ td.failed {
   vertical-align: top;
 }
 
+td.warning {
+  background-color: #fde293;
+  font-weight: bold;
+  text-align: center;
+  vertical-align: top;
+}
+
 td.failuredetails {
   text-align: left;
 }

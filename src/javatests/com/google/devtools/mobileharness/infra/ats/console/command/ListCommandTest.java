@@ -231,10 +231,10 @@ public class ListCommandTest {
 
     verify(lineReader)
         .printAbove(
-            "Session  Pass  Fail  Modules Complete  Result Directory     Test Plan  Device"
+            "Session  Pass  Fail  Warning  Modules Complete  Result Directory     Test Plan  Device"
                 + " serial(s)  Build ID            Product\n"
-                + "0        117   0     1 of 1            2023.11.30_12.34.56  cts        ABC, DEF "
-                + "         SQ3A.220705.003.A1  redfin");
+                + "0        117   0     0        1 of 1            2023.11.30_12.34.56  cts       "
+                + " ABC, DEF          SQ3A.220705.003.A1  redfin");
   }
 
   @Test

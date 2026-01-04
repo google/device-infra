@@ -23,10 +23,18 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Summary;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.TestCase;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportCreator;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportMerger;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
+import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
+import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.ConfigurationDescriptor;
+import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.ConfigurationDescriptorMetadata;
+import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.ConfigurationMetadata;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryReportMerger;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -168,5 +176,94 @@ public final class SessionResultHandlerUtilTest {
 
     assertThat(result.toString())
         .isEqualTo(logRootDir.resolve("inv_mcts_test_id/XtsTradefedTest_test_test_id").toString());
+  }
+
+  @Test
+  public void preprocessReport_withFailureLevelWarning_success() throws Exception {
+    Configuration module1Config =
+        Configuration.newBuilder()
+            .setMetadata(ConfigurationMetadata.newBuilder().setXtsModule("module1"))
+            .setConfigDescriptor(
+                ConfigurationDescriptor.newBuilder()
+                    .putMetadata(
+                        "failure_level",
+                        ConfigurationDescriptorMetadata.newBuilder().addValue("WARNING").build()))
+            .build();
+    Configuration module2Config =
+        Configuration.newBuilder()
+            .setMetadata(ConfigurationMetadata.newBuilder().setXtsModule("module2"))
+            .build();
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfo.builder()
+            .setTestPlan("testPlan")
+            .setCommandLineArgs("commandLineArgs")
+            .setXtsRootDir("xtsRootDir")
+            .setXtsType("xtsType")
+            .setExpandedModules(ImmutableMap.of("module1", module1Config, "module2", module2Config))
+            .build();
+
+    Result originalReport =
+        Result.newBuilder()
+            .addModuleInfo(
+                Module.newBuilder()
+                    .setName("module1")
+                    .setFailedTests(2)
+                    .addTestCase(
+                        TestCase.newBuilder()
+                            .addTest(
+                                com.google.devtools.mobileharness.infra.ats.console.result.proto
+                                    .ReportProto.Test.newBuilder()
+                                    .setName("test1")
+                                    .setResult("pass"))
+                            .addTest(
+                                com.google.devtools.mobileharness.infra.ats.console.result.proto
+                                    .ReportProto.Test.newBuilder()
+                                    .setName("test2")
+                                    .setResult("fail")))
+                    .addTestCase(
+                        TestCase.newBuilder()
+                            .addTest(
+                                com.google.devtools.mobileharness.infra.ats.console.result.proto
+                                    .ReportProto.Test.newBuilder()
+                                    .setName("test3")
+                                    .setResult("fail"))))
+            .addModuleInfo(
+                Module.newBuilder()
+                    .setName("module2")
+                    .setFailedTests(1)
+                    .addTestCase(
+                        TestCase.newBuilder()
+                            .addTest(
+                                com.google.devtools.mobileharness.infra.ats.console.result.proto
+                                    .ReportProto.Test.newBuilder()
+                                    .setName("test4")
+                                    .setResult("pass"))
+                            .addTest(
+                                com.google.devtools.mobileharness.infra.ats.console.result.proto
+                                    .ReportProto.Test.newBuilder()
+                                    .setName("test5")
+                                    .setResult("fail"))))
+            .setSummary(Summary.newBuilder().setPassed(2).setFailed(3).setWarning(0))
+            .build();
+
+    Result userfacingReport =
+        sessionResultHandlerUtil.preprocessReport(originalReport, sessionRequestInfo);
+
+    assertThat(userfacingReport.getModuleInfo(0).getName()).isEqualTo("module1");
+    assertThat(userfacingReport.getModuleInfo(0).getFailedTests()).isEqualTo(0);
+    assertThat(userfacingReport.getModuleInfo(0).getWarningTests()).isEqualTo(2);
+    assertThat(userfacingReport.getModuleInfo(0).getTestCase(0).getTest(1).getResult())
+        .isEqualTo("warning");
+    assertThat(userfacingReport.getModuleInfo(0).getTestCase(1).getTest(0).getResult())
+        .isEqualTo("warning");
+
+    assertThat(userfacingReport.getModuleInfo(1).getName()).isEqualTo("module2");
+    assertThat(userfacingReport.getModuleInfo(1).getFailedTests()).isEqualTo(1);
+    assertThat(userfacingReport.getModuleInfo(1).getWarningTests()).isEqualTo(0);
+    assertThat(userfacingReport.getModuleInfo(1).getTestCase(0).getTest(1).getResult())
+        .isEqualTo("fail");
+
+    assertThat(userfacingReport.getSummary().getFailed()).isEqualTo(1);
+    assertThat(userfacingReport.getSummary().getWarning()).isEqualTo(2);
   }
 }
