@@ -33,6 +33,7 @@ import com.google.devtools.mobileharness.infra.controller.scheduler.model.job.in
 import com.google.devtools.mobileharness.infra.controller.test.util.JobTimer;
 import com.google.devtools.mobileharness.shared.util.time.CountDownTimer;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import com.google.protobuf.Timestamp;
 import java.util.Optional;
 
 /**
@@ -64,13 +65,17 @@ public abstract class JobScheduleUnit {
   /** Timer of the job which starts when the job starts and expires when the job expires. */
   public abstract CountDownTimer timer();
 
+  /** The original submit timestamp of the job. */
+  public abstract Timestamp originalSubmitTimestamp();
+
   public abstract DeviceAllocationPriority deviceAllocationPriority();
 
   /** Create a builder for creating {@link JobScheduleUnit} instances. */
   public static Builder newBuilder() {
     return new AutoValue_JobScheduleUnit.Builder()
         .setPriority(Priority.DEFAULT)
-        .setTimeout(Timeout.getDefaultInstance());
+        .setTimeout(Timeout.getDefaultInstance())
+        .setOriginalSubmitTimestamp(Timestamp.getDefaultInstance());
   }
 
   public static JobScheduleUnit fromProtos(
@@ -82,7 +87,8 @@ public abstract class JobScheduleUnit {
             .setDriver(jobFeatureProto.getDriver())
             .setPriority(jobSettingProto.getPriority())
             .setDeviceAllocationPriority(jobFeatureProto.getDeviceAllocationPriority())
-            .setDeviceRequirements(DeviceRequirements.fromProto(jobFeatureProto));
+            .setDeviceRequirements(DeviceRequirements.fromProto(jobFeatureProto))
+            .setOriginalSubmitTimestamp(jobFeatureProto.getOriginalSubmitTimestamp());
     if (jobSettingProto.hasTimeout()) {
       builder.setTimeout(Timeout.fromProto(jobSettingProto.getTimeout()));
     }
@@ -118,6 +124,9 @@ public abstract class JobScheduleUnit {
 
     /** Optional. */
     public abstract Builder setDeviceAllocationPriority(DeviceAllocationPriority priority);
+
+    /** Optional. */
+    public abstract Builder setOriginalSubmitTimestamp(Timestamp originalSubmitTimestamp);
 
     /** DO NOT set this field unless you have to. */
     public abstract Builder setTiming(Timing timing);
@@ -172,6 +181,8 @@ public abstract class JobScheduleUnit {
     }
     jobFeatureBuilder.setDeviceRequirements(deviceRequirements);
     jobFeatureBuilder.setDeviceAllocationPriority(deviceAllocationPriority());
+    jobFeatureBuilder.setOriginalSubmitTimestamp(originalSubmitTimestamp());
+
     return jobFeatureBuilder.build();
   }
 }

@@ -27,6 +27,7 @@ import com.google.devtools.mobileharness.api.model.proto.Job.Retry.Level;
 import com.google.devtools.mobileharness.service.moss.proto.Slg.JobSettingProto;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import com.google.protobuf.Timestamp;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.Priority;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.Timeout;
 import java.time.Duration;
@@ -109,6 +110,9 @@ public class JobSetting {
   /** Job repeat run setting. */
   private final Repeat repeat;
 
+  /** Job submit timestamp. */
+  private final Timestamp originalSubmitTimestamp;
+
   /** Builder for building a JobSetting instance. */
   public static class Builder {
     private Timeout timeout;
@@ -122,6 +126,7 @@ public class JobSetting {
     private boolean hasTestSubdirs = true;
     private LocalFileUtil localFileUtil;
     private Repeat repeat;
+    private Timestamp originalSubmitTimestamp;
 
     private Builder() {}
 
@@ -204,6 +209,12 @@ public class JobSetting {
       this.allocationExitStrategy = allocationExitStrategy;
       return this;
     }
+
+    @CanIgnoreReturnValue
+    public Builder setOriginalSubmitTimestamp(Timestamp originalSubmitTimestamp) {
+      this.originalSubmitTimestamp = originalSubmitTimestamp;
+      return this;
+    }
   }
 
   public static Builder newBuilder() {
@@ -234,6 +245,7 @@ public class JobSetting {
             .setRetryLevel(Level.valueOf(jobSettingProto.getRetry().getRetryLevel().name()))
             .build();
     this.repeat = jobSettingProto.getRepeat();
+    this.originalSubmitTimestamp = Timestamp.getDefaultInstance();
   }
 
   private JobSetting(Builder builder) {
@@ -312,6 +324,10 @@ public class JobSetting {
     } else {
       repeat = Repeat.getDefaultInstance();
     }
+    this.originalSubmitTimestamp =
+        builder.originalSubmitTimestamp == null
+            ? Timestamp.getDefaultInstance()
+            : builder.originalSubmitTimestamp;
   }
 
   /** Gets the job priority setting. */
@@ -404,5 +420,10 @@ public class JobSetting {
   private static String getDefaultTmpDir() {
     // https://bazel.build/reference/test-encyclopedia#test-interaction-filesystem
     return System.getenv("TEST_TMPDIR");
+  }
+
+  /** Gets the original submit timestamp. */
+  public Timestamp getOriginalSubmitTimestamp() {
+    return originalSubmitTimestamp;
   }
 }
