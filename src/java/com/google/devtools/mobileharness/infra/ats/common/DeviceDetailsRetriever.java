@@ -90,24 +90,20 @@ public class DeviceDetailsRetriever {
               deviceId -> {
                 DeviceDetails.Builder deviceDetails = DeviceDetails.builder().setId(deviceId);
                 if (!sessionRequestInfo.productTypes().isEmpty()) {
-                  Optional<String> productType = getDeviceProductType(deviceId);
-                  productType.ifPresent(deviceDetails::setProductType);
-                  Optional<String> productVariant = getDeviceProductVariant(deviceId);
-                  productVariant.ifPresent(deviceDetails::setProductVariant);
+                  getDeviceProductType(deviceId).ifPresent(deviceDetails::setProductType);
+                  getDeviceProductVariant(deviceId).ifPresent(deviceDetails::setProductVariant);
                 }
                 if (sessionRequestInfo.maxSdkLevel().isPresent()
                     || sessionRequestInfo.minSdkLevel().isPresent()) {
-                  Optional<Integer> sdkVersion = getDeviceSdkVersion(deviceId);
-                  sdkVersion.ifPresent(deviceDetails::setSdkVersion);
+                  getDeviceSdkVersion(deviceId).ifPresent(deviceDetails::setSdkVersion);
                 }
                 if (sessionRequestInfo.maxBatteryLevel().isPresent()
                     || sessionRequestInfo.minBatteryLevel().isPresent()) {
-                  Optional<Integer> batteryLevel = getDeviceBatteryLevel(deviceId);
-                  batteryLevel.ifPresent(deviceDetails::setBatteryLevel);
+                  getDeviceBatteryLevel(deviceId).ifPresent(deviceDetails::setBatteryLevel);
                 }
                 if (sessionRequestInfo.maxBatteryTemperature().isPresent()) {
-                  Optional<Integer> batteryTemperature = getDeviceBatteryTemperature(deviceId);
-                  batteryTemperature.ifPresent(deviceDetails::setBatteryTemperature);
+                  getDeviceBatteryTemperature(deviceId)
+                      .ifPresent(deviceDetails::setBatteryTemperature);
                 }
                 ImmutableMap.Builder<String, String> collectedDeviceProperties =
                     ImmutableMap.builder();
@@ -115,10 +111,9 @@ public class DeviceDetailsRetriever {
                     .deviceProperties()
                     .keySet()
                     .forEach(
-                        propName -> {
-                          Optional<String> propertyValue = getDeviceProperty(deviceId, propName);
-                          propertyValue.ifPresent(s -> collectedDeviceProperties.put(propName, s));
-                        });
+                        propName ->
+                            getDeviceProperty(deviceId, propName)
+                                .ifPresent(s -> collectedDeviceProperties.put(propName, s)));
                 return deviceDetails
                     .setDeviceProperties(collectedDeviceProperties.buildOrThrow())
                     .build();
