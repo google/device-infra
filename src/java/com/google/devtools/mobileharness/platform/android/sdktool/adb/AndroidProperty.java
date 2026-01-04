@@ -59,6 +59,7 @@ public enum AndroidProperty {
   HARDWARE("ro.hardware"),
   HARDWARE_TYPE("ro.hardware.type"),
   HARDWARE_UFS("ro.boot.hardware.ufs"),
+  HAS_RAMDUMP("vendor.debug.ramdump.status.has_ramdump"),
   INCREMENTAL_BUILD("ro.build.version.incremental"),
   @DoNotAddToDimension
   KAIOS_RUNTIME_TOKEN("kaios.services.runtime.token"),
