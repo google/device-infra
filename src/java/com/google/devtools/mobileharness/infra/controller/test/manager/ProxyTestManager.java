@@ -92,7 +92,7 @@ public class ProxyTestManager extends TestManager<ProxyTestRunner>
     return getProxyToDirectTestRunner(testId).getTestExecutionUnit().job().dirs();
   }
 
-  private ProxyToDirectTestRunner getProxyToDirectTestRunner(String testId)
+  public ProxyToDirectTestRunner getProxyToDirectTestRunner(String testId)
       throws MobileHarnessException {
     ProxyTestRunner proxyTestRunner = getTestRunnerNonEmpty(testId);
     if (proxyTestRunner.isContainerMode()) {

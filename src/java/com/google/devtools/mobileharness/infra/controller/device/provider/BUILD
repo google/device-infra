@@ -72,6 +72,7 @@ java_library(
     name = "allocated_device_provisioning_module",
     srcs = ["AllocatedDeviceProvisioningModule.java"],
     visibility = [
+        "//:omnilab_fusion",
         "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
     ],
     deps = [
@@ -85,6 +86,7 @@ java_library(
     name = "local_device_provisioning_module",
     srcs = ["LocalDeviceProvisioningModule.java"],
     visibility = [
+        "//:omnilab_fusion",
         "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
     ],
     deps = [

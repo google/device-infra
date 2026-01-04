@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.infra.container.controller;
 
 import static com.google.common.base.Preconditions.checkState;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.allocation.Allocation;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
@@ -35,7 +36,9 @@ import com.google.devtools.mobileharness.infra.lab.controller.util.LabFileNotifi
 import com.google.devtools.mobileharness.infra.lab.proto.File.JobOrTestFileUnit;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
+import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import java.time.Duration;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 
@@ -86,16 +89,25 @@ public class ProxyToDirectTestRunner extends AbstractProxyTestRunner<ProxyToDire
   @GuardedBy("launchProxiedTestLock")
   private boolean cachedKillTimeout;
 
+  private final ImmutableList<Device> devices;
+
   public ProxyToDirectTestRunner(
       TestRunnerLauncher<? super ProxyToDirectTestRunner> launcher,
       TestExecutionUnit testExecutionUnit,
       Allocation allocation,
+      List<Device> devices,
       LabFileNotifier proxiedTestLabFileNotifier,
       TestEngineLocator testEngineLocator)
       throws TestRunnerLauncherConnectedException {
     super(launcher, testExecutionUnit, allocation);
+    this.devices = ImmutableList.copyOf(devices);
     this.proxiedTestLabFileNotifier = proxiedTestLabFileNotifier;
     this.testEngineLocator = testEngineLocator;
+  }
+
+  /** Gets the devices for the test. */
+  public ImmutableList<Device> getDevices() {
+    return devices;
   }
 
   @Override

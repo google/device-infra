@@ -33,6 +33,7 @@ import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunner.
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunnerSetting;
 import com.google.devtools.mobileharness.infra.controller.test.TestRunnerLauncher;
 import com.google.devtools.mobileharness.infra.controller.test.exception.TestRunnerLauncherConnectedException;
+import com.google.devtools.mobileharness.infra.controller.test.manager.ProxyTestManager;
 import com.google.devtools.mobileharness.infra.lab.common.env.UtrsEnvironments;
 import com.google.devtools.mobileharness.infra.lab.controller.FilePublisher;
 import com.google.devtools.mobileharness.infra.lab.controller.ForwardingTestMessageBuffer;
@@ -43,6 +44,7 @@ import com.google.devtools.mobileharness.infra.lab.rpc.service.util.LabResponseP
 import com.google.devtools.mobileharness.infra.lab.rpc.service.util.TestInfoCreator;
 import com.google.devtools.mobileharness.shared.util.comm.messaging.message.TestMessageInfo;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.message.StrPairUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.inject.assistedinject.Assisted;
@@ -70,7 +72,6 @@ import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 
@@ -86,7 +87,6 @@ public class ExecTestServiceImpl {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private final LabDirectTestRunnerHolder testRunnerHolder;
-
   private final DeviceHelperFactory deviceHelperFactory;
 
   private final LabResponseProtoGenerator labResponseProtoGenerator;
@@ -177,10 +177,20 @@ public class ExecTestServiceImpl {
           e);
     }
 
-    // Gets DeviceHelpers.
-    List<Device> devices = new ArrayList<>();
-    for (String deviceId : req.getDeviceIdList()) {
-      devices.add(deviceHelperFactory.getDeviceHelper(deviceId));
+    List<Device> devices;
+    if (Flags.instance().enableDeviceTestDecoupling.get()) {
+      if (!(testRunnerHolder instanceof ProxyTestManager proxyTestManager)) {
+        throw new MobileHarnessException(
+            InfraErrorId.LAB_RPC_EXEC_TEST_DECOUPLING_NOT_SUPPORTED,
+            "Device decoupling is not supported in this environment.");
+      }
+      devices =
+          proxyTestManager.getProxyToDirectTestRunner(testInfo.locator().getId()).getDevices();
+    } else {
+      devices = new ArrayList<>();
+      for (String deviceId : req.getDeviceIdList()) {
+        devices.add(deviceHelperFactory.getDeviceHelper(deviceId));
+      }
     }
     List<String> deviceIds = devices.stream().map(Device::getDeviceId).collect(toImmutableList());
 
@@ -194,7 +204,7 @@ public class ExecTestServiceImpl {
             devices.stream()
                 .map(Device::getDimensions)
                 .map(StrPairUtil::convertCollectionToMultimap)
-                .collect(Collectors.toList()));
+                .collect(toImmutableList()));
 
     // Creates DirectTestRunner.
     TestRunnerLauncher<? super DirectTestRunner> connectorTestRunnerLauncher =

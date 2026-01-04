@@ -125,6 +125,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/model:test_execution_result",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:callables",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:tag",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
     ],
@@ -140,5 +141,36 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:abstract_test_runner",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:direct_test_runner",
+    ],
+)
+
+java_library(
+    name = "thread_pool_launcher_provisioning_module",
+    srcs = ["ThreadPoolLauncherProvisioningModule.java"],
+    visibility = [
+        "//:omnilab_fusion",
+        "//src/java/com/google/devtools/mobileharness/infra/lab:__pkg__",
+    ],
+    deps = [
+        ":launcher_provider",
+        ":test_runner_thread_pool",
+        ":thread_pool_test_runner_launcher_provider",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
+        "@maven//:com_google_inject_guice",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "local_device_launcher_provisioning_module",
+    srcs = ["LocalDeviceLauncherProvisioningModule.java"],
+    visibility = [
+        "//:omnilab_fusion",
+        "//src/java/com/google/devtools/mobileharness/infra/lab:__pkg__",
+    ],
+    deps = [
+        ":launcher_provider",
+        ":local_device_test_runner_launcher_provider",
+        "@maven//:com_google_inject_guice",
     ],
 )

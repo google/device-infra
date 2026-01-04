@@ -27,9 +27,6 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import com.google.common.eventbus.EventBus;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.Futures;
@@ -39,7 +36,6 @@ import com.google.devtools.mobileharness.api.model.allocation.Allocation;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptions;
 import com.google.devtools.mobileharness.api.model.job.JobLocator;
 import com.google.devtools.mobileharness.api.model.job.TestLocator;
 import com.google.devtools.mobileharness.api.model.job.in.Dirs;
@@ -47,7 +43,6 @@ import com.google.devtools.mobileharness.api.model.job.in.Timeout;
 import com.google.devtools.mobileharness.api.model.job.out.Timing;
 import com.google.devtools.mobileharness.api.model.lab.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.lab.LabLocator;
-import com.google.devtools.mobileharness.api.model.proto.Job.JobFeature;
 import com.google.devtools.mobileharness.infra.container.controller.ProxyTestRunner;
 import com.google.devtools.mobileharness.infra.container.controller.ProxyToDirectTestRunner;
 import com.google.devtools.mobileharness.infra.container.proto.TestEngine.ResolveFileStatus;
@@ -55,10 +50,9 @@ import com.google.devtools.mobileharness.infra.container.proto.TestEngine.TestEn
 import com.google.devtools.mobileharness.infra.container.proto.TestEngine.TestEngineLocator.GrpcLocator;
 import com.google.devtools.mobileharness.infra.container.proto.TestEngine.TestEngineLocator.StubbyLocator;
 import com.google.devtools.mobileharness.infra.container.proto.TestEngine.TestEngineStatus;
-import com.google.devtools.mobileharness.infra.controller.device.TestExecutor;
-import com.google.devtools.mobileharness.infra.controller.device.TestExecutorProvider;
+import com.google.devtools.mobileharness.infra.controller.device.provider.DeviceProvider;
 import com.google.devtools.mobileharness.infra.controller.test.TestRunnerLauncher;
-import com.google.devtools.mobileharness.infra.controller.test.launcher.LocalDeviceTestRunnerLauncher;
+import com.google.devtools.mobileharness.infra.controller.test.launcher.LauncherProvider;
 import com.google.devtools.mobileharness.infra.controller.test.manager.ProxyTestManager;
 import com.google.devtools.mobileharness.infra.controller.test.manager.TestStartedException;
 import com.google.devtools.mobileharness.infra.controller.test.model.JobExecutionUnit;
@@ -92,18 +86,15 @@ import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
-import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.shared.version.Version;
 import com.google.devtools.mobileharness.shared.version.checker.ServiceSideVersionChecker;
 import com.google.devtools.mobileharness.shared.version.proto.VersionProto.VersionCheckResponse;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
-import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
 import com.google.wireless.qa.mobileharness.shared.util.NetUtil;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
@@ -120,9 +111,6 @@ public class PrepareTestServiceImpl {
   private static final String SATELLITE_LAB_TEST_ENGINE_RESOURCE_PATH =
       "/com/google/devtools/mobileharness/infra/container/testengine/SatelliteLabTestEngine_deploy.jar";
 
-  private static final Duration WAIT_DEVICE_READY_TIMEOUT = Duration.ofSeconds(20L);
-
-  private final TestExecutorProvider testExecutorProvider;
   private final JobManager jobManager;
   private final ProxyTestManager testManager;
   private final ServiceSideVersionChecker versionChecker =
@@ -140,9 +128,11 @@ public class PrepareTestServiceImpl {
   private final EventBus globalInternalEventBus;
   private final FileResolver fileResolver;
 
+  private final DeviceProvider deviceProvider;
+  private final LauncherProvider launcherProvider;
+
   @Inject
   public PrepareTestServiceImpl(
-      TestExecutorProvider testExecutorProvider,
       JobManager jobManager,
       ProxyTestManager testManager,
       LocalFileUtil localFileUtil,
@@ -155,8 +145,9 @@ public class PrepareTestServiceImpl {
       @ServViaCloudRpc boolean servViaCloudRpc,
       @CloudRpcDnsAddress String cloudRpcDnsName,
       @CloudRpcShardName String cloudRpcShardName,
+      DeviceProvider deviceProvider,
+      LauncherProvider launcherProvider,
       @GlobalEventBus EventBus globalInternalEventBus) {
-    this.testExecutorProvider = testExecutorProvider;
     this.jobManager = jobManager;
     this.testManager = testManager;
     this.localFileUtil = localFileUtil;
@@ -170,6 +161,8 @@ public class PrepareTestServiceImpl {
     this.cloudRpcShardName = cloudRpcShardName;
     this.globalInternalEventBus = globalInternalEventBus;
     this.fileResolver = fileResolver;
+    this.deviceProvider = deviceProvider;
+    this.launcherProvider = launcherProvider;
   }
 
   @CanIgnoreReturnValue
@@ -181,12 +174,6 @@ public class PrepareTestServiceImpl {
     VersionCheckResponse versionCheckResponse =
         versionChecker.checkStub(req.getVersionCheckRequest());
 
-    // Gets TestExecutors.
-    List<TestExecutor> testExecutors = getTestExecutorsUntilReady(req.getDeviceIdList());
-
-    // Checks the job feature.
-    checkJobFeature(req.getJob().getJobFeature(), testExecutors);
-
     // Creates JobExecutionUnit if absent.
     JobExecutionUnit jobExecutionUnit = createAndAddJobIfAbsent(req.getJob());
 
@@ -194,12 +181,12 @@ public class PrepareTestServiceImpl {
     TestExecutionUnit testExecutionUnit = createTestExecutionUnit(req.getTest(), jobExecutionUnit);
 
     ImmutableList<Device> devices =
-        testExecutors.stream().map(TestExecutor::getDevice).collect(toImmutableList());
+        deviceProvider.getDevices(req.getDeviceIdList(), req.getAllocatedDevicesList());
 
     // Creates TestRunnerLauncher.
     TestRunnerLauncher<? super ProxyTestRunner> launcher =
-        new LocalDeviceTestRunnerLauncher(
-            testExecutors.get(0), testExecutors.stream().skip(1L).collect(toImmutableList()));
+        launcherProvider.getLauncher(
+            testExecutionUnit.locator().id(), req.getJob().getJobFeature(), devices);
 
     // Creates Allocation.
     Allocation allocation =
@@ -257,11 +244,7 @@ public class PrepareTestServiceImpl {
     CreateTestResponse response =
         CreateTestResponse.newBuilder()
             .setVersionCheckResponse(versionCheckResponse)
-            .addAllDeviceFeature(
-                testExecutors.stream()
-                    .map(TestExecutor::getDevice)
-                    .map(Device::toFeature)
-                    .collect(toImmutableList()))
+            .addAllDeviceFeature(devices.stream().map(Device::toFeature).collect(toImmutableList()))
             .setContainerInfo(
                 ContainerInfo.newBuilder()
                     .setIsContainerMode(proxyTestRunner.isContainerMode())
@@ -363,58 +346,6 @@ public class PrepareTestServiceImpl {
     return testRunnerTiming.build();
   }
 
-  private void checkJobFeature(JobFeature jobFeature, List<TestExecutor> testExecutors)
-      throws MobileHarnessException {
-    // TODO: Checks device requirement directly rather than job type.
-    JobType primaryDeviceJobType =
-        JobType.newBuilder()
-            .setDriver(jobFeature.getDriver())
-            .setDevice(jobFeature.getDeviceRequirements().getDeviceRequirement(0).getDeviceType())
-            .addAllDecorator(
-                Lists.reverse(
-                    jobFeature.getDeviceRequirements().getDeviceRequirement(0).getDecoratorList()))
-            .build();
-
-    for (TestExecutor testExecutor : testExecutors) {
-      if (isJobSupported(testExecutor.getDevice(), primaryDeviceJobType)) {
-        return;
-      }
-    }
-
-    throw new MobileHarnessException(
-        InfraErrorId.LAB_RPC_PREPARE_TEST_JOB_TYPE_NOT_SUPPORTED,
-        String.format("Job type [%s] is not supported by MH lab", primaryDeviceJobType));
-  }
-
-  /** Checks whether the job type is supported by this device. */
-  private static boolean isJobSupported(Device device, JobType jobType) {
-    if (!device.getDeviceTypes().contains(jobType.getDevice())) {
-      logger.atWarning().log(
-          "The device type [%s] is not supported by the device with ID %s",
-          Sets.difference(ImmutableSet.of(jobType.getDevice()), device.getDeviceTypes()),
-          device.getDeviceControlId());
-      return false;
-    }
-
-    if (!device.getDriverTypes().contains(jobType.getDriver())) {
-      logger.atWarning().log(
-          "The driver [%s] is not supported by the device with ID %s",
-          Sets.difference(ImmutableSet.of(jobType.getDriver()), device.getDriverTypes()),
-          device.getDeviceControlId());
-      return false;
-    }
-
-    if (!device.getDecoratorTypes().containsAll(jobType.getDecoratorList())) {
-      logger.atWarning().log(
-          "The decorators [%s] are not supported by the device with ID %s",
-          Sets.difference(
-              ImmutableSet.copyOf(jobType.getDecoratorList()), device.getDecoratorTypes()),
-          device.getDeviceControlId());
-      return false;
-    }
-    return true;
-  }
-
   private JobExecutionUnit createAndAddJobIfAbsent(CreateTestRequest.Job job) {
     String jobId = job.getJobId();
     JobLocator jobLocator = JobLocator.of(jobId, job.getJobName());
@@ -446,48 +377,6 @@ public class PrepareTestServiceImpl {
     return new TestExecutionUnit(testLocator, testTiming, job);
   }
 
-  private List<TestExecutor> getTestExecutorsUntilReady(List<String> deviceIds)
-      throws MobileHarnessException, InterruptedException {
-    // Waits for the device to be ready, since the device maybe INIT in LabServer.
-    Clock clock = Clock.systemUTC();
-    Instant expireTime = clock.instant().plus(WAIT_DEVICE_READY_TIMEOUT);
-    Sleeper sleeper = Sleeper.defaultSleeper();
-    int attempts = 0;
-    while (true) {
-      try {
-        return getTestExecutors(deviceIds);
-      } catch (MobileHarnessException e) {
-        if (clock.instant().isAfter(expireTime)
-            || (e.getErrorId() != InfraErrorId.LAB_RPC_PREPARE_TEST_DEVICE_NOT_ALIVE
-                && e.getErrorId() != InfraErrorId.LAB_RPC_PREPARE_TEST_DEVICE_NOT_FOUND)) {
-          throw e;
-        }
-        logger.atWarning().log(
-            "%d failed attempts to get device runners of %s, try again later",
-            ++attempts, deviceIds);
-        sleeper.sleep(Duration.ofSeconds(1));
-      }
-    }
-  }
-
-  private List<TestExecutor> getTestExecutors(List<String> deviceIds)
-      throws MobileHarnessException {
-    List<TestExecutor> testExecutors = new ArrayList<>();
-    for (String deviceId : deviceIds) {
-      TestExecutor testExecutor = testExecutorProvider.getTestExecutorForDeviceId(deviceId);
-      MobileHarnessExceptions.check(
-          testExecutor != null,
-          InfraErrorId.LAB_RPC_PREPARE_TEST_DEVICE_NOT_FOUND,
-          () -> String.format("Device [%s] does not exist", deviceId));
-      MobileHarnessExceptions.check(
-          testExecutor.isAlive(),
-          InfraErrorId.LAB_RPC_PREPARE_TEST_DEVICE_NOT_ALIVE,
-          () -> String.format("Device [%s] is not alive when preparing test", deviceId));
-      testExecutors.add(testExecutor);
-    }
-    return testExecutors;
-  }
-
   private ProxyTestRunner createTestRunner(
       ContainerSetting containerSetting,
       TestRunnerLauncher<? super ProxyTestRunner> launcher,
@@ -500,6 +389,7 @@ public class PrepareTestServiceImpl {
         launcher,
         testExecutionUnit,
         allocation,
+        devices,
         new LabFileNotifier(),
         getProxiedTestEngineLocator());
   }

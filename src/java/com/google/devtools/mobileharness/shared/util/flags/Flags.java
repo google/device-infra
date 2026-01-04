@@ -1068,6 +1068,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableDeviceSystemSettingsChange = enableDeviceSystemSettingsChangeDefault;
 
+  private static final Flag<Boolean> enableDeviceTestDecouplingDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enable_device_test_decoupling",
+      description = "Whether to enable device/test decoupling mode. Default is false.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableDeviceTestDecoupling = enableDeviceTestDecouplingDefault;
+
   private static final Flag<Boolean> enableDiskCheckDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(

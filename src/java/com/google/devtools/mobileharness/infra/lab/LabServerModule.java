@@ -31,10 +31,14 @@ import com.google.devtools.mobileharness.infra.controller.device.bootstrap.Detec
 import com.google.devtools.mobileharness.infra.controller.device.bootstrap.DetectorsAndDispatchers;
 import com.google.devtools.mobileharness.infra.controller.device.external.ExternalDeviceManager;
 import com.google.devtools.mobileharness.infra.controller.device.external.NoopExternalDeviceManager;
+import com.google.devtools.mobileharness.infra.controller.device.provider.AllocatedDeviceProvisioningModule;
+import com.google.devtools.mobileharness.infra.controller.device.provider.LocalDeviceProvisioningModule;
 import com.google.devtools.mobileharness.infra.controller.messaging.MessageSenderFinder;
 import com.google.devtools.mobileharness.infra.controller.messaging.MessagingManager;
 import com.google.devtools.mobileharness.infra.controller.messaging.MessagingManagerHolder;
 import com.google.devtools.mobileharness.infra.controller.messaging.MessagingServiceModule;
+import com.google.devtools.mobileharness.infra.controller.test.launcher.LocalDeviceLauncherProvisioningModule;
+import com.google.devtools.mobileharness.infra.controller.test.launcher.ThreadPoolLauncherProvisioningModule;
 import com.google.devtools.mobileharness.infra.controller.test.manager.LabDirectTestRunnerUtil;
 import com.google.devtools.mobileharness.infra.controller.test.manager.ProxyTestManager;
 import com.google.devtools.mobileharness.infra.controller.test.manager.TestManager;
@@ -52,6 +56,7 @@ import com.google.devtools.mobileharness.shared.file.resolver.GcsFileResolver;
 import com.google.devtools.mobileharness.shared.file.resolver.LocalFileResolver;
 import com.google.devtools.mobileharness.shared.util.concurrent.ServiceModule;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.inject.AbstractModule;
 import com.google.inject.Key;
@@ -92,6 +97,13 @@ public class LabServerModule extends AbstractModule {
     bind(new Key<TestManager<?>>() {}).to(ProxyTestManager.class);
     bind(LabDirectTestRunnerHolder.class).to(ProxyTestManager.class);
     bind(EventBus.class).annotatedWith(GlobalEventBus.class).toInstance(globalInternalBus);
+    if (Flags.instance().enableDeviceTestDecoupling.get()) {
+      install(new AllocatedDeviceProvisioningModule());
+      install(new ThreadPoolLauncherProvisioningModule());
+    } else {
+      install(new LocalDeviceProvisioningModule());
+      install(new LocalDeviceLauncherProvisioningModule());
+    }
 
     Multibinder<Object> subscriberBinder =
         Multibinder.newSetBinder(binder(), Key.get(Object.class, GlobalEventBusSubscriber.class));

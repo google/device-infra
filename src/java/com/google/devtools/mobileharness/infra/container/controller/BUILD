@@ -64,6 +64,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/model:test_execution_unit",
         "//src/java/com/google/devtools/mobileharness/infra/lab/controller/util:lab_file_notifier",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
