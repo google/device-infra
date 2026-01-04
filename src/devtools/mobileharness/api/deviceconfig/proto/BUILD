@@ -62,6 +62,7 @@ proto_library(
     deps = [
         ":basic_proto",
         "//src/devtools/mobileharness/api/model/proto:lab_proto",
+        "@com_google_protobuf//:field_mask_proto",
     ],
 )
 
