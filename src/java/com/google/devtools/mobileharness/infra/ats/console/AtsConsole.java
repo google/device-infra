@@ -72,6 +72,7 @@ import com.google.devtools.mobileharness.shared.util.port.PortProber;
 import com.google.devtools.mobileharness.shared.util.reflection.ReflectionUtil;
 import com.google.devtools.mobileharness.shared.util.shell.ShellUtils.TokenizationException;
 import com.google.devtools.mobileharness.shared.util.system.ShutdownHookManager;
+import com.google.devtools.mobileharness.shared.util.system.ShutdownHookManager.Priority;
 import com.google.devtools.mobileharness.shared.util.system.SystemInfoPrinter;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.Guice;
@@ -194,7 +195,7 @@ public class AtsConsole {
 
     // Adds shutdown hook.
     ShutdownHookManager.getInstance()
-        .addShutdownHook(atsConsole::onShutdown, "ats-console-shutdown");
+        .addShutdownHook(atsConsole::onShutdown, "ats-console-shutdown", Priority.WORKERS);
 
     // Runs ATS console.
     try (NonThrowingAutoCloseable ignored = threadRenaming("ats-console-main-thread")) {

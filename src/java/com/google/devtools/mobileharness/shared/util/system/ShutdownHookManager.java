@@ -69,11 +69,58 @@ public class ShutdownHookManager {
    *
    * <p>Lower integer values execute EARLIER (e.g., 100 runs before 200, and -100 runs before 0).
    * Shutdown tasks with the same priority value are executed in their submission order.
+   *
+   * <p>You can use the predefined constants (like {@link #TRAFFIC}), derive values relative to them
+   * ({@link #earlier(int)}), or simply create a custom priority directly (e.g., {@code new
+   * Priority(150)}).
+   *
+   * <p>Standard Priorities:
+   *
+   * <table border="1">
+   * <tr><th>Constant</th><th>Value</th><th>Description</th></tr>
+   * <tr><td>{@link #HIGHEST}</td><td>MIN_VALUE</td><td>Urgent signals / health checks</td></tr>
+   * <tr><td>{@link #TRAFFIC}</td><td>100</td><td>Stop external inputs (ports)</td></tr>
+   * <tr><td>{@link #WORKERS}</td><td>200</td><td>Stop application logic</td></tr>
+   * <tr><td>{@link #RESOURCES}</td><td>300</td><td>(Default) Release infrastructure (DB, thread pools)</td></tr>
+   * <tr><td>{@link #LOWEST}</td><td>MAX_VALUE</td><td>Final audit / process termination</td></tr>
+   * </table>
    */
   public record Priority(int value) implements Comparable<Priority> {
 
+    /**
+     * The first tasks to run. Use this for setting global shutdown flags so load balancers stop
+     * routing traffic immediately.
+     */
+    public static final Priority HIGHEST = new Priority(Integer.MIN_VALUE);
+
+    /**
+     * Stops external inputs. Use this to close HTTP ports, pause Kafka consumers, or stop listening
+     * to queues. This ensures no new requests enter the system while existing ones are processing.
+     */
+    public static final Priority TRAFFIC = new Priority(100);
+
+    /** Stops application logic. */
+    public static final Priority WORKERS = new Priority(200);
+
+    /**
+     * Releases infrastructure. Use this to close JDBC connections, close files, or shut down thread
+     * pools.
+     *
+     * <p><b>Warning:</b> Do not use this for application logic. If the DB closes while your workers
+     * are still finishing tasks, data loss may occur.
+     *
+     * <p>This is the default priority if none is specified.
+     */
+    public static final Priority RESOURCES = new Priority(300);
+
+    /**
+     * The last tasks to run. Use this for final logging, releasing PID files, or simple metrics
+     * flushing.
+     */
+    public static final Priority LOWEST = new Priority(Integer.MAX_VALUE);
+
     /** The default priority for general cleanup shutdown tasks. */
-    public static final Priority DEFAULT = new Priority(200);
+    public static final Priority DEFAULT = RESOURCES;
 
     @Override
     public int compareTo(Priority other) {
