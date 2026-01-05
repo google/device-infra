@@ -656,7 +656,7 @@ public final class RunCommand implements Callable<Integer> {
     String result =
         commandExecutor.run(
             com.google.devtools.mobileharness.shared.util.command.Command.of(
-                    XtsCommandUtil.getXtsJavaCommand(
+                    getXtsJavaCommand(
                         xtsType,
                         xtsRootDir,
                         ImmutableList.of(),
@@ -875,6 +875,22 @@ public final class RunCommand implements Callable<Integer> {
         executorService);
     consoleUtil.printlnStdout("Command submitted.");
     return ExitCode.OK;
+  }
+
+  private static ImmutableList<String> getXtsJavaCommand(
+      String xtsType,
+      Path xtsRootDir,
+      ImmutableList<String> jvmFlags,
+      String concatenatedJarPath,
+      ImmutableList<String> xtsRunCommandArgs) {
+    Path javaBinary = XtsCommandUtil.getJavaBinary(xtsType, xtsRootDir);
+    return XtsCommandUtil.getTradefedJavaCommand(
+        javaBinary.toString(),
+        jvmFlags,
+        concatenatedJarPath,
+        ImmutableList.of(XtsCommandUtil.getXtsRootJavaProperty(xtsType, xtsRootDir)),
+        XtsCommandUtil.getConsoleClassName(),
+        xtsRunCommandArgs);
   }
 
   /** Future callback which prints {@code AtsSessionPluginOutput} to console. */

@@ -29,8 +29,8 @@ message XtsTradefedTestDriverSpec {
   }
 
   optional string xts_type = 1 [(field_detail) = {
-    help: "The type of xts. Current supported types include CTS."
-    is_required: true
+    help: "The type of xts. Current supported types include CTS. If not "
+          "specified, the driver will run in generic TF mode."
   }];
 
   optional string xts_root_dir = 2 [(field_detail) = {

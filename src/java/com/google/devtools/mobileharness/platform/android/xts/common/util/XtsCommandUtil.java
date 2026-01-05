@@ -30,24 +30,33 @@ public final class XtsCommandUtil {
   private static final SystemUtil SYSTEM_UTIL = new SystemUtil();
   private static final LocalFileUtil LOCAL_FILE_UTIL = new LocalFileUtil();
 
-  /** Gets xts command. */
-  public static ImmutableList<String> getXtsJavaCommand(
-      String xtsType,
-      Path xtsRootDir,
+  public static ImmutableList<String> getTradefedJavaCommand(
+      String javaBinary,
       ImmutableList<String> jvmFlags,
       String concatenatedJarPath,
+      ImmutableList<String> jvmDefines,
+      String mainClass,
       ImmutableList<String> xtsRunCommandArgs) {
-    Path javaBinary = getJavaBinary(xtsType, xtsRootDir);
     return ImmutableList.<String>builder()
-        .add(javaBinary.toString())
+        .add(javaBinary)
         .addAll(jvmFlags)
         .add("-cp")
         .add(concatenatedJarPath)
-        .add(
-            String.format("-D%s_ROOT=%s", Ascii.toUpperCase(xtsType).replace('-', '_'), xtsRootDir))
-        .add(COMPATIBILITY_CONSOLE_CLASS)
+        .addAll(jvmDefines)
+        .add(mainClass)
         .addAll(xtsRunCommandArgs)
         .build();
+  }
+
+  public static String getConsoleClassName() {
+    return COMPATIBILITY_CONSOLE_CLASS;
+  }
+
+  /**
+   * Gets the Java property argument for the xTS root directory, e.g., "-DCTS_ROOT=/path/to/cts".
+   */
+  public static String getXtsRootJavaProperty(String xtsType, Path xtsRootDir) {
+    return String.format("-D%s_ROOT=%s", Ascii.toUpperCase(xtsType).replace('-', '_'), xtsRootDir);
   }
 
   /** The logic should be consistent with cts-tradefed shell. */
