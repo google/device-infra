@@ -639,7 +639,7 @@ public final class XtsRunStrategy implements TradefedRunStrategy {
       throws MobileHarnessException, InterruptedException {
     TestSuiteHelper suiteHelper = new TestSuiteHelper(workDir.toString(), xtsType);
     // It's a map of expanded module names (e.g. `arm64-v8a CtsBatteryHealthTestCases`) to their
-    // configurations.
+    // configurations. Note this includes both TradeFed and non-TradeFed (Mobly) modules.
     Map<String, Configuration> configs =
         suiteHelper.loadTests(
             DeviceInfo.builder()
@@ -666,8 +666,10 @@ public final class XtsRunStrategy implements TradefedRunStrategy {
 
     // List of expanded module names (e.g. `arm64-v8a CtsBatteryHealthTestCases`), separated by
     // comma.
-    String filteredExpandedModules =
+    String filteredExpandedTradefedModules =
         configs.entrySet().stream()
+            // Filter out non-TradeFed modules (config v2 is used by Mobly modules).
+            .filter(entry -> !entry.getValue().getMetadata().getIsConfigV2())
             .filter(
                 entry ->
                     filteredTradefedModules.contains(entry.getValue().getMetadata().getXtsModule()))
@@ -678,7 +680,7 @@ public final class XtsRunStrategy implements TradefedRunStrategy {
         .properties()
         .add(
             XtsConstants.TRADEFED_FILTERED_EXPANDED_MODULES_FOR_TEST_PROPERTY_KEY,
-            filteredExpandedModules);
+            filteredExpandedTradefedModules);
   }
 
   @Override
