@@ -62,6 +62,7 @@ import com.google.gson.reflect.TypeToken;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
+import com.google.wireless.qa.mobileharness.shared.api.spec.MoblyAospTestSpec;
 import com.google.wireless.qa.mobileharness.shared.api.spec.MoblyTestSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
@@ -1457,6 +1458,40 @@ public final class SessionRequestHandlerUtilTest {
         .asList()
         .containsExactly("FooTest.test1", "FooTest.test3");
     assertThat(jobInfos.get(1).params().get(PARAM_XTS_SUITE_INFO)).contains("suite_plan=cts");
+  }
+
+  @Test
+  public void createXtsNonTradefedJobs_withVenvPath() throws Exception {
+    setUpForCreateXtsNonTradefedJobs();
+    SessionRequestInfo sessionRequestInfo =
+        sessionRequestHandlerUtil.addNonTradefedModuleInfo(
+            defaultSessionRequestInfoBuilder()
+                .setModuleArgs(ImmutableList.of("module1:venv_path:/path/to/custom/venv"))
+                .build());
+    ImmutableList<JobInfo> jobInfos =
+        sessionRequestHandlerUtil.createXtsNonTradefedJobs(
+            sessionRequestInfo, null, ImmutableMap.of());
+
+    assertThat(jobInfos).hasSize(2);
+    assertThat(jobInfos.get(0).params().getOptional(MoblyAospTestSpec.PARAM_VENV_PATH))
+        .hasValue(Path.of("/path/to/custom/venv").toString()); // module arg takes precedence
+    assertThat(jobInfos.get(1).params().getOptional(MoblyAospTestSpec.PARAM_VENV_PATH))
+        .hasValue(Path.of("/path/to/venv").toString()); // default venv path
+  }
+
+  @Test
+  public void createXtsNonTradefedJobs_atsServerRequest_noVenvPath() throws Exception {
+    setUpForCreateXtsNonTradefedJobs();
+    SessionRequestInfo sessionRequestInfo =
+        sessionRequestHandlerUtil.addNonTradefedModuleInfo(
+            defaultSessionRequestInfoBuilder().setIsAtsServerRequest(true).build());
+    ImmutableList<JobInfo> jobInfos =
+        sessionRequestHandlerUtil.createXtsNonTradefedJobs(
+            sessionRequestInfo, null, ImmutableMap.of());
+
+    assertThat(jobInfos).hasSize(2);
+    assertThat(jobInfos.get(0).params().getOptional(MoblyAospTestSpec.PARAM_VENV_PATH)).isEmpty();
+    assertThat(jobInfos.get(1).params().getOptional(MoblyAospTestSpec.PARAM_VENV_PATH)).isEmpty();
   }
 
   @Test

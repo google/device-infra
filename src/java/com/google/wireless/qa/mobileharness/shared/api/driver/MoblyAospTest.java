@@ -191,7 +191,12 @@ public class MoblyAospTest extends MoblyTest implements MoblyAospTestSpec {
   }
 
   Path getVenvPath(TestInfo testInfo) throws MobileHarnessException {
-    return Path.of(testInfo.getTmpFileDir(), "venv");
+    return testInfo
+        .jobInfo()
+        .params()
+        .getOptional(PARAM_VENV_PATH)
+        .map(Path::of)
+        .orElse(Path.of(testInfo.getTmpFileDir(), "venv"));
   }
 
   @Override

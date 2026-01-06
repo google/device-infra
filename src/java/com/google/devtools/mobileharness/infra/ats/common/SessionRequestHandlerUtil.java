@@ -89,6 +89,7 @@ import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.gson.Gson;
 import com.google.inject.Provider;
 import com.google.protobuf.TextFormat.ParseException;
+import com.google.wireless.qa.mobileharness.shared.api.spec.MoblyAospTestSpec;
 import com.google.wireless.qa.mobileharness.shared.api.spec.MoblyTestSpec;
 import com.google.wireless.qa.mobileharness.shared.api.step.android.InstallApkStepConstants;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
@@ -1138,7 +1139,8 @@ public class SessionRequestHandlerUtil {
                 testTimeout,
                 startTimeout,
                 isSkipDeviceInfo(sessionRequestInfo, subPlan),
-                sessionRequestInfo.xtsSuiteInfo());
+                sessionRequestInfo.xtsSuiteInfo(),
+                sessionRequestInfo.isAtsServerRequest());
 
         getSimCardTypeDimensionValue(moduleMetadata)
             .ifPresent(
@@ -1316,16 +1318,17 @@ public class SessionRequestHandlerUtil {
       Duration testTimeout,
       Duration startTimeout,
       boolean skipDeviceInfo,
-      ImmutableMap<String, String> xtsSuiteInfo)
+      ImmutableMap<String, String> xtsSuiteInfo,
+      boolean isAtsServerRequest)
       throws MobileHarnessException, InterruptedException {
     JobInfo jobInfo =
         createBaseXtsNonTradefedJob(
             moduleConfig, expandedModuleName, jobTimeout, testTimeout, startTimeout);
 
+    Path moduleDir = moduleConfigPath.getParent();
     ImmutableList<File> fileDepDirs =
         ImmutableList.of(
-            moduleConfigPath.getParent().toFile(),
-            XtsDirUtil.getXtsTestCasesDir(xtsRootDir, xtsType).toFile());
+            moduleDir.toFile(), XtsDirUtil.getXtsTestCasesDir(xtsRootDir, xtsType).toFile());
 
     moduleConfigurationHelper.updateJobInfo(jobInfo, moduleConfig, moduleDeviceConfig, fileDepDirs);
 
@@ -1365,6 +1368,12 @@ public class SessionRequestHandlerUtil {
     jobInfo.properties().add(Job.SKIP_COLLECTING_DEVICE_INFO, Boolean.toString(skipDeviceInfo));
     if (!matchedTestCases.isEmpty()) {
       jobInfo.params().add(MoblyTestSpec.TEST_SELECTOR_KEY, Joiner.on(" ").join(matchedTestCases));
+    }
+    if (!isAtsServerRequest
+        && jobInfo.params().getOptional(MoblyAospTestSpec.PARAM_VENV_PATH).isEmpty()) {
+      // Use the venv in the module directory if it's not specified by users. The venv will be
+      // created by the test driver if it doesn't exist.
+      jobInfo.params().add(MoblyAospTestSpec.PARAM_VENV_PATH, moduleDir.resolve("venv").toString());
     }
     jobInfo
         .params()

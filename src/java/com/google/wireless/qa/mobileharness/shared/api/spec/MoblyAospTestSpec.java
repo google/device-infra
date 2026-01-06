@@ -54,4 +54,9 @@ public interface MoblyAospTestSpec {
               + " the mobly android partner runner with command 'mobly_runner mobly_test_suite -i'."
               + " If not set, the mobly test bin will be used.")
   public static final String PARAM_TEST_EXECUTION_COMMAND = "test_execution_command";
+
+  @ParamAnnotation(
+      required = false,
+      help = "Path to the venv. If not set, a venv will be created in a temporary directory.")
+  public static final String PARAM_VENV_PATH = "venv_path";
 }
