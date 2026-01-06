@@ -73,7 +73,7 @@ final class ExitCommand implements Callable<Integer> {
 
     // Wait until no running sessions.
     ListenableFuture<?> noRunningSessionsFuture =
-        exitUtil.waitUntilNoRunningSessionsAndInterruptLineReader();
+        exitUtil.waitUntilNoRunningSessions(/* interruptLineReader= */ true);
 
     // Stops reading input if necessary.
     if (stopReadingInput) {

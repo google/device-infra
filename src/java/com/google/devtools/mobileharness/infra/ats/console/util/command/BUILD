@@ -36,7 +36,10 @@ java_library(
 java_library(
     name = "exit_util",
     srcs = ["ExitUtil.java"],
-    visibility = ["//src/java/com/google/devtools/mobileharness/infra/ats/console/command:__subpackages__"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/command:__subpackages__",
+    ],
     deps = [
         "//src/devtools/mobileharness/infra/ats/console/controller/proto:session_plugin_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",

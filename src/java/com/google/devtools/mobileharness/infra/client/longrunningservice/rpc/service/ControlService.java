@@ -135,11 +135,7 @@ public class ControlService extends ControlServiceGrpc.ControlServiceImplBase {
     KillServerResponse.Builder responseBuilder =
         KillServerResponse.newBuilder().setServerPid(ProcessHandle.current().pid());
 
-    // In embedded mode the OLC server won't be actually killed.
-    if (Flags.instance().atsConsoleOlcServerEmbeddedMode.getNonNull()) {
-      return responseBuilder.setSuccess(Success.getDefaultInstance()).build();
-    }
-
+    // Aborts unfinished sessions from the client.
     String clientId = request.getClientId();
     ImmutableList<String> unfinishedSessionIdsFromClient =
         sessionManager
@@ -154,13 +150,20 @@ public class ControlService extends ControlServiceGrpc.ControlServiceImplBase {
         "Unfinished sessions from client [%s]: %s", clientId, unfinishedSessionIdsFromClient);
     sessionManager.abortSessions(unfinishedSessionIdsFromClient);
 
+    // In embedded mode the OLC server won't be actually killed.
+    if (Flags.instance().atsConsoleOlcServerEmbeddedMode.getNonNull()) {
+      return responseBuilder.setSuccess(Success.getDefaultInstance()).build();
+    }
+
     ImmutableList<SessionDetail> unfinishedNotAbortedSessions =
         sessionManager.getAllSessions(
             SessionQueryUtil.SESSION_SUMMARY_FIELD_MASK,
             SessionQueryUtil.UNFINISHED_NOT_ABORTED_SESSION_FILTER);
 
-    // Gets all clients that are still alive.
+    // Invalidates the client ID.
     aliveClientIds.invalidate(clientId);
+
+    // Gets all clients that are still alive.
     Set<String> currentAliveClientIds = aliveClientIds.asMap().keySet();
 
     if (unfinishedNotAbortedSessions.isEmpty() && currentAliveClientIds.isEmpty()) {

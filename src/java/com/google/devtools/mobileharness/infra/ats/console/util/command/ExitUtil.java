@@ -89,16 +89,19 @@ public final class ExitUtil {
   }
 
   /** Asynchronously waits until no running sessions and then interrupts the line reader. */
-  public ListenableFuture<?> waitUntilNoRunningSessionsAndInterruptLineReader() {
+  public ListenableFuture<?> waitUntilNoRunningSessions(boolean interruptLineReader) {
     return logFailure(
         threadPool.submit(
             threadRenaming(
                 () -> {
-                  consoleUtil.printlnStdout(
-                      "Will exit the console after all commands have executed.");
                   try {
                     int sleepCount = 0;
-                    int runningRunCommandCount;
+                    int runningRunCommandCount = RunCommand.getRunningRunCommandCount();
+                    if (runningRunCommandCount == 0) {
+                      return;
+                    }
+                    consoleUtil.printlnStdout(
+                        "Will exit the console after all commands have executed.");
                     do {
                       // Sessions of RunCommand are the only async sessions in ATS console.
                       runningRunCommandCount = RunCommand.getRunningRunCommandCount();
@@ -121,7 +124,9 @@ public final class ExitUtil {
                             + " console directly.");
                     Thread.currentThread().interrupt();
                   } finally {
-                    interruptibleLineReader.interrupt();
+                    if (interruptLineReader) {
+                      interruptibleLineReader.interrupt();
+                    }
                   }
                 },
                 () -> "wait-until-no-running-session")),

@@ -53,7 +53,7 @@ final class KillCommand implements Callable<Integer> {
       interruptibleLineReader.interrupt();
     } else {
       @SuppressWarnings("unused")
-      var unused = exitUtil.waitUntilNoRunningSessionsAndInterruptLineReader();
+      var unused = exitUtil.waitUntilNoRunningSessions(/* interruptLineReader= */ true);
     }
 
     return ExitCode.OK;

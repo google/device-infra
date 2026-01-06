@@ -30,6 +30,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.util.concurrent.Futures;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -52,6 +53,7 @@ import com.google.devtools.mobileharness.infra.ats.console.command.preprocessor.
 import com.google.devtools.mobileharness.infra.ats.console.command.preprocessor.CommandPreprocessor.PreprocessingResult;
 import com.google.devtools.mobileharness.infra.ats.console.constant.AtsConsoleDirs;
 import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.ServerLogPrinter;
+import com.google.devtools.mobileharness.infra.ats.console.util.command.ExitUtil;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.InterruptibleLineReader;
 import com.google.devtools.mobileharness.infra.ats.console.util.log.LogDumper;
@@ -229,6 +231,7 @@ public class AtsConsole {
   private final CommandCompleter commandCompleter;
   private final CommandPreprocessor commandPreprocessor;
   private final OlcServerRunner olcServerRunner;
+  private final ExitUtil exitUtil;
 
   /** Set before {@link #run}; */
   @VisibleForTesting public volatile Injector injector;
@@ -253,7 +256,8 @@ public class AtsConsole {
       VersionMessageUtil versionMessageUtil,
       CommandCompleter commandCompleter,
       CommandPreprocessor commandPreprocessor,
-      Optional<OlcServerRunner> olcServerRunner) {
+      Optional<OlcServerRunner> olcServerRunner,
+      ExitUtil exitUtil) {
     this.mainArgs = mainArgs;
     this.deviceInfraServiceFlags = deviceInfraServiceFlags;
     this.lineReader = lineReader;
@@ -273,6 +277,7 @@ public class AtsConsole {
     this.commandCompleter = commandCompleter;
     this.commandPreprocessor = commandPreprocessor;
     this.olcServerRunner = olcServerRunner.orElse(null);
+    this.exitUtil = exitUtil;
   }
 
   public void run() throws MobileHarnessException, InterruptedException {
@@ -392,15 +397,19 @@ public class AtsConsole {
     // Dump logs.
     System.out.println(LogDumper.dumpLog(LogDirsType.USED));
 
+    // Peacefully cancels unfinished sessions and waits until them finish.
+    exitUtil.cancelUnfinishedSessions("Exit console", /* aggressive= */ false);
+    Futures.getUnchecked(exitUtil.waitUntilNoRunningSessions(/* interruptLineReader= */ false));
+
+    // Aborts all sessions of the console and kills the OLC server.
+    try {
+      controlStub.killServer(KillServerRequest.newBuilder().setClientId(clientId).build());
+    } catch (GrpcExceptionWithErrorId e) {
+      // Does nothing.
+    }
+
     if (Flags.instance().atsConsoleOlcServerEmbeddedMode.getNonNull()) {
       olcServerRunner.onShutdown();
-    } else {
-      // Aborts all sessions of the console and kills the OLC server.
-      try {
-        controlStub.killServer(KillServerRequest.newBuilder().setClientId(clientId).build());
-      } catch (GrpcExceptionWithErrorId e) {
-        // Does nothing.
-      }
     }
   }
 
