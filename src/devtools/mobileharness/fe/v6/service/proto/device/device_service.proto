@@ -42,7 +42,8 @@ service DeviceService {
   rpc GetDeviceHealthinessStats(GetDeviceHealthinessStatsRequest)
       returns (HealthinessStats) {
     option (google.api.http) = {
-      get: "/v6/devices/{id}/stats/healthiness"
+      post: "/v6/devices/{id}/stats:getHealthiness",
+      body: "*"
     };
   }
 
@@ -50,7 +51,8 @@ service DeviceService {
   rpc GetDeviceTestResultStats(GetDeviceTestResultStatsRequest)
       returns (TestResultStats) {
     option (google.api.http) = {
-      get: "/v6/devices/{id}/stats/testresults"
+      post: "/v6/devices/{id}/stats:getTestResults",
+      body: "*"
     };
   }
 
@@ -58,14 +60,15 @@ service DeviceService {
   rpc GetDeviceRecoveryTaskStats(GetDeviceRecoveryTaskStatsRequest)
       returns (RecoveryTaskStats) {
     option (google.api.http) = {
-      get: "/v6/devices/{id}/stats/recoverytasks"
+      post: "/v6/devices/{id}/stats:getRecoveryTasks",
+      body: "*"
     };
   }
 
   // Takes a screenshot of the device.
   rpc TakeScreenshot(TakeScreenshotRequest) returns (TakeScreenshotResponse) {
     option (google.api.http) = {
-      post: "/v6/devices/{id}:screenshot",
+      post: "/v6/devices/{id}:takeScreenshot",
       body: "*"
     };
   }
@@ -107,7 +110,8 @@ service DeviceService {
   // Gets testbed config for the device.
   rpc GetTestbedConfig(GetTestbedConfigRequest) returns (TestbedConfig) {
     option (google.api.http) = {
-      get: "/v6/devices/{id}/testbedConfig"
+      post: "/v6/devices/{id}:getTestbedConfig",
+      body: "*"
     };
   }
 }

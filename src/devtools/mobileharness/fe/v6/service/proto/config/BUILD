@@ -19,7 +19,10 @@ load("@protobuf//bazel:proto_library.bzl", "proto_library")
 
 package(
     default_applicable_licenses = ["//:license"],
-    default_visibility = ["//src/devtools/mobileharness/fe/v6:visibility"],
+    default_visibility = [
+        "//google/corp/devtools/mobileharness/fe:__subpackages__",
+        "//src/devtools/mobileharness/fe/v6:visibility",
+    ],
 )
 
 proto_library(

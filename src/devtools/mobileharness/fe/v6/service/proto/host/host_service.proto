@@ -38,7 +38,8 @@ service HostService {
   rpc GetHostDeviceSummaries(GetHostDeviceSummariesRequest)
       returns (GetHostDeviceSummariesResponse) {
     option (google.api.http) = {
-      get: "/v6/hosts/{host_name}/device_summaries"
+      post: "/v6/hosts/{host_name}:getDeviceSummaries",
+      body: "*"
     };
   }
 
@@ -46,7 +47,7 @@ service HostService {
   rpc UpdatePassThroughFlags(UpdatePassThroughFlagsRequest)
       returns (UpdatePassThroughFlagsResponse) {
     option (google.api.http) = {
-      post: "/v6/hosts/{host_name}/update_pass_through_flags"
+      post: "/v6/hosts/{host_name}:updatePassThroughFlags"
       body: "*"
     };
   }
