@@ -82,6 +82,12 @@
                             </td>
                         </tr>
                         <tr>
+                            <td class="rowtitle">Tests Warning</td>
+                            <td>
+                                <xsl:value-of select="Result/Summary/@warning"/>
+                            </td>
+                        </tr>
+                        <tr>
                             <td class="rowtitle">Modules Done</td>
                             <td>
                                 <xsl:value-of select="Result/Summary/@modules_done"/>
@@ -128,6 +134,7 @@
                             <th>Module</th>
                             <th>Passed</th>
                             <th>Failed</th>
+                            <th>Warning</th>
                             <th>Assumption Failure</th>
                             <th>Ignored</th>
                             <th>Total Tests</th>
@@ -136,11 +143,11 @@
                         <xsl:for-each select="Result/Module">
                             <tr>
                                 <td>
-                                    <xsl:if test="count(TestCase/Test[@result = 'fail']) &gt; 0">
+                                    <xsl:if test="count(TestCase/Test[@result = 'fail' or @result = 'warning']) &gt; 0">
                                         <xsl:variable name="href"><xsl:value-of select="@abi"/>&#xA0;<xsl:value-of select="@name"/></xsl:variable>
                                         <a href="#{$href}"><xsl:value-of select="@abi"/>&#xA0;<xsl:value-of select="@name"/></a>
                                     </xsl:if>
-                                    <xsl:if test="count(TestCase/Test[@result = 'fail']) &lt; 1">
+                                    <xsl:if test="count(TestCase/Test[@result = 'fail' or @result = 'warning']) &lt; 1">
                                         <xsl:value-of select="@abi"/>&#xA0;<xsl:value-of select="@name"/>
                                     </xsl:if>
                                 </td>
@@ -149,6 +156,9 @@
                                 </td>
                                 <td>
                                     <xsl:value-of select="count(TestCase/Test[@result = 'fail'])"/>
+                                </td>
+                                <td>
+                                    <xsl:value-of select="count(TestCase/Test[@result = 'warning'])"/>
                                 </td>
                                 <td>
                                     <xsl:value-of select="count(TestCase/Test[@result = 'ASSUMPTION_FAILURE'])"/>
@@ -170,6 +180,9 @@
                 <br/>
                 <xsl:call-template name="detailedTestReport">
                     <xsl:with-param name="resultFilter" select="'fail'" />
+                </xsl:call-template>
+                <xsl:call-template name="detailedTestReport">
+                    <xsl:with-param name="resultFilter" select="'warning'" />
                 </xsl:call-template>
 
                 <br/>
@@ -229,6 +242,19 @@
 
                                         <xsl:if test="@result='fail'">
                                             <td class="failed">
+                                                <div style="text-align: center; margin-left:auto; margin-right:auto;">
+                                                    <xsl:value-of select="@result"/>
+                                                </div>
+                                            </td>
+                                            <td class="failuredetails">
+                                                <div class="details">
+                                                    <xsl:value-of select="Failure/@message"/>
+                                                </div>
+                                            </td>
+                                        </xsl:if>
+
+                                        <xsl:if test="@result='warning'">
+                                            <td class="warning">
                                                 <div style="text-align: center; margin-left:auto; margin-right:auto;">
                                                     <xsl:value-of select="@result"/>
                                                 </div>

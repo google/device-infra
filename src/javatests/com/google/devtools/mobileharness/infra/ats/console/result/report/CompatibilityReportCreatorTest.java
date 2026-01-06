@@ -26,12 +26,10 @@ import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportPr
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.StackTrace;
-import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Summary;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.TestCase;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.TestFailure;
 import com.google.devtools.mobileharness.infra.ats.console.util.TestRunfilesUtil;
 import com.google.devtools.mobileharness.infra.ats.console.util.tradefed.TestRecordWriter;
-import com.google.devtools.mobileharness.platform.android.xts.common.TestStatus;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
@@ -64,31 +62,6 @@ public final class CompatibilityReportCreatorTest {
           "result/report/testdata/xml/report_creator_cts_non_tf_test_result.xml");
 
   private static final Splitter LINE_SPLITTER = Splitter.onPattern("\r\n|\n|\r");
-
-  private static final Result REPORT =
-      Result.newBuilder()
-          .setSummary(Summary.newBuilder().setPassed(1).setFailed(1).setWarning(0))
-          .addModuleInfo(
-              Module.newBuilder()
-                  .setName("module1")
-                  .setFailedTests(1)
-                  .setWarningTests(0)
-                  .addTestCase(
-                      TestCase.newBuilder()
-                          .setName("testCase1")
-                          .addTest(
-                              ReportProto.Test.newBuilder()
-                                  .setName("test1")
-                                  .setResult(
-                                      TestStatus.convertToTestStatusCompatibilityString(
-                                          TestStatus.PASSED)))
-                          .addTest(
-                              ReportProto.Test.newBuilder()
-                                  .setName("test2")
-                                  .setResult(
-                                      TestStatus.convertToTestStatusCompatibilityString(
-                                          TestStatus.FAILURE)))))
-          .build();
 
   private final LocalFileUtil realLocalFileUtil = new LocalFileUtil();
 
@@ -195,7 +168,8 @@ public final class CompatibilityReportCreatorTest {
     File xmlResultDir = temporaryFolder.newFolder("xml_result");
 
     reportCreator.createReport(
-        report,
+        /* originalReport= */ report,
+        /* userfacingReport= */ report,
         xmlResultDir.toPath(),
         /* testRecord= */ null,
         /* includeHtmlInZip= */ false,
@@ -221,32 +195,6 @@ public final class CompatibilityReportCreatorTest {
             realLocalFileUtil.listFilePaths(xmlResultDir.toPath().getParent(), false).stream()
                 .map(p -> p.getFileName().toString()))
         .containsExactly("xml_result.zip");
-  }
-
-  @Test
-  public void preprocessReport_nonAqtsTestPlan_success() {
-    Result preprocessedReport = reportCreator.preprocessReport(REPORT, /* testPlan= */ "cts");
-
-    // Preprocess doesn't really do anything for non-AQT test plans.
-    assertThat(preprocessedReport).isEqualTo(REPORT);
-  }
-
-  @Test
-  public void preprocessReport_aqtsTestPlan_success() {
-    Result preprocessedReport = reportCreator.preprocessReport(REPORT, /* testPlan= */ "aqts");
-
-    Result.Builder expectedReportBuilder = REPORT.toBuilder();
-    expectedReportBuilder
-        .getModuleInfoBuilderList()
-        .get(0)
-        .getTestCaseBuilderList()
-        .get(0)
-        .getTestBuilderList()
-        .get(1)
-        .setResult("WARNING");
-    expectedReportBuilder.getSummaryBuilder().setWarning(1).setFailed(0);
-    expectedReportBuilder.getModuleInfoBuilderList().get(0).setWarningTests(1).setFailedTests(0);
-    assertThat(preprocessedReport).isEqualTo(expectedReportBuilder.build());
   }
 
   private static String replaceLineBreak(String str) {

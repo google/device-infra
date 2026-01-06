@@ -23,10 +23,18 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Summary;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.TestCase;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportCreator;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportMerger;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
+import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
+import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.ConfigurationDescriptor;
+import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.ConfigurationDescriptorMetadata;
+import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.ConfigurationMetadata;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryReportMerger;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -168,5 +176,119 @@ public final class SessionResultHandlerUtilTest {
 
     assertThat(result.toString())
         .isEqualTo(logRootDir.resolve("inv_mcts_test_id/XtsTradefedTest_test_test_id").toString());
+  }
+
+  @Test
+  public void preprocessReport_withFailureLevels() throws Exception {
+    Configuration module1Config = createModuleConfigWithFailureLevel("module1", Optional.empty());
+    Configuration module2Config =
+        createModuleConfigWithFailureLevel("module2", Optional.of("PASSED"));
+    Configuration module3Config =
+        createModuleConfigWithFailureLevel("module3", Optional.of("WARNING"));
+    Configuration module4Config =
+        createModuleConfigWithFailureLevel("module4", Optional.of("FAILURE"));
+    Configuration module5Config =
+        createModuleConfigWithFailureLevel("module5", Optional.of("IGNORED"));
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfo.builder()
+            .setTestPlan("testPlan")
+            .setCommandLineArgs("commandLineArgs")
+            .setXtsRootDir("xtsRootDir")
+            .setXtsType("xtsType")
+            .setExpandedModules(
+                ImmutableMap.of(
+                    "module1",
+                    module1Config,
+                    "module2",
+                    module2Config,
+                    "module3",
+                    module3Config,
+                    "module4",
+                    module4Config,
+                    "module5",
+                    module5Config))
+            .build();
+
+    Module.Builder defaultModuleBuilder =
+        Module.newBuilder()
+            .setPassed(1)
+            .setFailedTests(2)
+            .addTestCase(
+                TestCase.newBuilder()
+                    .addTest(
+                        com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto
+                            .Test.newBuilder()
+                            .setName("test1")
+                            .setResult("pass"))
+                    .addTest(
+                        com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto
+                            .Test.newBuilder()
+                            .setName("test2")
+                            .setResult("fail")))
+            .addTestCase(
+                TestCase.newBuilder()
+                    .addTest(
+                        com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto
+                            .Test.newBuilder()
+                            .setName("test3")
+                            .setResult("fail")));
+    Result originalReport =
+        Result.newBuilder()
+            .addModuleInfo(defaultModuleBuilder.setName("module1").build())
+            .addModuleInfo(defaultModuleBuilder.setName("module2").build())
+            .addModuleInfo(defaultModuleBuilder.setName("module3").build())
+            .addModuleInfo(defaultModuleBuilder.setName("module4").build())
+            .addModuleInfo(defaultModuleBuilder.setName("module5").build())
+            .setSummary(Summary.newBuilder().setPassed(5).setFailed(10).setWarning(0))
+            .build();
+
+    Result userfacingReport =
+        sessionResultHandlerUtil.preprocessReport(originalReport, sessionRequestInfo);
+
+    assertModuleResultAfterFormat(
+        userfacingReport.getModuleInfo(0), "module1", 1, 2, 0, "fail", "fail");
+    assertModuleResultAfterFormat(
+        userfacingReport.getModuleInfo(1), "module2", 3, 0, 0, "pass", "pass");
+    assertModuleResultAfterFormat(
+        userfacingReport.getModuleInfo(2), "module3", 1, 0, 2, "warning", "warning");
+    assertModuleResultAfterFormat(
+        userfacingReport.getModuleInfo(3), "module4", 1, 2, 0, "fail", "fail");
+    assertModuleResultAfterFormat(
+        userfacingReport.getModuleInfo(4), "module5", 1, 0, 0, "IGNORED", "IGNORED");
+
+    assertThat(userfacingReport.getSummary().getPassed()).isEqualTo(7);
+    assertThat(userfacingReport.getSummary().getFailed()).isEqualTo(4);
+    assertThat(userfacingReport.getSummary().getWarning()).isEqualTo(2);
+  }
+
+  private Configuration createModuleConfigWithFailureLevel(
+      String moduleName, Optional<String> failureLevel) {
+    Configuration.Builder builder =
+        Configuration.newBuilder()
+            .setMetadata(ConfigurationMetadata.newBuilder().setXtsModule(moduleName));
+    failureLevel.ifPresent(
+        level ->
+            builder.setConfigDescriptor(
+                ConfigurationDescriptor.newBuilder()
+                    .putMetadata(
+                        "failure_level",
+                        ConfigurationDescriptorMetadata.newBuilder().addValue(level).build())));
+    return builder.build();
+  }
+
+  private void assertModuleResultAfterFormat(
+      Module moduleInfo,
+      String expectedModuleName,
+      int expectedPassed,
+      int expectedFailed,
+      int expectedWarning,
+      String expectedTest2Result,
+      String expectedTest3Result) {
+    assertThat(moduleInfo.getName()).isEqualTo(expectedModuleName);
+    assertThat(moduleInfo.getPassed()).isEqualTo(expectedPassed);
+    assertThat(moduleInfo.getFailedTests()).isEqualTo(expectedFailed);
+    assertThat(moduleInfo.getWarningTests()).isEqualTo(expectedWarning);
+    assertThat(moduleInfo.getTestCase(0).getTest(1).getResult()).isEqualTo(expectedTest2Result);
+    assertThat(moduleInfo.getTestCase(1).getTest(0).getResult()).isEqualTo(expectedTest3Result);
   }
 }

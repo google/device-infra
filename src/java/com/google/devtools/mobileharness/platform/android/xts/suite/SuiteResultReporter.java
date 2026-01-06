@@ -92,6 +92,7 @@ public class SuiteResultReporter {
     long totalTests = 0L;
     long passedTests = 0L;
     long failedTests = 0L;
+    long warningTests = 0L;
     long skippedTests = 0L;
     long assumeFailureTests = 0L;
     // Retry information
@@ -124,9 +125,8 @@ public class SuiteResultReporter {
         }
         totalTests += module.getTotalTests();
         passedTests += module.getPassed();
-        failedTests +=
-            getNumTestsInState(
-                module, TestStatus.convertToTestStatusCompatibilityString(TestStatus.FAILURE));
+        failedTests += module.getFailedTests();
+        warningTests += module.getWarningTests();
         skippedTests +=
             getNumTestsInState(
                 module, TestStatus.convertToTestStatusCompatibilityString(TestStatus.IGNORED));
@@ -200,6 +200,9 @@ public class SuiteResultReporter {
     invocationSummary.append(String.format("PASSED            : %s\n", passedTests));
     invocationSummary.append(String.format("FAILED            : %s\n", failedTests));
 
+    if (warningTests > 0L) {
+      invocationSummary.append(String.format("WARNING           : %s\n", warningTests));
+    }
     if (skippedTests > 0L) {
       invocationSummary.append(String.format("IGNORED           : %s\n", skippedTests));
     }

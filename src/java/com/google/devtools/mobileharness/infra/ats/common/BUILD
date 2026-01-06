@@ -216,6 +216,7 @@ java_library(
         "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_creator",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_format",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_merger",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:mobly_report_parser",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/xml:xml_constants",

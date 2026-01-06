@@ -24,6 +24,7 @@ import static com.google.devtools.mobileharness.shared.constant.LogRecordImporta
 import static java.util.stream.Collectors.toCollection;
 
 import com.google.auto.value.AutoValue;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
@@ -34,8 +35,10 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Attribute;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportCreator;
+import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportFormat;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportMerger;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportMerger.ParseResult;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportMerger.TradefedResultBundle;
@@ -71,7 +74,7 @@ import java.util.function.Function;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 
-/** Helper class for ATS applications to create job config. */
+/** Helper class for ATS applications to create session results. */
 public class SessionResultHandlerUtil {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
@@ -481,17 +484,19 @@ public class SessionResultHandlerUtil {
               .addAllIncludeFilter(includeFilters.build())
               .addAllExcludeFilter(excludeFilters.build())
               .build();
+      Result userfacingReport = preprocessReport(finalReport, sessionRequestInfo);
       // Generates the invocation summary file before creating the report and zipping result
       // folder.
       generateInvocationSummaryFile(
           sessionAllJobs,
-          finalReport,
+          userfacingReport,
           resultDir,
           logDir,
           /* previousResult= */ null,
           sessionRequestInfo);
       reportCreator.createReport(
           finalReport,
+          userfacingReport,
           resultDir,
           /* testRecord= */ null,
           /* includeHtmlInZip= */ sessionRequestInfo.htmlInZip(),
@@ -577,10 +582,16 @@ public class SessionResultHandlerUtil {
               String.format(
                   "Failed to generate screenshots metadata file for result dir [%s].", resultDir));
         }
+        Result userfacingReport = preprocessReport(finalReport, sessionRequestInfo);
         // Generates the invocation summary file before creating the report and zipping result
         // folder.
         generateInvocationSummaryFile(
-            sessionAllJobs, finalReport, resultDir, logDir, previousResult, sessionRequestInfo);
+            sessionAllJobs,
+            userfacingReport,
+            resultDir,
+            logDir,
+            previousResult,
+            sessionRequestInfo);
         String previousTestPlanForRetry =
             finalReport.getAttributeList().stream()
                 .filter(attribute -> attribute.getKey().equals(XmlConstants.SUITE_PLAN_ATTR))
@@ -589,6 +600,7 @@ public class SessionResultHandlerUtil {
                 .orElse("");
         reportCreator.createReport(
             finalReport,
+            userfacingReport,
             resultDir,
             /* testRecord= */ null,
             /* includeHtmlInZip= */ sessionRequestInfo.htmlInZip(),
@@ -985,23 +997,14 @@ public class SessionResultHandlerUtil {
       NonTradefedTestResult.Builder resultBuilder, String fileName, Path filePath)
       throws MobileHarnessException {
     switch (fileName) {
-      case "test_summary.yaml":
-        resultBuilder.setTestSummaryFile(filePath);
-        break;
-      case "device_build_fingerprint.txt":
-        resultBuilder.setDeviceBuildFingerprint(localFileUtil.readFile(filePath).trim());
-        break;
-      case "mobly_run_result_attributes.textproto":
-        resultBuilder.setResultAttributesFile(filePath);
-        break;
-      case "mobly_run_build_attributes.textproto":
-        resultBuilder.setBuildAttributesFile(filePath);
-        break;
-      case "ats_module_run_result.textproto":
-        resultBuilder.setModuleResultFile(filePath);
-        break;
-      default:
-        break;
+      case "test_summary.yaml" -> resultBuilder.setTestSummaryFile(filePath);
+      case "device_build_fingerprint.txt" ->
+          resultBuilder.setDeviceBuildFingerprint(localFileUtil.readFile(filePath).trim());
+      case "mobly_run_result_attributes.textproto" ->
+          resultBuilder.setResultAttributesFile(filePath);
+      case "mobly_run_build_attributes.textproto" -> resultBuilder.setBuildAttributesFile(filePath);
+      case "ats_module_run_result.textproto" -> resultBuilder.setModuleResultFile(filePath);
+      default -> {}
     }
   }
 
@@ -1320,5 +1323,54 @@ public class SessionResultHandlerUtil {
   /** Gets the log directory name for a test. */
   public static String getLogDirNameForTest(String prefix, String testId) {
     return prefix + "_test_" + testId;
+  }
+
+  /**
+   * Preprocesses the {@code report} for creating the user-facing report.
+   *
+   * <p>Currently only supports changing module failure level in the report.
+   */
+  @VisibleForTesting
+  Result preprocessReport(Result report, SessionRequestInfo sessionRequestInfo) {
+    Result.Builder resultBuilder = report.toBuilder();
+    ImmutableMap<String, CompatibilityReportFormat> moduleReportFormat =
+        sessionRequestInfo.expandedModules().values().stream()
+            .distinct()
+            .map(CompatibilityReportFormat::fromModuleConfig)
+            .flatMap(Optional::stream)
+            .collect(
+                toImmutableMap(
+                    CompatibilityReportFormat::targetName,
+                    Function.identity(),
+                    (first, second) -> first));
+
+    // Update each module's failed tests based on the module report format.
+    for (Module.Builder moduleBuilder : resultBuilder.getModuleInfoBuilderList()) {
+      String moduleName = moduleBuilder.getName();
+      if (moduleReportFormat.containsKey(moduleName)) {
+        moduleReportFormat.get(moduleBuilder.getName()).applyToModule(moduleBuilder);
+      }
+    }
+
+    // Update the Summary element's passed, failed and warning attributes.
+    long passedCount =
+        resultBuilder.getModuleInfoList().stream().map(Module::getPassed).mapToLong(x -> x).sum();
+    long warningCount =
+        resultBuilder.getModuleInfoList().stream()
+            .map(Module::getWarningTests)
+            .mapToLong(x -> x)
+            .sum();
+    long failedCount =
+        resultBuilder.getModuleInfoList().stream()
+            .map(Module::getFailedTests)
+            .mapToLong(x -> x)
+            .sum();
+    resultBuilder
+        .getSummaryBuilder()
+        .setPassed(passedCount)
+        .setFailed(failedCount)
+        .setWarning(warningCount);
+
+    return resultBuilder.build();
   }
 }
