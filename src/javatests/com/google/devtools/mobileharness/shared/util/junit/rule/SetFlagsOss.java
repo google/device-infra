@@ -38,7 +38,7 @@ public class SetFlagsOss extends TestWatcher {
         flags.entrySet().stream()
             .map(e -> String.format("--%s=%s", e.getKey(), e.getValue()))
             .collect(toImmutableList());
-    Flags.parse(flagsList.toArray(new String[0]));
+    Flags.parseOss(flagsList.toArray(new String[0]));
   }
 
   @Override

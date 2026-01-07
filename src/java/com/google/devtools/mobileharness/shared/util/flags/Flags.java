@@ -2411,13 +2411,32 @@ public class Flags {
     return INSTANCE;
   }
 
-  /** It is necessary to call this method in main() in OSS. */
+  /** See {@link #parse(String[])}. */
+  public static void parse(List<String> args) {
+    parse(args.toArray(new String[0]));
+  }
+
+  /**
+   * Parses flags.
+   *
+   * <p>Call this method in the main method.
+   *
+   * <p>This method will also switch between the OSS/internal version.
+   */
   public static void parse(String[] args) {
+    parseOss(args);
+  }
+
+  /** Parses flags in OSS. */
+  public static void parseOss(String[] args) {
     com.beust.jcommander.JCommander commander = new com.beust.jcommander.JCommander(instance());
     commander.setAcceptUnknownOptions(true);
     commander.setAllowParameterOverwriting(true);
     commander.parse(args);
-    // Check constraints on flags.
+    checkConstraints();
+  }
+
+  private static void checkConstraints() {
     checkArgument(
         !Flags.instance().resetDeviceInAndroidRealDeviceSetup.getNonNull()
             || !Flags.instance().keepTestHarnessFalse.getNonNull(),

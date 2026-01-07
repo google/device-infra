@@ -35,30 +35,30 @@ public class FlagsTest {
 
   @Test
   public void parse() throws Exception {
-    Flags.parse(new String[] {"--whatever_flag=hoo"});
+    Flags.parseOss(new String[] {"--whatever_flag=hoo"});
 
     assertThat(Flags.instance().supplementalResDir.getNonNull()).isEmpty();
     assertThat(Flags.instance().extraAdbCommandTimeout.getNonNull()).isEqualTo(Duration.ZERO);
 
-    Flags.parse(new String[] {"--mh_adb_command_extra_timeout=123s"});
+    Flags.parseOss(new String[] {"--mh_adb_command_extra_timeout=123s"});
 
     assertThat(Flags.instance().supplementalResDir.getNonNull()).isEmpty();
     assertThat(Flags.instance().extraAdbCommandTimeout.getNonNull())
         .isEqualTo(Duration.ofSeconds(123L));
 
-    Flags.parse(new String[] {"--supplemental_res_dir=foo"});
+    Flags.parseOss(new String[] {"--supplemental_res_dir=foo"});
 
     assertThat(Flags.instance().supplementalResDir.getNonNull()).isEqualTo("foo");
     assertThat(Flags.instance().extraAdbCommandTimeout.getNonNull())
         .isEqualTo(Duration.ofSeconds(123L));
 
-    Flags.parse(new String[] {"--cache_eviction_trim_to_ratio=0.5"});
+    Flags.parseOss(new String[] {"--cache_eviction_trim_to_ratio=0.5"});
     assertThat(Flags.instance().cacheEvictionTrimToRatio.getNonNull()).isEqualTo(0.5);
 
     assertThrows(
         IllegalArgumentException.class,
         () ->
-            Flags.parse(
+            Flags.parseOss(
                 new String[] {
                   "--reset_device_in_android_real_device_setup=true",
                   "--keep_test_harness_false=true",

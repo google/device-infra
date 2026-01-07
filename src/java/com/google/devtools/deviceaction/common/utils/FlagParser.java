@@ -153,8 +153,7 @@ public final class FlagParser {
   public static ActionOptions parse(String[] args) throws DeviceActionException {
     ArrayList<String> leftOvers = new ArrayList<>(Arrays.asList(args));
     ActionOptions options = parseOptions(leftOvers);
-    args = leftOvers.toArray(new String[0]);
-    Flags.parse(args);
+    Flags.parse(leftOvers);
     return options;
   }
 

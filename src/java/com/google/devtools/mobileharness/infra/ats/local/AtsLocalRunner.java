@@ -69,7 +69,7 @@ public class AtsLocalRunner {
             .addToHead(BuiltinOlcServerFlags.get())
             .addToEnd(ImmutableList.copyOf(args));
     logger.atInfo().log("Device infra service flags: %s", finalFlags.flags());
-    DeviceInfraServiceUtil.parseFlags(finalFlags.flags());
+    Flags.parse(finalFlags.flags());
 
     Injector injector =
         Guice.createInjector(

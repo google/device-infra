@@ -136,7 +136,7 @@ public class AtsConsole {
         DeviceInfraServiceUtil.getDeviceInfraServiceFlagsFromSystemProperty();
     FlagsString finalDeviceInfraServiceFlags =
         preprocessDeviceInfraServiceFlags(deviceInfraServiceFlags);
-    DeviceInfraServiceUtil.parseFlags(finalDeviceInfraServiceFlags.flags());
+    Flags.parse(finalDeviceInfraServiceFlags.flags());
 
     // Prints notice message.
     System.out.println(NoticeMessageUtil.getNoticeMessage());

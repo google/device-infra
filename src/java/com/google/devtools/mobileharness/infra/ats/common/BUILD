@@ -73,7 +73,6 @@ java_library(
     srcs = ["DeviceInfraServiceUtil.java"],
     deps = [
         ":flags_string",
-        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/shell",
         "@maven//:com_google_guava_guava",
     ],

@@ -19,10 +19,8 @@ package com.google.devtools.mobileharness.infra.ats.common;
 import static com.google.common.base.Strings.isNullOrEmpty;
 
 import com.google.common.collect.ImmutableList;
-import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.shell.ShellUtils;
 import com.google.devtools.mobileharness.shared.util.shell.ShellUtils.TokenizationException;
-import java.util.List;
 
 /** Utility for device infra service. */
 public class DeviceInfraServiceUtil {
@@ -49,17 +47,6 @@ public class DeviceInfraServiceUtil {
               DEVICE_INFRA_SERVICE_FLAGS_PROPERTY_KEY, property),
           e);
     }
-  }
-
-  /**
-   * Parses the list of device infra service flag strings and saves values to registered flags.
-   *
-   * @param flags the list of flag strings
-   * @implSpec do not use logger since flags has not been parsed
-   */
-  public static void parseFlags(List<String> flags) {
-    String[] flagArray = flags.toArray(new String[0]);
-    Flags.parse(flagArray);
   }
 
   private DeviceInfraServiceUtil() {}

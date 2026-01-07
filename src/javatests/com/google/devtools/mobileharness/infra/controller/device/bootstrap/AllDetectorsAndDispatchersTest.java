@@ -27,7 +27,7 @@ import org.junit.runners.JUnit4;
 public final class AllDetectorsAndDispatchersTest {
   @Test
   public void detectorCandidatesForLabServerOss_isNotEmpty() {
-    Flags.parse(new String[] {});
+    Flags.parseOss(new String[] {});
     assertThat(AllDetectorsAndDispatchers.detectorCandidatesForLabServerOss()).isNotEmpty();
   }
 }
