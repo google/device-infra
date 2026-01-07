@@ -107,13 +107,22 @@ public class JobManager {
       }
 
       private synchronized void notifyTestFile(TestFileUnit testFileUnit) {
-        if (testFileUnits.contains(testFileUnit)) {
+        if (isTestFileExisted(testFileUnit)) {
           logger.atInfo().log("Skip duplicated test file notification [%s]", testFileUnit);
         } else {
           testRunner.notifyJobOrTestFile(
               JobOrTestFileUnit.newBuilder().setTestFileUnit(testFileUnit).build());
           testFileUnits.add(testFileUnit);
         }
+      }
+
+      private synchronized boolean isTestFileExisted(TestFileUnit testFileUnit) {
+        return testFileUnits.stream()
+            .anyMatch(
+                unit ->
+                    unit.getTestLocator().equals(testFileUnit.getTestLocator())
+                        && unit.getTag().equals(testFileUnit.getTag())
+                        && unit.getChecksum().equals(testFileUnit.getChecksum()));
       }
 
       private void notifyJobFile(JobFileUnit jobFileUnit) {
@@ -202,12 +211,21 @@ public class JobManager {
     }
 
     private synchronized void notifyJobFile(JobFileUnit jobFileUnit) {
-      if (jobFileUnits.contains(jobFileUnit)) {
+      if (isJobFileExisted(jobFileUnit)) {
         logger.atInfo().log("Skip duplicated job file notification [%s]", jobFileUnit);
       } else {
         tests.values().forEach(test -> test.notifyJobFile(jobFileUnit));
         jobFileUnits.add(jobFileUnit);
       }
+    }
+
+    private synchronized boolean isJobFileExisted(JobFileUnit jobFileUnit) {
+      return jobFileUnits.stream()
+          .anyMatch(
+              unit ->
+                  unit.getJobLocator().equals(jobFileUnit.getJobLocator())
+                      && unit.getTag().equals(jobFileUnit.getTag())
+                      && unit.getChecksum().equals(jobFileUnit.getChecksum()));
     }
 
     private synchronized void notifyTestFile(TestFileUnit testFileUnit)
