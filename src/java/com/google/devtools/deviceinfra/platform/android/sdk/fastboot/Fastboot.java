@@ -311,6 +311,7 @@ public class Fastboot {
     // 363005DC750400EC fastboot
     Iterable<String> lines = Splitters.LINE_SPLITTER.split(output);
     for (String line : lines) {
+
       line = line.trim();
       if (line.isEmpty()) {
         continue;
@@ -363,6 +364,7 @@ public class Fastboot {
       //
       // Since fastboot version 33.0.3, the usb locations are merged into the same line:
       // 29271FDH300LFX         fastboot usb:1-14.4.4.2
+
       List<String> words =
           Splitters.LINE_OR_WHITESPACE_SPLITTER
               .trimResults()
