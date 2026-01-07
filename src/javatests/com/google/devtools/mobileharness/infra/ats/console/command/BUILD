@@ -51,6 +51,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/plan:plan_helper",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/result:result_lister_helper",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/constant:dirs",
+        "//src/java/com/google/devtools/mobileharness/shared/constant/inject:annotations",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/inject:common_module",

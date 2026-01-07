@@ -21,7 +21,7 @@ import static com.google.common.base.Preconditions.checkState;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.devtools.mobileharness.infra.ats.console.Annotations.SystemProperties;
+import com.google.devtools.mobileharness.shared.constant.inject.Annotations.SystemProperties;
 import java.nio.file.Path;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;

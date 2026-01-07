@@ -16,7 +16,10 @@
 
 package com.google.devtools.mobileharness.infra.ats.local;
 
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
+
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.common.metrics.stability.converter.ErrorModelConverter;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
@@ -62,8 +65,13 @@ public class AtsLocalRunner {
       "com.google.devtools.mobileharness.infra.ats.local.sessionplugin.AtsLocalSessionPlugin";
 
   public static void main(String[] args) throws InterruptedException, MobileHarnessException {
+    // Gets system properties.
+    ImmutableMap<String, String> systemProperties =
+        System.getProperties().entrySet().stream()
+            .collect(toImmutableMap(e -> (String) e.getKey(), e -> (String) e.getValue()));
+
     FlagsString deviceInfraServiceFlags =
-        DeviceInfraServiceUtil.getDeviceInfraServiceFlagsFromSystemProperty();
+        DeviceInfraServiceUtil.getDeviceInfraServiceFlags(systemProperties);
     FlagsString finalFlags =
         deviceInfraServiceFlags
             .addToHead(BuiltinOlcServerFlags.get())

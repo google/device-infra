@@ -21,6 +21,7 @@ import static com.google.common.base.Strings.isNullOrEmpty;
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.shared.util.shell.ShellUtils;
 import com.google.devtools.mobileharness.shared.util.shell.ShellUtils.TokenizationException;
+import java.util.Map;
 
 /** Utility for device infra service. */
 public class DeviceInfraServiceUtil {
@@ -33,8 +34,8 @@ public class DeviceInfraServiceUtil {
    *
    * @implSpec do not use logger since flags has not been parsed
    */
-  public static FlagsString getDeviceInfraServiceFlagsFromSystemProperty() {
-    String property = System.getProperties().getProperty(DEVICE_INFRA_SERVICE_FLAGS_PROPERTY_KEY);
+  public static FlagsString getDeviceInfraServiceFlags(Map<String, String> systemProperties) {
+    String property = systemProperties.get(DEVICE_INFRA_SERVICE_FLAGS_PROPERTY_KEY);
     if (isNullOrEmpty(property)) {
       return FlagsString.of("", ImmutableList.of());
     }

@@ -19,7 +19,7 @@ package com.google.devtools.mobileharness.infra.ats.console.command.alias;
 import static com.google.common.truth.Truth.assertThat;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.devtools.mobileharness.infra.ats.console.Annotations.SystemProperties;
+import com.google.devtools.mobileharness.shared.constant.inject.Annotations.SystemProperties;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.inject.Guice;
 import com.google.inject.Injector;

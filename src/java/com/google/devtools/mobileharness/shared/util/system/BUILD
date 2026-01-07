@@ -73,5 +73,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/constant:log_record_importance",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/network",
+        "@maven//:javax_inject_jsr330_api",
     ],
 )

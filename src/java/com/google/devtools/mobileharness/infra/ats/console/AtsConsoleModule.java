@@ -27,13 +27,13 @@ import com.google.devtools.mobileharness.infra.ats.common.olcserver.OlcServerCon
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerEnvironmentPreparer;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleLineReader;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleOutput;
-import com.google.devtools.mobileharness.infra.ats.console.Annotations.MainArgs;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ParseCommandOnly;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.RunCommandParsingResultFuture;
-import com.google.devtools.mobileharness.infra.ats.console.Annotations.SystemProperties;
 import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.XtsServerEnvironmentPreparer;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportModule;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.OlcServerRunner;
+import com.google.devtools.mobileharness.shared.constant.inject.Annotations.MainArgs;
+import com.google.devtools.mobileharness.shared.constant.inject.Annotations.SystemProperties;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.multibindings.OptionalBinder;

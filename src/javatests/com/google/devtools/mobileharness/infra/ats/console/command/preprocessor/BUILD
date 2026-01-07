@@ -25,10 +25,10 @@ java_library(
     name = "command_preprocessor_test",
     srcs = ["CommandPreprocessorTest.java"],
     deps = [
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console:annotations",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/command/alias:alias_manager",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/command/preprocessor:command_file_parser",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/command/preprocessor:command_preprocessor",
+        "//src/java/com/google/devtools/mobileharness/shared/constant/inject:annotations",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_extensions_guice_testlib",

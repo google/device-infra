@@ -45,7 +45,6 @@ import com.google.devtools.mobileharness.infra.ats.common.olcserver.OlcServerGrp
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleLineReader;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleOutput;
-import com.google.devtools.mobileharness.infra.ats.console.Annotations.MainArgs;
 import com.google.devtools.mobileharness.infra.ats.console.command.RootCommand;
 import com.google.devtools.mobileharness.infra.ats.console.command.completer.CommandCompleter;
 import com.google.devtools.mobileharness.infra.ats.console.command.completer.CommandCompleterHolder;
@@ -67,6 +66,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.control
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.ControlStub;
 import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
+import com.google.devtools.mobileharness.shared.constant.inject.Annotations.MainArgs;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.inject.CommonModule;
 import com.google.devtools.mobileharness.shared.util.logging.flogger.FloggerFormatter;
@@ -133,7 +133,7 @@ public class AtsConsole {
 
     // Parses flags.
     FlagsString deviceInfraServiceFlags =
-        DeviceInfraServiceUtil.getDeviceInfraServiceFlagsFromSystemProperty();
+        DeviceInfraServiceUtil.getDeviceInfraServiceFlags(systemProperties);
     FlagsString finalDeviceInfraServiceFlags =
         preprocessDeviceInfraServiceFlags(deviceInfraServiceFlags);
     Flags.parse(finalDeviceInfraServiceFlags.flags());

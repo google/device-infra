@@ -22,6 +22,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance;
 import com.google.devtools.mobileharness.shared.util.network.NetworkUtil;
+import javax.inject.Inject;
 
 /** A utility class to print system information. */
 public final class SystemInfoPrinter {
@@ -30,11 +31,8 @@ public final class SystemInfoPrinter {
 
   private final NetworkUtil networkUtil;
 
-  public SystemInfoPrinter() {
-    this(new NetworkUtil());
-  }
-
-  private SystemInfoPrinter(NetworkUtil networkUtil) {
+  @Inject
+  SystemInfoPrinter(NetworkUtil networkUtil) {
     this.networkUtil = networkUtil;
   }
 

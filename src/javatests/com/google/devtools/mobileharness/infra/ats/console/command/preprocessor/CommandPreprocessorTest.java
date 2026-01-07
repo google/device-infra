@@ -22,10 +22,10 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.devtools.mobileharness.infra.ats.console.Annotations.SystemProperties;
 import com.google.devtools.mobileharness.infra.ats.console.command.alias.AliasManager;
 import com.google.devtools.mobileharness.infra.ats.console.command.preprocessor.CommandFileParser.CommandLine;
 import com.google.devtools.mobileharness.infra.ats.console.command.preprocessor.CommandPreprocessor.PreprocessingResult;
+import com.google.devtools.mobileharness.shared.constant.inject.Annotations.SystemProperties;
 import com.google.inject.Guice;
 import com.google.inject.TypeLiteral;
 import com.google.inject.testing.fieldbinder.Bind;

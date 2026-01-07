@@ -14,48 +14,24 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.infra.ats.console;
+package com.google.devtools.mobileharness.shared.constant.inject;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import javax.inject.Qualifier;
 
-/** Annotations for ATS console. */
-public class Annotations {
+/** Annotations for global constants to inject. */
+public final class Annotations {
 
-  /** Line reader for the console. */
+  /** Main arguments {@code ImmutableList<String>}. */
   @Qualifier
   @Retention(RetentionPolicy.RUNTIME)
-  public @interface ConsoleLineReader {}
+  public @interface MainArgs {}
 
-  /** Output of the console. */
+  /** System properties {@code ImmutableMap<String, String>}. */
   @Qualifier
   @Retention(RetentionPolicy.RUNTIME)
-  public @interface ConsoleOutput {
-
-    /** Type of {@link ConsoleOutput}. */
-    enum Type {
-      OUT_STREAM,
-      ERR_STREAM,
-      OUT_WRITER,
-      ERR_WRITER,
-    }
-
-    Type value();
-  }
-
-  /** Whether to parse command only, or to run the command. */
-  @Qualifier
-  @Retention(RetentionPolicy.RUNTIME)
-  public @interface ParseCommandOnly {}
-
-  /**
-   * A future for RunCommand to set command line parse result, which later can be used by caller of
-   * RunCommand.
-   */
-  @Qualifier
-  @Retention(RetentionPolicy.RUNTIME)
-  public @interface RunCommandParsingResultFuture {}
+  public @interface SystemProperties {}
 
   private Annotations() {}
 }

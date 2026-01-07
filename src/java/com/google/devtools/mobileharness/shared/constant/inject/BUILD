@@ -14,32 +14,19 @@
 #
 
 load("@rules_java//java:defs.bzl", "java_library")
-load("//src/javatests/com/google/devtools/mobileharness/builddefs:junit_test_suites.bzl", "junit_test_suites")
 
 package(
     default_applicable_licenses = ["//:license"],
-    default_testonly = 1,
 )
 
 java_library(
-    name = "alias",
-    srcs = glob(["*.java"]),
+    name = "annotations",
+    srcs = ["Annotations.java"],
+    visibility = [
+        "//:deviceinfra_all_pkg",
+        "//:omnilab_fusion",
+    ],
     deps = [
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console/command/alias:alias_manager",
-        "//src/java/com/google/devtools/mobileharness/shared/constant/inject:annotations",
-        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
-        "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
-        "@maven//:com_google_guava_guava",
-        "@maven//:com_google_inject_guice",
         "@maven//:javax_inject_jsr330_api",
-        "@maven//:junit_junit",
     ],
-)
-
-junit_test_suites(
-    name = "gen_tests",
-    sizes = [
-        "small",
-    ],
-    deps = [":alias"],
 )
