@@ -1021,6 +1021,7 @@ public class AndroidInstrumentationUtil {
         String devicePath =
             PathUtil.join(
                 externalStoragePath,
+                "/Android/data/androidx.test.services/files/",
                 isCoverageFile
                     ? ANDROID_TEST_DEVICE_PATH_INTERNAL_USE
                     : ANDROID_TEST_DEVICE_PATH_TEST_OUTPUT);
@@ -1121,7 +1122,10 @@ public class AndroidInstrumentationUtil {
         // Use adb pull for Android Q-.
         // For Android P-, there is no isolated-storage feature, so no need to check sandbox folder.
         String devicePath =
-            PathUtil.join(externalStoragePath, ANDROID_TEST_DEVICE_PATH_TEST_PROPERTIES);
+            PathUtil.join(
+                externalStoragePath,
+                "/Android/data/androidx.test.services/files/",
+                ANDROID_TEST_DEVICE_PATH_TEST_PROPERTIES);
         hasOutputFile =
             pullInstrumentFiles(
                 testInfo, deviceId, devicePath, hostPropertyDir, /* shouldCreateFolder= */ true);
