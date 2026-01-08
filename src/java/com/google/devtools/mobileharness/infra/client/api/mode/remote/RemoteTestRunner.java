@@ -117,6 +117,12 @@ import javax.annotation.Nullable;
 /** For executing a single test allocated by calling remote lab. */
 public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
 
+  /**
+   * Param to control whether to throw an error if the test's gen dir cannot be downloaded (default
+   * false).
+   */
+  static final String PARAM_THROW_ON_GEN_DIR_DOWNLOAD_ERROR = "throw_on_gen_dir_download_error";
+
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   /** File that starts with this tag won't be sent to lab server side. */
@@ -517,7 +523,8 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
    * Updates the test engine file transfer client to download files from lab to client, does nothing
    * by default.
    */
-  private void updateTestEngineFileTransferClient(TestInfo testInfo)
+  @VisibleForTesting
+  void updateTestEngineFileTransferClient(TestInfo testInfo)
       throws MobileHarnessException, InterruptedException {}
 
   /** Sets file transfer related properties to the test, does nothing by default. */
@@ -529,7 +536,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
    */
   private void downloadTestGeneratedFiles(
       GetTestGenDataResponse resp, TestInfo testInfo, String subTestLogPostfix)
-      throws InterruptedException {}
+      throws MobileHarnessException, InterruptedException {}
 
   /** Sends all run files of the test from client to lab. */
   private void sendJobFilesCore(TestInfo testInfo)
@@ -538,7 +545,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
   /** Downloads the whole gen file directory from lab server. */
   @VisibleForTesting
   void downloadGenDir(TestInfo testInfo, final String remoteGenFileDir)
-      throws InterruptedException {}
+      throws MobileHarnessException, InterruptedException {}
 
   /**
    * Gets the lab version.

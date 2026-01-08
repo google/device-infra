@@ -32,7 +32,7 @@ public class FileTransferParametersFactory {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   /** Whether enable cloud file transfer. */
-  private static final String PARAM_ENABLE_CLOUD_FILE_TRANSFER = "enable_cloud_file_transfer";
+  public static final String PARAM_ENABLE_CLOUD_FILE_TRANSFER = "enable_cloud_file_transfer";
 
   /** Whether only store all files into one single zip file without any compression. */
   private static final String PARAM_FILE_TRANSFER_ZIP_STORE_ONLY = "file_transfer_zip_store_only";
