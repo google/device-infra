@@ -46,7 +46,7 @@ import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubP
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
-import com.google.wireless.qa.mobileharness.shared.api.spec.XtsTradefedTestSpec;
+import com.google.wireless.qa.mobileharness.shared.api.spec.TradefedTestSpec;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -260,7 +260,7 @@ public class ServerJobCreator extends XtsJobCreator {
     // It uses jobFiles here instead of driverParams as driverParams doesn't work well with list of
     // files.
     jobFiles.putAll(
-        XtsTradefedTestSpec.TAG_PREV_SESSION_TEST_RECORD_PB_FILES,
+        TradefedTestSpec.TAG_PREV_SESSION_TEST_RECORD_PB_FILES,
         toAtsServerPaths(
             tfRunRetryFilesBundle.testRecordProtoFiles(),
             sessionRequestInfo.remoteRunnerFilePathPrefix().orElse(null)));

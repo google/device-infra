@@ -631,7 +631,7 @@ public class SessionRequestHandlerUtil {
             .setDevice(DeviceList.newBuilder().addAllSubDeviceSpec(subDeviceSpecList))
             .setDriver(
                 Driver.newBuilder()
-                    .setName("XtsTradefedTest")
+                    .setName("TradefedTest")
                     .setParam(new Gson().toJson(driverParams)))
             .setGenFileDir(jobGenDir.toString());
     if (!jobFiles.isEmpty()) {
@@ -648,7 +648,7 @@ public class SessionRequestHandlerUtil {
                       .collect(toImmutableList())));
     }
     JobConfig jobConfig = jobConfigBuilder.build();
-    logger.atInfo().log("XtsTradefedTest job config: %s", shortDebugString(jobConfig));
+    logger.atInfo().log("TradefedTest job config: %s", shortDebugString(jobConfig));
     return jobConfig;
   }
 

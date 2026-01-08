@@ -385,14 +385,14 @@ java_proto_library(
 )
 
 proto_library(
-    name = "xts_tradefed_test_spec_proto",
-    srcs = ["driver/xts_tradefed_test_spec.proto"],
+    name = "tradefed_test_spec_proto",
+    srcs = ["driver/tradefed_test_spec.proto"],
     deps = [":base_spec_proto"],
 )
 
 java_proto_library(
-    name = "xts_tradefed_test_spec_java_proto",
-    deps = [":xts_tradefed_test_spec_proto"],
+    name = "tradefed_test_spec_java_proto",
+    deps = [":tradefed_test_spec_proto"],
 )
 
 proto_library(

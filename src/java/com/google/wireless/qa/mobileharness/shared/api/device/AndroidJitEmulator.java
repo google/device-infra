@@ -87,7 +87,7 @@ public class AndroidJitEmulator extends AndroidDevice {
     addSupportedDriver("NoOpDriver");
     addSupportedDriver("AndroidInstrumentation");
     addSupportedDriver("MoblyTest");
-    addSupportedDriver("XtsTradefedTest");
+    addSupportedDriver("TradefedTest");
 
     addSupportedDecorator("AndroidHdVideoDecorator");
     addSupportedDecorator("AndroidDeviceSettingsDecorator");

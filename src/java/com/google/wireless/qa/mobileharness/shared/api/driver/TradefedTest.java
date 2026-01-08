@@ -79,12 +79,12 @@ import com.google.wireless.qa.mobileharness.shared.api.CompositeDeviceUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DriverAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.device.CompositeDevice;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
-import com.google.wireless.qa.mobileharness.shared.api.spec.XtsTradefedTestSpec;
+import com.google.wireless.qa.mobileharness.shared.api.spec.TradefedTestSpec;
 import com.google.wireless.qa.mobileharness.shared.comm.message.event.TestMessageEvent;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
-import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.XtsTradefedTestDriverSpec;
+import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.TradefedTestDriverSpec;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
@@ -108,8 +108,8 @@ import org.apache.commons.text.StringSubstitutor;
 
 /** Driver for running Tradefed based xTS test suites. */
 @DriverAnnotation(help = "Running Tradefed based xTS test suites.")
-public class XtsTradefedTest extends BaseDriver
-    implements XtsTradefedTestSpec, SpecConfigable<XtsTradefedTestDriverSpec> {
+public class TradefedTest extends BaseDriver
+    implements TradefedTestSpec, SpecConfigable<TradefedTestDriverSpec> {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private static final ImmutableSet<String> FILTER_KEYS =
@@ -151,7 +151,7 @@ public class XtsTradefedTest extends BaseDriver
   private CommandProcess tfProcess;
 
   @Inject
-  XtsTradefedTest(
+  TradefedTest(
       Device device,
       TestInfo testInfo,
       CommandExecutor cmdExecutor,
@@ -182,7 +182,7 @@ public class XtsTradefedTest extends BaseDriver
 
   @Override
   public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
-    XtsTradefedTestDriverSpec spec = testInfo.jobInfo().combinedSpec(this);
+    TradefedTestDriverSpec spec = testInfo.jobInfo().combinedSpec(this);
     String xtsType = Strings.emptyToNull(spec.getXtsType());
     // TODO: Use different run strategy for xTS and non-xTS runs.
     tradefedRunStrategy = new XtsRunStrategy(localFileUtil, resUtil, systemUtil, clock, xtsType);
@@ -364,7 +364,7 @@ public class XtsTradefedTest extends BaseDriver
 
   /** Returns the exit code of the TF process or empty if the process doesn't start. */
   private Optional<Integer> runTradefedCommand(
-      TestInfo testInfo, XtsTradefedTestDriverSpec spec, Path workDir)
+      TestInfo testInfo, TradefedTestDriverSpec spec, Path workDir)
       throws MobileHarnessException, InterruptedException {
     ImmutableMap<String, String> env =
         tradefedRunStrategy.getEnvironment(workDir, spec, getDevice(), getEnvPath());
@@ -605,7 +605,7 @@ public class XtsTradefedTest extends BaseDriver
                           // process is still alive.
                           CommandProcess tfProcess;
                           synchronized (tfProcessLock) {
-                            tfProcess = XtsTradefedTest.this.tfProcess;
+                            tfProcess = TradefedTest.this.tfProcess;
                           }
                           if (tfProcess != null && tfProcess.isAlive()) {
                             getTest()
@@ -695,7 +695,7 @@ public class XtsTradefedTest extends BaseDriver
   }
 
   private ImmutableList<String> getTradefedRunCommandArgs(
-      XtsTradefedTestDriverSpec spec, Map<String, String> envVars, TestInfo testInfo)
+      TradefedTestDriverSpec spec, Map<String, String> envVars, TestInfo testInfo)
       throws MobileHarnessException {
     ImmutableList.Builder<String> tradefedRunCommand =
         ImmutableList.<String>builder().add("run", "commandAndExit");
@@ -791,7 +791,7 @@ public class XtsTradefedTest extends BaseDriver
     return tradefedRunCommand.build();
   }
 
-  private static ImmutableList<String> getExtraRunCommandArgs(XtsTradefedTestDriverSpec spec) {
+  private static ImmutableList<String> getExtraRunCommandArgs(TradefedTestDriverSpec spec) {
     if (spec.hasRunCommandArgs()) {
       try {
         return ShellUtils.tokenize(spec.getRunCommandArgs());
@@ -840,11 +840,11 @@ public class XtsTradefedTest extends BaseDriver
         String.format("tradefed-root-dir-%s", this.testId));
   }
 
-  private static boolean isRunRetryWithSubPlan(XtsTradefedTestDriverSpec spec) {
+  private static boolean isRunRetryWithSubPlan(TradefedTestDriverSpec spec) {
     return spec.getXtsTestPlan().equals("retry") && !spec.getSubplanXml().isEmpty();
   }
 
-  private static boolean useTfRunRetry(XtsTradefedTestDriverSpec spec, TestInfo testInfo) {
+  private static boolean useTfRunRetry(TradefedTestDriverSpec spec, TestInfo testInfo) {
     return spec.getXtsTestPlan().equals("retry")
         && !spec.getPrevSessionTestResultXml().isEmpty()
         && testInfo.jobInfo().files().isTagNotEmpty(TAG_PREV_SESSION_TEST_RECORD_PB_FILES);
@@ -858,7 +858,7 @@ public class XtsTradefedTest extends BaseDriver
    * running with a given subplan name, which may create a modified subplan xml file and pass it to
    * the driver.
    */
-  private static boolean isRunWithSubPlan(XtsTradefedTestDriverSpec spec) {
+  private static boolean isRunWithSubPlan(TradefedTestDriverSpec spec) {
     return !spec.getSubplanXml().isEmpty();
   }
 

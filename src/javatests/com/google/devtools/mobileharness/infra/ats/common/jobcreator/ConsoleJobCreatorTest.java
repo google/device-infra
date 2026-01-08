@@ -47,7 +47,7 @@ import com.google.devtools.mobileharness.shared.util.junit.rule.SetFlagsOss;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
-import com.google.wireless.qa.mobileharness.shared.api.spec.XtsTradefedTestSpec;
+import com.google.wireless.qa.mobileharness.shared.api.spec.TradefedTestSpec;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.SubDeviceSpec;
 import java.io.File;
@@ -539,7 +539,7 @@ public final class ConsoleJobCreatorTest {
             testResultPath.toString());
     assertThat(jobFilesCaptor.getValue())
         .containsExactly(
-            XtsTradefedTestSpec.TAG_PREV_SESSION_TEST_RECORD_PB_FILES, testRecordPath.toString());
+            TradefedTestSpec.TAG_PREV_SESSION_TEST_RECORD_PB_FILES, testRecordPath.toString());
     assertThat(tradefedJobInfoList.get(0).extraJobProperties())
         .containsEntry(Job.IS_RUN_RETRY, "true");
   }

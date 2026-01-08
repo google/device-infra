@@ -18,20 +18,20 @@ package com.google.wireless.qa.mobileharness.shared.api.validator.job;
 
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.wireless.qa.mobileharness.shared.api.spec.XtsTradefedTestSpec;
+import com.google.wireless.qa.mobileharness.shared.api.spec.TradefedTestSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
-import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.XtsTradefedTestDriverSpec;
+import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.TradefedTestDriverSpec;
 import java.util.List;
 
-/** Job validator for the {@code XtsTradefedTest} driver. */
-public class XtsTradefedTestJobValidator
-    implements JobValidator, SpecConfigable<XtsTradefedTestDriverSpec> {
+/** Job validator for the {@code TradefedTest} driver. */
+public class TradefedTestJobValidator
+    implements JobValidator, SpecConfigable<TradefedTestDriverSpec> {
 
   @Override
   public List<String> validate(JobInfo jobInfo) throws InterruptedException {
     ImmutableList.Builder<String> errors = ImmutableList.builder();
-    XtsTradefedTestDriverSpec spec;
+    TradefedTestDriverSpec spec;
     try {
       spec = jobInfo.combinedSpec(this);
     } catch (MobileHarnessException e) {
@@ -40,7 +40,7 @@ public class XtsTradefedTestJobValidator
     }
 
     if (spec.getXtsType().isEmpty()) {
-      errors.add("An xTS type must be specified, check xts_tradefed_test_spec.proto.");
+      errors.add("An xTS type must be specified, check tradefed_test_spec.proto.");
     } else {
       try {
         String unused = spec.getXtsType();
@@ -58,7 +58,7 @@ public class XtsTradefedTestJobValidator
           && spec.getPrevSessionTestRecordFiles().isEmpty()
           && !jobInfo
               .files()
-              .isTagNotEmpty(XtsTradefedTestSpec.TAG_PREV_SESSION_TEST_RECORD_PB_FILES)) {
+              .isTagNotEmpty(TradefedTestSpec.TAG_PREV_SESSION_TEST_RECORD_PB_FILES)) {
         errors.add(
             "When the test plan is 'retry' and no 'prev_session_test_result_xml',"
                 + " 'prev_session_test_record_files', 'prev_session_test_record_pb_files'"
@@ -70,7 +70,7 @@ public class XtsTradefedTestJobValidator
       } else if (spec.getPrevSessionTestRecordFiles().isEmpty()
           && !jobInfo
               .files()
-              .isTagNotEmpty(XtsTradefedTestSpec.TAG_PREV_SESSION_TEST_RECORD_PB_FILES)) {
+              .isTagNotEmpty(TradefedTestSpec.TAG_PREV_SESSION_TEST_RECORD_PB_FILES)) {
         errors.add(
             "When the test plan is 'retry' and no 'prev_session_xts_test_plan' specified, either"
                 + " 'prev_session_test_record_files' or 'prev_session_test_record_pb_files' must be"

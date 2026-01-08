@@ -14,16 +14,15 @@
  * limitations under the License.
  */
 
-package com.google.wireless.qa.mobileharness.shared.api.module;
+package com.google.wireless.qa.mobileharness.shared.api.spec;
 
-import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportModule;
-import com.google.inject.AbstractModule;
+import com.google.wireless.qa.mobileharness.shared.api.annotation.FileAnnotation;
 
-/** Configures {@code XtsTradefedTest}. */
-public final class XtsTradefedTestModule extends AbstractModule {
+/** The parameters/files for TradefedTest driver. */
+@SuppressWarnings("InterfaceWithOnlyStatics")
+public interface TradefedTestSpec {
 
-  @Override
-  protected void configure() {
-    install(new CompatibilityReportModule());
-  }
+  @FileAnnotation(required = false, help = "The test record proto files for the previous session.")
+  public static final String TAG_PREV_SESSION_TEST_RECORD_PB_FILES =
+      "prev_session_test_record_pb_files";
 }

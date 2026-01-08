@@ -474,7 +474,7 @@ public abstract class AndroidDeviceDelegate {
     device.addSupportedDriver("AndroidRoboTest");
     device.addSupportedDriver("MoblyTest");
     device.addSupportedDriver("NoOpDriver");
-    device.addSupportedDriver("XtsTradefedTest");
+    device.addSupportedDriver("TradefedTest");
     // keep-sorted end
   }
 

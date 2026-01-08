@@ -49,10 +49,10 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
-import com.google.wireless.qa.mobileharness.shared.api.spec.XtsTradefedTestSpec;
+import com.google.wireless.qa.mobileharness.shared.api.spec.TradefedTestSpec;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
-import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.XtsTradefedTestDriverSpec;
+import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.TradefedTestDriverSpec;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -134,7 +134,7 @@ public final class XtsRunStrategy implements TradefedRunStrategy {
   }
 
   @Override
-  public String getConcatenatedJarPath(Path workDir, XtsTradefedTestDriverSpec spec)
+  public String getConcatenatedJarPath(Path workDir, TradefedTestDriverSpec spec)
       throws MobileHarnessException {
     ImmutableList<Pattern> excludedJarFilePatterns =
         EXCLUDED_JAR_FILE_PATTERNS.stream().map(Pattern::compile).collect(toImmutableList());
@@ -224,7 +224,7 @@ public final class XtsRunStrategy implements TradefedRunStrategy {
     }
   }
 
-  private static Set<String> getLeadingJarsInClasspath(XtsTradefedTestDriverSpec spec) {
+  private static Set<String> getLeadingJarsInClasspath(TradefedTestDriverSpec spec) {
     LinkedHashSet<String> leadingJarsSet = new LinkedHashSet<>();
     // Always put tradefed.jar at the beginning
     leadingJarsSet.add("tradefed.jar");
@@ -238,7 +238,7 @@ public final class XtsRunStrategy implements TradefedRunStrategy {
     return Path.of(path.toString().replaceFirst(currentPrefix.toString(), newPrefix.toString()));
   }
 
-  private Path getXtsRootDir(XtsTradefedTestDriverSpec spec, TestInfo testInfo)
+  private Path getXtsRootDir(TradefedTestDriverSpec spec, TestInfo testInfo)
       throws MobileHarnessException {
     if (spec.hasXtsRootDir()) {
       return Path.of(spec.getXtsRootDir());
@@ -277,7 +277,7 @@ public final class XtsRunStrategy implements TradefedRunStrategy {
 
   @Override
   public ImmutableMap<String, String> getEnvironment(
-      Path workDir, XtsTradefedTestDriverSpec spec, Device device, String envPath)
+      Path workDir, TradefedTestDriverSpec spec, Device device, String envPath)
       throws MobileHarnessException, InterruptedException {
     Map<String, String> environmentToTradefedConsole = new HashMap<>();
     environmentToTradefedConsole.put("LD_LIBRARY_PATH", getConcatenatedLdLibraryPath(workDir));
@@ -321,7 +321,7 @@ public final class XtsRunStrategy implements TradefedRunStrategy {
   }
 
   @Override
-  public void setUpWorkDir(XtsTradefedTestDriverSpec spec, Path workDir, TestInfo testInfo)
+  public void setUpWorkDir(TradefedTestDriverSpec spec, Path workDir, TestInfo testInfo)
       throws MobileHarnessException, InterruptedException {
     Path sourceXtsRootDir = getXtsRootDir(spec, testInfo);
     Path dir = workDir.resolve(String.format("android-%s", xtsType));
@@ -579,14 +579,14 @@ public final class XtsRunStrategy implements TradefedRunStrategy {
         .collect(toImmutableSet());
   }
 
-  private static boolean useTfRunRetry(XtsTradefedTestDriverSpec spec, TestInfo testInfo) {
+  private static boolean useTfRunRetry(TradefedTestDriverSpec spec, TestInfo testInfo) {
     return !spec.getXtsType().isEmpty()
         && spec.getXtsTestPlan().equals("retry")
         && !spec.getPrevSessionTestResultXml().isEmpty()
         && testInfo
             .jobInfo()
             .files()
-            .isTagNotEmpty(XtsTradefedTestSpec.TAG_PREV_SESSION_TEST_RECORD_PB_FILES);
+            .isTagNotEmpty(TradefedTestSpec.TAG_PREV_SESSION_TEST_RECORD_PB_FILES);
   }
 
   /**
@@ -597,7 +597,7 @@ public final class XtsRunStrategy implements TradefedRunStrategy {
    * running with a given subplan name, which may create a modified subplan xml file and pass it to
    * the driver.
    */
-  private static boolean isRunWithSubPlan(XtsTradefedTestDriverSpec spec) {
+  private static boolean isRunWithSubPlan(TradefedTestDriverSpec spec) {
     return !spec.getSubplanXml().isEmpty();
   }
 

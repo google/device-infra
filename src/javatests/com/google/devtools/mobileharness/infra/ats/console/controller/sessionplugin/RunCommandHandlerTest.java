@@ -234,7 +234,7 @@ public final class RunCommandHandlerTest {
             .setType(
                 JobType.newBuilder()
                     .setDevice("AndroidRealDevice")
-                    .setDriver("XtsTradefedTest")
+                    .setDriver("TradefedTest")
                     .build())
             .setSetting(
                 JobSetting.newBuilder()
@@ -306,7 +306,7 @@ public final class RunCommandHandlerTest {
     assertThat(listFilePathsForNames(resultDir)).contains("invocation_summary.txt");
     assertThat(listFilePathsForNames(logDir.resolve("inv_123456")))
         .containsExactly("host_adb_log.txt");
-    assertThat(listFilePathsForNames(logDir.resolve("inv_123456/XtsTradefedTest_test_1")))
+    assertThat(listFilePathsForNames(logDir.resolve("inv_123456/TradefedTest_test_1")))
         .containsExactly("xts_tf_output.log", "command_history.txt");
 
     // Lists non-tradefed test result/log files

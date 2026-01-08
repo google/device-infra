@@ -116,8 +116,7 @@ public abstract class XtsJobCreator {
   public ImmutableList<JobInfo> createXtsTradefedTestJob(SessionRequestInfo sessionRequestInfo)
       throws MobileHarnessException, InterruptedException {
     if (sessionRequestInfo.excludeRunners().stream()
-        .anyMatch(
-            runner -> ConfigurationUtil.getSimpleClassName(runner).equals("XtsTradefedTest"))) {
+        .anyMatch(runner -> ConfigurationUtil.getSimpleClassName(runner).equals("TradefedTest"))) {
       return ImmutableList.of();
     }
 

@@ -21,7 +21,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
-import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.XtsTradefedTestDriverSpec;
+import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.TradefedTestDriverSpec;
 import java.nio.file.Path;
 import java.util.function.Predicate;
 
@@ -42,7 +42,7 @@ public interface TradefedRunStrategy {
    * @param workDir the working directory for the test run
    * @param testInfo the test info
    */
-  void setUpWorkDir(XtsTradefedTestDriverSpec spec, Path workDir, TestInfo testInfo)
+  void setUpWorkDir(TradefedTestDriverSpec spec, Path workDir, TestInfo testInfo)
       throws MobileHarnessException, InterruptedException;
 
   /**
@@ -51,7 +51,7 @@ public interface TradefedRunStrategy {
    * @param workDir the working directory for the test run
    * @param spec the driver spec
    */
-  String getConcatenatedJarPath(Path workDir, XtsTradefedTestDriverSpec spec)
+  String getConcatenatedJarPath(Path workDir, TradefedTestDriverSpec spec)
       throws MobileHarnessException;
 
   /**
@@ -63,7 +63,7 @@ public interface TradefedRunStrategy {
    * @param envPath the environment path
    */
   ImmutableMap<String, String> getEnvironment(
-      Path workDir, XtsTradefedTestDriverSpec spec, Device device, String envPath)
+      Path workDir, TradefedTestDriverSpec spec, Device device, String envPath)
       throws MobileHarnessException, InterruptedException;
 
   /**

@@ -34,7 +34,7 @@ java_library(
         ":testdata",
     ],
     runtime_deps = [
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:xts_tradefed_test",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:tradefed_test",
     ],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",

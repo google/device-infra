@@ -83,7 +83,7 @@ import javax.inject.Inject;
 final class AtsServerSessionPlugin {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
-  private static final String TRADEFED_DRIVER_NAME = "XtsTradefedTest";
+  private static final String TRADEFED_DRIVER_NAME = "TradefedTest";
   private static final String SESSION_PLUGIN_CLASS_NAME =
       "com.google.devtools.mobileharness.infra.ats.server.sessionplugin.AtsServerSessionPlugin";
   private static final String SESSION_MODULE_CLASS_NAME =

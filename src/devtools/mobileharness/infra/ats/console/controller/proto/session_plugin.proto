@@ -103,7 +103,7 @@ message RunCommand {
   // Optional.
   repeated string extra_arg = 6;
 
-  // Required for XtsTradefedTest
+  // Required for xTS TradefedTest
   string xts_type = 7;
 
   // Optional.

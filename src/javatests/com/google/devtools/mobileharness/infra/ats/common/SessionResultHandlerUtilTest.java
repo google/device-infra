@@ -83,7 +83,7 @@ public final class SessionResultHandlerUtilTest {
   @Mock private Properties testProperties;
 
   private final JobType jobType =
-      JobType.newBuilder().setDevice("AndroidRealDevice").setDriver("XtsTradefedTest").build();
+      JobType.newBuilder().setDevice("AndroidRealDevice").setDriver("TradefedTest").build();
   @Inject private SessionResultHandlerUtil sessionResultHandlerUtil;
 
   @Before
@@ -149,7 +149,7 @@ public final class SessionResultHandlerUtilTest {
     Path result = sessionResultHandlerUtil.getTradefedInvocationLogDir(testInfo, logRootDir);
 
     assertThat(result.toString())
-        .isEqualTo(logRootDir.resolve("inv_123/XtsTradefedTest_test_test_id").toString());
+        .isEqualTo(logRootDir.resolve("inv_123/TradefedTest_test_test_id").toString());
   }
 
   @Test
@@ -162,7 +162,7 @@ public final class SessionResultHandlerUtilTest {
     Path result = sessionResultHandlerUtil.getTradefedInvocationLogDir(testInfo, logRootDir);
 
     assertThat(result.toString())
-        .isEqualTo(logRootDir.resolve("inv_test_id/XtsTradefedTest_test_test_id").toString());
+        .isEqualTo(logRootDir.resolve("inv_test_id/TradefedTest_test_test_id").toString());
   }
 
   @Test
@@ -175,7 +175,7 @@ public final class SessionResultHandlerUtilTest {
     Path result = sessionResultHandlerUtil.getTradefedInvocationLogDir(testInfo, logRootDir);
 
     assertThat(result.toString())
-        .isEqualTo(logRootDir.resolve("inv_mcts_test_id/XtsTradefedTest_test_test_id").toString());
+        .isEqualTo(logRootDir.resolve("inv_mcts_test_id/TradefedTest_test_test_id").toString());
   }
 
   @Test

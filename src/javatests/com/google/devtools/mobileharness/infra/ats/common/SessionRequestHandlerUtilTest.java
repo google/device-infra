@@ -90,6 +90,7 @@ import org.mockito.junit.MockitoRule;
 public final class SessionRequestHandlerUtilTest {
 
   private static final String XTS_ROOT_DIR_PATH = "/path/to/xts_root_dir";
+  private static final String TRADEFED_TEST_DRIVER_NAME = "TradefedTest";
 
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
   @Rule public final TemporaryFolder folder = new TemporaryFolder();
@@ -206,7 +207,7 @@ public final class SessionRequestHandlerUtilTest {
     assertThat(jobConfig.getDevice().getSubDeviceSpecList())
         .containsExactly(subDeviceSpecWithDimension("id", "regex:(device_id_1|device_id_2)"));
 
-    assertThat(jobConfig.getDriver().getName()).isEqualTo("XtsTradefedTest");
+    assertThat(jobConfig.getDriver().getName()).isEqualTo(TRADEFED_TEST_DRIVER_NAME);
     String driverParamsStr = jobConfig.getDriver().getParam();
     Map<String, String> driverParamsMap =
         new Gson().fromJson(driverParamsStr, new TypeToken<>() {});
@@ -457,7 +458,7 @@ public final class SessionRequestHandlerUtilTest {
                     StringMap.newBuilder().putContent("id", "regex:(device_id_1|device_id_2)"))
                 .build());
 
-    assertThat(jobConfig.getDriver().getName()).isEqualTo("XtsTradefedTest");
+    assertThat(jobConfig.getDriver().getName()).isEqualTo(TRADEFED_TEST_DRIVER_NAME);
     String driverParamsStr = jobConfig.getDriver().getParam();
     Map<String, String> driverParamsMap =
         new Gson().fromJson(driverParamsStr, new TypeToken<>() {});

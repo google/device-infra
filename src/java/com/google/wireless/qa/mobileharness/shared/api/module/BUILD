@@ -18,8 +18,8 @@ load("@rules_java//java:defs.bzl", "java_library")
 package(default_applicable_licenses = ["//:license"])
 
 java_library(
-    name = "xts_tradefed_test_module",
-    srcs = ["XtsTradefedTestModule.java"],
+    name = "tradefed_test_module",
+    srcs = ["TradefedTestModule.java"],
     visibility = [
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
         "//src/javatests/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",

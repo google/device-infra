@@ -39,7 +39,7 @@ import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryG
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryType;
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
-import com.google.wireless.qa.mobileharness.shared.api.spec.XtsTradefedTestSpec;
+import com.google.wireless.qa.mobileharness.shared.api.spec.TradefedTestSpec;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
@@ -171,7 +171,7 @@ public class ConsoleJobCreator extends XtsJobCreator {
     // It uses jobFiles here instead of driverParams as driverParams doesn't work well with list of
     // files.
     jobFiles.putAll(
-        XtsTradefedTestSpec.TAG_PREV_SESSION_TEST_RECORD_PB_FILES,
+        TradefedTestSpec.TAG_PREV_SESSION_TEST_RECORD_PB_FILES,
         tfRunRetryFilesBundle.testRecordProtoFiles().stream()
             .map(Path::toAbsolutePath)
             .map(Path::toString)

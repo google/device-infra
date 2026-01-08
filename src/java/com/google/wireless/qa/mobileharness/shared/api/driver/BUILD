@@ -242,9 +242,9 @@ java_library(
 )
 
 java_library(
-    name = "xts_tradefed_test",
+    name = "tradefed_test",
     srcs = [
-        "XtsTradefedTest.java",
+        "TradefedTest.java",
     ],
     resources = [
         "//src/devtools/mobileharness/infra/controller/test/util/xtsdownloader/configs:mcts_list",
@@ -286,12 +286,12 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:composite_device",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:xts_tradefed_test_spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:tradefed_test_spec",
         "//src/java/com/google/wireless/qa/mobileharness/shared/comm/message/event",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:xts_tradefed_test_spec_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:tradefed_test_spec_java_proto",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",

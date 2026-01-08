@@ -135,6 +135,9 @@ import org.mockito.junit.MockitoRule;
 public final class AtsServerSessionPluginTest {
   private static final String ANDROID_XTS_ZIP = "file:///path/to/xts/zip/file";
   private static final String OUTPUT_FILE_UPLOAD_URL = "file:///path/to/output";
+  private static final String TRADEFED_TEST = "TradefedTest";
+  private static final JobType TRADEFED_JOB_TYPE =
+      JobType.newBuilder().setDriver(TRADEFED_TEST).build();
 
   private NewMultiCommandRequest request = NewMultiCommandRequest.getDefaultInstance();
   private CommandInfo commandInfo = CommandInfo.getDefaultInstance();
@@ -185,13 +188,13 @@ public final class AtsServerSessionPluginTest {
     when(jobInfo.locator()).thenReturn(new JobLocator("job_id", "job_name"));
     properties = new Properties(timing);
     when(jobInfo.properties()).thenReturn(properties);
-    when(jobInfo.type()).thenReturn(JobType.newBuilder().setDriver("XtsTradefedTest").build());
+    when(jobInfo.type()).thenReturn(TRADEFED_JOB_TYPE);
     when(jobInfo.status()).thenReturn(new Status(timing).set(TestStatus.RUNNING));
     when(jobInfo.resultWithCause())
         .thenReturn(new Result(timing.toNewTiming(), new Params(timing).toNewParams()));
     when(jobInfo2.locator()).thenReturn(new JobLocator("job_id2", "job_name2"));
     when(jobInfo2.properties()).thenReturn(properties);
-    when(jobInfo2.type()).thenReturn(JobType.newBuilder().setDriver("XtsTradefedTest").build());
+    when(jobInfo2.type()).thenReturn(TRADEFED_JOB_TYPE);
     when(jobInfo2.status()).thenReturn(new Status(timing).set(TestStatus.RUNNING));
     when(jobInfo2.resultWithCause())
         .thenReturn(new Result(timing.toNewTiming(), new Params(timing).toNewParams()));
@@ -567,8 +570,7 @@ public final class AtsServerSessionPluginTest {
     when(jobInfo.status()).thenReturn(new Status(timing).set(TestStatus.DONE));
     Result result = new Result(timing.toNewTiming(), new Params(timing).toNewParams()).setPass();
     when(jobInfo.resultWithCause()).thenReturn(result);
-    JobType jobType = JobType.newBuilder().setDriver("XtsTradefedTest").build();
-    when(jobInfo.type()).thenReturn(jobType);
+    when(jobInfo.type()).thenReturn(TRADEFED_JOB_TYPE);
 
     plugin.onJobEnded(new JobEndEvent(jobInfo, null));
 
@@ -604,8 +606,7 @@ public final class AtsServerSessionPluginTest {
     when(jobInfo.status()).thenReturn(new Status(timing).set(TestStatus.DONE));
     Result result = new Result(timing.toNewTiming(), new Params(timing).toNewParams()).setPass();
     when(jobInfo.resultWithCause()).thenReturn(result);
-    JobType jobType = JobType.newBuilder().setDriver("XtsTradefedTest").build();
-    when(jobInfo.type()).thenReturn(jobType);
+    when(jobInfo.type()).thenReturn(TRADEFED_JOB_TYPE);
     AtsServerSessionNotification notification =
         AtsServerSessionNotification.newBuilder()
             .setCancelSession(CancelSession.getDefaultInstance())
@@ -641,8 +642,7 @@ public final class AtsServerSessionPluginTest {
     when(jobInfo.status()).thenReturn(new Status(timing).set(TestStatus.DONE));
     Result result = new Result(timing.toNewTiming(), new Params(timing).toNewParams()).setPass();
     when(jobInfo.resultWithCause()).thenReturn(result);
-    JobType jobType = JobType.newBuilder().setDriver("XtsTradefedTest").build();
-    when(jobInfo.type()).thenReturn(jobType);
+    when(jobInfo.type()).thenReturn(TRADEFED_JOB_TYPE);
     when(testInfo.status()).thenReturn(new Status(timing).set(TestStatus.RUNNING));
 
     AtsServerSessionNotification notification =
@@ -685,8 +685,7 @@ public final class AtsServerSessionPluginTest {
     when(jobInfo.status()).thenReturn(new Status(timing).set(TestStatus.DONE));
     Result result = new Result(timing.toNewTiming(), new Params(timing).toNewParams()).setPass();
     when(jobInfo.resultWithCause()).thenReturn(result);
-    JobType jobType = JobType.newBuilder().setDriver("XtsTradefedTest").build();
-    when(jobInfo.type()).thenReturn(jobType);
+    when(jobInfo.type()).thenReturn(TRADEFED_JOB_TYPE);
 
     plugin.onJobEnded(new JobEndEvent(jobInfo, null));
 
@@ -729,8 +728,7 @@ public final class AtsServerSessionPluginTest {
     when(jobInfo.status()).thenReturn(new Status(timing).set(TestStatus.DONE));
     Result result = new Result(timing.toNewTiming(), new Params(timing).toNewParams()).setPass();
     when(jobInfo.resultWithCause()).thenReturn(result);
-    JobType jobType = JobType.newBuilder().setDriver("XtsTradefedTest").build();
-    when(jobInfo.type()).thenReturn(jobType);
+    when(jobInfo.type()).thenReturn(TRADEFED_JOB_TYPE);
 
     // Verify first jobInfo end signal won't add non-TF jobs.
     plugin.onJobEnded(new JobEndEvent(jobInfo, null));
@@ -742,8 +740,7 @@ public final class AtsServerSessionPluginTest {
     when(jobInfo2.status()).thenReturn(new Status(timing).set(TestStatus.DONE));
     Result result2 = new Result(timing.toNewTiming(), new Params(timing).toNewParams()).setPass();
     when(jobInfo2.resultWithCause()).thenReturn(result2);
-    JobType jobType2 = JobType.newBuilder().setDriver("XtsTradefedTest").build();
-    when(jobInfo2.type()).thenReturn(jobType2);
+    when(jobInfo2.type()).thenReturn(TRADEFED_JOB_TYPE);
 
     // Verify added non tradefed jobs when the last jobInfo has ended.
     plugin.onJobEnded(new JobEndEvent(jobInfo2, null));
@@ -784,8 +781,7 @@ public final class AtsServerSessionPluginTest {
     when(testInfo.resultWithCause()).thenReturn(result);
     testProperties.add(XtsConstants.TRADEFED_TESTS_TOTAL, "1");
     testProperties.add(XtsConstants.TRADEFED_JOBS_HAS_RESULT_FILE, "true");
-    JobType jobType = JobType.newBuilder().setDriver("XtsTradefedTest").build();
-    when(jobInfo.type()).thenReturn(jobType);
+    when(jobInfo.type()).thenReturn(TRADEFED_JOB_TYPE);
 
     plugin.onJobEnded(new JobEndEvent(jobInfo, null));
     verify(sessionInfo).addJob(jobInfo2);
@@ -824,8 +820,7 @@ public final class AtsServerSessionPluginTest {
     when(jobInfo.resultWithCause()).thenReturn(result);
     when(testInfo.resultWithCause()).thenReturn(result);
     testProperties.add(XtsConstants.TRADEFED_TESTS_TOTAL, "1");
-    JobType jobType = JobType.newBuilder().setDriver("XtsTradefedTest").build();
-    when(jobInfo.type()).thenReturn(jobType);
+    when(jobInfo.type()).thenReturn(TRADEFED_JOB_TYPE);
 
     plugin.onJobEnded(new JobEndEvent(jobInfo, null));
     verify(sessionInfo, never()).addJob(jobInfo2);
@@ -866,8 +861,7 @@ public final class AtsServerSessionPluginTest {
     when(jobInfo.resultWithCause()).thenReturn(result);
     when(testInfo.resultWithCause()).thenReturn(result);
     testProperties.add(XtsConstants.TRADEFED_TESTS_TOTAL, "1");
-    JobType jobType = JobType.newBuilder().setDriver("XtsTradefedTest").build();
-    when(jobInfo.type()).thenReturn(jobType);
+    when(jobInfo.type()).thenReturn(TRADEFED_JOB_TYPE);
 
     plugin.onJobEnded(new JobEndEvent(jobInfo, null));
     verify(sessionInfo, never()).addJob(jobInfo2);
@@ -1009,8 +1003,7 @@ public final class AtsServerSessionPluginTest {
     when(testInfo.resultWithCause()).thenReturn(result);
 
     when(jobInfo.resultWithCause()).thenReturn(result);
-    JobType jobType = JobType.newBuilder().setDriver("XtsTradefedTest").build();
-    when(jobInfo.type()).thenReturn(jobType);
+    when(jobInfo.type()).thenReturn(TRADEFED_JOB_TYPE);
     plugin.onJobEnded(new JobEndEvent(jobInfo, null));
     CreateSessionResponse response =
         CreateSessionResponse.newBuilder()
@@ -1087,8 +1080,7 @@ public final class AtsServerSessionPluginTest {
     when(testInfo.resultWithCause()).thenReturn(result);
 
     when(jobInfo.resultWithCause()).thenReturn(result);
-    JobType jobType = JobType.newBuilder().setDriver("XtsTradefedTest").build();
-    when(jobInfo.type()).thenReturn(jobType);
+    when(jobInfo.type()).thenReturn(TRADEFED_JOB_TYPE);
     plugin.onJobEnded(new JobEndEvent(jobInfo, null));
     CreateSessionResponse response =
         CreateSessionResponse.newBuilder()
@@ -1176,8 +1168,7 @@ public final class AtsServerSessionPluginTest {
     when(testInfo.resultWithCause()).thenReturn(result);
 
     when(jobInfo.resultWithCause()).thenReturn(result);
-    JobType jobType = JobType.newBuilder().setDriver("XtsTradefedTest").build();
-    when(jobInfo.type()).thenReturn(jobType);
+    when(jobInfo.type()).thenReturn(TRADEFED_JOB_TYPE);
     plugin.onJobEnded(new JobEndEvent(jobInfo, null));
     CreateSessionResponse response =
         CreateSessionResponse.newBuilder()
@@ -1247,8 +1238,7 @@ public final class AtsServerSessionPluginTest {
     when(testInfo.resultWithCause()).thenReturn(result);
 
     when(jobInfo.resultWithCause()).thenReturn(result);
-    JobType jobType = JobType.newBuilder().setDriver("XtsTradefedTest").build();
-    when(jobInfo.type()).thenReturn(jobType);
+    when(jobInfo.type()).thenReturn(TRADEFED_JOB_TYPE);
     plugin.onJobEnded(new JobEndEvent(jobInfo, null));
     CreateSessionResponse response =
         CreateSessionResponse.newBuilder()
@@ -1326,8 +1316,7 @@ public final class AtsServerSessionPluginTest {
     when(testInfo.resultWithCause()).thenReturn(result);
 
     when(jobInfo.resultWithCause()).thenReturn(result);
-    JobType jobType = JobType.newBuilder().setDriver("XtsTradefedTest").build();
-    when(jobInfo.type()).thenReturn(jobType);
+    when(jobInfo.type()).thenReturn(TRADEFED_JOB_TYPE);
     plugin.onJobEnded(new JobEndEvent(jobInfo, null));
     CreateSessionResponse response =
         CreateSessionResponse.newBuilder()
@@ -1390,8 +1379,7 @@ public final class AtsServerSessionPluginTest {
     when(testInfo.resultWithCause()).thenReturn(result);
 
     when(jobInfo.resultWithCause()).thenReturn(result);
-    JobType jobType = JobType.newBuilder().setDriver("XtsTradefedTest").build();
-    when(jobInfo.type()).thenReturn(jobType);
+    when(jobInfo.type()).thenReturn(TRADEFED_JOB_TYPE);
     plugin.onJobEnded(new JobEndEvent(jobInfo, null));
 
     com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result.Builder
@@ -1451,8 +1439,7 @@ public final class AtsServerSessionPluginTest {
     when(testInfo.resultWithCause()).thenReturn(result);
 
     when(jobInfo.resultWithCause()).thenReturn(result);
-    JobType jobType = JobType.newBuilder().setDriver("XtsTradefedTest").build();
-    when(jobInfo.type()).thenReturn(jobType);
+    when(jobInfo.type()).thenReturn(TRADEFED_JOB_TYPE);
     plugin.onJobEnded(new JobEndEvent(jobInfo, null));
 
     com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result.Builder
@@ -1506,8 +1493,7 @@ public final class AtsServerSessionPluginTest {
     when(testInfo.resultWithCause()).thenReturn(result);
 
     when(jobInfo.resultWithCause()).thenReturn(result);
-    JobType jobType = JobType.newBuilder().setDriver("XtsTradefedTest").build();
-    when(jobInfo.type()).thenReturn(jobType);
+    when(jobInfo.type()).thenReturn(TRADEFED_JOB_TYPE);
     plugin.onJobEnded(new JobEndEvent(jobInfo, null));
     IllegalStateException exception = new IllegalStateException("test");
     doThrow(exception)

@@ -20,10 +20,10 @@ import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
-import com.google.wireless.qa.mobileharness.shared.api.spec.XtsTradefedTestSpec;
+import com.google.wireless.qa.mobileharness.shared.api.spec.TradefedTestSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Files;
-import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.XtsTradefedTestDriverSpec;
+import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.TradefedTestDriverSpec;
 import java.util.List;
 import org.junit.Before;
 import org.junit.Rule;
@@ -34,11 +34,11 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
-/** Unit tests for {@link XtsTradefedTestJobValidator}. */
+/** Unit tests for {@link TradefedTestJobValidator}. */
 @RunWith(JUnit4.class)
-public final class XtsTradefedTestJobValidatorTest {
+public final class TradefedTestJobValidatorTest {
 
-  private XtsTradefedTestJobValidator validator;
+  private TradefedTestJobValidator validator;
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
   @Mock private JobInfo mockJobInfo;
@@ -46,7 +46,7 @@ public final class XtsTradefedTestJobValidatorTest {
 
   @Before
   public void setUp() {
-    validator = new XtsTradefedTestJobValidator();
+    validator = new TradefedTestJobValidator();
     when(mockJobInfo.files()).thenReturn(mockJobFiles);
   }
 
@@ -54,7 +54,7 @@ public final class XtsTradefedTestJobValidatorTest {
   public void validateJob_pass() throws Exception {
     when(mockJobInfo.combinedSpec(any()))
         .thenReturn(
-            XtsTradefedTestDriverSpec.newBuilder()
+            TradefedTestDriverSpec.newBuilder()
                 .setXtsType("cts")
                 .setXtsTestPlan("cts")
                 .setXtsRootDir("/path/to/cts_root")
@@ -64,7 +64,7 @@ public final class XtsTradefedTestJobValidatorTest {
 
     when(mockJobInfo.combinedSpec(any()))
         .thenReturn(
-            XtsTradefedTestDriverSpec.newBuilder()
+            TradefedTestDriverSpec.newBuilder()
                 .setXtsType("cts")
                 .setXtsTestPlan("cts")
                 .setAndroidXtsZip("/path/to/android_xts_zip")
@@ -77,22 +77,21 @@ public final class XtsTradefedTestJobValidatorTest {
   public void validateJob_missXtsType_error() throws Exception {
     when(mockJobInfo.combinedSpec(any()))
         .thenReturn(
-            XtsTradefedTestDriverSpec.newBuilder()
+            TradefedTestDriverSpec.newBuilder()
                 .setXtsTestPlan("cts")
                 .setXtsRootDir("/path/to/cts_root")
                 .build());
 
     List<String> errors = validator.validate(mockJobInfo);
     assertThat(errors).hasSize(1);
-    assertThat(errors)
-        .contains("An xTS type must be specified, check xts_tradefed_test_spec.proto.");
+    assertThat(errors).contains("An xTS type must be specified, check tradefed_test_spec.proto.");
   }
 
   @Test
   public void validateJob_missXtsTestPlan_error() throws Exception {
     when(mockJobInfo.combinedSpec(any()))
         .thenReturn(
-            XtsTradefedTestDriverSpec.newBuilder()
+            TradefedTestDriverSpec.newBuilder()
                 .setXtsType("cts")
                 .setXtsRootDir("/path/to/cts_root")
                 .build());
@@ -106,7 +105,7 @@ public final class XtsTradefedTestJobValidatorTest {
   public void validateJob_missPrevSessionXtsTestPlanWhenTestPlanIsRetry_error() throws Exception {
     when(mockJobInfo.combinedSpec(any()))
         .thenReturn(
-            XtsTradefedTestDriverSpec.newBuilder()
+            TradefedTestDriverSpec.newBuilder()
                 .setXtsType("cts")
                 .setXtsTestPlan("retry")
                 .setXtsRootDir("/path/to/cts_root")
@@ -121,13 +120,13 @@ public final class XtsTradefedTestJobValidatorTest {
   public void validateJob_missPrevSessionTestResultXmlWhenTestPlanIsRetry_error() throws Exception {
     when(mockJobInfo.combinedSpec(any()))
         .thenReturn(
-            XtsTradefedTestDriverSpec.newBuilder()
+            TradefedTestDriverSpec.newBuilder()
                 .setXtsType("cts")
                 .setXtsTestPlan("retry")
                 .setXtsRootDir("/path/to/cts_root")
                 .setPrevSessionTestRecordFiles("/path/to/prev_session_test_record_files")
                 .build());
-    when(mockJobFiles.isTagNotEmpty(XtsTradefedTestSpec.TAG_PREV_SESSION_TEST_RECORD_PB_FILES))
+    when(mockJobFiles.isTagNotEmpty(TradefedTestSpec.TAG_PREV_SESSION_TEST_RECORD_PB_FILES))
         .thenReturn(true);
 
     List<String> errors = validator.validate(mockJobInfo);
@@ -140,7 +139,7 @@ public final class XtsTradefedTestJobValidatorTest {
       throws Exception {
     when(mockJobInfo.combinedSpec(any()))
         .thenReturn(
-            XtsTradefedTestDriverSpec.newBuilder()
+            TradefedTestDriverSpec.newBuilder()
                 .setXtsType("cts")
                 .setXtsTestPlan("retry")
                 .setXtsRootDir("/path/to/cts_root")
@@ -159,7 +158,7 @@ public final class XtsTradefedTestJobValidatorTest {
   public void validateJob_missBothXtsRootDirAndAndroidXtsZip_error() throws Exception {
     when(mockJobInfo.combinedSpec(any()))
         .thenReturn(
-            XtsTradefedTestDriverSpec.newBuilder().setXtsType("cts").setXtsTestPlan("cts").build());
+            TradefedTestDriverSpec.newBuilder().setXtsType("cts").setXtsTestPlan("cts").build());
 
     List<String> errors = validator.validate(mockJobInfo);
     assertThat(errors).hasSize(1);

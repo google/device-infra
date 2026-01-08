@@ -69,7 +69,7 @@ public class TestRetryHandler {
           "IosNativeXcTest",
           "MoblyAospTest",
           "VegaTest",
-          "XtsTradefedTest");
+          "TradefedTest");
 
   /** Minimal job remaining time needed for triggering the extra retry for infra errors. */
   private static final Duration MIN_JOB_REMAINING_TIME_FOR_INFRA_ERROR_EXTRA_RETRY =

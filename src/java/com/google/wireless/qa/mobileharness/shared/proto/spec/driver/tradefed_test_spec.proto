@@ -23,9 +23,9 @@ import "src/java/com/google/wireless/qa/mobileharness/shared/proto/spec/base_spe
 option java_package = "com.google.wireless.qa.mobileharness.shared.proto.spec.driver";
 option java_multiple_files = true;
 
-message XtsTradefedTestDriverSpec {
+message TradefedTestDriverSpec {
   extend DriverSpec {
-    optional XtsTradefedTestDriverSpec ext = 514943769;
+    optional TradefedTestDriverSpec ext = 514943769;
   }
 
   optional string xts_type = 1 [(field_detail) = {
