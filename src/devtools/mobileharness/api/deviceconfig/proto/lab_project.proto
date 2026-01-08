@@ -42,4 +42,49 @@ message TenantDeviceConfig {
   HardwareFingerprint hardware_fingerprint = 1;
   // The device config to apply to a matching device.
   DeviceConfig device_config = 2;
+
+  // Merge semantics for dimensions with name collisions in the tenant and
+  // device config.
+  //
+  // Repeated conflicting dimensions in the  overridee are dropped, and in the
+  // overrider are retained. For example:
+  // overriding
+  //   { ... { name: "label", value: "a" }, { name: "label", value: "b" } }
+  // with
+  //   { ... { name: "label", value: "c" } }
+  // results in
+  //   { ... { name: "label", value: "c" } }
+  // and overriding
+  //   { ... { name: "label", value: "a" } }
+  // with
+  //   { ... { name: "label", value: "c" }, { name: "label", value: "d" } }
+  // results in
+  //   { ... { name: "label", value: "c" }, { name: "label", value: "d" } }
+  enum CompositeDimensionMergeSemantics {
+    // Unspecified, will default to UNION.
+    MERGE_SEMANTICS_UNSPECIFIED = 0;
+    // Tenant config will override the device config. For exammple:
+    //   tenant config: { ... { name: "label", value: "tenant" } }
+    //   device config: { ... { name: "label", value: "device" } }
+    //   merged config: { ... { name: "label", value: "tenant" } }
+    MERGE_SEMANTICS_TENANT_OVERRIDES = 1;
+    // Both are kept
+    //   tenant config: { ... { name: "label", value: "tenant" } }
+    //   device config: { ... { name: "label", value: "device" } }
+    //   merged config: { ...
+    //     { name: "label", value: "tenant" },
+    //     { name:  "label", value: "device" }
+    //   }
+    MERGE_SEMANTICS_UNION = 2;
+    // Device config will override the tenant config. For example:
+    //   tenant config: { ... { name: "label", value: "tenant" } }
+    //   device config: { ... { name: "label", value: "device" } }
+    //   merged config: { ... { name: "label", value: "device" } }
+    MERGE_SEMANTICS_DEVICE_OVERRIDES = 3;
+
+    // TODO: add merge semantics for host config.
+  }
+
+  // TODO: Implement this.
+  CompositeDimensionMergeSemantics merge_semantics = 4;
 }
