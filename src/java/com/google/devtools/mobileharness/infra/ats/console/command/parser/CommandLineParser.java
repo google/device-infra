@@ -16,7 +16,6 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.command.parser;
 
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.devtools.mobileharness.shared.util.shell.ShellUtils.tokenize;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -36,6 +35,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotat
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.inject.CommonModule;
 import com.google.devtools.mobileharness.shared.util.shell.ShellUtils.TokenizationException;
+import com.google.devtools.mobileharness.shared.util.system.SystemPropertiesUtil;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
@@ -107,9 +107,7 @@ public final class CommandLineParser {
   @VisibleForTesting
   CommandLineParser() {
     // Gets system properties.
-    ImmutableMap<String, String> systemProperties =
-        System.getProperties().entrySet().stream()
-            .collect(toImmutableMap(e -> (String) e.getKey(), e -> (String) e.getValue()));
+    ImmutableMap<String, String> systemProperties = SystemPropertiesUtil.getSystemProperties();
 
     // Parses flags.
     runCommandParseResult = new RunCommandParseResult();

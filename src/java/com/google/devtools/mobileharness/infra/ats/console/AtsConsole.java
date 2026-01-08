@@ -16,7 +16,6 @@
 
 package com.google.devtools.mobileharness.infra.ats.console;
 
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.DEBUG;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
@@ -76,6 +75,7 @@ import com.google.devtools.mobileharness.shared.util.shell.ShellUtils.Tokenizati
 import com.google.devtools.mobileharness.shared.util.system.ShutdownHookManager;
 import com.google.devtools.mobileharness.shared.util.system.ShutdownHookManager.Priority;
 import com.google.devtools.mobileharness.shared.util.system.SystemInfoPrinter;
+import com.google.devtools.mobileharness.shared.util.system.SystemPropertiesUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -127,9 +127,7 @@ public class AtsConsole {
   public static void main(String[] args)
       throws MobileHarnessException, IOException, InterruptedException {
     // Gets system properties.
-    ImmutableMap<String, String> systemProperties =
-        System.getProperties().entrySet().stream()
-            .collect(toImmutableMap(e -> (String) e.getKey(), e -> (String) e.getValue()));
+    ImmutableMap<String, String> systemProperties = SystemPropertiesUtil.getSystemProperties();
 
     // Parses flags.
     FlagsString deviceInfraServiceFlags =

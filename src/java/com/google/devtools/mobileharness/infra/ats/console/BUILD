@@ -93,6 +93,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/shell",
         "//src/java/com/google/devtools/mobileharness/shared/util/system:shutdown_hook_manager",
         "//src/java/com/google/devtools/mobileharness/shared/util/system:system_info_printer",
+        "//src/java/com/google/devtools/mobileharness/shared/util/system:system_properties_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
         "//src/java/com/google/wireless/qa/mobileharness/shared:log",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dir_preparer",

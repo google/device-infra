@@ -69,10 +69,21 @@ java_library(
     srcs = ["SystemInfoPrinter.java"],
     visibility = ["//:deviceinfra_all_pkg"],
     deps = [
+        ":system_properties_util",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/constant:log_record_importance",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/network",
         "@maven//:javax_inject_jsr330_api",
     ],
+)
+
+java_library(
+    name = "system_properties_util",
+    srcs = ["SystemPropertiesUtil.java"],
+    visibility = [
+        "//:deviceinfra_all_pkg",
+        "//:omnilab_fusion",
+    ],
+    deps = ["@maven//:com_google_guava_guava"],
 )

@@ -19,6 +19,8 @@ package com.google.devtools.mobileharness.infra.lab;
 import static com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools.createStandardScheduledThreadPool;
 import static com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools.createStandardThreadPool;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.AbstractIdleService;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -42,12 +44,13 @@ import com.google.devtools.mobileharness.infra.controller.test.launcher.ThreadPo
 import com.google.devtools.mobileharness.infra.controller.test.manager.LabDirectTestRunnerUtil;
 import com.google.devtools.mobileharness.infra.controller.test.manager.ProxyTestManager;
 import com.google.devtools.mobileharness.infra.controller.test.manager.TestManager;
-import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberExceptionLoggingHandler;
 import com.google.devtools.mobileharness.infra.lab.Annotations.DebugThreadPool;
 import com.google.devtools.mobileharness.infra.lab.Annotations.GlobalEventBus;
 import com.google.devtools.mobileharness.infra.lab.Annotations.GlobalEventBusSubscriber;
 import com.google.devtools.mobileharness.infra.lab.controller.LabDirectTestRunnerHolder;
 import com.google.devtools.mobileharness.infra.lab.rpc.service.ExecTestServiceImpl;
+import com.google.devtools.mobileharness.shared.constant.inject.Annotations.MainArgs;
+import com.google.devtools.mobileharness.shared.constant.inject.Annotations.SystemProperties;
 import com.google.devtools.mobileharness.shared.file.resolver.AbstractFileResolver;
 import com.google.devtools.mobileharness.shared.file.resolver.AtsFileServerFileResolver;
 import com.google.devtools.mobileharness.shared.file.resolver.CacheFileResolver;
@@ -68,6 +71,8 @@ import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageManag
 import com.google.wireless.qa.mobileharness.shared.constant.ExitCode;
 import java.time.Clock;
 import java.time.InstantSource;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import javax.inject.Inject;
 
@@ -75,15 +80,14 @@ import javax.inject.Inject;
 @SuppressWarnings("AvoidObjectArrays")
 public class LabServerModule extends AbstractModule {
 
-  private final String[] labArgs;
+  private final ImmutableList<String> mainArgs;
+  private final ImmutableMap<String, String> systemProperties;
   private final EventBus globalInternalBus;
 
-  public LabServerModule(String[] labArgs) {
-    this(labArgs, new EventBus(new SubscriberExceptionLoggingHandler()));
-  }
-
-  public LabServerModule(String[] labArgs, EventBus globalInternalBus) {
-    this.labArgs = labArgs;
+  public LabServerModule(
+      List<String> mainArgs, Map<String, String> systemProperties, EventBus globalInternalBus) {
+    this.mainArgs = ImmutableList.copyOf(mainArgs);
+    this.systemProperties = ImmutableMap.copyOf(systemProperties);
     this.globalInternalBus = globalInternalBus;
   }
 
@@ -97,7 +101,7 @@ public class LabServerModule extends AbstractModule {
     bind(new Key<TestManager<?>>() {}).to(ProxyTestManager.class);
     bind(LabDirectTestRunnerHolder.class).to(ProxyTestManager.class);
     bind(EventBus.class).annotatedWith(GlobalEventBus.class).toInstance(globalInternalBus);
-    if (Flags.instance().enableDeviceTestDecoupling.get()) {
+    if (Flags.instance().enableDeviceTestDecoupling.getNonNull()) {
       install(new AllocatedDeviceProvisioningModule());
       install(new ThreadPoolLauncherProvisioningModule());
     } else {
@@ -116,6 +120,18 @@ public class LabServerModule extends AbstractModule {
         .annotatedWith(DebugThreadPool.class)
         .toInstance(createStandardScheduledThreadPool("mh-lab-server-debug-random-exit-task", 1));
     bind(InstantSource.class).toInstance(InstantSource.system());
+  }
+
+  @Provides
+  @MainArgs
+  ImmutableList<String> provideMainArgs() {
+    return mainArgs;
+  }
+
+  @Provides
+  @SystemProperties
+  ImmutableMap<String, String> provideSystemProperties() {
+    return systemProperties;
   }
 
   @Provides

@@ -16,8 +16,6 @@
 
 package com.google.devtools.mobileharness.infra.ats.local;
 
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
@@ -48,6 +46,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stu
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.SessionStub;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.shared.util.system.SystemPropertiesUtil;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.protobuf.Any;
@@ -66,9 +65,7 @@ public class AtsLocalRunner {
 
   public static void main(String[] args) throws InterruptedException, MobileHarnessException {
     // Gets system properties.
-    ImmutableMap<String, String> systemProperties =
-        System.getProperties().entrySet().stream()
-            .collect(toImmutableMap(e -> (String) e.getKey(), e -> (String) e.getValue()));
+    ImmutableMap<String, String> systemProperties = SystemPropertiesUtil.getSystemProperties();
 
     FlagsString deviceInfraServiceFlags =
         DeviceInfraServiceUtil.getDeviceInfraServiceFlags(systemProperties);

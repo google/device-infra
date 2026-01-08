@@ -17,6 +17,8 @@
 package com.google.devtools.mobileharness.infra.lab;
 
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.eventbus.EventBus;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.AbstractIdleService;
@@ -32,19 +34,15 @@ import com.google.devtools.mobileharness.shared.util.concurrent.ExternalServiceM
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.logging.flogger.FloggerFormatter;
 import com.google.devtools.mobileharness.shared.util.system.ShutdownHookManager;
+import com.google.devtools.mobileharness.shared.util.system.SystemPropertiesUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.version.Version;
-import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
+import com.google.inject.Module;
 import com.google.wireless.qa.mobileharness.shared.constant.ExitCode;
 import com.google.wireless.qa.mobileharness.shared.constant.ExitCode.Lab;
-import com.google.wireless.qa.mobileharness.shared.util.ArrayUtil;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 /** Launcher of lab server. */
 public class LabServerLauncher {
@@ -57,48 +55,58 @@ public class LabServerLauncher {
 
   private static final SystemUtil SYSTEM_UTIL = new SystemUtil();
 
-  private volatile LabServer labServer;
+  public static void main(String[] args) throws InterruptedException {
+    // Gets system properties.
+    ImmutableMap<String, String> systemProperties = SystemPropertiesUtil.getSystemProperties();
 
-  private final String[] labArgs;
-  private final EventBus globalInternalBus = new EventBus(new SubscriberExceptionLoggingHandler());
-
-  private LabServerLauncher(String[] labArgs) {
-    this.labArgs = labArgs;
-  }
-
-  /**
-   * Entry point to start the lab server.
-   *
-   * @param args command line arguments, we are using flags only
-   */
-  public static void main(String[] args) throws InterruptedException, IOException {
-    // Adds extra flags.
-    List<String> extraArgs = new ArrayList<>();
-    String[] allLabArgs = ArrayUtil.join(extraArgs.toArray(new String[0]), args);
+    // Pre-processes main arguments.
+    ImmutableList<String> mainArgs = preprocessMainArgs(args, systemProperties);
 
     // Parses flags.
-    Flags.parse(allLabArgs);
+    Flags.parse(mainArgs);
 
+    // Runs in print_lab_stats mode.
     if (Flags.instance().printLabStats.getNonNull()) {
       System.out.println("version: " + Version.LAB_VERSION);
       SYSTEM_UTIL.exit(ExitCode.Shared.OK);
     }
 
-    // Sleeps forever for no-op lab server.
+    // Runs in no_op_lab_server mode.
     if (Flags.instance().noOpLabServer.getNonNull()) {
       Thread.currentThread().join();
     }
 
     try {
-      // Initializes lab server.
-      LabServerLauncher labServerLauncher = new LabServerLauncher(allLabArgs);
+      // Creates global internal bus.
+      EventBus globalInternalBus = new EventBus(new SubscriberExceptionLoggingHandler());
+
+      // Creates injector.
+      ImmutableList<Module> modules = createModules(mainArgs, systemProperties, globalInternalBus);
+      Injector injector = Guice.createInjector(modules);
+
+      // Initializes environment.
+      LabServer.initializeEnv();
+
+      // Creates lab server instance.
+      LabServer labServer = injector.getInstance(LabServer.class);
 
       // Adds shutdown hook.
       ShutdownHookManager.getInstance()
-          .addShutdownHook(labServerLauncher::onShutdown, "lab-server-launcher-shutdown");
+          .addShutdownHook(labServer::onShutdown, "lab-server-shutdown");
+
+      // Initializes cloud logging.
+      initializeCloudLogging();
+
+      // Prints main arguments.
+      logger.atInfo().log("Lab server arguments: %s", mainArgs);
+
+      // Starts external services.
+      ServiceManager externalServiceManager =
+          injector.getInstance(Key.get(ServiceManager.class, ExternalServiceManager.class));
+      externalServiceManager.startAsync().awaitHealthy();
 
       // Runs lab server.
-      labServerLauncher.run();
+      labServer.run();
 
       // Sometimes some unexpected non-daemon threads may be blocked here, so we use System.exit(0)
       // to make sure the process is terminated.
@@ -112,30 +120,25 @@ public class LabServerLauncher {
     }
   }
 
-  /** Initializes and runs lab server. */
-  public void run() throws MobileHarnessException, InterruptedException, IOException {
-    List<AbstractModule> modules = new ArrayList<>();
-    modules.add(new LabServerModule(labArgs, globalInternalBus));
-    Injector injector = Guice.createInjector(modules);
-    initializeEnv(injector);
-
-    ServiceManager externalServiceManager =
-        injector.getInstance(Key.get(ServiceManager.class, ExternalServiceManager.class));
-    externalServiceManager.startAsync().awaitHealthy();
-
-    labServer.run();
+  /** Pre-processes main arguments. */
+  private static ImmutableList<String> preprocessMainArgs(
+      String[] args, @SuppressWarnings("unused") ImmutableMap<String, String> systemProperties) {
+    ImmutableList.Builder<String> mainArgs = ImmutableList.builder();
+    mainArgs.add(args);
+    return mainArgs.build();
   }
 
-  private void onShutdown() {
-    logger.atInfo().log("Lab server is shutting down.");
-    labServer.onShutdown();
+  private static ImmutableList<Module> createModules(
+      ImmutableList<String> mainArgs,
+      ImmutableMap<String, String> systemProperties,
+      EventBus globalInternalBus)
+      throws MobileHarnessException {
+    ImmutableList.Builder<Module> modules = ImmutableList.builder();
+    modules.add(new LabServerModule(mainArgs, systemProperties, globalInternalBus));
+    return modules.build();
   }
 
-  /** Initializes environment by setting appropriate env vars and setting logger. */
-  private void initializeEnv(Injector injector) throws MobileHarnessException {
-    LabServer.initializeEnv();
-    labServer = injector.getInstance(LabServer.class);
-
+  private static void initializeCloudLogging() {
     if (Flags.instance().enableCloudLogging.getNonNull()) {
       MobileHarnessHostLogManager mobileHarnessHostLogManager =
           Guice.createInjector(
@@ -154,17 +157,15 @@ public class LabServerLauncher {
         // Does nothing
       }
     }
-
-    logger.atInfo().log("Lab server arguments: %s", Arrays.toString(labArgs));
   }
 
   // NoOpService is used so the ServiceManager has at least one service when starting up. Otherwise,
   // it will write an exception to stdout, which is forbidden in the ATS tests.
   private static class NoOpService extends AbstractIdleService {
     @Override
-    protected void startUp() throws Exception {}
+    protected void startUp() {}
 
     @Override
-    protected void shutDown() throws Exception {}
+    protected void shutDown() {}
   }
 }

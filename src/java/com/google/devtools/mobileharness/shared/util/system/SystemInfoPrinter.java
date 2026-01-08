@@ -53,7 +53,7 @@ public final class SystemInfoPrinter {
     logger
         .atInfo()
         .with(IMPORTANCE, importance)
-        .log("System Properties: %s", System.getProperties());
+        .log("System Properties: %s", SystemPropertiesUtil.getSystemProperties());
     logger.atInfo().with(IMPORTANCE, importance).log("Environment Variables: %s", System.getenv());
     logger.atInfo().with(IMPORTANCE, importance).log("Java version: %s", Runtime.version());
   }

@@ -23,7 +23,7 @@ import javax.inject.Qualifier;
 /** Annotations for global constants to inject. */
 public final class Annotations {
 
-  /** Main arguments {@code ImmutableList<String>}. */
+  /** Finalized main arguments {@code ImmutableList<String>}. */
   @Qualifier
   @Retention(RetentionPolicy.RUNTIME)
   public @interface MainArgs {}
