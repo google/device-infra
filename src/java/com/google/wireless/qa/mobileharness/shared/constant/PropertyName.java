@@ -93,6 +93,9 @@ public interface PropertyName {
     /** Sponge link of test. */
     SPONGE_LINK_OF_TEST,
 
+    /** Sponge labels. */
+    SPONGE_LABELS,
+
     // The streamz label for the job. */
     STREAMZ_LABEL,
 
