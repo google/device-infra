@@ -230,7 +230,10 @@ public class CacheFileResolver extends AbstractFileResolver {
               }
             }
             thisResolvedFiles.add(
-                ResolvedFile.create(thisPath, cachedResolvedFile.checksum().orElse(null)));
+                ResolvedFile.create(
+                    thisPath,
+                    cachedResolvedFile.checksum().orElse(null),
+                    cachedResolvedFile.spec().orElse(null)));
           }
           ResolveResult result =
               ResolveResult.of(

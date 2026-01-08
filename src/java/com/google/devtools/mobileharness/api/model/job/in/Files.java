@@ -50,7 +50,12 @@ public class Files {
   @AutoValue
   public abstract static class FileInfo {
     public static FileInfo create(String path, @Nullable String checksum) {
-      return new AutoValue_Files_FileInfo(path, Optional.ofNullable(checksum));
+      return new AutoValue_Files_FileInfo(path, Optional.ofNullable(checksum), Optional.empty());
+    }
+
+    public static FileInfo create(String path, @Nullable String checksum, @Nullable String spec) {
+      return new AutoValue_Files_FileInfo(
+          path, Optional.ofNullable(checksum), Optional.ofNullable(spec));
     }
 
     public abstract String path();
@@ -61,6 +66,22 @@ public class Files {
      * <p>Different file/dir types can have different checksum formats.
      */
     public abstract Optional<String> checksum();
+
+    /**
+     * The spec of the file.
+     *
+     * <p>
+     *
+     * <ul>
+     *   <li>If one user specified file spec can be resolved to one file, the spec is the user
+     *       specified file spec.
+     *   <li>If one user specified file spec can be resolved to multiple files and each file can be
+     *       mapped to a unique spec, the spec is the unique spec for the file.
+     *   <li>If one user specified file spec can be resolved to multiple files and each file can't
+     *       be mapped to a unique spec, the spec is empty.
+     * </ul>
+     */
+    public abstract Optional<String> spec();
   }
 
   /**
@@ -111,7 +132,7 @@ public class Files {
    */
   @CanIgnoreReturnValue
   public Files add(String tag, String fileOrDirPath) throws MobileHarnessException {
-    return add(tag, FileInfo.create(fileOrDirPath, null));
+    return add(tag, FileInfo.create(fileOrDirPath, null, fileOrDirPath));
   }
 
   /**
@@ -245,7 +266,8 @@ public class Files {
       tagFileOrDirs = getTagFileOrDirs(tag);
       tagFileOrDirs.clear();
       for (String newFileOrDirPath : newFileOrDirPaths) {
-        tagFileOrDirs.put(newFileOrDirPath, FileInfo.create(newFileOrDirPath, null));
+        tagFileOrDirs.put(
+            newFileOrDirPath, FileInfo.create(newFileOrDirPath, null, newFileOrDirPath));
       }
     }
     logger.atInfo().log(

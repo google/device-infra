@@ -109,7 +109,8 @@ public class GcsFileResolver extends AbstractFileResolver {
     gcsUtil.copyFileOrDirectoryToLocal(gcsPath, Path.of(localPath));
     Optional<String> checksum = gcsUtil.getCrc32c(Path.of(filePath));
     return ResolveResult.of(
-        ImmutableList.of(ResolvedFile.create(localPath, checksum.orElse(null))),
+        ImmutableList.of(
+            ResolvedFile.create(localPath, checksum.orElse(null), resolveSource.path())),
         ImmutableMap.of(),
         resolveSource);
   }

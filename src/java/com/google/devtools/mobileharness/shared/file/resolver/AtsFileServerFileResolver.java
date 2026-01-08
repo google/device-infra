@@ -99,7 +99,9 @@ public class AtsFileServerFileResolver extends AbstractFileResolver {
     if (Boolean.parseBoolean(
         resolveSource.parameters().get(PARAM_RESOLVE_ATS_FILE_SERVER_FILES_IN_LAB))) {
       return ResolveResult.of(
-          ImmutableList.of(ResolvedFile.create(path, null)), ImmutableMap.of(), resolveSource);
+          ImmutableList.of(ResolvedFile.create(path, null, path)),
+          ImmutableMap.of(),
+          resolveSource);
     } else {
       String sourcePath = getSourcePath(path);
       String httpSourcePath =
@@ -132,7 +134,7 @@ public class AtsFileServerFileResolver extends AbstractFileResolver {
         }
       }
       return ResolveResult.of(
-          ImmutableList.of(ResolvedFile.create(destination, null)),
+          ImmutableList.of(ResolvedFile.create(destination, null, path)),
           ImmutableMap.of(),
           resolveSource);
     }

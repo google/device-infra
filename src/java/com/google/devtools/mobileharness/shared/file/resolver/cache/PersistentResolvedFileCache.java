@@ -89,7 +89,9 @@ public class PersistentResolvedFileCache {
     return ResolveResult.of(
         ImmutableList.of(
             ResolvedFile.create(
-                cacheResult.symlinkPath().toString(), cacheResult.getEncodedChecksum())),
+                cacheResult.symlinkPath().toString(),
+                cacheResult.getEncodedChecksum(),
+                resolveSource.path())),
         ImmutableMap.of(),
         resolveSource);
   }

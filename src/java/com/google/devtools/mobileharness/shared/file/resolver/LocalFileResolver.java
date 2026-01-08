@@ -55,7 +55,7 @@ public class LocalFileResolver extends AbstractFileResolver {
       localFileUtil.checkFileOrDir(resolveSource.path());
     }
     return ResolveResult.of(
-        ImmutableList.of(ResolvedFile.create(resolveSource.path(), null)),
+        ImmutableList.of(ResolvedFile.create(resolveSource.path(), null, resolveSource.path())),
         ImmutableMap.of(),
         resolveSource);
   }

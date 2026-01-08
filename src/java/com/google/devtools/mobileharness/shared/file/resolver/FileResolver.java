@@ -65,12 +65,21 @@ public interface FileResolver {
   abstract class ResolvedFile {
 
     public static ResolvedFile create(String path, @Nullable String checksum) {
-      return new AutoValue_FileResolver_ResolvedFile(path, Optional.ofNullable(checksum));
+      return new AutoValue_FileResolver_ResolvedFile(
+          path, Optional.ofNullable(checksum), Optional.empty());
+    }
+
+    public static ResolvedFile create(
+        String path, @Nullable String checksum, @Nullable String spec) {
+      return new AutoValue_FileResolver_ResolvedFile(
+          path, Optional.ofNullable(checksum), Optional.ofNullable(spec));
     }
 
     public abstract String path();
 
     public abstract Optional<String> checksum();
+
+    public abstract Optional<String> spec();
   }
 
   /** Result of resolved file. */
