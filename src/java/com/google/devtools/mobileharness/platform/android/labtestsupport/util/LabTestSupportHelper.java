@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.platform.android.labtestsupport.util;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.instrumentation.AndroidInstrumentationSetting;
@@ -45,6 +46,10 @@ public class LabTestSupportHelper {
   static final String LTS_ENABLE_ADS_DEBUG_LOGGING_INSTRUMENTATION_RUNNER_NAME =
       LAB_TEST_SUPPORT_PACKAGE + ".EnableAdsDebugLoggingInstrumentation";
 
+  @VisibleForTesting
+  static final String LTS_ENABLE_SIGNATURE_MASQUERADING_RUNNER_NAME =
+      LAB_TEST_SUPPORT_PACKAGE + ".ConfigureSignatureMasqueradingInstrumentation";
+
   private final AndroidAdbUtil androidAdbUtil;
   private final AndroidInstrumentationUtil androidInstrumentationUtil;
 
@@ -70,7 +75,10 @@ public class LabTestSupportHelper {
       throws MobileHarnessException, InterruptedException {
     try {
       return runLtsInstrumentation(
-          serial, deviceSdkVersion, LTS_CONFIG_PHENOTYPE_FLAGS_INSTRUMENTATION_RUNNER_NAME);
+          serial,
+          deviceSdkVersion,
+          LTS_CONFIG_PHENOTYPE_FLAGS_INSTRUMENTATION_RUNNER_NAME,
+          ImmutableMap.of());
     } catch (MobileHarnessException e) {
       throw new MobileHarnessException(
           AndroidErrorId.LAB_TEST_SUPPORT_DISABLE_SMART_LOCK_FOR_PASSWORDS_AND_FAST_PAIR_ERROR,
@@ -86,7 +94,10 @@ public class LabTestSupportHelper {
       throws MobileHarnessException, InterruptedException {
     try {
       return runLtsInstrumentation(
-          serial, deviceSdkVersion, LTS_ENABLE_ADS_DEBUG_LOGGING_INSTRUMENTATION_RUNNER_NAME);
+          serial,
+          deviceSdkVersion,
+          LTS_ENABLE_ADS_DEBUG_LOGGING_INSTRUMENTATION_RUNNER_NAME,
+          ImmutableMap.of());
     } catch (MobileHarnessException e) {
       throw new MobileHarnessException(
           AndroidErrorId.LAB_TEST_SUPPORT_ENABLE_ADS_DEBUG_LOGGING_ERROR,
@@ -95,7 +106,30 @@ public class LabTestSupportHelper {
     }
   }
 
-  private boolean runLtsInstrumentation(String serial, int deviceSdkVersion, String runnerName)
+  public boolean applySignatureMasquerading(
+      String serial, int deviceSdkVersion, int uid, String signatureHash)
+      throws MobileHarnessException, InterruptedException {
+    try {
+      var instrumentationOptions =
+          ImmutableMap.<String, String>builder()
+              .put("targetPackageUid", String.valueOf(uid))
+              .put("signatureHash", signatureHash)
+              .buildOrThrow();
+      return runLtsInstrumentation(
+          serial,
+          deviceSdkVersion,
+          LTS_ENABLE_SIGNATURE_MASQUERADING_RUNNER_NAME,
+          instrumentationOptions);
+    } catch (MobileHarnessException e) {
+      throw new MobileHarnessException(
+          AndroidErrorId.LAB_TEST_SUPPORT_APPLY_SIGNATURE_MASQUERADING_ERROR,
+          String.format("Failed to apply signature masquerading on device %s", serial),
+          e);
+    }
+  }
+
+  private boolean runLtsInstrumentation(
+      String serial, int deviceSdkVersion, String runnerName, ImmutableMap<String, String> options)
       throws MobileHarnessException, InterruptedException {
     // This property is checked by the gms phenotype service.
     androidAdbUtil.setProperty(serial, ALLOW_LTS_PROP_NAME, "true");
@@ -107,7 +141,7 @@ public class LabTestSupportHelper {
                 LAB_TEST_SUPPORT_PACKAGE,
                 runnerName,
                 /* className= */ null,
-                /* otherOptions= */ null,
+                /* otherOptions= */ options,
                 /* async= */ false,
                 /* showRawResults= */ false,
                 /* prefixAndroidTest= */ false,

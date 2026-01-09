@@ -30,6 +30,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/labtestsupport/util:lab_test_support_helper",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_util",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
+        "@maven//:com_google_guava_guava",
         "@maven//:junit_junit",
         "@maven//:org_mockito_mockito_core",
     ],
