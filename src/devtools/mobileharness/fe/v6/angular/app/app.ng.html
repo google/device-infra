@@ -14,28 +14,29 @@
  limitations under the License.
 -->
 
-<mat-toolbar class="app-toolbar">
-  <button
-    class="toggleSidenavButton toolbar-button"
-    mat-icon-button
-    (click)="sideNavExpanded = !sideNavExpanded"
-    matTooltip="Main menu"
-    aria-label="Toggle sidenav menu"
-  >
-    <mat-icon aria-label="Side nav toggle icon">menu</mat-icon>
-  </button>
-  <!-- <img src="boq-omnilabfrontend/images/logo-title.png" alt="Omnilab ATS Logo"> -->
-  <img src="https://www.gstatic.com/mobileharness/images/omnilab_mark_primary_l.png" alt="Omnilab ATS Logo">
+@if (isStandaloneMode) {
+  <mat-toolbar class="app-toolbar">
+    <button
+      class="toggleSidenavButton toolbar-button"
+      mat-icon-button
+      (click)="sideNavExpanded = !sideNavExpanded"
+      matTooltip="Main menu"
+      aria-label="Toggle sidenav menu"
+    >
+      <mat-icon aria-label="Side nav toggle icon">menu</mat-icon>
+    </button>
+    <!-- <img src="boq-omnilabfrontend/images/logo-title.png" alt="Omnilab ATS Logo"> -->
+    <img src="https://www.gstatic.com/mobileharness/images/omnilab_mark_primary_l.png" alt="Omnilab ATS Logo">
 
-  <span class="title">OmniLab Console</span>
-  @if (showVersionInfo) {
-    <div class="version-info">
-      Version: {{ appData.labconsoleVersion }} <br />
-      ADB: {{ appData.adbVersion }} <br />
-      {{ appData.mttVersion }}
-    </div>
-  }
-</mat-toolbar>
+    <span class="title">OmniLab Console</span>
+    @if (showVersionInfo) {
+      <div class="version-info">
+        Version: {{ appData.labconsoleVersion }} <br />
+        ADB: {{ appData.adbVersion }} <br />
+        {{ appData.mttVersion }}
+      </div>
+    }
+  </mat-toolbar>
 
 <mat-sidenav-container [class.collapsed]="!sideNavExpanded" class="app-sidenav-container">
   <!--Sidenav menu-->
@@ -130,3 +131,7 @@
     </footer>
   </mat-sidenav-content>
 </mat-sidenav-container>
+} @else {
+  <!--Embedded mode, only show the routed content(main conent), and hide the toolbar, footer, and sidenav.-->
+  <router-outlet></router-outlet>
+}

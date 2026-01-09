@@ -17,6 +17,7 @@
 import {CommonModule} from '@angular/common';
 import {
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
   inject,
   OnDestroy,
@@ -30,7 +31,7 @@ import {MatMenuModule} from '@angular/material/menu';
 import {MatSidenavModule} from '@angular/material/sidenav';
 import {MatToolbarModule} from '@angular/material/toolbar';
 import {MatTooltipModule} from '@angular/material/tooltip';
-import {RouterModule} from '@angular/router';
+import {ActivatedRoute, RouterModule} from '@angular/router';
 // an example of using absolute path for source code import.
 import {
   APP_DATA,
@@ -64,10 +65,21 @@ export class App implements OnDestroy {
   sideNavExpanded = false;
   atsMajorVersionStr = '';
   private readonly destroy = new ReplaySubject<void>();
+  private readonly route: ActivatedRoute = inject(ActivatedRoute);
+  private readonly cdr: ChangeDetectorRef = inject(ChangeDetectorRef);
   readonly appData: AppData = inject(APP_DATA);
   showVersionInfo = true;
+  isEmbeddedMode = true;
+
+  get isStandaloneMode(): boolean {
+    return !this.isEmbeddedMode;
+  }
 
   constructor() {
+    this.route.queryParamMap.subscribe((params) => {
+      this.isEmbeddedMode = params.get('is_embedded_mode') === 'true';
+      this.cdr.markForCheck();
+    });
   }
 
   logout() {
