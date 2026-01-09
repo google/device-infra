@@ -154,14 +154,12 @@ public class AtsConsole {
         new AtsConsoleModule(
             "ats-console-" + UUID.randomUUID(),
             finalDeviceInfraServiceFlags,
-            asList(args),
-            systemProperties,
             lineReader,
             System.out,
             System.err,
             resultFuture -> {},
             /* parseCommandOnly= */ false));
-    modules.add(new CommonModule());
+    modules.add(new CommonModule(asList(args), System.getenv(), systemProperties));
 
     // Creates OLC server module for embedded mode.
     createOlcServerModuleFactory()

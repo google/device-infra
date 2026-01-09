@@ -16,14 +16,21 @@
 
 package com.google.devtools.mobileharness.shared.util.inject;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
+import com.google.devtools.mobileharness.shared.constant.inject.Annotations.MainArgs;
+import com.google.devtools.mobileharness.shared.constant.inject.Annotations.SystemEnvironment;
+import com.google.devtools.mobileharness.shared.constant.inject.Annotations.SystemProperties;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import java.time.Clock;
 import java.time.InstantSource;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import javax.inject.Singleton;
 
@@ -40,6 +47,37 @@ import javax.inject.Singleton;
  * </ul>
  */
 public class CommonModule extends AbstractModule {
+
+  private final ImmutableList<String> mainArgs;
+  private final ImmutableMap<String, String> systemEnvironment;
+  private final ImmutableMap<String, String> systemProperties;
+
+  public CommonModule(
+      List<String> mainArgs,
+      Map<String, String> systemEnvironment,
+      Map<String, String> systemProperties) {
+    this.mainArgs = ImmutableList.copyOf(mainArgs);
+    this.systemEnvironment = ImmutableMap.copyOf(systemEnvironment);
+    this.systemProperties = ImmutableMap.copyOf(systemProperties);
+  }
+
+  @Provides
+  @MainArgs
+  ImmutableList<String> provideMainArgs() {
+    return mainArgs;
+  }
+
+  @Provides
+  @SystemEnvironment
+  ImmutableMap<String, String> provideSystemEnvironment() {
+    return systemEnvironment;
+  }
+
+  @Provides
+  @SystemProperties
+  ImmutableMap<String, String> provideSystemProperties() {
+    return systemProperties;
+  }
 
   @Provides
   @Singleton

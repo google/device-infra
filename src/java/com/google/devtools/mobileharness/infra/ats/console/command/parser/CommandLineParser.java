@@ -20,7 +20,6 @@ import static com.google.devtools.mobileharness.shared.util.shell.ShellUtils.tok
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
@@ -106,9 +105,6 @@ public final class CommandLineParser {
 
   @VisibleForTesting
   CommandLineParser() {
-    // Gets system properties.
-    ImmutableMap<String, String> systemProperties = SystemPropertiesUtil.getSystemProperties();
-
     // Parses flags.
     runCommandParseResult = new RunCommandParseResult();
 
@@ -117,14 +113,14 @@ public final class CommandLineParser {
         new AtsConsoleModule(
             "command-line-parser-" + UUID.randomUUID(),
             FlagsString.of("", ImmutableList.of()),
-            ImmutableList.of(),
-            systemProperties,
             /* consoleLineReader= */ null,
             System.out,
             System.err,
             runCommandParseResult,
             /* parseCommandOnly= */ true));
-    modules.add(new CommonModule());
+    modules.add(
+        new CommonModule(
+            ImmutableList.of(), System.getenv(), SystemPropertiesUtil.getSystemProperties()));
     if (Flags.instance().atsConsoleOlcServerEmbeddedMode.getNonNull()) {
       modules.add(
           new AbstractModule() {

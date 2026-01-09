@@ -18,8 +18,6 @@ package com.google.devtools.mobileharness.infra.ats.console;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.infra.ats.common.FlagsString;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
@@ -32,15 +30,11 @@ import com.google.devtools.mobileharness.infra.ats.console.Annotations.RunComman
 import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.XtsServerEnvironmentPreparer;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportModule;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.OlcServerRunner;
-import com.google.devtools.mobileharness.shared.constant.inject.Annotations.MainArgs;
-import com.google.devtools.mobileharness.shared.constant.inject.Annotations.SystemProperties;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.multibindings.OptionalBinder;
 import java.io.PrintStream;
 import java.io.PrintWriter;
-import java.util.List;
-import java.util.Map;
 import java.util.function.Consumer;
 import javax.annotation.Nullable;
 import javax.inject.Singleton;
@@ -52,8 +46,6 @@ public class AtsConsoleModule extends AbstractModule {
 
   private final String consoleId;
   private final FlagsString deviceInfraServiceFlags;
-  private final ImmutableList<String> mainArgs;
-  private final ImmutableMap<String, String> systemProperties;
   @Nullable private final LineReader consoleLineReader;
   private final PrintStream consoleOutputOut;
   private final PrintStream consoleOutputErr;
@@ -63,8 +55,6 @@ public class AtsConsoleModule extends AbstractModule {
   public AtsConsoleModule(
       String consoleId,
       FlagsString deviceInfraServiceFlags,
-      List<String> mainArgs,
-      Map<String, String> systemProperties,
       @Nullable LineReader consoleLineReader,
       PrintStream consoleOutputOut,
       PrintStream consoleOutputErr,
@@ -72,8 +62,6 @@ public class AtsConsoleModule extends AbstractModule {
       boolean parseCommandOnly) {
     this.consoleId = consoleId;
     this.deviceInfraServiceFlags = deviceInfraServiceFlags;
-    this.mainArgs = ImmutableList.copyOf(mainArgs);
-    this.systemProperties = ImmutableMap.copyOf(systemProperties);
     this.consoleLineReader = consoleLineReader;
     this.consoleOutputOut = consoleOutputOut;
     this.consoleOutputErr = consoleOutputErr;
@@ -94,12 +82,6 @@ public class AtsConsoleModule extends AbstractModule {
   }
 
   @Provides
-  @MainArgs
-  ImmutableList<String> provideMainArgs() {
-    return mainArgs;
-  }
-
-  @Provides
   @RunCommandParsingResultFuture
   Consumer<ListenableFuture<SessionRequestInfo.Builder>> provideResultFuture() {
     return resultFuture;
@@ -109,12 +91,6 @@ public class AtsConsoleModule extends AbstractModule {
   @ParseCommandOnly
   boolean provideParseCommandOnly() {
     return parseCommandOnly;
-  }
-
-  @Provides
-  @SystemProperties
-  ImmutableMap<String, String> provideSystemProperties() {
-    return systemProperties;
   }
 
   @Provides

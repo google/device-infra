@@ -23,6 +23,7 @@ java_library(
     srcs = ["CommonModule.java"],
     visibility = ["//:deviceinfra_all_pkg"],
     deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/constant/inject:annotations",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
         "@maven//:com_google_guava_guava",

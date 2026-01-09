@@ -18,9 +18,12 @@ package com.google.devtools.mobileharness.shared.util.system;
 
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance;
+import com.google.devtools.mobileharness.shared.constant.inject.Annotations.SystemEnvironment;
+import com.google.devtools.mobileharness.shared.constant.inject.Annotations.SystemProperties;
 import com.google.devtools.mobileharness.shared.util.network.NetworkUtil;
 import javax.inject.Inject;
 
@@ -30,10 +33,17 @@ public final class SystemInfoPrinter {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private final NetworkUtil networkUtil;
+  private final ImmutableMap<String, String> systemEnvironment;
+  private final ImmutableMap<String, String> systemProperties;
 
   @Inject
-  SystemInfoPrinter(NetworkUtil networkUtil) {
+  SystemInfoPrinter(
+      NetworkUtil networkUtil,
+      @SystemEnvironment ImmutableMap<String, String> systemEnvironment,
+      @SystemProperties ImmutableMap<String, String> systemProperties) {
     this.networkUtil = networkUtil;
+    this.systemEnvironment = systemEnvironment;
+    this.systemProperties = systemProperties;
   }
 
   /** Prints system information. */
@@ -50,11 +60,11 @@ public final class SystemInfoPrinter {
           .withCause(e)
           .log("Failed to get local hostname");
     }
+    logger.atInfo().with(IMPORTANCE, importance).log("System Properties: %s", systemProperties);
     logger
         .atInfo()
         .with(IMPORTANCE, importance)
-        .log("System Properties: %s", SystemPropertiesUtil.getSystemProperties());
-    logger.atInfo().with(IMPORTANCE, importance).log("Environment Variables: %s", System.getenv());
+        .log("Environment Variables: %s", systemEnvironment);
     logger.atInfo().with(IMPORTANCE, importance).log("Java version: %s", Runtime.version());
   }
 }

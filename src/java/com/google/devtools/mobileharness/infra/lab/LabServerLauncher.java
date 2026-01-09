@@ -134,7 +134,8 @@ public class LabServerLauncher {
       EventBus globalInternalBus)
       throws MobileHarnessException {
     ImmutableList.Builder<Module> modules = ImmutableList.builder();
-    modules.add(new LabServerModule(mainArgs, systemProperties, globalInternalBus));
+    modules.add(
+        new LabServerModule(mainArgs, System.getenv(), systemProperties, globalInternalBus));
     return modules.build();
   }
 

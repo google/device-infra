@@ -17,9 +17,11 @@
 package com.google.devtools.mobileharness.infra.client.longrunningservice;
 
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.DEBUG;
+import static java.util.Arrays.asList;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.OlcServerDirs;
@@ -32,6 +34,7 @@ import com.google.devtools.mobileharness.shared.util.logging.flogger.FloggerForm
 import com.google.devtools.mobileharness.shared.util.signal.Signals;
 import com.google.devtools.mobileharness.shared.util.system.ShutdownHookManager;
 import com.google.devtools.mobileharness.shared.util.system.SystemInfoPrinter;
+import com.google.devtools.mobileharness.shared.util.system.SystemPropertiesUtil;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -49,6 +52,9 @@ public class OlcServer {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   public static void main(String[] args) throws MobileHarnessException, InterruptedException {
+    // Gets system properties.
+    ImmutableMap<String, String> systemProperties = SystemPropertiesUtil.getSystemProperties();
+
     // Parses flags.
     Flags.parse(args);
 
@@ -69,7 +75,7 @@ public class OlcServer {
                 Flags.instance().enableCloudPubsubMonitoring.getNonNull(),
                 enableDatabase,
                 Flags.instance().enableGrpcRelay.getNonNull()),
-            new CommonModule());
+            new CommonModule(asList(args), System.getenv(), systemProperties));
     OlcServerRunner serverRunner = injector.getInstance(OlcServerRunner.class);
     LogManager<LogRecords> logManager = injector.getInstance(new Key<>() {});
     SystemInfoPrinter systemInfoPrinter = injector.getInstance(SystemInfoPrinter.class);

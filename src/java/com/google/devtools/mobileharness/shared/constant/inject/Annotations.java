@@ -28,6 +28,11 @@ public final class Annotations {
   @Retention(RetentionPolicy.RUNTIME)
   public @interface MainArgs {}
 
+  /** System environment {@code ImmutableMap<String, String>}. */
+  @Qualifier
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface SystemEnvironment {}
+
   /** System properties {@code ImmutableMap<String, String>}. */
   @Qualifier
   @Retention(RetentionPolicy.RUNTIME)

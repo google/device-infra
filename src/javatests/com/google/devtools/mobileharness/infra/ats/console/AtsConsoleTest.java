@@ -133,14 +133,12 @@ public final class AtsConsoleTest {
             new AtsConsoleModule(
                 "fake_console_id",
                 deviceInfraServiceFlags,
-                ImmutableList.of(),
-                systemProperties,
                 lineReader,
                 consoleOutPrintStream,
                 consoleErrPrintStream,
                 future -> {},
                 /* parseCommandOnly= */ false),
-            new CommonModule());
+            new CommonModule(ImmutableList.of(), System.getenv(), systemProperties));
     injector.injectMembers(this);
     atsConsole.injector = injector;
   }
@@ -152,14 +150,12 @@ public final class AtsConsoleTest {
             new AtsConsoleModule(
                 "fake_console_id",
                 deviceInfraServiceFlags,
-                ImmutableList.of("help"),
-                systemProperties,
                 lineReader,
                 consoleOutPrintStream,
                 consoleErrPrintStream,
                 future -> {},
                 /* parseCommandOnly= */ false),
-            new CommonModule());
+            new CommonModule(ImmutableList.of("help"), System.getenv(), systemProperties));
     injector.injectMembers(this);
     atsConsole.injector = injector;
 

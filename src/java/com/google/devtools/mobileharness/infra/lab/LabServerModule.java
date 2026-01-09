@@ -49,6 +49,7 @@ import com.google.devtools.mobileharness.infra.lab.Annotations.GlobalEventBus;
 import com.google.devtools.mobileharness.infra.lab.Annotations.GlobalEventBusSubscriber;
 import com.google.devtools.mobileharness.infra.lab.rpc.service.ExecTestServiceImpl;
 import com.google.devtools.mobileharness.shared.constant.inject.Annotations.MainArgs;
+import com.google.devtools.mobileharness.shared.constant.inject.Annotations.SystemEnvironment;
 import com.google.devtools.mobileharness.shared.constant.inject.Annotations.SystemProperties;
 import com.google.devtools.mobileharness.shared.file.resolver.AbstractFileResolver;
 import com.google.devtools.mobileharness.shared.file.resolver.AtsFileServerFileResolver;
@@ -81,12 +82,17 @@ import javax.inject.Inject;
 public class LabServerModule extends AbstractModule {
 
   private final ImmutableList<String> mainArgs;
+  private final ImmutableMap<String, String> systemEnvironment;
   private final ImmutableMap<String, String> systemProperties;
   private final EventBus globalInternalBus;
 
   public LabServerModule(
-      List<String> mainArgs, Map<String, String> systemProperties, EventBus globalInternalBus) {
+      List<String> mainArgs,
+      Map<String, String> systemEnvironment,
+      Map<String, String> systemProperties,
+      EventBus globalInternalBus) {
     this.mainArgs = ImmutableList.copyOf(mainArgs);
+    this.systemEnvironment = ImmutableMap.copyOf(systemEnvironment);
     this.systemProperties = ImmutableMap.copyOf(systemProperties);
     this.globalInternalBus = globalInternalBus;
   }
@@ -126,6 +132,12 @@ public class LabServerModule extends AbstractModule {
   @MainArgs
   ImmutableList<String> provideMainArgs() {
     return mainArgs;
+  }
+
+  @Provides
+  @SystemEnvironment
+  ImmutableMap<String, String> provideSystemEnvironment() {
+    return systemEnvironment;
   }
 
   @Provides

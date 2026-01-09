@@ -118,7 +118,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/olcserver:xts_server_environment_preparer",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_module",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:olc_server_runner",
-        "//src/java/com/google/devtools/mobileharness/shared/constant/inject:annotations",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
