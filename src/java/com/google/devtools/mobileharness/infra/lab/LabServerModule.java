@@ -43,11 +43,10 @@ import com.google.devtools.mobileharness.infra.controller.test.launcher.LocalDev
 import com.google.devtools.mobileharness.infra.controller.test.launcher.ThreadPoolLauncherProvisioningModule;
 import com.google.devtools.mobileharness.infra.controller.test.manager.LabDirectTestRunnerUtil;
 import com.google.devtools.mobileharness.infra.controller.test.manager.ProxyTestManager;
-import com.google.devtools.mobileharness.infra.controller.test.manager.TestManager;
+import com.google.devtools.mobileharness.infra.controller.test.manager.TestManagerModule;
 import com.google.devtools.mobileharness.infra.lab.Annotations.DebugThreadPool;
 import com.google.devtools.mobileharness.infra.lab.Annotations.GlobalEventBus;
 import com.google.devtools.mobileharness.infra.lab.Annotations.GlobalEventBusSubscriber;
-import com.google.devtools.mobileharness.infra.lab.controller.LabDirectTestRunnerHolder;
 import com.google.devtools.mobileharness.infra.lab.rpc.service.ExecTestServiceImpl;
 import com.google.devtools.mobileharness.shared.constant.inject.Annotations.MainArgs;
 import com.google.devtools.mobileharness.shared.constant.inject.Annotations.SystemProperties;
@@ -61,6 +60,7 @@ import com.google.devtools.mobileharness.shared.util.concurrent.ServiceModule;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
+import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.AbstractModule;
 import com.google.inject.Key;
 import com.google.inject.Provides;
@@ -98,8 +98,6 @@ public class LabServerModule extends AbstractModule {
     // Binds controllers.
     install(new FactoryModuleBuilder().build(ExecTestServiceImpl.ExecTestServiceImplFactory.class));
     bind(DeviceHelperFactory.class).to(LocalDeviceManager.class);
-    bind(new Key<TestManager<?>>() {}).to(ProxyTestManager.class);
-    bind(LabDirectTestRunnerHolder.class).to(ProxyTestManager.class);
     bind(EventBus.class).annotatedWith(GlobalEventBus.class).toInstance(globalInternalBus);
     if (Flags.instance().enableDeviceTestDecoupling.getNonNull()) {
       install(new AllocatedDeviceProvisioningModule());
@@ -108,6 +106,7 @@ public class LabServerModule extends AbstractModule {
       install(new LocalDeviceProvisioningModule());
       install(new LocalDeviceLauncherProvisioningModule());
     }
+    install(new TestManagerModule());
 
     Multibinder<Object> subscriberBinder =
         Multibinder.newSetBinder(binder(), Key.get(Object.class, GlobalEventBusSubscriber.class));
@@ -120,6 +119,7 @@ public class LabServerModule extends AbstractModule {
         .annotatedWith(DebugThreadPool.class)
         .toInstance(createStandardScheduledThreadPool("mh-lab-server-debug-random-exit-task", 1));
     bind(InstantSource.class).toInstance(InstantSource.system());
+    bind(Sleeper.class).toInstance(Sleeper.defaultSleeper());
   }
 
   @Provides

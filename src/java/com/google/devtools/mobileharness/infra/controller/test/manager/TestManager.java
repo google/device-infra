@@ -322,6 +322,13 @@ public class TestManager<T extends TestRunner> implements Runnable {
                     String.format("Test [%s] is not found", testId)));
   }
 
+  /** Returns a snapshot of all current test runners. */
+  protected ImmutableList<T> getTestRunners() {
+    synchronized (testRunners) {
+      return ImmutableList.copyOf(testRunners.values());
+    }
+  }
+
   @VisibleForTesting
   void addTestRunner(String testId, T testRunner) {
     logger.atInfo().log("Add test runner to test manager: %s", testId);

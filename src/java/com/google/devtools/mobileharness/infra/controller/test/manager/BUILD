@@ -87,12 +87,12 @@ java_library(
         "//javatests/com/google/devtools/mobileharness/infra/controller/test/manager:__subpackages__",
         "//javatests/com/google/devtools/mobileharness/infra/lab:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
-        "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/service:__subpackages__",
     ],
     exports = [
         ":exception",
     ],
     deps = [
+        ":annotations",
         ":manager",
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
@@ -103,8 +103,36 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:direct_test_runner",
         "//src/java/com/google/devtools/mobileharness/infra/lab/controller:lab_direct_test_runner_holder",
         "//src/java/com/google/devtools/mobileharness/infra/lab/controller/util:lab_file_notifier",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:callables",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "annotations",
+    srcs = ["Annotations.java"],
+    deps = ["@maven//:javax_inject_jsr330_api"],
+)
+
+java_library(
+    name = "test_manager_module",
+    srcs = ["TestManagerModule.java"],
+    visibility = [
+        "//:omnilab_fusion",
+        "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
+    ],
+    deps = [
+        ":annotations",
+        ":manager",
+        ":proxy_test_manager",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/controller:lab_direct_test_runner_holder",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
+        "@maven//:com_google_guava_guava",
+        "@maven//:com_google_inject_guice",
         "@maven//:javax_inject_jsr330_api",
     ],
 )
