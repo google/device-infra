@@ -34,8 +34,10 @@ public interface FileTransferClient {
    * @param tag tag of file
    * @param path path of file to send
    * @param checksum checksum of file to send
+   * @param relativePath relative path of transferred file in the lab server
    */
-  void sendFile(String fileId, String tag, String path, @Nullable String checksum)
+  void sendFile(
+      String fileId, String tag, String path, @Nullable String checksum, String relativePath)
       throws MobileHarnessException, InterruptedException;
 
   boolean isSendable(String path, @Nullable String checksum)
