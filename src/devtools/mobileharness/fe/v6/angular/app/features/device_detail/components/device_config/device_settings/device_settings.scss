@@ -1,5 +1,18 @@
 @use '@angular/material' as mat;
 @use '../../../../../shared/styles/configuration' as config;
+@use '../../../../../shared/styles/common';
+
+.discard-button {
+  @include common.shared-button('secondary');
+}
+
+.save-button {
+  @include common.shared-button('primary');
+}
+
+.wizard-button-spinner {
+  margin-right: 0.5rem;
+}
 
 :host {
   @include mat.button-toggle-overrides((

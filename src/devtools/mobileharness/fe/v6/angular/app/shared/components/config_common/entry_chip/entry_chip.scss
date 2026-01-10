@@ -1,5 +1,9 @@
 @use '../../../styles/configuration' as config;
+@use '../../../styles/common';
 
+.add-button {
+  @include common.shared-button('secondary');
+}
 
 .entry-chip-container {
   font-family: config.$labconsole-font;

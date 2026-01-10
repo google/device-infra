@@ -146,4 +146,76 @@ message DeviceSummary {
   string model = 7;
   string version = 8;
   repeated device.SubDeviceInfo sub_devices = 9;
+  bool is_acid_support = 10;
+}
+
+// Types of proxy supported by devices.
+enum DeviceProxyType {
+  DEVICE_PROXY_TYPE_UNSPECIFIED = 0;
+  ADB_AND_VIDEO = 1;
+  ADB_ONLY = 2;
+  USB_IP = 3;
+  SSH = 4;
+  VIDEO = 5;
+}
+
+// Reason code for a device being ineligible for remote control.
+enum IneligibilityReasonCode {
+  INELIGIBILITY_REASON_CODE_UNSPECIFIED = 0;
+  PERMISSION_DENIED = 1;
+  DEVICE_NOT_IDLE = 2;
+  DEVICE_TYPE_NOT_SUPPORTED = 3;
+  HOST_OS_NOT_SUPPORTED = 4;
+  ACID_NOT_SUPPORTED = 5;
+}
+
+// Represents a device that is not eligible for remote control.
+message IneligibleDevice {
+  string device_id = 1;
+  IneligibilityReasonCode reason_code = 2;
+  string message = 3;
+}
+
+// Represents a device that is eligible for remote control.
+message EligibleDevice {
+  string device_id = 1;
+  repeated DeviceProxyType supported_proxy_types = 2;
+  repeated string run_as_candidates = 3;
+}
+
+// Options for creating a remote control session.
+message SessionOptions {
+  repeated DeviceProxyType common_proxy_types = 1;
+  repeated string common_run_as_candidates = 2;
+  int32 max_duration_hours = 3;
+}
+
+// Response for remote control eligibility check.
+message CheckRemoteControlEligibilityResponse {
+  repeated EligibleDevice eligible_devices = 1;
+  repeated IneligibleDevice ineligible_devices = 2;
+  SessionOptions session_options = 3;
+}
+
+// Flash options for remote control.
+message FlashOptions {
+  string branch = 1;
+  string build_id = 2;
+  string target = 3;
+}
+
+// Configuration for a single device in a remote control request.
+message RemoteControlDeviceConfig {
+  string device_id = 1;
+  string run_as = 2;
+}
+
+// Response containing results of remote control session startup.
+message RemoteControlDevicesResponse {
+  message SessionResult {
+    string device_id = 1;
+    string session_url = 2;
+    string error_message = 3;
+  }
+  repeated SessionResult sessions = 1;
 }
