@@ -1,4 +1,13 @@
 @use '../../../../../shared/styles/configuration' as config;
+@use '../../../../../shared/styles/common';
+
+.primary-button {
+  @include common.shared-button('primary');
+}
+
+.cancel-button {
+  @include common.shared-button('secondary');
+}
 
 .empty-config-grid {
   @media (min-width: 640px) {

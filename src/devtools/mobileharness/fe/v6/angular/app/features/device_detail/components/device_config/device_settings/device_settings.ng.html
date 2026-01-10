@@ -59,14 +59,14 @@
       <app-footer [param]="{deviceId: deviceId, hostName: ''}" class="main-footer">
         <ng-container footer-buttons>
           <button
-            class="wizard-button wizard-button-secondary"
+            class="discard-button"
             [disabled]="!isCategoryDirty(activeSection())"
             (click)="discard()"
           >
             Discard Changes
           </button>
           <button
-            class="wizard-button wizard-button-primary"
+            class="save-button"
             [disabled]="!isCategoryDirty(activeSection()) || hasError || saving()"
             (click)="save()"
           >
