@@ -252,8 +252,10 @@ public final class XtsRunStrategy implements TradefedRunStrategy {
                 testInfo.getTmpFileDir(), androidXtsZip.toString().replace('.', '_') + "_unzipped");
         localFileUtil.prepareDir(unzippedPath);
         // TODO: cache the unzip result to reduce lab disk usage.
+        String password =
+            testInfo.jobInfo().properties().getOptional(Job.XTS_ZIP_FILE_PASSWORD).orElse(null);
         localFileUtil.unzipFile(
-            androidXtsZip.toString(), unzippedPath, ANDROID_XTS_ZIP_UNCOMPRESS_TIMEOUT);
+            androidXtsZip.toString(), unzippedPath, ANDROID_XTS_ZIP_UNCOMPRESS_TIMEOUT, password);
         return Path.of(unzippedPath);
       } catch (MobileHarnessException | InterruptedException e) {
         if (e instanceof InterruptedException) {

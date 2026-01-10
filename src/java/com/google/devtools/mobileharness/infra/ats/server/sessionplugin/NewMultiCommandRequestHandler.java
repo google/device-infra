@@ -122,7 +122,7 @@ final class NewMultiCommandRequestHandler {
       DateTimeFormatter.ofPattern("uuuu.MM.dd_HH.mm.ss.SSS").withZone(ZoneId.systemDefault());
   private static final String OUTPUT_MANIFEST_FILE_NAME = "FILES";
   private static final Pattern ANDROID_XTS_ZIP_FILENAME_REGEX =
-      Pattern.compile("android-[a-z]+\\.zip");
+      Pattern.compile("android-[a-z_]+\\.zip");
   @VisibleForTesting static final String XTS_TF_JOB_PROP = "xts-tradefed-job";
   private static final String ACLOUD_FILENAME = "acloud_prebuilt";
 
@@ -524,6 +524,7 @@ final class NewMultiCommandRequestHandler {
     }
     String androidXtsZipPath = "";
     String androidXtsZipDownloadUrl = "";
+    String androidXtsZipPassword = "";
     ImmutableList.Builder<TestResource> fileTestResources = ImmutableList.builder();
     for (TestResource testResource : request.getTestResourcesList()) {
       URL testResourceUrl = getTestResourceUrl(testResource);
@@ -532,6 +533,7 @@ final class NewMultiCommandRequestHandler {
         if (ANDROID_XTS_ZIP_FILENAME_REGEX.matcher(testResource.getName()).matches()) {
           androidXtsZipPath = testResourceUrl.getPath();
           androidXtsZipDownloadUrl = testResource.getOriginalDownloadUrl();
+          androidXtsZipPassword = testResource.getPassword();
         } else {
           fileTestResources.add(testResource);
         }
@@ -546,23 +548,15 @@ final class NewMultiCommandRequestHandler {
           /* cause= */ null);
     }
     String xtsRootDir =
-        PathUtil.join(
-            DirUtil.getPublicGenDir(),
-            "session_" + sessionInfo.getSessionId(),
-            Files.getNameWithoutExtension(androidXtsZipPath));
+        getSessionWorkDir(sessionInfo)
+            .resolve(Files.getNameWithoutExtension(androidXtsZipPath))
+            .toString();
     if (mountedXtsRootDir.isEmpty()) {
       localFileUtil.prepareDir(xtsRootDir);
-      mountOrUnzipXtsZip(androidXtsZipPath, xtsRootDir);
+      mountOrUnzipXtsZip(androidXtsZipPath, xtsRootDir, androidXtsZipPassword);
       mountedXtsRootDir = xtsRootDir;
     }
-    final String androidXtsZipPathCopy = androidXtsZipPath;
-    String xtsType =
-        xtsTypeLoader.getXtsType(
-            xtsRootDir,
-            () ->
-                String.format(
-                    "Please make sure your XTS zip file %s only contains one xts type.",
-                    androidXtsZipPathCopy));
+    String xtsType = getXtsType(xtsRootDir, androidXtsZipPath);
 
     SessionRequestInfo.Builder sessionRequestInfoBuilder =
         CommandLineParser.getInstance()
@@ -575,6 +569,9 @@ final class NewMultiCommandRequestHandler {
     if (!isNullOrEmpty(androidXtsZipDownloadUrl)) {
       sessionRequestInfoBuilder.setAndroidXtsZipDownloadUrl(
           replacePathForRemoteRunner(androidXtsZipDownloadUrl));
+    }
+    if (!androidXtsZipPassword.isEmpty()) {
+      sessionRequestInfoBuilder.setAndroidXtsZipPassword(androidXtsZipPassword);
     }
     sessionRequestInfoBuilder.setDeviceSerials(deviceSerials);
     sessionRequestInfoBuilder.setEnvVars(
@@ -604,6 +601,15 @@ final class NewMultiCommandRequestHandler {
         .setAtsServerTestResources(fileTestResources.build())
         .setAtsServerTestEnvironment(request.getTestEnvironment())
         .build();
+  }
+
+  private String getXtsType(String xtsRootDir, String androidXtsZipPath) {
+    return xtsTypeLoader.getXtsType(
+        xtsRootDir,
+        () ->
+            String.format(
+                "Please make sure your XTS zip file %s only contains one xts type.",
+                androidXtsZipPath));
   }
 
   private void processPrevTestContext(
@@ -641,10 +647,7 @@ final class NewMultiCommandRequestHandler {
           prevSessionId =
               UUID.nameUUIDFromBytes(prevResultZipPath.toString().getBytes(UTF_8)).toString();
           String prevResultParentDir =
-              PathUtil.join(
-                  DirUtil.getPublicGenDir(),
-                  "session_" + sessionInfo.getSessionId(),
-                  "prev_result_dir");
+              getSessionWorkDir(sessionInfo).resolve("prev_result_dir").toString();
           localFileUtil.prepareDir(prevResultParentDir);
           localFileUtil.unzipFile(prevResultZipPath.toString(), prevResultParentDir, UNZIP_TIMEOUT);
           prevSessionResultUnzipDir = prevResultParentDir;
@@ -1144,10 +1147,10 @@ final class NewMultiCommandRequestHandler {
   }
 
   @CanIgnoreReturnValue
-  private String mountOrUnzipXtsZip(String zipFilePath, String targetDirPath)
+  private String mountOrUnzipXtsZip(String zipFilePath, String targetDirPath, String password)
       throws MobileHarnessException, InterruptedException {
-    if (atsServerSessionUtil.isLocalMode()) {
-      return localFileUtil.unzipFile(zipFilePath, targetDirPath, UNZIP_TIMEOUT);
+    if (!password.isEmpty() || atsServerSessionUtil.isLocalMode()) {
+      return localFileUtil.unzipFile(zipFilePath, targetDirPath, UNZIP_TIMEOUT, password);
     }
     Command command =
         Command.of("fuse-zip", "-r", zipFilePath, targetDirPath).timeout(SLOW_CMD_TIMEOUT);
@@ -1258,6 +1261,10 @@ final class NewMultiCommandRequestHandler {
 
   private static int getRandom4Digits() {
     return ThreadLocalRandom.current().nextInt(1000, 10000);
+  }
+
+  private Path getSessionWorkDir(SessionInfo sessionInfo) {
+    return Path.of(DirUtil.getPublicGenDir(), "session_" + sessionInfo.getSessionId());
   }
 
   @AutoValue

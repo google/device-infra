@@ -79,6 +79,8 @@ message TestResource {
   // The original download url of the test resource. Do not set the field if
   // the test resource is locally generated.
   optional string original_download_url = 8;
+  // The password to access the zipped test resource.
+  optional string password = 9;
 }
 
 message TestResourceParameters {
