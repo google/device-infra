@@ -47,6 +47,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
 import com.google.protobuf.TextFormat;
 import com.google.protobuf.TextFormat.ParseException;
+import com.google.protobuf.Timestamp;
 import com.google.wireless.qa.mobileharness.shared.api.job.JobTypeUtil;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
@@ -120,6 +121,26 @@ public final class JobInfoCreator {
       String sessionTmpDir,
       String sessionGenDir)
       throws MobileHarnessException, InterruptedException {
+    return createJobInfo(
+        jobId,
+        actualUser,
+        jobAccessAccount,
+        Timestamp.getDefaultInstance(),
+        jobConfig,
+        sessionTmpDir,
+        sessionGenDir);
+  }
+
+  /** Creates JobInfo from Gateway JobConfig. */
+  public static JobInfo createJobInfo(
+      String jobId,
+      String actualUser,
+      String jobAccessAccount,
+      Timestamp originalSubmitTimestamp,
+      com.google.devtools.mobileharness.api.gateway.proto.Setting.JobConfig jobConfig,
+      String sessionTmpDir,
+      String sessionGenDir)
+      throws MobileHarnessException, InterruptedException {
     jobId = jobId == null ? UUID.randomUUID().toString() : jobId;
     String jobDir = PathUtil.join(sessionTmpDir, "j_" + jobId);
     LocalFileUtil localFileUtil = new LocalFileUtil();
@@ -131,6 +152,7 @@ public final class JobInfoCreator {
             .setGenFileDir(PathUtil.join(jobDir, "gen"))
             .setTimeout(
                 SharedPoolJobUtil.maybeExtendStartTimeout(jobConfig.getTimeout(), jobConfig))
+            .setOriginalSubmitTimestamp(originalSubmitTimestamp)
             .setRepeat(jobConfig.getRepeat());
     if (jobConfig.hasRetry()) {
       jobSettingBuilder.setRetry(jobConfig.getRetry());
