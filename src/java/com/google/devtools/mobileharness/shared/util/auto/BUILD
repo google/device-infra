@@ -13,10 +13,7 @@
 # limitations under the License.
 #
 
-package(
-    default_applicable_licenses = ["//:license"],
-    default_visibility = ["//:deviceinfra_all_pkg"],
-)
+package(default_applicable_licenses = ["//:license"])
 
 java_plugin(
     name = "auto_value_plugin",
