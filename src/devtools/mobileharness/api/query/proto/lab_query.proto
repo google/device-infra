@@ -248,6 +248,9 @@ message LabQuery {
     LabViewRequest lab_view_request = 4;
     DeviceViewRequest device_view_request = 5;
   }
+
+  // Whether to use persisted dimensions.
+  bool use_persisted_dimensions = 6;
 }
 
 // Paging information to return a sub list of the result.
