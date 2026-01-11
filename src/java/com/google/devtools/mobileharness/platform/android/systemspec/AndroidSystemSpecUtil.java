@@ -25,6 +25,7 @@ import com.google.common.base.Ascii;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
@@ -869,5 +870,82 @@ public class AndroidSystemSpecUtil {
           "Device %s does not support retrieving storage lifetime.", serial);
       return -1;
     }
+  }
+
+  /** ADB shell command for getting panel name on legacy exynos devices. */
+  @VisibleForTesting
+  static final String ADB_SHELL_GET_PANEL_NAME_LEGACY =
+      "cat /sys/devices/platform/exynos-drm/primary-panel/panel_name";
+
+  /** ADB shell command for getting panel name on new devices. */
+  @VisibleForTesting
+  static final String ADB_SHELL_GET_PANEL_NAME_NEW =
+      "mount -t debugfs debugfs /sys/kernel/debug; cat /d/dri/0/DSI-1/panel/name";
+
+  private static final ImmutableSet<String> BOE_PANEL_NAMES =
+      ImmutableSet.of(
+          "boe-nt37290",
+          "boe-ts110f5mlg0",
+          "google-bigsurf",
+          "google-tk4b",
+          "google-tk4d",
+          "google-ct3b",
+          "google-ct3d",
+          "google-tg4b",
+          "google-tg4c",
+          "google-tkicb",
+          "google-fleb",
+          "google-staea",
+          "google-dcsdb");
+
+  // csot panel only used for tablets
+  private static final ImmutableSet<String> CSOT_PANEL_NAMES =
+      ImmutableSet.of("csot-ppa957db2d", "google-tkicc");
+
+  /**
+   * Gets the display panel vendor.
+   *
+   * @param serial the serial number of the device
+   */
+  public Optional<String> getDisplayPanelVendor(String serial) throws InterruptedException {
+    String panelName = getDisplayPanelName(serial);
+    if (Strings.isNullOrEmpty(panelName)) {
+      return Optional.empty();
+    }
+    if (BOE_PANEL_NAMES.contains(panelName)) {
+      return Optional.of("boe");
+    } else if (CSOT_PANEL_NAMES.contains(panelName)) {
+      return Optional.of("csot");
+    } else {
+      return Optional.of("sdc");
+    }
+  }
+
+  /**
+   * Gets the display panel name.
+   *
+   * @param serial the serial number of the device
+   */
+  public String getDisplayPanelName(String serial) throws InterruptedException {
+    try {
+      String output = adb.runShell(serial, ADB_SHELL_GET_PANEL_NAME_LEGACY).trim();
+      if (!output.isEmpty() && !output.contains("No such file")) {
+        return output;
+      }
+    } catch (MobileHarnessException e) {
+      // Ignore
+    }
+
+    try {
+      String output = adb.runShell(serial, ADB_SHELL_GET_PANEL_NAME_NEW).trim();
+      if (!output.isEmpty()
+          && !output.contains("No such file")
+          && !output.contains("Permission denied")) {
+        return output;
+      }
+    } catch (MobileHarnessException e) {
+      // Ignore
+    }
+    return "";
   }
 }
