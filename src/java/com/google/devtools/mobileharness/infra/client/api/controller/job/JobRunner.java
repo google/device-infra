@@ -65,6 +65,7 @@ import com.google.devtools.mobileharness.infra.client.api.controller.device.Devi
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
 import com.google.devtools.mobileharness.infra.client.api.mode.remote.JobCancelledException;
 import com.google.devtools.mobileharness.infra.client.api.util.result.ClientAllocErrorUtil;
+import com.google.devtools.mobileharness.infra.client.api.util.uploader.ResultUploader;
 import com.google.devtools.mobileharness.infra.controller.messaging.MessageSender;
 import com.google.devtools.mobileharness.infra.controller.plugin.CommonSetupModule;
 import com.google.devtools.mobileharness.infra.controller.plugin.PluginCreator;
@@ -92,6 +93,8 @@ import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Value;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Job;
+import com.google.wireless.qa.mobileharness.shared.controller.event.TestEndedEvent;
+import com.google.wireless.qa.mobileharness.shared.controller.event.TestStartingEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.event.util.ScopedEventBus;
 import com.google.wireless.qa.mobileharness.shared.controller.event.util.SkipInformationHandler;
 import com.google.wireless.qa.mobileharness.shared.controller.event.util.SkipInformationHandler.SkipInformation;
@@ -253,17 +256,21 @@ public class JobRunner implements Runnable {
 
   private final int maxQueryDeviceTimes;
 
+  private final List<ResultUploader> resultUploaders;
+
   /** Creates a job runner to run the given job in the given mode. */
   public JobRunner(
       JobInfo jobInfo,
       DeviceAllocator deviceAllocator,
       ExecMode execMode,
+      List<ResultUploader> resultUploaders,
       EventBus globalInternalBus) {
     this(
         jobInfo,
         deviceAllocator,
         execMode,
         new TestManager<>(),
+        resultUploaders,
         ThreadPools.createStandardThreadPool("job-runner-thread-pool"),
         new LocalFileUtil(),
         Clock.systemUTC(),
@@ -278,6 +285,7 @@ public class JobRunner implements Runnable {
       DeviceAllocator deviceAllocator,
       ExecMode execMode,
       TestManager<DirectTestRunner> testManager,
+      List<ResultUploader> resultUploaders,
       ListeningExecutorService threadPool,
       LocalFileUtil fileUtil,
       Clock clock,
@@ -302,6 +310,7 @@ public class JobRunner implements Runnable {
     this.testManager = testManager;
     this.pendingTestPrinter = new PendingTestPrinter(clock, jobInfo);
 
+    this.resultUploaders = resultUploaders;
     logFailure(this.threadPool.submit(testManager), Level.SEVERE, "Fatal error in test manager");
     scopedEventBus = new ScopedEventBus<>(EventScope.class);
     scopedEventBus.add(EventScope.CLASS_INTERNAL);
@@ -426,6 +435,23 @@ public class JobRunner implements Runnable {
     Optional<ExceptionDetail> failFastError = Optional.empty();
     String jobTag = jobInfo.locator().getId();
     jobInfo.log().atInfo().alsoTo(logger).log("Job started");
+    // Register a local event handler for each uploader.
+    // This listener will only exist in the client-side JobRunner.
+    for (ResultUploader uploader : resultUploaders) {
+      Object testEventListener =
+          new Object() {
+            @Subscribe
+            public void onTestStarting(TestStartingEvent event) throws InterruptedException {
+              uploader.onTestStarting(event.getTest(), event.getAllocation());
+            }
+
+            @Subscribe
+            public void onTestEnded(TestEndedEvent event) throws InterruptedException {
+              uploader.onTestEnded(event.getTest(), event.getAllocation());
+            }
+          };
+      scopedEventBus.inScope(EventScope.CLASS_INTERNAL).register(testEventListener);
+    }
     try {
       boolean skipJob;
       try (MobileHarnessAutoCloseable ignored1 = getPreRunJobSpan()) {
@@ -742,6 +768,13 @@ public class JobRunner implements Runnable {
       throw e;
     } finally {
       if (!isResumedJob(jobInfo)) {
+        // Note that the data upserted here may be different from what we have uploaded triggered by
+        // JobStartEvent, the properties added in ResultDbUploader.onJobStart,
+        // AntsUploader.onJobStart and ResultDbUploader.onJobStart will not be added till these
+        // uploader have been moved from plugin to here.
+        for (ResultUploader resultUploader : resultUploaders) {
+          resultUploader.onJobStart(jobInfo);
+        }
         JobStartEvent jobStartEvent = new JobStartEvent(jobInfo);
         scopedEventBus.post(
             jobStartEvent,
@@ -751,8 +784,7 @@ public class JobRunner implements Runnable {
 
             // Event handlers in GLOBAL_INTERNAL:
             // 1) TestLister: must run after AndroidBuildFetcher.
-            // 2) MossUploader.
-            // 3) MhTestDiagnosticsReporter
+            // 2) MhTestDiagnosticsReporter
             EventScope.GLOBAL_INTERNAL,
 
             // Event handlers in INTERNAL_PLUGIN:
@@ -1079,7 +1111,6 @@ public class JobRunner implements Runnable {
       }
 
       // Finalizes job.
-      logger.atInfo().log("Finalize job");
       try {
         finalizeJobResult(failFastError, isDeviceAllocatorSetUp, false, jobError);
       } catch (MobileHarnessException e) {
@@ -1123,9 +1154,8 @@ public class JobRunner implements Runnable {
             // 1) JobReporter
             // 2) GoogleAnalyticsUploader
             // 3) GenFileHandler
-            // 4) MossUploader: should run after API_PLUGIN to catch changes in client.
-            // 5) StreamzStats: reports metric values to Streamz
-            // 6) MhTestDiagnosticsReporter
+            // 4) StreamzStats: reports metric values to Streamz
+            // 5) MhTestDiagnosticsReporter
             EventScope.GLOBAL_INTERNAL,
 
             // Event handlers in CLASS_INTERNAL:
@@ -1133,6 +1163,9 @@ public class JobRunner implements Runnable {
             //    plugins are done. Otherwise, client plugins won't be able to load classes.
             EventScope.CLASS_INTERNAL);
         checkPluginExceptions(/* postRunJob= */ true);
+        // Upload to MOSS after all plugins have finished to make sure things changed by the plugins
+        // are uploaded.
+        jobInfo.properties().add(PropertyName.Job.Gateway._JOB_INFRA_DONE, "true");
       } catch (RuntimeException e) {
         String errorMessage = "Failed to post JobEndEvent";
         logger.atWarning().withCause(e).log("%s", errorMessage);
@@ -1144,6 +1177,9 @@ public class JobRunner implements Runnable {
                     errorMessage + ": " + e.getMessage()));
       }
 
+      for (ResultUploader resultUploader : resultUploaders) {
+        resultUploader.onJobEnd(jobInfo);
+      }
       // Removes the run file dirs of the job.
       JobSetting setting = jobInfo.setting();
       if (setting.hasRunFileDir()) {

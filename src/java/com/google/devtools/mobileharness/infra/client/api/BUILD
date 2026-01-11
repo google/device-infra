@@ -28,6 +28,7 @@ java_library(
     ],
     deps = [
         ":annotations",
+        "//java/com/google/devtools/mobileharness/infra/client/api/util/uploader:result_uploader",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/job",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode",

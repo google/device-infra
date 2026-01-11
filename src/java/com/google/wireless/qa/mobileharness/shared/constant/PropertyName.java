@@ -128,6 +128,11 @@ public interface PropertyName {
        * won't be shown in sponge.
        */
       _DUPLICATE_JOB_INDEX,
+      /**
+       * If this property is set to true, it means the job is finished in the gateway service, and
+       * the client side will not do any operations on this job.
+       */
+      _JOB_INFRA_DONE,
     }
   }
 
