@@ -63,7 +63,7 @@ public class SpongeNode {
   private volatile Optional<String> remoteGenFilesDir = Optional.empty();
 
   /** List of the attached file relative paths under {@link #genFilesDir}. */
-  private volatile Optional<List<String>> attachedFileRelativePaths = Optional.empty();
+  private volatile Optional<ImmutableList<String>> attachedFileRelativePaths = Optional.empty();
 
   /** The properties of the testcase/testsuite. */
   private final ConcurrentLinkedQueue<Property> properties = new ConcurrentLinkedQueue<>();
@@ -88,10 +88,14 @@ public class SpongeNode {
     return runTime;
   }
 
-  /** Sets the run time of the testcase/testsuite. */
+  /**
+   * Sets the run time of the testcase/testsuite.
+   *
+   * @param runTime the run time of the testcase/testsuite
+   */
   @CanIgnoreReturnValue
-  public SpongeNode setRunTime(Duration runtime) {
-    this.runTime = runtime;
+  public SpongeNode setRunTime(Duration runTime) {
+    this.runTime = runTime;
     return this;
   }
 
@@ -133,7 +137,7 @@ public class SpongeNode {
   }
 
   /** Returns the properties list of the testcase/testsuite. */
-  public List<Property> getProperties() {
+  public ImmutableList<Property> getProperties() {
     return ImmutableList.copyOf(properties);
   }
 
@@ -157,12 +161,12 @@ public class SpongeNode {
    */
   @CanIgnoreReturnValue
   public SpongeNode setAttachedFileRelativePaths(List<String> attachedFileRelativePaths) {
-    this.attachedFileRelativePaths = Optional.of(attachedFileRelativePaths);
+    this.attachedFileRelativePaths = Optional.of(ImmutableList.copyOf(attachedFileRelativePaths));
     return this;
   }
 
   /** Gets the specific attached file relative paths under {@link #genFilesDir}. */
-  public Optional<List<String>> getAttachedFileRelativePaths() {
+  public Optional<ImmutableList<String>> getAttachedFileRelativePaths() {
     return attachedFileRelativePaths;
   }
 
