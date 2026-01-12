@@ -906,6 +906,32 @@ public class LocalFileUtil {
   }
 
   /**
+   * Returns true if the zip file contains any encrypted entries.
+   *
+   * @throws MobileHarnessException if failed to run zipinfo on the file
+   */
+  public boolean isZipFileEncrypted(String zipFilePath)
+      throws MobileHarnessException, InterruptedException {
+    String zipInfoOutput;
+    try {
+      zipInfoOutput = cmdExecutor.run(Command.of("zipinfo", zipFilePath));
+    } catch (CommandException e) {
+      throw new MobileHarnessException(
+          BasicErrorId.LOCAL_FILE_ZIP_INFO_ERROR,
+          "Failed to run zipinfo on file " + zipFilePath,
+          e);
+    }
+    return Splitter.on('\n')
+        .splitToStream(zipInfoOutput)
+        .map(line -> line.trim().split("\\s+"))
+        .anyMatch(
+            parts ->
+                parts.length > 4
+                    && (parts[0].startsWith("-") || parts[0].startsWith("d"))
+                    && (parts[4].startsWith("B") || parts[4].startsWith("T")));
+  }
+
+  /**
    * Returns true if this file exists, OR exists in at least one dir (not including sub dirs) of the
    * PATH environment variable.
    *
@@ -2099,10 +2125,31 @@ public class LocalFileUtil {
    */
   public String unzipFile(String zipFilePath, String targetDirPath, @Nullable Duration timeout)
       throws MobileHarnessException, InterruptedException {
+    return unzipFile(zipFilePath, targetDirPath, timeout, /* password= */ null);
+  }
+
+  /**
+   * Unzips the file to the target dir, using a password if provided. If the target dir does not
+   * exist, will create it.
+   *
+   * @return the log
+   */
+  @CanIgnoreReturnValue
+  public String unzipFile(
+      String zipFilePath,
+      String targetDirPath,
+      @Nullable Duration timeout,
+      @Nullable String password)
+      throws MobileHarnessException, InterruptedException {
     try {
       prepareDir(targetDirPath);
+      ImmutableList.Builder<String> commandBuilder = ImmutableList.<String>builder().add("unzip");
+      if (password != null && !password.isEmpty()) {
+        commandBuilder.add("-P").add(password);
+      }
+      commandBuilder.add("-o").add(zipFilePath);
       Command command =
-          Command.of("unzip", "-o", zipFilePath).workDir(targetDirPath /*for b/28160125 */);
+          Command.of(commandBuilder.build()).workDir(targetDirPath /*for b/28160125 */);
       if (timeout != null) {
         command = command.timeout(fixed(timeout));
       }

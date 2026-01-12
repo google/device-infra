@@ -50,6 +50,8 @@ public abstract class SessionRequestInfo {
 
   public abstract Optional<String> androidXtsZipDownloadUrl();
 
+  public abstract Optional<String> androidXtsZipPassword();
+
   public abstract ImmutableList<String> deviceSerials();
 
   public abstract Optional<DeviceInfo> deviceInfo();
@@ -268,6 +270,8 @@ public abstract class SessionRequestInfo {
     public abstract Builder setAndroidXtsZip(String androidXtsZip);
 
     public abstract Builder setAndroidXtsZipDownloadUrl(String androidXtsZipDownloadUrl);
+
+    public abstract Builder setAndroidXtsZipPassword(String androidXtsZipPassword);
 
     public abstract Builder setEnvVars(ImmutableMap<String, String> envVars);
 

@@ -20,12 +20,13 @@ import com.google.auto.value.AutoValue;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ComparisonChain;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Version of a test suite.
  *
  * <p>The format of the version for a test suite is "<major>[.<minor>][.<patch>]_<revision>", e.g.
- * "16.1_r1", "16_r1", "8.0_r26", "4.0.3_r4".
+ * "16.1_r1", "16_r1", "8.0_r26", "4.0.3_r4", "15_sts-r46".
  */
 @AutoValue
 public abstract class TestSuiteVersion implements Comparable<TestSuiteVersion> {
@@ -70,8 +71,10 @@ public abstract class TestSuiteVersion implements Comparable<TestSuiteVersion> {
 
     if (hasRevision) {
       String revisionString = parts.get(1);
-      if (revisionString.startsWith("r") || revisionString.startsWith("R")) {
-        revision = Integer.parseInt(revisionString.substring(1));
+      // The revision string can be like "r1" or "sts-r46", so we parse from the last 'r'.
+      int rIndex = revisionString.toLowerCase(Locale.ROOT).lastIndexOf('r');
+      if (rIndex != -1) {
+        revision = Integer.parseInt(revisionString.substring(rIndex + 1));
       } else {
         throw new IllegalArgumentException(
             String.format("Invalid revision in version string: %s", versionString));

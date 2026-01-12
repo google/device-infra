@@ -55,5 +55,8 @@ public interface XtsPropertyName extends PropertyName {
 
     /** Device's supported abi list. From Android device property `ro.product.cpu.abilist`. */
     DEVICE_SUPPORTED_ABI_LIST,
+
+    /** Password for encrypted xTS zip file. */
+    XTS_ZIP_FILE_PASSWORD,
   }
 }

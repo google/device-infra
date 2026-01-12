@@ -35,6 +35,8 @@ public final class TestSuiteVersionTest {
     assertThat(TestSuiteVersion.create("10_R2")).isEqualTo(TestSuiteVersion.create(10, 0, 0, 2));
     assertThat(TestSuiteVersion.create("6.0")).isEqualTo(TestSuiteVersion.create(6, 0, 0, 0));
     assertThat(TestSuiteVersion.create("16.1")).isEqualTo(TestSuiteVersion.create(16, 1, 0, 0));
+    assertThat(TestSuiteVersion.create("15_sts-r46"))
+        .isEqualTo(TestSuiteVersion.create(15, 0, 0, 46));
   }
 
   @Test

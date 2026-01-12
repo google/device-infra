@@ -425,7 +425,9 @@ public final class NewMultiCommandRequestHandlerTest {
   @Test
   public void createTradefedJobs_localMode_success() throws Exception {
     when(atsServerSessionUtil.isLocalMode()).thenReturn(true);
-    doReturn("output").when(localFileUtil).unzipFile(anyString(), anyString(), any(Duration.class));
+    doReturn("output")
+        .when(localFileUtil)
+        .unzipFile(anyString(), anyString(), any(Duration.class), any());
     when(clock.instant())
         .thenReturn(
             Instant.ofEpochMilli(1000L), Instant.ofEpochMilli(2000L), Instant.ofEpochMilli(3000L));
@@ -466,10 +468,43 @@ public final class NewMultiCommandRequestHandlerTest {
     assertThat(sessionRequestInfo.remoteRunnerFilePathPrefix()).hasValue("ats-file-server::");
 
     // Verify that handler has unzipped the zip file.
-    verify(localFileUtil).unzipFile(zipFile, xtsRootDir, Duration.ofHours(1));
+    verify(localFileUtil).unzipFile(zipFile, xtsRootDir, Duration.ofHours(1), "");
 
     verify(files).add(eq("test-name-1"), eq("ats-file-server::/path/to/file1"));
     verify(files).add(eq("test-name-2"), eq("ats-file-server::/path/to/file2"));
+  }
+
+  @Test
+  public void createTradefedJobs_unzipWithPassword() throws Exception {
+    when(atsServerSessionUtil.isLocalMode()).thenReturn(true);
+    doReturn("output")
+        .when(localFileUtil)
+        .unzipFile(anyString(), anyString(), any(Duration.class), anyString());
+    when(clock.instant())
+        .thenReturn(
+            Instant.ofEpochMilli(1000L), Instant.ofEpochMilli(2000L), Instant.ofEpochMilli(3000L));
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+
+    request =
+        request.toBuilder()
+            .clearTestResources()
+            .addTestResources(
+                TestResource.newBuilder()
+                    .setUrl(ANDROID_XTS_ZIP)
+                    .setName("android-cts.zip")
+                    .setPassword("123")
+                    .build())
+            .build();
+    // Trigger the handler.
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+    String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
+    String zipFile = "/path/to/xts/zip/file.zip";
+
+    assertThat(createJobsResult.jobInfos()).containsExactly(jobInfo);
+    // Verify that handler has unzipped the zip file.
+    verify(localFileUtil).unzipFile(zipFile, xtsRootDir, Duration.ofHours(1), "123");
   }
 
   @Test
@@ -1790,7 +1825,9 @@ public final class NewMultiCommandRequestHandlerTest {
   @Test
   public void cleanup_noXtsZip_success() throws Exception {
     when(atsServerSessionUtil.isLocalMode()).thenReturn(true);
-    doReturn("output").when(localFileUtil).unzipFile(anyString(), anyString(), any(Duration.class));
+    doReturn("output")
+        .when(localFileUtil)
+        .unzipFile(anyString(), anyString(), any(Duration.class), any());
     doNothing().when(localFileUtil).removeFileOrDir(anyString());
     when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
@@ -1800,7 +1837,8 @@ public final class NewMultiCommandRequestHandlerTest {
 
     // Verify that handler has mounted the zip file.
     String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
-    verify(localFileUtil).unzipFile("/path/to/xts/zip/file.zip", xtsRootDir, Duration.ofHours(1));
+    verify(localFileUtil)
+        .unzipFile("/path/to/xts/zip/file.zip", xtsRootDir, Duration.ofHours(1), "");
     newMultiCommandRequestHandler.cleanup(sessionInfo);
     verify(localFileUtil).removeFileOrDir(xtsRootDir);
   }

@@ -185,6 +185,11 @@ public abstract class XtsJobCreator {
                 .deviceInfo()
                 .flatMap(deviceInfo -> deviceInfo.supportedAbiList())
                 .orElse(""));
+    if (sessionRequestInfo.androidXtsZipPassword().isPresent()
+        && !sessionRequestInfo.androidXtsZipPassword().get().isEmpty()) {
+      extraJobProperties.put(
+          Job.XTS_ZIP_FILE_PASSWORD, sessionRequestInfo.androidXtsZipPassword().get());
+    }
 
     Map<String, String> driverParams = new HashMap<>();
     ListMultimap<String, String> jobFiles = ArrayListMultimap.create();
