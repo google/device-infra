@@ -111,6 +111,7 @@ public final class XtsRunStrategy implements TradefedRunStrategy {
   private final ResUtil resUtil;
   private final Clock clock;
   private final String xtsType;
+  private final XtsCommandUtil xtsCommandUtil;
   private ImmutableSet<String> previousResultDirNames = ImmutableSet.of();
 
   public XtsRunStrategy(
@@ -118,12 +119,14 @@ public final class XtsRunStrategy implements TradefedRunStrategy {
       ResUtil resUtil,
       SystemUtil systemUtil,
       Clock clock,
-      String xtsType) {
+      String xtsType,
+      XtsCommandUtil xtsCommandUtil) {
     this.localFileUtil = localFileUtil;
     this.systemUtil = systemUtil;
     this.resUtil = resUtil;
     this.clock = clock;
     this.xtsType = checkNotNull(xtsType, "xtsType cannot be null for XtsRunStrategy");
+    this.xtsCommandUtil = xtsCommandUtil;
   }
 
   private boolean isJarFileIncluded(
@@ -605,7 +608,7 @@ public final class XtsRunStrategy implements TradefedRunStrategy {
 
   @Override
   public String getJavaPath(Path workDir) {
-    return XtsCommandUtil.getJavaBinary(xtsType, workDir).toString();
+    return xtsCommandUtil.getJavaBinary(xtsType, workDir).toString();
   }
 
   @Override

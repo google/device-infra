@@ -35,6 +35,9 @@ import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandException;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandFailureException;
+import com.google.devtools.mobileharness.shared.util.command.CommandResult;
+import com.google.devtools.mobileharness.shared.util.command.CommandTimeoutException;
+import com.google.devtools.mobileharness.shared.util.command.Timeout;
 import com.google.devtools.mobileharness.shared.util.command.java.JavaCommandCreator;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
@@ -44,7 +47,9 @@ import com.sun.management.OperatingSystemMXBean;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -125,11 +130,23 @@ public class SystemUtil {
   // Matches a port range, e.g. "1234-5678".
   private static final Pattern PORT_RANGE_PATTERN = Pattern.compile("^\\d{1,5}-\\d{1,5}$");
 
+  private static final Pattern JAVA_VERSION_PATTERN = Pattern.compile("\"(.*?)\"");
+  private static final Splitter LINE_SPLITTER_EMPTY_STRING_OMITTED =
+      Splitter.on('\n').omitEmptyStrings();
+  private static final Splitter DOT_SPLITTER = Splitter.on('.');
   private static volatile boolean processIsShuttingDown;
 
   private String osName = System.getProperty("os.name");
   private String archName = System.getProperty("os.arch");
   private final CommandExecutor executor;
+
+  /**
+   * Represents a Java version obtained by parsing the output of `java -version`.
+   *
+   * @param majorVersion The major version number, e.g., 8 for "1.8.0_212", 11 for "11.0.2".
+   * @param versionString The full version string, e.g., "1.8.0_212", "11.0.2", "21.0.1".
+   */
+  public static record JavaVersion(int majorVersion, String versionString) {}
 
   /** Kill signals. */
   public enum KillSignal {
@@ -362,6 +379,73 @@ public class SystemUtil {
   @Nullable
   public String getJavaVersion() {
     return JAVA_VERSION.value();
+  }
+
+  /**
+   * Gets the Java version information for a specific Java binary.
+   *
+   * <p>This method executes the `java -version` command using the provided `javaBin` path. It then
+   * parses the output to extract the Java version string and the major version number. The command
+   * output is typically sent to stderr, but {@link CommandExecutor} redirects stderr to stdout, so
+   * it's read from the standard output.
+   *
+   * @param javaBin The {@link Path} to the Java binary executable.
+   * @return A {@link JavaVersion} record containing the major version and the full version string.
+   * @throws MobileHarnessException if the command fails to execute, times out, or if the version
+   *     string cannot be parsed from the command output.
+   * @throws InterruptedException if the thread is interrupted while waiting for the command.
+   */
+  public JavaVersion getJavaVersion(Path javaBin)
+      throws MobileHarnessException, InterruptedException {
+    CommandResult result;
+    try {
+      result =
+          executor.exec(
+              Command.of(javaBin.toString(), "-version")
+                  .timeout(Timeout.fixed(Duration.ofSeconds(5))));
+    } catch (CommandException e) {
+      if (e instanceof CommandTimeoutException) {
+        throw new MobileHarnessException(
+            BasicErrorId.SYSTEM_GET_JAVA_VERSION_TIMEOUT_ERROR,
+            String.format("Getting java version for %s timed out.", javaBin),
+            e);
+      } else {
+        throw new MobileHarnessException(
+            BasicErrorId.SYSTEM_GET_JAVA_VERSION_COMMAND_ERROR,
+            String.format("Failed to get java version for %s", javaBin),
+            e);
+      }
+    }
+
+    // java -version may output to stderr, but CommandExecutor redirects stderr to stdout by
+    // default.
+    String output = result.stdout();
+    try {
+      for (String line : LINE_SPLITTER_EMPTY_STRING_OMITTED.split(output)) {
+        if (line.contains("version")) {
+          Matcher matcher = JAVA_VERSION_PATTERN.matcher(line);
+          if (matcher.find()) {
+            String versionStr = matcher.group(1);
+            List<String> versionParts = DOT_SPLITTER.splitToList(versionStr);
+            int version;
+            if (versionStr.startsWith("1.")) {
+              version = Integer.parseInt(versionParts.get(1));
+            } else {
+              version = Integer.parseInt(versionParts.get(0));
+            }
+            return new JavaVersion(version, versionStr);
+          }
+        }
+      }
+    } catch (NumberFormatException | IndexOutOfBoundsException e) {
+      throw new MobileHarnessException(
+          BasicErrorId.SYSTEM_GET_JAVA_VERSION_PARSE_ERROR,
+          String.format("Failed to get java version for %s", javaBin),
+          e);
+    }
+    throw new MobileHarnessException(
+        BasicErrorId.SYSTEM_GET_JAVA_VERSION_ERROR,
+        String.format("Failed to find version string for %s.", javaBin));
   }
 
   /** Returns the java feature version. */

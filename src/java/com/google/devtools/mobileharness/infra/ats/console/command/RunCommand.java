@@ -412,6 +412,7 @@ public final class RunCommand implements Callable<Integer> {
   private final Consumer<ListenableFuture<SessionRequestInfo.Builder>> resultFuture;
   private final boolean parseCommandOnly;
   private final CommandExecutor commandExecutor;
+  private final XtsCommandUtil xtsCommandUtil;
 
   @Inject
   RunCommand(
@@ -425,6 +426,7 @@ public final class RunCommand implements Callable<Integer> {
       ListeningExecutorService executorService,
       AtsSessionStub atsSessionStub,
       CommandExecutor commandExecutor,
+      XtsCommandUtil xtsCommandUtil,
       @RunCommandParsingResultFuture
           Consumer<ListenableFuture<SessionRequestInfo.Builder>> resultFuture,
       @ParseCommandOnly boolean parseCommandOnly) {
@@ -438,6 +440,7 @@ public final class RunCommand implements Callable<Integer> {
     this.executorService = executorService;
     this.atsSessionStub = atsSessionStub;
     this.commandExecutor = commandExecutor;
+    this.xtsCommandUtil = xtsCommandUtil;
     this.resultFuture = resultFuture;
     this.parseCommandOnly = parseCommandOnly;
   }
@@ -877,14 +880,14 @@ public final class RunCommand implements Callable<Integer> {
     return ExitCode.OK;
   }
 
-  private static ImmutableList<String> getXtsJavaCommand(
+  private ImmutableList<String> getXtsJavaCommand(
       String xtsType,
       Path xtsRootDir,
       ImmutableList<String> jvmFlags,
       String concatenatedJarPath,
       ImmutableList<String> xtsRunCommandArgs) {
-    Path javaBinary = XtsCommandUtil.getJavaBinary(xtsType, xtsRootDir);
-    return XtsCommandUtil.getTradefedJavaCommand(
+    Path javaBinary = xtsCommandUtil.getJavaBinary(xtsType, xtsRootDir);
+    return xtsCommandUtil.getTradefedJavaCommand(
         javaBinary.toString(),
         jvmFlags,
         concatenatedJarPath,

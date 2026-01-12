@@ -43,13 +43,18 @@ public class XtsServerEnvironmentPreparer implements ServerEnvironmentPreparer {
   private final ConsoleInfo consoleInfo;
   private final CommandHelper commandHelper;
   private final LocalFileUtil localFileUtil;
+  private final XtsCommandUtil xtsCommandUtil;
 
   @Inject
   XtsServerEnvironmentPreparer(
-      ConsoleInfo consoleInfo, CommandHelper commandHelper, LocalFileUtil localFileUtil) {
+      ConsoleInfo consoleInfo,
+      CommandHelper commandHelper,
+      LocalFileUtil localFileUtil,
+      XtsCommandUtil xtsCommandUtil) {
     this.consoleInfo = consoleInfo;
     this.commandHelper = commandHelper;
     this.localFileUtil = localFileUtil;
+    this.xtsCommandUtil = xtsCommandUtil;
   }
 
   @Override
@@ -137,9 +142,9 @@ public class XtsServerEnvironmentPreparer implements ServerEnvironmentPreparer {
       return jdkDir.resolve("bin/java");
     }
     if (!Flags.instance().atsConsoleOlcServerCopyServerResource.getNonNull()) {
-      return XtsCommandUtil.getJavaBinary(xtsType, xtsRootDir);
+      return xtsCommandUtil.getJavaBinary(xtsType, xtsRootDir);
     }
-    boolean useXtsJavaBinary = XtsCommandUtil.useXtsJavaBinary(xtsType, xtsRootDir);
+    boolean useXtsJavaBinary = xtsCommandUtil.useXtsJavaBinary(xtsType, xtsRootDir);
     if (useXtsJavaBinary && serverResDir != null) {
       // Copies JDK dir into server resource dir and grants access.
       Path xtsJdkDir = XtsDirUtil.getXtsJdkDir(xtsRootDir, xtsType);
@@ -153,7 +158,7 @@ public class XtsServerEnvironmentPreparer implements ServerEnvironmentPreparer {
       grantFileOrDirFullAccess(jdkDir);
       return jdkDir.resolve("bin/java");
     } else {
-      return XtsCommandUtil.getJavaBinary(xtsType, xtsRootDir);
+      return xtsCommandUtil.getJavaBinary(xtsType, xtsRootDir);
     }
   }
 }

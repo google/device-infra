@@ -137,6 +137,7 @@ public class TradefedTest extends BaseDriver
   private final Sleeper sleeper;
   private final ResUtil resUtil;
   private final Clock clock;
+  private final XtsCommandUtil xtsCommandUtil;
   private final String testId;
   private TradefedRunStrategy tradefedRunStrategy;
 
@@ -162,7 +163,8 @@ public class TradefedTest extends BaseDriver
       ListeningExecutorService threadPool,
       Sleeper sleeper,
       ResUtil resUtil,
-      Clock clock) {
+      Clock clock,
+      XtsCommandUtil xtsCommandUtil) {
     super(device, testInfo);
     this.cmdExecutor = cmdExecutor;
     this.localFileUtil = localFileUtil;
@@ -178,6 +180,7 @@ public class TradefedTest extends BaseDriver
             "tradefed-test-" + testInfo.locator().getId(), /* corePoolSize= */ 2);
     this.resUtil = resUtil;
     this.clock = clock;
+    this.xtsCommandUtil = xtsCommandUtil;
   }
 
   @Override
@@ -185,7 +188,8 @@ public class TradefedTest extends BaseDriver
     TradefedTestDriverSpec spec = testInfo.jobInfo().combinedSpec(this);
     String xtsType = Strings.emptyToNull(spec.getXtsType());
     // TODO: Use different run strategy for xTS and non-xTS runs.
-    tradefedRunStrategy = new XtsRunStrategy(localFileUtil, resUtil, systemUtil, clock, xtsType);
+    tradefedRunStrategy =
+        new XtsRunStrategy(localFileUtil, resUtil, systemUtil, clock, xtsType, xtsCommandUtil);
 
     CompositeDeviceUtil.cacheTestbed(testInfo, getDevice());
     Path workDir = null; // This will be TF_WORK_DIR
@@ -394,7 +398,7 @@ public class TradefedTest extends BaseDriver
             env.getOrDefault(
                 TF_PATH_KEY, tradefedRunStrategy.getConcatenatedJarPath(workDir, spec)));
     ImmutableList<String> cmd =
-        XtsCommandUtil.getTradefedJavaCommand(
+        xtsCommandUtil.getTradefedJavaCommand(
             tradefedRunStrategy.getJavaPath(workDir),
             jvmFlagsBuilder.build(),
             classpath,
