@@ -97,7 +97,9 @@ public class AndroidAdbUtil {
 
   /** ADB shell command to get bugreport generated directory. */
   @VisibleForTesting
-  static final String ADB_SHELL_FIND_BUGREPORT_DIRECTORY = "find /data -name \"*bugreports\"";
+  static final String ADB_SHELL_FIND_BUGREPORT_DIRECTORY =
+      "ls -d /bugreports /data/user_de/0/com.android.shell/files/bugreports 2>/dev/null"
+          + " || find /data -name \"*bugreports\"";
 
   /** ADB shell command for getting device property. Could be followed by the property name. */
   @VisibleForTesting static final String ADB_SHELL_GET_PROPERTY = "getprop";
@@ -277,19 +279,24 @@ public class AndroidAdbUtil {
   }
 
   /**
-   * Gets the directory of bugreport zip/txt/tmp saved on the device under /data. Support rooted
-   * devices with SDK>=23.
+   * Gets the directory of bugreport zip/txt/tmp saved on the device.
+   *
+   * <p>The method attempts to locate the directory by checking common paths (e.g., /bugreports or
+   * /data/user_de/0/com.android.shell/files/bugreports) which are often accessible via symlinks on
+   * non-rooted devices. If these are not found, it falls back to searching under /data for rooted
+   * devices. Supports SDK>=23.
    *
    * <p>For command output, Adb uses "\r\n" as line separator on SDK<=23, while uses "\n" as line
    * separator on SDK>23. It's callers' responsibility to parse it correctly.
    *
    * @param serial serial number of the device
-   * @return the bugreport files directory on the device.
+   * @return the bugreport files directory on the device, or an empty string if not found.
    */
   public String bugreportDirectory(String serial)
       throws MobileHarnessException, InterruptedException {
     try {
-      return adb.runShellWithRetry(serial, ADB_SHELL_FIND_BUGREPORT_DIRECTORY);
+      String output = adb.runShellWithRetry(serial, ADB_SHELL_FIND_BUGREPORT_DIRECTORY).trim();
+      return LINE_SPLITTER.splitToStream(output).findFirst().orElse("");
     } catch (MobileHarnessException e) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_ADB_UTIL_FIND_BUGREPORT_DIR_ERROR,
