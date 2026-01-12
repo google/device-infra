@@ -38,6 +38,14 @@ service DeviceService {
     };
   }
 
+  // Retrieves the detailed header info for a specific device by its ID.
+  rpc GetDeviceHeaderInfo(GetDeviceHeaderInfoRequest)
+      returns (DeviceHeaderInfo) {
+    option (google.api.http) = {
+      get: "/v6/devices/{id}/header"
+    };
+  }
+
   // Retrieves healthiness statistics for a device within a given time range.
   rpc GetDeviceHealthinessStats(GetDeviceHealthinessStatsRequest)
       returns (HealthinessStats) {
@@ -132,6 +140,15 @@ message GetDeviceOverviewRequest {
 
   // If true, forces a refresh and bypasses the cache.
   bool force_refresh = 3;
+}
+
+// Request message for GetDeviceHeaderInfo.
+message GetDeviceHeaderInfoRequest {
+  // The unique identifier of the device.
+  string id = 1;
+
+  // This field is not in use.
+  string universe = 2;
 }
 
 // Request message for GetDeviceHealthinessStats.
