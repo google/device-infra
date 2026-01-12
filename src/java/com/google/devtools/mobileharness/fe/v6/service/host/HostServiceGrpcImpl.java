@@ -18,6 +18,8 @@ package com.google.devtools.mobileharness.fe.v6.service.host;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcServiceUtil;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.DecommissionMissingDevicesRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.DecommissionMissingDevicesResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostDeviceSummariesRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostDeviceSummariesResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostOverviewRequest;
@@ -76,5 +78,18 @@ public final class HostServiceGrpcImpl extends HostServiceGrpc.HostServiceImplBa
         executor,
         HostServiceGrpc.getServiceDescriptor(),
         HostServiceGrpc.getUpdatePassThroughFlagsMethod());
+  }
+
+  @Override
+  public void decommissionMissingDevices(
+      DecommissionMissingDevicesRequest request,
+      StreamObserver<DecommissionMissingDevicesResponse> responseObserver) {
+    GrpcServiceUtil.invokeAsync(
+        request,
+        responseObserver,
+        logic::decommissionMissingDevices,
+        executor,
+        HostServiceGrpc.getServiceDescriptor(),
+        HostServiceGrpc.getDecommissionMissingDevicesMethod());
   }
 }

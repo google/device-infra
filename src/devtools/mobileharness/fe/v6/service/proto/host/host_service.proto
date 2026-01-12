@@ -51,6 +51,15 @@ service HostService {
       body: "*"
     };
   }
+
+  // Decommissions missing devices on a specific host.
+  rpc DecommissionMissingDevices(DecommissionMissingDevicesRequest)
+      returns (DecommissionMissingDevicesResponse) {
+    option (google.api.http) = {
+      post: "/v6/hosts/{host_name}/decommission_missing_devices"
+      body: "*"
+    };
+  }
 }
 
 // Request message for GetHostOverview.
@@ -81,3 +90,14 @@ message UpdatePassThroughFlagsRequest {
 
 // Response message for UpdatePassThroughFlags.
 message UpdatePassThroughFlagsResponse {}
+
+// Request message for DecommissionMissingDevices.
+message DecommissionMissingDevicesRequest {
+  // The unique name of the host.
+  string host_name = 1;
+  // The list of device control IDs to decommission.
+  repeated string device_control_ids = 2;
+}
+
+// Response message for DecommissionMissingDevices.
+message DecommissionMissingDevicesResponse {}

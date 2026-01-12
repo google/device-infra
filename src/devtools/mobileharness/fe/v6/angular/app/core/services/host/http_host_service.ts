@@ -36,4 +36,16 @@ export class HttpHostService extends HostService {
       flags,
     });
   }
+
+  override decommissionMissingDevices(
+    hostName: string,
+    deviceControlIds: string[],
+  ): Observable<void> {
+    return this.http.post<void>(
+      `${this.apiUrl}/${hostName}/decommissionMissingDevices`,
+      {
+        deviceControlIds,
+      },
+    );
+  }
 }
