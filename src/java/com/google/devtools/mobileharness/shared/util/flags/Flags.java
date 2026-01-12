@@ -392,6 +392,16 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> atsConsolePrintAboveInput = atsConsolePrintAboveInputDefault;
 
+  private static final Flag<Duration> atsConsoleShutdownWaitSessionTimeoutDefault =
+      DurationFlag.value(Duration.ofSeconds(10L));
+
+  @com.beust.jcommander.Parameter(
+      names = "--ats_console_shutdown_wait_session_timeout",
+      description = "When ATS console shuts down, timeout of waiting sessions end. Default is 10s.",
+      converter = DurationFlag.DurationConverter.class)
+  public Flag<Duration> atsConsoleShutdownWaitSessionTimeout =
+      atsConsoleShutdownWaitSessionTimeoutDefault;
+
   private static final Flag<Duration> atsDdaLeaseExpirationTimeDefault =
       DurationFlag.value(Duration.ofMinutes(5L));
 

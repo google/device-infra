@@ -22,6 +22,7 @@ import static com.google.devtools.mobileharness.shared.constant.LogRecordImporta
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 import static com.google.devtools.mobileharness.shared.util.shell.ShellUtils.tokenize;
 import static java.util.Arrays.asList;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
@@ -29,7 +30,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
-import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -93,6 +94,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 import javax.inject.Inject;
 import org.jline.reader.LineReader;
 import org.jline.reader.LineReaderBuilder;
@@ -389,23 +392,34 @@ public class AtsConsole {
         .setUnmatchedOptionsArePositionalParams(true);
   }
 
-  private void onShutdown() {
+  private void onShutdown() throws ExecutionException, InterruptedException {
     // Dump logs.
     System.out.println(LogDumper.dumpLog(LogDirsType.USED));
 
-    // Peacefully cancels unfinished sessions and waits until them finish.
-    exitUtil.cancelUnfinishedSessions("Exit console", /* aggressive= */ false);
-    Futures.getUnchecked(exitUtil.waitUntilNoRunningSessions(/* interruptLineReader= */ false));
-
-    // Aborts all sessions of the console and kills the OLC server.
     try {
-      controlStub.killServer(KillServerRequest.newBuilder().setClientId(clientId).build());
-    } catch (GrpcExceptionWithErrorId e) {
-      // Does nothing.
-    }
+      // Peacefully cancels unfinished sessions and waits until them finish.
+      exitUtil.cancelUnfinishedSessions("Exit console", /* aggressive= */ false);
+      ListenableFuture<?> noRunningSessionsFuture =
+          exitUtil.waitUntilNoRunningSessions(/* interruptLineReader= */ false);
+      Duration waitSessionTimeout =
+          Flags.instance().atsConsoleShutdownWaitSessionTimeout.getNonNull();
+      try {
+        noRunningSessionsFuture.get(waitSessionTimeout.toMillis(), MILLISECONDS);
+      } catch (TimeoutException e) {
+        logger.atInfo().log(
+            "Some sessions are still running after %s after cancelling them", waitSessionTimeout);
+      }
+    } finally {
+      // Aborts all sessions of the console and kills the OLC server.
+      try {
+        controlStub.killServer(KillServerRequest.newBuilder().setClientId(clientId).build());
+      } catch (GrpcExceptionWithErrorId e) {
+        // Does nothing.
+      }
 
-    if (Flags.instance().atsConsoleOlcServerEmbeddedMode.getNonNull()) {
-      olcServerRunner.onShutdown();
+      if (Flags.instance().atsConsoleOlcServerEmbeddedMode.getNonNull()) {
+        olcServerRunner.onShutdown();
+      }
     }
   }
 
