@@ -638,6 +638,7 @@ public final class XtsRunStrategy implements TradefedRunStrategy {
   public void saveFilteredExpandedModuleNames(TestInfo testInfo, Path workDir, Device device)
       throws MobileHarnessException, InterruptedException {
     TestSuiteHelper suiteHelper = new TestSuiteHelper(workDir.toString(), xtsType);
+    suiteHelper.setParameterizedModules(true);
     // It's a map of expanded module names (e.g. `arm64-v8a CtsBatteryHealthTestCases`) to their
     // configurations. Note this includes both TradeFed and non-TradeFed (Mobly) modules.
     Map<String, Configuration> configs =
