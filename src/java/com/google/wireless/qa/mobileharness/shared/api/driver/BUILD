@@ -332,4 +332,25 @@ java_library(
         "@protobuf//:protobuf_java",
     ],
 )
+
 ################################################################################
+# Slate Test
+################################################################################
+
+java_library(
+    name = "slate_driver",
+    srcs = ["SlateDriver.java"],
+    deps = [
+        ":base_driver",
+        "//src/devtools/mobileharness/api/model/proto:test_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/command",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/path",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
