@@ -174,15 +174,17 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
 
   /** Sends file {@code local} to remote side with {@code metadata}. */
   @VisibleForTesting
-  void sendFile(Any metadata, String local, @Nullable String checksum)
+  void sendFile(Any metadata, String local, @Nullable String checksum, String relativePath)
       throws MobileHarnessException, InterruptedException {
     FileTransferEvent.Builder event =
         FileTransferEvent.builder().setStart(Instant.now()).setType(ExecutionType.SEND);
-    logger.atInfo().log("Sending file: %s, checksum: %s", local, checksum);
+    logger.atInfo().log(
+        "Sending file: %s, checksum: %s, relative path: %s", local, checksum, relativePath);
     long fileSize;
     boolean isCached;
     if (isFileExists(Path.of(local)) || localFileUtil.isDirExist(local)) {
-      FileOperationStatus result = sendDirectlyIfSmall(metadata, Path.of(local), checksum);
+      FileOperationStatus result =
+          sendDirectlyIfSmall(metadata, Path.of(local), checksum, relativePath);
       if (result.isFinished()) {
         fileSize = result.fileSize();
         isCached = false;
@@ -196,10 +198,7 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
         fileSize = executionInfo.fileSize();
         isCached = executionInfo.isCached();
         downloadGcsFileToServer(
-            metadata,
-            executionInfo.checksum(),
-            Path.of(local),
-            /* isCompressed= */ dirExists(local));
+            metadata, executionInfo.checksum(), relativePath, /* isCompressed= */ dirExists(local));
       }
     } else if (checksum != null && gcsFileManager.fileExistAndFresh(Path.of(checksum))) {
       logger.atInfo().log(
@@ -210,7 +209,7 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
       downloadGcsFileToServer(
           metadata,
           checksum,
-          Path.of(local),
+          relativePath,
           /* isCompressed= */ gcsFileManager.isCompressed(Path.of(checksum)));
     } else {
       throw new MobileHarnessException(
@@ -223,17 +222,16 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
 
   /** {@inheritDoc} */
   @Override
-  public void sendFile(String fileId, String tag, String srcPath, @Nullable String checksum)
+  public void sendFile(
+      String fileId, String tag, String srcPath, @Nullable String checksum, String relativePath)
       throws MobileHarnessException, InterruptedException {
-    sendFile(
-        Any.pack(
-            TaggedFileMetadata.newBuilder()
-                .setFileId(fileId)
-                .setTag(tag)
-                .setOriginalPath(srcPath)
-                .build()),
-        srcPath,
-        checksum);
+    TaggedFileMetadata metadata =
+        TaggedFileMetadata.newBuilder()
+            .setFileId(fileId)
+            .setTag(tag)
+            .setOriginalPath(relativePath)
+            .build();
+    sendFile(Any.pack(metadata), srcPath, checksum, relativePath);
   }
 
   @Override
@@ -251,7 +249,7 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
    * @return {@link FileOperationStatus} of the send operation.
    */
   private FileOperationStatus sendDirectlyIfSmall(
-      Any metadata, Path local, @Nullable String checksum)
+      Any metadata, Path local, @Nullable String checksum, String relativePath)
       throws MobileHarnessException, InterruptedException {
     try {
       if (!fileOrDirExists(local.toString())) {
@@ -264,7 +262,7 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
       }
 
       SaveFileRequest.Builder request =
-          SaveFileRequest.newBuilder().setMetadata(metadata).setOriginalPath(local.toString());
+          SaveFileRequest.newBuilder().setMetadata(metadata).setOriginalPath(relativePath);
       if (checksum != null) {
         request.setChecksum(checksum);
       }
@@ -329,7 +327,7 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
   }
 
   private void downloadGcsFileToServer(
-      Any metadata, String checksum, Path local, boolean isCompressed)
+      Any metadata, String checksum, String relativePath, boolean isCompressed)
       throws MobileHarnessException, InterruptedException {
     withTimeout(
         () -> {
@@ -344,18 +342,19 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
                               .setBucket(gcsFileManager.getBucketName())
                               .setIsCompressed(isCompressed)
                               .setCompressOptions(toCompressOptions(params))
-                              .setOriginalPath(local.toString())
+                              .setOriginalPath(relativePath)
                               .setMetadata(metadata)
                               .build(),
                           initialTimeout,
                           impersonationUser),
                   String.format(
-                      "trigger server download gcs file %s; original path: %s", checksum, local));
+                      "trigger server download gcs file %s; original path: %s",
+                      checksum, relativePath));
           String processId = response.getProcessId();
 
           if (response.hasResponse()) {
             logger.atInfo().log(
-                "[%s] Finish downloading gcs file %s without waiting.", processId, local);
+                "[%s] Finish downloading gcs file %s without waiting.", processId, relativePath);
             return response.getResponse();
           }
 
@@ -365,7 +364,7 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
                     () -> stub.getProcessStatus(processId, impersonationUser),
                     String.format(
                         "[%s] get status of downloading gcs file %s; original path: %s",
-                        processId, checksum, local));
+                        processId, checksum, relativePath));
             if (statusResponse.getStatus() == ProcessStatus.FINISHED) {
               return statusResponse.getResponse();
             }
@@ -374,9 +373,10 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
           throw new InterruptedException(
               String.format(
                   "[%s] Interrupted while waiting for the finish of sending file %s",
-                  processId, local));
+                  processId, relativePath));
         },
-        String.format("let server downloading gcs file %s; original path: %s", checksum, local),
+        String.format(
+            "let server downloading gcs file %s; original path: %s", checksum, relativePath),
         /* isUploadFile= */ false);
   }
 

@@ -35,7 +35,23 @@ public interface FileTransferClient {
    * @param path path of file to send
    * @param checksum checksum of file to send
    */
-  void sendFile(String fileId, String tag, String path, @Nullable String checksum)
+  @Deprecated
+  default void sendFile(String fileId, String tag, String path, @Nullable String checksum)
+      throws MobileHarnessException, InterruptedException {
+    sendFile(fileId, tag, path, checksum, path);
+  }
+
+  /**
+   * Sends files to receiver server.
+   *
+   * @param fileId ID of file
+   * @param tag tag of file
+   * @param path path of file to send
+   * @param checksum checksum of file to send
+   * @param relativePath relative path of transferred file in the lab server
+   */
+  void sendFile(
+      String fileId, String tag, String path, @Nullable String checksum, String relativePath)
       throws MobileHarnessException, InterruptedException;
 
   boolean isSendable(String path, @Nullable String checksum)
