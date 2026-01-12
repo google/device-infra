@@ -1317,8 +1317,7 @@ public class AndroidPackageManagerUtil {
               ? adb.runShell(serial, installCommand, timeout, lineCallback)
               : adb.run(serial, installCommand, timeout, lineCallback);
     } catch (MobileHarnessException e) {
-      // For the second time, will throw whatever exception even if we got the error
-      // INSTALL_FAILED_PERMISSION_MODEL_DOWNGRADE
+      maybeThrowSecondaryNonInfraInstallationError(output, apkPath);
       throwInstallationError("Fail to install " + apkPath + " twice: " + e.getMessage(), e);
     }
     if (!output.contains(OUTPUT_SUCCESS)) {
@@ -1473,6 +1472,7 @@ public class AndroidPackageManagerUtil {
     } catch (MobileHarnessException e) {
       output = e.getMessage();
       maybeThrowNonInfraInstallationError(output, packageMap.values().toString());
+      maybeThrowSecondaryNonInfraInstallationError(output, packageMap.values().toString());
       throwInstallationError("install command killed", e);
     }
 
@@ -1488,6 +1488,7 @@ public class AndroidPackageManagerUtil {
             String.format("install-multi-package error: %s. See" + " for more details.", output));
       }
       maybeThrowNonInfraInstallationError(output, packageMap.values().toString());
+      maybeThrowSecondaryNonInfraInstallationError(output, packageMap.values().toString());
       throwInstallationError(
           "Failed to install packages:\n" + packageMap + '\n' + output, /* cause= */ null);
     }
@@ -2180,6 +2181,22 @@ public class AndroidPackageManagerUtil {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_PARSE_FAILED_UNEXPECTED_EXCEPTION,
           String.format("Failed to install %s due to unexpected exception: %s", apk, output));
+    }
+  }
+
+  /**
+   * Throws a non-infra installation error for well-known installation errors detected in the ADB
+   * output, otherwise does nothing.
+   *
+   * <p>This method is for after installation retries, or cases where no retry is attempted.
+   */
+  private static void maybeThrowSecondaryNonInfraInstallationError(String output, String apk)
+      throws MobileHarnessException {
+    if (output.contains(OUTPUT_INSTALL_FAILED_UPDATE_INCOMPATIBLE)) {
+      // Can occur for pre-installed system apps where signatures don't match, even after uninstall.
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_UPDATE_INCOMPATIBLE,
+          String.format("Failed to install %s due to incompatible update: %s", apk, output));
     }
   }
 
