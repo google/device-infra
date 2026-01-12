@@ -42,12 +42,7 @@ public class WatchableFileTransferClientTest {
         }
 
         @Override
-        public void sendFile(
-            String fileId,
-            String tag,
-            String path,
-            @Nullable String checksum,
-            String relativePath) {}
+        public void sendFile(String fileId, String tag, String path, @Nullable String checksum) {}
 
         @Override
         public long downloadFile(String remote, String local) {
