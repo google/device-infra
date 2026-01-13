@@ -80,8 +80,8 @@
             >help_outline</mat-icon
           >
         </dt>
-        <dd [class.grid-tight-dd]="!isEditingFlags">
-          @if(isEditingFlags) {
+        <dd [class.grid-tight-dd]="!isEditingFlags()">
+          @if(isEditingFlags()) {
             <div class="flags-edit-container">
               <textarea
                 [(ngModel)]="editedFlags"
@@ -165,7 +165,7 @@
                   <span class="action-button-text">Remote Control</span>
                 </button>
                 @if(decommissionMissingCount() > 0) {
-                  <button mat-flat-button class="action-button" [matTooltip]="'Decommission Missing (' + decommissionMissingCount() + ')'">
+                  <button mat-flat-button class="action-button" [matTooltip]="'Decommission Missing (' + decommissionMissingCount() + ')'" (click)="decommissionMissing()">
                     <mat-icon>delete_sweep</mat-icon>
                     <span class="action-button-text">Decommission Missing ({{decommissionMissingCount()}})</span>
                   </button>
@@ -204,7 +204,7 @@
                   @if(isTestbed(element)) {
                     <button mat-icon-button aria-label="expand row"
                       (click)="toggleRow(element); $event.stopPropagation()">
-                      <mat-icon class="expand-icon" [class.expanded]="expandedElement === element">chevron_right</mat-icon>
+                      <mat-icon class="expand-icon" [class.expanded]="expandedElement() === element">chevron_right</mat-icon>
                     </button>
                   }
                 </td>
@@ -369,7 +369,7 @@
               <ng-container matColumnDef="expandedDetail">
                 <td mat-cell *matCellDef="let element" [attr.colspan]="displayedColumns.length">
                   <div class="element-detail"
-                       [class.expanded]="element === expandedElement">
+                       [class.expanded]="element === expandedElement()">
                        @if(element.subDevices) {
                          <div class="sub-device-wrapper">
                            <table mat-table [dataSource]="element.subDevices" class="sub-device-table">
@@ -437,7 +437,7 @@
               <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true" class="sticky-header"></tr>
               <tr mat-row *matRowDef="let element; columns: displayedColumns;"
                   class="element-row"
-                  [class.expanded-row]="expandedElement === element"
+                  [class.expanded-row]="expandedElement() === element"
                   (click)="isTestbed(element) ? toggleRow(element) : null">
               </tr>
               <tr mat-row *matRowDef="let row; columns: ['expandedDetail']" class="detail-row"></tr>
@@ -519,3 +519,22 @@
     </div>
   </ng-template>
 }
+<!-- New line for decommission dialog trigger -->
+<ng-template #decommissionDialogContent let-devices="devices">
+  <div class="decommission-box">
+    <p class="text-gray-600">This will <b>permanently remove</b> the selected devices from the Lab Console inventory. This action cannot be undone.</p>
+    <div class="items-list-container">
+      <p class="items-list-label">
+          <span class="material-icons info-icon-small">info</span> Devices to be decommissioned:
+      </p>
+      <div class="items-scroll-container custom-scrollbar">
+        <ul class="items-list">
+          @for(d of devices; track d.id) {
+            <li class="item-row"><span class="item-dot"></span>{{d.id}}</li>
+          }
+        </ul>
+      </div>
+    </div>
+    <p class="note-text text-gray-500">If these devices connect again later, they will be discovered as new devices.</p>
+  </div>
+</ng-template>

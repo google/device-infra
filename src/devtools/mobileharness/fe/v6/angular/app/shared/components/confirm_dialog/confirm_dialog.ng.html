@@ -1,18 +1,36 @@
-<mat-dialog-content class="sub-modal-content">
-  <mat-icon class="sub-modal-icon" [class]="iconUI.iconColorClass">
-    {{ iconUI.icon }}
-  </mat-icon>
+<div class="confirm-dialog-container">
+  <div class="confirm-dialog-header">
+    <mat-icon class="sub-modal-icon" [class]="iconUI.iconColorClass">
+      {{ iconUI.icon }}
+    </mat-icon>
+    <h3 class="text-gray-800">{{ data.title }}</h3>
+  </div>
 
-  <h3 class="text-gray-800">{{ data.title }}</h3>
-  <p class="text-gray-600">{{ data.content }}</p>
+  <mat-dialog-content class="sub-modal-content">
+    @if(data.contentTemplate) {
+      <div class="html-content">
+        <ng-container *ngTemplateOutlet="data.contentTemplate; context: data.contentTemplateContext">
+        </ng-container>
+      </div>
+    } @else {
+      <p class="text-gray-600">{{ data.content }}</p>
+    }
+  </mat-dialog-content>
+
   <mat-dialog-actions align="center" class="sub-modal-actions">
     @if (data.secondaryButtonLabel) {
-      <button class="wizard-button wizard-button-secondary" [mat-dialog-close]="'secondary'">
+      <button class="secondary-button" [mat-dialog-close]="'secondary'" [disabled]="isLoading()">
         {{ data.secondaryButtonLabel }}
       </button>
     }
-    <button class="wizard-button wizard-button-primary" [mat-dialog-close]="'primary'">
+    <button class="primary-button"
+            [class.destructive]="data.type === 'error'"
+            (click)="onConfirm()"
+            [disabled]="isLoading()">
+      @if (isLoading()) {
+        <mat-spinner diameter="20" class="shared-button-spinner"></mat-spinner>
+      }
       {{ data.primaryButtonLabel }}
     </button>
   </mat-dialog-actions>
-</mat-dialog-content>
+</div>

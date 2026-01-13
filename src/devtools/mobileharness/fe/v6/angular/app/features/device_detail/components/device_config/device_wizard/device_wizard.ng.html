@@ -53,9 +53,9 @@
       ></app-review-table>
     </main>
     <ng-template #actionsTemplate>
-      <button mat-dialog-close class="wizard-button wizard-button-tertiary"> Cancel </button>
+      <button mat-dialog-close class="cancel-button"> Cancel </button>
       <button
-        class="wizard-button wizard-button-primary"
+        class="apply-button"
         [disabled]="applyChangesDisabled() || verifying()"
         (click)="submit()"
       >

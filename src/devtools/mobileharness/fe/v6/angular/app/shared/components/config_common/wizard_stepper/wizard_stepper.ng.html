@@ -28,13 +28,13 @@
   </div>
 
   <ng-template #actionsTemplate>
-    <button mat-dialog-close class="wizard-button wizard-button-tertiary"> Cancel </button>
+    <button mat-dialog-close class="cancel-button"> Cancel </button>
     @if (currentStepIndex() > 0) {
-      <button class="wizard-button wizard-button-secondary" (click)="previousStep()"> Back </button>
+      <button class="back-button" (click)="previousStep()"> Back </button>
     }
     @if (currentStepIndex() < WIZARD_STEPS.length - 1) {
       <button
-        class="wizard-button wizard-button-primary"
+        class="next-button"
         (click)="nextStep()"
         [disabled]="nextStepDisabled"
       >
@@ -43,12 +43,12 @@
     }
     @if (currentStepIndex() === WIZARD_STEPS.length - 1) {
       <button
-        class="wizard-button wizard-button-primary"
+        class="apply-button"
         (click)="apply.emit()"
         [disabled]="applyChangesDisabled || verifying()"
       >
         @if (verifying()) {
-          <mat-spinner [diameter]="20" class="wizard-button-spinner"></mat-spinner>
+          <mat-spinner [diameter]="20" class="shared-button-spinner"></mat-spinner>
           Verifying...
         } @else {
           Apply Changes

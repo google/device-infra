@@ -15,8 +15,10 @@ import {
   OnInit,
   signal,
   SimpleChanges,
+  TemplateRef,
+  ViewChild,
 } from '@angular/core';
-import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
+import {takeUntilDestroyed, toSignal} from '@angular/core/rxjs-interop';
 import {FormsModule} from '@angular/forms';
 import {MatButtonModule} from '@angular/material/button';
 import {MatCheckboxModule} from '@angular/material/checkbox';
@@ -30,7 +32,7 @@ import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 import {MatTableDataSource, MatTableModule} from '@angular/material/table';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {RouterLink} from '@angular/router';
-import {delay} from 'rxjs/operators';
+import {delay, map, tap} from 'rxjs/operators';
 import {
   HealthState,
   type DeviceDimension,
@@ -54,6 +56,7 @@ import {
   SearchableListOverlayComponent,
   SearchableListOverlayData,
 } from '../../../../shared/components/searchable_list_overlay/searchable_list_overlay';
+import {SnackBarService} from '../../../../shared/services/snackbar_service';
 import {dateUtils} from '../../../../shared/utils/date_utils';
 import {objectUtils} from '../../../../shared/utils/object_utils';
 
@@ -151,20 +154,37 @@ export class HostOverviewPage implements OnInit, OnChanges {
   private readonly dialog = inject(MatDialog);
   private readonly hostService = inject(HOST_SERVICE);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly snackBar = inject(SnackBarService);
 
   readonly objectUtils = objectUtils;
   readonly dateUtils = dateUtils;
   @Input({required: true}) host!: HostOverview;
 
+  isEditingFlags = signal(false);
+  editedFlags = '';
+  isSavingFlags = signal(false);
+
   deviceDataSource = new MatTableDataSource<DeviceSummary>();
   selection = new SelectionModel<DeviceSummary>(true, []);
+
+  @ViewChild('decommissionDialogContent')
+  decommissionDialogContent!: TemplateRef<{}>;
+  decommissionMissingCount = toSignal(
+    this.selection.changed.pipe(
+      map(
+        () =>
+          this.selection.selected.filter(
+            (device) => device.deviceStatus.status === 'MISSING',
+          ).length,
+      ),
+    ),
+    {initialValue: 0},
+  );
+
   deviceFilterInput = '';
   deviceFilterValue = '';
-  isEditingFlags = false;
-  editedFlags = '';
   isDeviceLoading = signal(false);
-  isSavingFlags = signal(false);
-  expandedElement: DeviceSummary | null = null;
+  expandedElement = signal<DeviceSummary | null>(null);
 
   // --- Dimensions Overlay State ---
   activeOverlay = signal<{
@@ -303,7 +323,7 @@ export class HostOverviewPage implements OnInit, OnChanges {
           this.isDeviceLoading.set(false);
         },
         error: (err) => {
-          console.error('Failed to load devices:', err);
+          this.snackBar.showError(`Failed to load devices: ${err.message}`);
           this.isDeviceLoading.set(false);
         },
       });
@@ -352,14 +372,59 @@ export class HostOverviewPage implements OnInit, OnChanges {
     }`;
   }
 
-  decommissionMissingCount(): number {
-    return this.selection.selected.filter(
+  decommissionMissing() {
+    const missingDevices = this.selection.selected.filter(
       (device) => device.deviceStatus.status === 'MISSING',
-    ).length;
+    );
+
+    if (missingDevices.length === 0) {
+      return;
+    }
+
+    const dialogData = {
+      title: `Decommission ${missingDevices.length} Device${
+        missingDevices.length > 1 ? 's' : ''
+      }?`,
+      contentTemplate: this.decommissionDialogContent,
+      contentTemplateContext: {devices: missingDevices},
+      type: 'error',
+      primaryButtonLabel: 'Decommission',
+      secondaryButtonLabel: 'Cancel',
+      onConfirm: () => this.decommissionDevices(missingDevices),
+    };
+
+    this.dialog.open(ConfirmDialog, {
+      panelClass: 'confirm-dialog-panel',
+      data: dialogData,
+      disableClose: true,
+    });
+  }
+
+  private decommissionDevices(devices: DeviceSummary[]) {
+    return this.hostService
+      .decommissionMissingDevices(
+        this.host.hostName,
+        devices.map((d) => d.id),
+      )
+      .pipe(
+        delay(1000),
+        tap(() => {
+          const decommissionedIds = new Set(devices.map((d) => d.id));
+          this.deviceDataSource.data = this.deviceDataSource.data.filter(
+            (d) => !decommissionedIds.has(d.id),
+          );
+          this.selection.clear();
+          this.snackBar.showSuccess(
+            `${devices.length} devices decommissioned successfully.`,
+          );
+        }),
+      );
   }
 
   toggleRow(element: DeviceSummary) {
-    this.expandedElement = this.expandedElement === element ? null : element;
+    this.expandedElement.set(
+      this.expandedElement() === element ? null : element,
+    );
   }
 
   isTestbed(element: DeviceSummary): boolean {
@@ -512,16 +577,16 @@ export class HostOverviewPage implements OnInit, OnChanges {
 
   startEditFlags() {
     this.editedFlags = this.host.labServer.passThroughFlags;
-    this.isEditingFlags = true;
+    this.isEditingFlags.set(true);
   }
 
   cancelEditFlags() {
-    this.isEditingFlags = false;
+    this.isEditingFlags.set(false);
   }
 
   saveFlags() {
     if (this.editedFlags === this.host.labServer.passThroughFlags) {
-      this.isEditingFlags = false;
+      this.isEditingFlags.set(false);
       return;
     }
 
@@ -532,13 +597,12 @@ export class HostOverviewPage implements OnInit, OnChanges {
       .subscribe({
         next: () => {
           this.host.labServer.passThroughFlags = this.editedFlags;
-          this.isEditingFlags = false;
+          this.isEditingFlags.set(false);
           this.isSavingFlags.set(false);
           this.showRestartDialog();
         },
         error: (err) => {
-          console.error('Failed to save flags:', err);
-          alert(`Failed to save flags: ${err.message}`);
+          this.snackBar.showError(`Failed to save flags: ${err.message}`);
           this.isSavingFlags.set(false);
         },
       });

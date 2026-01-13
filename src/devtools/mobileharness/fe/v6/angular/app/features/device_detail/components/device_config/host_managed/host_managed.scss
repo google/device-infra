@@ -1,4 +1,5 @@
 @use '../../../../../shared/styles/configuration' as config;
+@use '../../../../../shared/styles/common';
 
 .host-managed-content {
   font-size: 0.875rem;
@@ -63,9 +64,14 @@
   display: flex;
   gap: 0.75rem;
   align-items: center;
+}
 
-  a {
-    text-decoration: none;
-    font-family: config.$labconsole-font;
-  }
+.close-button {
+  @include common.shared-button('secondary');
+}
+
+.go-to-host-button {
+  @include common.shared-button('primary');
+  text-decoration: none;
+  font-family: config.$labconsole-font;
 }

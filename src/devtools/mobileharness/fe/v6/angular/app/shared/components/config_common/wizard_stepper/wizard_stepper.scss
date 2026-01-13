@@ -1,5 +1,18 @@
 @use '@angular/material' as mat;
 @use '../../../styles/configuration' as config;
+@use '../../../styles/common';
+
+.cancel-button {
+  @include common.shared-button('tertiary');
+}
+
+.back-button {
+  @include common.shared-button('secondary');
+}
+
+.next-button, .apply-button {
+  @include common.shared-button('primary');
+}
 
 :host {
   @include mat.stepper-overrides((

@@ -14,7 +14,7 @@
         </p>
         <a
           href="/hosts/{{ hostName }}"
-          class="wizard-button wizard-button-primary"
+          class="primary-button"
           target="_blank"
           rel="noopener noreferrer"
         >
@@ -58,7 +58,7 @@
           </mat-form-field>
           <button
             mat-button
-            class="load-button wizard-button wizard-button-primary"
+            class="load-button primary-button"
             (click)="loadAndReviewConfig()"
           >
             Load & Review Configuration
@@ -72,7 +72,7 @@
   }
 
   <ng-template #actionsTemplate>
-    <button mat-button mat-dialog-close class="wizard-button wizard-button-secondary">
+    <button mat-button mat-dialog-close class="cancel-button">
       Cancel
     </button>
   </ng-template>

@@ -49,6 +49,7 @@ import {OVERVIEW_09} from './hosts/overview_09';
 import {OVERVIEW_10} from './hosts/overview_10';
 import {OVERVIEW_11} from './hosts/overview_11';
 import {OVERVIEW_12} from './hosts/overview_12';
+import {OVERVIEW_13} from './hosts/overview_13';
 import {MockDeviceScenario, MockHostScenario} from './models';
 
 /**
@@ -107,4 +108,5 @@ export const MOCK_HOST_SCENARIOS: MockHostScenario[] = [
   OVERVIEW_10,
   OVERVIEW_11,
   OVERVIEW_12,
+  OVERVIEW_13,
 ];
