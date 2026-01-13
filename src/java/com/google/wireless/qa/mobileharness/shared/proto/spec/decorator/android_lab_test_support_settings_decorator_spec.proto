@@ -24,7 +24,7 @@ option java_package = "com.google.wireless.qa.mobileharness.shared.proto.spec.de
 option java_multiple_files = true;
 
 // Specs for AndroidLabTestSupportSettingsDecorator.
-// Next tag: 3
+// Next tag: 5
 message AndroidLabTestSupportSettingsDecoratorSpec {
   extend DecoratorSpec {
     optional AndroidLabTestSupportSettingsDecoratorSpec ext = 1011;
@@ -45,4 +45,14 @@ message AndroidLabTestSupportSettingsDecoratorSpec {
       help: "If set to 'true', enables ads debug logging on the device."
     }
   ];
+
+  optional string signature_masquerading_package_id = 3 [(field_detail) = {
+    is_required: false
+    help: "Package ID of the app to apply signature masquerading."
+  }];
+
+  optional string signature_file = 4 [(file_detail) = {
+    is_required: false
+    help: "Signature file of the app under test."
+  }];
 }

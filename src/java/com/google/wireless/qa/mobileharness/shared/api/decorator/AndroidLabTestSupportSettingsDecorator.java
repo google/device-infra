@@ -16,18 +16,25 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.decorator;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.io.BaseEncoding;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.labtestsupport.util.LabTestSupportHelper;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstallArgs;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstaller;
+import com.google.devtools.mobileharness.platform.android.packagemanager.AndroidPackageManagerUtil;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
+import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidLabTestSupportSettingsSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.AndroidLabTestSupportSettingsDecoratorSpec;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Optional;
 import javax.inject.Inject;
 
 /**
@@ -45,6 +52,8 @@ public class AndroidLabTestSupportSettingsDecorator extends BaseDecorator
   private final ApkInstaller apkInstaller;
   private final AndroidSystemSettingUtil androidSystemSettingUtil;
   private final LabTestSupportHelper labTestSupportHelper;
+  private final LocalFileUtil localFileUtil;
+  private final AndroidPackageManagerUtil androidPackageManagerUtil;
 
   @Inject
   AndroidLabTestSupportSettingsDecorator(
@@ -52,11 +61,15 @@ public class AndroidLabTestSupportSettingsDecorator extends BaseDecorator
       TestInfo testInfo,
       ApkInstaller apkInstaller,
       AndroidSystemSettingUtil androidSystemSettingUtil,
-      LabTestSupportHelper labTestSupportHelper) {
+      LabTestSupportHelper labTestSupportHelper,
+      LocalFileUtil localFileUtil,
+      AndroidPackageManagerUtil androidPackageManagerUtil) {
     super(decorated, testInfo);
     this.apkInstaller = apkInstaller;
     this.androidSystemSettingUtil = androidSystemSettingUtil;
     this.labTestSupportHelper = labTestSupportHelper;
+    this.localFileUtil = localFileUtil;
+    this.androidPackageManagerUtil = androidPackageManagerUtil;
   }
 
   @Override
@@ -94,6 +107,69 @@ public class AndroidLabTestSupportSettingsDecorator extends BaseDecorator
           String.format("Failed to enable ads debugging logging on device %s", deviceId));
     }
 
+    // Apply signature masquerading if both signature file and target package are specified.
+    if (spec.hasSignatureFile() && spec.hasSignatureMasqueradingPackageId()) {
+      // Read and check signature file
+      var signature = localFileUtil.readFile(spec.getSignatureFile());
+      if (signature.isEmpty()) {
+        throw new MobileHarnessException(
+            AndroidErrorId
+                .ANDROID_LAB_TEST_SUPPORT_SETTINGS_DECORATOR_APPLY_SIGNATURE_MASQUERADING_ERROR,
+            "Signature file empty.");
+      }
+      var signatureHash = computeSha1(signature);
+      // Get package UID
+      // Underlying method is supported only on API level >= 26
+      var targetPackageUid =
+          getUidOfPackage(deviceId, deviceSdkVersion, spec.getSignatureMasqueradingPackageId());
+      if (targetPackageUid.isEmpty()) {
+        throw new MobileHarnessException(
+            AndroidErrorId
+                .ANDROID_LAB_TEST_SUPPORT_SETTINGS_DECORATOR_APPLY_SIGNATURE_MASQUERADING_ERROR,
+            String.format(
+                "Failed to apply signature masquerading on device %s. Target package UID absent.",
+                deviceId));
+      }
+
+      // Apply lab test support signature masquerading
+      if (!labTestSupportHelper.applySignatureMasquerading(
+          deviceId, deviceSdkVersion, targetPackageUid.get(), signatureHash)) {
+        throw new MobileHarnessException(
+            AndroidErrorId
+                .ANDROID_LAB_TEST_SUPPORT_SETTINGS_DECORATOR_APPLY_SIGNATURE_MASQUERADING_ERROR,
+            String.format(
+                "Failed to apply signature masquerading on device %s. Instrumentation failed",
+                deviceId));
+      }
+    }
     getDecorated().run(testInfo);
+  }
+
+  private Optional<Integer> getUidOfPackage(
+      String deviceId, int deviceSdkVersion, String packageName)
+      throws InterruptedException, MobileHarnessException {
+    var allUids = androidPackageManagerUtil.listPackagesWithUid(deviceId, deviceSdkVersion);
+    for (var entry : allUids.entrySet()) {
+      if (entry.getValue().equals(packageName)) {
+        return Optional.of(entry.getKey());
+      }
+    }
+    return Optional.empty();
+  }
+
+  @VisibleForTesting
+  String computeSha1(String signature) throws MobileHarnessException {
+    var signatureBytes = BaseEncoding.base16().lowerCase().decode(signature);
+    try {
+      var digest = MessageDigest.getInstance("SHA-1");
+      var sha1Hash = digest.digest(signatureBytes);
+      return BaseEncoding.base16().lowerCase().encode(sha1Hash);
+    } catch (NoSuchAlgorithmException e) {
+      throw new MobileHarnessException(
+          AndroidErrorId
+              .ANDROID_LAB_TEST_SUPPORT_SETTINGS_DECORATOR_APPLY_SIGNATURE_MASQUERADING_ERROR,
+          "Error computing SHA-1 hash for supplied signature.",
+          e);
+    }
   }
 }

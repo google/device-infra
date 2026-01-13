@@ -23,6 +23,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.instrumentation.AndroidInstrumentationSetting;
@@ -74,7 +75,7 @@ public final class LabTestSupportHelperTest {
                 LabTestSupportHelper.LAB_TEST_SUPPORT_PACKAGE,
                 LabTestSupportHelper.LTS_CONFIG_PHENOTYPE_FLAGS_INSTRUMENTATION_RUNNER_NAME,
                 /* className= */ null,
-                /* otherOptions= */ null,
+                /* otherOptions= */ ImmutableMap.of(),
                 /* async= */ false,
                 /* showRawResults= */ false,
                 /* prefixAndroidTest= */ false,
@@ -122,7 +123,7 @@ public final class LabTestSupportHelperTest {
                 LabTestSupportHelper.LAB_TEST_SUPPORT_PACKAGE,
                 LabTestSupportHelper.LTS_ENABLE_ADS_DEBUG_LOGGING_INSTRUMENTATION_RUNNER_NAME,
                 /* className= */ null,
-                /* otherOptions= */ null,
+                /* otherOptions= */ ImmutableMap.of(),
                 /* async= */ false,
                 /* showRawResults= */ false,
                 /* prefixAndroidTest= */ false,
@@ -148,5 +149,56 @@ public final class LabTestSupportHelperTest {
                             DEVICE_ID, /* deviceSdkVersion= */ 34))
                 .getErrorId())
         .isEqualTo(AndroidErrorId.LAB_TEST_SUPPORT_ENABLE_ADS_DEBUG_LOGGING_ERROR);
+  }
+
+  @Test
+  public void applySignatureMasquerading_success() throws Exception {
+    when(androidInstrumentationUtil.instrument(any(), anyInt(), any(), any()))
+        .thenReturn("success=true");
+
+    assertThat(
+            labTestSupportHelper.applySignatureMasquerading(
+                DEVICE_ID,
+                /* deviceSdkVersion= */ 34,
+                /* uid= */ 1000,
+                /* signatureHash= */ "fakeSignature"))
+        .isTrue();
+
+    verify(androidAdbUtil).setProperty(DEVICE_ID, LabTestSupportHelper.ALLOW_LTS_PROP_NAME, "true");
+    verify(androidInstrumentationUtil)
+        .instrument(
+            DEVICE_ID,
+            /* deviceSdkVersion= */ 34,
+            AndroidInstrumentationSetting.create(
+                LabTestSupportHelper.LAB_TEST_SUPPORT_PACKAGE,
+                LabTestSupportHelper.LTS_ENABLE_SIGNATURE_MASQUERADING_RUNNER_NAME,
+                /* className= */ null,
+                /* otherOptions= */ ImmutableMap.of(
+                    "targetPackageUid", "1000", "signatureHash", "fakeSignature"),
+                /* async= */ false,
+                /* showRawResults= */ false,
+                /* prefixAndroidTest= */ false,
+                /* noIsolatedStorage= */ false,
+                /* useTestStorageService= */ false,
+                /* enableCoverage= */ false),
+            /* timeout= */ Duration.ofMinutes(1));
+  }
+
+  @Test
+  public void applySignatureMasquerading_instrumentationFailed_throwsException() throws Exception {
+    when(androidInstrumentationUtil.instrument(any(), anyInt(), any(), any()))
+        .thenThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_INSTRUMENTATION_COMMAND_EXEC_FAILED,
+                "instrumentation failed"));
+
+    assertThat(
+            assertThrows(
+                    MobileHarnessException.class,
+                    () ->
+                        labTestSupportHelper.applySignatureMasquerading(
+                            DEVICE_ID, /* deviceSdkVersion= */ 34, 1000, "fakeSignature"))
+                .getErrorId())
+        .isEqualTo(AndroidErrorId.LAB_TEST_SUPPORT_APPLY_SIGNATURE_MASQUERADING_ERROR);
   }
 }
