@@ -22,6 +22,7 @@ package(
     default_visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/monitoring:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/monitoring:__pkg__",
+        "//wireless/android/sdlc:__subpackages__",
         "//wireless/android/test_tools/dual_home_lab/monarch_proxy:__subpackages__",
     ],
 )
