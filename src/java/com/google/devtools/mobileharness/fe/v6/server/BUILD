@@ -55,5 +55,9 @@ java_library(
 java_binary(
     name = "oss_fe_server",
     main_class = "com.google.devtools.mobileharness.fe.v6.server.OssFeServer",
+    visibility = [
+        "//src/devtools/mobileharness/fe/v6:visibility",
+        "//third_party/py/multitest_transport:__subpackages__",
+    ],
     runtime_deps = [":oss_fe_server_lib"],
 )

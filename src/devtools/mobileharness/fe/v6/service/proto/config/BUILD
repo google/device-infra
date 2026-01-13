@@ -22,6 +22,7 @@ package(
     default_visibility = [
         "//google/corp/devtools/mobileharness/fe:__subpackages__",
         "//src/devtools/mobileharness/fe/v6:visibility",
+        "//third_party/py/multitest_transport:__subpackages__",
     ],
 )
 
