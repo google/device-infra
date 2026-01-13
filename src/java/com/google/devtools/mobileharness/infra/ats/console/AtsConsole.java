@@ -37,10 +37,10 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
 import com.google.devtools.mobileharness.infra.ats.common.DeviceInfraServiceUtil;
 import com.google.devtools.mobileharness.infra.ats.common.FlagsString;
+import com.google.devtools.mobileharness.infra.ats.common.constant.BuiltinFlags;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ClientId;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.DeviceInfraServiceFlags;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerStub;
-import com.google.devtools.mobileharness.infra.ats.common.olcserver.BuiltinOlcServerFlags;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.OlcServerGrpcInProcessChannelModule;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleLineReader;
@@ -492,7 +492,7 @@ public class AtsConsole {
       throws IOException, InterruptedException {
     // Adds builtin flags to the head.
     FlagsString flagsWithBuiltinFlags =
-        deviceInfraServiceFlags.addToHead(BuiltinOlcServerFlags.get());
+        deviceInfraServiceFlags.addToHead(BuiltinFlags.atsConsoleFlags());
 
     // Adds extra flags from environment variables to the end.
     ImmutableList.Builder<String> extraFlags = ImmutableList.builder();

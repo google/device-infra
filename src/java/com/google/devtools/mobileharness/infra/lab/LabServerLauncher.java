@@ -24,6 +24,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.AbstractIdleService;
 import com.google.common.util.concurrent.ServiceManager;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.ats.common.constant.BuiltinFlags;
 import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberExceptionLoggingHandler;
 import com.google.devtools.mobileharness.shared.logging.MobileHarnessHostLogManager;
 import com.google.devtools.mobileharness.shared.logging.MobileHarnessHostLogManagerModule;
@@ -122,10 +123,13 @@ public class LabServerLauncher {
 
   /** Pre-processes main arguments. */
   private static ImmutableList<String> preprocessMainArgs(
-      String[] args, @SuppressWarnings("unused") ImmutableMap<String, String> systemProperties) {
+      String[] args, ImmutableMap<String, String> systemProperties) {
     ImmutableList.Builder<String> mainArgs = ImmutableList.builder();
-    mainArgs.add(args);
-    return mainArgs.build();
+
+    // Adds built-in flags for ATS lab server.
+    ImmutableList<String> atsLabServerBuiltinFlags =
+        BuiltinFlags.atsLabServerFlags(systemProperties);
+    return mainArgs.addAll(atsLabServerBuiltinFlags).add(args).build();
   }
 
   private static ImmutableList<Module> createModules(

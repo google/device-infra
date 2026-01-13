@@ -25,8 +25,8 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.ats.common.DeviceInfraServiceUtil;
 import com.google.devtools.mobileharness.infra.ats.common.FlagsString;
+import com.google.devtools.mobileharness.infra.ats.common.constant.BuiltinFlags;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerStub;
-import com.google.devtools.mobileharness.infra.ats.common.olcserver.BuiltinOlcServerFlags;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer;
 import com.google.devtools.mobileharness.infra.ats.local.proto.AtsLocalSessionPluginProto.AtsLocalSessionPluginConfig;
 import com.google.devtools.mobileharness.infra.ats.local.proto.AtsLocalSessionPluginProto.AtsLocalSessionPluginOutput;
@@ -71,7 +71,7 @@ public class AtsLocalRunner {
         DeviceInfraServiceUtil.getDeviceInfraServiceFlags(systemProperties);
     FlagsString finalFlags =
         deviceInfraServiceFlags
-            .addToHead(BuiltinOlcServerFlags.get())
+            .addToHead(BuiltinFlags.atsConsoleFlags())
             .addToEnd(ImmutableList.copyOf(args));
     logger.atInfo().log("Device infra service flags: %s", finalFlags.flags());
     Flags.parse(finalFlags.flags());

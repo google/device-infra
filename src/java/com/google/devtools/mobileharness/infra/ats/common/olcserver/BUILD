@@ -61,14 +61,6 @@ java_library(
 )
 
 java_library(
-    name = "builtin_olc_server_flags",
-    srcs = ["BuiltinOlcServerFlags.java"],
-    deps = [
-        "@maven//:com_google_guava_guava",
-    ],
-)
-
-java_library(
     name = "module",
     srcs = ["OlcServerConnectorModule.java"],
     deps = [
