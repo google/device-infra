@@ -30,6 +30,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.escape.CharEscaperBuilder;
+import com.google.common.escape.Escaper;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.shared.util.file.remote.constant.RemoteFileType;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
@@ -135,6 +137,15 @@ public class LocalFileUtil {
         LinkOption.NOFOLLOW_LINKS,
         StandardCopyOption.REPLACE_EXISTING
       };
+
+  private static final Escaper PATH_ESCAPER =
+      new CharEscaperBuilder()
+          .addEscapes(
+              new char[] {
+                '"', '\'', '\\', ',', '{', '}', '*', '?', '[', ']', '%', ':', ' ', '|', '<', '>'
+              },
+              "_")
+          .toEscaper();
 
   /** System command executor. */
   private final CommandExecutor cmdExecutor;
@@ -2375,6 +2386,11 @@ public class LocalFileUtil {
           String.format("Failed to zip dir %s into %s", sourceDirPath, zipFilePath),
           e);
     }
+  }
+
+  /** Escapes the special characters in the path . */
+  public String escapeFilePath(String path) {
+    return PATH_ESCAPER.escape(path);
   }
 
   /**
