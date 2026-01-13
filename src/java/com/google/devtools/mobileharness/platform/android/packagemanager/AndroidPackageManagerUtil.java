@@ -196,6 +196,9 @@ public class AndroidPackageManagerUtil {
   public static final String OUTPUT_INSTALL_FAILED_MISSING_SHARED_LIBRARY =
       "INSTALL_FAILED_MISSING_SHARED_LIBRARY";
 
+  /** Output when one or more split APKs are missing. */
+  public static final String OUTPUT_INSTALL_FAILED_MISSING_SPLIT = "INSTALL_FAILED_MISSING_SPLIT";
+
   /** Current SDK version is newer than that required by the package. */
   public static final String OUTPUT_INSTALL_FAILED_NEWER_SDK = "INSTALL_FAILED_NEWER_SDK";
 
@@ -2076,6 +2079,12 @@ public class AndroidPackageManagerUtil {
               "Failed to install %s due to missing shared libraries: %s%n"
                   + "Please check <uses-library> element in your manifest.%n",
               apk, output));
+    }
+
+    if (output.contains(OUTPUT_INSTALL_FAILED_MISSING_SPLIT)) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_MISSING_SPLIT,
+          String.format("Failed to install %s due to missing split APKs: %s%n", apk, output));
     }
 
     if (output.contains(OUTPUT_INSTALL_FAILED_NEWER_SDK)) {
