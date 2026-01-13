@@ -87,6 +87,10 @@ public class SessionResultHandlerUtil {
           "mobly_run_result_attributes.textproto",
           "ats_module_run_result.textproto");
 
+  // Mobly result directories that are copied to the root result dir.
+  private static final ImmutableSet<String> MOBLY_ROOT_TEST_RESULT_DIR_NAMES =
+      ImmutableSet.of("report-log-files");
+
   private static final ImmutableSet<String> EXCLUDED_TF_GEN_RESULT_FILES =
       ImmutableSet.of(
           "checksum-suite.data",
@@ -372,6 +376,7 @@ public class SessionResultHandlerUtil {
                   copyNonTradefedTestResultFiles(
                       test,
                       nonTradefedTestResultsDir,
+                      resultDir,
                       testEntry
                           .getKey()
                           .properties()
@@ -880,7 +885,8 @@ public class SessionResultHandlerUtil {
   @CanIgnoreReturnValue
   private Optional<NonTradefedTestResult> copyNonTradefedTestResultFiles(
       TestInfo nonTradefedTestInfo,
-      Path resultDir,
+      Path nonTradefedResultDir,
+      Path rootResultDir,
       String moduleName,
       @Nullable String moduleAbi,
       @Nullable String moduleParameter)
@@ -900,6 +906,12 @@ public class SessionResultHandlerUtil {
             Path.of(testGenFileDir),
             /* recursively= */ true,
             path -> MOBLY_TEST_RESULT_FILE_NAMES.contains(path.getFileName().toString()));
+    List<String> moblyRootResultDirs =
+        localFileUtil.listDirs(
+            testGenFileDir,
+            /* depth= */ Integer.MAX_VALUE,
+            /* recursively= */ true,
+            file -> MOBLY_ROOT_TEST_RESULT_DIR_NAMES.contains(file.getName()));
 
     Optional<String> labGenFileDir = getLabGenFileDir(nonTradefedTestInfo);
     if (labGenFileDir.isPresent() && !labGenFileDir.get().equals(testGenFileDir)) {
@@ -908,6 +920,12 @@ public class SessionResultHandlerUtil {
               Path.of(labGenFileDir.get()),
               /* recursively= */ true,
               path -> MOBLY_TEST_RESULT_FILE_NAMES.contains(path.getFileName().toString())));
+      moblyRootResultDirs.addAll(
+          localFileUtil.listDirs(
+              labGenFileDir.get(),
+              /* depth= */ Integer.MAX_VALUE,
+              /* recursively= */ true,
+              file -> MOBLY_ROOT_TEST_RESULT_DIR_NAMES.contains(file.getName())));
     }
 
     // Prepares the test result dir for the non-tradefed test if needed.
@@ -915,7 +933,7 @@ public class SessionResultHandlerUtil {
         Optional.ofNullable(
             moblyTestResultFiles.isEmpty()
                 ? null
-                : prepareLogOrResultDirForTest(nonTradefedTestInfo, resultDir));
+                : prepareLogOrResultDirForTest(nonTradefedTestInfo, nonTradefedResultDir));
     for (Path moblyTestResultFile : moblyTestResultFiles) {
       logger.atInfo().log(
           "Copying non-tradefed test result relevant file [%s] into dir [%s]",
@@ -926,6 +944,14 @@ public class SessionResultHandlerUtil {
           nonTradefedTestResultBuilder,
           moblyTestResultFile.getFileName().toString(),
           moblyTestResultFile);
+    }
+
+    // Copy mobly result dirs to the root result dir.
+    for (String path : moblyRootResultDirs) {
+      logger.atInfo().log(
+          "Copying non-tradefed test result relevant dir [%s] into dir [%s]", path, rootResultDir);
+      localFileUtil.copyFileOrDirWithOverridingCopyOptions(
+          Path.of(path), rootResultDir, ImmutableList.of("-rf"));
     }
 
     return Optional.of(nonTradefedTestResultBuilder.build());
