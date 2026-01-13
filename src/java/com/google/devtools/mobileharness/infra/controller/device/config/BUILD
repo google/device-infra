@@ -102,7 +102,10 @@ java_library(
 java_library(
     name = "config_module",
     srcs = ["ApiConfigModule.java"],
-    visibility = ["//:omnilab_fusion"],
+    visibility = [
+        "//:omnilab_fusion",
+        "//java/com/google/devtools/omnilab/device/lifecycle/android:__pkg__",
+    ],
     deps = [
         ":api_config_listener",
         ":api_config_service",
