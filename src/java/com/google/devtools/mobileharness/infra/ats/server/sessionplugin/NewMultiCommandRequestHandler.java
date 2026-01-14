@@ -122,7 +122,7 @@ final class NewMultiCommandRequestHandler {
       DateTimeFormatter.ofPattern("uuuu.MM.dd_HH.mm.ss.SSS").withZone(ZoneId.systemDefault());
   private static final String OUTPUT_MANIFEST_FILE_NAME = "FILES";
   private static final Pattern ANDROID_XTS_ZIP_FILENAME_REGEX =
-      Pattern.compile("android-[a-z_]+\\.zip");
+      Pattern.compile("android-[a-z]+\\.zip_?");
   @VisibleForTesting static final String XTS_TF_JOB_PROP = "xts-tradefed-job";
   private static final String ACLOUD_FILENAME = "acloud_prebuilt";
 

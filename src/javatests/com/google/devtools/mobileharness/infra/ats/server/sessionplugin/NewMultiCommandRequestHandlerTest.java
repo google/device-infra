@@ -360,6 +360,59 @@ public final class NewMultiCommandRequestHandlerTest {
   }
 
   @Test
+  public void createTradefedJobs_forStsWithUnderscoreZip_success() throws Exception {
+    when(clock.instant())
+        .thenReturn(
+            Instant.ofEpochMilli(1000L), Instant.ofEpochMilli(2000L), Instant.ofEpochMilli(3000L));
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+    request =
+        request.toBuilder()
+            .clearTestResources()
+            .addTestResources(
+                TestResource.newBuilder()
+                    .setUrl("file:///path/to/xts/zip/android-sts.zip_")
+                    .setName("android-sts.zip_")
+                    .build())
+            .addTestResources(
+                TestResource.newBuilder()
+                    .setUrl("file:///data/path/to/file1")
+                    .setName("test-name-1")
+                    .build())
+            .addTestResources(
+                TestResource.newBuilder()
+                    .setUrl("file:///data/path/to/file2")
+                    .setName("test-name-2")
+                    .build())
+            .build();
+    String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/android-sts";
+    when(xtsTypeLoader.getXtsType(eq(xtsRootDir), any())).thenReturn("sts");
+    doReturn(true).when(localFileUtil).isDirExist(endsWith("/android-sts/testcases"));
+    doReturn(ImmutableList.of(new File("some_testcase")))
+        .when(localFileUtil)
+        .listFiles(endsWith("/android-sts/testcases"), eq(false));
+
+    // Trigger the handler.
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+
+    assertThat(createJobsResult.jobInfos()).containsExactly(jobInfo);
+    verify(xtsJobCreator).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
+
+    // Verify sessionRequestInfo has been correctly generated.
+    SessionRequestInfo sessionRequestInfo = sessionRequestInfoCaptor.getValue();
+    String zipFile = "/path/to/xts/zip/android-sts.zip_";
+    assertThat(sessionRequestInfo.xtsRootDir()).isEqualTo(xtsRootDir);
+    assertThat(sessionRequestInfo.xtsType()).isEqualTo("sts");
+    assertThat(sessionRequestInfo.androidXtsZip()).hasValue("ats-file-server::" + zipFile);
+
+    // Verify that handler has mounted the zip file.
+    Command mountCommand =
+        Command.of("fuse-zip", "-r", zipFile, xtsRootDir).timeout(Duration.ofMinutes(10));
+    verify(commandExecutor).run(mountCommand);
+  }
+
+  @Test
   public void createTradefedJobs_withAcloud_success() throws Exception {
     when(clock.instant())
         .thenReturn(
