@@ -33,6 +33,18 @@ public class BuiltinFlagsTest {
   }
 
   @Test
+  public void atsLabServerFlags_atsLabServer_notEmpty() {
+    assertThat(
+            BuiltinFlags.atsLabServerFlags(
+                ImmutableMap.of(BuiltinFlags.ATS_LAB_SERVER_TYPE_PROPERTY_KEY, "on-prem")))
+        .isNotEmpty();
+    assertThat(
+            BuiltinFlags.atsLabServerFlags(
+                ImmutableMap.of(BuiltinFlags.ATS_LAB_SERVER_TYPE_PROPERTY_KEY, "omni-dda")))
+        .isNotEmpty();
+  }
+
+  @Test
   public void atsLabServerFlags_invalidAtsLabServerType_throwsException() {
     assertThrows(
         IllegalArgumentException.class,

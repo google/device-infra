@@ -67,8 +67,43 @@ public final class BuiltinFlags {
           // keep-sorted end
           );
 
+  /** Built-in flags of the components [lab server] for all ATS lab server types. */
+  private static final ImmutableList<String> ATS_LAB_SERVER_COMMON_FLAGS =
+      ImmutableList.of(
+          // keep-sorted start
+          "--adb_dont_kill_server=true",
+          "--adb_max_no_device_detection_rounds=1200",
+          "--android_device_daemon=false",
+          "--cache_installed_apks=false",
+          "--check_android_device_sim_card_type=true",
+          "--check_device_interval=1h",
+          "--clear_android_device_multi_users=false",
+          "--detect_device_interval_sec=2",
+          "--disable_calling=false",
+          "--disable_device_reboot=true",
+          "--disable_device_reboot_for_ro_properties=true",
+          "--disable_wifi_util_func=true",
+          "--enable_android_device_ready_check=false",
+          "--enable_ats_mode=true",
+          "--enable_caching_reserved_device=true",
+          "--enable_device_state_change_recover=false",
+          "--enable_device_system_settings_change=false",
+          "--enable_external_master_server=true",
+          "--enable_fastboot_detector=false",
+          "--enable_root_device=false",
+          "--enable_test_log_collector=true",
+          "--ignore_check_device_failure=true",
+          "--mute_android=false",
+          "--resource_dir_name=lab_server_res_files",
+          "--serv_via_cloud_rpc=false",
+          "--set_test_harness_property=false",
+          "--use_emulator_name_in_uuid=true"
+          // keep-sorted end
+          );
+
   /**
-   * Built-in flags of the components [lab server] for ATS On-Prem Mode/Omni Mode.
+   * Built-in flags of the components [lab server] for ATS On-Prem Mode/Omni Mode, by ATS lab server
+   * type.
    *
    * <p>ATS On-Prem Mode/Omni Mode can also override these flags.
    */
@@ -76,32 +111,38 @@ public final class BuiltinFlags {
   static final ImmutableMap<String, ImmutableList<String>> ATS_LAB_SERVER_FLAGS =
       ImmutableMap.of(
           "on-prem",
-          ImmutableList.of(
+          append(
+              ATS_LAB_SERVER_COMMON_FLAGS
               // keep-sorted start
               // keep-sorted end
               ),
           "omni-dda",
-          ImmutableList.of(
+          append(
+              ATS_LAB_SERVER_COMMON_FLAGS
               // keep-sorted start
               // keep-sorted end
               ),
           "omni-public-testing",
-          ImmutableList.of(
+          append(
+              ATS_LAB_SERVER_COMMON_FLAGS
               // keep-sorted start
               // keep-sorted end
               ),
           "omni-internal-testing",
-          ImmutableList.of(
+          append(
+              ATS_LAB_SERVER_COMMON_FLAGS
               // keep-sorted start
               // keep-sorted end
               ),
           "omni-xts-testing",
-          ImmutableList.of(
+          append(
+              ATS_LAB_SERVER_COMMON_FLAGS
               // keep-sorted start
               // keep-sorted end
               ),
           "omni-private",
-          ImmutableList.of(
+          append(
+              ATS_LAB_SERVER_COMMON_FLAGS
               // keep-sorted start
               // keep-sorted end
               ));
@@ -131,6 +172,13 @@ public final class BuiltinFlags {
         atsLabServerType,
         ATS_LAB_SERVER_FLAGS.keySet());
     return ATS_LAB_SERVER_FLAGS.get(atsLabServerType);
+  }
+
+  private static ImmutableList<String> append(ImmutableList<String> list, String... elements) {
+    if (elements.length == 0) {
+      return list;
+    }
+    return ImmutableList.<String>builder().addAll(list).add(elements).build();
   }
 
   private BuiltinFlags() {}
