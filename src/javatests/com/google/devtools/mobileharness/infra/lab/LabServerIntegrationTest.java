@@ -36,6 +36,7 @@ import com.google.devtools.mobileharness.api.model.allocation.Allocation;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Job.JobUser;
 import com.google.devtools.mobileharness.api.model.proto.Lab.PortType;
+import com.google.devtools.mobileharness.infra.ats.common.constant.BuiltinFlags;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.AllocationWithStats;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.DeviceAllocator;
 import com.google.devtools.mobileharness.infra.client.api.mode.ats.AtsMode;
@@ -148,38 +149,24 @@ public class LabServerIntegrationTest {
                     .createJavaCommand(
                         LAB_SERVER_FILE_PATH,
                         ImmutableList.of(
-                            "--adb_dont_kill_server=true",
-                            "--android_device_daemon=false",
                             "--api_config=" + API_CONFIG_FILE_PATH,
-                            "--cache_installed_apks=false",
-                            "--clear_android_device_multi_users=false",
                             "--detect_adb_device=false",
-                            "--disable_calling=false",
-                            "--disable_device_reboot_for_ro_properties=true",
-                            "--disable_wifi_util_func=true",
-                            "--enable_android_device_ready_check=false",
                             "--enable_cloud_logging=false",
-                            "--enable_device_state_change_recover=false",
-                            "--enable_device_system_settings_change=false",
-                            "--enable_external_master_server=true",
+                            "--enable_control_service=false",
                             "--enable_file_cleaner=false",
-                            "--enable_root_device=false",
                             "--enable_stubby_rpc_server=false",
                             "--enable_wrangler_device_syncer=true",
-                            "--publish_device_await_startup=true",
-                            "--enable_control_service=false",
                             "--external_adb_initializer_template=true",
+                            "--publish_device_await_startup=true",
                             "--grpc_port=" + labServerGrpcPort,
                             "--master_grpc_target=localhost:" + masterPort,
-                            "--mute_android=false",
                             "--no_op_device_num=1",
                             "--public_dir=" + labServerPublicDirPath,
                             "--rpc_port=" + labServerRpcPort,
-                            "--serv_via_cloud_rpc=false",
-                            "--set_test_harness_property=false",
                             "--socket_port=" + labServerSocketPort,
                             "--tmp_dir_root=" + labServerTmpDirPath),
-                        ImmutableList.of()))
+                        ImmutableList.of(
+                            "-D" + BuiltinFlags.ATS_LAB_SERVER_TYPE_PROPERTY_KEY + "=on-prem")))
             .onStdout(
                 does(
                     stdout -> {

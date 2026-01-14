@@ -26,7 +26,9 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/local:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/lab:__pkg__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/ats/common/constant:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/lab:__subpackages__",
     ],
     deps = ["@maven//:com_google_guava_guava"],
 )

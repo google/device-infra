@@ -50,6 +50,7 @@ java_library(
         "//src/devtools/mobileharness/shared/labinfo/proto:lab_info_service_java_proto",
         "//src/devtools/mobileharness/shared/util/comm/relay/proto:destination_java_proto",
         "//src/devtools/mobileharness/shared/version/proto:version_service_java_proto",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common/constant:builtin_flags",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/constant:logs",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/constant:session_properties",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:control_stub",

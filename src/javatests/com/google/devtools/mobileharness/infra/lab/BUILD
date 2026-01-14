@@ -36,6 +36,7 @@ java_library(
         "//src/java/com/google/devtools/common/metrics/stability/converter",
         "//src/java/com/google/devtools/mobileharness/api/model/allocation",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common/constant:builtin_flags",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/allocation/allocator",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats:ats_mode",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats:module",

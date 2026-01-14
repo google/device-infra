@@ -36,6 +36,7 @@ import com.google.common.util.concurrent.SettableFuture;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabLocator;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
+import com.google.devtools.mobileharness.infra.ats.common.constant.BuiltinFlags;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.GetLogRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.GetLogResponse;
@@ -390,10 +391,10 @@ public class OlcServerIntegrationTest {
     String errorMessagePrefix =
         "A successful test run should not print exception stack traces, which will confuse"
             + " users and affect debuggability when debugging a failed one.\n\n";
-    assertWithMessage(errorMessagePrefix + "OLC server stderr")
+    assertWithMessage("%sOLC server stderr", errorMessagePrefix)
         .that(olcServerStderr)
         .doesNotContain("\tat ");
-    assertWithMessage(errorMessagePrefix + "lab server stderr")
+    assertWithMessage("%slab server stderr", errorMessagePrefix)
         .that(labServerStderr)
         .doesNotContain("\tat ");
 
@@ -643,38 +644,26 @@ public class OlcServerIntegrationTest {
                       .createJavaCommand(
                           LAB_SERVER_FILE_PATH,
                           ImmutableList.of(
-                              "--adb_dont_kill_server=true",
-                              "--android_device_daemon=false",
                               "--api_config=" + API_CONFIG_FILE_PATH,
-                              "--clear_android_device_multi_users=false",
                               "--detect_adb_device=false",
-                              "--disable_calling=false",
-                              "--disable_device_reboot_for_ro_properties=true",
-                              "--disable_wifi_util_func=true",
-                              "--enable_android_device_ready_check=false",
+                              "--enable_ats_mode=false",
                               "--enable_cloud_logging=false",
-                              "--enable_device_state_change_recover=false",
-                              "--enable_device_system_settings_change=false",
-                              "--enable_external_master_server=true",
+                              "--enable_control_service=false",
                               "--enable_file_cleaner=false",
+                              "--enable_rdh=false",
                               "--enable_stubby_rpc_server=false",
                               "--enable_trace_span_processor=false",
                               "--enable_wrangler_device_syncer=false",
-                              "--enable_rdh=false",
-                              "--enable_control_service=false",
                               "--external_adb_initializer_template=true",
                               "--grpc_port=" + labServerGrpcPort,
                               "--master_grpc_target=localhost:" + atsWorkerGrpcPort,
-                              "--mute_android=false",
                               "--no_op_device_num=" + noOpDeviceNum,
                               "--public_dir=" + tmpFolder.newFolder("lab_server_public_dir"),
-                              "--resource_dir_name=lab_server_res_files",
                               "--rpc_port=" + labServerRpcPort,
-                              "--serv_via_cloud_rpc=false",
-                              "--set_test_harness_property=false",
                               "--socket_port=" + labServerSocketPort,
                               "--tmp_dir_root=" + tmpFolder.newFolder("lab_server_tmp_dir")),
-                          ImmutableList.of()))
+                          ImmutableList.of(
+                              "-D" + BuiltinFlags.ATS_LAB_SERVER_TYPE_PROPERTY_KEY + "=on-prem")))
               .onStdout(
                   does(
                       stdout -> {
