@@ -112,8 +112,9 @@ public final class BuiltinFlags {
       ImmutableMap.of(
           "on-prem",
           append(
-              ATS_LAB_SERVER_COMMON_FLAGS
+              ATS_LAB_SERVER_COMMON_FLAGS,
               // keep-sorted start
+              "--enable_cloud_logging=false"
               // keep-sorted end
               ),
           "omni-dda",

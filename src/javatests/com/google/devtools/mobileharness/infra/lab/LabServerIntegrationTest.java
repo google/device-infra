@@ -151,7 +151,6 @@ public class LabServerIntegrationTest {
                         ImmutableList.of(
                             "--api_config=" + API_CONFIG_FILE_PATH,
                             "--detect_adb_device=false",
-                            "--enable_cloud_logging=false",
                             "--enable_control_service=false",
                             "--enable_file_cleaner=false",
                             "--enable_stubby_rpc_server=false",

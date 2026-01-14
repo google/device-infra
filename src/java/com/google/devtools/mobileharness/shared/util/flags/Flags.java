@@ -982,7 +982,7 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableClientFileTransfer = enableClientFileTransferDefault;
 
-  private static final Flag<Boolean> enableCloudLoggingDefault = Flag.value(false);
+  private static final Flag<Boolean> enableCloudLoggingDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(
       names = "--enable_cloud_logging",

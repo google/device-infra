@@ -647,7 +647,6 @@ public class OlcServerIntegrationTest {
                               "--api_config=" + API_CONFIG_FILE_PATH,
                               "--detect_adb_device=false",
                               "--enable_ats_mode=false",
-                              "--enable_cloud_logging=false",
                               "--enable_control_service=false",
                               "--enable_file_cleaner=false",
                               "--enable_rdh=false",
