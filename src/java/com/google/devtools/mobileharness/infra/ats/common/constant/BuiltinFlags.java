@@ -118,32 +118,65 @@ public final class BuiltinFlags {
               ),
           "omni-dda",
           append(
-              ATS_LAB_SERVER_COMMON_FLAGS
+              ATS_LAB_SERVER_COMMON_FLAGS,
               // keep-sorted start
+              "--add_supported_dimension_for_omni_mode_usage=dda",
+              "--android_factory_reset_wait_time=3m",
+              "--check_android_device_sim_card_type=false",
+              "--clear_android_device_multi_users=true",
+              "--disable_device_reboot=false",
+              "--disable_wifi_util_func=false",
+              "--enable_android_device_ready_check=true",
+              "--enable_caching_reserved_device=false",
+              "--enable_fastboot_detector=true",
+              "--force_device_reboot_after_test=true",
+              "--ignore_check_device_failure=false",
+              "--reset_device_in_android_real_device_setup=true"
               // keep-sorted end
               ),
           "omni-public-testing",
           append(
-              ATS_LAB_SERVER_COMMON_FLAGS
+              ATS_LAB_SERVER_COMMON_FLAGS,
               // keep-sorted start
+              "--add_required_dimension_for_partner_shared_pool=true",
+              "--add_supported_dimension_for_omni_mode_usage=public_testing",
+              "--android_factory_reset_wait_time=3m",
+              "--check_android_device_sim_card_type=false",
+              "--disable_device_reboot=false",
+              "--disable_wifi_util_func=false",
+              "--enable_android_device_ready_check=true",
+              "--enable_caching_reserved_device=false",
+              "--enable_fastboot_detector=true",
+              "--force_device_reboot_after_test=true",
+              "--ignore_check_device_failure=false",
+              "--reset_device_in_android_real_device_setup=true"
               // keep-sorted end
               ),
           "omni-internal-testing",
           append(
-              ATS_LAB_SERVER_COMMON_FLAGS
+              ATS_LAB_SERVER_COMMON_FLAGS,
               // keep-sorted start
+              "--add_supported_dimension_for_omni_mode_usage=internal_testing",
+              "--android_factory_reset_wait_time=3m",
+              "--disable_wifi_util_func=false",
+              "--enable_android_device_ready_check=true",
+              "--force_device_reboot_after_test=true",
+              "--reset_device_in_android_real_device_setup=true"
               // keep-sorted end
               ),
           "omni-xts-testing",
           append(
-              ATS_LAB_SERVER_COMMON_FLAGS
+              ATS_LAB_SERVER_COMMON_FLAGS,
               // keep-sorted start
+              "--add_supported_dimension_for_omni_mode_usage=cts_testing",
+              "--keep_test_harness_false=true"
               // keep-sorted end
               ),
           "omni-private",
           append(
-              ATS_LAB_SERVER_COMMON_FLAGS
+              ATS_LAB_SERVER_COMMON_FLAGS,
               // keep-sorted start
+              "--add_supported_dimension_for_omni_mode_usage=private_usage"
               // keep-sorted end
               ));
 
