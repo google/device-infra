@@ -18,11 +18,12 @@ import {MatSelectModule} from '@angular/material/select';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {openInNewTab} from 'app/shared/utils/safe_dom';
 import {finalize} from 'rxjs/operators';
+import {RemoteControlDialogData} from '../../../../core/models/device_action';
 import {
-  type RemoteControlRequest,
-  RemoteControlDialogData,
-} from '../../../../core/models/device_action';
-import {DEVICE_SERVICE} from '../../../../core/services/device/device_service';
+  DeviceProxyType,
+  RemoteControlDevicesRequest,
+} from '../../../../core/models/host_overview';
+import {HOST_SERVICE} from '../../../../core/services/host/host_service';
 import {Dialog} from '../../../../shared/components/config_common/dialog/dialog';
 import {ToggleSwitch} from '../../../../shared/components/toggle_switch/toggle_switch';
 import {SnackBarService} from '../../../../shared/services/snackbar_service';
@@ -52,14 +53,14 @@ import {SnackBarService} from '../../../../shared/services/snackbar_service';
   ],
 })
 export class RemoteControlDialog implements OnInit {
-  private readonly deviceService = inject(DEVICE_SERVICE);
+  private readonly hostService = inject(HOST_SERVICE);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly snackBar = inject(SnackBarService);
   readonly data: RemoteControlDialogData = inject(MAT_DIALOG_DATA);
 
   runAs: string;
   timeoutHours = 1;
-  proxyType: 'DEFAULT' | 'TCP' | 'ADB' | 'VNC' = 'DEFAULT';
+  proxyType: DeviceProxyType = DeviceProxyType.NONE;
   videoResolution: 'DEFAULT' | 'HIGH' | 'LOW' = 'DEFAULT';
   maxVideoSize: 'DEFAULT' | '1024' = 'DEFAULT';
   enableFlash = false;
@@ -156,9 +157,14 @@ export class RemoteControlDialog implements OnInit {
     }
     this.startingSession.set(true);
 
-    const request: RemoteControlRequest = {
-      runAs: this.runAs,
-      timeoutHours: this.timeoutHours,
+    const request: RemoteControlDevicesRequest = {
+      deviceConfigs: [
+        {
+          deviceId: this.data.deviceId,
+          runAs: this.runAs,
+        },
+      ],
+      durationSeconds: this.timeoutHours,
       proxyType: this.proxyType,
       videoResolution: this.videoResolution,
       maxVideoSize: this.maxVideoSize,
@@ -172,15 +178,19 @@ export class RemoteControlDialog implements OnInit {
       };
     }
 
-    this.deviceService
-      .remoteControl(this.data.deviceId, request)
+    this.hostService
+      .remoteControlDevices(this.data.hostName, request)
       .pipe(
         finalize(() => {
           this.startingSession.set(false);
         }),
       )
       .subscribe((response) => {
-        openInNewTab(response.sessionUrl);
+        if (response.sessions.length === 0) {
+          this.snackBar.showError('Failed to start session.');
+          return;
+        }
+        openInNewTab(response.sessions[0].sessionUrl);
       });
   }
 }

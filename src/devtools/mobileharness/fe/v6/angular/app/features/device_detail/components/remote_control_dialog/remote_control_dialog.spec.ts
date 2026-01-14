@@ -6,8 +6,8 @@ import {
 } from '@angular/material/dialog/testing';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
 import {RemoteControlDialogData} from '../../../../core/models/device_action';
-import {DEVICE_SERVICE} from '../../../../core/services/device/device_service';
-import {FakeDeviceService} from '../../../../core/services/device/fake_device_service';
+import {HOST_SERVICE} from '../../../../core/services/host/host_service';
+import {FakeHostService} from '../../../../core/services/host/fake_host_service';
 import {SnackBarService} from '../../../../shared/services/snackbar_service';
 import {RemoteControlDialog} from './remote_control_dialog';
 
@@ -18,6 +18,7 @@ describe('RemoteControlDialog', () => {
   let dialogRef: MatDialogRef<RemoteControlDialog>;
 
   const dialogData: RemoteControlDialogData = {
+    hostName: 'test-host',
     deviceId: 'test-device',
     runAsOptions: [{value: 'test_user', label: 'test_user', isDefault: true}],
     defaultRunAs: 'test_user',
@@ -34,7 +35,7 @@ describe('RemoteControlDialog', () => {
       ],
       providers: [
         {provide: MAT_DIALOG_DATA, useValue: dialogData},
-        {provide: DEVICE_SERVICE, useClass: FakeDeviceService},
+        {provide: HOST_SERVICE, useClass: FakeHostService},
         {provide: SnackBarService, useValue: snackBarService},
       ],
     }).compileComponents();

@@ -147,3 +147,113 @@ message DeviceSummary {
   string version = 8;
   repeated device.SubDeviceInfo sub_devices = 9;
 }
+
+// Types of proxy supported by devices.
+enum DeviceProxyType {
+  DEVICE_PROXY_TYPE_UNSPECIFIED = 0;
+  ADB_AND_VIDEO = 1;
+  ADB_ONLY = 2;
+  USB_IP = 3;
+  SSH = 4;
+  VIDEO = 5;
+}
+
+// Reason code for a device being ineligible for remote control.
+enum IneligibilityReasonCode {
+  INELIGIBILITY_REASON_CODE_UNSPECIFIED = 0;
+  // User lacks permission for the device.
+  PERMISSION_DENIED = 1;
+  // Device state is not IDLE (e.g., BUSY, MISSING).
+  DEVICE_NOT_IDLE = 2;
+  // Device type is not supported (e.g., FailedDevice, AbnormalTestbedDevice, or
+  // non-AndroidRealDevice in multi-selection mode).
+  DEVICE_TYPE_NOT_SUPPORTED = 3;
+  // Host OS is MacOS.
+  HOST_OS_NOT_SUPPORTED = 4;
+  // Device does not support AcidRemoteDriver.
+  ACID_NOT_SUPPORTED = 5;
+}
+
+// Options for creating a remote control session.
+message SessionOptions {
+  // The common proxy types for all devices.
+  repeated DeviceProxyType common_proxy_types = 1;
+  // The common run as candidates for all devices.
+  repeated string common_run_as_candidates = 2;
+  // The max duration hours for all devices.
+  int32 max_duration_hours = 3;
+}
+
+// The overall verdict dictating the frontend flow.
+enum EligibilityStatus {
+  // Default value.
+  ELIGIBILITY_STATUS_UNSPECIFIED = 0;
+  // All devices are eligible and have a common proxy.
+  // If the user has partial permission, the dialog will show the permission
+  // denied device card and allow the user to proceed.
+  READY = 1;
+  // Some selected devices are not eligible(e.g. status is busy, missing; no
+  // acid support; host OS is MacOS; etc).
+  BLOCK_DEVICES_INELIGIBLE = 2;
+  // All devices are eligible individually, but for multiple devices, they
+  // share no common proxy type, or for a single device, it has no supported
+  // proxy type.
+  BLOCK_NO_COMMON_PROXY = 3;
+  // Permission is denied for all selected devices.
+  BLOCK_ALL_PERMISSION_DENIED = 4;
+}
+
+// The eligibility result for a single device.
+message DeviceEligibilityResult {
+  string device_id = 1;
+  // Whether this specific device can be remotely controlled.
+  bool is_eligible = 2;
+
+  message IneligibilityReason {
+    IneligibilityReasonCode code = 1;
+    string message = 2;
+  }
+  // Detailed reason if the device is ineligible.
+  IneligibilityReason ineligibility_reason = 3;
+
+  // Supported proxy types for this device.
+  repeated DeviceProxyType supported_proxy_types = 4;
+
+  // Candidates for 'Run As' for this device.
+  repeated string run_as_candidates = 5;
+}
+
+// Response for remote control eligibility check.
+message CheckRemoteControlEligibilityResponse {
+  // The overall verdict dictating the frontend flow.
+  EligibilityStatus status = 1;
+  // Consolidated list of results for ALL requested devices.
+  // Always populated.
+  repeated DeviceEligibilityResult results = 2;
+  // Session options derived from the intersection of all ELIGIBLE devices.
+  // Present only if status is 'READY'.
+  SessionOptions session_options = 3;
+}
+
+// Flash options for remote control.
+message FlashOptions {
+  string branch = 1;
+  string build_id = 2;
+  string target = 3;
+}
+
+// Configuration for a single device in a remote control request.
+message RemoteControlDeviceConfig {
+  string device_id = 1;
+  string run_as = 2;
+}
+
+// Response containing results of remote control session startup.
+message RemoteControlDevicesResponse {
+  message SessionResult {
+    string device_id = 1;
+    string session_url = 2;
+    string error_message = 3;
+  }
+  repeated SessionResult sessions = 1;
+}

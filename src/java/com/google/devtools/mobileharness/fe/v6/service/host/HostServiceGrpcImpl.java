@@ -18,6 +18,8 @@ package com.google.devtools.mobileharness.fe.v6.service.host;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcServiceUtil;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.CheckRemoteControlEligibilityRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.CheckRemoteControlEligibilityResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DecommissionMissingDevicesRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DecommissionMissingDevicesResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostDeviceSummariesRequest;
@@ -25,6 +27,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostDeviceS
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostOverviewRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostOverview;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostServiceGrpc;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.RemoteControlDevicesRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.RemoteControlDevicesResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.UpdatePassThroughFlagsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.UpdatePassThroughFlagsResponse;
 import io.grpc.stub.StreamObserver;
@@ -91,5 +95,31 @@ public final class HostServiceGrpcImpl extends HostServiceGrpc.HostServiceImplBa
         executor,
         HostServiceGrpc.getServiceDescriptor(),
         HostServiceGrpc.getDecommissionMissingDevicesMethod());
+  }
+
+  @Override
+  public void checkRemoteControlEligibility(
+      CheckRemoteControlEligibilityRequest request,
+      StreamObserver<CheckRemoteControlEligibilityResponse> responseObserver) {
+    GrpcServiceUtil.invokeAsync(
+        request,
+        responseObserver,
+        logic::checkRemoteControlEligibility,
+        executor,
+        HostServiceGrpc.getServiceDescriptor(),
+        HostServiceGrpc.getCheckRemoteControlEligibilityMethod());
+  }
+
+  @Override
+  public void remoteControlDevices(
+      RemoteControlDevicesRequest request,
+      StreamObserver<RemoteControlDevicesResponse> responseObserver) {
+    GrpcServiceUtil.invokeAsync(
+        request,
+        responseObserver,
+        logic::remoteControlDevices,
+        executor,
+        HostServiceGrpc.getServiceDescriptor(),
+        HostServiceGrpc.getRemoteControlDevicesMethod());
   }
 }

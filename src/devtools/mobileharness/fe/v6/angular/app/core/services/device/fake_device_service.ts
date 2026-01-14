@@ -9,8 +9,6 @@ import {
   QuarantineDeviceRequest,
   QuarantineDeviceResponse,
   QuarantineInfo,
-  RemoteControlRequest,
-  RemoteControlResponse,
   TakeScreenshotResponse,
 } from '../../models/device_action';
 import {
@@ -178,15 +176,15 @@ export class FakeDeviceService extends DeviceService {
     return of(undefined).pipe(delay(1000));
   }
 
-  override remoteControl(
-    id: string,
-    req: RemoteControlRequest,
-  ): Observable<RemoteControlResponse> {
-    console.log(`FakeService: Remote controlling ${id} with req:`, req);
-    return of({
-      sessionUrl: `https://xcid.google.example.com/provider/mh/create/?deviceId=${id}`,
-    }).pipe(delay(1000));
-  }
+  // override remoteControl(
+  //   id: string,
+  //   req: RemoteControlRequest,
+  // ): Observable<RemoteControlResponse> {
+  //   console.log(`FakeService: Remote controlling ${id} with req:`, req);
+  //   return of({
+  //     sessionUrl: `https://xcid.google.example.com/provider/mh/create/?deviceId=${id}`,
+  //   }).pipe(delay(1000));
+  // }
 
   override getTestbedConfig(id: string): Observable<TestbedConfig> {
     console.log(`FakeService: Getting testbed config for ${id}`);

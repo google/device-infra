@@ -1,6 +1,16 @@
 import {Injectable} from '@angular/core';
 import {Observable, of, throwError} from 'rxjs';
-import {DeviceSummary, HostOverview} from '../../models/host_overview';
+
+import {
+  CheckRemoteControlEligibilityResponse,
+  DeviceEligibilityResult,
+  DeviceProxyType,
+  DeviceSummary,
+  EligibilityStatus,
+  HostOverview,
+  RemoteControlDevicesRequest,
+  RemoteControlDevicesResponse,
+} from '../../models/host_overview';
 import {MOCK_HOST_SCENARIOS} from '../mock_data';
 import {HostService} from './host_service';
 
@@ -83,5 +93,129 @@ export class FakeHostService extends HostService {
           ),
       );
     }
+  }
+
+  override checkRemoteControlEligibility(
+    hostName: string,
+    deviceControlIds: string[],
+  ): Observable<CheckRemoteControlEligibilityResponse> {
+    const results: DeviceEligibilityResult[] = [];
+
+    deviceControlIds.forEach((id) => {
+      const result: DeviceEligibilityResult = {
+        deviceId: id,
+        isEligible: true,
+        supportedProxyTypes: [],
+        runAsCandidates: [],
+      };
+
+      if (id.includes('ineligible-busy')) {
+        result.isEligible = false;
+        result.ineligibilityReason = {
+          code: 'DEVICE_NOT_IDLE',
+          message: `Device ${id} is busy.`,
+        };
+      } else if (id.includes('ineligible-no-acid')) {
+        result.isEligible = false;
+        result.ineligibilityReason = {
+          code: 'ACID_NOT_SUPPORTED',
+          message: `Device ${id} does not support ACID.`,
+        };
+      } else if (id.includes('ineligible-no-perm')) {
+        result.isEligible = false;
+        result.ineligibilityReason = {
+          code: 'PERMISSION_DENIED',
+          message: `Permission denied for device ${id}.`,
+        };
+      } else {
+        result.supportedProxyTypes = [
+          DeviceProxyType.ADB_AND_VIDEO,
+          DeviceProxyType.SSH,
+        ];
+        result.runAsCandidates = ['user1', 'mdb/group1', 'mdb/group2'];
+
+        if (id.includes('no-common-proxy-1')) {
+          result.supportedProxyTypes = [DeviceProxyType.ADB_ONLY];
+        } else if (id.includes('no-common-proxy-2')) {
+          result.supportedProxyTypes = [DeviceProxyType.SSH];
+        }
+      }
+      results.push(result);
+    });
+
+    // 1. Check for global permission denied (mock logic: if all devices are no-perm)
+    const allDenied =
+      results.length > 0 &&
+      results.every(
+        (r) =>
+          !r.isEligible && r.ineligibilityReason?.code === 'PERMISSION_DENIED',
+      );
+    if (allDenied) {
+      return of({
+        status: EligibilityStatus.BLOCK_ALL_PERMISSION_DENIED,
+        results,
+      });
+    }
+
+    // 2. Check for ineligible devices
+    if (results.some((r) => !r.isEligible)) {
+      return of({
+        status: EligibilityStatus.BLOCK_DEVICES_INELIGIBLE,
+        results,
+      });
+    }
+
+    // 3. Check for common proxy
+    if (results.length > 0) {
+      let commonProxies = results[0].supportedProxyTypes;
+      for (let i = 1; i < results.length; i++) {
+        commonProxies = commonProxies.filter((p) =>
+          results[i].supportedProxyTypes.includes(p),
+        );
+      }
+
+      if (commonProxies.length === 0) {
+        return of({
+          status: EligibilityStatus.BLOCK_NO_COMMON_PROXY,
+          results,
+        });
+      }
+
+      return of({
+        status: EligibilityStatus.READY,
+        results,
+        sessionOptions: {
+          commonProxyTypes: commonProxies,
+          commonRunAsCandidates: ['user1', 'mdb/group1'],
+          maxDurationHours: 12,
+        },
+      });
+    }
+
+    // Default empty case (should not happen if deviceControlIds is not empty)
+    return of({
+      status: EligibilityStatus.READY,
+      results,
+      sessionOptions: {
+        commonProxyTypes: [],
+        commonRunAsCandidates: [],
+        maxDurationHours: 12,
+      },
+    });
+  }
+
+  override remoteControlDevices(
+    hostName: string,
+    req: RemoteControlDevicesRequest,
+  ): Observable<RemoteControlDevicesResponse> {
+    const response: RemoteControlDevicesResponse = {
+      sessions: req.deviceConfigs.map((config) => ({
+        deviceId: config.deviceId,
+        sessionUrl: `http://acid/session/${config.deviceId}-${Math.floor(
+          Math.random() * 1000,
+        )}`,
+      })),
+    };
+    return of(response);
   }
 }

@@ -6,8 +6,6 @@ import {
   GetLogcatResponse,
   QuarantineDeviceRequest,
   QuarantineDeviceResponse,
-  RemoteControlRequest,
-  RemoteControlResponse,
   TakeScreenshotResponse,
 } from '../../models/device_action';
 import {
@@ -100,13 +98,13 @@ export abstract class DeviceService {
    */
   abstract unquarantineDevice(id: string): Observable<void>;
 
-  /**
-   * Starts a remote control session for the device.
-   */
-  abstract remoteControl(
-    id: string,
-    req: RemoteControlRequest,
-  ): Observable<RemoteControlResponse>;
+  // /**
+  //  * Starts a remote control session for the device.
+  //  */
+  // abstract remoteControl(
+  //   id: string,
+  //   req: RemoteControlRequest,
+  // ): Observable<RemoteControlResponse>;
 
   /**
    * Gets testbed config for the device.

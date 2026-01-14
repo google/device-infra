@@ -67,9 +67,11 @@
           <mat-form-field appearance="outline" subscriptSizing="dynamic">
             <mat-select [(ngModel)]="proxyType">
               <mat-option value="DEFAULT">Default (Auto-select)</mat-option>
-              <mat-option value="TCP">TCP</mat-option>
-              <mat-option value="ADB">ADB</mat-option>
-              <mat-option value="VNC">VNC</mat-option>
+              <mat-option value="TADB_AND_VIDEOCP">ADB_AND_VIDEO</mat-option>
+              <mat-option value="ADB_ONLY">ADB_ONLY</mat-option>
+              <mat-option value="USB_IP">USB_IP</mat-option>
+              <mat-option value="SSH">SSH</mat-option>
+              <mat-option value="VIDEO">VIDEO</mat-option>
             </mat-select>
           </mat-form-field>
         </div>

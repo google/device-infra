@@ -99,14 +99,6 @@ service DeviceService {
     };
   }
 
-  // Starts a remote control session for the device.
-  rpc RemoteControl(RemoteControlRequest) returns (RemoteControlResponse) {
-    option (google.api.http) = {
-      post: "/v6/devices/{id}:remoteControl",
-      body: "*"
-    };
-  }
-
   // Gets testbed config for the device.
   rpc GetTestbedConfig(GetTestbedConfigRequest) returns (TestbedConfig) {
     option (google.api.http) = {
@@ -222,37 +214,3 @@ message UnquarantineDeviceRequest {
 
 // Response for UnquarantineDevice.
 message UnquarantineDeviceResponse {}
-
-// Options for flashing a device during remote control.
-message FlashOptions {
-  // The branch to flash.
-  string branch = 1;
-  // The build ID to flash.
-  string build_id = 2;
-  // The target to flash.
-  string target = 3;
-}
-
-// Request for RemoteControl.
-message RemoteControlRequest {
-  // The device ID.
-  string id = 1;
-  // The user to run the remote control session as.
-  string run_as = 2;
-  // The timeout for the remote control session in hours.
-  int32 timeout_hours = 3;
-  // The proxy type to use for the remote control session.
-  string proxy_type = 4;
-  // The video resolution to use for the remote control session.
-  string video_resolution = 5;
-  // The maximum video size to use for the remote control session.
-  string max_video_size = 6;
-  // The flash options to use for the remote control session.
-  FlashOptions flash_options = 7;
-}
-
-// Response for RemoteControl.
-message RemoteControlResponse {
-  // The URL of the remote control session.
-  string session_url = 1;
-}

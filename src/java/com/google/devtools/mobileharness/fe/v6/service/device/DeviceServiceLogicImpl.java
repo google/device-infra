@@ -32,8 +32,6 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.device.HealthinessS
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.QuarantineDeviceRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.QuarantineDeviceResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.RecoveryTaskStats;
-import com.google.devtools.mobileharness.fe.v6.service.proto.device.RemoteControlRequest;
-import com.google.devtools.mobileharness.fe.v6.service.proto.device.RemoteControlResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.TakeScreenshotRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.TakeScreenshotResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.TestResultStats;
@@ -106,12 +104,6 @@ public final class DeviceServiceLogicImpl implements DeviceServiceLogic {
       UnquarantineDeviceRequest request) {
     // TODO: Implement this method.
     return immediateFuture(UnquarantineDeviceResponse.getDefaultInstance());
-  }
-
-  @Override
-  public ListenableFuture<RemoteControlResponse> remoteControl(RemoteControlRequest request) {
-    // TODO: Implement this method.
-    return immediateFuture(RemoteControlResponse.getDefaultInstance());
   }
 
   @Override

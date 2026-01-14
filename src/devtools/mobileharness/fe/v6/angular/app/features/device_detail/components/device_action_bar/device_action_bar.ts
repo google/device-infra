@@ -177,6 +177,7 @@ export class DeviceActionBar {
     this.dialog.open(RemoteControlDialog, {
       data: {
         deviceId: this.deviceId,
+        hostName: this.hostName,
         runAsOptions: opts?.runAsOptions || [],
         defaultRunAs: opts?.defaultRunAs || '',
       } as RemoteControlDialogData,

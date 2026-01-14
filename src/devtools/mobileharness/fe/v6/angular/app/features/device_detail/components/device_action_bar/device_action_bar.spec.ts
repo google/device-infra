@@ -197,6 +197,7 @@ describe('DeviceActionBar', () => {
 
     expect(dialog.open).toHaveBeenCalledWith(RemoteControlDialog, {
       data: {
+        hostName: 'test-host',
         deviceId: 'test-device',
         runAsOptions: [],
         defaultRunAs: '',

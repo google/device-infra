@@ -175,6 +175,7 @@ export interface QuarantineDialogData {
 
 /** Data for remote control dialog. */
 export interface RemoteControlDialogData {
+  hostName: string;
   deviceId: string;
   runAsOptions: RunAsOption[];
   defaultRunAs: string;

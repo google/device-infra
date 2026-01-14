@@ -9,8 +9,6 @@ import {
   GetLogcatResponse,
   QuarantineDeviceRequest,
   QuarantineDeviceResponse,
-  RemoteControlRequest,
-  RemoteControlResponse,
   TakeScreenshotResponse,
 } from '../../models/device_action';
 import {
@@ -135,15 +133,15 @@ export class HttpDeviceService extends DeviceService {
     return this.http.post<void>(`${this.apiUrl}/${id}:unquarantine`, {});
   }
 
-  override remoteControl(
-    id: string,
-    req: RemoteControlRequest,
-  ): Observable<RemoteControlResponse> {
-    return this.http.post<RemoteControlResponse>(
-      `${this.apiUrl}/${id}:remoteControl`,
-      req,
-    );
-  }
+  // override remoteControl(
+  //   id: string,
+  //   req: RemoteControlRequest,
+  // ): Observable<RemoteControlResponse> {
+  //   return this.http.post<RemoteControlResponse>(
+  //     `${this.apiUrl}/${id}:remoteControl`,
+  //     req,
+  //   );
+  // }
 
   override getTestbedConfig(id: string): Observable<TestbedConfig> {
     return this.http.get<TestbedConfig>(`${this.apiUrl}/${id}/testbedConfig`);

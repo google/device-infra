@@ -31,8 +31,6 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.device.HealthinessS
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.QuarantineDeviceRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.QuarantineDeviceResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.RecoveryTaskStats;
-import com.google.devtools.mobileharness.fe.v6.service.proto.device.RemoteControlRequest;
-import com.google.devtools.mobileharness.fe.v6.service.proto.device.RemoteControlResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.TakeScreenshotRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.TakeScreenshotResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.TestResultStats;
@@ -150,18 +148,6 @@ public final class DeviceServiceGrpcImpl extends DeviceServiceGrpc.DeviceService
         executor,
         DeviceServiceGrpc.getServiceDescriptor(),
         DeviceServiceGrpc.getUnquarantineDeviceMethod());
-  }
-
-  @Override
-  public void remoteControl(
-      RemoteControlRequest request, StreamObserver<RemoteControlResponse> responseObserver) {
-    GrpcServiceUtil.invokeAsync(
-        request,
-        responseObserver,
-        logic::remoteControl,
-        executor,
-        DeviceServiceGrpc.getServiceDescriptor(),
-        DeviceServiceGrpc.getRemoteControlMethod());
   }
 
   @Override

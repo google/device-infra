@@ -60,6 +60,24 @@ service HostService {
       body: "*"
     };
   }
+
+  // Checks for remote control eligibility for the given devices on the host.
+  rpc CheckRemoteControlEligibility(CheckRemoteControlEligibilityRequest)
+      returns (CheckRemoteControlEligibilityResponse) {
+    option (google.api.http) = {
+      post: "/v6/hosts/{host_name}/checkRemoteControlEligibility"
+      body: "*"
+    };
+  }
+
+  // Starts remote control sessions for multiple devices.
+  rpc RemoteControlDevices(RemoteControlDevicesRequest)
+      returns (RemoteControlDevicesResponse) {
+    option (google.api.http) = {
+      post: "/v6/hosts/{host_name}/remoteControlDevices"
+      body: "*"
+    };
+  }
 }
 
 // Request message for GetHostOverview.
@@ -101,3 +119,22 @@ message DecommissionMissingDevicesRequest {
 
 // Response message for DecommissionMissingDevices.
 message DecommissionMissingDevicesResponse {}
+
+// Request message for CheckRemoteControlEligibility.
+message CheckRemoteControlEligibilityRequest {
+  // The unique name of the host.
+  string host_name = 1;
+  // The list of device control IDs to check.
+  repeated string device_control_ids = 2;
+}
+
+// Request to start remote control sessions for multiple devices.
+message RemoteControlDevicesRequest {
+  string host_name = 1;
+  repeated RemoteControlDeviceConfig device_configs = 2;
+  int32 duration_seconds = 3;
+  DeviceProxyType proxy_type = 4;
+  string video_resolution = 5;
+  string max_video_size = 6;
+  FlashOptions flash_options = 7;
+}

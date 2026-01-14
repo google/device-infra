@@ -8,6 +8,7 @@
 
 import {HealthState, SubDeviceInfo} from './device_overview';
 
+
 /**
  * Semantic state of host connectivity with the OmniLab master server.
  * Frontend uses this to determine icon and color.
@@ -190,3 +191,166 @@ export interface HostOverview {
   /** OS of the host machine, e.g., "gLinux", "macOS". */
   readonly os: string;
 }
+
+/**
+ * Types of proxy supported by devices for remote control.
+ */
+export enum DeviceProxyType {
+  NONE = 0,
+  /**
+   * Represents ADB + Video streaming capability, typically provided by ACID.
+   * This type is available if 'AcidRemoteDriver' is listed in device's supportedDrivers.
+   */
+  ADB_AND_VIDEO = 1,
+  ADB_ONLY = 2,
+  USB_IP = 3,
+  SSH = 4,
+  VIDEO = 5,
+}
+
+/**
+ * Reason code for a device being ineligible for remote control.
+ */
+export type IneligibilityReasonCode =
+  | 'PERMISSION_DENIED' // User lacks permission for the device
+  | 'DEVICE_NOT_IDLE' // Device state is not IDLE (e.g., BUSY, MISSING)
+  | 'DEVICE_TYPE_NOT_SUPPORTED' // Device type is not supported (e.g., FailedDevice, AbnormalTestbedDevice, or non-AndroidRealDevice in multi-selection mode)
+  | 'HOST_OS_NOT_SUPPORTED' // Host OS is MacOS
+  | 'ACID_NOT_SUPPORTED'; // Device does not support AcidRemoteDriver
+
+/**
+ * The eligibility result for a single device.
+ */
+export interface DeviceEligibilityResult {
+  deviceId: string;
+  /** Whether this specific device can be remotely controlled. */
+  isEligible: boolean;
+  /**
+   * Detailed reason if the device is ineligible.
+   * Populated only if isEligible is false.
+   * Used for displaying error messages in BLOCK_DEVICES_INELIGIBLE status.
+   */
+  ineligibilityReason?: {
+    code: IneligibilityReasonCode;
+    message: string;
+  };
+  /**
+   * Supported proxy types for this device.
+   * Used for displaying compatibility details in BLOCK_NO_COMMON_PROXY status.
+   */
+  supportedProxyTypes: DeviceProxyType[];
+  /**
+   * Candidates for 'Run As' for this device.
+   */
+  runAsCandidates?: string[];
+}
+
+/**
+ * The overall verdict dictating the frontend flow.
+ */
+export enum EligibilityStatus {
+  /**
+   * All devices are eligible and have a common proxy.
+   * If the user has partial permission, the dialog will show the permission denied device card and allow
+   * the user to proceed.
+   * UI Action: Open configuration dialog immediately.
+   */
+  READY = 'READY',
+
+  /**
+   * One or more devices are ineligible (e.g. status is busy, missing; no acid support, etc).
+   * UI Action: Show dialog listing ineligible devices and reasons.
+   */
+  BLOCK_DEVICES_INELIGIBLE = 'BLOCK_DEVICES_INELIGIBLE',
+
+  /**
+   * All devices are eligible individually, but for multiple devices, they share no common proxy type,
+   * or for a single device, it has no supported proxy type.
+   * UI Action: Show dialog listing supported proxies for each device.
+   */
+  BLOCK_NO_COMMON_PROXY = 'BLOCK_NO_COMMON_PROXY',
+
+  /**
+   * User has no permission for any of the selected devices.
+   * UI Action: Show global permission denied error.
+   */
+  BLOCK_ALL_PERMISSION_DENIED = 'BLOCK_ALL_PERMISSION_DENIED',
+}
+
+/**
+ * Options for creating a remote control session, applicable only if
+ * status is 'READY'.
+ */
+export interface SessionOptions {
+  /**
+   * List of proxy types supported by ALL ELIGIBLE devices.
+   */
+  commonProxyTypes: DeviceProxyType[];
+  /**
+   * List of identities that have permission to access ALL ELIGIBLE devices.
+   */
+  commonRunAsCandidates: string[];
+  /**
+   * Maximum allowed session duration in hours.
+   */
+  maxDurationHours: number;
+}
+
+/**
+ * Response structure for checkRemoteControlEligibility API.
+ */
+export interface CheckRemoteControlEligibilityResponse {
+  /**
+   * The overall verdict dictating the frontend flow.
+   */
+  status: EligibilityStatus;
+
+  /**
+   * Consolidated list of results for ALL requested devices.
+   * Always populated.
+   */
+  results: DeviceEligibilityResult[];
+
+  /**
+   * Session options derived from the intersection of all ELIGIBLE devices.
+   * Present only if status is 'READY'.
+   */
+  sessionOptions?: SessionOptions;
+}
+
+/**
+ * Flash options for remote control.
+ */
+export interface FlashOptions {
+  branch: string;
+  buildId: string;
+  target: string;
+}
+
+/**
+ * Configuration for controlling a single device within a batch request.
+ */
+export interface DeviceRemoteControlConfig {
+  deviceId: string;
+  runAs: string;
+}
+
+/**
+ * Request for RemoteControlDevices API for multiple devices.
+ */
+export interface RemoteControlDevicesRequest {
+  deviceConfigs: DeviceRemoteControlConfig[];
+  durationSeconds: number;
+  proxyType: DeviceProxyType;
+  videoResolution?: 'DEFAULT' | 'HIGH' | 'LOW';
+  maxVideoSize?: 'DEFAULT' | '1024';
+  flashOptions?: FlashOptions;
+}
+
+/**
+ * Response for RemoteControlDevices API.
+ */
+export interface RemoteControlDevicesResponse {
+  sessions: Array<{deviceId: string; sessionUrl: string}>;
+}
+

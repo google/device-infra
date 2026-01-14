@@ -17,12 +17,16 @@
 package com.google.devtools.mobileharness.fe.v6.service.host;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.CheckRemoteControlEligibilityRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.CheckRemoteControlEligibilityResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DecommissionMissingDevicesRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DecommissionMissingDevicesResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostDeviceSummariesRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostDeviceSummariesResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostOverviewRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostOverview;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.RemoteControlDevicesRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.RemoteControlDevicesResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.UpdatePassThroughFlagsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.UpdatePassThroughFlagsResponse;
 
@@ -38,4 +42,10 @@ public interface HostServiceLogic {
 
   ListenableFuture<DecommissionMissingDevicesResponse> decommissionMissingDevices(
       DecommissionMissingDevicesRequest request);
+
+  ListenableFuture<CheckRemoteControlEligibilityResponse> checkRemoteControlEligibility(
+      CheckRemoteControlEligibilityRequest request);
+
+  ListenableFuture<RemoteControlDevicesResponse> remoteControlDevices(
+      RemoteControlDevicesRequest request);
 }
