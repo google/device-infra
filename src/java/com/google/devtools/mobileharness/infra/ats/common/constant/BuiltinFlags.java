@@ -75,24 +75,16 @@ public final class BuiltinFlags {
           "--adb_max_no_device_detection_rounds=1200",
           "--android_device_daemon=false",
           "--cache_installed_apks=false",
-          "--check_android_device_sim_card_type=true",
           "--check_device_interval=1h",
-          "--clear_android_device_multi_users=false",
           "--detect_device_interval_sec=2",
           "--disable_calling=false",
-          "--disable_device_reboot=true",
           "--disable_device_reboot_for_ro_properties=true",
-          "--disable_wifi_util_func=true",
-          "--enable_android_device_ready_check=false",
           "--enable_ats_mode=true",
-          "--enable_caching_reserved_device=true",
           "--enable_device_state_change_recover=false",
           "--enable_device_system_settings_change=false",
           "--enable_external_master_server=true",
-          "--enable_fastboot_detector=false",
           "--enable_root_device=false",
           "--enable_test_log_collector=true",
-          "--ignore_check_device_failure=true",
           "--mute_android=false",
           "--resource_dir_name=lab_server_res_files",
           "--serv_via_cloud_rpc=false",
@@ -114,7 +106,15 @@ public final class BuiltinFlags {
           append(
               ATS_LAB_SERVER_COMMON_FLAGS,
               // keep-sorted start
-              "--enable_cloud_logging=false"
+              "--check_android_device_sim_card_type=true",
+              "--clear_android_device_multi_users=false",
+              "--disable_device_reboot=true",
+              "--disable_wifi_util_func=true",
+              "--enable_android_device_ready_check=false",
+              "--enable_caching_reserved_device=true",
+              "--enable_cloud_logging=false",
+              "--enable_fastboot_detector=false",
+              "--ignore_check_device_failure=true"
               // keep-sorted end
               ),
           "omni-dda",
@@ -143,6 +143,7 @@ public final class BuiltinFlags {
               "--add_supported_dimension_for_omni_mode_usage=public_testing",
               "--android_factory_reset_wait_time=3m",
               "--check_android_device_sim_card_type=false",
+              "--clear_android_device_multi_users=false",
               "--disable_device_reboot=false",
               "--disable_wifi_util_func=false",
               "--enable_android_device_ready_check=true",
@@ -159,9 +160,15 @@ public final class BuiltinFlags {
               // keep-sorted start
               "--add_supported_dimension_for_omni_mode_usage=internal_testing",
               "--android_factory_reset_wait_time=3m",
+              "--check_android_device_sim_card_type=true",
+              "--clear_android_device_multi_users=false",
+              "--disable_device_reboot=true",
               "--disable_wifi_util_func=false",
               "--enable_android_device_ready_check=true",
+              "--enable_caching_reserved_device=true",
+              "--enable_fastboot_detector=false",
               "--force_device_reboot_after_test=true",
+              "--ignore_check_device_failure=true",
               "--reset_device_in_android_real_device_setup=true"
               // keep-sorted end
               ),
@@ -170,6 +177,14 @@ public final class BuiltinFlags {
               ATS_LAB_SERVER_COMMON_FLAGS,
               // keep-sorted start
               "--add_supported_dimension_for_omni_mode_usage=cts_testing",
+              "--check_android_device_sim_card_type=true",
+              "--clear_android_device_multi_users=false",
+              "--disable_device_reboot=true",
+              "--disable_wifi_util_func=true",
+              "--enable_android_device_ready_check=false",
+              "--enable_caching_reserved_device=true",
+              "--enable_fastboot_detector=false",
+              "--ignore_check_device_failure=true",
               "--keep_test_harness_false=true"
               // keep-sorted end
               ),
@@ -177,7 +192,15 @@ public final class BuiltinFlags {
           append(
               ATS_LAB_SERVER_COMMON_FLAGS,
               // keep-sorted start
-              "--add_supported_dimension_for_omni_mode_usage=private_usage"
+              "--add_supported_dimension_for_omni_mode_usage=private_usage",
+              "--check_android_device_sim_card_type=true",
+              "--clear_android_device_multi_users=false",
+              "--disable_device_reboot=true",
+              "--disable_wifi_util_func=true",
+              "--enable_android_device_ready_check=false",
+              "--enable_caching_reserved_device=true",
+              "--enable_fastboot_detector=false",
+              "--ignore_check_device_failure=true"
               // keep-sorted end
               ));
 
