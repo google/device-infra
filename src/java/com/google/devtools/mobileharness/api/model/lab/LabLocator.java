@@ -37,6 +37,11 @@ public abstract class LabLocator {
 
   public abstract Optional<String> masterDetectedIp();
 
+  /** Creates a locator for a lab with host name only. */
+  public static LabLocator of(String hostName) {
+    return of(/* ip= */ "", hostName);
+  }
+
   /** Creates a locator for a lab. */
   public static LabLocator of(String ip, String hostName) {
     return of(ip, hostName, /* masterDetectedIp= */ null);
