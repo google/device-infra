@@ -148,7 +148,8 @@ public class MoblyReportParser {
             + (!isNullOrEmpty(moblyReportInfo.moduleParameter())
                 ? String.format("[%s]", moblyReportInfo.moduleParameter())
                 : "");
-    Module.Builder moduleBuilder = Module.newBuilder().setName(moduleName).setIsNonTfModule(true);
+    Module.Builder moduleBuilder =
+        Module.newBuilder().setName(moduleName).setIsNonTfModule(true).setDone(false);
     if (moblyReportInfo.moduleAbi() != null) {
       moduleBuilder.setAbi(moblyReportInfo.moduleAbi());
     }
