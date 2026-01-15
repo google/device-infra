@@ -80,6 +80,7 @@ public enum AndroidProperty {
   RELEASE_VERSION("ro.build.version.release"),
   REVISION("ro.revision", "ro.boot.revision", "ro.boot.hardware.revision"),
   SCREEN_DENSITY("qemu.sf.lcd_density", "ro.sf.lcd_density"),
+  SDK_FULL_VERSION("ro.build.version.sdk_full"),
   SDK_VERSION("ro.build.version.sdk"),
   SECURE_BOOT("ro.boot.secure_boot"),
   SEC_AR("ro.boot.hw.soc.sec-ar"),

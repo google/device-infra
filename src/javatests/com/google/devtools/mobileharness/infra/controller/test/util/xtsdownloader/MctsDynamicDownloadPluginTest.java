@@ -374,6 +374,18 @@ public final class MctsDynamicDownloadPluginTest {
     verify(testProperties).getOptional(XtsConstants.DEVICE_MCTS_MODULES_INFO_PROPERTY_KEY);
   }
 
+  @Test
+  public void onTestStarting_sdk36_usesSdkFullVersion() throws Exception {
+    when(jobProperties.getOptional(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME))
+        .thenReturn(Optional.of(XtsConstants.STATIC_XTS_JOB_NAME));
+    when(mockAdbUtil.getProperty(any(), eq(AndroidProperty.SDK_VERSION))).thenReturn("36");
+    when(mockAdbUtil.getProperty(any(), eq(AndroidProperty.SDK_FULL_VERSION))).thenReturn("36-ext");
+
+    spyMctsDynamicDownloadPlugin.onTestStarting(mockEvent);
+
+    verify(testProperties).add(XtsConstants.DEVICE_AOSP_VERSION_PROPERTY_KEY, "36-ext");
+  }
+
   private void generateTestZipFilesForDynamicJob() throws IOException {
     generateTestZipFile("android-mcts-networking", "networking.txt", "/tmp");
     generateTestZipFile("android-mcts-conscrypt", "conscrypt.txt", "/tmp");

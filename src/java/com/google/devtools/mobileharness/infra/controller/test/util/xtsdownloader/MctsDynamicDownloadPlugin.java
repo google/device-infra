@@ -108,8 +108,12 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
   // the MCTS files.
   private static final ImmutableMap<String, ImmutableList<String>> INITIAL_RELEASE_VERSIONCODE_MAP =
       ImmutableMap.of(
-          "36", ImmutableList.of("2025-01", "2025-02", "2025-03", "2025-04", "2025-05", "2025-11"),
-          "37", ImmutableList.of("2026-01", "2026-02", "2026-03", "2026-04"));
+          "36.0", ImmutableList.of("2025-01", "2025-02", "2025-03", "2025-04", "2025-05"),
+          "36.1",
+              ImmutableList.of(
+                  "2025-01", "2025-02", "2025-03", "2025-04", "2025-05", "2025-06", "2025-07",
+                  "2025-08", "2025-09", "2025-10", "2025-11"),
+          "37.0", ImmutableList.of("2026-01", "2026-02", "2026-03", "2026-04"));
 
   private static final String MAINLINE_AOSP_VERSION_KEY = "AOSP";
 
@@ -655,7 +659,18 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
         event,
         XtsConstants.DEVICE_AOSP_VERSION_PROPERTY_KEY,
         "AOSP version",
-        (d) -> adbUtil.getProperty(d, AndroidProperty.SDK_VERSION));
+        (d) -> {
+          String sdkVersion = adbUtil.getProperty(d, AndroidProperty.SDK_VERSION);
+          // For Android 36+, there will be minor SDK bumps, e.g. 36.0 -> 36.1.
+          try {
+            if (Integer.parseInt(sdkVersion) >= 36) {
+              return adbUtil.getProperty(d, AndroidProperty.SDK_FULL_VERSION);
+            }
+          } catch (NumberFormatException e) {
+            // Return sdkVersion if it is not a number.
+          }
+          return sdkVersion;
+        });
   }
 
   /**
