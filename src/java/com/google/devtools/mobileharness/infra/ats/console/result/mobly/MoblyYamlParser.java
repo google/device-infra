@@ -136,8 +136,9 @@ public class MoblyYamlParser {
             currentTestClass = newTestClass;
           }
           String testName = String.valueOf(documentMap.get(RESULT_TESTNAME));
+          String result = String.valueOf(documentMap.get(RESULT_RESULT));
           if ((testName.equals(STAGE_SETUP_CLASS) || testName.equals(STAGE_PRE_RUN))
-              && String.valueOf(documentMap.get(RESULT_RESULT)).equals(RESULT_ERROR)) {
+              && (result.equals(RESULT_ERROR) || result.equals(RESULT_FAIL))) {
             hasSetupClassError = true;
             continue;
           }

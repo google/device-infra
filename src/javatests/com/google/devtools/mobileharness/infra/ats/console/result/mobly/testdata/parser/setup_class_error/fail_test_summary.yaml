@@ -1,0 +1,74 @@
+---
+Requested Tests:
+- test_hello_world1_1
+- test_hello_world1_2
+- test_hello_world2_1
+Type: TestNameList
+---
+Begin Time: 1663584273110
+Details: null
+End Time: 1663584275809
+Extra Errors: {}
+Extras: null
+Result: FAIL
+Retry Parent: null
+Signature: setup_class-1663584273110
+Stacktrace: null
+Termination Signal Type: null
+Test Class: HelloWorldTest1
+Test Name: setup_class
+Type: Record
+UID: null
+---
+Begin Time: 1663584277766
+Details: null
+End Time: 1663584280787
+Extra Errors: {}
+Extras: null
+Result: SKIP
+Retry Parent: null
+Signature: test_hello_world1_1-1663584277766
+Stacktrace: null
+Termination Signal Type: null
+Test Class: HelloWorldTest1
+Test Name: test_hello_world1_1
+Type: Record
+UID: null
+---
+Begin Time: 1663584280794
+Details: null
+End Time: 1663584283819
+Extra Errors: {}
+Extras: null
+Result: SKIP
+Retry Parent: null
+Signature: test_hello_world1_2-1663584280794
+Stacktrace: null
+Termination Signal Type: null
+Test Class: HelloWorldTest1
+Test Name: test_hello_world1_2
+Type: Record
+UID: null
+---
+Begin Time: 1663584284657
+Details: null
+End Time: 1663584284893
+Extra Errors: {}
+Extras: null
+Result: SKIP
+Retry Parent: null
+Signature: test_hello_world2_1-1663584284657
+Stacktrace: null
+Termination Signal Type: null
+Test Class: HelloWorldTest2
+Test Name: test_hello_world2_1
+Type: Record
+UID: null
+---
+Error: 1
+Executed: 0
+Failed: 0
+Passed: 0
+Requested: 3
+Skipped: 3
+Type: Summary
