@@ -78,6 +78,15 @@ public class LabServerLauncher {
     }
 
     try {
+      // Initializes environment.
+      LabServer.initializeEnv();
+
+      // Initializes cloud logging.
+      initializeCloudLogging();
+
+      // Prints main arguments.
+      logger.atInfo().log("Lab server arguments: %s", mainArgs);
+
       // Creates global internal bus.
       EventBus globalInternalBus = new EventBus(new SubscriberExceptionLoggingHandler());
 
@@ -85,21 +94,12 @@ public class LabServerLauncher {
       ImmutableList<Module> modules = createModules(mainArgs, systemProperties, globalInternalBus);
       Injector injector = Guice.createInjector(modules);
 
-      // Initializes environment.
-      LabServer.initializeEnv();
-
       // Creates lab server instance.
       LabServer labServer = injector.getInstance(LabServer.class);
 
       // Adds shutdown hook.
       ShutdownHookManager.getInstance()
           .addShutdownHook(labServer::onShutdown, "lab-server-shutdown");
-
-      // Initializes cloud logging.
-      initializeCloudLogging();
-
-      // Prints main arguments.
-      logger.atInfo().log("Lab server arguments: %s", mainArgs);
 
       // Starts external services.
       ServiceManager externalServiceManager =
