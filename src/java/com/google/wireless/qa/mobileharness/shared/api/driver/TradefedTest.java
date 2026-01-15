@@ -41,6 +41,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.ats.server.sessionplugin.TradefedConfigGenerator;
+import com.google.devtools.mobileharness.infra.ats.tradefed.NonXtsRunStrategy;
 import com.google.devtools.mobileharness.infra.ats.tradefed.TradefedRunStrategy;
 import com.google.devtools.mobileharness.infra.ats.tradefed.XtsRunStrategy;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogRecorder;
@@ -187,9 +188,11 @@ public class TradefedTest extends BaseDriver
   public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
     TradefedTestDriverSpec spec = testInfo.jobInfo().combinedSpec(this);
     String xtsType = Strings.emptyToNull(spec.getXtsType());
-    // TODO: Use different run strategy for xTS and non-xTS runs.
     tradefedRunStrategy =
-        new XtsRunStrategy(localFileUtil, resUtil, systemUtil, clock, xtsType, xtsCommandUtil);
+        spec.getXtsType().isEmpty()
+            ? new NonXtsRunStrategy(localFileUtil)
+            : new XtsRunStrategy(
+                localFileUtil, resUtil, systemUtil, clock, xtsType, xtsCommandUtil);
 
     CompositeDeviceUtil.cacheTestbed(testInfo, getDevice());
     Path workDir = null; // This will be TF_WORK_DIR

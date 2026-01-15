@@ -2290,6 +2290,14 @@ public class Flags {
     return Strings.nullToEmpty(System.getenv("HOME")) + "/mobileharness";
   }
 
+  private static final Flag<String> tradefedBinaryDirDefault = Flag.value("/bin/tradefed");
+
+  @com.beust.jcommander.Parameter(
+      names = "--tradefed_binary_dir",
+      description = "The directory of tradefed binaries.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> tradefedBinaryDir = tradefedBinaryDirDefault;
+
   private static final Flag<String> tradefedCurlDownloadLimitRateDefault = Flag.value(null);
 
   @com.beust.jcommander.Parameter(

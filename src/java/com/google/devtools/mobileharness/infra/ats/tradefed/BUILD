@@ -23,12 +23,24 @@ package(
 )
 
 java_library(
-    name = "tradefed_run_strategy_lib",
+    name = "tradefed_run_strategy",
+    srcs = ["TradefedRunStrategy.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:tradefed_test_spec_java_proto",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "xts_run_strategy",
     srcs = [
-        "TradefedRunStrategy.java",
         "XtsRunStrategy.java",
     ],
     deps = [
+        ":tradefed_run_strategy",
         "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:xts_property_name",
@@ -51,6 +63,26 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:tradefed_test_spec_java_proto",
         "@maven//:com_google_code_gson_gson",
         "@maven//:com_google_errorprone_error_prone_annotations",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "non_xts_run_strategy",
+    srcs = ["NonXtsRunStrategy.java"],
+    deps = [
+        ":tradefed_run_strategy",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/platform/android/shared/emulator:android_jit_emulator_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/system",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:tradefed_test_spec_java_proto",
+        "@maven//:com_google_code_gson_gson",
         "@maven//:com_google_guava_guava",
     ],
 )
