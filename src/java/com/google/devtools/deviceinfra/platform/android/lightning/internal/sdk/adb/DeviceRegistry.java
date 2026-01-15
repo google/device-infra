@@ -21,7 +21,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /** Registry for translating device serial numbers to local device IDs. */
-final class DeviceRegistry {
+public final class DeviceRegistry {
   private static final DeviceRegistry INSTANCE = new DeviceRegistry();
 
   private final Map<String, String> serialToLocalIdMap = new ConcurrentHashMap<>();
