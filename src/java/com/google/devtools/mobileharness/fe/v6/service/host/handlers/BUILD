@@ -21,15 +21,18 @@ package(
 )
 
 java_library(
-    name = "get_host_overview_handler",
-    srcs = ["GetHostOverviewHandler.java"],
+    name = "handlers",
+    srcs = glob(["*.java"]),
     deps = [
+        "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/api/model/proto:lab_java_proto",
         "//src/devtools/mobileharness/api/query/proto:filter_java_proto",
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
+        "//src/devtools/mobileharness/fe/v6/service/proto/device:device_resources_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/host:host_resources_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/host:host_service_java_proto",
         "//src/devtools/mobileharness/shared/labinfo/proto:lab_info_service_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/device/handlers",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/provider",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/util:daemon_statuses",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/util:host_connectivity_statuses",

@@ -40,7 +40,7 @@ import java.util.Locale;
 import javax.inject.Inject;
 
 /** Builder for the HealthAndActivityInfo proto. */
-final class HealthAndActivityBuilder {
+public final class HealthAndActivityBuilder {
 
   private static final ImmutableSet<String> ABNORMAL_TYPE_KEYWORDS =
       ImmutableSet.of(
@@ -59,7 +59,7 @@ final class HealthAndActivityBuilder {
     this.instantSource = instantSource;
   }
 
-  HealthAndActivityInfo buildHealthAndActivityInfo(DeviceInfo deviceInfo) {
+  public HealthAndActivityInfo buildHealthAndActivityInfo(DeviceInfo deviceInfo) {
     HealthAndActivityInfo.Builder builder = HealthAndActivityInfo.newBuilder();
 
     String status = deviceInfo.getDeviceStatus().toString();

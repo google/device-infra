@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.fe.v6.service.host;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.devtools.mobileharness.fe.v6.service.host.handlers.GetHostDeviceSummariesHandler;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.GetHostOverviewHandler;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.CheckRemoteControlEligibilityRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.CheckRemoteControlEligibilityResponse;
@@ -40,10 +41,14 @@ import javax.inject.Singleton;
 public final class HostServiceLogicImpl implements HostServiceLogic {
 
   private final GetHostOverviewHandler getHostOverviewHandler;
+  private final GetHostDeviceSummariesHandler getHostDeviceSummariesHandler;
 
   @Inject
-  HostServiceLogicImpl(GetHostOverviewHandler getHostOverviewHandler) {
+  HostServiceLogicImpl(
+      GetHostOverviewHandler getHostOverviewHandler,
+      GetHostDeviceSummariesHandler getHostDeviceSummariesHandler) {
     this.getHostOverviewHandler = getHostOverviewHandler;
+    this.getHostDeviceSummariesHandler = getHostDeviceSummariesHandler;
   }
 
   @Override
@@ -54,8 +59,7 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
   @Override
   public ListenableFuture<GetHostDeviceSummariesResponse> getHostDeviceSummaries(
       GetHostDeviceSummariesRequest request) {
-    // TODO: Implement this method.
-    return immediateFuture(GetHostDeviceSummariesResponse.getDefaultInstance());
+    return getHostDeviceSummariesHandler.getHostDeviceSummaries(request);
   }
 
   @Override
