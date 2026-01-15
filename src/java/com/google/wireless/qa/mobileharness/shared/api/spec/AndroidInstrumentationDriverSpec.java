@@ -256,6 +256,13 @@ public interface AndroidInstrumentationDriverSpec {
 
   @ParamAnnotation(
       required = false,
+      help =
+          "If true, mark the test as failure if all tests are ignored or assumption failures."
+              + " By default, this is false.")
+  String PARAM_FAIL_ON_ALL_SKIPPED = "fail_on_all_skipped";
+
+  @ParamAnnotation(
+      required = false,
       help = "Whether to skip clear media provider for multi user case. By default, this is false.")
   String PARAM_SKIP_CLEAR_MEDIA_PROVIDER_FOR_MULTI_USER_CASE =
       "skip_clear_media_provider_for_multi_user_case";

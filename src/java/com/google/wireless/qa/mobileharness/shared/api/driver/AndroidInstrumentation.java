@@ -37,6 +37,7 @@ import com.google.devtools.mobileharness.platform.android.instrumentation.Prepar
 import com.google.devtools.mobileharness.platform.android.instrumentation.parser.AmInstrumentationParser;
 import com.google.devtools.mobileharness.platform.android.instrumentation.parser.AmInstrumentationResultBuilder;
 import com.google.devtools.mobileharness.platform.android.instrumentation.parser.TestTimeTrackerKt;
+import com.google.devtools.mobileharness.platform.android.instrumentation.result.proto.TestStatus;
 import com.google.devtools.mobileharness.platform.android.instrumentation.result.proto.TestSuiteResult;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstallArgs;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstaller;
@@ -462,18 +463,30 @@ public class AndroidInstrumentation extends BaseDriver
 
       Supplier<LineCallback> lineCallbackFactory = null;
       TestSuiteResult.Builder testSuiteResultBuilder = null;
+      AmInstrumentationParser amInstrumentationParser = null;
       if (showRawResults) {
         testSuiteResultBuilder = TestSuiteResult.newBuilder();
 
         // This builder is final so it can be captured by the lambda.
         final TestSuiteResult.Builder finalBuilder = testSuiteResultBuilder;
+        amInstrumentationParser =
+            new AmInstrumentationParser(
+                ImmutableSet.of(new AmInstrumentationResultBuilder(finalBuilder)),
+                () -> TestTimeTrackerKt.TestTimeTracker(Instant::now));
+        final AmInstrumentationParser finalParser = amInstrumentationParser;
 
         // Create the factory that provides new LineCallback instances.
         lineCallbackFactory =
             () -> {
               // For each new callback, clear the builder to reset the state.
               finalBuilder.clear();
-              return getInstrumentationResultCallback(finalBuilder);
+              return new LineCallback() {
+                @Override
+                public LineCallback.Response onLine(String line) {
+                  finalParser.parse(line);
+                  return LineCallback.Response.empty();
+                }
+              };
             };
       }
 
@@ -527,6 +540,9 @@ public class AndroidInstrumentation extends BaseDriver
             .log("MobileHarnessException captured during instrumentation test");
         mhException = e;
         output = e.getMessage();
+      }
+      if (amInstrumentationParser != null) {
+        amInstrumentationParser.done();
       }
 
       testInfo
@@ -591,6 +607,18 @@ public class AndroidInstrumentation extends BaseDriver
                 deviceId, testInfo, filePathOnDevice, mhException);
         result = gtestResult.testResult();
         errorMsg.append(gtestResult.errorMessage());
+      }
+      if (job.params().getBool(AndroidInstrumentationDriverSpec.PARAM_FAIL_ON_ALL_SKIPPED, false)
+          && result == TestResult.PASS
+          && testSuiteResultBuilder != null) {
+        TestSuiteResult testSuiteResult = testSuiteResultBuilder.build();
+        if (testSuiteResult.getTestResultList().stream()
+            .allMatch(testResult -> testResult.getTestStatus() == TestStatus.IGNORED)) {
+          logger.atInfo().log(
+              "All tests were ignored or assumption failures, assigning FAIL result.");
+          result = TestResult.FAIL;
+          errorMsg.append("All tests were ignored or assumption failures.");
+        }
       }
 
       switch (result) {
@@ -904,24 +932,6 @@ public class AndroidInstrumentation extends BaseDriver
                             .PARAM_SKIP_CLEAR_MEDIA_PROVIDER_FOR_MULTI_USER_CASE,
                         false))
             .build());
-  }
-
-  private LineCallback getInstrumentationResultCallback(
-      TestSuiteResult.Builder testSuiteResultBuilder) {
-    AmInstrumentationResultBuilder amInstrumentationResultBuilder =
-        new AmInstrumentationResultBuilder(testSuiteResultBuilder);
-
-    AmInstrumentationParser amInstrumentationparser =
-        new AmInstrumentationParser(
-            ImmutableSet.of(amInstrumentationResultBuilder),
-            () -> TestTimeTrackerKt.TestTimeTracker(Instant::now));
-    return new LineCallback() {
-      @Override
-      public LineCallback.Response onLine(String line) {
-        amInstrumentationparser.parse(line);
-        return LineCallback.Response.empty();
-      }
-    };
   }
 
   protected ImmutableSet<String> getBuildApks(TestInfo testInfo)
