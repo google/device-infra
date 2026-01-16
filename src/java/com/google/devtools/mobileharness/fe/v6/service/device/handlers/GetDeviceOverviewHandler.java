@@ -52,7 +52,6 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceOvervi
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DimensionSourceGroup;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.Dimensions;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceOverviewRequest;
-import com.google.devtools.mobileharness.fe.v6.service.proto.device.HostInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.PermissionInfo;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
@@ -80,6 +79,7 @@ public final class GetDeviceOverviewHandler {
   private final ConfigurationProvider configurationProvider;
   private final ListeningExecutorService executor;
   private final HealthAndActivityBuilder healthAndActivityBuilder;
+  private final DeviceHeaderInfoBuilder deviceHeaderInfoBuilder;
   private final AsyncLoadingCache<String, DeviceOverviewPageData> overviewCache;
 
   @Inject
@@ -87,9 +87,11 @@ public final class GetDeviceOverviewHandler {
       LabInfoProvider labInfoProvider,
       ConfigurationProvider configurationProvider,
       ListeningExecutorService executor,
-      HealthAndActivityBuilder healthAndActivityBuilder) {
+      HealthAndActivityBuilder healthAndActivityBuilder,
+      DeviceHeaderInfoBuilder deviceHeaderInfoBuilder) {
     this.labInfoProvider = labInfoProvider;
     this.configurationProvider = configurationProvider;
+    this.deviceHeaderInfoBuilder = deviceHeaderInfoBuilder;
     this.executor = executor;
     this.healthAndActivityBuilder = healthAndActivityBuilder;
     this.overviewCache =
@@ -222,35 +224,26 @@ public final class GetDeviceOverviewHandler {
       DeviceInfo deviceInfo,
       Optional<DeviceConfig> deviceConfigOpt,
       Optional<LabConfig> labConfigOpt) {
+    DeviceHeaderInfo headerInfo =
+        deviceHeaderInfoBuilder.buildDeviceHeaderInfo(deviceInfo, deviceConfigOpt, labConfigOpt);
     DeviceOverview overview =
-        buildDeviceOverview(deviceId, deviceInfo, deviceConfigOpt, labConfigOpt);
-    DeviceHeaderInfo headerInfo = buildDeviceHeaderInfo(deviceInfo, deviceConfigOpt, labConfigOpt);
+        buildDeviceOverview(deviceId, deviceInfo, deviceConfigOpt, labConfigOpt, headerInfo);
     return DeviceOverviewPageData.newBuilder()
         .setOverview(overview)
         .setHeaderInfo(headerInfo)
         .build();
   }
 
-  private DeviceHeaderInfo buildDeviceHeaderInfo(
-      DeviceInfo unusedDeviceInfo,
-      Optional<DeviceConfig> unusedDeviceConfigOpt,
-      Optional<LabConfig> unusedLabConfigOpt) {
-    // TODO: Build DeviceHeaderInfo based on device info and configs.
-    return DeviceHeaderInfo.getDefaultInstance();
-  }
-
   private DeviceOverview buildDeviceOverview(
       String deviceId,
       DeviceInfo deviceInfo,
       Optional<DeviceConfig> deviceConfigOpt,
-      Optional<LabConfig> labConfigOpt) {
+      Optional<LabConfig> labConfigOpt,
+      DeviceHeaderInfo headerInfo) {
     DeviceOverview.Builder builder = DeviceOverview.newBuilder().setId(deviceId);
 
     // HostInfo
-    builder.setHost(
-        HostInfo.newBuilder()
-            .setName(deviceInfo.getDeviceLocator().getLabLocator().getHostName())
-            .setIp(deviceInfo.getDeviceLocator().getLabLocator().getIp()));
+    builder.setHost(headerInfo.getHost());
 
     // BasicDeviceInfo
     ImmutableList<DeviceDimension> allDimensions =

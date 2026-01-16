@@ -17,7 +17,9 @@
 package com.google.devtools.mobileharness.fe.v6.service.device;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceHeaderInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceOverviewPageData;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceHeaderInfoRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceHealthinessStatsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceOverviewRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceRecoveryTaskStatsRequest;
@@ -39,6 +41,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.device.Unquarantine
 /** Interface for the core logic of the Device Service. */
 public interface DeviceServiceLogic {
   ListenableFuture<DeviceOverviewPageData> getDeviceOverview(GetDeviceOverviewRequest request);
+
+  ListenableFuture<DeviceHeaderInfo> getDeviceHeaderInfo(GetDeviceHeaderInfoRequest request);
 
   ListenableFuture<HealthinessStats> getDeviceHealthinessStats(
       GetDeviceHealthinessStatsRequest request);

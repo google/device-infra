@@ -51,6 +51,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.GroupedDe
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.DeviceView;
 import com.google.devtools.mobileharness.fe.v6.service.device.ConfigurationProvider;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceHeaderInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceOverview;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceOverviewPageData;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceType;
@@ -58,6 +59,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.device.DimensionSou
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceOverviewRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HealthAndActivityInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HealthState;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.HostInfo;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
@@ -141,6 +143,7 @@ public final class GetDeviceOverviewHandlerTest {
 
   @Bind @Mock private LabInfoProvider labInfoProvider;
   @Bind @Mock private ConfigurationProvider configurationProvider;
+  @Bind @Mock private DeviceHeaderInfoBuilder deviceHeaderInfoBuilder;
 
   @Bind private ListeningExecutorService executorService = newDirectExecutorService();
   @Bind private InstantSource instantSource = InstantSource.fixed(NOW);
@@ -158,6 +161,12 @@ public final class GetDeviceOverviewHandlerTest {
         .thenReturn(immediateFuture(Optional.empty()));
     when(configurationProvider.getLabConfig(any(), any()))
         .thenReturn(immediateFuture(Optional.empty()));
+    when(deviceHeaderInfoBuilder.buildDeviceHeaderInfo(any(), any(), any()))
+        .thenReturn(
+            DeviceHeaderInfo.newBuilder()
+                .setId(DEVICE_ID)
+                .setHost(HostInfo.newBuilder().setName(HOST_NAME))
+                .build());
   }
 
   private void mockDeviceInfo(DeviceInfo deviceInfo) {
@@ -186,6 +195,12 @@ public final class GetDeviceOverviewHandlerTest {
     assertThat(response.getOverview().getId()).isEqualTo(DEVICE_ID);
     assertThat(response.getOverview().getHost().getName()).isEqualTo(HOST_NAME);
     assertThat(response.getOverview().hasHealthAndActivity()).isTrue();
+    assertThat(response.getHeaderInfo())
+        .isEqualTo(
+            DeviceHeaderInfo.newBuilder()
+                .setId(DEVICE_ID)
+                .setHost(HostInfo.newBuilder().setName(HOST_NAME))
+                .build());
 
     verify(labInfoProvider).getLabInfoAsync(any(GetLabInfoRequest.class), eq(UNIVERSE));
     verify(configurationProvider).getDeviceConfig(eq(DEVICE_ID), eq(UNIVERSE));
