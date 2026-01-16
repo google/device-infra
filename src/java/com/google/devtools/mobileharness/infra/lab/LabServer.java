@@ -425,11 +425,13 @@ public class LabServer {
     }
   }
 
-  /** Initializes environment by setting appropriate env vars and setting logger. */
-  public static void initializeEnv() throws MobileHarnessException {
+  /**
+   * Initializes logger.
+   *
+   * @apiNote this method should be called after flags are parsed
+   */
+  public static void initLogger() throws MobileHarnessException {
     LocalFileUtil localFileUtil = new LocalFileUtil();
-    SystemUtil systemUtil = new SystemUtil();
-
     // Loggers should be initialized it only after parsing flags, in order to get the parameters to
     // initialize the log file handler.
     try {
@@ -443,7 +445,15 @@ public class LabServer {
           InfraErrorId.LAB_INIT_ENV_PREPARE_DIR_ERROR, "Failed to setup local file dirs!", e);
     }
     MobileHarnessLogger.init(DirUtil.getDefaultLogDir());
+  }
 
+  /**
+   * Initializes system properties.
+   *
+   * @apiNote this method should be called after flags are parsed
+   */
+  public static void initSystemProperties() {
+    SystemUtil systemUtil = new SystemUtil();
     // Sets the system property TEST_TMPDIR, so that TestUtil will use it as tmp dir. If we don't
     // set it, the TestUtil will use /var/folders/.../$USER/tmp on Mac by default, where we cannot
     // change the attributes of the folders. Before we set the property "java.io.tmpdir" to be

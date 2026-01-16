@@ -19,7 +19,6 @@ package com.google.devtools.mobileharness.infra.ats.common.constant;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
 
-import com.google.common.collect.ImmutableMap;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -28,30 +27,16 @@ import org.junit.runners.JUnit4;
 public class BuiltinFlagsTest {
 
   @Test
-  public void atsLabServerFlags_notAtsLabServer_returnsEmpty() {
-    assertThat(BuiltinFlags.atsLabServerFlags(ImmutableMap.of())).isEmpty();
-  }
-
-  @Test
   public void atsLabServerFlags_atsLabServer_notEmpty() {
-    assertThat(
-            BuiltinFlags.atsLabServerFlags(
-                ImmutableMap.of(BuiltinFlags.ATS_LAB_SERVER_TYPE_PROPERTY_KEY, "on-prem")))
-        .isNotEmpty();
-    assertThat(
-            BuiltinFlags.atsLabServerFlags(
-                ImmutableMap.of(BuiltinFlags.ATS_LAB_SERVER_TYPE_PROPERTY_KEY, "omni-dda")))
-        .isNotEmpty();
+    assertThat(BuiltinFlags.atsLabServerFlags("on-prem")).isNotEmpty();
+    assertThat(BuiltinFlags.atsLabServerFlags("omni-dda")).isNotEmpty();
   }
 
   @Test
   public void atsLabServerFlags_invalidAtsLabServerType_throwsException() {
     assertThrows(
         IllegalArgumentException.class,
-        () ->
-            BuiltinFlags.atsLabServerFlags(
-                ImmutableMap.of(
-                    BuiltinFlags.ATS_LAB_SERVER_TYPE_PROPERTY_KEY, "wrong-ats-lab-server-type")));
+        () -> BuiltinFlags.atsLabServerFlags("wrong-ats-lab-server-type"));
   }
 
   @Test

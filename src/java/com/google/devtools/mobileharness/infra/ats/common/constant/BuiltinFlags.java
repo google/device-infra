@@ -209,23 +209,14 @@ public final class BuiltinFlags {
   }
 
   /**
-   * Returns built-in flags of an ATS lab server, or an empty list if it is not an ATS lab server
-   * (the {@linkplain #ATS_LAB_SERVER_TYPE_PROPERTY_KEY ATS lab server type} is not specified in the
-   * system properties).
+   * Returns built-in flags of an ATS lab server.
    *
-   * @throws IllegalArgumentException if the {@linkplain #ATS_LAB_SERVER_TYPE_PROPERTY_KEY ATS lab
-   *     server type} specified in the system properties is invalid
+   * @throws IllegalArgumentException if the {@code atsLabServerType} is not valid
    */
-  public static ImmutableList<String> atsLabServerFlags(
-      ImmutableMap<String, String> systemProperties) {
-    if (!systemProperties.containsKey(ATS_LAB_SERVER_TYPE_PROPERTY_KEY)) {
-      return ImmutableList.of();
-    }
-    String atsLabServerType = systemProperties.get(ATS_LAB_SERVER_TYPE_PROPERTY_KEY);
+  public static ImmutableList<String> atsLabServerFlags(String atsLabServerType) {
     checkArgument(
         ATS_LAB_SERVER_FLAGS.containsKey(atsLabServerType),
-        "Invalid value of property [%s]: [%s], valid values: %s",
-        ATS_LAB_SERVER_TYPE_PROPERTY_KEY,
+        "Invalid ATS lab server type: [%s], valid types: %s",
         atsLabServerType,
         ATS_LAB_SERVER_FLAGS.keySet());
     return ATS_LAB_SERVER_FLAGS.get(atsLabServerType);

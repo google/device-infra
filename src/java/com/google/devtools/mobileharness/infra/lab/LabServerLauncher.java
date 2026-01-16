@@ -57,14 +57,17 @@ public class LabServerLauncher {
   private static final SystemUtil SYSTEM_UTIL = new SystemUtil();
 
   public static void main(String[] args) throws InterruptedException {
-    // Gets system properties.
-    ImmutableMap<String, String> systemProperties = SystemPropertiesUtil.getSystemProperties();
-
     // Pre-processes main arguments.
-    ImmutableList<String> mainArgs = preprocessMainArgs(args, systemProperties);
+    ImmutableList<String> mainArgs = preprocessMainArgs(args);
 
     // Parses flags.
     Flags.parse(mainArgs);
+
+    // Initializes system properties.
+    LabServer.initSystemProperties();
+
+    // Gets system properties.
+    ImmutableMap<String, String> systemProperties = SystemPropertiesUtil.getSystemProperties();
 
     // Runs in print_lab_stats mode.
     if (Flags.instance().printLabStats.getNonNull()) {
@@ -78,8 +81,8 @@ public class LabServerLauncher {
     }
 
     try {
-      // Initializes environment.
-      LabServer.initializeEnv();
+      // Initializes logger.
+      LabServer.initLogger();
 
       // Initializes cloud logging.
       initializeCloudLogging();
@@ -122,14 +125,18 @@ public class LabServerLauncher {
   }
 
   /** Pre-processes main arguments. */
-  private static ImmutableList<String> preprocessMainArgs(
-      String[] args, ImmutableMap<String, String> systemProperties) {
+  private static ImmutableList<String> preprocessMainArgs(String[] args) {
     ImmutableList.Builder<String> mainArgs = ImmutableList.builder();
 
     // Adds built-in flags for ATS lab server.
-    ImmutableList<String> atsLabServerBuiltinFlags =
-        BuiltinFlags.atsLabServerFlags(systemProperties);
-    return mainArgs.addAll(atsLabServerBuiltinFlags).add(args).build();
+    String atsLabServerType = System.getProperty(BuiltinFlags.ATS_LAB_SERVER_TYPE_PROPERTY_KEY);
+    if (atsLabServerType != null) {
+      ImmutableList<String> atsLabServerBuiltinFlags =
+          BuiltinFlags.atsLabServerFlags(atsLabServerType);
+      mainArgs.addAll(atsLabServerBuiltinFlags);
+    }
+
+    return mainArgs.add(args).build();
   }
 
   private static ImmutableList<Module> createModules(
