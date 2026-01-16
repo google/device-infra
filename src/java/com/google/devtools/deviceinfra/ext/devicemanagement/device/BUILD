@@ -21,7 +21,6 @@ java_library(
     name = "base_device_helper",
     srcs = ["BaseDeviceHelper.java"],
     visibility = [
-        "//:omnilab_fusion",
         "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
     ],
