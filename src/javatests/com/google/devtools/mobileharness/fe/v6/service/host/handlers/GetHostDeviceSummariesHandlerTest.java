@@ -37,6 +37,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryR
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceType;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HealthAndActivityInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HealthState;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.SubDeviceInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DeviceHealthState;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DeviceSummary;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostDeviceSummariesRequest;
@@ -46,8 +47,12 @@ import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProt
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
+import com.google.wireless.qa.mobileharness.shared.api.spec.TestbedDeviceSpec;
+import com.google.wireless.qa.mobileharness.shared.proto.Common.StrPair;
+import com.google.wireless.qa.mobileharness.shared.proto.Device.SubDeviceDimensions;
 import java.time.Instant;
 import java.time.InstantSource;
+import java.util.Base64;
 import javax.inject.Inject;
 import org.junit.Before;
 import org.junit.Rule;
@@ -192,5 +197,74 @@ public final class GetHostDeviceSummariesHandlerTest {
     assertThat(response.getDeviceSummaries(1).getRequiredDims()).isEmpty();
     assertThat(response.getDeviceSummaries(1).getModel()).isEqualTo("iphone10");
     assertThat(response.getDeviceSummaries(1).getVersion()).isEqualTo("15");
+  }
+
+  @Test
+  public void getHostDeviceSummaries_withTestbedDevice_populatesSubDevices() throws Exception {
+    SubDeviceDimensions subDeviceDimensions =
+        SubDeviceDimensions.newBuilder()
+            .addSubDeviceDimension(
+                SubDeviceDimensions.SubDeviceDimension.newBuilder()
+                    .setDeviceId("sub_device_1")
+                    .addDeviceDimension(
+                        StrPair.newBuilder()
+                            .setName(TestbedDeviceSpec.MH_DEVICE_TYPE_KEY)
+                            .setValue("AndroidRealDevice"))
+                    .addDeviceDimension(
+                        StrPair.newBuilder().setName("model").setValue("pixel 5").build()))
+            .build();
+    String encodedSubDeviceDimensions =
+        Base64.getEncoder().encodeToString(subDeviceDimensions.toByteArray());
+    DeviceInfo testbedDeviceInfo =
+        DeviceInfo.newBuilder()
+            .setDeviceLocator(DeviceLocator.newBuilder().setId("testbed_device"))
+            .setDeviceStatus(DeviceStatus.IDLE)
+            .setDeviceFeature(
+                DeviceFeature.newBuilder()
+                    .addType("TestbedDevice")
+                    .setCompositeDimension(
+                        DeviceCompositeDimension.newBuilder()
+                            .addSupportedDimension(
+                                DeviceDimension.newBuilder()
+                                    .setName(TestbedDeviceSpec.SUBDEVICE_DIMENSIONS_KEY)
+                                    .setValue(encodedSubDeviceDimensions))))
+            .build();
+    when(labInfoProvider.getLabInfoAsync(any(), any()))
+        .thenReturn(
+            immediateFuture(
+                GetLabInfoResponse.newBuilder()
+                    .setLabQueryResult(
+                        LabQueryResult.newBuilder()
+                            .setLabView(
+                                LabView.newBuilder()
+                                    .addLabData(
+                                        LabData.newBuilder()
+                                            .setDeviceList(
+                                                DeviceList.newBuilder()
+                                                    .addDeviceInfo(testbedDeviceInfo)))))
+                    .build()));
+
+    GetHostDeviceSummariesResponse response =
+        getHostDeviceSummariesHandler.getHostDeviceSummaries(REQUEST).get();
+
+    assertThat(response.getDeviceSummariesList()).hasSize(1);
+    assertThat(response.getDeviceSummaries(0).getId()).isEqualTo("testbed_device");
+    assertThat(response.getDeviceSummaries(0).getSubDevicesList()).hasSize(1);
+    SubDeviceInfo expectedSubDeviceInfo =
+        SubDeviceInfo.newBuilder()
+            .setId("sub_device_1")
+            .addTypes(DeviceType.newBuilder().setType("AndroidRealDevice").setIsAbnormal(false))
+            .addDimensions(
+                com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceDimension
+                    .newBuilder()
+                    .setName("mh_device_type")
+                    .setValue("AndroidRealDevice"))
+            .addDimensions(
+                com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceDimension
+                    .newBuilder()
+                    .setName("model")
+                    .setValue("pixel 5"))
+            .build();
+    assertThat(response.getDeviceSummaries(0).getSubDevices(0)).isEqualTo(expectedSubDeviceInfo);
   }
 }

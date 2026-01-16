@@ -53,15 +53,18 @@ public final class GetHostDeviceSummariesHandler {
 
   private final LabInfoProvider labInfoProvider;
   private final HealthAndActivityBuilder healthAndActivityBuilder;
+  private final SubDeviceInfoListFactory subDeviceInfoListFactory;
   private final ListeningExecutorService executor;
 
   @Inject
   GetHostDeviceSummariesHandler(
       LabInfoProvider labInfoProvider,
       HealthAndActivityBuilder healthAndActivityBuilder,
+      SubDeviceInfoListFactory subDeviceInfoListFactory,
       ListeningExecutorService executor) {
     this.labInfoProvider = labInfoProvider;
     this.healthAndActivityBuilder = healthAndActivityBuilder;
+    this.subDeviceInfoListFactory = subDeviceInfoListFactory;
     this.executor = executor;
   }
 
@@ -111,24 +114,31 @@ public final class GetHostDeviceSummariesHandler {
             .map(d -> d.getName() + ":" + d.getValue())
             .collect(joining(", "));
 
-    return DeviceSummary.newBuilder()
-        .setId(deviceInfo.getDeviceLocator().getId())
-        .setHealthState(
-            DeviceHealthState.newBuilder()
-                .setHealth(healthAndActivityInfo.getState())
-                .setTitle(healthAndActivityInfo.getTitle())
-                .setTooltip(healthAndActivityInfo.getSubtitle()))
-        .addAllTypes(healthAndActivityInfo.getDeviceTypesList())
-        .setDeviceStatus(healthAndActivityInfo.getDeviceStatus())
-        .setLabel(dimensions.getOrDefault(DIMENSION_LABEL, ""))
-        .setRequiredDims(requiredDims)
-        .setModel(dimensions.getOrDefault(DIMENSION_MODEL, ""))
-        .setVersion(
-            dimensions.getOrDefault(
-                DIMENSION_SOFTWARE_VERSION, dimensions.getOrDefault(DIMENSION_SDK_VERSION, "")))
-        .build();
+    DeviceSummary.Builder deviceSummaryBuilder =
+        DeviceSummary.newBuilder()
+            .setId(deviceInfo.getDeviceLocator().getId())
+            .setHealthState(
+                DeviceHealthState.newBuilder()
+                    .setHealth(healthAndActivityInfo.getState())
+                    .setTitle(healthAndActivityInfo.getTitle())
+                    .setTooltip(healthAndActivityInfo.getSubtitle()))
+            .addAllTypes(healthAndActivityInfo.getDeviceTypesList())
+            .setDeviceStatus(healthAndActivityInfo.getDeviceStatus())
+            .setLabel(dimensions.getOrDefault(DIMENSION_LABEL, ""))
+            .setRequiredDims(requiredDims)
+            .setModel(dimensions.getOrDefault(DIMENSION_MODEL, ""))
+            .setVersion(
+                dimensions.getOrDefault(
+                    DIMENSION_SOFTWARE_VERSION,
+                    dimensions.getOrDefault(DIMENSION_SDK_VERSION, "")));
 
-    // TODO: Populate sub_devices.
+    // If it is a testbed device, decode sub-device information.
+    boolean isTestbed = deviceInfo.getDeviceFeature().getTypeList().contains("TestbedDevice");
+    if (isTestbed) { // Only attempt to decode sub-devices for testbeds
+      deviceSummaryBuilder.addAllSubDevices(subDeviceInfoListFactory.create(dimensions));
+    }
+
+    return deviceSummaryBuilder.build();
   }
 
   /** Creates a {@link GetLabInfoRequest} to filter labs by host name. */

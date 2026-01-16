@@ -40,7 +40,10 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/util:lab_activities",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:lab_info_provider",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:testbed_device_spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:device_model_java_proto",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
+        "@protobuf//:protobuf_java",
     ],
 )
