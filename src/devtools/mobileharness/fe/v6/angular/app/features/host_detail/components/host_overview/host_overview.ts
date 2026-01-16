@@ -33,16 +33,21 @@ import {MatTableDataSource, MatTableModule} from '@angular/material/table';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {RouterLink} from '@angular/router';
 import {delay, map, tap} from 'rxjs/operators';
+
 import {
   HealthState,
   type DeviceDimension,
 } from '../../../../core/models/device_overview';
 import {
   DaemonServerStatus,
+  DeviceProxyType,
   DeviceSummary,
+  EligibilityStatus,
   HostConnectivityStatus,
   LabServerActivity,
+  type CheckRemoteControlEligibilityResponse,
   type HostOverview,
+  type RemoteControlDevicesRequest,
 } from '../../../../core/models/host_overview';
 import {HOST_SERVICE} from '../../../../core/services/host/host_service';
 import {ConfirmDialog} from '../../../../shared/components/confirm_dialog/confirm_dialog';
@@ -59,6 +64,8 @@ import {
 import {SnackBarService} from '../../../../shared/services/snackbar_service';
 import {dateUtils} from '../../../../shared/utils/date_utils';
 import {objectUtils} from '../../../../shared/utils/object_utils';
+import {openInNewTab} from '../../../../shared/utils/safe_dom';
+import {RemoteControlDialog} from './remote_control_dialog/remote_control_dialog';
 
 const HEALTH_SEMANTIC_MAP: Record<
   string,
@@ -117,6 +124,15 @@ const STATUS_SEMANTIC_MAP: Record<string, {icon: string; colorClass: string}> =
     'MISSING': {icon: 'error', colorClass: 'text-red-600'},
   };
 
+const PROXY_TYPE_LABELS: Record<number, string> = {
+  0: 'None',
+  1: 'ADB & Video',
+  2: 'ADB Console',
+  3: 'USB-over-IP',
+  4: 'SSH',
+  5: 'Video Only',
+};
+
 /**
  * Component for displaying an overview of a host, including its basic
  * information, lab server status, devices, daemon server status, and host
@@ -169,6 +185,14 @@ export class HostOverviewPage implements OnInit, OnChanges {
 
   @ViewChild('decommissionDialogContent')
   decommissionDialogContent!: TemplateRef<{}>;
+  @ViewChild('incompatibleDevicesDialogContent')
+  incompatibleDevicesDialogContent!: TemplateRef<{}>;
+  @ViewChild('singleDeviceRCErrorDialogContent')
+  singleDeviceRCErrorDialogContent!: TemplateRef<{}>;
+  @ViewChild('multiDeviceRCErrorDialogContent')
+  multiDeviceRCErrorDialogContent!: TemplateRef<{}>;
+  @ViewChild('accessDeniedDialogContent')
+  accessDeniedDialogContent!: TemplateRef<{}>;
   decommissionMissingCount = toSignal(
     this.selection.changed.pipe(
       map(
@@ -312,6 +336,94 @@ export class HostOverviewPage implements OnInit, OnChanges {
     }
   }
 
+  // --- Lab Server Card ---
+  getStatusSemantic(status: HostConnectivityStatus | DaemonServerStatus) {
+    const config = STATUS_SEMANTIC_MAP[status.state];
+    const duration =
+      status.state === 'MISSING' && status.missingStartTime
+        ? this.dateUtils.formatTimeAgo(status.missingStartTime)
+        : '';
+
+    return {
+      icon: config?.icon ?? 'help_outline',
+      colorClass: config?.colorClass ?? 'text-gray-700',
+      text: status.title,
+      duration,
+      tooltip: status.tooltip,
+    };
+  }
+
+  getLabActivitySemantic(activity: LabServerActivity) {
+    const config = LAB_ACTIVITY_SEMANTIC_MAP[activity.state];
+    return {
+      icon: config?.icon ?? 'help_outline',
+      colorClass: config?.colorClass ?? 'text-gray-700',
+      text: activity.title,
+      isSpinning: config?.isSpinning ?? false,
+      tooltip: activity.tooltip,
+    };
+  }
+
+  // Flags editing
+  startEditFlags() {
+    this.editedFlags = this.host.labServer.passThroughFlags;
+    this.isEditingFlags.set(true);
+  }
+
+  cancelEditFlags() {
+    this.isEditingFlags.set(false);
+  }
+
+  saveFlags() {
+    if (this.editedFlags === this.host.labServer.passThroughFlags) {
+      this.isEditingFlags.set(false);
+      return;
+    }
+
+    this.isSavingFlags.set(true);
+    this.hostService
+      .updatePassThroughFlags(this.host.hostName, this.editedFlags)
+      .pipe(delay(2000), takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.host.labServer.passThroughFlags = this.editedFlags;
+          this.isEditingFlags.set(false);
+          this.isSavingFlags.set(false);
+          this.showRestartDialog();
+        },
+        error: (err) => {
+          this.snackBar.showError(`Failed to save flags: ${err.message}`);
+          this.isSavingFlags.set(false);
+        },
+      });
+  }
+
+  showRestartDialog() {
+    const dialogData = {
+      title: 'Restart Required',
+      content: `Pass through flags for ${this.host.hostName} have been updated. A Lab Server restart is required for changes to take effect. Restart now?`,
+      type: 'warning',
+      primaryButtonLabel: 'Restart Now',
+      secondaryButtonLabel: 'Later',
+    };
+
+    const restartDialogRef = this.dialog.open(ConfirmDialog, {
+      data: dialogData,
+      disableClose: true,
+    });
+
+    restartDialogRef
+      .afterClosed()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((result) => {
+        if (result === 'primary') {
+          // TODO: Implement restart lab server logic.
+          alert('Restarting lab server');
+        }
+      });
+  }
+
+  // --- Devices Card ---
   loadDevices() {
     this.isDeviceLoading.set(true);
     this.hostService
@@ -372,6 +484,7 @@ export class HostOverviewPage implements OnInit, OnChanges {
     }`;
   }
 
+  // device table actions - Decommission missing devices
   decommissionMissing() {
     const missingDevices = this.selection.selected.filter(
       (device) => device.deviceStatus.status === 'MISSING',
@@ -421,6 +534,172 @@ export class HostOverviewPage implements OnInit, OnChanges {
       );
   }
 
+  // device table actions -  Multi-device remote control
+  startMultiRemoteControl() {
+    const selectedDevices = this.selection.selected;
+
+    // 1. Quantity Check
+    if (selectedDevices.length === 0) {
+      this.snackBar.showError('Please select at least one device.');
+      return;
+    }
+    if (selectedDevices.length > 3) {
+      this.snackBar.showError(
+        'Can not remote control more than 3 devices at the same time.',
+      );
+      return;
+    }
+
+    // 2&3. Eligibility and Proxy Compatibility Check
+    const deviceControlIds = selectedDevices.map((d) => d.id);
+    this.hostService
+      .checkRemoteControlEligibility(this.host.hostName, deviceControlIds)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (response: CheckRemoteControlEligibilityResponse) => {
+          switch (response.status) {
+            case EligibilityStatus.BLOCK_DEVICES_INELIGIBLE: {
+              // Case 1: Ineligible devices found
+              const invalidDevices = response.results
+                .filter((d) => !d.isEligible)
+                .map((d) => ({
+                  id: d.deviceId,
+                  reason: d.ineligibilityReason?.message || 'Unknown reason',
+                }));
+              this.dialog.open(ConfirmDialog, {
+                panelClass: 'confirm-dialog-panel',
+                data: {
+                  title: 'Unable to Start Remote Control',
+                  contentTemplate: this.incompatibleDevicesDialogContent,
+                  contentTemplateContext: {
+                    invalidDevices,
+                    isSingleDevice: selectedDevices.length === 1,
+                  },
+                  type: 'warning',
+                  primaryButtonLabel: 'Got it',
+                },
+              });
+              break;
+            }
+            case EligibilityStatus.BLOCK_NO_COMMON_PROXY: {
+              // Case 2: No common session options
+              if (selectedDevices.length === 1) {
+                // SINGLE DEVICE FAILURE CASE
+                const device = selectedDevices[0];
+                this.dialog.open(ConfirmDialog, {
+                  panelClass: 'confirm-dialog-panel',
+                  data: {
+                    title: 'Connection Error',
+                    contentTemplate: this.singleDeviceRCErrorDialogContent,
+                    contentTemplateContext: {
+                      device,
+                      isTestbed: this.isTestbed(device),
+                    },
+                    type: 'warning',
+                    primaryButtonLabel: 'Got it',
+                  },
+                });
+              } else {
+                // MULTIPLE DEVICE FAILURE CASE
+                const capabilitiesList = response.results.map((d) => {
+                  const modes = d.supportedProxyTypes
+                    .map(
+                      (m: DeviceProxyType) => PROXY_TYPE_LABELS[m] || 'Unknown',
+                    )
+                    .join(', ');
+                  return {id: d.deviceId, modes: modes || 'None'};
+                });
+
+                this.dialog.open(ConfirmDialog, {
+                  panelClass: 'confirm-dialog-panel',
+                  data: {
+                    title: 'Connection Error',
+                    contentTemplate: this.multiDeviceRCErrorDialogContent,
+                    contentTemplateContext: {capabilitiesList},
+                    type: 'warning',
+                    primaryButtonLabel: 'Got it',
+                  },
+                });
+              }
+              break;
+            }
+            case EligibilityStatus.BLOCK_ALL_PERMISSION_DENIED: {
+              this.dialog.open(ConfirmDialog, {
+                panelClass: 'confirm-dialog-panel',
+                data: {
+                  title: 'Access Denied',
+                  contentTemplate: this.accessDeniedDialogContent,
+                  type: 'error',
+                  primaryButtonLabel: 'Got it',
+                },
+              });
+              break;
+            }
+            case EligibilityStatus.READY: {
+              this.openRemoteControlDialog(selectedDevices, response);
+              break;
+            }
+            default:
+              break;
+          }
+        },
+        error: (err) => {
+          console.error(err);
+          this.snackBar.showError(
+            `Failed to check proxy compatibility: ${err.message}`,
+          );
+        },
+      });
+  }
+
+  private openRemoteControlDialog(
+    selectedDevices: DeviceSummary[],
+    eligibilityResponse: CheckRemoteControlEligibilityResponse,
+  ) {
+    const dialogRef = this.dialog.open(RemoteControlDialog, {
+      panelClass: 'remote-control-dialog-panel',
+      data: {
+        devices: selectedDevices,
+        eligibilityResults: eligibilityResponse.results,
+        sessionOptions: eligibilityResponse.sessionOptions!,
+      },
+      disableClose: true,
+    });
+
+    dialogRef
+      .afterClosed()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((req: RemoteControlDevicesRequest | undefined) => {
+        if (req) {
+          this.startRemoteControlSessions(req);
+        }
+      });
+  }
+
+  private startRemoteControlSessions(req: RemoteControlDevicesRequest) {
+    this.hostService
+      .remoteControlDevices(this.host.hostName, req)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (res) => {
+          res.sessions.forEach((session) => {
+            if (session.sessionUrl) {
+              openInNewTab(session.sessionUrl);
+            } else {
+              this.snackBar.showError(
+                `Invalid session URL for device ${session.deviceId}`,
+              );
+            }
+          });
+        },
+        error: (err) => {
+          this.snackBar.showError(
+            `Failed to start remote control: ${err.message}`,
+          );
+        },
+      });
+  }
+
   toggleRow(element: DeviceSummary) {
     this.expandedElement.set(
       this.expandedElement() === element ? null : element,
@@ -435,10 +714,22 @@ export class HostOverviewPage implements OnInit, OnChanges {
     );
   }
 
+  // Health Column
+  getHealthSemantic(state: HealthState) {
+    return HEALTH_SEMANTIC_MAP[state] || DEFAULT_HEALTH_SEMANTIC;
+  }
+  // Type Column
   isTypeAbnormal(types: Array<{type: string; isAbnormal: boolean}>): boolean {
     return types.some((t) => t.isAbnormal);
   }
 
+  getFirstType(types: Array<{type: string; isAbnormal: boolean}>): string {
+    if (types.length === 0) return '';
+    const abnormalTypes = types.filter((t) => t.isAbnormal);
+    return abnormalTypes.length > 0 ? abnormalTypes[0].type : types[0].type;
+  }
+
+  // Dimensions and types hovers
   onDimHover(
     trigger: CdkOverlayOrigin,
     subDeviceId: string,
@@ -524,112 +815,5 @@ export class HostOverviewPage implements OnInit, OnChanges {
       clearTimeout(this.overlayHideTimer);
       this.overlayHideTimer = null;
     }
-  }
-
-  getFirstType(types: Array<{type: string; isAbnormal: boolean}>): string {
-    if (types.length === 0) return '';
-    const abnormalTypes = types.filter((t) => t.isAbnormal);
-    return abnormalTypes.length > 0 ? abnormalTypes[0].type : types[0].type;
-  }
-
-  getRemainingTypeCount(
-    types: Array<{type: string; isAbnormal: boolean}>,
-  ): number {
-    return Math.max(0, types.length - 1);
-  }
-
-  getDeviceTypesString(
-    types: Array<{type: string; isAbnormal: boolean}>,
-  ): string {
-    return types.map((t) => t.type).join(', ');
-  }
-
-  getStatusSemantic(status: HostConnectivityStatus | DaemonServerStatus) {
-    const config = STATUS_SEMANTIC_MAP[status.state];
-    const duration =
-      status.state === 'MISSING' && status.missingStartTime
-        ? this.dateUtils.formatTimeAgo(status.missingStartTime)
-        : '';
-
-    return {
-      icon: config?.icon ?? 'help_outline',
-      colorClass: config?.colorClass ?? 'text-gray-700',
-      text: status.title,
-      duration,
-      tooltip: status.tooltip,
-    };
-  }
-
-  getHealthSemantic(state: HealthState) {
-    return HEALTH_SEMANTIC_MAP[state] || DEFAULT_HEALTH_SEMANTIC;
-  }
-
-  getLabActivitySemantic(activity: LabServerActivity) {
-    const config = LAB_ACTIVITY_SEMANTIC_MAP[activity.state];
-    return {
-      icon: config?.icon ?? 'help_outline',
-      colorClass: config?.colorClass ?? 'text-gray-700',
-      text: activity.title,
-      isSpinning: config?.isSpinning ?? false,
-      tooltip: activity.tooltip,
-    };
-  }
-
-  startEditFlags() {
-    this.editedFlags = this.host.labServer.passThroughFlags;
-    this.isEditingFlags.set(true);
-  }
-
-  cancelEditFlags() {
-    this.isEditingFlags.set(false);
-  }
-
-  saveFlags() {
-    if (this.editedFlags === this.host.labServer.passThroughFlags) {
-      this.isEditingFlags.set(false);
-      return;
-    }
-
-    this.isSavingFlags.set(true);
-    this.hostService
-      .updatePassThroughFlags(this.host.hostName, this.editedFlags)
-      .pipe(delay(2000), takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: () => {
-          this.host.labServer.passThroughFlags = this.editedFlags;
-          this.isEditingFlags.set(false);
-          this.isSavingFlags.set(false);
-          this.showRestartDialog();
-        },
-        error: (err) => {
-          this.snackBar.showError(`Failed to save flags: ${err.message}`);
-          this.isSavingFlags.set(false);
-        },
-      });
-  }
-
-  showRestartDialog() {
-    const dialogData = {
-      title: 'Restart Required',
-      content: `Pass through flags for ${this.host.hostName} have been updated. A Lab Server restart is required for changes to take effect. Restart now?`,
-      type: 'warning',
-      primaryButtonLabel: 'Restart Now',
-      secondaryButtonLabel: 'Later',
-    };
-
-    const restartDialogRef = this.dialog.open(ConfirmDialog, {
-      data: dialogData,
-      disableClose: true,
-    });
-
-    restartDialogRef
-      .afterClosed()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((result) => {
-        if (result === 'primary') {
-          // TODO: Implement restart lab server logic.
-          alert('Restarting lab server');
-        }
-      });
   }
 }

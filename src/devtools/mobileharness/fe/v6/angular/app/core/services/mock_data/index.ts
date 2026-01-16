@@ -37,6 +37,11 @@ import {SCENARIO_HOST_DISCOVERY_HIDDEN} from './hosts/08_device_discovery_hidden
 import {SCENARIO_HOST_DEVICE_CONFIG_HIDDEN} from './hosts/09_device_config_hidden';
 import {SCENARIO_HOST_X_PROD} from './hosts/host_x_prod';
 import {SCENARIO_HOST_Z_PROD} from './hosts/host_z_prod';
+import {
+  SCENARIO_RC_ALL_VALID,
+  SCENARIO_RC_MIXED_ALL,
+  SCENARIO_RC_PROXY_MISMATCH,
+} from './hosts/multi_remote_control';
 import {OVERVIEW_01} from './hosts/overview_01';
 import {OVERVIEW_02} from './hosts/overview_02';
 import {OVERVIEW_03} from './hosts/overview_03';
@@ -50,6 +55,7 @@ import {OVERVIEW_10} from './hosts/overview_10';
 import {OVERVIEW_11} from './hosts/overview_11';
 import {OVERVIEW_12} from './hosts/overview_12';
 import {OVERVIEW_13} from './hosts/overview_13';
+import {SCENARIO_RC_PERMISSIONS_ALL} from './hosts/remote_control_permissions';
 import {MockDeviceScenario, MockHostScenario} from './models';
 
 /**
@@ -96,6 +102,10 @@ export const MOCK_HOST_SCENARIOS: MockHostScenario[] = [
   SCENARIO_HOST_DEVICE_CONFIG_HIDDEN,
   SCENARIO_HOST_X_PROD,
   SCENARIO_HOST_Z_PROD,
+  SCENARIO_RC_ALL_VALID,
+  SCENARIO_RC_MIXED_ALL,
+  SCENARIO_RC_PROXY_MISMATCH,
+  SCENARIO_RC_PERMISSIONS_ALL,
   OVERVIEW_01,
   OVERVIEW_02,
   OVERVIEW_03,

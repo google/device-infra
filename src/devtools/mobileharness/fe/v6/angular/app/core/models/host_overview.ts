@@ -254,6 +254,8 @@ export enum EligibilityStatus {
    * If the user has partial permission, the dialog will show the permission denied device card and allow
    * the user to proceed.
    * UI Action: Open configuration dialog immediately.
+   * If the user has partial permission, the status should be READY and allow
+   * the user to proceed, but show a warning in the dialog.
    */
   READY = 'READY',
 
@@ -292,6 +294,7 @@ export interface SessionOptions {
   commonRunAsCandidates: string[];
   /**
    * Maximum allowed session duration in hours.
+   * If the dimension pool value is shared then the value is 3 hours else 12 hours.
    */
   maxDurationHours: number;
 }

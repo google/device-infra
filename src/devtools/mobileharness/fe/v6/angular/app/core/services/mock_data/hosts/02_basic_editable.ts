@@ -3,7 +3,10 @@
 import {DeviceConfig} from '../../../models/device_config_models';
 import {HostConfig} from '../../../models/host_config_models';
 import {MockHostScenario} from '../models';
-import {createDefaultUiStatus} from './ui_status_utils';
+import {
+  createDefaultHostOverview,
+  createDefaultUiStatus,
+} from './ui_status_utils';
 
 const DEFAULT_DEVICE_CONFIG: DeviceConfig = {
   permissions: {owners: ['admin1'], executors: ['user1']},
@@ -33,6 +36,8 @@ const HOST_CONFIG: HostConfig = {
 export const SCENARIO_HOST_BASIC_EDITABLE: MockHostScenario = {
   hostName: 'host-basic-editable.example.com',
   scenarioName: '2. Basic Editable',
+  overview: createDefaultHostOverview('host-basic-editable.example.com'),
+  deviceSummaries: [],
   hostConfigResult: {
     hostConfig: HOST_CONFIG,
     uiStatus: createDefaultUiStatus(),

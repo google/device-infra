@@ -8,6 +8,7 @@ import {
   HostPropertiesUiStatus,
   PartStatus,
 } from '../../../models/host_config_models';
+import {HostOverview} from '../../../models/host_overview';
 
 const EDITABLE: Editability = {editable: true};
 const VISIBLE_EDITABLE: PartStatus = {visible: true, editability: EDITABLE};
@@ -42,5 +43,40 @@ export function createPartStatus(
   return {
     visible: true,
     editability: {editable, ...(reason && {reason})},
+  };
+}
+
+/**
+ * Creates a default HostOverview with basic running status.
+ */
+export function createDefaultHostOverview(hostName: string): HostOverview {
+  return {
+    hostName,
+    ip: '192.168.1.1',
+    os: 'gLinux',
+    labTypeDisplayNames: ['Satellite Lab'],
+    labServer: {
+      connectivity: {
+        state: 'RUNNING',
+        title: 'Running',
+        tooltip: 'Host is running and connected.',
+      },
+      activity: {
+        state: 'STARTED',
+        title: 'Started',
+        tooltip: 'Lab Server is started.',
+      },
+      version: 'R123.45.6',
+      passThroughFlags: '',
+    },
+    daemonServer: {
+      status: {
+        state: 'RUNNING',
+        title: 'Running',
+        tooltip: 'Daemon Server is running.',
+      },
+      version: '24.08.01',
+    },
+    properties: {},
   };
 }

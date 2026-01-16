@@ -3,7 +3,10 @@
 import {DeviceConfig} from '../../../models/device_config_models';
 import {HostConfig} from '../../../models/host_config_models';
 import {MockHostScenario} from '../models';
-import {createDefaultUiStatus, createPartStatus} from './ui_status_utils';
+import {
+  createDefaultHostOverview,
+  createDefaultUiStatus,
+} from './ui_status_utils';
 
 const DEFAULT_DEVICE_CONFIG: DeviceConfig = {
   permissions: {owners: ['admin1'], executors: ['user1']},
@@ -43,6 +46,8 @@ UI_STATUS.hostProperties.itemEditabilityOverrides = {
 export const SCENARIO_HOST_PUSHER_ITEM_OVERRIDE: MockHostScenario = {
   hostName: 'host-pusher-item-override.example.com',
   scenarioName: '5. Pusher - Properties Item Override',
+  overview: createDefaultHostOverview('host-pusher-item-override.example.com'),
+  deviceSummaries: [],
   hostConfigResult: {
     hostConfig: HOST_CONFIG,
     uiStatus: UI_STATUS,

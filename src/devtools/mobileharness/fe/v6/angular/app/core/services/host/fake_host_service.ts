@@ -101,43 +101,59 @@ export class FakeHostService extends HostService {
   ): Observable<CheckRemoteControlEligibilityResponse> {
     const results: DeviceEligibilityResult[] = [];
 
+    const isTestbed = (id: string) =>
+      id.includes('TESTBED') && deviceControlIds.length > 1;
+
     deviceControlIds.forEach((id) => {
       const result: DeviceEligibilityResult = {
         deviceId: id,
         isEligible: true,
-        supportedProxyTypes: [],
+        supportedProxyTypes: [
+          DeviceProxyType.ADB_AND_VIDEO,
+          DeviceProxyType.SSH,
+        ],
         runAsCandidates: [],
       };
 
-      if (id.includes('ineligible-busy')) {
+      if (id.includes('ineligible-busy') || id.includes('ineligible-failed')) {
         result.isEligible = false;
         result.ineligibilityReason = {
           code: 'DEVICE_NOT_IDLE',
-          message: `Device ${id} is busy.`,
+          message: `Status is not IDLE.`,
         };
       } else if (id.includes('ineligible-no-acid')) {
         result.isEligible = false;
         result.ineligibilityReason = {
           code: 'ACID_NOT_SUPPORTED',
-          message: `Device ${id} does not support ACID.`,
+          message: `No AcidRemoteDriver`,
         };
-      } else if (id.includes('ineligible-no-perm')) {
+      } else if (isTestbed(id)) {
+        result.isEligible = false;
+        result.ineligibilityReason = {
+          code: 'DEVICE_TYPE_NOT_SUPPORTED',
+          message: `Not AndroidRealDevice`,
+        };
+      } else if (id.includes('NO-PERM')) {
         result.isEligible = false;
         result.ineligibilityReason = {
           code: 'PERMISSION_DENIED',
-          message: `Permission denied for device ${id}.`,
+          message: `Permission Denied`,
         };
       } else {
-        result.supportedProxyTypes = [
-          DeviceProxyType.ADB_AND_VIDEO,
-          DeviceProxyType.SSH,
-        ];
         result.runAsCandidates = ['user1', 'mdb/group1', 'mdb/group2'];
 
-        if (id.includes('no-common-proxy-1')) {
+        if (id.includes('VALID-GROUP')) {
+          result.runAsCandidates = ['mdb/group1', 'mdb/group2'];
+        } else if (id.includes('VALID-USER')) {
+          result.runAsCandidates = ['user1'];
+        }
+
+        if (id.includes('PROXY-MISMATCH-1')) {
           result.supportedProxyTypes = [DeviceProxyType.ADB_ONLY];
-        } else if (id.includes('no-common-proxy-2')) {
+        } else if (id.includes('PROXY-MISMATCH-2')) {
           result.supportedProxyTypes = [DeviceProxyType.SSH];
+        } else if (id.includes('NO-PROXY')) {
+          result.supportedProxyTypes = [];
         }
       }
       results.push(result);
@@ -158,7 +174,12 @@ export class FakeHostService extends HostService {
     }
 
     // 2. Check for ineligible devices
-    if (results.some((r) => !r.isEligible)) {
+    if (
+      results.some(
+        (r) =>
+          !r.isEligible && r.ineligibilityReason?.code !== 'PERMISSION_DENIED',
+      )
+    ) {
       return of({
         status: EligibilityStatus.BLOCK_DEVICES_INELIGIBLE,
         results,
@@ -167,10 +188,11 @@ export class FakeHostService extends HostService {
 
     // 3. Check for common proxy
     if (results.length > 0) {
-      let commonProxies = results[0].supportedProxyTypes;
-      for (let i = 1; i < results.length; i++) {
+      const eligibleResults = results.filter((r) => r.isEligible);
+      let commonProxies = eligibleResults[0].supportedProxyTypes;
+      for (let i = 1; i < eligibleResults.length; i++) {
         commonProxies = commonProxies.filter((p) =>
-          results[i].supportedProxyTypes.includes(p),
+          eligibleResults[i].supportedProxyTypes.includes(p),
         );
       }
 
@@ -181,13 +203,27 @@ export class FakeHostService extends HostService {
         });
       }
 
+      // Calculate common runAs candidates
+      let commonRunAs = eligibleResults[0].runAsCandidates || [];
+      for (let i = 1; i < eligibleResults.length; i++) {
+        commonRunAs = commonRunAs.filter((c) =>
+          eligibleResults[i].runAsCandidates?.includes(c),
+        );
+      }
+
+      // Calculate max duration hours
+      let maxDurationHours = 12;
+      if (eligibleResults.some((r) => r.deviceId.includes('RC-VALID-USER-1'))) {
+        maxDurationHours = 3;
+      }
+
       return of({
         status: EligibilityStatus.READY,
         results,
         sessionOptions: {
           commonProxyTypes: commonProxies,
-          commonRunAsCandidates: ['user1', 'mdb/group1'],
-          maxDurationHours: 12,
+          commonRunAsCandidates: commonRunAs,
+          maxDurationHours,
         },
       });
     }
@@ -204,6 +240,12 @@ export class FakeHostService extends HostService {
     });
   }
 
+  /**
+   * Starts remote control sessions for multiple devices.
+   * @param hostName The name of the host.
+   * @param req The request containing device IDs and configuration for the sessions.
+   * @return An observable emitting the session results.
+   */
   override remoteControlDevices(
     hostName: string,
     req: RemoteControlDevicesRequest,
@@ -211,9 +253,7 @@ export class FakeHostService extends HostService {
     const response: RemoteControlDevicesResponse = {
       sessions: req.deviceConfigs.map((config) => ({
         deviceId: config.deviceId,
-        sessionUrl: `http://acid/session/${config.deviceId}-${Math.floor(
-          Math.random() * 1000,
-        )}`,
+        sessionUrl: `https://xcid.google.example.com/provider/mh/create/?device_id=${config.deviceId}`,
       })),
     };
     return of(response);

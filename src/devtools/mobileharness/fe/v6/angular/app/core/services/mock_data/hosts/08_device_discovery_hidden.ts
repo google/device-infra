@@ -3,7 +3,11 @@
 import {DeviceConfig} from '../../../models/device_config_models';
 import {HostConfig} from '../../../models/host_config_models';
 import {MockHostScenario} from '../models';
-import {createDefaultUiStatus, createPartStatus} from './ui_status_utils';
+import {
+  createDefaultHostOverview,
+  createDefaultUiStatus,
+  createPartStatus,
+} from './ui_status_utils';
 
 const DEFAULT_DEVICE_CONFIG: DeviceConfig = {
   permissions: {owners: ['admin1'], executors: ['user1']},
@@ -36,6 +40,8 @@ UI_STATUS.deviceDiscovery = createPartStatus(false);
 export const SCENARIO_HOST_DISCOVERY_HIDDEN: MockHostScenario = {
   hostName: 'host-discovery-hidden.example.com',
   scenarioName: '8. Device Discovery Hidden',
+  overview: createDefaultHostOverview('host-discovery-hidden.example.com'),
+  deviceSummaries: [],
   hostConfigResult: {
     hostConfig: HOST_CONFIG,
     uiStatus: UI_STATUS,

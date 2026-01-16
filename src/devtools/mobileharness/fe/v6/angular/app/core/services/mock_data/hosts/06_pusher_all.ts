@@ -6,7 +6,7 @@ import {
   HostConfigUiStatus,
 } from '../../../models/host_config_models';
 import {MockHostScenario} from '../models';
-import {createPartStatus} from './ui_status_utils';
+import {createDefaultHostOverview, createPartStatus} from './ui_status_utils';
 
 const DEFAULT_DEVICE_CONFIG: DeviceConfig = {
   permissions: {owners: ['admin1'], executors: ['user1']},
@@ -50,6 +50,8 @@ const UI_STATUS: HostConfigUiStatus = {
 export const SCENARIO_HOST_PUSHER_ALL: MockHostScenario = {
   hostName: 'host-pusher-all.example.com',
   scenarioName: '6. Pusher - All Locked',
+  overview: createDefaultHostOverview('host-pusher-all.example.com'),
+  deviceSummaries: [],
   hostConfigResult: {
     hostConfig: HOST_CONFIG,
     uiStatus: UI_STATUS,

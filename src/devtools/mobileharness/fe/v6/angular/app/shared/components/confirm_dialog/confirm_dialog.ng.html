@@ -31,6 +31,9 @@
         <mat-spinner diameter="20" class="shared-button-spinner"></mat-spinner>
       }
       {{ data.primaryButtonLabel }}
+      @if (data.primaryButtonIcon) {
+        <mat-icon>{{ data.primaryButtonIcon }}</mat-icon>
+      }
     </button>
   </mat-dialog-actions>
 </div>

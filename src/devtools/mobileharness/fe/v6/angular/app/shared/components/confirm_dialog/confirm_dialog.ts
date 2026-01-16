@@ -43,7 +43,8 @@ export class ConfirmDialog implements OnInit {
     contentTemplateContext?: {};
     type: 'info' | 'success' | 'warning' | 'error';
     primaryButtonLabel: string;
-    secondaryButtonLabel: string;
+    primaryButtonIcon?: string;
+    secondaryButtonLabel?: string;
     onConfirm?: () => Observable<void>;
   }>(MAT_DIALOG_DATA);
 

@@ -2,7 +2,11 @@
 
 import {HostConfig} from '../../../models/host_config_models';
 import {MockHostScenario} from '../models';
-import {createDefaultUiStatus, createPartStatus} from './ui_status_utils';
+import {
+  createDefaultHostOverview,
+  createDefaultUiStatus,
+  createPartStatus,
+} from './ui_status_utils';
 
 const HOST_CONFIG: HostConfig = {
   permissions: {
@@ -29,6 +33,8 @@ UI_STATUS.deviceConfigMode = createPartStatus(false);
 export const SCENARIO_HOST_DEVICE_CONFIG_HIDDEN: MockHostScenario = {
   hostName: 'host-device-config-hidden.example.com',
   scenarioName: '9. Device Config Hidden',
+  overview: createDefaultHostOverview('host-device-config-hidden.example.com'),
+  deviceSummaries: [],
   hostConfigResult: {
     hostConfig: HOST_CONFIG,
     uiStatus: UI_STATUS,

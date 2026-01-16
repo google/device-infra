@@ -181,6 +181,8 @@ message SessionOptions {
   // The common run as candidates for all devices.
   repeated string common_run_as_candidates = 2;
   // The max duration hours for all devices.
+  // If the dimension pool value is shared then the value is 3 hours else 12
+  // hours.
   int32 max_duration_hours = 3;
 }
 

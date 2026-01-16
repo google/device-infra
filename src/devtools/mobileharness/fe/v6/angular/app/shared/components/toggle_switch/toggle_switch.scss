@@ -24,6 +24,11 @@ $toggle-large-width: 52px;
 $toggle-large-height: 28px;
 $toggle-large-thumb: 24px;
 
+:host {
+  display: inline-flex;
+  align-items: center;
+}
+
 .toggle-switch-container {
   display: inline-flex;
   align-items: center;

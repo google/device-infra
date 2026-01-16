@@ -3,7 +3,10 @@
 import {DeviceConfig} from '../../../models/device_config_models';
 import {HostConfig} from '../../../models/host_config_models';
 import {MockHostScenario} from '../models';
-import {createDefaultUiStatus} from './ui_status_utils';
+import {
+  createDefaultHostOverview,
+  createDefaultUiStatus,
+} from './ui_status_utils';
 
 const SHARED_DEVICE_CONFIG: DeviceConfig = {
   permissions: {owners: ['admin1'], executors: ['shared-user']},
@@ -33,6 +36,8 @@ const HOST_CONFIG: HostConfig = {
 export const SCENARIO_HOST_SHARED_MODE: MockHostScenario = {
   hostName: 'host-shared-mode.example.com',
   scenarioName: '3. Shared Mode',
+  overview: createDefaultHostOverview('host-shared-mode.example.com'),
+  deviceSummaries: [],
   hostConfigResult: {
     hostConfig: HOST_CONFIG,
     uiStatus: createDefaultUiStatus(),
