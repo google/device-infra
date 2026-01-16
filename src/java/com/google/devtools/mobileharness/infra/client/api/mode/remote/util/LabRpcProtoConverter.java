@@ -29,9 +29,12 @@ import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.shared.trace.proto.SpanProto.ParentSpan;
 import com.google.devtools.mobileharness.shared.util.comm.messaging.message.TestMessageInfo;
 import com.google.devtools.mobileharness.shared.util.comm.messaging.poster.TestMessagePoster;
+import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.message.StrPairUtil;
 import com.google.devtools.mobileharness.shared.util.time.TimeoutUtil;
 import com.google.devtools.mobileharness.shared.version.Version;
+import com.google.protobuf.Descriptors.FieldDescriptor;
+import com.google.protobuf.Message;
 import com.google.wireless.qa.mobileharness.lab.proto.ExecTestServ.GetTestGenDataResponse;
 import com.google.wireless.qa.mobileharness.lab.proto.ExecTestServ.GetTestStatusResponse;
 import com.google.wireless.qa.mobileharness.lab.proto.ExecTestServ.KickOffTestRequest;
@@ -42,9 +45,13 @@ import com.google.wireless.qa.mobileharness.lab.proto.ExecTestServ.TestMessage;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageManager;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
+import com.google.wireless.qa.mobileharness.shared.model.job.in.ScopedSpecs;
+import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.JobSpecHelper;
+import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.JobSpecWalker;
 import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator;
 import com.google.wireless.qa.mobileharness.shared.proto.Common.StrPair;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.Timeout;
+import com.google.wireless.qa.mobileharness.shared.proto.spec.JobSpec;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -57,10 +64,19 @@ public class LabRpcProtoConverter {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
+  private final LocalFileUtil localFileUtil = new LocalFileUtil();
+  private final JobSpecWalker.Visitor escapePathVisitor = new EscapePathVisitor();
+
   public KickOffTestRequest generateKickOffTestRequestFrom(
-      TestInfo testInfo, List<DeviceLocator> deviceLocators, ParentSpan parentSpan) {
+      TestInfo testInfo, List<DeviceLocator> deviceLocators, ParentSpan parentSpan)
+      throws MobileHarnessException, InterruptedException {
     String testId = testInfo.locator().getId();
     JobInfo jobInfo = testInfo.jobInfo();
+    JobSpec jobSpec = JobSpecWalker.resolve(jobInfo.protoSpec().getProto(), escapePathVisitor);
+    ScopedSpecs scopedSpecs = jobInfo.scopedSpecs();
+    JobSpec scopedJobSpec = scopedSpecs.toJobSpec(JobSpecHelper.getDefaultHelper());
+    scopedSpecs.addAll(JobSpecWalker.resolve(scopedJobSpec, escapePathVisitor));
+
     return KickOffTestRequest.newBuilder()
         .addAllDeviceId(
             deviceLocators.stream().map(DeviceLocator::getSerial).collect(toImmutableList()))
@@ -72,8 +88,8 @@ public class LabRpcProtoConverter {
                 .setJobFeature(jobInfo.toFeature())
                 .addAllJobParam(StrPairUtil.convertMapToList(jobInfo.params().getAll()))
                 .setTimeout(getTestTimeout(jobInfo.setting().getNewTimeout()))
-                .setJobSpec(jobInfo.protoSpec().getProto())
-                .setJobScopedSpecsJson(jobInfo.scopedSpecs().toJsonString())
+                .setJobSpec(jobSpec)
+                .setJobScopedSpecsJson(scopedSpecs.toJsonString())
                 .setJobCreateTimeMs(jobInfo.timing().getCreateTime().toEpochMilli())
                 .setJobStartTimeMs(jobInfo.timing().getStartTimeNonNull().toEpochMilli())
                 .addAllDeviceScopedSpecsJson(
@@ -90,6 +106,38 @@ public class LabRpcProtoConverter {
                 .addAllTestProperty(StrPairUtil.convertMapToList(testInfo.properties().getAll())))
         .setParentSpan(parentSpan)
         .build();
+  }
+
+  /** A visitor that escapes all paths in the job spec. */
+  private class EscapePathVisitor extends JobSpecWalker.Visitor {
+
+    @Override
+    public void visitPrimitiveFileField(Message.Builder builder, FieldDescriptor field) {
+      if (field.getType() != FieldDescriptor.Type.STRING) {
+        return;
+      }
+
+      if (field.isRepeated()) {
+        List<String> paths = new ArrayList<>();
+
+        int size = builder.getRepeatedFieldCount(field);
+        for (int i = 0; i < size; i++) {
+          String escapedPath = getEscapedPath((String) builder.getRepeatedField(field, i));
+          paths.add(escapedPath);
+        }
+        builder.setField(field, paths);
+      } else {
+        String escapedPath = getEscapedPath((String) builder.getField(field));
+        builder.setField(field, escapedPath);
+      }
+    }
+  }
+
+  private String getEscapedPath(String path) {
+    if (localFileUtil.isLocalFileOrDir(path)) {
+      return path;
+    }
+    return localFileUtil.escapeFilePath(path.replace("::", "/"));
   }
 
   private static Timeout getTestTimeout(
