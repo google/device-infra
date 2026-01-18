@@ -222,6 +222,7 @@ public class InstallApkStep implements InstallApkStepConstants {
     boolean clearGmsAppData = spec.getClearGmsAppData();
     boolean forceInstallApks = spec.getForceInstallApks();
     boolean bypassLowTargetSdkBlock = spec.getBypassLowTargetSdkBlock();
+    boolean allowTestPackages = spec.getAllowTestPackages();
 
     SetMultimap<String, String> allPackages = LinkedHashMultimap.create();
     Set<String> allPackageNames = new HashSet<>();
@@ -279,6 +280,7 @@ public class InstallApkStep implements InstallApkStepConstants {
           clearGmsAppData,
           grantPermissionsOnInstall,
           bypassLowTargetSdkBlock,
+          allowTestPackages,
           installTimeout,
           sleepAfterInstallGms);
 
@@ -314,6 +316,7 @@ public class InstallApkStep implements InstallApkStepConstants {
             testInfo,
             broadcastInstallMessage,
             grantPermissionsOnInstall,
+            allowTestPackages,
             installTimeout);
       }
       remainToInstall =
@@ -359,6 +362,7 @@ public class InstallApkStep implements InstallApkStepConstants {
             clearGmsAppData,
             grantPermissionsOnInstall,
             bypassLowTargetSdkBlock,
+            allowTestPackages,
             installTimeout,
             sleepAfterInstallGms);
 
@@ -395,6 +399,7 @@ public class InstallApkStep implements InstallApkStepConstants {
       boolean clearGmsAppData,
       boolean grantPermissionsOnInstall,
       boolean bypassLowTargetSdkBlock,
+      boolean allowTestPackages,
       Optional<Duration> installTimeout,
       Optional<Duration> sleepAfterInstallGms)
       throws MobileHarnessException, InterruptedException {
@@ -423,7 +428,8 @@ public class InstallApkStep implements InstallApkStepConstants {
               .setSkipDowngrade(isGms && skipGmsDowngrade)
               .setClearAppData(isGms && clearGmsAppData)
               .setGrantPermissions(grantPermissionsOnInstall)
-              .setBypassLowTargetSdkBlock(bypassLowTargetSdkBlock);
+              .setBypassLowTargetSdkBlock(bypassLowTargetSdkBlock)
+              .setAllowTestPackages(allowTestPackages);
       if (isGms && shouldSkipGmsCompatibilityCheck(testInfo, apkPath)) {
         installArgsBuilder.setSkipGmsCompatCheck(true);
       }
@@ -486,6 +492,7 @@ public class InstallApkStep implements InstallApkStepConstants {
       TestInfo testInfo,
       boolean broadcastInstallMessage,
       boolean grantPermissionsOnInstall,
+      boolean allowTestPackages,
       Optional<Duration> installTimeout)
       throws InterruptedException, MobileHarnessException {
     String deviceId = device.getDeviceId();
@@ -523,6 +530,7 @@ public class InstallApkStep implements InstallApkStepConstants {
           Multimaps.index(apkPaths, v -> buildPackageName),
           grantPermissionsOnInstall,
           /* forceNoStreaming= */ false,
+          allowTestPackages,
           installTimeout.orElse(null),
           testInfo.log());
       testInfo

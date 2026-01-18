@@ -67,6 +67,9 @@ public abstract class ApkInstallArgs {
   /** Whether to bypass low target sdk check, only works on the device with sdk >= 34. */
   public abstract Optional<Boolean> bypassLowTargetSdkBlock();
 
+  /** Whether to allow installing test apks. */
+  public abstract Optional<Boolean> allowTestPackages();
+
   /** Timeout for apk installation. */
   public abstract Optional<Duration> installTimeout();
 
@@ -122,6 +125,8 @@ public abstract class ApkInstallArgs {
     public abstract Builder setForceQueryable(boolean forceQueryable);
 
     public abstract Builder setBypassLowTargetSdkBlock(boolean bypassLowTargetSdkBlock);
+
+    public abstract Builder setAllowTestPackages(boolean allowTestPackages);
 
     public abstract Builder setInstallTimeout(Duration installTimeout);
 

@@ -301,6 +301,7 @@ public class ApkInstaller {
     boolean forceNoStreaming = installArgs.forceNoStreaming().orElse(DeviceUtil.inSharedLab());
     boolean forceQueryable = installArgs.forceQueryable().orElse(false);
     boolean bypassLowTargetSdkBlock = installArgs.bypassLowTargetSdkBlock().orElse(false);
+    boolean allowTestPackages = installArgs.allowTestPackages().orElse(false);
     List<String> extraArgs = new ArrayList<>();
 
     String deviceId = device.getDeviceId();
@@ -398,6 +399,9 @@ public class ApkInstaller {
       if (bypassLowTargetSdkBlock
           && deviceSdkVersion > AndroidVersion.ANDROID_13.getEndSdkVersion()) {
         extraArgs.add("--bypass-low-target-sdk-block");
+      }
+      if (allowTestPackages) {
+        extraArgs.add("-t");
       }
       // If the package name is gms, ignore the grant runtime permissions switch.
       installApkHelper(
@@ -522,6 +526,7 @@ public class ApkInstaller {
    * @param grantPermissions whether to grant all runtime permissions.
    * @param forceNoStreaming if true, always pushes APK to device and invoke Package Manager as
    *     separate steps.
+   * @param allowTestApks if true, allow installing test apks.
    * @param installTimeout the timeout of the whole installation. If null, will use the default
    *     timeout.
    * @param log log collector.
@@ -534,6 +539,7 @@ public class ApkInstaller {
       Multimap<String, String> packageMap,
       boolean grantPermissions,
       boolean forceNoStreaming,
+      boolean allowTestApks,
       @Nullable Duration installTimeout,
       @Nullable LogCollector<?> log,
       String... extraArgs)
@@ -556,6 +562,7 @@ public class ApkInstaller {
         packageMap,
         grantPermissions,
         forceNoStreaming,
+        allowTestApks,
         packageMap.values().stream().anyMatch(f -> f.endsWith(APEX_SUFFIX)),
         installTimeout,
         log,
@@ -896,6 +903,7 @@ public class ApkInstaller {
       boolean grantPermissions,
       boolean forceNoStreaming,
       boolean hasApex,
+      boolean allowTestPackages,
       @Nullable Duration installTimeout,
       @Nullable LogCollector<?> log,
       String... extraArgs)
@@ -906,7 +914,8 @@ public class ApkInstaller {
         InstallCmdArgs.builder()
             .setReplaceExistingApp(true)
             .setGrantPermissions(grantPermissions)
-            .setForceNoStreaming(forceNoStreaming);
+            .setForceNoStreaming(forceNoStreaming)
+            .setAllowTestPackages(allowTestPackages);
     if (extraArgs.length > 0) {
       installCmdArgs.setExtraArgs(ImmutableList.copyOf(extraArgs));
     }
