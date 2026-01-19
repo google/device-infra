@@ -25,7 +25,7 @@ option java_multiple_files = true;
 option java_outer_classname = "AndroidFlashGkiDecoratorSpecProto";
 
 // Specs for {@link AndroidFlashGkiDecoratorSpec}
-// Next tag: 6
+// Next tag: 26
 message AndroidFlashGkiDecoratorSpec {
   extend DecoratorSpec {
     optional AndroidFlashGkiDecoratorSpec ext = 1015;
@@ -57,5 +57,96 @@ message AndroidFlashGkiDecoratorSpec {
   optional bool support_fastbootd = 5 [
     (field_detail) = { help: "Whether the device supports fastbootd mode." },
     default = true
+  ];
+
+  optional string ramdisk_image = 6
+      [(file_detail) = { help: "Path of the provided ramdisk image." }];
+
+  optional string dtb_image = 7
+      [(file_detail) = { help: "Path of the provided dtb image." }];
+
+  optional string initramfs_image = 8
+      [(file_detail) = { help: "Path of the provided initramfs image." }];
+
+  optional string vendor_boot_image = 9
+      [(file_detail) = { help: "Path of the provided vendor boot image." }];
+
+  optional string vendor_kernel_boot_image = 10 [
+    (file_detail) = { help: "Path of the provided vendor kernel boot image." }
+  ];
+
+  optional string dtbo_image = 11
+      [(file_detail) = { help: "Path of the provided dtbo image." }];
+
+  optional string vendor_dlkm_image = 12 [(file_detail) = {
+    help: "Path of the provided vendor dlkm image (file, zip, or dir)."
+  }];
+
+  optional string vbmeta_image = 13 [(file_detail) = {
+    help: "Path of the provided vbmeta image (file, zip, or dir)."
+  }];
+
+  optional string kernel_image = 14
+      [(file_detail) = { help: "Path of the provided Image.gz file." }];
+
+  optional string otatools_zip = 15
+      [(file_detail) = { help: "Path of the provided otatools.zip file." }];
+
+  optional bool wipe_device_before_gki_flash = 16 [
+    (field_detail) = {
+      help: "Whether to wipe device before GKI boot image flash."
+    },
+    default = false
+  ];
+
+  optional bool disable_verity = 17 [
+    (field_detail) = { help: "Whether to use disable verity." },
+    default = false
+  ];
+
+  optional bool oem_disable_verity = 18 [
+    (field_detail) = { help: "Whether to run oem disable verity." },
+    default = false
+  ];
+
+  repeated string fastboot_flash_options = 19 [(field_detail) = {
+    help: "Additional options to pass with fastboot flash command."
+  }];
+
+  repeated string additional_fastboot_command = 20
+      [(field_detail) = { help: "Additional fastboot command to run." }];
+
+  optional int32 boot_header_version = 21 [
+    (field_detail) = {
+      help: "The version of the boot.img header. "
+            "Set to 4 (Android 12) by default."
+    },
+    default = 4
+  ];
+
+  optional bool add_hash_footer = 22 [
+    (field_detail) = {
+      help: "Add hash footer to GKI boot image. More info at "
+            "https://android.googlesource.com/platform/external/avb/+/master/README.md"
+    },
+    default = false
+  ];
+
+  optional string security_patch_level = 23 [(field_detail) = {
+    help: "The security patch level to sign the boot image when add_hash_footer is enabled."
+  }];
+
+  optional string boot_image_key_path = 24 [
+    (field_detail) = {
+      help: "The key path in otatools to sign the boot image when add_hash_footer is enabled."
+    },
+    default = "external/avb/test/data/testkey_rsa4096.pem"
+  ];
+
+  optional string boot_image_algorithm = 25 [
+    (field_detail) = {
+      help: "The key algorithm to sign the boot image when add_hash_footer is enabled."
+    },
+    default = "SHA256_RSA4096"
   ];
 }
