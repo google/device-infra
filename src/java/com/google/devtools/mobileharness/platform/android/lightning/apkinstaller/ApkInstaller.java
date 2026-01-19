@@ -905,6 +905,7 @@ public class ApkInstaller {
     InstallCmdArgs.Builder installCmdArgs =
         InstallCmdArgs.builder()
             .setReplaceExistingApp(true)
+            .setAllowTestPackages(true)
             .setGrantPermissions(grantPermissions)
             .setForceNoStreaming(forceNoStreaming);
     if (extraArgs.length > 0) {
