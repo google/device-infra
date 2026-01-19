@@ -1170,8 +1170,6 @@ public class AndroidFileUtil {
           serial, new String[] {ADB_ARG_PUSH, srcFilePath, desFilePath}, timeout);
     } catch (MobileHarnessException e) {
       if (!((sdkVersion == 30 || sdkVersion == 31)
-          && (desFilePath.startsWith("/sdcard/Android/data/")
-              || desFilePath.startsWith("/sdcard/Android/obb/"))
           && e.getMessage().contains("remote fchown failed"))) {
         throw new MobileHarnessException(
             AndroidErrorId.ANDROID_FILE_UTIL_PUSH_FILE_ADB_ERROR,
