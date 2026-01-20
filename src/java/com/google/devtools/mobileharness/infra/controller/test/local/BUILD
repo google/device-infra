@@ -59,8 +59,6 @@ java_library(
 java_library(
     name = "local_test_builtin_plugins",
     srcs = ["LocalTestBuiltinPlugins.java"],
-    runtime_deps = [
-    ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:xts_property_name",
