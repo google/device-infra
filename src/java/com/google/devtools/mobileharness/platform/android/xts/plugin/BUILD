@@ -101,7 +101,7 @@ java_library(
     name = "mobly_resultstore_upload_plugin",
     srcs = ["MoblyResultstoreUploadPlugin.java"],
     visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/controller/test/local:__pkg__",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api:__pkg__",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
