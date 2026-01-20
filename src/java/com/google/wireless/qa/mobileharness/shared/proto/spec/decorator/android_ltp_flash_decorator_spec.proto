@@ -24,7 +24,7 @@ option java_package = "com.google.wireless.qa.mobileharness.shared.proto.spec.de
 option java_multiple_files = true;
 
 // Specs for {@link AndroidLtpFlashDecoratorSpec}
-// Next tag: 13
+// Next tag: 14
 message AndroidLtpFlashDecoratorSpec {
   extend DecoratorSpec {
     optional AndroidLtpFlashDecoratorSpec ext = 1012;
@@ -73,6 +73,17 @@ message AndroidLtpFlashDecoratorSpec {
     default = false,
     (field_detail) = {
       help: "If set to 'true', add '_test' suffix to build ID after flash ROM."
+    }
+  ];
+
+  optional string ltp_flashstation_timeout = 13 [
+    default = "1h",
+    (field_detail) = {
+      help: "Overrides the timeout duration on the cl_flashstation command for "
+            "flashing ROM. Does not guarantee a total execution time of the "
+            "decorator, as cl_flashstation might be called more than once as "
+            "part of a retry mechanism. Can be given as \"<x>h <y>m <z>s\" "
+            "format, or just a integer number of seconds."
     }
   ];
 }
