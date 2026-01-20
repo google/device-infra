@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.infra.client.api.mode.remote;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toCollection;
@@ -782,9 +783,14 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
       throws MobileHarnessException, InterruptedException {
     String testId = testInfo.locator().getId();
     logger.atInfo().log("Kick off test %s on device(s) %s", testId, deviceLocators);
+    ImmutableList<ResolveFileItem> resolveFileItems = getLabResolveFiles(testInfo.jobInfo());
     KickOffTestRequest req =
         new LabRpcProtoConverter()
-            .generateKickOffTestRequestFrom(testInfo, deviceLocators, getParentSpan());
+            .generateKickOffTestRequestFrom(
+                testInfo,
+                deviceLocators,
+                resolveFileItems.stream().map(item -> item.getFile()).collect(toImmutableSet()),
+                getParentSpan());
     ExecTestStub execTestStub = getTestEngineExecTestStub();
     int kickOffTryCount = 0;
     while (true) {

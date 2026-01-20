@@ -65,13 +65,16 @@ public class LabRpcProtoConverter {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private final LocalFileUtil localFileUtil = new LocalFileUtil();
-  private final JobSpecWalker.Visitor escapePathVisitor = new EscapePathVisitor();
 
   public KickOffTestRequest generateKickOffTestRequestFrom(
-      TestInfo testInfo, List<DeviceLocator> deviceLocators, ParentSpan parentSpan)
+      TestInfo testInfo,
+      List<DeviceLocator> deviceLocators,
+      Set<String> labResolveFiles,
+      ParentSpan parentSpan)
       throws MobileHarnessException, InterruptedException {
     String testId = testInfo.locator().getId();
     JobInfo jobInfo = testInfo.jobInfo();
+    JobSpecWalker.Visitor escapePathVisitor = new EscapePathVisitor(labResolveFiles);
     JobSpec jobSpec = JobSpecWalker.resolve(jobInfo.protoSpec().getProto(), escapePathVisitor);
     ScopedSpecs scopedSpecs = jobInfo.scopedSpecs();
     JobSpec scopedJobSpec = scopedSpecs.toJobSpec(JobSpecHelper.getDefaultHelper());
@@ -111,6 +114,12 @@ public class LabRpcProtoConverter {
   /** A visitor that escapes all paths in the job spec. */
   private class EscapePathVisitor extends JobSpecWalker.Visitor {
 
+    private final Set<String> labResolveFiles;
+
+    EscapePathVisitor(Set<String> labResolveFiles) {
+      this.labResolveFiles = labResolveFiles;
+    }
+
     @Override
     public void visitPrimitiveFileField(Message.Builder builder, FieldDescriptor field) {
       if (field.getType() != FieldDescriptor.Type.STRING) {
@@ -131,13 +140,16 @@ public class LabRpcProtoConverter {
         builder.setField(field, escapedPath);
       }
     }
-  }
 
-  private String getEscapedPath(String path) {
-    if (localFileUtil.isLocalFileOrDir(path)) {
-      return path;
+    private String getEscapedPath(String path) {
+      if (localFileUtil.isLocalFileOrDir(path)) {
+        return path;
+      }
+      if (labResolveFiles.contains(path)) {
+        return path;
+      }
+      return localFileUtil.escapeFilePath(path.replace("::", "/"));
     }
-    return localFileUtil.escapeFilePath(path.replace("::", "/"));
   }
 
   private static Timeout getTestTimeout(
