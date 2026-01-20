@@ -14,6 +14,7 @@
 #
 
 load("@rules_java//java:defs.bzl", "java_library")
+load("//devtools/deviceinfra/api/builddefs/test:mobile_test.bzl", "mobile_test")
 
 package(
     default_applicable_licenses = ["//:license"],
@@ -49,6 +50,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_internal_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:enums",
+        "//src/java/com/google/devtools/mobileharness/platform/android/systemspec",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_constants",
         "//src/java/com/google/devtools/mobileharness/shared/constant:log_record_importance",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
@@ -64,4 +66,30 @@ java_library(
         "@maven//:org_apache_commons_commons_lang3",
         "@protobuf//:protobuf_java",
     ],
+)
+
+# Test target to trigger MCTS dynamic download on a local device/lab server.
+mobile_test(
+    name = "mcts_dynamic_download_local_test",
+    args = [
+        "--job_timeout_sec=10800",
+        "--test_timeout_sec=7200",
+        "--start_timeout_sec=3600",
+    ],
+    device = "AndroidRealDevice",
+    driver = "AndroidXtsTradefedTest",
+    files = {
+        # IMPORTANT: Do NOT specify 'xts_root_dir' here.
+        # Its absence triggers dynamic download mode for MCTS.
+    },
+    params = {
+        "xts_type": "MCTS",
+        # This flag explicitly enables dynamic download,
+        # which is the default for MCTS when xts_root_dir is absent.
+        "use_xts_dynamic_download": "true",
+        # Replace with any valid MCTS module name if you want the test to run.
+        # If you only care about download, this might not matter,
+        # but AdbHostTestCases is small and usually present.
+        "run_command": "mcts -m AdbHostTestCases",
+    },
 )
