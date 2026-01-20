@@ -92,13 +92,18 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
 
   private static final String NON_PRELOADED_KEY = "non-preloaded";
 
-  // Only consider the Module released in Android V+ and not beta version. For the month of platform
-  // initial release ONLY, 5th digit >= 4 indicates platform beta (or mainline beta if >=8 or daily
-  // if => 9), refer to b/413266608 for more details.
-  private static final Pattern VERSIONCODE_PATTERN =
-      Pattern.compile("(3[5-9]|[4-9][0-9])(?!(00|99))\\d{2}[0-7]\\d{4}");
-  private static final Pattern PLATFORM_BETA_VERSIONCODE_PATTERN =
-      Pattern.compile("(3610|3704|3710)[4-9]\\d{6}");
+  // Only consider the Module released in Android V+ and not beta version.
+  // Version scheme v2: For the month of platform initial release ONLY, 5th digit >= 4 indicates
+  // platform beta (or mainline beta if >=8 or daily if => 9), refer to b/413266608 for more
+  // details.
+  private static final Pattern VERSIONCODE_PATTERN_V2 =
+      Pattern.compile("3[5-6](?!(00|99))\\d{2}[0-7]\\d{4}");
+  private static final Pattern PLATFORM_BETA_VERSIONCODE_PATTERN_V2 =
+      Pattern.compile("3610[4-9]\\d{4}");
+  // Version scheme v3: Use the 2nd digit of the mission number to determine if it's a non-beta
+  // release version.
+  private static final Pattern VERSIONCODE_PATTERN_V3 =
+      Pattern.compile("(3[7-9]|[4-9]\\d)(?!(00|99))\\d[05]\\d{5}");
 
   // Add the versioncode from
   // android/platform/superproject/main/+/main:build/release/flag_declarations/RELEASE_DEFAULT_UPDATABLE_MODULE_VERSION.textproto
@@ -117,16 +122,24 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
 
   private static final String MAINLINE_AOSP_VERSION_KEY = "AOSP";
 
-  private static final ImmutableMap<String, Integer> SDK_LEVEL_TO_YEAR =
+  private record SdkReleaseMonth(int year, int month) {}
+
+  // In version scheme v2 and older we can calculate the release month directly from the version
+  // code.
+  private static final ImmutableMap<Integer, Integer> SDK_LEVEL_TO_YEAR =
       ImmutableMap.of(
-          "30", 2020,
-          "31", 2021,
-          "32", 2022,
-          "33", 2022,
-          "34", 2023,
-          "35", 2024,
-          "36", 2025,
-          "37", 2026);
+          30, 2020,
+          31, 2021,
+          32, 2022,
+          33, 2022,
+          34, 2023,
+          35, 2024,
+          36, 2025);
+  // In version scheme v3 we need both the year and month of the first release to calculate the
+  // month of the train release.
+  private static final ImmutableMap<Integer, SdkReleaseMonth> SDK_LEVEL_TO_RELEASE_MONTH =
+      ImmutableMap.of(37, new SdkReleaseMonth(2026, 5));
+
   // For CTS, there's no diff between arm64 and arm.
   private static final ImmutableMap<String, String> DEVICE_ABI_MAP =
       ImmutableMap.of(
@@ -484,23 +497,62 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
     }
   }
 
-  private String getPreloadedMainlineVersion(String versioncode, String moduleName)
+  private String getPreloadedMainlineVersion(String versionCode, String moduleName)
       throws MobileHarnessException {
     // Get the release time of the preloaded mainline train, the format is YYYY-MM.
-    // Note that version codes must always increase to successfully install newer builds. For this
-    // reason, the version code "wraps" in January, making the month digits wrap to 13, instead of
-    // 01 (for the first month of the year) and so on, if the month is 0 then it's aosp version.
-    int month = Integer.parseInt(versioncode, 2, 4, 10);
-    Integer sdkLevelYear = SDK_LEVEL_TO_YEAR.get(versioncode.substring(0, 2));
-    if (sdkLevelYear == null) {
-      throw new MobileHarnessException(
-          AndroidErrorId.XTS_DYNAMIC_DOWNLOADER_DEVICE_SDK_VERSION_NOT_SUPPORT,
-          "Device is not compatible with the xts dynamic downloader. Required R+ build.");
+    int sdkLevel = Integer.parseInt(versionCode, 0, 2, 10);
+
+    int year;
+    int month;
+    if (sdkLevel >= 37) {
+      // Mainline version scheme v3.
+      SdkReleaseMonth sdkReleaseMonth = SDK_LEVEL_TO_RELEASE_MONTH.get(sdkLevel);
+      if (sdkReleaseMonth == null) {
+        throw new MobileHarnessException(
+            AndroidErrorId.XTS_DYNAMIC_DOWNLOADER_DEVICE_SDK_VERSION_NOT_SUPPORT,
+            "Failed to map module "
+                + moduleName
+                + " version "
+                + versionCode
+                + " to a release month. It is not compatible with this xts dynamic downloader.");
+      }
+      year = sdkReleaseMonth.year();
+      int mission = Integer.parseInt(versionCode, 2, 4, 10);
+      if (mission > 0) {
+        // Mission numbers increase by 5 for each month, starting at 05.
+        int monthsSinceSdkBump = (mission / 5) - 1;
+        month = sdkReleaseMonth.month() + monthsSinceSdkBump;
+      } else {
+        // If the mission is 0 then it's the aosp version.
+        month = 0;
+      }
+    } else {
+      // Mainline version scheme v2 or older.
+      Integer sdkLevelYear = SDK_LEVEL_TO_YEAR.get(sdkLevel);
+      if (sdkLevelYear == null) {
+        throw new MobileHarnessException(
+            AndroidErrorId.XTS_DYNAMIC_DOWNLOADER_DEVICE_SDK_VERSION_NOT_SUPPORT,
+            "Device with module "
+                + moduleName
+                + " version "
+                + versionCode
+                + " is not compatible with the xts dynamic downloader. Requires R+ build.");
+      }
+      year = sdkLevelYear;
+      month = Integer.parseInt(versionCode, 2, 4, 10);
     }
-    int year = sdkLevelYear + month / 12;
-    String version = String.format("%d-%02d", year, (month % 12 == 0 ? 12 : month % 12));
-    logger.atInfo().log("Get %s version(YYYY-MM): %s", moduleName, version);
-    return version;
+
+    // Note that version codes must always increase to successfully install newer builds. For this
+    // reason, the version code does not wrap back in January, making the month number continue to
+    // 13 and higher. If the month is 0 then it's the aosp version.
+    if (month > 0) {
+      year = year + (month - 1) / 12;
+      month = (month - 1) % 12 + 1;
+    }
+
+    String trainVersion = String.format("%d-%02d", year, month);
+    logger.atInfo().log("Get %s version %s => %s", moduleName, versionCode, trainVersion);
+    return trainVersion;
   }
 
   @Nullable
@@ -692,11 +744,13 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
         (d) -> adbUtil.getProperty(d, AndroidProperty.ABI));
   }
 
-  private String processModuleVersion(
+  @VisibleForTesting
+  String processModuleVersion(
       String moduleVersionNumber, String moduleName, String defaultVersion, String aospVersion)
       throws MobileHarnessException {
-    if (VERSIONCODE_PATTERN.matcher(moduleVersionNumber).matches()
-        && !PLATFORM_BETA_VERSIONCODE_PATTERN.matcher(moduleVersionNumber).matches()
+    if (((VERSIONCODE_PATTERN_V2.matcher(moduleVersionNumber).matches()
+                && !PLATFORM_BETA_VERSIONCODE_PATTERN_V2.matcher(moduleVersionNumber).matches())
+            || VERSIONCODE_PATTERN_V3.matcher(moduleVersionNumber).matches())
         && !AOSP_VERSIONCODE_LIST.contains(moduleVersionNumber)) {
       String preloadVersion = getPreloadedMainlineVersion(moduleVersionNumber, moduleName);
       ImmutableList<String> versionCodes = INITIAL_RELEASE_VERSIONCODE_MAP.get(aospVersion);

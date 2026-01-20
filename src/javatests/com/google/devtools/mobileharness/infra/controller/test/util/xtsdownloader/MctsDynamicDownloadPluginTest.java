@@ -21,6 +21,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Arrays.stream;
 import static org.apache.commons.lang3.SerializationUtils.serialize;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -490,5 +491,117 @@ public final class MctsDynamicDownloadPluginTest {
 
       zipOutputStream.closeEntry();
     }
+  }
+
+  @Test
+  public void processModuleVersion_calculateVersions_v2() throws Exception {
+    assertThat(
+            spyMctsDynamicDownloadPlugin.processModuleVersion(
+                "340100000", "some_module", "default", "34"))
+        .isEqualTo("default"); // Predates Android V.
+    assertThat(
+            spyMctsDynamicDownloadPlugin.processModuleVersion(
+                "351100004", "some_module", "default", "35"))
+        .isEqualTo("2024-11");
+    assertThat(
+            spyMctsDynamicDownloadPlugin.processModuleVersion(
+                "351300000", "some_module", "default", "35"))
+        .isEqualTo("2025-01");
+    assertThat(
+            spyMctsDynamicDownloadPlugin.processModuleVersion(
+                "360100000", "some_module", "default", "36.0"))
+        .isEqualTo("default"); // Matches initial release versioncode map.
+    assertThat(
+            spyMctsDynamicDownloadPlugin.processModuleVersion(
+                "361200000", "some_module", "default", "36.0"))
+        .isEqualTo("2025-12");
+    assertThat(
+            spyMctsDynamicDownloadPlugin.processModuleVersion(
+                "361300000", "some_module", "default", "36.0"))
+        .isEqualTo("2026-01");
+    assertThat(
+            spyMctsDynamicDownloadPlugin.processModuleVersion(
+                "351180000", "some_module", "default", "35"))
+        .isEqualTo("default"); // Beta version (5th digit >= 8).
+    assertThat(
+            spyMctsDynamicDownloadPlugin.processModuleVersion(
+                "361040000", "some_module", "default", "36.0"))
+        .isEqualTo("default"); // Platform beta version.
+    assertThat(
+            spyMctsDynamicDownloadPlugin.processModuleVersion(
+                "360000000", "some_module", "default", "36.0"))
+        .isEqualTo("default"); // AOSP version.
+    assertThat(
+            spyMctsDynamicDownloadPlugin.processModuleVersion(
+                "359900000", "some_module", "default", "35"))
+        .isEqualTo("default"); // Daily train version.
+  }
+
+  @Test
+  public void processModuleVersion_calculateVersions_v3() throws Exception {
+    assertThat(
+            spyMctsDynamicDownloadPlugin.processModuleVersion(
+                "370500000", "some_module", "default", "37.0"))
+        .isEqualTo("default"); // Initial release version.
+    assertThat(
+            spyMctsDynamicDownloadPlugin.processModuleVersion(
+                "370500000", "some_module", "default", "37.0"))
+        .isEqualTo("default"); // Matches initial release versioncode map.
+    assertThat(
+            spyMctsDynamicDownloadPlugin.processModuleVersion(
+                "371000000", "some_module", "default", "37.0"))
+        .isEqualTo("2026-06");
+    assertThat(
+            spyMctsDynamicDownloadPlugin.processModuleVersion(
+                "372000000", "some_module", "default", "37.0"))
+        .isEqualTo("2026-08");
+    assertThat(
+            spyMctsDynamicDownloadPlugin.processModuleVersion(
+                "374000000", "some_module", "default", "37.0"))
+        .isEqualTo("2026-12");
+    assertThat(
+            spyMctsDynamicDownloadPlugin.processModuleVersion(
+                "374500000", "some_module", "default", "37.0"))
+        .isEqualTo("2027-01");
+    assertThat(
+            spyMctsDynamicDownloadPlugin.processModuleVersion(
+                "373200000", "some_module", "default", "37.0"))
+        .isEqualTo("default"); // Mainline beta mission.
+    assertThat(
+            spyMctsDynamicDownloadPlugin.processModuleVersion(
+                "373400000", "some_module", "default", "37.0"))
+        .isEqualTo("default"); // Platform beta mission.
+    assertThat(
+            spyMctsDynamicDownloadPlugin.processModuleVersion(
+                "371100000", "some_module", "default", "37.0"))
+        .isEqualTo("default"); // Other non-release mission.
+    assertThat(
+            spyMctsDynamicDownloadPlugin.processModuleVersion(
+                "370000000", "some_module", "default", "37.0"))
+        .isEqualTo("default"); // AOSP version.
+    assertThat(
+            spyMctsDynamicDownloadPlugin.processModuleVersion(
+                "379900000", "some_module", "default", "37.0"))
+        .isEqualTo("default"); // Daily train version.
+  }
+
+  @Test
+  public void processModuleVersion_calculateVersions_aosp() throws Exception {
+    assertThat(
+            spyMctsDynamicDownloadPlugin.processModuleVersion(
+                "352090000", "some_module", "default", "35"))
+        .isEqualTo("default");
+  }
+
+  @Test
+  public void processModuleVersion_unsupportedSdkException() throws Exception {
+    MobileHarnessException thrown =
+        assertThrows(
+            MobileHarnessException.class,
+            () ->
+                spyMctsDynamicDownloadPlugin.processModuleVersion(
+                    "990500000", "some_module", "default", ""));
+    assertThat(thrown.getErrorId())
+        .isEqualTo(AndroidErrorId.XTS_DYNAMIC_DOWNLOADER_DEVICE_SDK_VERSION_NOT_SUPPORT);
   }
 }
