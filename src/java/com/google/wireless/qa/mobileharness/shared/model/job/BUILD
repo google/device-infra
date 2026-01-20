@@ -64,6 +64,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
+        "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_errorprone_error_prone_annotations",
     ],
 )
@@ -119,6 +120,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/path",
         "//src/java/com/google/devtools/mobileharness/shared/util/system",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:count_down_timer",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/job:job_type_util",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",

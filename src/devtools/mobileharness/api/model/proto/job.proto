@@ -18,6 +18,8 @@ syntax = "proto3";
 
 package mobileharness.api.model;
 
+import "google/protobuf/timestamp.proto";
+
 option java_package = "com.google.devtools.mobileharness.api.model.proto";
 option java_outer_classname = "Job";
 
@@ -144,6 +146,16 @@ message JobFeature {
 
   // Optional, if value not set we will use DEFAULT as default
   DeviceAllocationPriority device_allocation_priority = 5;
+
+  // Optional, if value not set we will not pass it to the scheduler.
+  // This field is used to support "Flaky re-attempts" scenarios, to make sure
+  // the retried task is considered part of the original submission for fairness
+  // in retry behavior.
+  //
+  // Setting this field is restricted to Mobile Harness internal systems.
+  // Ordinary external users should not set this field when submitting new
+  // tasks.
+  google.protobuf.Timestamp original_submit_timestamp = 6;
 
   // Deprecated. Use JobFeature.device_requirements.device_requirement instead.
   repeated DeviceRequirement device_requirement = 3 [deprecated = true];

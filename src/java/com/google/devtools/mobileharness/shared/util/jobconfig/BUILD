@@ -48,6 +48,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/path",
         "//src/java/com/google/devtools/mobileharness/shared/util/sharedpool:shared_pool_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/system",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:timeout_util",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/job:job_type_util",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
@@ -63,6 +64,7 @@ java_library(
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_code_gson_gson",
         "@maven//:com_google_guava_guava",
+        "@maven//:com_google_protobuf_protobuf_java",
         "@protobuf//:protobuf_java",
     ],
 )
