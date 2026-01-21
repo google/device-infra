@@ -517,8 +517,8 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
       throws MobileHarnessException, InterruptedException {}
 
   /** Sends test level running files to the lab, does nothing by default. */
-  private void sendTestFiles(TestInfo testInfo)
-      throws MobileHarnessException, InterruptedException {}
+  @VisibleForTesting
+  void sendTestFiles(TestInfo testInfo) throws MobileHarnessException, InterruptedException {}
 
   /**
    * Updates the test engine file transfer client to download files from lab to client, does nothing
