@@ -150,6 +150,17 @@ public class Files {
   }
 
   /**
+   * Finds a single input file/dir marked with the given tag.
+   *
+   * @param tag file/dir tag
+   * @return the FileInfo of the file/dir with the given tag
+   * @throws MobileHarnessException when tag did not match exactly one input file/dir
+   */
+  public synchronized FileInfo getSingleFileInfo(String tag) throws MobileHarnessException {
+    return newFiles.getSingleFileInfo(tag);
+  }
+
+  /**
    * Finds the input files/dirs marked with the given tag.
    *
    * @return a copy of the file/dir full path, or <b>an empty set</b> if there is no file/dir with
