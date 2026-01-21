@@ -24,7 +24,7 @@ option java_package = "com.google.wireless.qa.mobileharness.shared.proto.spec.de
 option java_multiple_files = true;
 
 // Specs for {@link InstallApkStep}.
-// Next tag: 16
+// Next tag: 17
 message InstallApkStepSpec {
   extend DecoratorSpec {
     optional InstallApkStepSpec ext = 241344121;
@@ -125,6 +125,14 @@ message InstallApkStepSpec {
       help: "Whether apks installed should be uninstalled after test. Note "
             "that it does not verify if the apks are successfully removed. "
             "Default is false."
+    }
+  ];
+
+  optional bool skip_apk_downgrade = 16 [
+    default = false,
+    (field_detail) = {
+      help: "Whether to skip installing packages which are a version downgrade "
+            "compared to the installed version.  Default is faise."
     }
   ];
 }

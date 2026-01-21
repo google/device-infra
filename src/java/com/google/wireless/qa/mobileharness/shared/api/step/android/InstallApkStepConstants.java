@@ -58,6 +58,11 @@ public interface InstallApkStepConstants {
 
   @ParamAnnotation(
       required = false,
+      help = "Skip installing apks if it is a downgrade. Default value is false.")
+  String PARAM_SKIP_APK_DOWNGRADE = "skip_apk_downgrade";
+
+  @ParamAnnotation(
+      required = false,
       help =
           "Max execution time of the 'adb install ...' command for each build APK. "
               + "No effect if large than test timeout setting. ")
