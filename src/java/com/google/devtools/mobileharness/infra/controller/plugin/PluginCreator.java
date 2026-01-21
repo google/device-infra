@@ -48,6 +48,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -272,7 +273,7 @@ public class PluginCreator implements AutoCloseable {
       if (classNames == null) {
         logger.atInfo().log(
             "No plugin class name given, searching plugin class by plugin annotation");
-        classes = new HashSet<>();
+        classes = new LinkedHashSet<>();
         for (var jarEntry : reflectedJars) {
           final URL jarUrl = jarEntry.url;
           logger.atInfo().log("Searching plugin classes in jar [%s]", jarUrl);
