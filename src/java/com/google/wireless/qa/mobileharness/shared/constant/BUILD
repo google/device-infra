@@ -56,7 +56,7 @@ java_library(
     name = "dimension",
     srcs = ["Dimension.java"],
     deps = [
-        "@maven//:com_google_guava_guava",
+        "@maven//:com_google_guava_guava:base-gwt",
     ],
 )
 
