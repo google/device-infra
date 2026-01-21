@@ -179,6 +179,7 @@ public class LabServer {
 
   /** Initializes and runs lab server, and blocks until shutdown. */
   public void run() throws MobileHarnessException, InterruptedException {
+    logger.atInfo().log("Add changes to trigger copybara.");
     systemInfoPrinter.printSystemInfo(DEBUG);
     try {
 
