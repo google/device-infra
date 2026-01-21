@@ -29,9 +29,37 @@ message DeviceLocator {
   // REQUIRED
   // The host name of the lab the device connects to.
   string host_name = 2;
+
+  // A list of services available on the host, including ADB serial number for
+  // the AndroidDeviceService or forwarded port name for the registered ports.
+  repeated HostServiceInfo host_service_info = 3;
 }
 
 /** The device locator list. */
 message DeviceLocators {
   repeated DeviceLocator device_locator = 1;
+}
+
+// Information about a single host service.
+message HostServiceInfo {
+  oneof service {
+    AdbServiceInfo adb_service = 1;
+    PortServiceInfo port_service = 2;
+  }
+}
+
+message AdbServiceInfo {
+  // Device ID used to connect to the AndroidDeviceService on the host.
+  // See google3/cloud/test/device/remote/service/adb_service.proto for details.
+  // Device ID must be specified in the DEVICE_ID metadata key.
+  // eg. “localhost:6520” or “emulator-123”
+  string device_id = 1;
+}
+
+message PortServiceInfo {
+  // Port exposed by the host.
+  // See google3/cloud/test/device/remote/service/port_service.proto for
+  // details.
+  // eg. ‘waterfall’ etc
+  string port_name = 1;
 }
