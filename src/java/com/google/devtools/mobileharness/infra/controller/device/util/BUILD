@@ -57,6 +57,7 @@ java_library(
     name = "device_status_info_printer",
     srcs = ["DeviceStatusInfoPrinter.java"],
     visibility = [
+        "//java/com/google/devtools/mobileharness/infra/lab/controller/wrangler:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/lab/controller:__pkg__",
     ],
