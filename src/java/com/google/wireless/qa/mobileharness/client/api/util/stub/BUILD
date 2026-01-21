@@ -22,6 +22,7 @@ java_library(
     srcs = ["StubManager.java"],
     visibility = ["//:deviceinfra_all_pkg"],
     deps = [
+        "//java/com/google/devtools/mobileharness/infra/cloudatlas/grpcrouter/stub:grpc_router_stub_configuration_factory",
         "//src/devtools/mobileharness/infra/client/api/proto:resource_federation_java_proto",
         "//src/devtools/mobileharness/infra/client/api/proto:server_locator_java_proto",
         "//src/devtools/mobileharness/infra/container/proto:test_engine_java_proto",
