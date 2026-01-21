@@ -52,6 +52,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceOvervi
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DimensionSourceGroup;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.Dimensions;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceOverviewRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.NetworkInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.PermissionInfo;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
@@ -302,7 +303,7 @@ public final class GetDeviceOverviewHandler {
     BasicDeviceInfo.Builder basicInfo = BasicDeviceInfo.newBuilder();
     ImmutableMap<String, String> dimMap =
         dimensions.stream()
-            .collect(toImmutableMap(d -> d.getName(), d -> d.getValue(), (v1, v2) -> v1));
+            .collect(toImmutableMap(d -> d.getName(), d -> d.getValue(), (v1, unused) -> v1));
 
     basicInfo.setModel(dimMap.getOrDefault("model", ""));
 
@@ -329,7 +330,7 @@ public final class GetDeviceOverviewHandler {
       basicInfo.setBatteryLevel(-1); // Default if not a number
     }
 
-    BasicDeviceInfo.Network.Builder network = BasicDeviceInfo.Network.newBuilder();
+    NetworkInfo.Builder network = NetworkInfo.newBuilder();
     try {
       network.setWifiRssi(Integer.parseInt(dimMap.getOrDefault("wifi_rssi", "0")));
     } catch (NumberFormatException e) {

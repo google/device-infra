@@ -219,6 +219,8 @@ const deviceSummaries: DeviceSummary[] = [
           {name: 'lab_supports_sandbox', value: 'true'},
           {name: 'host_name', value: 'aw-zo3.sjc.corp.example.com'},
         ],
+        model: 'minicircuits',
+        version: 'RDCAT-6000-90',
       },
       {
         id: '41081FDAS000YB',
@@ -241,6 +243,8 @@ const deviceSummaries: DeviceSummary[] = [
           {name: 'host_ip', value: '192.168.1.101'},
           {name: 'host_name', value: 'host-a-1.example.com'},
         ],
+        model: 'Pixel 8',
+        version: '15',
       },
     ],
   },

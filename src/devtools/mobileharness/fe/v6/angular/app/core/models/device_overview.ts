@@ -56,6 +56,38 @@ export interface DeviceOverview {
 // --- Helper Interfaces for DeviceOverview ---
 
 /**
+ * Represents a specific type classification of a device (e.g., AndroidRealDevice).
+ */
+export interface DeviceType {
+  /** The type string. */
+  type: string;
+  /**
+   * Backend-determined flag indicating if this type suggests an abnormal
+   * or unhealthy state (e.g., FailedAndroidDevice, DisconnectedDevice)
+   * and should be highlighted visually.
+   */
+  isAbnormal: boolean;
+}
+
+/**
+ * Network connectivity details for a device.
+ */
+export interface NetworkInfo {
+  /** WiFi signal strength in dBm, e.g., -65. Optional. */
+  wifiRssi?: number;
+  /** Indicates if the device has internet access. Optional. */
+  hasInternet?: boolean;
+}
+
+/**
+ * Information about remote control capabilities and status.
+ */
+export interface RemoteControlInfo {
+  isSupported?: boolean;
+  unsupportedReason?: string;
+}
+
+/**
  * Enum-like union of strings representing the high-level health state of the device.
  * This state is determined by the backend based on various factors (status, types, tasks)
  * and is used by the frontend to drive the main visual representation in the
@@ -108,16 +140,7 @@ export interface HealthAndActivityInfo {
   /**
    * List of device types (e.g., AndroidRealDevice, AdbDevice).
    */
-  deviceTypes: Array<{
-    /** The type string. */
-    type: string;
-    /**
-     * Backend-determined flag indicating if this type suggests an abnormal
-     * or unhealthy state (e.g., FailedAndroidDevice, DisconnectedDevice)
-     * and should be highlighted visually.
-     */
-    isAbnormal: boolean;
-  }>;
+  deviceTypes: DeviceType[];
 
   /**
    * The timestamp of when the device was last considered "In Service".
@@ -182,12 +205,7 @@ export interface BasicDeviceInfo {
   /** Battery level percentage (0-100), or null if not applicable. */
   batteryLevel: number | null;
   /** Network connectivity details. */
-  network: {
-    /** WiFi signal strength in dBm, e.g., -65. Optional. */
-    wifiRssi?: number;
-    /** Indicates if the device has internet access. Optional. */
-    hasInternet?: boolean;
-  };
+  network: NetworkInfo;
   /** Hardware identifier, common for Android devices (e.g., "cheetah"). Optional. */
   hardware?: string;
   /** Build ID or version, common for Android devices. Optional. */
@@ -247,17 +265,20 @@ export interface Dimensions {
  */
 export interface SubDeviceInfo {
   id: string;
-  types: Array<{
-    /** The type string. */
-    type: string;
-    /**
-     * Backend-determined flag indicating if this type suggests an abnormal
-     * or unhealthy state (e.g., FailedAndroidDevice, DisconnectedDevice)
-     * and should be highlighted visually.
-     */
-    isAbnormal: boolean;
-  }>;
+  types: DeviceType[];
+  /** Dimensions of the sub-device. */
   dimensions?: DeviceDimension[];
+
+  /** Model of the sub-device. */
+  model?: string;
+  /** Version of the sub-device. */
+  version?: string;
+  /** Battery level percentage (0-100), or null if not applicable. */
+  batteryLevel?: number | null;
+  /** Network connectivity details. */
+  network?: NetworkInfo;
+  /** Remote control support details. */
+  remoteControl?: RemoteControlInfo;
 }
 
 /**
@@ -275,3 +296,4 @@ export interface DeviceOverviewPageData {
   headerInfo: DeviceHeaderInfo;
   overview: DeviceOverview;
 }
+

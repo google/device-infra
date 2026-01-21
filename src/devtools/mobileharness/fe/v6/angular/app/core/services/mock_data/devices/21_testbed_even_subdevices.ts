@@ -46,7 +46,7 @@ const OVERVIEW: DeviceOverview = {
     model: 'Testbed',
     version: 'N/A',
     form: 'testbed',
-    os: 'N/A',
+    os: 'Android',
     batteryLevel: null,
     network: {},
   },

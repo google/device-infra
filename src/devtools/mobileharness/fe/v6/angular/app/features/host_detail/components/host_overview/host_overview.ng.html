@@ -379,6 +379,18 @@
                                <td mat-cell *matCellDef="let sub" class="sub-device-id"> {{sub.id}} </td>
                              </ng-container>
 
+                             <!-- Model Column -->
+                             <ng-container matColumnDef="model">
+                               <th mat-header-cell *matHeaderCellDef> MODEL </th>
+                               <td mat-cell *matCellDef="let sub"> {{sub.model || '-'}} </td>
+                             </ng-container>
+
+                             <!-- Version Column -->
+                             <ng-container matColumnDef="version">
+                               <th mat-header-cell *matHeaderCellDef> VERSION </th>
+                               <td mat-cell *matCellDef="let sub"> {{sub.version || '-'}} </td>
+                             </ng-container>
+
                              <!-- Type Column -->
                              <ng-container matColumnDef="type">
                                <th mat-header-cell *matHeaderCellDef> TYPE </th>
@@ -403,25 +415,53 @@
                                </td>
                              </ng-container>
 
-                             <!-- Dimensions Column -->
-                             <ng-container matColumnDef="dimensions">
-                               <th mat-header-cell *matHeaderCellDef> DIMENSIONS </th>
+                             <!-- Battery Column -->
+                             <ng-container matColumnDef="battery">
+                               <th mat-header-cell *matHeaderCellDef> BATTERY </th>
                                <td mat-cell *matCellDef="let sub">
-                                 @if(sub.dimensions && sub.dimensions.length > 0) {
-                                   <app-overflow-list
-                                     [items]="sub.dimensions"
-                                     [limit]="2"
-                                     [itemTemplate]="dimTemplate"
-                                     moreButtonClass="sub-device-dim-chip more"
-                                     (showOverlay)="onDimHover($event, sub.id, sub.dimensions)"
-                                     (hideOverlay)="handleMouseLeave($event)">
-                                   </app-overflow-list>
-                                   <ng-template #dimTemplate let-dim>
-                                     <span class="sub-device-dim-chip"><b>{{dim.name}}</b>: {{dim.value}}</span>
-                                   </ng-template>
-                                 } @else {
-                                   -
-                                 }
+                                 {{ sub.batteryLevel !== null && sub.batteryLevel !== undefined ? sub.batteryLevel + '%' : '-' }}
+                               </td>
+                             </ng-container>
+
+                             <!-- Wifi Column -->
+                             <ng-container matColumnDef="wifi">
+                               <th mat-header-cell *matHeaderCellDef> WIFI </th>
+                               <td mat-cell *matCellDef="let sub">
+                                 <div class="network-status">
+                                   @if (sub.network?.wifiRssi !== undefined) {
+                                     @let wifiIcon = getWifiSignalIcon(sub.network?.wifiRssi);
+                                     @let wifiQuality = getWifiQualityText(sub.network?.wifiRssi);
+                                     <mat-icon
+                                       class="wifi-icon"
+                                       title="Signal: {{ wifiQuality }} ({{ sub.network?.wifiRssi }} dBm)"
+                                     >
+                                       {{ wifiIcon }}
+                                     </mat-icon>
+                                   }
+                                   @if (sub.network?.hasInternet === true) {
+                                     <mat-icon class="internet-icon text-green-600" title="Internet access">public</mat-icon>
+                                   } @else if (sub.network?.hasInternet === false) {
+                                     <mat-icon class="internet-icon text-red-600" title="No internet access">public_off</mat-icon>
+                                   } @else {
+                                     <mat-icon class="wifi-icon" title="Unknown">signal_wifi_off</mat-icon>
+                                     <span class="text-gray-600">Unknown</span>
+                                   }
+                                 </div>
+                               </td>
+                             </ng-container>
+
+                             <!-- Actions Column -->
+                             <ng-container matColumnDef="actions">
+                               <th mat-header-cell *matHeaderCellDef> ACTION </th>
+                               <td mat-cell *matCellDef="let sub">
+                                 <div [matTooltip]="sub.remoteControl?.isSupported ? 'Remote Control' : (sub.remoteControl?.unsupportedReason || 'Not supported')"
+                                      class="inline-block">
+                                   <button mat-icon-button
+                                           (click)="startSubDeviceRemoteControl(sub)"
+                                           [disabled]="!sub.remoteControl?.isSupported">
+                                     <mat-icon>important_devices</mat-icon>
+                                   </button>
+                                 </div>
                                </td>
                              </ng-container>
 

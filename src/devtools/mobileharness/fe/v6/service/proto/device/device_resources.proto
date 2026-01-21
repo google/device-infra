@@ -73,6 +73,20 @@ message HostInfo {
   string ip = 2;
 }
 
+// Network connectivity details for a device.
+message NetworkInfo {
+  // WiFi signal strength in dBm, e.g., -65.
+  sint32 wifi_rssi = 1;
+  // Indicates if the device has internet access.
+  bool has_internet = 2;
+}
+
+// Information about remote control capabilities and status.
+message RemoteControlInfo {
+  bool is_supported = 1;
+  string unsupported_reason = 2;
+}
+
 // High-level health state of the device.
 enum HealthState {
   HEALTH_STATE_UNSPECIFIED = 0;
@@ -154,13 +168,7 @@ message BasicDeviceInfo {
   // Battery level percentage (0-100), or -1 if not applicable.
   int32 battery_level = 5;
   // Network connectivity details.
-  message Network {
-    // WiFi signal strength in dBm, e.g., -65.
-    sint32 wifi_rssi = 1;
-    // Indicates if the device has internet access.
-    bool has_internet = 2;
-  }
-  Network network = 6;
+  NetworkInfo network = 6;
   // Hardware identifier, common for Android devices.
   string hardware = 7;
   // Build ID or version, common for Android devices.
@@ -207,6 +215,17 @@ message SubDeviceInfo {
   string id = 1;
   repeated DeviceType types = 2;
   repeated DeviceDimension dimensions = 3;
+
+  // Model of the sub-device.
+  string model = 4;
+  // Version of the sub-device.
+  string version = 5;
+  // Battery level percentage (0-100), or -1 if not applicable.
+  int32 battery_level = 6;
+  // Network connectivity details.
+  NetworkInfo network = 7;
+  // Remote control support details.
+  RemoteControlInfo remote_control = 8;
 }
 
 // Testbed configuration in YAML format.

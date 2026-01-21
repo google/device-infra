@@ -37,6 +37,7 @@ import {delay, map, tap} from 'rxjs/operators';
 import {
   HealthState,
   type DeviceDimension,
+  type SubDeviceInfo,
 } from '../../../../core/models/device_overview';
 import {
   DaemonServerStatus,
@@ -300,7 +301,15 @@ export class HostOverviewPage implements OnInit, OnChanges {
     'actions',
   ];
 
-  subDeviceDisplayedColumns: string[] = ['id', 'type', 'dimensions'];
+  subDeviceDisplayedColumns: string[] = [
+    'id',
+    'type',
+    'model',
+    'version',
+    'battery',
+    'wifi',
+    'actions',
+  ];
 
   navList: NavItem[] = [
     {
@@ -550,6 +559,34 @@ export class HostOverviewPage implements OnInit, OnChanges {
       return;
     }
 
+    this.checkEligibilityAndStart(selectedDevices);
+  }
+
+  startSubDeviceRemoteControl(subDevice: SubDeviceInfo) {
+    // Construct a temporary DeviceSummary from SubDeviceInfo
+    const deviceSummary: DeviceSummary = {
+      id: subDevice.id,
+      healthState: {
+        health: 'UNKNOWN', // Default for sub-devices if unknown
+        title: 'Unknown',
+        tooltip: '',
+      },
+      types: subDevice.types,
+      deviceStatus: {
+        status: 'UNKNOWN',
+        isCritical: false,
+      },
+      label: '',
+      requiredDims: '',
+      model: subDevice.model || '',
+      version: subDevice.version || '',
+      subDevices: [],
+    };
+
+    this.checkEligibilityAndStart([deviceSummary]);
+  }
+
+  private checkEligibilityAndStart(selectedDevices: DeviceSummary[]) {
     // 2&3. Eligibility and Proxy Compatibility Check
     const deviceControlIds = selectedDevices.map((d) => d.id);
     this.hostService
@@ -718,6 +755,23 @@ export class HostOverviewPage implements OnInit, OnChanges {
   getHealthSemantic(state: HealthState) {
     return HEALTH_SEMANTIC_MAP[state] || DEFAULT_HEALTH_SEMANTIC;
   }
+
+  getWifiSignalIcon(rssi: number | undefined): string {
+    if (rssi === undefined) return '';
+    if (rssi >= -67) return 'signal_wifi_4_bar';
+    if (rssi >= -75) return 'network_wifi_3_bar';
+    if (rssi >= -85) return 'network_wifi_2_bar';
+    return 'network_wifi_1_bar';
+  }
+
+  getWifiQualityText(rssi: number | undefined): string {
+    if (rssi === undefined) return '';
+    if (rssi >= -67) return 'Excellent';
+    if (rssi >= -75) return 'Good';
+    if (rssi >= -85) return 'Okay';
+    return 'Weak';
+  }
+
   // Type Column
   isTypeAbnormal(types: Array<{type: string; isAbnormal: boolean}>): boolean {
     return types.some((t) => t.isAbnormal);
