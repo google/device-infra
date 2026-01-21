@@ -424,6 +424,13 @@ public interface PropertyName {
     /** Locator of test engine stub. */
     _TEST_ENGINE_LOCATOR;
 
+    /** Test property format for MH flash wait time for flashing quota. */
+    public static final String FORMAT_FLASH_WAIT_FOR_QUOTA_DURATION_MILLIS =
+        "flash_wait_millis_for_quota_%s";
+
+    /** Test property format for MH flash actual time (excluding waiting for quota). */
+    public static final String FORMAT_FLASH_DURATION_MILLIS = "flash_millis_%d_attempt_%s";
+
     /**
      * Name prefix of the test property that contains the decorator run time in milliseconds.
      *
