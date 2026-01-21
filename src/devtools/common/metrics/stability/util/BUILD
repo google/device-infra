@@ -23,6 +23,13 @@ package(
     default_visibility = ["//visibility:public"],
 )
 
+exports_files(
+    ["grpc_error_util.py"],
+    visibility = [
+        "//third_party/py/multitest_transport:__subpackages__",
+    ],
+)
+
 py_library(
     name = "grpc_error_util_lib",
     srcs = ["grpc_error_util.py"],
