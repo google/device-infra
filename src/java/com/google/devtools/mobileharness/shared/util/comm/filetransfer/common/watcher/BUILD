@@ -19,6 +19,7 @@ package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
         "//:deviceinfra_all_pkg",
+        "//javatests/com/google/geo/engprod/mobileharness:__subpackages__",
     ],
 )
 
