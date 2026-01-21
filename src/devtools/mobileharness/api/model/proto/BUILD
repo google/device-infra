@@ -57,6 +57,15 @@ java_proto_library(
     deps = [":job_proto"],
 )
 
+kt_jvm_proto_library(
+    name = "job_kt_proto",
+    visibility = [
+        "//java/com/google/devtools/omnilab/device/lab/specs:__pkg__",
+        "//javatests/com/google/devtools/omnilab/device/lab/specs:__pkg__",
+    ],
+    deps = [":job_proto"],
+)
+
 proto_library(
     name = "lab_proto",
     srcs = ["lab.proto"],
