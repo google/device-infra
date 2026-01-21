@@ -312,6 +312,29 @@ public class Files {
   }
 
   /**
+   * Finds a single input file/dir info marked with the given tag.
+   *
+   * @param tag file/dir tag
+   * @return the FileInfo of the file/dir with the given tag
+   * @throws MobileHarnessException when tag did not match exactly one input file/dir
+   */
+  public synchronized FileInfo getSingleFileInfo(String tag) throws MobileHarnessException {
+    Map<String, FileInfo> tagFileOrDirs = getTagFileOrDirs(tag);
+    if (tagFileOrDirs.isEmpty()) {
+      throw new MobileHarnessException(
+          BasicErrorId.JOB_OR_TEST_FILE_NOT_FOUND,
+          String.format("No input file/dir tagged with [%s]", tag));
+    } else if (tagFileOrDirs.size() > 1) {
+      throw new MobileHarnessException(
+          BasicErrorId.JOB_OR_TEST_FILE_MULTI_PATHS,
+          String.format(
+              "More than one input files/dirs %s are tagged with [%s]", tagFileOrDirs, tag));
+    } else {
+      return Iterables.getOnlyElement(tagFileOrDirs.values());
+    }
+  }
+
+  /**
    * Finds the input files/dirs marked with the given tag.
    *
    * @return a copy of the file/dir full path, or <b>an empty set</b> if there is no file/dir with
