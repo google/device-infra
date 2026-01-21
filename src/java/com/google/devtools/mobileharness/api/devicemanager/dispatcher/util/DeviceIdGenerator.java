@@ -178,6 +178,24 @@ public class DeviceIdGenerator {
   }
 
   /**
+   * Generates the Gem5 device id from device control id, and sets uuid in the format
+   * <hostname>:gem5:<deviceControlId>.
+   *
+   * @param deviceControlId the device control id from detector.
+   */
+  public DeviceId getGem5DeviceId(String deviceControlId) {
+    try {
+      return DeviceId.of(
+          deviceControlId, String.format("%s:gem5:%s", getLocalHostName(), deviceControlId), true);
+    } catch (MobileHarnessException e) {
+      // Should not happen.
+      logger.atWarning().withCause(e).log(
+          "Failed to generate Gem5Device uuid, use random uuid instead..");
+      return DeviceId.of(deviceControlId, UUID.randomUUID().toString(), true);
+    }
+  }
+
+  /**
    * Generates the NoOp device id from device control id, adds the lab host name as the prefix of
    * the uuid.
    *
