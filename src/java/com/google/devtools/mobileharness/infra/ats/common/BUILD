@@ -30,7 +30,7 @@ java_library(
     name = "ats_session_plugin_util",
     srcs = ["AtsSessionPluginUtil.java"],
     deps = [
-        "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_constants",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/constant:xts_constants",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "@maven//:com_google_guava_guava",
     ],
@@ -136,7 +136,6 @@ java_library(
         ":device_selection_options",
         ":session_handler_helper",
         ":session_request_info",
-        ":xts_property_name",
         "//src/devtools/mobileharness/api/model/proto:job_java_proto",
         "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
         "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",
@@ -154,11 +153,12 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:enums",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:abi_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:mobly_test_loader",
-        "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_constants",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_dir_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:configuration_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:module_configuration_helper",
-        "//src/java/com/google/devtools/mobileharness/platform/android/xts/plugin:non_tradefed_report_generator_constants",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/constant:non_tradefed_report_generator_constants",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/constant:xts_constants",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/constant:xts_property_name",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:module_arg",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:suite_common",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:suite_test_filter",
@@ -210,7 +210,6 @@ java_library(
     deps = [
         ":session_handler_helper",
         ":session_request_info",
-        ":xts_property_name",
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
@@ -222,8 +221,9 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/constant:session_properties",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_info",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:abi_util",
-        "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_constants",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_dir_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/constant:xts_constants",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/constant:xts_property_name",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:suite_common",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:suite_result_reporter",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:previous_result_loader",
@@ -244,26 +244,6 @@ java_library(
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
     ],
-)
-
-java_library(
-    name = "xts_property_name",
-    srcs = ["XtsPropertyName.java"],
-    visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/ats/common/jobcreator:__pkg__",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/tradefed:__pkg__",
-        "//src/java/com/google/devtools/mobileharness/infra/controller/test/local:__pkg__",
-        "//src/java/com/google/devtools/mobileharness/platform/android/xts/plugin:__pkg__",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/ats/common/jobcreator:__pkg__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__",
-        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/plugin:__pkg__",
-        "//src/javatests/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
-    ],
-    deps = ["//src/java/com/google/wireless/qa/mobileharness/shared/constant:property"],
 )
 
 java_library(

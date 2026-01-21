@@ -27,7 +27,7 @@ java_library(
         ":install_python_pkg_deps_args",
         ":mobly_python_venv_util",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_constants",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/constant:xts_constants",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",

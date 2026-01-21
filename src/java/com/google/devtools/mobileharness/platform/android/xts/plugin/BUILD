@@ -23,15 +23,15 @@ java_library(
         "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/plugin:__subpackages__",
     ],
     deps = [
-        ":non_tradefed_report_generator_constants",
         "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/testrunner/event/test",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/common:xts_property_name",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:certification_suite_info",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:certification_suite_info_factory",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:mobly_report_helper",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/constant:non_tradefed_report_generator_constants",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/constant:xts_property_name",
         "//src/java/com/google/devtools/mobileharness/shared/util/base",
         "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
@@ -45,18 +45,6 @@ java_library(
 )
 
 java_library(
-    name = "non_tradefed_report_generator_constants",
-    srcs = ["NonTradefedReportGeneratorConstants.java"],
-    visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
-        "//src/java/com/google/devtools/mobileharness/infra/controller/test/local:__pkg__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
-        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/plugin:__pkg__",
-    ],
-    deps = ["//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation:basic_annotation"],
-)
-
-java_library(
     name = "xts_device_compatibility_checker",
     srcs = ["XtsDeviceCompatibilityChecker.java"],
     visibility = [
@@ -66,10 +54,10 @@ java_library(
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/testrunner/plugin:exception",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/common:xts_property_name",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_internal_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common:device_build_info",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/constant:xts_property_name",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event:lab_test_events",
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/plugin",

@@ -17,7 +17,7 @@
 package com.google.devtools.mobileharness.infra.ats.common;
 
 import com.google.common.collect.ImmutableList;
-import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
+import com.google.devtools.mobileharness.platform.android.xts.constant.XtsConstants;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 
 /** Utility class for ATS session plugins. */

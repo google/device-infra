@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.infra.ats.common;
+package com.google.devtools.mobileharness.platform.android.xts.constant;
 
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
 

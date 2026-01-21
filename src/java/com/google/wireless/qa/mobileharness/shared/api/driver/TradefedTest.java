@@ -50,8 +50,8 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.L
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
 import com.google.devtools.mobileharness.platform.android.shared.emulator.AndroidJitEmulatorUtil;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsCommandUtil;
-import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
+import com.google.devtools.mobileharness.platform.android.xts.constant.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.message.proto.TestMessageProto.XtsTradefedRunCancellation;
 import com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance;
 import com.google.devtools.mobileharness.shared.util.command.Command;

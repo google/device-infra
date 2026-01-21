@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.platform.android.xts.plugin;
+package com.google.devtools.mobileharness.platform.android.xts.constant;
 
 import com.google.wireless.qa.mobileharness.shared.api.annotation.ParamAnnotation;
 
-/** Constants for {@link NonTradefedReportGenerator}. */
+/** Constants for {@code NonTradefedReportGenerator}. */
 public final class NonTradefedReportGeneratorConstants {
 
   @ParamAnnotation(

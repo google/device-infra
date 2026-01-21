@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.platform.android.xts.common.util;
+package com.google.devtools.mobileharness.platform.android.xts.constant;
 
 import java.util.regex.Pattern;
 
