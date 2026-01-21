@@ -194,6 +194,24 @@ public final class AndroidFileUtilTest {
   }
 
   @Test
+  public void getExternalStoragePath_api32_multiuser() throws Exception {
+    when(androidUserUtil.getCurrentUser(SERIAL, /* sdkVersion= */ 32))
+        .thenReturn(10)
+        .thenThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_USER_UTIL_GET_FOREGROUND_USER_ERROR, "Error"));
+
+    assertThat(androidFileUtil.getExternalStoragePath(SERIAL, /* sdkVersion= */ 32))
+        .isEqualTo("/storage/emulated/10");
+    assertThat(
+            assertThrows(
+                    MobileHarnessException.class,
+                    () -> androidFileUtil.getExternalStoragePath(SERIAL, /* sdkVersion= */ 32))
+                .getErrorId())
+        .isEqualTo(AndroidErrorId.ANDROID_FILE_UTIL_GET_EXTERNAL_STORAGE_ERROR);
+  }
+
+  @Test
   public void getFileInfo_file() throws Exception {
     int sdkVersion = 28;
     String fileParentDir = "/data/test_dir/";
