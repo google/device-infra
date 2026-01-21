@@ -143,7 +143,12 @@ public final class Dimension {
      * shared/shared_without_recovery/group_shared/partner_shared/dedicated.
      */
     POOL,
-    /** Whether the device is reachable from the host. */
+    /** Whether the device is reachable from the host via ping. */
+    /** Whether the device is reachable from the host via DIAL. */
+    /** The URL suffix for DIAL app. */
+    DIAL_APP_URL_SUFFIX,
+    /** The URL suffix for DIAL rest. */
+    DIAL_REST_URL_SUFFIX,
     /** Whether the device has the YouTube app installed. */
     /** The release version of the device. */
     RELEASE_VERSION,
