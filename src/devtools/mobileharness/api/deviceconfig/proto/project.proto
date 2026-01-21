@@ -1,0 +1,69 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package mobileharness.api.deviceconfig;
+
+import "google/protobuf/any.proto";
+
+option java_package = "com.google.devtools.mobileharness.api.deviceconfig.proto";
+option java_outer_classname = "ProjectConfigServiceProto";
+
+// Identifier for devices running Android OS
+message AndroidRealDeviceFingerprint {
+  // Result of `getprop ro.product.device`
+  string ro_product_device = 1;
+  // Result of `getprop ro.build.version.sdk`, usually an integer, but may have
+  // additional parts for beta or extension releases.
+  string ro_build_version_sdk = 2;
+  // Result of `getprop ro.build.type`, usually one of "user" or "userdebug"
+  string ro_build_type = 3;
+  // `getprop ro.build.id`
+  // Build of the system version of Android running on the device.
+  string ro_build_id = 4;
+}
+
+// Identification for devices running iOS
+message IosRealDeviceFingerprint {
+  // ProductType as given by ideviceinfo
+  string product_type = 1;
+  // ProductVersion as given by ideviceinfo
+  string product_version = 2;
+}
+
+// Descriptor of devices for hardware-specific configuration.
+message HardwareFingerprint {
+  // OS type or platform; "ANDROID" or "IOS"
+  string platform = 1;
+  oneof fingerprint {
+    AndroidRealDeviceFingerprint android_device_fingerprint = 2;
+    IosRealDeviceFingerprint ios_device_fingerprint = 3;
+  }
+}
+
+// A description of a device so that the Lifecycle can reset the config.
+// Generally ignored if a lifecycle is unable to read the lifecycle_fingerprint.
+// More than one lifecycle config can be returned for a device.
+message LifecycleConfig {
+  // DeviceConfig is currently omitted for YAGNI, as the DeviceConfigService
+  // can still apply for this device.
+  // Identifier for a device which is readable by the lifecycle on the host.
+  HardwareFingerprint hardware_fingerprint = 1;
+  // A platform-dependent config describing options or data used for resetting
+  // a device. Different lifecycle methods may require different fields.
+  google.protobuf.Any preparation_config = 2;
+}
