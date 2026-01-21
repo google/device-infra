@@ -22,6 +22,7 @@ package(
     default_visibility = [
         "//:deviceinfra_all_pkg",
         "//:omnilab_fusion",
+        "//java/com/google/pixel/quality/userjourney/plugin/seikoplugin:__subpackages__",
     ],
 )
 
