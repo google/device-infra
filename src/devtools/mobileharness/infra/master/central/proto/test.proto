@@ -53,17 +53,6 @@ enum AllocationParallelismMode {
   ALLOCATION_PARALLELISM_MODE_PARALLEL = 2;
 }
 
-// Describes the backend mechanism used to process the allocation workflow.
-enum AllocationExecutionMechanism {
-  ALLOCATION_EXECUTION_MECHANISM_UNSPECIFIED = 0;
-
-  // The legacy polling mechanism.
-  ALLOCATION_EXECUTION_MECHANISM_POLLING = 1;
-
-  // The new asynchronous, Spanner Queue-based orchestration mechanism.
-  ALLOCATION_EXECUTION_MECHANISM_QUEUE_ORCHESTRATOR = 2;
-}
-
 // Tracks the granular state of the allocation workflow.
 enum AllocationWorkflowStatus {
   ALLOCATION_WORKFLOW_STATUS_UNSPECIFIED = 0;
@@ -204,9 +193,6 @@ message TestCondition {
   // == NEW FIELDS FOR ASYNCHRONOUS WORKFLOW ORCHESTRATION ==
   // =================================================================
 
-  // Defines the execution mechanism for this test's allocation workflow.
-  AllocationExecutionMechanism execution_mechanism = 12;
-
   // Defines which workflow to execute for this test's allocation.
   AllocationType allocation_type = 13;
 
@@ -226,5 +212,5 @@ message TestCondition {
   // device allocations.
   AllocationParallelismMode allocation_mode = 17;
 
-  reserved 9;
+  reserved 9, 12;
 }

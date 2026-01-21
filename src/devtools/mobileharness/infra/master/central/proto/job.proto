@@ -43,6 +43,17 @@ message JobProfile {
   map<string, string> param = 4;
 }
 
+// Describes the backend mechanism used to process the allocation workflow.
+enum AllocationMechanism {
+  ALLOCATION_MECHANISM_UNSPECIFIED = 0;
+
+  // The legacy polling mechanism.
+  ALLOCATION_MECHANISM_POLLING = 1;
+
+  // The new asynchronous, Spanner Queue-based orchestration mechanism.
+  ALLOCATION_MECHANISM_QUEUE_ORCHESTRATOR = 2;
+}
+
 message JobCondition {
   // Required.
   int64 heartbeat_time_ms = 1;
@@ -66,6 +77,9 @@ message JobCondition {
   // Optional: Max time that a job can live in Central without heartbeats. It
   // should not be less than 5 minutes.
   int64 keep_alive_timeout_ms = 5;
+
+  // Defines the execution mechanism for this job's allocation workflow.
+  AllocationMechanism allocation_mechanism = 6;
 }
 
 // Allocation conditions of a job.
