@@ -20,6 +20,7 @@ package(
     default_visibility = [
         "//:deviceinfra_all_pkg",
         "//:omnilab_fusion",
+        "//third_party/android_external_tests/connectivity/tools/scheduler/iop_v2:internal",
         "//wireless/android/pixel/testtools/djar:__subpackages__",
     ],
 )
