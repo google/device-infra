@@ -27,6 +27,7 @@ import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.E
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.ExceptionDetail;
 import com.google.devtools.common.metrics.stability.model.proto.NamespaceProto.Namespace;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
+import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.out.Result;
@@ -236,7 +237,10 @@ public class TestRetryHandler {
               && testResult != TestResult.PASS
               && testResult != TestResult.SKIP)) {
         boolean retryOnTimeout = jobInfo.params().getBool(PARAM_RETRY_ON_TIMEOUT, true);
-        if (retryOnTimeout || testResult != TestResult.TIMEOUT) {
+        boolean isTimeout =
+            testResult == TestResult.TIMEOUT
+                || cause.map(TestRetryHandler::isCustomerTestExecutionTimeout).orElse(false);
+        if (retryOnTimeout || !isTimeout) {
           retryReason = "TEST_" + testResult;
         }
       }
@@ -347,6 +351,12 @@ public class TestRetryHandler {
     }
 
     addFinalAttemptProperty(currentTestInfo);
+  }
+
+  private static boolean isCustomerTestExecutionTimeout(ExceptionDetail detail) {
+    return ErrorModelConverter.toFlattenedExceptionDetail(detail)
+        .getErrorNameStackTrace()
+        .contains(BasicErrorId.CUSTOMER_TEST_EXECUTION_TIMEOUT_EXCEPTION_WRAPPER.name());
   }
 
   private ImmutableList<TestInfo> getAllAttempts(JobInfo jobInfo, TestInfo currentTestInfo) {
