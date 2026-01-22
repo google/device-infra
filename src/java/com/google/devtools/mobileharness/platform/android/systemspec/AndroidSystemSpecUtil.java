@@ -25,6 +25,7 @@ import com.google.common.base.Ascii;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
@@ -48,6 +49,51 @@ import java.util.stream.Stream;
 /** Utility class to query Android device hardware related specs. */
 public class AndroidSystemSpecUtil {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
+  /** The vendor of display panel. */
+  private enum PanelVendor {
+    BOE(
+        "boe",
+        ImmutableSet.of(
+            "boe-nt37290",
+            "boe-ts110f5mlg0",
+            "google-bigsurf",
+            "google-tk4b",
+            "google-tk4d",
+            "google-ct3b",
+            "google-ct3d",
+            "google-tg4b",
+            "google-tg4c",
+            "google-tkicb",
+            "google-fleb",
+            "google-staea",
+            "google-dcsdb")),
+    CSOT("csot", ImmutableSet.of("csot-ppa957db2d", "google-tkicc")),
+    SDC("sdc", ImmutableSet.of());
+
+    private final String vendorName;
+    private final ImmutableSet<String> panelNames;
+
+    PanelVendor(String vendorName, ImmutableSet<String> panelNames) {
+      this.vendorName = vendorName;
+      this.panelNames = panelNames;
+    }
+
+    @Override
+    public String toString() {
+      return vendorName;
+    }
+
+    static PanelVendor fromPanelName(String panelName) {
+      if (BOE.panelNames.contains(panelName)) {
+        return BOE;
+      }
+      if (CSOT.panelNames.contains(panelName)) {
+        return CSOT;
+      }
+      return SDC;
+    }
+  }
 
   /**
    * Pattern to match USB ID in "adb devices -l" like "usb:2-5" whose USB host bus is 2 and USB host
@@ -198,6 +244,16 @@ public class AndroidSystemSpecUtil {
   /** The pattern of storage lifetime. */
   private static final Pattern PATTERN_STORAGE_LIFETIME =
       Pattern.compile("\"useful_lifetime_remaining\":\\s*(\\d+)");
+
+  /** ADB shell command for getting panel name on legacy exynos devices. */
+  @VisibleForTesting
+  static final String ADB_SHELL_GET_PANEL_NAME_LEGACY =
+      "cat /sys/devices/platform/exynos-drm/primary-panel/panel_name";
+
+  /** ADB shell command for getting panel name on new devices. */
+  @VisibleForTesting
+  static final String ADB_SHELL_GET_PANEL_NAME_NEW =
+      "mount -t debugfs debugfs /sys/kernel/debug; cat /d/dri/0/DSI-1/panel/name";
 
   private final Adb adb;
 
@@ -869,5 +925,55 @@ public class AndroidSystemSpecUtil {
           "Device %s does not support retrieving storage lifetime.", serial);
       return -1;
     }
+  }
+
+  /**
+   * Gets the display panel vendor.
+   *
+   * <p>This method may return {@link Optional#empty()} if panel name could not be retrieved, which
+   * may happen on un-rooted new devices.
+   *
+   * @param serial the serial number of the device
+   */
+  public Optional<String> getDisplayPanelVendor(String serial) throws InterruptedException {
+    String panelName = getDisplayPanelName(serial);
+    if (Strings.isNullOrEmpty(panelName)) {
+      return Optional.empty();
+    }
+    return Optional.of(PanelVendor.fromPanelName(panelName).toString());
+  }
+
+  /**
+   * Gets the display panel name.
+   *
+   * <p>It first attempts to read panel name using a command for legacy exynos devices. If that
+   * fails, and if the device is rooted, it attempts to read panel name using a command for new
+   * devices.
+   *
+   * @param serial the serial number of the device
+   */
+  private String getDisplayPanelName(String serial) throws InterruptedException {
+    try {
+      String output = adb.runShell(serial, ADB_SHELL_GET_PANEL_NAME_LEGACY).trim();
+      if (!output.isEmpty()
+          && !output.contains("No such file")
+          && !output.contains("Permission denied")) {
+        return output;
+      }
+    } catch (MobileHarnessException e) {
+      // Ignore
+    }
+
+    try {
+      String output = adb.runShell(serial, ADB_SHELL_GET_PANEL_NAME_NEW).trim();
+      if (!output.isEmpty()
+          && !output.contains("No such file")
+          && !output.contains("Permission denied")) {
+        return output;
+      }
+    } catch (MobileHarnessException e) {
+      // Ignore
+    }
+    return "";
   }
 }

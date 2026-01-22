@@ -234,6 +234,8 @@ public final class Dimension {
     CODENAME,
     /** Max CPU frequency in Ghz. Precision is 1 decimal place. */
     CPU_FREQ_IN_GHZ,
+    /** The display panel vendor of the device. */
+    DISPLAY_PANEL_VENDOR,
     /**
      * The disk status of the device. The common value is OK. If free space is less than {@link
      * com.google.devtools.deviceinfra.ext.devicemanagement.device.platform.android.realdevice.AndroidRealDeviceConstants#FREE_EXTERNAL_STORAGE_ALERT_MB},

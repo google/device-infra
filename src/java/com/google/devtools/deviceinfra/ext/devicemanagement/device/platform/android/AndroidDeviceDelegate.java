@@ -193,10 +193,13 @@ public abstract class AndroidDeviceDelegate {
   }
 
   @VisibleForTesting
-  void updateSystemSpecDimensions() {
+  void updateSystemSpecDimensions() throws InterruptedException {
     androidSystemSpecUtil
         .getKernelReleaseNumber(deviceId)
         .ifPresent(this::updateKernelReleaseDimensions);
+    androidSystemSpecUtil
+        .getDisplayPanelVendor(deviceId)
+        .ifPresent(vendor -> device.updateDimension(Dimension.Name.DISPLAY_PANEL_VENDOR, vendor));
   }
 
   private void updateKernelReleaseDimensions(String kernelReleaseNumber) {
