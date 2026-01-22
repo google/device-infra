@@ -22,6 +22,7 @@ import static com.google.wireless.qa.mobileharness.shared.api.spec.GoogleAccount
 import static com.google.wireless.qa.mobileharness.shared.api.spec.GoogleAccountDecoratorSpec.PARAM_ACCOUNT_TYPES;
 import static com.google.wireless.qa.mobileharness.shared.api.spec.GoogleAccountDecoratorSpec.PARAM_EMAIL;
 import static com.google.wireless.qa.mobileharness.shared.api.spec.GoogleAccountDecoratorSpec.PARAM_EMAILS;
+import static com.google.wireless.qa.mobileharness.shared.api.spec.GoogleAccountDecoratorSpec.PARAM_HAS_CUSTOM_INTERNET_CONNECTION_IN_LAB;
 import static com.google.wireless.qa.mobileharness.shared.api.spec.GoogleAccountDecoratorSpec.PARAM_PASSWORD;
 import static com.google.wireless.qa.mobileharness.shared.api.spec.GoogleAccountDecoratorSpec.PARAM_PASSWORDS;
 import static com.google.wireless.qa.mobileharness.shared.api.spec.GoogleAccountDecoratorSpec.SPLITTER;
@@ -30,6 +31,7 @@ import com.google.common.base.Ascii;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.platform.android.accountmanager.AccountCredentialType;
 import com.google.devtools.mobileharness.platform.android.accountmanager.AndroidGoogleAccountType;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
@@ -40,6 +42,8 @@ import java.util.Locale;
 /** Job validator for the {@code AndroidAccountDecorator} driver decorator. */
 public class AndroidAccountDecoratorJobValidator implements JobValidator {
 
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
   @Override
   public List<String> validate(JobInfo job) throws InterruptedException {
     List<String> errors = Lists.newLinkedList();
@@ -47,6 +51,8 @@ public class AndroidAccountDecoratorJobValidator implements JobValidator {
     String emailsParam = job.params().get(PARAM_EMAILS);
     String accountTypeParam = job.params().get(PARAM_ACCOUNT_TYPE);
     String accountTypesParam = job.params().get(PARAM_ACCOUNT_TYPES);
+    boolean hasCustomInternetPlugin =
+        job.params().isTrue(PARAM_HAS_CUSTOM_INTERNET_CONNECTION_IN_LAB);
 
     String internetDimension =
         job.dimensions().get(Ascii.toLowerCase(Dimension.Name.INTERNET.name()));
@@ -90,27 +96,34 @@ public class AndroidAccountDecoratorJobValidator implements JobValidator {
     }
 
     if (newAccounts != null) {
-      // Step One: Checks future internet existence since add account needs internet connection.
-      List<String> decoratorList = job.type().getDecoratorList();
-      String setWifiDecorator = "AndroidSetWifiDecorator";
-      String accountDecorator = "AndroidAccountDecorator";
-      // Jobs may set Wi-Fi itself and do not require internet dimension as true.
-      // Only exercise this logic if accountDecorator will be invoked from outside of
-      // any decorator adapter. The non-presence of AndroidAccountDecorator in the main decorator
-      // list means that we got here through one of the decorator adapters.
-      if (decoratorList.contains(accountDecorator) && !hasSpecifiedDevice(job)) {
-        if (!decoratorList.contains(setWifiDecorator)) {
-          // Checks whether internet dimension is set as true.
-          // AutoEmulator and LocalEmulator should keep adding dimension internet as true.
-          if (Strings.isNullOrEmpty(internetDimension)) {
-            job.dimensions().addIfAbsent(Ascii.toLowerCase(Dimension.Name.INTERNET.name()), "true");
-          } else if (!Boolean.toString(true).equals(internetDimension)) {
-            errors.add("Please set dimension internet as true for using AndroidAccountDecorator");
+      if (!hasCustomInternetPlugin) {
+        // Step One: Checks future internet existence since add account needs internet connection.
+        List<String> decoratorList = job.type().getDecoratorList();
+        String setWifiDecorator = "AndroidSetWifiDecorator";
+        String accountDecorator = "AndroidAccountDecorator";
+        // Jobs may set Wi-Fi itself and do not require internet dimension as true.
+        // Only exercise this logic if accountDecorator will be invoked from outside of
+        // any decorator adapter. The non-presence of AndroidAccountDecorator in the main decorator
+        // list means that we got here through one of the decorator adapters.
+        if (decoratorList.contains(accountDecorator) && !hasSpecifiedDevice(job)) {
+          if (!decoratorList.contains(setWifiDecorator)) {
+            // Checks whether internet dimension is set as true.
+            // AutoEmulator and LocalEmulator should keep adding dimension internet as true.
+            if (Strings.isNullOrEmpty(internetDimension)) {
+              job.dimensions()
+                  .addIfAbsent(Ascii.toLowerCase(Dimension.Name.INTERNET.name()), "true");
+            } else if (!Boolean.toString(true).equals(internetDimension)) {
+              errors.add("Please set dimension internet as true for using AndroidAccountDecorator");
+            }
+          } else if (decoratorList.indexOf(setWifiDecorator)
+              < decoratorList.indexOf(accountDecorator)) {
+            errors.add("AndroidSetWifiDecorator must be put in front of AndroidAccountDecorator.");
           }
-        } else if (decoratorList.indexOf(setWifiDecorator)
-            < decoratorList.indexOf(accountDecorator)) {
-          errors.add("AndroidSetWifiDecorator must be put in front of AndroidAccountDecorator.");
         }
+      } else {
+        logger.atInfo().log(
+            "Skipping default internet connectivity checks for AndroidAccountDecorator "
+                + "because 'has_custom_internet_connection_in_lab' is set to true.");
       }
       errors.addAll(validatePasswordAndCredentialTypes(job, newAccounts));
     }
