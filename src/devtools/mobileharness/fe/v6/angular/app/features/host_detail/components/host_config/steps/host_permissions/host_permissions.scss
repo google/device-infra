@@ -13,8 +13,7 @@
   margin: 0.25rem 0 1.5rem 0;
 }
 
-.chip-container,
-.ssh-access-container {
+.chip-container {
   .chip-title {
     font-size: 1.125rem;
     line-height: 1.75rem;
@@ -26,8 +25,8 @@
   .chip-desc {
     font-size: 0.875rem;
     line-height: 1.25rem;
-    margin-top: 0.25rem !important;
-    margin-bottom: 0.5rem !important;
+    margin-top: 0.25rem;
+    margin-bottom: 0.5rem;
   }
 
   .note {
@@ -37,7 +36,5 @@
   }
 }
 
-.ssh-access-container {
-  margin-top: 1.5rem;
-}
+
 
