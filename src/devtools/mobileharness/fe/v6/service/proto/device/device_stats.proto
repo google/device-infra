@@ -92,7 +92,9 @@ message DailyTestResults {
   int32 fail = 3;
   int32 error = 4;
   int32 timeout = 5;
-  int32 other = 6;
+  int32 abort = 6;
+  int32 skip = 7;
+  int32 unknown = 8;
 }
 
 // Aggregated test result statistics over the selected period.
@@ -106,7 +108,7 @@ message AggregatedTestResults {
   repeated CategoryStats completion_breakdown = 4;
 
   // Breakdown of "Non-Completion" tests.
-  // Expected categories: "ERROR", "TIMEOUT", "OTHER".
+  // Expected categories: "UNKNOWN", "ERROR", "TIMEOUT", "ABORT", "SKIP".
   repeated CategoryStats non_completion_breakdown = 5;
 }
 
