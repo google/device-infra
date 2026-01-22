@@ -20,6 +20,8 @@ package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
         "//:deviceinfra_all_pkg",
+        "//java/com/google/devtools/omnilab/costmanagement:__subpackages__",
+        "//javatests/com/google/devtools/omnilab/costmanagement:__subpackages__",
     ],
 )
 
