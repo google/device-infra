@@ -421,7 +421,16 @@ public final class Dimension {
     /** The drivers that the device supports. */
     DRIVER,
     /** The decorators that the device supports. */
-    DECORATOR;
+    DECORATOR,
+
+    /** Type of the power switch supplying power to the device. */
+    POWER_SWITCH_TYPE,
+    /** IP Address of the power switch supplying power to the device. */
+    POWER_SWITCH_IP_ADDRESS,
+    /** MAC Address of the power switch supplying power to the device. */
+    POWER_SWITCH_MAC_ADDRESS,
+    /** Port number/load number of the outlet of the power switch supplying power to the device. */
+    POWER_SWITCH_PORT;
 
     public String lowerCaseName() {
       return Ascii.toLowerCase(name());
