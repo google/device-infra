@@ -26,12 +26,15 @@ java_library(
     srcs = glob(["*Test.java"]),
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector/model",
+        "//src/java/com/google/devtools/mobileharness/api/devicemanager/dispatcher:android_desktop_executor_device_dispatcher",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/dispatcher:failed_device",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/dispatcher/model",
+        "//src/java/com/google/devtools/mobileharness/api/devicemanager/dispatcher/util:device_id_descriptor_generator",
         "//src/java/com/google/devtools/mobileharness/api/model/lab:device_id_descriptor",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "@maven//:com_google_guava_guava",
         "@maven//:junit_junit",
+        "@maven//:org_mockito_mockito_core",
     ],
 )
 
