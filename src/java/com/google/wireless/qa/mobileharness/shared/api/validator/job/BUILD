@@ -45,6 +45,7 @@ java_library(
     deps = [
         ":job_validator",
         "//src/java/com/google/devtools/mobileharness/platform/android/accountmanager:enums",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:google_account_decorator_spec",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",

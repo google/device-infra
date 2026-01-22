@@ -103,6 +103,13 @@ public interface GoogleAccountDecoratorSpec {
               + " skip_credential_retrieval_from_tas is set to true.")
   String PARAM_OBFUSCATED_GAIA_IDS = "obfuscated_gaia_ids";
 
+  @ParamAnnotation(
+      required = false,
+      help =
+          "Boolean value to skip the default internet connectivity checks for"
+              + " AndroidAccountDecorator.")
+  String PARAM_HAS_CUSTOM_INTERNET_CONNECTION_IN_LAB = "has_custom_internet_connection_in_lab";
+
   /** Splitter for params which are defined as comma separated values. */
   Splitter SPLITTER = Splitter.on(",").omitEmptyStrings().trimResults();
 
