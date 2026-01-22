@@ -457,6 +457,8 @@ public class LocalDeviceDispatch {
                           deviceId.get(),
                           dispatchType,
                           dispatcherToDevice.get(dispatcher.getClass())));
+                  logger.atInfo().log(
+                      "dispatcher: %s, dispatchType: %s", dispatcher.getClass(), dispatchType);
                 } catch (MobileHarnessException e) {
                   logger.atWarning().withCause(e).log(
                       "Failed to get uuid for device: %s", deviceControlId);
