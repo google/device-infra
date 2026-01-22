@@ -23,7 +23,6 @@ package(
         "//src/devtools/mobileharness/infra/ats:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/ats:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats:__subpackages__",
-        "//third_party/py/multitest_transport:__subpackages__",
     ],
 )
 
