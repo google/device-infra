@@ -74,17 +74,62 @@ public final class TradefedTestJobValidatorTest {
   }
 
   @Test
-  public void validateJob_missXtsType_error() throws Exception {
+  public void validateJob_emptyXtsType_pass() throws Exception {
+    when(mockJobInfo.combinedSpec(any()))
+        .thenReturn(TradefedTestDriverSpec.newBuilder().setXtsType("").build());
+
+    assertThat(validator.validate(mockJobInfo)).isEmpty();
+  }
+
+  @Test
+  public void validateJob_emptyXtsTypeWithXtsFields_returnError() throws Exception {
+    when(mockJobInfo.combinedSpec(any()))
+        .thenReturn(TradefedTestDriverSpec.newBuilder().setXtsTestPlan("cts").build());
+    assertThat(validator.validate(mockJobInfo))
+        .contains(
+            "When xts_type is not specified, this is running non xTS tests, so xts_test_plan must"
+                + " be empty.");
+
+    when(mockJobInfo.combinedSpec(any()))
+        .thenReturn(TradefedTestDriverSpec.newBuilder().setXtsRootDir("/path/to/xts").build());
+    assertThat(validator.validate(mockJobInfo))
+        .contains(
+            "When xts_type is not specified, this is running non xTS tests, so xts_root_dir must be"
+                + " empty.");
+
+    when(mockJobInfo.combinedSpec(any()))
+        .thenReturn(TradefedTestDriverSpec.newBuilder().setAndroidXtsZip("/path/to/zip").build());
+    assertThat(validator.validate(mockJobInfo))
+        .contains(
+            "When xts_type is not specified, this is running non xTS tests, so android_xts_zip"
+                + " must be empty.");
+
     when(mockJobInfo.combinedSpec(any()))
         .thenReturn(
             TradefedTestDriverSpec.newBuilder()
-                .setXtsTestPlan("cts")
-                .setXtsRootDir("/path/to/cts_root")
+                .setPrevSessionTestResultXml("/path/to/xml")
                 .build());
+    assertThat(validator.validate(mockJobInfo))
+        .contains(
+            "When xts_type is not specified, this is running non xTS tests, so"
+                + " prev_session_test_result_xml must be empty.");
 
-    List<String> errors = validator.validate(mockJobInfo);
-    assertThat(errors).hasSize(1);
-    assertThat(errors).contains("An xTS type must be specified, check tradefed_test_spec.proto.");
+    when(mockJobInfo.combinedSpec(any()))
+        .thenReturn(
+            TradefedTestDriverSpec.newBuilder()
+                .setPrevSessionTestRecordFiles("/path/to/record")
+                .build());
+    assertThat(validator.validate(mockJobInfo))
+        .contains(
+            "When xts_type is not specified, this is running non xTS tests, so"
+                + " prev_session_test_record_files must be empty.");
+
+    when(mockJobInfo.combinedSpec(any()))
+        .thenReturn(TradefedTestDriverSpec.newBuilder().setPrevSessionXtsTestPlan("plan").build());
+    assertThat(validator.validate(mockJobInfo))
+        .contains(
+            "When xts_type is not specified, this is running non xTS tests, so"
+                + " prev_session_xts_test_plan must be empty.");
   }
 
   @Test

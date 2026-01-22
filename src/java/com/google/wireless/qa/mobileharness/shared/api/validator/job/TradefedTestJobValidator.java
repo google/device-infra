@@ -40,7 +40,39 @@ public class TradefedTestJobValidator
     }
 
     if (spec.getXtsType().isEmpty()) {
-      errors.add("An xTS type must be specified, check tradefed_test_spec.proto.");
+
+      // Need to check that it does not have xts related fields in non xts mode.
+      if (!spec.getXtsTestPlan().isEmpty()) {
+        errors.add(
+            "When xts_type is not specified, this is running non xTS tests, so xts_test_plan must"
+                + " be empty.");
+      }
+      if (!spec.getXtsRootDir().isEmpty()) {
+        errors.add(
+            "When xts_type is not specified, this is running non xTS tests, so xts_root_dir must be"
+                + " empty.");
+      }
+      if (!spec.getAndroidXtsZip().isEmpty()) {
+        errors.add(
+            "When xts_type is not specified, this is running non xTS tests, so android_xts_zip must"
+                + " be empty.");
+      }
+      if (!spec.getPrevSessionTestResultXml().isEmpty()) {
+        errors.add(
+            "When xts_type is not specified, this is running non xTS tests, so"
+                + " prev_session_test_result_xml must be empty.");
+      }
+      if (!spec.getPrevSessionTestRecordFiles().isEmpty()) {
+        errors.add(
+            "When xts_type is not specified, this is running non xTS tests, so"
+                + " prev_session_test_record_files must be empty.");
+      }
+      if (!spec.getPrevSessionXtsTestPlan().isEmpty()) {
+        errors.add(
+            "When xts_type is not specified, this is running non xTS tests, so"
+                + " prev_session_xts_test_plan must be empty.");
+      }
+      return errors.build();
     } else {
       try {
         String unused = spec.getXtsType();
