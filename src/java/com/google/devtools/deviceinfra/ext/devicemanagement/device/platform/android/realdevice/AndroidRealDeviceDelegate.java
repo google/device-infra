@@ -62,6 +62,7 @@ import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
 import com.google.devtools.mobileharness.platform.android.file.StorageInfo;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstallArgs;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstaller;
+import com.google.devtools.mobileharness.platform.android.lightning.systemstate.AndroidFrpUtil;
 import com.google.devtools.mobileharness.platform.android.lightning.systemstate.SystemStateManager;
 import com.google.devtools.mobileharness.platform.android.media.AndroidMediaUtil;
 import com.google.devtools.mobileharness.platform.android.packagemanager.AndroidPackageManagerUtil;
@@ -154,6 +155,7 @@ public abstract class AndroidRealDeviceDelegate {
   private final AndroidProcessUtil androidProcessUtil;
   private final AndroidSystemSettingUtil systemSettingUtil;
   private final AndroidFileUtil androidFileUtil;
+  private final AndroidFrpUtil androidFrpUtil;
   private final AndroidConnectivityUtil connectivityUtil;
   private final AndroidSystemStateUtil systemStateUtil;
   private final AndroidSystemSpecUtil systemSpecUtil;
@@ -199,7 +201,8 @@ public abstract class AndroidRealDeviceDelegate {
       LocalFileUtil fileUtil,
       DeviceAdminUtil deviceAdminUtil,
       MtaasToolsInstantiator mtaasToolsInstantiator,
-      TelephonyHelper telephonyHelper) {
+      TelephonyHelper telephonyHelper,
+      AndroidFrpUtil androidFrpUtil) {
     this.device = device;
     this.androidDeviceDelegate = androidDeviceDelegate;
     this.deviceStat = deviceStat;
@@ -226,6 +229,7 @@ public abstract class AndroidRealDeviceDelegate {
     this.deviceAdminUtil = deviceAdminUtil;
     this.mtaasToolsInstantiator = mtaasToolsInstantiator;
     this.telephonyHelper = telephonyHelper;
+    this.androidFrpUtil = androidFrpUtil;
 
     this.deviceId = device.getDeviceId();
     device.setProperty(
@@ -543,7 +547,8 @@ public abstract class AndroidRealDeviceDelegate {
     androidAdbUtil.setProperty(deviceId, RESET_PROPERTY_LABEL, "true", /* ignoreError= */ false);
     try {
       logger.atInfo().log("Start to factory reset device %s via test harness", deviceId);
-      systemStateUtil.factoryResetViaTestHarness(deviceId, /* waitTime= */ null);
+      androidFrpUtil.factoryResetViaTestHarnessWithFrpClear(
+          device, /* waitTime= */ null, /* log= */ null);
       if (isOverTcpDevice) {
         systemStateUtil.waitForOverTcpDeviceConnection(deviceId, Duration.ofMinutes(5));
       }
@@ -1400,7 +1405,8 @@ public abstract class AndroidRealDeviceDelegate {
         case DEVICE:
           if (shouldFactoryResetViaTestHarness()) {
             logger.atInfo().log("Factory reset device %s via Test Harness Mode.", deviceId);
-            systemStateUtil.factoryResetViaTestHarness(deviceId, /* waitTime= */ null);
+            androidFrpUtil.factoryResetViaTestHarnessWithFrpClear(
+                device, /* waitTime= */ null, /* log= */ null);
             device.removeDimension(Dimension.Name.RECOVERY_STATUS);
           } else {
             logger.atInfo().log("Device %s reboot to normal mode", deviceId);

@@ -199,6 +199,8 @@ public class AndroidSystemStateUtil {
   @VisibleForTesting
   static final String RESET_VIA_TEST_HARNESS_SCREEN_LOCKED_ERROR = "there is a lock screen";
 
+  @VisibleForTesting static final String RESET_VIA_TEST_HARNESS_FRP_ERROR = "FRP is active";
+
   private static final String OTA_PACKAGE_EXTENSION = "zip";
   private static final RetryStrategy RETRY_STRATEGY =
       exponentialBackoff(Duration.ofSeconds(3), /* multiplier= */ 1, /* numAttempts= */ 10);
@@ -398,6 +400,16 @@ public class AndroidSystemStateUtil {
             format(
                 "Failed to factory reset device %s via Test Harness Mode as device screen seems"
                     + " locked.",
+                serial),
+            e);
+      }
+
+      if (e.getMessage().contains(RESET_VIA_TEST_HARNESS_FRP_ERROR)) {
+        throw new MobileHarnessException(
+            AndroidErrorId.ANDROID_SYSTEM_STATE_FACTORY_RESET_VIA_TEST_HARNESS_FRP_ERROR,
+            format(
+                "Failed to factory reset device %s via Test Harness Mode because Factory Reset"
+                    + " Protection (FRP) is active.",
                 serial),
             e);
       }

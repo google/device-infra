@@ -32,6 +32,7 @@ import com.google.devtools.mobileharness.platform.android.connectivity.AndroidCo
 import com.google.devtools.mobileharness.platform.android.deviceadmin.DeviceAdminUtil;
 import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstaller;
+import com.google.devtools.mobileharness.platform.android.lightning.systemstate.AndroidFrpUtil;
 import com.google.devtools.mobileharness.platform.android.lightning.systemstate.SystemStateManager;
 import com.google.devtools.mobileharness.platform.android.media.AndroidMediaUtil;
 import com.google.devtools.mobileharness.platform.android.packagemanager.AndroidPackageManagerUtil;
@@ -95,7 +96,8 @@ public class AndroidRealDeviceDelegateImpl extends AndroidRealDeviceDelegate {
         new LocalFileUtil(),
         new DeviceAdminUtil(),
         new MtaasToolsInstantiator(),
-        new TelephonyHelper());
+        new TelephonyHelper(),
+        new AndroidFrpUtil());
   }
 
   @VisibleForTesting
@@ -125,7 +127,8 @@ public class AndroidRealDeviceDelegateImpl extends AndroidRealDeviceDelegate {
       LocalFileUtil localFileUtil,
       DeviceAdminUtil deviceAdminUtil,
       MtaasToolsInstantiator mtaasToolsInstantiator,
-      TelephonyHelper telephonyHelper) {
+      TelephonyHelper telephonyHelper,
+      AndroidFrpUtil androidFrpUtil) {
     super(
         device,
         androidDeviceDelegate,
@@ -152,7 +155,8 @@ public class AndroidRealDeviceDelegateImpl extends AndroidRealDeviceDelegate {
         localFileUtil,
         deviceAdminUtil,
         mtaasToolsInstantiator,
-        telephonyHelper);
+        telephonyHelper,
+        androidFrpUtil);
     this.androidAdbInternalUtil = androidAdbInternalUtil;
     this.connectivityUtil = connectivityUtil;
     this.deviceId = device.getDeviceId();
