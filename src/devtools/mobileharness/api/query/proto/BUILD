@@ -53,6 +53,11 @@ py_proto_library(
     deps = [":filter_proto"],
 )
 
+jspb_proto_library(
+    name = "filter_jspb_proto",
+    deps = [":filter_proto"],
+)
+
 proto_library(
     name = "lab_query_proto",
     srcs = ["lab_query.proto"],
