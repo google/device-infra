@@ -16,7 +16,7 @@ import {DeviceHeaderInfo, HostInfo} from './device_action';
  * Represents the comprehensive data required to render the "Overview" tab
  * on the Device Detail Page.
  */
-export interface DeviceOverview {
+export declare interface DeviceOverview {
   /** The unique identifier of the device. */
   id: string;
 
@@ -58,7 +58,7 @@ export interface DeviceOverview {
 /**
  * Represents a specific type classification of a device (e.g., AndroidRealDevice).
  */
-export interface DeviceType {
+export declare interface DeviceType {
   /** The type string. */
   type: string;
   /**
@@ -72,7 +72,7 @@ export interface DeviceType {
 /**
  * Network connectivity details for a device.
  */
-export interface NetworkInfo {
+export declare interface NetworkInfo {
   /** WiFi signal strength in dBm, e.g., -65. Optional. */
   wifiRssi?: number;
   /** Indicates if the device has internet access. Optional. */
@@ -82,7 +82,7 @@ export interface NetworkInfo {
 /**
  * Information about remote control capabilities and status.
  */
-export interface RemoteControlInfo {
+export declare interface RemoteControlInfo {
   isSupported?: boolean;
   unsupportedReason?: string;
 }
@@ -105,7 +105,7 @@ export type HealthState =
 /**
  * Contains all data related to the device's health, status, and current activity.
  */
-export interface HealthAndActivityInfo {
+export declare interface HealthAndActivityInfo {
   /**
    * The main title to display in the Health & Activity card, summarizing the state.
    * e.g., "In Service (Idle)", "Out of Service (Recovering)".
@@ -193,7 +193,7 @@ export interface HealthAndActivityInfo {
 /**
  * Basic hardware, software, and real-time information about the device.
  */
-export interface BasicDeviceInfo {
+export declare interface BasicDeviceInfo {
   /** Device model, e.g., "Pixel 8 Pro". */
   model: string;
   /** OS version, e.g., "14" for Android, "22.04" for Ubuntu. */
@@ -215,7 +215,7 @@ export interface BasicDeviceInfo {
 /**
  * Information about user and group permissions for the device.
  */
-export interface PermissionInfo {
+export declare interface PermissionInfo {
   /** List of users/groups who own the device and can change its config. */
   owners: string[];
   /** List of users/groups who can execute tests on the device. */
@@ -225,7 +225,7 @@ export interface PermissionInfo {
 /**
  * Lists of supported test drivers and decorators.
  */
-export interface CapabilitiesInfo {
+export declare interface CapabilitiesInfo {
   /** Test drivers compatible with this device. */
   supportedDrivers: string[];
   /** Decorators that can be applied to tests running on this device. */
@@ -236,7 +236,7 @@ export interface CapabilitiesInfo {
  * Represents one dimension of the device.
  * Corresponds to deviceinfra.fe.v6.device.DeviceDimension
  */
-export interface DeviceDimension {
+export declare interface DeviceDimension {
   name?: string;
   value?: string;
 }
@@ -245,7 +245,7 @@ export interface DeviceDimension {
  * Represents a group of dimensions from a single source.
  * Corresponds to deviceinfra.fe.v6.device.DimensionSourceGroup
  */
-export interface DimensionSourceGroup {
+export declare interface DimensionSourceGroup {
   dimensions?: DeviceDimension[];
 }
 
@@ -255,7 +255,7 @@ export interface DimensionSourceGroup {
  * from the proto map.
  * Corresponds to deviceinfra.fe.v6.device.Dimensions
  */
-export interface Dimensions {
+export declare interface Dimensions {
   supported?: {[key: string]: DimensionSourceGroup};
   required?: {[key: string]: DimensionSourceGroup};
 }
@@ -263,7 +263,7 @@ export interface Dimensions {
 /**
  * Information about a sub-device in a testbed.
  */
-export interface SubDeviceInfo {
+export declare interface SubDeviceInfo {
   id: string;
   types: DeviceType[];
   /** Dimensions of the sub-device. */
@@ -284,7 +284,7 @@ export interface SubDeviceInfo {
 /**
  * Testbed configuration in YAML format.
  */
-export interface TestbedConfig {
+export declare interface TestbedConfig {
   yamlContent: string;
   codeSearchLink: string;
 }
@@ -292,7 +292,7 @@ export interface TestbedConfig {
 /**
  * Data for device overview page.
  */
-export interface DeviceOverviewPageData {
+export declare interface DeviceOverviewPageData {
   headerInfo: DeviceHeaderInfo;
   overview: DeviceOverview;
 }

@@ -1,7 +1,7 @@
 /**
  * Information about the host machine.
  */
-export interface HostInfo {
+export declare interface HostInfo {
   /** The hostname of the lab server. */
   name: string;
   /** The IP address of the lab server. */
@@ -12,7 +12,7 @@ export interface HostInfo {
 /**
  * State of an action button in device header.
  */
-export interface ActionButtonState {
+export declare interface ActionButtonState {
   enabled: boolean;
   visible: boolean;
   tooltip: string;
@@ -21,7 +21,7 @@ export interface ActionButtonState {
 /**
  * Parameters for flash action button.
  */
-export interface FlashButtonParams {
+export declare interface FlashButtonParams {
   deviceType: string;
   requiredDimensions: string;
 }
@@ -29,14 +29,14 @@ export interface FlashButtonParams {
 /**
  * State of flash action button.
  */
-export interface FlashActionButtonState extends ActionButtonState {
+export declare interface FlashActionButtonState extends ActionButtonState {
   params: FlashButtonParams;
 }
 
 /**
  * Option for runAs in remote control.
  */
-export interface RunAsOption {
+export declare interface RunAsOption {
   value: string;
   label: string;
   isDefault: boolean;
@@ -45,7 +45,7 @@ export interface RunAsOption {
 /**
  * State of remote control action button.
  */
-export interface RemoteControlButtonState extends ActionButtonState {
+export declare interface RemoteControlButtonState extends ActionButtonState {
   runAsOptions: RunAsOption[];
   defaultRunAs: string;
 }
@@ -53,7 +53,7 @@ export interface RemoteControlButtonState extends ActionButtonState {
 /**
  * Quarantine information of device.
  */
-export interface QuarantineInfo {
+export declare interface QuarantineInfo {
   isQuarantined: boolean;
   // ISO 8601 date string(e.g. "1972-01-01T10:00:20.021Z"), or '' if not quarantined
   expiry: string;
@@ -62,7 +62,7 @@ export interface QuarantineInfo {
 /**
  * Actions for device header.
  */
-export interface DeviceActions {
+export declare interface DeviceActions {
   screenshot: ActionButtonState;
   logcat: ActionButtonState;
   flash: FlashActionButtonState;
@@ -74,7 +74,7 @@ export interface DeviceActions {
 /**
  * Information for device header.
  */
-export interface DeviceHeaderInfo {
+export declare interface DeviceHeaderInfo {
   id: string;
   host?: HostInfo;
   quarantine?: QuarantineInfo;
@@ -84,7 +84,7 @@ export interface DeviceHeaderInfo {
 /**
  * Response for TakeScreenshot API.
  */
-export interface TakeScreenshotResponse {
+export declare interface TakeScreenshotResponse {
   screenshotUrl: string;
   capturedAt: string;
 }
@@ -92,7 +92,7 @@ export interface TakeScreenshotResponse {
 /**
  * Response for GetLogcat API.
  */
-export interface GetLogcatResponse {
+export declare interface GetLogcatResponse {
   logUrl: string;
   capturedAt: string;
 }
@@ -100,7 +100,7 @@ export interface GetLogcatResponse {
 /**
  * Flash options for remote control.
  */
-export interface FlashOptions {
+export declare interface FlashOptions {
   branch: string;
   buildId: string;
   target: string;
@@ -109,7 +109,7 @@ export interface FlashOptions {
 /**
  * Request for RemoteControl API.
  */
-export interface RemoteControlRequest {
+export declare interface RemoteControlRequest {
   runAs: string;
   timeoutHours: number;
   proxyType: 'DEFAULT' | 'TCP' | 'ADB' | 'VNC';
@@ -121,14 +121,14 @@ export interface RemoteControlRequest {
 /**
  * Response for RemoteControl API.
  */
-export interface RemoteControlResponse {
+export declare interface RemoteControlResponse {
   sessionUrl: string;
 }
 
 /**
  * Request for QuarantineDevice API.
  */
-export interface QuarantineDeviceRequest {
+export declare interface QuarantineDeviceRequest {
   /** The timestamp in ISO 8601 format with UTC timezone when the quarantine should expire. */
   endTime: string;
 }
@@ -136,19 +136,19 @@ export interface QuarantineDeviceRequest {
 /**
  * Response for QuarantineDevice API.
  */
-export interface QuarantineDeviceResponse {
+export declare interface QuarantineDeviceResponse {
   quarantineExpiry: string;
 }
 
 /** Data for screenshot dialog. */
-export interface ScreenshotDialogData {
+export declare interface ScreenshotDialogData {
   deviceId: string;
   screenshotUrl: string;
   capturedAt: string;
 }
 
 /** Data for logcat dialog. */
-export interface LogcatDialogData {
+export declare interface LogcatDialogData {
   deviceId: string;
   logContent: string;
   capturedAt: string;
@@ -156,7 +156,7 @@ export interface LogcatDialogData {
 }
 
 /** Data for flash dialog. */
-export interface FlashDialogData {
+export declare interface FlashDialogData {
   deviceId: string;
   hostName: string;
   deviceType: string;
@@ -164,7 +164,7 @@ export interface FlashDialogData {
 }
 
 /** Data for quarantine dialog. */
-export interface QuarantineDialogData {
+export declare interface QuarantineDialogData {
   deviceId: string;
   isUpdate: boolean;
   currentExpiry?: string;
@@ -174,7 +174,7 @@ export interface QuarantineDialogData {
 }
 
 /** Data for remote control dialog. */
-export interface RemoteControlDialogData {
+export declare interface RemoteControlDialogData {
   hostName: string;
   deviceId: string;
   runAsOptions: RunAsOption[];

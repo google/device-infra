@@ -21,7 +21,7 @@ import {DeviceActionBar} from './components/device_action_bar/device_action_bar'
 import {DeviceOverviewTab} from './components/device_overview_tab/device_overview_tab';
 import {HealthStatisticTab} from './components/health_statistic_tab/health_statistic_tab';
 
-interface DevicePageData {
+declare interface DevicePageData {
   pageData: DeviceOverviewPageData | null;
   error: string | null;
 }
