@@ -18,6 +18,8 @@ syntax = "proto3";
 
 package mobileharness.infra.monitoring;
 
+import "storage/googlesql/public/proto/type_annotation.proto";
+
 option java_package = "com.google.devtools.mobileharness.infra.monitoring.proto";
 option java_outer_classname = "RecordProto";
 
@@ -133,4 +135,13 @@ message DeviceRecord {
 message StrPair {
   string name = 1;
   string value = 2;
+}
+
+// The schema of state metrics table in Napa Express.
+message TableSchemaForMHStateMetrics {
+  // Fields with GoogleSQL-format annotations.
+  int64 monitoring_timestamp = 1 [(googlesql.format) = TIMESTAMP_MICROS];
+
+  HostRecord host_record = 2;
+  DeviceRecord device_record = 3;
 }
