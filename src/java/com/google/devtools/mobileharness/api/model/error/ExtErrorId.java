@@ -179,9 +179,6 @@ public enum ExtErrorId implements ErrorId {
   // SubPlanCreator: 87_441 ~ 87_450
   SUBPLAN_CREATOR_SUBPLAN_FILE_ALREADY_EXISTED(87_441, ErrorType.CUSTOMER_ISSUE),
 
-  // ScreenshotsMetadataUtil: 87_451 ~ 87_460
-  SCREENSHOTS_METADATA_UTIL_GEN_METADATA_FILE_ERROR(87_451, ErrorType.INFRA_ISSUE),
-
   /** End of xTS Utils error ids. */
 
   // NoOpDecorator: 91_051 ~ 91_060
