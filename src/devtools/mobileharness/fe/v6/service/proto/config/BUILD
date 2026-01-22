@@ -54,3 +54,17 @@ java_grpc_library(
     srcs = [":config_service_proto"],
     deps = [":config_service_java_proto"],
 )
+
+rpc_endpoint_interface(
+    name = "config_endpoint",
+    default_provider = "//java/com/google/devtools/mobileharness/fe/v6/config/service:tin_sut_component",
+    metadata = [
+    ],
+    rpc_services = [
+        RpcService(
+            name = "mobileharness.fe.v6.config.ConfigService",
+            proto_library = ":config_service_proto",
+        ),
+    ],
+    visibility = ["//visibility:public"],
+)

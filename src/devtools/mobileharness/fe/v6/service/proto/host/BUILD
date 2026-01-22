@@ -58,3 +58,17 @@ java_grpc_library(
     srcs = [":host_service_proto"],
     deps = [":host_service_java_proto"],
 )
+
+rpc_endpoint_interface(
+    name = "host_endpoint",
+    default_provider = "//java/com/google/devtools/mobileharness/fe/v6/host/service:tin_sut_component",
+    metadata = [
+    ],
+    rpc_services = [
+        RpcService(
+            name = "mobileharness.fe.v6.host.HostService",
+            proto_library = ":host_service_proto",
+        ),
+    ],
+    visibility = ["//visibility:public"],
+)
