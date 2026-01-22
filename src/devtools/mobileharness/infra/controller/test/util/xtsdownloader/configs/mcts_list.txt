@@ -143,3 +143,4 @@ MultiDeviceRangingTestCases
 net-tests-utils-host-common
 SdkSandboxManagerDisabledTests
 SdkSandboxManagerTests
+# LINT.ThenChange(//depot/google3/configs/wireless/android/testing/atp/prod/android-xts/cts/templates/common.gcl)
