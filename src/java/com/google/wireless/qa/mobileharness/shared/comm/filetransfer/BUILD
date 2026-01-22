@@ -19,7 +19,10 @@ load("@rules_java//java:defs.bzl", "java_library")
 #   File transferring tools.
 package(
     default_applicable_licenses = ["//:license"],
-    default_visibility = ["//:deviceinfra_all_pkg"],
+    default_visibility = [
+        "//:deviceinfra_all_pkg",
+        "//devtools/mobileharness/project:sophont",
+    ],
 )
 
 java_library(
