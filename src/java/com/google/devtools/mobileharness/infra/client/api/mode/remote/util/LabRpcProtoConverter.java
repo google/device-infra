@@ -78,7 +78,9 @@ public class LabRpcProtoConverter {
     JobSpec jobSpec = JobSpecWalker.resolve(jobInfo.protoSpec().getProto(), escapePathVisitor);
     ScopedSpecs scopedSpecs = jobInfo.scopedSpecs();
     JobSpec scopedJobSpec = scopedSpecs.toJobSpec(JobSpecHelper.getDefaultHelper());
-    scopedSpecs.addAll(JobSpecWalker.resolve(scopedJobSpec, escapePathVisitor));
+    JobSpec resolvedScopedJobSpec = JobSpecWalker.resolve(scopedJobSpec, escapePathVisitor);
+    ScopedSpecs resolvedScopedSpecs = new ScopedSpecs(null);
+    resolvedScopedSpecs.addAll(resolvedScopedJobSpec);
 
     return KickOffTestRequest.newBuilder()
         .addAllDeviceId(
@@ -92,7 +94,7 @@ public class LabRpcProtoConverter {
                 .addAllJobParam(StrPairUtil.convertMapToList(jobInfo.params().getAll()))
                 .setTimeout(getTestTimeout(jobInfo.setting().getNewTimeout()))
                 .setJobSpec(jobSpec)
-                .setJobScopedSpecsJson(scopedSpecs.toJsonString())
+                .setJobScopedSpecsJson(resolvedScopedSpecs.toJsonString())
                 .setJobCreateTimeMs(jobInfo.timing().getCreateTime().toEpochMilli())
                 .setJobStartTimeMs(jobInfo.timing().getStartTimeNonNull().toEpochMilli())
                 .addAllDeviceScopedSpecsJson(
