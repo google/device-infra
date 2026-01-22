@@ -23,6 +23,7 @@ package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
         "//:deviceinfra_all_pkg",
+        "//devtools/mobileharness/project:pte_testbed_sentry",
         "//wireless/android/pixel/testtools/djar:__subpackages__",
     ],
 )
