@@ -48,11 +48,14 @@ public class FileClassifier implements FileCallback {
 
   private final JobManager jobManager;
 
+  private final LocalFileUtil fileUtil;
+
   /** Locks for job files copy threads. The key is target file path. */
   private final ConcurrentHashMap<String, CountDownLatch> copyingLocks = new ConcurrentHashMap<>();
 
   public FileClassifier(JobManager jobManager) {
     this.jobManager = jobManager;
+    this.fileUtil = new LocalFileUtil();
   }
 
   @VisibleForTesting
@@ -66,10 +69,6 @@ public class FileClassifier implements FileCallback {
 
     private final LocalFileUtil fileUtil;
     private final String targetFileOrDirPath;
-
-    private CopyFileHandler(String targetFileOrDirPath) {
-      this(targetFileOrDirPath, new LocalFileUtil());
-    }
 
     @VisibleForTesting
     CopyFileHandler(String targetFileOrDirPath, LocalFileUtil fileUtil) {
@@ -136,8 +135,12 @@ public class FileClassifier implements FileCallback {
     if (testLocator != null) {
       TestExecutionUnit test =
           jobManager.getTest(testLocator.getJobLocator().getId(), testLocator.getId());
+      String relativePath =
+          fileUtil.isLocalFileOrDir(originalPath)
+              ? originalPath
+              : fileUtil.escapeFilePath(originalPath.replaceAll("::", "/"));
       String targetFileOrDirPath =
-          PathUtil.join(test.job().dirs().runFileDir(), testLocator.getId(), originalPath);
+          PathUtil.join(test.job().dirs().runFileDir(), testLocator.getId(), relativePath);
       copyFileToJobDir(testLocator.getJobLocator().getId(), tag, path, targetFileOrDirPath);
 
       TestFileUnit.Builder testFileUnit =
@@ -153,7 +156,11 @@ public class FileClassifier implements FileCallback {
     } else {
       JobLocator jobLocator = JobLocator.parseString(fileId);
       JobExecutionUnit job = jobManager.getJob(jobLocator.getId());
-      String targetFileOrDirPath = PathUtil.join(job.dirs().runFileDir(), originalPath);
+      String relativePath =
+          fileUtil.isLocalFileOrDir(originalPath)
+              ? originalPath
+              : fileUtil.escapeFilePath(originalPath.replaceAll("::", "/"));
+      String targetFileOrDirPath = PathUtil.join(job.dirs().runFileDir(), relativePath);
       copyFileToJobDir(jobLocator.getId(), tag, path, targetFileOrDirPath);
       JobFileUnit.Builder jobFileUnit =
           JobFileUnit.newBuilder()
@@ -184,7 +191,7 @@ public class FileClassifier implements FileCallback {
         logger.atFine().log(
             "Copying job file from shared dir [jobId=%s, tag=%s, path=%s, targetPath=%s]",
             jobId, tag, path, targetFileOrDirPath);
-        CopyFileHandler copyFileHandler = new CopyFileHandler(targetFileOrDirPath);
+        CopyFileHandler copyFileHandler = new CopyFileHandler(targetFileOrDirPath, fileUtil);
         copyFileHandler.handleFileOrDir(tag, path);
         jobManager.markJobCopyFile(jobId, targetFileOrDirPath);
       } else {
