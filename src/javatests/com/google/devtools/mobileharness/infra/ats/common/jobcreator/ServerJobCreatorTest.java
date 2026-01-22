@@ -60,6 +60,7 @@ import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.SubDeviceSpec;
 import java.io.File;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import javax.inject.Inject;
@@ -119,9 +120,7 @@ public final class ServerJobCreatorTest {
             "use_tf_retry",
             "false",
             "ats_storage_path",
-            tmpFolder.getRoot().getAbsolutePath(),
-            "run_dynamic_download_mcts_only",
-            "false"));
+            tmpFolder.getRoot().getAbsolutePath()));
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
     realLocalFileUtil = new LocalFileUtil();
     when(sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(any()))
@@ -130,7 +129,6 @@ public final class ServerJobCreatorTest {
                 SubDeviceSpec.getDefaultInstance(), SubDeviceSpec.getDefaultInstance()));
     xtsRootDir = publicDir + "/session_session_id/file";
     realLocalFileUtil.prepareParentDir(xtsRootDir);
-    when(localFileUtil.readFile(any(Path.class))).thenReturn("");
   }
 
   @Test
@@ -186,27 +184,12 @@ public final class ServerJobCreatorTest {
   public void createXtsTradefedTestJob() throws Exception {
     String xtsRootDir = publicDir + "/session_session_id/file";
     realLocalFileUtil.prepareParentDir(xtsRootDir);
-    DeviceActionConfigObject resultReporter =
-        DeviceActionConfigObject.newBuilder()
-            .setClassName("ResultReporter")
-            .setType(DeviceActionConfigObject.DeviceActionConfigObjectType.RESULT_REPORTER)
-            .build();
-    DeviceActionConfigObject targetPreparer =
-        DeviceActionConfigObject.newBuilder()
-            .setClassName("TargetPreparer")
-            .setType(DeviceActionConfigObject.DeviceActionConfigObjectType.TARGET_PREPARER)
-            .build();
-    TestEnvironment testEnvironment =
-        TestEnvironment.newBuilder()
-            .addDeviceActionConfigObjects(targetPreparer)
-            .addDeviceActionConfigObjects(resultReporter)
-            .build();
     SessionRequestInfo sessionRequestInfo =
         SessionRequestInfo.builder()
             .setTestPlan("cts")
             .setCommandLineArgs("cts")
             .setXtsType("cts")
-            .setAtsServerTestEnvironment(testEnvironment)
+            .setAtsServerTestEnvironment(TestEnvironment.getDefaultInstance())
             .setXtsRootDir(xtsRootDir)
             .setAndroidXtsZip(ANDROID_XTS_ZIP_PATH)
             .setRemoteRunnerFilePathPrefix("ats-file-server::")
@@ -241,9 +224,7 @@ public final class ServerJobCreatorTest {
             "xts_test_plan",
             "cts",
             "xts_test_plan_file",
-            "ats-file-server::/public_dir/session_session_id/command.xml",
-            "no_device_action_xts_test_plan_file",
-            "ats-file-server::/public_dir/session_session_id/no_device_action_command.xml");
+            "ats-file-server::/public_dir/session_session_id/command.xml");
     assertThat(tradefedJobInfoList.get(0).extraJobProperties())
         .containsExactly(
             Job.XTS_TEST_PLAN,
@@ -254,19 +235,9 @@ public final class ServerJobCreatorTest {
             "arm64-v8a,armeabi-v7a");
     String commandXmlContent =
         realLocalFileUtil.readFile(Path.of(publicDir, "session_session_id/command.xml"));
-    assertThat(commandXmlContent).contains("TargetPreparer");
-    assertThat(commandXmlContent).contains("ResultReporter");
     assertThat(commandXmlContent).contains("TF_DEVICE_0");
     assertThat(commandXmlContent).contains("TF_DEVICE_1");
     assertThat(countOccurrences(commandXmlContent, "TF_DEVICE_")).isEqualTo(2);
-
-    String dynamicCommandXmlContent =
-        realLocalFileUtil.readFile(
-            Path.of(publicDir, "session_session_id/no_device_action_command.xml"));
-    assertThat(dynamicCommandXmlContent).contains("ResultReporter");
-    assertThat(dynamicCommandXmlContent).contains("TF_DEVICE_0");
-    assertThat(dynamicCommandXmlContent).contains("TF_DEVICE_1");
-    assertThat(countOccurrences(dynamicCommandXmlContent, "TF_DEVICE_")).isEqualTo(2);
   }
 
   @SuppressWarnings("unchecked")
@@ -307,9 +278,7 @@ public final class ServerJobCreatorTest {
             "xts_test_plan",
             "cts",
             "xts_test_plan_file",
-            publicDir + "/session_session_id/command.xml",
-            "no_device_action_xts_test_plan_file",
-            publicDir + "/session_session_id/no_device_action_command.xml");
+            publicDir + "/session_session_id/command.xml");
     assertThat(tradefedJobInfoList.get(0).extraJobProperties())
         .containsExactly(
             Job.XTS_TEST_PLAN,
@@ -323,13 +292,6 @@ public final class ServerJobCreatorTest {
     assertThat(commandXmlContent).contains("TF_DEVICE_0");
     assertThat(commandXmlContent).contains("TF_DEVICE_1");
     assertThat(countOccurrences(commandXmlContent, "TF_DEVICE_")).isEqualTo(2);
-
-    String dynamicCommandXmlContent =
-        realLocalFileUtil.readFile(
-            Path.of(publicDir, "session_session_id/no_device_action_command.xml"));
-    assertThat(dynamicCommandXmlContent).contains("TF_DEVICE_0");
-    assertThat(dynamicCommandXmlContent).contains("TF_DEVICE_1");
-    assertThat(countOccurrences(dynamicCommandXmlContent, "TF_DEVICE_")).isEqualTo(2);
   }
 
   @SuppressWarnings("unchecked")
@@ -402,7 +364,7 @@ public final class ServerJobCreatorTest {
         .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any(), any());
 
     Map<String, String> driverParamsMap = driverParamsCaptor.getValue();
-    assertThat(driverParamsMap).hasSize(7);
+    assertThat(driverParamsMap).hasSize(6);
     assertThat(driverParamsMap)
         .containsAtLeast(
             "xts_type",
@@ -414,9 +376,7 @@ public final class ServerJobCreatorTest {
             "prev_session_xts_test_plan",
             "cts",
             "xts_test_plan_file",
-            "ats-file-server::/public_dir/session_session_id/command.xml",
-            "no_device_action_xts_test_plan_file",
-            "ats-file-server::/public_dir/session_session_id/no_device_action_command.xml");
+            "ats-file-server::/public_dir/session_session_id/command.xml");
     assertThat(driverParamsMap.get("subplan_xml")).startsWith("ats-file-server::");
   }
 
@@ -467,7 +427,7 @@ public final class ServerJobCreatorTest {
     verify(sessionRequestHandlerUtil)
         .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any(), any());
     Map<String, String> driverParamsMap = driverParamsCaptor.getValue();
-    assertThat(driverParamsMap).hasSize(7);
+    assertThat(driverParamsMap).hasSize(6);
     assertThat(driverParamsMap)
         .containsAtLeast(
             "xts_type",
@@ -479,9 +439,7 @@ public final class ServerJobCreatorTest {
             "prev_session_xts_test_plan",
             "cts",
             "xts_test_plan_file",
-            publicDir + "/session_session_id/command.xml",
-            "no_device_action_xts_test_plan_file",
-            publicDir + "/session_session_id/no_device_action_command.xml");
+            publicDir + "/session_session_id/command.xml");
     assertThat(driverParamsMap.get("subplan_xml"))
         .startsWith(Path.of(xtsRootDir).getParent().toString());
   }
@@ -528,7 +486,7 @@ public final class ServerJobCreatorTest {
     verify(sessionRequestHandlerUtil)
         .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any(), any());
     Map<String, String> driverParamsMap = driverParamsCaptor.getValue();
-    assertThat(driverParamsMap).hasSize(7);
+    assertThat(driverParamsMap).hasSize(6);
     assertThat(driverParamsMap)
         .containsAtLeast(
             "xts_type",
@@ -540,9 +498,7 @@ public final class ServerJobCreatorTest {
             "prev_session_xts_test_plan",
             "cts",
             "xts_test_plan_file",
-            publicDir + "/session_session_id/command.xml",
-            "no_device_action_xts_test_plan_file",
-            publicDir + "/session_session_id/no_device_action_command.xml");
+            publicDir + "/session_session_id/command.xml");
     assertThat(driverParamsMap.get("subplan_xml"))
         .startsWith(Path.of(xtsRootDir).getParent().toString());
   }
@@ -794,72 +750,41 @@ public final class ServerJobCreatorTest {
   }
 
   @Test
-  public void createXtsTradefedTestJob_dynamicDownloadEnabled_runMctsOnly() throws Exception {
-    flags.setAllFlags(
-        ImmutableMap.of(
-            "enable_ats_mode",
-            "true",
-            "use_tf_retry",
-            "false",
-            "ats_storage_path",
-            tmpFolder.getRoot().getAbsolutePath(),
-            "run_dynamic_download_mcts_only",
-            "true"));
-    String xtsRootDir = publicDir + "/session_session_id/file";
-    realLocalFileUtil.prepareParentDir(xtsRootDir);
+  public void reviseRequestInfoForDynamicJob_withoutTestEnvironment_doNothing() throws Exception {
     SessionRequestInfo sessionRequestInfo =
         SessionRequestInfo.builder()
             .setTestPlan("cts")
             .setCommandLineArgs("cts")
             .setXtsType("cts")
-            .setAtsServerTestEnvironment(TestEnvironment.getDefaultInstance())
             .setXtsRootDir(xtsRootDir)
-            .setAndroidXtsZip(ANDROID_XTS_ZIP_PATH)
-            .setIsXtsDynamicDownloadEnabled(true)
             .build();
-    when(sessionRequestHandlerUtil.getStaticMctsModules())
-        .thenReturn(ImmutableSet.of("mcts-module"));
-    when(sessionRequestHandlerUtil.initializeJobConfig(any(), any(), any(), any()))
-        .thenReturn(JobConfig.newBuilder().setName("job_name").build());
-    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any(), any()))
-        .thenAnswer(
-            invocation -> {
-              JobInfo jobInfo = mock(JobInfo.class);
-              when(jobInfo.properties()).thenReturn(new Properties(new Timing()));
-              return jobInfo;
-            });
-    when(sessionRequestHandlerUtil.getFilteredTradefedModules(any()))
-        .thenReturn(ImmutableList.of());
-
-    ImmutableList<JobInfo> jobInfos = jobCreator.createXtsTradefedTestJob(sessionRequestInfo);
-
-    assertThat(jobInfos).hasSize(1);
-    assertThat(jobInfos.get(0).properties().get(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME))
-        .isEqualTo(XtsConstants.DYNAMIC_MCTS_JOB_NAME);
-    assertThat(jobInfos.get(0).properties().get(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED))
-        .isEqualTo("true");
+    assertThat(jobCreator.reviseRequestInfoForDynamicJob(sessionRequestInfo))
+        .isEqualTo(sessionRequestInfo);
   }
 
   @Test
-  public void createXtsTradefedTestJob_dynamicDownloadEnabled_runStaticAndMcts() throws Exception {
-    flags.setAllFlags(
-        ImmutableMap.of(
-            "enable_ats_mode",
-            "true",
-            "use_tf_retry",
-            "false",
-            "ats_storage_path",
-            tmpFolder.getRoot().getAbsolutePath(),
-            "run_dynamic_download_mcts_only",
-            "false"));
+  public void createXtsTradefedTestJob_dynamicDownloadEnabled_createsStaticJobFirst()
+      throws Exception {
     String xtsRootDir = publicDir + "/session_session_id/file";
     realLocalFileUtil.prepareParentDir(xtsRootDir);
+    DeviceActionConfigObject resultReporter =
+        DeviceActionConfigObject.newBuilder()
+            .setType(DeviceActionConfigObject.DeviceActionConfigObjectType.RESULT_REPORTER)
+            .build();
+    TestEnvironment testEnvironment =
+        TestEnvironment.newBuilder()
+            .addDeviceActionConfigObjects(
+                DeviceActionConfigObject.newBuilder()
+                    .setType(DeviceActionConfigObject.DeviceActionConfigObjectType.TARGET_PREPARER)
+                    .build())
+            .addDeviceActionConfigObjects(resultReporter)
+            .build();
     SessionRequestInfo sessionRequestInfo =
         SessionRequestInfo.builder()
             .setTestPlan("cts")
             .setCommandLineArgs("cts")
             .setXtsType("cts")
-            .setAtsServerTestEnvironment(TestEnvironment.getDefaultInstance())
+            .setAtsServerTestEnvironment(testEnvironment)
             .setXtsRootDir(xtsRootDir)
             .setAndroidXtsZip(ANDROID_XTS_ZIP_PATH)
             .setIsXtsDynamicDownloadEnabled(true)
@@ -868,7 +793,10 @@ public final class ServerJobCreatorTest {
         .thenReturn(ImmutableSet.of("mcts-module"));
     when(sessionRequestHandlerUtil.initializeJobConfig(any(), any(), any(), any()))
         .thenReturn(JobConfig.newBuilder().setName("job_name").build());
-    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any(), any()))
+    ArgumentCaptor<SessionRequestInfo> sessionRequestInfoCaptor =
+        ArgumentCaptor.forClass(SessionRequestInfo.class);
+    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(
+            sessionRequestInfoCaptor.capture(), any()))
         .thenAnswer(
             invocation -> {
               JobInfo jobInfo = mock(JobInfo.class);
@@ -883,12 +811,15 @@ public final class ServerJobCreatorTest {
     assertThat(jobInfos).hasSize(2);
     assertThat(jobInfos.get(0).properties().get(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME))
         .isEqualTo(XtsConstants.STATIC_XTS_JOB_NAME);
-    assertThat(jobInfos.get(0).properties().get(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED))
-        .isEqualTo("true");
     assertThat(jobInfos.get(1).properties().get(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME))
         .isEqualTo(XtsConstants.DYNAMIC_MCTS_JOB_NAME);
-    assertThat(jobInfos.get(1).properties().get(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED))
-        .isEqualTo("true");
+    List<SessionRequestInfo> capturedSrIs = sessionRequestInfoCaptor.getAllValues();
+    assertThat(
+            capturedSrIs.get(0).atsServerTestEnvironment().get().getDeviceActionConfigObjectsList())
+        .hasSize(2);
+    assertThat(
+            capturedSrIs.get(1).atsServerTestEnvironment().get().getDeviceActionConfigObjectsList())
+        .containsExactly(resultReporter);
   }
 
   @Test
@@ -923,6 +854,41 @@ public final class ServerJobCreatorTest {
 
     assertThat(jobInfos).hasSize(1);
     verify(sessionRequestHandlerUtil).createXtsTradefedTestJob(eq(sessionRequestInfo), any());
+  }
+
+  @Test
+  public void reviseRequestInfoForDynamicJob_withTestEnvironment_filterDeviceActions()
+      throws Exception {
+    DeviceActionConfigObject resultReporter =
+        DeviceActionConfigObject.newBuilder()
+            .setType(DeviceActionConfigObject.DeviceActionConfigObjectType.RESULT_REPORTER)
+            .build();
+    TestEnvironment testEnvironment =
+        TestEnvironment.newBuilder()
+            .addDeviceActionConfigObjects(
+                DeviceActionConfigObject.newBuilder()
+                    .setType(DeviceActionConfigObject.DeviceActionConfigObjectType.TARGET_PREPARER)
+                    .build())
+            .addDeviceActionConfigObjects(resultReporter)
+            .build();
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfo.builder()
+            .setTestPlan("cts")
+            .setCommandLineArgs("cts")
+            .setXtsType("cts")
+            .setXtsRootDir(xtsRootDir)
+            .setAtsServerTestEnvironment(testEnvironment)
+            .build();
+
+    SessionRequestInfo updatedSessionRequestInfo =
+        jobCreator.reviseRequestInfoForDynamicJob(sessionRequestInfo);
+    assertThat(updatedSessionRequestInfo.atsServerTestEnvironment()).isPresent();
+    assertThat(
+            updatedSessionRequestInfo
+                .atsServerTestEnvironment()
+                .get()
+                .getDeviceActionConfigObjectsList())
+        .containsExactly(resultReporter);
   }
 
   private int countOccurrences(String text, String pattern) {

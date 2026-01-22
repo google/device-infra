@@ -731,21 +731,6 @@ public class TradefedTest extends BaseDriver
     } else {
       // Build final config based on local env vars
       String configTemplate = localFileUtil.readFile(spec.getXtsTestPlanFile());
-      if (testInfo
-              .jobInfo()
-              .properties()
-              .getOptional(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME)
-              .orElse("")
-              .equals(XtsConstants.DYNAMIC_MCTS_JOB_NAME)
-          && !testInfo
-              .jobInfo()
-              .properties()
-              .getOptional(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_INDEX)
-              .orElse("0")
-              .equals("0")
-          && !spec.getNoDeviceActionXtsTestPlanFile().isEmpty()) {
-        configTemplate = localFileUtil.readFile(spec.getNoDeviceActionXtsTestPlanFile());
-      }
       StringSubstitutor sub = new StringSubstitutor(envVars);
       String config = sub.replace(configTemplate);
 

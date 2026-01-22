@@ -58,9 +58,6 @@ public class XtsConstants {
   /** The job type of dynamic download xTS jobs. */
   public static final String XTS_DYNAMIC_DOWNLOAD_JOB_NAME = "xts_dynamic_download_job_name";
 
-  /** The job index of dynamic download xTS jobs. */
-  public static final String XTS_DYNAMIC_DOWNLOAD_JOB_INDEX = "xts_dynamic_download_job_index";
-
   /** The job name of dynamic download xTS job. */
   public static final String DYNAMIC_MCTS_JOB_NAME = "MCTS";
 

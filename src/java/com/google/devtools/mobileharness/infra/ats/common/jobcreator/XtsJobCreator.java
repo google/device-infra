@@ -139,10 +139,8 @@ public abstract class XtsJobCreator {
 
     for (TradefedJobInfo tradefedJobInfo : tradefedJobInfoList) {
       if (shouldCreateDynamicDownloadJobs(tradefedJobInfo, sessionRequestInfo)) {
-        for (int i = 0; i < allDynamicDownloadJobNames.size(); i++) {
-          jobInfos.add(
-              createDynamicJobInfo(
-                  sessionRequestInfo, tradefedJobInfo, allDynamicDownloadJobNames.get(i), i));
+        for (String jobName : allDynamicDownloadJobNames) {
+          jobInfos.add(createDynamicJobInfo(sessionRequestInfo, tradefedJobInfo, jobName));
         }
       } else {
         jobInfos.add(
@@ -566,12 +564,27 @@ public abstract class XtsJobCreator {
         && !SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo);
   }
 
+  /**
+   * Revises the given {@link SessionRequestInfo} for a dynamic job.
+   *
+   * <p>Subclasses can override this method to customize the session request info for dynamic jobs.
+   * Currently this method is mainly used for removing the device actions in the dynamic download
+   * jobs.
+   *
+   * @param sessionRequestInfo the original session request info
+   * @return the revised session request info for the dynamic job
+   */
+  protected SessionRequestInfo reviseRequestInfoForDynamicJob(
+      SessionRequestInfo sessionRequestInfo) {
+    return sessionRequestInfo;
+  }
+
   private JobInfo createDynamicJobInfo(
-      SessionRequestInfo sessionRequestInfo,
-      TradefedJobInfo tradefedJobInfo,
-      String jobName,
-      int jobIndex)
+      SessionRequestInfo sessionRequestInfo, TradefedJobInfo tradefedJobInfo, String jobName)
       throws MobileHarnessException, InterruptedException {
+    if (jobName.contains(XtsConstants.DYNAMIC_MCTS_JOB_NAME)) {
+      sessionRequestInfo = reviseRequestInfoForDynamicJob(sessionRequestInfo);
+    }
     String updatedJobName = tradefedJobInfo.jobConfig().getName() + "_" + jobName;
     TradefedJobInfo updatedTradefedJobInfo =
         TradefedJobInfo.of(
@@ -583,9 +596,6 @@ public abstract class XtsJobCreator {
 
     dynamicDownloadJobInfo.properties().add(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED, "true");
     dynamicDownloadJobInfo.properties().add(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME, jobName);
-    dynamicDownloadJobInfo
-        .properties()
-        .add(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_INDEX, String.valueOf(jobIndex));
     return dynamicDownloadJobInfo;
   }
 

@@ -102,8 +102,4 @@ message TradefedTestDriverSpec {
   optional bool disable_tf_result_log = 17 [
     (field_detail) = { help: "Whether to disable TF result logs in terminal." }
   ];
-
-  optional string no_device_action_xts_test_plan_file = 18 [(file_detail) = {
-    help: "The dynamic job's test plan XML file for xTS to run."
-  }];
 }
