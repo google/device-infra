@@ -76,3 +76,16 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+java_library(
+    name = "gcs_metadata_util",
+    srcs = ["GcsMetadataUtil.java"],
+    deps = [
+        "//devtools/mobileharness/infra/lab/proto:lab_file_metadata_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dir",
+        "@maven//:com_google_guava_guava",
+        "@protobuf//:protobuf_java",
+    ],
+)
