@@ -49,6 +49,8 @@ import com.google.devtools.mobileharness.platform.android.xts.common.util.MoblyT
 import com.google.devtools.mobileharness.platform.android.xts.config.ConfigurationUtil;
 import com.google.devtools.mobileharness.platform.android.xts.config.ModuleConfigurationHelper;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
+import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.ConfigurationDescriptor;
+import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.ConfigurationDescriptorMetadata;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.ConfigurationMetadata;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Device;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Option;
@@ -64,6 +66,7 @@ import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import com.google.wireless.qa.mobileharness.shared.api.spec.MoblyAospTestSpec;
 import com.google.wireless.qa.mobileharness.shared.api.spec.MoblyTestSpec;
+import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.StringMap;
@@ -158,8 +161,8 @@ public final class SessionRequestHandlerUtilTest {
 
   private Configuration.Builder defaultConfigurationBuilder() {
     return Configuration.newBuilder()
-        .addDevices(Device.newBuilder().setName("AndroidDevice"))
-        .addDevices(Device.newBuilder().setName("AndroidDevice2"))
+        .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+        .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
         .setTest(
             com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto
                 .Test.newBuilder()
@@ -771,6 +774,14 @@ public final class SessionRequestHandlerUtilTest {
         defaultConfigurationBuilder()
             .setMetadata(
                 ConfigurationMetadata.newBuilder().setXtsModule("module1").setIsConfigV2(true))
+            .setConfigDescriptor(
+                ConfigurationDescriptor.newBuilder()
+                    .putMetadata(
+                        "token",
+                        ConfigurationDescriptorMetadata.newBuilder()
+                            .setKey("token")
+                            .addValue("SIM_CARD")
+                            .build()))
             .build();
     Configuration config2 =
         defaultConfigurationBuilder()
@@ -811,7 +822,7 @@ public final class SessionRequestHandlerUtilTest {
             defaultSessionRequestInfoBuilder().build());
     ImmutableList<JobInfo> jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
-            sessionRequestInfo, null, ImmutableMap.of());
+            sessionRequestInfo, /* subPlan= */ null, /* extraJobProperties= */ ImmutableMap.of());
 
     assertThat(jobInfos).hasSize(2);
     verify(moduleConfigurationHelper, times(2)).updateJobInfo(any(), any(), any(), any());
@@ -819,6 +830,10 @@ public final class SessionRequestHandlerUtilTest {
         .isEqualTo(AllocationExitStrategy.FAIL_FAST_NO_MATCH);
     assertThat(jobInfos.get(1).setting().getAllocationExitStrategy())
         .isEqualTo(AllocationExitStrategy.FAIL_FAST_NO_MATCH);
+    assertThat(getJobInfoDeviceDimensionValue(jobInfos.get(0), Name.SIM_CARD_TYPE.lowerCaseName()))
+        .hasValue("SIM_CARD");
+    assertThat(getJobInfoDeviceDimensionValue(jobInfos.get(1), Name.SIM_CARD_TYPE.lowerCaseName()))
+        .isEmpty();
   }
 
   @Test

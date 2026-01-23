@@ -57,6 +57,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:mobly_aosp_test_spec",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:mobly_test_spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_config_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",

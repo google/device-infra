@@ -1147,9 +1147,10 @@ public class SessionRequestHandlerUtil {
         getSimCardTypeDimensionValue(moduleMetadata)
             .ifPresent(
                 simCardTypeDimensionValue ->
-                    jobInfo
-                        .subDeviceSpecs()
-                        .getAllSubDevices()
+                    jobInfo.subDeviceSpecs().getAllSubDevices().stream()
+                        // Only add sim card type dimension to Android real devices.
+                        .filter(
+                            subDeviceSpec -> subDeviceSpec.type().equals(ANDROID_REAL_DEVICE_TYPE))
                         .forEach(
                             subDeviceSpec ->
                                 subDeviceSpec
