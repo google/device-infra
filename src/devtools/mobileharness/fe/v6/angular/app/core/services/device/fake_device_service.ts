@@ -107,7 +107,9 @@ export class FakeDeviceService extends DeviceService {
   ): Observable<TestResultStats> {
     const scenario = MOCK_DEVICE_SCENARIOS.find((s) => s.id === id);
     if (scenario) {
-      return of(generateTestResultStats(startDate, endDate)).pipe(delay(1000));
+      const stats =
+        scenario.testResultStats || generateTestResultStats(startDate, endDate);
+      return of(stats).pipe(delay(1000));
     } else {
       return throwError(
         () => new Error(`Device with ID '${id}' not found in mock data.`),

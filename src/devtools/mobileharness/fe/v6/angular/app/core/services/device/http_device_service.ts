@@ -50,16 +50,18 @@ export class HttpDeviceService extends DeviceService {
     startDate: GoogleDate,
     endDate: GoogleDate,
   ): Observable<HealthinessStats> {
-    return this.http.get<HealthinessStats>(
-      `${this.apiUrl}/${id}/stats/healthiness`,
+    return this.http.post<HealthinessStats>(
+      `${this.apiUrl}/${id}/stats:getHealthiness`,
       {
-        params: {
-          'start_date.year': startDate.year,
-          'start_date.month': startDate.month,
-          'start_date.day': startDate.day,
-          'end_date.year': endDate.year,
-          'end_date.month': endDate.month,
-          'end_date.day': endDate.day,
+        'start_date': {
+          'year': startDate.year,
+          'month': startDate.month,
+          'day': startDate.day,
+        },
+        'end_date': {
+          'year': endDate.year,
+          'month': endDate.month,
+          'day': endDate.day,
         },
       },
     );
@@ -70,16 +72,18 @@ export class HttpDeviceService extends DeviceService {
     startDate: GoogleDate,
     endDate: GoogleDate,
   ): Observable<TestResultStats> {
-    return this.http.get<TestResultStats>(
-      `${this.apiUrl}/${id}/stats/testresults`,
+    return this.http.post<TestResultStats>(
+      `${this.apiUrl}/${id}/stats:getTestResults`,
       {
-        params: {
-          'start_date.year': startDate.year,
-          'start_date.month': startDate.month,
-          'start_date.day': startDate.day,
-          'end_date.year': endDate.year,
-          'end_date.month': endDate.month,
-          'end_date.day': endDate.day,
+        'start_date': {
+          'year': startDate.year,
+          'month': startDate.month,
+          'day': startDate.day,
+        },
+        'end_date': {
+          'year': endDate.year,
+          'month': endDate.month,
+          'day': endDate.day,
         },
       },
     );
@@ -90,16 +94,18 @@ export class HttpDeviceService extends DeviceService {
     startDate: GoogleDate,
     endDate: GoogleDate,
   ): Observable<RecoveryTaskStats> {
-    return this.http.get<RecoveryTaskStats>(
-      `${this.apiUrl}/${id}/stats/recoverytasks`,
+    return this.http.post<RecoveryTaskStats>(
+      `${this.apiUrl}/${id}/stats:getRecoveryTasks`,
       {
-        params: {
-          'start_date.year': startDate.year,
-          'start_date.month': startDate.month,
-          'start_date.day': startDate.day,
-          'end_date.year': endDate.year,
-          'end_date.month': endDate.month,
-          'end_date.day': endDate.day,
+        'start_date': {
+          'year': startDate.year,
+          'month': startDate.month,
+          'day': startDate.day,
+        },
+        'end_date': {
+          'year': endDate.year,
+          'month': endDate.month,
+          'day': endDate.day,
         },
       },
     );

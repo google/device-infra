@@ -47,16 +47,29 @@ export class StatisticBreakdown implements OnChanges {
   @Input() charts: BreakdownChart[] = [];
 
   view: 'table' | 'chart' = 'table';
+  filteredData: TableItem[] = [];
 
   @ViewChildren('chartContainer') chartElements!: QueryList<ElementRef>;
 
   ngOnChanges(changes: SimpleChanges) {
+    if (changes['tableData'] || changes['tableColumns']) {
+      this.updateFilteredData();
+    }
     if (changes['charts'] && this.view === 'chart') {
       // Allow view to update before drawing
       setTimeout(() => {
         this.drawCharts();
       }, 0);
     }
+  }
+
+  private updateFilteredData() {
+    this.filteredData = this.tableData.filter((row) => {
+      if (this.tableColumns.includes('count')) {
+        return row.count && row.count !== 0;
+      }
+      return row.value && row.value !== 0;
+    });
   }
 
   toggleView(view: 'table' | 'chart') {

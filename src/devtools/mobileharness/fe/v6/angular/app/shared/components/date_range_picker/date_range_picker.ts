@@ -115,7 +115,12 @@ export class DateRangePicker implements OnInit {
     };
   }
 
+  updateToday() {
+    this.today = this.dateAdapter.today();
+  }
+
   selectLastNDays(days: number) {
+    this.updateToday();
     const endDate = this.dateAdapter.today();
     const startDate = this.dateAdapter.today();
     // days - 1 because if I want 7 days including today, I subtract 6 days.

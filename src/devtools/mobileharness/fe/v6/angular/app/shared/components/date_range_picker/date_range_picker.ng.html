@@ -1,4 +1,4 @@
-<button mat-button [matMenuTriggerFor]="menu" class="date-range-button">
+<button mat-button [matMenuTriggerFor]="menu" class="date-range-button" (menuOpened)="updateToday()">
   <mat-icon>calendar_today</mat-icon>
   <span>{{displayedRange.start | date:'MMM d, y'}} - {{displayedRange.end | date:'MMM d, y'}} (PDT)</span>
   <mat-icon iconPositionEnd>arrow_drop_down</mat-icon>
@@ -17,13 +17,13 @@
           <mat-label>Start Date (PDT)</mat-label>
           <input matInput [matDatepicker]="startDatePicker" formControlName="start" [max]="today">
           <mat-datepicker-toggle matSuffix [for]="startDatePicker"></mat-datepicker-toggle>
-          <mat-datepicker #startDatePicker></mat-datepicker>
+          <mat-datepicker #startDatePicker (opened)="updateToday()"></mat-datepicker>
         </mat-form-field>
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>End Date (PDT)</mat-label>
           <input matInput [matDatepicker]="endDatePicker" formControlName="end" [max]="today">
           <mat-datepicker-toggle matSuffix [for]="endDatePicker"></mat-datepicker-toggle>
-          <mat-datepicker #endDatePicker></mat-datepicker>
+          <mat-datepicker #endDatePicker (opened)="updateToday()"></mat-datepicker>
         </mat-form-field>
       </div>
       <div class="form-errors">

@@ -27,9 +27,9 @@ export interface DailyHealthiness {
  */
 export interface HealthinessSummary {
   /** Total percentage of time the device was considered "In Service". */
-  inServicePercent: number;
+  inServicePercent?: number;
   /** Total percentage of time the device was considered "Out of Service". */
-  outOfServicePercent: number;
+  outOfServicePercent?: number;
 
   /**
    * Breakdown of "In Service" time.
@@ -37,7 +37,7 @@ export interface HealthinessSummary {
    */
   inServiceBreakdown: Array<{
     category: string;
-    percent: number;
+    percent?: number;
   }>;
 
   /**
@@ -47,7 +47,7 @@ export interface HealthinessSummary {
    */
   outOfServiceBreakdown: Array<{
     category: string;
-    percent: number;
+    percent?: number;
   }>;
 }
 
@@ -70,19 +70,19 @@ export interface TestResultStats {
 export interface DailyTestResults {
   /** The date in YYYY-MM-DD format. */
   date: string;
-  pass: number;
-  fail: number;
-  error: number;
-  timeout: number;
-  other: number;
+  pass?: number;
+  fail?: number;
+  error?: number;
+  timeout?: number;
+  other?: number;
 }
 
 /**
  * Common statistics containing count and percentage.
  */
 export interface Stats {
-  count: number;
-  percent: number;
+  count?: number;
+  percent?: number;
 }
 
 /**

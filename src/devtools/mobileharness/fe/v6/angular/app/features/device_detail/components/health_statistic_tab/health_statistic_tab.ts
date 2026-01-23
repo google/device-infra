@@ -338,8 +338,8 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
       summaryColumns,
       (d, date) => [
         date,
-        d.healthinessSummary.inServicePercent,
-        d.healthinessSummary.outOfServicePercent,
+        d.healthinessSummary.inServicePercent ?? 0,
+        d.healthinessSummary.outOfServicePercent ?? 0,
       ],
       this.healthinessSummaryChartOptions(),
     );
@@ -388,11 +388,13 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
   }
 
   private collectCategories(
-    items: Array<{category: string}>,
+    items: Array<{category: string; percent?: number; count?: number}>,
     categorySet: Set<string>,
   ) {
     for (const item of items) {
-      categorySet.add(item.category);
+      if ((item.percent ?? 0) > 0 || (item.count ?? 0) > 0) {
+        categorySet.add(item.category);
+      }
     }
   }
 
@@ -417,10 +419,10 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
         const row: Array<Date | number> = [date];
         const breakdownMap: Record<string, number> = {};
         const addToMap = (
-          items: Array<{category: string; percent: number}>,
+          items: Array<{category: string; percent?: number}>,
         ) => {
           for (const item of items) {
-            breakdownMap[item.category.toUpperCase()] = item.percent;
+            breakdownMap[item.category.toUpperCase()] = item.percent ?? 0;
           }
         };
         addToMap(d.healthinessSummary.inServiceBreakdown);
@@ -437,7 +439,9 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
 
   // Healthiness Breakdown Table and Charts
   private calculateHealthinessTableData() {
-    if (!this.healthinessStats) return;
+    if (!this.healthinessStats || !this.healthinessStats.aggregatedStats) {
+      return;
+    }
 
     const stats = this.healthinessStats.aggregatedStats;
 
@@ -472,7 +476,9 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
     ];
   }
   private calculateHealthPieChartsData() {
-    if (!this.healthinessStats) return;
+    if (!this.healthinessStats || !this.healthinessStats.aggregatedStats) {
+      return;
+    }
 
     const data = this.healthinessStats.aggregatedStats;
     const charts: BreakdownChart[] = [];
@@ -481,14 +487,20 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
     const majorData = new google.visualization.DataTable();
     majorData.addColumn('string', 'Status');
     majorData.addColumn('number', 'Percentage');
-    majorData.addRows([
-      ['In Service', data.inServicePercent],
-      ['Out of Service', data.outOfServicePercent],
-    ]);
+
+    const majorColors: string[] = [];
+    if (data.inServicePercent && data.inServicePercent > 0) {
+      majorData.addRow(['In Service', data.inServicePercent]);
+      majorColors.push(HEALTH_SUMMARY_COLORS[0]);
+    }
+    if (data.outOfServicePercent && data.outOfServicePercent > 0) {
+      majorData.addRow(['Out of Service', data.outOfServicePercent]);
+      majorColors.push(HEALTH_SUMMARY_COLORS[1]);
+    }
 
     const majorOptions: PieChartOptions = {
       pieHole: 0.4,
-      colors: HEALTH_SUMMARY_COLORS,
+      colors: majorColors,
       backgroundColor: 'transparent',
       legend: {position: 'right', alignment: 'center'},
       chartArea: {left: 10, top: 20, width: '90%', height: '85%'},
@@ -514,7 +526,7 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
     ];
 
     allBreakdown.forEach((item) => {
-      if (item.percent > 0) {
+      if (item.percent && item.percent > 0) {
         minorData.addRow([item.category.toUpperCase(), item.percent]);
         minorColors.push(this.getHealthColor(item.category));
       }
@@ -563,14 +575,23 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
       this.testChartElement,
       this.testResultStats?.dailyStats || [],
       columns,
-      (d, date) => [date, d.pass, d.fail, d.error, d.timeout, d.other],
+      (d, date) => [
+        date,
+        d.pass ?? 0,
+        d.fail ?? 0,
+        d.error ?? 0,
+        d.timeout ?? 0,
+        d.other ?? 0,
+      ],
       this.testResultChartOptions(),
     );
   }
 
   // Test Result Breakdown Table and Charts
   private calculateTestTableData() {
-    if (!this.testResultStats) return;
+    if (!this.testResultStats || !this.testResultStats.aggregatedStats) {
+      return;
+    }
 
     const stats = this.testResultStats.aggregatedStats;
 
@@ -615,7 +636,9 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
     ];
   }
   private calculateTestPieChartsData() {
-    if (!this.testResultStats) return;
+    if (!this.testResultStats || !this.testResultStats.aggregatedStats) {
+      return;
+    }
 
     const data = this.testResultStats.aggregatedStats;
     const charts: BreakdownChart[] = [];
@@ -624,14 +647,20 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
     const majorData = new google.visualization.DataTable();
     majorData.addColumn('string', 'Category');
     majorData.addColumn('number', 'Count');
-    majorData.addRows([
-      ['Completion', data.completionStats.count],
-      ['Non-Completion', data.nonCompletionStats.count],
-    ]);
+
+    const majorColors: string[] = [];
+    if (data.completionStats.count && data.completionStats.count > 0) {
+      majorData.addRow(['Completion', data.completionStats.count]);
+      majorColors.push('#2E7D32');
+    }
+    if (data.nonCompletionStats.count && data.nonCompletionStats.count > 0) {
+      majorData.addRow(['Non-Completion', data.nonCompletionStats.count]);
+      majorColors.push('#C62828');
+    }
 
     const majorOptions: PieChartOptions = {
       pieHole: 0.4,
-      colors: ['#2E7D32', '#C62828'],
+      colors: majorColors,
       backgroundColor: 'transparent',
       legend: {position: 'right', alignment: 'center'},
       chartArea: {left: 10, top: 20, width: '90%', height: '85%'},
@@ -657,7 +686,7 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
     ];
 
     allBreakdown.forEach((item) => {
-      if (item.stats.count > 0) {
+      if (item.stats.count && item.stats.count > 0) {
         minorData.addRow([
           item.category.toUpperCase() === 'OTHER'
             ? 'Others'
@@ -715,7 +744,9 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
 
   // Recovery Task Breakdown Table and Charts
   private calculateRecoveryTableData() {
-    if (!this.recoveryTaskStats) return;
+    if (!this.recoveryTaskStats || !this.recoveryTaskStats.aggregatedStats) {
+      return;
+    }
 
     const stats = this.recoveryTaskStats.aggregatedStats;
 
@@ -736,7 +767,9 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
     ];
   }
   private calculateRecoveryPieChartsData() {
-    if (!this.recoveryTaskStats) return;
+    if (!this.recoveryTaskStats || !this.recoveryTaskStats.aggregatedStats) {
+      return;
+    }
 
     const data = this.recoveryTaskStats.aggregatedStats;
     const charts: BreakdownChart[] = [];
@@ -744,15 +777,17 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
     chartData.addColumn('string', 'Result');
     chartData.addColumn('number', 'Count');
 
+    const colors: string[] = [];
     data.outcomeBreakdown.forEach((item) => {
-      if (item.stats.count > 0) {
+      if (item.stats.count && item.stats.count > 0) {
         chartData.addRow([item.category.toUpperCase(), item.stats.count]);
+        colors.push(this.getRecoveryColor(item.category));
       }
     });
 
     const options: PieChartOptions = {
       pieHole: 0.4,
-      colors: RECOVERY_CHART_COLORS,
+      colors,
       backgroundColor: 'transparent',
       legend: {position: 'right', alignment: 'center'},
       chartArea: {left: 10, top: 20, width: '90%', height: '85%'},

@@ -194,11 +194,14 @@ export function generateTestResultStats(
     };
   });
 
-  const totalPass = dailyStats.reduce((sum, day) => sum + day.pass, 0);
-  const totalFail = dailyStats.reduce((sum, day) => sum + day.fail, 0);
-  const totalError = dailyStats.reduce((sum, day) => sum + day.error, 0);
-  const totalTimeout = dailyStats.reduce((sum, day) => sum + day.timeout, 0);
-  const totalOther = dailyStats.reduce((sum, day) => sum + day.other, 0);
+  const totalPass = dailyStats.reduce((sum, day) => sum + (day.pass ?? 0), 0);
+  const totalFail = dailyStats.reduce((sum, day) => sum + (day.fail ?? 0), 0);
+  const totalError = dailyStats.reduce((sum, day) => sum + (day.error ?? 0), 0);
+  const totalTimeout = dailyStats.reduce(
+    (sum, day) => sum + (day.timeout ?? 0),
+    0,
+  );
+  const totalOther = dailyStats.reduce((sum, day) => sum + (day.other ?? 0), 0);
 
   const totalTests =
     totalPass + totalFail + totalError + totalTimeout + totalOther;
