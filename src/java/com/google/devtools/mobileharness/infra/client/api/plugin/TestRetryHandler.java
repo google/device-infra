@@ -241,6 +241,12 @@ public class TestRetryHandler {
             testResult == TestResult.TIMEOUT
                 || cause.map(TestRetryHandler::isCustomerTestExecutionTimeout).orElse(false);
         if (retryOnTimeout || !isTimeout) {
+          currentTestInfo.log().atInfo().log(
+              "testResult: %s, retryOnTimeout: %s, isTimeout: %s, cause: %s",
+              testResult,
+              retryOnTimeout,
+              isTimeout,
+              cause.map(ExceptionDetail::toString).orElse("N/A"));
           retryReason = "TEST_" + testResult;
         }
       }
@@ -354,9 +360,9 @@ public class TestRetryHandler {
   }
 
   private static boolean isCustomerTestExecutionTimeout(ExceptionDetail detail) {
-    return ErrorModelConverter.toFlattenedExceptionDetail(detail)
-        .getErrorNameStackTrace()
-        .contains(BasicErrorId.CUSTOMER_TEST_EXECUTION_TIMEOUT_EXCEPTION_WRAPPER.name());
+    return ErrorModelConverter.getCriticalErrorId(detail)
+        .getName()
+        .equals(BasicErrorId.CUSTOMER_TEST_EXECUTION_TIMEOUT_EXCEPTION_WRAPPER.name());
   }
 
   private ImmutableList<TestInfo> getAllAttempts(JobInfo jobInfo, TestInfo currentTestInfo) {
