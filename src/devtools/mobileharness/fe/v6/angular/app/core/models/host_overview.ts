@@ -19,7 +19,7 @@ export type HostConnectivityState = 'RUNNING' | 'MISSING' | 'UNKNOWN';
  * Represents the data needed to render the Host Connectivity card.
  * Corresponds to HostConnectivityStatus in host_resources.proto.
  */
-export interface HostConnectivityStatus {
+export declare interface HostConnectivityStatus {
   /** The semantic state used by FE to determine styling (icon/color). */
   readonly state: HostConnectivityState;
   /** The display text for the state, e.g., "Running", "Missing". */
@@ -54,7 +54,7 @@ export type LabServerActivityState =
  * Represents the data needed to render Lab Server activity.
  * Corresponds to LabServerInfo.Activity in host_resources.proto.
  */
-export interface LabServerActivity {
+export declare interface LabServerActivity {
   /** The semantic state used by FE to determine styling (icon/color/spin). */
   readonly state: LabServerActivityState;
   /** The display text for the state, e.g., "Started", "Stopping". */
@@ -67,7 +67,7 @@ export interface LabServerActivity {
  * Represents the data needed to render the Lab Server card.
  * Corresponds to LabServerInfo in host_resources.proto.
  */
-export interface LabServerInfo {
+export declare interface LabServerInfo {
   /** Host connectivity status details. */
   readonly connectivity: HostConnectivityStatus;
   /**
@@ -92,7 +92,7 @@ export type DaemonServerState = 'RUNNING' | 'MISSING' | 'UNKNOWN';
  * Represents the data needed to render Daemon server status.
  * Corresponds to DaemonServerInfo.Status in host_resources.proto.
  */
-export interface DaemonServerStatus {
+export declare interface DaemonServerStatus {
   /** The semantic state used by FE to determine styling (icon/color). */
   readonly state: DaemonServerState;
   /** The display text for the state, e.g., "Running", "Missing". */
@@ -112,7 +112,7 @@ export interface DaemonServerStatus {
  * Represents the data needed to render the Daemon Server card.
  * Corresponds to DaemonServerInfo in host_resources.proto.
  */
-export interface DaemonServerInfo {
+export declare interface DaemonServerInfo {
   /** The status of the daemon server. */
   readonly status: DaemonServerStatus;
   /** The version of the daemon server software. */
@@ -123,7 +123,7 @@ export interface DaemonServerInfo {
  * Semantic state of the device health.
  * Frontend uses this to determine icon and color.
  */
-export interface DeviceHealthState {
+export declare interface DeviceHealthState {
   /** The semantic state used by FE to determine styling (icon/color). */
   readonly health: HealthState;
   /** The display text for the state, e.g., "In Service", "Out of Service". */
@@ -136,7 +136,7 @@ export interface DeviceHealthState {
  * A summary of a device connected to the host, for display in the device list.
  * Corresponds to DeviceSummary in host_resources.proto.
  */
-export interface DeviceSummary {
+export declare interface DeviceSummary {
   readonly id: string;
   readonly healthState: DeviceHealthState;
   readonly types: Array<{
@@ -172,7 +172,7 @@ export interface DeviceSummary {
  * overview section. This is the top-level interface for host overview data.
  * Corresponds to HostOverview in host_resources.proto.
  */
-export interface HostOverview {
+export declare interface HostOverview {
   /** The unique name (ID) of the host. */
   readonly hostName: string;
   /** The IP address of the host. */
@@ -221,7 +221,7 @@ export type IneligibilityReasonCode =
 /**
  * The eligibility result for a single device.
  */
-export interface DeviceEligibilityResult {
+export declare interface DeviceEligibilityResult {
   deviceId: string;
   /** Whether this specific device can be remotely controlled. */
   isEligible: boolean;
@@ -283,7 +283,7 @@ export enum EligibilityStatus {
  * Options for creating a remote control session, applicable only if
  * status is 'READY'.
  */
-export interface SessionOptions {
+export declare interface SessionOptions {
   /**
    * List of proxy types supported by ALL ELIGIBLE devices.
    */
@@ -302,7 +302,7 @@ export interface SessionOptions {
 /**
  * Response structure for checkRemoteControlEligibility API.
  */
-export interface CheckRemoteControlEligibilityResponse {
+export declare interface CheckRemoteControlEligibilityResponse {
   /**
    * The overall verdict dictating the frontend flow.
    */
@@ -324,7 +324,7 @@ export interface CheckRemoteControlEligibilityResponse {
 /**
  * Flash options for remote control.
  */
-export interface FlashOptions {
+export declare interface FlashOptions {
   branch: string;
   buildId: string;
   target: string;
@@ -333,7 +333,7 @@ export interface FlashOptions {
 /**
  * Configuration for controlling a single device within a batch request.
  */
-export interface DeviceRemoteControlConfig {
+export declare interface DeviceRemoteControlConfig {
   deviceId: string;
   runAs: string;
 }
@@ -341,7 +341,7 @@ export interface DeviceRemoteControlConfig {
 /**
  * Request for RemoteControlDevices API for multiple devices.
  */
-export interface RemoteControlDevicesRequest {
+export declare interface RemoteControlDevicesRequest {
   deviceConfigs: DeviceRemoteControlConfig[];
   durationSeconds: number;
   proxyType: DeviceProxyType;
@@ -353,7 +353,7 @@ export interface RemoteControlDevicesRequest {
 /**
  * Response for RemoteControlDevices API.
  */
-export interface RemoteControlDevicesResponse {
+export declare interface RemoteControlDevicesResponse {
   sessions: Array<{deviceId: string; sessionUrl: string}>;
 }
 

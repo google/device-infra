@@ -6,7 +6,7 @@
  * Represents the data for the Device Healthiness Statistics card.
  * Backend is responsible for fetching, filtering by date, and aggregating.
  */
-export interface HealthinessStats {
+export declare interface HealthinessStats {
   /** Time series data for daily healthiness breakdown. */
   dailyStats: DailyHealthiness[];
   /** Aggregated data over the selected period. */
@@ -16,7 +16,7 @@ export interface HealthinessStats {
 /**
  * Healthiness breakdown for a single day.
  */
-export interface DailyHealthiness {
+export declare interface DailyHealthiness {
   /** The date in YYYY-MM-DD format. */
   date: string;
   healthinessSummary: HealthinessSummary;
@@ -25,7 +25,7 @@ export interface DailyHealthiness {
 /**
  * Healthiness statistics summary over the selected period.
  */
-export interface HealthinessSummary {
+export declare interface HealthinessSummary {
   /** Total percentage of time the device was considered "In Service". */
   inServicePercent?: number;
   /** Total percentage of time the device was considered "Out of Service". */
@@ -56,7 +56,7 @@ export interface HealthinessSummary {
 /**
  * Represents the data for the Test Result Statistics card.
  */
-export interface TestResultStats {
+export declare interface TestResultStats {
   /** Time series data for daily test results. */
   dailyStats: DailyTestResults[];
   /** Aggregated data over the selected period. */
@@ -67,7 +67,7 @@ export interface TestResultStats {
  * Test results for a single day.
  * Values represent counts.
  */
-export interface DailyTestResults {
+export declare interface DailyTestResults {
   /** The date in YYYY-MM-DD format. */
   date: string;
   pass?: number;
@@ -80,7 +80,7 @@ export interface DailyTestResults {
 /**
  * Common statistics containing count and percentage.
  */
-export interface Stats {
+export declare interface Stats {
   count?: number;
   percent?: number;
 }
@@ -88,7 +88,7 @@ export interface Stats {
 /**
  * Common breakdown message containing category and stats.
  */
-export interface CategoryStats {
+export declare interface CategoryStats {
   category: string;
   stats: Stats;
 }
@@ -96,7 +96,7 @@ export interface CategoryStats {
 /**
  * Aggregated test result statistics over the selected period.
  */
-export interface AggregatedTestResults {
+export declare interface AggregatedTestResults {
   totalTests: number;
   completionStats: Stats;
   nonCompletionStats: Stats;
@@ -109,7 +109,7 @@ export interface AggregatedTestResults {
 /**
  * Represents the data for the Recovery Task Statistics card.
  */
-export interface RecoveryTaskStats {
+export declare interface RecoveryTaskStats {
   /** Time series data for daily recovery task outcomes. */
   dailyStats: DailyRecoveryTasks[];
   /** Aggregated data over the selected period. */
@@ -120,7 +120,7 @@ export interface RecoveryTaskStats {
  * Recovery task outcomes for a single day.
  * Values represent counts.
  */
-export interface DailyRecoveryTasks {
+export declare interface DailyRecoveryTasks {
   /** The date in YYYY-MM-DD format. */
   date: string;
   success: number;
@@ -130,7 +130,7 @@ export interface DailyRecoveryTasks {
 /**
  * Aggregated recovery task statistics over the selected period.
  */
-export interface AggregatedRecoveryTasks {
+export declare interface AggregatedRecoveryTasks {
   totalTasks: number;
   outcomeBreakdown: CategoryStats[];
 }

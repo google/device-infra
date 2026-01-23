@@ -8,7 +8,7 @@
  * Represents a single dimension name-value pair.
  * A device dimension is defined by a name and a corresponding value.
  */
-export interface DeviceDimension {
+export declare interface DeviceDimension {
   name: string;
   value: string;
 }
@@ -16,7 +16,7 @@ export interface DeviceDimension {
 /**
  * Defines who can control and use a device.
  */
-export interface PermissionInfo {
+export declare interface PermissionInfo {
   /**
    * List of users or groups who have full control over the device,
    * including changing its configuration.
@@ -32,7 +32,7 @@ export interface PermissionInfo {
 /**
  * Configuration for the device's default Wi-Fi network.
  */
-export interface WifiConfig {
+export declare interface WifiConfig {
   /**
    * Type of Wi-Fi configuration.
    * 'none': No default Wi-Fi is set.
@@ -51,7 +51,7 @@ export interface WifiConfig {
 /**
  * Settings related to device stability and reboot behavior during testing.
  */
-export interface StabilitySettings {
+export declare interface StabilitySettings {
   /**
    * The maximum number of consecutive test failures on this device
    * before the device is rebooted.
@@ -68,7 +68,7 @@ export interface StabilitySettings {
  * The core interface representing the complete device configuration displayed
  * in the UI.
  */
-export interface DeviceConfig {
+export declare interface DeviceConfig {
   permissions: PermissionInfo;
   wifi: WifiConfig;
   dimensions: {
@@ -89,7 +89,7 @@ export interface DeviceConfig {
 /**
  * The result object returned when fetching a device's configuration.
  */
-export interface GetDeviceConfigResult {
+export declare interface GetDeviceConfigResult {
   /** The device's configuration, or null if no config is set. */
   deviceConfig: DeviceConfig | null;
   /** True if the device inherits its base configuration from the host. */
@@ -101,7 +101,7 @@ export interface GetDeviceConfigResult {
 /**
  * The result object returned when checking device write permissions.
  */
-export interface CheckDeviceWritePermissionResult {
+export declare interface CheckDeviceWritePermissionResult {
   /** True if the current user has permission to edit the device config. */
   hasPermission: boolean;
   /** The username of the user for whom the permission was checked. */
@@ -112,7 +112,7 @@ export interface CheckDeviceWritePermissionResult {
  * The result object returned after attempting to update a device's
  * configuration.
  */
-export interface UpdateDeviceConfigResult {
+export declare interface UpdateDeviceConfigResult {
   /** True if the update operation was successful. */
   success: boolean;
   /** Details about the error if the update failed. */
@@ -142,7 +142,7 @@ export enum ConfigSection {
 /**
  * Interface for the request object used when updating a device's configuration.
  */
-export interface UpdateDeviceConfigRequest {
+export declare interface UpdateDeviceConfigRequest {
   deviceId: string;
   config: DeviceConfig;
   section: ConfigSection;

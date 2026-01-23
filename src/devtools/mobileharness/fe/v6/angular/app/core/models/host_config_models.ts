@@ -10,7 +10,7 @@ import {
 /**
  * Defines a principal (user or group) allowed to SSH as a specific login user.
  */
-export interface SshPrincipal {
+export declare interface SshPrincipal {
   loginUser: string; // The username on the host machine (e.g., 'root', 'mobileharness')
   principals: string[]; // List of users or MDB groups allowed to assume the loginUser role
 }
@@ -18,7 +18,7 @@ export interface SshPrincipal {
 /**
  * Permissions for the host.
  */
-export interface HostPermissions {
+export declare interface HostPermissions {
   hostAdmins: string[]; // Users/groups who can edit this host config
   sshAccess: SshPrincipal[]; // Defines SSH access rules. Will be [] if no rules are set.
 }
@@ -34,7 +34,7 @@ export type DeviceConfigMode =
 /**
  * Specifications for Maneki device detection.
  */
-export interface ManekiSpec {
+export declare interface ManekiSpec {
   type: string;
   macAddress: string;
 }
@@ -42,7 +42,7 @@ export interface ManekiSpec {
 /**
  * Settings for device discovery.
  */
-export interface DeviceDiscoverySettings {
+export declare interface DeviceDiscoverySettings {
   monitoredDeviceUuids: string[];
   testbedUuids: string[];
   miscDeviceUuids: string[];
@@ -59,7 +59,7 @@ export interface DeviceDiscoverySettings {
 /**
  * Represents a single host property key-value pair.
  */
-export interface HostProperty {
+export declare interface HostProperty {
   key: string;
   value: string;
 }
@@ -67,7 +67,7 @@ export interface HostProperty {
 /**
  * The main interface for host configuration.
  */
-export interface HostConfig {
+export declare interface HostConfig {
   permissions: HostPermissions;
   deviceConfigMode: DeviceConfigMode;
   deviceConfig?: DeviceConfig; // Optional to match JSON omission
@@ -78,7 +78,7 @@ export interface HostConfig {
 /**
  * Describes the editability of a visible part.
  */
-export interface Editability {
+export declare interface Editability {
   editable: boolean;
   // Message explaining why editable is false.
   reason?: string;
@@ -87,7 +87,7 @@ export interface Editability {
 /**
  * Represents the UI control status of a single configuration part.
  */
-export interface PartStatus {
+export declare interface PartStatus {
   // True if the part should be visible in the UI.
   visible: boolean;
   // Details about editability, only relevant and expected if visible is true.
@@ -97,7 +97,7 @@ export interface PartStatus {
 /**
  * Defines the UI status for the Host Properties section.
  */
-export interface HostPropertiesUiStatus {
+export declare interface HostPropertiesUiStatus {
   // Status of the Host Properties section as a whole.
   // visible: controls if the section is shown.
   // editability.editable: controls if the "Add Property" button is enabled.
@@ -113,7 +113,7 @@ export interface HostPropertiesUiStatus {
  * Defines which parts of the HostConfig are visible and editable in the Lab Console UI.
  * This is derived from the backend's management mode and host type.
  */
-export interface HostConfigUiStatus {
+export declare interface HostConfigUiStatus {
   // Corresponds to parts within the HOST_PERMISSIONS section
   hostAdmins: PartStatus;
   sshAccess: PartStatus;
@@ -134,7 +134,7 @@ export interface HostConfigUiStatus {
 /**
  * Result of fetching host configuration.
  */
-export interface GetHostConfigResult {
+export declare interface GetHostConfigResult {
   hostConfig?: HostConfig; // Optional as the whole config might be null
   uiStatus: HostConfigUiStatus;
 }
@@ -154,7 +154,7 @@ export enum HostConfigSection {
 /**
  * Defines the scope of a partial update.
  */
-export interface HostConfigUpdateScope {
+export declare interface HostConfigUpdateScope {
   section: HostConfigSection;
   deviceConfigSection?: DeviceConfigSection; // Relevant only if section is DEVICE_CONFIG
 }
@@ -162,14 +162,14 @@ export interface HostConfigUpdateScope {
 /**
  * Options for the update request.
  */
-export interface UpdateOptions {
+export declare interface UpdateOptions {
   overrideSelfLockout?: boolean;
 }
 
 /**
  * Request to update host configuration.
  */
-export interface UpdateHostConfigRequest {
+export declare interface UpdateHostConfigRequest {
   hostName: string;
   config: HostConfig;
   // If scope is omitted, it implies updating all editable parts of the HostConfig
@@ -181,7 +181,7 @@ export interface UpdateHostConfigRequest {
 /**
  * Result of updating host configuration.
  */
-export interface UpdateHostConfigResult {
+export declare interface UpdateHostConfigResult {
   success: boolean;
   error?: {
     code:
@@ -197,7 +197,7 @@ export interface UpdateHostConfigResult {
 /**
  * Result of checking host write permission.
  */
-export interface CheckHostWritePermissionResult {
+export declare interface CheckHostWritePermissionResult {
   hasPermission: boolean;
   userName?: string;
 }
