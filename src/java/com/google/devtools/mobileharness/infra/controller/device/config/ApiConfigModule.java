@@ -16,18 +16,28 @@
 
 package com.google.devtools.mobileharness.infra.controller.device.config;
 
+import com.google.devtools.mobileharness.infra.controller.device.DeviceIdManager;
 import com.google.devtools.mobileharness.shared.util.concurrent.ServiceModule;
+import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.multibindings.Multibinder;
+import java.time.Clock;
 
 /** Module for providing {@link ApiConfig}. */
 public final class ApiConfigModule extends AbstractModule {
   private final boolean hasDefaultSynced;
+  private final BasicDeviceConfigMerger basicDeviceConfigMerger;
 
   /** Constructs an {@link ApiConfigModule} with the given {@code hasDefaultSynced} value. */
   public ApiConfigModule(boolean hasDefaultSynced) {
+    this(hasDefaultSynced, new BasicDeviceConfigMerger() {});
+  }
+
+  public ApiConfigModule(
+      boolean hasDefaultSynced, BasicDeviceConfigMerger basicDeviceConfigMerger) {
     this.hasDefaultSynced = hasDefaultSynced;
+    this.basicDeviceConfigMerger = basicDeviceConfigMerger;
   }
 
   @Override
@@ -39,6 +49,10 @@ public final class ApiConfigModule extends AbstractModule {
 
   @Provides
   ApiConfig provideApiConfig() {
-    return ApiConfig.getInstance();
+    return new ApiConfigV5(
+        DeviceIdManager.getInstance(),
+        new SystemUtil(),
+        Clock.systemUTC(),
+        basicDeviceConfigMerger);
   }
 }

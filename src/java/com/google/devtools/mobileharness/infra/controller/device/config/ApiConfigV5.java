@@ -86,7 +86,11 @@ public class ApiConfigV5 implements ApiConfig {
 
     static {
       singleton =
-          new ApiConfigV5(DeviceIdManager.getInstance(), new SystemUtil(), Clock.systemUTC());
+          new ApiConfigV5(
+              DeviceIdManager.getInstance(),
+              new SystemUtil(),
+              Clock.systemUTC(),
+              new BasicDeviceConfigMerger() {});
     }
   }
 
@@ -94,6 +98,7 @@ public class ApiConfigV5 implements ApiConfig {
     return SingletonHolder.singleton;
   }
 
+  private final BasicDeviceConfigMerger basicDeviceConfigMerger;
   private final DeviceIdManager deviceIdManager;
   private final SystemUtil systemUtil;
   private final Clock clock;
@@ -112,10 +117,15 @@ public class ApiConfigV5 implements ApiConfig {
   private boolean isDefaultSynced = true;
 
   @VisibleForTesting
-  ApiConfigV5(DeviceIdManager deviceIdManager, SystemUtil systemUtil, Clock clock) {
+  ApiConfigV5(
+      DeviceIdManager deviceIdManager,
+      SystemUtil systemUtil,
+      Clock clock,
+      BasicDeviceConfigMerger basicDeviceConfigMerger) {
     this.deviceIdManager = deviceIdManager;
     this.systemUtil = systemUtil;
     this.clock = clock;
+    this.basicDeviceConfigMerger = basicDeviceConfigMerger;
   }
 
   @Override
@@ -162,22 +172,12 @@ public class ApiConfigV5 implements ApiConfig {
 
   @Override
   public List<String> getOwners(String deviceControlId) {
-    Set<String> owners = new HashSet<>(getBasicDeviceConfig(deviceControlId).getOwnerList());
-    DeviceConfig tenantConfig = tenantDeviceConfigs.get(deviceControlId);
-    if (tenantConfig != null) {
-      owners.addAll(tenantConfig.getBasicConfig().getOwnerList());
-    }
-    return new ArrayList<>(owners);
+    return getBasicDeviceConfig(deviceControlId).getOwnerList();
   }
 
   @Override
   public List<String> getExecutors(String deviceControlId) {
-    Set<String> executors = new HashSet<>(getBasicDeviceConfig(deviceControlId).getExecutorList());
-    DeviceConfig tenantConfig = tenantDeviceConfigs.get(deviceControlId);
-    if (tenantConfig != null) {
-      executors.addAll(tenantConfig.getBasicConfig().getExecutorList());
-    }
-    return new ArrayList<>(executors);
+    return getBasicDeviceConfig(deviceControlId).getExecutorList();
   }
 
   @Override
@@ -441,6 +441,22 @@ public class ApiConfigV5 implements ApiConfig {
   }
 
   private BasicDeviceConfig getBasicDeviceConfig(String deviceControlId) {
+    if (basicDeviceConfigMerger.enabled() && tenantDeviceConfigs.containsKey(deviceControlId)) {
+      BasicDeviceConfigSet.Builder basicDeviceConfigSetBuilder = BasicDeviceConfigSet.builder();
+      if (labConfig.hasDefaultDeviceConfig()) {
+        basicDeviceConfigSetBuilder.setLabConfig(labConfig.getDefaultDeviceConfig());
+      }
+      if (tenantDeviceConfigs.containsKey(deviceControlId)) {
+        basicDeviceConfigSetBuilder.setTenantConfig(
+            tenantDeviceConfigs.get(deviceControlId).getBasicConfig());
+      }
+      if (deviceConfigs.containsKey(deviceControlId)) {
+        basicDeviceConfigSetBuilder.setDeviceConfig(
+            deviceConfigs.get(deviceControlId).getBasicConfig());
+      }
+      return basicDeviceConfigMerger.merge(basicDeviceConfigSetBuilder.build());
+    }
+    // Legacy implementation below
     DeviceConfig deviceConfig = deviceConfigs.get(deviceControlId);
     Optional<DeviceId> deviceId = deviceIdManager.getDeviceIdFromControlId(deviceControlId);
 
