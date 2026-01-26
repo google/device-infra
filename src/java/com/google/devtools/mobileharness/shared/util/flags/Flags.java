@@ -653,6 +653,14 @@ public class Flags {
       converter = Flag.IntegerConverter.class)
   public Flag<Integer> configServiceGrpcPort = configServiceGrpcPortDefault;
 
+  private static final Flag<String> configServiceGrpcTargetDefault = Flag.value("localhost:8081");
+
+  @com.beust.jcommander.Parameter(
+      names = "--config_service_grpc_target",
+      description = "gRPC target of the config service.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> configServiceGrpcTarget = configServiceGrpcTargetDefault;
+
   private static final Flag<String> configServiceJdbcUrlDefault =
       Flag.value("jdbc:mysql:///ats_db");
 
@@ -1104,6 +1112,14 @@ public class Flags {
               + " it to false in remote labs. Default is true.",
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableEmulatorDetection = enableEmulatorDetectionDefault;
+
+  private static final Flag<Boolean> enableExternalConfigServiceDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enable_external_config_service",
+      description = "Whether to enable external config service. Default is false.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableExternalConfigService = enableExternalConfigServiceDefault;
 
   private static final Flag<Boolean> enableExternalMasterServerDefault = Flag.value(false);
 

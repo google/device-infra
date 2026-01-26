@@ -39,3 +39,21 @@ java_library(
         "@maven//:com_google_inject_guice",
     ],
 )
+
+java_library(
+    name = "device_config_grpc_stub_module",
+    srcs = ["DeviceConfigGrpcStubModule.java"],
+    deps = [
+        ":device_config_grpc_stub",
+        "//src/devtools/mobileharness/api/deviceconfig/proto:device_config_service_grpc",
+        "//src/java/com/google/devtools/mobileharness/service/deviceconfig/rpc/stub:annotation",
+        "//src/java/com/google/devtools/mobileharness/service/deviceconfig/rpc/stub:device_config_stub",
+        "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:channel_factory",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "@grpc-java//core",
+        "@grpc-java//stub",
+        "@maven//:com_google_guava_guava",
+        "@maven//:com_google_inject_guice",
+    ],
+)
