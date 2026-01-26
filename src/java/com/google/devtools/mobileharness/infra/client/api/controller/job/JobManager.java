@@ -39,6 +39,7 @@ import com.google.devtools.mobileharness.infra.client.api.plugin.TestRetryHandle
 import com.google.devtools.mobileharness.infra.controller.messaging.MessageSender;
 import com.google.devtools.mobileharness.infra.controller.messaging.MessageSenderFinder;
 import com.google.devtools.mobileharness.infra.controller.test.event.TestExecutionEndedEvent;
+import com.google.devtools.mobileharness.shared.context.InvocationContext;
 import com.google.devtools.mobileharness.shared.util.comm.messaging.poster.TestMessagePoster;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
@@ -151,7 +152,10 @@ public class JobManager implements Runnable, MessageSenderFinder {
           jobId,
           JobRunnerAndFuture.of(
               jobRunner,
-              jobThreadPool.submit(threadRenaming(jobRunner, () -> "job-runner-" + jobId))));
+              jobThreadPool.submit(
+                  threadRenaming(
+                      InvocationContext.propagateContext(jobRunner),
+                      () -> "job-runner-" + jobId))));
 
       jobInfo.log().atInfo().alsoTo(logger).log("Started job %s", jobId);
     }
