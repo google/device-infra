@@ -95,6 +95,14 @@ public final class JobInfoCreator {
 
   @VisibleForTesting static final String ANDROID_REAL_DEVICE = "AndroidRealDevice";
 
+  @VisibleForTesting
+  static final ImmutableList<String> ORIGINAL_SUBMIT_TIMESTAMP_ALLOWLIST_USERS =
+      ImmutableList.of(
+          "cloud-testservice-test",
+          "cloud-testservice-autopush",
+          "cloud-testservice-staging",
+          "cloud-testservice");
+
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   /** Prefix of a file in scoped spec. */
@@ -147,9 +155,15 @@ public final class JobInfoCreator {
             .setGenFileDir(PathUtil.join(jobDir, "gen"))
             .setTimeout(
                 SharedPoolJobUtil.maybeExtendStartTimeout(jobConfig.getTimeout(), jobConfig))
-            .setOriginalSubmitTime(
-                originalSubmitTimestamp != null ? toJavaInstant(originalSubmitTimestamp) : null)
             .setRepeat(jobConfig.getRepeat());
+    if (originalSubmitTimestamp != null) {
+      if (ORIGINAL_SUBMIT_TIMESTAMP_ALLOWLIST_USERS.contains(actualUser)) {
+        jobSettingBuilder.setOriginalSubmitTime(toJavaInstant(originalSubmitTimestamp));
+      } else {
+        logger.atWarning().log(
+            "Cannot set original submit time for user not in allowlist: %s", actualUser);
+      }
+    }
     if (jobConfig.hasRetry()) {
       jobSettingBuilder.setRetry(jobConfig.getRetry());
     } else {
