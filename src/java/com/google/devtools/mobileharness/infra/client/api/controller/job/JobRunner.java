@@ -31,6 +31,7 @@ import com.google.common.base.Joiner.MapJoiner;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.ListMultimap;
@@ -74,6 +75,10 @@ import com.google.devtools.mobileharness.infra.controller.test.manager.DirectTes
 import com.google.devtools.mobileharness.infra.controller.test.manager.TestManager;
 import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberExceptionLoggingHandler;
 import com.google.devtools.mobileharness.shared.constant.closeable.MobileHarnessAutoCloseable;
+import com.google.devtools.mobileharness.shared.context.InvocationContext.ContextScope;
+import com.google.devtools.mobileharness.shared.context.InvocationContext.InvocationInfo;
+import com.google.devtools.mobileharness.shared.context.InvocationContext.InvocationType;
+import com.google.devtools.mobileharness.shared.context.InvocationContextExecutors;
 import com.google.devtools.mobileharness.shared.util.algorithm.GraphMatching;
 import com.google.devtools.mobileharness.shared.util.comm.messaging.poster.TestMessagePoster;
 import com.google.devtools.mobileharness.shared.util.concurrent.Callables;
@@ -264,7 +269,9 @@ public class JobRunner implements Runnable {
         deviceAllocator,
         execMode,
         new TestManager<>(),
-        ThreadPools.createStandardThreadPool("job-runner-thread-pool"),
+        InvocationContextExecutors.propagatingContext(
+            ThreadPools.createStandardThreadPool("job-runner-thread-pool"),
+            ListeningExecutorService.class),
         new LocalFileUtil(),
         Clock.systemUTC(),
         Sleeper.defaultSleeper(),
@@ -419,6 +426,16 @@ public class JobRunner implements Runnable {
 
   @Override
   public void run() {
+    try (ContextScope ignored =
+        new ContextScope(
+            ImmutableMap.of(
+                InvocationType.OMNILAB_JOB,
+                InvocationInfo.sameDisplayId(jobInfo.locator().getId())))) {
+      runInternal();
+    }
+  }
+
+  private void runInternal() {
     running = true;
     jobInfo.status().set(TestStatus.RUNNING);
     Throwable jobError = null;
