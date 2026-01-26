@@ -1,0 +1,303 @@
+<div class="rc-modal-container" [formGroup]="form">
+  <!-- Header -->
+  <div class="modal-header">
+    <div>
+      <h3>Remote Control</h3>
+      <p>Configure session for {{ deviceList().length }} device{{ deviceList().length > 1 ? 's' : '' }}</p>
+    </div>
+    <button mat-icon-button mat-dialog-close class="close-button">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <!-- Body -->
+  <mat-dialog-content class="modal-body custom-scrollbar">
+    <!-- Device List Section -->
+    <section>
+      <div class="section-header">
+        <h4>
+          <span class="indicator"></span>
+          Target Devices
+          <span class="badge">{{ deviceList().length }}</span>
+        </h4>
+
+        <!-- Global Selector -->
+        @if (globalRunAsOptions().length > 0) {
+          <div class="global-selector" [class.mixed]="form.get('globalRunAs')?.value === ''">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <div matPrefix class="prefix-wrapper">
+                <mat-icon>group_work</mat-icon>
+                <label>All Devices RUN AS:</label>
+              </div>
+              <mat-select formControlName="globalRunAs" [matTooltip]="form.get('globalRunAs')?.value">
+                <mat-option value="" disabled class="hidden-option">Mixed</mat-option>
+                @for (opt of globalRunAsOptions(); track opt) {
+                  <mat-option [value]="opt">{{ opt }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+          </div>
+        } @else {
+          <div class="no-common-identity" title="No common identity available across all selected devices">
+            <mat-icon>group_off</mat-icon>
+            <span>No Common Identity</span>
+          </div>
+        }
+      </div>
+
+      <div class="device-grid" [class]="deviceGridClass">
+        @for (item of deviceList(); track item.summary.id; let i = $index) {
+          <div class="device-card" [class.no-access]="!item.hasAccess">
+            @if (!item.hasAccess) {
+              <button class="remove-btn" (click)="removeDevice(i)" title="Remove device">
+                <mat-icon>close</mat-icon>
+              </button>
+            }
+
+            <div class="card-header">
+              <div class="icon-wrapper">
+                <mat-icon>smartphone</mat-icon>
+                <!-- Simplified status dot -->
+                <div class="status-dot"></div>
+              </div>
+              <div class="info">
+                <h5 [title]="item.summary.id">{{ item.summary.id }}</h5>
+                <p [title]="item.summary.model">{{ item.summary.model || 'Unknown' }}</p>
+              </div>
+            </div>
+
+            <div class="card-action" [formGroup]="getDeviceControl(i)">
+              @if (item.hasAccess) {
+                @if (item.validIdentities.length === 1) {
+                  <div class="static-identity">
+                    <mat-icon>person</mat-icon>
+                    <span>Run as: <strong [matTooltip]="item.validIdentities[0]">{{ item.validIdentities[0] }}</strong></span>
+                  </div>
+                } @else {
+                  <div class="identity-select-wrapper">
+                    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                      <div matPrefix class="label">
+                        <mat-icon>person</mat-icon>
+                        <span>Run as:</span>
+                      </div>
+                      <mat-select formControlName="runAs" [matTooltip]="getDeviceControl(i).get('runAs')?.value">
+                        @for (uid of item.validIdentities; track uid) {
+                          <mat-option [value]="uid">{{ uid }}</mat-option>
+                        }
+                      </mat-select>
+                    </mat-form-field>
+                  </div>
+                }
+              } @else {
+                <div class="access-denied-badge">
+                  <mat-icon>block</mat-icon> Access Denied
+                </div>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    </section>
+
+    <!-- Duration Section -->
+    <section>
+      <div class="section-label-row">
+        <label>
+          <mat-icon>timer</mat-icon>
+          Duration
+          <mat-icon class="help-icon" [matTooltip]="'Session duration. Max ' + maxDurationHours + 'h.'">help_outline</mat-icon>
+        </label>
+        <div class="end-time-badge">{{ endTime() }}</div>
+      </div>
+
+      <div class="duration-box">
+        <div class="slider-row">
+          <mat-slider min="10" [max]="maxDurationHours * 60" step="10" class="slider">
+            <input matSliderThumb formControlName="durationMinutes">
+          </mat-slider>
+
+          <div class="inputs">
+            <div class="input-wrapper">
+              <input type="number" formControlName="durationH" min="0" [max]="maxDurationHours">
+              <span>h</span>
+            </div>
+            <span class="colon">:</span>
+            <div class="input-wrapper">
+              <input type="number" formControlName="durationM" min="0" max="59">
+              <span>m</span>
+            </div>
+          </div>
+        </div>
+
+        <mat-chip-listbox
+          class="chips-row"
+          hideSingleSelectionIndicator
+          (change)="setDuration($event.value)">
+          @for (chip of durationChips; track chip.value) {
+            <mat-chip-option
+              #chipRef
+              [selected]="form.get('durationMinutes')?.value === chip.value"
+              [value]="chip.value"
+              (click)="toggleChip(chipRef, $event)">
+              {{ chip.label }}
+            </mat-chip-option>
+          }
+        </mat-chip-listbox>
+
+        <div class="duration-warning">
+          <mat-icon>info</mat-icon>
+          <span>During the session, the device(s) will be marked as <strong>BUSY</strong> and unavailable for automated tests.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Flash Section -->
+    <section class="flash-section" [class.active]="form.get('enableFlash')?.value">
+      <div class="flash-header">
+        <div class="header-left-group">
+          <div class="header-icon-circle">
+            <mat-icon>system_update</mat-icon>
+          </div>
+          <div class="header-text-group">
+            <span class="header-title">Flash Device</span>
+            <span class="header-subtitle">Install a build before starting</span>
+          </div>
+        </div>
+        <toggle-switch formControlName="enableFlash"></toggle-switch>
+      </div>
+
+      @if (form.get('enableFlash')?.value) {
+        <div class="flash-fields">
+          <div class="row">
+            <div class="flash-field-group">
+              <label class="field-label" id="branch-label">
+                Branch Name <span class="required">*</span>
+                <mat-icon class="help-icon" matTooltip="Android build branch name, e.g., git_main.">help_outline</mat-icon>
+              </label>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-icon matPrefix>fork_right</mat-icon>
+                <input matInput formControlName="flashBranch" placeholder="git_main" aria-labelledby="branch-label">
+                @if (form.get('flashBranch')?.invalid && form.get('flashBranch')?.touched) {
+                  <mat-error>Branch is required</mat-error>
+                }
+              </mat-form-field>
+            </div>
+
+            <div class="flash-field-group">
+              <label class="field-label" id="build-id-label">
+                Build ID <span class="required">*</span>
+                <mat-icon class="help-icon" matTooltip="The specific build number to flash, e.g., 12345678 or P12345678.">help_outline</mat-icon>
+              </label>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-icon matPrefix>numbers</mat-icon>
+                <input matInput formControlName="flashBuildId" placeholder="12345678" aria-labelledby="build-id-label">
+                @if (form.get('flashBuildId')?.invalid && form.get('flashBuildId')?.touched) {
+                  <mat-error>Build ID is required</mat-error>
+                }
+              </mat-form-field>
+            </div>
+          </div>
+
+          <div class="flash-field-group full-width">
+            <label class="field-label" id="target-label">
+              Target <span class="required">*</span>
+              <mat-icon class="help-icon" matTooltip="The build target name, e.g., husky-next-userdebug.">help_outline</mat-icon>
+            </label>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="full-width">
+              <mat-icon matPrefix>track_changes</mat-icon>
+              <input matInput formControlName="flashTarget" placeholder="product-userdebug" aria-labelledby="target-label">
+              @if (form.get('flashTarget')?.invalid && form.get('flashTarget')?.touched) {
+                <mat-error>Target is required</mat-error>
+              }
+            </mat-form-field>
+          </div>
+        </div>
+      }
+    </section>
+
+    <!-- Advanced Settings -->
+    <section class="advanced-section">
+      <div class="advanced-header" role="button" tabindex="0" (click)="showAdvancedSettings.set(!showAdvancedSettings())" (keydown.enter)="showAdvancedSettings.set(!showAdvancedSettings())" (keydown.space)="showAdvancedSettings.set(!showAdvancedSettings())">
+        <div class="header-left-group">
+          <div class="header-icon-circle">
+            <mat-icon>tune</mat-icon>
+          </div>
+          <div class="header-text-group">
+            <span class="header-title">Advanced Settings</span>
+            <span class="header-subtitle">{{ getSettingsSummary() }}</span>
+          </div>
+        </div>
+        <mat-icon class="chevron" [class.rotated]="showAdvancedSettings()">expand_more</mat-icon>
+      </div>
+
+      @if (showAdvancedSettings()) {
+        <div class="advanced-panel">
+          <div class="field-group">
+            <div class="field-label-wrapper">
+              <label class="field-label">
+                Connection Proxy
+              </label>
+            </div>
+            <mat-form-field appearance="outline" class="proxy-select" subscriptSizing="dynamic">
+              <mat-icon matPrefix>settings_ethernet</mat-icon>
+              <mat-select formControlName="proxyType">
+                <mat-option [value]="0">Auto (Default)</mat-option>
+                @for (mode of commonProxyModes(); track mode) {
+                  <mat-option [value]="mode">{{ PROXY_TYPE_LABELS[mode] }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="row">
+            <div class="field">
+              <div class="field-label-wrapper">
+                <label class="field-label">
+                  Resolution
+                  <mat-icon class="help-icon" matTooltip="Control video quality. 'Default' uses the device's native screen resolution.">help_outline</mat-icon>
+                </label>
+              </div>
+              <mat-button-toggle-group formControlName="videoResolution" hideSingleSelectionIndicator>
+                <mat-button-toggle value="default">Default (Native)</mat-button-toggle>
+                <mat-button-toggle value="high">High</mat-button-toggle>
+                <mat-button-toggle value="low">Low</mat-button-toggle>
+              </mat-button-toggle-group>
+            </div>
+
+            <div class="field">
+              <div class="field-label-wrapper">
+                <label class="field-label">
+                  Max Video Size
+                  <mat-icon class="help-icon" matTooltip="Limits max video dimension (width/height) to save bandwidth.">help_outline</mat-icon>
+                </label>
+              </div>
+              <div class="limit-video-box">
+                <mat-icon>compress</mat-icon>
+                <span class="limit-label">Limit to 1024px</span>
+                <toggle-switch formControlName="limitVideoSize"></toggle-switch>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+    </section>
+
+  </mat-dialog-content>
+
+  <!-- Footer -->
+  <mat-dialog-actions class="modal-footer">
+    <a href="http://go/acid-real-devices" target="_blank" class="help-link">
+      <mat-icon>help</mat-icon> Need Help?
+    </a>
+    <div class="buttons">
+      <button mat-button mat-dialog-close>Cancel</button>
+      <button mat-flat-button color="primary" (click)="startSession()" [disabled]="form.invalid">
+        {{ form.get('enableFlash')?.value ? 'Flash & Start' : 'Start Session' }}
+      </button>
+    </div>
+  </mat-dialog-actions>
+</div>
+
+

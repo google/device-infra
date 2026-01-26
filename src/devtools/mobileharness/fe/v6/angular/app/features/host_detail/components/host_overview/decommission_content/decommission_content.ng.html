@@ -1,0 +1,16 @@
+<div class="decommission-box">
+  <p class="text-gray-600">This will <b>permanently remove</b> the selected devices from the Lab Console inventory. This action cannot be undone.</p>
+  <div class="items-list-container">
+    <p class="items-list-label">
+        <span class="material-icons info-icon-small">info</span> Devices to be decommissioned:
+    </p>
+    <div class="items-scroll-container custom-scrollbar">
+      <ul class="items-list">
+        @for(d of devices; track d.id) {
+          <li class="item-row"><span class="item-dot"></span>{{d.id}}</li>
+        }
+      </ul>
+    </div>
+  </div>
+  <p class="note-text text-gray-500">If these devices connect again later, they will be discovered as new devices.</p>
+</div>

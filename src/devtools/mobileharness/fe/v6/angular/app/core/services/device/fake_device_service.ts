@@ -283,8 +283,6 @@ export class FakeDeviceService extends DeviceService {
             : !isAndroid
               ? 'Only for Android devices'
               : 'Device must be IDLE for remote control',
-          runAsOptions: [{value: 'test', label: 'test', isDefault: true}],
-          defaultRunAs: 'test',
         },
         quarantine: {
           enabled: true,

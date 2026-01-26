@@ -1,0 +1,40 @@
+@if(capabilitiesList && capabilitiesList.length > 0) {
+  <div class="amber-box">
+    <h4><span class="material-icons">link_off</span> No Common Connection Method</h4>
+    <p>
+      The selected devices do not share a supported remote control protocol.
+      Multi-device control requires all devices to support at least one common method (e.g., all support SSH).
+    </p>
+  </div>
+  <div class="capabilities-list">
+      <h4>Device Capabilities</h4>
+      <div class="device-list-box custom-scrollbar">
+          @for(item of capabilitiesList; track item.id) {
+            <div class="device-row-col">
+                <span class="device-id">{{item.id}}</span>
+                <span class="capabilities">
+                    <span class="material-icons">settings_ethernet</span>
+                    Supports: {{item.modes}}
+                </span>
+            </div>
+          }
+      </div>
+  </div>
+} @else {
+  @if(isTestbed) {
+    <div class="amber-box">
+      <h4><span class="material-icons">info</span> Testbed Device Selected</h4>
+      <p>
+        Remote control cannot be initiated for the selected Testbed device directly.
+        Users need to make sure subdevices are supported by ACID.
+      </p>
+    </div>
+  } @else {
+    <div class="amber-box">
+      <h4><span class="material-icons">link_off</span> No Supported Connection Method</h4>
+      <p>
+        Device <b>{{device?.id}}</b> does not support any compatible remote control protocols (e.g., ADB, SSH) or relies on a proxy type that is not currently enabled.
+      </p>
+    </div>
+  }
+}

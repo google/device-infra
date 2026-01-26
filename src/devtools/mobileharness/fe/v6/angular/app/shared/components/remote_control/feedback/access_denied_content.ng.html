@@ -1,0 +1,37 @@
+<div class="access-denied-box">
+  @if (devices.length === 1) {
+    <p class="message">
+      You do not have permission to remote control device <code class="device-id">{{ devices[0].id }}</code>.
+    </p>
+  } @else {
+    <p class="message">
+      You lack the requisite permissions to control any of the <strong>{{ devices.length }}</strong> selected devices.
+    </p>
+  }
+
+  <div class="error-banner">
+    <mat-icon>block</mat-icon>
+    <div class="banner-content">
+      <span class="banner-title">Permission Required</span>
+      <span class="banner-desc">No valid identity found in <strong>owners</strong> or <strong>executors</strong> list.</span>
+    </div>
+  </div>
+
+  <p class="instruction">
+    To gain access, please contact the device owner to add your username or group to the device configuration.
+  </p>
+
+  @if (devices.length > 1) {
+    <div class="device-list-preview">
+      <span class="list-label">Affected Devices:</span>
+      <div class="device-chips">
+        @for (device of devices | slice:0:5; track device.id) {
+          <span class="device-chip">{{ device.id }}</span>
+        }
+        @if (devices.length > 5) {
+          <span class="more-chip">+{{ devices.length - 5 }} more</span>
+        }
+      </div>
+    </div>
+  }
+</div>

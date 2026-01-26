@@ -7,7 +7,7 @@ import {DeviceConfig} from '../../../models/device_config_models';
 import {DeviceOverview} from '../../../models/device_overview';
 import {MockDeviceScenario} from '../models';
 
-const DEVICE_ID = 'IDLE_BUT_QUARANTINED';
+const DEVICE_ID = 'IDLE_BUT_QUARANTINED-NO-PERM';
 
 const OVERVIEW: DeviceOverview = {
   id: DEVICE_ID,

@@ -253,20 +253,6 @@ message FlashActionButtonState {
   FlashButtonParams params = 2;
 }
 
-// Option for runAs in remote control.
-message RunAsOption {
-  string value = 1;
-  string label = 2;
-  bool is_default = 3;
-}
-
-// State of remote control action button.
-message RemoteControlButtonState {
-  ActionButtonState state = 1;
-  repeated RunAsOption run_as_options = 2;
-  string default_run_as = 3;
-}
-
 // Quarantine information of device.
 message QuarantineInfo {
   bool is_quarantined = 1;
@@ -278,7 +264,7 @@ message DeviceActions {
   ActionButtonState screenshot = 1;
   ActionButtonState logcat = 2;
   FlashActionButtonState flash = 3;
-  RemoteControlButtonState remote_control = 4;
+  ActionButtonState remote_control = 4;
   ActionButtonState quarantine = 5;
 }
 

@@ -18,12 +18,15 @@ import {
   DeviceActions,
   LogcatDialogData,
   QuarantineDialogData,
-  RemoteControlDialogData,
   ScreenshotDialogData,
 } from '../../../../core/models/device_action';
 import type {DeviceOverviewPageData} from '../../../../core/models/device_overview';
+import {
+  DeviceSummary,
+} from '../../../../core/models/host_overview';
 import {DEVICE_SERVICE} from '../../../../core/services/device/device_service';
 import {ConfirmDialog} from '../../../../shared/components/confirm_dialog/confirm_dialog';
+import {RemoteControlService} from '../../../../shared/services/remote_control_service';
 import {SnackBarService} from '../../../../shared/services/snackbar_service';
 import {DeviceConfig} from '../device_config/device_config';
 import {DeviceEmpty} from '../device_config/device_empty/device_empty';
@@ -31,7 +34,6 @@ import {DeviceWizard} from '../device_config/device_wizard/device_wizard';
 import {FlashDialog} from '../flash_dialog/flash_dialog';
 import {LogcatDialog} from '../logcat_dialog/logcat_dialog';
 import {QuarantineDialog} from '../quarantine_dialog/quarantine_dialog';
-import {RemoteControlDialog} from '../remote_control_dialog/remote_control_dialog';
 import {ScreenshotDialog} from '../screenshot_dialog/screenshot_dialog';
 
 /**
@@ -47,6 +49,7 @@ import {ScreenshotDialog} from '../screenshot_dialog/screenshot_dialog';
 })
 export class DeviceActionBar {
   private readonly deviceService = inject(DEVICE_SERVICE);
+  private readonly remoteControlService = inject(RemoteControlService);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(SnackBarService);
 
@@ -55,6 +58,7 @@ export class DeviceActionBar {
   takingScreenshot = signal(false);
   gettingLogcat = signal(false);
   unquarantining = signal(false);
+  checkingRemoteControl = signal(false);
 
   get actions() {
     return this.pageData.headerInfo.actions;
@@ -173,15 +177,25 @@ export class DeviceActionBar {
   }
 
   remoteControl(): void {
-    const opts = this.actions?.remoteControl;
-    this.dialog.open(RemoteControlDialog, {
-      data: {
-        deviceId: this.deviceId,
-        hostName: this.hostName,
-        runAsOptions: opts?.runAsOptions || [],
-        defaultRunAs: opts?.defaultRunAs || '',
-      } as RemoteControlDialogData,
-    });
+    const overview = this.pageData.overview;
+    const deviceSummary: DeviceSummary = {
+      id: overview.id,
+      healthState: {
+        health: overview.healthAndActivity.state,
+        title: overview.healthAndActivity.title,
+        tooltip: overview.healthAndActivity.subtitle || '',
+      },
+      types: overview.healthAndActivity.deviceTypes,
+      deviceStatus: overview.healthAndActivity.deviceStatus,
+      label: '',
+      requiredDims: '',
+      model: overview.basicInfo.model || '',
+      version: overview.basicInfo.version || '',
+      subDevices: overview.subDevices,
+    };
+    this.remoteControlService.startRemoteControl(this.hostName, [
+      deviceSummary,
+    ]);
   }
 
   flashDevice(): void {

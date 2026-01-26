@@ -34,23 +34,6 @@ export declare interface FlashActionButtonState extends ActionButtonState {
 }
 
 /**
- * Option for runAs in remote control.
- */
-export declare interface RunAsOption {
-  value: string;
-  label: string;
-  isDefault: boolean;
-}
-
-/**
- * State of remote control action button.
- */
-export declare interface RemoteControlButtonState extends ActionButtonState {
-  runAsOptions: RunAsOption[];
-  defaultRunAs: string;
-}
-
-/**
  * Quarantine information of device.
  */
 export declare interface QuarantineInfo {
@@ -66,7 +49,7 @@ export declare interface DeviceActions {
   screenshot: ActionButtonState;
   logcat: ActionButtonState;
   flash: FlashActionButtonState;
-  remoteControl: RemoteControlButtonState;
+  remoteControl: ActionButtonState;
   quarantine: ActionButtonState;
   configuration: ActionButtonState;
 }
@@ -171,12 +154,4 @@ export declare interface QuarantineDialogData {
   title: string;
   description: string;
   confirmText: string;
-}
-
-/** Data for remote control dialog. */
-export declare interface RemoteControlDialogData {
-  hostName: string;
-  deviceId: string;
-  runAsOptions: RunAsOption[];
-  defaultRunAs: string;
 }

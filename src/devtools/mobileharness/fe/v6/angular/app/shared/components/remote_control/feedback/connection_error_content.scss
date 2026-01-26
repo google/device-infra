@@ -1,0 +1,92 @@
+@use '@angular/material' as mat;
+@use '../../../styles/common';
+
+.amber-box {
+  background-color: rgba(#fffbeb, 0.5); // bg-amber-50/50
+  border: 1px solid #fef3c7; // border-amber-100
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin-bottom: 1.25rem;
+
+  h4 {
+    color: #78350f; // text-amber-900
+    font-weight: 600;
+    font-size: 0.875rem;
+    margin: 0 0 0.5rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    mat-icon {
+      color: #d97706; // text-amber-600
+      font-size: 1rem;
+      height: 1rem;
+      width: 1rem;
+    }
+  }
+
+  p {
+    font-size: 0.875rem;
+    color: #92400e; // text-amber-800
+    line-height: 1.5;
+    margin-bottom: 0;
+    max-width: none; // Reset max-width for this p
+  }
+}
+
+.capabilities-list {
+  h4 {
+    color: #111827; // text-gray-900
+    font-weight: 600;
+    font-size: 0.875rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .device-list-box {
+    border: 1px solid #e5e7eb; // border-gray-200
+    border-radius: 0.5rem;
+    background-color: white;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); // shadow-sm
+    max-height: 12rem;
+    overflow-y: auto;
+
+    @include common.shared-scrollbar-style();
+  }
+
+  .device-row-col {
+    display: flex;
+    flex-direction: column;
+    padding: 0.75rem;
+    border-bottom: 1px solid #f3f4f6;
+    transition: background-color 0.2s;
+
+    &:last-child {
+      border-bottom: 0;
+    }
+    &:hover {
+      background-color: #f9fafb;
+    }
+
+    .device-id {
+      font-family: 'Roboto Mono', monospace;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #374151;
+    }
+
+    .capabilities {
+      font-size: 0.75rem;
+      color: #6b7280;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+
+      mat-icon,
+      .material-icons {
+        font-size: 0.875rem;
+        height: 0.875rem;
+        width: 0.875rem;
+        color: #9ca3af;
+      }
+    }
+  }
+}

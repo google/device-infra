@@ -5,7 +5,7 @@ import {
   inject,
   OnInit,
   signal,
-  TemplateRef,
+  Type,
 } from '@angular/core';
 import {MatButtonModule} from '@angular/material/button';
 import {
@@ -39,8 +39,8 @@ export class ConfirmDialog implements OnInit {
   readonly data = inject<{
     title: string;
     content?: string;
-    contentTemplate?: TemplateRef<{}>;
-    contentTemplateContext?: {};
+    contentComponent?: Type<{}>;
+    contentComponentInputs?: Record<string, {}>;
     type: 'info' | 'success' | 'warning' | 'error';
     primaryButtonLabel: string;
     primaryButtonIcon?: string;

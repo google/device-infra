@@ -8,7 +8,7 @@ import {DeviceConfig} from '../../../models/device_config_models';
 import {DeviceOverview} from '../../../models/device_overview';
 import {MockDeviceScenario} from '../models';
 
-const DEVICE_ID = 'HOST-DEVICE-001';
+const DEVICE_ID = 'HOST-DEVICE-001-ineligible-no-acid';
 
 const OVERVIEW: DeviceOverview = {
   id: DEVICE_ID,

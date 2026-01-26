@@ -1,0 +1,67 @@
+<div class="confirm-connection-content">
+  <p class="confirm-message">
+    You are about to start remote control sessions for the following devices with the configuration below.
+  </p>
+  @if (skippedDevices.length > 0) {
+    <div class="skipped-section">
+      <div class="skipped-header" (click)="showSkippedInConfirm.set(!showSkippedInConfirm())">
+        <mat-icon class="warning-icon">warning</mat-icon>
+        <span>{{ skippedDevices.length }} devices skipped</span>
+        <mat-icon class="chevron" [class.rotated]="showSkippedInConfirm()">expand_more</mat-icon>
+      </div>
+      @if (showSkippedInConfirm()) {
+        <div class="skipped-list">
+          @for (device of skippedDevices; track device.id) {
+            <div class="skipped-item">
+              <span class="device-id">{{ device.id }}</span>
+              @if (device.reason) {
+                <span class="reason-badge">{{ device.reason }}</span>
+              }
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+
+  <div class="target-section">
+    <div class="section-title">
+      <span>TARGET DEVICES</span>
+      <span class="count-badge">{{ request?.deviceConfigs?.length || 0 }}</span>
+    </div>
+    <div class="device-list">
+      @for (config of request?.deviceConfigs; track config.deviceId) {
+        <div class="device-item">
+          <mat-icon class="check-icon">check_circle</mat-icon>
+          <span class="device-id">{{ config.deviceId }}</span>
+          <div class="run-as">
+            <span class="label">RUN AS</span>
+            <span class="value" [matTooltip]="config.runAs">{{ config.runAs }}</span>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+
+  <div class="settings-summary">
+    <div class="setting-chip">
+      <mat-icon>timer</mat-icon>
+      <span>{{ getDurationLabel() }}</span>
+    </div>
+    <div class="divider"></div>
+    <div class="setting-chip">
+      <mat-icon>videocam</mat-icon>
+      <span>{{ getResolutionLabel() }}</span>
+    </div>
+    <div class="divider"></div>
+    <div class="setting-chip">
+      <mat-icon>settings_ethernet</mat-icon>
+      <span>{{ getProxyLabel() }}</span>
+    </div>
+    <div class="divider"></div>
+    <div class="setting-chip">
+      <mat-icon>system_update</mat-icon>
+      <span>{{ getFlashLabel() }}</span>
+    </div>
+  </div>
+</div>

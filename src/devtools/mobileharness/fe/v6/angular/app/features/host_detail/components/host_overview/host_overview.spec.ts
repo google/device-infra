@@ -5,6 +5,8 @@ import {provideRouter} from '@angular/router';
 import {HostOverview} from '../../../../core/models/host_overview';
 import {FakeHostService} from '../../../../core/services/host/fake_host_service';
 import {HOST_SERVICE} from '../../../../core/services/host/host_service';
+import {RemoteControlService} from '../../../../shared/services/remote_control_service';
+import {SnackBarService} from '../../../../shared/services/snackbar_service';
 import {HostOverviewPage} from './host_overview';
 
 describe('HostOverview Component', () => {
@@ -49,6 +51,16 @@ describe('HostOverview Component', () => {
       providers: [
         provideRouter([]),
         {provide: HOST_SERVICE, useClass: FakeHostService},
+        {
+          provide: RemoteControlService,
+          useValue: jasmine.createSpyObj('RemoteControlService', [
+            'startRemoteControl',
+          ]),
+        },
+        {
+          provide: SnackBarService,
+          useValue: jasmine.createSpyObj('SnackBarService', ['showError']),
+        },
       ],
     }).compileComponents();
 

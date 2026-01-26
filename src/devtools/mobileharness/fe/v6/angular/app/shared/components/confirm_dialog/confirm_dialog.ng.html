@@ -7,10 +7,9 @@
   </div>
 
   <mat-dialog-content class="sub-modal-content">
-    @if(data.contentTemplate) {
+    @if (data.contentComponent) {
       <div class="html-content">
-        <ng-container *ngTemplateOutlet="data.contentTemplate; context: data.contentTemplateContext">
-        </ng-container>
+        <ng-container *ngComponentOutlet="data.contentComponent; inputs: data.contentComponentInputs"></ng-container>
       </div>
     } @else {
       <p class="text-gray-600">{{ data.content }}</p>

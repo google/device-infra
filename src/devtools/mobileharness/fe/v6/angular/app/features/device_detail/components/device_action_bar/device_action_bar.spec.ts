@@ -6,12 +6,14 @@ import {of} from 'rxjs';
 import {DeviceOverviewPageData} from '../../../../core/models/device_overview';
 import {DEVICE_SERVICE} from '../../../../core/services/device/device_service';
 import {FakeDeviceService} from '../../../../core/services/device/fake_device_service';
+import {FakeHostService} from '../../../../core/services/host/fake_host_service';
+import {HOST_SERVICE} from '../../../../core/services/host/host_service';
 import {ConfirmDialog} from '../../../../shared/components/confirm_dialog/confirm_dialog';
+import {RemoteControlService} from '../../../../shared/services/remote_control_service';
 import {SnackBarService} from '../../../../shared/services/snackbar_service';
 import {FlashDialog} from '../flash_dialog/flash_dialog';
 import {LogcatDialog} from '../logcat_dialog/logcat_dialog';
 import {QuarantineDialog} from '../quarantine_dialog/quarantine_dialog';
-import {RemoteControlDialog} from '../remote_control_dialog/remote_control_dialog';
 import {ScreenshotDialog} from '../screenshot_dialog/screenshot_dialog';
 import {DeviceActionBar} from './device_action_bar';
 
@@ -21,6 +23,8 @@ describe('DeviceActionBar', () => {
   let snackBarService: jasmine.SpyObj<SnackBarService>;
   let dialog: jasmine.SpyObj<MatDialog>;
   let deviceService: FakeDeviceService;
+  let hostService: FakeHostService;
+  let remoteControlService: jasmine.SpyObj<RemoteControlService>;
 
   const mockPageData: DeviceOverviewPageData = {
     overview: {
@@ -65,8 +69,6 @@ describe('DeviceActionBar', () => {
           enabled: true,
           visible: true,
           tooltip: '',
-          runAsOptions: [],
-          defaultRunAs: '',
         },
         quarantine: {enabled: true, visible: true, tooltip: ''},
         configuration: {
@@ -86,13 +88,20 @@ describe('DeviceActionBar', () => {
     ]);
     dialog = jasmine.createSpyObj('MatDialog', ['open']);
     deviceService = new FakeDeviceService();
+    hostService = new FakeHostService();
+
+    remoteControlService = jasmine.createSpyObj('RemoteControlService', [
+      'startRemoteControl',
+    ]);
 
     await TestBed.configureTestingModule({
       imports: [DeviceActionBar, NoopAnimationsModule],
       providers: [
         {provide: DEVICE_SERVICE, useValue: deviceService},
+        {provide: HOST_SERVICE, useValue: hostService},
         {provide: SnackBarService, useValue: snackBarService},
         {provide: MatDialog, useValue: dialog},
+        {provide: RemoteControlService, useValue: remoteControlService},
       ],
     }).compileComponents();
 
@@ -189,20 +198,16 @@ describe('DeviceActionBar', () => {
     });
   });
 
-  it('should open RemoteControlDialog when remote control button is clicked', () => {
+  it('should call startRemoteControl when remote control button is clicked', () => {
     const remoteControlButton = fixture.nativeElement.querySelector(
       '[data-testid="remoteControl-button-2xl"]',
     );
     remoteControlButton.click();
 
-    expect(dialog.open).toHaveBeenCalledWith(RemoteControlDialog, {
-      data: {
-        hostName: 'test-host',
-        deviceId: 'test-device',
-        runAsOptions: [],
-        defaultRunAs: '',
-      },
-    });
+    expect(remoteControlService.startRemoteControl).toHaveBeenCalledWith(
+      'test-host',
+      jasmine.any(Array),
+    );
   });
 
   it('should open FlashDialog when flash button is clicked', () => {

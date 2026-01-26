@@ -1,0 +1,114 @@
+@use '@angular/material' as mat;
+
+.access-denied-box {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+
+  p {
+    margin: 0;
+  }
+
+  .message {
+    font-size: 0.95rem;
+    line-height: 1.5rem;
+    color: #1f2937; // gray-800
+
+    strong {
+      font-weight: 600;
+    }
+  }
+
+  .device-id {
+    background-color: #f3f4f6; // gray-100
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.25rem;
+    border: 1px solid #e5e7eb; // gray-200
+    color: #111827; // gray-900
+    font-size: 0.85em;
+  }
+
+  .instruction {
+    font-size: 0.875rem;
+    color: #4b5563; // gray-600
+    line-height: 1.4;
+  }
+}
+
+.error-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  background-color: #fef2f2; // red-50
+  border: 1px solid #fee2e2; // red-100
+  padding: 1rem;
+  border-radius: 0.5rem;
+
+  mat-icon {
+    font-size: 1.25rem;
+    height: 1.25rem;
+    width: 1.25rem;
+    color: #dc2626; // red-600
+    flex-shrink: 0;
+    margin-top: 0.125rem;
+  }
+
+  .banner-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .banner-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #991b1b; // red-800
+  }
+
+  .banner-desc {
+    font-size: 0.8125rem;
+    color: #b91c1c; // red-700
+    line-height: 1.25rem;
+  }
+}
+
+.device-list-preview {
+  margin-top: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #f3f4f6; // gray-100
+
+  .list-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #6b7280; // gray-500
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+  }
+
+  .device-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .device-chip {
+    font-size: 0.75rem;
+    font-family: 'Roboto Mono', monospace;
+    background-color: #f9fafb; // gray-50
+    border: 1px solid #e5e7eb; // gray-200
+    color: #374151; // gray-700
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+  }
+
+  .more-chip {
+    font-size: 0.75rem;
+    color: #6b7280; // gray-500
+    font-weight: 500;
+    padding: 0.25rem 0.5rem;
+    display: flex;
+    align-items: center;
+  }
+}

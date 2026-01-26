@@ -1,0 +1,28 @@
+<div class="requirements-box">
+  <h4><span class="material-icons">info</span> Requirements for Remote Control</h4>
+  @if(isSingleDevice) {
+    <ul>
+      <li><span class="dot"></span> Must support <code>AcidRemoteDriver</code></li>
+      <li><span class="dot"></span> Device status must be <span class="status-badge">IDLE</span></li>
+      <li><span class="dot"></span> Type cannot be <code>AbnormalTestbedDevice</code> or <code>FailedDevice</code></li>
+      <li><span class="dot"></span> Host OS cannot be <strong>Mac OS</strong></li>
+    </ul>
+  } @else {
+    <ul>
+      <li><span class="dot"></span> Must be <strong>AndroidRealDevice</strong> (not Testbed)</li>
+      <li><span class="dot"></span> Must support <code>AcidRemoteDriver</code></li>
+      <li><span class="dot"></span> Device status must be <span class="status-badge">IDLE</span></li>
+    </ul>
+  }
+</div>
+<div class="incompatible-devices-section">
+  <h4><span class="material-icons">highlight_off</span> Incompatible Devices <span class="count">({{invalidDevices.length}})</span></h4>
+  <div class="device-list-box custom-scrollbar">
+    @for(item of invalidDevices; track item.id) {
+      <div class="device-row">
+        <span class="device-id">{{item.id}}</span>
+        <span class="reason-badge">{{item.reason}}</span>
+      </div>
+    }
+  </div>
+</div>

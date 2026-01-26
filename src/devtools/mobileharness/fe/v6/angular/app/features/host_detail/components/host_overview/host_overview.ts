@@ -15,8 +15,6 @@ import {
   OnInit,
   signal,
   SimpleChanges,
-  TemplateRef,
-  ViewChild,
 } from '@angular/core';
 import {takeUntilDestroyed, toSignal} from '@angular/core/rxjs-interop';
 import {FormsModule} from '@angular/forms';
@@ -41,14 +39,10 @@ import {
 } from '../../../../core/models/device_overview';
 import {
   DaemonServerStatus,
-  DeviceProxyType,
   DeviceSummary,
-  EligibilityStatus,
   HostConnectivityStatus,
   LabServerActivity,
-  type CheckRemoteControlEligibilityResponse,
   type HostOverview,
-  type RemoteControlDevicesRequest,
 } from '../../../../core/models/host_overview';
 import {HOST_SERVICE} from '../../../../core/services/host/host_service';
 import {ConfirmDialog} from '../../../../shared/components/confirm_dialog/confirm_dialog';
@@ -62,11 +56,11 @@ import {
   SearchableListOverlayComponent,
   SearchableListOverlayData,
 } from '../../../../shared/components/searchable_list_overlay/searchable_list_overlay';
+import {RemoteControlService} from '../../../../shared/services/remote_control_service';
 import {SnackBarService} from '../../../../shared/services/snackbar_service';
 import {dateUtils} from '../../../../shared/utils/date_utils';
 import {objectUtils} from '../../../../shared/utils/object_utils';
-import {openInNewTab} from '../../../../shared/utils/safe_dom';
-import {RemoteControlDialog} from './remote_control_dialog/remote_control_dialog';
+import {DecommissionContent} from './decommission_content/decommission_content';
 
 const HEALTH_SEMANTIC_MAP: Record<
   string,
@@ -125,15 +119,6 @@ const STATUS_SEMANTIC_MAP: Record<string, {icon: string; colorClass: string}> =
     'MISSING': {icon: 'error', colorClass: 'text-red-600'},
   };
 
-const PROXY_TYPE_LABELS: Record<number, string> = {
-  0: 'None',
-  1: 'ADB & Video',
-  2: 'ADB Console',
-  3: 'USB-over-IP',
-  4: 'SSH',
-  5: 'Video Only',
-};
-
 /**
  * Component for displaying an overview of a host, including its basic
  * information, lab server status, devices, daemon server status, and host
@@ -165,11 +150,13 @@ const PROXY_TYPE_LABELS: Record<number, string> = {
     InfoCard,
     SearchableListOverlayComponent,
     OverflowList,
+    DecommissionContent,
   ],
 })
 export class HostOverviewPage implements OnInit, OnChanges {
   private readonly dialog = inject(MatDialog);
   private readonly hostService = inject(HOST_SERVICE);
+  private readonly remoteControlService = inject(RemoteControlService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly snackBar = inject(SnackBarService);
 
@@ -184,16 +171,6 @@ export class HostOverviewPage implements OnInit, OnChanges {
   deviceDataSource = new MatTableDataSource<DeviceSummary>();
   selection = new SelectionModel<DeviceSummary>(true, []);
 
-  @ViewChild('decommissionDialogContent')
-  decommissionDialogContent!: TemplateRef<{}>;
-  @ViewChild('incompatibleDevicesDialogContent')
-  incompatibleDevicesDialogContent!: TemplateRef<{}>;
-  @ViewChild('singleDeviceRCErrorDialogContent')
-  singleDeviceRCErrorDialogContent!: TemplateRef<{}>;
-  @ViewChild('multiDeviceRCErrorDialogContent')
-  multiDeviceRCErrorDialogContent!: TemplateRef<{}>;
-  @ViewChild('accessDeniedDialogContent')
-  accessDeniedDialogContent!: TemplateRef<{}>;
   decommissionMissingCount = toSignal(
     this.selection.changed.pipe(
       map(
@@ -507,8 +484,8 @@ export class HostOverviewPage implements OnInit, OnChanges {
       title: `Decommission ${missingDevices.length} Device${
         missingDevices.length > 1 ? 's' : ''
       }?`,
-      contentTemplate: this.decommissionDialogContent,
-      contentTemplateContext: {devices: missingDevices},
+      contentComponent: DecommissionContent,
+      contentComponentInputs: {devices: missingDevices},
       type: 'error',
       primaryButtonLabel: 'Decommission',
       secondaryButtonLabel: 'Cancel',
@@ -545,21 +522,10 @@ export class HostOverviewPage implements OnInit, OnChanges {
 
   // device table actions -  Multi-device remote control
   startMultiRemoteControl() {
-    const selectedDevices = this.selection.selected;
-
-    // 1. Quantity Check
-    if (selectedDevices.length === 0) {
-      this.snackBar.showError('Please select at least one device.');
-      return;
-    }
-    if (selectedDevices.length > 3) {
-      this.snackBar.showError(
-        'Can not remote control more than 3 devices at the same time.',
-      );
-      return;
-    }
-
-    this.checkEligibilityAndStart(selectedDevices);
+    this.remoteControlService.startRemoteControl(
+      this.host.hostName,
+      this.selection.selected,
+    );
   }
 
   startSubDeviceRemoteControl(subDevice: SubDeviceInfo) {
@@ -583,158 +549,9 @@ export class HostOverviewPage implements OnInit, OnChanges {
       subDevices: [],
     };
 
-    this.checkEligibilityAndStart([deviceSummary]);
-  }
-
-  private checkEligibilityAndStart(selectedDevices: DeviceSummary[]) {
-    // 2&3. Eligibility and Proxy Compatibility Check
-    const deviceControlIds = selectedDevices.map((d) => d.id);
-    this.hostService
-      .checkRemoteControlEligibility(this.host.hostName, deviceControlIds)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (response: CheckRemoteControlEligibilityResponse) => {
-          switch (response.status) {
-            case EligibilityStatus.BLOCK_DEVICES_INELIGIBLE: {
-              // Case 1: Ineligible devices found
-              const invalidDevices = response.results
-                .filter((d) => !d.isEligible)
-                .map((d) => ({
-                  id: d.deviceId,
-                  reason: d.ineligibilityReason?.message || 'Unknown reason',
-                }));
-              this.dialog.open(ConfirmDialog, {
-                panelClass: 'confirm-dialog-panel',
-                data: {
-                  title: 'Unable to Start Remote Control',
-                  contentTemplate: this.incompatibleDevicesDialogContent,
-                  contentTemplateContext: {
-                    invalidDevices,
-                    isSingleDevice: selectedDevices.length === 1,
-                  },
-                  type: 'warning',
-                  primaryButtonLabel: 'Got it',
-                },
-              });
-              break;
-            }
-            case EligibilityStatus.BLOCK_NO_COMMON_PROXY: {
-              // Case 2: No common session options
-              if (selectedDevices.length === 1) {
-                // SINGLE DEVICE FAILURE CASE
-                const device = selectedDevices[0];
-                this.dialog.open(ConfirmDialog, {
-                  panelClass: 'confirm-dialog-panel',
-                  data: {
-                    title: 'Connection Error',
-                    contentTemplate: this.singleDeviceRCErrorDialogContent,
-                    contentTemplateContext: {
-                      device,
-                      isTestbed: this.isTestbed(device),
-                    },
-                    type: 'warning',
-                    primaryButtonLabel: 'Got it',
-                  },
-                });
-              } else {
-                // MULTIPLE DEVICE FAILURE CASE
-                const capabilitiesList = response.results.map((d) => {
-                  const modes = d.supportedProxyTypes
-                    .map(
-                      (m: DeviceProxyType) => PROXY_TYPE_LABELS[m] || 'Unknown',
-                    )
-                    .join(', ');
-                  return {id: d.deviceId, modes: modes || 'None'};
-                });
-
-                this.dialog.open(ConfirmDialog, {
-                  panelClass: 'confirm-dialog-panel',
-                  data: {
-                    title: 'Connection Error',
-                    contentTemplate: this.multiDeviceRCErrorDialogContent,
-                    contentTemplateContext: {capabilitiesList},
-                    type: 'warning',
-                    primaryButtonLabel: 'Got it',
-                  },
-                });
-              }
-              break;
-            }
-            case EligibilityStatus.BLOCK_ALL_PERMISSION_DENIED: {
-              this.dialog.open(ConfirmDialog, {
-                panelClass: 'confirm-dialog-panel',
-                data: {
-                  title: 'Access Denied',
-                  contentTemplate: this.accessDeniedDialogContent,
-                  type: 'error',
-                  primaryButtonLabel: 'Got it',
-                },
-              });
-              break;
-            }
-            case EligibilityStatus.READY: {
-              this.openRemoteControlDialog(selectedDevices, response);
-              break;
-            }
-            default:
-              break;
-          }
-        },
-        error: (err) => {
-          console.error(err);
-          this.snackBar.showError(
-            `Failed to check proxy compatibility: ${err.message}`,
-          );
-        },
-      });
-  }
-
-  private openRemoteControlDialog(
-    selectedDevices: DeviceSummary[],
-    eligibilityResponse: CheckRemoteControlEligibilityResponse,
-  ) {
-    const dialogRef = this.dialog.open(RemoteControlDialog, {
-      panelClass: 'remote-control-dialog-panel',
-      data: {
-        devices: selectedDevices,
-        eligibilityResults: eligibilityResponse.results,
-        sessionOptions: eligibilityResponse.sessionOptions!,
-      },
-      disableClose: true,
-    });
-
-    dialogRef
-      .afterClosed()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((req: RemoteControlDevicesRequest | undefined) => {
-        if (req) {
-          this.startRemoteControlSessions(req);
-        }
-      });
-  }
-
-  private startRemoteControlSessions(req: RemoteControlDevicesRequest) {
-    this.hostService
-      .remoteControlDevices(this.host.hostName, req)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (res) => {
-          res.sessions.forEach((session) => {
-            if (session.sessionUrl) {
-              openInNewTab(session.sessionUrl);
-            } else {
-              this.snackBar.showError(
-                `Invalid session URL for device ${session.deviceId}`,
-              );
-            }
-          });
-        },
-        error: (err) => {
-          this.snackBar.showError(
-            `Failed to start remote control: ${err.message}`,
-          );
-        },
-      });
+    this.remoteControlService.startRemoteControl(this.host.hostName, [
+      deviceSummary,
+    ]);
   }
 
   toggleRow(element: DeviceSummary) {
