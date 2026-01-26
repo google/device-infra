@@ -18,6 +18,9 @@ syntax = "proto3";
 
 package devtools.mobileharness.fe.v6.service.proto.device;
 
+import "google/type/date.proto";
+import "src/devtools/mobileharness/api/model/proto/test.proto";
+
 option java_package = "com.google.devtools.mobileharness.fe.v6.service.proto.device";
 option java_multiple_files = true;
 option java_outer_classname = "DeviceStatsProto";
@@ -64,71 +67,79 @@ message HealthinessSummary {
   repeated Breakdown out_of_service_breakdown = 4;
 }
 
-// Common statistics containing count and percentage.
-message Stats {
-  int32 count = 1;
-  float percent = 2;
-}
-
-// Common breakdown message containing category and stats.
-message CategoryStats {
-  string category = 1;
-  Stats stats = 2;
-}
-
 // Represents the data for the Test Result Statistics card.
 message TestResultStats {
   // Time series data for daily test results.
-  repeated DailyTestResults daily_stats = 1;
+  repeated DailyTestResultStats daily_stats = 1;
   // Aggregated data over the selected period.
-  AggregatedTestResults aggregated_stats = 2;
+  TestResultSummary aggregated_stats = 2;
 }
 
 // Test results for a single day.
-message DailyTestResults {
-  // The date in YYYY-MM-DD format.
-  string date = 1;
-  int32 pass = 2;
-  int32 fail = 3;
-  int32 error = 4;
-  int32 timeout = 5;
-  int32 other = 6;
+message DailyTestResultStats {
+  google.type.Date date = 1;
+  TestResultSummary test_result_summary = 2;
 }
 
-// Aggregated test result statistics over the selected period.
-message AggregatedTestResults {
-  int32 total_tests = 1;
+// Common statistics containing count and percentage.
+message Stats {
+  int64 count = 1;
+  float percent = 2;
+}
+
+// Test result breakdown message containing test result and stats.
+message TestResultBreakdown {
+  .mobileharness.api.model.TestResult result = 1;
+  Stats stats = 2;
+}
+
+// Summary of test result statistics over a period (e.g., a single day or a
+// selected date range).
+message TestResultSummary {
+  int64 total_tests = 1;
   Stats completion_stats = 2;
   Stats non_completion_stats = 3;
 
   // Breakdown of "Completion" tests.
   // Expected categories: "PASS", "FAIL".
-  repeated CategoryStats completion_breakdown = 4;
+  repeated TestResultBreakdown completion_breakdown = 4;
 
   // Breakdown of "Non-Completion" tests.
-  // Expected categories: "ERROR", "TIMEOUT", "OTHER".
-  repeated CategoryStats non_completion_breakdown = 5;
+  // Expected categories: "UNKNOWN", "ERROR", "TIMEOUT", "ABORT", "SKIP".
+  repeated TestResultBreakdown non_completion_breakdown = 5;
 }
 
 // Represents the data for the Recovery Task Statistics card.
 message RecoveryTaskStats {
   // Time series data for daily recovery task outcomes.
-  repeated DailyRecoveryTasks daily_stats = 1;
+  repeated DailyRecoveryTaskStats daily_stats = 1;
   // Aggregated data over the selected period.
-  AggregatedRecoveryTasks aggregated_stats = 2;
+  RecoveryTasksSummary aggregated_stats = 2;
 }
 
 // Recovery task outcomes for a single day.
-message DailyRecoveryTasks {
-  // The date in YYYY-MM-DD format.
-  string date = 1;
-  int32 success = 2;
-  int32 fail = 3;
+message DailyRecoveryTaskStats {
+  google.type.Date date = 1;
+  RecoveryTasksSummary recovery_task_summary = 2;
 }
 
-// Aggregated recovery task statistics over the selected period.
-message AggregatedRecoveryTasks {
-  int32 total_tasks = 1;
-  // Expected categories: "SUCCESS", "FAIL".
-  repeated CategoryStats outcome_breakdown = 2;
+// The outcome of a recovery task.
+enum RecoveryTaskOutcome {
+  RECOVERY_TASK_OUTCOME_UNKNOWN = 0;
+  RECOVERY_SUCCESS = 1;  // A recovery task is success if the test result is
+                         // PASS.
+  RECOVERY_FAIL = 2;     // Otherwise, the recovery task is a fail.
+}
+
+// Common breakdown message containing result and stats.
+message RecoveryTaskOutcomeBreakdown {
+  RecoveryTaskOutcome outcome = 1;
+  Stats stats = 2;
+}
+
+// Summary of recovery task statistics over a period (e.g., a single day or a
+// selected date range).
+message RecoveryTasksSummary {
+  int64 total_tasks = 1;
+  repeated RecoveryTaskOutcomeBreakdown outcome_breakdown = 2;
 }

@@ -41,6 +41,10 @@ java_proto_library(
 proto_library(
     name = "device_stats_proto",
     srcs = ["device_stats.proto"],
+    deps = [
+        "//google/type:date",
+        "//src/devtools/mobileharness/api/model/proto:test_proto",
+    ],
 )
 
 java_proto_library(
