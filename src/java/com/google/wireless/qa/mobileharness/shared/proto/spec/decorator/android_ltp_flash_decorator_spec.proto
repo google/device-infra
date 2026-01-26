@@ -24,7 +24,7 @@ option java_package = "com.google.wireless.qa.mobileharness.shared.proto.spec.de
 option java_multiple_files = true;
 
 // Specs for {@link AndroidLtpFlashDecoratorSpec}
-// Next tag: 14
+// Next tag: 15
 message AndroidLtpFlashDecoratorSpec {
   extend DecoratorSpec {
     optional AndroidLtpFlashDecoratorSpec ext = 1012;
@@ -84,6 +84,13 @@ message AndroidLtpFlashDecoratorSpec {
             "decorator, as cl_flashstation might be called more than once as "
             "part of a retry mechanism. Can be given as \"<x>h <y>m <z>s\" "
             "format, or just a integer number of seconds."
+    }
+  ];
+
+  optional bool run_post_flash_setup = 14 [
+    default = true,
+    (field_detail) = {
+      help: "Whether to run device setup steps after flashing the device."
     }
   ];
 }
