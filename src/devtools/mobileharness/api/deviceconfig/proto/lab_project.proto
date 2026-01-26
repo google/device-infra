@@ -41,8 +41,5 @@ message TenantDeviceConfig {
   // A device selector for the given device config.
   HardwareFingerprint hardware_fingerprint = 1;
   // The device config to apply to a matching device.
-  // Supported and required dimensions specified here are merged with those from
-  // the device config. When there are conflicts, the value(s) from this config
-  // take precedence.
   DeviceConfig device_config = 2;
 }

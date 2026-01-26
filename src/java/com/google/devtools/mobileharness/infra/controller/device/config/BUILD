@@ -73,8 +73,6 @@ java_library(
     srcs = [
         "ApiConfig.java",
         "ApiConfigV5.java",
-        "BasicDeviceConfigMerger.java",
-        "BasicDeviceConfigSet.java",
     ],
     visibility = [
         "//:deviceinfra_all_pkg",
@@ -90,7 +88,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/lab:device_id_descriptor",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:device_id_manager",
-        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/message:str_pair",
@@ -114,9 +111,7 @@ java_library(
         ":api_config_service",
         ":config",
         ":has_default_synced",
-        "//src/java/com/google/devtools/mobileharness/infra/controller/device:device_id_manager",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:service_module",
-        "//src/java/com/google/devtools/mobileharness/shared/util/system",
         "@maven//:com_google_inject_guice",
     ],
 )
