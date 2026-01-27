@@ -175,6 +175,30 @@ public abstract class AndroidRealDeviceDelegate {
 
   private final DeviceAdminUtil deviceAdminUtil;
 
+  private static final ImmutableMap<FastbootProperty, Dimension.Name>
+      REQUIRED_FASTBOOT_PROPERTY_TO_DIMENSION_NAME =
+          ImmutableMap.<FastbootProperty, Dimension.Name>builder()
+              .put(FastbootProperty.PRODUCT, Dimension.Name.HARDWARE)
+              .buildOrThrow();
+
+  private static final ImmutableMap<FastbootProperty, Dimension.Name>
+      OPTIONAL_FASTBOOT_PROPERTY_TO_DIMENSION_NAME =
+          ImmutableMap.<FastbootProperty, Dimension.Name>builder()
+              .put(FastbootProperty.UNLOCKED, Dimension.Name.OEM_UNLOCK)
+              .put(FastbootProperty.HW_REVISION, Dimension.Name.REVISION)
+              .put(FastbootProperty.SECURE_BOOT, Dimension.Name.SECURE_BOOT)
+              .put(FastbootProperty.DEVKEY_ALLOW, Dimension.Name.DEVKEY_ALLOW)
+              .put(FastbootProperty.SBDP_ALLOW, Dimension.Name.SBDP_ALLOW)
+              .put(FastbootProperty.SBDP_AR_CHECK, Dimension.Name.SBDP_AR_CHECK)
+              .put(FastbootProperty.SBDP_AR_UPDATE, Dimension.Name.SBDP_AR_UPDATE)
+              .put(FastbootProperty.AP_AR_NS, Dimension.Name.AP_AR_NS)
+              .put(FastbootProperty.AP_AR_S, Dimension.Name.AP_AR_S)
+              .put(FastbootProperty.SOC_ID, Dimension.Name.SOC_ID)
+              .put(FastbootProperty.AR_FORCE_UPDATE, Dimension.Name.AR_FORCE_UPDATE)
+              .put(FastbootProperty.AR_UPDATE_ALLOW, Dimension.Name.AR_UPDATE_ALLOW)
+              .put(FastbootProperty.SERIALNO, Dimension.Name.SERIAL)
+              .buildOrThrow();
+
   protected AndroidRealDeviceDelegate(
       AndroidDevice device,
       AndroidDeviceDelegate androidDeviceDelegate,
@@ -337,90 +361,43 @@ public abstract class AndroidRealDeviceDelegate {
       device.addSupportedDriver(AndroidRealDeviceConstants.NO_OP_DRIVER);
       device.addSupportedDriver(AndroidRealDeviceConstants.MOBLY_TEST_DRIVER);
       device.addSupportedDriver(AndroidRealDeviceConstants.MOBLY_AOSP_TEST_DRIVER);
-      String hardware = fastboot.getVar(deviceId, FastbootProperty.PRODUCT);
-      if (!Strings.isNullOrEmpty(hardware)) {
-        device.updateDimension(Dimension.Name.HARDWARE, hardware);
-      }
-      String unlocked = fastboot.getVar(deviceId, FastbootProperty.UNLOCKED);
-      if (!Strings.isNullOrEmpty(unlocked)) {
-        device.updateDimension(Dimension.Name.OEM_UNLOCK, unlocked);
-      }
-      String revision = fastboot.getVar(deviceId, FastbootProperty.HW_REVISION);
-      if (!Strings.isNullOrEmpty(revision)) {
-        device.updateDimension(Dimension.Name.REVISION, Ascii.toLowerCase(revision));
-      }
-      String secureBoot = fastboot.getVar(deviceId, FastbootProperty.SECURE_BOOT);
-      if (!Strings.isNullOrEmpty(secureBoot)) {
-        device.updateDimension(Dimension.Name.SECURE_BOOT, Ascii.toLowerCase(secureBoot));
-      }
-      String devkeyAllow = fastboot.getVar(deviceId, FastbootProperty.DEVKEY_ALLOW);
-      if (!Strings.isNullOrEmpty(devkeyAllow)) {
-        device.updateDimension(Dimension.Name.DEVKEY_ALLOW, Ascii.toLowerCase(devkeyAllow));
-      }
-      String sbdpAllow = fastboot.getVar(deviceId, FastbootProperty.SBDP_ALLOW);
-      if (!Strings.isNullOrEmpty(sbdpAllow)) {
-        device.updateDimension(Dimension.Name.SBDP_ALLOW, Ascii.toLowerCase(sbdpAllow));
-      }
-      String sbdpArCheck = fastboot.getVar(deviceId, FastbootProperty.SBDP_AR_CHECK);
-      if (!Strings.isNullOrEmpty(sbdpArCheck)) {
-        device.updateDimension(Dimension.Name.SBDP_AR_CHECK, Ascii.toLowerCase(sbdpArCheck));
-      }
-      String sbdpArUpdate = fastboot.getVar(deviceId, FastbootProperty.SBDP_AR_UPDATE);
-      if (!Strings.isNullOrEmpty(sbdpArUpdate)) {
-        device.updateDimension(Dimension.Name.SBDP_AR_UPDATE, Ascii.toLowerCase(sbdpArUpdate));
-      }
-      String arNs = fastboot.getVar(deviceId, FastbootProperty.AP_AR_NS);
-      if (!Strings.isNullOrEmpty(arNs)) {
-        device.updateDimension(Dimension.Name.AP_AR_NS, Ascii.toLowerCase(arNs));
-      }
-      String arS = fastboot.getVar(deviceId, FastbootProperty.AP_AR_S);
-      if (!Strings.isNullOrEmpty(arS)) {
-        device.updateDimension(Dimension.Name.AP_AR_S, Ascii.toLowerCase(arS));
-      }
-      try {
-        String socId = fastboot.getVar(deviceId, FastbootProperty.SOC_ID);
-        if (!Strings.isNullOrEmpty(socId)) {
-          device.updateDimension(Dimension.Name.SOC_ID, Ascii.toLowerCase(socId));
-        }
-      } catch (MobileHarnessException e) {
-        logger.atInfo().log(
-            "Failed to get soc_id for fastboot device %s: %s",
-            deviceId, MoreThrowables.shortDebugString(e));
-      }
-      try {
-        String arForceUpdate = fastboot.getVar(deviceId, FastbootProperty.AR_FORCE_UPDATE);
-        if (!Strings.isNullOrEmpty(arForceUpdate)) {
-          device.updateDimension(Dimension.Name.AR_FORCE_UPDATE, Ascii.toLowerCase(arForceUpdate));
-        }
-      } catch (MobileHarnessException e) {
-        logger.atInfo().log(
-            "Failed to get ar_force_update for fastboot device %s: %s",
-            deviceId, MoreThrowables.shortDebugString(e));
-      }
-      try {
-        String arUpdateAllow = fastboot.getVar(deviceId, FastbootProperty.AR_UPDATE_ALLOW);
-        if (!Strings.isNullOrEmpty(arUpdateAllow)) {
-          device.updateDimension(Dimension.Name.AR_UPDATE_ALLOW, Ascii.toLowerCase(arUpdateAllow));
-        }
-      } catch (MobileHarnessException e) {
-        logger.atInfo().log(
-            "Failed to get ar_update_allow for fastboot device %s: %s",
-            deviceId, MoreThrowables.shortDebugString(e));
-      }
-
-      try {
-        String serialno = fastboot.getVar(deviceId, FastbootProperty.SERIALNO);
-        if (!Strings.isNullOrEmpty(serialno)) {
-          device.updateDimension(Ascii.toLowerCase(AndroidProperty.SERIAL.name()), serialno);
-        }
-      } catch (MobileHarnessException e) {
-        logger.atInfo().log(
-            "Failed to get serialno for fastboot device %s: %s",
-            deviceId, MoreThrowables.shortDebugString(e));
-      }
+      ImmutableMap<FastbootProperty, String> requiredFastbootProperties =
+          addFastbootPropertiesToDimension(
+              REQUIRED_FASTBOOT_PROPERTY_TO_DIMENSION_NAME, /* isRequired= */ true);
+      addFastbootPropertiesToDimension(
+          OPTIONAL_FASTBOOT_PROPERTY_TO_DIMENSION_NAME, /* isRequired= */ false);
 
       addFastbootCommunication(deviceId);
     }
+  }
+
+  @CanIgnoreReturnValue
+  private ImmutableMap<FastbootProperty, String> addFastbootPropertiesToDimension(
+      ImmutableMap<FastbootProperty, Dimension.Name> fastbootPropertyToDimensionName,
+      boolean isRequired)
+      throws MobileHarnessException, InterruptedException {
+    ImmutableMap.Builder<FastbootProperty, String> fastbootPropertyToValue = ImmutableMap.builder();
+    for (FastbootProperty fastbootProperty : fastbootPropertyToDimensionName.keySet()) {
+      try {
+        String value = fastboot.getVar(deviceId, fastbootProperty);
+        if (!Strings.isNullOrEmpty(value)) {
+          device.updateDimension(
+              fastbootPropertyToDimensionName.get(fastbootProperty), Ascii.toLowerCase(value));
+          fastbootPropertyToValue.put(fastbootProperty, value);
+        } else {
+          fastbootPropertyToValue.put(fastbootProperty, "");
+        }
+      } catch (MobileHarnessException e) {
+        if (isRequired) {
+          throw e;
+        } else {
+          logger.atInfo().log(
+              "Failed to get %s for fastboot device %s: %s",
+              fastbootProperty.name(), deviceId, MoreThrowables.shortDebugString(e));
+        }
+      }
+    }
+    return fastbootPropertyToValue.buildOrThrow();
   }
 
   private Optional<USB.Builder> parseUsbLocation(String usbLocation) {
