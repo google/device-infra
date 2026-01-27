@@ -58,6 +58,7 @@ public final class Enums {
     HARDWARE,
     HW_REVISION,
     IS_USERSPACE,
+    NOS_PRODUCTION,
     PRODUCT,
     SBDP_ALLOW,
     SBDP_AR_CHECK,

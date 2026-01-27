@@ -188,6 +188,7 @@ public abstract class AndroidRealDeviceDelegate {
               .put(FastbootProperty.HW_REVISION, Dimension.Name.REVISION)
               .put(FastbootProperty.SECURE_BOOT, Dimension.Name.SECURE_BOOT)
               .put(FastbootProperty.DEVKEY_ALLOW, Dimension.Name.DEVKEY_ALLOW)
+              .put(FastbootProperty.NOS_PRODUCTION, Dimension.Name.NOS_PRODUCTION)
               .put(FastbootProperty.SBDP_ALLOW, Dimension.Name.SBDP_ALLOW)
               .put(FastbootProperty.SBDP_AR_CHECK, Dimension.Name.SBDP_AR_CHECK)
               .put(FastbootProperty.SBDP_AR_UPDATE, Dimension.Name.SBDP_AR_UPDATE)
