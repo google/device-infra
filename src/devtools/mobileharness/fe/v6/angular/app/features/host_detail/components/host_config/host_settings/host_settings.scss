@@ -14,18 +14,10 @@
 }
 
 .content-container {
-  display: flex;
-  flex-grow: 1;
-  min-height: 0;
-  padding: 0;
-  height: 90vh;
-  max-width: 72rem;
-  font-family: config.$labconsole-font;
+  @extend .config-layout-container;
 
   .nav-bar {
-    padding: 1rem;
-    background-color: #f9fafb;
-    border-right: 1px solid #e5e7eb;
+    @extend .config-nav-bar;
     width: 16rem;
     min-width: 16rem;
 
@@ -40,34 +32,17 @@
     }
 
     .settings-nav-item {
-      display: flex;
-      align-items: center;
-      padding: .75rem 1rem;
-      border-radius: .375rem;
-      font-weight: 500;
-      color: #334155;
-      cursor: pointer;
-      transition: background-color 0.2s;
-      text-decoration: none;
+      @extend .config-nav-item;
 
       .nav-item-icon {
-        margin-right: 1rem;
+        // Overriding the margin/size if different from base, but base is similar.
+        // Base has margin-right: 1rem. This has 1rem.
         font-size: 1.25rem;
         line-height: 1.5rem;
-        color: #64748b;
+        // color inherited from base
       }
     }
 
-    .settings-nav-item:hover {
-      background-color: #f1f5f9
-    }
-
-    .settings-nav-item.active{
-      background-color:#eef4ff;
-      color:#1d4ed8;
-    }
-
-    .settings-nav-item.active .nav-item-icon,
     .settings-nav-item.active .nav-item-child-icon {
       color:#1d4ed8;
     }
@@ -84,11 +59,7 @@
   }
 
   .content-main {
-    padding: 1.5rem 1.5rem 0;
-    flex-direction: column;
-    flex-grow: 1;
-    display: flex;
-    min-height: 0;
+    @extend .config-layout-main;
 
     .pusher-banner {
       display: flex;
@@ -97,8 +68,9 @@
       background-color: #e8f0fe;
       color: #0b57d0;
       border-radius: 0.5rem;
-      margin-bottom: 1.5rem;
+      margin: 1.5rem 1.5rem 0; // Added margin to compensate for removed padding from parent
       font-weight: 500;
+      flex-shrink: 0;
 
       mat-icon {
         font-size: 1rem;
@@ -109,19 +81,17 @@
     }
 
     .main-container {
-      flex-grow: 1;
-      min-height: 0;
+      @extend .config-layout-content;
 
       .settings-title {
         display: flex;
         align-items: center;
-        font-size: 1.25rem;
-        line-height: 1.75rem;
+        @extend .config-section-title;
       }
     }
 
     .main-footer {
-       margin: 0 -1.5rem;
+       flex-shrink: 0;
     }
   }
 

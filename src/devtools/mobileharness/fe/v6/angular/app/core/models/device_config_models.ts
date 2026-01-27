@@ -4,6 +4,7 @@
  * and the Device Configuration UI components.
  */
 
+
 /**
  * Represents a single dimension name-value pair.
  * A device dimension is defined by a name and a corresponding value.
@@ -46,6 +47,14 @@ export declare interface WifiConfig {
   psk: string;
   /** Whether the network is hidden (does not broadcast its SSID). */
   scanSsid: boolean;
+}
+
+/**
+ * Represents a recommended Wi-Fi network configuration.
+ */
+export declare interface RecommendedWifi {
+  ssid: string;
+  psk: string;
 }
 
 /**
@@ -182,3 +191,4 @@ export declare interface UpdateDeviceConfigRequest {
   section: ConfigSection;
   options?: {overrideSelfLockout?: boolean};
 }
+

@@ -54,6 +54,17 @@ java_library(
 )
 
 java_library(
+    name = "get_recommended_wifi_handler",
+    srcs = ["GetRecommendedWifiHandler.java"],
+    deps = [
+        "//src/devtools/mobileharness/fe/v6/service/proto/config:config_service_java_proto",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
     name = "get_host_default_device_config_handler",
     srcs = ["GetHostDefaultDeviceConfigHandler.java"],
     deps = [
