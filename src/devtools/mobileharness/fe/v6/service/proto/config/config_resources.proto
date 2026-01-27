@@ -75,6 +75,26 @@ message DeviceConfig {
   StabilitySettings settings = 4;
 }
 
+// Defines the UI status for the DeviceConfig section.
+message DeviceConfigUiStatus {
+  // Status of the Permissions section.
+  PartStatus permissions = 1;
+  // Status of the Wi-Fi section.
+  PartStatus wifi = 2;
+  // Status of the Dimensions section.
+  PartStatus dimensions = 3;
+  // Status of the Stability section.
+  PartStatus settings = 4;
+}
+
+// Defines the UI status for the DeviceConfig section within HostConfig.
+message HostDeviceConfigUiStatus {
+  // Status of the 'Device Configs' section/group as a whole.
+  PartStatus section_status = 1;
+  // Status of the specific sub-sections (Permissions, Wifi, etc.).
+  DeviceConfigUiStatus sub_sections = 2;
+}
+
 // Enum representing the distinct sections of the device configuration dialog.
 enum DeviceConfigSection {
   DEVICE_CONFIG_SECTION_UNKNOWN = 0;
@@ -184,7 +204,7 @@ message HostConfigUiStatus {
   PartStatus device_config_mode = 3;
 
   // Corresponds to the DEVICE_CONFIG section
-  PartStatus device_config = 4;
+  HostDeviceConfigUiStatus device_config = 4;
 
   // Corresponds to the HOST_PROPERTIES section
   HostPropertiesUiStatus host_properties = 5;

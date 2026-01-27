@@ -40,7 +40,10 @@ const UI_STATUS: HostConfigUiStatus = {
   hostAdmins: {...NON_EDITABLE},
   sshAccess: {...NON_EDITABLE},
   deviceConfigMode: {...NON_EDITABLE},
-  deviceConfig: {...NON_EDITABLE},
+  deviceConfig: {
+    sectionStatus: {...NON_EDITABLE},
+    subSections: {},
+  },
   hostProperties: {
     sectionStatus: {...NON_EDITABLE},
   },

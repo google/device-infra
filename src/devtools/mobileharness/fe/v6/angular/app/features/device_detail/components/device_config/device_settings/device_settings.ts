@@ -1,15 +1,33 @@
 import {CommonModule} from '@angular/common';
-import {ChangeDetectionStrategy, Component, inject, Input, OnInit, signal} from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  inject,
+  Input,
+  OnInit,
+  signal,
+} from '@angular/core';
 import {FormsModule} from '@angular/forms';
 import {MatButtonModule} from '@angular/material/button';
-import {MatDialog, MatDialogModule, MatDialogRef} from '@angular/material/dialog';
+import {
+  MAT_DIALOG_DATA,
+  MatDialog,
+  MatDialogModule,
+  MatDialogRef,
+} from '@angular/material/dialog';
 import {MatIconModule} from '@angular/material/icon';
 import {MatMenuModule} from '@angular/material/menu';
 import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 import {delay, finalize, tap} from 'rxjs/operators';
 
-import type {DeviceConfig} from '../../../../../core/models/device_config_models';
-import {ConfigSection, UpdateDeviceConfigRequest} from '../../../../../core/models/device_config_models';
+import type {
+  DeviceConfig,
+  DeviceConfigUiStatus,
+} from '../../../../../core/models/device_config_models';
+import {
+  ConfigSection,
+  UpdateDeviceConfigRequest,
+} from '../../../../../core/models/device_config_models';
 import {CONFIG_SERVICE} from '../../../../../core/services/config/config_service';
 import {Dialog} from '../../../../../shared/components/config_common/dialog/dialog';
 import {Footer} from '../../../../../shared/components/config_common/footer/footer';
@@ -19,6 +37,13 @@ import {Dimensions} from '../steps/dimensions/dimensions';
 import {Permissions} from '../steps/permissions/permissions';
 import {Stability} from '../steps/stability/stability';
 import {Wifi} from '../steps/wifi/wifi';
+
+const DEFAULT_DEVICE_CONFIG_UI_STATUS: DeviceConfigUiStatus = {
+  permissions: {visible: true, editability: {editable: true}},
+  wifi: {visible: true, editability: {editable: true}},
+  dimensions: {visible: true, editability: {editable: true}},
+  settings: {visible: true, editability: {editable: true}},
+};
 
 /**
  * Component for displaying the device configuration settings dialog.
@@ -49,8 +74,14 @@ import {Wifi} from '../steps/wifi/wifi';
   ],
 })
 export class DeviceSettings implements OnInit {
-  private readonly dialog = inject(MatDialog);  // to open confirm dialog
+  readonly ConfigSection = ConfigSection;
+
+  private readonly dialog = inject(MatDialog); // to open confirm dialog
   private readonly dialogRef = inject(MatDialogRef<DeviceSettings>);
+  private readonly dialogData = inject(MAT_DIALOG_DATA, {optional: true}) as {
+    deviceId: string;
+    config: DeviceConfig;
+  } | null;
 
   private readonly configService = inject(CONFIG_SERVICE);
 
@@ -69,30 +100,65 @@ export class DeviceSettings implements OnInit {
     },
   };
 
-  readonly navList = [
+  uiStatusInternal: DeviceConfigUiStatus = DEFAULT_DEVICE_CONFIG_UI_STATUS;
+
+  @Input()
+  set uiStatus(value: Partial<DeviceConfigUiStatus> | undefined) {
+    if (!value) {
+      this.uiStatusInternal = DEFAULT_DEVICE_CONFIG_UI_STATUS;
+      return;
+    }
+    this.uiStatusInternal = {
+      ...DEFAULT_DEVICE_CONFIG_UI_STATUS,
+      ...value,
+    };
+  }
+
+  get uiStatus(): DeviceConfigUiStatus {
+    return this.uiStatusInternal;
+  }
+
+  private readonly allNavItems = [
     {
-      id: 'permissions',
+      id: ConfigSection.PERMISSIONS,
       icon: 'security',
       label: 'Permissions',
     },
     {
-      id: 'wifi',
+      id: ConfigSection.WIFI,
       icon: 'wifi',
       label: 'Wi-Fi',
     },
     {
-      id: 'dimensions',
+      id: ConfigSection.DIMENSIONS,
       icon: 'category',
       label: 'Dimensions',
     },
     {
-      id: 'stability',
+      id: ConfigSection.STABILITY,
       icon: 'autorenew',
       label: 'Stability & Reboot',
     },
   ];
 
-  activeSection = signal<string>('permissions');
+  get navList() {
+    return this.allNavItems.filter((nav) => {
+      switch (nav.id) {
+        case ConfigSection.PERMISSIONS:
+          return this.uiStatusInternal.permissions.visible;
+        case ConfigSection.WIFI:
+          return this.uiStatusInternal.wifi.visible;
+        case ConfigSection.DIMENSIONS:
+          return this.uiStatusInternal.dimensions.visible;
+        case ConfigSection.STABILITY:
+          return this.uiStatusInternal.settings.visible;
+        default:
+          return true;
+      }
+    });
+  }
+
+  activeSection = signal<ConfigSection>(ConfigSection.PERMISSIONS);
 
   private originalConfig: DeviceConfig = this.config;
   newConfig: DeviceConfig = this.config;
@@ -104,22 +170,37 @@ export class DeviceSettings implements OnInit {
 
   ngOnInit() {
     console.log('ngOnInit');
+    if (this.dialogData) {
+      this.deviceId = this.dialogData.deviceId || this.deviceId;
+      this.config = this.dialogData.config || this.config;
+    }
+
     this.originalConfig = objectUtils.deepCopy(this.config) as DeviceConfig;
     this.newConfig = objectUtils.deepCopy(this.config) as DeviceConfig;
+
+    if (
+      this.navList.length > 0 &&
+      !this.navList.find((nav) => nav.id === this.activeSection())
+    ) {
+      this.activeSection.set(this.navList[0].id);
+    }
 
     this.isCategoryDirty(this.activeSection());
   }
 
-  setActiveSection(event: Event, section: string) {
-    console.log('setActiveSection', section);
+  setActiveSection(event: Event, section: string | ConfigSection) {
+    const targetSection = section as ConfigSection;
+    console.log('setActiveSection', targetSection);
     event.preventDefault();
 
-    if (section !== this.activeSection() &&
-        this.isCategoryDirty(this.activeSection())) {
+    if (
+      targetSection !== this.activeSection() &&
+      this.isCategoryDirty(this.activeSection())
+    ) {
       const dialogData = {
         title: 'Unsaved Changes',
         content:
-            'You have unsaved changes. Are you sure you want to discard them?',
+          'You have unsaved changes. Are you sure you want to discard them?',
         type: 'warning',
         primaryButtonLabel: 'Discard and Switch',
         secondaryButtonLabel: 'Stay Here',
@@ -132,15 +213,15 @@ export class DeviceSettings implements OnInit {
       unsaveDialogRef.afterClosed().subscribe((result) => {
         if (result === 'primary') {
           this.newConfig = objectUtils.deepCopy(
-                               this.originalConfig,
-                               ) as DeviceConfig;
-          this.activeSection.set(section);
+            this.originalConfig,
+          ) as DeviceConfig;
+          this.activeSection.set(targetSection);
         }
 
         return;
       });
     } else {
-      this.activeSection.set(section);
+      this.activeSection.set(targetSection);
     }
   }
 
@@ -148,18 +229,18 @@ export class DeviceSettings implements OnInit {
     this.dialogRef.close({action: 'reset', deviceId: this.deviceId});
   }
 
-  isCategoryDirty(category: string) {
+  isCategoryDirty(category: ConfigSection) {
     let newDimensions = {
       supported: this.newConfig.dimensions.supported,
       required: this.newConfig.dimensions.required,
     };
 
-    if (category === 'dimensions') {
+    if (category === ConfigSection.DIMENSIONS) {
       const supportDimensions = this.newConfig.dimensions.supported.filter(
-          (item) => !(!item.name && !item.value),
+        (item) => !(!item.name && !item.value),
       );
       const requiredDimensions = this.newConfig.dimensions.required.filter(
-          (item) => !(!item.name && !item.value),
+        (item) => !(!item.name && !item.value),
       );
 
       newDimensions = {
@@ -168,29 +249,29 @@ export class DeviceSettings implements OnInit {
       };
     }
 
-    const originalMap: Record<string, unknown> = {
-      'permissions': this.originalConfig.permissions,
-      'wifi': this.originalConfig.wifi,
-      'dimensions': this.originalConfig.dimensions,
-      'stability': this.originalConfig.settings,
+    const originalMap: Partial<Record<ConfigSection, unknown>> = {
+      [ConfigSection.PERMISSIONS]: this.originalConfig.permissions,
+      [ConfigSection.WIFI]: this.originalConfig.wifi,
+      [ConfigSection.DIMENSIONS]: this.originalConfig.dimensions,
+      [ConfigSection.STABILITY]: this.originalConfig.settings,
     };
-    const newMap: Record<string, unknown> = {
-      'permissions': this.newConfig.permissions,
-      'wifi': this.newConfig.wifi,
-      'dimensions': newDimensions,
-      'stability': this.newConfig.settings,
+    const newMap: Partial<Record<ConfigSection, unknown>> = {
+      [ConfigSection.PERMISSIONS]: this.newConfig.permissions,
+      [ConfigSection.WIFI]: this.newConfig.wifi,
+      [ConfigSection.DIMENSIONS]: newDimensions,
+      [ConfigSection.STABILITY]: this.newConfig.settings,
     };
 
     return (
-        JSON.stringify(originalMap[category]) !==
-        JSON.stringify(newMap[category]));
+      JSON.stringify(originalMap[category]) !== JSON.stringify(newMap[category])
+    );
   }
 
   selfLockout() {
     const dialogData = {
       title: 'Permission Warning',
       content:
-          'The new owners list does not contain your username, and you are not a member of any of the specified owner groups. Proceeding will remove your ability to configure this device in the future.',
+        'The new owners list does not contain your username, and you are not a member of any of the specified owner groups. Proceeding will remove your ability to configure this device in the future.',
       type: 'warning',
       primaryButtonLabel: 'Proceed Anyway',
       secondaryButtonLabel: 'Go Back',
@@ -201,7 +282,7 @@ export class DeviceSettings implements OnInit {
     });
     selfLockoutDialog.afterClosed().subscribe((result) => {
       if (result === 'secondary') {
-        this.activeSection.set('permissions');
+        this.activeSection.set(ConfigSection.PERMISSIONS);
         return;
       }
       if (result === 'primary') {
@@ -230,9 +311,9 @@ export class DeviceSettings implements OnInit {
       return;
     }
 
-    const errorMessage = errorCode ?
-        ` with error code ${errorCode}. Please try again.` :
-        '. Please try again.';
+    const errorMessage = errorCode
+      ? ` with error code ${errorCode}. Please try again.`
+      : '. Please try again.';
 
     const dialogData = {
       title: 'Configuration Failed',
@@ -249,42 +330,37 @@ export class DeviceSettings implements OnInit {
 
   save(selfLockout = false) {
     const section = this.activeSection();
-    const requestSectionMap: Record<string, ConfigSection> = {
-      'permissions': ConfigSection.PERMISSIONS,
-      'wifi': ConfigSection.WIFI,
-      'dimensions': ConfigSection.DIMENSIONS,
-      'stability': ConfigSection.STABILITY,
-    };
 
     const request: UpdateDeviceConfigRequest = {
       deviceId: this.deviceId,
       config: this.newConfig,
-      section: requestSectionMap[section],
+      section,
       options: {overrideSelfLockout: selfLockout},
     };
 
-    this.configService.updateDeviceConfig(request)
-        .pipe(
-            tap(() => {
-              this.saving.set(true);
-            }),
-            delay(1000),
-            finalize(() => {
-              this.saving.set(false);
-            }),
-            )
-        .subscribe((result) => {
-          if (!result.success) {
-            this.error(result.error?.code);
-            return;
-          }
+    this.configService
+      .updateDeviceConfig(request)
+      .pipe(
+        tap(() => {
+          this.saving.set(true);
+        }),
+        delay(1000),
+        finalize(() => {
+          this.saving.set(false);
+        }),
+      )
+      .subscribe((result) => {
+        if (!result.success) {
+          this.error(result.error?.code);
+          return;
+        }
 
-          this.originalConfig = objectUtils.deepCopy(
-                                    this.newConfig,
-                                    ) as DeviceConfig;
+        this.originalConfig = objectUtils.deepCopy(
+          this.newConfig,
+        ) as DeviceConfig;
 
-          this.success();
-        });
+        this.success();
+      });
   }
 
   discard() {

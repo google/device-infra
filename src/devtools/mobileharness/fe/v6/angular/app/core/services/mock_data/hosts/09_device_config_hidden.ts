@@ -27,7 +27,10 @@ const HOST_CONFIG: HostConfig = {
 };
 
 const UI_STATUS = createDefaultUiStatus();
-UI_STATUS.deviceConfig = createPartStatus(false);
+UI_STATUS.deviceConfig = {
+  sectionStatus: createPartStatus(false),
+  subSections: {},
+};
 UI_STATUS.deviceConfigMode = createPartStatus(false);
 
 export const SCENARIO_HOST_DEVICE_CONFIG_HIDDEN: MockHostScenario = {

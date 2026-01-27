@@ -21,7 +21,10 @@ export function createDefaultUiStatus(): HostConfigUiStatus {
     hostAdmins: {...VISIBLE_EDITABLE},
     sshAccess: {...VISIBLE_EDITABLE},
     deviceConfigMode: {...VISIBLE_EDITABLE},
-    deviceConfig: {...VISIBLE_EDITABLE},
+    deviceConfig: {
+      sectionStatus: {...VISIBLE_EDITABLE},
+      subSections: {},
+    },
     hostProperties: {
       sectionStatus: {...VISIBLE_EDITABLE},
     },

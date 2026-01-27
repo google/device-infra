@@ -34,23 +34,23 @@
     <main class="configuration-content-main">
       <div class="main-container">
         @switch (activeSection()) {
-          @case ('permissions') {
+          @case (ConfigSection.PERMISSIONS) {
             <app-permissions
               workflow="settings"
               [(permissions)]="newConfig.permissions"
             ></app-permissions>
           }
-          @case ('wifi') {
+          @case (ConfigSection.WIFI) {
             <app-wifi workflow="settings" [(wifi)]="newConfig.wifi"></app-wifi>
           }
-          @case ('dimensions') {
+          @case (ConfigSection.DIMENSIONS) {
             <app-dimensions
               workflow="settings"
               [(dimensions)]="newConfig.dimensions"
               (hasError)="hasError = $event"
             ></app-dimensions>
           }
-          @case ('stability') {
+          @case (ConfigSection.STABILITY) {
             <app-stability [(settings)]="newConfig.settings"></app-stability>
           }
         }

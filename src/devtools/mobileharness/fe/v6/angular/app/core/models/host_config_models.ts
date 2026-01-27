@@ -5,6 +5,7 @@
 import {
   DeviceConfig,
   ConfigSection as DeviceConfigSection,
+  DeviceConfigUiStatus,
 } from './device_config_models';
 
 /**
@@ -110,6 +111,17 @@ export declare interface HostPropertiesUiStatus {
 }
 
 /**
+ * Defines the UI status for the Device Config section within Host Config.
+ */
+export declare interface HostDeviceConfigUiStatus {
+  // Status of the 'Device Configs' section/group as a whole.
+  sectionStatus: PartStatus;
+
+  // Status of the specific sub-sections (Permissions, Wifi, etc.).
+  subSections: Partial<DeviceConfigUiStatus>;
+}
+
+/**
  * Defines which parts of the HostConfig are visible and editable in the Lab Console UI.
  * This is derived from the backend's management mode and host type.
  */
@@ -122,7 +134,7 @@ export declare interface HostConfigUiStatus {
   deviceConfigMode: PartStatus;
 
   // Corresponds to the DEVICE_CONFIG section
-  deviceConfig: PartStatus;
+  deviceConfig: HostDeviceConfigUiStatus;
 
   // Corresponds to the HOST_PROPERTIES section
   hostProperties: HostPropertiesUiStatus;

@@ -87,6 +87,35 @@ export declare interface DeviceConfig {
 }
 
 /**
+ * Describes the editability of a visible part.
+ */
+export declare interface Editability {
+  editable: boolean;
+  // Message explaining why editable is false.
+  reason?: string;
+}
+
+/**
+ * Represents the UI control status of a single configuration part.
+ */
+export declare interface PartStatus {
+  // True if the part should be visible in the UI.
+  visible: boolean;
+  // Details about editability, only relevant and expected if visible is true.
+  editability?: Editability;
+}
+
+/**
+ * Defines which parts of the DeviceConfig are visible and editable in the UI.
+ */
+export declare interface DeviceConfigUiStatus {
+  permissions: PartStatus;
+  wifi: PartStatus;
+  dimensions: PartStatus;
+  settings: PartStatus;
+}
+
+/**
  * The result object returned when fetching a device's configuration.
  */
 export declare interface GetDeviceConfigResult {
@@ -96,6 +125,11 @@ export declare interface GetDeviceConfigResult {
   isHostManaged: boolean;
   /** The name of the host the device is connected to. */
   hostName?: string;
+  /**
+   * The UI status for the device configuration sections.
+   * If omitted or partially provided, the frontend assumes visible=true and editable=true by default.
+   */
+  uiStatus?: Partial<DeviceConfigUiStatus>;
 }
 
 /**

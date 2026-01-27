@@ -17,7 +17,8 @@ import {type HostOverview} from '../../core/models/host_overview';
 import {HOST_SERVICE} from '../../core/services/host/host_service';
 import {HostConfig} from './components/host_config/host_config';
 import {HostEmpty} from './components/host_config/host_empty/host_empty';
-import {HostWizard} from './components/host_config/host_wizard/host_wizard';
+import {HostSettings} from './components/host_config/host_settings/host_settings';
+// deviceinfra:google3-replace-end
 import {HostOverviewPage} from './components/host_overview/host_overview';
 
 interface HostPageData {
@@ -104,8 +105,8 @@ export class HostDetail implements OnInit {
     hostName: string,
     config: HostConfig,
   ) {
-    this.dialog.open(HostWizard, {
-      data: {hostName, source: action, config},
+    this.dialog.open(HostSettings, {
+      data: {hostName, config},
       autoFocus: false,
     });
   }

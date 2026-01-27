@@ -1,4 +1,13 @@
 @use '../../../../../shared/styles/configuration' as config;
+@use '../../../../../shared/styles/common';
+
+.wizard-button-secondary {
+  @include common.shared-button('secondary');
+}
+
+.wizard-button-primary {
+  @include common.shared-button('primary');
+}
 
 .config-menu-text {
   font-family: config.$labconsole-font;

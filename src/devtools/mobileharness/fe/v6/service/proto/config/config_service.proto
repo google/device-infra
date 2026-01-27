@@ -98,6 +98,7 @@ message GetDeviceConfigResponse {
   DeviceConfig device_config = 1;
   bool is_host_managed = 2;
   string host_name = 3;
+  DeviceConfigUiStatus ui_status = 4;
 }
 
 // Request for CheckDeviceWritePermission.

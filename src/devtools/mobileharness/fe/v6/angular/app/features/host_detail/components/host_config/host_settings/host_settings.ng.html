@@ -91,7 +91,7 @@
               [description]="'Manage permissions for devices on this host.'"
               [hostTooltipText]="tooltipText()"
               [(permissions)]="deviceConfig.permissions"
-              [uiStatus]="config.uiStatus.deviceConfig"
+              [uiStatus]="permissionsUiStatus"
             ></app-permissions>
           }
           @case ('wifi') {
@@ -111,7 +111,7 @@
               type="host"
               workflow="settings"
               [(wifi)]="deviceConfig.wifi"
-              [uiStatus]="config.uiStatus.deviceConfig"
+              [uiStatus]="wifiUiStatus"
             ></app-wifi>
           }
           @case ('dimensions') {
@@ -139,7 +139,7 @@
               "
               [hostTooltipText]="tooltipText()"
               [(settings)]="deviceConfig.settings"
-              [uiStatus]="config.uiStatus.deviceConfig"
+              [uiStatus]="settingsUiStatus"
             ></app-stability>
           }
           @case ('device-discovery') {

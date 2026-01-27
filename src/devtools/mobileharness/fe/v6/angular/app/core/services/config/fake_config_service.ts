@@ -4,6 +4,7 @@ import {
   CheckDeviceWritePermissionResult,
   ConfigSection,
   DeviceConfig,
+  DeviceConfigUiStatus,
   GetDeviceConfigResult,
   UpdateDeviceConfigRequest,
   UpdateDeviceConfigResult,
@@ -60,10 +61,21 @@ export class FakeConfigService extends ConfigService {
     const isHostManaged = scenario.overview.host.name === 'host-x.example.com';
     const hostName = scenario.overview.host.name;
 
+    let uiStatus: Partial<DeviceConfigUiStatus> | undefined;
+    if (deviceId === 'WIFI_DIMENSIONS_ONLY_DEVICE') {
+      uiStatus = {
+        permissions: {visible: false},
+        wifi: {visible: true, editability: {editable: true}},
+        dimensions: {visible: true, editability: {editable: true}},
+        settings: {visible: false},
+      };
+    }
+
     return of({
       deviceConfig: scenario.config,
       isHostManaged,
       hostName,
+      uiStatus,
     });
   }
 
