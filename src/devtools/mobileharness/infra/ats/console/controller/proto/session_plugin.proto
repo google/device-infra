@@ -113,6 +113,8 @@ message RunCommand {
 
   repeated string exclude_filter = 10;
 
+  repeated string strict_include_filter = 40;
+
   // Optional.
   optional int32 retry_session_index = 11;
   // Optional.

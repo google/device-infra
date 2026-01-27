@@ -227,6 +227,20 @@ public final class RunCommandHandlerTest {
     assertThat(sessionRequestInfo.maxSdkLevel()).hasValue(35);
   }
 
+  @Test
+  public void generateSessionRequestInfo_strictIncludeFilter() throws Exception {
+    RunCommand command =
+        RunCommand.newBuilder()
+            .setXtsType("cts")
+            .setXtsRootDir("xts_root_dir")
+            .addAllStrictIncludeFilter(ImmutableList.of("strict_1", "strict_2"))
+            .build();
+
+    SessionRequestInfo sessionRequestInfo = runCommandHandler.generateSessionRequestInfo(command);
+
+    assertThat(sessionRequestInfo.strictIncludeFilters()).containsExactly("strict_1", "strict_2");
+  }
+
   private static ImmutableList<JobInfo> createJobInfos() throws MobileHarnessException {
     JobInfo tradefedJobInfo =
         JobInfo.newBuilder()

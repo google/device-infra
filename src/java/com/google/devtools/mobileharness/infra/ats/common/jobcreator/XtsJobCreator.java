@@ -312,13 +312,25 @@ public abstract class XtsJobCreator {
                           // For "run retry" command, the passed in include filters and exclude
                           // filters are set in generated subplan, no need to set in TF command
                           // again.
-                          !useTfRetry && SessionRequestHandlerUtil.isRunRetry(testPlan)
+                          // For "run with strict include filters" (--strict-include-filter set),
+                          // the include filters and exclude filters will be ignored.
+                          (!useTfRetry && SessionRequestHandlerUtil.isRunRetry(testPlan))
+                                  || !sessionRequestInfo.strictIncludeFilters().isEmpty()
                               ? Stream.empty()
                               : sessionRequestInfo.includeFilters().stream()
                                   .map(
                                       includeFilter ->
                                           String.format("--include-filter \"%s\"", includeFilter)),
                           !useTfRetry && SessionRequestHandlerUtil.isRunRetry(testPlan)
+                              ? Stream.empty()
+                              : sessionRequestInfo.strictIncludeFilters().stream()
+                                  .map(
+                                      strictIncludeFilter ->
+                                          String.format(
+                                              "--strict-include-filter \"%s\"",
+                                              strictIncludeFilter)),
+                          (!useTfRetry && SessionRequestHandlerUtil.isRunRetry(testPlan))
+                                  || !sessionRequestInfo.strictIncludeFilters().isEmpty()
                               ? Stream.empty()
                               : sessionRequestInfo.excludeFilters().stream()
                                   .map(
