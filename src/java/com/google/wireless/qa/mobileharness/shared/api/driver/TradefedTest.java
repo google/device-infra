@@ -707,10 +707,12 @@ public class TradefedTest extends BaseDriver
     ImmutableList.Builder<String> tradefedRunCommand =
         ImmutableList.<String>builder().add("run", "commandAndExit");
 
+    ImmutableList.Builder<String> tradefedCommandBuilder = ImmutableList.<String>builder();
     String testPlan =
         isRunRetryWithSubPlan(spec) ? spec.getPrevSessionXtsTestPlan() : spec.getXtsTestPlan();
-    ImmutableList.Builder<String> tradefedCommandBuilder =
-        ImmutableList.<String>builder().add(testPlan);
+    if (!testPlan.isEmpty()) {
+      tradefedCommandBuilder.add(testPlan);
+    }
     if (isRunWithSubPlan(spec)) {
       tradefedCommandBuilder.add(
           "--subplan", com.google.common.io.Files.getNameWithoutExtension(spec.getSubplanXml()));
