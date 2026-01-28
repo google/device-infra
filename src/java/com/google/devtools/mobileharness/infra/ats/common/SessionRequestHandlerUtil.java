@@ -1144,18 +1144,20 @@ public class SessionRequestHandlerUtil {
                 sessionRequestInfo.xtsSuiteInfo(),
                 sessionRequestInfo.isAtsServerRequest());
 
-        getSimCardTypeDimensionValue(moduleMetadata)
-            .ifPresent(
-                simCardTypeDimensionValue ->
-                    jobInfo
-                        .subDeviceSpecs()
-                        .getAllSubDevices()
-                        .forEach(
-                            subDeviceSpec ->
-                                subDeviceSpec
-                                    .deviceRequirement()
-                                    .dimensions()
-                                    .add(Name.SIM_CARD_TYPE, simCardTypeDimensionValue)));
+        if (sessionRequestInfo.enableTokenSharding()) {
+          getSimCardTypeDimensionValue(moduleMetadata)
+              .ifPresent(
+                  simCardTypeDimensionValue ->
+                      jobInfo
+                          .subDeviceSpecs()
+                          .getAllSubDevices()
+                          .forEach(
+                              subDeviceSpec ->
+                                  subDeviceSpec
+                                      .deviceRequirement()
+                                      .dimensions()
+                                      .add(Name.SIM_CARD_TYPE, simCardTypeDimensionValue)));
+        }
 
         if (deviceSerialsDimensionValue != null) {
           jobInfo

@@ -49,6 +49,8 @@ import com.google.devtools.mobileharness.platform.android.xts.common.util.MoblyT
 import com.google.devtools.mobileharness.platform.android.xts.config.ConfigurationUtil;
 import com.google.devtools.mobileharness.platform.android.xts.config.ModuleConfigurationHelper;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
+import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.ConfigurationDescriptor;
+import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.ConfigurationDescriptorMetadata;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.ConfigurationMetadata;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Device;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Option;
@@ -62,6 +64,8 @@ import com.google.gson.reflect.TypeToken;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
+import com.google.testing.junit.testparameterinjector.TestParameter;
+import com.google.testing.junit.testparameterinjector.TestParameterInjector;
 import com.google.wireless.qa.mobileharness.shared.api.spec.MoblyAospTestSpec;
 import com.google.wireless.qa.mobileharness.shared.api.spec.MoblyTestSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -81,12 +85,11 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
-@RunWith(JUnit4.class)
+@RunWith(TestParameterInjector.class)
 public final class SessionRequestHandlerUtilTest {
 
   private static final String XTS_ROOT_DIR_PATH = "/path/to/xts_root_dir";
@@ -172,6 +175,52 @@ public final class SessionRequestHandlerUtilTest {
         .setType("AndroidDevice")
         .setDimensions(StringMap.newBuilder().putContent(dimensionName, dimensionValue))
         .build();
+  }
+
+  @Test
+  public void createXtsNonTradefedJobs_enableTokenSharding_setsSimCardTypeDimension(
+      @TestParameter boolean enableTokenSharding) throws Exception {
+    setUpForCreateXtsNonTradefedJobs();
+    ConfigurationDescriptor configDescriptor =
+        ConfigurationDescriptor.newBuilder()
+            .putMetadata(
+                "token",
+                ConfigurationDescriptorMetadata.newBuilder()
+                    .setKey("token")
+                    .addValue("SIM_CARD")
+                    .build())
+            .build();
+    Configuration configWithToken =
+        defaultConfigurationBuilder()
+            .setMetadata(
+                ConfigurationMetadata.newBuilder().setXtsModule("module2").setIsConfigV2(true))
+            .setConfigDescriptor(configDescriptor)
+            .build();
+
+    when(testSuiteHelper.loadTests(any()))
+        .thenReturn(ImmutableMap.of("arm64-v8a module2", configWithToken));
+    when(configurationUtil.getConfigsV2FromDirs(any()))
+        .thenReturn(ImmutableMap.of("/path/to/config2", configWithToken));
+
+    SessionRequestInfo sessionRequestInfo =
+        sessionRequestHandlerUtil.addNonTradefedModuleInfo(
+            defaultSessionRequestInfoBuilder()
+                .setEnableTokenSharding(enableTokenSharding)
+                .setModuleNames(ImmutableList.of("module2"))
+                .build());
+
+    ImmutableList<JobInfo> jobInfos =
+        sessionRequestHandlerUtil.createXtsNonTradefedJobs(
+            sessionRequestInfo, null, ImmutableMap.of());
+
+    assertThat(jobInfos).hasSize(1);
+    if (enableTokenSharding) {
+      assertThat(jobInfos.get(0).subDeviceSpecs().getAllSubDevices().get(0).dimensions().getAll())
+          .containsEntry("sim_card_type", "SIM_CARD");
+    } else {
+      assertThat(jobInfos.get(0).subDeviceSpecs().getAllSubDevices().get(0).dimensions().getAll())
+          .doesNotContainKey("sim_card_type");
+    }
   }
 
   @Test
