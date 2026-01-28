@@ -72,15 +72,5 @@
 }
 
 .step-content {
-  padding: 1.5rem;
-  overflow-y: auto;
-  flex-grow: 1;
-  min-height: 0px;
-  max-height: calc(90vh - 99px - 85px - 56px);
-}
-
-@media (min-width: 768px) {
-  .step-content {
-    padding: 2rem;
-  }
+  @extend .config-wizard-step-content;
 }

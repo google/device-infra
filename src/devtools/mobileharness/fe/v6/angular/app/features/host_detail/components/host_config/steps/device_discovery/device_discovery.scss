@@ -12,8 +12,7 @@
   .discovery-title {
     display: flex;
     align-items: center;
-    font-size: 1.25rem;
-    line-height: 1.75rem;
+    @extend .config-section-title;
   }
 }
 
