@@ -69,6 +69,12 @@ package_group(
     ],
 )
 
+package_group(
+    name = "omnilab_console",
+    packages = [
+    ],
+)
+
 kt_kotlinc_options(
     name = "kt_kotlinc_options",
     jvm_target = "17",
