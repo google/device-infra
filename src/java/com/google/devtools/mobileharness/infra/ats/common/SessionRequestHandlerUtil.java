@@ -553,16 +553,27 @@ public class SessionRequestHandlerUtil {
         modules.isEmpty() ? allTfModules : matchModules(modules, allTfModules);
 
     // Filter modules by include/exclude filters.
+    // For "run with strict include filters" (--strict-include-filter set), the include filters
+    // and exclude filters will be ignored.
     ImmutableList<SuiteTestFilter> includeFilters =
-        Stream.concat(
-                sessionRequestInfo.includeFilters().stream(),
-                isTfRetryWithModules ? sessionRequestInfo.moduleNames().stream() : Stream.empty())
-            .map(SuiteTestFilter::create)
-            .collect(toImmutableList());
+        !sessionRequestInfo.strictIncludeFilters().isEmpty()
+            ? sessionRequestInfo.strictIncludeFilters().stream()
+                .map(SuiteTestFilter::create)
+                .collect(toImmutableList())
+            : Stream.concat(
+                    sessionRequestInfo.includeFilters().stream(),
+                    isTfRetryWithModules
+                        ? sessionRequestInfo.moduleNames().stream()
+                        : Stream.empty())
+                .map(SuiteTestFilter::create)
+                .collect(toImmutableList());
     ImmutableList<SuiteTestFilter> excludeFilters =
-        sessionRequestInfo.excludeFilters().stream()
-            .map(SuiteTestFilter::create)
-            .collect(toImmutableList());
+        !sessionRequestInfo.strictIncludeFilters().isEmpty()
+            ? ImmutableList.of()
+            : sessionRequestInfo.excludeFilters().stream()
+                .map(SuiteTestFilter::create)
+                .collect(toImmutableList());
+
     ImmutableList.Builder<String> filteredModulesBuilder = ImmutableList.builder();
     for (String module : givenMatchedTfModules) {
       if (excludeFilters.stream()
@@ -887,11 +898,15 @@ public class SessionRequestHandlerUtil {
     ImmutableList<SuiteTestFilter> includeFilters;
     if (subPlan == null) {
       includeFilters =
-          Stream.concat(
-                  sessionRequestInfo.includeFilters().stream(),
-                  testPlanFilter.includeFilters().stream())
-              .map(SuiteTestFilter::create)
-              .collect(toImmutableList());
+          !sessionRequestInfo.strictIncludeFilters().isEmpty()
+              ? sessionRequestInfo.strictIncludeFilters().stream()
+                  .map(SuiteTestFilter::create)
+                  .collect(toImmutableList())
+              : Stream.concat(
+                      sessionRequestInfo.includeFilters().stream(),
+                      testPlanFilter.includeFilters().stream())
+                  .map(SuiteTestFilter::create)
+                  .collect(toImmutableList());
     } else {
       includeFilters =
           subPlan.getNonTfIncludeFiltersMultimap().entries().stream()
@@ -907,11 +922,13 @@ public class SessionRequestHandlerUtil {
     }
 
     ImmutableList<SuiteTestFilter> excludeFilters =
-        Stream.concat(
-                sessionRequestInfo.excludeFilters().stream(),
-                testPlanFilter.excludeFilters().stream())
-            .map(SuiteTestFilter::create)
-            .collect(toImmutableList());
+        !sessionRequestInfo.strictIncludeFilters().isEmpty()
+            ? ImmutableList.of()
+            : Stream.concat(
+                    sessionRequestInfo.excludeFilters().stream(),
+                    testPlanFilter.excludeFilters().stream())
+                .map(SuiteTestFilter::create)
+                .collect(toImmutableList());
     if (subPlan != null) {
       ImmutableList<SuiteTestFilter> subplanExcludeFilters =
           subPlan.getNonTfExcludeFiltersMultimap().entries().stream()

@@ -72,6 +72,8 @@ public abstract class SessionRequestInfo {
 
   public abstract ImmutableList<String> excludeFilters();
 
+  public abstract ImmutableList<String> strictIncludeFilters();
+
   public abstract ImmutableMultimap<String, String> moduleMetadataIncludeFilters();
 
   public abstract ImmutableMultimap<String, String> moduleMetadataExcludeFilters();
@@ -189,6 +191,7 @@ public abstract class SessionRequestInfo {
         .setDeviceProperties(ImmutableMap.of())
         .setIncludeFilters(ImmutableList.of())
         .setExcludeFilters(ImmutableList.of())
+        .setStrictIncludeFilters(ImmutableList.of())
         .setModuleMetadataIncludeFilters(ImmutableMultimap.of())
         .setModuleMetadataExcludeFilters(ImmutableMultimap.of())
         .setModuleArgs(ImmutableList.of())
@@ -242,6 +245,8 @@ public abstract class SessionRequestInfo {
     public abstract Builder setIncludeFilters(List<String> includeFilters);
 
     public abstract Builder setExcludeFilters(List<String> excludeFilters);
+
+    public abstract Builder setStrictIncludeFilters(List<String> strictIncludeFilters);
 
     public abstract Builder setModuleMetadataIncludeFilters(
         ImmutableMultimap<String, String> moduleMetadataIncludeFilters);

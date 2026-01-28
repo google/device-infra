@@ -253,6 +253,17 @@ public final class RunCommand implements Callable<Integer> {
   private List<String> excludeFilters;
 
   @Option(
+      names = {"--strict-include-filter", "--compatibility:strict-include-filter"},
+      paramLabel = "\"[abi] <module_name> <test_name>\"",
+      description =
+          "Run with the specified modules, or test packages, classes, and cases. For example, run"
+              + " cts --strict-include-filter \"CtsCalendarcommon2Test"
+              + " android.calendarcommon2.cts.Calendarcommon2Test#testStaticLinking\" includes the"
+              + " specified module. All other filters will be ignored to strictly run this set.")
+  @SuppressWarnings("PreferredInterfaceType")
+  private List<String> strictIncludeFilters;
+
+  @Option(
       names = {
         "--module-metadata-include-filter",
         "--compatibility:module-metadata-include-filter"
@@ -491,6 +502,10 @@ public final class RunCommand implements Callable<Integer> {
             this.excludeFilters == null
                 ? ImmutableList.of()
                 : ImmutableList.copyOf(this.excludeFilters))
+        .setStrictIncludeFilters(
+            this.strictIncludeFilters == null
+                ? ImmutableList.of()
+                : ImmutableList.copyOf(this.strictIncludeFilters))
         .setModuleMetadataIncludeFilters(
             this.moduleMetadataIncludeFilters == null
                 ? ImmutableMultimap.of()
@@ -735,6 +750,10 @@ public final class RunCommand implements Callable<Integer> {
         this.excludeFilters == null
             ? ImmutableList.of()
             : ImmutableList.copyOf(this.excludeFilters);
+    ImmutableList<String> strictIncludeFilters =
+        this.strictIncludeFilters == null
+            ? ImmutableList.of()
+            : ImmutableList.copyOf(this.strictIncludeFilters);
 
     ImmutableMultimap<String, String> moduleMetadataIncludeFilters =
         this.moduleMetadataIncludeFilters == null
@@ -765,6 +784,7 @@ public final class RunCommand implements Callable<Integer> {
             .putAllDeviceProperty(devicePropertiesMap)
             .addAllIncludeFilter(includeFilters)
             .addAllExcludeFilter(excludeFilters)
+            .addAllStrictIncludeFilter(strictIncludeFilters)
             .setHtmlInZip(htmlInZip)
             .setReportSystemCheckers(reportSystemCheckers)
             .putAllXtsSuiteInfo(
