@@ -20,7 +20,9 @@ export const TEST_COLORS: Record<string, string> = {
   'fail': '#EA4335',
   'error': '#FDBB05',
   'timeout': '#A142F4',
-  'other': '#9E9E9E',
+  'unknown': '#546E7A',
+  'skip': '#CFD8DC',
+  'abort': '#AD1457',
 };
 /** Chart colors for test results. */
 export const TEST_CHART_COLORS = [
@@ -28,7 +30,9 @@ export const TEST_CHART_COLORS = [
   TEST_COLORS['fail'],
   TEST_COLORS['error'],
   TEST_COLORS['timeout'],
-  TEST_COLORS['other'],
+  TEST_COLORS['unknown'],
+  TEST_COLORS['skip'],
+  TEST_COLORS['abort'],
 ];
 
 /** Colors associated with different recovery outcomes. */

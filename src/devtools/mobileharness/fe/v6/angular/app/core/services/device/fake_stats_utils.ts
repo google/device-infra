@@ -183,6 +183,11 @@ export function generateTestResultStats(
     rem -= error;
     const timeout = Math.floor(Math.random() * (rem * 0.7));
     rem -= timeout;
+    const unknown = Math.floor(Math.random() * (rem * 0.4));
+    rem -= unknown;
+    const skip = Math.floor(Math.random() * (rem * 0.5));
+    rem -= skip;
+    const abort = rem;
 
     return {
       date: formatDate(date),
@@ -190,7 +195,9 @@ export function generateTestResultStats(
       fail,
       error,
       timeout,
-      other: rem,
+      unknown,
+      skip,
+      abort,
     };
   });
 
@@ -201,12 +208,24 @@ export function generateTestResultStats(
     (sum, day) => sum + (day.timeout ?? 0),
     0,
   );
-  const totalOther = dailyStats.reduce((sum, day) => sum + (day.other ?? 0), 0);
+  const totalUnknown = dailyStats.reduce(
+    (sum, day) => sum + (day.unknown ?? 0),
+    0,
+  );
+  const totalSkip = dailyStats.reduce((sum, day) => sum + (day.skip ?? 0), 0);
+  const totalAbort = dailyStats.reduce((sum, day) => sum + (day.abort ?? 0), 0);
 
   const totalTests =
-    totalPass + totalFail + totalError + totalTimeout + totalOther;
+    totalPass +
+    totalFail +
+    totalError +
+    totalTimeout +
+    totalUnknown +
+    totalSkip +
+    totalAbort;
   const completionCount = totalPass + totalFail;
-  const nonCompletionCount = totalError + totalTimeout + totalOther;
+  const nonCompletionCount =
+    totalError + totalTimeout + totalUnknown + totalSkip + totalAbort;
 
   const aggregatedStats: AggregatedTestResults = {
     totalTests,
@@ -250,10 +269,24 @@ export function generateTestResultStats(
         },
       },
       {
-        category: 'OTHER',
+        category: 'UNKNOWN',
         stats: {
-          count: totalOther,
-          percent: totalTests ? (totalOther / totalTests) * 100 : 0,
+          count: totalUnknown,
+          percent: totalTests ? (totalUnknown / totalTests) * 100 : 0,
+        },
+      },
+      {
+        category: 'SKIP',
+        stats: {
+          count: totalSkip,
+          percent: totalTests ? (totalSkip / totalTests) * 100 : 0,
+        },
+      },
+      {
+        category: 'ABORT',
+        stats: {
+          count: totalAbort,
+          percent: totalTests ? (totalAbort / totalTests) * 100 : 0,
         },
       },
     ].filter((item) => item.stats.count > 0),
@@ -285,8 +318,11 @@ export function generateRecoveryTaskStats(
     },
   );
 
-  const totalSuccess = dailyStats.reduce((sum, day) => sum + day.success, 0);
-  const totalFail = dailyStats.reduce((sum, day) => sum + day.fail, 0);
+  const totalSuccess = dailyStats.reduce(
+    (sum, day) => sum + (day.success ?? 0),
+    0,
+  );
+  const totalFail = dailyStats.reduce((sum, day) => sum + (day.fail ?? 0), 0);
   const totalTasks = totalSuccess + totalFail;
 
   const aggregatedStats: AggregatedRecoveryTasks = {

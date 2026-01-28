@@ -74,7 +74,10 @@ export declare interface DailyTestResults {
   fail?: number;
   error?: number;
   timeout?: number;
-  other?: number;
+  unknown?: number;
+  skip?: number;
+  abort?: number;
+  [key: string]: number | string | undefined;
 }
 
 /**
@@ -123,8 +126,8 @@ export declare interface RecoveryTaskStats {
 export declare interface DailyRecoveryTasks {
   /** The date in YYYY-MM-DD format. */
   date: string;
-  success: number;
-  fail: number;
+  success?: number;
+  fail?: number;
 }
 
 /**

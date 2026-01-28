@@ -3,15 +3,15 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
-  inject,
   Input,
   OnDestroy,
   OnInit,
   QueryList,
-  signal,
   ViewChild,
   ViewChildren,
   WritableSignal,
+  inject,
+  signal,
 } from '@angular/core';
 import {MatProgressBarModule} from '@angular/material/progress-bar';
 import {MatTableModule} from '@angular/material/table';
@@ -23,7 +23,6 @@ import {
   HEALTH_SUMMARY_COLORS,
   RECOVERY_CHART_COLORS,
   RECOVERY_COLORS,
-  TEST_CHART_COLORS,
   TEST_COLORS,
 } from '../../../../core/constants/statistic_constants';
 import {
@@ -308,12 +307,13 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
   // Healthiness Summary Chart
   healthinessSummaryChartOptions = (): ColumnChartOptions => ({
     backgroundColor: 'transparent',
-    isStacked: 'percent',
+    isStacked: true,
     legend: {position: 'bottom'},
     vAxis: {
       title: 'Time Percentage',
-      format: 'percent',
+      format: "#'%'",
       gridlines: {color: '#e0e0e0'},
+      viewWindow: {min: 0, max: 100},
     },
     hAxis: {
       title: 'Date (PDT)',
@@ -322,7 +322,7 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
     },
     colors: HEALTH_SUMMARY_COLORS,
     bar: {groupWidth: '60%'},
-    chartArea: {left: 60, top: 20, width: '85%', height: '70%'},
+    chartArea: {left: 70, top: 20, width: '85%', height: '70%'},
   });
   private drawHealthinessSummaryCharts() {
     // --- Summary Chart ---
@@ -348,12 +348,13 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
   // Healthiness Detail Chart
   healthinessDetailChartOptions = (states: string[]): ColumnChartOptions => ({
     backgroundColor: 'transparent',
-    isStacked: 'percent',
+    isStacked: true,
     legend: {position: 'bottom', maxLines: 2},
     vAxis: {
       title: 'Time Percentage',
-      format: 'percent',
+      format: "#'%'",
       gridlines: {color: '#e0e0e0'},
+      viewWindow: {min: 0, max: 100},
     },
     hAxis: {
       title: 'Date (PDT)',
@@ -362,7 +363,7 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
     },
     colors: states.map((s) => this.getHealthColor(s)),
     bar: {groupWidth: '60%'},
-    chartArea: {left: 60, top: 20, width: '85%', height: '70%'},
+    chartArea: {left: 70, top: 20, width: '85%', height: '70%'},
   });
   private updateHealthDetailStates() {
     if (!this.healthinessStats) {
@@ -392,7 +393,7 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
     categorySet: Set<string>,
   ) {
     for (const item of items) {
-      if ((item.percent ?? 0) > 0 || (item.count ?? 0) > 0) {
+      if (item.category) {
         categorySet.add(item.category);
       }
     }
@@ -437,6 +438,20 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
     );
   }
 
+  private showNoDataMessage(element: ElementRef | undefined) {
+    if (element?.nativeElement) {
+      element.nativeElement.style.height = '100px';
+      element.nativeElement.innerHTML =
+        '<div style="display: flex; justify-content: center; align-items: center; height: 100%; color: #bdbdbd; font-style: italic;">No data available</div>';
+    }
+  }
+
+  private resetChartHeight(element: ElementRef | undefined) {
+    if (element?.nativeElement) {
+      element.nativeElement.style.height = '';
+    }
+  }
+
   // Healthiness Breakdown Table and Charts
   private calculateHealthinessTableData() {
     if (!this.healthinessStats || !this.healthinessStats.aggregatedStats) {
@@ -452,27 +467,31 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
         color: '#1e8e3e',
         type: 'summary' as const,
       },
-      ...stats.inServiceBreakdown.map((item) => ({
-        label: item.category.toUpperCase(),
-        value: item.percent,
-        color: this.getHealthColor(item.category.toLowerCase()),
-        type: 'detail' as const,
-      })),
+      ...stats.inServiceBreakdown
+        .filter((item) => item.percent && item.percent > 0)
+        .map((item) => ({
+          label: item.category.toUpperCase(),
+          value: item.percent,
+          color: this.getHealthColor(item.category.toLowerCase()),
+          type: 'detail' as const,
+        })),
       {
         label: 'Out of Service',
         value: stats.outOfServicePercent,
         color: '#d93025',
         type: 'summary' as const,
       },
-      ...stats.outOfServiceBreakdown.map((item) => ({
-        label:
-          item.category.toUpperCase() === 'OTHERS'
-            ? 'Others'
-            : item.category.toUpperCase(),
-        value: item.percent,
-        color: this.getHealthColor(item.category.toLowerCase()),
-        type: 'detail' as const,
-      })),
+      ...stats.outOfServiceBreakdown
+        .filter((item) => item.percent && item.percent > 0)
+        .map((item) => ({
+          label:
+            item.category.toUpperCase() === 'OTHERS'
+              ? 'Others'
+              : item.category.toUpperCase(),
+          value: item.percent,
+          color: this.getHealthColor(item.category.toLowerCase()),
+          type: 'detail' as const,
+        })),
     ];
   }
   private calculateHealthPieChartsData() {
@@ -498,19 +517,10 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
       majorColors.push(HEALTH_SUMMARY_COLORS[1]);
     }
 
-    const majorOptions: PieChartOptions = {
-      pieHole: 0.4,
-      colors: majorColors,
-      backgroundColor: 'transparent',
-      legend: {position: 'right', alignment: 'center'},
-      chartArea: {left: 10, top: 20, width: '90%', height: '85%'},
-      sliceVisibilityThreshold: 0,
-    };
-
     charts.push({
       title: 'Primary Status',
       data: majorData,
-      options: majorOptions,
+      options: this.createPieChartOptions(majorColors),
     });
 
     // Minor Chart (Detailed Breakdown)
@@ -532,58 +542,75 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
       }
     });
 
-    const minorOptions: PieChartOptions = {
-      pieHole: 0.4,
-      colors: minorColors,
-      backgroundColor: 'transparent',
-      legend: {position: 'right', alignment: 'center'},
-      chartArea: {left: 10, top: 20, width: '90%', height: '85%'},
-      sliceVisibilityThreshold: 0,
-    };
-
     charts.push({
       title: 'Detailed Status Breakdown',
       data: minorData,
-      options: minorOptions,
+      options: this.createPieChartOptions(minorColors),
     });
 
     this.healthBreakdownCharts = charts;
   }
 
   // Test Result Chart
-  testResultChartOptions = (): ColumnChartOptions => ({
+  testResultChartOptions = (colors: string[]): ColumnChartOptions => ({
     backgroundColor: 'transparent',
     isStacked: true,
     legend: {position: 'bottom'},
-    colors: TEST_CHART_COLORS,
-    bar: {groupWidth: '50%'},
-    chartArea: {left: 60, top: 20, width: '85%', height: '70%'},
+    colors,
+    bar: {groupWidth: '75%'},
+    chartArea: {left: 70, top: 20, width: '85%', height: '70%'},
     hAxis: {title: 'Date (PDT)', format: 'MMM d'},
     vAxis: {title: 'Number of Tests'},
   });
   private drawTestStackedBarChart() {
+    const dailyStats = this.testResultStats?.dailyStats || [];
+    const allCategories = new Set<string>();
+    for (const stat of dailyStats) {
+      Object.keys(stat).forEach((key) => {
+        if (key !== 'date' && typeof stat[key] === 'number') {
+          allCategories.add(key);
+        }
+      });
+    }
+
+    const priorityOrder = Object.keys(TEST_COLORS).map((key) =>
+      key.toLowerCase(),
+    );
+
+    const sortedCategories = Array.from(allCategories).sort((a, b) => {
+      const indexA = priorityOrder.indexOf(a.toLowerCase());
+      const indexB = priorityOrder.indexOf(b.toLowerCase());
+      if (indexA !== -1 && indexB !== -1) {
+        return indexA - indexB;
+      }
+      if (indexA !== -1) return -1;
+      if (indexB !== -1) return 1;
+      return a.localeCompare(b);
+    });
+
     const columns = [
       {type: 'date', label: 'Date'},
-      {type: 'number', label: 'PASS'},
-      {type: 'number', label: 'FAIL'},
-      {type: 'number', label: 'ERROR'},
-      {type: 'number', label: 'TIMEOUT'},
-      {type: 'number', label: 'Others'},
+      ...sortedCategories.map((cat) => ({
+        type: 'number',
+        label: cat.toUpperCase(),
+      })),
     ];
+
+    const colors = sortedCategories.map((cat) => this.getTestColor(cat));
 
     this.drawChart(
       this.testChartElement,
-      this.testResultStats?.dailyStats || [],
+      dailyStats,
       columns,
-      (d, date) => [
-        date,
-        d.pass ?? 0,
-        d.fail ?? 0,
-        d.error ?? 0,
-        d.timeout ?? 0,
-        d.other ?? 0,
-      ],
-      this.testResultChartOptions(),
+      (d, date) => {
+        const row: Array<Date | number | null> = [date];
+        sortedCategories.forEach((cat) => {
+          const val = d[cat];
+          row.push(typeof val === 'number' && val > 0 ? val : null);
+        });
+        return row;
+      },
+      this.testResultChartOptions(colors),
     );
   }
 
@@ -609,13 +636,15 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
         color: '#1e8e3e',
         type: 'summary' as const,
       },
-      ...stats.completionBreakdown.map((item) => ({
-        label: item.category.toUpperCase(),
-        count: item.stats.count,
-        percent: item.stats.percent,
-        color: this.getTestColor(item.category.toLowerCase()),
-        type: 'detail' as const,
-      })),
+      ...stats.completionBreakdown
+        .filter((item) => item.stats.count && item.stats.count > 0)
+        .map((item) => ({
+          label: item.category.toUpperCase(),
+          count: item.stats.count,
+          percent: item.stats.percent,
+          color: this.getTestColor(item.category.toLowerCase()),
+          type: 'detail' as const,
+        })),
       {
         label: 'Non-Completion',
         count: stats.nonCompletionStats.count,
@@ -623,16 +652,18 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
         color: '#d93025',
         type: 'summary' as const,
       },
-      ...stats.nonCompletionBreakdown.map((item) => ({
-        label:
-          item.category.toUpperCase() === 'OTHER'
-            ? 'Others'
-            : item.category.toUpperCase(),
-        count: item.stats.count,
-        percent: item.stats.percent,
-        color: this.getTestColor(item.category.toLowerCase()),
-        type: 'detail' as const,
-      })),
+      ...stats.nonCompletionBreakdown
+        .filter((item) => item.stats.count && item.stats.count > 0)
+        .map((item) => ({
+          label:
+            item.category.toUpperCase() === 'OTHER'
+              ? 'Others'
+              : item.category.toUpperCase(),
+          count: item.stats.count,
+          percent: item.stats.percent,
+          color: this.getTestColor(item.category.toLowerCase()),
+          type: 'detail' as const,
+        })),
     ];
   }
   private calculateTestPieChartsData() {
@@ -658,19 +689,10 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
       majorColors.push('#C62828');
     }
 
-    const majorOptions: PieChartOptions = {
-      pieHole: 0.4,
-      colors: majorColors,
-      backgroundColor: 'transparent',
-      legend: {position: 'right', alignment: 'center'},
-      chartArea: {left: 10, top: 20, width: '90%', height: '85%'},
-      sliceVisibilityThreshold: 0,
-    };
-
     charts.push({
       title: 'Primary Result',
       data: majorData,
-      options: majorOptions,
+      options: this.createPieChartOptions(majorColors),
     });
 
     // Minor Chart (Detailed Result)
@@ -697,19 +719,10 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
       }
     });
 
-    const minorOptions: PieChartOptions = {
-      pieHole: 0.4,
-      colors: minorColors,
-      backgroundColor: 'transparent',
-      legend: {position: 'right', alignment: 'center'},
-      chartArea: {left: 10, top: 20, width: '90%', height: '85%'},
-      sliceVisibilityThreshold: 0,
-    };
-
     charts.push({
       title: 'Detailed Result Breakdown',
       data: minorData,
-      options: minorOptions,
+      options: this.createPieChartOptions(minorColors),
     });
 
     this.testBreakdownCharts = charts;
@@ -737,7 +750,7 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
       this.recoveryChartElement,
       this.recoveryTaskStats?.dailyStats || [],
       columns,
-      (d, date) => [date, d.success, d.fail],
+      (d, date) => [date, d.success ?? 0, d.fail ?? 0],
       this.recoveryTaskChartOptions(),
     );
   }
@@ -757,13 +770,15 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
         percent: 100,
         type: 'total' as const,
       },
-      ...stats.outcomeBreakdown.map((item) => ({
-        label: item.category.toUpperCase(),
-        count: item.stats.count,
-        percent: item.stats.percent,
-        color: this.getRecoveryColor(item.category),
-        type: 'detail' as const,
-      })),
+      ...stats.outcomeBreakdown
+        .filter((item) => item.stats.count && item.stats.count > 0)
+        .map((item) => ({
+          label: item.category.toUpperCase(),
+          count: item.stats.count,
+          percent: item.stats.percent,
+          color: this.getRecoveryColor(item.category),
+          type: 'detail' as const,
+        })),
     ];
   }
   private calculateRecoveryPieChartsData() {
@@ -785,22 +800,29 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
       }
     });
 
+    charts.push({
+      title: 'Recovery Result',
+      data: chartData,
+      options: this.createPieChartOptions(colors),
+    });
+
+    this.recoveryBreakdownCharts = charts;
+  }
+
+  private createPieChartOptions(colors: string[]): PieChartOptions {
     const options: PieChartOptions = {
       pieHole: 0.4,
       colors,
       backgroundColor: 'transparent',
       legend: {position: 'right', alignment: 'center'},
       chartArea: {left: 10, top: 20, width: '90%', height: '85%'},
-      sliceVisibilityThreshold: 0,
     };
 
-    charts.push({
-      title: 'Recovery Result',
-      data: chartData,
-      options,
-    });
+    if (colors.length === 1) {
+      options.pieSliceTextStyle = {color: 'black'};
+    }
 
-    this.recoveryBreakdownCharts = charts;
+    return options;
   }
 
   // Helpers for template (health)
@@ -822,7 +844,7 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
     element: ElementRef | undefined,
     dataList: T[],
     columns: Array<{type: string; label: string}>,
-    rowMapper: (item: T, date: Date) => Array<Date | number | string>,
+    rowMapper: (item: T, date: Date) => Array<Date | number | string | null>,
     options: ColumnChartOptions,
   ) {
     if (!element?.nativeElement) {
@@ -835,11 +857,28 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
     });
 
     const dates: Date[] = [];
+    let hasData = false;
     dataList.forEach((d) => {
       const date = new Date(`${d.date}T00:00:00`);
       dates.push(date);
-      data.addRow(rowMapper(d, date));
+      const row = rowMapper(d, date);
+      // Check if any non-date column has a value > 0
+      if (
+        row.some(
+          (val) => typeof val === 'number' && !isNaN(val) && Math.abs(val) > 0,
+        )
+      ) {
+        hasData = true;
+      }
+      data.addRow(row);
     });
+
+    if (!hasData) {
+      this.showNoDataMessage(element);
+      return;
+    }
+
+    this.resetChartHeight(element);
 
     // Fix for duplicate dates on hAxis when data points are few.
     // When there are few data points, Google Charts may generate intermediate ticks (e.g. every 12 hours).

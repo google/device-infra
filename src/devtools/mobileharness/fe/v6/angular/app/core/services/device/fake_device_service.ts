@@ -86,7 +86,10 @@ export class FakeDeviceService extends DeviceService {
   ): Observable<HealthinessStats> {
     const scenario = MOCK_DEVICE_SCENARIOS.find((s) => s.id === id);
     if (scenario) {
-      return of(generateHealthinessStats(startDate, endDate)).pipe(delay(1000));
+      const stats =
+        scenario.healthinessStats ||
+        generateHealthinessStats(startDate, endDate);
+      return of(stats).pipe(delay(1000));
     } else {
       return throwError(
         () => new Error(`Device with ID '${id}' not found in mock data.`),
@@ -130,9 +133,10 @@ export class FakeDeviceService extends DeviceService {
   ): Observable<RecoveryTaskStats> {
     const scenario = MOCK_DEVICE_SCENARIOS.find((s) => s.id === id);
     if (scenario) {
-      return of(generateRecoveryTaskStats(startDate, endDate)).pipe(
-        delay(1000),
-      );
+      const stats =
+        scenario.recoveryTaskStats ||
+        generateRecoveryTaskStats(startDate, endDate);
+      return of(stats).pipe(delay(1000));
     } else {
       return throwError(
         () => new Error(`Device with ID '${id}' not found in mock data.`),

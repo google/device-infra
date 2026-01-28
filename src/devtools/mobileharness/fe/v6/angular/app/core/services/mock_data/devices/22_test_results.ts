@@ -4,89 +4,466 @@
 
 import {DeviceConfig} from '../../../models/device_config_models';
 import {DeviceOverview} from '../../../models/device_overview';
-import {TestResultStats} from '../../../models/device_stats';
+import {
+  HealthinessStats,
+  RecoveryTaskStats,
+  TestResultStats,
+} from '../../../models/device_stats';
 import {MockDeviceScenario} from '../models';
 
 const DEVICE_ID = 'DEVICE_WITH_TEST_RESULTS';
 
-const TEST_RESULT_STATS: TestResultStats = {
-  dailyStats: [
+const HEALTHINESS_STATS: HealthinessStats = {
+  'dailyStats': [
     {
-      date: '2026-01-01',
-      pass: 10,
-      timeout: 5,
+      'date': '2026-01-17',
+      'healthinessSummary': {
+        'inServiceBreakdown': [
+          {
+            'category': 'BUSY',
+          },
+          {
+            'category': 'IDLE',
+          },
+        ],
+        'outOfServiceBreakdown': [
+          {
+            'category': 'DIRTY',
+          },
+          {
+            'category': 'DYING',
+          },
+          {
+            'category': 'FAILED',
+          },
+          {
+            'category': 'INIT',
+          },
+          {
+            'category': 'LAMEDUCK',
+          },
+          {
+            'category': 'MISSING',
+          },
+          {
+            'category': 'OTHERS',
+          },
+          {
+            'category': 'PREPPING',
+          },
+        ],
+      },
     },
     {
-      date: '2026-01-02',
+      'date': '2026-01-18',
+      'healthinessSummary': {
+        'inServiceBreakdown': [
+          {
+            'category': 'BUSY',
+          },
+          {
+            'category': 'IDLE',
+          },
+        ],
+        'outOfServiceBreakdown': [
+          {
+            'category': 'DIRTY',
+          },
+          {
+            'category': 'DYING',
+          },
+          {
+            'category': 'FAILED',
+          },
+          {
+            'category': 'INIT',
+          },
+          {
+            'category': 'LAMEDUCK',
+          },
+          {
+            'category': 'MISSING',
+          },
+          {
+            'category': 'OTHERS',
+          },
+          {
+            'category': 'PREPPING',
+          },
+        ],
+      },
     },
     {
-      date: '2026-01-03',
-      pass: 7,
-      timeout: 5,
+      'date': '2026-01-19',
+      'healthinessSummary': {
+        'inServiceBreakdown': [
+          {
+            'category': 'BUSY',
+          },
+          {
+            'category': 'IDLE',
+          },
+        ],
+        'outOfServiceBreakdown': [
+          {
+            'category': 'DIRTY',
+          },
+          {
+            'category': 'DYING',
+          },
+          {
+            'category': 'FAILED',
+          },
+          {
+            'category': 'INIT',
+          },
+          {
+            'category': 'LAMEDUCK',
+          },
+          {
+            'category': 'MISSING',
+          },
+          {
+            'category': 'OTHERS',
+          },
+          {
+            'category': 'PREPPING',
+          },
+        ],
+      },
     },
     {
-      date: '2026-01-04',
-      pass: 8,
-      timeout: 9,
+      'date': '2026-01-20',
+      'healthinessSummary': {
+        'inServiceBreakdown': [
+          {
+            'category': 'BUSY',
+          },
+          {
+            'category': 'IDLE',
+          },
+        ],
+        'outOfServiceBreakdown': [
+          {
+            'category': 'DIRTY',
+          },
+          {
+            'category': 'DYING',
+          },
+          {
+            'category': 'FAILED',
+          },
+          {
+            'category': 'INIT',
+          },
+          {
+            'category': 'LAMEDUCK',
+          },
+          {
+            'category': 'MISSING',
+          },
+          {
+            'category': 'OTHERS',
+          },
+          {
+            'category': 'PREPPING',
+          },
+        ],
+      },
     },
     {
-      date: '2026-01-05',
-      pass: 5,
-      timeout: 5,
+      'date': '2026-01-21',
+      'healthinessSummary': {
+        'inServiceBreakdown': [
+          {
+            'category': 'BUSY',
+          },
+          {
+            'category': 'IDLE',
+          },
+        ],
+        'outOfServiceBreakdown': [
+          {
+            'category': 'DIRTY',
+          },
+          {
+            'category': 'DYING',
+          },
+          {
+            'category': 'FAILED',
+          },
+          {
+            'category': 'INIT',
+          },
+          {
+            'category': 'LAMEDUCK',
+          },
+          {
+            'category': 'MISSING',
+          },
+          {
+            'category': 'OTHERS',
+          },
+          {
+            'category': 'PREPPING',
+          },
+        ],
+      },
     },
     {
-      date: '2026-01-06',
-      pass: 9,
-      error: 1,
-      timeout: 8,
+      'date': '2026-01-22',
+      'healthinessSummary': {
+        'inServiceBreakdown': [
+          {
+            'category': 'BUSY',
+          },
+          {
+            'category': 'IDLE',
+          },
+        ],
+        'outOfServiceBreakdown': [
+          {
+            'category': 'DIRTY',
+          },
+          {
+            'category': 'DYING',
+          },
+          {
+            'category': 'FAILED',
+          },
+          {
+            'category': 'INIT',
+          },
+          {
+            'category': 'LAMEDUCK',
+          },
+          {
+            'category': 'MISSING',
+          },
+          {
+            'category': 'OTHERS',
+          },
+          {
+            'category': 'PREPPING',
+          },
+        ],
+      },
     },
     {
-      date: '2026-01-07',
-      pass: 1,
-      timeout: 1,
+      'date': '2026-01-23',
+      'healthinessSummary': {
+        'inServiceBreakdown': [
+          {
+            'category': 'BUSY',
+          },
+          {
+            'category': 'IDLE',
+          },
+        ],
+        'outOfServiceBreakdown': [
+          {
+            'category': 'DIRTY',
+          },
+          {
+            'category': 'DYING',
+          },
+          {
+            'category': 'FAILED',
+          },
+          {
+            'category': 'INIT',
+          },
+          {
+            'category': 'LAMEDUCK',
+          },
+          {
+            'category': 'MISSING',
+          },
+          {
+            'category': 'OTHERS',
+          },
+          {
+            'category': 'PREPPING',
+          },
+        ],
+      },
     },
   ],
-  aggregatedStats: {
-    totalTests: 74,
-    completionStats: {
-      count: 40,
-      percent: 54.054054,
-    },
-    nonCompletionStats: {
-      count: 34,
-      percent: 45.945946,
-    },
-    completionBreakdown: [
+  'aggregatedStats': {
+    'inServiceBreakdown': [
       {
-        category: 'PASS',
-        stats: {
-          count: 40,
-          percent: 100,
-        },
+        'category': 'BUSY',
       },
       {
-        category: 'FAIL',
-        stats: {},
+        'category': 'IDLE',
       },
     ],
-    nonCompletionBreakdown: [
+    'outOfServiceBreakdown': [
       {
-        category: 'ERROR',
-        stats: {
-          count: 1,
-          percent: 2.9411764,
+        'category': 'DIRTY',
+      },
+      {
+        'category': 'DYING',
+      },
+      {
+        'category': 'FAILED',
+      },
+      {
+        'category': 'INIT',
+      },
+      {
+        'category': 'LAMEDUCK',
+      },
+      {
+        'category': 'MISSING',
+      },
+      {
+        'category': 'OTHERS',
+      },
+      {
+        'category': 'PREPPING',
+      },
+    ],
+  },
+};
+const TEST_RESULT_STATS: TestResultStats = {
+  'dailyStats': [
+    {
+      'date': '2026-01-01',
+      'pass': 10,
+      'timeout': 5,
+    },
+    {
+      'date': '2026-01-02',
+    },
+    {
+      'date': '2026-01-03',
+      'pass': 7,
+      'timeout': 5,
+    },
+    {
+      'date': '2026-01-04',
+      'pass': 8,
+      'timeout': 9,
+    },
+    {
+      'date': '2026-01-05',
+      'pass': 5,
+      'timeout': 5,
+    },
+    {
+      'date': '2026-01-06',
+      'pass': 9,
+      'error': 1,
+      'timeout': 8,
+    },
+    {
+      'date': '2026-01-07',
+      'pass': 1,
+      'timeout': 1,
+    },
+  ],
+  'aggregatedStats': {
+    'totalTests': 74,
+    'completionStats': {
+      'count': 40,
+      'percent': 54.054054,
+    },
+    'nonCompletionStats': {
+      'count': 34,
+      'percent': 45.945946,
+    },
+    'completionBreakdown': [
+      {
+        'category': 'PASS',
+        'stats': {
+          'count': 40,
+          'percent': 54.054054,
         },
       },
       {
-        category: 'TIMEOUT',
-        stats: {
-          count: 33,
-          percent: 97.05882,
+        'category': 'FAIL',
+        'stats': {},
+      },
+    ],
+    'nonCompletionBreakdown': [
+      {
+        'category': 'ERROR',
+        'stats': {
+          'count': 1,
+          'percent': 1.3513514,
         },
       },
       {
-        category: 'OTHER',
-        stats: {},
+        'category': 'TIMEOUT',
+        'stats': {
+          'count': 33,
+          'percent': 44.594593,
+        },
+      },
+      {
+        'category': 'ABORT',
+        'stats': {},
+      },
+      {
+        'category': 'SKIP',
+        'stats': {},
+      },
+      {
+        'category': 'UNKNOWN',
+        'stats': {},
+      },
+    ],
+  },
+};
+const RECOVERY_TASK_STATS: RecoveryTaskStats = {
+  'dailyStats': [
+    {
+      'date': '2026-01-01',
+      'success': 14,
+    },
+    {
+      'date': '2026-01-02',
+      'success': 14,
+    },
+    {
+      'date': '2026-01-03',
+      'success': 15,
+    },
+    {
+      'date': '2026-01-04',
+      'success': 14,
+    },
+    {
+      'date': '2026-01-05',
+      'success': 12,
+      'fail': 5,
+    },
+    {
+      'date': '2026-01-06',
+      'success': 9,
+    },
+    {
+      'date': '2026-01-07',
+      'success': 1,
+    },
+  ],
+  'aggregatedStats': {
+    'totalTasks': 84,
+    'outcomeBreakdown': [
+      {
+        'category': 'SUCCESS',
+        'stats': {
+          'count': 79,
+          'percent': 94.04762,
+        },
+      },
+      {
+        'category': 'FAIL',
+        'stats': {
+          'count': 5,
+          'percent': 5.952381,
+        },
       },
     ],
   },
@@ -206,7 +583,9 @@ export const SCENARIO_TEST_RESULTS: MockDeviceScenario = {
   overview: OVERVIEW,
   config: CONFIG,
   isQuarantined: false,
+  healthinessStats: HEALTHINESS_STATS,
   testResultStats: TEST_RESULT_STATS,
+  recoveryTaskStats: RECOVERY_TASK_STATS,
   actionVisibility: {
     screenshot: true,
     logcat: true,
