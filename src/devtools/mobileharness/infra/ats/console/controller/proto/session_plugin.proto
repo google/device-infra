@@ -191,6 +191,14 @@ message RunCommand {
 
   // Optional. Whether to enable Mobly resultstore upload.
   optional bool enable_mobly_resultstore_upload = 38;
+
+  // Optional. Whether to enable token sharding, which means we will allocate
+  // devices based on whether they hold certain resources (e.g. SIM card types)
+  // that test modules declare they need.
+  // For Tradefed jobs, we pass this argument to the Tradefed process to handle.
+  // For non-Tradefed (Mobly) jobs, we'll add a SIM card type dimension to the
+  // job's device requirement.
+  optional bool enable_token_sharding = 39;
 }
 
 message RunCommandState {
