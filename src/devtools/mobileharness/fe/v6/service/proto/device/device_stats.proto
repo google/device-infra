@@ -66,7 +66,7 @@ message HealthinessSummary {
 
 // Common statistics containing count and percentage.
 message Stats {
-  int32 count = 1;
+  int64 count = 1;
   float percent = 2;
 }
 
@@ -86,18 +86,20 @@ message TestResultStats {
 
 // Test results for a single day.
 message DailyTestResults {
+  message TestResultCount {
+    string result = 1;
+    int64 count = 2;
+  }
   // The date in YYYY-MM-DD format.
   string date = 1;
-  int32 pass = 2;
-  int32 fail = 3;
-  int32 error = 4;
-  int32 timeout = 5;
-  int32 other = 6;
+  // Counts of each test result.
+  // The result can be UNKNOWN, PASS, FAIL, ERROR, TIMEOUT, ABORT, SKIP.
+  repeated TestResultCount test_result_count = 2;
 }
 
 // Aggregated test result statistics over the selected period.
 message AggregatedTestResults {
-  int32 total_tests = 1;
+  int64 total_tests = 1;
   Stats completion_stats = 2;
   Stats non_completion_stats = 3;
 
@@ -106,7 +108,7 @@ message AggregatedTestResults {
   repeated CategoryStats completion_breakdown = 4;
 
   // Breakdown of "Non-Completion" tests.
-  // Expected categories: "ERROR", "TIMEOUT", "OTHER".
+  // Expected categories: "UNKNOWN", "ERROR", "TIMEOUT", "ABORT", "SKIP".
   repeated CategoryStats non_completion_breakdown = 5;
 }
 
@@ -122,13 +124,13 @@ message RecoveryTaskStats {
 message DailyRecoveryTasks {
   // The date in YYYY-MM-DD format.
   string date = 1;
-  int32 success = 2;
-  int32 fail = 3;
+  int64 success = 2;  // A recovery task is success if the test result is PASS
+  int64 fail = 3;     // Otherwise, the recovery task is a fail.
 }
 
 // Aggregated recovery task statistics over the selected period.
 message AggregatedRecoveryTasks {
-  int32 total_tasks = 1;
+  int64 total_tasks = 1;
   // Expected categories: "SUCCESS", "FAIL".
   repeated CategoryStats outcome_breakdown = 2;
 }
