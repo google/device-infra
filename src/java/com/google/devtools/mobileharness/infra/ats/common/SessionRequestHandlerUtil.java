@@ -1298,7 +1298,9 @@ public class SessionRequestHandlerUtil {
       if (isExcluded && filterMap.containsKey(testClass) && filterMap.get(testClass).isEmpty()) {
         return;
       }
-      filterMap.computeIfAbsent(testClass, k -> new HashSet<>()).add(Joiner.on('.').join(list));
+      filterMap
+          .computeIfAbsent(testClass, unused -> new HashSet<>())
+          .add(Joiner.on('.').join(list));
     }
   }
 
