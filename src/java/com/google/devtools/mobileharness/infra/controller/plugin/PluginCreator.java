@@ -166,7 +166,8 @@ public class PluginCreator implements AutoCloseable {
     } else {
       this.moduleClassNames = null;
     }
-    this.forceLoadFromJarClassRegex = forceLoadFromJarClassRegex;
+    this.forceLoadFromJarClassRegex =
+        forceLoadFromJarClassRegex == null ? null : forceLoadFromJarClassRegex;
     this.pluginType = pluginType;
     this.log = log;
     this.systemModules = ImmutableList.copyOf(systemModules);
