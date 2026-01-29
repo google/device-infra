@@ -32,8 +32,12 @@ import javax.inject.Singleton;
 @Singleton
 public class DeviceHeaderInfoBuilder {
 
+  private final FlashButtonBuilder flashButtonBuilder;
+
   @Inject
-  DeviceHeaderInfoBuilder() {}
+  DeviceHeaderInfoBuilder(FlashButtonBuilder flashButtonBuilder) {
+    this.flashButtonBuilder = flashButtonBuilder;
+  }
 
   /** Builds DeviceHeaderInfo based on device info and configs. */
   public DeviceHeaderInfo buildDeviceHeaderInfo(
@@ -62,7 +66,7 @@ public class DeviceHeaderInfoBuilder {
             DeviceActions.newBuilder()
                 .setScreenshot(ScreenshotButtonBuilder.build(deviceInfo))
                 .setLogcat(LogcatButtonBuilder.build(deviceInfo))
-                .setFlash(FlashButtonBuilder.build(deviceInfo))
+                .setFlash(flashButtonBuilder.build(deviceInfo))
                 .setRemoteControl(RemoteControlButtonBuilder.build(deviceInfo))
                 .setQuarantine(QuarantineButtonBuilder.build(deviceInfo)))
         .build();
