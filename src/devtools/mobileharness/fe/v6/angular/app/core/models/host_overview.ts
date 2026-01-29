@@ -165,6 +165,8 @@ export declare interface DeviceSummary {
   readonly model: string;
   readonly version: string;
   readonly subDevices?: SubDeviceInfo[];
+  /** Optional parent device ID (e.g. for sub-devices belonging to a testbed). */
+  readonly parentDeviceId?: string;
 }
 
 /**
@@ -219,6 +221,18 @@ export type IneligibilityReasonCode =
   | 'ACID_NOT_SUPPORTED'; // Device does not support AcidRemoteDriver
 
 /**
+ * The eligibility result for a sub-device.
+ */
+export declare interface SubDeviceEligibilityResult {
+  deviceId: string;
+  isEligible: boolean;
+  ineligibilityReason?: {
+    code: IneligibilityReasonCode;
+    message: string;
+  };
+}
+
+/**
  * The eligibility result for a single device.
  */
 export declare interface DeviceEligibilityResult {
@@ -243,6 +257,11 @@ export declare interface DeviceEligibilityResult {
    * Candidates for 'Run As' for this device.
    */
   runAsCandidates?: string[];
+  /**
+   * If the device is a composite device (e.g. testbed), this field contains
+   * eligibility details for its sub-devices.
+   */
+  subDeviceResults?: SubDeviceEligibilityResult[];
 }
 
 /**
@@ -328,6 +347,7 @@ export declare interface FlashOptions {
   branch: string;
   buildId: string;
   target: string;
+  subDeviceIds?: string[];
 }
 
 /**
@@ -336,6 +356,7 @@ export declare interface FlashOptions {
 export declare interface DeviceRemoteControlConfig {
   deviceId: string;
   runAs: string;
+  parentDeviceId?: string;
 }
 
 /**
