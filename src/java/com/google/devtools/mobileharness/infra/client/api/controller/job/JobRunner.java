@@ -31,6 +31,7 @@ import com.google.common.base.Joiner.MapJoiner;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.ListMultimap;
@@ -38,6 +39,7 @@ import com.google.common.collect.Streams;
 import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.util.concurrent.ForwardingListeningExecutorService;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.common.metrics.stability.converter.ErrorModelConverter;
@@ -74,6 +76,10 @@ import com.google.devtools.mobileharness.infra.controller.test.manager.DirectTes
 import com.google.devtools.mobileharness.infra.controller.test.manager.TestManager;
 import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberExceptionLoggingHandler;
 import com.google.devtools.mobileharness.shared.constant.closeable.MobileHarnessAutoCloseable;
+import com.google.devtools.mobileharness.shared.context.InvocationContext;
+import com.google.devtools.mobileharness.shared.context.InvocationContext.ContextScope;
+import com.google.devtools.mobileharness.shared.context.InvocationContext.InvocationInfo;
+import com.google.devtools.mobileharness.shared.context.InvocationContext.InvocationType;
 import com.google.devtools.mobileharness.shared.util.algorithm.GraphMatching;
 import com.google.devtools.mobileharness.shared.util.comm.messaging.poster.TestMessagePoster;
 import com.google.devtools.mobileharness.shared.util.concurrent.Callables;
@@ -113,6 +119,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
@@ -298,7 +305,7 @@ public class JobRunner implements Runnable {
       this.deviceQuerier = execMode.createDeviceQuerier();
       this.suitableDeviceChecker = new SuitableDeviceChecker();
     }
-    this.threadPool = threadPool;
+    this.threadPool = new ContextPropagatingListeningExecutorService(threadPool);
     this.testManager = testManager;
     this.pendingTestPrinter = new PendingTestPrinter(clock, jobInfo);
 
@@ -419,6 +426,16 @@ public class JobRunner implements Runnable {
 
   @Override
   public void run() {
+    try (ContextScope ignored =
+        new ContextScope(
+            ImmutableMap.of(
+                InvocationType.OMNILAB_JOB,
+                InvocationInfo.sameDisplayId(jobInfo.locator().getId())))) {
+      runInternal();
+    }
+  }
+
+  private void runInternal() {
     running = true;
     jobInfo.status().set(TestStatus.RUNNING);
     Throwable jobError = null;
@@ -1780,6 +1797,46 @@ public class JobRunner implements Runnable {
           GraphMatching.maximumCardinalityBipartiteMatching(suitableDevices.build());
 
       hasFoundPotentialSuitableDevice = matchingResult.size() == deviceQueryFilters.size();
+    }
+  }
+
+  private static class ContextPropagatingListeningExecutorService
+      extends ForwardingListeningExecutorService {
+
+    private final ListeningExecutorService delegate;
+
+    private ContextPropagatingListeningExecutorService(ListeningExecutorService delegate) {
+      this.delegate = delegate;
+    }
+
+    @Override
+    protected ListeningExecutorService delegate() {
+      return delegate;
+    }
+
+    @Override
+    public <T> ListenableFuture<T> submit(Callable<T> task) {
+      return delegate().submit(InvocationContext.propagateContext(task));
+    }
+
+    @Override
+    public ListenableFuture<?> submit(Runnable task) {
+      return delegate().submit(InvocationContext.propagateContext(task));
+    }
+
+    @Override
+    public <T> ListenableFuture<T> submit(Runnable task, T result) {
+      return delegate().submit(InvocationContext.propagateContext(task), result);
+    }
+
+    @Override
+    public void execute(Runnable command) {
+      delegate().execute(InvocationContext.propagateContext(command));
+    }
+
+    @Override
+    public boolean awaitTermination(java.time.Duration timeout) throws InterruptedException {
+      return delegate().awaitTermination(timeout);
     }
   }
 }
