@@ -37,6 +37,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/device:configuration_provider",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/device/handlers",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:lab_info_provider",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "@grpc-java//core",
