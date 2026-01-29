@@ -34,6 +34,10 @@ public abstract class AndroidDeviceVersionEnvValidator implements EnvValidator {
   @Override
   public void validate(Device device) throws MobileHarnessException, InterruptedException {
     checkNotNull(device);
+    // Oxygen device is only a place hold, so it cannot run the adb command.
+    if (device.getClass().getSimpleName().equals("OxygenDevice")) {
+      return;
+    }
     if (device instanceof AndroidDevice) {
       Integer sdkVersion = ((AndroidDevice) device).getSdkVersion();
       if (sdkVersion != null && sdkVersion < minDeviceSdkVersion) {
