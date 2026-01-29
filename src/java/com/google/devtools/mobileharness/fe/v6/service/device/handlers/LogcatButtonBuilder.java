@@ -16,16 +16,55 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.device.handlers;
 
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.ActionButtonState;
+import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManager;
+import java.util.List;
+import javax.inject.Inject;
+import javax.inject.Singleton;
 
 /** Utility class to build {@link ActionButtonState} for logcat button. */
-final class LogcatButtonBuilder {
+@Singleton
+class LogcatButtonBuilder {
 
-  public static ActionButtonState build(DeviceInfo deviceInfo) {
-    // TODO: Fill logcat button state.
-    return ActionButtonState.getDefaultInstance();
+  private final FeatureManager featureManager;
+
+  @Inject
+  LogcatButtonBuilder(FeatureManager featureManager) {
+    this.featureManager = featureManager;
   }
 
-  private LogcatButtonBuilder() {}
+  public ActionButtonState build(DeviceInfo deviceInfo) {
+    if (!featureManager.isDeviceLogcatButtonEnabled()) {
+      return ActionButtonState.newBuilder().setVisible(false).build();
+    }
+
+    List<String> deviceTypes = deviceInfo.getDeviceFeature().getTypeList();
+    boolean isAndroidRealDevice =
+        deviceTypes.contains("AndroidRealDevice") && !deviceTypes.contains("TestbedDevice");
+
+    if (!isAndroidRealDevice) {
+      return ActionButtonState.newBuilder().setVisible(false).build();
+    }
+
+    boolean isDeviceMissing = deviceInfo.getDeviceStatus().equals(DeviceStatus.MISSING);
+
+    boolean isSharedDevice =
+        deviceInfo.getDeviceFeature().getCompositeDimension().getRequiredDimensionList().stream()
+            .anyMatch(d -> d.getName().equals("pool") && d.getValue().equals("shared"));
+
+    ActionButtonState.Builder stateBuilder = ActionButtonState.newBuilder().setVisible(true);
+
+    if (isDeviceMissing || isSharedDevice) {
+      stateBuilder
+          .setEnabled(false)
+          .setTooltip(
+              "It's only supported to get the device logcat on the satellite Android devices.");
+    } else {
+      stateBuilder.setEnabled(true).setTooltip("Get logcat of the device");
+    }
+
+    return stateBuilder.build();
+  }
 }

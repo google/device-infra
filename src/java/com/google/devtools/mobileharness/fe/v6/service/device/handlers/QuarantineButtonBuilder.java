@@ -16,16 +16,45 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.device.handlers;
 
+import com.google.common.base.Ascii;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.ActionButtonState;
+import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManager;
+import javax.inject.Inject;
+import javax.inject.Singleton;
 
 /** Utility class to build {@link ActionButtonState} for quarantine button. */
-final class QuarantineButtonBuilder {
+@Singleton
+class QuarantineButtonBuilder {
 
-  public static ActionButtonState build(DeviceInfo deviceInfo) {
-    // TODO: Fill quarantine button state.
-    return ActionButtonState.getDefaultInstance();
+  private final FeatureManager featureManager;
+
+  @Inject
+  QuarantineButtonBuilder(FeatureManager featureManager) {
+    this.featureManager = featureManager;
   }
 
-  private QuarantineButtonBuilder() {}
+  public ActionButtonState build(DeviceInfo deviceInfo) {
+    if (!featureManager.isDeviceQuarantineEnabled()) {
+      return ActionButtonState.newBuilder().setVisible(false).build();
+    }
+
+    boolean isQuarantined =
+        deviceInfo.getDeviceCondition().getTempDimensionList().stream()
+            .anyMatch(
+                dim ->
+                    dim.getDimension().getName().equals("quarantined")
+                        && Ascii.toLowerCase(dim.getDimension().getValue()).equals("true"));
+
+    String tooltip =
+        isQuarantined
+            ? "Unquarantine the device to allow it to be allocated by other tests."
+            : "Quarantine the device to prevent it from being allocated by other tests.";
+
+    return ActionButtonState.newBuilder()
+        .setVisible(true)
+        .setEnabled(true)
+        .setTooltip(tooltip)
+        .build();
+  }
 }
