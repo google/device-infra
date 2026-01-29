@@ -24,8 +24,10 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.proto.Device.TempDimension;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabLocator;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.ActionButtonState;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceActions;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceHeaderInfo;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.FlashActionButtonState;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HostInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.QuarantineInfo;
 import com.google.inject.Guice;
@@ -73,7 +75,13 @@ public final class DeviceHeaderInfoBuilderTest {
             .setId(DEVICE_ID)
             .setHost(HostInfo.newBuilder().setName(HOST_NAME).setIp(IP))
             .setQuarantine(QuarantineInfo.newBuilder().setIsQuarantined(true))
-            .setActions(DeviceActions.getDefaultInstance())
+            .setActions(
+                DeviceActions.newBuilder()
+                    .setScreenshot(ActionButtonState.getDefaultInstance())
+                    .setLogcat(ActionButtonState.getDefaultInstance())
+                    .setFlash(FlashActionButtonState.getDefaultInstance())
+                    .setRemoteControl(ActionButtonState.getDefaultInstance())
+                    .setQuarantine(ActionButtonState.getDefaultInstance()))
             .build();
 
     assertThat(
@@ -97,7 +105,13 @@ public final class DeviceHeaderInfoBuilderTest {
             .setId(DEVICE_ID)
             .setHost(HostInfo.newBuilder().setName(HOST_NAME).setIp(IP))
             .setQuarantine(QuarantineInfo.newBuilder().setIsQuarantined(false))
-            .setActions(DeviceActions.getDefaultInstance())
+            .setActions(
+                DeviceActions.newBuilder()
+                    .setScreenshot(ActionButtonState.getDefaultInstance())
+                    .setLogcat(ActionButtonState.getDefaultInstance())
+                    .setFlash(FlashActionButtonState.getDefaultInstance())
+                    .setRemoteControl(ActionButtonState.getDefaultInstance())
+                    .setQuarantine(ActionButtonState.getDefaultInstance()))
             .build();
 
     assertThat(

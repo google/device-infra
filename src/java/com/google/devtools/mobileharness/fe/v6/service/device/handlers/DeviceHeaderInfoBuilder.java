@@ -58,7 +58,13 @@ public class DeviceHeaderInfoBuilder {
                                         .toLowerCase(Locale.ROOT)
                                         .equals("true"))))
         // TODO: Fill device actions.
-        .setActions(DeviceActions.getDefaultInstance())
+        .setActions(
+            DeviceActions.newBuilder()
+                .setScreenshot(ScreenshotButtonBuilder.build(deviceInfo))
+                .setLogcat(LogcatButtonBuilder.build(deviceInfo))
+                .setFlash(FlashButtonBuilder.build(deviceInfo))
+                .setRemoteControl(RemoteControlButtonBuilder.build(deviceInfo))
+                .setQuarantine(QuarantineButtonBuilder.build(deviceInfo)))
         .build();
   }
 }
