@@ -1414,6 +1414,14 @@ public class Flags {
       converter = Flag.StringConverter.class)
   public Flag<String> fastbootPathFromUser = fastbootPathFromUserDefault;
 
+  private static final Flag<Boolean> feEnableDeviceFlashingDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--fe_enable_device_flashing",
+      description = "Enables the device flashing button in the Mobile Harness FE UI.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> feEnableDeviceFlashing = feEnableDeviceFlashingDefault;
+
   private static final Flag<Integer> feGrpcPortDefault = Flag.value(8080);
 
   @com.beust.jcommander.Parameter(

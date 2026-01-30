@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.util;
 
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -32,7 +33,7 @@ public class FeatureManager {
 
   /** Checks if the device flashing feature is enabled. */
   public boolean isDeviceFlashingEnabled() {
-    // Device flashing is only enabled in internal Google builds for now.
-    return environment.isGoogleInternal();
+    // Controlled by the startup flag AND only available in Google internal builds.
+    return Flags.instance().feEnableDeviceFlashing.getNonNull() && environment.isGoogleInternal();
   }
 }

@@ -27,6 +27,7 @@ java_library(
     name = "util",
     srcs = glob(["*.java"]),
     deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "@maven//:javax_inject_jsr330_api",
     ],
 )

@@ -17,6 +17,8 @@
 package com.google.devtools.mobileharness.fe.v6.service.device.handlers;
 
 import static com.google.common.truth.extensions.proto.ProtoTruth.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCondition;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
@@ -31,25 +33,35 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.device.FlashActionB
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HostInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.QuarantineInfo;
 import com.google.inject.Guice;
+import com.google.inject.testing.fieldbinder.Bind;
+import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import java.util.Optional;
 import javax.inject.Inject;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+import org.mockito.Mock;
+import org.mockito.junit.MockitoJUnit;
+import org.mockito.junit.MockitoRule;
 
 @RunWith(JUnit4.class)
 public final class DeviceHeaderInfoBuilderTest {
+  @Rule public final MockitoRule mocks = MockitoJUnit.rule();
 
   private static final String DEVICE_ID = "test_device_id";
   private static final String HOST_NAME = "test_host.google.com";
   private static final String IP = "192.168.1.1";
 
+  @Bind @Mock private FlashButtonBuilder flashButtonBuilder;
   @Inject private DeviceHeaderInfoBuilder deviceHeaderInfoBuilder;
 
   @Before
   public void setUp() {
-    Guice.createInjector().injectMembers(this);
+    Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
+    when(flashButtonBuilder.build(any(DeviceInfo.class)))
+        .thenReturn(FlashActionButtonState.getDefaultInstance());
   }
 
   @Test
