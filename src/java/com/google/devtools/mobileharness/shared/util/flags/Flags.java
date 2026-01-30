@@ -1438,6 +1438,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> feEnableDeviceQuarantine = feEnableDeviceQuarantineDefault;
 
+  private static final Flag<Boolean> feEnableDeviceScreenshotDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--fe_enable_device_screenshot",
+      description = "Enables the device screenshot button in the Mobile Harness FE UI.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> feEnableDeviceScreenshot = feEnableDeviceScreenshotDefault;
+
   private static final Flag<Integer> feGrpcPortDefault = Flag.value(8080);
 
   @com.beust.jcommander.Parameter(

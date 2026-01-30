@@ -16,16 +16,53 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.device.handlers;
 
+import com.google.common.base.Ascii;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.ActionButtonState;
+import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManager;
+import javax.inject.Inject;
+import javax.inject.Singleton;
 
 /** Utility class to build {@link ActionButtonState} for screenshot button. */
-final class ScreenshotButtonBuilder {
+@Singleton
+class ScreenshotButtonBuilder {
 
-  public static ActionButtonState build(DeviceInfo deviceInfo) {
-    // TODO: Fill screenshot button state.
-    return ActionButtonState.getDefaultInstance();
+  private final FeatureManager featureManager;
+
+  @Inject
+  ScreenshotButtonBuilder(FeatureManager featureManager) {
+    this.featureManager = featureManager;
   }
 
-  private ScreenshotButtonBuilder() {}
+  public ActionButtonState build(DeviceInfo deviceInfo) {
+    if (!featureManager.isDeviceScreenshotEnabled()) {
+      return ActionButtonState.newBuilder().setVisible(false).build();
+    }
+
+    boolean isDeviceMissing = deviceInfo.getDeviceStatus().equals(DeviceStatus.MISSING);
+
+    boolean isScreenshotSupported =
+        deviceInfo.getDeviceFeature().getCompositeDimension().getSupportedDimensionList().stream()
+            .anyMatch(
+                dimension ->
+                    dimension.getName().equals("screenshot_able")
+                        && Ascii.equalsIgnoreCase(dimension.getValue(), "true"));
+
+    if (!isDeviceMissing && isScreenshotSupported) {
+      return ActionButtonState.newBuilder()
+          .setVisible(true)
+          .setEnabled(true)
+          .setTooltip("Take screenshot of the device")
+          .build();
+    } else {
+      return ActionButtonState.newBuilder()
+          .setVisible(true)
+          .setEnabled(false)
+          .setTooltip(
+              "It's only supported to take a screenshot when the device is not missing and the "
+                  + "\"screenshot_able\" dimension is existing for this device.")
+          .build();
+    }
+  }
 }

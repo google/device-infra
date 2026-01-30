@@ -158,4 +158,44 @@ public final class FeatureManagerTest {
     FeatureManager featureManager = new FeatureManager(mockEnvironment);
     assertThat(featureManager.isDeviceQuarantineEnabled()).isFalse();
   }
+
+  @Test
+  public void isDeviceScreenshotEnabled_googleInternal_flagTrue_returnsTrue() {
+    when(mockEnvironment.isGoogleInternal()).thenReturn(true);
+    flags.setAllFlags(ImmutableMap.of("fe_enable_device_screenshot", "true"));
+    FeatureManager featureManager = new FeatureManager(mockEnvironment);
+    assertThat(featureManager.isDeviceScreenshotEnabled()).isTrue();
+  }
+
+  @Test
+  public void isDeviceScreenshotEnabled_googleInternal_flagFalse_returnsFalse() {
+    when(mockEnvironment.isGoogleInternal()).thenReturn(true);
+    flags.setAllFlags(ImmutableMap.of("fe_enable_device_screenshot", "false"));
+    FeatureManager featureManager = new FeatureManager(mockEnvironment);
+    assertThat(featureManager.isDeviceScreenshotEnabled()).isFalse();
+  }
+
+  @Test
+  public void isDeviceScreenshotEnabled_oss_flagTrue_returnsFalse() {
+    when(mockEnvironment.isGoogleInternal()).thenReturn(false);
+    flags.setAllFlags(ImmutableMap.of("fe_enable_device_screenshot", "true"));
+    FeatureManager featureManager = new FeatureManager(mockEnvironment);
+    assertThat(featureManager.isDeviceScreenshotEnabled()).isFalse();
+  }
+
+  @Test
+  public void isDeviceScreenshotEnabled_oss_flagFalse_returnsFalse() {
+    when(mockEnvironment.isGoogleInternal()).thenReturn(false);
+    flags.setAllFlags(ImmutableMap.of("fe_enable_device_screenshot", "false"));
+    FeatureManager featureManager = new FeatureManager(mockEnvironment);
+    assertThat(featureManager.isDeviceScreenshotEnabled()).isFalse();
+  }
+
+  @Test
+  public void isDeviceScreenshotEnabled_flagNotSet_defaultsToFalse() {
+    when(mockEnvironment.isGoogleInternal()).thenReturn(true);
+    // Flag fe_enable_device_screenshot is not set, defaults to false.
+    FeatureManager featureManager = new FeatureManager(mockEnvironment);
+    assertThat(featureManager.isDeviceScreenshotEnabled()).isFalse();
+  }
 }

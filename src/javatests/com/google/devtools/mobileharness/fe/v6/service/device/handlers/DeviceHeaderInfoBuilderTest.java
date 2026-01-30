@@ -57,6 +57,7 @@ public final class DeviceHeaderInfoBuilderTest {
   @Bind @Mock private FlashButtonBuilder flashButtonBuilder;
   @Bind @Mock private LogcatButtonBuilder logcatButtonBuilder;
   @Bind @Mock private QuarantineButtonBuilder quarantineButtonBuilder;
+  @Bind @Mock private ScreenshotButtonBuilder screenshotButtonBuilder;
   @Inject private DeviceHeaderInfoBuilder deviceHeaderInfoBuilder;
 
   @Before
@@ -67,6 +68,8 @@ public final class DeviceHeaderInfoBuilderTest {
     when(logcatButtonBuilder.build(any(DeviceInfo.class)))
         .thenReturn(ActionButtonState.getDefaultInstance());
     when(quarantineButtonBuilder.build(any(DeviceInfo.class)))
+        .thenReturn(ActionButtonState.getDefaultInstance());
+    when(screenshotButtonBuilder.build(any(DeviceInfo.class)))
         .thenReturn(ActionButtonState.getDefaultInstance());
   }
 

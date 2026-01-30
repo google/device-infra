@@ -48,4 +48,10 @@ public class FeatureManager {
     // Controlled by the startup flag AND only available in Google internal builds.
     return Flags.instance().feEnableDeviceQuarantine.getNonNull() && environment.isGoogleInternal();
   }
+
+  /** Checks if the screenshot feature is enabled. */
+  public boolean isDeviceScreenshotEnabled() {
+    // Controlled by the startup flag AND only available in Google internal builds.
+    return Flags.instance().feEnableDeviceScreenshot.getNonNull() && environment.isGoogleInternal();
+  }
 }
