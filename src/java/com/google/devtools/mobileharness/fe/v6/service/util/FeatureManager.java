@@ -36,4 +36,10 @@ public class FeatureManager {
     // Controlled by the startup flag AND only available in Google internal builds.
     return Flags.instance().feEnableDeviceFlashing.getNonNull() && environment.isGoogleInternal();
   }
+
+  /** Checks if the logcat button for devices is enabled. */
+  public boolean isDeviceLogcatButtonEnabled() {
+    // Controlled by the startup flag AND only available in Google internal builds.
+    return Flags.instance().feEnableDeviceLogcat.getNonNull() && environment.isGoogleInternal();
+  }
 }

@@ -55,6 +55,7 @@ public final class DeviceHeaderInfoBuilderTest {
   private static final String IP = "192.168.1.1";
 
   @Bind @Mock private FlashButtonBuilder flashButtonBuilder;
+  @Bind @Mock private LogcatButtonBuilder logcatButtonBuilder;
   @Inject private DeviceHeaderInfoBuilder deviceHeaderInfoBuilder;
 
   @Before
@@ -62,6 +63,8 @@ public final class DeviceHeaderInfoBuilderTest {
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
     when(flashButtonBuilder.build(any(DeviceInfo.class)))
         .thenReturn(FlashActionButtonState.getDefaultInstance());
+    when(logcatButtonBuilder.build(any(DeviceInfo.class)))
+        .thenReturn(ActionButtonState.getDefaultInstance());
   }
 
   @Test

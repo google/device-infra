@@ -1422,6 +1422,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> feEnableDeviceFlashing = feEnableDeviceFlashingDefault;
 
+  private static final Flag<Boolean> feEnableDeviceLogcatDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--fe_enable_device_logcat",
+      description = "Enables the device logcat button in the Mobile Harness FE UI.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> feEnableDeviceLogcat = feEnableDeviceLogcatDefault;
+
   private static final Flag<Integer> feGrpcPortDefault = Flag.value(8080);
 
   @com.beust.jcommander.Parameter(

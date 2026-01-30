@@ -78,4 +78,44 @@ public final class FeatureManagerTest {
     FeatureManager featureManager = new FeatureManager(mockEnvironment);
     assertThat(featureManager.isDeviceFlashingEnabled()).isFalse();
   }
+
+  @Test
+  public void isDeviceLogcatButtonEnabled_googleInternal_flagTrue_returnsTrue() {
+    when(mockEnvironment.isGoogleInternal()).thenReturn(true);
+    flags.setAllFlags(ImmutableMap.of("fe_enable_device_logcat", "true"));
+    FeatureManager featureManager = new FeatureManager(mockEnvironment);
+    assertThat(featureManager.isDeviceLogcatButtonEnabled()).isTrue();
+  }
+
+  @Test
+  public void isDeviceLogcatButtonEnabled_googleInternal_flagFalse_returnsFalse() {
+    when(mockEnvironment.isGoogleInternal()).thenReturn(true);
+    flags.setAllFlags(ImmutableMap.of("fe_enable_device_logcat", "false"));
+    FeatureManager featureManager = new FeatureManager(mockEnvironment);
+    assertThat(featureManager.isDeviceLogcatButtonEnabled()).isFalse();
+  }
+
+  @Test
+  public void isDeviceLogcatButtonEnabled_oss_flagTrue_returnsFalse() {
+    when(mockEnvironment.isGoogleInternal()).thenReturn(false);
+    flags.setAllFlags(ImmutableMap.of("fe_enable_device_logcat", "true"));
+    FeatureManager featureManager = new FeatureManager(mockEnvironment);
+    assertThat(featureManager.isDeviceLogcatButtonEnabled()).isFalse();
+  }
+
+  @Test
+  public void isDeviceLogcatButtonEnabled_oss_flagFalse_returnsFalse() {
+    when(mockEnvironment.isGoogleInternal()).thenReturn(false);
+    flags.setAllFlags(ImmutableMap.of("fe_enable_device_logcat", "false"));
+    FeatureManager featureManager = new FeatureManager(mockEnvironment);
+    assertThat(featureManager.isDeviceLogcatButtonEnabled()).isFalse();
+  }
+
+  @Test
+  public void isDeviceLogcatButtonEnabled_flagNotSet_defaultsToFalse() {
+    when(mockEnvironment.isGoogleInternal()).thenReturn(true);
+    // Flag fe_enable_device_logcat is not set, defaults to false.
+    FeatureManager featureManager = new FeatureManager(mockEnvironment);
+    assertThat(featureManager.isDeviceLogcatButtonEnabled()).isFalse();
+  }
 }
