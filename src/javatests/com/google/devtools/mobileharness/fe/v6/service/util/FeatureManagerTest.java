@@ -118,4 +118,44 @@ public final class FeatureManagerTest {
     FeatureManager featureManager = new FeatureManager(mockEnvironment);
     assertThat(featureManager.isDeviceLogcatButtonEnabled()).isFalse();
   }
+
+  @Test
+  public void isDeviceQuarantineEnabled_googleInternal_flagTrue_returnsTrue() {
+    when(mockEnvironment.isGoogleInternal()).thenReturn(true);
+    flags.setAllFlags(ImmutableMap.of("fe_enable_device_quarantine", "true"));
+    FeatureManager featureManager = new FeatureManager(mockEnvironment);
+    assertThat(featureManager.isDeviceQuarantineEnabled()).isTrue();
+  }
+
+  @Test
+  public void isDeviceQuarantineEnabled_googleInternal_flagFalse_returnsFalse() {
+    when(mockEnvironment.isGoogleInternal()).thenReturn(true);
+    flags.setAllFlags(ImmutableMap.of("fe_enable_device_quarantine", "false"));
+    FeatureManager featureManager = new FeatureManager(mockEnvironment);
+    assertThat(featureManager.isDeviceQuarantineEnabled()).isFalse();
+  }
+
+  @Test
+  public void isDeviceQuarantineEnabled_oss_flagTrue_returnsFalse() {
+    when(mockEnvironment.isGoogleInternal()).thenReturn(false);
+    flags.setAllFlags(ImmutableMap.of("fe_enable_device_quarantine", "true"));
+    FeatureManager featureManager = new FeatureManager(mockEnvironment);
+    assertThat(featureManager.isDeviceQuarantineEnabled()).isFalse();
+  }
+
+  @Test
+  public void isDeviceQuarantineEnabled_oss_flagFalse_returnsFalse() {
+    when(mockEnvironment.isGoogleInternal()).thenReturn(false);
+    flags.setAllFlags(ImmutableMap.of("fe_enable_device_quarantine", "false"));
+    FeatureManager featureManager = new FeatureManager(mockEnvironment);
+    assertThat(featureManager.isDeviceQuarantineEnabled()).isFalse();
+  }
+
+  @Test
+  public void isDeviceQuarantineEnabled_flagNotSet_defaultsToFalse() {
+    when(mockEnvironment.isGoogleInternal()).thenReturn(true);
+    // Flag fe_enable_device_quarantine is not set, defaults to false.
+    FeatureManager featureManager = new FeatureManager(mockEnvironment);
+    assertThat(featureManager.isDeviceQuarantineEnabled()).isFalse();
+  }
 }

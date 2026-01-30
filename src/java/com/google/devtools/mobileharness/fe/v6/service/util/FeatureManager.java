@@ -42,4 +42,10 @@ public class FeatureManager {
     // Controlled by the startup flag AND only available in Google internal builds.
     return Flags.instance().feEnableDeviceLogcat.getNonNull() && environment.isGoogleInternal();
   }
+
+  /** Checks if the quarantine feature is enabled. */
+  public boolean isDeviceQuarantineEnabled() {
+    // Controlled by the startup flag AND only available in Google internal builds.
+    return Flags.instance().feEnableDeviceQuarantine.getNonNull() && environment.isGoogleInternal();
+  }
 }

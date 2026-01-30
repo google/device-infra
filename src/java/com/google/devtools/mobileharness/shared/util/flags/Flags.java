@@ -1430,6 +1430,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> feEnableDeviceLogcat = feEnableDeviceLogcatDefault;
 
+  private static final Flag<Boolean> feEnableDeviceQuarantineDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--fe_enable_device_quarantine",
+      description = "Enables the device quarantine button in the Mobile Harness FE UI.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> feEnableDeviceQuarantine = feEnableDeviceQuarantineDefault;
+
   private static final Flag<Integer> feGrpcPortDefault = Flag.value(8080);
 
   @com.beust.jcommander.Parameter(

@@ -34,12 +34,16 @@ public class DeviceHeaderInfoBuilder {
 
   private final FlashButtonBuilder flashButtonBuilder;
   private final LogcatButtonBuilder logcatButtonBuilder;
+  private final QuarantineButtonBuilder quarantineButtonBuilder;
 
   @Inject
   DeviceHeaderInfoBuilder(
-      FlashButtonBuilder flashButtonBuilder, LogcatButtonBuilder logcatButtonBuilder) {
+      FlashButtonBuilder flashButtonBuilder,
+      LogcatButtonBuilder logcatButtonBuilder,
+      QuarantineButtonBuilder quarantineButtonBuilder) {
     this.flashButtonBuilder = flashButtonBuilder;
     this.logcatButtonBuilder = logcatButtonBuilder;
+    this.quarantineButtonBuilder = quarantineButtonBuilder;
   }
 
   /** Builds DeviceHeaderInfo based on device info and configs. */
@@ -71,7 +75,7 @@ public class DeviceHeaderInfoBuilder {
                 .setLogcat(logcatButtonBuilder.build(deviceInfo))
                 .setFlash(flashButtonBuilder.build(deviceInfo))
                 .setRemoteControl(RemoteControlButtonBuilder.build(deviceInfo))
-                .setQuarantine(QuarantineButtonBuilder.build(deviceInfo)))
+                .setQuarantine(quarantineButtonBuilder.build(deviceInfo)))
         .build();
   }
 }
