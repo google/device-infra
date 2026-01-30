@@ -149,8 +149,27 @@ public class GcsFileManager {
             .build();
   }
 
-  public static String getCredentialFile() {
-    return Flags.instance().fileTransferCredFile.getNonNull();
+  /**
+   * Gets the credential file path.
+   *
+   * <p>It will first try to get the credential file from the {@code --file_transfer_cred_file}
+   * flag, then from the {@code --internal_service_credential_file} flag.
+   */
+  public static String getCredentialFile() throws MobileHarnessException {
+    LocalFileUtil localFileUtil = new LocalFileUtil();
+    String fileTransferCredFile = Flags.instance().fileTransferCredFile.get();
+    if (fileTransferCredFile != null && localFileUtil.isFileExist(fileTransferCredFile)) {
+      return fileTransferCredFile;
+    }
+
+    String internalServiceCredFile = Flags.instance().internalServiceCredentialFile.get();
+    if (internalServiceCredFile != null && localFileUtil.isFileExist(internalServiceCredFile)) {
+      return internalServiceCredFile;
+    }
+    throw new MobileHarnessException(
+        BasicErrorId.GCS_CREDENTIAL_FILE_NOT_FOUND,
+        "Credential file not found. Please provide a valid credential file in flags"
+            + " --file_transfer_cred_file or --internal_service_credential_file.");
   }
 
   /** Information of an execution (uploading/downloading). */
