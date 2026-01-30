@@ -859,6 +859,24 @@ public abstract class Command {
   }
 
   /**
+   * Informs the CommandExecutor to close the stdin after the input is written.
+   *
+   * <p>Close the input stream.
+   *
+   * <p>Example:
+   *
+   * <pre>{@code
+   * command.closeStdinAfterInput();
+   * }</pre>
+   *
+   * @see <a href="#input">Command Input</a>
+   */
+  @CheckReturnValue
+  public Command closeStdinAfterInput() {
+    return toBuilder().shouldCloseStdinAfterInput(true).build();
+  }
+
+  /**
    * Returns a command that behaves equivalently to this command, but with the specified work
    * directory in place of the current work directory.
    *
@@ -1044,6 +1062,9 @@ public abstract class Command {
   /** See {@link #input(String)} and {@link #inputLn(String)}. */
   public abstract Optional<String> getInput();
 
+  /** See {@link #shouldCloseStdinAfterInput(String)}. */
+  public abstract boolean getShouldCloseStdinAfterInput();
+
   /** See {@link #workDir(Path)}. */
   public abstract Optional<Path> getWorkDirectory();
 
@@ -1134,6 +1155,8 @@ public abstract class Command {
 
     abstract Builder input(String input);
 
+    abstract Builder shouldCloseStdinAfterInput(boolean shouldCloseStdinAfterInput);
+
     abstract Builder workDirectory(Path workDirectory);
 
     abstract Builder extraEnvironment(Map<String, String> extraEnvironment);
@@ -1159,6 +1182,7 @@ public abstract class Command {
         .needStderrInResult(DEFAULT_NEED_STDERR_IN_RESULT)
         .stderrPath(Optional.empty())
         .stdoutPath(Optional.empty())
+        .shouldCloseStdinAfterInput(false)
         .showFullResultInException(DEFAULT_SHOW_FULL_RESULT_IN_EXCEPTION);
   }
 }
