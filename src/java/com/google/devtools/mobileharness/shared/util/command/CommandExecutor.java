@@ -358,6 +358,15 @@ public class CommandExecutor {
     // Writes initial input.
     writeToStdin(commandProcess, command.getInput().orElse(null));
 
+    if (command.getShouldCloseStdinAfterInput()) {
+      try {
+        commandProcess.stdinWriter().close();
+      } catch (IOException e) {
+        logger.atWarning().withCause(e).log(
+            "Failed to close stdin of command [%s]", commandProcess.command());
+      }
+    }
+
     // Sets line consumers and starts reading stdout.
     if (stdoutCollector != null) {
       stdoutCollector.setLineConsumer(
