@@ -114,13 +114,13 @@
               >
                 Health Statistics
               </button>
-              <button
+              <!-- <button
                 (click)="setActiveTab('record')"
                 class="tab-link"
                 [class.active]="activeTab() === 'record'"
               >
                 Record
-              </button>
+              </button> -->
             </nav>
           </div>
 
@@ -133,7 +133,7 @@
             }
             @if (activeTab() === 'test-history') {
               <div class="tab-content">
-                <p class="placeholder-text">Test History UI Mock is defined in another document.</p>
+                <p class="placeholder-text">The test history tab is still under development.</p>
               </div>
             }
             @if (activeTab() === 'health') {
