@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	log "github.com/golang/glog"
@@ -87,6 +88,15 @@ func (zu *ZipUploader) DoUpload() (digest.Digest, error) {
 	return rootDigest, nil
 }
 
+func secureJoin(dstRoot, name string) (string, error) {
+	cleanedDstRoot := filepath.Clean(dstRoot)
+	filePath := filepath.Join(cleanedDstRoot, name)
+	if !strings.HasPrefix(filePath, cleanedDstRoot+string(os.PathSeparator)) && filePath != cleanedDstRoot {
+		return "", fmt.Errorf("invalid path: %q attempts to write outside of %q", name, cleanedDstRoot)
+	}
+	return filePath, nil
+}
+
 type zipUnarchiver struct {
 	zipPath  string
 	dstRoot  string
@@ -129,7 +139,10 @@ func (zu *zipUnarchiver) extractAll(o extractOptions) error {
 }
 
 func (zu *zipUnarchiver) extractDir(zf *zip.File) error {
-	filePath := filepath.Join(zu.dstRoot, zf.Name)
+	filePath, err := secureJoin(zu.dstRoot, zf.Name)
+	if err != nil {
+		return err
+	}
 	if err := os.MkdirAll(filePath, zf.Mode()); err != nil {
 		return fmt.Errorf("failed to extract directory %s: %v", filePath, err)
 	}
@@ -144,7 +157,10 @@ type extractOptions struct {
 }
 
 func (zu *zipUnarchiver) extractFile(zf *zip.File, o extractOptions) error {
-	filePath := filepath.Join(zu.dstRoot, zf.Name)
+	filePath, err := secureJoin(zu.dstRoot, zf.Name)
+	if err != nil {
+		return err
+	}
 	if err := os.MkdirAll(filepath.Dir(filePath), os.ModePerm); err != nil {
 		return fmt.Errorf("failed to create directory %s: %v", filepath.Dir(filePath), err)
 	}
