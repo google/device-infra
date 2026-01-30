@@ -140,7 +140,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/mobly:mobly_doc_entry",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/mobly:parser",
-        "//src/java/com/google/devtools/mobileharness/platform/android/xts/common:test_status",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report/moblytestentryconverter:mobly_test_entry_converter",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",

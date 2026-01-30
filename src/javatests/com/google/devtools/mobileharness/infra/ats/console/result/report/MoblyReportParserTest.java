@@ -82,7 +82,7 @@ public final class MoblyReportParserTest {
                 Optional.of(DEVICE_BUILD_FINGERPRINT),
                 Optional.of(Path.of(BUILD_ATTR_FILE)),
                 Optional.of(Path.of(MODULE_RESULT_FILE_PASS)),
-                /* regardAbortAsFail= */ false));
+                Optional.empty()));
 
     assertThat(res).isPresent();
 
@@ -172,7 +172,7 @@ public final class MoblyReportParserTest {
                 Optional.empty(),
                 Optional.empty(),
                 Optional.of(Path.of(MODULE_RESULT_FILE_FAIL)),
-                /* regardAbortAsFail= */ false));
+                Optional.empty()));
 
     assertThat(res).isPresent();
 
@@ -205,7 +205,7 @@ public final class MoblyReportParserTest {
   }
 
   @Test
-  public void parseMoblyTestResult_regardAbortAsFail() throws Exception {
+  public void parseMoblyTestResult_betocqConverter() throws Exception {
     String summaryFile =
         TestRunfilesUtil.getRunfilesLocation(
             "result/report/testdata/mobly/abort/test_summary.yaml");
@@ -220,7 +220,8 @@ public final class MoblyReportParserTest {
                 Optional.of(DEVICE_BUILD_FINGERPRINT),
                 Optional.of(Path.of(BUILD_ATTR_FILE)),
                 Optional.of(Path.of(MODULE_RESULT_FILE_PASS)),
-                /* regardAbortAsFail= */ true));
+                Optional.of(
+                    "com.google.devtools.mobileharness.infra.ats.console.result.report.moblytestentryconverter.contrib.BetocqTestEntryConverter")));
     assertThat(res1).isPresent();
     Result report1 = res1.get();
     assertThat(report1.getSummary())
@@ -228,6 +229,7 @@ public final class MoblyReportParserTest {
             Summary.newBuilder()
                 .setPassed(0)
                 .setFailed(3)
+                .setWarning(2)
                 .setModulesDone(1)
                 .setModulesTotal(1)
                 .build());
@@ -235,47 +237,12 @@ public final class MoblyReportParserTest {
     assertThat(report1.getModuleInfo(0).getTestCaseList()).hasSize(2);
     assertThat(report1.getModuleInfo(0).getTestCase(0).getTestList()).hasSize(3);
     assertThat(report1.getModuleInfo(0).getTestCase(0).getTest(0).getResult()).isEqualTo("IGNORED");
-    assertThat(report1.getModuleInfo(0).getTestCase(0).getTest(0).getSkipped()).isTrue();
-    assertThat(report1.getModuleInfo(0).getTestCase(0).getTest(1).getResult()).isEqualTo("fail");
-    assertThat(report1.getModuleInfo(0).getTestCase(0).getTest(1).getSkipped()).isFalse();
+    assertThat(report1.getModuleInfo(0).getTestCase(0).getTest(1).getResult()).isEqualTo("IGNORED");
     assertThat(report1.getModuleInfo(0).getTestCase(0).getTest(2).getResult()).isEqualTo("fail");
-    assertThat(report1.getModuleInfo(0).getTestCase(1).getTestList()).hasSize(1);
+    assertThat(report1.getModuleInfo(0).getTestCase(1).getTestList()).hasSize(4);
     assertThat(report1.getModuleInfo(0).getTestCase(1).getTest(0).getResult()).isEqualTo("fail");
-    assertThat(report1.getModuleInfo(0).getTestCase(1).getTest(0).getSkipped()).isFalse();
-
-    Optional<Result> res2 =
-        moblyReportParser.parseMoblyTestResult(
-            MoblyReportInfo.of(
-                "mobly-package-name",
-                "module-abi",
-                "module-parameter",
-                Optional.of(Path.of(summaryFile)),
-                Optional.of(Path.of(RESULT_ATTR_FILE)),
-                Optional.of(DEVICE_BUILD_FINGERPRINT),
-                Optional.of(Path.of(BUILD_ATTR_FILE)),
-                Optional.of(Path.of(MODULE_RESULT_FILE_PASS)),
-                /* regardAbortAsFail= */ false));
-    assertThat(res2).isPresent();
-    Result report2 = res2.get();
-    assertThat(report2.getSummary())
-        .isEqualTo(
-            Summary.newBuilder()
-                .setPassed(0)
-                .setFailed(1)
-                .setModulesDone(1)
-                .setModulesTotal(1)
-                .build());
-    assertThat(report2.getModuleInfoList()).hasSize(1);
-    assertThat(report2.getModuleInfo(0).getTestCaseList()).hasSize(2);
-    assertThat(report2.getModuleInfo(0).getTestCase(0).getTestList()).hasSize(3);
-    assertThat(report2.getModuleInfo(0).getTestCase(0).getTest(0).getResult()).isEqualTo("IGNORED");
-    assertThat(report2.getModuleInfo(0).getTestCase(0).getTest(0).getSkipped()).isTrue();
-    assertThat(report2.getModuleInfo(0).getTestCase(0).getTest(1).getResult()).isEqualTo("IGNORED");
-    assertThat(report2.getModuleInfo(0).getTestCase(0).getTest(1).getSkipped()).isTrue();
-    assertThat(report2.getModuleInfo(0).getTestCase(0).getTest(2).getResult()).isEqualTo("fail");
-    assertThat(report2.getModuleInfo(0).getTestCase(0).getTest(2).getSkipped()).isFalse();
-    assertThat(report2.getModuleInfo(0).getTestCase(1).getTestList()).hasSize(1);
-    assertThat(report2.getModuleInfo(0).getTestCase(1).getTest(0).getResult()).isEqualTo("IGNORED");
-    assertThat(report2.getModuleInfo(0).getTestCase(1).getTest(0).getSkipped()).isTrue();
+    assertThat(report1.getModuleInfo(0).getTestCase(1).getTest(1).getResult()).isEqualTo("fail");
+    assertThat(report1.getModuleInfo(0).getTestCase(1).getTest(2).getResult()).isEqualTo("warning");
+    assertThat(report1.getModuleInfo(0).getTestCase(1).getTest(3).getResult()).isEqualTo("warning");
   }
 }

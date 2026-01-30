@@ -280,7 +280,7 @@ public final class CompatibilityReportMergerTest {
                     Optional.of(DEVICE_BUILD_FINGERPRINT),
                     Optional.of(Path.of(MOBLY_BUILD_ATTR_FILE_1)),
                     Optional.of(Path.of(MODULE_RESULT_FILE_1)),
-                    /* regardAbortAsFail= */ false),
+                    Optional.empty()),
                 MoblyReportInfo.of(
                     "mobly-package-2",
                     "module-abi",
@@ -290,7 +290,7 @@ public final class CompatibilityReportMergerTest {
                     Optional.of(DEVICE_BUILD_FINGERPRINT),
                     Optional.of(Path.of(MOBLY_BUILD_ATTR_FILE_2)),
                     Optional.of(Path.of(MODULE_RESULT_FILE_2)),
-                    /* regardAbortAsFail= */ false)));
+                    Optional.empty())));
 
     assertThat(res).hasSize(2);
     assertThat(res.get(0).report().get().getModuleInfoList()).hasSize(1);
@@ -311,7 +311,7 @@ public final class CompatibilityReportMergerTest {
                     Optional.of(DEVICE_BUILD_FINGERPRINT),
                     Optional.of(Path.of(MOBLY_BUILD_ATTR_FILE_1)),
                     Optional.of(Path.of(MODULE_RESULT_FILE_1)),
-                    /* regardAbortAsFail= */ false),
+                    Optional.empty()),
                 MoblyReportInfo.of(
                     "mobly-package-2",
                     "module-abi",
@@ -321,7 +321,7 @@ public final class CompatibilityReportMergerTest {
                     Optional.of(DEVICE_BUILD_FINGERPRINT),
                     Optional.of(Path.of(MOBLY_BUILD_ATTR_FILE_2)),
                     Optional.of(Path.of(MODULE_RESULT_FILE_2)),
-                    /* regardAbortAsFail= */ false)),
+                    Optional.empty())),
             /* skipDeviceInfo= */ false);
 
     assertThat(res).isPresent();
