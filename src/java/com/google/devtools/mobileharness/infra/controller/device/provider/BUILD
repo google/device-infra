@@ -21,6 +21,7 @@ java_library(
     name = "device_provider",
     srcs = ["DeviceProvider.java"],
     visibility = [
+        "//:omnilab_fusion",
         "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
     ],
     deps = [
