@@ -376,6 +376,29 @@ section {
   }
 }
 
+.note-footer {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed $gray-200;
+  font-size: 0.6875rem;
+  color: $gray-500;
+  line-height: 1.4;
+
+  mat-icon {
+    @include icon-size(0.875rem);
+    color: $blue-400;
+    flex-shrink: 0;
+  }
+
+  strong {
+    font-weight: 600;
+    color: $gray-700;
+  }
+}
+
 // Device Grid
 .device-grid {
   display: grid;
@@ -567,6 +590,96 @@ section {
       }
     }
   }
+
+  .sub-device-section {
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid $gray-100;
+
+    .sub-device-header {
+      @include flex-between-center;
+      margin-bottom: 0.5rem;
+      cursor: pointer;
+
+      .title {
+        font-size: 10px;
+        font-weight: 600;
+        color: $gray-500;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .badge {
+        margin-left: 0.5rem;
+        background-color: $gray-100;
+        color: $gray-700;
+        font-size: 10px;
+        font-weight: 500;
+        padding: 0.125rem 0.5rem;
+        border-radius: 9999px;
+        line-height: 1.25rem;
+      }
+
+      .expand-icon {
+        color: $gray-400;
+        @include icon-size(1.25rem);
+        margin-left: auto;
+        transition: transform 0.2s;
+
+        &.rotated {
+          transform: rotate(180deg);
+        }
+      }
+    }
+
+    .sub-device-list {
+      display: flex;
+      &[hidden] {
+        display: none;
+      }
+      flex-direction: column;
+      background-color: $gray-50;
+      border-radius: 0.5rem;
+      padding: 0.5rem;
+      border: 1px solid $gray-100;
+
+      .sub-device-row {
+        @include flex-between-center;
+        padding: 0.5rem;
+        line-height: normal;
+        border-bottom: 1px solid $gray-100;
+
+        &:last-child {
+          border-bottom: none;
+        }
+
+        .left {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+
+          .status-icon {
+            @include icon-size(1rem);
+            &.success { color: $green-500; }
+            &.error { color: $red-600; }
+          }
+
+          .sub-device-id {
+            font-size: 0.75rem;
+            line-height: 1rem;
+            color: $gray-700;
+          }
+        }
+
+        .error-reason {
+          font-size: 10px;
+          color: $red-600;
+          font-style: italic;
+          text-align: right;
+        }
+      }
+    }
+  }
 }
 
 // Duration Section
@@ -718,29 +831,6 @@ section {
       }
     }
   }
-
-  .duration-warning {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-top: 0.75rem;
-    padding-top: 0.75rem;
-    border-top: 1px dashed $gray-200;
-    font-size: 0.6875rem; // 11px
-    color: $gray-500;
-    line-height: 1.4;
-
-    mat-icon {
-      @include icon-size(0.875rem);
-      color: $blue-400;
-      flex-shrink: 0;
-    }
-
-    strong {
-      font-weight: 600;
-      color: $gray-700;
-    }
-  }
 }
 
 // Flash Section
@@ -819,6 +909,51 @@ section {
 
         .mat-icon[matPrefix] {
           margin-right: -0.25rem;
+        }
+      }
+    }
+
+    .checkbox-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.5rem 1rem;
+      margin-top: 0.5rem;
+
+      &.single-col {
+        grid-template-columns: 1fr;
+      }
+
+      mat-checkbox {
+        @include mat.checkbox-overrides((
+          selected-icon-color: $blue-600,
+          selected-checkmark-color: $white,
+          selected-focus-icon-color: $blue-600,
+          selected-hover-icon-color: $blue-600,
+          selected-pressed-icon-color: $blue-600,
+        ));
+
+        width: 100%;
+        overflow: hidden;
+
+        ::ng-deep .mdc-form-field {
+          padding-left: 0; // Remove default padding
+          width: 100%;
+          overflow: hidden;
+        }
+
+        ::ng-deep .mdc-label {
+          flex: 1;
+          overflow: hidden;
+        }
+
+        .checkbox-label {
+          display: block;
+          font-family: monospace;
+          font-size: 0.8125rem;
+          color: $gray-700;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
       }
     }

@@ -22,26 +22,28 @@
         </h4>
 
         <!-- Global Selector -->
-        @if (globalRunAsOptions().length > 0) {
-          <div class="global-selector" [class.mixed]="form.get('globalRunAs')?.value === ''">
-            <mat-form-field appearance="outline" subscriptSizing="dynamic">
-              <div matPrefix class="prefix-wrapper">
-                <mat-icon>group_work</mat-icon>
-                <label>All Devices RUN AS:</label>
-              </div>
-              <mat-select formControlName="globalRunAs" [matTooltip]="form.get('globalRunAs')?.value">
-                <mat-option value="" disabled class="hidden-option">Mixed</mat-option>
-                @for (opt of globalRunAsOptions(); track opt) {
-                  <mat-option [value]="opt">{{ opt }}</mat-option>
-                }
-              </mat-select>
-            </mat-form-field>
-          </div>
-        } @else {
-          <div class="no-common-identity" title="No common identity available across all selected devices">
-            <mat-icon>group_off</mat-icon>
-            <span>No Common Identity</span>
-          </div>
+        @if (deviceList().length > 1) {
+          @if (globalRunAsOptions().length > 0) {
+            <div class="global-selector" [class.mixed]="form.get('globalRunAs')?.value === ''">
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <div matPrefix class="prefix-wrapper">
+                  <mat-icon>group_work</mat-icon>
+                  <label>All Devices RUN AS:</label>
+                </div>
+                <mat-select formControlName="globalRunAs" [matTooltip]="form.get('globalRunAs')?.value">
+                  <mat-option value="" disabled class="hidden-option">Mixed</mat-option>
+                  @for (opt of globalRunAsOptions(); track opt) {
+                    <mat-option [value]="opt">{{ opt }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+            </div>
+          } @else {
+            <div class="no-common-identity" title="No common identity available across all selected devices">
+              <mat-icon>group_off</mat-icon>
+              <span>No Common Identity</span>
+            </div>
+          }
         }
       </div>
 
@@ -94,6 +96,42 @@
                 </div>
               }
             </div>
+
+            @if (item.subDevices && item.subDevices.length > 0) {
+              <div class="sub-device-section">
+                <div class="sub-device-header" (click)="toggleSubDevices(item.summary.id)">
+                  <span class="title">SUB-DEVICES</span>
+                  <span class="badge">{{ item.readySubDeviceCount }} / {{ item.subDevices.length }} Ready</span>
+                  <mat-icon class="expand-icon" [class.rotated]="!isExpanded(item.summary.id)">expand_less</mat-icon>
+                </div>
+
+                <!-- Sub-device list -->
+                <div class="sub-device-list" [hidden]="!isExpanded(item.summary.id)">
+                  @for (sub of item.subDevices; track sub.deviceId) {
+                    <div class="sub-device-row">
+                      <div class="left">
+                        @if (sub.isEligible) {
+                          <mat-icon class="status-icon success">check_circle</mat-icon>
+                        } @else {
+                          <mat-icon class="status-icon error">error</mat-icon>
+                        }
+                        <span class="sub-device-id">{{ sub.deviceId }}</span>
+                      </div>
+                      @if (!sub.isEligible) {
+                        <div class="right error-reason">
+                          {{ sub.ineligibilityReason?.message || 'Unknown reason' }}
+                        </div>
+                      }
+                    </div>
+                  }
+                </div>
+
+                <div class="note-footer">
+                  <mat-icon>info</mat-icon>
+                  <span>Only <strong>valid (ready)</strong> sub-devices will be included in the remote control session.</span>
+                </div>
+              </div>
+            }
           </div>
         }
       </div>
@@ -144,7 +182,7 @@
           }
         </mat-chip-listbox>
 
-        <div class="duration-warning">
+        <div class="note-footer">
           <mat-icon>info</mat-icon>
           <span>During the session, the device(s) will be marked as <strong>BUSY</strong> and unavailable for automated tests.</span>
         </div>
@@ -168,6 +206,27 @@
 
       @if (form.get('enableFlash')?.value) {
         <div class="flash-fields">
+          @if (eligibleSubDevices().length > 0) {
+            <div class="flash-field-group full-width">
+              <label class="field-label" id="sub-devices-label">
+                Select Devices to Flash <span class="required">*</span>
+              </label>
+              <div class="checkbox-grid" [class.single-col]="eligibleSubDevices().length === 1">
+                @for (sub of eligibleSubDevices(); track sub.deviceId) {
+                  <mat-checkbox
+                    [checked]="isSubDeviceSelected(sub.deviceId)"
+                    (change)="toggleSubDeviceSelection(sub.deviceId, $event.checked)"
+                    color="primary">
+                    <span class="checkbox-label" [matTooltip]="sub.deviceId">{{ sub.deviceId }}</span>
+                  </mat-checkbox>
+                }
+              </div>
+              @if (form.get('flashSubDeviceIds')?.invalid && form.get('flashSubDeviceIds')?.touched) {
+                <mat-error style="font-size: 0.75rem; margin-top: -0.25rem;">At least one device must be selected</mat-error>
+              }
+            </div>
+          }
+
           <div class="row">
             <div class="flash-field-group">
               <label class="field-label" id="branch-label">

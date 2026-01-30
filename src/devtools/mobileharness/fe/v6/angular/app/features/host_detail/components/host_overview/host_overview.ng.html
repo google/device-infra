@@ -354,7 +354,7 @@
                       <mat-icon>screenshot</mat-icon>
                       <span>Screenshot</span>
                     </button>
-                    <button mat-menu-item>
+                    <button mat-menu-item (click)="startSingleRemoteControl(element)">
                       <mat-icon>important_devices</mat-icon>
                       <span>Remote Control</span>
                     </button>
@@ -457,7 +457,7 @@
                                  <div [matTooltip]="sub.remoteControl?.isSupported ? 'Remote Control' : (sub.remoteControl?.unsupportedReason || 'Not supported')"
                                       class="inline-block">
                                    <button mat-icon-button
-                                           (click)="startSubDeviceRemoteControl(sub)"
+                                           (click)="startSubDeviceRemoteControl(sub, element)"
                                            [disabled]="!sub.remoteControl?.isSupported">
                                      <mat-icon>important_devices</mat-icon>
                                    </button>

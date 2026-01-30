@@ -115,6 +115,73 @@ export class FakeHostService extends HostService {
         runAsCandidates: [],
       };
 
+      if (id.includes('TESTBED-SINGLE-ELIGIBLE-SUB')) {
+        result.subDeviceResults = [
+          {
+            deviceId: id + '_sub_1',
+            isEligible: true,
+          },
+        ];
+      } else if (id.includes('TESTBED-MIXED-ELIGIBILITY')) {
+        result.subDeviceResults = [
+          {
+            deviceId: id + '_sub_1',
+            isEligible: true,
+          },
+          {
+            deviceId: id + '_sub_2',
+            isEligible: false,
+            ineligibilityReason: {
+              code: 'DEVICE_NOT_IDLE',
+              message: 'Device is busy',
+            },
+          },
+          {
+            deviceId: id + '_sub_3',
+            isEligible: false,
+            ineligibilityReason: {
+              code: 'DEVICE_TYPE_NOT_SUPPORTED',
+              message: 'Not supported type',
+            },
+          },
+          {
+            deviceId: id + '_sub_4',
+            isEligible: true,
+          },
+        ];
+      } else if (id.includes('RC-TESTBED-VALID')) {
+        result.subDeviceResults = [
+          {
+            deviceId: 'sub-device-tb-valid-1',
+            isEligible: true,
+          },
+          {
+            deviceId: 'sub-device-tb-valid-2',
+            isEligible: true,
+          },
+          {
+            deviceId: 'sub-device-tb-valid-3',
+            isEligible: false,
+            ineligibilityReason: {
+              code: 'DEVICE_NOT_IDLE',
+              message: 'Status: BUSY',
+            },
+          },
+          {
+            deviceId: 'sub-device-tb-valid-4',
+            isEligible: true,
+          },
+          {
+            deviceId: 'sub-device-tb-valid-5',
+            isEligible: false,
+            ineligibilityReason: {
+              code: 'DEVICE_TYPE_NOT_SUPPORTED',
+              message: 'Not supported',
+            },
+          },
+        ];
+      }
+
       if (id.includes('ineligible-busy') || id.includes('ineligible-failed')) {
         result.isEligible = false;
         result.ineligibilityReason = {

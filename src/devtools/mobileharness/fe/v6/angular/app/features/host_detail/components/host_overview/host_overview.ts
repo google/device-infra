@@ -528,7 +528,14 @@ export class HostOverviewPage implements OnInit, OnChanges {
     );
   }
 
-  startSubDeviceRemoteControl(subDevice: SubDeviceInfo) {
+  startSingleRemoteControl(device: DeviceSummary) {
+    this.remoteControlService.startRemoteControl(this.host.hostName, [device]);
+  }
+
+  startSubDeviceRemoteControl(
+    subDevice: SubDeviceInfo,
+    parentDevice: DeviceSummary,
+  ) {
     // Construct a temporary DeviceSummary from SubDeviceInfo
     const deviceSummary: DeviceSummary = {
       id: subDevice.id,
@@ -547,6 +554,7 @@ export class HostOverviewPage implements OnInit, OnChanges {
       model: subDevice.model || '',
       version: subDevice.version || '',
       subDevices: [],
+      parentDeviceId: parentDevice.id,
     };
 
     this.remoteControlService.startRemoteControl(this.host.hostName, [

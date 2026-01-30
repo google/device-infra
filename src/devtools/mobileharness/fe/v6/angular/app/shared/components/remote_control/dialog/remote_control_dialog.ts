@@ -22,6 +22,7 @@ import {
 } from '@angular/forms';
 import {MatButtonModule} from '@angular/material/button';
 import {MatButtonToggleModule} from '@angular/material/button-toggle';
+import {MatCheckboxModule} from '@angular/material/checkbox';
 import {MatChipOption, MatChipsModule} from '@angular/material/chips';
 import {
   MAT_DIALOG_DATA,
@@ -41,6 +42,7 @@ import {
   DeviceSummary,
   RemoteControlDevicesRequest,
   SessionOptions,
+  SubDeviceEligibilityResult,
 } from 'app/core/models/host_overview';
 import {ConfirmDialog} from 'app/shared/components/confirm_dialog/confirm_dialog';
 import {ToggleSwitch} from 'app/shared/components/toggle_switch/toggle_switch';
@@ -59,6 +61,8 @@ interface DeviceListItem {
   eligibility: DeviceEligibilityResult;
   validIdentities: string[];
   hasAccess: boolean;
+  subDevices: SubDeviceEligibilityResult[];
+  readySubDeviceCount: number;
 }
 
 /**
@@ -74,6 +78,7 @@ interface DeviceListItem {
     ReactiveFormsModule,
     MatButtonModule,
     MatButtonToggleModule,
+    MatCheckboxModule,
     MatChipsModule,
     MatDialogModule,
     MatFormFieldModule,
@@ -105,6 +110,7 @@ export class RemoteControlDialog implements OnInit, OnDestroy {
 
     // Flash Settings
     enableFlash: [false],
+    flashSubDeviceIds: [[] as string[]],
     flashBranch: ['', this.requiredIfFlashEnabled()],
     flashBuildId: ['', this.requiredIfFlashEnabled()],
     flashTarget: ['', this.requiredIfFlashEnabled()],
@@ -121,6 +127,16 @@ export class RemoteControlDialog implements OnInit, OnDestroy {
 
   // Processed data for the view
   deviceList = signal<DeviceListItem[]>([]);
+
+  // Track expanded state of sub-device sections
+  expandedDeviceIds = signal<Set<string>>(new Set());
+
+  // Eligible sub-devices for flashing (if any)
+  eligibleSubDevices = computed(() => {
+    return this.deviceList()
+      .flatMap((d) => d.subDevices)
+      .filter((s) => s.isEligible);
+  });
 
   commonIdentities = signal<string[]>([]);
   globalRunAsOptions = computed(() => {
@@ -235,6 +251,8 @@ export class RemoteControlDialog implements OnInit, OnDestroy {
     const devices = this.data.devices;
     const results = this.data.eligibilityResults;
 
+    const initialExpanded = new Set<string>();
+
     const processedList: DeviceListItem[] = devices.map((device) => {
       const result = results.find((r) => r.deviceId === device.id);
       const validIdentities: string[] = result?.runAsCandidates || [];
@@ -254,15 +272,27 @@ export class RemoteControlDialog implements OnInit, OnDestroy {
       });
       this.deviceConfigs.push(deviceGroup);
 
+      const subDevices: SubDeviceEligibilityResult[] =
+        result?.subDeviceResults || [];
+      const readySubDeviceCount = subDevices.filter((s) => s.isEligible).length;
+
+      // Default expanded
+      if (subDevices.length > 0) {
+        initialExpanded.add(device.id);
+      }
+
       return {
         summary: device,
         eligibility: result!,
         validIdentities,
         hasAccess,
+        subDevices,
+        readySubDeviceCount,
       };
     });
 
     this.deviceList.set(processedList);
+    this.expandedDeviceIds.set(initialExpanded);
 
     // Initialize Common Identities from Data
     const commonIds = (
@@ -326,6 +356,25 @@ export class RemoteControlDialog implements OnInit, OnDestroy {
           }
         }
       });
+
+      // Default select all eligible sub-devices when flash is enabled
+      if (enabled) {
+        const allIds = this.eligibleSubDevices().map((s) => s.deviceId);
+        this.form.get('flashSubDeviceIds')?.setValue(allIds);
+      }
+    });
+
+    // Add validation for sub-device selection
+    this.form.get('flashSubDeviceIds')?.addValidators((control) => {
+      const enabled = this.form.get('enableFlash')?.value;
+      const subDevices = this.eligibleSubDevices();
+      if (enabled && subDevices.length > 0) {
+        const selected = control.value as string[];
+        if (!selected || selected.length === 0) {
+          return {'required': true};
+        }
+      }
+      return null;
     });
   }
 
@@ -400,6 +449,20 @@ export class RemoteControlDialog implements OnInit, OnDestroy {
 
   // --- Actions ---
 
+  toggleSubDevices(deviceId: string) {
+    const current = new Set(this.expandedDeviceIds());
+    if (current.has(deviceId)) {
+      current.delete(deviceId);
+    } else {
+      current.add(deviceId);
+    }
+    this.expandedDeviceIds.set(current);
+  }
+
+  isExpanded(deviceId: string): boolean {
+    return this.expandedDeviceIds().has(deviceId);
+  }
+
   removeDevice(index: number) {
     this.deviceConfigs.removeAt(index);
 
@@ -426,6 +489,26 @@ export class RemoteControlDialog implements OnInit, OnDestroy {
     }
     // Otherwise (e.g. click on padding), manually toggle.
     chip.toggleSelected(true);
+  }
+
+  toggleSubDeviceSelection(deviceId: string, checked: boolean) {
+    const control = this.form.controls.flashSubDeviceIds;
+    const currentSet = new Set(control.value || []);
+
+    if (checked) {
+      currentSet.add(deviceId);
+    } else {
+      currentSet.delete(deviceId);
+    }
+
+    control.setValue(Array.from(currentSet));
+    control.markAsTouched();
+  }
+
+  isSubDeviceSelected(deviceId: string): boolean {
+    return (this.form.controls.flashSubDeviceIds.value || []).includes(
+      deviceId,
+    );
   }
 
   getSettingsSummary(): string {
@@ -489,10 +572,16 @@ export class RemoteControlDialog implements OnInit, OnDestroy {
       | Array<{deviceId: string; runAs: string}>
       | undefined;
     const deviceConfigs = (rawConfigs ?? [])
-      .map((c) => ({
-        deviceId: c.deviceId,
-        runAs: c.runAs,
-      }))
+      .map((c) => {
+        const deviceSummary = this.data.devices.find(
+          (d) => d.id === c.deviceId,
+        );
+        return {
+          deviceId: c.deviceId,
+          runAs: c.runAs,
+          parentDeviceId: deviceSummary?.parentDeviceId,
+        };
+      })
       .filter((c) => c.runAs);
 
     const req: RemoteControlDevicesRequest = {
@@ -511,6 +600,7 @@ export class RemoteControlDialog implements OnInit, OnDestroy {
             branch: val.flashBranch ?? '',
             buildId: val.flashBuildId ?? '',
             target: val.flashTarget ?? '',
+            subDeviceIds: val.flashSubDeviceIds ?? [],
           }
         : undefined,
     };
