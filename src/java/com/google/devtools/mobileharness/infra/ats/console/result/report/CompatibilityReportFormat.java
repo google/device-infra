@@ -17,6 +17,8 @@
 package com.google.devtools.mobileharness.infra.ats.console.result.report;
 
 import com.google.auto.value.AutoValue;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSetMultimap;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Test;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.TestCase;
@@ -32,26 +34,36 @@ public abstract class CompatibilityReportFormat {
 
   private static final String OPTION_TEST_FAILURE_LEVEL = "failure_level";
 
+  // TODO: Remove the static map once the warning annotation is fully supported.
+  private static final ImmutableSetMultimap<String, String> MODULE_TO_WARNING_TESTS =
+      ImmutableSetMultimap.of();
+
   /** The target name this format is for. Can be module name or test plan name. */
   public abstract String targetName();
 
   /** The failure level of test in the report. */
   public abstract TestStatus failureLevel();
 
+  /** The test cases to be affected by the format. */
+  public abstract Optional<ImmutableSet<String>> tests();
+
   /**
    * Creates a {@link CompatibilityReportFormat} for a module based on the given module {@link
    * Configuration}.
    */
   public static Optional<CompatibilityReportFormat> fromModuleConfig(Configuration configuration) {
+    String moduleName = configuration.getMetadata().getXtsModule();
     CompatibilityReportFormat.Builder builder =
-        new AutoValue_CompatibilityReportFormat.Builder()
-            .setTargetName(configuration.getMetadata().getXtsModule());
+        new AutoValue_CompatibilityReportFormat.Builder().setTargetName(moduleName);
     Map<String, ConfigurationDescriptorMetadata> metadataMap =
         configuration.getConfigDescriptor().getMetadataMap();
     if (metadataMap.containsKey(OPTION_TEST_FAILURE_LEVEL)
         && metadataMap.get(OPTION_TEST_FAILURE_LEVEL).getValueCount() > 0) {
       builder.setFailureLevel(
           TestStatus.valueOf(metadataMap.get(OPTION_TEST_FAILURE_LEVEL).getValue(0)));
+      return Optional.of(builder.build());
+    } else if (MODULE_TO_WARNING_TESTS.containsKey(moduleName)) {
+      builder.setFailureLevel(TestStatus.WARNING).setTests(MODULE_TO_WARNING_TESTS.get(moduleName));
       return Optional.of(builder.build());
     } else {
       return Optional.empty();
@@ -88,11 +100,20 @@ public abstract class CompatibilityReportFormat {
    */
   public void applyToModule(Module.Builder moduleBuilder) {
     String failureLevel = TestStatus.convertToTestStatusCompatibilityString(failureLevel());
+    int changedCount = 0;
     for (TestCase.Builder testCaseBuilder : moduleBuilder.getTestCaseBuilderList()) {
       for (Test.Builder testBuilder : testCaseBuilder.getTestBuilderList()) {
         if (testBuilder
             .getResult()
             .equals(TestStatus.convertToTestStatusCompatibilityString(TestStatus.FAILURE))) {
+          if (tests().isPresent()
+              && !tests()
+                  .get()
+                  .contains(
+                      String.format("%s#%s", testCaseBuilder.getName(), testBuilder.getName()))) {
+            continue;
+          }
+          changedCount++;
           testBuilder.setResult(failureLevel);
         }
       }
@@ -100,13 +121,13 @@ public abstract class CompatibilityReportFormat {
     switch (failureLevel()) {
       case PASSED -> {
         moduleBuilder
-            .setPassed(moduleBuilder.getPassed() + moduleBuilder.getFailedTests())
-            .setFailedTests(0);
+            .setPassed(moduleBuilder.getPassed() + changedCount)
+            .setFailedTests(moduleBuilder.getFailedTests() - changedCount);
       }
       case WARNING -> {
         moduleBuilder
-            .setWarningTests(moduleBuilder.getWarningTests() + moduleBuilder.getFailedTests())
-            .setFailedTests(0);
+            .setWarningTests(moduleBuilder.getWarningTests() + changedCount)
+            .setFailedTests(moduleBuilder.getFailedTests() - changedCount);
       }
       case FAILURE -> {
         // Do nothing.
@@ -121,6 +142,8 @@ public abstract class CompatibilityReportFormat {
     public abstract Builder setTargetName(String targetName);
 
     public abstract Builder setFailureLevel(TestStatus failureLevel);
+
+    public abstract Builder setTests(ImmutableSet<String> tests);
 
     public abstract CompatibilityReportFormat build();
   }
