@@ -13,33 +13,22 @@
 # limitations under the License.
 #
 
-load("@rules_java//java:defs.bzl", "java_library")
+load("@rules_java//java:java_library.bzl", "java_library")
 
 package(default_applicable_licenses = ["//:license"])
 
 java_library(
-    name = "test_status",
-    srcs = ["TestStatus.java"],
+    name = "mobly_test_entry_converter",
+    srcs = glob(["**/*.java"]),
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:__subpackages__",
-        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result/report:__pkg__",
     ],
     deps = [
+        "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
         "//src/devtools/mobileharness/infra/ats/console/result/proto:result_java_proto",
-    ],
-)
-
-java_library(
-    name = "device_build_info",
-    srcs = ["DeviceBuildInfo.java"],
-    visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:__subpackages__",
-        "//src/java/com/google/devtools/mobileharness/platform/android/xts/plugin:__pkg__",
-        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/plugin:__pkg__",
-    ],
-    deps = [
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/xml:xml_constants",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/mobly:mobly_doc_entry",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/common:test_status",
         "@maven//:com_google_guava_guava",
     ],
 )

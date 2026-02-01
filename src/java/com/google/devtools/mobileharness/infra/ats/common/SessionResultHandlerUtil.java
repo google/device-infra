@@ -400,7 +400,8 @@ public class SessionResultHandlerUtil {
                               res.moduleResultFile(),
                               test.jobInfo()
                                   .params()
-                                  .getBool(MoblyReportInfo.PARAM_REGARD_ABORT_AS_FAIL, false))));
+                                  .getOptional(
+                                      MoblyReportInfo.MOBLY_TEST_ENTRY_CONVERTER_CLASS_PARAM))));
               return null;
             },
             String.format(
