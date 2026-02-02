@@ -31,6 +31,7 @@ import com.google.devtools.mobileharness.shared.util.file.remote.GcsUtil.GcsApiO
 import com.google.devtools.mobileharness.shared.util.file.remote.GcsUtil.GcsParams;
 import com.google.devtools.mobileharness.shared.util.file.remote.GcsUtil.GcsParams.Scope;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -100,7 +101,7 @@ public class GcsFileManager {
         DEFAULT_CACHE_TTL,
         Optional.empty(),
         Optional.empty(),
-        GcsUtil.CredentialType.ofCredentialFile(getCredentialFile()));
+        GcsUtil.CredentialType.ofCredentialFile(getCredentialFile().get()));
   }
 
   @SuppressWarnings("GoodTime") // TODO: fix GoodTime violation
@@ -150,26 +151,34 @@ public class GcsFileManager {
   }
 
   /**
+   * Gets the credential type for GCS access.
+   *
+   * @param bucketName name of bucket to manage
+   */
+  public static GcsUtil.CredentialType getCredentialType(String bucketName, SystemUtil systemUtil) {
+    Optional<String> credentialFile = getCredentialFile();
+    return GcsUtil.CredentialType.ofCredentialFile(credentialFile.get());
+  }
+
+  /**
    * Gets the credential file path.
    *
    * <p>It will first try to get the credential file from the {@code --file_transfer_cred_file}
    * flag, then from the {@code --internal_service_credential_file} flag.
    */
-  public static String getCredentialFile() throws MobileHarnessException {
+  @VisibleForTesting
+  static Optional<String> getCredentialFile() {
     LocalFileUtil localFileUtil = new LocalFileUtil();
     String fileTransferCredFile = Flags.instance().fileTransferCredFile.get();
     if (fileTransferCredFile != null && localFileUtil.isFileExist(fileTransferCredFile)) {
-      return fileTransferCredFile;
+      return Optional.of(fileTransferCredFile);
     }
 
     String internalServiceCredFile = Flags.instance().internalServiceCredentialFile.get();
     if (internalServiceCredFile != null && localFileUtil.isFileExist(internalServiceCredFile)) {
-      return internalServiceCredFile;
+      return Optional.of(internalServiceCredFile);
     }
-    throw new MobileHarnessException(
-        BasicErrorId.GCS_CREDENTIAL_FILE_NOT_FOUND,
-        "Credential file not found. Please provide a valid credential file in flags"
-            + " --file_transfer_cred_file or --internal_service_credential_file.");
+    return Optional.empty();
   }
 
   /** Information of an execution (uploading/downloading). */
