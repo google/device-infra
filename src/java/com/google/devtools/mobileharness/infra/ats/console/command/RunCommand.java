@@ -43,8 +43,6 @@ import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPrepar
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ParseCommandOnly;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.RunCommandParsingResultFuture;
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
-import com.google.devtools.mobileharness.infra.ats.console.command.picocli.parameterpreprocessor.MapPreprocessor;
-import com.google.devtools.mobileharness.infra.ats.console.command.picocli.parameterpreprocessor.MultimapPreprocessor;
 import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.AtsSessionStub;
 import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.ServerLogPrinter;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto;
@@ -80,16 +78,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import javax.inject.Inject;
-import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.ExitCode;
 import picocli.CommandLine.Help.Ansi;
 import picocli.CommandLine.HelpCommand;
-import picocli.CommandLine.Model.CommandSpec;
-import picocli.CommandLine.Option;
+import picocli.CommandLine.Mixin;
 import picocli.CommandLine.ParameterException;
-import picocli.CommandLine.Parameters;
-import picocli.CommandLine.Spec;
 
 /** Command to run xTS tests. */
 @Command(
@@ -109,302 +103,7 @@ public final class RunCommand implements Callable<Integer> {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  @Parameters(
-      index = "0",
-      arity = "0..1",
-      paramLabel = "<config>",
-      hideParamSyntax = true,
-      description = "xTS test config/plan.")
-  private String config;
-
-  @ArgGroup(exclusive = false, multiplicity = "0..*")
-  private List<ModuleTestOptionsGroup> moduleTestOptionsGroups;
-
-  static class ModuleTestOptionsGroup {
-    @Option(
-        names = {"-m", "--module"},
-        required = true,
-        paramLabel = "<test_module_name>",
-        description = "Run the specified module.")
-    String module;
-
-    @Option(
-        names = {"-t", "--test"},
-        required = false,
-        paramLabel = "<test_case_name>",
-        description = "Run the specified test case.")
-    String test;
-  }
-
-  @Option(
-      names = {"-s", "--serial"},
-      paramLabel = "<device_id>",
-      description = "Run test on the specific device.")
-  @SuppressWarnings("PreferredInterfaceType")
-  private List<String> serialOpt;
-
-  @Option(
-      names = {"--exclude-serial"},
-      paramLabel = "<exclude_device_id>",
-      description = "Run test on any device except those with this serial number(s).")
-  private List<String> excludeSerialOpt;
-
-  @Option(
-      names = {"--product-type"},
-      paramLabel = "<device_product_type>",
-      description =
-          "Run test on device with this product type(s). May also filter by variant using"
-              + " product:variant.")
-  private List<String> productTypes;
-
-  @Option(
-      names = {"--property"},
-      paramLabel = "<device_property>",
-      preprocessor = MapPreprocessor.class,
-      description =
-          "Run test on device with this property value. Expected format --property <propertyname>"
-              + " <propertyvalue>.")
-  private Map<String, String> devicePropertiesMap;
-
-  @Option(
-      names = {"--min-battery"},
-      paramLabel = "<min_battery_level>",
-      description =
-          "only run this test on a device whose battery level is at least the given"
-              + " amount. Scale: 0-100")
-  private Integer minBattery = null;
-
-  @Option(
-      names = {"--max-battery"},
-      paramLabel = "<max_battery_level>",
-      description =
-          "only run this test on a device whose battery level is strictly less than the "
-              + "given amount. Scale: 0-100")
-  private Integer maxBattery = null;
-
-  @Option(
-      names = {"--require-battery-check"},
-      arity = "1",
-      paramLabel = "<require_battery_check>",
-      description =
-          "If --min-battery and/or --max-battery is specified, enforce the check. If"
-              + " require-battery-check=false, then no battery check will occur. This is TRUE by"
-              + " default.")
-  private boolean requireBatteryCheck = true;
-
-  @Option(
-      names = {"--max-battery-temperature"},
-      paramLabel = "<max_battery_temperature>",
-      description =
-          "only run this test on a device whose battery temperature is strictly "
-              + "less than the given amount. Scale: Degrees celsius")
-  private Integer maxBatteryTemperature = null;
-
-  @Option(
-      names = {"--require-battery-temp-check"},
-      arity = "1",
-      paramLabel = "<require_battery_temp_check>",
-      description =
-          "If --max-battery-temperature is specified, enforce the battery checking. If"
-              + " require-battery-temp-check=false, then no temperature check will occur. This is"
-              + " TRUE by default.")
-  private boolean requireBatteryTemperatureCheck = true;
-
-  @Option(
-      names = {"--min-sdk-level"},
-      paramLabel = "<min_sdk_level>",
-      description = "Only run this test on devices that support this Android SDK/API level")
-  private Integer minSdk = null;
-
-  @Option(
-      names = {"--max-sdk-level"},
-      paramLabel = "<max_sdk_level>",
-      description = "Only run this test on devices that support this Android SDK/API level")
-  private Integer maxSdk = null;
-
-  @Option(
-      names = {"--shard-count"},
-      paramLabel = "<number_of_shards>",
-      description =
-          "Shard a run into given number of independent chunks, to run on multiple devices in"
-              + " parallel.")
-  private int shardCount;
-
-  @Option(
-      names = {"--include-filter", "--compatibility:include-filter"},
-      paramLabel = "\"[abi] <module_name> <test_name>\"",
-      description =
-          "Run with the specified modules, or test packages, classes, and cases. For example, run"
-              + " cts --include-filter \"CtsCalendarcommon2TestCases"
-              + " android.calendarcommon2.cts.Calendarcommon2Test#testStaticLinking\" includes the"
-              + " specified module.")
-  @SuppressWarnings("PreferredInterfaceType")
-  private List<String> includeFilters;
-
-  @Option(
-      names = {"--exclude-filter", "--compatibility:exclude-filter"},
-      paramLabel = "\"[abi] <module_name> <test_name>\"",
-      description =
-          "Exclude the specified modules, or test packages, classes, and cases, from the run. For"
-              + " example, run cts --exclude-filter \"CtsCalendarcommon2Test"
-              + " android.calendarcommon2.cts.Calendarcommon2Test#testStaticLinking\" excludes the"
-              + " specified module.")
-  @SuppressWarnings("PreferredInterfaceType")
-  private List<String> excludeFilters;
-
-  @Option(
-      names = {"--strict-include-filter"},
-      paramLabel = "\"[abi] <module_name> <test_name>\"",
-      description =
-          "Run with the specified modules, or test packages, classes, and cases. For example, run"
-              + " cts --strict-include-filter \"CtsCalendarcommon2Test"
-              + " android.calendarcommon2.cts.Calendarcommon2Test#testStaticLinking\" includes the"
-              + " specified module. All other filters will be ignored to strictly run this set.")
-  @SuppressWarnings("PreferredInterfaceType")
-  private List<String> strictIncludeFilters;
-
-  @Option(
-      names = {
-        "--module-metadata-include-filter",
-        "--compatibility:module-metadata-include-filter"
-      },
-      paramLabel = "<key> <value>",
-      preprocessor = MultimapPreprocessor.class,
-      description =
-          "Run modules with specific metadata in key-value pairs. For example, run"
-              + " cts --module-metadata-include-filter component gts-root"
-              + " includes modules with metadata key=component value=gts-root.")
-  @SuppressWarnings("PreferredInterfaceType")
-  private Multimap<String, String> moduleMetadataIncludeFilters;
-
-  @Option(
-      names = {
-        "--module-metadata-exclude-filter",
-        "--compatibility:module-metadata-exclude-filter"
-      },
-      arity = "2",
-      paramLabel = "<key> <value>",
-      preprocessor = MultimapPreprocessor.class,
-      description =
-          "Exclude modules with specific metadata in key-value pairs. For example, run"
-              + " cts --module-metadata-exclude-filter component gts-root"
-              + " excludes modules with metadata key=component value=gts-root.")
-  @SuppressWarnings("PreferredInterfaceType")
-  private Multimap<String, String> moduleMetadataExcludeFilters;
-
-  @Option(
-      names = {"--html-in-zip"},
-      arity = "0..1",
-      paramLabel = "<html_in_zip>",
-      description = "Whether to include html reports in the result zip file. Default is false.")
-  private boolean htmlInZip;
-
-  @Option(
-      names = {"--report-system-checkers"},
-      arity = "0..1",
-      paramLabel = "<report_system_checkers>",
-      description = "Whether reporting system checkers as test or not. Default is false.")
-  private boolean reportSystemCheckers = false;
-
-  @Option(
-      names = {"-d", "--skip-device-info"},
-      arity = "0..1",
-      paramLabel = "<skip_device_info>",
-      description = "Whether device info collection should be skipped. Default is false.")
-  private Boolean skipDeviceInfo = null;
-
-  @Option(
-      names = {"--subplan"},
-      paramLabel = "<subplan_name>",
-      description = "Run the specified subplan.")
-  private String subPlanName;
-
-  @Option(
-      names = {"--help"},
-      paramLabel = "<help>",
-      description = "Show the help message.")
-  private boolean showHelp;
-
-  @Option(
-      names = {"--help-all"},
-      paramLabel = "<help_all>",
-      description = "Show the help all message.")
-  private boolean showHelpAll;
-
-  @Option(
-      names = {"--module-arg", "--compatibility:module-arg"},
-      paramLabel = "\"<module_name>:<arg_name>:[<arg_key>:=]<arg_value>\"",
-      description = "Arguments to pass to a module.")
-  private List<String> moduleCmdArgs;
-
-  @Parameters(index = "1..*", hidden = true)
-  private List<String> extraRunCmdArgs;
-
-  // Command options for "run retry" command
-  @Option(
-      names = "--retry",
-      paramLabel = "<retry_session_id>",
-      description =
-          "Index for the retry session. Use @|bold list results|@ to get the session index."
-              + " Either this or <retry_session_result_dir_name> must be set when calling 'run"
-              + " retry' command")
-  private Integer retrySessionIndex; // Use Integer instead of int to check if it's set
-
-  @Option(
-      names = "--retry-result-dir",
-      paramLabel = "<retry_session_result_dir_name>",
-      description =
-          "Result directory name for the retry session. Use @|bold list results|@ to get the result"
-              + " directory name. Either this or <retry_session_id> must be set when calling 'run"
-              + " retry' command. Use this option instead of <retry_session_id> to retry specific"
-              + " sessions parallelly if needed")
-  private String retrySessionResultDirName;
-
-  @Option(
-      names = "--retry-type",
-      description =
-          "Test retry type for 'run retry' command. Supported values: ${COMPLETION-CANDIDATES}")
-  private RetryType retryType;
-
-  @Option(names = "--exclude-runner", description = "Exclude tests by test runners.")
-  private List<String> excludeRunnerOpt;
-
-  @Option(
-      names = {"--enable-default-logs"},
-      arity = "0..1",
-      paramLabel = "<enable_default_logs>",
-      description = "Whether to enable default logs. Default is false.")
-  private Boolean enableDefaultLogs = null;
-
-  @Option(
-      names = {"--enable-token-sharding"},
-      arity = "0..1",
-      paramLabel = "<enable_token_sharding>",
-      description = "Automatically matches the test that requires respective SIM type")
-  private boolean enableTokenSharding = false;
-
-  @ArgGroup(exclusive = true, multiplicity = "0..1")
-  private DeviceTypeOptionsGroup deviceTypeOptionsGroup;
-
-  static class DeviceTypeOptionsGroup {
-    @Option(
-        names = {"-e", "--emulator"},
-        required = false,
-        paramLabel = "<run_test_on_emulator>",
-        description = "If true, force this test to run on emulator. Default is false.")
-    boolean runTestOnEmulator;
-
-    @Option(
-        names = {"-rd", "--device"},
-        required = false,
-        paramLabel = "<run_test_on_real_device>",
-        description =
-            "If true, force this test to run on a physical device, not an emulator. Default is"
-                + " false.")
-    boolean runTestOnRealDevice;
-  }
-
-  @Spec private CommandSpec spec;
+  @Mixin private RunCommandOptions options;
 
   static final String RUN_COMMAND_SESSION_NAME = "run_command";
 
@@ -478,7 +177,7 @@ public final class RunCommand implements Callable<Integer> {
         }
       }
       checkState(Flags.instance().enableAtsConsoleOlcServer.getNonNull());
-      if (showHelp || showHelpAll) {
+      if (options.showHelp || options.showHelpAll) {
         return showHelpMessage(
             commandHelper.getXtsType(), consoleInfo.getXtsRootDirectoryNonEmpty());
       } else {
@@ -486,7 +185,7 @@ public final class RunCommand implements Callable<Integer> {
         return runWithOlcServerPrepared(command);
       }
     } finally {
-      moduleTestOptionsGroups = null; // Resets the group to clear the history
+      options.moduleTestOptionsGroups = null; // Resets the group to clear the history
     }
   }
 
@@ -499,52 +198,58 @@ public final class RunCommand implements Callable<Integer> {
     SessionRequestInfo.Builder sessionRequestBuilder = SessionRequestInfo.builder();
     validateCommandParameters();
     sessionRequestBuilder
-        .setTestPlan(config)
+        .setTestPlan(options.config)
         .setModuleNames(getModules())
         .setIncludeFilters(
-            this.includeFilters == null
+            this.options.includeFilters == null
                 ? ImmutableList.of()
-                : ImmutableList.copyOf(this.includeFilters))
+                : ImmutableList.copyOf(this.options.includeFilters))
         .setExcludeFilters(
-            this.excludeFilters == null
+            this.options.excludeFilters == null
                 ? ImmutableList.of()
-                : ImmutableList.copyOf(this.excludeFilters))
+                : ImmutableList.copyOf(this.options.excludeFilters))
         .setStrictIncludeFilters(
-            this.strictIncludeFilters == null
+            this.options.strictIncludeFilters == null
                 ? ImmutableList.of()
-                : ImmutableList.copyOf(this.strictIncludeFilters))
+                : ImmutableList.copyOf(this.options.strictIncludeFilters))
         .setModuleMetadataIncludeFilters(
-            this.moduleMetadataIncludeFilters == null
+            this.options.moduleMetadataIncludeFilters == null
                 ? ImmutableMultimap.of()
-                : ImmutableMultimap.copyOf(this.moduleMetadataIncludeFilters))
+                : ImmutableMultimap.copyOf(this.options.moduleMetadataIncludeFilters))
         .setModuleMetadataExcludeFilters(
-            this.moduleMetadataExcludeFilters == null
+            this.options.moduleMetadataExcludeFilters == null
                 ? ImmutableMultimap.of()
-                : ImmutableMultimap.copyOf(this.moduleMetadataExcludeFilters))
-        .setHtmlInZip(htmlInZip);
-    if (this.shardCount > 0) {
-      sessionRequestBuilder.setShardCount(this.shardCount);
+                : ImmutableMultimap.copyOf(this.options.moduleMetadataExcludeFilters))
+        .setHtmlInZip(options.htmlInZip);
+    if (this.options.shardCount > 0) {
+      sessionRequestBuilder.setShardCount(this.options.shardCount);
     }
     if (!this.getTest().isEmpty()) {
       sessionRequestBuilder.setTestName(this.getTest());
     }
     ImmutableList<String> moduleArgs =
-        moduleCmdArgs != null ? ImmutableList.copyOf(moduleCmdArgs) : ImmutableList.of();
+        options.moduleCmdArgs != null
+            ? ImmutableList.copyOf(options.moduleCmdArgs)
+            : ImmutableList.of();
     ImmutableList<String> extraArgs =
-        extraRunCmdArgs != null ? ImmutableList.copyOf(extraRunCmdArgs) : ImmutableList.of();
+        options.extraRunCmdArgs != null
+            ? ImmutableList.copyOf(options.extraRunCmdArgs)
+            : ImmutableList.of();
     ImmutableSet<String> excludeRunners =
-        excludeRunnerOpt != null ? ImmutableSet.copyOf(excludeRunnerOpt) : ImmutableSet.of();
-    if (this.retryType != null) {
+        options.excludeRunnerOpt != null
+            ? ImmutableSet.copyOf(options.excludeRunnerOpt)
+            : ImmutableSet.of();
+    if (this.options.retryType != null) {
       sessionRequestBuilder.setRetryType(
-          RetryType.valueOf(Ascii.toUpperCase(this.retryType.name())));
+          RetryType.valueOf(Ascii.toUpperCase(this.options.retryType.name())));
     }
     if (isSkipDeviceInfo().isPresent()) {
       sessionRequestBuilder.setSkipDeviceInfo(isSkipDeviceInfo().get());
     }
-    if (enableDefaultLogs != null) {
-      sessionRequestBuilder.setEnableDefaultLogs(enableDefaultLogs);
+    if (options.enableDefaultLogs != null) {
+      sessionRequestBuilder.setEnableDefaultLogs(options.enableDefaultLogs);
     }
-    sessionRequestBuilder.setEnableTokenSharding(enableTokenSharding);
+    sessionRequestBuilder.setEnableTokenSharding(options.enableTokenSharding);
 
     return sessionRequestBuilder
         .setModuleArgs(moduleArgs)
@@ -554,51 +259,51 @@ public final class RunCommand implements Callable<Integer> {
 
   @VisibleForTesting
   void validateCommandParameters() throws MobileHarnessException {
-    if (isNullOrEmpty(config)) {
+    if (isNullOrEmpty(options.config)) {
       throw new ParameterException(
-          spec.commandLine(),
+          options.spec.commandLine(),
           Ansi.AUTO.string(
               "Param @|fg(yellow) <config>|@ right after 'run' command is required.\n"));
     }
-    if (moduleTestOptionsGroups != null && !moduleTestOptionsGroups.isEmpty()) {
+    if (options.moduleTestOptionsGroups != null && !options.moduleTestOptionsGroups.isEmpty()) {
       ImmutableList<String> tests =
-          moduleTestOptionsGroups.stream()
+          options.moduleTestOptionsGroups.stream()
               .map(group -> group.test)
               .filter(Objects::nonNull)
               .collect(toImmutableList());
       if (tests.size() > 1) {
         throw new ParameterException(
-            spec.commandLine(),
+            options.spec.commandLine(),
             Ansi.AUTO.string("Only at most one test case could be specified.\n"));
       }
-      if (tests.size() == 1 && moduleTestOptionsGroups.size() > 1) {
+      if (tests.size() == 1 && options.moduleTestOptionsGroups.size() > 1) {
         throw new ParameterException(
-            spec.commandLine(),
+            options.spec.commandLine(),
             Ansi.AUTO.string("Multiple modules are unsupported if a test case is specified.\n"));
       }
     }
-    if (includeFilters != null
-        && !includeFilters.isEmpty()
-        && moduleTestOptionsGroups != null
-        && !moduleTestOptionsGroups.isEmpty()) {
+    if (options.includeFilters != null
+        && !options.includeFilters.isEmpty()
+        && options.moduleTestOptionsGroups != null
+        && !options.moduleTestOptionsGroups.isEmpty()) {
       throw new ParameterException(
-          spec.commandLine(),
+          options.spec.commandLine(),
           Ansi.AUTO.string(
               "Don't use '--include-filter' and '--module/-m' options at the same time.\n"));
     }
-    if (config.equals("retry")) {
+    if (options.config.equals("retry")) {
       validateRunRetryCommandParameters();
     }
-    if (!isNullOrEmpty(subPlanName) && !isSubPlanExist(subPlanName)) {
+    if (!isNullOrEmpty(options.subPlanName) && !isSubPlanExist(options.subPlanName)) {
       throw new ParameterException(
-          spec.commandLine(),
-          Ansi.AUTO.string(String.format("Subplan [%s] doesn't exist.\n", subPlanName)));
+          options.spec.commandLine(),
+          Ansi.AUTO.string(String.format("Subplan [%s] doesn't exist.\n", options.subPlanName)));
     }
-    if (moduleCmdArgs != null && !moduleCmdArgs.isEmpty()) {
-      for (String moduleArg : moduleCmdArgs) {
+    if (options.moduleCmdArgs != null && !options.moduleCmdArgs.isEmpty()) {
+      for (String moduleArg : options.moduleCmdArgs) {
         if (!ModuleArg.isValid(moduleArg)) {
           throw new ParameterException(
-              spec.commandLine(),
+              options.spec.commandLine(),
               Ansi.AUTO.string(
                   String.format(
                       "Invalid module arguments provided. Unprocessed arguments: %s\n"
@@ -611,47 +316,47 @@ public final class RunCommand implements Callable<Integer> {
   }
 
   private void validateRunRetryCommandParameters() {
-    if (retrySessionIndex == null && isNullOrEmpty(retrySessionResultDirName)) {
+    if (options.retrySessionIndex == null && isNullOrEmpty(options.retrySessionResultDirName)) {
       throw new ParameterException(
-          spec.commandLine(),
+          options.spec.commandLine(),
           Ansi.AUTO.string(
               "Must provide option '--retry <retry_session_id>' or '--retry-result-dir"
                   + " <retry_session_result_dir_name>' for retry command.\n"));
     }
-    if (retrySessionIndex != null && !isNullOrEmpty(retrySessionResultDirName)) {
+    if (options.retrySessionIndex != null && !isNullOrEmpty(options.retrySessionResultDirName)) {
       throw new ParameterException(
-          spec.commandLine(),
+          options.spec.commandLine(),
           Ansi.AUTO.string(
               "Option '--retry <retry_session_id>' and '--retry-result-dir"
                   + " <retry_session_result_dir_name>' are mutually exclusive.\n"));
     }
-    if (!isNullOrEmpty(subPlanName)) {
+    if (!isNullOrEmpty(options.subPlanName)) {
       throw new ParameterException(
-          spec.commandLine(),
+          options.spec.commandLine(),
           Ansi.AUTO.string(
               "Option '--subplan <subplan_name>' is not supported in retry command.\n"));
     }
-    if (includeFilters != null && !includeFilters.isEmpty()) {
+    if (options.includeFilters != null && !options.includeFilters.isEmpty()) {
       throw new ParameterException(
-          spec.commandLine(),
+          options.spec.commandLine(),
           Ansi.AUTO.string("Option '--include-filter' is not supported in retry command.\n"));
     }
   }
 
   private void validateRunCommandExtraArgs() {
-    if (extraRunCmdArgs != null && !extraRunCmdArgs.isEmpty()) {
+    if (options.extraRunCmdArgs != null && !options.extraRunCmdArgs.isEmpty()) {
       // The extra args are passed to TF behind if need to run tests via TF. Ideally we should add
       // corresponding parameter or option in this Command class explicitly, but at the moment we
       // may not cover all TF supported options, so we do some basic validations here.
-      if (!extraRunCmdArgs.get(0).startsWith("-")) {
+      if (!options.extraRunCmdArgs.get(0).startsWith("-")) {
         throw new ParameterException(
-            spec.commandLine(),
+            options.spec.commandLine(),
             Ansi.AUTO.string(
                 String.format(
                     "Invalid arguments provided. Unprocessed arguments: %s\n"
                         + "Double check if the input is valid, for example, quoting the arg value"
                         + " if it contains space.\n",
-                    extraRunCmdArgs)));
+                    options.extraRunCmdArgs)));
       }
     }
   }
@@ -664,14 +369,17 @@ public final class RunCommand implements Callable<Integer> {
   }
 
   private ImmutableList<String> getModules() {
-    return moduleTestOptionsGroups != null
-        ? moduleTestOptionsGroups.stream().map(group -> group.module).collect(toImmutableList())
+    return options.moduleTestOptionsGroups != null
+        ? options.moduleTestOptionsGroups.stream()
+            .map(group -> group.module)
+            .collect(toImmutableList())
         : ImmutableList.of();
   }
 
   private String getTest() {
-    return moduleTestOptionsGroups != null && moduleTestOptionsGroups.get(0).test != null
-        ? moduleTestOptionsGroups.get(0).test
+    return options.moduleTestOptionsGroups != null
+            && options.moduleTestOptionsGroups.get(0).test != null
+        ? options.moduleTestOptionsGroups.get(0).test
         : "";
   }
 
@@ -690,7 +398,10 @@ public final class RunCommand implements Callable<Integer> {
                             + ":"
                             + xtsToolsDir.resolve(xtsType + "-tradefed.jar"),
                         ImmutableList.of(
-                            "run", "commandAndExit", config, showHelp ? "--help" : "--help-all")))
+                            "run",
+                            "commandAndExit",
+                            options.config,
+                            options.showHelp ? "--help" : "--help-all")))
                 .timeout(Timeout.fixed(Duration.ofSeconds(60))));
     Iterable<String> lines = Splitters.LINE_SPLITTER.split(result);
 
@@ -712,7 +423,7 @@ public final class RunCommand implements Callable<Integer> {
           break;
         }
         output.append(line).append("\n");
-      } else if (line.startsWith("'" + config + "' configuration:")) {
+      } else if (line.startsWith("'" + options.config + "' configuration:")) {
         output.append(line).append("\n");
         printing = true;
       } else if (line.startsWith("Failed to run command:")) {
@@ -737,47 +448,57 @@ public final class RunCommand implements Callable<Integer> {
   int runWithCommand(ImmutableList<String> command)
       throws InterruptedException, MobileHarnessException {
     ImmutableList<String> deviceSerials =
-        serialOpt != null ? ImmutableList.copyOf(serialOpt) : ImmutableList.of();
+        options.serialOpt != null ? ImmutableList.copyOf(options.serialOpt) : ImmutableList.of();
     ImmutableList<String> excludeSerials =
-        excludeSerialOpt != null ? ImmutableList.copyOf(excludeSerialOpt) : ImmutableList.of();
+        options.excludeSerialOpt != null
+            ? ImmutableList.copyOf(options.excludeSerialOpt)
+            : ImmutableList.of();
     ImmutableList<String> productTypes =
-        this.productTypes == null ? ImmutableList.of() : ImmutableList.copyOf(this.productTypes);
+        this.options.productTypes == null
+            ? ImmutableList.of()
+            : ImmutableList.copyOf(this.options.productTypes);
     ImmutableMap<String, String> devicePropertiesMap =
-        this.devicePropertiesMap == null
+        this.options.devicePropertiesMap == null
             ? ImmutableMap.of()
-            : ImmutableMap.copyOf(this.devicePropertiesMap);
+            : ImmutableMap.copyOf(this.options.devicePropertiesMap);
 
     ImmutableList<String> modules = getModules();
 
     String test = getTest();
     ImmutableList<String> includeFilters =
-        this.includeFilters == null
+        this.options.includeFilters == null
             ? ImmutableList.of()
-            : ImmutableList.copyOf(this.includeFilters);
+            : ImmutableList.copyOf(this.options.includeFilters);
     ImmutableList<String> excludeFilters =
-        this.excludeFilters == null
+        this.options.excludeFilters == null
             ? ImmutableList.of()
-            : ImmutableList.copyOf(this.excludeFilters);
+            : ImmutableList.copyOf(this.options.excludeFilters);
     ImmutableList<String> strictIncludeFilters =
-        this.strictIncludeFilters == null
+        this.options.strictIncludeFilters == null
             ? ImmutableList.of()
-            : ImmutableList.copyOf(this.strictIncludeFilters);
+            : ImmutableList.copyOf(this.options.strictIncludeFilters);
 
     ImmutableMultimap<String, String> moduleMetadataIncludeFilters =
-        this.moduleMetadataIncludeFilters == null
+        this.options.moduleMetadataIncludeFilters == null
             ? ImmutableMultimap.of()
-            : ImmutableMultimap.copyOf(this.moduleMetadataIncludeFilters);
+            : ImmutableMultimap.copyOf(this.options.moduleMetadataIncludeFilters);
     ImmutableMultimap<String, String> moduleMetadataExcludeFilters =
-        this.moduleMetadataExcludeFilters == null
+        this.options.moduleMetadataExcludeFilters == null
             ? ImmutableMultimap.of()
-            : ImmutableMultimap.copyOf(this.moduleMetadataExcludeFilters);
+            : ImmutableMultimap.copyOf(this.options.moduleMetadataExcludeFilters);
 
     ImmutableList<String> moduleArgs =
-        moduleCmdArgs != null ? ImmutableList.copyOf(moduleCmdArgs) : ImmutableList.of();
+        options.moduleCmdArgs != null
+            ? ImmutableList.copyOf(options.moduleCmdArgs)
+            : ImmutableList.of();
     ImmutableList<String> extraArgs =
-        extraRunCmdArgs != null ? ImmutableList.copyOf(extraRunCmdArgs) : ImmutableList.of();
+        options.extraRunCmdArgs != null
+            ? ImmutableList.copyOf(options.extraRunCmdArgs)
+            : ImmutableList.of();
     ImmutableSet<String> excludeRunners =
-        excludeRunnerOpt != null ? ImmutableSet.copyOf(excludeRunnerOpt) : ImmutableSet.of();
+        options.excludeRunnerOpt != null
+            ? ImmutableSet.copyOf(options.excludeRunnerOpt)
+            : ImmutableSet.of();
 
     Path xtsRootDirectory = consoleInfo.getXtsRootDirectoryNonEmpty();
     String xtsType = commandHelper.getXtsType();
@@ -793,11 +514,11 @@ public final class RunCommand implements Callable<Integer> {
             .addAllIncludeFilter(includeFilters)
             .addAllExcludeFilter(excludeFilters)
             .addAllStrictIncludeFilter(strictIncludeFilters)
-            .setHtmlInZip(htmlInZip)
-            .setReportSystemCheckers(reportSystemCheckers)
+            .setHtmlInZip(options.htmlInZip)
+            .setReportSystemCheckers(options.reportSystemCheckers)
             .putAllXtsSuiteInfo(
                 new CertificationSuiteInfoFactory()
-                    .generateSuiteInfoMap(xtsRootDirectory.toString(), xtsType, config));
+                    .generateSuiteInfoMap(xtsRootDirectory.toString(), xtsType, options.config));
     moduleMetadataIncludeFilters.forEach(
         (key, value) ->
             runCommand.addModuleMetadataIncludeFilter(
@@ -807,16 +528,16 @@ public final class RunCommand implements Callable<Integer> {
             runCommand.addModuleMetadataExcludeFilter(
                 ModuleMetadataFilterEntry.newBuilder().setKey(key).setValue(value)));
     isSkipDeviceInfo().ifPresent(runCommand::setSkipDeviceInfo);
-    if (shardCount > 0) {
-      runCommand.setShardCount(shardCount);
+    if (options.shardCount > 0) {
+      runCommand.setShardCount(options.shardCount);
     }
     if (consoleInfo.getPythonPackageIndexUrl().isPresent()) {
       runCommand.setPythonPkgIndexUrl(consoleInfo.getPythonPackageIndexUrl().get());
     }
-    runCommand.setEnableTokenSharding(enableTokenSharding);
+    runCommand.setEnableTokenSharding(options.enableTokenSharding);
 
     runCommand
-        .setTestPlan(config)
+        .setTestPlan(options.config)
         .addAllModuleName(modules)
         .addAllModuleArg(moduleArgs)
         .addAllExtraArg(extraArgs)
@@ -824,27 +545,27 @@ public final class RunCommand implements Callable<Integer> {
     if (!test.isEmpty()) {
       runCommand.setTestName(test);
     }
-    if (!isNullOrEmpty(subPlanName)) {
-      runCommand.setSubPlanName(subPlanName);
+    if (!isNullOrEmpty(options.subPlanName)) {
+      runCommand.setSubPlanName(options.subPlanName);
     }
-    if (retrySessionIndex != null) {
+    if (options.retrySessionIndex != null) {
       // As the command parameters validation ensures only one of retrySessionIndex or
       // retrySessionResultDirName is set, so at this point retrySessionResultDirName is empty. Now
       // we get the retrySessionResultDirName by the retrySessionIndex and will use
       // retrySessionResultDirName to locate the previous result later.
-      retrySessionResultDirName = getRetrySessionResultDirName(retrySessionIndex);
+      options.retrySessionResultDirName = getRetrySessionResultDirName(options.retrySessionIndex);
       logger
           .atInfo()
           .with(IMPORTANCE, IMPORTANT)
           .log(
               "Retry session index [%s] mapped to retry session result dir name [%s]",
-              retrySessionIndex, retrySessionResultDirName);
+              options.retrySessionIndex, options.retrySessionResultDirName);
     }
-    if (!isNullOrEmpty(retrySessionResultDirName)) {
-      runCommand.setRetrySessionResultDirName(retrySessionResultDirName.trim());
+    if (!isNullOrEmpty(options.retrySessionResultDirName)) {
+      runCommand.setRetrySessionResultDirName(options.retrySessionResultDirName.trim());
     }
-    if (retryType != null) {
-      runCommand.setRetryType(Ascii.toUpperCase(retryType.name()));
+    if (options.retryType != null) {
+      runCommand.setRetryType(Ascii.toUpperCase(options.retryType.name()));
     }
     if (Flags.instance().enableXtsDynamicDownloader.getNonNull()) {
       runCommand.setEnableXtsDynamicDownload(true);
@@ -852,32 +573,32 @@ public final class RunCommand implements Callable<Integer> {
     if (Flags.instance().enableMoblyResultstoreUpload.getNonNull()) {
       runCommand.setEnableMoblyResultstoreUpload(true);
     }
-    if (deviceTypeOptionsGroup != null) {
-      if (deviceTypeOptionsGroup.runTestOnEmulator) {
+    if (options.deviceTypeOptionsGroup != null) {
+      if (options.deviceTypeOptionsGroup.runTestOnEmulator) {
         runCommand.setDeviceType(DeviceType.EMULATOR);
       }
-      if (deviceTypeOptionsGroup.runTestOnRealDevice) {
+      if (options.deviceTypeOptionsGroup.runTestOnRealDevice) {
         runCommand.setDeviceType(DeviceType.REAL_DEVICE);
       }
     }
-    if (requireBatteryCheck) {
-      if (maxBattery != null) {
-        runCommand.setMaxBatteryLevel(maxBattery);
+    if (options.requireBatteryCheck) {
+      if (options.maxBattery != null) {
+        runCommand.setMaxBatteryLevel(options.maxBattery);
       }
-      if (minBattery != null) {
-        runCommand.setMinBatteryLevel(minBattery);
-      }
-    }
-    if (requireBatteryTemperatureCheck) {
-      if (maxBatteryTemperature != null) {
-        runCommand.setMaxBatteryTemperature(maxBatteryTemperature);
+      if (options.minBattery != null) {
+        runCommand.setMinBatteryLevel(options.minBattery);
       }
     }
-    if (minSdk != null) {
-      runCommand.setMinSdkLevel(minSdk);
+    if (options.requireBatteryTemperatureCheck) {
+      if (options.maxBatteryTemperature != null) {
+        runCommand.setMaxBatteryTemperature(options.maxBatteryTemperature);
+      }
     }
-    if (maxSdk != null) {
-      runCommand.setMaxSdkLevel(maxSdk);
+    if (options.minSdk != null) {
+      runCommand.setMinSdkLevel(options.minSdk);
+    }
+    if (options.maxSdk != null) {
+      runCommand.setMaxSdkLevel(options.maxSdk);
     }
     if (Flags.instance().enableCtsVerifierResultReporter.getNonNull()) {
       runCommand.setEnableCtsVerifierResultReporter(true);
@@ -885,7 +606,7 @@ public final class RunCommand implements Callable<Integer> {
     if (consoleInfo.isFromCommandFile()) {
       runCommand.setJobStartTimeout(toProtoDuration(CMDFILE_JOBS_START_TIMEOUT));
     }
-    runCommand.setEnableDefaultLogs(Boolean.TRUE.equals(enableDefaultLogs));
+    runCommand.setEnableDefaultLogs(Objects.equals(options.enableDefaultLogs, true));
 
     ImmutableList<String> commandLineArgs = command.stream().skip(1L).collect(toImmutableList());
     runCommand.setInitialState(
@@ -979,46 +700,46 @@ public final class RunCommand implements Callable<Integer> {
 
   @VisibleForTesting
   List<String> getProductTypes() {
-    return this.productTypes;
+    return this.options.productTypes;
   }
 
   @VisibleForTesting
   Map<String, String> getDevicePropertiesMap() {
-    return this.devicePropertiesMap;
+    return this.options.devicePropertiesMap;
   }
 
   @VisibleForTesting
   List<String> getSerials() {
-    return this.serialOpt;
+    return this.options.serialOpt;
   }
 
   @VisibleForTesting
   List<String> getExtraRunCmdArgs() {
-    return this.extraRunCmdArgs;
+    return this.options.extraRunCmdArgs;
   }
 
   @VisibleForTesting
   Multimap<String, String> getModuleMetadataIncludeFilters() {
-    return this.moduleMetadataIncludeFilters;
+    return this.options.moduleMetadataIncludeFilters;
   }
 
   @VisibleForTesting
   Multimap<String, String> getModuleMetadataExcludeFilters() {
-    return this.moduleMetadataExcludeFilters;
+    return this.options.moduleMetadataExcludeFilters;
   }
 
   private Optional<Boolean> isSkipDeviceInfo() {
     // Currently skip collecting device info for plan cts-dev or set explicitly, and ideally it
     // should parse given plan and its child plans to see if the option "skip-device-info" is set to
     // true explicitly.
-    if (skipDeviceInfo == null && Objects.equals(config, "cts-dev")) {
+    if (options.skipDeviceInfo == null && Objects.equals(options.config, "cts-dev")) {
       return Optional.of(true);
     }
     // TODO Temporary solution to unblock app compat test post processing.
-    if (skipDeviceInfo == null && Objects.equals(config, "csuite-app-crawl")) {
+    if (options.skipDeviceInfo == null && Objects.equals(options.config, "csuite-app-crawl")) {
       return Optional.of(true);
     }
-    return Optional.ofNullable(skipDeviceInfo);
+    return Optional.ofNullable(options.skipDeviceInfo);
   }
 
   /**
