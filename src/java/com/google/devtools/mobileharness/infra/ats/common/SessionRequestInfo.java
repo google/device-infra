@@ -179,6 +179,8 @@ public abstract class SessionRequestInfo {
 
   public abstract Optional<Boolean> enableDefaultLogs();
 
+  public abstract boolean enableTokenSharding();
+
   public static Builder builder() {
     return new AutoValue_SessionRequestInfo.Builder()
         .setModuleNames(ImmutableList.of())
@@ -208,7 +210,8 @@ public abstract class SessionRequestInfo {
         .setXtsSuiteInfo(ImmutableMap.of())
         .setAtsServerTestResources(ImmutableList.of())
         .setExcludeRunners(ImmutableSet.of())
-        .setAllowPartialDeviceMatch(false);
+        .setAllowPartialDeviceMatch(false)
+        .setEnableTokenSharding(false);
   }
 
   public abstract Builder toBuilder();
@@ -339,6 +342,8 @@ public abstract class SessionRequestInfo {
     public abstract Builder setAllowPartialDeviceMatch(boolean allowPartialDeviceMatch);
 
     public abstract Builder setEnableDefaultLogs(boolean enableDefaultLogs);
+
+    public abstract Builder setEnableTokenSharding(boolean enableTokenSharding);
 
     protected abstract SessionRequestInfo autoBuild();
 

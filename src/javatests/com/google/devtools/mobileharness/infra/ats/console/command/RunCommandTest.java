@@ -358,4 +358,22 @@ public final class RunCommandTest {
                 + "aaa\n"
                 + "ccc");
   }
+
+  @Test
+  public void parseArgs_enableTokenSharding() throws Exception {
+    when(commandHelper.getXtsType()).thenReturn("cts");
+    when(atsSessionStub.runSession(any(), any()))
+        .thenReturn(immediateFuture(AtsSessionPluginOutput.getDefaultInstance()));
+
+    commandLine.parseArgs("cts", "--enable-token-sharding");
+    var unused = runCommand.runWithCommand(ImmutableList.of("run", "cts"));
+
+    verify(atsSessionStub)
+        .runSession(
+            eq(RunCommand.RUN_COMMAND_SESSION_NAME), atsSessionPluginConfigCaptor.capture());
+    com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto
+            .RunCommand
+        runCmd = atsSessionPluginConfigCaptor.getValue().getRunCommand();
+    assertThat(runCmd.getEnableTokenSharding()).isTrue();
+  }
 }

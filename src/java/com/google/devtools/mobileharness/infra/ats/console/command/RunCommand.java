@@ -365,6 +365,13 @@ public final class RunCommand implements Callable<Integer> {
       description = "Whether to enable default logs. Default is false.")
   private Boolean enableDefaultLogs = null;
 
+  @Option(
+      names = {"--enable-token-sharding"},
+      arity = "0..1",
+      paramLabel = "<enable_token_sharding>",
+      description = "Automatically matches the test that requires respective SIM type")
+  private boolean enableTokenSharding = false;
+
   @ArgGroup(exclusive = true, multiplicity = "0..1")
   private DeviceTypeOptionsGroup deviceTypeOptionsGroup;
 
@@ -522,6 +529,7 @@ public final class RunCommand implements Callable<Integer> {
     if (enableDefaultLogs != null) {
       sessionRequestBuilder.setEnableDefaultLogs(enableDefaultLogs);
     }
+    sessionRequestBuilder.setEnableTokenSharding(enableTokenSharding);
 
     return sessionRequestBuilder
         .setModuleArgs(moduleArgs)
@@ -785,6 +793,7 @@ public final class RunCommand implements Callable<Integer> {
     if (consoleInfo.getPythonPackageIndexUrl().isPresent()) {
       runCommand.setPythonPkgIndexUrl(consoleInfo.getPythonPackageIndexUrl().get());
     }
+    runCommand.setEnableTokenSharding(enableTokenSharding);
 
     runCommand
         .setTestPlan(config)

@@ -339,6 +339,9 @@ public abstract class XtsJobCreator {
                           reportSystemCheckersArg.stream(),
                           skipDeviceInfoArg.stream(),
                           enableDefaultLogsArg.stream(),
+                          sessionRequestInfo.enableTokenSharding()
+                              ? Stream.of("--enable-token-sharding")
+                              : Stream.empty(),
                           sessionRequestInfo.moduleArgs().stream()
                               .map(arg -> arg.replace("\"", "\\\""))
                               .map(arg -> String.format("--module-arg \"%s\"", arg)),

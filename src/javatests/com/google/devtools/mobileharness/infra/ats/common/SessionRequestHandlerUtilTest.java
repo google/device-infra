@@ -49,6 +49,8 @@ import com.google.devtools.mobileharness.platform.android.xts.common.util.MoblyT
 import com.google.devtools.mobileharness.platform.android.xts.config.ConfigurationUtil;
 import com.google.devtools.mobileharness.platform.android.xts.config.ModuleConfigurationHelper;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
+import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.ConfigurationDescriptor;
+import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.ConfigurationDescriptorMetadata;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.ConfigurationMetadata;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Device;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Option;
@@ -172,6 +174,29 @@ public final class SessionRequestHandlerUtilTest {
         .setType("AndroidDevice")
         .setDimensions(StringMap.newBuilder().putContent(dimensionName, dimensionValue))
         .build();
+  }
+
+  @Test
+  public void createXtsNonTradefedJobs_enableTokenSharding_setsSimCardTypeDimension()
+      throws Exception {
+    setUpForCreateXtsNonTradefedJobs();
+    SessionRequestInfo sessionRequestInfo =
+        sessionRequestHandlerUtil.addNonTradefedModuleInfo(
+            defaultSessionRequestInfoBuilder()
+                .setEnableTokenSharding(true)
+                .setModuleNames(ImmutableList.of("module1", "module2"))
+                .build());
+
+    ImmutableList<JobInfo> jobInfos =
+        sessionRequestHandlerUtil.createXtsNonTradefedJobs(
+            sessionRequestInfo, null, ImmutableMap.of());
+
+    assertThat(jobInfos).hasSize(2);
+    // Module 1 requires SIM card (through configuration metadata).
+    assertThat(jobInfos.get(0).subDeviceSpecs().getAllSubDevices().get(0).dimensions().getAll())
+        .containsEntry("sim_card_type", "SIM_CARD");
+    assertThat(jobInfos.get(1).subDeviceSpecs().getAllSubDevices().get(0).dimensions().getAll())
+        .doesNotContainKey("sim_card_type");
   }
 
   @Test
@@ -771,6 +796,14 @@ public final class SessionRequestHandlerUtilTest {
         defaultConfigurationBuilder()
             .setMetadata(
                 ConfigurationMetadata.newBuilder().setXtsModule("module1").setIsConfigV2(true))
+            .setConfigDescriptor(
+                ConfigurationDescriptor.newBuilder()
+                    .putMetadata(
+                        "token",
+                        ConfigurationDescriptorMetadata.newBuilder()
+                            .setKey("token")
+                            .addValue("SIM_CARD")
+                            .build()))
             .build();
     Configuration config2 =
         defaultConfigurationBuilder()
