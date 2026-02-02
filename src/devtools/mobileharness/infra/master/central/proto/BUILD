@@ -28,6 +28,9 @@ package(
 proto_library(
     name = "allocation_task_proto",
     srcs = ["allocation_task.proto"],
+    deps = [
+        "//src/devtools/mobileharness/api/model/proto:device_proto",
+    ],
 )
 
 java_proto_library(
@@ -97,6 +100,7 @@ proto_library(
     name = "test_proto",
     srcs = ["test.proto"],
     deps = [
+        ":allocation_task_proto",
         ":quota_proto",
         "//src/devtools/mobileharness/api/model/proto:device_proto",
         "//src/devtools/mobileharness/api/model/proto:test_proto",
