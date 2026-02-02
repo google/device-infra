@@ -302,102 +302,6 @@ public final class SessionRequestHandlerUtilTest {
 
   @Test
   public void
-      getSubDeviceSpecListForTradefed_atsServerRequestWithDeviceSerials_retryAndSucceedsOnThirdAttempt()
-          throws Exception {
-    when(atsMasterUtil.queryAndroidDevicesFromMaster())
-        .thenReturn(ImmutableList.of()) // First call, no devices
-        .thenReturn(ImmutableList.of()) // Second call, no devices
-        .thenReturn(
-            ImmutableList.of(
-                DeviceInfo.newBuilder()
-                    .setId("device_id_1")
-                    .addDimension(Dimension.newBuilder().setName("uuid").setValue("device_id_1"))
-                    .addType("AndroidOnlineDevice")
-                    .setStatus("IDLE")
-                    .build())); // Third call, one device
-
-    SessionRequestInfo sessionRequestInfo =
-        defaultSessionRequestInfoBuilder()
-            .setIsAtsServerRequest(true)
-            .setDeviceSerials(ImmutableList.of("device_id_1"))
-            .build();
-
-    ImmutableList<SubDeviceSpec> subDeviceSpecs =
-        sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
-
-    assertThat(subDeviceSpecs).hasSize(1);
-    assertThat(subDeviceSpecs.get(0).getDimensions().getContentMap())
-        .containsEntry("uuid", "device_id_1");
-    verify(sleeper, times(2)).sleep(Duration.ofSeconds(30));
-  }
-
-  @Test
-  public void
-      getSubDeviceSpecListForTradefed_atsServerRequestWithDeviceSerials_retryUntilRequestedIsFound()
-          throws Exception {
-    when(atsMasterUtil.queryAndroidDevicesFromMaster())
-        .thenReturn(ImmutableList.of()) // First call, no devices
-        .thenReturn(
-            ImmutableList.of(
-                DeviceInfo.newBuilder()
-                    .setId("device_id_2")
-                    .addDimension(Dimension.newBuilder().setName("uuid").setValue("device_id_2"))
-                    .addType("AndroidOnlineDevice")
-                    .setStatus("IDLE")
-                    .build())) // Second call, one device that is not the one requested
-        .thenReturn(
-            ImmutableList.of(
-                DeviceInfo.newBuilder()
-                    .setId("device_id_1")
-                    .addDimension(Dimension.newBuilder().setName("uuid").setValue("device_id_1"))
-                    .addType("AndroidOnlineDevice")
-                    .setStatus("IDLE")
-                    .build(),
-                DeviceInfo.newBuilder()
-                    .setId("device_id_2")
-                    .addDimension(Dimension.newBuilder().setName("uuid").setValue("device_id_2"))
-                    .addType("AndroidOnlineDevice")
-                    .setStatus("IDLE")
-                    .build())); // Third call, All devices are found
-
-    SessionRequestInfo sessionRequestInfo =
-        defaultSessionRequestInfoBuilder()
-            .setIsAtsServerRequest(true)
-            .setDeviceSerials(ImmutableList.of("device_id_1"))
-            .build();
-
-    ImmutableList<SubDeviceSpec> subDeviceSpecs =
-        sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
-
-    assertThat(subDeviceSpecs).hasSize(1);
-    assertThat(subDeviceSpecs.get(0).getDimensions().getContentMap())
-        .containsEntry("uuid", "device_id_1");
-    verify(sleeper, times(2)).sleep(Duration.ofSeconds(30));
-  }
-
-  @Test
-  public void getSubDeviceSpecListForTradefed_atsServerRequestWithDeviceSerials_retryAndFail()
-      throws Exception {
-    when(atsMasterUtil.queryAndroidDevicesFromMaster()).thenReturn(ImmutableList.of());
-
-    SessionRequestInfo sessionRequestInfo =
-        defaultSessionRequestInfoBuilder()
-            .setIsAtsServerRequest(true)
-            .setAllowPartialDeviceMatch(true)
-            .setDeviceSerials(ImmutableList.of("device_id_1"))
-            .build();
-
-    MobileHarnessException exception =
-        assertThrows(
-            MobileHarnessException.class,
-            () -> sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo));
-
-    assertThat(exception).hasMessageThat().contains("none of the selected devices are ready");
-    verify(sleeper, times(39)).sleep(Duration.ofSeconds(30));
-  }
-
-  @Test
-  public void
       getSubDeviceSpecListForTradefed_atsServerRequestWithPartialDeviceMatch_allowPartialDeviceMatch_filterNotAvailableDevices()
           throws Exception {
     when(atsMasterUtil.queryAndroidDevicesFromMaster())
@@ -1695,7 +1599,7 @@ public final class SessionRequestHandlerUtilTest {
   }
 
   @Test
-  public void getDeviceInfo_atsServerRequest_waitForDevices() throws Exception {
+  public void getDeviceInfo_atsServerRequest() throws Exception {
     SessionRequestInfo sessionRequestInfo =
         defaultSessionRequestInfoBuilder()
             .setIsAtsServerRequest(true)
@@ -1703,22 +1607,26 @@ public final class SessionRequestHandlerUtilTest {
             .build();
 
     when(atsMasterUtil.queryAndroidDevicesFromMaster())
-        .thenReturn(ImmutableList.of()) // First call, no devices
-        .thenReturn(ImmutableList.of()) // Second call, no devices
         .thenReturn(
             ImmutableList.of(
                 DeviceInfo.newBuilder()
                     .setId("device_id_1")
                     .addDimension(Dimension.newBuilder().setName("uuid").setValue("device_id_1"))
+                    .addDimension(Dimension.newBuilder().setName("abi").setValue("arm64-v8a"))
+                    .addDimension(Dimension.newBuilder().setName("abilist").setValue("arm64-v8a"))
                     .addType("AndroidOnlineDevice")
                     .setStatus("IDLE")
-                    .build())); // Third call, device found
+                    .build()));
 
-    var unused = sessionRequestHandlerUtil.getDeviceInfo(sessionRequestInfo);
+    Optional<TestSuiteHelper.DeviceInfo> deviceInfo =
+        sessionRequestHandlerUtil.getDeviceInfo(sessionRequestInfo);
 
-    verify(sleeper, times(2)).sleep(Duration.ofSeconds(30));
-    // Verify that deviceQuerier.queryDevice(any()) is called 4 times: 3 times in
-    // waitForRequestedDevicesToBeReady and 1 time in getDeviceInfoFromMaster.
-    verify(atsMasterUtil, times(4)).queryAndroidDevicesFromMaster();
+    assertThat(deviceInfo)
+        .hasValue(
+            TestSuiteHelper.DeviceInfo.builder()
+                .setDeviceId("device_id_1")
+                .setSupportedAbi("arm64-v8a")
+                .setSupportedAbiList("arm64-v8a")
+                .build());
   }
 }
