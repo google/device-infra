@@ -96,7 +96,6 @@ public final class ConsoleJobCreatorTest {
                 SubDeviceSpec.getDefaultInstance(), SubDeviceSpec.getDefaultInstance()));
   }
 
-  @SuppressWarnings("unchecked")
   @Test
   public void createXtsTradefedTestJob() throws Exception {
     SessionRequestInfo sessionRequestInfo =
@@ -114,6 +113,7 @@ public final class ConsoleJobCreatorTest {
                         .build()))
             .setEnableDefaultLogs(false)
             .build();
+    @SuppressWarnings("unchecked") // safe by specification
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
 
     when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any(), any()))
@@ -146,7 +146,6 @@ public final class ConsoleJobCreatorTest {
             "arm64-v8a,armeabi-v7a");
   }
 
-  @SuppressWarnings("unchecked") // safe by specification
   @Test
   public void createXtsTradefedTestJob_withSubPlan() throws Exception {
     File xtsRootDir = folder.newFolder("xts_root_dir");
@@ -176,6 +175,7 @@ public final class ConsoleJobCreatorTest {
                         .build()))
             .setEnableDefaultLogs(false)
             .build();
+    @SuppressWarnings("unchecked") // safe by specification
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
 
     when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any(), any()))
@@ -227,7 +227,6 @@ public final class ConsoleJobCreatorTest {
     assertThat(tradefedJobInfoList).hasSize(2);
   }
 
-  @SuppressWarnings("unchecked")
   @Test
   public void createXtsTradefedTestJob_withTfModules() throws Exception {
     SessionRequestInfo sessionRequestInfo =
@@ -243,6 +242,7 @@ public final class ConsoleJobCreatorTest {
             .setExtraArgs(ImmutableList.of("--logcat-on-failure"))
             .setEnableDefaultLogs(false)
             .build();
+    @SuppressWarnings("unchecked") // safe by specification
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
 
     when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any(), any()))
@@ -276,7 +276,71 @@ public final class ConsoleJobCreatorTest {
             "");
   }
 
-  @SuppressWarnings("unchecked")
+  @Test
+  public void createXtsTradefedTestJob_strictIncludeFilters() throws Exception {
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfo.builder()
+            .setTestPlan("cts")
+            .setCommandLineArgs("cts")
+            .setXtsType("cts")
+            .setXtsRootDir(XTS_ROOT_DIR_PATH)
+            .setModuleNames(ImmutableList.of("mock_module"))
+            .setStrictIncludeFilters(ImmutableList.of("strict_filter_1", "strict_filter_2"))
+            .setEnableDefaultLogs(false)
+            .build();
+    @SuppressWarnings("unchecked") // safe by specification
+    ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
+
+    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any(), any()))
+        .thenReturn(JobConfig.getDefaultInstance());
+
+    ImmutableList<TradefedJobInfo> tradefedJobInfoList =
+        jobCreator.createXtsTradefedTestJobInfo(
+            sessionRequestInfo, /* tfModules= */ ImmutableList.of("mock_module"));
+
+    assertThat(tradefedJobInfoList).hasSize(1);
+    verify(sessionRequestHandlerUtil)
+        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any(), any());
+    assertThat(driverParamsCaptor.getValue())
+        .containsEntry(
+            "run_command_args",
+            "-m mock_module --strict-include-filter \"strict_filter_1\" --strict-include-filter"
+                + " \"strict_filter_2\" --enable-default-logs false");
+  }
+
+  @Test
+  public void createXtsTradefedTestJob_strictIncludeFilters_ignoreOtherFilters() throws Exception {
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfo.builder()
+            .setTestPlan("cts")
+            .setCommandLineArgs("cts")
+            .setXtsType("cts")
+            .setXtsRootDir(XTS_ROOT_DIR_PATH)
+            .setModuleNames(ImmutableList.of("mock_module"))
+            .setStrictIncludeFilters(ImmutableList.of("strict_filter"))
+            .setIncludeFilters(ImmutableList.of("include_filter"))
+            .setExcludeFilters(ImmutableList.of("exclude_filter"))
+            .setEnableDefaultLogs(false)
+            .build();
+    @SuppressWarnings("unchecked") // safe by specification
+    ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
+
+    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any(), any()))
+        .thenReturn(JobConfig.getDefaultInstance());
+
+    ImmutableList<TradefedJobInfo> tradefedJobInfoList =
+        jobCreator.createXtsTradefedTestJobInfo(
+            sessionRequestInfo, ImmutableList.of("mock_module"));
+
+    assertThat(tradefedJobInfoList).hasSize(1);
+    verify(sessionRequestHandlerUtil)
+        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any(), any());
+    assertThat(driverParamsCaptor.getValue())
+        .containsEntry(
+            "run_command_args",
+            "-m mock_module --strict-include-filter \"strict_filter\" --enable-default-logs false");
+  }
+
   @Test
   public void createXtsTradefedTestJob_withGivenTest() throws Exception {
     SessionRequestInfo sessionRequestInfo =
@@ -292,6 +356,7 @@ public final class ConsoleJobCreatorTest {
             .setExtraArgs(ImmutableList.of("--logcat-on-failure"))
             .setEnableDefaultLogs(false)
             .build();
+    @SuppressWarnings("unchecked") // safe by specification
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
 
     when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any(), any()))
@@ -326,7 +391,6 @@ public final class ConsoleJobCreatorTest {
             "");
   }
 
-  @SuppressWarnings("unchecked")
   @Test
   public void createXtsTradefedTestJob_enableDefaultLogsTrue() throws Exception {
     SessionRequestInfo sessionRequestInfo =
@@ -338,6 +402,7 @@ public final class ConsoleJobCreatorTest {
             .setModuleNames(ImmutableList.of("module1"))
             .setEnableDefaultLogs(true)
             .build();
+    @SuppressWarnings("unchecked") // safe by specification
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
 
     when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any(), any()))
@@ -353,7 +418,6 @@ public final class ConsoleJobCreatorTest {
         .containsEntry("run_command_args", "-m module1 --enable-default-logs true");
   }
 
-  @SuppressWarnings("unchecked")
   @Test
   public void createXtsTradefedTestJob_addSubPlanXmlPathForRetry() throws Exception {
     SubPlan subPlan = new SubPlan();
@@ -370,6 +434,7 @@ public final class ConsoleJobCreatorTest {
             .setRetrySessionIndex(0)
             .setEnableDefaultLogs(false)
             .build();
+    @SuppressWarnings("unchecked") // safe by specification
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
 
     when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any(), any()))
@@ -402,7 +467,6 @@ public final class ConsoleJobCreatorTest {
     assertThat(driverParamsMap.get("subplan_xml")).startsWith(xtsRootDir.getAbsolutePath());
   }
 
-  @SuppressWarnings("unchecked")
   @Test
   public void createXtsTradefedTestJobInfo_retrySubplanWithFilters() throws Exception {
     SubPlan subPlan = new SubPlan();
@@ -422,6 +486,7 @@ public final class ConsoleJobCreatorTest {
             .setExcludeFilters(ImmutableList.of("armeabi-v7a ModuleB android.test.Foo#test1"))
             .setEnableDefaultLogs(false)
             .build();
+    @SuppressWarnings("unchecked") // safe by specification
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
     ArgumentCaptor<RetryArgs> retryArgsCaptor = ArgumentCaptor.forClass(RetryArgs.class);
 
@@ -511,9 +576,9 @@ public final class ConsoleJobCreatorTest {
     when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any(), any()))
         .thenReturn(JobConfig.getDefaultInstance());
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings("unchecked") // safe by specification
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings("unchecked") // safe by specification
     ArgumentCaptor<ImmutableMultimap<String, String>> jobFilesCaptor =
         ArgumentCaptor.forClass(ImmutableMultimap.class);
 

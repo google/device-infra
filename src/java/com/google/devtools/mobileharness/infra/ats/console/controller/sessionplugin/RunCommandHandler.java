@@ -344,6 +344,7 @@ class RunCommandHandler {
             .setReportSystemCheckers(runCommand.getReportSystemCheckers())
             .setIncludeFilters(runCommand.getIncludeFilterList())
             .setExcludeFilters(runCommand.getExcludeFilterList())
+            .setStrictIncludeFilters(runCommand.getStrictIncludeFilterList())
             .setModuleArgs(runCommand.getModuleArgList())
             .setExtraArgs(runCommand.getExtraArgList())
             .setXtsSuiteInfo(ImmutableMap.copyOf(runCommand.getXtsSuiteInfoMap()))
