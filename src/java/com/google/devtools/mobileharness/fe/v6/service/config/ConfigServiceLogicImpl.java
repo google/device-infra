@@ -22,6 +22,7 @@ import com.google.devtools.mobileharness.fe.v6.service.config.handlers.CheckHost
 import com.google.devtools.mobileharness.fe.v6.service.config.handlers.GetDeviceConfigHandler;
 import com.google.devtools.mobileharness.fe.v6.service.config.handlers.GetHostConfigHandler;
 import com.google.devtools.mobileharness.fe.v6.service.config.handlers.GetHostDefaultDeviceConfigHandler;
+import com.google.devtools.mobileharness.fe.v6.service.config.handlers.GetRecommendedWifiHandler;
 import com.google.devtools.mobileharness.fe.v6.service.config.handlers.UpdateDeviceConfigHandler;
 import com.google.devtools.mobileharness.fe.v6.service.config.handlers.UpdateHostConfigHandler;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckDeviceWritePermissionRequest;
@@ -34,6 +35,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostConfi
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostConfigResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostDefaultDeviceConfigRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostDefaultDeviceConfigResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetRecommendedWifiRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetRecommendedWifiResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateDeviceConfigRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateDeviceConfigResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateHostConfigRequest;
@@ -48,6 +51,7 @@ public final class ConfigServiceLogicImpl implements ConfigServiceLogic {
   private final GetDeviceConfigHandler getDeviceConfigHandler;
   private final CheckDeviceWritePermissionHandler checkDeviceWritePermissionHandler;
   private final UpdateDeviceConfigHandler updateDeviceConfigHandler;
+  private final GetRecommendedWifiHandler getRecommendedWifiHandler;
   private final GetHostDefaultDeviceConfigHandler getHostDefaultDeviceConfigHandler;
   private final GetHostConfigHandler getHostConfigHandler;
   private final CheckHostWritePermissionHandler checkHostWritePermissionHandler;
@@ -58,6 +62,7 @@ public final class ConfigServiceLogicImpl implements ConfigServiceLogic {
       GetDeviceConfigHandler getDeviceConfigHandler,
       CheckDeviceWritePermissionHandler checkDeviceWritePermissionHandler,
       UpdateDeviceConfigHandler updateDeviceConfigHandler,
+      GetRecommendedWifiHandler getRecommendedWifiHandler,
       GetHostDefaultDeviceConfigHandler getHostDefaultDeviceConfigHandler,
       GetHostConfigHandler getHostConfigHandler,
       CheckHostWritePermissionHandler checkHostWritePermissionHandler,
@@ -65,6 +70,7 @@ public final class ConfigServiceLogicImpl implements ConfigServiceLogic {
     this.getDeviceConfigHandler = getDeviceConfigHandler;
     this.checkDeviceWritePermissionHandler = checkDeviceWritePermissionHandler;
     this.updateDeviceConfigHandler = updateDeviceConfigHandler;
+    this.getRecommendedWifiHandler = getRecommendedWifiHandler;
     this.getHostDefaultDeviceConfigHandler = getHostDefaultDeviceConfigHandler;
     this.getHostConfigHandler = getHostConfigHandler;
     this.checkHostWritePermissionHandler = checkHostWritePermissionHandler;
@@ -86,6 +92,12 @@ public final class ConfigServiceLogicImpl implements ConfigServiceLogic {
   public ListenableFuture<UpdateDeviceConfigResponse> updateDeviceConfig(
       UpdateDeviceConfigRequest request) {
     return updateDeviceConfigHandler.updateDeviceConfig(request);
+  }
+
+  @Override
+  public ListenableFuture<GetRecommendedWifiResponse> getRecommendedWifi(
+      GetRecommendedWifiRequest request) {
+    return getRecommendedWifiHandler.getRecommendedWifi(request);
   }
 
   @Override

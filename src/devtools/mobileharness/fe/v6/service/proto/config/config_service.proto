@@ -53,6 +53,14 @@ service ConfigService {
     };
   }
 
+  // Retrieves a list of recommended Wi-Fi networks.
+  rpc GetRecommendedWifi(GetRecommendedWifiRequest)
+      returns (GetRecommendedWifiResponse) {
+    option (google.api.http) = {
+      get: "/v6/configs/wifi/recommendations"
+    };
+  }
+
   // Retrieves the default DeviceConfig set at the host level.
   rpc GetHostDefaultDeviceConfig(GetHostDefaultDeviceConfigRequest)
       returns (GetHostDefaultDeviceConfigResponse) {
@@ -137,6 +145,14 @@ message UpdateDeviceConfigRequest {
 message UpdateDeviceConfigResponse {
   bool success = 1;
   UpdateError error = 2;
+}
+
+// Request for GetRecommendedWifi.
+message GetRecommendedWifiRequest {}
+
+// Response for GetRecommendedWifi.
+message GetRecommendedWifiResponse {
+  repeated RecommendedWifi recommendations = 1;
 }
 
 // Request for GetHostDefaultDeviceConfig.

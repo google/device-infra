@@ -6,6 +6,7 @@ import {
   DeviceConfig,
   DeviceConfigUiStatus,
   GetDeviceConfigResult,
+  RecommendedWifi,
   UpdateDeviceConfigRequest,
   UpdateDeviceConfigResult,
 } from '../../models/device_config_models';
@@ -147,6 +148,24 @@ export class FakeConfigService extends ConfigService {
 
     this.mockDeviceScenarios[scenarioIndex].config = currentConfig;
     return of({success: true});
+  }
+
+  override getRecommendedWifi(): Observable<RecommendedWifi[]> {
+    return of([
+      {ssid: 'GoogleGuest', psk: ''},
+      {ssid: 'GoogleGuestPSK', psk: 'google_guest_password_123'},
+      {ssid: 'WL-MobileHarness', psk: 'mh_lab_secret_key'},
+      {ssid: 'Android-Lab-Secure', psk: 'secure_android_99'},
+      {ssid: 'Guest-Open', psk: ''},
+      {ssid: 'Lab-Testing-A', psk: 'test_pass_alpha'},
+      {ssid: 'Lab-Testing-B', psk: 'test_pass_beta'},
+      {ssid: 'Lab-Testing-C', psk: 'test_pass_gamma'},
+      {ssid: 'Pixel-Factory', psk: 'factory_reset_key'},
+      {ssid: 'WearOS-Lab', psk: 'wear_os_dedicated_key'},
+      {ssid: 'Nest-Devices', psk: 'nest_devices_iot_secret'},
+      {ssid: 'Auto-Testing-Network', psk: 'automation_bot_pass'},
+      {ssid: 'Voice-Isolation-Lab', psk: 'audio_lab_key_456'},
+    ]);
   }
 
   // ===== Host Config Methods =====

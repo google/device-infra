@@ -5,8 +5,7 @@
 }
 
 .title {
-  font-size: 1.25rem;
-  line-height: 1.75rem;
+  @extend .config-section-title;
 }
 
 .desc {

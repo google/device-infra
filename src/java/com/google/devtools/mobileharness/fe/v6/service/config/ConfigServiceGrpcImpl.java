@@ -29,6 +29,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostConfi
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostConfigResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostDefaultDeviceConfigRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostDefaultDeviceConfigResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetRecommendedWifiRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetRecommendedWifiResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateDeviceConfigRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateDeviceConfigResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateHostConfigRequest;
@@ -84,6 +86,19 @@ public final class ConfigServiceGrpcImpl extends ConfigServiceGrpc.ConfigService
         executor,
         ConfigServiceGrpc.getServiceDescriptor(),
         ConfigServiceGrpc.getUpdateDeviceConfigMethod());
+  }
+
+  @Override
+  public void getRecommendedWifi(
+      GetRecommendedWifiRequest request,
+      StreamObserver<GetRecommendedWifiResponse> responseObserver) {
+    GrpcServiceUtil.invokeAsync(
+        request,
+        responseObserver,
+        logic::getRecommendedWifi,
+        executor,
+        ConfigServiceGrpc.getServiceDescriptor(),
+        ConfigServiceGrpc.getGetRecommendedWifiMethod());
   }
 
   @Override

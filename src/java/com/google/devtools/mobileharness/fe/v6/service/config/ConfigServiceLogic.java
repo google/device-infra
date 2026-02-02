@@ -27,6 +27,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostConfi
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostConfigResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostDefaultDeviceConfigRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostDefaultDeviceConfigResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetRecommendedWifiRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetRecommendedWifiResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateDeviceConfigRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateDeviceConfigResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateHostConfigRequest;
@@ -41,6 +43,9 @@ public interface ConfigServiceLogic {
 
   ListenableFuture<UpdateDeviceConfigResponse> updateDeviceConfig(
       UpdateDeviceConfigRequest request);
+
+  ListenableFuture<GetRecommendedWifiResponse> getRecommendedWifi(
+      GetRecommendedWifiRequest request);
 
   ListenableFuture<GetHostDefaultDeviceConfigResponse> getHostDefaultDeviceConfig(
       GetHostDefaultDeviceConfigRequest request);

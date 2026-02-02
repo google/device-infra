@@ -4,6 +4,7 @@ import {
   CheckDeviceWritePermissionResult,
   DeviceConfig,
   GetDeviceConfigResult,
+  RecommendedWifi,
   UpdateDeviceConfigRequest,
   UpdateDeviceConfigResult,
 } from '../../models/device_config_models';
@@ -55,6 +56,12 @@ export abstract class ConfigService {
   abstract updateDeviceConfig(
     request: UpdateDeviceConfigRequest,
   ): Observable<UpdateDeviceConfigResult>;
+
+  /**
+   * Retrieves a list of recommended Wi-Fi networks.
+   * @return An Observable emitting the list of recommended Wi-Fi configurations.
+   */
+  abstract getRecommendedWifi(): Observable<RecommendedWifi[]>;
 
   // ===== Host Config Methods =====
 

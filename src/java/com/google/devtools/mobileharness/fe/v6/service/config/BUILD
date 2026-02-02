@@ -40,6 +40,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/handlers:get_device_config_handler",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/handlers:get_host_config_handler",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/handlers:get_host_default_device_config_handler",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/handlers:get_recommended_wifi_handler",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/handlers:update_device_config_handler",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/handlers:update_host_config_handler",
         "@maven//:com_google_guava_guava",

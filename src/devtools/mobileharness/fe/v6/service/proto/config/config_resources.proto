@@ -52,6 +52,14 @@ message WifiConfig {
   bool scan_ssid = 4;
 }
 
+// Represents a recommended Wi-Fi network configuration.
+message RecommendedWifi {
+  // The network name (SSID).
+  string ssid = 1;
+  // The password (PSK) for the network.
+  string psk = 2;
+}
+
 // Settings related to device stability and reboot behavior during testing.
 message StabilitySettings {
   // The maximum number of consecutive test failures on this device

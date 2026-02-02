@@ -21,11 +21,6 @@
         }
       </div>
       <div class="toggle-switch-icon-container">
-        <!-- <mat-slide-toggle
-          [hideIcon]="true"
-          [checked]="wifiEnabled()"
-          (change)="onWifiEnabledChange($event)"
-        ></mat-slide-toggle> -->
         <toggle-switch
           color="#0b57d0"
           [disabled]="!uiStatus.editability?.editable"
@@ -36,73 +31,155 @@
     </label>
 
     @if (wifiEnabled()) {
-      <div class="wifi-config-details space-y-4">
-        <mat-button-toggle-group
-          name="wifi-type"
-          [hideSingleSelectionIndicator]="true"
-          (change)="onWifiTypeChange($event)"
-          [(value)]="wifi.type"
-          [disabled]="!uiStatus.editability?.editable"
-        >
-          <mat-button-toggle value="pre-configured">Pre-configured</mat-button-toggle>
-          <mat-button-toggle value="custom">Custom</mat-button-toggle>
-        </mat-button-toggle-group>
+      <div class="wifi-config-split-view">
+        <!-- Left Column: Manual Input -->
+        <div class="wifi-manual-col">
+          <div class="wifi-card">
+            <div class="wifi-card-content">
+              <div class="wifi-card-header">
+                <div class="header-title">
+                  <mat-icon class="text-gray-500">settings_input_antenna</mat-icon>
+                  <h4>Network Details</h4>
+                </div>
+                <button
+                  mat-button
+                  class="select-network-btn"
+                  (click)="toggleRecommendations()"
+                  [disabled]="!uiStatus.editability?.editable"
+                >
+                  <mat-icon>format_list_bulleted</mat-icon>
+                  Select Network
+                </button>
+              </div>
 
-        <div class="wifi-details-inputs">
-          @if (wifi.type === 'pre-configured') {
-            <label for="wifi-pre-configured-ssid" class="form-label">Select Network</label>
-            <mat-form-field appearance="outline" class="form-field">
-              <mat-select [(value)]="wifi.ssid" [disabled]="!uiStatus.editability?.editable">
-                @for (option of PRECONFIGURED_WIFI; track $index) {
-                  <mat-option [value]="option" class="form-option">{{ option }}</mat-option>
-                }
-              </mat-select>
-            </mat-form-field>
-          }
-          @if (wifi.type === 'custom') {
-            <div id="custom-wifi-container">
               <div class="form-group">
-                <label id="wifi-custom-ssid" class="form-label">Network Name (SSID)</label>
-                <mat-form-field appearance="outline" class="form-field"  subscriptSizing="dynamic">
+                <label for="wifi-ssid" class="form-label">Network Name (SSID) <span class="required">*</span></label>
+                <mat-form-field appearance="outline" class="form-field full-width" subscriptSizing="dynamic">
                   <input
                     matInput
+                    id="wifi-ssid"
                     type="text"
                     [(ngModel)]="wifi.ssid"
                     [disabled]="!uiStatus.editability?.editable"
-                    aria-labelledby="wifi-custom-ssid"
+                    placeholder="Enter SSID..."
                   />
+                  @if (wifi.ssid && uiStatus.editability?.editable) {
+                    <button
+                      mat-icon-button
+                      matSuffix
+                      class="input-suffix-btn"
+                      (click)="clearSsid()"
+                      matTooltip="Clear"
+                    >
+                      <mat-icon>close</mat-icon>
+                    </button>
+                  }
                 </mat-form-field>
               </div>
+
               <div class="form-group">
-                <label id="wifi-custom-psk" class="form-label">Password (PSK)</label>
-                <mat-form-field appearance="outline" class="form-field"  subscriptSizing="dynamic">
+                <label for="wifi-psk" class="form-label">Password (PSK)</label>
+                <mat-form-field appearance="outline" class="form-field full-width" subscriptSizing="dynamic">
                   <input
                     matInput
-                    type="password"
+                    id="wifi-psk"
+                    [type]="passwordVisible() ? 'text' : 'password'"
                     [(ngModel)]="wifi.psk"
                     [disabled]="!uiStatus.editability?.editable"
-                    aria-labelledby="wifi-custom-psk"
+                    placeholder="Leave empty for open networks"
                   />
+                  <button
+                    mat-icon-button
+                    matSuffix
+                    class="input-suffix-btn"
+                    (click)="togglePasswordVisibility()"
+                    [matTooltip]="passwordVisible() ? 'Hide Password' : 'Show Password'"
+                    [disabled]="!uiStatus.editability?.editable"
+                  >
+                    <mat-icon>{{ passwordVisible() ? 'visibility' : 'visibility_off' }}</mat-icon>
+                  </button>
                 </mat-form-field>
               </div>
             </div>
-          }
-          <div class="hidden-network-container">
-            <label class="container-flex">
-              <toggle-switch
-                color="#0b57d0"
-                [disabled]="!uiStatus.editability?.editable"
-                [checked]="wifi.scanSsid"
-                (checkedChange)="onWifiScanSsidChange($event)"
-              ></toggle-switch>
-              <!-- <mat-slide-toggle [hideIcon]="true" [checked]="wifi.scanSsid"></mat-slide-toggle> -->
-              <div>
-                <span class="font-medium text-gray-700">Hidden Network</span>
-                <p class="text-xs text-gray-500">
-                  Enable this if the network does not broadcast its name (SSID).
-                </p>
+
+            <div class="wifi-card-footer">
+              <div class="hidden-network-container">
+                <label class="container-flex">
+                  <toggle-switch
+                    color="#0b57d0"
+                    [disabled]="!uiStatus.editability?.editable"
+                    [checked]="wifi.scanSsid"
+                    (checkedChange)="onWifiScanSsidChange($event)"
+                  ></toggle-switch>
+                  <div>
+                    <span
+                      class="font-medium text-gray-700"
+                      matTooltip="Enable this if the network does not broadcast its name (SSID)."
+                      matTooltipPosition="above"
+                    >
+                      Hidden Network
+                    </span>
+                  </div>
+                </label>
               </div>
-            </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Recommendations -->
+        <div class="wifi-rec-col" [class.visible]="showRecommendations()">
+          <div class="wifi-rec-card">
+            <div class="wifi-rec-header">
+              <span class="rec-title">SELECT NETWORK</span>
+              <button mat-icon-button (click)="toggleRecommendations()">
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
+
+            <div class="wifi-rec-search">
+              <mat-icon class="search-icon">search</mat-icon>
+              <input
+                type="text"
+                placeholder="Filter..."
+                [ngModel]="recommendationFilter()"
+                (ngModelChange)="recommendationFilter.set($event)"
+              />
+            </div>
+
+            <div class="wifi-rec-list">
+              @if (isLoading()) {
+                <div class="loading-state">
+                  <mat-icon class="spin-icon">sync</mat-icon>
+                  <span>Loading recommendations...</span>
+                </div>
+              } @else {
+                @for (net of filteredRecommendations(); track net.ssid) {
+                  <button
+                    class="wifi-rec-item"
+                    (click)="applyRecommendation(net)"
+                    [disabled]="!uiStatus.editability?.editable"
+                  >
+                    <div class="rec-item-content">
+                      <mat-icon class="wifi-icon">wifi</mat-icon>
+                      <span class="rec-ssid">{{ net.ssid }}</span>
+                      @if (!net.psk) {
+                        <span class="open-badge">Open</span>
+                      }
+                    </div>
+                    <span class="auto-fill-label">Auto-fill</span>
+                  </button>
+                }
+                @if (filteredRecommendations().length === 0) {
+                  <div class="no-results">
+                    @if (recommendedWifi().length === 0) {
+                      No recommendations available
+                    } @else {
+                      No matching networks
+                    }
+                  </div>
+                }
+              }
+            </div>
           </div>
         </div>
       </div>

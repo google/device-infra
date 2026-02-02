@@ -2,7 +2,7 @@
 
 $labconsole-font: Roboto, sans-serif;
 
-:host {
+@mixin default-overrides() {
   @include mat.form-field-overrides((
     container-height: 42px,
     container-vertical-padding: 6px,
@@ -22,7 +22,7 @@ $labconsole-font: Roboto, sans-serif;
     subscript-text-font: $labconsole-font,
   ));
 
- @include mat.select-overrides((
+  @include mat.select-overrides((
     trigger-text-size: 100%,
     trigger-text-tracking: normal,
     trigger-text-line-height: 30px,
@@ -33,6 +33,19 @@ $labconsole-font: Roboto, sans-serif;
     label-text-tracking: normal,
     label-text-font: $labconsole-font,
   ));
+
+  @include mat.button-toggle-overrides((
+    label-text-font: $labconsole-font,
+    selected-state-background-color: #e8f0fe,
+    selected-state-text-color: #1d4ed8,
+    height: 2.25rem,
+  ));
+}
+
+// Keep existing :host for backward compatibility if any component relies on it implicitely (unlikely with @use),
+// or for reference. Ideally we replace usages with the mixin.
+:host {
+  @include default-overrides();
 }
 
 
@@ -233,4 +246,111 @@ h1, h2, h3, h4, h5, h6, p {
   gap: 0.75rem;
 }
 
+// --- NEWLY EXTRACTED STYLES ---
 
+// Circular Action Button (used in device config header, settings menu)
+.config-action-button {
+  width: 2.5rem;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: #64748b;
+  transition: background-color 0.2s;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+
+  &:hover {
+    background-color: #f1f5f9;
+  }
+}
+
+// Config Section Title (Standard H3)
+.config-section-title {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+  font-weight: 600;
+  color: #1f2937; // gray-800
+}
+
+// Settings Layout (Nav + Main Content)
+.config-layout-container {
+  display: flex;
+  flex-grow: 1;
+  min-height: 0;
+  padding: 0;
+  height: 90vh;
+  max-width: 72rem;
+  font-family: $labconsole-font;
+}
+
+.config-nav-bar {
+  padding: 1rem;
+  background-color: #f9fafb; // bg-gray-50
+  border-right: 1px solid #e5e7eb;
+  // width/min-width might vary, so keeping it flexible or overriding in specific files if needed
+  // device_settings has flex nav, host_settings has fixed width.
+}
+
+.config-nav-item {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  color: #334155;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  text-decoration: none;
+
+  &:hover {
+    background-color: #f1f5f9;
+  }
+
+  &.active {
+    background-color: #eef4ff;
+    color: #1d4ed8;
+
+    .material-icons, mat-icon {
+      color: #1d4ed8;
+    }
+  }
+
+  .material-icons, mat-icon {
+    margin-right: 1rem;
+    color: #64748b;
+  }
+}
+
+// Main Content Area
+.config-layout-main {
+  display: flex;
+  flex-grow: 1;
+  flex-direction: column;
+  min-height: 0;
+  padding: 0;
+  font-family: $labconsole-font;
+  overflow: hidden;
+}
+
+.config-layout-content {
+  flex-grow: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 1.5rem;
+}
+
+// Wizard Step Content
+.config-wizard-step-content {
+  padding: 1.5rem;
+  overflow-y: auto;
+  flex-grow: 1;
+  min-height: 0px;
+  max-height: calc(90vh - 99px - 85px - 56px);
+
+  @media (min-width: 768px) {
+    padding: 2rem;
+  }
+}

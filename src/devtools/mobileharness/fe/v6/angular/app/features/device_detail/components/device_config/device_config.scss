@@ -23,21 +23,7 @@
     }
 
     .action-button {
-      width: 2.5rem;
-      height: 2.5rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 50%;
-      color: #64748b;
-      transition: background-color 0.2s;
-      cursor: pointer;
-      border: none;
-      background: transparent;
-    }
-
-    .action-button:hover {
-      background-color: #f1f5f9;
+      @extend .config-action-button;
     }
   }
 
