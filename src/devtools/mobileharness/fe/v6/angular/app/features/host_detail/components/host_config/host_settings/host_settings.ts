@@ -414,16 +414,18 @@ export class HostSettings implements OnInit {
   }
 
   initializeData() {
-    this.deviceConfig = objectUtils.deepCopy({
-      ...this.config.hostConfig!.deviceConfig!,
-      permissions: {
-        owners: this.config.hostConfig!.permissions.hostAdmins,
-        executors: this.config.hostConfig!.deviceConfig!.permissions.executors,
-      },
-    }) as DeviceConfig;
-    this.hostConfig = objectUtils.deepCopy(
-      this.config.hostConfig!,
-    ) as HostConfig;
+    if (this.config.hostConfig) {
+      this.deviceConfig = objectUtils.deepCopy({
+        ...this.config.hostConfig.deviceConfig!,
+        permissions: {
+          owners: this.config.hostConfig.permissions.hostAdmins,
+          executors: this.config.hostConfig.deviceConfig!.permissions.executors,
+        },
+      }) as DeviceConfig;
+      this.hostConfig = objectUtils.deepCopy(
+        this.config.hostConfig,
+      ) as HostConfig;
+    }
 
     this.originalDeviceConfig = objectUtils.deepCopy(
       this.deviceConfig,

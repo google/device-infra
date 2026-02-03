@@ -31,13 +31,15 @@
     </div>
   </app-info-card>
   <app-info-card #overviewSection id="lab-server" title="Lab Server" [collapsible]="false">
-    <div operations class="operation-button">
-      <a href="#" target="_blank">
-        <mat-icon>article</mat-icon>
-        <span class="operation-text">View Log</span>
-        <mat-icon>open_in_new</mat-icon>
-      </a>
-    </div>
+    @if (isGoogleInternal) {
+      <div operations class="operation-button">
+        <a href="{{ getLogUrl('lab') }}" target="_blank">
+          <mat-icon>article</mat-icon>
+          <span class="operation-text">View Log</span>
+          <mat-icon>open_in_new</mat-icon>
+        </a>
+      </div>
+    }
     <div class="info-card-content">
       <dl class="grid-tight">
         <dt>State</dt>
@@ -107,14 +109,14 @@
             } @else {
               <span class="text-gray-500">None</span>
             }
-            <button
+            <!-- <button
               mat-icon-button
               (click)="startEditFlags()"
               title="Edit Pass Through Flags"
               class="edit-flags-button"
             >
               <mat-icon>edit</mat-icon>
-            </button>
+            </button> -->
           }
         </dd>
       </dl>
@@ -496,13 +498,15 @@
     }
   </app-info-card>
   <app-info-card #overviewSection id="daemon-server" title="Daemon Server" [collapsible]="false">
-    <div operations class="operation-button">
-      <a href="#" target="_blank">
-        <mat-icon>article</mat-icon>
-        <span class="operation-text">View Log</span>
-        <mat-icon>open_in_new</mat-icon>
-      </a>
-    </div>
+    @if (isGoogleInternal) {
+      <div operations class="operation-button">
+        <a href="{{ getLogUrl('daemon') }}" target="_blank">
+          <mat-icon>article</mat-icon>
+          <span class="operation-text">View Log</span>
+          <mat-icon>open_in_new</mat-icon>
+        </a>
+      </div>
+    }
     <div class="info-card-content">
       <dl class="grid-tight">
         <dt>State</dt>

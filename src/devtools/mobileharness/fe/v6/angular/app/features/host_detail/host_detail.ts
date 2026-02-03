@@ -14,11 +14,12 @@ import {Observable, of} from 'rxjs';
 import {catchError, map, switchMap} from 'rxjs/operators';
 
 import {type HostOverview} from '../../core/models/host_overview';
+import {Environment} from '../../core/services/environment';
 import {HOST_SERVICE} from '../../core/services/host/host_service';
 import {HostConfig} from './components/host_config/host_config';
 import {HostEmpty} from './components/host_config/host_empty/host_empty';
 import {HostSettings} from './components/host_config/host_settings/host_settings';
-// deviceinfra:google3-replace-end
+import {HostWizard} from './components/host_config/host_wizard/host_wizard';
 import {HostOverviewPage} from './components/host_overview/host_overview';
 
 interface HostPageData {
@@ -48,6 +49,7 @@ export class HostDetail implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly dialog = inject(MatDialog);
   private readonly hostService = inject(HOST_SERVICE);
+  private readonly environment = inject(Environment);
 
   readonly hostPageData$: Observable<HostPageData> = this.route.paramMap.pipe(
     map((params) => params.get('hostName')),
@@ -92,7 +94,7 @@ export class HostDetail implements OnInit {
           return;
         }
 
-        this.createorcopyConfiguration(
+        this.createOrCopyConfiguration(
           result.action,
           result.hostName,
           result.config,
@@ -100,15 +102,31 @@ export class HostDetail implements OnInit {
       });
   }
 
-  createorcopyConfiguration(
+  createOrCopyConfiguration(
     action: string,
     hostName: string,
     config: HostConfig,
   ) {
-    this.dialog.open(HostSettings, {
-      data: {hostName, config},
-      autoFocus: false,
-    });
+    if (this.environment.isGoogleInternal()) {
+      this.dialog.open(HostWizard, {
+        data: {hostName, source: action, config},
+        autoFocus: false,
+      });
+    } else {
+      const dialogRef = this.dialog.open(HostSettings, {
+        data: {hostName, config},
+        autoFocus: false,
+      });
+
+      dialogRef.afterClosed().subscribe((result) => {
+        if (!result) {
+          return;
+        }
+        if (result.action === 'reset') {
+          this.resetConfiguration(result.hostName);
+        }
+      });
+    }
   }
 
   openConfiguration(hostName: string) {
@@ -128,7 +146,7 @@ export class HostDetail implements OnInit {
       }
 
       if (result.action === 'new' || result.action === 'copy') {
-        this.createorcopyConfiguration(result.action, hostName, result.config);
+        this.createOrCopyConfiguration(result.action, hostName, result.config);
       }
     });
   }

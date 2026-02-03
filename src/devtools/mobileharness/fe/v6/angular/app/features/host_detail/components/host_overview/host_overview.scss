@@ -29,6 +29,7 @@
   dt {
     color: #3c4043;
     font-weight: 500;
+    line-height: 1.5rem;
 
     .cursor-help {
       vertical-align: middle;
@@ -40,6 +41,7 @@
     min-width: 0;
     display: flex;
     align-items: center;
+    line-height: 1.5rem;
     gap: 4px;
 
     &.grid-tight-dd {
@@ -120,8 +122,8 @@
 
 
 .edit-flags-button {
-  width: 40px;
-  height: 40px;
+  width: 1rem;
+  height: 1rem;
   display: flex;
   align-items: center;
   justify-content: center;

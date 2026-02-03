@@ -44,6 +44,7 @@ import {
   LabServerActivity,
   type HostOverview,
 } from '../../../../core/models/host_overview';
+import {Environment} from '../../../../core/services/environment';
 import {HOST_SERVICE} from '../../../../core/services/host/host_service';
 import {ConfirmDialog} from '../../../../shared/components/confirm_dialog/confirm_dialog';
 import {InfoCard} from '../../../../shared/components/info_card/info_card';
@@ -150,7 +151,6 @@ const STATUS_SEMANTIC_MAP: Record<string, {icon: string; colorClass: string}> =
     InfoCard,
     SearchableListOverlayComponent,
     OverflowList,
-    DecommissionContent,
   ],
 })
 export class HostOverviewPage implements OnInit, OnChanges {
@@ -159,9 +159,12 @@ export class HostOverviewPage implements OnInit, OnChanges {
   private readonly remoteControlService = inject(RemoteControlService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly snackBar = inject(SnackBarService);
+  private readonly environment = inject(Environment);
 
   readonly objectUtils = objectUtils;
   readonly dateUtils = dateUtils;
+  readonly isGoogleInternal = this.environment.isGoogleInternal();
+
   @Input({required: true}) host!: HostOverview;
 
   isEditingFlags = signal(false);
@@ -323,6 +326,7 @@ export class HostOverviewPage implements OnInit, OnChanges {
   }
 
   // --- Lab Server Card ---
+
   getStatusSemantic(status: HostConnectivityStatus | DaemonServerStatus) {
     const config = STATUS_SEMANTIC_MAP[status.state];
     const duration =

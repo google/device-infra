@@ -23,14 +23,14 @@ import {
 import type {DeviceOverviewPageData} from '../../../../core/models/device_overview';
 import {DeviceSummary} from '../../../../core/models/host_overview';
 import {DEVICE_SERVICE} from '../../../../core/services/device/device_service';
+import {Environment} from '../../../../core/services/environment';
 import {ConfirmDialog} from '../../../../shared/components/confirm_dialog/confirm_dialog';
 import {RemoteControlService} from '../../../../shared/services/remote_control_service';
 import {SnackBarService} from '../../../../shared/services/snackbar_service';
 import {DeviceConfig} from '../device_config/device_config';
 import {DeviceEmpty} from '../device_config/device_empty/device_empty';
-
 import {DeviceSettings} from '../device_config/device_settings/device_settings';
-// deviceinfra:google3-replace-end
+import {DeviceWizard} from '../device_config/device_wizard/device_wizard';
 import {FlashDialog} from '../flash_dialog/flash_dialog';
 import {LogcatDialog} from '../logcat_dialog/logcat_dialog';
 import {QuarantineDialog} from '../quarantine_dialog/quarantine_dialog';
@@ -52,6 +52,7 @@ export class DeviceActionBar {
   private readonly remoteControlService = inject(RemoteControlService);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(SnackBarService);
+  private readonly environment = inject(Environment);
 
   @Input({required: true}) pageData!: DeviceOverviewPageData;
 
@@ -115,7 +116,7 @@ export class DeviceActionBar {
       }
 
       if (result.action === 'new' || result.action === 'copy') {
-        this.createorcopyConfiguration(result.action, deviceId, result.config);
+        this.createOrCopyConfiguration(result.action, deviceId, result.config);
       }
     });
   }
@@ -137,7 +138,7 @@ export class DeviceActionBar {
           return;
         }
 
-        this.createorcopyConfiguration(
+        this.createOrCopyConfiguration(
           result.action,
           result.deviceId,
           result.config,
@@ -145,15 +146,31 @@ export class DeviceActionBar {
       });
   }
 
-  createorcopyConfiguration(
+  createOrCopyConfiguration(
     action: string,
     deviceId: string,
     config: DeviceConfig | null,
   ) {
-    this.dialog.open(DeviceSettings, {
-      data: {deviceId, config},
-      autoFocus: false,
-    });
+    if (this.environment.isGoogleInternal()) {
+      this.dialog.open(DeviceWizard, {
+        data: {source: action, deviceId, config},
+        autoFocus: false,
+      });
+    } else {
+      const dialogRef = this.dialog.open(DeviceSettings, {
+        data: {deviceId, config},
+        autoFocus: false,
+      });
+
+      dialogRef.afterClosed().subscribe((result) => {
+        if (!result) {
+          return;
+        }
+        if (result.action === 'reset') {
+          this.resetConfiguration(result.deviceId, this.hostName);
+        }
+      });
+    }
   }
 
   takeScreenshot(): void {
