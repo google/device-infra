@@ -3,7 +3,7 @@ $labconsole-font: Roboto, sans-serif;
 :host {
   display: block;
   background-color: #f8f9fa; // bg-gray-50
-  min-height: 100vh;
+  min-height: 100%;
   padding: 1.5rem; // p-6
   font-family: $labconsole-font;
 }
