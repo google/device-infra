@@ -175,6 +175,9 @@ public class AndroidConnectivityUtil {
   /** The pattern of ip address. */
   private static final Pattern PATTERN_NETWORK_LINK_ADDRESS = Pattern.compile("(.*)/(.*)");
 
+  /** Pattern for one or more whitespace characters. */
+  private static final Pattern PATTERN_WHITESPACE = Pattern.compile("\\s+");
+
   /** ADB shell template for non-blocking ping. Should be filled with the time limit and host. */
   @VisibleForTesting static final String ADB_SHELL_TEMPLATE_PING = "ping -c 1 -w %d %s";
 
@@ -457,7 +460,7 @@ public class AndroidConnectivityUtil {
     if (Strings.isNullOrEmpty(output)) {
       return result;
     }
-    List<String> split = Splitter.on(' ').splitToList(output);
+    List<String> split = Splitter.on(PATTERN_WHITESPACE).splitToList(output);
     // try get the 9th column from the output
     // Example output: 100.112.36.0/22 dev wlan0 proto kernel scope link src 100.112.37.26
     if (split.size() > 8) {
