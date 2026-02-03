@@ -36,7 +36,15 @@ public abstract class CompatibilityReportFormat {
 
   // TODO: Remove the static map once the warning annotation is fully supported.
   private static final ImmutableSetMultimap<String, String> MODULE_TO_WARNING_TESTS =
-      ImmutableSetMultimap.of();
+      ImmutableSetMultimap.<String, String>builder()
+          .put(
+              "GtsStorageHostTestCases",
+              "com.google.android.storage.gts.UfsDetectionHostTest#testDeviceUsesUfs_SR")
+          .putAll(
+              "GtsPerformanceHostTestCases",
+              "com.google.android.performance.gts.BouncyBallHostTest#testBouncyBallNoFrameDropsForceOnGpuComposition_SR",
+              "com.google.android.performance.gts.BouncyBallHostTest#testBouncyBallNoFrameDropsDefaultGpuComposition_SR")
+          .build();
 
   /** The target name this format is for. Can be module name or test plan name. */
   public abstract String targetName();
