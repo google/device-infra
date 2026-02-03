@@ -111,7 +111,7 @@ public interface AndroidInstrumentationDriverSpec {
   @ParamAnnotation(
       required = false,
       help =
-          "Whether to use android instrumentation parsing or gtest XML parsing. If omitted, this"
+          "Whether to use android instrumentation parsing or gtest XML parsing. If omitted, this "
               + "defaults to true to use instrumentation parsing.")
   String PARAM_USE_ANDROIDINSTRUMENTATION_PARSER = "use_androidinstrumentation_parser";
 
@@ -197,8 +197,8 @@ public interface AndroidInstrumentationDriverSpec {
       required = false,
       help =
           "Whether to disable isolated-storage feature for package in Android Q. "
-              + "Default value is true. Specify this as false when you would like to verify sandbox"
-              + "feature in test apk.")
+              + "Default value is true. Specify this as false when you would like to verify "
+              + "sandbox feature in test apk.")
   String PARAM_DISABLE_ISOLATED_STORAGE_FOR_APK = "disable_isolated_storage_for_apk";
 
   @ParamAnnotation(
@@ -273,6 +273,13 @@ public interface AndroidInstrumentationDriverSpec {
       help = "Whether to skip clear media provider for multi user case. By default, this is false.")
   String PARAM_SKIP_CLEAR_MEDIA_PROVIDER_FOR_MULTI_USER_CASE =
       "skip_clear_media_provider_for_multi_user_case";
+
+  @ParamAnnotation(
+      required = false,
+      help =
+          "Whether to enable mock location for the instrumentation test. By default, this is"
+              + " false.")
+  String PARAM_MOCK_LOCATION = "mock_location";
 
   /** Resource path of the Android basic_services.apk which is needed for reading test_args. */
   String BASIC_SERVICE_APK_PATH =

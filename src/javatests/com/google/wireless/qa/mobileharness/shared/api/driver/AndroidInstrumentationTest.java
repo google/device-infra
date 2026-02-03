@@ -194,6 +194,30 @@ public class AndroidInstrumentationTest {
   }
 
   @Test
+  public void run_enableMockLocation_pass() throws Exception {
+    mockRunTestBasicSteps(TEST_NAME, OPTIONS, false, false);
+    jobInfo.params().add(AndroidInstrumentationDriverSpec.PARAM_MOCK_LOCATION, "true");
+    AndroidInstrumentationSetting setting =
+        mockInstrumentSetting(
+            TEST_NAME,
+            OPTION_MAP,
+            /* async= */ false,
+            /* showRawResults= */ false,
+            /* prefixAndroidTest= */ false,
+            /* noIsolatedStorage= */ false,
+            /* useTestStorageService= */ true);
+    when(androidInstrumentationUtil.instrument(
+            DEVICE_ID, DEFAULT_SDK_VERSION, setting, TEST_TIMEOUT, null))
+        .thenReturn("OK (1 test)");
+
+    driver.run(testInfo);
+
+    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
+    verify(androidInstrumentationUtil)
+        .setMockLocationEnabled(DEVICE_ID, TEST_PACKAGE, DEFAULT_SDK_VERSION);
+  }
+
+  @Test
   public void run_installationFailSetResultFail() throws Exception {
     mockRunTestBasicSteps(TEST_NAME, OPTIONS, false, false);
     jobInfo.params().add(AndroidInstrumentationDriverSpec.PARAM_PREFIX_ANDROID_TEST, "true");

@@ -1563,6 +1563,22 @@ public class AndroidInstrumentationUtil {
     }
   }
 
+  /**
+   * Sets mock location enabled for the device.
+   *
+   * @param deviceId device serial number
+   * @param packageName package name of the test app to be set as mock location provider
+   * @param sdkVersion SDK version of the device
+   */
+  public void setMockLocationEnabled(String deviceId, String packageName, int sdkVersion)
+      throws MobileHarnessException, InterruptedException {
+    logger.atInfo().log("Enable mock location for device %s and package %s", deviceId, packageName);
+    var unused = settingUtil.allowMockLocation(deviceId);
+    if (sdkVersion >= AndroidVersion.MARSHMALLOW.getStartSdkVersion()) {
+      settingUtil.setDefaultMockLocationProvider(deviceId, packageName);
+    }
+  }
+
   private Optional<String> getCurrentUser(String deviceId, @Nullable Integer deviceSdkVersion)
       throws MobileHarnessException, InterruptedException {
     if (deviceSdkVersion != null

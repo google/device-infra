@@ -788,6 +788,11 @@ public class AndroidInstrumentation extends BaseDriver
           getDevice().getDeviceId(), testPackageName);
     }
 
+    if (testInfo.jobInfo().params().isTrue(AndroidInstrumentationDriverSpec.PARAM_MOCK_LOCATION)) {
+      androidInstrumentationUtil.setMockLocationEnabled(
+          getDevice().getDeviceId(), testPackageName, deviceSdkVersion);
+    }
+
     return testPackageName;
   }
 
