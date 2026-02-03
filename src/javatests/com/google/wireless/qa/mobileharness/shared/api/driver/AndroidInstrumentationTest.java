@@ -264,6 +264,38 @@ public class AndroidInstrumentationTest {
   }
 
   @Test
+  public void run_disableUseTestStorageService() throws Exception {
+    mockRunTestBasicSteps(TEST_NAME, OPTIONS, false, true);
+    jobInfo.params().add(AndroidInstrumentationDriverSpec.PARAM_PREFIX_ANDROID_TEST, "true");
+    jobInfo.params().add(AndroidInstrumentationDriverSpec.PARAM_USE_TEST_STORAGE_SERVICE, "false");
+    String instrumentationLog =
+        "com.google.codelab.mobileharness.android.hellomobileharness"
+            + ".HelloMobileHarnessTest:.......\n\n"
+            + "Time: 31.281\n\n"
+            + "OK (7 tests)";
+    AndroidInstrumentationSetting setting =
+        mockInstrumentSetting(
+            TEST_NAME,
+            OPTION_MAP,
+            /* async= */ false,
+            /* showRawResults= */ false,
+            /* prefixAndroidTest= */ true,
+            /* noIsolatedStorage= */ true,
+            /* useTestStorageService= */ false);
+    when(androidInstrumentationUtil.instrument(
+            DEVICE_ID, DEFAULT_SDK_VERSION, setting, TEST_TIMEOUT, null))
+        .thenReturn(instrumentationLog);
+
+    driver.run(testInfo);
+
+    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
+    verify(fileUtil)
+        .writeToFile(
+            PathUtil.join(GEN_FILE_DIR_PATH, DEFAULT_INSTRUMENTATION_LOG_FILE_NAME),
+            instrumentationLog);
+  }
+
+  @Test
   public void run_showRawData_pass() throws Exception {
     mockRunTestBasicSteps(TEST_PACKAGE + "." + TEST_CLASS_NAME, OPTIONS, true, false);
     when(androidInstrumentationUtil.showRawResultsIfNeeded(testInfo)).thenReturn(true);

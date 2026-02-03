@@ -370,7 +370,8 @@ public class AndroidInstrumentation extends BaseDriver
               job.params()
                   .getBool(AndroidInstrumentationDriverSpec.PARAM_PREFIX_ANDROID_TEST, false),
               noIsolatedStorage,
-              /* useTestStorageService= */ true,
+              job.params()
+                  .getBool(AndroidInstrumentationDriverSpec.PARAM_USE_TEST_STORAGE_SERVICE, true),
               job.params().getBool(AndroidInstrumentationDriverSpec.PARAM_ENABLE_COVERAGE, false),
               job.params().getBool(AndroidInstrumentationDriverSpec.PARAM_USE_ORCHESTRATOR, false)),
           Duration.ofMillis(testTimeoutMs));
@@ -524,7 +525,9 @@ public class AndroidInstrumentation extends BaseDriver
                     job.params()
                         .getBool(AndroidInstrumentationDriverSpec.PARAM_PREFIX_ANDROID_TEST, false),
                     noIsolatedStorage,
-                    /* useTestStorageService= */ true,
+                    job.params()
+                        .getBool(
+                            AndroidInstrumentationDriverSpec.PARAM_USE_TEST_STORAGE_SERVICE, true),
                     job.params()
                         .getBool(AndroidInstrumentationDriverSpec.PARAM_ENABLE_COVERAGE, false),
                     job.params()

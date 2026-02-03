@@ -249,6 +249,13 @@ public interface AndroidInstrumentationDriverSpec {
   @ParamAnnotation(
       required = false,
       help =
+          "Whether to use test storage service to run the instrumentation. By default, this is"
+              + " true.")
+  String PARAM_USE_TEST_STORAGE_SERVICE = "use_test_storage_service";
+
+  @ParamAnnotation(
+      required = false,
+      help =
           "Set test result to FAIL if no tests ran. For example, user specified test methods do not"
               + " exist, or using Parameterized runner with ShardLevel.METHOD. By default, this is"
               + " false.")
