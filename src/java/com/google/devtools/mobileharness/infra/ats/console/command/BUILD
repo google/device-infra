@@ -84,12 +84,9 @@ java_library(
 
 java_library(
     name = "run_command",
-    srcs = [
-        "RunCommand.java",
-    ],
+    srcs = ["RunCommand.java"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:__pkg__",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console/command/parser:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/command:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/command:__subpackages__",
     ],
@@ -97,9 +94,7 @@ java_library(
         ":run_command_options",
         "//src/devtools/mobileharness/infra/ats/console/controller/proto:session_plugin_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_info",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:server_preparer",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console:annotations",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:console_info",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/olcserver:ats_session_stub",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/olcserver:server_log_printer",
@@ -108,12 +103,9 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/command:command_helper",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/console:console_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/result:result_lister_helper",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/subplan:sub_plan_lister",
         "//src/java/com/google/devtools/mobileharness/platform/android/shared/constant:splitters",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_command_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_dir_util",
-        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:module_arg",
-        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:retry_type",
         "//src/java/com/google/devtools/mobileharness/shared/constant:log_record_importance",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
@@ -129,11 +121,33 @@ java_library(
     name = "run_command_options",
     srcs = ["RunCommandOptions.java"],
     deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console:console_info",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/command/picocli/parameterpreprocessor:map_preprocessor",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/command/picocli/parameterpreprocessor:multimap_preprocessor",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/command:command_helper",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/subplan:sub_plan_lister",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:module_arg",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:retry_type",
         "@maven//:com_google_guava_guava",
         "@maven//:info_picocli_picocli",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "run_command_parser",
+    srcs = ["RunCommandParser.java"],
+    visibility = ["//src/java/com/google/devtools/mobileharness/infra/ats/console/command/parser:__pkg__"],
+    deps = [
+        ":run_command_options",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_info",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console:annotations",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:retry_type",
+        "@maven//:com_google_guava_guava",
+        "@maven//:info_picocli_picocli",
+        "@maven//:javax_inject_jsr330_api",
     ],
 )
 

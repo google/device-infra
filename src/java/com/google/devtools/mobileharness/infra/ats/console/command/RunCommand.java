@@ -20,8 +20,6 @@ import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.util.concurrent.Futures.addCallback;
-import static com.google.common.util.concurrent.Futures.immediateFailedFuture;
-import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoDuration;
@@ -38,10 +36,7 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer;
-import com.google.devtools.mobileharness.infra.ats.console.Annotations.ParseCommandOnly;
-import com.google.devtools.mobileharness.infra.ats.console.Annotations.RunCommandParsingResultFuture;
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
 import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.AtsSessionStub;
 import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.ServerLogPrinter;
@@ -56,12 +51,9 @@ import com.google.devtools.mobileharness.infra.ats.console.result.report.Certifi
 import com.google.devtools.mobileharness.infra.ats.console.util.command.CommandHelper;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
 import com.google.devtools.mobileharness.infra.ats.console.util.result.ResultListerHelper;
-import com.google.devtools.mobileharness.infra.ats.console.util.subplan.SubPlanLister;
 import com.google.devtools.mobileharness.platform.android.shared.constant.Splitters;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsCommandUtil;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
-import com.google.devtools.mobileharness.platform.android.xts.suite.ModuleArg;
-import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryType;
 import com.google.devtools.mobileharness.shared.util.command.CommandException;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.Timeout;
@@ -72,18 +64,14 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import javax.inject.Inject;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.ExitCode;
-import picocli.CommandLine.Help.Ansi;
 import picocli.CommandLine.HelpCommand;
 import picocli.CommandLine.Mixin;
-import picocli.CommandLine.ParameterException;
 
 /** Command to run xTS tests. */
 @Command(
@@ -103,7 +91,7 @@ public final class RunCommand implements Callable<Integer> {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  @Mixin private RunCommandOptions options;
+  @VisibleForTesting @Mixin RunCommandOptions options;
 
   static final String RUN_COMMAND_SESSION_NAME = "run_command";
 
@@ -119,15 +107,12 @@ public final class RunCommand implements Callable<Integer> {
   private final ConsoleInfo consoleInfo;
   private final ConsoleUtil consoleUtil;
   private final CommandHelper commandHelper;
-  private final SubPlanLister subPlanLister;
   private final ResultListerHelper resultListerHelper;
 
   private final ServerPreparer serverPreparer;
   private final ServerLogPrinter serverLogPrinter;
   private final ListeningExecutorService executorService;
   private final AtsSessionStub atsSessionStub;
-  private final Consumer<ListenableFuture<SessionRequestInfo.Builder>> resultFuture;
-  private final boolean parseCommandOnly;
   private final CommandExecutor commandExecutor;
   private final XtsCommandUtil xtsCommandUtil;
 
@@ -136,21 +121,16 @@ public final class RunCommand implements Callable<Integer> {
       ConsoleInfo consoleInfo,
       ConsoleUtil consoleUtil,
       CommandHelper commandHelper,
-      SubPlanLister subPlanLister,
       ResultListerHelper resultListerHelper,
       ServerPreparer serverPreparer,
       ServerLogPrinter serverLogPrinter,
       ListeningExecutorService executorService,
       AtsSessionStub atsSessionStub,
       CommandExecutor commandExecutor,
-      XtsCommandUtil xtsCommandUtil,
-      @RunCommandParsingResultFuture
-          Consumer<ListenableFuture<SessionRequestInfo.Builder>> resultFuture,
-      @ParseCommandOnly boolean parseCommandOnly) {
+      XtsCommandUtil xtsCommandUtil) {
     this.consoleInfo = consoleInfo;
     this.consoleUtil = consoleUtil;
     this.commandHelper = commandHelper;
-    this.subPlanLister = subPlanLister;
     this.resultListerHelper = resultListerHelper;
     this.serverPreparer = serverPreparer;
     this.serverLogPrinter = serverLogPrinter;
@@ -158,30 +138,18 @@ public final class RunCommand implements Callable<Integer> {
     this.atsSessionStub = atsSessionStub;
     this.commandExecutor = commandExecutor;
     this.xtsCommandUtil = xtsCommandUtil;
-    this.resultFuture = resultFuture;
-    this.parseCommandOnly = parseCommandOnly;
   }
 
   @Override
   public Integer call() throws MobileHarnessException, InterruptedException {
-    ImmutableList<String> command = consoleInfo.getLastCommand();
     try {
-      if (parseCommandOnly) {
-        try {
-          // TODO: Add additional command line options from ats console.
-          resultFuture.accept(immediateFuture(createParseResult()));
-          return ExitCode.OK;
-        } catch (RuntimeException | Error e) {
-          resultFuture.accept(immediateFailedFuture(e));
-          return ExitCode.SOFTWARE;
-        }
-      }
       checkState(Flags.instance().enableAtsConsoleOlcServer.getNonNull());
       if (options.showHelp || options.showHelpAll) {
         return showHelpMessage(
             commandHelper.getXtsType(), consoleInfo.getXtsRootDirectoryNonEmpty());
       } else {
-        validateCommandParameters();
+        options.validateCommandParameters();
+        ImmutableList<String> command = consoleInfo.getLastCommand();
         return runWithOlcServerPrepared(command);
       }
     } finally {
@@ -192,195 +160,6 @@ public final class RunCommand implements Callable<Integer> {
   /** Returns the number of currently running RunCommand instances. */
   public static int getRunningRunCommandCount() {
     return RUNNING_COMMAND_COUNT.get();
-  }
-
-  private SessionRequestInfo.Builder createParseResult() throws MobileHarnessException {
-    SessionRequestInfo.Builder sessionRequestBuilder = SessionRequestInfo.builder();
-    validateCommandParameters();
-    sessionRequestBuilder
-        .setTestPlan(options.config)
-        .setModuleNames(getModules())
-        .setIncludeFilters(
-            this.options.includeFilters == null
-                ? ImmutableList.of()
-                : ImmutableList.copyOf(this.options.includeFilters))
-        .setExcludeFilters(
-            this.options.excludeFilters == null
-                ? ImmutableList.of()
-                : ImmutableList.copyOf(this.options.excludeFilters))
-        .setStrictIncludeFilters(
-            this.options.strictIncludeFilters == null
-                ? ImmutableList.of()
-                : ImmutableList.copyOf(this.options.strictIncludeFilters))
-        .setModuleMetadataIncludeFilters(
-            this.options.moduleMetadataIncludeFilters == null
-                ? ImmutableMultimap.of()
-                : ImmutableMultimap.copyOf(this.options.moduleMetadataIncludeFilters))
-        .setModuleMetadataExcludeFilters(
-            this.options.moduleMetadataExcludeFilters == null
-                ? ImmutableMultimap.of()
-                : ImmutableMultimap.copyOf(this.options.moduleMetadataExcludeFilters))
-        .setHtmlInZip(options.htmlInZip);
-    if (this.options.shardCount > 0) {
-      sessionRequestBuilder.setShardCount(this.options.shardCount);
-    }
-    if (!this.getTest().isEmpty()) {
-      sessionRequestBuilder.setTestName(this.getTest());
-    }
-    ImmutableList<String> moduleArgs =
-        options.moduleCmdArgs != null
-            ? ImmutableList.copyOf(options.moduleCmdArgs)
-            : ImmutableList.of();
-    ImmutableList<String> extraArgs =
-        options.extraRunCmdArgs != null
-            ? ImmutableList.copyOf(options.extraRunCmdArgs)
-            : ImmutableList.of();
-    ImmutableSet<String> excludeRunners =
-        options.excludeRunnerOpt != null
-            ? ImmutableSet.copyOf(options.excludeRunnerOpt)
-            : ImmutableSet.of();
-    if (this.options.retryType != null) {
-      sessionRequestBuilder.setRetryType(
-          RetryType.valueOf(Ascii.toUpperCase(this.options.retryType.name())));
-    }
-    if (isSkipDeviceInfo().isPresent()) {
-      sessionRequestBuilder.setSkipDeviceInfo(isSkipDeviceInfo().get());
-    }
-    if (options.enableDefaultLogs != null) {
-      sessionRequestBuilder.setEnableDefaultLogs(options.enableDefaultLogs);
-    }
-    sessionRequestBuilder.setEnableTokenSharding(options.enableTokenSharding);
-
-    return sessionRequestBuilder
-        .setModuleArgs(moduleArgs)
-        .setExtraArgs(extraArgs)
-        .setExcludeRunners(excludeRunners);
-  }
-
-  @VisibleForTesting
-  void validateCommandParameters() throws MobileHarnessException {
-    if (isNullOrEmpty(options.config)) {
-      throw new ParameterException(
-          options.spec.commandLine(),
-          Ansi.AUTO.string(
-              "Param @|fg(yellow) <config>|@ right after 'run' command is required.\n"));
-    }
-    if (options.moduleTestOptionsGroups != null && !options.moduleTestOptionsGroups.isEmpty()) {
-      ImmutableList<String> tests =
-          options.moduleTestOptionsGroups.stream()
-              .map(group -> group.test)
-              .filter(Objects::nonNull)
-              .collect(toImmutableList());
-      if (tests.size() > 1) {
-        throw new ParameterException(
-            options.spec.commandLine(),
-            Ansi.AUTO.string("Only at most one test case could be specified.\n"));
-      }
-      if (tests.size() == 1 && options.moduleTestOptionsGroups.size() > 1) {
-        throw new ParameterException(
-            options.spec.commandLine(),
-            Ansi.AUTO.string("Multiple modules are unsupported if a test case is specified.\n"));
-      }
-    }
-    if (options.includeFilters != null
-        && !options.includeFilters.isEmpty()
-        && options.moduleTestOptionsGroups != null
-        && !options.moduleTestOptionsGroups.isEmpty()) {
-      throw new ParameterException(
-          options.spec.commandLine(),
-          Ansi.AUTO.string(
-              "Don't use '--include-filter' and '--module/-m' options at the same time.\n"));
-    }
-    if (options.config.equals("retry")) {
-      validateRunRetryCommandParameters();
-    }
-    if (!isNullOrEmpty(options.subPlanName) && !isSubPlanExist(options.subPlanName)) {
-      throw new ParameterException(
-          options.spec.commandLine(),
-          Ansi.AUTO.string(String.format("Subplan [%s] doesn't exist.\n", options.subPlanName)));
-    }
-    if (options.moduleCmdArgs != null && !options.moduleCmdArgs.isEmpty()) {
-      for (String moduleArg : options.moduleCmdArgs) {
-        if (!ModuleArg.isValid(moduleArg)) {
-          throw new ParameterException(
-              options.spec.commandLine(),
-              Ansi.AUTO.string(
-                  String.format(
-                      "Invalid module arguments provided. Unprocessed arguments: %s\n"
-                          + "Expected format: <module_name>:<arg_name>:[<arg_key>:=]<arg_value>.\n",
-                      moduleArg)));
-        }
-      }
-    }
-    validateRunCommandExtraArgs();
-  }
-
-  private void validateRunRetryCommandParameters() {
-    if (options.retrySessionIndex == null && isNullOrEmpty(options.retrySessionResultDirName)) {
-      throw new ParameterException(
-          options.spec.commandLine(),
-          Ansi.AUTO.string(
-              "Must provide option '--retry <retry_session_id>' or '--retry-result-dir"
-                  + " <retry_session_result_dir_name>' for retry command.\n"));
-    }
-    if (options.retrySessionIndex != null && !isNullOrEmpty(options.retrySessionResultDirName)) {
-      throw new ParameterException(
-          options.spec.commandLine(),
-          Ansi.AUTO.string(
-              "Option '--retry <retry_session_id>' and '--retry-result-dir"
-                  + " <retry_session_result_dir_name>' are mutually exclusive.\n"));
-    }
-    if (!isNullOrEmpty(options.subPlanName)) {
-      throw new ParameterException(
-          options.spec.commandLine(),
-          Ansi.AUTO.string(
-              "Option '--subplan <subplan_name>' is not supported in retry command.\n"));
-    }
-    if (options.includeFilters != null && !options.includeFilters.isEmpty()) {
-      throw new ParameterException(
-          options.spec.commandLine(),
-          Ansi.AUTO.string("Option '--include-filter' is not supported in retry command.\n"));
-    }
-  }
-
-  private void validateRunCommandExtraArgs() {
-    if (options.extraRunCmdArgs != null && !options.extraRunCmdArgs.isEmpty()) {
-      // The extra args are passed to TF behind if need to run tests via TF. Ideally we should add
-      // corresponding parameter or option in this Command class explicitly, but at the moment we
-      // may not cover all TF supported options, so we do some basic validations here.
-      if (!options.extraRunCmdArgs.get(0).startsWith("-")) {
-        throw new ParameterException(
-            options.spec.commandLine(),
-            Ansi.AUTO.string(
-                String.format(
-                    "Invalid arguments provided. Unprocessed arguments: %s\n"
-                        + "Double check if the input is valid, for example, quoting the arg value"
-                        + " if it contains space.\n",
-                    options.extraRunCmdArgs)));
-      }
-    }
-  }
-
-  private boolean isSubPlanExist(String subPlanName) throws MobileHarnessException {
-    Path xtsRootDir = consoleInfo.getXtsRootDirectoryNonEmpty();
-    return subPlanLister
-        .listSubPlans(xtsRootDir.toString(), commandHelper.getXtsType())
-        .contains(subPlanName);
-  }
-
-  private ImmutableList<String> getModules() {
-    return options.moduleTestOptionsGroups != null
-        ? options.moduleTestOptionsGroups.stream()
-            .map(group -> group.module)
-            .collect(toImmutableList())
-        : ImmutableList.of();
-  }
-
-  private String getTest() {
-    return options.moduleTestOptionsGroups != null
-            && options.moduleTestOptionsGroups.get(0).test != null
-        ? options.moduleTestOptionsGroups.get(0).test
-        : "";
   }
 
   @VisibleForTesting
@@ -433,7 +212,7 @@ public final class RunCommand implements Callable<Integer> {
     }
     // Remove the last newline character because printLnStdout will add a new line.
     consoleUtil.printlnStdout(
-        output.length() > 0 ? output.deleteCharAt(output.length() - 1).toString() : "");
+        !output.isEmpty() ? output.deleteCharAt(output.length() - 1).toString() : "");
 
     return ExitCode.OK;
   }
@@ -462,9 +241,9 @@ public final class RunCommand implements Callable<Integer> {
             ? ImmutableMap.of()
             : ImmutableMap.copyOf(this.options.devicePropertiesMap);
 
-    ImmutableList<String> modules = getModules();
+    ImmutableList<String> modules = options.getModules();
 
-    String test = getTest();
+    String test = options.getTest();
     ImmutableList<String> includeFilters =
         this.options.includeFilters == null
             ? ImmutableList.of()
@@ -527,7 +306,7 @@ public final class RunCommand implements Callable<Integer> {
         (key, value) ->
             runCommand.addModuleMetadataExcludeFilter(
                 ModuleMetadataFilterEntry.newBuilder().setKey(key).setValue(value)));
-    isSkipDeviceInfo().ifPresent(runCommand::setSkipDeviceInfo);
+    options.isSkipDeviceInfo().ifPresent(runCommand::setSkipDeviceInfo);
     if (options.shardCount > 0) {
       runCommand.setShardCount(options.shardCount);
     }
@@ -726,20 +505,6 @@ public final class RunCommand implements Callable<Integer> {
   @VisibleForTesting
   Multimap<String, String> getModuleMetadataExcludeFilters() {
     return this.options.moduleMetadataExcludeFilters;
-  }
-
-  private Optional<Boolean> isSkipDeviceInfo() {
-    // Currently skip collecting device info for plan cts-dev or set explicitly, and ideally it
-    // should parse given plan and its child plans to see if the option "skip-device-info" is set to
-    // true explicitly.
-    if (options.skipDeviceInfo == null && Objects.equals(options.config, "cts-dev")) {
-      return Optional.of(true);
-    }
-    // TODO Temporary solution to unblock app compat test post processing.
-    if (options.skipDeviceInfo == null && Objects.equals(options.config, "csuite-app-crawl")) {
-      return Optional.of(true);
-    }
-    return Optional.ofNullable(options.skipDeviceInfo);
   }
 
   /**

@@ -135,9 +135,7 @@ public final class AtsConsoleTest {
                 deviceInfraServiceFlags,
                 lineReader,
                 consoleOutPrintStream,
-                consoleErrPrintStream,
-                future -> {},
-                /* parseCommandOnly= */ false),
+                consoleErrPrintStream),
             new CommonModule(ImmutableList.of(), System.getenv(), systemProperties));
     injector.injectMembers(this);
     atsConsole.injector = injector;
@@ -152,9 +150,7 @@ public final class AtsConsoleTest {
                 deviceInfraServiceFlags,
                 lineReader,
                 consoleOutPrintStream,
-                consoleErrPrintStream,
-                future -> {},
-                /* parseCommandOnly= */ false),
+                consoleErrPrintStream),
             new CommonModule(ImmutableList.of("help"), System.getenv(), systemProperties));
     injector.injectMembers(this);
     atsConsole.injector = injector;

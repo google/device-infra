@@ -16,20 +16,35 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.command;
 
+import static com.google.common.base.Strings.isNullOrEmpty;
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Multimap;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
 import com.google.devtools.mobileharness.infra.ats.console.command.picocli.parameterpreprocessor.MapPreprocessor;
 import com.google.devtools.mobileharness.infra.ats.console.command.picocli.parameterpreprocessor.MultimapPreprocessor;
+import com.google.devtools.mobileharness.infra.ats.console.util.command.CommandHelper;
+import com.google.devtools.mobileharness.infra.ats.console.util.subplan.SubPlanLister;
+import com.google.devtools.mobileharness.platform.android.xts.suite.ModuleArg;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryType;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import javax.inject.Inject;
 import picocli.CommandLine.ArgGroup;
+import picocli.CommandLine.Help.Ansi;
 import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Option;
+import picocli.CommandLine.ParameterException;
 import picocli.CommandLine.Parameters;
 import picocli.CommandLine.Spec;
 
-/** Options of {@code RunCommand}. */
-public class RunCommandOptions {
+/** Options of {@link RunCommand}. */
+class RunCommandOptions {
 
   @Parameters(
       index = "0",
@@ -327,4 +342,154 @@ public class RunCommandOptions {
   }
 
   @Spec CommandSpec spec;
+
+  private final ConsoleInfo consoleInfo;
+  private final CommandHelper commandHelper;
+  private final SubPlanLister subPlanLister;
+
+  @Inject
+  RunCommandOptions(
+      ConsoleInfo consoleInfo, CommandHelper commandHelper, SubPlanLister subPlanLister) {
+    this.consoleInfo = consoleInfo;
+    this.commandHelper = commandHelper;
+    this.subPlanLister = subPlanLister;
+  }
+
+  void validateCommandParameters() throws MobileHarnessException {
+    if (isNullOrEmpty(config)) {
+      throw new ParameterException(
+          spec.commandLine(),
+          Ansi.AUTO.string(
+              "Param @|fg(yellow) <config>|@ right after 'run' command is required.\n"));
+    }
+    if (moduleTestOptionsGroups != null && !moduleTestOptionsGroups.isEmpty()) {
+      ImmutableList<String> tests =
+          moduleTestOptionsGroups.stream()
+              .map(group -> group.test)
+              .filter(Objects::nonNull)
+              .collect(toImmutableList());
+      if (tests.size() > 1) {
+        throw new ParameterException(
+            spec.commandLine(),
+            Ansi.AUTO.string("Only at most one test case could be specified.\n"));
+      }
+      if (tests.size() == 1 && moduleTestOptionsGroups.size() > 1) {
+        throw new ParameterException(
+            spec.commandLine(),
+            Ansi.AUTO.string("Multiple modules are unsupported if a test case is specified.\n"));
+      }
+    }
+    if (includeFilters != null
+        && !includeFilters.isEmpty()
+        && moduleTestOptionsGroups != null
+        && !moduleTestOptionsGroups.isEmpty()) {
+      throw new ParameterException(
+          spec.commandLine(),
+          Ansi.AUTO.string(
+              "Don't use '--include-filter' and '--module/-m' options at the same time.\n"));
+    }
+    if (config.equals("retry")) {
+      validateRunRetryCommandParameters();
+    }
+    if (!isNullOrEmpty(subPlanName) && !isSubPlanExist(subPlanName)) {
+      throw new ParameterException(
+          spec.commandLine(),
+          Ansi.AUTO.string(String.format("Subplan [%s] doesn't exist.\n", subPlanName)));
+    }
+    if (moduleCmdArgs != null && !moduleCmdArgs.isEmpty()) {
+      for (String moduleArg : moduleCmdArgs) {
+        if (!ModuleArg.isValid(moduleArg)) {
+          throw new ParameterException(
+              spec.commandLine(),
+              Ansi.AUTO.string(
+                  String.format(
+                      """
+                      Invalid module arguments provided. Unprocessed arguments: %s
+                      Expected format: <module_name>:<arg_name>:[<arg_key>:=]<arg_value>.
+                      """,
+                      moduleArg)));
+        }
+      }
+    }
+    validateRunCommandExtraArgs();
+  }
+
+  private void validateRunRetryCommandParameters() {
+    if (retrySessionIndex == null && isNullOrEmpty(retrySessionResultDirName)) {
+      throw new ParameterException(
+          spec.commandLine(),
+          Ansi.AUTO.string(
+              "Must provide option '--retry <retry_session_id>' or '--retry-result-dir"
+                  + " <retry_session_result_dir_name>' for retry command.\n"));
+    }
+    if (retrySessionIndex != null && !isNullOrEmpty(retrySessionResultDirName)) {
+      throw new ParameterException(
+          spec.commandLine(),
+          Ansi.AUTO.string(
+              "Option '--retry <retry_session_id>' and '--retry-result-dir"
+                  + " <retry_session_result_dir_name>' are mutually exclusive.\n"));
+    }
+    if (!isNullOrEmpty(subPlanName)) {
+      throw new ParameterException(
+          spec.commandLine(),
+          Ansi.AUTO.string(
+              "Option '--subplan <subplan_name>' is not supported in retry command.\n"));
+    }
+    if (includeFilters != null && !includeFilters.isEmpty()) {
+      throw new ParameterException(
+          spec.commandLine(),
+          Ansi.AUTO.string("Option '--include-filter' is not supported in retry command.\n"));
+    }
+  }
+
+  private void validateRunCommandExtraArgs() {
+    if (extraRunCmdArgs != null && !extraRunCmdArgs.isEmpty()) {
+      // The extra args are passed to TF behind if need to run tests via TF. Ideally we should add
+      // corresponding parameter or option in this Command class explicitly, but at the moment we
+      // may not cover all TF supported options, so we do some basic validations here.
+      if (!extraRunCmdArgs.get(0).startsWith("-")) {
+        throw new ParameterException(
+            spec.commandLine(),
+            Ansi.AUTO.string(
+                String.format(
+                    "Invalid arguments provided. Unprocessed arguments: %s\n"
+                        + "Double check if the input is valid, for example, quoting the arg value"
+                        + " if it contains space.\n",
+                    extraRunCmdArgs)));
+      }
+    }
+  }
+
+  private boolean isSubPlanExist(String subPlanName) throws MobileHarnessException {
+    Path xtsRootDir = consoleInfo.getXtsRootDirectoryNonEmpty();
+    return subPlanLister
+        .listSubPlans(xtsRootDir.toString(), commandHelper.getXtsType())
+        .contains(subPlanName);
+  }
+
+  ImmutableList<String> getModules() {
+    return moduleTestOptionsGroups != null
+        ? moduleTestOptionsGroups.stream().map(group -> group.module).collect(toImmutableList())
+        : ImmutableList.of();
+  }
+
+  String getTest() {
+    return moduleTestOptionsGroups != null && moduleTestOptionsGroups.get(0).test != null
+        ? moduleTestOptionsGroups.get(0).test
+        : "";
+  }
+
+  Optional<Boolean> isSkipDeviceInfo() {
+    // Currently skip collecting device info for plan cts-dev or set explicitly, and ideally it
+    // should parse given plan and its child plans to see if the option "skip-device-info" is set to
+    // true explicitly.
+    if (skipDeviceInfo == null && Objects.equals(config, "cts-dev")) {
+      return Optional.of(true);
+    }
+    // TODO Temporary solution to unblock app compat test post processing.
+    if (skipDeviceInfo == null && Objects.equals(config, "csuite-app-crawl")) {
+      return Optional.of(true);
+    }
+    return Optional.ofNullable(skipDeviceInfo);
+  }
 }

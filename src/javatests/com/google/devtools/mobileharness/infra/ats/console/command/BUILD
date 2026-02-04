@@ -81,11 +81,8 @@ java_library(
     srcs = ["ConsoleCommandTestModule.java"],
     deps = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:flags_string",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_info",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:module",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:server_environment_preparer",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console:annotations",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console:console_info",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_module",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",

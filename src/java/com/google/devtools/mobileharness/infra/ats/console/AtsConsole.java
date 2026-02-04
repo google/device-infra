@@ -159,9 +159,7 @@ public class AtsConsole {
             finalDeviceInfraServiceFlags,
             lineReader,
             System.out,
-            System.err,
-            resultFuture -> {},
-            /* parseCommandOnly= */ false));
+            System.err));
     modules.add(new CommonModule(asList(args), System.getenv(), systemProperties));
 
     // Creates OLC server module for embedded mode.

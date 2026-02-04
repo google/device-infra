@@ -28,7 +28,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerEnvironmentPreparer.ServerEnvironment;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleLineReader;
-import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
 import com.google.devtools.mobileharness.infra.ats.console.GuiceFactory;
 import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.AtsSessionStub;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
@@ -47,7 +46,6 @@ import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import java.io.File;
 import java.nio.file.Path;
 import javax.annotation.Nullable;
-import javax.inject.Inject;
 import org.jline.reader.LineReader;
 import org.junit.Before;
 import org.junit.Rule;
@@ -84,37 +82,33 @@ public final class RunCommandTest {
   @Mock @Bind private ResultListerHelper resultListerHelper;
   @Mock @Bind private CommandHelper commandHelper;
 
-  @Inject private ConsoleInfo consoleInfo;
   private CommandLine commandLine;
   private RunCommand runCommand;
 
   @Before
   public void setUp() {
-    Injector injector = Guice.createInjector(BoundFieldModule.of(this));
-    injector.injectMembers(this);
-
-    runCommand =
-        new GuiceFactory(
-                Guice.createInjector(
-                    BoundFieldModule.of(this),
-                    new ConsoleCommandTestModule(
-                        consoleInfo,
-                        ServerEnvironment.of(
-                            Path.of("/fake_server_binary"),
-                            Path.of("/fake_java_binary"),
-                            Path.of("/fake_working_dir")))))
-            .create(RunCommand.class);
+    Injector injector =
+        Guice.createInjector(
+            BoundFieldModule.of(this),
+            new ConsoleCommandTestModule(
+                ServerEnvironment.of(
+                    Path.of("/fake_server_binary"),
+                    Path.of("/fake_java_binary"),
+                    Path.of("/fake_working_dir"))));
     commandLine =
-        new CommandLine(runCommand)
+        new CommandLine(RunCommand.class, new GuiceFactory(injector))
             .setCaseInsensitiveEnumValuesAllowed(true)
             .setUnmatchedOptionsArePositionalParams(true);
+    runCommand = commandLine.getCommand();
   }
 
   @Test
   public void validateCommandParameters_retryCommandNotSupportSubplanOption() {
     commandLine.parseArgs("retry", "--retry", "0", "--subplan", "subplan1");
 
-    assertThat(assertThrows(ParameterException.class, () -> runCommand.validateCommandParameters()))
+    assertThat(
+            assertThrows(
+                ParameterException.class, () -> runCommand.options.validateCommandParameters()))
         .hasMessageThat()
         .contains("Option '--subplan <subplan_name>' is not supported in retry command");
   }
@@ -123,7 +117,9 @@ public final class RunCommandTest {
   public void validateCommandParameters_retryCommandRequiresSessionIdOrResultDirName() {
     commandLine.parseArgs("retry", "--shard-count", "2");
 
-    assertThat(assertThrows(ParameterException.class, () -> runCommand.validateCommandParameters()))
+    assertThat(
+            assertThrows(
+                ParameterException.class, () -> runCommand.options.validateCommandParameters()))
         .hasMessageThat()
         .contains(
             "Must provide option '--retry <retry_session_id>' or '--retry-result-dir"
@@ -142,7 +138,9 @@ public final class RunCommandTest {
         "--shard-count",
         "2");
 
-    assertThat(assertThrows(ParameterException.class, () -> runCommand.validateCommandParameters()))
+    assertThat(
+            assertThrows(
+                ParameterException.class, () -> runCommand.options.validateCommandParameters()))
         .hasMessageThat()
         .contains(
             "Option '--retry <retry_session_id>' and '--retry-result-dir"
@@ -153,7 +151,9 @@ public final class RunCommandTest {
   public void validateCommandParameters_retryCommandNotSupportIncludeFilter() {
     commandLine.parseArgs("retry", "--retry", "0", "--include-filter", "moduleA");
 
-    assertThat(assertThrows(ParameterException.class, () -> runCommand.validateCommandParameters()))
+    assertThat(
+            assertThrows(
+                ParameterException.class, () -> runCommand.options.validateCommandParameters()))
         .hasMessageThat()
         .contains("Option '--include-filter' is not supported in retry command");
   }
@@ -162,7 +162,9 @@ public final class RunCommandTest {
   public void validateCommandParameters_cannotSpecifyIncludeFilterAndModuleAtTheSameTime() {
     commandLine.parseArgs("cts", "--module", "module_a", "--include-filter", "module_b");
 
-    assertThat(assertThrows(ParameterException.class, () -> runCommand.validateCommandParameters()))
+    assertThat(
+            assertThrows(
+                ParameterException.class, () -> runCommand.options.validateCommandParameters()))
         .hasMessageThat()
         .contains("Don't use '--include-filter' and '--module/-m' options at the same time");
   }
@@ -184,7 +186,9 @@ public final class RunCommandTest {
         "CtsCompanionDeviceManagerMultiDeviceTestCases",
         "CompanionDeviceManagerTestClass#test_associate_createsAssociation_classicBluetooth");
 
-    assertThat(assertThrows(ParameterException.class, () -> runCommand.validateCommandParameters()))
+    assertThat(
+            assertThrows(
+                ParameterException.class, () -> runCommand.options.validateCommandParameters()))
         .hasMessageThat()
         .contains("Invalid arguments provided. Unprocessed arguments:");
   }
@@ -193,7 +197,9 @@ public final class RunCommandTest {
   public void validateCommandParameters_invalidModuleArgs() {
     commandLine.parseArgs("cts", "--module-arg", "arg");
 
-    assertThat(assertThrows(ParameterException.class, () -> runCommand.validateCommandParameters()))
+    assertThat(
+            assertThrows(
+                ParameterException.class, () -> runCommand.options.validateCommandParameters()))
         .hasMessageThat()
         .contains(
             "Invalid module arguments provided. Unprocessed arguments: arg\nExpected format:"

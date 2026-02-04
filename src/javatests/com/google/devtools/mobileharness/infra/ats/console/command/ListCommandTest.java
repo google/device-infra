@@ -150,9 +150,7 @@ public class ListCommandTest {
                 deviceInfraServiceFlags,
                 lineReader,
                 consoleOutPrintStream,
-                consoleErrPrintStream,
-                future -> {},
-                /* parseCommandOnly= */ false),
+                consoleErrPrintStream),
             new CommonModule(
                 /* mainArgs= */ ImmutableList.of(),
                 System.getenv(),

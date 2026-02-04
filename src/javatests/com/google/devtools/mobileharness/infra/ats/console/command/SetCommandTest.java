@@ -59,20 +59,16 @@ public final class SetCommandTest {
 
   @Before
   public void setUp() {
-    Injector injector = Guice.createInjector(BoundFieldModule.of(this));
+    Injector injector =
+        Guice.createInjector(
+            BoundFieldModule.of(this),
+            new ConsoleCommandTestModule(
+                ServerEnvironment.of(
+                    Path.of("/fake_server_binary"),
+                    Path.of("/fake_java_binary"),
+                    Path.of("/fake_working_dir"))));
     injector.injectMembers(this);
-    commandLine =
-        new CommandLine(
-            RootCommand.class,
-            new GuiceFactory(
-                Guice.createInjector(
-                    BoundFieldModule.of(this),
-                    new ConsoleCommandTestModule(
-                        consoleInfo,
-                        ServerEnvironment.of(
-                            Path.of("/fake_server_binary"),
-                            Path.of("/fake_java_binary"),
-                            Path.of("/fake_working_dir"))))));
+    commandLine = new CommandLine(RootCommand.class, new GuiceFactory(injector));
   }
 
   @Test

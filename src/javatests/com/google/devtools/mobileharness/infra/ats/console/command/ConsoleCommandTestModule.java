@@ -17,18 +17,13 @@
 package com.google.devtools.mobileharness.infra.ats.console.command;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.mobileharness.infra.ats.common.FlagsString;
-import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.OlcServerConnectorModule;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerEnvironmentPreparer;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerEnvironmentPreparer.NoOpServerEnvironmentPreparer;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerEnvironmentPreparer.ServerEnvironment;
-import com.google.devtools.mobileharness.infra.ats.console.Annotations.ParseCommandOnly;
-import com.google.devtools.mobileharness.infra.ats.console.Annotations.RunCommandParsingResultFuture;
-import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportModule;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
@@ -36,16 +31,13 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import java.time.InstantSource;
-import java.util.function.Consumer;
 
 /** Console command module for testing. */
 public class ConsoleCommandTestModule extends AbstractModule {
 
-  private final ConsoleInfo consoleInfo;
   private final ServerEnvironment serverEnvironment;
 
-  ConsoleCommandTestModule(ConsoleInfo consoleInfo, ServerEnvironment serverEnvironment) {
-    this.consoleInfo = consoleInfo;
+  ConsoleCommandTestModule(ServerEnvironment serverEnvironment) {
     this.serverEnvironment = serverEnvironment;
   }
 
@@ -64,11 +56,6 @@ public class ConsoleCommandTestModule extends AbstractModule {
   }
 
   @Provides
-  ConsoleInfo provideConsoleInfo() {
-    return consoleInfo;
-  }
-
-  @Provides
   ListeningExecutorService provideThreadPool() {
     return ThreadPools.createStandardThreadPool("main-thread");
   }
@@ -81,18 +68,6 @@ public class ConsoleCommandTestModule extends AbstractModule {
   @Provides
   Sleeper provideSleeper() {
     return Sleeper.defaultSleeper();
-  }
-
-  @Provides
-  @RunCommandParsingResultFuture
-  Consumer<ListenableFuture<SessionRequestInfo.Builder>> provideResultFuture() {
-    return resultFuture -> {};
-  }
-
-  @Provides
-  @ParseCommandOnly
-  Boolean provideParseCommandOnly() {
-    return false;
   }
 
   @Provides
