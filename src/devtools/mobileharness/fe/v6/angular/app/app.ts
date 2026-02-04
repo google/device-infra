@@ -31,13 +31,19 @@ import {MatMenuModule} from '@angular/material/menu';
 import {MatSidenavModule} from '@angular/material/sidenav';
 import {MatToolbarModule} from '@angular/material/toolbar';
 import {MatTooltipModule} from '@angular/material/tooltip';
-import {ActivatedRoute, RouterModule} from '@angular/router';
+import {
+  ActivatedRoute,
+  NavigationEnd,
+  Router,
+  RouterModule,
+} from '@angular/router';
 // an example of using absolute path for source code import.
 import {
   APP_DATA,
   type AppData,
 } from 'app/core/models/app_data';
 import {ReplaySubject} from 'rxjs';
+import {filter, takeUntil} from 'rxjs/operators';
 
 /** Homepage */
 @Component({
@@ -67,19 +73,60 @@ export class App implements OnDestroy {
   private readonly destroy = new ReplaySubject<void>();
   private readonly route: ActivatedRoute = inject(ActivatedRoute);
   private readonly cdr: ChangeDetectorRef = inject(ChangeDetectorRef);
+  private readonly router: Router = inject(Router);
   readonly appData: AppData = inject(APP_DATA);
   showVersionInfo = true;
   isEmbeddedMode = true;
+  isFakeData = false;
+  showContent = true;
 
   get isStandaloneMode(): boolean {
     return !this.isEmbeddedMode;
   }
 
   constructor() {
-    this.route.queryParamMap.subscribe((params) => {
-      this.isEmbeddedMode = params.get('is_embedded_mode') === 'true';
+    this.route.queryParamMap
+      .pipe(takeUntil(this.destroy))
+      .subscribe((params) => {
+        this.isEmbeddedMode = params.get('is_embedded_mode') === 'true';
+        this.isFakeData = params.get('fake_data') === 'true';
+        this.updateShowContent();
+        this.cdr.markForCheck();
+      });
+
+    this.router.events
+      .pipe(
+        filter((event) => event instanceof NavigationEnd),
+        takeUntil(this.destroy),
+      )
+      .subscribe(() => {
+        this.updateShowContent();
+      });
+  }
+
+  updateShowContent() {
+    if (this.isFakeData) {
+      this.showContent = true;
       this.cdr.markForCheck();
-    });
+      return;
+    }
+
+    let route = this.router.routerState.snapshot.root;
+    while (route.firstChild) {
+      route = route.firstChild;
+    }
+
+    const path = route.routeConfig?.path;
+    const params = route.params;
+
+    if (path === 'devices/:id' && params['id']) {
+      this.showContent = true;
+    } else if (path === 'hosts/:hostName' && params['hostName']) {
+      this.showContent = true;
+    } else {
+      this.showContent = false;
+    }
+    this.cdr.markForCheck();
   }
 
   logout() {
