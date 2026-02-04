@@ -446,7 +446,7 @@ public final class AtsServerSessionPluginTest {
     assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
     assertThat(requestDetail.getErrorReason()).isEqualTo(ErrorReason.INVALID_REQUEST);
     assertThat(requestDetail.getErrorMessage())
-        .isEqualTo("No jobs were created for session： session_id ");
+        .isEqualTo("No jobs were created for session: session_id ");
   }
 
   @Test
