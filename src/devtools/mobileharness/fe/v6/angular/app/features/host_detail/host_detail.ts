@@ -3,15 +3,17 @@ import {
   ChangeDetectionStrategy,
   Component,
   inject,
+  OnDestroy,
   OnInit,
 } from '@angular/core';
 import {MatButtonModule} from '@angular/material/button';
 import {MatDialog} from '@angular/material/dialog';
 import {MatIconModule} from '@angular/material/icon';
 import {MatMenuModule} from '@angular/material/menu';
+import {Title} from '@angular/platform-browser';
 import {ActivatedRoute, RouterModule} from '@angular/router';
-import {Observable, of} from 'rxjs';
-import {catchError, map, switchMap} from 'rxjs/operators';
+import {combineLatest, Observable, of, ReplaySubject} from 'rxjs';
+import {catchError, map, switchMap, takeUntil} from 'rxjs/operators';
 
 import {type HostOverview} from '../../core/models/host_overview';
 import {Environment} from '../../core/services/environment';
@@ -45,11 +47,13 @@ interface HostPageData {
     RouterModule,
   ],
 })
-export class HostDetail implements OnInit {
+export class HostDetail implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly dialog = inject(MatDialog);
   private readonly hostService = inject(HOST_SERVICE);
   private readonly environment = inject(Environment);
+  private readonly titleService = inject(Title);
+  private readonly destroyed = new ReplaySubject<void>(1);
 
   readonly hostPageData$: Observable<HostPageData> = this.route.paramMap.pipe(
     map((params) => params.get('hostName')),
@@ -76,7 +80,29 @@ export class HostDetail implements OnInit {
     }),
   );
 
-  ngOnInit() {}
+  ngOnInit() {
+    combineLatest([
+      this.route.paramMap.pipe(map((params) => params.get('hostName'))),
+      this.route.queryParamMap.pipe(
+        map((params) => params.get('is_embedded_mode') === 'true'),
+      ),
+    ])
+      .pipe(takeUntil(this.destroyed))
+      .subscribe(([hostName, isEmbedded]) => {
+        // for embedded mode, we don't need to set the title.
+        if (!isEmbedded && hostName) {
+          this.titleService.setTitle(`OmniLab Console - Host ${hostName}`);
+        } else {
+          this.titleService.setTitle(`OmniLab Console`);
+        }
+      });
+  }
+
+  ngOnDestroy() {
+    this.destroyed.next();
+    this.destroyed.complete();
+    this.titleService.setTitle(`OmniLab Console`);
+  }
 
   resetConfiguration(hostName: string) {
     this.dialog

@@ -3,15 +3,18 @@ import {
   ChangeDetectionStrategy,
   Component,
   inject,
+  OnDestroy,
+  OnInit,
   signal,
   ViewChild,
 } from '@angular/core';
 import {MatIconModule} from '@angular/material/icon';
 import {MatMenuModule} from '@angular/material/menu';
 import {MatTooltipModule} from '@angular/material/tooltip';
+import {Title} from '@angular/platform-browser';
 import {ActivatedRoute, RouterModule} from '@angular/router';
-import {Observable, of} from 'rxjs';
-import {catchError, map, switchMap} from 'rxjs/operators';
+import {combineLatest, Observable, of, ReplaySubject} from 'rxjs';
+import {catchError, map, switchMap, takeUntil} from 'rxjs/operators';
 
 import {dateUtils} from 'app/shared/utils/date_utils';
 import {DeviceOverviewPageData} from '../../core/models/device_overview';
@@ -48,15 +51,41 @@ declare interface DevicePageData {
   styleUrl: './device_detail_page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class DeviceDetailPage {
+export class DeviceDetailPage implements OnInit, OnDestroy {
   @ViewChild(DeviceActionBar) actionBar!: DeviceActionBar;
   private readonly route = inject(ActivatedRoute);
   private readonly deviceService = inject(DEVICE_SERVICE);
   private readonly snackBar = inject(SnackBarService);
+  private readonly titleService = inject(Title);
+  private readonly destroyed = new ReplaySubject<void>(1);
 
   activeTab = signal<'overview' | 'test-history' | 'health' | 'record'>(
     'overview',
   );
+
+  ngOnInit() {
+    combineLatest([
+      this.route.paramMap.pipe(map((params) => params.get('id'))),
+      this.route.queryParamMap.pipe(
+        map((params) => params.get('is_embedded_mode') === 'true'),
+      ),
+    ])
+      .pipe(takeUntil(this.destroyed))
+      .subscribe(([id, isEmbedded]) => {
+        // for embedded mode, we don't need to set the title.
+        if (!isEmbedded && id) {
+          this.titleService.setTitle(`OmniLab Console - Device ${id}`);
+        } else {
+          this.titleService.setTitle(`OmniLab Console`);
+        }
+      });
+  }
+
+  ngOnDestroy() {
+    this.destroyed.next();
+    this.destroyed.complete();
+    this.titleService.setTitle(`OmniLab Console`);
+  }
 
   readonly devicePageData$: Observable<DevicePageData> =
     this.route.paramMap.pipe(
