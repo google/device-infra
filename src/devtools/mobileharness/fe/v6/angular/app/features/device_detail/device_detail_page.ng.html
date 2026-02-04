@@ -26,20 +26,22 @@
 
         <div class="card-body">
           <!-- Legacy Console Banner -->
-          <div class="legacy-page-banner">
-            <mat-icon class="legacy-page-banner-icon">info</mat-icon>
-            <span>
-                This is the new OmniLab Console. If needed, you can
-              <a
-                href="#"
-                id="legacy-link"
-                target="_blank"
-                class="legacy-link"
-                >
-                view this device in the legacy page
-                </a>.
-            </span>
-          </div>
+          @if (legacyFeUrl) {
+            <div class="legacy-page-banner">
+              <mat-icon class="legacy-page-banner-icon">info</mat-icon>
+              <span>
+                  This is the new OmniLab Console. If needed, you can
+                <a
+                  href="{{legacyFeUrl}}/labdetailview/{{device.host.name}}/{{device.host.ip}}/{{device.id}}"
+                  id="legacy-link"
+                  target="_blank"
+                  class="legacy-link"
+                  >
+                  view this device in the legacy page
+                  </a>.
+              </span>
+            </div>
+          }
 
           <!-- Device Title Bar -->
           <div class="device-title-bar">

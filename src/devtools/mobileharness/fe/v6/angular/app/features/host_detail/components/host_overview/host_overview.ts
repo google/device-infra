@@ -327,6 +327,11 @@ export class HostOverviewPage implements OnInit, OnChanges {
 
   // --- Lab Server Card ---
 
+  getLogUrl(type: 'lab' | 'daemon'): string {
+
+    return '';
+  }
+
   getStatusSemantic(status: HostConnectivityStatus | DaemonServerStatus) {
     const config = STATUS_SEMANTIC_MAP[status.state];
     const duration =

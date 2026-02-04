@@ -367,7 +367,7 @@ export class DeviceOverviewTab implements OnInit, OnDestroy, OnChanges {
         this.filterDrivers(this.driversSearchTerm);
       } else {
         this.filteredDrivers.set([
-          ...this.device.capabilities.supportedDrivers,
+          ...(this.device.capabilities.supportedDrivers || []),
         ]);
       }
 
@@ -375,7 +375,7 @@ export class DeviceOverviewTab implements OnInit, OnDestroy, OnChanges {
         this.filterDecorators(this.decoratorsSearchTerm);
       } else {
         this.filteredDecorators.set([
-          ...this.device.capabilities.supportedDecorators,
+          ...(this.device.capabilities.supportedDecorators || []),
         ]);
       }
     }
@@ -386,7 +386,7 @@ export class DeviceOverviewTab implements OnInit, OnDestroy, OnChanges {
     if (!this.device || !this.device.capabilities) return;
 
     this.filteredDrivers.set(
-      this.device.capabilities.supportedDrivers.filter((d) =>
+      (this.device.capabilities.supportedDrivers || []).filter((d) =>
         d.toLowerCase().includes(lowerTerm),
       ),
     );
@@ -397,7 +397,7 @@ export class DeviceOverviewTab implements OnInit, OnDestroy, OnChanges {
     if (!this.device || !this.device.capabilities) return;
 
     this.filteredDecorators.set(
-      this.device.capabilities.supportedDecorators.filter((d) =>
+      (this.device.capabilities.supportedDecorators || []).filter((d) =>
         d.toLowerCase().includes(lowerTerm),
       ),
     );

@@ -58,6 +58,11 @@ export declare interface AppData {
   readonly startMode?: string;
 }
 
+/** Gets the legacy FE url. */
+export function getLegacyFeUrl(applicationId: string): string {
+  return '';
+}
+
 
 const OSS_DEFAULTS = {
   // for OSS, we use the localhost:8080 as the default lab console server url.
@@ -88,13 +93,14 @@ export function getAppData(): AppData {
     // we should not set the default value for overrideLabConsoleServerUrl,
     // because, as its name suggested, if the overrideLabConsoleServerUrl is not
     // set, we should use the default lab console server url.
-    overrideLabConsoleServerUrl: rawData.overrideLabConsoleServerUrl ??
-        defaults.overrideLabConsoleServerUrl,
+    overrideLabConsoleServerUrl:
+      rawData.overrideLabConsoleServerUrl ??
+      defaults.overrideLabConsoleServerUrl,
     // compute the labConsoleServerUrl via labConsoleServerPort and
     // overrideLabConsoleServerUrl.
-    labConsoleServerUrl: rawData.overrideLabConsoleServerUrl ??
-        `${window.location.protocol}//${window.location.hostname}:${
-                             labConsoleServerPort}`,
+    labConsoleServerUrl:
+      rawData.overrideLabConsoleServerUrl ??
+      `${window.location.protocol}//${window.location.hostname}:${labConsoleServerPort}`,
     applicationId: rawData.applicationId ?? defaults.applicationId,
     email: rawData.email ?? defaults.email,
     userDisplayName: rawData.userDisplayName ?? defaults.userDisplayName,

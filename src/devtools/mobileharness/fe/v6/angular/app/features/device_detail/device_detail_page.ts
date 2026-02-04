@@ -17,6 +17,7 @@ import {combineLatest, Observable, of, ReplaySubject} from 'rxjs';
 import {catchError, map, switchMap, takeUntil} from 'rxjs/operators';
 
 import {dateUtils} from 'app/shared/utils/date_utils';
+import {APP_DATA, getLegacyFeUrl} from '../../core/models/app_data';
 import {DeviceOverviewPageData} from '../../core/models/device_overview';
 import {DEVICE_SERVICE} from '../../core/services/device/device_service';
 import {SnackBarService} from '../../shared/services/snackbar_service';
@@ -58,6 +59,9 @@ export class DeviceDetailPage implements OnInit, OnDestroy {
   private readonly snackBar = inject(SnackBarService);
   private readonly titleService = inject(Title);
   private readonly destroyed = new ReplaySubject<void>(1);
+  private readonly appData = inject(APP_DATA);
+
+  readonly legacyFeUrl = getLegacyFeUrl(this.appData.applicationId ?? '');
 
   activeTab = signal<'overview' | 'test-history' | 'health' | 'record'>(
     'overview',

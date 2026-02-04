@@ -217,9 +217,9 @@ export declare interface BasicDeviceInfo {
  */
 export declare interface PermissionInfo {
   /** List of users/groups who own the device and can change its config. */
-  owners: string[];
+  owners?: string[];
   /** List of users/groups who can execute tests on the device. */
-  executors: string[];
+  executors?: string[];
 }
 
 /**
@@ -227,9 +227,9 @@ export declare interface PermissionInfo {
  */
 export declare interface CapabilitiesInfo {
   /** Test drivers compatible with this device. */
-  supportedDrivers: string[];
+  supportedDrivers?: string[];
   /** Decorators that can be applied to tests running on this device. */
-  supportedDecorators: string[];
+  supportedDecorators?: string[];
 }
 
 /**

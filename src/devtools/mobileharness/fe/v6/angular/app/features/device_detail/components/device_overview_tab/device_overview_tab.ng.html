@@ -312,7 +312,7 @@
           <h4 class="capabilities-title">
             Supported Drivers ({{ filteredDrivers().length }})
           </h4>
-          @if (device.capabilities && device.capabilities.supportedDrivers.length) {
+          @if (device.capabilities && device.capabilities.supportedDrivers) {
             <mat-form-field appearance="outline" class="overview-search-field" subscriptSizing="dynamic">
               <input
                 matInput
@@ -349,7 +349,7 @@
           <h4 class="capabilities-title">
             Supported Decorators ({{ filteredDecorators().length }})
           </h4>
-          @if (device.capabilities && device.capabilities.supportedDecorators.length) {
+          @if (device.capabilities && device.capabilities.supportedDecorators) {
             <mat-form-field appearance="outline" class="overview-search-field" subscriptSizing="dynamic">
               <input
                 matInput

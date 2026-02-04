@@ -218,9 +218,9 @@ export class FakeDeviceService extends DeviceService {
     const isFlashable = overview.healthAndActivity.deviceTypes.some(
       (t) => t.type === 'AndroidFlashableDevice',
     );
-    const screenshotable = overview.capabilities.supportedDecorators.includes(
-      'AndroidScreenshotDecorator',
-    );
+    const screenshotable = (
+      overview.capabilities.supportedDecorators || []
+    ).includes('AndroidScreenshotDecorator');
 
     const remoteControlEnabled = isAndroid && isIdle;
     const screenshotEnabled = isAndroid && !isMissing && screenshotable;
