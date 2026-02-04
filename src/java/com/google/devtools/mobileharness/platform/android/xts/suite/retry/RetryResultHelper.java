@@ -146,12 +146,14 @@ public final class RetryResultHelper {
       }
       if (types.contains("failed")) {
         statusesToRun.add(TestStatus.convertToTestStatusCompatibilityString(TestStatus.FAILURE));
+        statusesToRun.add(TestStatus.convertToTestStatusCompatibilityString(TestStatus.WARNING));
       }
     } else {
       if (types.contains("failed")) {
         statusesToRun.add(TestStatus.convertToTestStatusCompatibilityString(TestStatus.FAILURE));
         statusesToRun.add(TestStatus.convertToTestStatusCompatibilityString(TestStatus.INCOMPLETE));
         statusesToRun.add(TestStatus.convertToTestStatusCompatibilityString(TestStatus.SKIPPED));
+        statusesToRun.add(TestStatus.convertToTestStatusCompatibilityString(TestStatus.WARNING));
       }
       if (types.contains("not_executed")) {
         statusesToRun.add(TestStatus.convertToTestStatusCompatibilityString(TestStatus.INCOMPLETE));

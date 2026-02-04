@@ -20,10 +20,8 @@ import static com.google.common.base.Strings.isNullOrEmpty;
 import static java.lang.Math.max;
 
 import com.google.auto.value.AutoValue;
-import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMultimap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -37,19 +35,18 @@ import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportPr
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Reason;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
-import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.StackTrace;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Summary;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Test;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.TestCase;
-import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.TestFailure;
-import com.google.devtools.mobileharness.infra.ats.console.result.proto.ResultProto.MoblyResult;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ResultProto.ModuleRunResult;
-import com.google.devtools.mobileharness.platform.android.xts.common.TestStatus;
+import com.google.devtools.mobileharness.infra.ats.console.result.report.moblytestentryconverter.DefaultMoblyTestEntryConverter;
+import com.google.devtools.mobileharness.infra.ats.console.result.report.moblytestentryconverter.MoblyTestEntryConverter;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.protobuf.TextFormat;
 import com.google.protobuf.TextFormat.ParseException;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.Map;
@@ -66,9 +63,6 @@ import javax.inject.Inject;
 public class MoblyReportParser {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
-
-  private static final ImmutableSet<String> MOBLY_ABORT_SIGNAL_TYPE =
-      ImmutableSet.of("TestAbortClass", "TestAbortAll");
 
   private final LocalFileUtil localFileUtil;
   private final MoblyYamlParser moblyYamlParser;
@@ -194,14 +188,28 @@ public class MoblyReportParser {
       moduleBuilder
           .setRuntimeMillis(runtime)
           .addAllTestCase(
-              getTestCases(testEntriesMapBuilder.build(), moblyReportInfo.regardAbortAsFail()));
-      if (moblyReportInfo.regardAbortAsFail()) {
-        moduleBuilder.setFailedTests(
-            (int)
-                moduleBuilder.getTestCaseList().stream()
-                    .flatMap(testCase -> testCase.getTestList().stream())
-                    .filter(test -> test.getResult().equals(getTestStatus(MoblyResult.FAIL)))
-                    .count());
+              getTestCases(
+                  testEntriesMapBuilder.build(),
+                  getMoblyTestEntryConverter(moblyReportInfo.moblyTestEntryConverterClass())));
+      if (moblyReportInfo.moblyTestEntryConverterClass().isPresent()) {
+        // Recalculate counts in module if the converter is specified.
+        int passedTests = 0;
+        int failedTests = 0;
+        int warningTests = 0;
+        for (TestCase testCase : moduleBuilder.getTestCaseList()) {
+          for (Test test : testCase.getTestList()) {
+            switch (test.getResult()) {
+              case "pass" -> passedTests++;
+              case "fail" -> failedTests++;
+              case "warning" -> warningTests++;
+              default -> {}
+            }
+          }
+        }
+        moduleBuilder
+            .setPassed(passedTests)
+            .setFailedTests(failedTests)
+            .setWarningTests(warningTests);
       }
       Module module = moduleBuilder.build();
       resultBuilder
@@ -209,6 +217,7 @@ public class MoblyReportParser {
               Summary.newBuilder()
                   .setPassed(module.getPassed())
                   .setFailed(module.getFailedTests())
+                  .setWarning(module.getWarningTests())
                   .setModulesDone(module.getDone() ? 1 : 0)
                   .setModulesTotal(1))
           .addModuleInfo(module);
@@ -243,37 +252,15 @@ public class MoblyReportParser {
    * Generates a list of {@link TestCase} where each one represents one test class, and all of them
    * belong to the same module.
    */
-  private static ImmutableList<TestCase> getTestCases(
-      ImmutableMultimap<String, MoblyTestEntry> testEntries, boolean regardAbortAsFail) {
+  private ImmutableList<TestCase> getTestCases(
+      ImmutableMultimap<String, MoblyTestEntry> testEntries,
+      MoblyTestEntryConverter moblyTestEntryConverter) {
     ImmutableList.Builder<TestCase> testCases = ImmutableList.builder();
     for (Map.Entry<String, Collection<MoblyTestEntry>> entry : testEntries.asMap().entrySet()) {
       TestCase.Builder testCaseBuilder = TestCase.newBuilder().setName(entry.getKey());
       ImmutableList.Builder<Test> testListBuilder = ImmutableList.builder();
       for (MoblyTestEntry testEntry : entry.getValue()) {
-        MoblyResult result = testEntry.getResult();
-        if (regardAbortAsFail
-            && result == MoblyResult.SKIP
-            && testEntry.getTerminationSignalType().isPresent()
-            && MOBLY_ABORT_SIGNAL_TYPE.contains(testEntry.getTerminationSignalType().get())) {
-          result = MoblyResult.FAIL;
-        }
-        Test.Builder testBuilder =
-            Test.newBuilder().setName(testEntry.getTestName()).setResult(getTestStatus(result));
-        if (result == MoblyResult.SKIP) {
-          testBuilder.setSkipped(true);
-        }
-        if (testEntry.getStacktrace().isPresent()) {
-          String stackTrace = testEntry.getStacktrace().get();
-          testBuilder.setFailure(
-              TestFailure.newBuilder()
-                  .setMsg(
-                      testEntry
-                          .getDetails()
-                          // Use the first line of stack trace as error message if no details
-                          .orElse(Splitter.on('\n').splitToList(stackTrace).get(0)))
-                  .setStackTrace(StackTrace.newBuilder().setContent(stackTrace)));
-        }
-        testListBuilder.add(testBuilder.build());
+        testListBuilder.add(moblyTestEntryConverter.convert(testEntry));
       }
       testCaseBuilder.addAllTest(testListBuilder.build());
       testCases.add(testCaseBuilder.build());
@@ -281,15 +268,37 @@ public class MoblyReportParser {
     return testCases.build();
   }
 
-  private static String getTestStatus(MoblyResult moblyResult) {
-    return TestStatus.convertMoblyResultToTestStatusCompatibilityString(moblyResult);
+  private MoblyTestEntryConverter getMoblyTestEntryConverter(
+      Optional<String> moblyTestEntryConverterClassName) throws MobileHarnessException {
+    if (moblyTestEntryConverterClassName.isPresent()) {
+      try {
+        return Class.forName(moblyTestEntryConverterClassName.get())
+            .asSubclass(MoblyTestEntryConverter.class)
+            .getDeclaredConstructor()
+            .newInstance();
+      } catch (ClassNotFoundException
+          | NoSuchMethodException
+          | InstantiationException
+          | IllegalAccessException
+          | IllegalArgumentException
+          | InvocationTargetException e) {
+        throw new MobileHarnessException(
+            ExtErrorId.MOBLY_REPORT_PARSER_INVALID_CONVERTER_CLASS_ERROR,
+            String.format(
+                "Failed to create Mobly test entry converter: %s",
+                moblyTestEntryConverterClassName.get()),
+            e);
+      }
+    }
+    return new DefaultMoblyTestEntryConverter();
   }
 
   /** Data class for the xTS report parse result. */
   @AutoValue
   public abstract static class MoblyReportInfo {
 
-    public static final String PARAM_REGARD_ABORT_AS_FAIL = "regard_abort_as_fail";
+    public static final String MOBLY_TEST_ENTRY_CONVERTER_CLASS_PARAM =
+        "mobly_test_entry_converter_class";
 
     /** Creates a {@link ParseResult}. */
     public static MoblyReportInfo of(
@@ -301,7 +310,7 @@ public class MoblyReportParser {
         Optional<String> deviceBuildFingerprint,
         Optional<Path> buildAttributesFile,
         Optional<Path> moduleResultFile,
-        boolean regardAbortAsFail) {
+        Optional<String> moblyTestEntryConverterClass) {
       return new AutoValue_MoblyReportParser_MoblyReportInfo(
           moblyPackageName,
           moduleAbi,
@@ -311,7 +320,7 @@ public class MoblyReportParser {
           deviceBuildFingerprint,
           buildAttributesFile,
           moduleResultFile,
-          regardAbortAsFail);
+          moblyTestEntryConverterClass);
     }
 
     /** The name of Mobly package to which the {@code moblySummaryFile} belongs to. */
@@ -356,7 +365,7 @@ public class MoblyReportParser {
      */
     public abstract Optional<Path> moduleResultFile();
 
-    /** Whether to regard abort test cases as fail. */
-    public abstract boolean regardAbortAsFail();
+    /** The class name of the Mobly test entry converter. */
+    public abstract Optional<String> moblyTestEntryConverterClass();
   }
 }

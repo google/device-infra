@@ -21,7 +21,7 @@ java_library(
     name = "test_status",
     srcs = ["TestStatus.java"],
     visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result/report:__pkg__",
     ],
@@ -34,7 +34,7 @@ java_library(
     name = "device_build_info",
     srcs = ["DeviceBuildInfo.java"],
     visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/plugin:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/plugin:__pkg__",
     ],

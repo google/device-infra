@@ -4,6 +4,9 @@ Requested Tests:
 - test_hello_world1_2
 - test_hello_world1_3
 - test_hello_world2_1
+- test_hello_world2_2
+- test_hello_world2_3
+- test_hello_world2_4
 Type: TestNameList
 ...
 ---
@@ -76,11 +79,62 @@ Type: Record
 UID: null
 ...
 ---
-Error: 1
-Executed: 4
-Failed: 0
+Begin Time: 1765357235896
+Details: null
+End Time: 1765357235898
+Extra Errors: {}
+Extras: null
+Parent: null
+Result: FAIL
+Retry Parent: null
+Signature: test_hello_world2_2-1765357235896
+Stacktrace: "Aborting all tests due to 5G AP is not ready for this test."
+Termination Signal Type: TestAbortAll
+Test Class: HelloWorldTest2
+Test Name: test_hello_world2_2
+Type: Record
+UID: null
+...
+---
+Begin Time: 1765357235898
+Details: null
+End Time: 1765357235899
+Extra Errors: {}
+Extras: null
+Parent: null
+Result: FAIL
+Retry Parent: null
+Signature: test_hello_world2_3-1765357235898
+Stacktrace: "Low success rate: 0.00% is lower than the target 98.00%."
+Termination Signal Type: TestFailure
+Test Class: HelloWorldTest2
+Test Name: test_hello_world2_3
+Type: Record
+UID: null
+...
+---
+Begin Time: 1765357235899
+Details: null
+End Time: 1765357235900
+Extra Errors: {}
+Extras: null
+Parent: null
+Result: ERROR
+Retry Parent: null
+Signature: test_hello_world2_4-1765357235899
+Stacktrace: "API error"
+Termination Signal Type: ApiError
+Test Class: HelloWorldTest2
+Test Name: test_hello_world2_4
+Type: Record
+UID: null
+...
+---
+Error: 2
+Executed: 7
+Failed: 2
 Passed: 0
-Requested: 4
+Requested: 7
 Skipped: 3
 Type: Summary
 ...
