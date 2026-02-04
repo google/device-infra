@@ -65,7 +65,9 @@ public class AllocatedDeviceProvider implements DeviceProvider {
                 () ->
                     new MobileHarnessException(
                         InfraErrorId.LAB_DEVICE_PROVIDER_GET_DEVICE_ERROR,
-                        "Device class_name not found in dimensions"));
+                        String.format(
+                            "Dimension 'device_class_name' missing from DeviceFeature:\n%s",
+                            feature)));
     Class<? extends Device> deviceClass = ClassUtil.getDeviceClass(deviceClassName);
     DeviceInfo isolatedInfo = LiteDeviceInfoFactory.create(deviceId);
     feature
