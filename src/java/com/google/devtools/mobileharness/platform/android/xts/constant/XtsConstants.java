@@ -46,6 +46,15 @@ public class XtsConstants {
 
   public static final String TRADEFED_RUNTIME_INFO_FILE_NAME = "tf_runtime_info";
 
+  /**
+   * A MH test property key of TF test module results file name.
+   *
+   * <p>Use {@linkplain
+   * com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedTestModuleResultsMonitor
+   * XtsTradefedTestModuleResultsMonitor} to read its content.
+   */
+  public static final String TRADEFED_TEST_MODULE_RESULTS_FILE_NAME = "tf_test_module_results";
+
   public static final String INVOCATION_SUMMARY_FILE_NAME = "invocation_summary.txt";
 
   /** A MH job property key to indicate whether Mobly resultstore upload is enabled. */

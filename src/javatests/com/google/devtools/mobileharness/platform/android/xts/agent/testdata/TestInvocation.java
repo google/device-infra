@@ -22,6 +22,7 @@ import static com.google.devtools.mobileharness.platform.android.xts.agent.testd
 import static com.google.devtools.mobileharness.platform.android.xts.agent.testdata.FakeTradefed.INVOCATION_UNCHECKED_EXCEPTION_MESSAGE;
 
 import com.android.tradefed.result.CollectingTestListener;
+import com.google.devtools.mobileharness.platform.android.xts.agent.testdata.FakeConfiguration;
 import com.google.devtools.mobileharness.platform.android.xts.agent.testdata.FakeInvocationContext;
 
 public class TestInvocation {
@@ -29,8 +30,10 @@ public class TestInvocation {
   private volatile String status = "init";
 
   @SuppressWarnings("unused")
-  public void invoke(FakeInvocationContext context, int param2, int param3, int param4)
-      throws InterruptedException {
+  public void invoke(
+      FakeInvocationContext context, FakeConfiguration config, Object param3, Object param4)
+      throws Exception {
+    System.out.println("DEBUG: TestInvocation.invoke started");
     if (context.getSerials().contains(DEVICE_ID_TO_TRIGGER_UNCHECKED_INVOCATION_EXCEPTION)) {
       throw new RuntimeException(INVOCATION_UNCHECKED_EXCEPTION_MESSAGE);
     }
@@ -40,9 +43,28 @@ public class TestInvocation {
           .invocationFailed(new InterruptedException(INVOCATION_CHECKED_EXCEPTION_MESSAGE));
     }
 
+    // Simulate module execution
+    FakeInvocationContext moduleContext =
+        new FakeInvocationContext(context.getInvocationId(), context.getSerials());
+    moduleContext.addAttribute("module-id", "module1");
+    moduleContext.addAttribute("module-name", "module1");
+
+    for (Object listener : config.getTestInvocationListeners()) {
+      // Using reflection keying off method name to be safe or casing
+      listener
+          .getClass()
+          .getMethod("testModuleStarted", Object.class)
+          .invoke(listener, moduleContext);
+    }
+
     // Briefly sleeps to make sure the monitoring agent will be reading (and writing to file) the
     // "init" status to avoid flaky tests.
     Thread.sleep(1_000L);
+
+    for (Object listener : config.getTestInvocationListeners()) {
+      listener.getClass().getMethod("testModuleEnded").invoke(listener);
+    }
+
     status = "running";
     status = "finished";
   }
