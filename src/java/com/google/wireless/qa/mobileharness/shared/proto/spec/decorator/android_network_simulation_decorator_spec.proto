@@ -51,4 +51,9 @@ message AndroidNetworkSimulationDecoratorSpec {
   // Traffic rule for down traffic.
   optional TrafficRule down = 2
       [(field_detail) = { help: "Traffic rule for down traffic." }];
+
+  // TODO Experiment, remove once feature is tested.
+  optional bool experimental_all_ips = 3 [(field_detail) = {
+    help: "Experimental feature to apply network simulation to all device IPs."
+  }];
 }
