@@ -153,12 +153,14 @@ public class HealthStatusManager {
 
   /** Check if all handlers has drained. */
   private boolean allHandlersHasDrained() {
+    boolean allDrained = true;
     for (DrainHandler handler : drainHandlers) {
       if (!handler.hasDrained()) {
-        return false;
+        logger.atInfo().log("Handler %s has not drained yet.", handler);
+        allDrained = false;
       }
     }
-    return true;
+    return allDrained;
   }
 
   /** Check if any handler has expired for drain. */
