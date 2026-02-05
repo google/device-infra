@@ -118,68 +118,70 @@
       suffix: 'xl'
     }"></ng-container>
 
-    <button
-      class="m3-action-button transparent dropdown-trigger"
-      [matMenuTriggerFor]="moreMenu"
-      matTooltip="Show more actions"
-    >
-      <span>More</span>
-      <mat-icon>expand_more</mat-icon>
-    </button>
-    <mat-menu #moreMenu="matMenu">
-      <ng-container *ngTemplateOutlet="actionItem; context: {
-        key: 'flash',
-        icon: 'flash_on',
-        label: 'Flash',
-        handler: onFlash,
-        mode: 'menu',
-        suffix: 'xl'
-      }"></ng-container>
+    @if (hasXlMoreMenuItems()) {
+      <button
+        class="m3-action-button transparent dropdown-trigger"
+        [matMenuTriggerFor]="moreMenu"
+        matTooltip="Show more actions"
+      >
+        <span>More</span>
+        <mat-icon>expand_more</mat-icon>
+      </button>
+      <mat-menu #moreMenu="matMenu">
+        <ng-container *ngTemplateOutlet="actionItem; context: {
+          key: 'flash',
+          icon: 'flash_on',
+          label: 'Flash',
+          handler: onFlash,
+          mode: 'menu',
+          suffix: 'xl'
+        }"></ng-container>
 
-      <ng-container *ngTemplateOutlet="actionItem; context: {
-        key: 'logcat',
-        icon: 'description',
-        label: 'Get Logcat',
-        handler: onLogcat,
-        mode: 'menu',
-        loading: gettingLogcat(),
-        loadingLabel: 'Fetching...',
-        suffix: 'xl'
-      }"></ng-container>
+        <ng-container *ngTemplateOutlet="actionItem; context: {
+          key: 'logcat',
+          icon: 'description',
+          label: 'Get Logcat',
+          handler: onLogcat,
+          mode: 'menu',
+          loading: gettingLogcat(),
+          loadingLabel: 'Fetching...',
+          suffix: 'xl'
+        }"></ng-container>
 
-      @if (actions?.quarantine?.visible) {
-        @if (quarantineInfo?.isQuarantined) {
-          <ng-container *ngTemplateOutlet="actionItem; context: {
-            key: 'quarantine',
-            icon: 'play_circle_outline',
-            label: 'Unquarantine',
-            handler: onQuarantine,
-            mode: 'menu',
-            loading: unquarantining(),
-            loadingLabel: 'Working...',
-            suffix: 'xl'
-          }"></ng-container>
+        @if (actions?.quarantine?.visible) {
+          @if (quarantineInfo?.isQuarantined) {
+            <ng-container *ngTemplateOutlet="actionItem; context: {
+              key: 'quarantine',
+              icon: 'play_circle_outline',
+              label: 'Unquarantine',
+              handler: onQuarantine,
+              mode: 'menu',
+              loading: unquarantining(),
+              loadingLabel: 'Working...',
+              suffix: 'xl'
+            }"></ng-container>
 
-          <ng-container *ngTemplateOutlet="actionItem; context: {
-            key: 'quarantine',
-            icon: 'edit_calendar',
-            label: 'Change Duration',
-            handler: onChangeQuarantine,
-            mode: 'menu',
-            suffix: 'xl'
-          }"></ng-container>
-        } @else {
-          <ng-container *ngTemplateOutlet="actionItem; context: {
-            key: 'quarantine',
-            icon: 'block',
-            label: 'Quarantine',
-            handler: onQuarantine,
-            mode: 'menu',
-            suffix: 'xl'
-          }"></ng-container>
+            <ng-container *ngTemplateOutlet="actionItem; context: {
+              key: 'quarantine',
+              icon: 'edit_calendar',
+              label: 'Change Duration',
+              handler: onChangeQuarantine,
+              mode: 'menu',
+              suffix: 'xl'
+            }"></ng-container>
+          } @else {
+            <ng-container *ngTemplateOutlet="actionItem; context: {
+              key: 'quarantine',
+              icon: 'block',
+              label: 'Quarantine',
+              handler: onQuarantine,
+              mode: 'menu',
+              suffix: 'xl'
+            }"></ng-container>
+          }
         }
-      }
-    </mat-menu>
+      </mat-menu>
+    }
   </div>
 
   <!-- small view -->
@@ -193,88 +195,90 @@
       suffix: 'sm'
     }"></ng-container>
 
-    <button
-      class="m3-action-button transparent dropdown-trigger"
-      [matMenuTriggerFor]="actionsMenu"
-      matTooltip="Show more actions"
-    >
-      <span>Take Action</span>
-      <mat-icon>expand_more</mat-icon>
-    </button>
-    <mat-menu #actionsMenu="matMenu">
-      <ng-container *ngTemplateOutlet="actionItem; context: {
-        key: 'screenshot',
-        icon: 'screenshot',
-        label: 'Screenshot',
-        handler: onScreenshot,
-        mode: 'menu',
-        loading: takingScreenshot(),
-        loadingLabel: 'Taking...',
-        suffix: 'sm'
-      }"></ng-container>
+    @if (hasSmActionMenuItems()) {
+      <button
+        class="m3-action-button transparent dropdown-trigger"
+        [matMenuTriggerFor]="actionsMenu"
+        matTooltip="Show more actions"
+      >
+        <span>Take Action</span>
+        <mat-icon>expand_more</mat-icon>
+      </button>
+      <mat-menu #actionsMenu="matMenu">
+        <ng-container *ngTemplateOutlet="actionItem; context: {
+          key: 'screenshot',
+          icon: 'screenshot',
+          label: 'Screenshot',
+          handler: onScreenshot,
+          mode: 'menu',
+          loading: takingScreenshot(),
+          loadingLabel: 'Taking...',
+          suffix: 'sm'
+        }"></ng-container>
 
-      <ng-container *ngTemplateOutlet="actionItem; context: {
-        key: 'remoteControl',
-        icon: 'important_devices',
-        label: 'Remote Control',
-        handler: onRemoteControl,
-        mode: 'menu',
-        suffix: 'sm'
-      }"></ng-container>
+        <ng-container *ngTemplateOutlet="actionItem; context: {
+          key: 'remoteControl',
+          icon: 'important_devices',
+          label: 'Remote Control',
+          handler: onRemoteControl,
+          mode: 'menu',
+          suffix: 'sm'
+        }"></ng-container>
 
-      <ng-container *ngTemplateOutlet="actionItem; context: {
-        key: 'flash',
-        icon: 'flash_on',
-        label: 'Flash',
-        handler: onFlash,
-        mode: 'menu',
-        suffix: 'sm'
-      }"></ng-container>
+        <ng-container *ngTemplateOutlet="actionItem; context: {
+          key: 'flash',
+          icon: 'flash_on',
+          label: 'Flash',
+          handler: onFlash,
+          mode: 'menu',
+          suffix: 'sm'
+        }"></ng-container>
 
-      <ng-container *ngTemplateOutlet="actionItem; context: {
-        key: 'logcat',
-        icon: 'description',
-        label: 'Get Logcat',
-        handler: onLogcat,
-        mode: 'menu',
-        loading: gettingLogcat(),
-        loadingLabel: 'Fetching...',
-        suffix: 'sm'
-      }"></ng-container>
+        <ng-container *ngTemplateOutlet="actionItem; context: {
+          key: 'logcat',
+          icon: 'description',
+          label: 'Get Logcat',
+          handler: onLogcat,
+          mode: 'menu',
+          loading: gettingLogcat(),
+          loadingLabel: 'Fetching...',
+          suffix: 'sm'
+        }"></ng-container>
 
-      @if (actions?.quarantine?.visible) {
-        @if (quarantineInfo?.isQuarantined) {
-          <ng-container *ngTemplateOutlet="actionItem; context: {
-            key: 'quarantine',
-            icon: 'play_circle_outline',
-            label: 'Unquarantine',
-            handler: onQuarantine,
-            mode: 'menu',
-            loading: unquarantining(),
-            loadingLabel: 'Working...',
-            suffix: 'sm'
-          }"></ng-container>
+        @if (actions?.quarantine?.visible) {
+          @if (quarantineInfo?.isQuarantined) {
+            <ng-container *ngTemplateOutlet="actionItem; context: {
+              key: 'quarantine',
+              icon: 'play_circle_outline',
+              label: 'Unquarantine',
+              handler: onQuarantine,
+              mode: 'menu',
+              loading: unquarantining(),
+              loadingLabel: 'Working...',
+              suffix: 'sm'
+            }"></ng-container>
 
-          <ng-container *ngTemplateOutlet="actionItem; context: {
-            key: 'quarantine',
-            icon: 'edit_calendar',
-            label: 'Change Duration',
-            handler: onChangeQuarantine,
-            mode: 'menu',
-            suffix: 'sm'
-          }"></ng-container>
-        } @else {
-          <ng-container *ngTemplateOutlet="actionItem; context: {
-            key: 'quarantine',
-            icon: 'block',
-            label: 'Quarantine',
-            handler: onQuarantine,
-            mode: 'menu',
-            suffix: 'sm'
-          }"></ng-container>
+            <ng-container *ngTemplateOutlet="actionItem; context: {
+              key: 'quarantine',
+              icon: 'edit_calendar',
+              label: 'Change Duration',
+              handler: onChangeQuarantine,
+              mode: 'menu',
+              suffix: 'sm'
+            }"></ng-container>
+          } @else {
+            <ng-container *ngTemplateOutlet="actionItem; context: {
+              key: 'quarantine',
+              icon: 'block',
+              label: 'Quarantine',
+              handler: onQuarantine,
+              mode: 'menu',
+              suffix: 'sm'
+            }"></ng-container>
+          }
         }
-      }
-    </mat-menu>
+      </mat-menu>
+    }
   </div>
 </div>
 

@@ -2,6 +2,7 @@ import {CommonModule} from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   inject,
   Input,
   signal,
@@ -96,6 +97,30 @@ export class DeviceActionBar {
       key
     ];
   }
+
+  isActionVisible(key: keyof DeviceActions): boolean {
+    return this.getAction(key)?.visible ?? false;
+  }
+
+  readonly hasXlMoreMenuItems = computed(() => {
+    const visible =
+      this.isActionVisible('flash') ||
+      this.isActionVisible('logcat') ||
+      this.isActionVisible('quarantine');
+    console.log('hasXlMoreMenuItems executed, result:', visible);
+    return visible;
+  });
+
+  readonly hasSmActionMenuItems = computed(() => {
+    const visible =
+      this.isActionVisible('screenshot') ||
+      this.isActionVisible('remoteControl') ||
+      this.isActionVisible('flash') ||
+      this.isActionVisible('logcat') ||
+      this.isActionVisible('quarantine');
+    console.log('hasSmActionMenuItems executed, result:', visible);
+    return visible;
+  });
 
   openConfiguration(): void {
     const deviceId = this.deviceId;

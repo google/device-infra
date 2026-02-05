@@ -14,7 +14,8 @@
             <span>({{ host.ip }})</span>
           </div>
 
-          <div class="header-actions">
+          <!-- TODO: Remove visibility hidden once the UI is ready. -->
+          <div class="header-actions" style="visibility: hidden">
             <!-- 2xl view -->
             <div class="header-actions-2xl">
               <button class="m3-action-button filled" (click)="openConfiguration(host.hostName)">
