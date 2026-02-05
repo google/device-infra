@@ -20,6 +20,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
@@ -34,8 +35,10 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdb
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidContent;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DumpSysType;
 import com.google.devtools.mobileharness.platform.android.shared.autovalue.UtilArgs;
+import com.google.devtools.mobileharness.platform.android.systemsetting.ScreenResolutionUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil.KillSignal;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
+import com.google.wireless.qa.mobileharness.shared.util.ScreenResolution;
 import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Duration;
@@ -60,13 +63,16 @@ public final class AndroidMediaUtilTest {
   @Mock private Sleeper sleeper;
   @Mock private Clock clock;
   @Mock private AndroidProcessUtil androidProcessUtil;
+  @Mock private ScreenResolutionUtil screenResolutionUtil;
 
   private static final String SERIAL = "363005dc750400ec";
   private AndroidMediaUtil androidMediaUtil;
 
   @Before
   public void setUp() {
-    androidMediaUtil = new AndroidMediaUtil(adb, adbUtil, sleeper, clock, androidProcessUtil);
+    androidMediaUtil =
+        new AndroidMediaUtil(
+            adb, adbUtil, sleeper, clock, androidProcessUtil, screenResolutionUtil);
   }
 
   @Test
@@ -222,7 +228,10 @@ public final class AndroidMediaUtilTest {
     String outputFileOnDevice = "/path/to/device/file";
     int bitRate = 4000000;
 
-    androidMediaUtil = spy(new AndroidMediaUtil(adb, adbUtil, sleeper, clock, androidProcessUtil));
+    androidMediaUtil =
+        spy(
+            new AndroidMediaUtil(
+                adb, adbUtil, sleeper, clock, androidProcessUtil, screenResolutionUtil));
     InOrder inOrder = Mockito.inOrder(androidMediaUtil, sleeper);
 
     androidMediaUtil.recordScreenVr(SERIAL, outputFileOnDevice, bitRate);
@@ -234,6 +243,8 @@ public final class AndroidMediaUtilTest {
 
   @Test
   public void rotateScreen() throws Exception {
+    when(screenResolutionUtil.getScreenResolution(SERIAL))
+        .thenReturn(ScreenResolution.create(1080, 2340));
     when(adbUtil.content(any(UtilArgs.class), any(AndroidContent.class)))
         .thenReturn("")
         .thenThrow(
@@ -246,6 +257,50 @@ public final class AndroidMediaUtilTest {
                     () -> androidMediaUtil.rotateScreen(SERIAL, ScreenOrientation.PORTRAIT))
                 .getErrorId())
         .isEqualTo(AndroidErrorId.ANDROID_MEDIA_UTIL_ROTATE_SCREEN_ERROR);
+  }
+
+  @Test
+  public void rotateScreen_screenResolutionInitWidthLargerThanHeight_useReversedLandscape()
+      throws Exception {
+    when(screenResolutionUtil.getScreenResolution(SERIAL))
+        .thenReturn(ScreenResolution.create(2208, 1840));
+
+    androidMediaUtil.rotateScreen(SERIAL, ScreenOrientation.LANDSCAPE);
+
+    // Use reversed landscape, which is portrait.
+    verify(adbUtil)
+        .content(
+            any(UtilArgs.class),
+            argThat(
+                contentArgs ->
+                    contentArgs.equals(
+                        AndroidContent.builder()
+                            .setCommand(AndroidContent.Command.INSERT)
+                            .setUri(AndroidMediaUtil.ANDROID_CONTENT_PROVIDER_SETTING)
+                            .setOtherArgument("--bind name:s:user_rotation --bind value:i:0")
+                            .build())));
+  }
+
+  @Test
+  public void rotateScreen_screenResolutionInitWidthLargerThanHeight_useReversedPortrait()
+      throws Exception {
+    when(screenResolutionUtil.getScreenResolution(SERIAL))
+        .thenReturn(ScreenResolution.create(2208, 1840));
+
+    androidMediaUtil.rotateScreen(SERIAL, ScreenOrientation.PORTRAIT);
+
+    // Use reversed portrait, which is landscape.
+    verify(adbUtil)
+        .content(
+            any(UtilArgs.class),
+            argThat(
+                contentArgs ->
+                    contentArgs.equals(
+                        AndroidContent.builder()
+                            .setCommand(AndroidContent.Command.INSERT)
+                            .setUri(AndroidMediaUtil.ANDROID_CONTENT_PROVIDER_SETTING)
+                            .setOtherArgument("--bind name:s:user_rotation --bind value:i:1")
+                            .build())));
   }
 
   @Test

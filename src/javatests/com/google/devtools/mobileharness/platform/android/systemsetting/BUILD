@@ -21,13 +21,14 @@ package(default_applicable_licenses = ["//:license"])
 java_library(
     name = "systemsetting",
     testonly = 1,
-    srcs = ["AndroidSystemSettingUtilTest.java"],
+    srcs = glob(["*.java"]),
     deps = [
         "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:enums",
         "//src/java/com/google/devtools/mobileharness/platform/android/shared/autovalue:util_args",
+        "//src/java/com/google/devtools/mobileharness/platform/android/systemsetting:screen_resolution_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/systemsetting:system_setting_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/systemstate:system_state_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",

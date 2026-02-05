@@ -209,20 +209,6 @@ public class AndroidSystemSettingUtil {
 
   private static final String LEGACY_STORAGE_OUTPUT_PATTERN = "LEGACY_STORAGE:\\s(?<MODE>\\w+)";
 
-  /** Regex pattern that is used for detecting device height for api level < 15. */
-  private static final Pattern PATTERN_DISPLAY_HEIGHT_MATCH =
-      Pattern.compile("DisplayHeight=([0-9]+)");
-
-  /** Regex pattern that is used for detecting device width for api level < 15. */
-  private static final Pattern PATTERN_DISPLAY_WIDTH_MATCH =
-      Pattern.compile("DisplayWidth=([0-9]+)");
-
-  /** Regex pattern that is used for detecting device resolution for api level >= 15. */
-  private static final Pattern PATTERN_RESOLUTION_MATCH =
-      Pattern.compile(
-          "init=(?<initWidth>[0-9]+)x(?<initHeight>[0-9]+).*"
-              + "cur=(?<curWidth>[0-9]+)x(?<curHeight>[0-9]+)");
-
   /** The pattern of time zone offset for the device. */
   private static final Pattern PATTERN_TIME_ZONE_OFFSET =
       Pattern.compile("^(\\+|-)((?:[0-1]\\d)|(?:2[0-3]))([0-5]\\d)$");
@@ -312,13 +298,16 @@ public class AndroidSystemSettingUtil {
 
   private final AndroidSystemStateUtil systemStateUtil;
 
+  private final ScreenResolutionUtil screenResolutionUtil;
+
   public AndroidSystemSettingUtil() {
     this(
         new Adb(),
         Sleeper.defaultSleeper(),
         Clock.systemUTC(),
         new AndroidAdbUtil(),
-        new AndroidSystemStateUtil());
+        new AndroidSystemStateUtil(),
+        new ScreenResolutionUtil());
   }
 
   @VisibleForTesting
@@ -327,12 +316,14 @@ public class AndroidSystemSettingUtil {
       Sleeper sleeper,
       Clock clock,
       AndroidAdbUtil adbUtil,
-      AndroidSystemStateUtil systemStateUtil) {
+      AndroidSystemStateUtil systemStateUtil,
+      ScreenResolutionUtil screenResolutionUtil) {
     this.adb = adb;
     this.sleeper = sleeper;
     this.clock = clock;
     this.adbUtil = adbUtil;
     this.systemStateUtil = systemStateUtil;
+    this.screenResolutionUtil = screenResolutionUtil;
   }
 
   /**
@@ -1128,70 +1119,12 @@ public class AndroidSystemSettingUtil {
   /**
    * Get the screen resolution of the given device. It works on api level >=15 and 10.
    *
-   * @param serial the serial number of the device
-   * @return the screen resolution
-   * @throws MobileHarnessException if window information dumped can't be parsed as expected.
-   * @throws InterruptedException if current thread is interrupted during this method
+   * @deprecated Use {@link ScreenResolutionUtil#getScreenResolution(String)} instead.
    */
+  @Deprecated
   public ScreenResolution getScreenResolution(String serial)
       throws MobileHarnessException, InterruptedException {
-    String windowInfo = "";
-    try {
-      windowInfo = adbUtil.dumpSys(serial, DumpSysType.WINDOW);
-    } catch (MobileHarnessException e) {
-      throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_SYSTEM_SETTING_DUMPSYS_WINDOW_ERROR, e.getMessage(), e);
-    }
-    /*
-     * Sample segment of windowInfo for PATTERN_RESOLUTION_MATCH:
-     * WINDOW MANAGER DISPLAY CONTENTS (dumpsys window displays)
-     * Display: mDisplayId=0
-     * init=1080x1920 420dpi cur=1080x1920 app=1080x1794 rng=1080x1017-1794x1731
-     * deferred=false layoutNeeded=false
-     * mStacks[1]1
-     * mStackId=1
-     * mDeferDetach=false
-     */
-    Matcher matcher = PATTERN_RESOLUTION_MATCH.matcher(windowInfo);
-    if (matcher.find()) {
-      int width = Integer.parseInt(matcher.group("initWidth"));
-      int height = Integer.parseInt(matcher.group("initHeight"));
-      int curWidth = Integer.parseInt(matcher.group("curWidth"));
-      int curHeight = Integer.parseInt(matcher.group("curHeight"));
-      ScreenResolution resolution =
-          ScreenResolution.createWithOverride(width, height, curWidth, curHeight);
-      logger.atInfo().log("Detect device resolution: %s", resolution);
-      return resolution;
-    } else {
-      /*
-       * Sample segment of windowInfo for PATTERN_DISPLAY_WIDTH_MATCH:
-       *  mSystemBooted=true mDisplayEnabled=true
-       *  mLayoutNeeded=false mBlurShown=false
-       *  no DimAnimator
-       *  mInputMethodAnimLayerAdjustment=0  mWallpaperAnimLayerAdjustment=0
-       *  mLastWallpaperX=0.5 mLastWallpaperY=0.0
-       *  mDisplayFrozen=false mWindowsFreezingScreen=false mAppsFreezingScreen=0
-       *  mRotation=0, mForcedAppOrientation=5, mRequestedRotation=0
-       *  mAnimationPending=false mWindowAnimationScale=1.0 mTransitionWindowAnimationScale=1.0
-       *  mNextAppTransition=0xffffffff, mAppTransitionReady=false, mAppTransitionRunning=false
-       *  mStartingIconInTransition=false, mSkipAppTransitionAnimation=false
-       *  DisplayWidth=480 DisplayHeight=800
-       */
-      Matcher widthMatcher = PATTERN_DISPLAY_WIDTH_MATCH.matcher(windowInfo);
-      Matcher heightMatcher = PATTERN_DISPLAY_HEIGHT_MATCH.matcher(windowInfo);
-      if (widthMatcher.find() && heightMatcher.find()) {
-        int width = Integer.parseInt(widthMatcher.group(1));
-        int height = Integer.parseInt(heightMatcher.group(1));
-        ScreenResolution resolution = ScreenResolution.create(width, height);
-        logger.atInfo().log("Detect device resolution: %s", resolution);
-        return resolution;
-      } else {
-        logger.atWarning().log("Invalid window information: %s", windowInfo);
-        throw new MobileHarnessException(
-            AndroidErrorId.ANDROID_SYSTEM_SETTING_PARSE_RESOLUTION_ERROR,
-            "Fail to parse device resolution from sys window information: " + windowInfo);
-      }
-    }
+    return screenResolutionUtil.getScreenResolution(serial);
   }
 
   /**

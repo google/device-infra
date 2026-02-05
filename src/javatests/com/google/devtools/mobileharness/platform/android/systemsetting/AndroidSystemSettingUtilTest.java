@@ -42,7 +42,6 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.IntentArgs
 import com.google.devtools.mobileharness.platform.android.shared.autovalue.UtilArgs;
 import com.google.devtools.mobileharness.platform.android.systemstate.AndroidSystemStateUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
-import com.google.wireless.qa.mobileharness.shared.util.ScreenResolution;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -66,6 +65,7 @@ public class AndroidSystemSettingUtilTest {
   @Mock private Clock clock;
   @Mock private AndroidAdbUtil adbUtil;
   @Mock private AndroidSystemStateUtil systemStateUtil;
+  @Mock private ScreenResolutionUtil screenResolutionUtil;
 
   private static final String DEVICE_ID = "device_id";
   private static final String TEST_PACKAGE_NAME = "package.name";
@@ -78,7 +78,9 @@ public class AndroidSystemSettingUtilTest {
 
   @Before
   public void setUp() {
-    settingUtil = new AndroidSystemSettingUtil(adb, sleeper, clock, adbUtil, systemStateUtil);
+    settingUtil =
+        new AndroidSystemSettingUtil(
+            adb, sleeper, clock, adbUtil, systemStateUtil, screenResolutionUtil);
   }
 
   @Test
@@ -521,35 +523,6 @@ public class AndroidSystemSettingUtilTest {
         .hasValue(AppOperationMode.ALLOW);
     assertThat(settingUtil.getPackageOperationMode(DEVICE_ID, TEST_PACKAGE_NAME, "NON_EXIST_OP"))
         .isEmpty();
-  }
-
-  @Test
-  public void getScreenResolution_resolutionPattern() throws Exception {
-    when(adbUtil.dumpSys(DEVICE_ID, DumpSysType.WINDOW))
-        .thenReturn("xyz init=1080x1920 420dpi cur=540x960 app=1080x1794");
-
-    assertThat(settingUtil.getScreenResolution(DEVICE_ID))
-        .isEqualTo(ScreenResolution.createWithOverride(1080, 1920, 540, 960));
-  }
-
-  @Test
-  public void getScreenResolution_displayPattern() throws Exception {
-    when(adbUtil.dumpSys(DEVICE_ID, DumpSysType.WINDOW))
-        .thenReturn("xyz DisplayWidth=123 xyz DisplayHeight=321 xyz");
-
-    assertThat(settingUtil.getScreenResolution(DEVICE_ID))
-        .isEqualTo(ScreenResolution.create(123, 321));
-  }
-
-  @Test
-  public void getScreenResolution_invalidWindowInfo_throwsException() throws Exception {
-    when(adbUtil.dumpSys(DEVICE_ID, DumpSysType.WINDOW)).thenReturn("xyz xyz");
-
-    assertThat(
-            assertThrows(
-                    MobileHarnessException.class, () -> settingUtil.getScreenResolution(DEVICE_ID))
-                .getErrorId())
-        .isEqualTo(AndroidErrorId.ANDROID_SYSTEM_SETTING_PARSE_RESOLUTION_ERROR);
   }
 
   @Test

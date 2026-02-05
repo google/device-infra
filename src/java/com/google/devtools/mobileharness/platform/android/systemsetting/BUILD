@@ -29,6 +29,7 @@ java_library(
     ],
     deps = [
         ":enums",
+        ":screen_resolution_util",
         "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_util",
@@ -55,5 +56,23 @@ java_library(
     ],
     visibility = [
         "//:deviceinfra_pkg",
+    ],
+)
+
+java_library(
+    name = "screen_resolution_util",
+    srcs = ["ScreenResolutionUtil.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/platform/android/media:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/media:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/systemsetting:__pkg__",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:enums",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/util:resolution",
+        "@maven//:com_google_guava_guava",
     ],
 )

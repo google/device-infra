@@ -28,11 +28,13 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidCon
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DumpSysType;
 import com.google.devtools.mobileharness.platform.android.shared.autovalue.UtilArgs;
+import com.google.devtools.mobileharness.platform.android.systemsetting.ScreenResolutionUtil;
 import com.google.devtools.mobileharness.shared.util.base.StrUtil;
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil.KillSignal;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import com.google.wireless.qa.mobileharness.shared.util.ScreenResolution;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -95,13 +97,16 @@ public class AndroidMediaUtil {
 
   private final AndroidProcessUtil androidProcessUtil;
 
+  private final ScreenResolutionUtil screenResolutionUtil;
+
   public AndroidMediaUtil() {
     this(
         new Adb(),
         new AndroidAdbUtil(),
         Sleeper.defaultSleeper(),
         Clock.systemUTC(),
-        new AndroidProcessUtil());
+        new AndroidProcessUtil(),
+        new ScreenResolutionUtil());
   }
 
   @VisibleForTesting
@@ -110,12 +115,14 @@ public class AndroidMediaUtil {
       AndroidAdbUtil adbUtil,
       Sleeper sleeper,
       Clock clock,
-      AndroidProcessUtil androidProcessUtil) {
+      AndroidProcessUtil androidProcessUtil,
+      ScreenResolutionUtil screenResolutionUtil) {
     this.adb = adb;
     this.adbUtil = adbUtil;
     this.sleeper = sleeper;
     this.clock = clock;
     this.androidProcessUtil = androidProcessUtil;
+    this.screenResolutionUtil = screenResolutionUtil;
   }
 
   /**
@@ -284,6 +291,21 @@ public class AndroidMediaUtil {
    */
   public void rotateScreen(String serial, ScreenOrientation orientation)
       throws MobileHarnessException, InterruptedException {
+    ScreenResolution screenResolution = screenResolutionUtil.getScreenResolution(serial);
+    // For TV-like and unfolded foldable device whose init screen width > screen height, they use
+    // reversed orientation id(b/474525405).
+    if (screenResolution.width() > screenResolution.height()
+        && (orientation.equals(ScreenOrientation.PORTRAIT)
+            || orientation.equals(ScreenOrientation.LANDSCAPE))) {
+      orientation =
+          orientation.equals(ScreenOrientation.PORTRAIT)
+              ? ScreenOrientation.LANDSCAPE
+              : ScreenOrientation.PORTRAIT;
+      logger.atInfo().log(
+          "Device %s has init screen width > screen height, use reversed orientation %s",
+          serial, orientation);
+    }
+
     AndroidContent contentArgs =
         AndroidContent.builder()
             .setCommand(AndroidContent.Command.INSERT)
