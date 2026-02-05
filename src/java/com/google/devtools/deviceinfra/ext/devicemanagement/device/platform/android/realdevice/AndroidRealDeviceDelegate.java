@@ -283,7 +283,9 @@ public abstract class AndroidRealDeviceDelegate {
         // Bad connection devices could not be detected sometime.
         throw new MobileHarnessException(
             AndroidErrorId.ANDROID_REAL_DEVICE_DELEGATE_UNDETECTED_DURING_INIT,
-            "Device is undetectable. Please replug the usb cable or reboot the device.");
+            String.format(
+                "Device %s is undetectable. Please replug the usb cable or reboot the device.",
+                deviceId));
       }
     }
 
