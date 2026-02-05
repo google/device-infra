@@ -13,6 +13,9 @@
 # limitations under the License.
 #
 
+load("@rules_java//java:defs.bzl", "java_plugin")
+load("@rules_java//java:java_library.bzl", "java_library")
+
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = ["//:deviceinfra_all_pkg"],

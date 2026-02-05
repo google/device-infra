@@ -15,6 +15,7 @@
 
 # Description:
 #   Protos for Mobile Harness Master V5 Central.
+load("@protobuf//bazel:cc_proto_library.bzl", "cc_proto_library")
 load("@protobuf//bazel:java_proto_library.bzl", "java_proto_library")
 load("@protobuf//bazel:proto_library.bzl", "proto_library")
 
@@ -45,6 +46,11 @@ proto_library(
         "//src/devtools/mobileharness/api/model/proto:device_proto",
         "//src/devtools/mobileharness/api/model/proto:test_proto",
     ],
+)
+
+cc_proto_library(
+    name = "device_cc_proto",
+    deps = [":device_proto"],
 )
 
 java_proto_library(
