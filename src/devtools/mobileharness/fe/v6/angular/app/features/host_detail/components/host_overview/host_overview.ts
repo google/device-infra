@@ -423,10 +423,10 @@ export class HostOverviewPage implements OnInit, OnChanges {
     this.isDeviceLoading.set(true);
     this.hostService
       .getHostDeviceSummaries(this.host.hostName)
-      .pipe(delay(2000), takeUntilDestroyed(this.destroyRef))
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (devices) => {
-          this.deviceDataSource.data = devices;
+        next: (response) => {
+          this.deviceDataSource.data = response.deviceSummaries;
           this.isDeviceLoading.set(false);
         },
         error: (err) => {

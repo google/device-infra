@@ -5,7 +5,7 @@ import {Observable} from 'rxjs';
 import {APP_DATA, AppData} from '../../models/app_data';
 import {
   CheckRemoteControlEligibilityResponse,
-  DeviceSummary,
+  GetHostDeviceSummariesResponse,
   HostOverview,
   RemoteControlDevicesRequest,
   RemoteControlDevicesResponse,
@@ -30,8 +30,10 @@ export class HttpHostService extends HostService {
 
   override getHostDeviceSummaries(
     hostName: string,
-  ): Observable<DeviceSummary[]> {
-    return this.http.get<DeviceSummary[]>(`${this.apiUrl}/${hostName}/devices`);
+  ): Observable<GetHostDeviceSummariesResponse> {
+    return this.http.get<GetHostDeviceSummariesResponse>(
+      `${this.apiUrl}/${hostName}/devices`,
+    );
   }
 
   override updatePassThroughFlags(

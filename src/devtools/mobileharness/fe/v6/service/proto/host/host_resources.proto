@@ -236,18 +236,6 @@ message DeviceEligibilityResult {
   repeated SubDeviceEligibilityResult sub_device_results = 6;
 }
 
-// Response for remote control eligibility check.
-message CheckRemoteControlEligibilityResponse {
-  // The overall verdict dictating the frontend flow.
-  EligibilityStatus status = 1;
-  // Consolidated list of results for ALL requested devices.
-  // Always populated.
-  repeated DeviceEligibilityResult results = 2;
-  // Session options derived from the intersection of all ELIGIBLE devices.
-  // Present only if status is 'READY'.
-  SessionOptions session_options = 3;
-}
-
 // Flash options for remote control.
 message FlashOptions {
   string branch = 1;
@@ -262,14 +250,4 @@ message RemoteControlDeviceConfig {
   string run_as = 2;
   // Optional parent device ID (e.g. for sub-devices belonging to a testbed).
   string parent_device_id = 3;
-}
-
-// Response containing results of remote control session startup.
-message RemoteControlDevicesResponse {
-  message SessionResult {
-    string device_id = 1;
-    string session_url = 2;
-    string error_message = 3;
-  }
-  repeated SessionResult sessions = 1;
 }

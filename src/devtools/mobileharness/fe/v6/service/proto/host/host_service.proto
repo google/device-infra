@@ -127,6 +127,18 @@ message CheckRemoteControlEligibilityRequest {
   repeated string device_control_ids = 2;
 }
 
+// Response for remote control eligibility check.
+message CheckRemoteControlEligibilityResponse {
+  // The overall verdict dictating the frontend flow.
+  EligibilityStatus status = 1;
+  // Consolidated list of results for ALL requested devices.
+  // Always populated.
+  repeated DeviceEligibilityResult results = 2;
+  // Session options derived from the intersection of all ELIGIBLE devices.
+  // Present only if status is 'READY'.
+  SessionOptions session_options = 3;
+}
+
 // Request to start remote control sessions for multiple devices.
 message RemoteControlDevicesRequest {
   string host_name = 1;
@@ -136,4 +148,14 @@ message RemoteControlDevicesRequest {
   string video_resolution = 5;
   string max_video_size = 6;
   FlashOptions flash_options = 7;
+}
+
+// Response containing results of remote control session startup.
+message RemoteControlDevicesResponse {
+  message SessionResult {
+    string device_id = 1;
+    string session_url = 2;
+    string error_message = 3;
+  }
+  repeated SessionResult sessions = 1;
 }

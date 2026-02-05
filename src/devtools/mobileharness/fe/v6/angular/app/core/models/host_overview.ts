@@ -170,6 +170,13 @@ export declare interface DeviceSummary {
 }
 
 /**
+ * Response for GetHostDeviceSummaries API.
+ */
+export declare interface GetHostDeviceSummariesResponse {
+  deviceSummaries: DeviceSummary[];
+}
+
+/**
  * Represents the comprehensive data required to render the Host Detail Page's
  * overview section. This is the top-level interface for host overview data.
  * Corresponds to HostOverview in host_resources.proto.

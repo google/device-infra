@@ -3,7 +3,7 @@ import {Observable} from 'rxjs';
 
 import {
   CheckRemoteControlEligibilityResponse,
-  DeviceSummary,
+  GetHostDeviceSummariesResponse,
   HostOverview,
   RemoteControlDevicesRequest,
   RemoteControlDevicesResponse,
@@ -28,7 +28,7 @@ export abstract class HostService {
    */
   abstract getHostDeviceSummaries(
     hostName: string,
-  ): Observable<DeviceSummary[]>;
+  ): Observable<GetHostDeviceSummariesResponse>;
 
   /**
    * Updates the pass through flags for a specific host.

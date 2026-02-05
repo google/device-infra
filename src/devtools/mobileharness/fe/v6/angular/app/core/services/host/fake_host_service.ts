@@ -5,8 +5,8 @@ import {
   CheckRemoteControlEligibilityResponse,
   DeviceEligibilityResult,
   DeviceProxyType,
-  DeviceSummary,
   EligibilityStatus,
+  GetHostDeviceSummariesResponse,
   HostOverview,
   RemoteControlDevicesRequest,
   RemoteControlDevicesResponse,
@@ -49,12 +49,12 @@ export class FakeHostService extends HostService {
 
   override getHostDeviceSummaries(
     hostName: string,
-  ): Observable<DeviceSummary[]> {
+  ): Observable<GetHostDeviceSummariesResponse> {
     const scenario = MOCK_HOST_SCENARIOS.find((s) => s.hostName === hostName);
     if (scenario && scenario.deviceSummaries) {
-      return of(scenario.deviceSummaries);
+      return of({deviceSummaries: scenario.deviceSummaries});
     }
-    return of([]);
+    return of({deviceSummaries: []});
   }
 
   override updatePassThroughFlags(

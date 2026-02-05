@@ -57,13 +57,13 @@ describe('HttpHostService', () => {
     const mockDeviceSummaries: DeviceSummary[] = [
       {id: 'device-1'} as DeviceSummary,
     ];
-    service.getHostDeviceSummaries('test-host').subscribe((devices) => {
-      expect(devices).toEqual(mockDeviceSummaries);
+    service.getHostDeviceSummaries('test-host').subscribe((response) => {
+      expect(response).toEqual({deviceSummaries: mockDeviceSummaries});
     });
     const req = httpMock.expectOne(
       'http://testdomain.com/v6/hosts/test-host/devices',
     );
     expect(req.request.method).toBe('GET');
-    req.flush(mockDeviceSummaries);
+    req.flush({deviceSummaries: mockDeviceSummaries});
   });
 });
