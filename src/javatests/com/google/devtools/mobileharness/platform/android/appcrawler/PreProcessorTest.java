@@ -17,11 +17,13 @@
 package com.google.devtools.mobileharness.platform.android.appcrawler;
 
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
+import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstallArgs;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstaller;
-import com.google.wireless.qa.mobileharness.shared.api.device.Device;
-import com.google.wireless.qa.mobileharness.shared.api.device.NoOpDevice;
+import com.google.wireless.qa.mobileharness.shared.api.device.AndroidDevice;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -44,6 +46,8 @@ public class PreProcessorTest {
   @Rule public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   @Mock private ApkInstaller apkInstaller;
+  @Mock private Adb adb;
+  @Mock private AndroidDevice device;
   private PreProcessor preProcessor;
 
   private String crawlerPath;
@@ -53,13 +57,14 @@ public class PreProcessorTest {
   public void setUp() throws Exception {
     crawlerPath = temporaryFolder.newFile("crawler.apk").toPath().toString();
     stubPath = temporaryFolder.newFile("stub.apk").toPath().toString();
-    preProcessor = new PreProcessor(apkInstaller);
+    preProcessor = new PreProcessor(apkInstaller, adb);
+    when(device.getDeviceId()).thenReturn("device_id");
   }
 
   @Test
-  public void installApks_completes() throws Exception {
+  public void installApks_completesForApiLevel28() throws Exception {
     TestInfo testInfo = setUpJobInfo().tests().add("some test");
-    Device device = new NoOpDevice("device_name");
+    when(device.getSdkVersion()).thenReturn(28);
     AndroidRoboTestSpec spec = AndroidRoboTestSpec.newBuilder().setCrawlerApk(crawlerPath).build();
 
     preProcessor.installApks(testInfo, device, spec, stubPath);
@@ -67,6 +72,18 @@ public class PreProcessorTest {
     verify(apkInstaller)
         .installApk(device, setupInstallable(spec.getCrawlerApk(), true), testInfo.log());
     verify(apkInstaller).installApk(device, setupInstallable(stubPath, true), testInfo.log());
+    verify(adb).runShell("device_id", "dumpsys deviceidle whitelist +androidx.test.tools.crawler");
+  }
+
+  @Test
+  public void installApks_completesForApiLevel27() throws Exception {
+    TestInfo testInfo = setUpJobInfo().tests().add("some test");
+    when(device.getSdkVersion()).thenReturn(27);
+    AndroidRoboTestSpec spec = AndroidRoboTestSpec.newBuilder().setCrawlerApk(crawlerPath).build();
+
+    preProcessor.installApks(testInfo, device, spec, stubPath);
+
+    verifyNoInteractions(adb);
   }
 
   private JobInfo setUpJobInfo() {
