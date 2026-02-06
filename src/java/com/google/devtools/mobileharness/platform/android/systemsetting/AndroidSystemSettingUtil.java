@@ -41,7 +41,6 @@ import com.google.devtools.mobileharness.platform.android.shared.autovalue.UtilA
 import com.google.devtools.mobileharness.platform.android.shared.constant.Splitters;
 import com.google.devtools.mobileharness.platform.android.systemstate.AndroidSystemStateUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
-import com.google.wireless.qa.mobileharness.shared.util.ScreenResolution;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -298,16 +297,13 @@ public class AndroidSystemSettingUtil {
 
   private final AndroidSystemStateUtil systemStateUtil;
 
-  private final ScreenResolutionUtil screenResolutionUtil;
-
   public AndroidSystemSettingUtil() {
     this(
         new Adb(),
         Sleeper.defaultSleeper(),
         Clock.systemUTC(),
         new AndroidAdbUtil(),
-        new AndroidSystemStateUtil(),
-        new ScreenResolutionUtil());
+        new AndroidSystemStateUtil());
   }
 
   @VisibleForTesting
@@ -316,14 +312,12 @@ public class AndroidSystemSettingUtil {
       Sleeper sleeper,
       Clock clock,
       AndroidAdbUtil adbUtil,
-      AndroidSystemStateUtil systemStateUtil,
-      ScreenResolutionUtil screenResolutionUtil) {
+      AndroidSystemStateUtil systemStateUtil) {
     this.adb = adb;
     this.sleeper = sleeper;
     this.clock = clock;
     this.adbUtil = adbUtil;
     this.systemStateUtil = systemStateUtil;
-    this.screenResolutionUtil = screenResolutionUtil;
   }
 
   /**
@@ -1114,17 +1108,6 @@ public class AndroidSystemSettingUtil {
           AndroidErrorId.ANDROID_SYSTEM_SETTING_GET_PACKAGE_OP_MODE_ERROR, e.getMessage(), e);
     }
     return Optional.empty();
-  }
-
-  /**
-   * Get the screen resolution of the given device. It works on api level >=15 and 10.
-   *
-   * @deprecated Use {@link ScreenResolutionUtil#getScreenResolution(String)} instead.
-   */
-  @Deprecated
-  public ScreenResolution getScreenResolution(String serial)
-      throws MobileHarnessException, InterruptedException {
-    return screenResolutionUtil.getScreenResolution(serial);
   }
 
   /**

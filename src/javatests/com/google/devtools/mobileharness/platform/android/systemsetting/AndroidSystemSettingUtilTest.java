@@ -65,7 +65,6 @@ public class AndroidSystemSettingUtilTest {
   @Mock private Clock clock;
   @Mock private AndroidAdbUtil adbUtil;
   @Mock private AndroidSystemStateUtil systemStateUtil;
-  @Mock private ScreenResolutionUtil screenResolutionUtil;
 
   private static final String DEVICE_ID = "device_id";
   private static final String TEST_PACKAGE_NAME = "package.name";
@@ -78,9 +77,7 @@ public class AndroidSystemSettingUtilTest {
 
   @Before
   public void setUp() {
-    settingUtil =
-        new AndroidSystemSettingUtil(
-            adb, sleeper, clock, adbUtil, systemStateUtil, screenResolutionUtil);
+    settingUtil = new AndroidSystemSettingUtil(adb, sleeper, clock, adbUtil, systemStateUtil);
   }
 
   @Test

@@ -37,6 +37,7 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceConn
 import com.google.devtools.mobileharness.platform.android.shared.autovalue.UtilArgs;
 import com.google.devtools.mobileharness.platform.android.shared.constant.PackageConstants;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
+import com.google.devtools.mobileharness.platform.android.systemsetting.ScreenResolutionUtil;
 import com.google.devtools.mobileharness.platform.android.systemspec.AndroidSystemSpecUtil;
 import com.google.devtools.mobileharness.platform.android.systemstate.AndroidSystemStateUtil;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
@@ -112,6 +113,7 @@ public abstract class AndroidDeviceDelegate {
   private final AndroidProcessUtil androidProcessUtil;
   private final AndroidDeviceHelper androidDeviceHelper;
   private final AndroidSystemSpecUtil androidSystemSpecUtil;
+  private final ScreenResolutionUtil screenResolutionUtil;
 
   protected final BaseDevice device;
 
@@ -123,7 +125,8 @@ public abstract class AndroidDeviceDelegate {
       AndroidPackageManagerUtil androidPackageManagerUtil,
       AndroidSystemSettingUtil androidSystemSettingUtil,
       AndroidProcessUtil androidProcessUtil,
-      AndroidSystemSpecUtil androidSystemSpecUtil) {
+      AndroidSystemSpecUtil androidSystemSpecUtil,
+      ScreenResolutionUtil screenResolutionUtil) {
     this.device = device;
     this.am = am;
     this.androidAdbUtil = androidAdbUtil;
@@ -134,6 +137,7 @@ public abstract class AndroidDeviceDelegate {
     this.deviceId = device.getDeviceId();
     this.androidDeviceHelper = new AndroidDeviceHelper(androidAdbUtil);
     this.androidSystemSpecUtil = androidSystemSpecUtil;
+    this.screenResolutionUtil = screenResolutionUtil;
   }
 
   /** Ensures device is booted up and ready to respond. */
@@ -536,7 +540,7 @@ public abstract class AndroidDeviceDelegate {
 
     // Gets the current override size of the screen of the device.
     try {
-      ScreenResolution screenResolution = androidSystemSettingUtil.getScreenResolution(deviceId);
+      ScreenResolution screenResolution = screenResolutionUtil.getScreenResolution(deviceId);
       logger.atInfo().log("Device %s screen resolution: %s", deviceId, screenResolution);
       device.addDimension(
           Dimension.Name.SCREEN_SIZE,

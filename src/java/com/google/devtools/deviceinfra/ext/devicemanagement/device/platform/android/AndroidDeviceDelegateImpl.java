@@ -22,6 +22,7 @@ import com.google.devtools.mobileharness.platform.android.packagemanager.Android
 import com.google.devtools.mobileharness.platform.android.process.AndroidProcessUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
+import com.google.devtools.mobileharness.platform.android.systemsetting.ScreenResolutionUtil;
 import com.google.devtools.mobileharness.platform.android.systemspec.AndroidSystemSpecUtil;
 import com.google.devtools.mobileharness.platform.android.systemstate.AndroidSystemStateUtil;
 import com.google.wireless.qa.mobileharness.shared.api.device.BaseDevice;
@@ -38,7 +39,8 @@ public class AndroidDeviceDelegateImpl extends AndroidDeviceDelegate {
         new AndroidPackageManagerUtil(),
         new AndroidSystemSettingUtil(),
         new AndroidProcessUtil(),
-        new AndroidSystemSpecUtil());
+        new AndroidSystemSpecUtil(),
+        new ScreenResolutionUtil());
   }
 
   @VisibleForTesting
@@ -50,7 +52,8 @@ public class AndroidDeviceDelegateImpl extends AndroidDeviceDelegate {
       AndroidPackageManagerUtil androidPackageManagerUtil,
       AndroidSystemSettingUtil androidSystemSettingUtil,
       AndroidProcessUtil androidProcessUtil,
-      AndroidSystemSpecUtil androidSystemSpecUtil) {
+      AndroidSystemSpecUtil androidSystemSpecUtil,
+      ScreenResolutionUtil screenResolutionUtil) {
     super(
         device,
         am,
@@ -59,7 +62,8 @@ public class AndroidDeviceDelegateImpl extends AndroidDeviceDelegate {
         androidPackageManagerUtil,
         androidSystemSettingUtil,
         androidProcessUtil,
-        androidSystemSpecUtil);
+        androidSystemSpecUtil,
+        screenResolutionUtil);
   }
 
   @Override
