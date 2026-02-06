@@ -1,6 +1,7 @@
 import {CommonModule} from '@angular/common';
 import {
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
   inject,
   OnDestroy,
@@ -51,9 +52,15 @@ declare interface DevicePageData {
   templateUrl: './device_detail_page.ng.html',
   styleUrl: './device_detail_page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    '[class.has-background]': 'hasBackground',
+  },
 })
 export class DeviceDetailPage implements OnInit, OnDestroy {
+  hasBackground = true;
+
   @ViewChild(DeviceActionBar) actionBar!: DeviceActionBar;
+  private readonly cdr = inject(ChangeDetectorRef);
   private readonly route = inject(ActivatedRoute);
   private readonly deviceService = inject(DEVICE_SERVICE);
   private readonly snackBar = inject(SnackBarService);
@@ -76,8 +83,11 @@ export class DeviceDetailPage implements OnInit, OnDestroy {
     ])
       .pipe(takeUntil(this.destroyed))
       .subscribe(([id, isEmbedded]) => {
+        const isStandalone = !isEmbedded;
+        this.hasBackground = isStandalone;
+        this.cdr.markForCheck();
         // for embedded mode, we don't need to set the title.
-        if (!isEmbedded && id) {
+        if (isStandalone && id) {
           this.titleService.setTitle(`OmniLab Console - Device ${id}`);
         } else {
           this.titleService.setTitle(`OmniLab Console`);

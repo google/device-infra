@@ -1,6 +1,7 @@
 import {CommonModule} from '@angular/common';
 import {
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
   inject,
   OnDestroy,
@@ -46,8 +47,14 @@ interface HostPageData {
     MatMenuModule,
     RouterModule,
   ],
+  host: {
+    '[class.has-background]': 'hasBackground',
+  },
 })
 export class HostDetail implements OnInit, OnDestroy {
+  hasBackground = true;
+
+  private readonly cdr = inject(ChangeDetectorRef);
   private readonly route = inject(ActivatedRoute);
   private readonly dialog = inject(MatDialog);
   private readonly hostService = inject(HOST_SERVICE);
@@ -89,8 +96,11 @@ export class HostDetail implements OnInit, OnDestroy {
     ])
       .pipe(takeUntil(this.destroyed))
       .subscribe(([hostName, isEmbedded]) => {
+        const isStandalone = !isEmbedded;
+        this.hasBackground = isStandalone;
+        this.cdr.markForCheck();
         // for embedded mode, we don't need to set the title.
-        if (!isEmbedded && hostName) {
+        if (isStandalone && hostName) {
           this.titleService.setTitle(`OmniLab Console - Host ${hostName}`);
         } else {
           this.titleService.setTitle(`OmniLab Console`);
