@@ -99,6 +99,7 @@ java_library(
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_protobuf_protobuf_java",
+        "@maven//:javax_inject_jsr330_api",
     ],
 )
 
@@ -114,9 +115,7 @@ java_library(
         ":api_config_service",
         ":config",
         ":has_default_synced",
-        "//src/java/com/google/devtools/mobileharness/infra/controller/device:device_id_manager",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:service_module",
-        "//src/java/com/google/devtools/mobileharness/shared/util/system",
         "@maven//:com_google_inject_guice",
     ],
 )

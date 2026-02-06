@@ -16,32 +16,26 @@
 
 package com.google.devtools.mobileharness.infra.controller.device.config;
 
-import com.google.devtools.mobileharness.infra.controller.device.DeviceIdManager;
 import com.google.devtools.mobileharness.shared.util.concurrent.ServiceModule;
-import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.multibindings.Multibinder;
-import java.time.Clock;
 
 /** Module for providing {@link ApiConfig}. */
 public final class ApiConfigModule extends AbstractModule {
   private final boolean hasDefaultSynced;
-  private final BasicDeviceConfigMerger basicDeviceConfigMerger;
 
   /** Constructs an {@link ApiConfigModule} with the given {@code hasDefaultSynced} value. */
   public ApiConfigModule(boolean hasDefaultSynced) {
-    this(hasDefaultSynced, new BasicDeviceConfigMerger() {});
-  }
-
-  public ApiConfigModule(
-      boolean hasDefaultSynced, BasicDeviceConfigMerger basicDeviceConfigMerger) {
     this.hasDefaultSynced = hasDefaultSynced;
-    this.basicDeviceConfigMerger = basicDeviceConfigMerger;
   }
 
   @Override
   protected void configure() {
+    // This is needed because ApiConfig is statically initialized and created by its consumers
+    // without the use of Guice. Static injection is required to inject the dependencies of
+    // ApiConfigV5 without refactoring all of its consumers.
+    requestStaticInjection(ApiConfigV5.class);
     install(ServiceModule.forService(ApiConfigService.class));
     Multibinder.newSetBinder(binder(), ApiConfigListener.class);
     bind(Boolean.class).annotatedWith(HasDefaultSynced.class).toInstance(hasDefaultSynced);
@@ -49,10 +43,6 @@ public final class ApiConfigModule extends AbstractModule {
 
   @Provides
   ApiConfig provideApiConfig() {
-    return new ApiConfigV5(
-        DeviceIdManager.getInstance(),
-        new SystemUtil(),
-        Clock.systemUTC(),
-        basicDeviceConfigMerger);
+    return ApiConfig.getInstance();
   }
 }

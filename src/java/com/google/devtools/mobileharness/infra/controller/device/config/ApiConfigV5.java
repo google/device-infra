@@ -53,9 +53,14 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 import javax.annotation.concurrent.GuardedBy;
+import javax.inject.Inject;
 
 /** The class which contains the user configured DeviceConfig/LabConfig. */
 public class ApiConfigV5 implements ApiConfig {
+  @SuppressWarnings(
+      "UnnecessaryAssignment") // Legacy server does not use Guice and needs direct assignment.
+  @Inject
+  static BasicDeviceConfigMerger basicDeviceConfigMerger = new BasicDeviceConfigMerger() {};
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -86,11 +91,7 @@ public class ApiConfigV5 implements ApiConfig {
 
     static {
       singleton =
-          new ApiConfigV5(
-              DeviceIdManager.getInstance(),
-              new SystemUtil(),
-              Clock.systemUTC(),
-              new BasicDeviceConfigMerger() {});
+          new ApiConfigV5(DeviceIdManager.getInstance(), new SystemUtil(), Clock.systemUTC());
     }
   }
 
@@ -98,7 +99,6 @@ public class ApiConfigV5 implements ApiConfig {
     return SingletonHolder.singleton;
   }
 
-  private final BasicDeviceConfigMerger basicDeviceConfigMerger;
   private final DeviceIdManager deviceIdManager;
   private final SystemUtil systemUtil;
   private final Clock clock;
@@ -117,15 +117,10 @@ public class ApiConfigV5 implements ApiConfig {
   private boolean isDefaultSynced = true;
 
   @VisibleForTesting
-  ApiConfigV5(
-      DeviceIdManager deviceIdManager,
-      SystemUtil systemUtil,
-      Clock clock,
-      BasicDeviceConfigMerger basicDeviceConfigMerger) {
+  ApiConfigV5(DeviceIdManager deviceIdManager, SystemUtil systemUtil, Clock clock) {
     this.deviceIdManager = deviceIdManager;
     this.systemUtil = systemUtil;
     this.clock = clock;
-    this.basicDeviceConfigMerger = basicDeviceConfigMerger;
   }
 
   @Override
