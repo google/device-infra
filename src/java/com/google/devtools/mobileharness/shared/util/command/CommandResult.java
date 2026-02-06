@@ -67,17 +67,19 @@ public class CommandResult {
 
     toStringSupplier =
         Suppliers.memoize(
-            () ->
-                String.format(
-                    "code=%d, out=[%s], err=[%s]",
-                    exitCode(), truncateOutput(stdout()), truncateOutput(stderr())));
+                () ->
+                    String.format(
+                        "code=%d, out=[%s], err=[%s]",
+                        exitCode(), truncateOutput(stdout()), truncateOutput(stderr())))
+            ::get;
     toStringWithoutTruncationSupplier =
         Suppliers.memoize(
-            () -> String.format("code=%d, out=[%s], err=[%s]", exitCode(), stdout(), stderr()));
+                () -> String.format("code=%d, out=[%s], err=[%s]", exitCode(), stdout(), stderr()))
+            ::get;
     stdoutWithoutTrailingLineTerminatorSupplier =
-        Suppliers.memoize(() -> removeTrailingLineTerminator(stdout()));
+        Suppliers.memoize(() -> removeTrailingLineTerminator(stdout()))::get;
     stderrWithoutTrailingLineTerminatorSupplier =
-        Suppliers.memoize(() -> removeTrailingLineTerminator(stderr()));
+        Suppliers.memoize(() -> removeTrailingLineTerminator(stderr()))::get;
   }
 
   /**

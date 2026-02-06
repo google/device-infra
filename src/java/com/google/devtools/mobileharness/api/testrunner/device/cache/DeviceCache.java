@@ -28,7 +28,8 @@ import java.util.function.Supplier;
  */
 public abstract class DeviceCache {
 
-  private static final Supplier<DeviceCache> INSTANCE = Suppliers.memoize(DeviceCache::initialize);
+  private static final Supplier<DeviceCache> INSTANCE =
+      Suppliers.memoize(DeviceCache::initialize)::get;
 
   public static DeviceCache getInstance() {
     return INSTANCE.get();
