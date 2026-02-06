@@ -41,6 +41,9 @@ java_proto_library(
 proto_library(
     name = "device_stats_proto",
     srcs = ["device_stats.proto"],
+    deps = [
+        "@googleapis//google/type:date_proto",
+    ],
 )
 
 java_proto_library(

@@ -18,6 +18,8 @@ syntax = "proto3";
 
 package devtools.mobileharness.fe.v6.service.proto.device;
 
+import "google/type/date.proto";
+
 option java_package = "com.google.devtools.mobileharness.fe.v6.service.proto.device";
 option java_multiple_files = true;
 option java_outer_classname = "DeviceStatsProto";
@@ -46,6 +48,7 @@ message HealthinessSummary {
 
   // Represents a breakdown of a specific healthiness category.
   message Breakdown {
+    // TODO: Use an enum for the category.
     // The healthiness category. This is a secondary classification and not a
     // direct mapping to a device status.
     string category = 1;
@@ -64,71 +67,95 @@ message HealthinessSummary {
   repeated Breakdown out_of_service_breakdown = 4;
 }
 
-// Common statistics containing count and percentage.
+// --- Common Messages ---
 message Stats {
   int32 count = 1;
   float percent = 2;
 }
 
-// Common breakdown message containing category and stats.
-message CategoryStats {
-  string category = 1;
+// --- Test Result Statistics ---
+enum TestResultCategory {
+  TEST_RESULT_CATEGORY_UNSPECIFIED = 0;
+  TEST_RESULT_CATEGORY_PASS = 1;
+  TEST_RESULT_CATEGORY_FAIL = 2;
+  TEST_RESULT_CATEGORY_ERROR = 3;
+  TEST_RESULT_CATEGORY_TIMEOUT = 4;
+  TEST_RESULT_CATEGORY_ABORT = 5;
+  TEST_RESULT_CATEGORY_SKIP = 6;
+  TEST_RESULT_CATEGORY_UNKNOWN = 7;
+}
+
+message TestResultStats {
+  repeated DailyTestResults daily_stats = 1;
+  TestResultSummary summary = 2;
+}
+
+message DailyTestResults {
+  google.type.Date date = 1;
+  int32 total_count = 2;
+
+  message DailyCategoryStats {
+    TestResultCategory category = 1;
+    // 'percent' in Stats is relative to DailyTestResults.total_count
+    Stats stats = 2;
+  }
+  repeated DailyCategoryStats category_stats = 3;
+}
+
+message TestResultBreakdownItem {
+  TestResultCategory category = 1;
+  // 'percent' in Stats is relative to TestResultSummary.total_count
   Stats stats = 2;
 }
 
-// Represents the data for the Test Result Statistics card.
-message TestResultStats {
-  // Time series data for daily test results.
-  repeated DailyTestResults daily_stats = 1;
-  // Aggregated data over the selected period.
-  AggregatedTestResults aggregated_stats = 2;
+message TestResultSummary {
+  int32 total_count = 1;
+
+  message TestResultGroup {
+    string display_name = 1;  // e.g., "Completion", "Non-Completion", "Unknown"
+    // 'percent' in total_stats is relative to TestResultSummary.total_count
+    Stats total_stats = 2;  // Total count and percent for this group
+    repeated TestResultBreakdownItem breakdown_items =
+        3;  // Breakdown of individual categories within this group
+  }
+
+  TestResultGroup completion_group = 2;
+  TestResultGroup non_completion_group = 3;
+  TestResultGroup unknown_group = 4;
 }
 
-// Test results for a single day.
-message DailyTestResults {
-  // The date in YYYY-MM-DD format.
-  string date = 1;
-  int32 pass = 2;
-  int32 fail = 3;
-  int32 error = 4;
-  int32 timeout = 5;
-  int32 other = 6;
+// --- Recovery Task Statistics ---
+
+enum RecoveryOutcomeCategory {
+  RECOVERY_OUTCOME_CATEGORY_UNSPECIFIED = 0;
+  RECOVERY_OUTCOME_CATEGORY_SUCCESS = 1;
+  RECOVERY_OUTCOME_CATEGORY_FAIL = 2;
 }
 
-// Aggregated test result statistics over the selected period.
-message AggregatedTestResults {
-  int32 total_tests = 1;
-  Stats completion_stats = 2;
-  Stats non_completion_stats = 3;
-
-  // Breakdown of "Completion" tests.
-  // Expected categories: "PASS", "FAIL".
-  repeated CategoryStats completion_breakdown = 4;
-
-  // Breakdown of "Non-Completion" tests.
-  // Expected categories: "ERROR", "TIMEOUT", "OTHER".
-  repeated CategoryStats non_completion_breakdown = 5;
-}
-
-// Represents the data for the Recovery Task Statistics card.
 message RecoveryTaskStats {
-  // Time series data for daily recovery task outcomes.
   repeated DailyRecoveryTasks daily_stats = 1;
-  // Aggregated data over the selected period.
-  AggregatedRecoveryTasks aggregated_stats = 2;
+  RecoveryTaskSummary summary = 2;
 }
 
-// Recovery task outcomes for a single day.
 message DailyRecoveryTasks {
-  // The date in YYYY-MM-DD format.
-  string date = 1;
-  int32 success = 2;
-  int32 fail = 3;
+  google.type.Date date = 1;
+  int32 total_count = 2;
+
+  message DailyOutcomeStats {
+    RecoveryOutcomeCategory category = 1;
+    // 'percent' in Stats is relative to DailyRecoveryTasks.total_count
+    Stats stats = 2;
+  }
+  repeated DailyOutcomeStats category_stats = 3;
 }
 
-// Aggregated recovery task statistics over the selected period.
-message AggregatedRecoveryTasks {
-  int32 total_tasks = 1;
-  // Expected categories: "SUCCESS", "FAIL".
-  repeated CategoryStats outcome_breakdown = 2;
+message RecoveryTaskBreakdownItem {
+  RecoveryOutcomeCategory category = 1;
+  // 'percent' in Stats is relative to RecoveryTaskSummary.total_count
+  Stats stats = 2;
+}
+
+message RecoveryTaskSummary {
+  int32 total_count = 1;
+  repeated RecoveryTaskBreakdownItem outcome_breakdown = 2;
 }
