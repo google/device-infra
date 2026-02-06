@@ -512,6 +512,8 @@ public abstract class AndroidDeviceDelegate {
     device.addSupportedDecorator("AndroidStartAppsDecorator");
     device.addSupportedDecorator("AndroidSwitchLanguageDecorator");
     device.addSupportedDecorator("AndroidSwitchUserDecorator");
+    device.addSupportedDecorator("PythonVersionCheckDecorator");
+    // keep-sorted end
   }
 
   /**

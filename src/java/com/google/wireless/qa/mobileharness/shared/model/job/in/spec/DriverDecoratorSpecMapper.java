@@ -90,6 +90,7 @@ public final class DriverDecoratorSpecMapper {
     builder.put("AndroidSwitchUserDecorator", "AndroidSwitchUserDecoratorSpec");
     builder.put("MoblyDecoratorAdapter", "MoblyDecoratorAdapterSpec");
     builder.put("NoOpDecorator", "NoOpDecoratorSpec");
+    builder.put("PythonVersionCheckDecorator", "PythonVersionCheckDecoratorSpec");
     // keep-sorted end
 
     DRIVER_DECORATOR_SPEC_MAP = builder.buildOrThrow();

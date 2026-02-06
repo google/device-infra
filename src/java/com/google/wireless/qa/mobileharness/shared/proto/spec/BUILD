@@ -51,6 +51,7 @@ proto_library(
         ":mobly_decorator_adapter_spec_proto",
         ":no_op_decorator_spec_proto",
         ":no_op_driver_spec_proto",
+        ":python_version_check_decorator_spec_proto",
     ],
 )
 
@@ -421,4 +422,15 @@ proto_library(
 java_proto_library(
     name = "android_logcat_monitoring_decorator_spec_java_proto",
     deps = [":android_logcat_monitoring_decorator_spec_proto"],
+)
+
+proto_library(
+    name = "python_version_check_decorator_spec_proto",
+    srcs = ["decorator/python_version_check_decorator_spec.proto"],
+    deps = [":base_spec_proto"],
+)
+
+java_proto_library(
+    name = "python_version_check_decorator_spec_java_proto",
+    deps = [":python_version_check_decorator_spec_proto"],
 )
