@@ -1529,6 +1529,48 @@ public final class SessionRequestHandlerUtilTest {
   }
 
   @Test
+  public void addNonTradefedModuleInfo_atsServerRequest_noDeviceInfo_usesDummyDeviceInfo()
+      throws Exception {
+    setUpForCreateXtsNonTradefedJobs();
+    SessionRequestInfo sessionRequestInfo =
+        defaultSessionRequestInfoBuilder().setIsAtsServerRequest(true).build();
+
+    var unused = sessionRequestHandlerUtil.addNonTradefedModuleInfo(sessionRequestInfo);
+
+    verify(testSuiteHelper)
+        .loadTests(
+            com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper.DeviceInfo
+                .builder()
+                .setDeviceId("dummy_device_id")
+                .setSupportedAbiList("arm64-v8a,armeabi-v7a")
+                .setSupportedAbi("arm64-v8a")
+                .build());
+  }
+
+  @Test
+  public void addNonTradefedModuleInfo_atsServerRequest_withDeviceInfo_usesOriginalDeviceInfo()
+      throws Exception {
+    setUpForCreateXtsNonTradefedJobs();
+    com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper.DeviceInfo
+        deviceInfo =
+            com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper.DeviceInfo
+                .builder()
+                .setDeviceId("device_id_1")
+                .setSupportedAbiList("arm64-v8a,armeabi-v7a")
+                .setSupportedAbi("arm64-v8a")
+                .build();
+    SessionRequestInfo sessionRequestInfo =
+        defaultSessionRequestInfoBuilder()
+            .setIsAtsServerRequest(true)
+            .setDeviceInfo(Optional.of(deviceInfo))
+            .build();
+
+    var unused = sessionRequestHandlerUtil.addNonTradefedModuleInfo(sessionRequestInfo);
+
+    verify(testSuiteHelper).loadTests(deviceInfo);
+  }
+
+  @Test
   public void filterModuleByConfigMetadata_success() throws Exception {
     ImmutableListMultimap<String, String> moduleMetadata =
         ImmutableListMultimap.of(
