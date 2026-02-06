@@ -4,7 +4,7 @@
       <div class="error-message">
         <mat-icon class="error-icon">error_outline</mat-icon>
         <p>{{ data.error }}</p>
-        <a routerLink="/dev/device-harness" class="m3-button">Back to Harness</a>
+        <a routerLink="/dev/device-harness" queryParamsHandling="merge" class="m3-button">Back to Harness</a>
       </div>
     } @else if (data.pageData; as pageData) {
       @let device = pageData.overview;
@@ -13,6 +13,7 @@
           <div class="header-device-id">
             <a
               [routerLink]="['/hosts', device.host.name]"
+              queryParamsHandling="merge"
               class="host-link"
               title="Navigate to host: {{ device.host.name }}"
               >{{ device.host.name }}</a
@@ -64,6 +65,7 @@
                   <span>Connected to Host:</span>
                   <a
                     [routerLink]="['/hosts', device.host.name]"
+                    queryParamsHandling="merge"
                     class="host-link-inline"
                     title="{{ device.host.name }}"
                     >{{ device.host.name }}</a

@@ -12,7 +12,7 @@ const DEVICE_ID = '43021FDAQ000UM';
 
 const OVERVIEW: DeviceOverview = {
   id: DEVICE_ID,
-  host: {name: 'host-a-1.prod.example.com', ip: '192.168.1.101'},
+  host: {name: 'host-a-1.example.com', ip: '192.168.1.101'},
   healthAndActivity: {
     title: 'In Service (Idle)',
     subtitle: 'The device is healthy and ready for new tasks.',

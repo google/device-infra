@@ -218,6 +218,7 @@
                 <td mat-cell *matCellDef="let element" class="limit-width">
                   <a
                     [routerLink]="['/devices', element.id]"
+                    queryParamsHandling="merge"
                     class="id-link truncate-text"
                     title="{{element.id}}"
                     matTooltip="{{element.id}}"
