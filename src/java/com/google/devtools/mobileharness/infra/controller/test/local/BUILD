@@ -23,7 +23,6 @@ java_library(
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/lab/controller:__pkg__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:__pkg__",
     ],
     deps = [
         ":local_test_builtin_plugins",
