@@ -492,6 +492,9 @@
   padding: 0.25rem 0;
   font-size: 0.875rem;
   color: #3c4043;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 
   &:hover {
     // Add visual feedback on hover if needed, but keep it subtle

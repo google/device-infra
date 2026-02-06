@@ -18,6 +18,7 @@ import {MatDialog} from '@angular/material/dialog';
 import {MatFormFieldModule} from '@angular/material/form-field';
 import {MatIconModule} from '@angular/material/icon';
 import {MatInputModule} from '@angular/material/input';
+import {MatTooltipModule} from '@angular/material/tooltip';
 import {Subject} from 'rxjs';
 import {debounceTime, distinctUntilChanged, takeUntil} from 'rxjs/operators';
 import type {DeviceOverview} from '../../../../core/models/device_overview';
@@ -67,6 +68,7 @@ interface DimensionItem {
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
+    MatTooltipModule,
     FormsModule,
     MasterDetailLayout,
     InfoCard,

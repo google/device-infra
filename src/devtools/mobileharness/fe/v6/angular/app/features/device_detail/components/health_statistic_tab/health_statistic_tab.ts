@@ -125,6 +125,12 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
   loadingTest = signal(false);
   loadingRecovery = signal(false);
 
+  // Data availability signals
+  healthSummaryHasData = signal(true);
+  healthDetailHasData = signal(true);
+  testHasData = signal(true);
+  recoveryHasData = signal(true);
+
   // ViewChilds for charts.
   private healthChartSummaryElementInternal: ElementRef | undefined;
   @ViewChild('healthChartSummary')
@@ -342,6 +348,7 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
         d.healthinessSummary.outOfServicePercent ?? 0,
       ],
       this.healthinessSummaryChartOptions(),
+      this.healthSummaryHasData,
     );
   }
 
@@ -435,21 +442,8 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
         return row;
       },
       this.healthinessDetailChartOptions(this.healthDetailStates),
+      this.healthDetailHasData,
     );
-  }
-
-  private showNoDataMessage(element: ElementRef | undefined) {
-    if (element?.nativeElement) {
-      element.nativeElement.style.height = '100px';
-      element.nativeElement.innerHTML =
-        '<div style="display: flex; justify-content: center; align-items: center; height: 100%; color: #bdbdbd; font-style: italic;">No data available</div>';
-    }
-  }
-
-  private resetChartHeight(element: ElementRef | undefined) {
-    if (element?.nativeElement) {
-      element.nativeElement.style.height = '';
-    }
   }
 
   // Healthiness Breakdown Table and Charts
@@ -611,6 +605,7 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
         return row;
       },
       this.testResultChartOptions(colors),
+      this.testHasData,
     );
   }
 
@@ -752,6 +747,7 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
       columns,
       (d, date) => [date, d.success ?? 0, d.fail ?? 0],
       this.recoveryTaskChartOptions(),
+      this.recoveryHasData,
     );
   }
 
@@ -846,6 +842,7 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
     columns: Array<{type: string; label: string}>,
     rowMapper: (item: T, date: Date) => Array<Date | number | string | null>,
     options: ColumnChartOptions,
+    hasDataSignal: WritableSignal<boolean> | undefined,
   ) {
     if (!element?.nativeElement) {
       return;
@@ -873,12 +870,13 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
       data.addRow(row);
     });
 
-    if (!hasData) {
-      this.showNoDataMessage(element);
-      return;
+    if (hasDataSignal !== undefined) {
+      hasDataSignal.set(hasData);
     }
 
-    this.resetChartHeight(element);
+    if (!hasData) {
+      return;
+    }
 
     // Fix for duplicate dates on hAxis when data points are few.
     // When there are few data points, Google Charts may generate intermediate ticks (e.g. every 12 hours).
@@ -889,9 +887,11 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
       options.hAxis.ticks = dates;
     }
 
-    new google.visualization.ColumnChart(element.nativeElement).draw(
-      data,
-      options,
-    );
+    setTimeout(() => {
+      new google.visualization.ColumnChart(element.nativeElement).draw(
+        data,
+        options,
+      );
+    });
   }
 }

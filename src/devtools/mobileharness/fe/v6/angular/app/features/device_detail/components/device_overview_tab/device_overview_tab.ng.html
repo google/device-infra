@@ -147,8 +147,13 @@
           <dl class="info-grid-tight">
             <dt title="Battery">Battery</dt>
             <dd>
-              {{ device.basicInfo.batteryLevel !== null ? device.basicInfo.batteryLevel + '%' :
-              'N/A' }}
+              @if (device.basicInfo.batteryLevel === -1) {
+                Unknown
+              } @else if (device.basicInfo.batteryLevel !== null && device.basicInfo.batteryLevel >= 0 && device.basicInfo.batteryLevel <= 100) {
+                {{ device.basicInfo.batteryLevel }}%
+              } @else {
+                N/A
+              }
             </dd>
 
             <dt title="Network">Network</dt>
@@ -332,7 +337,7 @@
               @if (filteredDrivers().length > 0) {
                 <ul class="capability-list">
                   @for (driver of filteredDrivers(); track driver) {
-                    <li class="capability-item">{{ driver }}</li>
+                    <li class="capability-item" [matTooltip]="driver">{{ driver }}</li>
                   }
                 </ul>
               } @else {
@@ -369,7 +374,7 @@
               @if (filteredDecorators().length > 0) {
                 <ul class="capability-list">
                   @for (decorator of filteredDecorators(); track decorator) {
-                    <li class="capability-item">{{ decorator }}</li>
+                    <li class="capability-item" [matTooltip]="decorator">{{ decorator }}</li>
                   }
                 </ul>
               } @else {
