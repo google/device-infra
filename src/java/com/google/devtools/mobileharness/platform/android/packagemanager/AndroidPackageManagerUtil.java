@@ -1424,12 +1424,6 @@ public class AndroidPackageManagerUtil {
               "Install-multi-package support requires the minimal API level to %s",
               DEFAULT_INSTALL_MULTI_PACKAGE_START_SDK_VERSION));
     }
-    // Since sdk >= 29, all args are possible except -p.
-    if (installCmdArgs.partialApplicationInstall()) {
-      throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_PARTIAL_INSTALL_NOT_ALLOWED_ERROR,
-          "Partial application installation are not allowed for install-multi-package.");
-    }
 
     if (packageMap.isEmpty()) {
       logger.atWarning().log("No package to install.");

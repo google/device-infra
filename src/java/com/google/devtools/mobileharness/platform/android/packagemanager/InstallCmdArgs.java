@@ -35,8 +35,6 @@ public abstract class InstallCmdArgs {
 
   private static final String ARG_ALLOW_VERSION_CODE_DOWNGRADE = "-d";
 
-  private static final String ARG_PARTIAL_APPLICATION_INSTALL = "-p";
-
   private static final String ARG_GRANT_PERMISSIONS = "-g";
 
   private static final String ARG_INSTANT = "--instant";
@@ -51,9 +49,6 @@ public abstract class InstallCmdArgs {
 
   /** Whether to allow version code downgrade (debuggable packages only). Default to be false. */
   public abstract boolean allowVersionCodeDowngrade();
-
-  /** Partial application install (intall-multiple only). Default to be false. */
-  public abstract boolean partialApplicationInstall();
 
   /** Whether to grant all runtime permissions. Default to be false. */
   public abstract boolean grantPermissions();
@@ -84,9 +79,6 @@ public abstract class InstallCmdArgs {
     if (allowVersionCodeDowngrade()) {
       argList.add(ARG_ALLOW_VERSION_CODE_DOWNGRADE);
     }
-    if (partialApplicationInstall()) {
-      argList.add(ARG_PARTIAL_APPLICATION_INSTALL);
-    }
     if (grantPermissions()) {
       argList.add(ARG_GRANT_PERMISSIONS);
     }
@@ -106,7 +98,6 @@ public abstract class InstallCmdArgs {
         .setReplaceExistingApp(false)
         .setAllowTestPackages(false)
         .setAllowVersionCodeDowngrade(false)
-        .setPartialApplicationInstall(false)
         .setGrantPermissions(false)
         .setInstant(false)
         .setForceNoStreaming(false)
@@ -121,8 +112,6 @@ public abstract class InstallCmdArgs {
     public abstract Builder setAllowTestPackages(boolean value);
 
     public abstract Builder setAllowVersionCodeDowngrade(boolean value);
-
-    public abstract Builder setPartialApplicationInstall(boolean value);
 
     public abstract Builder setGrantPermissions(boolean value);
 
