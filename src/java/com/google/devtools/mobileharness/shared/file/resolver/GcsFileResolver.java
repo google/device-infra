@@ -34,6 +34,7 @@ import com.google.devtools.mobileharness.shared.util.file.checksum.proto.Checksu
 import com.google.devtools.mobileharness.shared.util.file.checksum.proto.ChecksumProto.Checksum;
 import com.google.devtools.mobileharness.shared.util.file.remote.GcsUtil;
 import com.google.devtools.mobileharness.shared.util.file.remote.GcsUtil.GcsParams;
+import com.google.devtools.mobileharness.shared.util.file.remote.GcsUtilFactory;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import java.nio.file.Path;
@@ -177,7 +178,7 @@ public class GcsFileResolver extends AbstractFileResolver {
   @VisibleForTesting
   GcsUtil createGcsUtil(String project, String bucket, @Nullable String credentialFile)
       throws MobileHarnessException {
-    return new GcsUtil(
+    return GcsUtilFactory.create(
         credentialFile != null
             ? new GcsParams(
                 project,

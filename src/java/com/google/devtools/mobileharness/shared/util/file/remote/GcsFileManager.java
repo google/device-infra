@@ -76,7 +76,7 @@ public class GcsFileManager {
   /** TTL of File Transfer caches in Google Cloud Storage. Default is 1 day. */
   private final Optional<Duration> cloudCacheTtl;
 
-  /** Size of shard for uploading GCS file in parellel. */
+  /** Size of shard for uploading GCS file in parallel. */
   private final Optional<Long> uploadShardSize;
 
   /** Size of shard for downloading GCS file in parellel. */
@@ -116,7 +116,7 @@ public class GcsFileManager {
       throws MobileHarnessException, InterruptedException {
     this(
         homeDir,
-        new GcsUtil(new GcsParams(bucket, Scope.READ_WRITE, credentialType)),
+        GcsUtilFactory.create(new GcsParams(bucket, Scope.READ_WRITE, credentialType)),
         new LocalFileUtil(),
         cloudCacheTtl,
         localCacheTtl,

@@ -124,7 +124,7 @@ final class GsUtil {
       logger.atInfo().log(
           "gcsParams: %s, %s, %s",
           gcsParams.applicationName, gcsParams.bucketName, gcsParams.credentialType);
-      return new GsUtil(new GcsUtil(gcsParams));
+      return new GsUtil(GcsUtilFactory.create(gcsParams));
     }
   }
 
