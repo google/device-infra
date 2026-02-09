@@ -569,12 +569,15 @@ public class CompatibilityReportMerger {
     Optional<Result> report = reportParser.parse(xmlReportFile, /* shallow= */ false);
     ImmutableSet<String> skippedModuleIds = ImmutableSet.of();
     if (report.isPresent()) {
+      boolean hadDeviceNotAvailableException = false;
       // Insert the metadata from the test record (if present) to the report.
       if (resultBundle.testRecordFile().isPresent()) {
         Optional<TestRecord> testRecord = readTestRecord(resultBundle.testRecordFile().get());
         if (testRecord.isPresent()) {
           report = Optional.of(insertMetadataFromTestRecord(report.get(), testRecord.get()));
           skippedModuleIds = getSkippedModuleIds(testRecord.get());
+          hadDeviceNotAvailableException =
+              testRecord.get().getDebugInfo().getTrace().contains("DeviceNotAvailableException");
         }
       }
 
@@ -582,7 +585,11 @@ public class CompatibilityReportMerger {
       // populate the module info in the result XML file. In this case, we will insert the modules
       // info from the result bundle, so the final XML report is more complete and accurate for
       // retrying.
-      if (report.get().getModuleInfoCount() == 0) {
+      if (report.get().getModuleInfoCount() == 0 && hadDeviceNotAvailableException) {
+        logger.atInfo().log(
+            "Tradefed generated result file with no module info due to DeviceNotAvailableException."
+                + " Inserting modules %s (and skipping %s).",
+            resultBundle.modules(), skippedModuleIds);
         report = Optional.of(insertModulesToResult(report.get(), resultBundle.modules()));
       }
     }
@@ -593,12 +600,18 @@ public class CompatibilityReportMerger {
   @VisibleForTesting
   static Result insertModulesToResult(
       Result result, ImmutableList<TradefedResultBundle.ModuleInfo> modules) {
-    Result.Builder resultBuilder = result.toBuilder();
-    for (TradefedResultBundle.ModuleInfo module : modules) {
-      resultBuilder.addModuleInfo(
-          Module.newBuilder().setName(module.name()).setAbi(module.abi()).setDone(false).build());
-    }
-    return resultBuilder.build();
+    return result.toBuilder()
+        .addAllModuleInfo(
+            modules.stream()
+                .map(
+                    module ->
+                        Module.newBuilder()
+                            .setName(module.name())
+                            .setAbi(module.abi())
+                            .setDone(false)
+                            .build())
+                .collect(toImmutableList()))
+        .build();
   }
 
   @VisibleForTesting
