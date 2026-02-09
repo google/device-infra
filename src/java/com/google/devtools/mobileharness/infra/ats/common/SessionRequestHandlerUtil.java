@@ -666,12 +666,12 @@ public class SessionRequestHandlerUtil {
   }
 
   /**
-   * Adds non-tradefed module info to the {@code SessionRequestInfo}. This is required step before
-   * creating non-tradefed jobs or checking if it can do so.
+   * Adds xts module info to the {@code SessionRequestInfo}. This is required step before creating
+   * non-tradefed jobs or checking if it can do so. And the info is needed for result processing.
    *
    * @return an updated {@code SessionRequestInfo}
    */
-  public SessionRequestInfo addNonTradefedModuleInfo(SessionRequestInfo sessionRequestInfo)
+  public SessionRequestInfo addXtsModuleInfo(SessionRequestInfo sessionRequestInfo)
       throws MobileHarnessException, InterruptedException {
     SessionRequestInfo.Builder updatedSessionRequestInfo = sessionRequestInfo.toBuilder();
 

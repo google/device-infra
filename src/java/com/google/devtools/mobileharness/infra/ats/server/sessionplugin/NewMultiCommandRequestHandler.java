@@ -272,7 +272,6 @@ final class NewMultiCommandRequestHandler {
       throws InterruptedException, MobileHarnessException {
     SessionRequestInfo sessionRequestInfo =
         getSessionRequestInfo(request, commandInfo, sessionInfo);
-    sessionRequestInfo = sessionRequestHandlerUtil.addNonTradefedModuleInfo(sessionRequestInfo);
 
     SetMultimap<String, String> commandToJobsMap = getCommandToJobsMap(sessionInfo);
 
@@ -596,11 +595,13 @@ final class NewMultiCommandRequestHandler {
       sessionRequestInfoBuilder.setShardingMode(commandInfo.getShardingMode());
     }
 
-    return sessionRequestInfoBuilder
-        .setDeviceInfo(sessionRequestHandlerUtil.getDeviceInfo(sessionRequestInfoBuilder.build()))
-        .setAtsServerTestResources(fileTestResources.build())
-        .setAtsServerTestEnvironment(request.getTestEnvironment())
-        .build();
+    return sessionRequestHandlerUtil.addXtsModuleInfo(
+        sessionRequestInfoBuilder
+            .setDeviceInfo(
+                sessionRequestHandlerUtil.getDeviceInfo(sessionRequestInfoBuilder.build()))
+            .setAtsServerTestResources(fileTestResources.build())
+            .setAtsServerTestEnvironment(request.getTestEnvironment())
+            .build());
   }
 
   private String getXtsType(String xtsRootDir, String androidXtsZipPath) {

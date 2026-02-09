@@ -180,7 +180,7 @@ public final class NewMultiCommandRequestHandlerTest {
     when(jobInfo.files()).thenReturn(files);
     when(jobInfo.tests()).thenReturn(testInfos);
     when(testInfos.getAll()).thenReturn(ImmutableListMultimap.of("test_id", testInfo));
-    when(sessionRequestHandlerUtil.addNonTradefedModuleInfo(any()))
+    when(sessionRequestHandlerUtil.addXtsModuleInfo(any()))
         .thenAnswer(invocation -> invocation.getArgument(0));
     when(deviceQuerier.queryDevice(any()))
         .thenReturn(

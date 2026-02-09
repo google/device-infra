@@ -426,6 +426,6 @@ class RunCommandHandler {
 
     Optional<DeviceInfo> deviceInfo = sessionRequestHandlerUtil.getDeviceInfo(builder.build());
     builder.setDeviceInfo(deviceInfo);
-    return sessionRequestHandlerUtil.addNonTradefedModuleInfo(builder.build());
+    return sessionRequestHandlerUtil.addXtsModuleInfo(builder.build());
   }
 }

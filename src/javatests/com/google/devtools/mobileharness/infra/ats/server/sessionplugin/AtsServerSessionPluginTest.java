@@ -221,7 +221,7 @@ public final class AtsServerSessionPluginTest {
     when(moblyJobInfo.files()).thenReturn(files);
     when(moblyJobInfo2.files()).thenReturn(files);
     when(files.getAll()).thenReturn(ImmutableMultimap.of());
-    when(sessionRequestHandlerUtil.addNonTradefedModuleInfo(any()))
+    when(sessionRequestHandlerUtil.addXtsModuleInfo(any()))
         .thenAnswer(invocation -> invocation.getArgument(0));
     Mockito.doNothing().when(localFileUtil).mergeDir(any(Path.class), any(Path.class));
     commandInfo =
