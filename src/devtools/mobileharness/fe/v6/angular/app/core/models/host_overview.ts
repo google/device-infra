@@ -139,7 +139,7 @@ export declare interface DeviceHealthState {
 export declare interface DeviceSummary {
   readonly id: string;
   readonly healthState: DeviceHealthState;
-  readonly types: Array<{
+  readonly types?: Array<{
     /** The type string. */
     type: string;
     /**
@@ -158,12 +158,12 @@ export declare interface DeviceSummary {
      */
     isCritical: boolean;
   };
-  readonly label: string;
+  readonly label?: string;
   // TODO: Consider if we need to display more complex form of required dimensions.
   // The type of `requiredDims` may need to update.
-  readonly requiredDims: string;
-  readonly model: string;
-  readonly version: string;
+  readonly requiredDims?: string;
+  readonly model?: string;
+  readonly version?: string;
   readonly subDevices?: SubDeviceInfo[];
   /** Optional parent device ID (e.g. for sub-devices belonging to a testbed). */
   readonly parentDeviceId?: string;

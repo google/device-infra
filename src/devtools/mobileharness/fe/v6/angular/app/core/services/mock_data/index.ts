@@ -60,6 +60,7 @@ import {OVERVIEW_10} from './hosts/overview_10';
 import {OVERVIEW_11} from './hosts/overview_11';
 import {OVERVIEW_12} from './hosts/overview_12';
 import {OVERVIEW_13} from './hosts/overview_13';
+import {OVERVIEW_14} from './hosts/overview_14';
 import {SCENARIO_RC_PERMISSIONS_ALL} from './hosts/remote_control_permissions';
 import {MockDeviceScenario, MockHostScenario} from './models';
 
@@ -129,4 +130,5 @@ export const MOCK_HOST_SCENARIOS: MockHostScenario[] = [
   OVERVIEW_11,
   OVERVIEW_12,
   OVERVIEW_13,
+  OVERVIEW_14,
 ];

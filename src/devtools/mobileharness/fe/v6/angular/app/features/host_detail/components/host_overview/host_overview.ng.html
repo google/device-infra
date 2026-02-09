@@ -248,7 +248,7 @@
               <ng-container matColumnDef="type">
                 <th mat-header-cell *matHeaderCellDef>TYPE</th>
                 <td mat-cell *matCellDef="let element">
-                  @if(element.types.length > 0) {
+                  @if(element.types && element.types.length > 0) {
                     <div class="type-chip-wrapper">
                       <div
                         class="type-chip"

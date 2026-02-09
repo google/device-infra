@@ -211,7 +211,7 @@ export class RemoteControlService {
 
   isTestbed(element: DeviceSummary): boolean {
     return (
-      element.types.some((t) => t.type === 'TestbedDevice') &&
+      (element.types?.some((t) => t.type === 'TestbedDevice') ?? false) &&
       !!element.subDevices &&
       element.subDevices.length > 0
     );

@@ -579,7 +579,7 @@ export class HostOverviewPage implements OnInit, OnChanges {
 
   isTestbed(element: DeviceSummary): boolean {
     return (
-      element.types.some((t) => t.type === 'TestbedDevice') &&
+      (element.types?.some((t) => t.type === 'TestbedDevice') ?? false) &&
       !!element.subDevices &&
       element.subDevices.length > 0
     );
@@ -607,12 +607,16 @@ export class HostOverviewPage implements OnInit, OnChanges {
   }
 
   // Type Column
-  isTypeAbnormal(types: Array<{type: string; isAbnormal: boolean}>): boolean {
-    return types.some((t) => t.isAbnormal);
+  isTypeAbnormal(
+    types: Array<{type: string; isAbnormal: boolean}> | undefined,
+  ): boolean {
+    return types?.some((t) => t.isAbnormal) ?? false;
   }
 
-  getFirstType(types: Array<{type: string; isAbnormal: boolean}>): string {
-    if (types.length === 0) return '';
+  getFirstType(
+    types: Array<{type: string; isAbnormal: boolean}> | undefined,
+  ): string {
+    if (!types || types.length === 0) return '';
     const abnormalTypes = types.filter((t) => t.isAbnormal);
     return abnormalTypes.length > 0 ? abnormalTypes[0].type : types[0].type;
   }
@@ -647,10 +651,10 @@ export class HostOverviewPage implements OnInit, OnChanges {
   onTypeHover(
     trigger: CdkOverlayOrigin,
     subDeviceId: string,
-    types: Array<{type: string; isAbnormal: boolean}>,
+    types: Array<{type: string; isAbnormal: boolean}> | undefined,
   ) {
     this.clearHideTimer();
-    const chipItems = types.map((t) => ({
+    const chipItems = (types ?? []).map((t) => ({
       label: t.type,
       cssClass: t.isAbnormal ? 'type-chip-abnormal' : 'type-chip-normal',
     }));
