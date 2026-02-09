@@ -1,0 +1,17 @@
+@use '@angular/material' as mat;
+
+.progress-bar {
+  @include mat.progress-bar-overrides((
+    active-indicator-color: #1967d2,
+    track-color: #e8f0fe,
+  ));
+  margin-bottom: 16px;
+}
+
+.info-card-content {
+  transition: opacity 0.2s;
+}
+
+.hidden {
+  display: none;
+}

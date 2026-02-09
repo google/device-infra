@@ -1,93 +1,99 @@
 <app-master-detail-layout [navList]="navList">
-  <app-info-card
-    #statisticSection
+  <app-statistic-card
     id="health-statistic"
     title="Device Healthiness Statistics"
-    [collapsible]="false">
-    <ng-container operations>
-      <app-date-range-picker (dateRangeChange)="onDateRangeChange('health', $event)"></app-date-range-picker>
-    </ng-container>
-    @if (loadingHealth()) {
-      <mat-progress-bar mode="indeterminate" class="progress-bar"></mat-progress-bar>
-    }
-    <div class="info-card-content" [style.opacity]="loadingHealth() ? 0.5 : 1">
-      <div class="chart-section">
-          <h4 class="chart-title">Daily Healthiness Trend</h4>
-          <div #healthChartSummary class="chart-container" [hidden]="!healthSummaryHasData()"></div>
-          @if (!healthSummaryHasData()) {
-            <div class="no-data-message">No data available</div>
-          }
-        </div>
-        <div class="chart-section">
-          <h4 class="chart-title">Daily Healthiness Breakdown</h4>
-          <div #healthChartDetail class="chart-container" [hidden]="!healthDetailHasData()"></div>
-          @if (!healthDetailHasData()) {
-            <div class="no-data-message">No data available</div>
-          }
-        </div>
-        <app-statistic-breakdown
-          title="Total Healthiness Breakdown"
-          [selectedPeriodStr]="healthDateRangeString"
-          [tableData]="healthDataSource"
-          [tableColumns]="['label', 'value']"
-          [charts]="healthBreakdownCharts"
-        ></app-statistic-breakdown>
+    [loading]="loadingHealth()"
+    (dateRangeChange)="onDateRangeChange('health', $event)">
+    <div class="chart-section">
+      <h4 class="chart-title">Daily Healthiness Trend</h4>
+      <div class="chart-container" [hidden]="!healthSummaryHasData()">
+        <app-google-chart
+           type="ColumnChart"
+           [columns]="healthSummaryChartData().columns"
+           [rows]="healthSummaryChartData().rows"
+           [options]="healthSummaryChartData().options">
+        </app-google-chart>
       </div>
-  </app-info-card>
-  <app-info-card
-    #statisticSection
+      @if (!healthSummaryHasData()) {
+        <div class="no-data-message">No data available</div>
+      }
+    </div>
+    <div class="chart-section">
+      <h4 class="chart-title">Daily Healthiness Breakdown</h4>
+      <div class="chart-container" [hidden]="!healthDetailHasData()">
+        <app-google-chart
+           type="ColumnChart"
+           [columns]="healthDetailChartData().columns"
+           [rows]="healthDetailChartData().rows"
+           [options]="healthDetailChartData().options">
+        </app-google-chart>
+      </div>
+      @if (!healthDetailHasData()) {
+        <div class="no-data-message">No data available</div>
+      }
+    </div>
+    <app-statistic-breakdown
+      title="Total Healthiness Breakdown"
+      [selectedPeriodStr]="healthDateRangeString()"
+      [tableData]="healthDataSource()"
+      [tableColumns]="['label', 'value']"
+      [charts]="healthBreakdownCharts()"
+    ></app-statistic-breakdown>
+  </app-statistic-card>
+
+  <app-statistic-card
     id="test-result-statistic"
     title="Test Result Statistics"
-    [collapsible]="false">
-    <ng-container operations>
-      <app-date-range-picker (dateRangeChange)="onDateRangeChange('test', $event)"></app-date-range-picker>
-    </ng-container>
-    @if (loadingTest()) {
-      <mat-progress-bar mode="indeterminate" class="progress-bar"></mat-progress-bar>
-    }
-    <div class="info-card-content" [style.opacity]="loadingTest() ? 0.5 : 1">
-      <div class="chart-section">
-          <h4 class="chart-title">Daily Test Results Trend</h4>
-          <div #testChart class="chart-container" [hidden]="!testHasData()"></div>
-          @if (!testHasData()) {
-            <div class="no-data-message">No data available</div>
-          }
-        </div>
-        <app-statistic-breakdown
-          title="Total Test Result Breakdown"
-          [selectedPeriodStr]="testDateRangeString"
-          [tableData]="testDataSource"
-          [tableColumns]="['label', 'count', 'percentage']"
-          [charts]="testBreakdownCharts"
-        ></app-statistic-breakdown>
+    [loading]="loadingTest()"
+    (dateRangeChange)="onDateRangeChange('test', $event)">
+    <div class="chart-section">
+      <h4 class="chart-title">Daily Test Results Trend</h4>
+      <div class="chart-container" [hidden]="!testHasData()">
+        <app-google-chart
+           type="ColumnChart"
+           [columns]="testChartData().columns"
+           [rows]="testChartData().rows"
+           [options]="testChartData().options">
+        </app-google-chart>
       </div>
-  </app-info-card>
-  <app-info-card
-    #statisticSection
+      @if (!testHasData()) {
+        <div class="no-data-message">No data available</div>
+      }
+    </div>
+    <app-statistic-breakdown
+      title="Total Test Result Breakdown"
+      [selectedPeriodStr]="testDateRangeString()"
+      [tableData]="testDataSource()"
+      [tableColumns]="['label', 'count', 'percentage']"
+      [charts]="testBreakdownCharts()"
+    ></app-statistic-breakdown>
+  </app-statistic-card>
+
+  <app-statistic-card
     id="recovery-task-statistic"
     title="Recovery Task Statistics"
-    [collapsible]="false">
-    <ng-container operations>
-      <app-date-range-picker (dateRangeChange)="onDateRangeChange('recovery', $event)"></app-date-range-picker>
-    </ng-container>
-    @if (loadingRecovery()) {
-      <mat-progress-bar mode="indeterminate" class="progress-bar"></mat-progress-bar>
-    }
-    <div class="info-card-content" [style.opacity]="loadingRecovery() ? 0.5 : 1">
-      <div class="chart-section">
-          <h4 class="chart-title">Daily Recovery Task Trend</h4>
-          <div #recoveryChart class="chart-container" [hidden]="!recoveryHasData()"></div>
-          @if (!recoveryHasData()) {
-            <div class="no-data-message">No data available</div>
-          }
-        </div>
-        <app-statistic-breakdown
-          title="Total Recovery Task Breakdown"
-          [selectedPeriodStr]="recoveryDateRangeString"
-          [tableData]="recoveryDataSource"
-          [tableColumns]="['label', 'count', 'percentage']"
-          [charts]="recoveryBreakdownCharts"
-        ></app-statistic-breakdown>
+    [loading]="loadingRecovery()"
+    (dateRangeChange)="onDateRangeChange('recovery', $event)">
+    <div class="chart-section">
+      <h4 class="chart-title">Daily Recovery Task Trend</h4>
+      <div class="chart-container" [hidden]="!recoveryHasData()">
+        <app-google-chart
+           type="ColumnChart"
+           [columns]="recoveryChartData().columns"
+           [rows]="recoveryChartData().rows"
+           [options]="recoveryChartData().options">
+        </app-google-chart>
       </div>
-  </app-info-card>
+      @if (!recoveryHasData()) {
+        <div class="no-data-message">No data available</div>
+      }
+    </div>
+    <app-statistic-breakdown
+      title="Total Recovery Task Breakdown"
+      [selectedPeriodStr]="recoveryDateRangeString()"
+      [tableData]="recoveryDataSource()"
+      [tableColumns]="['label', 'count', 'percentage']"
+      [charts]="recoveryBreakdownCharts()"
+    ></app-statistic-breakdown>
+  </app-statistic-card>
 </app-master-detail-layout>

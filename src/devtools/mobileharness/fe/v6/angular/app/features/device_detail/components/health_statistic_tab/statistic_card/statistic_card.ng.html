@@ -1,0 +1,11 @@
+<app-info-card [id]="id" [title]="title" [collapsible]="false">
+  <ng-container operations>
+    <app-date-range-picker (dateRangeChange)="dateRangeChange.emit($event)"></app-date-range-picker>
+  </ng-container>
+
+  <mat-progress-bar mode="indeterminate" class="progress-bar" [class.hidden]="!loading"></mat-progress-bar>
+
+  <div class="info-card-content" [style.opacity]="loading ? 0.5 : 1">
+    <ng-content></ng-content>
+  </div>
+</app-info-card>

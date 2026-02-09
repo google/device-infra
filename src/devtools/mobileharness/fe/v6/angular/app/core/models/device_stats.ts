@@ -54,33 +54,6 @@ export declare interface HealthinessSummary {
 // -----------------------------------------------------------------------------
 
 /**
- * Represents the data for the Test Result Statistics card.
- */
-export declare interface TestResultStats {
-  /** Time series data for daily test results. */
-  dailyStats: DailyTestResults[];
-  /** Aggregated data over the selected period. */
-  aggregatedStats: AggregatedTestResults;
-}
-
-/**
- * Test results for a single day.
- * Values represent counts.
- */
-export declare interface DailyTestResults {
-  /** The date in YYYY-MM-DD format. */
-  date: string;
-  pass?: number;
-  fail?: number;
-  error?: number;
-  timeout?: number;
-  unknown?: number;
-  skip?: number;
-  abort?: number;
-  [key: string]: number | string | undefined;
-}
-
-/**
  * Common statistics containing count and percentage.
  */
 export declare interface Stats {
@@ -88,26 +61,90 @@ export declare interface Stats {
   percent?: number;
 }
 
+// -----------------------------------------------------------------------------
+// Test Result Statistics
+// -----------------------------------------------------------------------------
+
 /**
- * Common breakdown message containing category and stats.
+ * Categories for test results.
  */
-export declare interface CategoryStats {
-  category: string;
+export declare type TestResultCategory =
+  | 'TEST_RESULT_CATEGORY_UNSPECIFIED'
+  | 'TEST_RESULT_CATEGORY_PASS'
+  | 'TEST_RESULT_CATEGORY_FAIL'
+  | 'TEST_RESULT_CATEGORY_ERROR'
+  | 'TEST_RESULT_CATEGORY_TIMEOUT'
+  | 'TEST_RESULT_CATEGORY_ABORT'
+  | 'TEST_RESULT_CATEGORY_SKIP'
+  | 'TEST_RESULT_CATEGORY_UNKNOWN';
+
+/**
+ * Represents the data for the Test Result Statistics card.
+ */
+export declare interface TestResultStats {
+  /** Time series data for daily test results. */
+  dailyStats: DailyTestResults[];
+  /** Aggregated data over the selected period. */
+  summary: TestResultSummary;
+}
+
+/**
+ * Test results for a single day.
+ */
+export declare interface DailyTestResults {
+  /** The date in YYYY-MM-DD format. */
+  date: string;
+  totalCount: number;
+  categoryStats: DailyCategoryStats[];
+}
+
+/**
+ * Statistics for a specific test result category on a specific day.
+ */
+export declare interface DailyCategoryStats {
+  category: TestResultCategory;
   stats: Stats;
 }
 
 /**
- * Aggregated test result statistics over the selected period.
+ * Breakdown of test results by category.
  */
-export declare interface AggregatedTestResults {
-  totalTests: number;
-  completionStats: Stats;
-  nonCompletionStats: Stats;
-  completionBreakdown: CategoryStats[];
-  nonCompletionBreakdown: CategoryStats[];
+export declare interface TestResultBreakdownItem {
+  category: TestResultCategory;
+  stats: Stats;
+}
+
+/**
+ * Group of test results (e.g., Completion, Non-Completion).
+ */
+export declare interface TestResultGroup {
+  displayName: string; // e.g., "Completion", "Non-Completion", "Unknown"
+  // 'percent' in totalStats is relative to TestResultSummary.totalCount
+  totalStats: Stats; // Total count and percent for this group
+  breakdownItems: TestResultBreakdownItem[]; // Breakdown of individual categories within this group
+}
+
+/**
+ * Summary of test result statistics over a period.
+ */
+export declare interface TestResultSummary {
+  totalCount: number;
+  completionGroup: TestResultGroup;
+  nonCompletionGroup: TestResultGroup;
+  unknownGroup: TestResultGroup;
 }
 
 // -----------------------------------------------------------------------------
+// Recovery Task Statistics
+// -----------------------------------------------------------------------------
+
+/**
+ * Categories for recovery task outcomes.
+ */
+export declare type RecoveryOutcomeCategory =
+  | 'RECOVERY_OUTCOME_CATEGORY_UNSPECIFIED'
+  | 'RECOVERY_OUTCOME_CATEGORY_SUCCESS'
+  | 'RECOVERY_OUTCOME_CATEGORY_FAIL';
 
 /**
  * Represents the data for the Recovery Task Statistics card.
@@ -116,24 +153,39 @@ export declare interface RecoveryTaskStats {
   /** Time series data for daily recovery task outcomes. */
   dailyStats: DailyRecoveryTasks[];
   /** Aggregated data over the selected period. */
-  aggregatedStats: AggregatedRecoveryTasks;
+  summary: RecoveryTaskSummary;
 }
 
 /**
  * Recovery task outcomes for a single day.
- * Values represent counts.
  */
 export declare interface DailyRecoveryTasks {
   /** The date in YYYY-MM-DD format. */
   date: string;
-  success?: number;
-  fail?: number;
+  totalCount: number;
+  categoryStats: DailyOutcomeStats[];
 }
 
 /**
- * Aggregated recovery task statistics over the selected period.
+ * Statistics for a specific recovery outcome category on a specific day.
  */
-export declare interface AggregatedRecoveryTasks {
-  totalTasks: number;
-  outcomeBreakdown: CategoryStats[];
+export declare interface DailyOutcomeStats {
+  category: RecoveryOutcomeCategory;
+  stats: Stats;
+}
+
+/**
+ * Breakdown of recovery tasks by outcome category.
+ */
+export declare interface RecoveryTaskBreakdownItem {
+  category: RecoveryOutcomeCategory;
+  stats: Stats;
+}
+
+/**
+ * Summary of recovery task statistics over a period.
+ */
+export declare interface RecoveryTaskSummary {
+  totalCount: number;
+  outcomeBreakdown: RecoveryTaskBreakdownItem[];
 }

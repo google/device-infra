@@ -1,13 +1,17 @@
 import {GoogleDate} from '../../../shared/utils/date_utils';
 import {
-  AggregatedRecoveryTasks,
-  AggregatedTestResults,
+  DailyCategoryStats,
   DailyHealthiness,
+  DailyOutcomeStats,
   DailyRecoveryTasks,
   DailyTestResults,
   HealthinessStats,
   HealthinessSummary,
+  RecoveryOutcomeCategory,
+  RecoveryTaskBreakdownItem,
   RecoveryTaskStats,
+  TestResultBreakdownItem,
+  TestResultCategory,
   TestResultStats,
 } from '../../models/device_stats';
 
@@ -169,6 +173,19 @@ export function generateTestResultStats(
   endDate: GoogleDate,
 ): TestResultStats {
   const {start, days} = getDates(startDate, endDate);
+
+  // Accumulators
+  const totalCounts: Record<TestResultCategory, number> = {
+    'TEST_RESULT_CATEGORY_PASS': 0,
+    'TEST_RESULT_CATEGORY_FAIL': 0,
+    'TEST_RESULT_CATEGORY_ERROR': 0,
+    'TEST_RESULT_CATEGORY_TIMEOUT': 0,
+    'TEST_RESULT_CATEGORY_UNKNOWN': 0,
+    'TEST_RESULT_CATEGORY_SKIP': 0,
+    'TEST_RESULT_CATEGORY_ABORT': 0,
+    'TEST_RESULT_CATEGORY_UNSPECIFIED': 0,
+  };
+
   const dailyStats: DailyTestResults[] = Array.from({length: days}, (_, i) => {
     const date = new Date(start);
     date.setDate(start.getDate() + i);
@@ -187,112 +204,177 @@ export function generateTestResultStats(
     rem -= unknown;
     const skip = Math.floor(Math.random() * (rem * 0.5));
     rem -= skip;
-    const abort = rem;
+    const abort = Math.floor(Math.random() * (rem * 0.5));
+    rem -= abort;
+    const unspecified = rem;
+
+    totalCounts['TEST_RESULT_CATEGORY_PASS'] += pass;
+    totalCounts['TEST_RESULT_CATEGORY_FAIL'] += fail;
+    totalCounts['TEST_RESULT_CATEGORY_ERROR'] += error;
+    totalCounts['TEST_RESULT_CATEGORY_TIMEOUT'] += timeout;
+    totalCounts['TEST_RESULT_CATEGORY_UNKNOWN'] += unknown;
+    totalCounts['TEST_RESULT_CATEGORY_UNSPECIFIED'] += unspecified;
+    totalCounts['TEST_RESULT_CATEGORY_SKIP'] += skip;
+    totalCounts['TEST_RESULT_CATEGORY_ABORT'] += abort;
 
     return {
       date: formatDate(date),
-      pass,
-      fail,
-      error,
-      timeout,
-      unknown,
-      skip,
-      abort,
+      totalCount: total,
+      categoryStats: [
+        {
+          category: 'TEST_RESULT_CATEGORY_PASS',
+          stats: {count: pass, percent: total ? (pass / total) * 100 : 0},
+        },
+        {
+          category: 'TEST_RESULT_CATEGORY_FAIL',
+          stats: {count: fail, percent: total ? (fail / total) * 100 : 0},
+        },
+        {
+          category: 'TEST_RESULT_CATEGORY_ERROR',
+          stats: {count: error, percent: total ? (error / total) * 100 : 0},
+        },
+        {
+          category: 'TEST_RESULT_CATEGORY_TIMEOUT',
+          stats: {count: timeout, percent: total ? (timeout / total) * 100 : 0},
+        },
+        {
+          category: 'TEST_RESULT_CATEGORY_UNKNOWN',
+          stats: {count: unknown, percent: total ? (unknown / total) * 100 : 0},
+        },
+        {
+          category: 'TEST_RESULT_CATEGORY_UNSPECIFIED',
+          stats: {
+            count: unspecified,
+            percent: total ? (unspecified / total) * 100 : 0,
+          },
+        },
+        {
+          category: 'TEST_RESULT_CATEGORY_SKIP',
+          stats: {count: skip, percent: total ? (skip / total) * 100 : 0},
+        },
+        {
+          category: 'TEST_RESULT_CATEGORY_ABORT',
+          stats: {count: abort, percent: total ? (abort / total) * 100 : 0},
+        },
+      ].filter(
+        (i) => i.stats.count && i.stats.count > 0,
+      ) as DailyCategoryStats[],
     };
   });
 
-  const totalPass = dailyStats.reduce((sum, day) => sum + (day.pass ?? 0), 0);
-  const totalFail = dailyStats.reduce((sum, day) => sum + (day.fail ?? 0), 0);
-  const totalError = dailyStats.reduce((sum, day) => sum + (day.error ?? 0), 0);
-  const totalTimeout = dailyStats.reduce(
-    (sum, day) => sum + (day.timeout ?? 0),
-    0,
-  );
-  const totalUnknown = dailyStats.reduce(
-    (sum, day) => sum + (day.unknown ?? 0),
-    0,
-  );
-  const totalSkip = dailyStats.reduce((sum, day) => sum + (day.skip ?? 0), 0);
-  const totalAbort = dailyStats.reduce((sum, day) => sum + (day.abort ?? 0), 0);
+  const totalTests = Object.values(totalCounts).reduce((a, b) => a + b, 0);
 
-  const totalTests =
-    totalPass +
-    totalFail +
-    totalError +
-    totalTimeout +
-    totalUnknown +
-    totalSkip +
-    totalAbort;
-  const completionCount = totalPass + totalFail;
+  const completionCount =
+    totalCounts['TEST_RESULT_CATEGORY_PASS'] +
+    totalCounts['TEST_RESULT_CATEGORY_FAIL'];
   const nonCompletionCount =
-    totalError + totalTimeout + totalUnknown + totalSkip + totalAbort;
+    totalCounts['TEST_RESULT_CATEGORY_ERROR'] +
+    totalCounts['TEST_RESULT_CATEGORY_TIMEOUT'] +
+    totalCounts['TEST_RESULT_CATEGORY_ABORT'] +
+    totalCounts['TEST_RESULT_CATEGORY_SKIP'] +
+    totalCounts['TEST_RESULT_CATEGORY_UNKNOWN'];
+  const unknownCount = totalCounts['TEST_RESULT_CATEGORY_UNSPECIFIED'];
 
-  const aggregatedStats: AggregatedTestResults = {
-    totalTests,
-    completionStats: {
-      count: completionCount,
-      percent: totalTests ? (completionCount / totalTests) * 100 : 0,
+  const getPercent = (count: number) =>
+    totalTests ? (count / totalTests) * 100 : 0;
+
+  return {
+    dailyStats,
+    summary: {
+      totalCount: totalTests,
+      completionGroup: {
+        displayName: 'Completion',
+        totalStats: {
+          count: completionCount,
+          percent: getPercent(completionCount),
+        },
+        breakdownItems: [
+          {
+            category: 'TEST_RESULT_CATEGORY_PASS',
+            stats: {
+              count: totalCounts['TEST_RESULT_CATEGORY_PASS'],
+              percent: getPercent(totalCounts['TEST_RESULT_CATEGORY_PASS']),
+            },
+          },
+          {
+            category: 'TEST_RESULT_CATEGORY_FAIL',
+            stats: {
+              count: totalCounts['TEST_RESULT_CATEGORY_FAIL'],
+              percent: getPercent(totalCounts['TEST_RESULT_CATEGORY_FAIL']),
+            },
+          },
+        ].filter(
+          (i) => i.stats.count && i.stats.count > 0,
+        ) as TestResultBreakdownItem[],
+      },
+      nonCompletionGroup: {
+        displayName: 'Non-Completion',
+        totalStats: {
+          count: nonCompletionCount,
+          percent: getPercent(nonCompletionCount),
+        },
+        breakdownItems: [
+          {
+            category: 'TEST_RESULT_CATEGORY_ERROR',
+            stats: {
+              count: totalCounts['TEST_RESULT_CATEGORY_ERROR'],
+              percent: getPercent(totalCounts['TEST_RESULT_CATEGORY_ERROR']),
+            },
+          },
+          {
+            category: 'TEST_RESULT_CATEGORY_TIMEOUT',
+            stats: {
+              count: totalCounts['TEST_RESULT_CATEGORY_TIMEOUT'],
+              percent: getPercent(totalCounts['TEST_RESULT_CATEGORY_TIMEOUT']),
+            },
+          },
+          {
+            category: 'TEST_RESULT_CATEGORY_ABORT',
+            stats: {
+              count: totalCounts['TEST_RESULT_CATEGORY_ABORT'],
+              percent: getPercent(totalCounts['TEST_RESULT_CATEGORY_ABORT']),
+            },
+          },
+          {
+            category: 'TEST_RESULT_CATEGORY_SKIP',
+            stats: {
+              count: totalCounts['TEST_RESULT_CATEGORY_SKIP'],
+              percent: getPercent(totalCounts['TEST_RESULT_CATEGORY_SKIP']),
+            },
+          },
+          {
+            category: 'TEST_RESULT_CATEGORY_UNKNOWN',
+            stats: {
+              count: totalCounts['TEST_RESULT_CATEGORY_UNKNOWN'],
+              percent: getPercent(totalCounts['TEST_RESULT_CATEGORY_UNKNOWN']),
+            },
+          },
+        ].filter(
+          (i) => i.stats.count && i.stats.count > 0,
+        ) as TestResultBreakdownItem[],
+      },
+      unknownGroup: {
+        displayName: 'Unknown',
+        totalStats: {
+          count: unknownCount,
+          percent: getPercent(unknownCount),
+        },
+        breakdownItems: [
+          {
+            category: 'TEST_RESULT_CATEGORY_UNSPECIFIED',
+            stats: {
+              count: totalCounts['TEST_RESULT_CATEGORY_UNSPECIFIED'],
+              percent: getPercent(
+                totalCounts['TEST_RESULT_CATEGORY_UNSPECIFIED'],
+              ),
+            },
+          },
+        ].filter(
+          (i) => i.stats.count && i.stats.count > 0,
+        ) as TestResultBreakdownItem[],
+      },
     },
-    nonCompletionStats: {
-      count: nonCompletionCount,
-      percent: totalTests ? (nonCompletionCount / totalTests) * 100 : 0,
-    },
-    completionBreakdown: [
-      {
-        category: 'PASS',
-        stats: {
-          count: totalPass,
-          percent: totalTests ? (totalPass / totalTests) * 100 : 0,
-        },
-      },
-      {
-        category: 'FAIL',
-        stats: {
-          count: totalFail,
-          percent: totalTests ? (totalFail / totalTests) * 100 : 0,
-        },
-      },
-    ].filter((item) => item.stats.count > 0),
-    nonCompletionBreakdown: [
-      {
-        category: 'ERROR',
-        stats: {
-          count: totalError,
-          percent: totalTests ? (totalError / totalTests) * 100 : 0,
-        },
-      },
-      {
-        category: 'TIMEOUT',
-        stats: {
-          count: totalTimeout,
-          percent: totalTests ? (totalTimeout / totalTests) * 100 : 0,
-        },
-      },
-      {
-        category: 'UNKNOWN',
-        stats: {
-          count: totalUnknown,
-          percent: totalTests ? (totalUnknown / totalTests) * 100 : 0,
-        },
-      },
-      {
-        category: 'SKIP',
-        stats: {
-          count: totalSkip,
-          percent: totalTests ? (totalSkip / totalTests) * 100 : 0,
-        },
-      },
-      {
-        category: 'ABORT',
-        stats: {
-          count: totalAbort,
-          percent: totalTests ? (totalAbort / totalTests) * 100 : 0,
-        },
-      },
-    ].filter((item) => item.stats.count > 0),
   };
-
-  return {dailyStats, aggregatedStats};
 }
 
 /** Generates mock recovery task stats. */
@@ -301,6 +383,13 @@ export function generateRecoveryTaskStats(
   endDate: GoogleDate,
 ): RecoveryTaskStats {
   const {start, days} = getDates(startDate, endDate);
+
+  const totalCounts: Record<RecoveryOutcomeCategory, number> = {
+    'RECOVERY_OUTCOME_CATEGORY_SUCCESS': 0,
+    'RECOVERY_OUTCOME_CATEGORY_FAIL': 0,
+    'RECOVERY_OUTCOME_CATEGORY_UNSPECIFIED': 0,
+  };
+
   const dailyStats: DailyRecoveryTasks[] = Array.from(
     {length: days},
     (_, i) => {
@@ -308,42 +397,82 @@ export function generateRecoveryTaskStats(
       date.setDate(start.getDate() + i);
 
       const total = 5 + Math.floor(Math.random() * 20);
-      const success = Math.floor(Math.random() * total * 0.8);
-      const fail = total - success;
+      let rem = total;
+      const success = Math.floor(Math.random() * rem * 0.8);
+      rem -= success;
+      const fail = Math.floor(Math.random() * rem * 0.9);
+      rem -= fail;
+      const unspecified = rem;
+
+      totalCounts['RECOVERY_OUTCOME_CATEGORY_SUCCESS'] += success;
+      totalCounts['RECOVERY_OUTCOME_CATEGORY_FAIL'] += fail;
+      totalCounts['RECOVERY_OUTCOME_CATEGORY_UNSPECIFIED'] += unspecified;
+
+      const categoryStats: DailyOutcomeStats[] = [
+        {
+          category: 'RECOVERY_OUTCOME_CATEGORY_SUCCESS',
+          stats: {count: success, percent: total ? (success / total) * 100 : 0},
+        },
+        {
+          category: 'RECOVERY_OUTCOME_CATEGORY_FAIL',
+          stats: {count: fail, percent: total ? (fail / total) * 100 : 0},
+        },
+        {
+          category: 'RECOVERY_OUTCOME_CATEGORY_UNSPECIFIED',
+          stats: {
+            count: unspecified,
+            percent: total ? (unspecified / total) * 100 : 0,
+          },
+        },
+      ].filter(
+        (i) => i.stats.count && i.stats.count > 0,
+      ) as DailyOutcomeStats[];
+
       return {
         date: formatDate(date),
-        success,
-        fail,
+        totalCount: total,
+        categoryStats,
       };
     },
   );
 
-  const totalSuccess = dailyStats.reduce(
-    (sum, day) => sum + (day.success ?? 0),
-    0,
-  );
-  const totalFail = dailyStats.reduce((sum, day) => sum + (day.fail ?? 0), 0);
-  const totalTasks = totalSuccess + totalFail;
+  const totalTasks = Object.values(totalCounts).reduce((a, b) => a + b, 0);
+  const getPercent = (count: number) =>
+    totalTasks ? (count / totalTasks) * 100 : 0;
 
-  const aggregatedStats: AggregatedRecoveryTasks = {
-    totalTasks,
-    outcomeBreakdown: [
-      {
-        category: 'SUCCESS',
-        stats: {
-          count: totalSuccess,
-          percent: totalTasks ? (totalSuccess / totalTasks) * 100 : 0,
+  return {
+    dailyStats,
+    summary: {
+      totalCount: totalTasks,
+      outcomeBreakdown: [
+        {
+          category: 'RECOVERY_OUTCOME_CATEGORY_SUCCESS',
+          stats: {
+            count: totalCounts['RECOVERY_OUTCOME_CATEGORY_SUCCESS'],
+            percent: getPercent(
+              totalCounts['RECOVERY_OUTCOME_CATEGORY_SUCCESS'],
+            ),
+          },
         },
-      },
-      {
-        category: 'FAIL',
-        stats: {
-          count: totalFail,
-          percent: totalTasks ? (totalFail / totalTasks) * 100 : 0,
+        {
+          category: 'RECOVERY_OUTCOME_CATEGORY_FAIL',
+          stats: {
+            count: totalCounts['RECOVERY_OUTCOME_CATEGORY_FAIL'],
+            percent: getPercent(totalCounts['RECOVERY_OUTCOME_CATEGORY_FAIL']),
+          },
         },
-      },
-    ].filter((item) => item.stats.count > 0),
+        {
+          category: 'RECOVERY_OUTCOME_CATEGORY_UNSPECIFIED',
+          stats: {
+            count: totalCounts['RECOVERY_OUTCOME_CATEGORY_UNSPECIFIED'],
+            percent: getPercent(
+              totalCounts['RECOVERY_OUTCOME_CATEGORY_UNSPECIFIED'],
+            ),
+          },
+        },
+      ].filter(
+        (i) => i.stats.count && i.stats.count > 0,
+      ) as RecoveryTaskBreakdownItem[],
+    },
   };
-
-  return {dailyStats, aggregatedStats};
 }

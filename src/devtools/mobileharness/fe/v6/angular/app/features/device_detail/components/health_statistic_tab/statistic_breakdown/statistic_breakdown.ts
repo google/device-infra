@@ -2,14 +2,12 @@ import {CommonModule} from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
-  ElementRef,
   Input,
   OnChanges,
-  QueryList,
   SimpleChanges,
-  ViewChildren,
 } from '@angular/core';
 import {MatTableModule} from '@angular/material/table';
+import {GoogleChartComponent} from '../google_chart/google_chart';
 
 type PieChartOptions = google.visualization.PieChartOptions;
 
@@ -34,7 +32,7 @@ export interface TableItem {
 @Component({
   selector: 'app-statistic-breakdown',
   standalone: true,
-  imports: [CommonModule, MatTableModule],
+  imports: [CommonModule, MatTableModule, GoogleChartComponent],
   templateUrl: './statistic_breakdown.ng.html',
   styleUrl: './statistic_breakdown.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -49,17 +47,9 @@ export class StatisticBreakdown implements OnChanges {
   view: 'table' | 'chart' = 'table';
   filteredData: TableItem[] = [];
 
-  @ViewChildren('chartContainer') chartElements!: QueryList<ElementRef>;
-
   ngOnChanges(changes: SimpleChanges) {
     if (changes['tableData'] || changes['tableColumns']) {
       this.updateFilteredData();
-    }
-    if (changes['charts'] && this.view === 'chart') {
-      // Allow view to update before drawing
-      setTimeout(() => {
-        this.drawCharts();
-      }, 0);
     }
   }
 
@@ -76,26 +66,5 @@ export class StatisticBreakdown implements OnChanges {
     if (this.view === view) return;
 
     this.view = view;
-    if (view === 'chart') {
-      setTimeout(() => {
-        this.drawCharts();
-      }, 0);
-    }
-  }
-
-  private drawCharts() {
-    if (!this.chartElements || this.charts.length === 0) {
-      return;
-    }
-
-    this.chartElements.forEach((element, index) => {
-      const chartConfig = this.charts[index];
-      if (chartConfig && element.nativeElement) {
-        new google.visualization.PieChart(element.nativeElement).draw(
-          chartConfig.data,
-          chartConfig.options,
-        );
-      }
-    });
   }
 }

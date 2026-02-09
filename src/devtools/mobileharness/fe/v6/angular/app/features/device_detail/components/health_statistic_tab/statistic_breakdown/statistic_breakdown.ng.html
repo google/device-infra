@@ -70,7 +70,13 @@
         @for (chart of charts; track chart.title) {
           <div>
             <h5 class="chart-subtitle">{{ chart.title }}</h5>
-            <div #chartContainer class="pie-chart-container"></div>
+            <div class="pie-chart-container">
+              <app-google-chart
+                  type="PieChart"
+                  [dataTable]="chart.data"
+                  [options]="chart.options">
+              </app-google-chart>
+            </div>
           </div>
         }
       </div>

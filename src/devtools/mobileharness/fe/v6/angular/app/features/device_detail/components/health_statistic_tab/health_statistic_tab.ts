@@ -2,50 +2,40 @@ import {CommonModule} from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
-  ElementRef,
   Input,
   OnDestroy,
   OnInit,
-  QueryList,
-  ViewChild,
-  ViewChildren,
-  WritableSignal,
+  computed,
   inject,
   signal,
 } from '@angular/core';
-import {MatProgressBarModule} from '@angular/material/progress-bar';
+import {toSignal} from '@angular/core/rxjs-interop';
 import {MatTableModule} from '@angular/material/table';
 import {load} from '@google-web-components/google-chart/loader';
-import {Observable} from 'rxjs';
-import {finalize} from 'rxjs/operators';
-import {
-  HEALTH_COLORS,
-  HEALTH_SUMMARY_COLORS,
-  RECOVERY_CHART_COLORS,
-  RECOVERY_COLORS,
-  TEST_COLORS,
-} from '../../../../core/constants/statistic_constants';
-import {
-  HealthinessStats,
-  RecoveryTaskStats,
-  TestResultStats,
-} from '../../../../core/models/device_stats';
+import {Subject, of} from 'rxjs';
+import {catchError, finalize, switchMap, tap} from 'rxjs/operators';
+
 import {DEVICE_SERVICE} from '../../../../core/services/device/device_service';
-import {DateRangePicker} from '../../../../shared/components/date_range_picker/date_range_picker';
-import {InfoCard} from '../../../../shared/components/info_card/info_card';
 import {
   MasterDetailLayout,
   NavItem,
 } from '../../../../shared/components/master_detail_layout/master_detail_layout';
 import {dateUtils} from '../../../../shared/utils/date_utils';
+import {GoogleChartComponent} from './google_chart/google_chart';
 import {
-  BreakdownChart,
-  StatisticBreakdown,
-  TableItem,
-} from './statistic_breakdown/statistic_breakdown';
-
-type ColumnChartOptions = google.visualization.ColumnChartOptions;
-type PieChartOptions = google.visualization.PieChartOptions;
+  getHealthDetailChartData,
+  getHealthSummaryChartData,
+  getRecoveryTaskChartData,
+  getTestResultChartData,
+  transformHealthStatsToCharts,
+  transformHealthStatsToTable,
+  transformRecoveryStatsToCharts,
+  transformRecoveryStatsToTable,
+  transformTestStatsToCharts,
+  transformTestStatsToTable,
+} from './health_statistic_transformer';
+import {StatisticBreakdown} from './statistic_breakdown/statistic_breakdown';
+import {StatisticCard} from './statistic_card/statistic_card';
 
 /**
  * A tab component to show device healthiness, test result and recovery task
@@ -59,30 +49,25 @@ type PieChartOptions = google.visualization.PieChartOptions;
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule,
+    GoogleChartComponent,
     MasterDetailLayout,
-    InfoCard,
-    DateRangePicker,
-    MatProgressBarModule,
     MatTableModule,
     StatisticBreakdown,
+    StatisticCard,
   ],
-  host: {
-    '(window:resize)': 'onWindowResize()',
-  },
 })
 export class HealthStatisticTab implements OnInit, OnDestroy {
   @Input({required: true}) deviceId!: string;
 
   private readonly deviceService = inject(DEVICE_SERVICE);
 
-  private readonly googleChartsLoaded: Promise<void>;
+  // Used for breakdown charts that depend on global google lib being loaded for DataTable creation
+  private readonly chartsLibraryLoaded = signal(false);
 
   constructor() {
-    this.googleChartsLoaded = new Promise<void>((resolve) => {
-      load().then(() => {
-        google.charts.setOnLoadCallback(() => {
-          resolve();
-        });
+    load().then(() => {
+      google.charts.setOnLoadCallback(() => {
+        this.chartsLibraryLoaded.set(true);
       });
     });
   }
@@ -102,796 +87,197 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
     },
   ];
 
-  // Healthiness statistics.
-  healthinessStats: HealthinessStats | null = null;
-  healthDetailStates: string[] = [];
-  healthDataSource: TableItem[] = [];
-  healthBreakdownCharts: BreakdownChart[] = [];
-  healthDateRangeString = '';
-
-  // Test result statistics.
-  testResultStats: TestResultStats | null = null;
-  testDataSource: TableItem[] = [];
-  testBreakdownCharts: BreakdownChart[] = [];
-  testDateRangeString = '';
-
-  // Recovery task statistics.
-  recoveryTaskStats: RecoveryTaskStats | null = null;
-  recoveryDataSource: TableItem[] = [];
-  recoveryBreakdownCharts: BreakdownChart[] = [];
-  recoveryDateRangeString = '';
-
   loadingHealth = signal(false);
   loadingTest = signal(false);
   loadingRecovery = signal(false);
 
-  // Data availability signals
-  healthSummaryHasData = signal(true);
-  healthDetailHasData = signal(true);
-  testHasData = signal(true);
-  recoveryHasData = signal(true);
+  healthDateRangeString = signal('');
+  testDateRangeString = signal('');
+  recoveryDateRangeString = signal('');
 
-  // ViewChilds for charts.
-  private healthChartSummaryElementInternal: ElementRef | undefined;
-  @ViewChild('healthChartSummary')
-  set healthChartSummaryElement(value: ElementRef | undefined) {
-    this.healthChartSummaryElementInternal = value;
-    this.googleChartsLoaded.then(() => {
-      this.drawHealthinessSummaryCharts();
-    });
-  }
-  get healthChartSummaryElement(): ElementRef | undefined {
-    return this.healthChartSummaryElementInternal;
-  }
+  private readonly healthDateRange$ = new Subject<{start: Date; end: Date}>();
+  private readonly testDateRange$ = new Subject<{start: Date; end: Date}>();
+  private readonly recoveryDateRange$ = new Subject<{start: Date; end: Date}>();
 
-  private healthChartDetailElementInternal: ElementRef | undefined;
-  @ViewChild('healthChartDetail')
-  set healthChartDetailElement(value: ElementRef | undefined) {
-    this.healthChartDetailElementInternal = value;
-    this.googleChartsLoaded.then(() => {
-      this.drawHealthinessDetailCharts();
-    });
-  }
-  get healthChartDetailElement(): ElementRef | undefined {
-    return this.healthChartDetailElementInternal;
-  }
+  // Healthiness statistics.
+  readonly healthinessStats = toSignal(
+    this.healthDateRange$.pipe(
+      tap((range) => {
+        this.loadingHealth.set(true);
+        this.healthDateRangeString.set(
+          dateUtils.formatDateRange(range.start, range.end),
+        );
+      }),
+      switchMap((range) =>
+        this.deviceService
+          .getDeviceHealthinessStats(
+            this.deviceId,
+            dateUtils.toGoogleDate(range.start),
+            dateUtils.toGoogleDate(range.end),
+          )
+          .pipe(
+            catchError(() => of(null)),
+            finalize(() => {
+              this.loadingHealth.set(false);
+            }),
+          ),
+      ),
+    ),
+    {initialValue: null},
+  );
 
-  private testChartElementInternal: ElementRef | undefined;
-  @ViewChild('testChart')
-  set testChartElement(value: ElementRef | undefined) {
-    this.testChartElementInternal = value;
-    this.googleChartsLoaded.then(() => {
-      this.drawTestStackedBarChart();
-    });
-  }
-  get testChartElement(): ElementRef | undefined {
-    return this.testChartElementInternal;
-  }
+  healthDataSource = computed(() => {
+    return transformHealthStatsToTable(
+      this.healthinessStats()?.aggregatedStats,
+    );
+  });
 
-  private recoveryChartElementInternal: ElementRef | undefined;
-  @ViewChild('recoveryChart')
-  set recoveryChartElement(value: ElementRef | undefined) {
-    this.recoveryChartElementInternal = value;
-    this.googleChartsLoaded.then(() => {
-      this.drawRecoveryStackedBarChart();
-    });
-  }
-  get recoveryChartElement(): ElementRef | undefined {
-    return this.recoveryChartElementInternal;
-  }
-
-  @ViewChildren(StatisticBreakdown)
-  breakdownComponents!: QueryList<StatisticBreakdown>;
-
-  private resizeTimeout: ReturnType<typeof setTimeout> | undefined;
-
-  onWindowResize() {
-    if (this.resizeTimeout) {
-      clearTimeout(this.resizeTimeout);
+  private readonly healthBreakdownChartsData = computed(() => {
+    if (!this.chartsLibraryLoaded()) {
+      return [];
     }
+    return transformHealthStatsToCharts(
+      this.healthinessStats()?.aggregatedStats,
+    );
+  });
 
-    this.resizeTimeout = setTimeout(() => {
-      this.renderHealthinessCard();
-      this.renderTestCard();
-      this.renderRecoveryCard();
-    }, 200);
-  }
+  healthBreakdownCharts = computed(() => {
+    return this.healthBreakdownChartsData();
+  });
+
+  // New Computed Signals for Health Charts
+  readonly healthSummaryChartData = computed(() => {
+    return getHealthSummaryChartData(this.healthinessStats());
+  });
+
+  readonly healthSummaryHasData = computed(
+    () => this.healthSummaryChartData().hasData,
+  );
+
+  readonly healthDetailChartData = computed(() => {
+    return getHealthDetailChartData(this.healthinessStats());
+  });
+
+  readonly healthDetailHasData = computed(
+    () => this.healthDetailChartData().hasData,
+  );
+
+  // Test result statistics.
+  readonly testResultStats = toSignal(
+    this.testDateRange$.pipe(
+      tap((range) => {
+        this.loadingTest.set(true);
+        this.testDateRangeString.set(
+          dateUtils.formatDateRange(range.start, range.end),
+        );
+      }),
+      switchMap((range) =>
+        this.deviceService
+          .getDeviceTestResultStats(
+            this.deviceId,
+            dateUtils.toGoogleDate(range.start),
+            dateUtils.toGoogleDate(range.end),
+          )
+          .pipe(
+            catchError(() => of(null)),
+            finalize(() => {
+              this.loadingTest.set(false);
+            }),
+          ),
+      ),
+    ),
+    {initialValue: null},
+  );
+
+  testDataSource = computed(() => {
+    return transformTestStatsToTable(this.testResultStats()?.summary);
+  });
+
+  private readonly testBreakdownChartsData = computed(() => {
+    if (!this.chartsLibraryLoaded()) {
+      return [];
+    }
+    return transformTestStatsToCharts(this.testResultStats()?.summary);
+  });
+
+  testBreakdownCharts = computed(() => {
+    return this.testBreakdownChartsData();
+  });
+
+  readonly testChartData = computed(() => {
+    return getTestResultChartData(this.testResultStats());
+  });
+
+  readonly testHasData = computed(() => this.testChartData().hasData);
+
+  // Recovery task statistics.
+  readonly recoveryTaskStats = toSignal(
+    this.recoveryDateRange$.pipe(
+      tap((range) => {
+        this.loadingRecovery.set(true);
+        this.recoveryDateRangeString.set(
+          dateUtils.formatDateRange(range.start, range.end),
+        );
+      }),
+      switchMap((range) =>
+        this.deviceService
+          .getDeviceRecoveryTaskStats(
+            this.deviceId,
+            dateUtils.toGoogleDate(range.start),
+            dateUtils.toGoogleDate(range.end),
+          )
+          .pipe(
+            catchError(() => of(null)),
+            finalize(() => {
+              this.loadingRecovery.set(false);
+            }),
+          ),
+      ),
+    ),
+    {initialValue: null},
+  );
+
+  recoveryDataSource = computed(() => {
+    return transformRecoveryStatsToTable(this.recoveryTaskStats()?.summary);
+  });
+
+  private readonly recoveryBreakdownChartsData = computed(() => {
+    if (!this.chartsLibraryLoaded()) {
+      return [];
+    }
+    return transformRecoveryStatsToCharts(this.recoveryTaskStats()?.summary);
+  });
+
+  recoveryBreakdownCharts = computed(() => {
+    return this.recoveryBreakdownChartsData();
+  });
+
+  readonly recoveryChartData = computed(() => {
+    return getRecoveryTaskChartData(this.recoveryTaskStats());
+  });
+
+  readonly recoveryHasData = computed(() => this.recoveryChartData().hasData);
 
   ngOnInit() {}
 
-  ngOnDestroy() {
-    if (this.resizeTimeout) {
-      clearTimeout(this.resizeTimeout);
-    }
-  }
+  ngOnDestroy() {}
 
   onDateRangeChange(
     type: 'health' | 'test' | 'recovery',
     range: {start: Date; end: Date},
   ) {
-    const rangeStr = dateUtils.formatDateRange(range.start, range.end);
-
     switch (type) {
       case 'health':
-        this.healthDateRangeString = rangeStr;
-        this.loadStats(
-          range,
-          this.loadingHealth,
-          (start, end) =>
-            this.deviceService.getDeviceHealthinessStats(
-              this.deviceId,
-              dateUtils.toGoogleDate(start),
-              dateUtils.toGoogleDate(end),
-            ),
-          (stats) => {
-            this.healthinessStats = stats;
-            this.updateHealthDetailStates();
-            this.renderHealthinessCard();
-          },
-        );
+        this.healthDateRange$.next(range);
         break;
       case 'test':
-        this.testDateRangeString = rangeStr;
-        this.loadStats(
-          range,
-          this.loadingTest,
-          (start, end) =>
-            this.deviceService.getDeviceTestResultStats(
-              this.deviceId,
-              dateUtils.toGoogleDate(start),
-              dateUtils.toGoogleDate(end),
-            ),
-          (stats) => {
-            this.testResultStats = stats;
-            this.renderTestCard();
-          },
-        );
+        this.testDateRange$.next(range);
         break;
       case 'recovery':
-        this.recoveryDateRangeString = rangeStr;
-        this.loadStats(
-          range,
-          this.loadingRecovery,
-          (start, end) =>
-            this.deviceService.getDeviceRecoveryTaskStats(
-              this.deviceId,
-              dateUtils.toGoogleDate(start),
-              dateUtils.toGoogleDate(end),
-            ),
-          (stats) => {
-            this.recoveryTaskStats = stats;
-            this.renderRecoveryCard();
-          },
-        );
+        this.recoveryDateRange$.next(range);
         break;
       default:
         break;
     }
-  }
-
-  private loadStats<T>(
-    range: {start: Date; end: Date},
-    loadingSignal: WritableSignal<boolean>,
-    fetchData: (start: Date, end: Date) => Observable<T>,
-    onSuccess: (stats: T) => void,
-  ) {
-    loadingSignal.set(true);
-
-    fetchData(range.start, range.end)
-      .pipe(
-        finalize(() => {
-          loadingSignal.set(false);
-        }),
-      )
-      .subscribe((stats) => {
-        onSuccess(stats);
-      });
-  }
-
-  async renderHealthinessCard() {
-    await this.googleChartsLoaded;
-    this.drawHealthinessSummaryCharts();
-    this.drawHealthinessDetailCharts();
-    this.calculateHealthinessTableData();
-    this.calculateHealthPieChartsData();
-  }
-
-  async renderTestCard() {
-    await this.googleChartsLoaded;
-    this.drawTestStackedBarChart();
-    this.calculateTestTableData();
-    this.calculateTestPieChartsData();
-  }
-
-  async renderRecoveryCard() {
-    await this.googleChartsLoaded;
-    this.drawRecoveryStackedBarChart();
-    this.calculateRecoveryTableData();
-    this.calculateRecoveryPieChartsData();
-  }
-
-  // Healthiness Summary Chart
-  healthinessSummaryChartOptions = (): ColumnChartOptions => ({
-    backgroundColor: 'transparent',
-    isStacked: true,
-    legend: {position: 'bottom'},
-    vAxis: {
-      title: 'Time Percentage',
-      format: "#'%'",
-      gridlines: {color: '#e0e0e0'},
-      viewWindow: {min: 0, max: 100},
-    },
-    hAxis: {
-      title: 'Date (PDT)',
-      format: 'MMM d',
-      gridlines: {color: 'transparent'},
-    },
-    colors: HEALTH_SUMMARY_COLORS,
-    bar: {groupWidth: '60%'},
-    chartArea: {left: 70, top: 20, width: '85%', height: '70%'},
-  });
-  private drawHealthinessSummaryCharts() {
-    // --- Summary Chart ---
-    const summaryColumns = [
-      {type: 'date', label: 'Date'},
-      {type: 'number', label: 'In Service'},
-      {type: 'number', label: 'Out of Service'},
-    ];
-
-    this.drawChart(
-      this.healthChartSummaryElement,
-      this.healthinessStats?.dailyStats || [],
-      summaryColumns,
-      (d, date) => [
-        date,
-        d.healthinessSummary.inServicePercent ?? 0,
-        d.healthinessSummary.outOfServicePercent ?? 0,
-      ],
-      this.healthinessSummaryChartOptions(),
-      this.healthSummaryHasData,
-    );
-  }
-
-  // Healthiness Detail Chart
-  healthinessDetailChartOptions = (states: string[]): ColumnChartOptions => ({
-    backgroundColor: 'transparent',
-    isStacked: true,
-    legend: {position: 'bottom', maxLines: 2},
-    vAxis: {
-      title: 'Time Percentage',
-      format: "#'%'",
-      gridlines: {color: '#e0e0e0'},
-      viewWindow: {min: 0, max: 100},
-    },
-    hAxis: {
-      title: 'Date (PDT)',
-      format: 'MMM d',
-      gridlines: {color: 'transparent'},
-    },
-    colors: states.map((s) => this.getHealthColor(s)),
-    bar: {groupWidth: '60%'},
-    chartArea: {left: 70, top: 20, width: '85%', height: '70%'},
-  });
-  private updateHealthDetailStates() {
-    if (!this.healthinessStats) {
-      this.healthDetailStates = [];
-      return;
-    }
-    const allCategories = new Set<string>();
-    for (const day of this.healthinessStats.dailyStats) {
-      this.collectCategories(
-        day.healthinessSummary.inServiceBreakdown,
-        allCategories,
-      );
-      this.collectCategories(
-        day.healthinessSummary.outOfServiceBreakdown,
-        allCategories,
-      );
-    }
-    this.healthDetailStates = Array.from(allCategories).sort((a, b) => {
-      if (a.toLowerCase() === 'others') return 1;
-      if (b.toLowerCase() === 'others') return -1;
-      return a.localeCompare(b);
-    });
-  }
-
-  private collectCategories(
-    items: Array<{category: string; percent?: number; count?: number}>,
-    categorySet: Set<string>,
-  ) {
-    for (const item of items) {
-      if (item.category) {
-        categorySet.add(item.category);
-      }
-    }
-  }
-
-  private drawHealthinessDetailCharts() {
-    if (!this.healthinessStats) return;
-
-    // --- Detail Chart ---
-    const detailColumns = [{type: 'date', label: 'Date'}];
-    this.healthDetailStates.forEach((state) => {
-      detailColumns.push({
-        type: 'number',
-        label:
-          state.toLowerCase() === 'others' ? 'Others' : state.toUpperCase(),
-      });
-    });
-
-    this.drawChart(
-      this.healthChartDetailElement,
-      this.healthinessStats.dailyStats,
-      detailColumns,
-      (d, date) => {
-        const row: Array<Date | number> = [date];
-        const breakdownMap: Record<string, number> = {};
-        const addToMap = (
-          items: Array<{category: string; percent?: number}>,
-        ) => {
-          for (const item of items) {
-            breakdownMap[item.category.toUpperCase()] = item.percent ?? 0;
-          }
-        };
-        addToMap(d.healthinessSummary.inServiceBreakdown);
-        addToMap(d.healthinessSummary.outOfServiceBreakdown);
-
-        this.healthDetailStates.forEach((state) => {
-          row.push(breakdownMap[state.toUpperCase()] || 0);
-        });
-        return row;
-      },
-      this.healthinessDetailChartOptions(this.healthDetailStates),
-      this.healthDetailHasData,
-    );
-  }
-
-  // Healthiness Breakdown Table and Charts
-  private calculateHealthinessTableData() {
-    if (!this.healthinessStats || !this.healthinessStats.aggregatedStats) {
-      return;
-    }
-
-    const stats = this.healthinessStats.aggregatedStats;
-
-    this.healthDataSource = [
-      {
-        label: 'In Service',
-        value: stats.inServicePercent,
-        color: '#1e8e3e',
-        type: 'summary' as const,
-      },
-      ...stats.inServiceBreakdown
-        .filter((item) => item.percent && item.percent > 0)
-        .map((item) => ({
-          label: item.category.toUpperCase(),
-          value: item.percent,
-          color: this.getHealthColor(item.category.toLowerCase()),
-          type: 'detail' as const,
-        })),
-      {
-        label: 'Out of Service',
-        value: stats.outOfServicePercent,
-        color: '#d93025',
-        type: 'summary' as const,
-      },
-      ...stats.outOfServiceBreakdown
-        .filter((item) => item.percent && item.percent > 0)
-        .map((item) => ({
-          label:
-            item.category.toUpperCase() === 'OTHERS'
-              ? 'Others'
-              : item.category.toUpperCase(),
-          value: item.percent,
-          color: this.getHealthColor(item.category.toLowerCase()),
-          type: 'detail' as const,
-        })),
-    ];
-  }
-  private calculateHealthPieChartsData() {
-    if (!this.healthinessStats || !this.healthinessStats.aggregatedStats) {
-      return;
-    }
-
-    const data = this.healthinessStats.aggregatedStats;
-    const charts: BreakdownChart[] = [];
-
-    // Major Chart (In/Out Service)
-    const majorData = new google.visualization.DataTable();
-    majorData.addColumn('string', 'Status');
-    majorData.addColumn('number', 'Percentage');
-
-    const majorColors: string[] = [];
-    if (data.inServicePercent && data.inServicePercent > 0) {
-      majorData.addRow(['In Service', data.inServicePercent]);
-      majorColors.push(HEALTH_SUMMARY_COLORS[0]);
-    }
-    if (data.outOfServicePercent && data.outOfServicePercent > 0) {
-      majorData.addRow(['Out of Service', data.outOfServicePercent]);
-      majorColors.push(HEALTH_SUMMARY_COLORS[1]);
-    }
-
-    charts.push({
-      title: 'Primary Status',
-      data: majorData,
-      options: this.createPieChartOptions(majorColors),
-    });
-
-    // Minor Chart (Detailed Breakdown)
-    const minorData = new google.visualization.DataTable();
-    minorData.addColumn('string', 'Status');
-    minorData.addColumn('number', 'Value');
-
-    const minorColors: string[] = [];
-
-    const allBreakdown = [
-      ...data.inServiceBreakdown,
-      ...data.outOfServiceBreakdown,
-    ];
-
-    allBreakdown.forEach((item) => {
-      if (item.percent && item.percent > 0) {
-        minorData.addRow([item.category.toUpperCase(), item.percent]);
-        minorColors.push(this.getHealthColor(item.category));
-      }
-    });
-
-    charts.push({
-      title: 'Detailed Status Breakdown',
-      data: minorData,
-      options: this.createPieChartOptions(minorColors),
-    });
-
-    this.healthBreakdownCharts = charts;
-  }
-
-  // Test Result Chart
-  testResultChartOptions = (colors: string[]): ColumnChartOptions => ({
-    backgroundColor: 'transparent',
-    isStacked: true,
-    legend: {position: 'bottom'},
-    colors,
-    bar: {groupWidth: '75%'},
-    chartArea: {left: 70, top: 20, width: '85%', height: '70%'},
-    hAxis: {title: 'Date (PDT)', format: 'MMM d'},
-    vAxis: {title: 'Number of Tests'},
-  });
-  private drawTestStackedBarChart() {
-    const dailyStats = this.testResultStats?.dailyStats || [];
-    const allCategories = new Set<string>();
-    for (const stat of dailyStats) {
-      Object.keys(stat).forEach((key) => {
-        if (key !== 'date' && typeof stat[key] === 'number') {
-          allCategories.add(key);
-        }
-      });
-    }
-
-    const priorityOrder = Object.keys(TEST_COLORS).map((key) =>
-      key.toLowerCase(),
-    );
-
-    const sortedCategories = Array.from(allCategories).sort((a, b) => {
-      const indexA = priorityOrder.indexOf(a.toLowerCase());
-      const indexB = priorityOrder.indexOf(b.toLowerCase());
-      if (indexA !== -1 && indexB !== -1) {
-        return indexA - indexB;
-      }
-      if (indexA !== -1) return -1;
-      if (indexB !== -1) return 1;
-      return a.localeCompare(b);
-    });
-
-    const columns = [
-      {type: 'date', label: 'Date'},
-      ...sortedCategories.map((cat) => ({
-        type: 'number',
-        label: cat.toUpperCase(),
-      })),
-    ];
-
-    const colors = sortedCategories.map((cat) => this.getTestColor(cat));
-
-    this.drawChart(
-      this.testChartElement,
-      dailyStats,
-      columns,
-      (d, date) => {
-        const row: Array<Date | number | null> = [date];
-        sortedCategories.forEach((cat) => {
-          const val = d[cat];
-          row.push(typeof val === 'number' && val > 0 ? val : null);
-        });
-        return row;
-      },
-      this.testResultChartOptions(colors),
-      this.testHasData,
-    );
-  }
-
-  // Test Result Breakdown Table and Charts
-  private calculateTestTableData() {
-    if (!this.testResultStats || !this.testResultStats.aggregatedStats) {
-      return;
-    }
-
-    const stats = this.testResultStats.aggregatedStats;
-
-    this.testDataSource = [
-      {
-        label: 'Total',
-        count: stats.totalTests,
-        percent: 100,
-        type: 'total' as const,
-      },
-      {
-        label: 'Completion',
-        count: stats.completionStats.count,
-        percent: stats.completionStats.percent,
-        color: '#1e8e3e',
-        type: 'summary' as const,
-      },
-      ...stats.completionBreakdown
-        .filter((item) => item.stats.count && item.stats.count > 0)
-        .map((item) => ({
-          label: item.category.toUpperCase(),
-          count: item.stats.count,
-          percent: item.stats.percent,
-          color: this.getTestColor(item.category.toLowerCase()),
-          type: 'detail' as const,
-        })),
-      {
-        label: 'Non-Completion',
-        count: stats.nonCompletionStats.count,
-        percent: stats.nonCompletionStats.percent,
-        color: '#d93025',
-        type: 'summary' as const,
-      },
-      ...stats.nonCompletionBreakdown
-        .filter((item) => item.stats.count && item.stats.count > 0)
-        .map((item) => ({
-          label:
-            item.category.toUpperCase() === 'OTHER'
-              ? 'Others'
-              : item.category.toUpperCase(),
-          count: item.stats.count,
-          percent: item.stats.percent,
-          color: this.getTestColor(item.category.toLowerCase()),
-          type: 'detail' as const,
-        })),
-    ];
-  }
-  private calculateTestPieChartsData() {
-    if (!this.testResultStats || !this.testResultStats.aggregatedStats) {
-      return;
-    }
-
-    const data = this.testResultStats.aggregatedStats;
-    const charts: BreakdownChart[] = [];
-
-    // Major Chart (Completion/Non-Completion)
-    const majorData = new google.visualization.DataTable();
-    majorData.addColumn('string', 'Category');
-    majorData.addColumn('number', 'Count');
-
-    const majorColors: string[] = [];
-    if (data.completionStats.count && data.completionStats.count > 0) {
-      majorData.addRow(['Completion', data.completionStats.count]);
-      majorColors.push('#2E7D32');
-    }
-    if (data.nonCompletionStats.count && data.nonCompletionStats.count > 0) {
-      majorData.addRow(['Non-Completion', data.nonCompletionStats.count]);
-      majorColors.push('#C62828');
-    }
-
-    charts.push({
-      title: 'Primary Result',
-      data: majorData,
-      options: this.createPieChartOptions(majorColors),
-    });
-
-    // Minor Chart (Detailed Result)
-    const minorData = new google.visualization.DataTable();
-    minorData.addColumn('string', 'Result');
-    minorData.addColumn('number', 'Count');
-
-    const minorColors: string[] = [];
-
-    const allBreakdown = [
-      ...data.completionBreakdown,
-      ...data.nonCompletionBreakdown,
-    ];
-
-    allBreakdown.forEach((item) => {
-      if (item.stats.count && item.stats.count > 0) {
-        minorData.addRow([
-          item.category.toUpperCase() === 'OTHER'
-            ? 'Others'
-            : item.category.toUpperCase(),
-          item.stats.count,
-        ]);
-        minorColors.push(this.getTestColor(item.category));
-      }
-    });
-
-    charts.push({
-      title: 'Detailed Result Breakdown',
-      data: minorData,
-      options: this.createPieChartOptions(minorColors),
-    });
-
-    this.testBreakdownCharts = charts;
-  }
-
-  // Recovery Task Chart
-  recoveryTaskChartOptions = (): ColumnChartOptions => ({
-    backgroundColor: 'transparent',
-    isStacked: true,
-    legend: {position: 'bottom'},
-    colors: RECOVERY_CHART_COLORS,
-    bar: {groupWidth: '50%'},
-    chartArea: {left: 60, top: 20, width: '85%', height: '70%'},
-    hAxis: {title: 'Date (PDT)', format: 'MMM d'},
-    vAxis: {title: 'Number of Tasks'},
-  });
-  private drawRecoveryStackedBarChart() {
-    const columns = [
-      {type: 'date', label: 'Date'},
-      {type: 'number', label: 'SUCCESS'},
-      {type: 'number', label: 'FAIL'},
-    ];
-
-    this.drawChart(
-      this.recoveryChartElement,
-      this.recoveryTaskStats?.dailyStats || [],
-      columns,
-      (d, date) => [date, d.success ?? 0, d.fail ?? 0],
-      this.recoveryTaskChartOptions(),
-      this.recoveryHasData,
-    );
-  }
-
-  // Recovery Task Breakdown Table and Charts
-  private calculateRecoveryTableData() {
-    if (!this.recoveryTaskStats || !this.recoveryTaskStats.aggregatedStats) {
-      return;
-    }
-
-    const stats = this.recoveryTaskStats.aggregatedStats;
-
-    this.recoveryDataSource = [
-      {
-        label: 'Total',
-        count: stats.totalTasks,
-        percent: 100,
-        type: 'total' as const,
-      },
-      ...stats.outcomeBreakdown
-        .filter((item) => item.stats.count && item.stats.count > 0)
-        .map((item) => ({
-          label: item.category.toUpperCase(),
-          count: item.stats.count,
-          percent: item.stats.percent,
-          color: this.getRecoveryColor(item.category),
-          type: 'detail' as const,
-        })),
-    ];
-  }
-  private calculateRecoveryPieChartsData() {
-    if (!this.recoveryTaskStats || !this.recoveryTaskStats.aggregatedStats) {
-      return;
-    }
-
-    const data = this.recoveryTaskStats.aggregatedStats;
-    const charts: BreakdownChart[] = [];
-    const chartData = new google.visualization.DataTable();
-    chartData.addColumn('string', 'Result');
-    chartData.addColumn('number', 'Count');
-
-    const colors: string[] = [];
-    data.outcomeBreakdown.forEach((item) => {
-      if (item.stats.count && item.stats.count > 0) {
-        chartData.addRow([item.category.toUpperCase(), item.stats.count]);
-        colors.push(this.getRecoveryColor(item.category));
-      }
-    });
-
-    charts.push({
-      title: 'Recovery Result',
-      data: chartData,
-      options: this.createPieChartOptions(colors),
-    });
-
-    this.recoveryBreakdownCharts = charts;
-  }
-
-  private createPieChartOptions(colors: string[]): PieChartOptions {
-    const options: PieChartOptions = {
-      pieHole: 0.4,
-      colors,
-      backgroundColor: 'transparent',
-      legend: {position: 'right', alignment: 'center'},
-      chartArea: {left: 10, top: 20, width: '90%', height: '85%'},
-    };
-
-    if (colors.length === 1) {
-      options.pieSliceTextStyle = {color: 'black'};
-    }
-
-    return options;
-  }
-
-  // Helpers for template (health)
-  getHealthColor(state: string): string {
-    return HEALTH_COLORS[state.toLowerCase()] || '#BDBDBD';
-  }
-
-  // Helpers for template (test)
-  getTestColor(state: string): string {
-    return TEST_COLORS[state.toLowerCase()] || '#9E9E9E';
-  }
-
-  // Helpers for template (recovery)
-  getRecoveryColor(state: string): string {
-    return RECOVERY_COLORS[state.toLowerCase()] || '#9E9E9E';
-  }
-
-  private drawChart<T extends {date: string}>(
-    element: ElementRef | undefined,
-    dataList: T[],
-    columns: Array<{type: string; label: string}>,
-    rowMapper: (item: T, date: Date) => Array<Date | number | string | null>,
-    options: ColumnChartOptions,
-    hasDataSignal: WritableSignal<boolean> | undefined,
-  ) {
-    if (!element?.nativeElement) {
-      return;
-    }
-
-    const data = new google.visualization.DataTable();
-    columns.forEach((col) => {
-      data.addColumn(col.type, col.label);
-    });
-
-    const dates: Date[] = [];
-    let hasData = false;
-    dataList.forEach((d) => {
-      const date = new Date(`${d.date}T00:00:00`);
-      dates.push(date);
-      const row = rowMapper(d, date);
-      // Check if any non-date column has a value > 0
-      if (
-        row.some(
-          (val) => typeof val === 'number' && !isNaN(val) && Math.abs(val) > 0,
-        )
-      ) {
-        hasData = true;
-      }
-      data.addRow(row);
-    });
-
-    if (hasDataSignal !== undefined) {
-      hasDataSignal.set(hasData);
-    }
-
-    if (!hasData) {
-      return;
-    }
-
-    // Fix for duplicate dates on hAxis when data points are few.
-    // When there are few data points, Google Charts may generate intermediate ticks (e.g. every 12 hours).
-    // Since our format is 'MMM d', these intermediate ticks appear as duplicate dates.
-    // We strictly define ticks to match our data points when the dataset is small.
-    if (dates.length > 0 && dates.length <= 15) {
-      options.hAxis = options.hAxis || {};
-      options.hAxis.ticks = dates;
-    }
-
-    setTimeout(() => {
-      new google.visualization.ColumnChart(element.nativeElement).draw(
-        data,
-        options,
-      );
-    });
   }
 }

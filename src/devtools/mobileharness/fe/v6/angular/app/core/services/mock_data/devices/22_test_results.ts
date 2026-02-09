@@ -18,452 +18,348 @@ const HEALTHINESS_STATS: HealthinessStats = {
     {
       'date': '2026-01-17',
       'healthinessSummary': {
-        'inServiceBreakdown': [
-          {
-            'category': 'BUSY',
-          },
-          {
-            'category': 'IDLE',
-          },
-        ],
+        'inServiceBreakdown': [{'category': 'BUSY'}, {'category': 'IDLE'}],
         'outOfServiceBreakdown': [
-          {
-            'category': 'DIRTY',
-          },
-          {
-            'category': 'DYING',
-          },
-          {
-            'category': 'FAILED',
-          },
-          {
-            'category': 'INIT',
-          },
-          {
-            'category': 'LAMEDUCK',
-          },
-          {
-            'category': 'MISSING',
-          },
-          {
-            'category': 'OTHERS',
-          },
-          {
-            'category': 'PREPPING',
-          },
+          {'category': 'DIRTY'},
+          {'category': 'DYING'},
+          {'category': 'FAILED'},
+          {'category': 'INIT'},
+          {'category': 'LAMEDUCK'},
+          {'category': 'MISSING'},
+          {'category': 'OTHERS'},
+          {'category': 'PREPPING'},
         ],
       },
     },
     {
       'date': '2026-01-18',
       'healthinessSummary': {
-        'inServiceBreakdown': [
-          {
-            'category': 'BUSY',
-          },
-          {
-            'category': 'IDLE',
-          },
-        ],
+        'inServiceBreakdown': [{'category': 'BUSY'}, {'category': 'IDLE'}],
         'outOfServiceBreakdown': [
-          {
-            'category': 'DIRTY',
-          },
-          {
-            'category': 'DYING',
-          },
-          {
-            'category': 'FAILED',
-          },
-          {
-            'category': 'INIT',
-          },
-          {
-            'category': 'LAMEDUCK',
-          },
-          {
-            'category': 'MISSING',
-          },
-          {
-            'category': 'OTHERS',
-          },
-          {
-            'category': 'PREPPING',
-          },
+          {'category': 'DIRTY'},
+          {'category': 'DYING'},
+          {'category': 'FAILED'},
+          {'category': 'INIT'},
+          {'category': 'LAMEDUCK'},
+          {'category': 'MISSING'},
+          {'category': 'OTHERS'},
+          {'category': 'PREPPING'},
         ],
       },
     },
     {
       'date': '2026-01-19',
       'healthinessSummary': {
-        'inServiceBreakdown': [
-          {
-            'category': 'BUSY',
-          },
-          {
-            'category': 'IDLE',
-          },
-        ],
+        'inServiceBreakdown': [{'category': 'BUSY'}, {'category': 'IDLE'}],
         'outOfServiceBreakdown': [
-          {
-            'category': 'DIRTY',
-          },
-          {
-            'category': 'DYING',
-          },
-          {
-            'category': 'FAILED',
-          },
-          {
-            'category': 'INIT',
-          },
-          {
-            'category': 'LAMEDUCK',
-          },
-          {
-            'category': 'MISSING',
-          },
-          {
-            'category': 'OTHERS',
-          },
-          {
-            'category': 'PREPPING',
-          },
+          {'category': 'DIRTY'},
+          {'category': 'DYING'},
+          {'category': 'FAILED'},
+          {'category': 'INIT'},
+          {'category': 'LAMEDUCK'},
+          {'category': 'MISSING'},
+          {'category': 'OTHERS'},
+          {'category': 'PREPPING'},
         ],
       },
     },
     {
       'date': '2026-01-20',
       'healthinessSummary': {
-        'inServiceBreakdown': [
-          {
-            'category': 'BUSY',
-          },
-          {
-            'category': 'IDLE',
-          },
-        ],
+        'inServiceBreakdown': [{'category': 'BUSY'}, {'category': 'IDLE'}],
         'outOfServiceBreakdown': [
-          {
-            'category': 'DIRTY',
-          },
-          {
-            'category': 'DYING',
-          },
-          {
-            'category': 'FAILED',
-          },
-          {
-            'category': 'INIT',
-          },
-          {
-            'category': 'LAMEDUCK',
-          },
-          {
-            'category': 'MISSING',
-          },
-          {
-            'category': 'OTHERS',
-          },
-          {
-            'category': 'PREPPING',
-          },
+          {'category': 'DIRTY'},
+          {'category': 'DYING'},
+          {'category': 'FAILED'},
+          {'category': 'INIT'},
+          {'category': 'LAMEDUCK'},
+          {'category': 'MISSING'},
+          {'category': 'OTHERS'},
+          {'category': 'PREPPING'},
         ],
       },
     },
     {
       'date': '2026-01-21',
       'healthinessSummary': {
-        'inServiceBreakdown': [
-          {
-            'category': 'BUSY',
-          },
-          {
-            'category': 'IDLE',
-          },
-        ],
+        'inServiceBreakdown': [{'category': 'BUSY'}, {'category': 'IDLE'}],
         'outOfServiceBreakdown': [
-          {
-            'category': 'DIRTY',
-          },
-          {
-            'category': 'DYING',
-          },
-          {
-            'category': 'FAILED',
-          },
-          {
-            'category': 'INIT',
-          },
-          {
-            'category': 'LAMEDUCK',
-          },
-          {
-            'category': 'MISSING',
-          },
-          {
-            'category': 'OTHERS',
-          },
-          {
-            'category': 'PREPPING',
-          },
+          {'category': 'DIRTY'},
+          {'category': 'DYING'},
+          {'category': 'FAILED'},
+          {'category': 'INIT'},
+          {'category': 'LAMEDUCK'},
+          {'category': 'MISSING'},
+          {'category': 'OTHERS'},
+          {'category': 'PREPPING'},
         ],
       },
     },
     {
       'date': '2026-01-22',
       'healthinessSummary': {
-        'inServiceBreakdown': [
-          {
-            'category': 'BUSY',
-          },
-          {
-            'category': 'IDLE',
-          },
-        ],
+        'inServiceBreakdown': [{'category': 'BUSY'}, {'category': 'IDLE'}],
         'outOfServiceBreakdown': [
-          {
-            'category': 'DIRTY',
-          },
-          {
-            'category': 'DYING',
-          },
-          {
-            'category': 'FAILED',
-          },
-          {
-            'category': 'INIT',
-          },
-          {
-            'category': 'LAMEDUCK',
-          },
-          {
-            'category': 'MISSING',
-          },
-          {
-            'category': 'OTHERS',
-          },
-          {
-            'category': 'PREPPING',
-          },
+          {'category': 'DIRTY'},
+          {'category': 'DYING'},
+          {'category': 'FAILED'},
+          {'category': 'INIT'},
+          {'category': 'LAMEDUCK'},
+          {'category': 'MISSING'},
+          {'category': 'OTHERS'},
+          {'category': 'PREPPING'},
         ],
       },
     },
     {
       'date': '2026-01-23',
       'healthinessSummary': {
-        'inServiceBreakdown': [
-          {
-            'category': 'BUSY',
-          },
-          {
-            'category': 'IDLE',
-          },
-        ],
+        'inServiceBreakdown': [{'category': 'BUSY'}, {'category': 'IDLE'}],
         'outOfServiceBreakdown': [
-          {
-            'category': 'DIRTY',
-          },
-          {
-            'category': 'DYING',
-          },
-          {
-            'category': 'FAILED',
-          },
-          {
-            'category': 'INIT',
-          },
-          {
-            'category': 'LAMEDUCK',
-          },
-          {
-            'category': 'MISSING',
-          },
-          {
-            'category': 'OTHERS',
-          },
-          {
-            'category': 'PREPPING',
-          },
+          {'category': 'DIRTY'},
+          {'category': 'DYING'},
+          {'category': 'FAILED'},
+          {'category': 'INIT'},
+          {'category': 'LAMEDUCK'},
+          {'category': 'MISSING'},
+          {'category': 'OTHERS'},
+          {'category': 'PREPPING'},
         ],
       },
     },
   ],
   'aggregatedStats': {
-    'inServiceBreakdown': [
-      {
-        'category': 'BUSY',
-      },
-      {
-        'category': 'IDLE',
-      },
-    ],
+    'inServiceBreakdown': [{'category': 'BUSY'}, {'category': 'IDLE'}],
     'outOfServiceBreakdown': [
-      {
-        'category': 'DIRTY',
-      },
-      {
-        'category': 'DYING',
-      },
-      {
-        'category': 'FAILED',
-      },
-      {
-        'category': 'INIT',
-      },
-      {
-        'category': 'LAMEDUCK',
-      },
-      {
-        'category': 'MISSING',
-      },
-      {
-        'category': 'OTHERS',
-      },
-      {
-        'category': 'PREPPING',
-      },
+      {'category': 'DIRTY'},
+      {'category': 'DYING'},
+      {'category': 'FAILED'},
+      {'category': 'INIT'},
+      {'category': 'LAMEDUCK'},
+      {'category': 'MISSING'},
+      {'category': 'OTHERS'},
+      {'category': 'PREPPING'},
     ],
   },
 };
+
 const TEST_RESULT_STATS: TestResultStats = {
   'dailyStats': [
     {
       'date': '2026-01-01',
-      'pass': 10,
-      'timeout': 5,
+      'totalCount': 15,
+      'categoryStats': [
+        {
+          'category': 'TEST_RESULT_CATEGORY_PASS',
+          'stats': {'count': 10, 'percent': 66.6},
+        },
+        {
+          'category': 'TEST_RESULT_CATEGORY_TIMEOUT',
+          'stats': {'count': 5, 'percent': 33.3},
+        },
+      ],
     },
     {
       'date': '2026-01-02',
+      'totalCount': 0,
+      'categoryStats': [],
     },
     {
       'date': '2026-01-03',
-      'pass': 7,
-      'timeout': 5,
+      'totalCount': 12,
+      'categoryStats': [
+        {
+          'category': 'TEST_RESULT_CATEGORY_PASS',
+          'stats': {'count': 7, 'percent': 58.3},
+        },
+        {
+          'category': 'TEST_RESULT_CATEGORY_TIMEOUT',
+          'stats': {'count': 5, 'percent': 41.7},
+        },
+      ],
     },
     {
       'date': '2026-01-04',
-      'pass': 8,
-      'timeout': 9,
+      'totalCount': 17,
+      'categoryStats': [
+        {
+          'category': 'TEST_RESULT_CATEGORY_PASS',
+          'stats': {'count': 8, 'percent': 47},
+        },
+        {
+          'category': 'TEST_RESULT_CATEGORY_TIMEOUT',
+          'stats': {'count': 9, 'percent': 53},
+        },
+      ],
     },
     {
       'date': '2026-01-05',
-      'pass': 5,
-      'timeout': 5,
+      'totalCount': 10,
+      'categoryStats': [
+        {
+          'category': 'TEST_RESULT_CATEGORY_PASS',
+          'stats': {'count': 5, 'percent': 50},
+        },
+        {
+          'category': 'TEST_RESULT_CATEGORY_TIMEOUT',
+          'stats': {'count': 5, 'percent': 50},
+        },
+      ],
     },
     {
       'date': '2026-01-06',
-      'pass': 9,
-      'error': 1,
-      'timeout': 8,
+      'totalCount': 18,
+      'categoryStats': [
+        {
+          'category': 'TEST_RESULT_CATEGORY_PASS',
+          'stats': {'count': 9, 'percent': 50},
+        },
+        {
+          'category': 'TEST_RESULT_CATEGORY_ERROR',
+          'stats': {'count': 1, 'percent': 5.5},
+        },
+        {
+          'category': 'TEST_RESULT_CATEGORY_TIMEOUT',
+          'stats': {'count': 8, 'percent': 44.4},
+        },
+      ],
     },
     {
       'date': '2026-01-07',
-      'pass': 1,
-      'timeout': 1,
+      'totalCount': 2,
+      'categoryStats': [
+        {
+          'category': 'TEST_RESULT_CATEGORY_PASS',
+          'stats': {'count': 1, 'percent': 50},
+        },
+        {
+          'category': 'TEST_RESULT_CATEGORY_TIMEOUT',
+          'stats': {'count': 1, 'percent': 50},
+        },
+      ],
     },
   ],
-  'aggregatedStats': {
-    'totalTests': 74,
-    'completionStats': {
-      'count': 40,
-      'percent': 54.054054,
+  'summary': {
+    'totalCount': 74,
+    'completionGroup': {
+      'displayName': 'Completion',
+      'totalStats': {'count': 40, 'percent': 54.05},
+      'breakdownItems': [
+        {
+          'category': 'TEST_RESULT_CATEGORY_PASS',
+          'stats': {'count': 40, 'percent': 54.05},
+        },
+      ],
     },
-    'nonCompletionStats': {
-      'count': 34,
-      'percent': 45.945946,
+    'nonCompletionGroup': {
+      'displayName': 'Non-Completion',
+      'totalStats': {'count': 34, 'percent': 45.95},
+      'breakdownItems': [
+        {
+          'category': 'TEST_RESULT_CATEGORY_ERROR',
+          'stats': {'count': 1, 'percent': 1.35},
+        },
+        {
+          'category': 'TEST_RESULT_CATEGORY_TIMEOUT',
+          'stats': {'count': 33, 'percent': 44.6},
+        },
+      ],
     },
-    'completionBreakdown': [
-      {
-        'category': 'PASS',
-        'stats': {
-          'count': 40,
-          'percent': 54.054054,
-        },
-      },
-      {
-        'category': 'FAIL',
-        'stats': {},
-      },
-    ],
-    'nonCompletionBreakdown': [
-      {
-        'category': 'ERROR',
-        'stats': {
-          'count': 1,
-          'percent': 1.3513514,
-        },
-      },
-      {
-        'category': 'TIMEOUT',
-        'stats': {
-          'count': 33,
-          'percent': 44.594593,
-        },
-      },
-      {
-        'category': 'ABORT',
-        'stats': {},
-      },
-      {
-        'category': 'SKIP',
-        'stats': {},
-      },
-      {
-        'category': 'UNKNOWN',
-        'stats': {},
-      },
-    ],
+    'unknownGroup': {
+      'displayName': 'Unknown',
+      'totalStats': {'count': 0, 'percent': 0},
+      'breakdownItems': [],
+    },
   },
 };
+
 const RECOVERY_TASK_STATS: RecoveryTaskStats = {
   'dailyStats': [
     {
       'date': '2026-01-01',
-      'success': 14,
+      'totalCount': 14,
+      'categoryStats': [
+        {
+          'category': 'RECOVERY_OUTCOME_CATEGORY_SUCCESS',
+          'stats': {'count': 14, 'percent': 100},
+        },
+      ],
     },
     {
       'date': '2026-01-02',
-      'success': 14,
+      'totalCount': 14,
+      'categoryStats': [
+        {
+          'category': 'RECOVERY_OUTCOME_CATEGORY_SUCCESS',
+          'stats': {'count': 14, 'percent': 100},
+        },
+      ],
     },
     {
       'date': '2026-01-03',
-      'success': 15,
+      'totalCount': 15,
+      'categoryStats': [
+        {
+          'category': 'RECOVERY_OUTCOME_CATEGORY_SUCCESS',
+          'stats': {'count': 15, 'percent': 100},
+        },
+      ],
     },
     {
       'date': '2026-01-04',
-      'success': 14,
+      'totalCount': 14,
+      'categoryStats': [
+        {
+          'category': 'RECOVERY_OUTCOME_CATEGORY_SUCCESS',
+          'stats': {'count': 14, 'percent': 100},
+        },
+      ],
     },
     {
       'date': '2026-01-05',
-      'success': 12,
-      'fail': 5,
+      'totalCount': 17,
+      'categoryStats': [
+        {
+          'category': 'RECOVERY_OUTCOME_CATEGORY_SUCCESS',
+          'stats': {'count': 12, 'percent': 70.6},
+        },
+        {
+          'category': 'RECOVERY_OUTCOME_CATEGORY_FAIL',
+          'stats': {'count': 5, 'percent': 29.4},
+        },
+      ],
     },
     {
       'date': '2026-01-06',
-      'success': 9,
+      'totalCount': 9,
+      'categoryStats': [
+        {
+          'category': 'RECOVERY_OUTCOME_CATEGORY_SUCCESS',
+          'stats': {'count': 9, 'percent': 100},
+        },
+      ],
     },
     {
       'date': '2026-01-07',
-      'success': 1,
+      'totalCount': 1,
+      'categoryStats': [
+        {
+          'category': 'RECOVERY_OUTCOME_CATEGORY_SUCCESS',
+          'stats': {'count': 1, 'percent': 100},
+        },
+      ],
     },
   ],
-  'aggregatedStats': {
-    'totalTasks': 84,
+  'summary': {
+    'totalCount': 84,
     'outcomeBreakdown': [
       {
-        'category': 'SUCCESS',
-        'stats': {
-          'count': 79,
-          'percent': 94.04762,
-        },
+        'category': 'RECOVERY_OUTCOME_CATEGORY_SUCCESS',
+        'stats': {'count': 79, 'percent': 94.05},
       },
       {
-        'category': 'FAIL',
-        'stats': {
-          'count': 5,
-          'percent': 5.952381,
-        },
+        'category': 'RECOVERY_OUTCOME_CATEGORY_FAIL',
+        'stats': {'count': 5, 'percent': 5.95},
       },
     ],
   },
