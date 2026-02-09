@@ -140,6 +140,14 @@ public class Flags {
   public Flag<String> addSupportedDimensionForOmniModeUsage =
       addSupportedDimensionForOmniModeUsageDefault;
 
+  private static final Flag<Boolean> allowInsecurePluginDefault = Flag.value(true);
+
+  @com.beust.jcommander.Parameter(
+      names = "--allow_insecure_plugin",
+      description = "Whether to allow plugins built from untrusted sources.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> allowInsecurePlugin = allowInsecurePluginDefault;
+
   private static final Flag<List<String>> alrArtifactsDefault = Flag.stringList();
 
   @com.beust.jcommander.Parameter(

@@ -57,6 +57,9 @@ public interface PropertyName {
      */
     HAS_ASSOCIATED_ALLOCATION,
 
+    /** True to indicate that the job contains plugins not from verifiable sources. */
+    HAS_INSECURE_PLUGIN,
+
     /** Whether the job is resumable. */
     IS_RESUMABLE,
 
