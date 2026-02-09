@@ -253,6 +253,18 @@ message RequestDetail {
   optional string working_job_id = 26;
   optional string working_test_id = 27;
   repeated string non_tradefed_log_dir_names = 28;
+
+  // Real-time test module execution progress.
+  repeated TestModuleResult test_module_results = 29;
+}
+
+message TestModuleResult {
+  optional string name = 1;
+  optional bool complete = 2;
+  optional int64 duration_ms = 3;
+  optional int64 passed_tests = 4;
+  optional int64 failed_tests = 5;
+  optional int64 total_tests = 6;
 }
 
 message TestContext {

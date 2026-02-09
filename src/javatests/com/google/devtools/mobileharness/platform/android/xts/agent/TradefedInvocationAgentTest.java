@@ -77,6 +77,8 @@ public class TradefedInvocationAgentTest {
   @Test
   public void premain() throws Exception {
     Path runtimeInfoFilePath = tempFolder.newFolder().toPath().resolve("runtime_info_file.txt");
+    Path testModuleResultsFilePath =
+        tempFolder.newFolder().toPath().resolve("test_module_results_file.txt");
 
     CommandProcess commandProcess =
         commandExecutor.start(
@@ -88,7 +90,8 @@ public class TradefedInvocationAgentTest {
                             ImmutableList.of("-s", "device1", "-s", "device2"),
                             ImmutableList.of(
                                 String.format(
-                                    "-javaagent:%s=%s", AGENT_PATH, runtimeInfoFilePath))))
+                                    "-javaagent:%s=%s:%s",
+                                    AGENT_PATH, runtimeInfoFilePath, testModuleResultsFilePath))))
                 .showFullResultInException(true));
 
     List<XtsTradefedRuntimeInfo> runtimeInfos =
@@ -158,6 +161,8 @@ public class TradefedInvocationAgentTest {
   @Test
   public void premain_sharding() throws Exception {
     Path runtimeInfoFilePath = tempFolder.newFolder().toPath().resolve("runtime_info_file.txt");
+    Path testModuleResultsFilePath =
+        tempFolder.newFolder().toPath().resolve("test_module_results_file.txt");
 
     CommandProcess commandProcess =
         commandExecutor.start(
@@ -171,7 +176,8 @@ public class TradefedInvocationAgentTest {
                                 "-s", "device1", "-s", "device2", "--shard-count", "2"),
                             ImmutableList.of(
                                 String.format(
-                                    "-javaagent:%s=%s", AGENT_PATH, runtimeInfoFilePath))))
+                                    "-javaagent:%s=%s:%s",
+                                    AGENT_PATH, runtimeInfoFilePath, testModuleResultsFilePath))))
                 .showFullResultInException(true));
 
     List<XtsTradefedRuntimeInfo> runtimeInfos =
@@ -248,6 +254,8 @@ public class TradefedInvocationAgentTest {
   @Test
   public void premain_invocationThrowsUncheckedException() throws Exception {
     Path runtimeInfoFilePath = tempFolder.newFolder().toPath().resolve("runtime_info_file.txt");
+    Path testModuleResultsFilePath =
+        tempFolder.newFolder().toPath().resolve("test_module_results_file.txt");
 
     CommandProcess commandProcess =
         commandExecutor.start(
@@ -262,9 +270,8 @@ public class TradefedInvocationAgentTest {
                                 "-s", DEVICE_ID_TO_TRIGGER_UNCHECKED_INVOCATION_EXCEPTION),
                             ImmutableList.of(
                                 String.format(
-                                    "-javaagent:%s=%s",
-                                    AGENT_PATH,
-                                    String.format("%s:%s", runtimeInfoFilePath, "true")))))
+                                    "-javaagent:%s=%s:%s",
+                                    AGENT_PATH, runtimeInfoFilePath, testModuleResultsFilePath))))
                 .showFullResultInException(true));
 
     List<XtsTradefedRuntimeInfo> runtimeInfos =
@@ -282,6 +289,8 @@ public class TradefedInvocationAgentTest {
   @Test
   public void premain_invocationThrowsCheckedException() throws Exception {
     Path runtimeInfoFilePath = tempFolder.newFolder().toPath().resolve("runtime_info_file.txt");
+    Path testModuleResultsFilePath =
+        tempFolder.newFolder().toPath().resolve("test_module_results_file.txt");
 
     CommandProcess commandProcess =
         commandExecutor.start(
@@ -296,9 +305,8 @@ public class TradefedInvocationAgentTest {
                                 "-s", DEVICE_ID_TO_TRIGGER_CHECKED_INVOCATION_EXCEPTION),
                             ImmutableList.of(
                                 String.format(
-                                    "-javaagent:%s=%s",
-                                    AGENT_PATH,
-                                    String.format("%s:%s", runtimeInfoFilePath, "true")))))
+                                    "-javaagent:%s=%s:%s",
+                                    AGENT_PATH, runtimeInfoFilePath, testModuleResultsFilePath))))
                 .showFullResultInException(true));
 
     List<XtsTradefedRuntimeInfo> runtimeInfos =
