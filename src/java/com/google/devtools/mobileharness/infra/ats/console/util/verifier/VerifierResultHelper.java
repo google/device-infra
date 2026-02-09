@@ -29,7 +29,6 @@ import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportPr
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Test;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.TestCase;
 import com.google.devtools.mobileharness.platform.android.packagemanager.AndroidPackageManagerUtil;
-import com.google.devtools.mobileharness.platform.android.packagemanager.StatusFilter;
 import com.google.devtools.mobileharness.platform.android.process.AndroidProcessUtil;
 import com.google.devtools.mobileharness.platform.android.shared.autovalue.UtilArgs;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
@@ -232,7 +231,6 @@ public class VerifierResultHelper {
                   .setSerial(serial)
                   .setUserId(Integer.toString(getUserId(serial)))
                   .build(),
-              StatusFilter.NONE,
               VERIFIER_PACKAGE)
           .isEmpty()) {
         // Check the version name for the installed apk

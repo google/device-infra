@@ -1064,20 +1064,6 @@ public class AndroidPackageManagerUtil {
     installApk(
         UtilArgs.builder().setSerial(serial).setSdkVersion(sdkVersion).build(),
         apkPath,
-        grantPermissions,
-        installTimeout);
-  }
-
-  /** Overload of {@link AndroidPackageManagerUtil#installApk} */
-  public void installApk(
-      UtilArgs utilArgs,
-      String apkPath,
-      boolean grantPermissions,
-      @Nullable Duration installTimeout)
-      throws MobileHarnessException, InterruptedException {
-    installApk(
-        utilArgs,
-        apkPath,
         /* dexMetadataPath= */ null,
         grantPermissions,
         /* forceNoStreaming= */ false,
@@ -1532,39 +1518,21 @@ public class AndroidPackageManagerUtil {
    */
   public Set<String> listPackages(String serial, String nameFilter)
       throws MobileHarnessException, InterruptedException {
-    return listPackages(serial, StatusFilter.NONE, nameFilter);
-  }
-
-  /**
-   * Gets package names of packages on the device.
-   *
-   * @param serial serial number of the device.
-   * @param statusFilter status filter.
-   * @param nameFilter filter to only those whose name contains this string.
-   * @return a set of package names; will never be null but could be empty
-   * @throws MobileHarnessException if fail getting package info from the device
-   * @throws InterruptedException if current thread is interrupted during this method
-   */
-  public Set<String> listPackages(String serial, StatusFilter statusFilter, String nameFilter)
-      throws MobileHarnessException, InterruptedException {
-    return listPackages(UtilArgs.builder().setSerial(serial).build(), statusFilter, nameFilter);
+    return listPackages(serial, ListPackagesArgs.builder().setNameFilter(nameFilter).build());
   }
 
   /**
    * Gets package names of packages on the device.
    *
    * @param utilArgs args with serial, sdkVersion and userId
-   * @param statusFilter status filter.
    * @param nameFilter filter to only those whose name contains this string.
    * @return a set of package names; will never be null but could be empty
    * @throws MobileHarnessException if fail getting package info from the device
    * @throws InterruptedException if current thread is interrupted during this method
    */
-  public Set<String> listPackages(UtilArgs utilArgs, StatusFilter statusFilter, String nameFilter)
+  public Set<String> listPackages(UtilArgs utilArgs, String nameFilter)
       throws MobileHarnessException, InterruptedException {
-    return listPackages(
-        utilArgs,
-        ListPackagesArgs.builder().setStatusFilter(statusFilter).setNameFilter(nameFilter).build());
+    return listPackages(utilArgs, ListPackagesArgs.builder().setNameFilter(nameFilter).build());
   }
 
   /**
@@ -1743,7 +1711,13 @@ public class AndroidPackageManagerUtil {
    */
   public boolean isPackageEnabled(String serial, String packageName)
       throws MobileHarnessException, InterruptedException {
-    return listPackages(serial, StatusFilter.ENABLED, packageName).contains(packageName);
+    return listPackages(
+            serial,
+            ListPackagesArgs.builder()
+                .setStatusFilter(StatusFilter.ENABLED)
+                .setNameFilter(packageName)
+                .build())
+        .contains(packageName);
   }
 
   /**
@@ -1884,7 +1858,8 @@ public class AndroidPackageManagerUtil {
           }
         };
     String[] adbCommand = new String[] {"-s", serial, "shell", ADB_SHELL_GET_MODULEINFO};
-    Optional<MobileHarnessException> exceptionOp = processAdbResult(adbCommand, processor);
+    Optional<MobileHarnessException> exceptionOp =
+        processGetModuleInfoAdbResult(adbCommand, processor);
 
     if (processor.success()) {
       return modules;
@@ -2222,7 +2197,7 @@ public class AndroidPackageManagerUtil {
    *
    * @return possible execution exception during adb run.
    */
-  private Optional<MobileHarnessException> processAdbResult(
+  private Optional<MobileHarnessException> processGetModuleInfoAdbResult(
       String[] command, LineProcessor processor)
       throws InterruptedException, MobileHarnessException {
     try {

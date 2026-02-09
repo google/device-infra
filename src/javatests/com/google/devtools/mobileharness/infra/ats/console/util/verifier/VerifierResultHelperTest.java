@@ -80,7 +80,7 @@ public class VerifierResultHelperTest {
         .thenReturn(CURRENT_TIME);
     when(adb.getAdbPath()).thenReturn("/path/to/adb");
     when(androidSystemSettingUtil.getDeviceSdkVersion(anyString())).thenReturn(SDK_VERSION);
-    when(androidPackageManagerUtil.listPackages(any(UtilArgs.class), any(), any()))
+    when(androidPackageManagerUtil.listPackages(any(UtilArgs.class), any(String.class)))
         .thenReturn(ImmutableSet.of("com.android.cts.verifier"));
     when(androidPackageManagerUtil.getAppVersionName(anyString(), anyString())).thenReturn("16_r1");
     when(androidPackageManagerUtil.getApkVersionName(anyString())).thenReturn("16_r1");
@@ -144,7 +144,7 @@ public class VerifierResultHelperTest {
     Path xtsRoot = folder.newFolder("xts_root").toPath();
     File apk = xtsRoot.resolve(VerifierResultHelper.CTS_VERIFIER_APK).toFile();
     apk.createNewFile();
-    when(androidPackageManagerUtil.listPackages(any(UtilArgs.class), any(), any()))
+    when(androidPackageManagerUtil.listPackages(any(UtilArgs.class), any(String.class)))
         .thenReturn(ImmutableSet.of());
 
     verifierResultHelper.pushResults(
