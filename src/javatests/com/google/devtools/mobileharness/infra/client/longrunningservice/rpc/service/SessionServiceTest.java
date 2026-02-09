@@ -32,10 +32,13 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionId;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.AbortSessionsRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.AbortSessionsResponse;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetTestModuleResultsRequest;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetTestModuleResultsResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.NotifyAllSessionsRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.NotifyAllSessionsResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.SessionFilter;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.util.SessionQueryUtil;
+import io.grpc.stub.StreamObserver;
 import java.util.Arrays;
 import org.junit.Before;
 import org.junit.Rule;
@@ -137,6 +140,29 @@ public final class SessionServiceTest {
 
     verify(sessionManager, never()).notifySessions(any(), any());
     assertThat(response.getSessionIdList()).isEmpty();
+  }
+
+  @Test
+  public void getTestModuleResults() {
+    GetTestModuleResultsRequest request =
+        GetTestModuleResultsRequest.newBuilder()
+            .setSessionId(SessionId.newBuilder().setId("session_id"))
+            .build();
+    StreamObserver<GetTestModuleResultsResponse> responseObserver =
+        new StreamObserver<GetTestModuleResultsResponse>() {
+          @Override
+          public void onNext(GetTestModuleResultsResponse response) {
+            assertThat(response.getResultList()).isEmpty();
+          }
+
+          @Override
+          public void onError(Throwable t) {}
+
+          @Override
+          public void onCompleted() {}
+        };
+
+    sessionService.getTestModuleResults(request, responseObserver);
   }
 
   private ImmutableList<SessionId> createSessionIds(String... sessionIds) {
