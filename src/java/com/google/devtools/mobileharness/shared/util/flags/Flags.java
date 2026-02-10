@@ -552,6 +552,14 @@ public class Flags {
       converter = DurationFlag.DurationConverter.class)
   public Flag<Duration> checkFilesInterval = checkFilesIntervalDefault;
 
+  private static final Flag<Boolean> checkInsecurePluginDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--check_insecure_plugin",
+      description = "Whether to check plugins built from untrusted sources.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> checkInsecurePlugin = checkInsecurePluginDefault;
+
   private static final Flag<Boolean> clearAndroidDeviceMultiUsersDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(
