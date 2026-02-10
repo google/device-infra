@@ -1,0 +1,142 @@
+#!/bin/bash
+set -u
+
+# usage function
+function usage()
+{
+   cat << HEREDOC
+
+   Usage: $progname [--device DEVICE] [--verbose] [--repair] [--deploy] [--latest-paris]
+
+   optional arguments:
+     -h, --help           show this help message and exit
+     -v, --verbose        increase the verbosity of the bash script
+     -d, --device DEVICE  device hostname[:port]
+     --latest-paris       Use latest paris version (default: prod)
+     --repair             repair the device
+     --deploy             deploy the device
+
+HEREDOC
+}
+
+# initialize variables
+progname=$(basename -- "$0")
+verbose=0
+deploy=0
+repair=0
+device=""
+useLatestParis=0
+port="5555"
+user=`whoami`
+tm=`date +"%Y-%m-%d_%H%M%S_%N"`
+servername=`hostname`
+
+
+# use getopt and store the output into $OPTS
+# note the use of -o for the short options, --long for the long name options
+# and a : for any option that takes a parameter
+OPTS=$(getopt -o "hd:v" --long "help,device:,verbose,repair,deploy,latest-paris" -n "$progname" -- "$@")
+if [ $? != 0 ] ; then echo "Error in command line arguments." >&2 ; usage; exit 1 ; fi
+eval set -- "$OPTS"
+
+while true; do
+  # uncomment the next line to see how shift is working
+  # echo "\$1:\"$1\" \$2:\"$2\""
+  case "$1" in
+    -h | --help ) usage; exit; ;;
+    -d | --device ) device="$2"; shift 2 ;;
+    --latest-paris ) useLatestParis=1; shift 1 ;;
+    --repair ) repair=1; shift ;;
+    --deploy ) deploy=1; shift ;;
+    -v | --verbose ) verbose=$((verbose + 1)); shift ;;
+    -- ) shift; break ;;
+    * ) break ;;
+  esac
+done
+
+if [ -z "${device}" ]; then
+  echo "device is empty"
+  exit -1
+fi
+
+if [[ $device =~ ":" ]]; then
+  port=${device##*:}
+  device="${device%%:*}"
+fi
+echo "device: $device, port: $port"
+
+if [ -z "$user" ]; then
+  user="default"
+fi
+
+# set env var for PARIS. This should be temporary. b/416779787
+export PARIS_ADB_PATH="/usr/local/google/mobileharness/ate/adb"
+recoveryDir=/usr/local/google/mobileharness/runtime_files/recovery/
+pd=/tmp/recovery
+if [ $deploy -eq 1 ]; then
+  pd="${pd}/deploy"
+elif [ $repair -eq 1 ]; then
+  pd="${pd}/repair"
+else
+  pd="${pd}/check"
+fi
+
+dd=${pd}/${device}
+wd=${pd}/${device}/${tm}_${user}
+
+echo "work directory: $wd"
+# cat ~/passwd | sudo -S rm -rf ${wd}
+if [ -d "${wd}" ]; then
+  echo "${wd} already existed"
+  exit 1
+fi
+
+mkdir -p ${wd}
+
+function exitEarlyIfExistingRepairJobRunning() {
+  local stringPattern="$1"
+  local repairProcesses=$(pgrep -a paris | grep "/${stringPattern}/" | grep -- "local-recovery")
+  if [ -n "$repairProcesses" ]; then
+     echo "has other running $repairProcesses"
+     echo "has other running $repairProcesses" > ${wd}/exitEarly.txt
+     exit 1
+  fi
+     echo "no process of the same dut running: ${stringPattern}"
+     return 0
+}
+exitEarlyIfExistingRepairJobRunning "${device}"
+
+#  copy json file #ideally these steps should be done when mh_lab container first started. mount service account, install ping
+if [ ! -e "/creds/service_accounts/skylab-drone.json" ]; then
+  cat ~/passwd | sudo -S mkdir -p /creds/service_accounts
+  cat ~/passwd | sudo -S cp "${recoveryDir}/skylab-drone.json" /creds/service_accounts
+fi
+
+cd "${dd}"
+# download paris
+depotToolsPath="/usr/local/google/mobileharness/runtime_files/recovery/depot_tools"
+"${depotToolsPath}"/cipd init -force -cache-dir "${pd}"
+
+if [[ $useLatestParis -eq 1 ]]; then
+  echo "using latest paris"
+  "${depotToolsPath}"/cipd install -service-account-json "/creds/service_accounts/skylab-drone.json" 'experimental/infra/paris/linux-amd64'
+else
+  echo "using prod paris"
+  "${depotToolsPath}"/cipd install -service-account-json "/creds/service_accounts/skylab-drone.json" 'experimental/infra/paris/linux-amd64' "prod"
+fi
+
+exitEarlyIfExistingRepairJobRunning ${device}
+
+uniqID="${servername}-${device}-${user}-${tm}"
+if [[ $useLatestParis -eq 1 ]]; then
+  uniqID="${uniqID}-latest"
+fi
+
+if [[ $deploy -eq 1 ]]; then
+  "${dd}"/paris local-recovery -only-verify=false -upload-logs -swarming-id="${uniqID}" -bb-id="${uniqID}" -update-inv -task-name deploy -dev-active=false -generate-log-files -log-root ${wd}/logs -karte-server prod -log-proto -service-account-json /creds/service_accounts/skylab-drone.json -verbose ${device}
+elif [[ $repair -eq 1 ]]; then
+  "${dd}"/paris local-recovery -only-verify=false -upload-logs -swarming-id="${uniqID}" -bb-id="${uniqID}" -update-inv -task-name repair -dev-active=false -generate-log-files -log-root ${wd}/logs -karte-server prod -log-proto -service-account-json /creds/service_accounts/skylab-drone.json -verbose ${device}
+else
+  "${dd}"/paris local-recovery -upload-logs -swarming-id="${uniqID}" -bb-id="${uniqID}" -update-inv -task-name verify -dev-active=false -generate-log-files -log-root ${wd}/logs -karte-server prod -log-proto -service-account-json /creds/service_accounts/skylab-drone.json -verbose ${device}
+fi
+

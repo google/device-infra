@@ -1231,6 +1231,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableMoblyResultstoreUpload = enableMoblyResultstoreUploadDefault;
 
+  private static final Flag<Boolean> enableParisDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enable_paris",
+      description = "Whether this server supports paris detection.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableParis = enableParisDefault;
+
   private static final Flag<Boolean> enablePersistentCacheDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(
@@ -2028,6 +2036,14 @@ public class Flags {
       description = "OLC server port. By default, it is 7030.",
       converter = Flag.IntegerConverter.class)
   public Flag<Integer> olcServerPort = olcServerPortDefault;
+
+  private static final Flag<String> parisPathDefault = Flag.value("");
+
+  @com.beust.jcommander.Parameter(
+      names = "--paris_path",
+      description = "The user provided path to run paris health check/repair",
+      converter = Flag.StringConverter.class)
+  public Flag<String> parisPath = parisPathDefault;
 
   private static final Flag<String> perfettoScriptPathDefault = Flag.value("");
 
