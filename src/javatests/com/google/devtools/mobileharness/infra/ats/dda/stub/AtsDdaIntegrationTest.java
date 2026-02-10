@@ -365,6 +365,7 @@ public class AtsDdaIntegrationTest {
                             "--enable_ats_mode=false",
                             "--enable_cloud_logging=false",
                             "--enable_control_service=false",
+                            "--enable_device_config_manager=false",
                             "--enable_file_cleaner=false",
                             "--enable_rdh=false",
                             "--enable_stubby_rpc_server=false",
