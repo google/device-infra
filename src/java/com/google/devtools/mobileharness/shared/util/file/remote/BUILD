@@ -37,7 +37,10 @@ java_library(
 
 java_library(
     name = "gcs_util",
-    srcs = ["GcsUtil.java"],
+    srcs = [
+        "ApiaryBasedGcsUtil.java",
+        "GcsUtil.java",
+    ],
     deps = [
         ":dataclass",
         "//src/java/com/google/devtools/mobileharness/api/model/error",

@@ -22,7 +22,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 public class GcsUtilFactory {
 
   public static GcsUtil create(GcsUtil.GcsParams params) throws MobileHarnessException {
-    return new GcsUtil(params);
+    return new ApiaryBasedGcsUtil(params);
   }
 
   private GcsUtilFactory() {}

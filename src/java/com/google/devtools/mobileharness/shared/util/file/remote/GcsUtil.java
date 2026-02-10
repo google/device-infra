@@ -16,32 +16,15 @@
 
 package com.google.devtools.mobileharness.shared.util.file.remote;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
-import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
-import com.google.api.client.googleapis.json.GoogleJsonError;
-import com.google.api.client.googleapis.json.GoogleJsonResponseException;
-import com.google.api.client.googleapis.media.MediaHttpDownloader;
-import com.google.api.client.http.HttpRequestInitializer;
-import com.google.api.client.http.HttpResponseException;
-import com.google.api.client.http.HttpStatusCodes;
 import com.google.api.client.http.InputStreamContent;
-import com.google.api.client.http.javanet.NetHttpTransport;
-import com.google.api.client.json.gson.GsonFactory;
-import com.google.api.services.storage.Storage;
-import com.google.api.services.storage.model.ComposeRequest;
-import com.google.api.services.storage.model.ComposeRequest.SourceObjects;
-import com.google.api.services.storage.model.Objects;
 import com.google.api.services.storage.model.StorageObject;
 import com.google.auto.value.AutoOneOf;
 import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.Hashing;
@@ -62,17 +45,11 @@ import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.protobuf.ByteString;
 import java.io.BufferedOutputStream;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.SocketException;
-import java.net.SocketTimeoutException;
-import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.security.GeneralSecurityException;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -80,11 +57,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
-import javax.annotation.Nullable;
-import javax.net.ssl.SSLException;
 
 /** Utility class for operating with files using Google Cloud Storage. */
-public class GcsUtil {
+public abstract class GcsUtil {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -92,29 +67,17 @@ public class GcsUtil {
    * Maximum numbers of shards. It's a limitation of Google Cloud Storage. {@code
    * https://cloud.google.com/storage/docs/gsutil/commands/compose}.
    */
-  private static final int MAX_SHARD_COUNT = 32;
+  protected static final int MAX_SHARD_COUNT = 32;
 
   /** Maximum attempts while meet network issue. */
-  private static final int MAX_ATTEMPTS = 5;
+  protected static final int MAX_ATTEMPTS = 5;
 
   /** Output signal when lab server has no space left. */
-  private static final String OUTPUT_NO_SPACE = "No space left on device";
-
-  /**
-   * Timeout of connecting to GCS service. Default value is 20s, see {@link
-   * com.google.api.client.http.HttpRequest#connectTimeout}.
-   */
-  private static final Duration HTTP_CONNECT_TIMEOUT = Duration.ofMinutes(1);
-
-  /**
-   * Timeout of reading from GCS service. Default value is 20s, see {@link
-   * com.google.api.client.http.HttpRequest#readTimeout}.
-   */
-  private static final Duration HTTP_READ_TIMEOUT = Duration.ofMinutes(1);
+  protected static final String OUTPUT_NO_SPACE = "No space left on device";
 
   /** Thread pool for uploading/downloading GSC file in parellel. */
-  private static final class Holder {
-    private static final ListeningExecutorService threadpool =
+  protected static final class Holder {
+    static final ListeningExecutorService threadpool =
         ThreadPools.createStandardThreadPoolWithMaxSize(
             "gcs-util", Flags.instance().gcsUtilThreads.getNonNull());
 
@@ -127,10 +90,12 @@ public class GcsUtil {
               },
               "gcs-util-shutdown");
     }
+
+    private Holder() {}
   }
 
   /** Random number generator for creating temporary file. */
-  private static final Random random = new Random();
+  protected static final Random random = new Random();
 
   /** File attribute view to save file attribute to. */
   private static final String ATTR_VIEW = "user";
@@ -185,7 +150,7 @@ public class GcsUtil {
       FULL_CONTROL("https://www.googleapis.com/auth/devstorage.full_control"),
       CLOUDPLATFORM_READ_ONLY("https://www.googleapis.com/auth/cloud-platform.read-only"),
       CLOUDPLATFORM("https://www.googleapis.com/auth/cloud-platform");
-      private final String uri;
+      public final String uri;
 
       Scope(String uri) {
         this.uri = uri;
@@ -260,101 +225,29 @@ public class GcsUtil {
     }
   }
 
-  private final Storage client;
+  protected final GcsParams storageParams;
 
-  private final GcsParams storageParams;
+  protected final ChecksumUtil checksumUtil;
 
-  private final ChecksumUtil checksumUtil;
+  protected final ChecksumUtil crc32cChecksumUtil;
 
-  private final ChecksumUtil crc32cChecksumUtil;
+  protected final LocalFileUtil localFileUtil;
 
-  private final LocalFileUtil localFileUtil;
-
-  private static Storage getClient(GcsParams storageParams) throws MobileHarnessException {
-    // Get credential
-    HttpRequestInitializer credential = getCredential(storageParams);
-    return new Storage.Builder(new NetHttpTransport(), GsonFactory.getDefaultInstance(), credential)
-        .setHttpRequestInitializer(
-            request -> {
-              // Timeout should be large enough to fit bad network conditions. b/79751793,
-              // b/80438442, b/80443729.
-              credential.initialize(request);
-              request.setConnectTimeout((int) HTTP_CONNECT_TIMEOUT.toMillis());
-              request.setReadTimeout((int) HTTP_READ_TIMEOUT.toMillis());
-            })
-        .setApplicationName(storageParams.applicationName)
-        .build();
-  }
-
-  private static HttpRequestInitializer getCredential(GcsParams storageParams)
-      throws MobileHarnessException {
-    switch (storageParams.credentialType.getType()) {
-      case APP_DEFAULT:
-        return appDefaultCredential(storageParams.scope);
-      case CREDENTIAL_FILE:
-        return credentialFromJsonFile(
-            storageParams.credentialType.credentialFile(), storageParams.scope);
-      case NONE:
-    }
-    throw new MobileHarnessException(
-        BasicErrorId.GCS_INVALID_PARAMS,
-        String.format(
-            "Invalid GcsParams %s. Please provide a valid credential type.", storageParams));
-  }
-
-  private static HttpRequestInitializer credentialFromJsonFile(
-      String filePath, GcsParams.Scope scope) throws MobileHarnessException {
-    try {
-      return GoogleCredential.fromStream(
-              new FileInputStream(filePath),
-              GoogleNetHttpTransport.newTrustedTransport(),
-              GsonFactory.getDefaultInstance())
-          .createScoped(ImmutableSet.of(scope.uri));
-    } catch (GeneralSecurityException e) {
-      throw new MobileHarnessException(
-          BasicErrorId.GCS_SECURITY_ERROR, "General Security Exception when connecting to GCS", e);
-    } catch (FileNotFoundException e) {
-      throw new MobileHarnessException(
-          BasicErrorId.LOCAL_FILE_OR_DIR_NOT_FOUND, "Credential file not found " + filePath, e);
-    } catch (IOException e) {
-      throw new MobileHarnessException(
-          BasicErrorId.LOCAL_NETWORK_ERROR, "Failed to create credential", e);
-    }
-  }
-
-  private static HttpRequestInitializer appDefaultCredential(GcsParams.Scope scope)
-      throws MobileHarnessException {
-    try {
-      return GoogleCredential.getApplicationDefault().createScoped(ImmutableSet.of(scope.uri));
-    } catch (IOException e) {
-      throw new MobileHarnessException(
-          BasicErrorId.GCS_SECURITY_ERROR, "Cannot create application default credential!", e);
-    }
-  }
-
-  /**
-   * Constructs a CloudStorageUtil given the related parameters about the storage.
-   *
-   * @throws MobileHarnessException if failed to set up the client
-   */
-  public GcsUtil(GcsParams storageParams) throws MobileHarnessException {
+  /** Constructs a CloudStorageUtil given the related parameters about the storage. */
+  protected GcsUtil(GcsParams storageParams) {
     this(
         storageParams,
-        getClient(storageParams),
         new ChecksumUtil(Hashing.murmur3_128()),
         new ChecksumUtil(Hashing.crc32c()),
         new LocalFileUtil());
   }
 
-  @VisibleForTesting
-  GcsUtil(
+  protected GcsUtil(
       GcsParams storageParams,
-      Storage client,
       ChecksumUtil checksumUtil,
       ChecksumUtil crc32cChecksumUtil,
       LocalFileUtil localFileUtil) {
     this.storageParams = storageParams;
-    this.client = client;
     this.checksumUtil = checksumUtil;
     this.crc32cChecksumUtil = crc32cChecksumUtil;
     this.localFileUtil = localFileUtil;
@@ -479,71 +372,9 @@ public class GcsUtil {
    * @param from byte offset to start; it should large or equal to 0
    * @param size size to download; -1 means no limitation;
    */
-  private void copyFileToLocal(GcsApiObject gcsFile, Path localFile, long from, long size)
-      throws MobileHarnessException, InterruptedException {
-    MobileHarnessExceptions.check(
-        from >= 0,
-        BasicErrorId.GCS_ILLEGAL_OFFSET,
-        () -> "file offset should be a non negative position, but get " + from);
-    localFileUtil.prepareParentDir(localFile);
-
-    String fileInfo =
-        String.format(
-            "file gs://%s/%s [%s, %s) to %s",
-            storageParams.bucketName, gcsFile, from, from + size, localFile);
-
-    retryIfMeetQuotaOrNetworkIssue(
-        () -> {
-          try (BufferedOutputStream bufferedOutputStream = getOutputStream(localFile)) {
-            Storage.Objects.Get get =
-                client.objects().get(storageParams.bucketName, gcsFile.path().toString());
-
-            if (gcsFile.generationNumber().isPresent()) {
-              get.setGeneration(gcsFile.generationNumber().get());
-            }
-
-            MediaHttpDownloader downloader = getMediaHttpDownloader(get);
-            if (downloader == null) {
-              throw new MobileHarnessException(
-                  BasicErrorId.GCS_NO_DOWNLOADER,
-                  String.format(
-                      "Downloader of GCS file gs://%s/%s is not initialized.",
-                      storageParams.bucketName, gcsFile));
-            }
-
-            downloader.setDirectDownloadEnabled(true);
-            if (size > 0) {
-              downloader.setContentRange(from, from + size - 1);
-            } else if (from > 0) {
-              downloader.setBytesDownloaded(from);
-            }
-            get.executeMediaAndDownloadTo(bufferedOutputStream);
-          } catch (IOException e) {
-            if (e.getMessage().contains(OUTPUT_NO_SPACE)) {
-              throw new MobileHarnessException(
-                  BasicErrorId.GCS_DOWNLOAD_FILE_NO_SPACE_ERROR,
-                  "Please clean the lab machine to make space for GCS file downloading",
-                  e);
-            }
-            throw new MobileHarnessException(
-                BasicErrorId.GCS_DOWNLOAD_FILE_ERROR,
-                String.format("Fail to copy %s: %s", fileInfo, e.getMessage()),
-                e);
-          }
-          return null;
-        },
-        "copy " + fileInfo);
-
-    logger.atInfo().log(
-        "Copied file gs://%s/%s [%s, %s) to %s",
-        storageParams.bucketName, gcsFile, from, from + size, localFile);
-  }
-
-  /** For mocking in unit test, because the wrapped method is `final`. */
-  @VisibleForTesting
-  MediaHttpDownloader getMediaHttpDownloader(Storage.Objects.Get get) {
-    return get.getMediaHttpDownloader();
-  }
+  protected abstract void copyFileToLocal(
+      GcsApiObject gcsFile, Path localFile, long from, long size)
+      throws MobileHarnessException, InterruptedException;
 
   /**
    * Copies {@code gcsFile} from Google Cloud Storage to local {@code localFile}. file {@code
@@ -805,47 +636,8 @@ public class GcsUtil {
    * @param delimiter name of the objects' delimiter
    * @param recursively whether to recursively list files
    */
-  public List<String> listFiles(String prefix, String delimiter, boolean recursively)
-      throws MobileHarnessException {
-    List<String> files = new ArrayList<>();
-    logger.atInfo().log(
-        "List files with prefix(%s), delimiter(%s), recursively(%s)",
-        prefix, delimiter, recursively);
-    try {
-      Storage.Objects.List listObjects = client.objects().list(storageParams.bucketName);
-      if (!Strings.isNullOrEmpty(prefix)) {
-        listObjects.setPrefix(prefix);
-      }
-      if (!Strings.isNullOrEmpty(delimiter)) {
-        listObjects.setDelimiter(delimiter);
-      }
-      Objects objects;
-      do {
-        objects = listObjects.execute();
-        List<String> prefixes = objects.getPrefixes();
-        if (prefixes != null) {
-          for (String subPrefix : prefixes) {
-            if (recursively) {
-              files.addAll(listFiles(subPrefix, delimiter, recursively));
-            } else {
-              files.add(subPrefix);
-            }
-          }
-        }
-        List<StorageObject> items = objects.getItems();
-        if (items != null) {
-          for (StorageObject object : items) {
-            files.add(object.getName());
-          }
-        }
-        listObjects.setPageToken(objects.getNextPageToken());
-      } while (objects.getNextPageToken() != null);
-    } catch (IOException e) {
-      throw new MobileHarnessException(
-          BasicErrorId.GCS_LIST_FILES_ERROR, String.format("Failed to list file %s", prefix), e);
-    }
-    return files;
-  }
+  public abstract List<String> listFiles(String prefix, String delimiter, boolean recursively)
+      throws MobileHarnessException;
 
   /**
    * Copies {@code localFile} to Google Cloud Storage file {@code gcsFile}.
@@ -948,67 +740,13 @@ public class GcsUtil {
    * @param objectMetadata metaData of the object in the cloud, including the name of object
    * @throws MobileHarnessException if fails to copy file.
    */
-  public void copyContentStreamToCloud(
-      InputStreamContent contentStream, StorageObject objectMetadata)
-      throws MobileHarnessException {
-    try {
-      client.objects().insert(storageParams.bucketName, objectMetadata, contentStream).execute();
-    } catch (IOException e) {
-      throw new MobileHarnessException(
-          BasicErrorId.GCS_UPLOAD_FILE_ERROR,
-          "Cannot upload the content stream to Google Cloud Storage object "
-              + objectMetadata.getName(),
-          e);
-    }
-  }
+  public abstract void copyContentStreamToCloud(
+      InputStreamContent contentStream, StorageObject objectMetadata) throws MobileHarnessException;
 
   /** Composes gcs files in list {@code srcGcsFiles} to {@code dstGcsFile}. */
-  public void compose(
+  public abstract void compose(
       Path dstGcsFile, boolean removeSources, List<Path> srcGcsFiles, String contentType)
-      throws MobileHarnessException, InterruptedException {
-    try {
-      String actionInfo =
-          String.format("Composes gcs file %s from source files: %s", dstGcsFile, srcGcsFiles);
-      retryIfMeetQuotaOrNetworkIssue(
-          () -> {
-            try {
-              StorageObject metadata =
-                  new StorageObject().setName(dstGcsFile.toString()).setContentType(contentType);
-
-              ComposeRequest request =
-                  new ComposeRequest()
-                      .setDestination(metadata)
-                      .setSourceObjects(
-                          srcGcsFiles.stream()
-                              .map(s -> new SourceObjects().setName(s.toString()))
-                              .collect(toImmutableList()));
-              client
-                  .objects()
-                  .compose(storageParams.bucketName, dstGcsFile.toString(), request)
-                  .execute();
-              return null;
-            } catch (IOException e) {
-              throw new MobileHarnessException(
-                  BasicErrorId.GCS_UPLOAD_FILE_ERROR,
-                  String.format(
-                      "Failed to compose GCS file %s to gs://%s/%s",
-                      srcGcsFiles, storageParams.bucketName, dstGcsFile),
-                  e);
-            }
-          },
-          actionInfo);
-    } finally {
-      if (removeSources) {
-        for (Path src : srcGcsFiles) {
-          try {
-            deleteCloudFile(src.toString());
-          } catch (MobileHarnessException e) {
-            logger.atWarning().withCause(e).log("Failed to remove compose file: %s", src);
-          }
-        }
-      }
-    }
-  }
+      throws MobileHarnessException, InterruptedException;
 
   /**
    * Copies {@code localFile} to Google Cloud Storage {@code gcsFile} in shards with size {@code
@@ -1150,30 +888,8 @@ public class GcsUtil {
    *
    * @return metadata of file {@code gcsFile}; or empty if {@code file} doesn't exit
    */
-  private Optional<StorageObject> getMetadata(GcsApiObject gcsFile)
-      throws MobileHarnessException, InterruptedException {
-    String actionInfo = "get metadata of Google Cloud Storage File: " + gcsFile;
-    return retryIfMeetQuotaOrNetworkIssue(
-        () -> {
-          try {
-            Storage.Objects.Get getRequest =
-                client.objects().get(storageParams.bucketName, gcsFile.path().toString());
-
-            if (gcsFile.generationNumber().isPresent()) {
-              getRequest.setGeneration(gcsFile.generationNumber().get());
-            }
-
-            return Optional.ofNullable(getRequest.execute());
-          } catch (IOException e) {
-            if (isObjectNoFound(e)) {
-              return Optional.empty();
-            }
-            throw new MobileHarnessException(
-                BasicErrorId.GCS_GET_METADATA_ERROR, "Failed to " + actionInfo, e);
-          }
-        },
-        actionInfo);
-  }
+  protected abstract Optional<StorageObject> getMetadata(GcsApiObject gcsFile)
+      throws MobileHarnessException, InterruptedException;
 
   /**
    * Runs {@code func} with retry if it failed on Quota or Network issue.
@@ -1187,11 +903,12 @@ public class GcsUtil {
    * @return attempts that is taken to run {@code func}
    */
   @CanIgnoreReturnValue
-  private <R> R retryIfMeetQuotaOrNetworkIssue(GcsMethod<R> m, String actionInfo)
+  protected <R> R retryIfMeetQuotaOrNetworkIssue(GcsMethod<R> m, String actionInfo)
       throws MobileHarnessException, InterruptedException {
     return retryIfMeetQuotaOrNetworkIssue(m, actionInfo, Sleeper.defaultSleeper());
   }
 
+  @CanIgnoreReturnValue
   @VisibleForTesting
   <R> R retryIfMeetQuotaOrNetworkIssue(GcsMethod<R> m, String actionInfo, Sleeper sleeper)
       throws MobileHarnessException, InterruptedException {
@@ -1206,14 +923,14 @@ public class GcsUtil {
         }
         return response;
       } catch (MobileHarnessException e) {
-        if (causedByQuotaIssue(e)) {
+        if (isQuotaIssue(e)) {
           logger.atWarning().log("Failed on quota issue, will retry: %s", actionInfo);
           lastException = e;
           exceptions.add(
               String.format(
                   "attempt #%s [%s]: %s",
                   i + 1, currentTime(), Throwables.getStackTraceAsString(e)));
-        } else if (causedByNetworkIssue(e)) {
+        } else if (isNetworkIssue(e)) {
           logger.atWarning().log("Failed on network issue, will retry: %s", actionInfo);
           lastException = e;
           exceptions.add(
@@ -1229,7 +946,7 @@ public class GcsUtil {
       sleeper.sleep(Duration.ofMillis(sleepSecond * 1000 + random.nextInt(10)));
       sleepSecond *= 2;
     }
-    if (lastException != null && causedByQuotaIssue(lastException)) {
+    if (lastException != null && isQuotaIssue(lastException)) {
       throw new MobileHarnessException(
           BasicErrorId.GCS_MEET_QUOTA_ISSUE,
           String.format(
@@ -1249,62 +966,15 @@ public class GcsUtil {
     R call() throws MobileHarnessException;
   }
 
-  /** Returns true if {@code e} is failed because of object is no found. */
-  private static boolean isObjectNoFound(IOException e) {
-    Optional<Integer> errorCode = getGcsServerErrorCode(e);
-    return errorCode.isPresent() && errorCode.get().equals(HttpStatusCodes.STATUS_CODE_NOT_FOUND);
-  }
-
   /**
    * Returns true if {@code e} is caused by GCS quota issue.
    *
    * <p>{@code https://cloud.google.com/storage/docs/request-rate#ramp-up}
    */
-  private static boolean causedByQuotaIssue(MobileHarnessException e) {
-    if (!(e.getCause() instanceof IOException)) {
-      return false;
-    }
-    IOException cause = (IOException) e.getCause();
-    Optional<Integer> errorCode = getGcsServerErrorCode(cause);
-    if (errorCode.isPresent()) {
-      if ((errorCode.get() / 100) == 5 || errorCode.get() == 429) {
-        return true;
-      }
-    }
-    return false;
-  }
+  protected abstract boolean isQuotaIssue(MobileHarnessException e);
 
   /** Returns true if {@code e} is caused by GCS network issue. */
-  private static boolean causedByNetworkIssue(MobileHarnessException e) {
-    if (!(e.getCause() instanceof IOException)) {
-      return false;
-    }
-    IOException cause = (IOException) e.getCause();
-    String errorMessage = Strings.nullToEmpty(cause.getMessage());
-    return (cause instanceof SocketTimeoutException)
-        || (cause instanceof UnknownHostException)
-        || (cause instanceof SocketException) /* b/140559689 */
-        || (cause instanceof SSLException) /* b/113663972 */
-        || errorMessage.contains("Remote host closed connection during handshake") /* b/111562372 */
-        || errorMessage.contains("Error writing request body to server") /* b/111561615 */
-        || errorMessage.contains("Connection closed prematurely") /* b/123259718 */;
-  }
-
-  /** Gets error code if {@code e} is a valid GCS server exception; otherwise returns empty. */
-  private static Optional<Integer> getGcsServerErrorCode(IOException e) {
-    if (!(e instanceof GoogleJsonResponseException)) {
-      if (e instanceof HttpResponseException) {
-        return Optional.of(((HttpResponseException) e).getStatusCode());
-      }
-      return Optional.empty();
-    }
-    @Nullable GoogleJsonError details = ((GoogleJsonResponseException) e).getDetails();
-    if (details == null) {
-      // For the http error code like 5XX, the details maybe null, use status code instead.
-      return Optional.of(((GoogleJsonResponseException) e).getStatusCode());
-    }
-    return Optional.of(details.getCode());
-  }
+  protected abstract boolean isNetworkIssue(MobileHarnessException e);
 
   /**
    * Deletes a file on the cloud.
@@ -1312,18 +982,7 @@ public class GcsUtil {
    * @param targetFilePath the name of GCS object to delete
    * @throws MobileHarnessException if fails to delete the file
    */
-  public void deleteCloudFile(String targetFilePath) throws MobileHarnessException {
-    try {
-      client.objects().delete(storageParams.bucketName, targetFilePath).execute();
-    } catch (IOException e) {
-      throw new MobileHarnessException(
-          BasicErrorId.GCS_DELETE_FILE_ERROR,
-          String.format(
-              "Failed to delete the file %s (bucket: %s) on GCS.",
-              targetFilePath, storageParams.bucketName),
-          e);
-    }
-  }
+  public abstract void deleteCloudFile(String targetFilePath) throws MobileHarnessException;
 
   /**
    * Checks if an object named {@code gcsFile} exists. This method is faster than fileOrDirExist(),
@@ -1346,7 +1005,7 @@ public class GcsUtil {
     return getMetadata(gcsFile).isPresent();
   }
 
-  private static BufferedOutputStream getOutputStream(Path localFile) throws IOException {
+  protected static BufferedOutputStream getOutputStream(Path localFile) throws IOException {
     return getOutputStreamFromLocalFile(localFile);
   }
 
@@ -1363,11 +1022,11 @@ public class GcsUtil {
     return localFileUtil.getFileSize(localFile);
   }
 
-  private Instant currentTime() {
+  protected static Instant currentTime() {
     return currentInstant();
   }
 
-  private Instant currentInstant() {
+  private static Instant currentInstant() {
     return Clock.systemUTC().instant();
   }
 }
