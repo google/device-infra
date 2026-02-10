@@ -302,7 +302,7 @@ public class InstallApkStep implements InstallApkStepConstants {
             allPackages, pkg -> !Objects.equals(pkg, PackageConstants.PACKAGE_NAME_GMS));
     SetMultimap<String, String> splitPackages =
         Multimaps.filterKeys(remainToInstall, pkg -> allPackages.get(pkg).size() > 1);
-    if (deviceSdkVersion > AndroidVersion.PI.getEndSdkVersion() && !splitPackages.isEmpty()) {
+    if (deviceSdkVersion > AndroidVersion.KITKAT.getEndSdkVersion() && !splitPackages.isEmpty()) {
       for (Map.Entry<String, Collection<String>> entry : splitPackages.asMap().entrySet()) {
         String packageName = entry.getKey();
         Collection<String> apkPaths = entry.getValue();

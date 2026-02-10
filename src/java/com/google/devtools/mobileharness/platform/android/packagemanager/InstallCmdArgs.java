@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.platform.android.packagemanager;
 import com.google.auto.value.AutoValue;
 import com.google.auto.value.extension.memoized.Memoized;
 import com.google.common.collect.ImmutableList;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -120,6 +121,14 @@ public abstract class InstallCmdArgs {
     public abstract Builder setForceNoStreaming(boolean value);
 
     public abstract Builder setExtraArgs(ImmutableList<String> extras);
+
+    public abstract ImmutableList.Builder<String> extraArgsBuilder();
+
+    @CanIgnoreReturnValue
+    public Builder addExtraArgs(String... extras) {
+      extraArgsBuilder().add(extras);
+      return this;
+    }
 
     public abstract InstallCmdArgs build();
   }

@@ -53,6 +53,7 @@ import com.google.wireless.qa.mobileharness.shared.util.ArrayUtil;
 import com.google.wireless.qa.mobileharness.shared.util.DeviceUtil;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -154,6 +155,9 @@ public class AndroidPackageManagerUtil {
   @VisibleForTesting
   static final int DEFAULT_INSTALL_MULTI_PACKAGE_START_SDK_VERSION =
       AndroidVersion.PI.getEndSdkVersion() + 1;
+
+  static final int DEFAULT_INSTALL_MULTIPLE_START_SDK_VERSION =
+      AndroidVersion.LOLLIPOP.getStartSdkVersion();
 
   /** Partial output of "adb shell pm disable [app]" when the command succeeds. */
   static final String OUTPUT_DISABLE_APP_SUCCESS = "new state: disabled";
@@ -1364,21 +1368,20 @@ public class AndroidPackageManagerUtil {
       @Nullable Duration installTimeout,
       String... extraArgs)
       throws MobileHarnessException, InterruptedException {
-    InstallCmdArgs.Builder installCmdArgs =
+    InstallCmdArgs installCmdArgs =
         InstallCmdArgs.builder()
             .setReplaceExistingApp(true)
             .setAllowVersionCodeDowngrade(true)
-            .setGrantPermissions(true);
+            .setGrantPermissions(true)
+            .addExtraArgs(extraArgs)
+            .build();
     ListMultimap<String, String> apkMap = ArrayListMultimap.create();
     for (String apk : apkList) {
       String packageName = aapt.getApkPackageName(apk);
       apkMap.put(packageName, apk);
     }
-    if (extraArgs.length > 0) {
-      installCmdArgs.setExtraArgs(ImmutableList.copyOf(extraArgs));
-    }
     installMultiPackage(
-        utilArgs, installCmdArgs.build(), apkMap, waitForStagedSessionReady, installTimeout);
+        utilArgs, installCmdArgs, apkMap, waitForStagedSessionReady, installTimeout);
   }
 
   /**
@@ -1476,7 +1479,77 @@ public class AndroidPackageManagerUtil {
           "Failed to install packages:\n" + packageMap + '\n' + output, /* cause= */ null);
     }
 
-    logger.atWarning().log("Successfully install apks %s to device %s", packageMap, serial);
+    logger.atInfo().log("Successfully installed apks %s to device %s", packageMap, serial);
+  }
+
+  /**
+   * Installs a package consisting of one or multiple APK splits with a single "adb
+   * install-multiple" command. Only work on devices with SDK version >= 21.
+   *
+   * @param utilArgs args with serial, sdkVersion and userId
+   * @param installCmdArgs adb install args
+   * @param apks a list of APK splits to be installed
+   * @param installTimeout timeout for installation
+   * @throws MobileHarnessException if install command fails
+   * @throws InterruptedException if the thread executing the command is interrupted
+   */
+  public void installMultiple(
+      UtilArgs utilArgs,
+      InstallCmdArgs installCmdArgs,
+      Collection<String> apks,
+      @Nullable Duration installTimeout)
+      throws MobileHarnessException, InterruptedException {
+    isMultiUserSupported(utilArgs, DEFAULT_MULTI_USER_START_SDK_VERSION);
+    if (utilArgs.sdkVersion().isPresent()
+        && utilArgs.sdkVersion().getAsInt() < DEFAULT_INSTALL_MULTIPLE_START_SDK_VERSION) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_SDK_VERSION_NOT_SUPPORT,
+          String.format(
+              "Install-multiple support requires the minimal API level to be %d",
+              DEFAULT_INSTALL_MULTIPLE_START_SDK_VERSION));
+    }
+
+    if (apks.isEmpty()) {
+      logger.atWarning().log("No package to install.");
+      return;
+    }
+
+    String[] installCommand =
+        ArrayUtil.join("install-multiple", installCmdArgs.getInstallArgsArray());
+    if (utilArgs.userId().isPresent()) {
+      installCommand = ArrayUtil.join(installCommand, "--user", utilArgs.userId().get());
+    }
+    installCommand = ArrayUtil.join(installCommand, apks.toArray(new String[0]));
+
+    String serial = utilArgs.serial();
+    String output = "";
+    Duration timeout =
+        installTimeout == null ? DEFAULT_INSTALL_TIMEOUT.multipliedBy(apks.size()) : installTimeout;
+
+    logger.atInfo().log("Start install apks to device %s", serial);
+
+    try {
+      output =
+          adb.run(
+              serial,
+              installCommand,
+              timeout,
+              LineCallback.stopWhen(
+                  line -> line.startsWith(OUTPUT_SUCCESS) || line.startsWith(OUTPUT_FAILURE)));
+    } catch (MobileHarnessException e) {
+      maybeThrowNonInfraInstallationError(e.getMessage(), apks.toString());
+      maybeThrowSecondaryNonInfraInstallationError(e.getMessage(), apks.toString());
+      throwInstallationError("install-multiple command killed", e);
+    }
+
+    if (!output.contains(OUTPUT_SUCCESS)) {
+      maybeThrowNonInfraInstallationError(output, apks.toString());
+      maybeThrowSecondaryNonInfraInstallationError(output, apks.toString());
+      throwInstallationError(
+          String.format("Failed to install apks %s to device %s", apks, serial), null);
+    }
+
+    logger.atInfo().log("Successfully installed apks %s to device %s", apks, serial);
   }
 
   /**

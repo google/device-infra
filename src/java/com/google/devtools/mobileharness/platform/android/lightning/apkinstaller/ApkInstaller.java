@@ -20,7 +20,6 @@ import com.google.common.annotations.Beta;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Multimap;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.hash.Hashing;
@@ -54,6 +53,7 @@ import com.google.wireless.qa.mobileharness.shared.util.DeviceUtil;
 import java.io.File;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.logging.Level;
@@ -543,14 +543,6 @@ public class ApkInstaller {
           AndroidErrorId.ANDROID_APK_INSTALLER_APPLY_MULTI_PACKAGE_INSTALL_TO_GMS,
           "Don't use install-multi-package to install GMS. Please install GMS separately.");
     }
-    if (deviceSdkVersion <= AndroidVersion.PI.getEndSdkVersion()) {
-      throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_APK_INSTALLER_DEVICE_SDK_TOO_LOW,
-          String.format(
-              "The device sdk version %d is too low for install-multi-package. Please try other"
-                  + " ways",
-              deviceSdkVersion));
-    }
     installMultiPackageHelper(
         buildUtilArgs(deviceId, userId == null ? MULTI_USER_DEFAULT_ID : userId, deviceSdkVersion),
         packageMap,
@@ -902,21 +894,28 @@ public class ApkInstaller {
       throws MobileHarnessException, InterruptedException {
     SharedLogUtil.logMsg(
         logger, log, "Start to install multiple packages to device %s...", utilArgs.serial());
-    InstallCmdArgs.Builder installCmdArgs =
+    InstallCmdArgs installCmdArgs =
         InstallCmdArgs.builder()
             .setReplaceExistingApp(true)
             .setAllowTestPackages(true)
             .setGrantPermissions(grantPermissions)
-            .setForceNoStreaming(forceNoStreaming);
-    if (extraArgs.length > 0) {
-      installCmdArgs.setExtraArgs(ImmutableList.copyOf(extraArgs));
+            .setForceNoStreaming(forceNoStreaming)
+            .addExtraArgs(extraArgs)
+            .build();
+    if (utilArgs.sdkVersion().isPresent()
+        && utilArgs.sdkVersion().getAsInt() <= AndroidVersion.PI.getEndSdkVersion()) {
+      for (Collection<String> apkPaths : packageMap.asMap().values()) {
+        androidPackageManagerUtil.installMultiple(
+            utilArgs, installCmdArgs, apkPaths, installTimeout);
+      }
+    } else {
+      androidPackageManagerUtil.installMultiPackage(
+          utilArgs,
+          installCmdArgs,
+          packageMap,
+          hasApex ? WAIT_FOR_STAGED_SESSION_READY_TIMEOUT : null,
+          installTimeout);
     }
-    androidPackageManagerUtil.installMultiPackage(
-        utilArgs,
-        installCmdArgs.build(),
-        packageMap,
-        hasApex ? WAIT_FOR_STAGED_SESSION_READY_TIMEOUT : null,
-        installTimeout);
     SharedLogUtil.logMsg(
         logger,
         log,
