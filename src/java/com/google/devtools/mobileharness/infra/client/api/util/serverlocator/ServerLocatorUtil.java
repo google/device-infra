@@ -105,6 +105,9 @@ public final class ServerLocatorUtil {
    */
   @VisibleForTesting
   static GrpcServerLocator parseGrpcServerLocator(String grpcServerTarget) {
+    if (grpcServerTarget.startsWith(DNS_PREFIX)) {
+      grpcServerTarget = grpcServerTarget.substring(DNS_PREFIX.length());
+    }
     HostAndPort hostAndPort = HostAndPort.fromString(grpcServerTarget);
     GrpcServerLocator.Builder builder = GrpcServerLocator.newBuilder();
     if (hostAndPort.hasPort()) {

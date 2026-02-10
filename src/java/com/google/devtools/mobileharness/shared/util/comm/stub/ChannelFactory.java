@@ -25,7 +25,7 @@ import java.util.concurrent.Executor;
 public class ChannelFactory {
 
   public static ManagedChannel createLocalChannel(int port, Executor executor) {
-    return createChannel(NettyChannelBuilder.forAddress("localhost", port), executor);
+    return createChannel(NettyChannelBuilder.forTarget("dns:///localhost:" + port), executor);
   }
 
   /**
