@@ -67,8 +67,8 @@ public class AndroidDesktopExecutorDevice extends BaseDevice {
     // Decorators for Mobly tests.
     this.addSupportedDecorator("CrosLsNexusDecorator");
     this.addSupportedDecorator("CrosDutTopologyDecorator");
-    // For AndroidLogCatDecorator.
     this.addSupportedDecorator("AndroidLogCatDecorator");
+    this.addSupportedDecorator("AndroidInstallAppsDecorator");
     String executorGroup = Flags.instance().androidDesktopExecutorGroup.getNonNull();
     ImmutableSet<String> validGroups = ImmutableSet.of("sfo36", "acs", "htl");
     if (validGroups.contains(executorGroup)) {
