@@ -36,11 +36,10 @@ java_library(
 )
 
 java_library(
-    name = "apiary_based_gcs_util",
-    srcs = ["ApiaryBasedGcsUtil.java"],
+    name = "gcs_util",
+    srcs = ["GcsUtil.java"],
     deps = [
         ":dataclass",
-        ":gcs_util",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
@@ -62,26 +61,9 @@ java_library(
 )
 
 java_library(
-    name = "gcs_util",
-    srcs = ["GcsUtil.java"],
-    deps = [
-        ":dataclass",
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
-        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "@maven//:com_google_apis_google_api_services_storage",
-        "@maven//:com_google_errorprone_error_prone_annotations",
-        "@maven//:com_google_guava_guava",
-        "@maven//:com_google_http_client_google_http_client",
-        "@protobuf//:protobuf_java",
-    ],
-)
-
-java_library(
     name = "gcs_util_factory",
     srcs = ["GcsUtilFactory.java"],
     deps = [
-        ":apiary_based_gcs_util",
         ":gcs_util",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
     ],
