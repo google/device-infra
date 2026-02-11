@@ -19,7 +19,6 @@ package com.google.devtools.mobileharness.fe.v6.service.device.handlers;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
-import static com.google.common.util.concurrent.Futures.immediateFuture;
 
 import com.github.benmanes.caffeine.cache.AsyncCacheLoader;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
@@ -36,13 +35,9 @@ import com.google.common.util.concurrent.JdkFutureAdapters;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig;
-import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
-import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
-import com.google.devtools.mobileharness.api.query.proto.FilterProto;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
-import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery;
-import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Filter;
-import com.google.devtools.mobileharness.fe.v6.service.device.ConfigurationProvider;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.PermissionInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.BasicDeviceInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.BasicDeviceInfo.Form;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.CapabilitiesInfo;
@@ -53,10 +48,9 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.device.DimensionSou
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.Dimensions;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceOverviewRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.NetworkInfo;
-import com.google.devtools.mobileharness.fe.v6.service.proto.device.PermissionInfo;
-import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
-import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
-import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
+import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader;
+import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader.DeviceData;
+import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader.ManagementMode;
 import java.time.Duration;
 import java.util.List;
 import java.util.Locale;
@@ -75,9 +69,9 @@ public final class GetDeviceOverviewHandler {
   private static final String DIMENSION_SOURCE_DETECTED = "Detected by OmniLab";
   private static final String DIMENSION_SOURCE_DEVICE_CONFIG = "From Device Config";
   private static final String DIMENSION_SOURCE_HOST_CONFIG = "From Host Config";
+  private static final String DIMENSION_SOURCE_UNKNOWN = "Unknown";
 
-  private final LabInfoProvider labInfoProvider;
-  private final ConfigurationProvider configurationProvider;
+  private final DeviceDataLoader deviceDataLoader;
   private final ListeningExecutorService executor;
   private final HealthAndActivityBuilder healthAndActivityBuilder;
   private final DeviceHeaderInfoBuilder deviceHeaderInfoBuilder;
@@ -85,13 +79,11 @@ public final class GetDeviceOverviewHandler {
 
   @Inject
   GetDeviceOverviewHandler(
-      LabInfoProvider labInfoProvider,
-      ConfigurationProvider configurationProvider,
+      DeviceDataLoader deviceDataLoader,
       ListeningExecutorService executor,
       HealthAndActivityBuilder healthAndActivityBuilder,
       DeviceHeaderInfoBuilder deviceHeaderInfoBuilder) {
-    this.labInfoProvider = labInfoProvider;
-    this.configurationProvider = configurationProvider;
+    this.deviceDataLoader = deviceDataLoader;
     this.deviceHeaderInfoBuilder = deviceHeaderInfoBuilder;
     this.executor = executor;
     this.healthAndActivityBuilder = healthAndActivityBuilder;
@@ -147,88 +139,24 @@ public final class GetDeviceOverviewHandler {
     String deviceId = parts.get(1);
     logger.atInfo().log("Loading device overview for %s", key);
 
-    // 1. Fetch DeviceInfo
-    logger.atInfo().log("Fetching DeviceInfo for %s", key);
-    ListenableFuture<GetLabInfoResponse> getLabInfoResponseFuture =
-        labInfoProvider.getLabInfoAsync(createGetLabInfoRequest(deviceId), universe);
-
-    ListenableFuture<DeviceInfo> deviceInfoFuture =
-        Futures.transform(
-            getLabInfoResponseFuture,
-            response -> {
-              logger.atInfo().log("Received DeviceInfo response for %s", key);
-              return response
-                  .getLabQueryResult()
-                  .getDeviceView()
-                  .getGroupedDevices()
-                  .getDeviceList()
-                  .getDeviceInfoList()
-                  .stream()
-                  .findFirst()
-                  .orElseThrow(
-                      () ->
-                          new RuntimeException(
-                              "Device not found: " + deviceId + " in universe: " + universe));
-            },
-            executor);
-
-    // 2. Start ConfigProvider fetches early
-    logger.atInfo().log("Fetching DeviceConfig for %s", key);
-    ListenableFuture<Optional<DeviceConfig>> deviceConfigFuture =
-        configurationProvider.getDeviceConfig(deviceId, universe);
-
-    // 3. Fetch LabConfig, depends on DeviceInfo
-    ListenableFuture<Optional<LabConfig>> labConfigFuture =
-        Futures.transformAsync(
-            deviceInfoFuture,
-            deviceInfo -> {
-              String hostName = deviceInfo.getDeviceLocator().getLabLocator().getHostName();
-              logger.atInfo().log("Fetching LabConfig for host %s for key %s", hostName, key);
-              return hostName.isEmpty()
-                  ? immediateFuture(Optional.empty())
-                  : configurationProvider.getLabConfig(hostName, universe);
-            },
-            executor);
-
-    // 4. Combine and build
-    return Futures.whenAllSucceed(deviceInfoFuture, labConfigFuture)
-        .callAsync(
-            () -> {
-              logger.atInfo().log("All base futures succeeded for %s", key);
-              DeviceInfo deviceInfo = Futures.getDone(deviceInfoFuture);
-              Optional<LabConfig> labConfigOpt = Futures.getDone(labConfigFuture);
-
-              final ListenableFuture<Optional<DeviceConfig>> finalDeviceConfigFuture;
-              if (isHostConfigUsed(labConfigOpt)) {
-                logger.atInfo().log("Using host config for %s", key);
-                deviceConfigFuture.cancel(false);
-                finalDeviceConfigFuture = immediateFuture(Optional.empty());
-              } else {
-                logger.atInfo().log("Using device config for %s", key);
-                finalDeviceConfigFuture = deviceConfigFuture;
-              }
-
-              return Futures.transform(
-                  finalDeviceConfigFuture,
-                  deviceConfigOpt -> {
-                    logger.atInfo().log("Building DeviceOverview for %s", key);
-                    return buildDeviceOverviewPageData(
-                        deviceId, deviceInfo, deviceConfigOpt, labConfigOpt);
-                  },
-                  executor);
-            },
-            executor);
+    return Futures.transform(
+        deviceDataLoader.loadDeviceData(deviceId, universe),
+        deviceData -> {
+          logger.atInfo().log("Building DeviceOverview for %s", key);
+          return buildDeviceOverviewPageData(deviceId, deviceData);
+        },
+        executor);
   }
 
   private DeviceOverviewPageData buildDeviceOverviewPageData(
-      String deviceId,
-      DeviceInfo deviceInfo,
-      Optional<DeviceConfig> deviceConfigOpt,
-      Optional<LabConfig> labConfigOpt) {
+      String deviceId, DeviceData deviceData) {
+    DeviceInfo deviceInfo = deviceData.deviceInfo();
+
     DeviceHeaderInfo headerInfo =
-        deviceHeaderInfoBuilder.buildDeviceHeaderInfo(deviceInfo, deviceConfigOpt, labConfigOpt);
-    DeviceOverview overview =
-        buildDeviceOverview(deviceId, deviceInfo, deviceConfigOpt, labConfigOpt, headerInfo);
+        deviceHeaderInfoBuilder.buildDeviceHeaderInfo(
+            deviceInfo, Optional.of(deviceData.effectiveDeviceConfig()), deviceData.rawLabConfig());
+
+    DeviceOverview overview = buildDeviceOverview(deviceId, deviceData, headerInfo);
     return DeviceOverviewPageData.newBuilder()
         .setOverview(overview)
         .setHeaderInfo(headerInfo)
@@ -236,30 +164,29 @@ public final class GetDeviceOverviewHandler {
   }
 
   private DeviceOverview buildDeviceOverview(
-      String deviceId,
-      DeviceInfo deviceInfo,
-      Optional<DeviceConfig> deviceConfigOpt,
-      Optional<LabConfig> labConfigOpt,
-      DeviceHeaderInfo headerInfo) {
+      String deviceId, DeviceData deviceData, DeviceHeaderInfo headerInfo) {
+    DeviceInfo deviceInfo = deviceData.deviceInfo();
+
     DeviceOverview.Builder builder = DeviceOverview.newBuilder().setId(deviceId);
 
     // HostInfo
     builder.setHost(headerInfo.getHost());
 
     // BasicDeviceInfo
-    ImmutableList<DeviceDimension> allDimensions =
-        Stream.concat(
-                deviceInfo
-                    .getDeviceFeature()
-                    .getCompositeDimension()
-                    .getSupportedDimensionList()
-                    .stream(),
-                deviceInfo
-                    .getDeviceFeature()
-                    .getCompositeDimension()
-                    .getRequiredDimensionList()
-                    .stream())
-            .collect(toImmutableList());
+    ImmutableList<com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension>
+        allDimensions =
+            Stream.concat(
+                    deviceInfo
+                        .getDeviceFeature()
+                        .getCompositeDimension()
+                        .getSupportedDimensionList()
+                        .stream(),
+                    deviceInfo
+                        .getDeviceFeature()
+                        .getCompositeDimension()
+                        .getRequiredDimensionList()
+                        .stream())
+                .collect(toImmutableList());
     builder.setBasicInfo(buildBasicDeviceInfo(allDimensions));
 
     // Permissions
@@ -280,7 +207,7 @@ public final class GetDeviceOverviewHandler {
             .collect(toImmutableMap(p -> p.getName(), p -> p.getValue())));
 
     // Dimensions
-    builder.setDimensions(buildDimensions(deviceInfo, deviceConfigOpt, labConfigOpt));
+    builder.setDimensions(buildDimensions(deviceData));
 
     // HealthAndActivityInfo
     builder.setHealthAndActivity(healthAndActivityBuilder.buildHealthAndActivityInfo(deviceInfo));
@@ -288,18 +215,8 @@ public final class GetDeviceOverviewHandler {
     return builder.build();
   }
 
-  private boolean isHostConfigUsed(Optional<LabConfig> labConfigOpt) {
-    return labConfigOpt
-        .map(
-            labConfig ->
-                labConfig.getHostProperties().getHostPropertyList().stream()
-                    .anyMatch(
-                        p ->
-                            p.getKey().equals("device_config_mode") && p.getValue().equals("host")))
-        .orElse(false);
-  }
-
-  private BasicDeviceInfo buildBasicDeviceInfo(List<DeviceDimension> dimensions) {
+  private BasicDeviceInfo buildBasicDeviceInfo(
+      List<com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension> dimensions) {
     BasicDeviceInfo.Builder basicInfo = BasicDeviceInfo.newBuilder();
     ImmutableMap<String, String> dimMap =
         dimensions.stream()
@@ -340,49 +257,28 @@ public final class GetDeviceOverviewHandler {
     return basicInfo.setNetwork(network).build();
   }
 
-  private Dimensions buildDimensions(
-      DeviceInfo deviceInfo,
-      Optional<DeviceConfig> deviceConfigOpt,
-      Optional<LabConfig> labConfigOpt) {
+  private Dimensions buildDimensions(DeviceData deviceData) {
+    DeviceInfo deviceInfo = deviceData.deviceInfo();
+    DeviceConfig config = deviceData.effectiveDeviceConfig();
+
     ImmutableMap.Builder<String, DimensionSourceGroup> supportedMap = ImmutableMap.builder();
     ImmutableMap.Builder<String, DimensionSourceGroup> requiredMap = ImmutableMap.builder();
 
-    List<DeviceDimension> configSupported = ImmutableList.of();
-    List<DeviceDimension> configRequired = ImmutableList.of();
-    String configSourceKey = "";
+    List<com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension> configSupported =
+        ImmutableList.of();
+    List<com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension> configRequired =
+        ImmutableList.of();
+    String configSourceKey =
+        switch (deviceData.managementMode()) {
+          case HOST_MANAGED -> DIMENSION_SOURCE_HOST_CONFIG;
+          case PER_DEVICE ->
+              deviceData.rawIndividualConfig().isPresent() ? DIMENSION_SOURCE_DEVICE_CONFIG : "";
+          case NOT_SUPPORTED -> "";
+        };
 
-    if (isHostConfigUsed(labConfigOpt)) {
-      configSourceKey = DIMENSION_SOURCE_HOST_CONFIG;
-      if (labConfigOpt.get().hasDefaultDeviceConfig()) {
-        configSupported =
-            labConfigOpt
-                .get()
-                .getDefaultDeviceConfig()
-                .getCompositeDimension()
-                .getSupportedDimensionList();
-        configRequired =
-            labConfigOpt
-                .get()
-                .getDefaultDeviceConfig()
-                .getCompositeDimension()
-                .getRequiredDimensionList();
-      }
-    } else if (deviceConfigOpt.isPresent()) {
-      configSourceKey = DIMENSION_SOURCE_DEVICE_CONFIG;
-      if (deviceConfigOpt.get().hasBasicConfig()) {
-        configSupported =
-            deviceConfigOpt
-                .get()
-                .getBasicConfig()
-                .getCompositeDimension()
-                .getSupportedDimensionList();
-        configRequired =
-            deviceConfigOpt
-                .get()
-                .getBasicConfig()
-                .getCompositeDimension()
-                .getRequiredDimensionList();
-      }
+    if (config.hasBasicConfig()) {
+      configSupported = config.getBasicConfig().getCompositeDimension().getSupportedDimensionList();
+      configRequired = config.getBasicConfig().getCompositeDimension().getRequiredDimensionList();
     }
 
     if (!configSourceKey.isEmpty()) {
@@ -398,35 +294,40 @@ public final class GetDeviceOverviewHandler {
               .build());
     }
 
-    ImmutableSet<DeviceDimension> configDims =
-        Stream.concat(configSupported.stream(), configRequired.stream()).collect(toImmutableSet());
+    ImmutableSet<com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension>
+        configDims =
+            Stream.concat(configSupported.stream(), configRequired.stream())
+                .collect(toImmutableSet());
 
-    List<DeviceDimension> allSupported =
+    List<com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension> allSupported =
         deviceInfo.getDeviceFeature().getCompositeDimension().getSupportedDimensionList();
-    List<DeviceDimension> allRequired =
+    List<com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension> allRequired =
         deviceInfo.getDeviceFeature().getCompositeDimension().getRequiredDimensionList();
 
-    ImmutableList<com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceDimension>
-        detectedSupported =
-            allSupported.stream()
-                .filter(d -> !configDims.contains(d))
-                .map(this::convertToFeDimension)
-                .collect(toImmutableList());
-    ImmutableList<com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceDimension>
-        detectedRequired =
-            allRequired.stream()
-                .filter(d -> !configDims.contains(d))
-                .map(this::convertToFeDimension)
-                .collect(toImmutableList());
+    ImmutableList<DeviceDimension> detectedSupported =
+        allSupported.stream()
+            .filter(d -> !configDims.contains(d))
+            .map(this::convertToFeDimension)
+            .collect(toImmutableList());
+    ImmutableList<DeviceDimension> detectedRequired =
+        allRequired.stream()
+            .filter(d -> !configDims.contains(d))
+            .map(this::convertToFeDimension)
+            .collect(toImmutableList());
+
+    String detectedSourceKey =
+        deviceData.managementMode() == ManagementMode.NOT_SUPPORTED
+            ? DIMENSION_SOURCE_UNKNOWN
+            : DIMENSION_SOURCE_DETECTED;
 
     if (!detectedSupported.isEmpty()) {
       supportedMap.put(
-          DIMENSION_SOURCE_DETECTED,
+          detectedSourceKey,
           DimensionSourceGroup.newBuilder().addAllDimensions(detectedSupported).build());
     }
     if (!detectedRequired.isEmpty()) {
       requiredMap.put(
-          DIMENSION_SOURCE_DETECTED,
+          detectedSourceKey,
           DimensionSourceGroup.newBuilder().addAllDimensions(detectedRequired).build());
     }
 
@@ -436,40 +337,16 @@ public final class GetDeviceOverviewHandler {
         .build();
   }
 
-  private ImmutableList<
-          com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceDimension>
-      convertToFeDimensions(List<DeviceDimension> dimensions) {
+  private ImmutableList<DeviceDimension> convertToFeDimensions(
+      List<com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension> dimensions) {
     return dimensions.stream().map(this::convertToFeDimension).collect(toImmutableList());
   }
 
-  private com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceDimension
-      convertToFeDimension(DeviceDimension dimension) {
-    return com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceDimension.newBuilder()
+  private DeviceDimension convertToFeDimension(
+      com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension dimension) {
+    return DeviceDimension.newBuilder()
         .setName(dimension.getName())
         .setValue(dimension.getValue())
-        .build();
-  }
-
-  private GetLabInfoRequest createGetLabInfoRequest(String deviceId) {
-    return GetLabInfoRequest.newBuilder()
-        .setLabQuery(
-            LabQuery.newBuilder()
-                .setFilter(
-                    Filter.newBuilder()
-                        .setDeviceFilter(
-                            FilterProto.DeviceFilter.newBuilder()
-                                .addDeviceMatchCondition(
-                                    FilterProto.DeviceFilter.DeviceMatchCondition.newBuilder()
-                                        .setDeviceUuidMatchCondition(
-                                            FilterProto.DeviceFilter.DeviceMatchCondition
-                                                .DeviceUuidMatchCondition.newBuilder()
-                                                .setCondition(
-                                                    FilterProto.StringMatchCondition.newBuilder()
-                                                        .setInclude(
-                                                            FilterProto.StringMatchCondition.Include
-                                                                .newBuilder()
-                                                                .addExpected(deviceId)))))))
-                .setDeviceViewRequest(LabQuery.DeviceViewRequest.getDefaultInstance()))
         .build();
   }
 }

@@ -28,6 +28,7 @@ package(
 proto_library(
     name = "config_resources_proto",
     srcs = ["config_resources.proto"],
+    deps = ["//src/devtools/mobileharness/fe/v6/service/proto/common:common_resources_proto"],
 )
 
 java_proto_library(

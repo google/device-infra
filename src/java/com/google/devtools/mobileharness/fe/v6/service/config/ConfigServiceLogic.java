@@ -33,16 +33,17 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateDevice
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateDeviceConfigResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateHostConfigRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateHostConfigResponse;
+import java.util.Optional;
 
 /** Interface for the core logic of the Config Service. */
 public interface ConfigServiceLogic {
   ListenableFuture<GetDeviceConfigResponse> getDeviceConfig(GetDeviceConfigRequest request);
 
   ListenableFuture<CheckDeviceWritePermissionResponse> checkDeviceWritePermission(
-      CheckDeviceWritePermissionRequest request);
+      CheckDeviceWritePermissionRequest request, Optional<String> endUser);
 
   ListenableFuture<UpdateDeviceConfigResponse> updateDeviceConfig(
-      UpdateDeviceConfigRequest request);
+      UpdateDeviceConfigRequest request, Optional<String> endUser);
 
   ListenableFuture<GetRecommendedWifiResponse> getRecommendedWifi(
       GetRecommendedWifiRequest request);
@@ -53,7 +54,8 @@ public interface ConfigServiceLogic {
   ListenableFuture<GetHostConfigResponse> getHostConfig(GetHostConfigRequest request);
 
   ListenableFuture<CheckHostWritePermissionResponse> checkHostWritePermission(
-      CheckHostWritePermissionRequest request);
+      CheckHostWritePermissionRequest request, Optional<String> endUser);
 
-  ListenableFuture<UpdateHostConfigResponse> updateHostConfig(UpdateHostConfigRequest request);
+  ListenableFuture<UpdateHostConfigResponse> updateHostConfig(
+      UpdateHostConfigRequest request, Optional<String> endUser);
 }

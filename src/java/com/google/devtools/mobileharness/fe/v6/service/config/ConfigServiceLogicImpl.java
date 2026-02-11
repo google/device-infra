@@ -41,6 +41,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateDevice
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateDeviceConfigResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateHostConfigRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateHostConfigResponse;
+import java.util.Optional;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -84,14 +85,14 @@ public final class ConfigServiceLogicImpl implements ConfigServiceLogic {
 
   @Override
   public ListenableFuture<CheckDeviceWritePermissionResponse> checkDeviceWritePermission(
-      CheckDeviceWritePermissionRequest request) {
-    return checkDeviceWritePermissionHandler.checkDeviceWritePermission(request);
+      CheckDeviceWritePermissionRequest request, Optional<String> endUser) {
+    return checkDeviceWritePermissionHandler.checkDeviceWritePermission(request, endUser);
   }
 
   @Override
   public ListenableFuture<UpdateDeviceConfigResponse> updateDeviceConfig(
-      UpdateDeviceConfigRequest request) {
-    return updateDeviceConfigHandler.updateDeviceConfig(request);
+      UpdateDeviceConfigRequest request, Optional<String> endUser) {
+    return updateDeviceConfigHandler.updateDeviceConfig(request, endUser);
   }
 
   @Override
@@ -113,13 +114,13 @@ public final class ConfigServiceLogicImpl implements ConfigServiceLogic {
 
   @Override
   public ListenableFuture<CheckHostWritePermissionResponse> checkHostWritePermission(
-      CheckHostWritePermissionRequest request) {
-    return checkHostWritePermissionHandler.checkHostWritePermission(request);
+      CheckHostWritePermissionRequest request, Optional<String> endUser) {
+    return checkHostWritePermissionHandler.checkHostWritePermission(request, endUser);
   }
 
   @Override
   public ListenableFuture<UpdateHostConfigResponse> updateHostConfig(
-      UpdateHostConfigRequest request) {
-    return updateHostConfigHandler.updateHostConfig(request);
+      UpdateHostConfigRequest request, Optional<String> endUser) {
+    return updateHostConfigHandler.updateHostConfig(request, endUser);
   }
 }

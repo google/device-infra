@@ -21,34 +21,21 @@ package(
 )
 
 java_library(
-    name = "tests",
+    name = "util_tests",
     testonly = 1,
-    srcs = glob(["*.java"]),
+    srcs = [
+        "ConfigServiceCapabilityTest.java",
+        "DeviceConfigConverterTest.java",
+    ],
     deps = [
         "//src/devtools/mobileharness/api/deviceconfig/proto:basic_java_proto",
-        "//src/devtools/mobileharness/api/deviceconfig/proto:device_java_proto",
         "//src/devtools/mobileharness/api/deviceconfig/proto:lab_java_proto",
-        "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/api/model/proto:lab_java_proto",
-        "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
-        "//src/devtools/mobileharness/fe/v6/service/proto/common:common_resources_java_proto",
-        "//src/devtools/mobileharness/fe/v6/service/proto/device:device_resources_java_proto",
-        "//src/devtools/mobileharness/fe/v6/service/proto/device:device_service_java_proto",
-        "//src/devtools/mobileharness/shared/labinfo/proto:lab_info_service_java_proto",
+        "//src/devtools/mobileharness/fe/v6/service/proto/config:config_resources_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/util:config_service_capability",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/device/handlers",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:configuration_provider",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:lab_info_provider",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/util:device_config_converter",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
-        "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
-        "@grpc-java//core",
-        "@maven//:com_google_guava_guava",
-        "@maven//:com_google_inject_extensions_guice_testlib",
-        "@maven//:com_google_inject_guice",
-        "@maven//:com_google_protobuf_protobuf_java",
-        "@maven//:com_google_truth_extensions_truth_proto_extension",
-        "@maven//:javax_inject_jsr330_api",
         "@maven//:junit_junit",
         "@maven//:org_mockito_mockito_core",
     ],
@@ -56,8 +43,6 @@ java_library(
 
 junit_test_suites(
     name = "gen_tests",
-    sizes = [
-        "small",
-    ],
-    deps = [":tests"],
+    sizes = ["small"],
+    deps = [":util_tests"],
 )

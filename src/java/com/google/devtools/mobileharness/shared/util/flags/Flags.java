@@ -1487,6 +1487,14 @@ public class Flags {
       converter = Flag.IntegerConverter.class)
   public Flag<Integer> feGrpcPort = feGrpcPortDefault;
 
+  private static final Flag<Boolean> feConnectToConfigServerDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--fe_connect_to_config_server",
+      description = "Whether to connect to the config server in the FE server.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> feConnectToConfigServer = feConnectToConfigServerDefault;
+
   private static final Flag<Duration> fileExpireTimeDefault =
       DurationFlag.value(Duration.ofHours(3L));
 

@@ -150,10 +150,43 @@ final class DeviceConfigGrpcStub implements DeviceConfigStub {
   }
 
   @Override
+  public ListenableFuture<UpdateDeviceConfigsResponse> updateDeviceConfigsAsync(
+      UpdateDeviceConfigsRequest request, boolean useClientRpcAuthority) {
+    if (useClientRpcAuthority) {
+      throw new UnsupportedOperationException(
+          "useClientRpcAuthority is not supported in gRPC stub");
+    }
+    return GrpcStubUtil.invokeAsync(
+        deviceConfigServiceFutureStub::updateDeviceConfigs,
+        request,
+        InfraErrorId.DEVICE_CONFIG_RPC_STUB_UPDATE_DEVICE_CONFIGS_ERROR,
+        String.format(
+            "Failed to update config for device %s",
+            request.getDeviceLocatorConfigList().stream()
+                .map(DeviceLocatorConfigPair::getDeviceLocator)
+                .map(DeviceLocator::getDeviceUuid)
+                .collect(toImmutableList())));
+  }
+
+  @Override
   public UpdateLabConfigResponse updateLabConfig(UpdateLabConfigRequest request)
       throws GrpcExceptionWithErrorId {
     return GrpcStubUtil.invoke(
         deviceConfigStub::updateLabConfig,
+        request,
+        InfraErrorId.DEVICE_CONFIG_RPC_STUB_UPDATE_LAB_CONFIG_ERROR,
+        String.format("Failed to update config for lab %s", request.getLabConfig().getHostName()));
+  }
+
+  @Override
+  public ListenableFuture<UpdateLabConfigResponse> updateLabConfigAsync(
+      UpdateLabConfigRequest request, boolean useClientRpcAuthority) {
+    if (useClientRpcAuthority) {
+      throw new UnsupportedOperationException(
+          "useClientRpcAuthority is not supported in gRPC stub");
+    }
+    return GrpcStubUtil.invokeAsync(
+        deviceConfigServiceFutureStub::updateLabConfig,
         request,
         InfraErrorId.DEVICE_CONFIG_RPC_STUB_UPDATE_LAB_CONFIG_ERROR,
         String.format("Failed to update config for lab %s", request.getLabConfig().getHostName()));

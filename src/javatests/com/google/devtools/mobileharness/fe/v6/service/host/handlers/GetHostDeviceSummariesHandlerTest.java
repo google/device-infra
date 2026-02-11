@@ -255,12 +255,12 @@ public final class GetHostDeviceSummariesHandlerTest {
             .setId("sub_device_1")
             .addTypes(DeviceType.newBuilder().setType("AndroidRealDevice").setIsAbnormal(false))
             .addDimensions(
-                com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceDimension
+                com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension
                     .newBuilder()
                     .setName("mh_device_type")
                     .setValue("AndroidRealDevice"))
             .addDimensions(
-                com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceDimension
+                com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension
                     .newBuilder()
                     .setName("model")
                     .setValue("pixel 5"))
