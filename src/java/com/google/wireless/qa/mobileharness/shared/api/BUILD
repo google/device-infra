@@ -63,6 +63,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_real_device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:failed_device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:mobly_aosp_test",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:slate_driver",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:tradefed_test",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/module:tradefed_test_module",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/env:android_device_settings_decorator_env_validator",
@@ -202,6 +203,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:mobly_aosp_test",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:mobly_test",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:no_op_driver",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:slate_driver",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:tradefed_test",
     ],
 )

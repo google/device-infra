@@ -373,6 +373,19 @@ java_proto_library(
 )
 
 proto_library(
+    name = "slate_driver_spec_proto",
+    srcs = ["driver/slate_driver_spec.proto"],
+    deps = [
+        ":base_spec_proto",
+    ],
+)
+
+java_proto_library(
+    name = "slate_driver_spec_java_proto",
+    deps = [":slate_driver_spec_proto"],
+)
+
+proto_library(
     name = "testbed_decorator_adapter_spec_proto",
     srcs = ["decorator/testbed_decorator_adapter_spec.proto"],
     deps = [
