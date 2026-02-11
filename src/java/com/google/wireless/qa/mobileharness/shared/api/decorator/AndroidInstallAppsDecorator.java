@@ -64,17 +64,9 @@ public class AndroidInstallAppsDecorator extends BaseDecorator
     Instant startTime = Instant.now();
     // Installs APKs.
     sendProgressReportMessage(testInfo, "Install apks");
-    List<String> packagesOfInstalledApks;
-    InstallApkStepSpec spec;
-    try {
-      spec = testInfo.jobInfo().combinedSpec(this, getDevice().getDeviceId());
-      packagesOfInstalledApks = installApkStep.installBuildApks(getDevice(), testInfo, spec);
-    } catch (MobileHarnessException e) {
-      // Proper TestResult will be set by isInstallFailure.
-      installApkStep.isInstallFailure(e, testInfo);
-      // Throw out the exception so Mobly adapter can capture this failure. b/73964982.
-      throw e;
-    }
+    InstallApkStepSpec spec = testInfo.jobInfo().combinedSpec(this, getDevice().getDeviceId());
+    List<String> packagesOfInstalledApks =
+        installApkStep.installBuildApks(getDevice(), testInfo, spec);
 
     Instant endTime = Instant.now();
     long runTimeMs = Duration.between(startTime, endTime).toMillis();
