@@ -47,6 +47,7 @@ public final class DeviceConditionUtil {
   private static final String ANDROID_REAL_DEVICE_TYPE = "AndroidRealDevice";
   private static final String IOS_REAL_DEVICE_TYPE = "IosRealDevice";
   private static final String CLOUD_TF_AVD_DEVICE_TYPE = "CloudTFAvdDevice";
+  private static final String ANDROID_LOCAL_EMULATOR_TYPE = "AndroidLocalEmulator";
 
   /**
    * Summarizes the final device status.
@@ -186,7 +187,8 @@ public final class DeviceConditionUtil {
 
   private static boolean exceedRemovalThreshold(DeviceDao deviceDao) {
     Instant timestamp = Instant.ofEpochMilli(deviceDao.condition().getSyncTimeMsFromMaster());
-    if (deviceDao.profile().getFeature().getTypeList().contains(CLOUD_TF_AVD_DEVICE_TYPE)) {
+    List<String> types = deviceDao.profile().getFeature().getTypeList();
+    if (types.contains(CLOUD_TF_AVD_DEVICE_TYPE) || types.contains(ANDROID_LOCAL_EMULATOR_TYPE)) {
       return timestamp
           .plus(Flags.instance().ephemeralRemovalThreshold.get())
           .isBefore(InstantSource.system().instant());
