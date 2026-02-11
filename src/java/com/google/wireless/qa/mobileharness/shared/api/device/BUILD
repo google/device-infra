@@ -102,6 +102,24 @@ java_library(
 ################################################################################
 
 java_library(
+    name = "android_desktop_executor_device",
+    srcs = ["AndroidDesktopExecutorDevice.java"],
+    deps = [
+        ":base_device",
+        "//src/devtools/mobileharness/api/model/proto:device_java_proto",
+        "//src/devtools/mobileharness/api/model/proto:test_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_internal_util",
+        "//src/java/com/google/devtools/mobileharness/platform/androiddesktop/device:android_desktop_device_helper",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "android_device",
     srcs = ["AndroidDevice.java"],
     deps = [

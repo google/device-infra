@@ -234,6 +234,15 @@ public class Flags {
   public Flag<String> androidAuthTestSupportSignedApkPath =
       androidAuthTestSupportSignedApkPathDefault;
 
+  private static final Flag<String> androidDesktopExecutorGroupDefault = Flag.value("");
+
+  @com.beust.jcommander.Parameter(
+      names = "--android_desktop_executor_group",
+      description =
+          "The executor group of the Android Desktop device. Used to set network_zone dimension.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> androidDesktopExecutorGroup = androidDesktopExecutorGroupDefault;
+
   private static final Flag<Boolean> enableDaemonDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(
