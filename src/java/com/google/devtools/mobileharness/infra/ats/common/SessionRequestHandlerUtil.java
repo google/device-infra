@@ -1551,12 +1551,12 @@ public class SessionRequestHandlerUtil {
     return hostIp.get();
   }
 
-  private Path createJobGenDir(String jobName) {
+  public Path createJobGenDir(String jobName) {
     return sessionGenDir.resolve(
         String.format("job_gen_%s_%s", encodeJobName(jobName), UUID.randomUUID()));
   }
 
-  private Path createJobTmpDir(String jobName) {
+  public Path createJobTmpDir(String jobName) {
     return sessionTempDir.resolve(
         String.format("job_tmp_%s_%s", encodeJobName(jobName), UUID.randomUUID()));
   }
@@ -1649,7 +1649,7 @@ public class SessionRequestHandlerUtil {
         jobInfo.files().getAll());
   }
 
-  private static Duration calculateTestTimeout(Duration jobTimeout) {
+  public static Duration calculateTestTimeout(Duration jobTimeout) {
     return jobTimeout.compareTo(JOB_TEST_TIMEOUT_DIFF.multipliedBy(2L)) < 0
         ? jobTimeout.dividedBy(2L)
         : jobTimeout.minus(JOB_TEST_TIMEOUT_DIFF);

@@ -958,7 +958,7 @@ public class SessionResultHandlerUtil {
     return Optional.of(nonTradefedTestResultBuilder.build());
   }
 
-  private ImmutableList<Path> getGenFilesFromTest(TestInfo test) throws MobileHarnessException {
+  public ImmutableList<Path> getGenFilesFromTest(TestInfo test) throws MobileHarnessException {
     String testGenFileDir = test.getGenFileDir();
     List<Path> genFiles = localFileUtil.listFilesOrDirs(Path.of(testGenFileDir), path -> true);
 

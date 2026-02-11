@@ -180,7 +180,11 @@ final class AtsServerSessionPlugin {
           }
           updateSessionPluginOutput(requestDetail);
 
-          createXtsJobs(requestDetail, newMultiCommandRequest);
+          if (newMultiCommandRequest.getCommands(0).getCommandLine().startsWith("slate")) {
+            createSlateJobs(requestDetail, newMultiCommandRequest);
+          } else {
+            createXtsJobs(requestDetail, newMultiCommandRequest);
+          }
         } finally {
           requestDetail.setUpdateTime(Timestamps.fromMillis(clock.instant().toEpochMilli()));
           updateSessionPluginOutput(requestDetail);
@@ -323,12 +327,7 @@ final class AtsServerSessionPlugin {
     CreateJobsResult createTradefedJobsResult =
         newMultiCommandRequestHandler.createTradefedJobs(newMultiCommandRequest, sessionInfo);
     tradefedJobs = new ArrayList<>(createTradefedJobsResult.jobInfos());
-    requestDetail.setState(createTradefedJobsResult.state());
-    createTradefedJobsResult.errorReason().ifPresent(requestDetail::setErrorReason);
-    createTradefedJobsResult
-        .errorMessage()
-        .ifPresent(errorMessage -> appendErrorMessage(requestDetail, errorMessage));
-    createTradefedJobsResult.commandDetails().forEach(requestDetail::putCommandDetails);
+    updateRequestDetailWithCreateJobsResult(requestDetail, createTradefedJobsResult);
     if (!createTradefedJobsResult.state().equals(RequestState.RUNNING)) {
       return;
     }
@@ -336,13 +335,8 @@ final class AtsServerSessionPlugin {
     // Create non-tradefed jobs.
     CreateJobsResult createNonTradefedJobsResult =
         newMultiCommandRequestHandler.createNonTradefedJobs(newMultiCommandRequest, sessionInfo);
-    requestDetail.setState(createNonTradefedJobsResult.state());
     nonTradefedJobs = createNonTradefedJobsResult.jobInfos();
-    createNonTradefedJobsResult.errorReason().ifPresent(requestDetail::setErrorReason);
-    createNonTradefedJobsResult
-        .errorMessage()
-        .ifPresent(errorMessage -> appendErrorMessage(requestDetail, errorMessage));
-    createNonTradefedJobsResult.commandDetails().forEach(requestDetail::putCommandDetails);
+    updateRequestDetailWithCreateJobsResult(requestDetail, createNonTradefedJobsResult);
     if (!createNonTradefedJobsResult.state().equals(RequestState.RUNNING)) {
       return;
     }
@@ -369,6 +363,31 @@ final class AtsServerSessionPlugin {
       // If no tradefed job was added, add non tradefed jobs directly.
       nonTradefedJobs.forEach(sessionInfo::addJob);
     }
+  }
+
+  @GuardedBy("sessionLock")
+  void createSlateJobs(
+      RequestDetail.Builder requestDetail, NewMultiCommandRequest newMultiCommandRequest)
+      throws InterruptedException {
+    CreateJobsResult createSlateJobsResult =
+        newMultiCommandRequestHandler.createSlateJobs(newMultiCommandRequest, sessionInfo);
+    updateRequestDetailWithCreateJobsResult(requestDetail, createSlateJobsResult);
+    if (!createSlateJobsResult.state().equals(RequestState.RUNNING)) {
+      return;
+    }
+
+    // One slate job per session.
+    createSlateJobsResult.jobInfos().forEach(sessionInfo::addJob);
+  }
+
+  private void updateRequestDetailWithCreateJobsResult(
+      RequestDetail.Builder requestDetail, CreateJobsResult createJobsResult) {
+    requestDetail.setState(createJobsResult.state());
+    createJobsResult.errorReason().ifPresent(requestDetail::setErrorReason);
+    createJobsResult
+        .errorMessage()
+        .ifPresent(errorMessage -> appendErrorMessage(requestDetail, errorMessage));
+    createJobsResult.commandDetails().forEach(requestDetail::putCommandDetails);
   }
 
   @GuardedBy("sessionLock")

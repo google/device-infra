@@ -19,13 +19,16 @@ package com.google.devtools.mobileharness.infra.ats.server.sessionplugin;
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.base.Throwables.getStackTraceAsString;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.primitives.Ints.saturatedCast;
 import static com.google.devtools.mobileharness.shared.util.error.MoreThrowables.shortDebugString;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toJavaDuration;
+import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoTimestamp;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.function.Predicate.not;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Splitter;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
@@ -75,13 +78,23 @@ import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.shared.util.jobconfig.JobInfoCreator;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.protobuf.util.Timestamps;
+import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
+import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
+import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.DeviceList;
+import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.Driver;
+import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.FileConfigList;
+import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.FileConfigList.FileConfig;
+import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.StringList;
+import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.StringMap;
+import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.SubDeviceSpec;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -113,8 +126,22 @@ final class NewMultiCommandRequestHandler {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
+  @FunctionalInterface
+  private interface JobInfosCreator {
+    ImmutableList<JobInfo> create(
+        NewMultiCommandRequest request,
+        CommandInfo commandInfo,
+        SessionInfo sessionInfo,
+        ImmutableMap.Builder<String, CommandDetail> commandDetailsBuilder)
+        throws InterruptedException, MobileHarnessException;
+  }
+
   /** Timeout setting for slow commands. */
   private static final Duration SLOW_CMD_TIMEOUT = Duration.ofMinutes(10);
+
+  // Default Slate timeout 60 mins + 5 mins buffer time.
+  private static final Duration SLATE_DEFAULT_JOB_TIMEOUT = Duration.ofMinutes(65);
+  private static final Duration SLATE_DEFAULT_BUFFER_TIME = Duration.ofMinutes(5);
 
   private static final Duration UNZIP_TIMEOUT = Duration.ofHours(1);
 
@@ -129,6 +156,8 @@ final class NewMultiCommandRequestHandler {
   private static final String ATS_GOOGLE_CLOUD_STORAGE_PREFIX = "mtt:///google_cloud_storage/";
 
   private static final String NOOP_TEST_COMMAND_LINE = "util/timewaster";
+
+  private static final String SLATE_JOB_PROP = "slate-job";
 
   @VisibleForTesting
   static final String REQUEST_ERROR_MESSAGE_FOR_TRADEFED_INVOCATION_ERROR =
@@ -186,6 +215,25 @@ final class NewMultiCommandRequestHandler {
 
   CreateJobsResult createTradefedJobs(NewMultiCommandRequest request, SessionInfo sessionInfo)
       throws InterruptedException {
+    return createJobs(request, sessionInfo, this::createXtsTradefedTestJob, "tradefed");
+  }
+
+  CreateJobsResult createNonTradefedJobs(NewMultiCommandRequest request, SessionInfo sessionInfo)
+      throws InterruptedException {
+    return createJobs(request, sessionInfo, this::createNonTradefedJobInfos, "non-tradefed");
+  }
+
+  CreateJobsResult createSlateJobs(NewMultiCommandRequest request, SessionInfo sessionInfo)
+      throws InterruptedException {
+    return createJobs(request, sessionInfo, this::createSlateJobInfos, "slate");
+  }
+
+  private CreateJobsResult createJobs(
+      NewMultiCommandRequest request,
+      SessionInfo sessionInfo,
+      JobInfosCreator jobInfosCreator,
+      String jobType)
+      throws InterruptedException {
     if (request.getCommandsList().isEmpty()) {
       return CreateJobsResult.of(
           RequestState.ERROR,
@@ -199,12 +247,12 @@ final class NewMultiCommandRequestHandler {
     for (CommandInfo commandInfo : request.getCommandsList()) {
       try {
         ImmutableList<JobInfo> jobInfos =
-            createXtsTradefedTestJob(request, commandInfo, sessionInfo, commandDetailsBuilder);
+            jobInfosCreator.create(request, commandInfo, sessionInfo, commandDetailsBuilder);
         jobInfoBuilder.addAll(jobInfos);
       } catch (MobileHarnessException e) {
         logger.atWarning().withCause(e).log(
-            "Failed to create tradefed jobs for command [%s]. Interrupt the session [%s].",
-            commandInfo.getCommandLine(), sessionInfo.getSessionId());
+            "Failed to create %s jobs for command [%s]. Interrupt the session [%s].",
+            jobType, commandInfo.getCommandLine(), sessionInfo.getSessionId());
         ErrorReason errorReason = getErrorReason(e);
         return CreateJobsResult.of(
             RequestState.ERROR,
@@ -224,47 +272,7 @@ final class NewMultiCommandRequestHandler {
         jobInfoBuilder.build());
   }
 
-  CreateJobsResult createNonTradefedJobs(NewMultiCommandRequest request, SessionInfo sessionInfo)
-      throws InterruptedException {
-    if (request.getCommandsList().isEmpty()) {
-      return CreateJobsResult.of(
-          RequestState.ERROR,
-          ErrorReason.INVALID_REQUEST,
-          "COMMAND_NOT_AVAILABLE",
-          ImmutableMap.of(),
-          ImmutableList.of());
-    }
-
-    ImmutableList.Builder<JobInfo> jobInfoBuilder = ImmutableList.builder();
-    ImmutableMap.Builder<String, CommandDetail> commandDetailsBuilder = ImmutableMap.builder();
-    for (CommandInfo commandInfo : request.getCommandsList()) {
-      try {
-        jobInfoBuilder.addAll(
-            createNonTradefedJobs(request, commandInfo, sessionInfo, commandDetailsBuilder));
-      } catch (MobileHarnessException e) {
-        logger.atWarning().withCause(e).log(
-            "Failed to create non-tradefed jobs for command [%s]. Interrupt the session [%s].",
-            commandInfo.getCommandLine(), sessionInfo.getSessionId());
-        ErrorReason errorReason = getErrorReason(e);
-        return CreateJobsResult.of(
-            RequestState.ERROR,
-            errorReason,
-            String.format(
-                "INVALID_COMMAND_%s with error: %s",
-                commandInfo.getCommandLine(), shortDebugString(e)),
-            commandDetailsBuilder.buildKeepingLast(),
-            jobInfoBuilder.build());
-      }
-    }
-    return CreateJobsResult.of(
-        RequestState.RUNNING,
-        null,
-        null,
-        commandDetailsBuilder.buildKeepingLast(),
-        jobInfoBuilder.build());
-  }
-
-  private ImmutableList<JobInfo> createNonTradefedJobs(
+  private ImmutableList<JobInfo> createNonTradefedJobInfos(
       NewMultiCommandRequest request,
       CommandInfo commandInfo,
       SessionInfo sessionInfo,
@@ -427,6 +435,130 @@ final class NewMultiCommandRequestHandler {
     CommandDetail commandDetail = commandDetailBuilder.build();
     commandDetailsBuilder.put(commandDetail.getId(), commandDetail);
     return jobInfoList;
+  }
+
+  private ImmutableList<JobInfo> createSlateJobInfos(
+      NewMultiCommandRequest request,
+      CommandInfo commandInfo,
+      SessionInfo sessionInfo,
+      ImmutableMap.Builder<String, CommandDetail> commandDetailsBuilder)
+      throws InterruptedException, MobileHarnessException {
+    JobInfo jobInfo = createSlateJob(request, commandInfo);
+    String commandId = getCommandId(commandInfo, request);
+    ImmutableList<String> deviceSerials =
+        commandInfo.getDeviceDimensionsList().stream()
+            .filter(d -> d.getName().equals("device_serial"))
+            .map(DeviceDimension::getValue)
+            .collect(toImmutableList());
+    CommandDetail commandDetail =
+        CommandDetail.newBuilder()
+            .setCommandLine(commandInfo.getCommandLine())
+            .setOriginalCommandInfo(commandInfo)
+            .setCreateTime(toProtoTimestamp(clock.instant()))
+            .setStartTime(toProtoTimestamp(clock.instant()))
+            .setUpdateTime(toProtoTimestamp(clock.instant()))
+            .setRequestId(sessionInfo.getSessionId())
+            .setId(commandId)
+            .setCommandAttemptId(getCommandAttemptId(commandId, sessionInfo.getSessionId()))
+            .setState(CommandState.RUNNING)
+            // TODO: add serials and host ip for slate jobs after test starting.
+            .addAllDeviceSerials(deviceSerials)
+            .setHostIp(sessionRequestHandlerUtil.getHostIp(deviceSerials.get(0)))
+            .build();
+    commandDetailsBuilder.put(commandId, commandDetail);
+    jobInfo.properties().add(XtsPropertyName.Job.XTS_COMMAND_ID, commandId);
+    jobInfo.properties().add(SLATE_JOB_PROP, "true");
+    return ImmutableList.of(jobInfo);
+  }
+
+  private JobInfo createSlateJob(NewMultiCommandRequest request, CommandInfo commandInfo)
+      throws MobileHarnessException, InterruptedException {
+    Map<String, String> params = new HashMap<>();
+    ImmutableList.Builder<FileConfig> fileConfigs = ImmutableList.builder();
+
+    if (request.getTestResourcesList().stream()
+        .noneMatch(resource -> resource.getName().equals("slate_binary"))) {
+      throw MobileHarnessExceptionFactory.createUserFacingException(
+          InfraErrorId.ATS_SERVER_INVALID_TEST_RESOURCE,
+          "Slate requires test resource slate_binary.",
+          null);
+    }
+
+    ImmutableList<String> deviceSerials =
+        commandInfo.getDeviceDimensionsList().stream()
+            .filter(d -> d.getName().equals("device_serial"))
+            .map(DeviceDimension::getValue)
+            .collect(toImmutableList());
+    if (deviceSerials.size() != 1) {
+      throw MobileHarnessExceptionFactory.createUserFacingException(
+          InfraErrorId.ATS_SERVER_INVALID_REQUEST_ERROR,
+          "Slate only supports single device mode.",
+          null);
+    }
+
+    DeviceList deviceList =
+        DeviceList.newBuilder()
+            .addAllSubDeviceSpec(
+                deviceSerials.stream()
+                    .map(
+                        deviceSerial ->
+                            SubDeviceSpec.newBuilder()
+                                .setType("AndroidDevice")
+                                .setDimensions(
+                                    StringMap.newBuilder()
+                                        .putContent(Name.UUID.lowerCaseName(), deviceSerial))
+                                .build())
+                    .collect(toImmutableList()))
+            .build();
+
+    String commandLine = commandInfo.getCommandLine();
+    List<String> tokens = Splitter.on(' ').omitEmptyStrings().splitToList(commandLine);
+    int targetIndex = tokens.indexOf("--target");
+    if (targetIndex == -1 || targetIndex + 1 >= tokens.size()) {
+      throw MobileHarnessExceptionFactory.createUserFacingException(
+          InfraErrorId.ATS_SERVER_INVALID_REQUEST_ERROR,
+          String.format(
+              "Invalid command line: %s, missing or invalid --target parameter.", commandLine),
+          null);
+    }
+
+    String target = tokens.get(targetIndex + 1);
+    params.put("target", target);
+
+    Duration jobTimeout = toJavaDuration(request.getTestEnvironment().getInvocationTimeout());
+    if (jobTimeout.isZero()) {
+      jobTimeout = SLATE_DEFAULT_JOB_TIMEOUT;
+    }
+    Duration testTimeout = SessionRequestHandlerUtil.calculateTestTimeout(jobTimeout);
+    if (testTimeout.compareTo(SLATE_DEFAULT_JOB_TIMEOUT) > 0) {
+      params.put(
+          "timeout_mins", String.valueOf(testTimeout.minus(SLATE_DEFAULT_BUFFER_TIME).toMinutes()));
+    }
+    Duration startTimeout = toJavaDuration(request.getQueueTimeout());
+    String name = String.format("slate-job-%s", target);
+    Path jobGenDir = sessionRequestHandlerUtil.createJobGenDir(name);
+    Path jobTmpDir = sessionRequestHandlerUtil.createJobTmpDir(name);
+    JobConfig jobConfig =
+        JobConfig.newBuilder()
+            .setName(name)
+            .setJobTimeoutSec(saturatedCast(jobTimeout.toSeconds()))
+            .setTestTimeoutSec(saturatedCast(testTimeout.toSeconds()))
+            .setStartTimeoutSec(startTimeout.toSeconds())
+            .setTestAttempts(1)
+            .setTests(StringList.newBuilder().addContent(String.format("slate-test-%s", target)))
+            .setDevice(deviceList)
+            .setDriver(Driver.newBuilder().setName("SlateDriver"))
+            .setParams(StringMap.newBuilder().putAllContent(params))
+            .setGenFileDir(jobGenDir.toString())
+            .setFiles(FileConfigList.newBuilder().addAllContent(fileConfigs.build()))
+            .build();
+
+    JobInfo jobInfo =
+        JobInfoCreator.createJobInfo(
+            jobConfig, ImmutableList.of(), jobGenDir.toString(), jobTmpDir.toString());
+
+    insertAdditionalTestResource(jobInfo, request);
+    return jobInfo;
   }
 
   private void insertAdditionalTestResource(JobInfo jobInfo, NewMultiCommandRequest request)
@@ -745,81 +877,31 @@ final class NewMultiCommandRequestHandler {
       String commandId = commandDetail.getId();
       Path outputDirPath =
           Path.of(outputUrl.getPath()).resolve(sessionInfo.getSessionId()).resolve(commandId);
-      String resultDirectoryName =
-          TIMESTAMP_DIR_NAME_FORMATTER.format(Instant.now()) + "_" + getRandom4Digits();
-      Path resultDir = outputDirPath.resolve(resultDirectoryName);
       Path logDir = outputDirPath.resolve("logs");
+
+      MobileHarnessException resultProcessingException = null; // Store result processing error
       ImmutableList<JobInfo> jobs =
           commandToJobsMap.get(commandId).stream()
               .map(jobIdToJobMap::get)
               .collect(toImmutableList());
-      MobileHarnessException resultProcessingException = null; // Store result processing error
       try {
-        SessionRequestInfo sessionRequestInfo =
-            getSessionRequestInfo(request, commandDetail.getOriginalCommandInfo(), sessionInfo);
-        Optional<Result> processResult =
-            sessionResultHandlerUtil.processResult(
-                resultDir,
-                logDir,
-                /* latestResultLink= */ null,
-                /* latestLogLink= */ null,
-                jobs,
-                sessionRequestInfo);
-        if (processResult.isPresent() && processResult.get().hasSummary()) {
-          long failedModuleCount =
-              processResult.get().getModuleInfoList().stream()
-                  .filter(module -> module.getFailedTests() > 0)
-                  .count();
-          commandDetailBuilder
-              .setPassedTestCount(processResult.get().getSummary().getPassed())
-              .setFailedTestCount(processResult.get().getSummary().getFailed())
-              .setTotalModuleCount(processResult.get().getSummary().getModulesTotal())
-              .setFailedModuleCount(failedModuleCount)
-              .setTotalTestCount(
-                  commandDetailBuilder.getPassedTestCount()
-                      + commandDetailBuilder.getFailedTestCount());
-        }
-        Path resultZip = outputDirPath.resolve(resultDirectoryName + ".zip");
-        if (localFileUtil.isFileExist(resultZip)) {
-          // Make sure the context command line is the original command line, not a retry command.
-          String contextCommandLine = commandDetail.getCommandLine();
-          if (request.hasPrevTestContext()
-              && !request.getPrevTestContext().getCommandLine().isEmpty()) {
-            contextCommandLine = request.getPrevTestContext().getCommandLine();
-          }
-          TestContext testContext =
-              TestContext.newBuilder()
-                  .setCommandLine(contextCommandLine)
-                  .putAllEnvVar(request.getTestEnvironment().getEnvVarsMap())
-                  .addTestResource(
-                      TestResource.newBuilder()
-                          .setName(resultZip.getFileName().toString())
-                          .setUrl("file://" + resultZip)
-                          .build())
-                  .build();
-          // TODO: filter context files.
-          testContextMapBuilder.put(commandId, testContext);
-        }
-
-        if (localFileUtil.isDirExist(resultDir)) {
-          // Remove dedicated result directory and move its files to '/<session_id>/<command_id>/'
-          // level.
-          localFileUtil.mergeDir(resultDir, outputDirPath);
+        if (!jobs.isEmpty() && jobs.get(0).properties().has(SLATE_JOB_PROP)) {
+          handleSlateResultProcessing(sessionInfo, jobs, logDir, commandDetailBuilder);
+        } else {
+          handleXtsResultProcessing(
+              sessionInfo,
+              request,
+              commandDetail,
+              jobs,
+              logDir,
+              outputUrl,
+              outputDirPath,
+              commandId,
+              commandDetailBuilder,
+              testContextMapBuilder);
         }
 
         createOutputManifestFile(outputDirPath);
-
-        if (request.hasRetryPreviousSessionId()) {
-          Path prevResultDir =
-              Path.of(outputUrl.getPath())
-                  .resolve(request.getRetryPreviousSessionId())
-                  .resolve(commandId);
-          sessionResultHandlerUtil.copyRetryFiles(
-              prevResultDir.toString(), outputDirPath.toString());
-          // After copying the retry files, regenerate the screenshots metadata file if needed.
-          sessionResultHandlerUtil.generateScreenshotsMetadataFile(
-              sessionRequestInfo, outputDirPath);
-        }
       } catch (MobileHarnessException e) {
         logger.atWarning().withCause(e).log(
             "Failed to process result for session %s, command %s",
@@ -933,6 +1015,141 @@ final class NewMultiCommandRequestHandler {
         errorMessage,
         commandDetailMapBuilder.buildKeepingLast(),
         testContextMapBuilder.buildKeepingLast());
+  }
+
+  private void handleXtsResultProcessing(
+      SessionInfo sessionInfo,
+      NewMultiCommandRequest request,
+      CommandDetail commandDetail,
+      ImmutableList<JobInfo> jobs,
+      Path logDir,
+      URL outputUrl,
+      Path outputDirPath,
+      String commandId,
+      CommandDetail.Builder commandDetailBuilder,
+      ImmutableMap.Builder<String, TestContext> testContextMapBuilder)
+      throws MobileHarnessException, InterruptedException {
+    String resultDirectoryName =
+        TIMESTAMP_DIR_NAME_FORMATTER.format(Instant.now()) + "_" + getRandom4Digits();
+    Path resultDir = outputDirPath.resolve(resultDirectoryName);
+    SessionRequestInfo sessionRequestInfo =
+        getSessionRequestInfo(request, commandDetail.getOriginalCommandInfo(), sessionInfo);
+    Optional<Result> processResult =
+        sessionResultHandlerUtil.processResult(
+            resultDir,
+            logDir,
+            /* latestResultLink= */ null,
+            /* latestLogLink= */ null,
+            jobs,
+            sessionRequestInfo);
+    if (processResult.isPresent() && processResult.get().hasSummary()) {
+      long failedModuleCount =
+          processResult.get().getModuleInfoList().stream()
+              .filter(module -> module.getFailedTests() > 0)
+              .count();
+      commandDetailBuilder
+          .setPassedTestCount(processResult.get().getSummary().getPassed())
+          .setFailedTestCount(processResult.get().getSummary().getFailed())
+          .setTotalModuleCount(processResult.get().getSummary().getModulesTotal())
+          .setFailedModuleCount(failedModuleCount)
+          .setTotalTestCount(
+              commandDetailBuilder.getPassedTestCount()
+                  + commandDetailBuilder.getFailedTestCount());
+    }
+    Path resultZip = outputDirPath.resolve(resultDirectoryName + ".zip");
+    if (localFileUtil.isFileExist(resultZip)) {
+      // Make sure the context command line is the original command line, not a retry command.
+      String contextCommandLine = commandDetail.getCommandLine();
+      if (request.hasPrevTestContext()
+          && !request.getPrevTestContext().getCommandLine().isEmpty()) {
+        contextCommandLine = request.getPrevTestContext().getCommandLine();
+      }
+      TestContext testContext =
+          TestContext.newBuilder()
+              .setCommandLine(contextCommandLine)
+              .putAllEnvVar(request.getTestEnvironment().getEnvVarsMap())
+              .addTestResource(
+                  TestResource.newBuilder()
+                      .setName(resultZip.getFileName().toString())
+                      .setUrl("file://" + resultZip)
+                      .build())
+              .build();
+      // TODO: filter context files.
+      testContextMapBuilder.put(commandId, testContext);
+    }
+
+    if (localFileUtil.isDirExist(resultDir)) {
+      // Remove dedicated result directory and move its files to '/<session_id>/<command_id>/'
+      // level.
+      localFileUtil.mergeDir(resultDir, outputDirPath);
+    }
+
+    if (request.hasRetryPreviousSessionId()) {
+      Path prevResultDir =
+          Path.of(outputUrl.getPath())
+              .resolve(request.getRetryPreviousSessionId())
+              .resolve(commandId);
+      sessionResultHandlerUtil.copyRetryFiles(prevResultDir.toString(), outputDirPath.toString());
+      // After copying the retry files, regenerate the screenshots metadata file if needed.
+      sessionResultHandlerUtil.generateScreenshotsMetadataFile(sessionRequestInfo, outputDirPath);
+    }
+  }
+
+  private void handleSlateResultProcessing(
+      SessionInfo sessionInfo,
+      ImmutableList<JobInfo> jobs,
+      Path logDir,
+      CommandDetail.Builder commandDetailBuilder)
+      throws MobileHarnessException, InterruptedException {
+    long passedTestCount = 0;
+    long failedTestCount = 0;
+    for (JobInfo jobInfo : jobs) {
+      Path jobGenDir = Path.of(jobInfo.setting().getGenFileDir());
+      if (localFileUtil.isDirExist(jobGenDir)) {
+        logger.atInfo().log("Merging slate job gen dir [%s] to output dir [%s]", jobGenDir, logDir);
+        localFileUtil.mergeDir(jobGenDir, logDir);
+      }
+
+      for (TestInfo testInfo : jobInfo.tests().getAll().values()) {
+        ImmutableList<Path> genFiles = sessionResultHandlerUtil.getGenFilesFromTest(testInfo);
+        Path testLogDir = logDir.resolve(String.format("test_%s", testInfo.locator().getId()));
+        localFileUtil.prepareDir(testLogDir);
+        for (Path genFile : genFiles) {
+          logger.atInfo().log(
+              "Copying slate test log relevant file/dir [%s] into dir [%s]", genFile, testLogDir);
+          localFileUtil.copyFileOrDirWithOverridingCopyOptions(
+              genFile, testLogDir, ImmutableList.of("-rf"));
+        }
+
+        if (testInfo.result().get() == TestResult.PASS) {
+          passedTestCount++;
+        } else if (testInfo.result().get() != TestResult.SKIP) {
+          failedTestCount++;
+        }
+      }
+    }
+    Path serverSessionLogsDir = logDir.resolve("olc_server_session_logs");
+    try {
+      localFileUtil.prepareDir(serverSessionLogsDir);
+      sessionInfo.putSessionProperty(
+          SessionProperties.PROPERTY_KEY_SERVER_SESSION_LOG_PATH,
+          serverSessionLogsDir.resolve("olc_server_session_log.txt").toString());
+    } catch (MobileHarnessException e) {
+      logger.atWarning().withCause(e).log(
+          "Failed to create server session logs dir for session: %s", sessionInfo.getSessionId());
+    }
+    commandDetailBuilder
+        .setPassedTestCount(passedTestCount)
+        .setFailedTestCount(failedTestCount)
+        .setTotalModuleCount(jobs.size())
+        .setFailedModuleCount(
+            jobs.stream()
+                .filter(
+                    jobInfo ->
+                        jobInfo.result().get() != TestResult.PASS
+                            && jobInfo.result().get() != TestResult.SKIP)
+                .count())
+        .setTotalTestCount(passedTestCount + failedTestCount);
   }
 
   // Clean up temporary files and directories in session and jobs.
