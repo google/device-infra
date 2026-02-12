@@ -33,4 +33,18 @@ public final class EnvironmentTest {
 
     assertThat(environment.isGoogleInternal()).isEqualTo(expectedIsGoogleInternal);
   }
+
+  @Test
+  public void isAts_returnsCorrectValueForEnvironment() {
+    boolean expectedIsAts = true;
+
+    assertThat(environment.isAts()).isEqualTo(expectedIsAts);
+  }
+
+  @Test
+  public void getEnvironmentType_returnsCorrectValueForEnvironment() {
+    Environment.EnvironmentType expectedEnvironmentType = Environment.EnvironmentType.ATS;
+
+    assertThat(environment.getEnvironmentType()).isEqualTo(expectedEnvironmentType);
+  }
 }

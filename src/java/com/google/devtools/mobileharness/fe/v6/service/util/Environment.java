@@ -23,18 +23,34 @@ import javax.inject.Singleton;
 @Singleton
 public class Environment {
 
-  private static final boolean GOOGLE_INTERNAL_BUILD = checkIsGoogleInternal();
+  /** The environment type of the current runtime. */
+  public enum EnvironmentType {
+    GOOGLE_INTERNAL,
+    ATS
+  }
 
-  private static boolean checkIsGoogleInternal() {
+  private static final EnvironmentType CURRENT_ENVIRONMENT = checkEnvironment();
+
+  private static EnvironmentType checkEnvironment() {
     boolean isGoogleInternal = false;
-    return isGoogleInternal;
+    return isGoogleInternal ? EnvironmentType.GOOGLE_INTERNAL : EnvironmentType.ATS;
   }
 
   @Inject
   Environment() {}
 
-  /** Returns true if running in the internal Google environment. */
+  /** Returns the current runtime environment type. */
+  public EnvironmentType getEnvironmentType() {
+    return CURRENT_ENVIRONMENT;
+  }
+
+  /** Helper method for boolean checks. */
   public boolean isGoogleInternal() {
-    return GOOGLE_INTERNAL_BUILD;
+    return CURRENT_ENVIRONMENT == EnvironmentType.GOOGLE_INTERNAL;
+  }
+
+  /** Helper method for boolean checks. */
+  public boolean isAts() {
+    return CURRENT_ENVIRONMENT == EnvironmentType.ATS;
   }
 }
