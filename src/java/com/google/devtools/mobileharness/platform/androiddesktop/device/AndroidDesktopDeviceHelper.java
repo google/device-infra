@@ -57,8 +57,7 @@ public class AndroidDesktopDeviceHelper {
 
   public static final String SHIVAS_CLI_PATH =
       "/usr/local/google/mobileharness/ate/cipd_packages/shivas";
-  public static final String SA_PATH =
-      "/usr/local/google/mobileharness/runtime_files/recovery/skylab-drone.json";
+  public static final String SA_PATH = "/creds/service_accounts/skylab-drone.json";
   private static final String PARIS_CHECK_HEALTH_RESOURCE_FILE_PATH = "paris-check-health";
   private static final Supplier<Optional<String>> PARIS_CHECK_HEALTH_SCRIPT_PATH =
       Suppliers.memoize(AndroidDesktopDeviceHelper::getParisCheckHealthScriptPath);

@@ -106,12 +106,6 @@ function exitEarlyIfExistingRepairJobRunning() {
 }
 exitEarlyIfExistingRepairJobRunning "${device}"
 
-#  copy json file #ideally these steps should be done when mh_lab container first started. mount service account, install ping
-if [ ! -e "/creds/service_accounts/skylab-drone.json" ]; then
-  cat ~/passwd | sudo -S mkdir -p /creds/service_accounts
-  cat ~/passwd | sudo -S cp "${recoveryDir}/skylab-drone.json" /creds/service_accounts
-fi
-
 cd "${dd}"
 # download paris
 depotToolsPath="/usr/local/google/mobileharness/runtime_files/recovery/depot_tools"
