@@ -75,7 +75,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/container/controller:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:__pkg__",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/allocation",
@@ -97,7 +96,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/container/controller:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:__pkg__",
     ],
     exports = [
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/exception",
