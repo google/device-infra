@@ -51,9 +51,7 @@ java_library(
     deps = [
         ":device_details",
         ":session_request_info",
-        "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/device:querier",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_internal_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:enums",
@@ -61,7 +59,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
         "@maven//:javax_inject_jsr330_api",
@@ -130,12 +127,14 @@ java_library(
         "//src/devtools/mobileharness/infra/controller/test/util/xtsdownloader/configs:mcts_list",
     ],
     deps = [
+        ":ats_master_util",
         ":device_details",
         ":device_details_retriever",
         ":device_selection",
         ":device_selection_options",
         ":session_handler_helper",
         ":session_request_info",
+        "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/api/model/proto:job_java_proto",
         "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
         "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",
@@ -147,7 +146,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error:exception_factory",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/plan:test_plan_parser",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:certification_suite_info_factory",
-        "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/device:querier",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:annotations",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:enums",
@@ -261,4 +259,18 @@ java_library(
     name = "shard_constants",
     srcs = ["ShardConstants.java"],
     deps = ["@maven//:com_google_guava_guava"],
+)
+
+java_library(
+    name = "ats_master_util",
+    srcs = ["AtsMasterUtil.java"],
+    deps = [
+        "//src/devtools/mobileharness/api/model/proto:device_java_proto",
+        "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/device:querier",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
 )

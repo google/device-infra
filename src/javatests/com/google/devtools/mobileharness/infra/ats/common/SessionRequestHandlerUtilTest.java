@@ -41,7 +41,6 @@ import com.google.devtools.mobileharness.api.model.proto.Job.AllocationExitStrat
 import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser;
 import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser.TestPlanFilter;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfoFactory;
-import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.SessionGenDir;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.SessionTempDir;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
@@ -71,7 +70,6 @@ import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.StringMap;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.SubDeviceSpec;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo;
-import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryResult;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.Dimension;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -98,7 +96,6 @@ public final class SessionRequestHandlerUtilTest {
   @Rule public final TemporaryFolder folder = new TemporaryFolder();
   @Rule public final SetFlagsOss flags = new SetFlagsOss();
 
-  @Bind @Mock private DeviceQuerier deviceQuerier;
   @Bind @Mock private LocalFileUtil localFileUtil;
   @Bind @Mock private ModuleConfigurationHelper moduleConfigurationHelper;
   @Bind @Mock private ConfigurationUtil configurationUtil;
@@ -110,6 +107,8 @@ public final class SessionRequestHandlerUtilTest {
   @Bind @Mock private MoblyTestLoader moblyTestLoader;
   @Bind @Mock private TestPlanParser testPlanParser;
   @Bind @Mock private Sleeper sleeper;
+  @Bind @Mock private AtsMasterUtil atsMasterUtil;
+  @Bind @Mock private DeviceDetailsRetriever deviceDetailsRetriever;
 
   @Inject private SessionRequestHandlerUtil sessionRequestHandlerUtil;
 
@@ -131,23 +130,29 @@ public final class SessionRequestHandlerUtilTest {
 
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
 
-    when(deviceQuerier.queryDevice(any()))
-        .thenReturn(
-            DeviceQueryResult.newBuilder()
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder()
-                        .setId("device_id_1")
-                        .addDimension(
-                            Dimension.newBuilder().setName("uuid").setValue("device_id_1"))
-                        .addType("AndroidOnlineDevice"))
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder()
-                        .setId("device_id_2")
-                        .addDimension(
-                            Dimension.newBuilder().setName("uuid").setValue("device_id_1"))
-                        .addType("AndroidOnlineDevice"))
-                .build());
     when(testPlanParser.parseFilters(any(), anyString(), anyString())).thenReturn(testPlanFilter);
+    when(atsMasterUtil.queryAndroidDevicesFromMaster())
+        .thenReturn(
+            ImmutableList.of(
+                DeviceInfo.newBuilder()
+                    .setId("device_id_1")
+                    .addDimension(Dimension.newBuilder().setName("uuid").setValue("device_id_1"))
+                    .addType("AndroidOnlineDevice")
+                    .setStatus("IDLE")
+                    .build(),
+                DeviceInfo.newBuilder()
+                    .setId("device_id_2")
+                    .addDimension(Dimension.newBuilder().setName("uuid").setValue("device_id_2"))
+                    .addType("AndroidOnlineDevice")
+                    .setStatus("IDLE")
+                    .build()));
+    when(deviceDetailsRetriever.getAllLocalAndroidDevicesWithNeededDetails(any()))
+        .thenReturn(
+            ImmutableMap.of(
+                "device_id_1",
+                DeviceDetails.builder().setId("device_id_1").setUuid("device_id_1").build(),
+                "device_id_2",
+                DeviceDetails.builder().setId("device_id_2").setUuid("device_id_2").build()));
   }
 
   private SessionRequestInfo.Builder defaultSessionRequestInfoBuilder() {
@@ -240,16 +245,13 @@ public final class SessionRequestHandlerUtilTest {
   }
 
   @Test
-  public void initializeJobConfig_atsServerNoDeviceRequirement_pickOneDevice() throws Exception {
+  public void initializeJobConfig_atsServerNoDeviceRequirement_throwsException() throws Exception {
     SessionRequestInfo sessionRequestInfo =
         defaultSessionRequestInfoBuilder().setIsAtsServerRequest(true).build();
-    ImmutableList<SubDeviceSpec> subDeviceSpecs =
-        sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
-    JobConfig jobConfig =
-        sessionRequestHandlerUtil.initializeJobConfig(
-            sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs, ImmutableMultimap.of());
-    assertThat(jobConfig.getDevice().getSubDeviceSpecList())
-        .containsExactly(subDeviceSpecWithDimension("id", "regex:(device_id_1|device_id_2)"));
+
+    assertThrows(
+        MobileHarnessException.class,
+        () -> sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo));
   }
 
   @Test
@@ -272,16 +274,15 @@ public final class SessionRequestHandlerUtilTest {
   @Test
   public void initializeJobConfig_atsServerSpecifyNotAvailableDevice_createJobWithLeftDevice()
       throws Exception {
-    when(deviceQuerier.queryDevice(any()))
+    when(atsMasterUtil.queryAndroidDevicesFromMaster())
         .thenReturn(
-            DeviceQueryResult.newBuilder()
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder()
-                        .setId("device_id_1")
-                        .addDimension(
-                            Dimension.newBuilder().setName("uuid").setValue("device_id_1"))
-                        .addType("AndroidOnlineDevice"))
-                .build());
+            ImmutableList.of(
+                DeviceInfo.newBuilder()
+                    .setId("device_id_1")
+                    .addDimension(Dimension.newBuilder().setName("uuid").setValue("device_id_1"))
+                    .addType("AndroidOnlineDevice")
+                    .setStatus("IDLE")
+                    .build()));
     SessionRequestInfo sessionRequestInfo =
         defaultSessionRequestInfoBuilder()
             .setIsAtsServerRequest(true)
@@ -303,18 +304,17 @@ public final class SessionRequestHandlerUtilTest {
   public void
       getSubDeviceSpecListForTradefed_atsServerRequestWithDeviceSerials_retryAndSucceedsOnThirdAttempt()
           throws Exception {
-    when(deviceQuerier.queryDevice(any()))
-        .thenReturn(DeviceQueryResult.getDefaultInstance()) // First call, no devices
-        .thenReturn(DeviceQueryResult.getDefaultInstance()) // Second call, no devices
+    when(atsMasterUtil.queryAndroidDevicesFromMaster())
+        .thenReturn(ImmutableList.of()) // First call, no devices
+        .thenReturn(ImmutableList.of()) // Second call, no devices
         .thenReturn(
-            DeviceQueryResult.newBuilder()
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder()
-                        .setId("device_id_1")
-                        .addDimension(
-                            Dimension.newBuilder().setName("uuid").setValue("device_id_1"))
-                        .addType("AndroidOnlineDevice"))
-                .build()); // Third call, one device
+            ImmutableList.of(
+                DeviceInfo.newBuilder()
+                    .setId("device_id_1")
+                    .addDimension(Dimension.newBuilder().setName("uuid").setValue("device_id_1"))
+                    .addType("AndroidOnlineDevice")
+                    .setStatus("IDLE")
+                    .build())); // Third call, one device
 
     SessionRequestInfo sessionRequestInfo =
         defaultSessionRequestInfoBuilder()
@@ -335,32 +335,30 @@ public final class SessionRequestHandlerUtilTest {
   public void
       getSubDeviceSpecListForTradefed_atsServerRequestWithDeviceSerials_retryUntilRequestedIsFound()
           throws Exception {
-    when(deviceQuerier.queryDevice(any()))
-        .thenReturn(DeviceQueryResult.getDefaultInstance()) // First call, no devices
+    when(atsMasterUtil.queryAndroidDevicesFromMaster())
+        .thenReturn(ImmutableList.of()) // First call, no devices
         .thenReturn(
-            DeviceQueryResult.newBuilder()
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder()
-                        .setId("device_id_2")
-                        .addDimension(
-                            Dimension.newBuilder().setName("uuid").setValue("device_id_2"))
-                        .addType("AndroidOnlineDevice"))
-                .build()) // Second call, one device that is not the one requested
+            ImmutableList.of(
+                DeviceInfo.newBuilder()
+                    .setId("device_id_2")
+                    .addDimension(Dimension.newBuilder().setName("uuid").setValue("device_id_2"))
+                    .addType("AndroidOnlineDevice")
+                    .setStatus("IDLE")
+                    .build())) // Second call, one device that is not the one requested
         .thenReturn(
-            DeviceQueryResult.newBuilder()
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder()
-                        .setId("device_id_1")
-                        .addDimension(
-                            Dimension.newBuilder().setName("uuid").setValue("device_id_1"))
-                        .addType("AndroidOnlineDevice"))
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder()
-                        .setId("device_id_2")
-                        .addDimension(
-                            Dimension.newBuilder().setName("uuid").setValue("device_id_2"))
-                        .addType("AndroidOnlineDevice"))
-                .build()); // Third call, All devices are found
+            ImmutableList.of(
+                DeviceInfo.newBuilder()
+                    .setId("device_id_1")
+                    .addDimension(Dimension.newBuilder().setName("uuid").setValue("device_id_1"))
+                    .addType("AndroidOnlineDevice")
+                    .setStatus("IDLE")
+                    .build(),
+                DeviceInfo.newBuilder()
+                    .setId("device_id_2")
+                    .addDimension(Dimension.newBuilder().setName("uuid").setValue("device_id_2"))
+                    .addType("AndroidOnlineDevice")
+                    .setStatus("IDLE")
+                    .build())); // Third call, All devices are found
 
     SessionRequestInfo sessionRequestInfo =
         defaultSessionRequestInfoBuilder()
@@ -380,11 +378,12 @@ public final class SessionRequestHandlerUtilTest {
   @Test
   public void getSubDeviceSpecListForTradefed_atsServerRequestWithDeviceSerials_retryAndFail()
       throws Exception {
-    when(deviceQuerier.queryDevice(any())).thenReturn(DeviceQueryResult.getDefaultInstance());
+    when(atsMasterUtil.queryAndroidDevicesFromMaster()).thenReturn(ImmutableList.of());
 
     SessionRequestInfo sessionRequestInfo =
         defaultSessionRequestInfoBuilder()
             .setIsAtsServerRequest(true)
+            .setAllowPartialDeviceMatch(true)
             .setDeviceSerials(ImmutableList.of("device_id_1"))
             .build();
 
@@ -393,7 +392,7 @@ public final class SessionRequestHandlerUtilTest {
             MobileHarnessException.class,
             () -> sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo));
 
-    assertThat(exception).hasMessageThat().contains("No available device is found.");
+    assertThat(exception).hasMessageThat().contains("none of the selected devices are ready");
     verify(sleeper, times(39)).sleep(Duration.ofSeconds(30));
   }
 
@@ -401,16 +400,15 @@ public final class SessionRequestHandlerUtilTest {
   public void
       getSubDeviceSpecListForTradefed_atsServerRequestWithPartialDeviceMatch_allowPartialDeviceMatch_filterNotAvailableDevices()
           throws Exception {
-    when(deviceQuerier.queryDevice(any()))
+    when(atsMasterUtil.queryAndroidDevicesFromMaster())
         .thenReturn(
-            DeviceQueryResult.newBuilder()
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder()
-                        .setId("device_id_1")
-                        .addDimension(
-                            Dimension.newBuilder().setName("uuid").setValue("device_id_1"))
-                        .addType("AndroidOnlineDevice"))
-                .build());
+            ImmutableList.of(
+                DeviceInfo.newBuilder()
+                    .setId("device_id_1")
+                    .addDimension(Dimension.newBuilder().setName("uuid").setValue("device_id_1"))
+                    .addType("AndroidOnlineDevice")
+                    .setStatus("IDLE")
+                    .build()));
 
     SessionRequestInfo sessionRequestInfo =
         defaultSessionRequestInfoBuilder()
@@ -431,16 +429,15 @@ public final class SessionRequestHandlerUtilTest {
   public void
       getSubDeviceSpecListForTradefed_atsServerRequestWithPartialDeviceMatch_notAllowPartialDeviceMatch_notFilterNotAvailableDevices()
           throws Exception {
-    when(deviceQuerier.queryDevice(any()))
+    when(atsMasterUtil.queryAndroidDevicesFromMaster())
         .thenReturn(
-            DeviceQueryResult.newBuilder()
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder()
-                        .setId("device_id_1")
-                        .addDimension(
-                            Dimension.newBuilder().setName("uuid").setValue("device_id_1"))
-                        .addType("AndroidOnlineDevice"))
-                .build());
+            ImmutableList.of(
+                DeviceInfo.newBuilder()
+                    .setId("device_id_1")
+                    .addDimension(Dimension.newBuilder().setName("uuid").setValue("device_id_1"))
+                    .addType("AndroidOnlineDevice")
+                    .setStatus("IDLE")
+                    .build()));
 
     SessionRequestInfo sessionRequestInfo =
         defaultSessionRequestInfoBuilder()
@@ -547,12 +544,11 @@ public final class SessionRequestHandlerUtilTest {
 
   @Test
   public void initializeJobConfig_multiDevice_noEnoughDevices() throws Exception {
-    when(deviceQuerier.queryDevice(any()))
+    when(deviceDetailsRetriever.getAllLocalAndroidDevicesWithNeededDetails(any()))
         .thenReturn(
-            DeviceQueryResult.newBuilder()
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
-                .build());
+            ImmutableMap.of(
+                "device_id_1",
+                DeviceDetails.builder().setId("device_id_1").setUuid("device_id_1").build()));
     SessionRequestInfo sessionRequestInfo =
         defaultSessionRequestInfoBuilder().setTestPlan("cts-multi-device").build();
     ImmutableList<SubDeviceSpec> subDeviceSpecs =
@@ -605,7 +601,8 @@ public final class SessionRequestHandlerUtilTest {
 
   @Test
   public void initializeJobConfig_noOnlineDevices_noJobConfig() throws Exception {
-    when(deviceQuerier.queryDevice(any())).thenReturn(DeviceQueryResult.getDefaultInstance());
+    when(deviceDetailsRetriever.getAllLocalAndroidDevicesWithNeededDetails(any()))
+        .thenReturn(ImmutableMap.of());
     SessionRequestInfo sessionRequestInfo = defaultSessionRequestInfoBuilder().build();
     assertThrows(
         MobileHarnessException.class,
@@ -813,17 +810,6 @@ public final class SessionRequestHandlerUtilTest {
     when(configurationUtil.getConfigsV2FromDirs(any()))
         .thenReturn(ImmutableMap.of("/path/to/config1", config1, "/path/to/config2", config2));
 
-    when(deviceQuerier.queryDevice(any()))
-        .thenReturn(
-            DeviceQueryResult.newBuilder()
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder()
-                        .setId("device_id_1")
-                        .addType("AndroidOnlineDevice")
-                        .addDimension(
-                            Dimension.newBuilder().setName("abilist").setValue("arm64-v8a")))
-                .build());
-
     sessionRequestHandlerUtil = spy(sessionRequestHandlerUtil);
     doReturn(testSuiteHelper)
         .when(sessionRequestHandlerUtil)
@@ -883,18 +869,17 @@ public final class SessionRequestHandlerUtilTest {
   @Test
   public void createXtsNonTradefedJobs_withDeviceSerials() throws Exception {
     setUpForCreateXtsNonTradefedJobs();
-    when(deviceQuerier.queryDevice(any()))
+    when(deviceDetailsRetriever.getAllLocalAndroidDevicesWithNeededDetails(any()))
         .thenReturn(
-            DeviceQueryResult.newBuilder()
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_3").addType("AndroidOnlineDevice"))
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_4").addType("AndroidOnlineDevice"))
-                .build());
+            ImmutableMap.of(
+                "device_id_1",
+                DeviceDetails.builder().setId("device_id_1").setUuid("device_id_1").build(),
+                "device_id_2",
+                DeviceDetails.builder().setId("device_id_2").setUuid("device_id_2").build(),
+                "device_id_3",
+                DeviceDetails.builder().setId("device_id_3").setUuid("device_id_3").build(),
+                "device_id_4",
+                DeviceDetails.builder().setId("device_id_4").setUuid("device_id_4").build()));
     SessionRequestInfo sessionRequestInfo =
         sessionRequestHandlerUtil.addXtsModuleInfo(
             defaultSessionRequestInfoBuilder()
@@ -1428,7 +1413,8 @@ public final class SessionRequestHandlerUtilTest {
     setUpForCreateXtsNonTradefedJobs();
     SessionRequestInfo sessionRequestInfo =
         sessionRequestHandlerUtil.addXtsModuleInfo(defaultSessionRequestInfoBuilder().build());
-    when(deviceQuerier.queryDevice(any())).thenReturn(DeviceQueryResult.getDefaultInstance());
+    when(deviceDetailsRetriever.getAllLocalAndroidDevicesWithNeededDetails(any()))
+        .thenReturn(ImmutableMap.of());
 
     assertThrows(
         MobileHarnessException.class,
@@ -1646,41 +1632,34 @@ public final class SessionRequestHandlerUtilTest {
 
   @Test
   public void getHostIp_success() throws Exception {
-    when(deviceQuerier.queryDevice(any()))
+    when(atsMasterUtil.queryAndroidDevicesFromMaster())
         .thenReturn(
-            DeviceQueryResult.newBuilder()
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder()
-                        .setId("device_id_1")
-                        .addDimension(
-                            Dimension.newBuilder().setName("host_ip").setValue("192.168.1.1")))
-                .build());
+            ImmutableList.of(
+                DeviceInfo.newBuilder()
+                    .setId("device_id_1")
+                    .addDimension(Dimension.newBuilder().setName("host_ip").setValue("192.168.1.1"))
+                    .build()));
 
     assertThat(sessionRequestHandlerUtil.getHostIp("device_id_1")).isEqualTo("192.168.1.1");
   }
 
   @Test
   public void getHostIp_deviceNotFound() throws Exception {
-    when(deviceQuerier.queryDevice(any()))
+    when(atsMasterUtil.queryAndroidDevicesFromMaster())
         .thenReturn(
-            DeviceQueryResult.newBuilder()
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder()
-                        .setId("device_id_2")
-                        .addDimension(
-                            Dimension.newBuilder().setName("host_ip").setValue("192.168.1.1")))
-                .build());
+            ImmutableList.of(
+                DeviceInfo.newBuilder()
+                    .setId("device_id_2")
+                    .addDimension(Dimension.newBuilder().setName("host_ip").setValue("192.168.1.1"))
+                    .build()));
 
     assertThat(sessionRequestHandlerUtil.getHostIp("device_id_1")).isEmpty();
   }
 
   @Test
   public void getHostIp_hostIpNotFound() throws Exception {
-    when(deviceQuerier.queryDevice(any()))
-        .thenReturn(
-            DeviceQueryResult.newBuilder()
-                .addDeviceInfo(DeviceInfo.newBuilder().setId("device_id_1"))
-                .build());
+    when(atsMasterUtil.queryAndroidDevicesFromMaster())
+        .thenReturn(ImmutableList.of(DeviceInfo.newBuilder().setId("device_id_1").build()));
 
     assertThat(sessionRequestHandlerUtil.getHostIp("device_id_1")).isEmpty();
   }
@@ -1723,24 +1702,23 @@ public final class SessionRequestHandlerUtilTest {
             .setDeviceSerials(ImmutableList.of("device_id_1"))
             .build();
 
-    when(deviceQuerier.queryDevice(any()))
-        .thenReturn(DeviceQueryResult.getDefaultInstance()) // First call, no devices
-        .thenReturn(DeviceQueryResult.getDefaultInstance()) // Second call, no devices
+    when(atsMasterUtil.queryAndroidDevicesFromMaster())
+        .thenReturn(ImmutableList.of()) // First call, no devices
+        .thenReturn(ImmutableList.of()) // Second call, no devices
         .thenReturn(
-            DeviceQueryResult.newBuilder()
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder()
-                        .setId("device_id_1")
-                        .addDimension(
-                            Dimension.newBuilder().setName("uuid").setValue("device_id_1"))
-                        .addType("AndroidOnlineDevice"))
-                .build()); // Third call, device found
+            ImmutableList.of(
+                DeviceInfo.newBuilder()
+                    .setId("device_id_1")
+                    .addDimension(Dimension.newBuilder().setName("uuid").setValue("device_id_1"))
+                    .addType("AndroidOnlineDevice")
+                    .setStatus("IDLE")
+                    .build())); // Third call, device found
 
     var unused = sessionRequestHandlerUtil.getDeviceInfo(sessionRequestInfo);
 
     verify(sleeper, times(2)).sleep(Duration.ofSeconds(30));
     // Verify that deviceQuerier.queryDevice(any()) is called 4 times: 3 times in
     // waitForRequestedDevicesToBeReady and 1 time in getDeviceInfoFromMaster.
-    verify(deviceQuerier, times(4)).queryDevice(any());
+    verify(atsMasterUtil, times(4)).queryAndroidDevicesFromMaster();
   }
 }

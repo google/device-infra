@@ -52,12 +52,12 @@ import com.google.devtools.deviceinfra.shared.util.file.remote.constant.RemoteFi
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.model.proto.Job.AllocationExitStrategy;
 import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser;
 import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser.TestPlanFilter;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.ShardingMode;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfoFactory;
-import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.SessionGenDir;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.SessionTempDir;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
@@ -107,8 +107,6 @@ import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.StringList;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.StringMap;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.SubDeviceSpec;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery;
-import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryFilter;
-import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryResult;
 import java.io.File;
 import java.net.URLEncoder;
 import java.nio.file.Path;
@@ -158,7 +156,6 @@ public class SessionRequestHandlerUtil {
   private static final ImmutableList<String> XTS_TYPE_THAT_NEED_TEST_HARNESS_PROPERTY_FALSE =
       ImmutableList.of("cts", "mcts");
 
-  private final DeviceQuerier deviceQuerier;
   private final LocalFileUtil localFileUtil;
   private final ConfigurationUtil configurationUtil;
   private final ModuleConfigurationHelper moduleConfigurationHelper;
@@ -171,10 +168,10 @@ public class SessionRequestHandlerUtil {
   private final MoblyTestLoader moblyTestLoader;
   private final TestPlanParser testPlanParser;
   private final Sleeper sleeper;
+  private final AtsMasterUtil atsMasterUtil;
 
   @Inject
   SessionRequestHandlerUtil(
-      DeviceQuerier deviceQuerier,
       LocalFileUtil localFileUtil,
       ConfigurationUtil configurationUtil,
       ModuleConfigurationHelper moduleConfigurationHelper,
@@ -186,8 +183,8 @@ public class SessionRequestHandlerUtil {
       DeviceDetailsRetriever deviceDetailsRetriever,
       MoblyTestLoader moblyTestLoader,
       TestPlanParser testPlanParser,
-      Sleeper sleeper) {
-    this.deviceQuerier = deviceQuerier;
+      Sleeper sleeper,
+      AtsMasterUtil atsMasterUtil) {
     this.localFileUtil = localFileUtil;
     this.configurationUtil = configurationUtil;
     this.moduleConfigurationHelper = moduleConfigurationHelper;
@@ -200,6 +197,7 @@ public class SessionRequestHandlerUtil {
     this.moblyTestLoader = moblyTestLoader;
     this.testPlanParser = testPlanParser;
     this.sleeper = sleeper;
+    this.atsMasterUtil = atsMasterUtil;
   }
 
   /** Information used to create the Tradefed job. */
@@ -225,65 +223,19 @@ public class SessionRequestHandlerUtil {
    */
   public ImmutableList<SubDeviceSpec> getSubDeviceSpecListForTradefed(
       SessionRequestInfo sessionRequestInfo) throws MobileHarnessException, InterruptedException {
+
+    // ATS UI solely rely on user handpicked devices, and don't need CLI param
+    // to filter devices. In the future, will use MH native dimensions for advanced filtering.
+    if (sessionRequestInfo.isAtsServerRequest()) {
+      return getSubDeviceSpecListForAtsServerRequest(sessionRequestInfo);
+    }
+
     String testPlan = sessionRequestInfo.testPlan();
     String xtsType = sessionRequestInfo.xtsType();
     int requestedShardCount = sessionRequestInfo.shardCount().orElse(0);
     int minDeviceCount = testPlan.matches(xtsType + "-multi-?device") ? 2 : 1;
     int shardCount = max(requestedShardCount, minDeviceCount);
-    ImmutableSet<DeviceDetails> availableDevices = getAvailableDevices(sessionRequestInfo);
-    Map<String, String> extraDimensions = new HashMap<>();
-    // TODO: b/444562857 - Remove enableTestHarnessCheckForRequiredTests flag once test harness
-    // dimension allocation issue is fixed.
-    if (Flags.instance().isOmniMode.getNonNull()
-        && Flags.instance().enableTestHarnessCheckForRequiredTests.getNonNull()
-        && needTestHarnessPropertyFalse(sessionRequestInfo)) {
-      extraDimensions.put(toLowerCase(AndroidProperty.PERSIST_TEST_HARNESS.name()), Value.FALSE);
-    }
-    if (sessionRequestInfo.isAtsServerRequest() && !sessionRequestInfo.deviceSerials().isEmpty()) {
-      if (shouldEnableModuleSharding(sessionRequestInfo)) {
-        StringMap dimensions =
-            StringMap.newBuilder()
-                .putContent(
-                    Name.UUID.lowerCaseName(),
-                    String.format(
-                        "%s(%s)",
-                        Value.PREFIX_REGEX,
-                        Joiner.on('|').join(sessionRequestInfo.deviceSerials())))
-                .putAllContent(extraDimensions)
-                .build();
-        return ImmutableList.of(
-            SubDeviceSpec.newBuilder()
-                .setType(getTradefedRequiredDeviceType(sessionRequestInfo))
-                .setDimensions(dimensions)
-                .build());
-      } else {
-        // Use UUID instead of id because the id is not unique for virtual devices on different
-        // hosts, but UUID is for them. Example: the id is 0.0.0.0:6520 and is same for those from
-        // different hosts, and UUID is hostname:6520 which is unique.
-        ImmutableSet<String> availableDeviceUuids =
-            availableDevices.stream()
-                .map(device -> device.uuid().orElse(""))
-                .collect(toImmutableSet());
-        Stream<String> deviceSerials = sessionRequestInfo.deviceSerials().stream();
-        if (sessionRequestInfo.allowPartialDeviceMatch()) {
-          // TODO: The available devices should online and not busy. Currently only
-          // check for online devices.
-          deviceSerials = deviceSerials.filter(availableDeviceUuids::contains);
-        }
-        return deviceSerials
-            .map(
-                deviceSerial ->
-                    SubDeviceSpec.newBuilder()
-                        .setType(getTradefedRequiredDeviceType(sessionRequestInfo))
-                        .setDimensions(
-                            StringMap.newBuilder()
-                                .putContent(Name.UUID.lowerCaseName(), deviceSerial)
-                                .putAllContent(extraDimensions))
-                        .build())
-            .collect(toImmutableList());
-      }
-    }
-
+    ImmutableSet<DeviceDetails> availableDevices = getLocalAvailableDevices(sessionRequestInfo);
     if (sessionRequestInfo.deviceSerials().isEmpty()) {
       return pickAndroidOnlineDevices(
           sessionRequestInfo,
@@ -298,25 +250,105 @@ public class SessionRequestHandlerUtil {
                     .setType(getTradefedRequiredDeviceType(sessionRequestInfo))
                     .setDimensions(
                         StringMap.newBuilder()
-                            .putContent(Name.ID.lowerCaseName(), deviceDetails.id())
-                            .putAllContent(extraDimensions))
+                            .putContent(Name.ID.lowerCaseName(), deviceDetails.id()))
                     .build())
         .collect(toImmutableList());
   }
 
-  private ImmutableSet<DeviceDetails> getAvailableDevices(SessionRequestInfo sessionRequestInfo)
-      throws MobileHarnessException, InterruptedException {
-    ImmutableMap<String, DeviceDetails> allAndroidDevices;
-    // Wait for devices to be ready for ATS server requests.
-    if (sessionRequestInfo.isAtsServerRequest() && !sessionRequestInfo.deviceSerials().isEmpty()) {
-      waitForRequestedDevicesToBeReady(sessionRequestInfo);
-      // Fetch the devices again after waiting to ensure we have the latest information.
-      allAndroidDevices =
-          deviceDetailsRetriever.getAllAndroidDevicesWithNeededDetails(sessionRequestInfo);
-    } else {
-      allAndroidDevices =
-          deviceDetailsRetriever.getAllAndroidDevicesWithNeededDetails(sessionRequestInfo);
+  private ImmutableList<SubDeviceSpec> getSubDeviceSpecListForAtsServerRequest(
+      SessionRequestInfo sessionRequestInfo) throws MobileHarnessException, InterruptedException {
+    if (sessionRequestInfo.deviceSerials().isEmpty()) {
+      throw MobileHarnessExceptionFactory.createUserFacingException(
+          InfraErrorId.OLCS_NO_AVAILABLE_DEVICE,
+          "Device serials are required for ATS server requests.",
+          /* cause= */ null);
     }
+
+    // TODO: Wait when session is just started.
+    waitForRequestedDevicesToBeReady(sessionRequestInfo);
+
+    Map<String, String> extraDimensions = new HashMap<>();
+    // TODO: b/444562857 - Remove enableTestHarnessCheckForRequiredTests flag once test harness
+    // dimension allocation issue is fixed.
+    if (Flags.instance().isOmniMode.getNonNull()
+        && Flags.instance().enableTestHarnessCheckForRequiredTests.getNonNull()
+        && needTestHarnessPropertyFalse(sessionRequestInfo)) {
+      extraDimensions.put(toLowerCase(AndroidProperty.PERSIST_TEST_HARNESS.name()), Value.FALSE);
+    }
+    if (shouldEnableModuleSharding(sessionRequestInfo)) {
+      StringMap dimensions =
+          StringMap.newBuilder()
+              .putContent(
+                  Name.UUID.lowerCaseName(),
+                  String.format(
+                      "%s(%s)",
+                      Value.PREFIX_REGEX, Joiner.on('|').join(sessionRequestInfo.deviceSerials())))
+              .putAllContent(extraDimensions)
+              .build();
+      return ImmutableList.of(
+          SubDeviceSpec.newBuilder()
+              .setType(getTradefedRequiredDeviceType(sessionRequestInfo))
+              .setDimensions(dimensions)
+              .build());
+    } else {
+
+      Stream<String> deviceSerials = sessionRequestInfo.deviceSerials().stream();
+      // TODO: replace the allowPartialDeviceMatch with a enum for more device match
+      // strategy.
+      if (sessionRequestInfo.allowPartialDeviceMatch()) {
+        ImmutableList<
+                com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo>
+            allOnlineAndroidDevices = atsMasterUtil.queryAndroidDevicesFromMaster();
+        // Use UUID instead of id because the id is not unique for virtual devices on different
+        // hosts, but UUID is for them. Example: the id is 0.0.0.0:6520 and is same for those from
+        // different hosts, and UUID is hostname:6520 which is unique.
+        ImmutableSet<String> availableDeviceUuids =
+            allOnlineAndroidDevices.stream()
+                .filter(
+                    deviceInfo ->
+                        Ascii.equalsIgnoreCase(deviceInfo.getStatus(), DeviceStatus.IDLE.name()))
+                .map(
+                    deviceInfo ->
+                        deviceInfo.getDimensionList().stream()
+                            .filter(
+                                dimension ->
+                                    dimension.getName().equals(Ascii.toLowerCase(Name.UUID.name())))
+                            .findFirst()
+                            .map(DeviceQuery.Dimension::getValue))
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .collect(toImmutableSet());
+        ImmutableList<String> onlineDeviceSerials =
+            deviceSerials.filter(availableDeviceUuids::contains).collect(toImmutableList());
+        if (onlineDeviceSerials.isEmpty()) {
+          throw MobileHarnessExceptionFactory.createUserFacingException(
+              InfraErrorId.OLCS_NO_AVAILABLE_DEVICE,
+              "Although partial device match is allowed, none of the selected devices are ready"
+                  + " (IDLE) to run the test. If this is unexpected, you may need to increase"
+                  + " the device recovery timeout to allow longer recovery time before creating"
+                  + " the job.",
+              /* cause= */ null);
+        }
+        deviceSerials = onlineDeviceSerials.stream();
+      }
+      return deviceSerials
+          .map(
+              deviceSerial ->
+                  SubDeviceSpec.newBuilder()
+                      .setType(getTradefedRequiredDeviceType(sessionRequestInfo))
+                      .setDimensions(
+                          StringMap.newBuilder()
+                              .putContent(Name.UUID.lowerCaseName(), deviceSerial)
+                              .putAllContent(extraDimensions))
+                      .build())
+          .collect(toImmutableList());
+    }
+  }
+
+  private ImmutableSet<DeviceDetails> getLocalAvailableDevices(
+      SessionRequestInfo sessionRequestInfo) throws MobileHarnessException, InterruptedException {
+    ImmutableMap<String, DeviceDetails> allAndroidDevices =
+        deviceDetailsRetriever.getAllLocalAndroidDevicesWithNeededDetails(sessionRequestInfo);
     logger.atInfo().log("All android devices: %s", allAndroidDevices.keySet());
 
     DeviceSelectionOptions.Builder optionsBuilder =
@@ -369,11 +401,15 @@ public class SessionRequestHandlerUtil {
     int attempt = 0;
 
     while (!missingSerials.isEmpty() && attempt < GET_DEVICE_FOR_ATS_SERVER_MAX_RETRY_ATTEMPTS) {
-      ImmutableMap<String, DeviceDetails> currentDevices =
-          deviceDetailsRetriever.getAllAndroidDevicesWithNeededDetails(sessionRequestInfo);
+      ImmutableSet<String> currentDeviceIds =
+          atsMasterUtil.queryAndroidDevicesFromMaster().stream()
+              .map(
+                  com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo
+                      ::getId)
+              .collect(toImmutableSet());
       missingSerials.clear();
       missingSerials.addAll(requestedSerials);
-      missingSerials.removeAll(currentDevices.keySet());
+      missingSerials.removeAll(currentDeviceIds);
 
       if (!missingSerials.isEmpty()) {
         attempt++;
@@ -709,7 +745,7 @@ public class SessionRequestHandlerUtil {
 
   public Optional<DeviceInfo> getDeviceInfo(SessionRequestInfo sessionRequestInfo)
       throws MobileHarnessException, InterruptedException {
-    // Wait for devices to be ready for ATS server requests.
+    // TODO: Wait when session is just started.
     if (sessionRequestInfo.isAtsServerRequest() && !sessionRequestInfo.deviceSerials().isEmpty()) {
       waitForRequestedDevicesToBeReady(sessionRequestInfo);
     }
@@ -724,25 +760,21 @@ public class SessionRequestHandlerUtil {
 
   private Optional<DeviceInfo> getDeviceInfoFromMaster(SessionRequestInfo sessionRequestInfo)
       throws MobileHarnessException, InterruptedException {
-    DeviceQueryResult queryResult;
-    try {
-      queryResult = deviceQuerier.queryDevice(DeviceQueryFilter.getDefaultInstance());
-    } catch (MobileHarnessException e) {
-      throw new MobileHarnessException(
-          InfraErrorId.ATSC_RUN_COMMAND_QUERY_DEVICE_ERROR, "Failed to query device", e);
-    }
-
     Optional<com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo>
         queryDeviceInfo =
-            queryResult.getDeviceInfoList().stream()
+            atsMasterUtil.queryAndroidDevicesFromMaster().stream()
+                .filter(
+                    deviceInfo ->
+                        Ascii.equalsIgnoreCase(deviceInfo.getStatus(), DeviceStatus.BUSY.name())
+                            || Ascii.equalsIgnoreCase(
+                                deviceInfo.getStatus(),
+                                DeviceStatus.IDLE.name())) // in healthy state.
                 .filter(
                     deviceInfo -> {
                       if (sessionRequestInfo.deviceSerials().isEmpty()) {
                         return true;
                       } else {
-                        return sessionRequestInfo.deviceSerials().contains(deviceInfo.getId())
-                            && deviceInfo.getTypeList().stream()
-                                .anyMatch(deviceType -> deviceType.startsWith("Android"));
+                        return sessionRequestInfo.deviceSerials().contains(deviceInfo.getId());
                       }
                     })
                 .findFirst();
@@ -783,7 +815,9 @@ public class SessionRequestHandlerUtil {
   private Optional<DeviceInfo> getDeviceInfoFromLocal(SessionRequestInfo sessionRequestInfo)
       throws MobileHarnessException, InterruptedException {
     ImmutableSet<String> allLocalAndroidDevices =
-        deviceDetailsRetriever.getAllAndroidDevicesWithNeededDetails(sessionRequestInfo).keySet();
+        deviceDetailsRetriever
+            .getAllLocalAndroidDevicesWithNeededDetails(sessionRequestInfo)
+            .keySet();
     if (!allLocalAndroidDevices.isEmpty()) {
       Optional<String> deviceSerial;
       if (sessionRequestInfo.deviceSerials().isEmpty()) {
@@ -862,7 +896,7 @@ public class SessionRequestHandlerUtil {
       availableDeviceSerials = ImmutableSet.copyOf(sessionRequestInfo.deviceSerials());
     } else {
       availableDeviceSerials =
-          getAvailableDevices(sessionRequestInfo).stream()
+          getLocalAvailableDevices(sessionRequestInfo).stream()
               .map(DeviceDetails::id)
               .collect(toImmutableSet());
     }
@@ -1522,16 +1556,9 @@ public class SessionRequestHandlerUtil {
   }
 
   public String getHostIp(String deviceSerial) throws MobileHarnessException, InterruptedException {
-    DeviceQueryResult queryResult;
-    try {
-      queryResult = deviceQuerier.queryDevice(DeviceQueryFilter.getDefaultInstance());
-    } catch (MobileHarnessException e) {
-      throw new MobileHarnessException(
-          InfraErrorId.ATSC_RUN_COMMAND_QUERY_DEVICE_ERROR, "Failed to query device", e);
-    }
     Optional<com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo>
         queryDeviceInfo =
-            queryResult.getDeviceInfoList().stream()
+            atsMasterUtil.queryAndroidDevicesFromMaster().stream()
                 .filter(deviceInfo -> deviceInfo.getId().equals(deviceSerial))
                 .findFirst();
     if (queryDeviceInfo.isEmpty()) {

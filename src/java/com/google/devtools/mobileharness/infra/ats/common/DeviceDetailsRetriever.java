@@ -19,13 +19,10 @@ package com.google.devtools.mobileharness.infra.ats.common;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.function.Function.identity;
 
-import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
-import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
@@ -34,9 +31,6 @@ import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidS
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.inject.Provider;
-import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
-import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryFilter;
-import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryResult;
 import java.util.Optional;
 import javax.inject.Inject;
 
@@ -45,34 +39,18 @@ public class DeviceDetailsRetriever {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  private final DeviceQuerier deviceQuerier;
   private final Provider<AndroidAdbInternalUtil> androidAdbInternalUtilProvider;
   private final Provider<AndroidAdbUtil> androidAdbUtilProvider;
   private final Provider<AndroidSystemSettingUtil> androidSystemSettingUtilProvider;
 
   @Inject
   DeviceDetailsRetriever(
-      DeviceQuerier deviceQuerier,
       Provider<AndroidAdbInternalUtil> androidAdbInternalUtilProvider,
       Provider<AndroidAdbUtil> androidAdbUtilProvider,
       Provider<AndroidSystemSettingUtil> androidSystemSettingUtilProvider) {
-    this.deviceQuerier = deviceQuerier;
     this.androidAdbInternalUtilProvider = androidAdbInternalUtilProvider;
     this.androidAdbUtilProvider = androidAdbUtilProvider;
     this.androidSystemSettingUtilProvider = androidSystemSettingUtilProvider;
-  }
-
-  /**
-   * Gets details of all Android devices. The detail only contain needed field as specified in the
-   * sessionRequestInfo.
-   */
-  public ImmutableMap<String, DeviceDetails> getAllAndroidDevicesWithNeededDetails(
-      SessionRequestInfo sessionRequestInfo) throws MobileHarnessException, InterruptedException {
-    if (Flags.instance().enableAtsMode.getNonNull()) {
-      return getAllAndroidDevicesFromMaster();
-    } else {
-      return getAllLocalAndroidDevicesWithNeededDetails(sessionRequestInfo);
-    }
   }
 
   /**
@@ -226,34 +204,5 @@ public class DeviceDetailsRetriever {
       Thread.currentThread().interrupt();
     }
     return Optional.empty();
-  }
-
-  private ImmutableMap<String, DeviceDetails> getAllAndroidDevicesFromMaster()
-      throws MobileHarnessException, InterruptedException {
-    DeviceQueryResult queryResult;
-    try {
-      queryResult = deviceQuerier.queryDevice(DeviceQueryFilter.getDefaultInstance());
-    } catch (MobileHarnessException e) {
-      throw new MobileHarnessException(
-          InfraErrorId.ATSC_RUN_COMMAND_QUERY_DEVICE_ERROR, "Failed to query device", e);
-    }
-    return queryResult.getDeviceInfoList().stream()
-        .filter(
-            deviceInfo ->
-                deviceInfo.getTypeList().stream()
-                    .anyMatch(deviceType -> deviceType.startsWith("Android")))
-        .map(
-            deviceInfo -> {
-              DeviceDetails.Builder deviceDetails =
-                  DeviceDetails.builder().setId(deviceInfo.getId());
-              deviceInfo.getDimensionList().stream()
-                  .filter(
-                      dimension -> dimension.getName().equals(Ascii.toLowerCase(Name.UUID.name())))
-                  .findFirst()
-                  .ifPresent(dimension -> deviceDetails.setUuid(dimension.getValue()));
-              return deviceDetails.build();
-            })
-        // TODO: add more device info to the DeviceDetails for ATS 2.0
-        .collect(toImmutableMap(DeviceDetails::id, identity()));
   }
 }
