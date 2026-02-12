@@ -197,6 +197,8 @@ public abstract class AndroidRealDeviceDelegate {
               .put(FastbootProperty.SOC_ID, Dimension.Name.SOC_ID)
               .put(FastbootProperty.AR_FORCE_UPDATE, Dimension.Name.AR_FORCE_UPDATE)
               .put(FastbootProperty.AR_UPDATE_ALLOW, Dimension.Name.AR_UPDATE_ALLOW)
+              .put(FastbootProperty.DDR_SIZE, Dimension.Name.DDR_SIZE)
+              .put(FastbootProperty.STORAGE_CAPACITY, Dimension.Name.STORAGE_CAPACITY)
               .put(FastbootProperty.SERIALNO, Dimension.Name.SERIAL)
               .buildOrThrow();
 

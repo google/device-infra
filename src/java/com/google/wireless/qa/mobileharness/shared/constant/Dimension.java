@@ -236,6 +236,8 @@ public final class Dimension {
     CODENAME,
     /** Max CPU frequency in Ghz. Precision is 1 decimal place. */
     CPU_FREQ_IN_GHZ,
+    /** The DDR size of the device. */
+    DDR_SIZE,
     /** The display panel vendor of the device. */
     DISPLAY_PANEL_VENDOR,
     /**
@@ -302,6 +304,8 @@ public final class Dimension {
      * dimension doesn't exist, it means the device has been recovered.
      */
     RECOVERY_STATUS,
+    /** The storage capacity of the device. */
+    STORAGE_CAPACITY,
     /** The screen density. */
     SCREEN_DENSITY,
     /** The screen size. */
