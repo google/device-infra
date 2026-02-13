@@ -59,16 +59,18 @@ public class AndroidDesktopExecutorDevice extends BaseDevice {
   public void prepare() throws MobileHarnessException, InterruptedException {
     super.prepare();
     this.addSupportedDriver("NoOpDriver");
+    this.addSupportedDriver("TradefedTest");
     // For Mobly tests.
     this.addSupportedDriver("MoblyAospTest");
     this.addSupportedDriver("MoblyTest");
     // For AndroidInstrumentation tests.
     this.addSupportedDriver("AndroidInstrumentation");
     // Decorators for Mobly tests.
+    this.addSupportedDecorator("AndroidInstallAppsDecorator");
+    this.addSupportedDecorator("AndroidLogCatDecorator");
+    this.addSupportedDecorator("AndroidSwitchLanguageDecorator");
     this.addSupportedDecorator("CrosLsNexusDecorator");
     this.addSupportedDecorator("CrosDutTopologyDecorator");
-    // For AndroidLogCatDecorator.
-    this.addSupportedDecorator("AndroidLogCatDecorator");
     String executorGroup = Flags.instance().androidDesktopExecutorGroup.getNonNull();
     ImmutableSet<String> validGroups = ImmutableSet.of("sfo36", "acs", "htl");
     if (validGroups.contains(executorGroup)) {
