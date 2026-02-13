@@ -52,6 +52,7 @@ proto_library(
         ":no_op_decorator_spec_proto",
         ":no_op_driver_spec_proto",
         ":python_version_check_decorator_spec_proto",
+        ":slate_driver_spec_proto",
     ],
 )
 

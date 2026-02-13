@@ -23,3 +23,26 @@ import "src/java/com/google/wireless/qa/mobileharness/shared/proto/spec/base_spe
 option java_package = "com.google.wireless.qa.mobileharness.shared.proto.spec.driver";
 option java_multiple_files = true;
 option java_outer_classname = "SlateDriverSpecOuterClass";
+
+// Spec for SlateDriver.
+message SlateDriverSpec {
+  extend DriverSpec {
+    optional SlateDriverSpec ext = 215380198;
+  }
+
+  optional Google3File slate_binary = 1 [
+    (file_detail) = { is_required: true help: "The standalone SLATE binary." }
+  ];
+
+  optional Google3File slate_config = 2
+      [(file_detail) = { help: "The custom config.yaml file." }];
+
+  optional string target = 3 [(field_detail) = {
+    is_required: true
+    help: "The target task to run in SLATE."
+  }];
+
+  optional int32 timeout_mins = 4 [(field_detail) = {
+    help: "The timeout for the slate binary execution in minutes. Default is 60 mins."
+  }];
+}

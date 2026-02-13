@@ -60,6 +60,7 @@ public final class DriverDecoratorSpecMapper {
     builder.put("AndroidInstrumentation", "AndroidInstrumentationSpec");
     builder.put("AndroidRoboTest", "AndroidRoboTestSpec");
     builder.put("NoOpDriver", "NoOpDriverSpec");
+    builder.put("SlateDriver", "SlateDriverSpec");
     builder.put("TradefedTest", "TradefedTestDriverSpec");
     // keep-sorted end
 
