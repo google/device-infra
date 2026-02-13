@@ -67,7 +67,6 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import javax.annotation.Nullable;
@@ -216,6 +215,7 @@ public class InstallApkStep implements InstallApkStepConstants {
               installTimeoutSec, deviceId);
     }
 
+    int deviceSdkVersion = systemSettingManager.getDeviceSdkVersion(device);
     boolean broadcastInstallMessage = spec.getBroadcastInstallMessage();
     boolean grantPermissionsOnInstall = spec.getGrantPermissionsOnInstall();
     boolean skipGmsDowngrade = spec.getSkipGmsDowngrade();
@@ -239,7 +239,18 @@ public class InstallApkStep implements InstallApkStepConstants {
       allPackageNames.add(buildPackageName);
     }
 
-    int deviceSdkVersion = systemSettingManager.getDeviceSdkVersion(device);
+    boolean hasSplitPackages =
+        allPackages.keySet().stream().anyMatch(pkg -> allPackages.get(pkg).size() > 1);
+    if (hasSplitPackages && deviceSdkVersion < AndroidVersion.LOLLIPOP.getStartSdkVersion()) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_INSTALL_APK_STEP_INSTALL_NOT_SUPPORTED,
+          String.format(
+              "The packages %s contain multiple apks with the same package name."
+                  + "If it is your intention to install split apks, please make"
+                  + " sure the device SDK version is >= 21.",
+              allPackages));
+    }
+
     // Install GMS if provided in build apks. GMS Core is installed first because it creates
     // new permissions. APKs that define permissions must precede the APKs that use them.
     // b/149046112 b/36941003
@@ -296,16 +307,17 @@ public class InstallApkStep implements InstallApkStepConstants {
           testInfo, deviceId, PackageConstants.PACKAGE_NAME_GMS, null);
     }
 
-    // Install non-GMS app bundles.
-    SetMultimap<String, String> remainToInstall =
-        Multimaps.filterKeys(
-            allPackages, pkg -> !Objects.equals(pkg, PackageConstants.PACKAGE_NAME_GMS));
-    SetMultimap<String, String> splitPackages =
-        Multimaps.filterKeys(remainToInstall, pkg -> allPackages.get(pkg).size() > 1);
-    if (deviceSdkVersion > AndroidVersion.KITKAT.getEndSdkVersion() && !splitPackages.isEmpty()) {
-      for (Map.Entry<String, Collection<String>> entry : splitPackages.asMap().entrySet()) {
-        String packageName = entry.getKey();
-        Collection<String> apkPaths = entry.getValue();
+    // Install non-GMS packages.
+
+    for (Map.Entry<String, Collection<String>> entry : allPackages.asMap().entrySet()) {
+      String packageName = entry.getKey();
+      Collection<String> apkPaths = entry.getValue();
+
+      if (packageName.equals(PackageConstants.PACKAGE_NAME_GMS)) {
+        continue;
+      }
+
+      if (apkPaths.size() > 1) {
         installMultiPackages(
             device,
             packageName,
@@ -315,34 +327,8 @@ public class InstallApkStep implements InstallApkStepConstants {
             broadcastInstallMessage,
             grantPermissionsOnInstall,
             installTimeout);
-      }
-      remainToInstall =
-          Multimaps.filterKeys(remainToInstall, pkg -> !splitPackages.containsKey(pkg));
-    }
-
-    // Install non-GMS apks individually.
-    ImmutableMap<String, String> singlePackages;
-    // Convert the multimap with single apk entries to a map.
-    try {
-      singlePackages =
-          remainToInstall.entries().stream()
-              .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue));
-    } catch (IllegalArgumentException e) {
-      // IllegalArgumentException is thrown when there is duplicated key.
-      throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_INSTALL_APK_STEP_INSTALL_NOT_SUPPORTED,
-          String.format(
-              "The packages %s contain multiple apks with the same package name."
-                  + "If it is your intention to install split apks, please make"
-                  + " sure the device SDK version is >= 29.",
-              remainToInstall),
-          e);
-    }
-    if (!singlePackages.isEmpty()) {
-      for (Map.Entry<String, String> entry : singlePackages.entrySet()) {
-        // Gets the package name from the build apks.
-        String buildPackageName = entry.getKey();
-        String buildApk = entry.getValue();
+      } else {
+        String buildApk = Iterables.getOnlyElement(apkPaths);
         Optional<String> dexMetadataFile =
             getMatchingDexMetadataFile(buildApk, dexMetadataFilesByNameMap);
         dexMetadataFile.ifPresent(matchedDexMetadataFiles::add);
@@ -350,7 +336,7 @@ public class InstallApkStep implements InstallApkStepConstants {
         installSingleApk(
             device,
             deviceSdkVersion,
-            buildPackageName,
+            packageName,
             buildApk,
             dexMetadataFile,
             testInfo,
@@ -363,10 +349,11 @@ public class InstallApkStep implements InstallApkStepConstants {
             sleepAfterInstallGms);
 
         if (installSuccessHandler != null) {
-          installSuccessHandler.handle(buildPackageName, buildApk);
+          installSuccessHandler.handle(packageName, buildApk);
         }
       }
     }
+
     if (!matchedDexMetadataFiles.equals(dexMetadataFiles)) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_INSTALL_APK_STEP_DEX_METADATA_WITHOUT_APK,
@@ -439,8 +426,7 @@ public class InstallApkStep implements InstallApkStepConstants {
       apkInstaller.installApkIfNotExist(device, installArgsBuilder.build(), testInfo.log());
       // If currently not on system user 0, ensure apks are installed on system user too.
       // b/142827104
-      if (androidUserUtil.getCurrentUser(deviceId, systemSettingManager.getDeviceSdkVersion(device))
-          != 0) {
+      if (androidUserUtil.getCurrentUser(deviceId, deviceSdkVersion) != 0) {
         apkInstaller.installApkIfNotExist(
             device, installArgsBuilder.setUserId("0").build(), testInfo.log());
       }
