@@ -1051,12 +1051,31 @@ public class AndroidAdbUtil {
    * @throws InterruptedException if the thread executing the commands is interrupted
    */
   public void sendKey(String serial, int key) throws MobileHarnessException, InterruptedException {
+    sendKey(serial, key, /* longPress= */ false);
+  }
+
+  /**
+   * Sends key event to the device.
+   *
+   * @param serial serial number of the device
+   * @param key key event name (e.g. "KEYCODE_HOME") or number
+   * @param longPress whether to long press the key
+   * @throws MobileHarnessException if fails to execute the commands or timeout
+   * @throws InterruptedException if the thread executing the commands is interrupted
+   */
+  public void sendKey(String serial, String key, boolean longPress)
+      throws MobileHarnessException, InterruptedException {
     String output = null;
     Exception exception = null;
 
     try {
-      logger.atInfo().log("Input keyevent %d to device %s", key, serial);
-      output = adb.runShellWithRetry(serial, ADB_SHELL_SEND_KEY + " " + key);
+      logger.atInfo().log("Input keyevent %s (longPress=%s) to device %s", key, longPress, serial);
+      StringBuilder command = new StringBuilder(ADB_SHELL_SEND_KEY);
+      if (longPress) {
+        command.append(" --longpress");
+      }
+      command.append(" ").append(key);
+      output = adb.runShellWithRetry(serial, command.toString());
     } catch (MobileHarnessException e) {
       output = e.getMessage();
       exception = e;
@@ -1068,6 +1087,20 @@ public class AndroidAdbUtil {
           "Failed to hit the key: " + output,
           exception);
     }
+  }
+
+  /**
+   * Sends key event to the device.
+   *
+   * @param serial serial number of the device
+   * @param key key value
+   * @param longPress whether to long press the key
+   * @throws MobileHarnessException if fails to execute the commands or timeout
+   * @throws InterruptedException if the thread executing the commands is interrupted
+   */
+  public void sendKey(String serial, int key, boolean longPress)
+      throws MobileHarnessException, InterruptedException {
+    sendKey(serial, String.valueOf(key), longPress);
   }
 
   /**
