@@ -82,7 +82,8 @@ public class LabFileNotifier {
   }
 
   /** Handles all cached job/test files. */
-  public void onTestStarting(TestInfo testInfo, Allocation allocation) {
+  public void onTestStarting(TestInfo testInfo, Allocation allocation)
+      throws MobileHarnessException {
     synchronized (fileCache) {
       testInfo
           .log()
@@ -106,12 +107,17 @@ public class LabFileNotifier {
   }
 
   /** Handles a job/test file if the test has already started, otherwise adds it to a cache. */
-  public void notifyJobOrTestFile(JobOrTestFileUnit fileUnit) {
+  public void notifyJobOrTestFile(JobOrTestFileUnit fileUnit)
+      throws MobileHarnessException, InterruptedException {
     logger.atInfo().log("Notify job/test file: %s", shortDebugString(fileUnit));
     synchronized (fileCache) {
       if (isTestStarted) {
         addJobOrTestFile(fileUnit);
-        handleJobOrTestFile(fileUnit);
+        try {
+          handleJobOrTestFile(fileUnit);
+        } catch (MobileHarnessException | InterruptedException e) {
+          throw e;
+        }
       } else {
         fileCache.add(fileUnit);
       }
@@ -146,7 +152,7 @@ public class LabFileNotifier {
 
   @GuardedBy("fileCache")
   @VisibleForTesting
-  protected void handleJobOrTestFile(JobOrTestFileUnit fileUnit) {
+  protected void handleJobOrTestFile(JobOrTestFileUnit fileUnit) throws MobileHarnessException {
     testInfo
         .log()
         .at(Level.FINE)
@@ -158,20 +164,26 @@ public class LabFileNotifier {
       } else {
         handleJobFile(fileUnit.getJobFileUnit());
       }
-    } catch (MobileHarnessException | InterruptedException e) {
+    } catch (MobileHarnessException e) {
       testInfo
           .warnings()
           .addAndLog(
               new MobileHarnessException(
-                  e instanceof MobileHarnessException
-                      ? InfraErrorId.LAB_FILE_NOTIFIER_HANDLE_FILE_ERROR
-                      : InfraErrorId.LAB_FILE_NOTIFIER_HANDLE_FILE_INTERRUPTED,
+                  InfraErrorId.LAB_FILE_NOTIFIER_HANDLE_FILE_ERROR,
                   String.format("Failed to handle file [%s]", fileUnit),
                   e),
               logger);
-      if (e instanceof InterruptedException) {
-        Thread.currentThread().interrupt();
-      }
+      throw e;
+    } catch (InterruptedException e) {
+      testInfo
+          .warnings()
+          .addAndLog(
+              new MobileHarnessException(
+                  InfraErrorId.LAB_FILE_NOTIFIER_HANDLE_FILE_INTERRUPTED,
+                  String.format("Failed to handle file [%s]", fileUnit),
+                  e),
+              logger);
+      Thread.currentThread().interrupt();
     }
   }
 
