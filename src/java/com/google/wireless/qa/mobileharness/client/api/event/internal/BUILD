@@ -25,7 +25,6 @@ java_library(
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/job:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:__pkg__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:__pkg__",
     ],
     deps = [
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
