@@ -372,6 +372,9 @@ public interface PropertyName {
     /** The ID of another new test, when the current test is retried by the new test. */
     RETRY_TEST_ID,
 
+    /** RoboViz link of test. */
+    ROBOVIZ_LINK_OF_TEST,
+
     /** Whether the test runs in MH sandbox mode. Value type is boolean. */
     SANDBOX_MODE,
 
