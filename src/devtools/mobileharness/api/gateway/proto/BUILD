@@ -18,9 +18,7 @@ load("@protobuf//bazel:proto_library.bzl", "proto_library")
 
 package(
     default_applicable_licenses = ["//:license"],
-    default_visibility = [
-        "//:deviceinfra_all_pkg",
-    ],
+    default_visibility = ["//:deviceinfra_all_pkg"],
 )
 
 proto_library(
