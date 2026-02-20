@@ -103,6 +103,11 @@ public interface AndroidInstrumentationDriverSpec {
 
   @ParamAnnotation(
       required = false,
+      help = "Whether print the raw test results. By default, this is false.")
+  String PARAM_SHOW_RAW_RESULT = "show_raw_result";
+
+  @ParamAnnotation(
+      required = false,
       help =
           "Max execution time of the 'adb shell am instrument ...' command only. "
               + "No effect if large than test timeout setting.")

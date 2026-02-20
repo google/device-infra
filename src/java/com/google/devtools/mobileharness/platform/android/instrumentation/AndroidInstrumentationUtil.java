@@ -1336,6 +1336,12 @@ public class AndroidInstrumentationUtil {
               AndroidInstrumentationDriverSpec.METHODS_DELIMITER);
       showRawResults = true;
     }
+    if (testInfo
+        .jobInfo()
+        .params()
+        .isTrue(AndroidInstrumentationDriverSpec.PARAM_SHOW_RAW_RESULT)) {
+      showRawResults = true;
+    }
     return showRawResults;
   }
 
