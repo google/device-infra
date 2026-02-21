@@ -50,7 +50,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceLis
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.GroupedDevices;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.DeviceView;
-import com.google.devtools.mobileharness.fe.v6.service.device.ConfigurationProvider;
+import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapability;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceHeaderInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceOverview;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceOverviewPageData;
@@ -60,7 +60,9 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceOve
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HealthAndActivityInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HealthState;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HostInfo;
+import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
+import com.google.devtools.mobileharness.fe.v6.service.util.Environment;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 import com.google.inject.Guice;
@@ -143,7 +145,9 @@ public final class GetDeviceOverviewHandlerTest {
 
   @Bind @Mock private LabInfoProvider labInfoProvider;
   @Bind @Mock private ConfigurationProvider configurationProvider;
+  @Bind @Mock private ConfigServiceCapability configServiceCapability;
   @Bind @Mock private DeviceHeaderInfoBuilder deviceHeaderInfoBuilder;
+  @Bind @Mock private Environment environment;
 
   @Bind private ListeningExecutorService executorService = newDirectExecutorService();
   @Bind private InstantSource instantSource = InstantSource.fixed(NOW);
@@ -159,14 +163,17 @@ public final class GetDeviceOverviewHandlerTest {
         .thenReturn(immediateFuture(DEFAULT_LAB_INFO_RESPONSE));
     when(configurationProvider.getDeviceConfig(any(), any()))
         .thenReturn(immediateFuture(Optional.empty()));
+    // By default, assume Config Service is available but returns nothing
     when(configurationProvider.getLabConfig(any(), any()))
-        .thenReturn(immediateFuture(Optional.empty()));
+        .thenReturn(immediateFuture(Optional.of(LabConfig.getDefaultInstance())));
     when(deviceHeaderInfoBuilder.buildDeviceHeaderInfo(any(), any(), any()))
         .thenReturn(
             DeviceHeaderInfo.newBuilder()
                 .setId(DEVICE_ID)
                 .setHost(HostInfo.newBuilder().setName(HOST_NAME))
                 .build());
+    when(environment.isGoogleInternal()).thenReturn(true);
+    when(configServiceCapability.isUniverseSupported(any())).thenReturn(true);
   }
 
   private void mockDeviceInfo(DeviceInfo deviceInfo) {
@@ -242,15 +249,18 @@ public final class GetDeviceOverviewHandlerTest {
   }
 
   @Test
-  public void getDeviceOverview_deviceConfigFails() throws Exception {
+  public void getDeviceOverview_deviceConfigFails_gracefulFallback() throws Exception {
     when(configurationProvider.getDeviceConfig(any(), any()))
         .thenReturn(immediateFailedFuture(new RuntimeException("Config error")));
 
     ListenableFuture<DeviceOverviewPageData> responseFuture =
         getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST);
 
-    ExecutionException e = assertThrows(ExecutionException.class, responseFuture::get);
-    assertThat(e).hasCauseThat().isInstanceOf(RuntimeException.class);
+    // Should NOT throw exception, but return metadata with no config dimensions
+    DeviceOverviewPageData response = responseFuture.get();
+    assertThat(response.getOverview().getId()).isEqualTo(DEVICE_ID);
+    assertThat(response.getOverview().getDimensions().getSupportedMap())
+        .doesNotContainKey("From Device Config");
   }
 
   @Test
@@ -264,12 +274,12 @@ public final class GetDeviceOverviewHandlerTest {
             "Detected by OmniLab",
             DimensionSourceGroup.newBuilder()
                 .addDimensions(
-                    com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceDimension
+                    com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension
                         .newBuilder()
                         .setName("detected_supported")
                         .setValue("val1"))
                 .addDimensions(
-                    com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceDimension
+                    com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension
                         .newBuilder()
                         .setName("config_supported")
                         .setValue("val3"))
@@ -279,12 +289,12 @@ public final class GetDeviceOverviewHandlerTest {
             "Detected by OmniLab",
             DimensionSourceGroup.newBuilder()
                 .addDimensions(
-                    com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceDimension
+                    com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension
                         .newBuilder()
                         .setName("detected_required")
                         .setValue("val2"))
                 .addDimensions(
-                    com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceDimension
+                    com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension
                         .newBuilder()
                         .setName("config_required")
                         .setValue("val4"))
@@ -319,7 +329,7 @@ public final class GetDeviceOverviewHandlerTest {
             "From Device Config",
             DimensionSourceGroup.newBuilder()
                 .addDimensions(
-                    com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceDimension
+                    com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension
                         .newBuilder()
                         .setName("config_supported")
                         .setValue("val3"))
@@ -327,7 +337,7 @@ public final class GetDeviceOverviewHandlerTest {
             "Detected by OmniLab",
             DimensionSourceGroup.newBuilder()
                 .addDimensions(
-                    com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceDimension
+                    com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension
                         .newBuilder()
                         .setName("detected_supported")
                         .setValue("val1"))
@@ -337,7 +347,7 @@ public final class GetDeviceOverviewHandlerTest {
             "From Device Config",
             DimensionSourceGroup.newBuilder()
                 .addDimensions(
-                    com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceDimension
+                    com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension
                         .newBuilder()
                         .setName("config_required")
                         .setValue("val4"))
@@ -345,7 +355,7 @@ public final class GetDeviceOverviewHandlerTest {
             "Detected by OmniLab",
             DimensionSourceGroup.newBuilder()
                 .addDimensions(
-                    com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceDimension
+                    com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension
                         .newBuilder()
                         .setName("detected_required")
                         .setValue("val2"))
@@ -387,7 +397,7 @@ public final class GetDeviceOverviewHandlerTest {
             "From Host Config",
             DimensionSourceGroup.newBuilder()
                 .addDimensions(
-                    com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceDimension
+                    com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension
                         .newBuilder()
                         .setName("config_supported")
                         .setValue("val3"))
@@ -395,7 +405,7 @@ public final class GetDeviceOverviewHandlerTest {
             "Detected by OmniLab",
             DimensionSourceGroup.newBuilder()
                 .addDimensions(
-                    com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceDimension
+                    com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension
                         .newBuilder()
                         .setName("detected_supported")
                         .setValue("val1"))
@@ -405,7 +415,7 @@ public final class GetDeviceOverviewHandlerTest {
             "From Host Config",
             DimensionSourceGroup.newBuilder()
                 .addDimensions(
-                    com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceDimension
+                    com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension
                         .newBuilder()
                         .setName("config_required")
                         .setValue("val4"))
@@ -413,7 +423,7 @@ public final class GetDeviceOverviewHandlerTest {
             "Detected by OmniLab",
             DimensionSourceGroup.newBuilder()
                 .addDimensions(
-                    com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceDimension
+                    com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension
                         .newBuilder()
                         .setName("detected_required")
                         .setValue("val2"))
@@ -423,8 +433,33 @@ public final class GetDeviceOverviewHandlerTest {
         .containsExactlyEntriesIn(expectedSupported);
     assertThat(response.getDimensions().getRequiredMap())
         .containsExactlyEntriesIn(expectedRequired);
-    // Verify DeviceConfig future was cancelled
-    verify(configurationProvider).getDeviceConfig(any(), any());
+  }
+
+  @Test
+  public void getDeviceOverview_unsupportedUniverse_gracefulFallback() throws Exception {
+    when(configServiceCapability.isUniverseSupported(UNIVERSE)).thenReturn(false);
+
+    DeviceOverviewPageData response =
+        getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST).get();
+
+    assertThat(response.getOverview().getId()).isEqualTo(DEVICE_ID);
+    // When universe is not supported, it should behave like situation 2 (no config dimensions,
+    // Unknown source)
+    assertThat(response.getOverview().getDimensions().getSupportedMap())
+        .containsExactly(
+            "Unknown",
+            DimensionSourceGroup.newBuilder()
+                .addDimensions(
+                    com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension
+                        .newBuilder()
+                        .setName("detected_supported")
+                        .setValue("val1"))
+                .addDimensions(
+                    com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension
+                        .newBuilder()
+                        .setName("config_supported")
+                        .setValue("val3"))
+                .build());
   }
 
   // Tests for HealthAndActivityInfo
@@ -604,5 +639,88 @@ public final class GetDeviceOverviewHandlerTest {
     assertThat(info.getDeviceStatus().getIsCritical()).isTrue();
     assertThat(info.getDiagnostics().getDiagnosis()).contains("no type detected");
     assertThat(info.getDiagnostics().getDiagnosis()).contains("FAILED");
+  }
+
+  @Test
+  public void getDeviceOverview_androidSpecificLogic() throws Exception {
+    DeviceInfo androidDevice =
+        DEFAULT_DEVICE_INFO.toBuilder()
+            .setDeviceFeature(
+                DEFAULT_DEVICE_INFO.getDeviceFeature().toBuilder()
+                    .clearType()
+                    .addType("AndroidRealDevice")
+                    .setCompositeDimension(
+                        DeviceCompositeDimension.newBuilder()
+                            .addSupportedDimension(
+                                DeviceDimension.newBuilder()
+                                    .setName("os")
+                                    .setValue("Android")
+                                    .build())
+                            .addSupportedDimension(
+                                DeviceDimension.newBuilder()
+                                    .setName("sdk_version")
+                                    .setValue("31")
+                                    .build())))
+            .build();
+    mockDeviceInfo(androidDevice);
+
+    DeviceOverview response =
+        getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST).get().getOverview();
+
+    assertThat(response.getBasicInfo().getVersion()).isEqualTo("31");
+
+    DeviceInfo otherDevice =
+        DEFAULT_DEVICE_INFO.toBuilder()
+            .setDeviceFeature(
+                DEFAULT_DEVICE_INFO.getDeviceFeature().toBuilder()
+                    .clearType()
+                    .addType("LinuxRealDevice")
+                    .setCompositeDimension(
+                        DeviceCompositeDimension.newBuilder()
+                            .addSupportedDimension(
+                                DeviceDimension.newBuilder()
+                                    .setName("os")
+                                    .setValue("Linux")
+                                    .build())
+                            .addSupportedDimension(
+                                DeviceDimension.newBuilder()
+                                    .setName("software_version")
+                                    .setValue("ubuntu_20.04")
+                                    .build())))
+            .build();
+    mockDeviceInfo(otherDevice);
+    GetDeviceOverviewRequest forceRefreshRequest =
+        DEFAULT_REQUEST.toBuilder().setForceRefresh(true).build();
+
+    response = getDeviceOverviewHandler.getDeviceOverview(forceRefreshRequest).get().getOverview();
+    assertThat(response.getBasicInfo().getVersion()).isEqualTo("ubuntu_20.04");
+  }
+
+  @Test
+  public void getDeviceOverview_malformedNumericFields_gracefulFallback() throws Exception {
+    DeviceInfo malformedDevice =
+        DEFAULT_DEVICE_INFO.toBuilder()
+            .setDeviceFeature(
+                DEFAULT_DEVICE_INFO.getDeviceFeature().toBuilder()
+                    .setCompositeDimension(
+                        DeviceCompositeDimension.newBuilder()
+                            .addSupportedDimension(
+                                DeviceDimension.newBuilder()
+                                    .setName("battery_level")
+                                    .setValue("not_a_number")
+                                    .build())
+                            .addSupportedDimension(
+                                DeviceDimension.newBuilder()
+                                    .setName("wifi_rssi")
+                                    .setValue("bad_rssi")
+                                    .build())))
+            .build();
+    mockDeviceInfo(malformedDevice);
+
+    DeviceOverview response =
+        getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST).get().getOverview();
+
+    assertThat(response.getBasicInfo().getBatteryLevel()).isEqualTo(-1);
+    assertThat(response.getBasicInfo().getNetwork().getWifiRssi()).isEqualTo(0);
   }
 }

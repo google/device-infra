@@ -16,12 +16,18 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.config.handlers;
 
-import static com.google.common.util.concurrent.Futures.immediateFuture;
-
 import com.google.common.flogger.FluentLogger;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
+import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapability;
+import com.google.devtools.mobileharness.fe.v6.service.config.util.DeviceConfigConverter;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostConfigRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostConfigResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.HostConfig;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.HostConfigUiStatus;
+import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -30,12 +36,45 @@ import javax.inject.Singleton;
 public final class GetHostConfigHandler {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
+  private final ConfigurationProvider configurationProvider;
+  private final ConfigServiceCapability configServiceCapability;
+  private final ListeningExecutorService executor;
+
   @Inject
-  GetHostConfigHandler() {}
+  GetHostConfigHandler(
+      ConfigurationProvider configurationProvider,
+      ConfigServiceCapability configServiceCapability,
+      ListeningExecutorService executor) {
+    this.configurationProvider = configurationProvider;
+    this.configServiceCapability = configServiceCapability;
+    this.executor = executor;
+  }
 
   public ListenableFuture<GetHostConfigResponse> getHostConfig(GetHostConfigRequest request) {
     logger.atInfo().log("Getting host config for %s", request.getHostName());
-    // TODO: Implement real logic.
-    return immediateFuture(GetHostConfigResponse.getDefaultInstance());
+    if (!configServiceCapability.isUniverseSupported(request.getUniverse())) {
+      throw new UnsupportedOperationException(
+          String.format(
+              "Configuration operations are not currently supported for universe '%s' in the Google"
+                  + " Internal environment.",
+              request.getUniverse()));
+    }
+
+    return Futures.transform(
+        configurationProvider.getLabConfig(request.getHostName(), request.getUniverse()),
+        labConfigOpt -> {
+          if (labConfigOpt.isEmpty()) {
+            return GetHostConfigResponse.getDefaultInstance();
+          }
+          LabConfig labConfig = labConfigOpt.get();
+          HostConfig hostConfig = DeviceConfigConverter.toFeHostConfig(labConfig);
+          HostConfigUiStatus uiStatus = configServiceCapability.calculateHostUiStatus();
+
+          return GetHostConfigResponse.newBuilder()
+              .setHostConfig(hostConfig)
+              .setUiStatus(uiStatus)
+              .build();
+        },
+        executor);
   }
 }

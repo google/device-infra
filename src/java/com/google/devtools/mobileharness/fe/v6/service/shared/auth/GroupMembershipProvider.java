@@ -14,16 +14,13 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.fe.v6.service.device;
+package com.google.devtools.mobileharness.fe.v6.service.shared.auth;
 
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig;
-import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
-import java.util.Optional;
+import java.util.List;
 
-/** Interface for fetching device and lab configurations. */
-public interface ConfigurationProvider {
-  ListenableFuture<Optional<DeviceConfig>> getDeviceConfig(String deviceId, String universe);
-
-  ListenableFuture<Optional<LabConfig>> getLabConfig(String hostName, String universe);
+/** Service for checking group membership in an environment-agnostic way. */
+public interface GroupMembershipProvider {
+  /** Returns true if the user is a member of any of the specified groups. */
+  ListenableFuture<Boolean> isMemberOfAny(String username, List<String> groupNames);
 }

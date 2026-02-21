@@ -16,12 +16,17 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.config.handlers;
 
-import static com.google.common.util.concurrent.Futures.immediateFuture;
-
 import com.google.common.flogger.FluentLogger;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
+import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapability;
+import com.google.devtools.mobileharness.fe.v6.service.config.util.DeviceConfigConverter;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.DeviceConfig;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostDefaultDeviceConfigRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostDefaultDeviceConfigResponse;
+import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -30,13 +35,47 @@ import javax.inject.Singleton;
 public final class GetHostDefaultDeviceConfigHandler {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
+  private final ConfigurationProvider configurationProvider;
+  private final ConfigServiceCapability configServiceCapability;
+  private final ListeningExecutorService executor;
+
   @Inject
-  GetHostDefaultDeviceConfigHandler() {}
+  GetHostDefaultDeviceConfigHandler(
+      ConfigurationProvider configurationProvider,
+      ConfigServiceCapability configServiceCapability,
+      ListeningExecutorService executor) {
+    this.configurationProvider = configurationProvider;
+    this.configServiceCapability = configServiceCapability;
+    this.executor = executor;
+  }
 
   public ListenableFuture<GetHostDefaultDeviceConfigResponse> getHostDefaultDeviceConfig(
       GetHostDefaultDeviceConfigRequest request) {
     logger.atInfo().log("Getting host default device config for %s", request.getHostName());
-    // TODO: Implement real logic.
-    return immediateFuture(GetHostDefaultDeviceConfigResponse.getDefaultInstance());
+    if (!configServiceCapability.isUniverseSupported(request.getUniverse())) {
+      throw new UnsupportedOperationException(
+          String.format(
+              "Configuration operations are not currently supported for universe '%s' in the Google"
+                  + " Internal environment.",
+              request.getUniverse()));
+    }
+
+    return Futures.transform(
+        configurationProvider.getLabConfig(request.getHostName(), request.getUniverse()),
+        labConfigOpt -> {
+          if (labConfigOpt.isEmpty()) {
+            return GetHostDefaultDeviceConfigResponse.getDefaultInstance();
+          }
+          LabConfig labConfig = labConfigOpt.get();
+          DeviceConfig.Builder builder = DeviceConfig.newBuilder();
+          if (labConfig.hasDefaultDeviceConfig()) {
+            builder.mergeFrom(
+                DeviceConfigConverter.toFeDeviceConfig(labConfig.getDefaultDeviceConfig()));
+          }
+          return GetHostDefaultDeviceConfigResponse.newBuilder()
+              .setDeviceConfig(builder.build())
+              .build();
+        },
+        executor);
   }
 }

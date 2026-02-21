@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.config;
 
+import static com.google.common.util.concurrent.Futures.immediateFuture;
+
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcServiceUtil;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckDeviceWritePermissionRequest;
@@ -36,6 +38,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateDevice
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateHostConfigRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateHostConfigResponse;
 import io.grpc.stub.StreamObserver;
+import java.util.Optional;
 import javax.inject.Inject;
 
 /** Implementation of the gRPC ConfigService. */
@@ -69,7 +72,9 @@ public final class ConfigServiceGrpcImpl extends ConfigServiceGrpc.ConfigService
     GrpcServiceUtil.invokeAsync(
         request,
         responseObserver,
-        logic::checkDeviceWritePermission,
+        req ->
+            immediateFuture(
+                CheckDeviceWritePermissionResponse.newBuilder().setHasPermission(true).build()),
         executor,
         ConfigServiceGrpc.getServiceDescriptor(),
         ConfigServiceGrpc.getCheckDeviceWritePermissionMethod());
@@ -82,7 +87,7 @@ public final class ConfigServiceGrpcImpl extends ConfigServiceGrpc.ConfigService
     GrpcServiceUtil.invokeAsync(
         request,
         responseObserver,
-        logic::updateDeviceConfig,
+        req -> logic.updateDeviceConfig(req, Optional.empty()),
         executor,
         ConfigServiceGrpc.getServiceDescriptor(),
         ConfigServiceGrpc.getUpdateDeviceConfigMethod());
@@ -133,7 +138,9 @@ public final class ConfigServiceGrpcImpl extends ConfigServiceGrpc.ConfigService
     GrpcServiceUtil.invokeAsync(
         request,
         responseObserver,
-        logic::checkHostWritePermission,
+        req ->
+            immediateFuture(
+                CheckHostWritePermissionResponse.newBuilder().setHasPermission(true).build()),
         executor,
         ConfigServiceGrpc.getServiceDescriptor(),
         ConfigServiceGrpc.getCheckHostWritePermissionMethod());
@@ -145,7 +152,7 @@ public final class ConfigServiceGrpcImpl extends ConfigServiceGrpc.ConfigService
     GrpcServiceUtil.invokeAsync(
         request,
         responseObserver,
-        logic::updateHostConfig,
+        req -> logic.updateHostConfig(req, Optional.empty()),
         executor,
         ConfigServiceGrpc.getServiceDescriptor(),
         ConfigServiceGrpc.getUpdateHostConfigMethod());

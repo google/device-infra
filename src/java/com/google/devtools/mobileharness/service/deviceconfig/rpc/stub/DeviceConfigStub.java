@@ -83,10 +83,18 @@ public interface DeviceConfigStub {
     return updateDeviceConfigs(request);
   }
 
+  /** Updates a list of configurations of devices asynchronously. */
+  ListenableFuture<UpdateDeviceConfigsResponse> updateDeviceConfigsAsync(
+      UpdateDeviceConfigsRequest request, boolean useClientRpcAuthority);
+
   /** Updates the configuration of a lab. */
   @CanIgnoreReturnValue
   UpdateLabConfigResponse updateLabConfig(UpdateLabConfigRequest request)
       throws RpcExceptionWithErrorId;
+
+  /** Updates the configuration of a lab asynchronously. */
+  ListenableFuture<UpdateLabConfigResponse> updateLabConfigAsync(
+      UpdateLabConfigRequest request, boolean useClientRpcAuthority);
 
   /** Copies the configuration of a device to multiple ones. */
   CopyDeviceConfigsResponse copyDeviceConfigs(CopyDeviceConfigsRequest request)

@@ -17,30 +17,137 @@
 package com.google.devtools.mobileharness.fe.v6.service.config.handlers;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.util.concurrent.Futures.immediateFuture;
+import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
 
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.BasicDeviceConfig;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostWritePermissionRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostWritePermissionResponse;
+import com.google.devtools.mobileharness.fe.v6.service.shared.auth.GroupMembershipProvider;
+import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
 import com.google.inject.Guice;
+import com.google.inject.testing.fieldbinder.Bind;
+import com.google.inject.testing.fieldbinder.BoundFieldModule;
+import java.util.Optional;
 import javax.inject.Inject;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+import org.mockito.Mock;
+import org.mockito.junit.MockitoJUnit;
+import org.mockito.junit.MockitoRule;
 
 @RunWith(JUnit4.class)
 public final class CheckHostWritePermissionHandlerTest {
 
-  @Inject private CheckHostWritePermissionHandler checkHostWritePermissionHandler;
+  @Rule public final MockitoRule mocks = MockitoJUnit.rule();
+
+  @Bind @Mock private ConfigurationProvider configurationProvider;
+  @Bind @Mock private GroupMembershipProvider groupMembershipProvider;
+  @Bind private ListeningExecutorService executorService = newDirectExecutorService();
+
+  @Inject private CheckHostWritePermissionHandler handler;
 
   @Before
   public void setUp() {
-    Guice.createInjector().injectMembers(this);
+    Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
   }
 
   @Test
-  public void checkHostWritePermission_success() throws Exception {
-    CheckHostWritePermissionRequest request = CheckHostWritePermissionRequest.getDefaultInstance();
-    assertThat(checkHostWritePermissionHandler.checkHostWritePermission(request).get())
-        .isEqualTo(CheckHostWritePermissionResponse.getDefaultInstance());
+  public void checkHostWritePermission_noUser_returnsFalse() throws Exception {
+    CheckHostWritePermissionRequest request =
+        CheckHostWritePermissionRequest.newBuilder().setHostName("host").build();
+
+    CheckHostWritePermissionResponse response =
+        handler.checkHostWritePermission(request, Optional.empty()).get();
+
+    assertThat(response.getHasPermission()).isFalse();
+  }
+
+  @Test
+  public void checkHostWritePermission_noLabConfig_returnsFalse() throws Exception {
+    when(configurationProvider.getLabConfig("host", "universe"))
+        .thenReturn(immediateFuture(Optional.empty()));
+
+    CheckHostWritePermissionRequest request =
+        CheckHostWritePermissionRequest.newBuilder()
+            .setHostName("host")
+            .setUniverse("universe")
+            .build();
+
+    CheckHostWritePermissionResponse response =
+        handler.checkHostWritePermission(request, Optional.of("user")).get();
+
+    assertThat(response.getHasPermission()).isFalse();
+  }
+
+  @Test
+  public void checkHostWritePermission_userInAdmins_returnsTrue() throws Exception {
+    LabConfig labConfig =
+        LabConfig.newBuilder()
+            .setDefaultDeviceConfig(
+                BasicDeviceConfig.newBuilder().addOwner("admin1").addOwner("admin2").build())
+            .build();
+    when(configurationProvider.getLabConfig("host", "universe"))
+        .thenReturn(immediateFuture(Optional.of(labConfig)));
+
+    CheckHostWritePermissionRequest request =
+        CheckHostWritePermissionRequest.newBuilder()
+            .setHostName("host")
+            .setUniverse("universe")
+            .build();
+
+    CheckHostWritePermissionResponse response =
+        handler.checkHostWritePermission(request, Optional.of("admin1")).get();
+
+    assertThat(response.getHasPermission()).isTrue();
+  }
+
+  @Test
+  public void checkHostWritePermission_noAdmins_returnsTrue() throws Exception {
+    LabConfig labConfig = LabConfig.newBuilder().build();
+    when(configurationProvider.getLabConfig("host", "universe"))
+        .thenReturn(immediateFuture(Optional.of(labConfig)));
+
+    CheckHostWritePermissionRequest request =
+        CheckHostWritePermissionRequest.newBuilder()
+            .setHostName("host")
+            .setUniverse("universe")
+            .build();
+
+    CheckHostWritePermissionResponse response =
+        handler.checkHostWritePermission(request, Optional.of("user")).get();
+
+    assertThat(response.getHasPermission()).isTrue();
+  }
+
+  @Test
+  public void checkHostWritePermission_userInGroup_returnsTrue() throws Exception {
+    LabConfig labConfig =
+        LabConfig.newBuilder()
+            .setDefaultDeviceConfig(BasicDeviceConfig.newBuilder().addOwner("group1").build())
+            .build();
+    when(configurationProvider.getLabConfig("host", "universe"))
+        .thenReturn(immediateFuture(Optional.of(labConfig)));
+    when(groupMembershipProvider.isMemberOfAny(eq("user"), any()))
+        .thenReturn(immediateFuture(true));
+
+    CheckHostWritePermissionRequest request =
+        CheckHostWritePermissionRequest.newBuilder()
+            .setHostName("host")
+            .setUniverse("universe")
+            .build();
+
+    CheckHostWritePermissionResponse response =
+        handler.checkHostWritePermission(request, Optional.of("user")).get();
+
+    assertThat(response.getHasPermission()).isTrue();
   }
 }

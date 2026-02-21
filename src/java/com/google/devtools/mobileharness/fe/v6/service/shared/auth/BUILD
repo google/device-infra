@@ -21,20 +21,9 @@ package(
 )
 
 java_library(
-    name = "configuration_provider",
-    srcs = ["ConfigurationProvider.java"],
+    name = "auth",
+    srcs = glob(["*.java"]),
     deps = [
-        "//src/devtools/mobileharness/api/deviceconfig/proto:device_java_proto",
-        "//src/devtools/mobileharness/api/deviceconfig/proto:lab_java_proto",
-        "@maven//:com_google_guava_guava",
-    ],
-)
-
-java_library(
-    name = "lab_info_provider",
-    srcs = ["LabInfoProvider.java"],
-    deps = [
-        "//src/devtools/mobileharness/shared/labinfo/proto:lab_info_service_java_proto",
         "@maven//:com_google_guava_guava",
     ],
 )

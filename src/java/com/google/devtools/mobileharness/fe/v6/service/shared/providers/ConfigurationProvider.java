@@ -14,32 +14,21 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.fe.v6.service.device;
-
-import static com.google.common.util.concurrent.Futures.immediateFuture;
+package com.google.devtools.mobileharness.fe.v6.service.shared.providers;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
 import java.util.Optional;
-import javax.inject.Inject;
 
-/** OSS implementation of {@link ConfigurationProvider}. */
-public class OssConfigurationProviderImpl implements ConfigurationProvider {
+/** Interface for fetching and updating device and lab configurations. */
+public interface ConfigurationProvider {
+  ListenableFuture<Optional<DeviceConfig>> getDeviceConfig(String deviceId, String universe);
 
-  @Inject
-  OssConfigurationProviderImpl() {}
+  ListenableFuture<Optional<LabConfig>> getLabConfig(String hostName, String universe);
 
-  @Override
-  public ListenableFuture<Optional<DeviceConfig>> getDeviceConfig(
-      String deviceId, String universe) {
-    // TODO: Implement when OSS Device Config Service is available.
-    return immediateFuture(Optional.empty());
-  }
+  ListenableFuture<Void> updateDeviceConfig(
+      String deviceId, DeviceConfig deviceConfig, String universe);
 
-  @Override
-  public ListenableFuture<Optional<LabConfig>> getLabConfig(String hostName, String universe) {
-    // TODO: Implement when OSS Device Config Service is available.
-    return immediateFuture(Optional.empty());
-  }
+  ListenableFuture<Void> updateLabConfig(String hostName, LabConfig labConfig, String universe);
 }

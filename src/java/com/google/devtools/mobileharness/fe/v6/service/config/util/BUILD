@@ -21,27 +21,25 @@ package(
 )
 
 java_library(
-    name = "handlers",
-    srcs = glob(["*.java"]),
+    name = "device_config_converter",
+    srcs = ["DeviceConfigConverter.java"],
     deps = [
-        "//src/devtools/mobileharness/api/deviceconfig/proto:device_java_proto",
+        "//src/devtools/mobileharness/api/deviceconfig/proto:basic_java_proto",
         "//src/devtools/mobileharness/api/deviceconfig/proto:lab_java_proto",
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
-        "//src/devtools/mobileharness/api/query/proto:filter_java_proto",
-        "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/common:common_resources_java_proto",
-        "//src/devtools/mobileharness/fe/v6/service/proto/device:device_resources_java_proto",
-        "//src/devtools/mobileharness/fe/v6/service/proto/device:device_service_java_proto",
-        "//src/devtools/mobileharness/shared/labinfo/proto:lab_info_service_java_proto",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:configuration_provider",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:lab_info_provider",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
-        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
-        "@maven//:com_github_ben_manes_caffeine_caffeine",
+        "//src/devtools/mobileharness/fe/v6/service/proto/config:config_resources_java_proto",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_protobuf_protobuf_java",
+    ],
+)
+
+java_library(
+    name = "config_service_capability",
+    srcs = ["ConfigServiceCapability.java"],
+    deps = [
+        "//src/devtools/mobileharness/fe/v6/service/proto/config:config_resources_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
         "@maven//:javax_inject_jsr330_api",
     ],
 )

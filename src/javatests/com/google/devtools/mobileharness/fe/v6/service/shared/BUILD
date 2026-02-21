@@ -14,34 +14,43 @@
 #
 
 load("@rules_java//java:java_library.bzl", "java_library")
+load("//src/javatests/com/google/devtools/mobileharness/builddefs:junit_test_suites.bzl", "junit_test_suites")
 
 package(
     default_applicable_licenses = ["//:license"],
-    default_visibility = ["//src/devtools/mobileharness/fe/v6:visibility"],
 )
 
 java_library(
-    name = "handlers",
+    name = "tests",
+    testonly = 1,
     srcs = glob(["*.java"]),
     deps = [
+        "//src/devtools/mobileharness/api/deviceconfig/proto:basic_java_proto",
         "//src/devtools/mobileharness/api/deviceconfig/proto:device_java_proto",
         "//src/devtools/mobileharness/api/deviceconfig/proto:lab_java_proto",
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
-        "//src/devtools/mobileharness/api/query/proto:filter_java_proto",
+        "//src/devtools/mobileharness/api/model/proto:lab_java_proto",
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
-        "//src/devtools/mobileharness/fe/v6/service/proto/common:common_resources_java_proto",
-        "//src/devtools/mobileharness/fe/v6/service/proto/device:device_resources_java_proto",
-        "//src/devtools/mobileharness/fe/v6/service/proto/device:device_service_java_proto",
         "//src/devtools/mobileharness/shared/labinfo/proto:lab_info_service_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/util:config_service_capability",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:configuration_provider",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:lab_info_provider",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
-        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
-        "@maven//:com_github_ben_manes_caffeine_caffeine",
+        "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "@maven//:com_google_guava_guava",
-        "@maven//:com_google_protobuf_protobuf_java",
+        "@maven//:com_google_inject_extensions_guice_testlib",
+        "@maven//:com_google_inject_guice",
         "@maven//:javax_inject_jsr330_api",
+        "@maven//:junit_junit",
+        "@maven//:org_mockito_mockito_core",
     ],
+)
+
+junit_test_suites(
+    name = "gen_tests",
+    sizes = [
+        "small",
+    ],
+    deps = [":tests"],
 )
