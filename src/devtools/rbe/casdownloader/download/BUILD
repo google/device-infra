@@ -27,6 +27,8 @@ go_library(
     deps = [
         "//src/devtools/rbe/casdownloader/cache",
         "//src/devtools/rbe/casuploader/chunkerutil",
+        "@org_golang_google_grpc//codes",
+        "@org_golang_google_grpc//status",
         "@com_github_bazelbuild_remote_apis//build/bazel/remote/execution/v2:remote_execution_go_proto",
         "@com_github_bazelbuild_remote_apis_sdks//go/pkg/client",
         "@com_github_bazelbuild_remote_apis_sdks//go/pkg/digest",

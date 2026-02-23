@@ -4,6 +4,7 @@ package download
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -22,6 +23,8 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/google/device-infra/src/devtools/rbe/casuploader/chunkerutil"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"go.chromium.org/luci/common/data/text/units"
 )
 
@@ -32,11 +35,13 @@ type DownloadJob struct {
 	DumpJSON string
 	Cache    cache.Cache
 	// Filters applied to files to download
-	IncludeFilters []string
-	ExcludeFilters []string
-	downloadStats  *downloadStats
-	KeepChunks     bool
-	ChunksOnly     bool
+	IncludeFilters  []string
+	ExcludeFilters  []string
+	downloadStats   *downloadStats
+	KeepChunks      bool
+	ChunksOnly      bool
+	MinDownloadMbps int64
+	DownloadTimeout time.Duration
 }
 
 type downloadStats struct {
@@ -72,12 +77,12 @@ func prepareSymLinksAndDirs(root string, outputs []*client.TreeOutput) ([]*clien
 	}
 
 	if err := os.MkdirAll(root, 0o700); err != nil {
-		return nil, fmt.Errorf("failed to create the root directory: %v", err)
+		return nil, fmt.Errorf("failed to create the root directory: %w", err)
 	}
 
 	for dir := range dirSet {
 		if err := os.MkdirAll(dir, 0o700); err != nil && !os.IsExist(err) {
-			return nil, fmt.Errorf("failed to create directory: %v", err)
+			return nil, fmt.Errorf("failed to create directory: %w", err)
 		}
 	}
 
@@ -89,7 +94,7 @@ func prepareSymLinksAndDirs(root string, outputs []*client.TreeOutput) ([]*clien
 		}
 		if output.SymlinkTarget != "" {
 			if err := os.Symlink(output.SymlinkTarget, output.Path); err != nil {
-				return nil, fmt.Errorf("failed to create symlink to %s: %v", output.Path, err)
+				return nil, fmt.Errorf("failed to create symlink to %s: %w", output.Path, err)
 			}
 			numSymLink++
 			continue
@@ -140,7 +145,7 @@ func copyFiles(ctx context.Context, dsts []*client.TreeOutput, srcs map[digest.D
 				// Fall back to copy the file.
 			}
 			if err := copyFile(dst.Path, src.Path, fileMode(dst)); err != nil {
-				return fmt.Errorf("failed to copy file from '%s' to '%s': %v", src.Path, dst.Path, err)
+				return fmt.Errorf("failed to copy file from '%s' to '%s': %w", src.Path, dst.Path, err)
 			}
 			return nil
 		})
@@ -180,10 +185,10 @@ func dumpStats(path string, stats *downloadStats) error {
 	statsJSON, err := json.Marshal(stats)
 
 	if err != nil {
-		return fmt.Errorf("failed to marshal stats json: %v", err)
+		return fmt.Errorf("failed to marshal stats json: %w", err)
 	}
 	if err := os.WriteFile(path, statsJSON, 0600); err != nil {
-		return fmt.Errorf("failed to write stats json: %v", err)
+		return fmt.Errorf("failed to write stats json: %w", err)
 	}
 	return nil
 }
@@ -195,14 +200,14 @@ func (d *DownloadJob) filterFiles(fullSet map[string]*client.TreeOutput) (map[st
 	for _, filter := range d.IncludeFilters {
 		p, err := regexp.Compile(filter)
 		if err != nil {
-			return nil, fmt.Errorf("fail to compile filter %s: %v", filter, err)
+			return nil, fmt.Errorf("fail to compile filter %s: %w", filter, err)
 		}
 		includePatterns = append(includePatterns, p)
 	}
 	for _, filter := range d.ExcludeFilters {
 		p, err := regexp.Compile(filter)
 		if err != nil {
-			return nil, fmt.Errorf("fail to compile filter %s: %v", filter, err)
+			return nil, fmt.Errorf("fail to compile filter %s: %w", filter, err)
 		}
 		excludePatterns = append(excludePatterns, p)
 	}
@@ -279,7 +284,7 @@ func (d *DownloadJob) downloadFilesWithAbsolutePath(ctx context.Context, toDownl
 		// Convert absolute output.Path to be relative to d.Dir
 		relPath, err := filepath.Rel(d.Dir, output.Path)
 		if err != nil {
-			return fmt.Errorf("failed to make path relative for %s: %v", output.Path, err)
+			return fmt.Errorf("failed to make path relative for %s: %w", output.Path, err)
 		}
 		// Create a new TreeOutput with the relative path
 		relOutput := *output // Shallow copy
@@ -293,15 +298,58 @@ func (d *DownloadJob) downloadFilesWithAbsolutePath(ctx context.Context, toDownl
 	return err
 }
 
+// CalculateTimeout calculates the effective download timeout based on minDownloadMbps and size.
+func CalculateTimeout(minDownloadMbps int64, size int64) time.Duration {
+	const minTimeout = 30 * time.Second
+	if minDownloadMbps <= 0 || size <= 0 {
+		return minTimeout // Never return 0 duration.
+	}
+	// size is in bytes, minDownloadMbps is in megabytes per second.
+	// Convert minDownloadMbps to bytes per second for calculation.
+	bps := minDownloadMbps * 1024 * 1024
+	seconds := float64(size) / float64(bps)
+	// Use time.Duration(seconds*float64(time.Second)) to convert seconds to Duration.
+	// Add minTimeout to ensure a base timeout.
+	// Cap the calculated duration to avoid overflow if seconds is very large.
+	// MaxInt64 / time.Second is roughly 292 years, which is a sufficiently large timeout.
+	maxDuration := time.Duration(1<<63 - 1)
+	calculatedDuration := time.Duration(seconds * float64(time.Second))
+	if calculatedDuration < 0 || calculatedDuration > maxDuration-minTimeout { // Check for overflow
+		return maxDuration
+	}
+	return minTimeout + calculatedDuration
+}
+
 func (d *DownloadJob) downloadWithoutLocalCache(ctx context.Context, outputs []*client.TreeOutput) error {
 	toDownload := make(map[digest.Digest]*client.TreeOutput)
+	var sumSize int64
 	for _, output := range outputs {
 		toDownload[output.Digest] = output
+		sumSize += output.Digest.Size
 	}
+
+	if d.DumpJSON != "" {
+		d.updateDownloadStats(outputs, toDownload)
+	}
+
+	if d.MinDownloadMbps > 0 { // only set timeout if minDownloadMbps is positive.
+		timeout := CalculateTimeout(d.MinDownloadMbps, sumSize)
+		var cancel context.CancelFunc
+		// Use a child context with the speed-based timeout. Go's context.WithTimeout ensures
+		// that the child's deadline is no later than the parent's deadline (the fixed timeout),
+		// so the shorter of the two will be used.
+		ctx, cancel = context.WithTimeout(ctx, timeout)
+		defer cancel()
+		log.Infof("Calculate effective timeout %v based on size %v and min-download-mbps %v", timeout, units.Size(sumSize), d.MinDownloadMbps)
+	}
+
 	start := time.Now()
 	if err := d.downloadFilesWithAbsolutePath(ctx, toDownload); err != nil {
 		removeLeftOverFiles(outputs)
-		return fmt.Errorf("failed to download files: %v", err)
+		if ctx.Err() == context.DeadlineExceeded {
+			return context.DeadlineExceeded
+		}
+		return fmt.Errorf("failed to download files: %w", err)
 	}
 	log.Infof("finished downloading %d files from CAS without local cache, took %s", len(toDownload), time.Since(start))
 
@@ -312,7 +360,10 @@ func (d *DownloadJob) downloadWithLocalCache(ctx context.Context, cache cache.Ca
 	start := time.Now()
 	cached, missed, err := cache.Pull(ctx, outputs)
 	if err != nil {
-		return fmt.Errorf("failed to pull files from cache: %v", err)
+		if ctx.Err() == context.DeadlineExceeded {
+			return context.DeadlineExceeded
+		}
+		return fmt.Errorf("failed to pull files from cache: %w", err)
 	}
 	log.Infof("finished pulling %d files from cache, took %s", len(cached), time.Since(start))
 
@@ -329,10 +380,28 @@ func (d *DownloadJob) downloadWithLocalCache(ctx context.Context, cache cache.Ca
 	}
 	log.Infof("start downloading %d files, estimated size %v", len(toDownload), units.Size(sumSize))
 
+	if d.DumpJSON != "" {
+		d.updateDownloadStats(outputs, toDownload)
+	}
+
+	if d.MinDownloadMbps > 0 { // only set timeout if minDownloadMbps is positive.
+		timeout := CalculateTimeout(d.MinDownloadMbps, sumSize)
+		var cancel context.CancelFunc
+		// Use a child context with the speed-based timeout. Go's context.WithTimeout ensures
+		// that the child's deadline is no later than the parent's deadline (the fixed timeout),
+		// so the shorter of the two will be used.
+		ctx, cancel = context.WithTimeout(ctx, timeout)
+		defer cancel()
+		log.Infof("Calculate effective timeout %v based on size %v and min-download-mbps %v", timeout, units.Size(sumSize), d.MinDownloadMbps)
+	}
+
 	start = time.Now()
 	if err := d.downloadFilesWithAbsolutePath(ctx, toDownload); err != nil {
 		removeLeftOverFiles(outputs)
-		return fmt.Errorf("failed to download files: %v", err)
+		if ctx.Err() == context.DeadlineExceeded {
+			return context.DeadlineExceeded
+		}
+		return fmt.Errorf("failed to download files: %w", err)
 	}
 	log.Infof("finished downloading %d files from CAS, took %s", len(toDownload), time.Since(start))
 
@@ -340,7 +409,10 @@ func (d *DownloadJob) downloadWithLocalCache(ctx context.Context, cache cache.Ca
 	start = time.Now()
 	if err := cache.Push(ctx, toDownload); err != nil {
 		removeLeftOverFiles(outputs)
-		return err
+		if ctx.Err() == context.DeadlineExceeded {
+			return context.DeadlineExceeded
+		}
+		return fmt.Errorf("failed to push files to cache: %w", err)
 	}
 	log.Infof("finished pushing %d files to local cache, took %s", len(toDownload), time.Since(start))
 
@@ -349,13 +421,12 @@ func (d *DownloadJob) downloadWithLocalCache(ctx context.Context, cache cache.Ca
 		start = time.Now()
 		if err := copyFiles(ctx, dups, toDownload); err != nil {
 			removeLeftOverFiles(outputs)
-			return err
+			if ctx.Err() == context.DeadlineExceeded {
+				return context.DeadlineExceeded
+			}
+			return fmt.Errorf("failed to copy duplicated files: %w", err)
 		}
 		log.Infof("finished copying/hard-linking %d duplicated files, took %s", len(dups), time.Since(start))
-	}
-
-	if d.DumpJSON != "" {
-		d.updateDownloadStats(outputs, toDownload)
 	}
 
 	return nil
@@ -372,11 +443,23 @@ func (d *DownloadJob) downloadWithLocalCache(ctx context.Context, cache cache.Ca
 //   - Dump downloadStats
 func (d *DownloadJob) DoDownload(ctx context.Context) error {
 	d.downloadStats = &downloadStats{}
+	if d.DownloadTimeout > 0 {
+		var cancel context.CancelFunc
+		// Apply the fixed download timeout as a parent context.
+		ctx, cancel = context.WithTimeout(ctx, d.DownloadTimeout)
+		defer cancel()
+		log.Infof("Applying fixed download timeout: %v", d.DownloadTimeout)
+	}
 	start := time.Now()
 	err := d.doDownloadInternal(ctx)
 	d.downloadStats.E2eTimeMs = time.Since(start).Milliseconds()
 	if err != nil {
 		d.downloadStats.DownloadError = err.Error()
+		// Use errors.Is and status.Code to detect timeout even if it's wrapped or a gRPC error.
+		if errors.Is(err, context.DeadlineExceeded) || ctx.Err() == context.DeadlineExceeded || status.Code(err) == codes.DeadlineExceeded {
+			d.downloadStats.DownloadError = "TIMED_OUT"
+			err = context.DeadlineExceeded
+		}
 	}
 
 	if d.DumpJSON != "" {

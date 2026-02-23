@@ -33,7 +33,7 @@ import (
 var adcCredentialsScriptContent []byte
 
 const (
-	version = "1.26"
+	version = "1.27"
 	// The headers key of our RequestMetadata.
 	remoteHeadersKey = "build.bazel.remote.execution.v2.requestmetadata-bin"
 	// RBECASConcurrency is the default maximum number of concurrent upload and download operations for RBE clients.
@@ -84,6 +84,10 @@ var (
 
 	// Report memory status and set memory limit.
 	memoryLimit = flag.Int64("memory-limit", 0, "Memory limit in MiB.")
+	// Flag for minimum download speed.
+	minDownloadMbps = flag.Int64("min-download-mbps", 0, "Minimum download speed in megabytes per second. If set, an effective timeout will be calculated and applied to the download.")
+	// Flag for fixed download timeout.
+	downloadTimeout = flag.Duration("download-timeout", 0, "Fixed timeout for the entire download process. If set, the download will fail if it takes longer than this duration, but stats will still be dumped.")
 
 	// Flag for the RPC timeout for per-rpc deadline. Specify 0 to use default value.
 	rpcTimeout              = flag.Duration("rpc-timeout", DefaultRPCTimeout, "Default RPC timeout as duration, like 20s, 1m etc.")
@@ -234,15 +238,17 @@ func main() {
 	}
 
 	d := download.DownloadJob{
-		Client:         client,
-		Digest:         *rootDigest,
-		Dir:            *dir,
-		DumpJSON:       *dumpJSON,
-		Cache:          cache,
-		IncludeFilters: includeFilters,
-		ExcludeFilters: excludeFilters,
-		KeepChunks:     *keepChunks,
-		ChunksOnly:     *chunksOnly,
+		Client:          client,
+		Digest:          *rootDigest,
+		Dir:             *dir,
+		DumpJSON:        *dumpJSON,
+		Cache:           cache,
+		IncludeFilters:  includeFilters,
+		ExcludeFilters:  excludeFilters,
+		KeepChunks:      *keepChunks,
+		ChunksOnly:      *chunksOnly,
+		MinDownloadMbps: *minDownloadMbps,
+		DownloadTimeout: *downloadTimeout,
 	}
 	reportMemoryStats()
 	if err = d.DoDownload(ctx); err != nil {

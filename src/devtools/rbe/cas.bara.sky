@@ -40,6 +40,8 @@ cas_blaze_to_bazel_transforms = [
     cas_build_file_replace("//third_party/fastcdc_go:fastcdc", "@com_github_jotfs_fastcdc_go//:fastcdc-go"),
     cas_build_file_replace("//third_party/golang/gofuse/fuse", "@com_github_hanwen_go_fuse_v2//fuse:go_default_library"),
     cas_build_file_replace("//third_party/golang/gofuse/fs", "@com_github_hanwen_go_fuse_v2//fs:go_default_library"),
+    cas_build_file_replace("//third_party/golang/grpc/codes", "@org_golang_google_grpc//codes"),
+    cas_build_file_replace("//third_party/golang/grpc/status", "@org_golang_google_grpc//status"),
 ]
 
 cas_go_imports_map = {
@@ -53,4 +55,6 @@ cas_go_imports_map = {
     "google3/third_party/fastcdc_go/fastcdc": "github.com/jotfs/fastcdc-go",
     "google3/third_party/golang/gofuse/fuse/fuse": "github.com/hanwen/go-fuse/v2/fuse",
     "google3/third_party/golang/gofuse/fs/fs": "github.com/hanwen/go-fuse/v2/fs",
+    "google3/third_party/golang/grpc/codes/codes": "google.golang.org/grpc/codes",
+    "google3/third_party/golang/grpc/status/status": "google.golang.org/grpc/status",
 }
