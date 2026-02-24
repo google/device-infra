@@ -243,6 +243,16 @@ public class Flags {
       converter = Flag.StringConverter.class)
   public Flag<String> androidDesktopExecutorGroup = androidDesktopExecutorGroupDefault;
 
+  private static final Flag<Integer> androidDesktopExecutorDevicesNumDefault = Flag.value(0);
+
+  @com.beust.jcommander.Parameter(
+      names = "--android_desktop_executor_devices_num",
+      description =
+          "If the number is greater than 0, the labserver will create that many number of"
+              + " AndroidDesktopExecutorDevices.",
+      converter = Flag.IntegerConverter.class)
+  public Flag<Integer> androidDesktopExecutorDevicesNum = androidDesktopExecutorDevicesNumDefault;
+
   private static final Flag<Boolean> enableDaemonDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(

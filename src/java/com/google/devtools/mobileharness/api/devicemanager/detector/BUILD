@@ -41,6 +41,17 @@ java_library(
 )
 
 java_library(
+    name = "android_desktop_executor_detector",
+    srcs = ["AndroidDesktopExecutorDetector.java"],
+    deps = [
+        ":base",
+        "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector/model",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "base",
     srcs = ["Detector.java"],
     deps = [

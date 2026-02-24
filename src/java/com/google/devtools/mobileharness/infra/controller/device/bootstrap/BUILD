@@ -25,6 +25,10 @@ java_library(
     visibility = [
         "//src/javatests/com/google/devtools/mobileharness/infra/controller/device/bootstrap:__subpackages__",
     ],
+    runtime_deps = [
+        "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:android_desktop_executor_detector",
+        "//src/java/com/google/devtools/mobileharness/api/devicemanager/dispatcher:android_desktop_executor_device",
+    ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:adb",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:base",

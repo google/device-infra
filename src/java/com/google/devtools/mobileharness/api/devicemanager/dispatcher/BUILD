@@ -109,6 +109,21 @@ java_library(
 )
 
 java_library(
+    name = "android_desktop_executor_device",
+    srcs = ["AndroidDesktopExecutorDeviceDispatcher.java"],
+    runtime_deps = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_desktop_executor_device",
+    ],
+    deps = [
+        ":base",
+        "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector/model",
+        "//src/java/com/google/devtools/mobileharness/api/devicemanager/dispatcher/model",
+        "//src/java/com/google/devtools/mobileharness/api/devicemanager/dispatcher/util:device_id_descriptor_generator",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab:device_id_descriptor",
+    ],
+)
+
+java_library(
     name = "failed_device",
     srcs = ["FailedDeviceDispatcher.java"],
     deps = [

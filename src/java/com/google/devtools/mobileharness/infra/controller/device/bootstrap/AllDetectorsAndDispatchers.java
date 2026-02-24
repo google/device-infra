@@ -62,6 +62,12 @@ final class AllDetectorsAndDispatchers {
       detectorCandidatesForLocalModeInternalOssAndLabServerOss() {
     ImmutableList.Builder<Detector> detectorCandidates = ImmutableList.builder();
 
+    // Android Desktop Executor detector.
+    if (Flags.instance().androidDesktopExecutorDevicesNum.getNonNull() > 0) {
+      detectorCandidates.add(createDetector("AndroidDesktopExecutorDetector"));
+      return detectorCandidates.build();
+    }
+
     // ADB detector.
     if (Flags.instance().detectAdbDevice.getNonNull()) {
       detectorCandidates.add(new AdbDetector());
@@ -78,6 +84,7 @@ final class AllDetectorsAndDispatchers {
     if (Flags.instance().noOpDeviceNum.getNonNull() > 0) {
       detectorCandidates.add(new NoOpDeviceDetector());
     }
+
     return detectorCandidates.build();
   }
 
@@ -111,6 +118,11 @@ final class AllDetectorsAndDispatchers {
       if (Flags.instance().androidJitEmulatorNum.getNonNull() > 0) {
         dispatcherManager.add(loadDispatcherClass("AndroidJitEmulatorDispatcher"));
       }
+    }
+
+    // Android Desktop Executor dispatcher.
+    if (Flags.instance().androidDesktopExecutorDevicesNum.getNonNull() > 0) {
+      dispatcherManager.add(loadDispatcherClass("AndroidDesktopExecutorDeviceDispatcher"));
     }
   }
 
