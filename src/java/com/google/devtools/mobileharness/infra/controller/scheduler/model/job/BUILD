@@ -39,5 +39,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/time:count_down_timer",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
+        "@maven//:com_google_protobuf_protobuf_java",
     ],
 )

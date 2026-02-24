@@ -33,6 +33,7 @@ import com.google.devtools.mobileharness.infra.controller.scheduler.model.job.in
 import com.google.devtools.mobileharness.infra.controller.test.util.JobTimer;
 import com.google.devtools.mobileharness.shared.util.time.CountDownTimer;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import com.google.protobuf.Timestamp;
 import java.util.Optional;
 
 /**
@@ -66,6 +67,9 @@ public abstract class JobScheduleUnit {
 
   public abstract DeviceAllocationPriority deviceAllocationPriority();
 
+  /** The timestamp when the job is submitted originally. */
+  public abstract Optional<Timestamp> originalSubmitTimestamp();
+
   /** Create a builder for creating {@link JobScheduleUnit} instances. */
   public static Builder newBuilder() {
     return new AutoValue_JobScheduleUnit.Builder()
@@ -85,6 +89,9 @@ public abstract class JobScheduleUnit {
             .setDeviceRequirements(DeviceRequirements.fromProto(jobFeatureProto));
     if (jobSettingProto.hasTimeout()) {
       builder.setTimeout(Timeout.fromProto(jobSettingProto.getTimeout()));
+    }
+    if (jobFeatureProto.hasOriginalSubmitTimestamp()) {
+      builder.setOriginalSubmitTimestamp(jobFeatureProto.getOriginalSubmitTimestamp());
     }
     return builder.build();
   }
@@ -118,6 +125,9 @@ public abstract class JobScheduleUnit {
 
     /** Optional. */
     public abstract Builder setDeviceAllocationPriority(DeviceAllocationPriority priority);
+
+    /** Optional. */
+    public abstract Builder setOriginalSubmitTimestamp(Timestamp originalSubmitTimestamp);
 
     /** DO NOT set this field unless you have to. */
     public abstract Builder setTiming(Timing timing);
@@ -172,6 +182,9 @@ public abstract class JobScheduleUnit {
     }
     jobFeatureBuilder.setDeviceRequirements(deviceRequirements);
     jobFeatureBuilder.setDeviceAllocationPriority(deviceAllocationPriority());
+    if (originalSubmitTimestamp().isPresent()) {
+      jobFeatureBuilder.setOriginalSubmitTimestamp(originalSubmitTimestamp().get());
+    }
     return jobFeatureBuilder.build();
   }
 }
