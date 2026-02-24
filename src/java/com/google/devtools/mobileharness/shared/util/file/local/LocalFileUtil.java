@@ -44,6 +44,7 @@ import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.Timeout;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import com.google.protobuf.ByteString;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
@@ -1700,6 +1701,34 @@ public class LocalFileUtil {
     } catch (IOException e) {
       throw new MobileHarnessException(
           BasicErrorId.LOCAL_FILE_READ_STRING_ERROR, "Failed to read content of file " + file, e);
+    }
+  }
+
+  /**
+   * Reads file and returns the content in a ByteString.
+   *
+   * @throws MobileHarnessException if file not exists, or the given path is a directory, or failed
+   *     to read the file
+   */
+  public ByteString readFileBytes(String filePath) throws MobileHarnessException {
+    return readFileBytes(Path.of(filePath));
+  }
+
+  /**
+   * Reads file and returns the content in a ByteString.
+   *
+   * @throws MobileHarnessException if file not exists, or the given path is a directory, or failed
+   *     to read the file
+   */
+  public ByteString readFileBytes(Path file) throws MobileHarnessException {
+    checkFile(file);
+    try (FileInputStream fis = new FileInputStream(file.toFile())) {
+      return ByteString.readFrom(fis);
+    } catch (IOException e) {
+      throw new MobileHarnessException(
+          BasicErrorId.LOCAL_FILE_READ_BINARY_ERROR,
+          "Failed to read the content of binary file " + file,
+          e);
     }
   }
 
