@@ -57,6 +57,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_shipping_api_level_check_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_show_instruction_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_switch_user_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:cros_ls_nexus_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:python_version_check_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_jit_emulator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_local_emulator",
