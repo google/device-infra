@@ -30,6 +30,7 @@ port="5555"
 user=`whoami`
 tm=`date +"%Y-%m-%d_%H%M%S_%N"`
 servername=`hostname`
+namespace=${UFS_NAMESPACE:-os}
 
 
 # use getopt and store the output into $OPTS
@@ -127,10 +128,10 @@ if [[ $useLatestParis -eq 1 ]]; then
 fi
 
 if [[ $deploy -eq 1 ]]; then
-  "${dd}"/paris local-recovery -only-verify=false -upload-logs -swarming-id="${uniqID}" -bb-id="${uniqID}" -update-inv -task-name deploy -dev-active=false -generate-log-files -log-root ${wd}/logs -karte-server prod -log-proto -service-account-json /creds/service_accounts/skylab-drone.json -verbose ${device}
+  "${dd}"/paris local-recovery -only-verify=false -upload-logs -swarming-id="${uniqID}" -bb-id="${uniqID}" -update-inv -task-name deploy -dev-active=false -generate-log-files -log-root ${wd}/logs -karte-server prod -log-proto -service-account-json /creds/service_accounts/skylab-drone.json -verbose -namespace="${namespace}" ${device}
 elif [[ $repair -eq 1 ]]; then
-  "${dd}"/paris local-recovery -only-verify=false -upload-logs -swarming-id="${uniqID}" -bb-id="${uniqID}" -update-inv -task-name repair -dev-active=false -generate-log-files -log-root ${wd}/logs -karte-server prod -log-proto -service-account-json /creds/service_accounts/skylab-drone.json -verbose ${device}
+  "${dd}"/paris local-recovery -only-verify=false -upload-logs -swarming-id="${uniqID}" -bb-id="${uniqID}" -update-inv -task-name repair -dev-active=false -generate-log-files -log-root ${wd}/logs -karte-server prod -log-proto -service-account-json /creds/service_accounts/skylab-drone.json -verbose -namespace="${namespace}" ${device}
 else
-  "${dd}"/paris local-recovery -upload-logs -swarming-id="${uniqID}" -bb-id="${uniqID}" -update-inv -task-name verify -dev-active=false -generate-log-files -log-root ${wd}/logs -karte-server prod -log-proto -service-account-json /creds/service_accounts/skylab-drone.json -verbose ${device}
+  "${dd}"/paris local-recovery -upload-logs -swarming-id="${uniqID}" -bb-id="${uniqID}" -update-inv -task-name verify -dev-active=false -generate-log-files -log-root ${wd}/logs -karte-server prod -log-proto -service-account-json /creds/service_accounts/skylab-drone.json -verbose -namespace="${namespace}" ${device}
 fi
 
