@@ -170,8 +170,7 @@ public class AndroidInstrumentation extends BaseDriver
     stopwatch.start();
     try {
       buildPackageNames =
-          installApkStep.installBuildApks(
-              device, testInfo, jobBuildApks, /* installSuccessHandler= */ null, /* spec= */ null);
+          installApkStep.installBuildApks(device, testInfo, jobBuildApks, /* spec= */ null);
       testPackageName = installTestApks(testInfo, deviceSdkVersion, testApk);
     } catch (MobileHarnessException e) {
       if (installApkStep.isInstallFailure(e, testInfo)) {

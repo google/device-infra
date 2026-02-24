@@ -78,13 +78,6 @@ public class InstallApkStep implements InstallApkStepConstants {
 
   private static final String APP_OP_MANAGE_EXTERNAL_STORAGE = "MANAGE_EXTERNAL_STORAGE";
 
-  /** Interface to deal with app versions for AndroidAppVersionDecorator. */
-  @FunctionalInterface
-  public interface InstallSuccessHandler {
-    void handle(String packageName, String buildApks)
-        throws MobileHarnessException, InterruptedException;
-  }
-
   /** {@code Aapt} for AAPT operations. */
   private final Aapt aapt;
 
@@ -139,22 +132,13 @@ public class InstallApkStep implements InstallApkStepConstants {
   public List<String> installBuildApks(Device device, TestInfo testInfo)
       throws MobileHarnessException, InterruptedException {
     return installBuildApks(
-        device,
-        testInfo,
-        testInfo.jobInfo().files().get(TAG_BUILD_APK),
-        /* installSuccessHandler= */ null,
-        /* spec= */ null);
+        device, testInfo, testInfo.jobInfo().files().get(TAG_BUILD_APK), /* spec= */ null);
   }
 
   @CanIgnoreReturnValue
   public List<String> installBuildApks(Device device, TestInfo testInfo, InstallApkStepSpec spec)
       throws MobileHarnessException, InterruptedException {
-    return installBuildApks(
-        device,
-        testInfo,
-        getBuildApks(spec, testInfo.jobInfo()),
-        /* installSuccessHandler= */ null,
-        spec);
+    return installBuildApks(device, testInfo, getBuildApks(spec, testInfo.jobInfo()), spec);
   }
 
   /**
@@ -170,7 +154,6 @@ public class InstallApkStep implements InstallApkStepConstants {
       Device device,
       TestInfo testInfo,
       ImmutableSet<String> jobBuildApks,
-      @Nullable InstallSuccessHandler installSuccessHandler,
       @Nullable InstallApkStepSpec spec)
       throws MobileHarnessException, InterruptedException {
     if (spec == null) {
@@ -292,10 +275,6 @@ public class InstallApkStep implements InstallApkStepConstants {
           bypassLowTargetSdkBlock,
           installTimeout,
           sleepAfterInstallGms);
-
-      if (installSuccessHandler != null) {
-        installSuccessHandler.handle(PackageConstants.PACKAGE_NAME_GMS, buildApk);
-      }
     } else if (testInfo
         .jobInfo()
         .params()
@@ -347,10 +326,6 @@ public class InstallApkStep implements InstallApkStepConstants {
             bypassLowTargetSdkBlock,
             installTimeout,
             sleepAfterInstallGms);
-
-        if (installSuccessHandler != null) {
-          installSuccessHandler.handle(packageName, buildApk);
-        }
       }
     }
 
