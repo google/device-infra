@@ -27,6 +27,24 @@ package(
 )
 
 java_library(
+    name = "config_service_based_device_config_manager",
+    srcs = ["ConfigServiceBasedDeviceConfigManager.java"],
+    deps = [
+        ":device_config_manager",
+        "//src/devtools/mobileharness/api/deviceconfig/proto:device_config_service_java_proto",
+        "//src/devtools/mobileharness/api/deviceconfig/proto:device_java_proto",
+        "//src/devtools/mobileharness/api/deviceconfig/proto:lab_java_proto",
+        "//src/java/com/google/devtools/common/metrics/stability/rpc:exception",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device:device_id_manager",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device/config",
+        "//src/java/com/google/devtools/mobileharness/service/deviceconfig/rpc/stub:device_config_stub",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+    ],
+)
+
+java_library(
     name = "device_config_manager",
     srcs = ["DeviceConfigManager.java"],
     deps = [
