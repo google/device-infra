@@ -194,8 +194,8 @@ func dumpStats(path string, stats *downloadStats) error {
 }
 
 func (d *DownloadJob) filterFiles(fullSet map[string]*client.TreeOutput) (map[string]*client.TreeOutput, error) {
-	includePatterns := []*regexp.Regexp{}
-	excludePatterns := []*regexp.Regexp{}
+	var includePatterns []*regexp.Regexp
+	var excludePatterns []*regexp.Regexp
 
 	for _, filter := range d.IncludeFilters {
 		p, err := regexp.Compile(filter)
@@ -320,6 +320,19 @@ func CalculateTimeout(minDownloadMbps int64, size int64) time.Duration {
 	return minTimeout + calculatedDuration
 }
 
+func calculateAndLogTimeout(ctx context.Context, downloadTimeout time.Duration, minDownloadMbps int64, size int64) time.Duration {
+	calculatedTimeout := CalculateTimeout(minDownloadMbps, size)
+	log.InfoContextf(ctx, "Calculated dynamic timeout %v based on size %v and min-download-mbps %v", calculatedTimeout.Truncate(time.Millisecond), units.Size(size), minDownloadMbps)
+
+	if parentDeadline, ok := ctx.Deadline(); ok {
+		parentRemaining := time.Until(parentDeadline)
+		if parentRemaining < calculatedTimeout {
+			log.InfoContextf(ctx, "The effective timeout is constrained by download-timeout: %v (%v remaining)", downloadTimeout.Truncate(time.Millisecond), parentRemaining.Truncate(time.Millisecond))
+		}
+	}
+	return calculatedTimeout
+}
+
 func (d *DownloadJob) downloadWithoutLocalCache(ctx context.Context, outputs []*client.TreeOutput) error {
 	toDownload := make(map[digest.Digest]*client.TreeOutput)
 	var sumSize int64
@@ -333,14 +346,13 @@ func (d *DownloadJob) downloadWithoutLocalCache(ctx context.Context, outputs []*
 	}
 
 	if d.MinDownloadMbps > 0 { // only set timeout if minDownloadMbps is positive.
-		timeout := CalculateTimeout(d.MinDownloadMbps, sumSize)
+		timeout := calculateAndLogTimeout(ctx, d.DownloadTimeout, d.MinDownloadMbps, sumSize)
 		var cancel context.CancelFunc
 		// Use a child context with the speed-based timeout. Go's context.WithTimeout ensures
 		// that the child's deadline is no later than the parent's deadline (the fixed timeout),
 		// so the shorter of the two will be used.
 		ctx, cancel = context.WithTimeout(ctx, timeout)
 		defer cancel()
-		log.Infof("Calculate effective timeout %v based on size %v and min-download-mbps %v", timeout, units.Size(sumSize), d.MinDownloadMbps)
 	}
 
 	start := time.Now()
@@ -351,7 +363,7 @@ func (d *DownloadJob) downloadWithoutLocalCache(ctx context.Context, outputs []*
 		}
 		return fmt.Errorf("failed to download files: %w", err)
 	}
-	log.Infof("finished downloading %d files from CAS without local cache, took %s", len(toDownload), time.Since(start))
+	log.InfoContextf(ctx, "finished downloading %d files from CAS without local cache, took %s", len(toDownload), time.Since(start))
 
 	return nil
 }
@@ -365,10 +377,10 @@ func (d *DownloadJob) downloadWithLocalCache(ctx context.Context, cache cache.Ca
 		}
 		return fmt.Errorf("failed to pull files from cache: %w", err)
 	}
-	log.Infof("finished pulling %d files from cache, took %s", len(cached), time.Since(start))
+	log.InfoContextf(ctx, "finished pulling %d files from cache, took %s", len(cached), time.Since(start))
 
 	if len(missed) <= 0 {
-		log.Infof("All files in cache. Skip downloading files.")
+		log.InfoContextf(ctx, "All files in cache. Skip downloading files.")
 		return nil
 	}
 
@@ -378,21 +390,20 @@ func (d *DownloadJob) downloadWithLocalCache(ctx context.Context, cache cache.Ca
 	for _, output := range toDownload {
 		sumSize += output.Digest.Size
 	}
-	log.Infof("start downloading %d files, estimated size %v", len(toDownload), units.Size(sumSize))
+	log.InfoContextf(ctx, "start downloading %d files, estimated size %v", len(toDownload), units.Size(sumSize))
 
 	if d.DumpJSON != "" {
 		d.updateDownloadStats(outputs, toDownload)
 	}
 
 	if d.MinDownloadMbps > 0 { // only set timeout if minDownloadMbps is positive.
-		timeout := CalculateTimeout(d.MinDownloadMbps, sumSize)
+		timeout := calculateAndLogTimeout(ctx, d.DownloadTimeout, d.MinDownloadMbps, sumSize)
 		var cancel context.CancelFunc
 		// Use a child context with the speed-based timeout. Go's context.WithTimeout ensures
 		// that the child's deadline is no later than the parent's deadline (the fixed timeout),
 		// so the shorter of the two will be used.
 		ctx, cancel = context.WithTimeout(ctx, timeout)
 		defer cancel()
-		log.Infof("Calculate effective timeout %v based on size %v and min-download-mbps %v", timeout, units.Size(sumSize), d.MinDownloadMbps)
 	}
 
 	start = time.Now()
@@ -403,7 +414,7 @@ func (d *DownloadJob) downloadWithLocalCache(ctx context.Context, cache cache.Ca
 		}
 		return fmt.Errorf("failed to download files: %w", err)
 	}
-	log.Infof("finished downloading %d files from CAS, took %s", len(toDownload), time.Since(start))
+	log.InfoContextf(ctx, "finished downloading %d files from CAS, took %s", len(toDownload), time.Since(start))
 
 	// Push downloaded files to local cache
 	start = time.Now()
@@ -414,7 +425,7 @@ func (d *DownloadJob) downloadWithLocalCache(ctx context.Context, cache cache.Ca
 		}
 		return fmt.Errorf("failed to push files to cache: %w", err)
 	}
-	log.Infof("finished pushing %d files to local cache, took %s", len(toDownload), time.Since(start))
+	log.InfoContextf(ctx, "finished pushing %d files to local cache, took %s", len(toDownload), time.Since(start))
 
 	if len(dups) > 0 {
 		// Copy duplicates files to the target location
@@ -426,7 +437,7 @@ func (d *DownloadJob) downloadWithLocalCache(ctx context.Context, cache cache.Ca
 			}
 			return fmt.Errorf("failed to copy duplicated files: %w", err)
 		}
-		log.Infof("finished copying/hard-linking %d duplicated files, took %s", len(dups), time.Since(start))
+		log.InfoContextf(ctx, "finished copying/hard-linking %d duplicated files, took %s", len(dups), time.Since(start))
 	}
 
 	return nil
@@ -448,7 +459,7 @@ func (d *DownloadJob) DoDownload(ctx context.Context) error {
 		// Apply the fixed download timeout as a parent context.
 		ctx, cancel = context.WithTimeout(ctx, d.DownloadTimeout)
 		defer cancel()
-		log.Infof("Applying fixed download timeout: %v", d.DownloadTimeout)
+		log.InfoContextf(ctx, "Applying fixed download timeout: %v", d.DownloadTimeout)
 	}
 	start := time.Now()
 	err := d.doDownloadInternal(ctx)
@@ -464,7 +475,7 @@ func (d *DownloadJob) DoDownload(ctx context.Context) error {
 
 	if d.DumpJSON != "" {
 		if dumpErr := dumpStats(d.DumpJSON, d.downloadStats); dumpErr != nil {
-			log.Errorf("failed to dump stats to file: %v", dumpErr)
+			log.ErrorContextf(ctx, "failed to dump stats to file: %v", dumpErr)
 		}
 	}
 	return err
@@ -488,7 +499,7 @@ func (d *DownloadJob) doDownloadInternal(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to get directory tree from RBE: %v", err)
 	}
-	log.Infof("Finished GetDirectoryTree")
+	log.InfoContextf(ctx, "Finished GetDirectoryTree")
 
 	t := &repb.Tree{
 		Root:     rootDir,
@@ -499,7 +510,7 @@ func (d *DownloadJob) doDownloadInternal(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to flatten tree: %v", err)
 	}
-	log.Infof("Finished FlattenTree")
+	log.InfoContextf(ctx, "Finished FlattenTree")
 
 	if len(d.IncludeFilters) > 0 || len(d.ExcludeFilters) > 0 {
 		flattenTreeOutputs, err = d.filterFiles(flattenTreeOutputs)
@@ -516,7 +527,7 @@ func (d *DownloadJob) doDownloadInternal(ctx context.Context) error {
 		return outputs[i].Path < outputs[j].Path
 	})
 	dirRetrieveTime := time.Since(start)
-	log.Infof("finished retriving directory tree from RBE, took %s", dirRetrieveTime)
+	log.InfoContextf(ctx, "finished retriving directory tree from RBE, took %s", dirRetrieveTime)
 	d.downloadStats.DirRetrieveTimeMs = dirRetrieveTime.Milliseconds()
 
 	start = time.Now()
@@ -525,7 +536,7 @@ func (d *DownloadJob) doDownloadInternal(ctx context.Context) error {
 		return err
 	}
 	dirPrepareTime := time.Since(start)
-	log.Infof("finished preparing directories, took %s", dirPrepareTime)
+	log.InfoContextf(ctx, "finished preparing directories, took %s", dirPrepareTime)
 	d.downloadStats.DirPrepareTimeMs = dirPrepareTime.Milliseconds()
 
 	start = time.Now()
@@ -543,15 +554,15 @@ func (d *DownloadJob) doDownloadInternal(ctx context.Context) error {
 
 	if err := d.moveChunksIndexFileIfNeeded(); err != nil {
 		// This is optional and should not fail the download. Just log it.
-		log.Error(err)
+		log.ErrorContext(ctx, err)
 	}
 
 	fileDownloadTime := time.Since(start)
-	log.Infof("finished downloading files, took %s", fileDownloadTime)
+	log.InfoContextf(ctx, "finished downloading files, took %s", fileDownloadTime)
 	d.downloadStats.FileDownloadTimeMs = fileDownloadTime.Milliseconds()
 
 	if d.ChunksOnly {
-		log.Infof("Skipping restoring chunked files since chunks-only is true.")
+		log.InfoContextf(ctx, "Skipping restoring chunked files since chunks-only is true.")
 		d.downloadStats.ChunkRestoreTimeMs = 0
 	} else {
 		start = time.Now()
@@ -559,7 +570,7 @@ func (d *DownloadJob) doDownloadInternal(ctx context.Context) error {
 			return err
 		}
 		chunkRestoreTime := time.Since(start)
-		log.Infof("finished restoring chunked files, took %s", chunkRestoreTime)
+		log.InfoContextf(ctx, "finished restoring chunked files, took %s", chunkRestoreTime)
 		d.downloadStats.ChunkRestoreTimeMs = chunkRestoreTime.Milliseconds()
 	}
 
