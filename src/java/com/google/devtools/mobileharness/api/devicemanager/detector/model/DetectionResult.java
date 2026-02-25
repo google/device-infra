@@ -73,5 +73,6 @@ public abstract class DetectionResult {
     TTB,
     VIDEO,
     WINDOWS,
+    ZEBU,
   }
 }

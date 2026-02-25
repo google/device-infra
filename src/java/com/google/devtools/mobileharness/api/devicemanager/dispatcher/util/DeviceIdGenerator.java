@@ -133,12 +133,15 @@ public class DeviceIdGenerator {
   public DeviceId getSshDeviceId(String deviceControlId) {
     try {
       return DeviceId.of(
-          deviceControlId, String.format("%s:%s", getLocalHostName(), deviceControlId), false);
+          deviceControlId,
+          String.format("%s:%s", getLocalHostName(), deviceControlId),
+          /* isUuidVolatile= */ false);
     } catch (MobileHarnessException e) {
       // Should not happen.
       logger.atWarning().withCause(e).log(
           "Failed to generate sshable EmbeddedLinuxDevice uuid, use random uuid instead.");
-      return DeviceId.of(deviceControlId, UUID.randomUUID().toString(), false);
+      return DeviceId.of(
+          deviceControlId, UUID.randomUUID().toString(), /* isUuidVolatile= */ false);
     }
   }
 
@@ -154,7 +157,7 @@ public class DeviceIdGenerator {
       return DeviceId.of(
           deviceControlId,
           String.format("%s:%s", getLocalHostName(), deviceControlId).replace('/', '-'),
-          false);
+          /* isUuidVolatile= */ false);
     } catch (MobileHarnessException e) {
       throw new AssertionError("Failed to generate VideoDevice uuid.", e);
     }
@@ -168,12 +171,13 @@ public class DeviceIdGenerator {
    */
   public DeviceId getLinuxDeviceId(String deviceControlId) {
     try {
-      return DeviceId.of(deviceControlId, getLocalHostName(), false);
+      return DeviceId.of(deviceControlId, getLocalHostName(), /* isUuidVolatile= */ false);
     } catch (MobileHarnessException e) {
       // Should not happen.
       logger.atWarning().withCause(e).log(
           "Failed to generate LinuxDevice uuid, use random uuid instead.");
-      return DeviceId.of(deviceControlId, UUID.randomUUID().toString(), false);
+      return DeviceId.of(
+          deviceControlId, UUID.randomUUID().toString(), /* isUuidVolatile= */ false);
     }
   }
 
@@ -191,12 +195,12 @@ public class DeviceIdGenerator {
       // Should not happen.
       logger.atWarning().withCause(e).log(
           "Failed to generate NoOpDevice uuid, use random uuid instead..");
-      return DeviceId.of(deviceControlId, UUID.randomUUID().toString(), true);
+      return DeviceId.of(deviceControlId, UUID.randomUUID().toString(), /* isUuidVolatile= */ true);
     }
   }
 
   /**
-   * Generates the gem5 device id from device control id, adds the lab host name as the prefix of
+   * Generates the Gem5 device id from device control id, adds the lab host name as the prefix of
    * the uuid.
    *
    * @param deviceControlId the device control id from detector.
@@ -204,9 +208,28 @@ public class DeviceIdGenerator {
   public DeviceId getGem5DeviceId(String deviceControlId) {
     try {
       return DeviceId.of(
-          deviceControlId, String.format("%s:%s", getLocalHostName(), deviceControlId), false);
+          deviceControlId,
+          String.format("%s:%s", getLocalHostName(), deviceControlId),
+          /* isUuidVolatile= */ false);
     } catch (MobileHarnessException e) {
       throw new AssertionError("Failed to generate Gem5Device uuid.", e);
+    }
+  }
+
+  /**
+   * Generates the ZeBu device id from device control id, adds the lab host name as the prefix of
+   * the uuid.
+   *
+   * @param deviceControlId the device control id from detector.
+   */
+  public DeviceId getZebuDeviceId(String deviceControlId) {
+    try {
+      return DeviceId.of(
+          deviceControlId,
+          String.format("%s:%s", getLocalHostName(), deviceControlId),
+          /* isUuidVolatile= */ false);
+    } catch (MobileHarnessException e) {
+      throw new AssertionError("Failed to generate ZebuDevice uuid.", e);
     }
   }
 
