@@ -69,6 +69,7 @@ java_library(
     runtime_deps = [
     ],
     deps = [
+        ":grpc_address_util",
         "//src/java/com/google/devtools/mobileharness/shared/constant/closeable",
         "@grpc-java//core",
         "@grpc-java//stub",
@@ -127,4 +128,9 @@ java_library(
         "@maven//:com_google_inject_guice",
         "@maven//:javax_inject_jsr330_api",
     ],
+)
+
+java_library(
+    name = "grpc_address_util",
+    srcs = ["GrpcAddressUtil.java"],
 )
