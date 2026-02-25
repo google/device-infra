@@ -300,7 +300,7 @@ func (d *DownloadJob) downloadFilesWithAbsolutePath(ctx context.Context, toDownl
 
 // CalculateTimeout calculates the effective download timeout based on minDownloadMbps and size.
 func CalculateTimeout(minDownloadMbps int64, size int64) time.Duration {
-	const minTimeout = 30 * time.Second
+	const minTimeout = 10 * time.Second
 	if minDownloadMbps <= 0 || size <= 0 {
 		return minTimeout // Never return 0 duration.
 	}
@@ -345,15 +345,15 @@ func (d *DownloadJob) downloadWithoutLocalCache(ctx context.Context, outputs []*
 		d.updateDownloadStats(outputs, toDownload)
 	}
 
+	var cancel context.CancelFunc = func() {}
 	if d.MinDownloadMbps > 0 { // only set timeout if minDownloadMbps is positive.
 		timeout := calculateAndLogTimeout(ctx, d.DownloadTimeout, d.MinDownloadMbps, sumSize)
-		var cancel context.CancelFunc
 		// Use a child context with the speed-based timeout. Go's context.WithTimeout ensures
 		// that the child's deadline is no later than the parent's deadline (the fixed timeout),
 		// so the shorter of the two will be used.
 		ctx, cancel = context.WithTimeout(ctx, timeout)
-		defer cancel()
 	}
+	defer cancel()
 
 	start := time.Now()
 	if err := d.downloadFilesWithAbsolutePath(ctx, toDownload); err != nil {
@@ -396,15 +396,15 @@ func (d *DownloadJob) downloadWithLocalCache(ctx context.Context, cache cache.Ca
 		d.updateDownloadStats(outputs, toDownload)
 	}
 
+	var cancel context.CancelFunc = func() {}
 	if d.MinDownloadMbps > 0 { // only set timeout if minDownloadMbps is positive.
 		timeout := calculateAndLogTimeout(ctx, d.DownloadTimeout, d.MinDownloadMbps, sumSize)
-		var cancel context.CancelFunc
 		// Use a child context with the speed-based timeout. Go's context.WithTimeout ensures
 		// that the child's deadline is no later than the parent's deadline (the fixed timeout),
 		// so the shorter of the two will be used.
 		ctx, cancel = context.WithTimeout(ctx, timeout)
-		defer cancel()
 	}
+	defer cancel()
 
 	start = time.Now()
 	if err := d.downloadFilesWithAbsolutePath(ctx, toDownload); err != nil {
@@ -461,14 +461,24 @@ func (d *DownloadJob) DoDownload(ctx context.Context) error {
 		defer cancel()
 		log.InfoContextf(ctx, "Applying fixed download timeout: %v", d.DownloadTimeout)
 	}
+
 	start := time.Now()
 	err := d.doDownloadInternal(ctx)
 	d.downloadStats.E2eTimeMs = time.Since(start).Milliseconds()
-	if err != nil {
+
+	// We check the context state before the library error.
+	// If the context is done, it is a timeout (or cancel), regardless of the returned err.
+	if ctx.Err() != nil {
+		d.downloadStats.DownloadError = fmt.Sprintf("TIMED_OUT: download-timeout=%v", d.DownloadTimeout)
+		err = context.DeadlineExceeded
+	} else if errors.Is(err, context.DeadlineExceeded) {
+		d.downloadStats.DownloadError = fmt.Sprintf("TIMED_OUT: min-download-mbps=%v", d.MinDownloadMbps)
+	} else if err != nil {
+		// Context is still healthy, so this is a genuine library or network failure.
 		d.downloadStats.DownloadError = err.Error()
-		// Use errors.Is and status.Code to detect timeout even if it's wrapped or a gRPC error.
-		if errors.Is(err, context.DeadlineExceeded) || ctx.Err() == context.DeadlineExceeded || status.Code(err) == codes.DeadlineExceeded {
-			d.downloadStats.DownloadError = "TIMED_OUT"
+		// Fallback: check gRPC status code if the library returned a remote timeout.
+		if status.Code(err) == codes.DeadlineExceeded {
+			d.downloadStats.DownloadError = fmt.Sprintf("TIMED_OUT: %v", err)
 			err = context.DeadlineExceeded
 		}
 	}
