@@ -32,7 +32,6 @@ android_binary(
     # avoid having to potentially allowlist the new package to install on devices.
     custom_package = "android.telephony.utility",
     manifest = "AndroidManifest.xml",
-    multidex = "native",
     deps = [
         "@maven//:androidx_test_core",
         "@maven//:androidx_test_ext_junit",

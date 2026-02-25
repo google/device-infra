@@ -29,7 +29,6 @@ android_binary(
     name = "switchlanguage",
     srcs = glob(["*.java"]),
     manifest = "AndroidManifest.xml",
-    multidex = "native",
     deps = [
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",

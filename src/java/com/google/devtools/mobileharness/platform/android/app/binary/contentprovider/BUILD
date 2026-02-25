@@ -32,7 +32,6 @@ android_binary(
     # compatible with the existing tests.
     custom_package = "android.tradefed.contentprovider",
     manifest = "AndroidManifest.xml",
-    multidex = "native",
     deps = [
         "@maven//:androidx_annotation_annotation",
     ],

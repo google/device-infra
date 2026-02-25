@@ -39,7 +39,6 @@ android_library(
 android_binary(
     name = "daemon",
     manifest = "AndroidManifest.xml",
-    multidex = "native",
     resource_files = ["//src/java/com/google/devtools/mobileharness/platform/android/app/binary/devicedaemon/shared:resource_files"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/platform/android/app/devicedaemon/impl:__pkg__",
