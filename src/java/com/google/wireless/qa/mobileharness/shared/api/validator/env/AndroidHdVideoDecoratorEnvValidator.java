@@ -56,8 +56,7 @@ public class AndroidHdVideoDecoratorEnvValidator extends AndroidDeviceVersionEnv
     }
     super.validate(device);
     try {
-      String output = adb.runShell(device.getDeviceId(), ADB_SHELL_VALIDATE);
-      logger.atInfo().log("'%s' output: %s", ADB_SHELL_VALIDATE, output);
+      String unused = adb.runShell(device.getDeviceId(), ADB_SHELL_VALIDATE);
     } catch (MobileHarnessException e) {
       logger.atWarning().log("Failed to run screenrecord: %s.", e.getMessage());
       throw new MobileHarnessException(
