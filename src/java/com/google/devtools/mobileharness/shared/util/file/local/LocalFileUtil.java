@@ -2160,7 +2160,9 @@ public class LocalFileUtil {
       }
       commandBuilder.add("-o").add(zipFilePath);
       Command command =
-          Command.of(commandBuilder.build()).workDir(targetDirPath /*for b/28160125 */);
+          Command.of(commandBuilder.build())
+              .workDir(targetDirPath /*for b/28160125 */)
+              .successExitCodes(0, 1);
       if (timeout != null) {
         command = command.timeout(fixed(timeout));
       }
@@ -2200,7 +2202,8 @@ public class LocalFileUtil {
               .add(zipFilePath)
               .addAll(fileNamesToUnzip)
               .build();
-      Command command = Command.of(cmd).workDir(targetDirPath /*for b/28160125 */);
+      Command command =
+          Command.of(cmd).workDir(targetDirPath /*for b/28160125 */).successExitCodes(0, 1);
       return cmdExecutor.run(command);
     } catch (MobileHarnessException e) {
       if (e.getErrorId() == BasicErrorId.COMMAND_EXEC_FAIL
