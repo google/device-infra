@@ -8,6 +8,7 @@ import {CommonModule} from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   DestroyRef,
   inject,
   Input,
@@ -166,6 +167,12 @@ export class HostOverviewPage implements OnInit, OnChanges {
   readonly isGoogleInternal = this.environment.isGoogleInternal();
 
   @Input({required: true}) host!: HostOverview;
+
+  readonly isAteHost = computed(() => {
+    return this.host.labTypeDisplayNames.some((name) =>
+      name.includes('ATE Lab'),
+    );
+  });
 
   isEditingFlags = signal(false);
   editedFlags = '';
@@ -328,6 +335,11 @@ export class HostOverviewPage implements OnInit, OnChanges {
   // --- Lab Server Card ---
 
   getLogUrl(type: 'lab' | 'daemon'): string {
+
+    return '';
+  }
+
+  getTradefedLogUrl(): string {
 
     return '';
   }

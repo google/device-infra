@@ -1,5 +1,14 @@
 <app-master-detail-layout [navList]="navList">
   <app-info-card #overviewSection id="overview" title="Overview" [collapsible]="false">
+    @if (isGoogleInternal && isAteHost()) {
+      <div operations class="operation-button">
+        <a href="{{ getTradefedLogUrl() }}" target="_blank">
+          <mat-icon>description</mat-icon>
+          <span class="operation-text">View Tradefed Log</span>
+          <mat-icon>open_in_new</mat-icon>
+        </a>
+      </div>
+    }
     <div class="info-card-content">
       <div class="grid-wrapper">
         <dl class="grid-tight">
