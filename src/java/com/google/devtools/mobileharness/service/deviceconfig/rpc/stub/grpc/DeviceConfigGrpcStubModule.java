@@ -25,6 +25,7 @@ import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServ
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceGrpc.DeviceConfigServiceFutureStub;
 import com.google.devtools.mobileharness.service.deviceconfig.rpc.stub.Annotation;
 import com.google.devtools.mobileharness.service.deviceconfig.rpc.stub.DeviceConfigStub;
+import com.google.devtools.mobileharness.shared.util.comm.stub.GrpcAddressUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.inject.AbstractModule;
 import com.google.inject.Singleton;
@@ -65,7 +66,7 @@ public final class DeviceConfigGrpcStubModule extends AbstractModule {
   /** Gets the {@link Channel} of GRPC by the DNS name of the flag. */
   private Channel getChannel() {
     return com.google.devtools.mobileharness.shared.util.comm.stub.ChannelFactory.createChannel(
-        configDnsName, directExecutor());
+        GrpcAddressUtil.getGrpcTarget(configDnsName), directExecutor());
   }
 
   /** Gets a list of {@link ClientInterceptor}s used before requests are dispatched to channels. */

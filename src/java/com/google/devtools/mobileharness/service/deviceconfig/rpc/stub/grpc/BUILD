@@ -49,6 +49,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/service/deviceconfig/rpc/stub:annotation",
         "//src/java/com/google/devtools/mobileharness/service/deviceconfig/rpc/stub:device_config_stub",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:channel_factory",
+        "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:grpc_address_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@grpc-java//core",
