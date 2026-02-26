@@ -17,11 +17,8 @@
 package com.google.devtools.mobileharness.platform.android.packagemanager;
 
 import com.google.auto.value.AutoValue;
-import com.google.auto.value.extension.memoized.Memoized;
 import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Common args for adb app installation: install, install-multiple, install-multi-package. Only used
@@ -68,29 +65,38 @@ public abstract class InstallCmdArgs {
 
   abstract Builder toBuilder();
 
-  @Memoized
+  /** Gets the install args array. */
   public String[] getInstallArgsArray() {
-    List<String> argList = new ArrayList<>();
+    return getInstallArgsArray(Integer.MAX_VALUE);
+  }
+
+  /**
+   * Gets the install args array for the given sdk version.
+   *
+   * @param sdkVersion the sdk version of the device, used to determine if the arg is supported.
+   */
+  public String[] getInstallArgsArray(int sdkVersion) {
+    ImmutableList.Builder<String> args = ImmutableList.builder();
     if (replaceExistingApp()) {
-      argList.add(ARG_REPLACE_EXISTING_APP);
+      args.add(ARG_REPLACE_EXISTING_APP);
     }
     if (allowTestPackages()) {
-      argList.add(ARG_ALLOW_TEST_PACKAGES);
+      args.add(ARG_ALLOW_TEST_PACKAGES);
     }
-    if (allowVersionCodeDowngrade()) {
-      argList.add(ARG_ALLOW_VERSION_CODE_DOWNGRADE);
+    if (allowVersionCodeDowngrade() && sdkVersion >= 17) {
+      args.add(ARG_ALLOW_VERSION_CODE_DOWNGRADE);
     }
-    if (grantPermissions()) {
-      argList.add(ARG_GRANT_PERMISSIONS);
+    if (grantPermissions() && sdkVersion >= 23) {
+      args.add(ARG_GRANT_PERMISSIONS);
     }
-    if (instant()) {
-      argList.add(ARG_INSTANT);
+    if (instant() && sdkVersion >= 26) {
+      args.add(ARG_INSTANT);
     }
-    if (forceNoStreaming()) {
-      argList.add(ARG_FORCE_NO_STREAMING);
+    if (forceNoStreaming() && sdkVersion >= 27) {
+      args.add(ARG_FORCE_NO_STREAMING);
     }
-    argList.addAll(extraArgs());
-    return argList.toArray(new String[0]);
+    args.addAll(extraArgs());
+    return args.build().toArray(new String[0]);
   }
 
   /** Gets default InstallArgs builder instance. */

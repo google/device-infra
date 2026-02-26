@@ -82,16 +82,6 @@ public class AndroidPackageManagerUtil {
   /** ADB arg of uninstalation. Should be followed with a package name. */
   @VisibleForTesting static final String ADB_ARG_UNINSTALL = "uninstall";
 
-  /** ADB args for installing a APK. Should be followed by the path of the APK. */
-  @VisibleForTesting static final String[] ADB_ARGS_INSTALL = new String[] {"install", "-r", "-t"};
-
-  /**
-   * ADB args for installing an app with multiple files (APK or Dex Metadata files). Should be
-   * followed by the space-delimited paths of multiple files.
-   */
-  @VisibleForTesting
-  static final String[] ADB_ARGS_INSTALL_MULTIPLE = new String[] {"install-multiple", "-r"};
-
   /**
    * split_1.apk:split_2.apk:...:split_n.apk. All apks in each item are the split apks belong to a
    * single package.
@@ -103,8 +93,7 @@ public class AndroidPackageManagerUtil {
 
   /** ADB shell command for installing a package. */
   @VisibleForTesting
-  static final ImmutableList<String> ADB_SHELL_INSTALL_PACKAGE =
-      ImmutableList.of("pm", "install", "-r", "-t");
+  static final ImmutableList<String> ADB_SHELL_INSTALL_PACKAGE = ImmutableList.of("pm", "install");
 
   /** ADB shell command for uninstalling a package. Should be followed by the package name. */
   @VisibleForTesting static final String ADB_SHELL_UNINSTALL_PACKAGE = "pm uninstall";
@@ -1019,14 +1008,18 @@ public class AndroidPackageManagerUtil {
       throws MobileHarnessException, InterruptedException {
     installApk(
         utilArgs,
+        InstallCmdArgs.builder()
+            .setReplaceExistingApp(true)
+            .setAllowTestPackages(true)
+            .setAllowVersionCodeDowngrade(true)
+            .setGrantPermissions(grantPermissions)
+            .addExtraArgs(extraArgs)
+            .build(),
         packageName,
         apkPath,
         null,
-        grantPermissions,
-        /* forceNoStreaming= */ false,
         /* isRemoteInstall= */ true,
-        installTimeout,
-        extraArgs);
+        installTimeout);
   }
 
   /**
@@ -1112,30 +1105,30 @@ public class AndroidPackageManagerUtil {
 
     installApk(
         utilArgs,
+        InstallCmdArgs.builder()
+            .setReplaceExistingApp(true)
+            .setAllowTestPackages(true)
+            .setAllowVersionCodeDowngrade(true)
+            .setGrantPermissions(grantPermissions)
+            .setForceNoStreaming(forceNoStreaming)
+            .addExtraArgs(extraArgs)
+            .build(),
         packageName,
         apkPath,
         dexMetadataPath,
-        grantPermissions,
-        forceNoStreaming,
         /* isRemoteInstall= */ false,
-        installTimeout,
-        extraArgs);
+        installTimeout);
   }
 
   private void installApk(
       UtilArgs utilArgs,
+      InstallCmdArgs installCmdArgs,
       String packageName,
       String apkPath,
       @Nullable String dexMetadataPath,
-      boolean grantPermissions,
-      boolean forceNoStreaming,
       boolean isRemoteInstall,
-      @Nullable Duration installTimeout,
-      String... extraArgs)
+      @Nullable Duration installTimeout)
       throws MobileHarnessException, InterruptedException {
-    // Installs the apk.
-    // "-d" only works with 17+ devices to allow app downgrade.
-    // "-g" only works with 23+ devices to grant all required permissions.
     String serial = utilArgs.serial();
     int sdkVersion = utilArgs.sdkVersion().orElse(0);
     String[] installFiles =
@@ -1143,21 +1136,10 @@ public class AndroidPackageManagerUtil {
     String[] installCommand =
         isRemoteInstall
             ? ADB_SHELL_INSTALL_PACKAGE.toArray(new String[0])
-            : installFiles.length > 1 ? ADB_ARGS_INSTALL_MULTIPLE : ADB_ARGS_INSTALL;
-    if (sdkVersion >= 17) {
-      installCommand = ArrayUtil.join(installCommand, "-d");
-    }
-    if (sdkVersion >= 23 && grantPermissions) {
-      installCommand = ArrayUtil.join(installCommand, "-g");
-    }
-
-    if (sdkVersion >= 27 && forceNoStreaming) {
-      installCommand = ArrayUtil.join(installCommand, "--no-streaming");
-    }
-
-    if (extraArgs.length > 0) {
-      installCommand = ArrayUtil.join(installCommand, extraArgs);
-    }
+            : installFiles.length > 1
+                ? new String[] {"install-multiple"}
+                : new String[] {"install"};
+    installCommand = ArrayUtil.join(installCommand, installCmdArgs.getInstallArgsArray(sdkVersion));
 
     if (utilArgs.userId().isPresent()) {
       installCommand = ArrayUtil.join(installCommand, "--user", utilArgs.userId().get());
