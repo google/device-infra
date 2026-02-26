@@ -24,7 +24,10 @@ java_library(
     name = "get_device_config_handler",
     srcs = ["GetDeviceConfigHandler.java"],
     deps = [
+        "//src/devtools/mobileharness/fe/v6/service/proto/config:config_resources_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/config:config_service_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",

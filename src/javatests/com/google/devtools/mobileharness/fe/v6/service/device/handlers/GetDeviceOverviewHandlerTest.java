@@ -61,6 +61,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.device.HealthAndAct
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HealthState;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HostInfo;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
+import com.google.devtools.mobileharness.fe.v6.service.util.Environment;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 import com.google.inject.Guice;
@@ -144,6 +145,7 @@ public final class GetDeviceOverviewHandlerTest {
   @Bind @Mock private LabInfoProvider labInfoProvider;
   @Bind @Mock private ConfigurationProvider configurationProvider;
   @Bind @Mock private DeviceHeaderInfoBuilder deviceHeaderInfoBuilder;
+  @Bind @Mock private Environment environment;
 
   @Bind private ListeningExecutorService executorService = newDirectExecutorService();
   @Bind private InstantSource instantSource = InstantSource.fixed(NOW);
@@ -159,14 +161,16 @@ public final class GetDeviceOverviewHandlerTest {
         .thenReturn(immediateFuture(DEFAULT_LAB_INFO_RESPONSE));
     when(configurationProvider.getDeviceConfig(any(), any()))
         .thenReturn(immediateFuture(Optional.empty()));
+    // By default, assume Config Service is available but returns nothing
     when(configurationProvider.getLabConfig(any(), any()))
-        .thenReturn(immediateFuture(Optional.empty()));
+        .thenReturn(immediateFuture(Optional.of(LabConfig.getDefaultInstance())));
     when(deviceHeaderInfoBuilder.buildDeviceHeaderInfo(any(), any(), any()))
         .thenReturn(
             DeviceHeaderInfo.newBuilder()
                 .setId(DEVICE_ID)
                 .setHost(HostInfo.newBuilder().setName(HOST_NAME))
                 .build());
+    when(environment.isGoogleInternal()).thenReturn(true);
   }
 
   private void mockDeviceInfo(DeviceInfo deviceInfo) {
@@ -242,15 +246,18 @@ public final class GetDeviceOverviewHandlerTest {
   }
 
   @Test
-  public void getDeviceOverview_deviceConfigFails() throws Exception {
+  public void getDeviceOverview_deviceConfigFails_gracefulFallback() throws Exception {
     when(configurationProvider.getDeviceConfig(any(), any()))
         .thenReturn(immediateFailedFuture(new RuntimeException("Config error")));
 
     ListenableFuture<DeviceOverviewPageData> responseFuture =
         getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST);
 
-    ExecutionException e = assertThrows(ExecutionException.class, responseFuture::get);
-    assertThat(e).hasCauseThat().isInstanceOf(RuntimeException.class);
+    // Should NOT throw exception, but return metadata with no config dimensions
+    DeviceOverviewPageData response = responseFuture.get();
+    assertThat(response.getOverview().getId()).isEqualTo(DEVICE_ID);
+    assertThat(response.getOverview().getDimensions().getSupportedMap())
+        .doesNotContainKey("From Device Config");
   }
 
   @Test
@@ -423,8 +430,34 @@ public final class GetDeviceOverviewHandlerTest {
         .containsExactlyEntriesIn(expectedSupported);
     assertThat(response.getDimensions().getRequiredMap())
         .containsExactlyEntriesIn(expectedRequired);
-    // Verify DeviceConfig future was cancelled
-    verify(configurationProvider).getDeviceConfig(any(), any());
+  }
+
+  @Test
+  public void getDeviceOverview_configServiceUnavailable_gracefulFallback() throws Exception {
+    // Scenario (2)/(3): Config service is down or access denied
+    when(configurationProvider.getLabConfig(any(), any()))
+        .thenReturn(immediateFailedFuture(new StatusRuntimeException(Status.PERMISSION_DENIED)));
+
+    DeviceOverviewPageData response =
+        getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST).get();
+
+    assertThat(response.getOverview().getId()).isEqualTo(DEVICE_ID);
+    // All dimensions should be under "Detected"
+    assertThat(response.getOverview().getDimensions().getSupportedMap())
+        .containsExactly(
+            "Detected by OmniLab",
+            DimensionSourceGroup.newBuilder()
+                .addDimensions(
+                    com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceDimension
+                        .newBuilder()
+                        .setName("detected_supported")
+                        .setValue("val1"))
+                .addDimensions(
+                    com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceDimension
+                        .newBuilder()
+                        .setName("config_supported")
+                        .setValue("val3"))
+                .build());
   }
 
   // Tests for HealthAndActivityInfo
