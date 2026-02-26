@@ -1,0 +1,13 @@
+profiles:
+  m5stack_cores3:
+    fqbn: m5stack:esp32:m5stack_cores3
+    platforms:
+      - platform: m5stack:esp32 (3.2.5)
+        platform_index_url: https://static-cdn.m5stack.com/resource/arduino/package_m5stack_index.json
+    libraries:
+      - M5Unified (0.2.13)
+      - M5GFX (0.2.19)
+      - Adafruit PWM Servo Driver Library (3.0.2)
+      - Adafruit BusIO (1.17.4)
+
+default_profile: m5stack_cores3
