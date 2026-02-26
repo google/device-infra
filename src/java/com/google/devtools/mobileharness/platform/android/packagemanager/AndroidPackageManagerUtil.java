@@ -178,6 +178,19 @@ public class AndroidPackageManagerUtil {
   public static final String OUTPUT_INSTALL_FAILED_DUPLICATE_PERMISSION =
       "INSTALL_FAILED_DUPLICATE_PERMISSION";
 
+  /**
+   * Output when the install failed due to duplication. E.g.
+   *
+   * <ul>
+   *   <li>{@code adb install-multi-package app.apk:otherApp.apk} - Tries to installs two separate
+   *       apps, using the syntax for a single multi-split app.
+   *   <li>{@code adb install-multiple app.apk theSameApp.apk} - Tries to install the same app
+   *       twice, using different files.
+   * </ul>
+   */
+  public static final String OUTPUT_INSTALL_FAILED_INVALID_APK_SPLIT_NULL =
+      "INSTALL_FAILED_INVALID_APK: Split null was defined multiple times";
+
   /** Output when the install app failed by invalid apk. */
   public static final String OUTPUT_INSTALL_FAILED_INVALID_APK = "INSTALL_FAILED_INVALID_APK";
 
@@ -277,10 +290,6 @@ public class AndroidPackageManagerUtil {
   /** Parser encountered an unexpected exception. */
   public static final String OUTPUT_INSTALL_PARSE_FAILED_UNEXPECTED_EXCEPTION =
       "INSTALL_PARSE_FAILED_UNEXPECTED_EXCEPTION";
-
-  /** Output when the install app failed by duplicate permission. */
-  public static final String OUTPUT_INSTALL_FAILED_INVALID_APK_SPLIT_NULL =
-      "INSTALL_FAILED_INVALID_APK: Split null was defined multiple times";
 
   /** Prefix out the output lines of the "adb shell pm list package -3" command. */
   @VisibleForTesting static final String OUTPUT_PACKAGE_PREFIX = "package:";
@@ -1445,16 +1454,6 @@ public class AndroidPackageManagerUtil {
     }
 
     if (!allSessionsSuccess(output)) {
-      if (output.contains(OUTPUT_INSTALL_FAILED_VERSION_DOWNGRADE)) {
-        throw new MobileHarnessException(
-            AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_VERSION_DOWNGRADE,
-            String.format("install-multi-package error: %s", output));
-      }
-      if (output.contains(OUTPUT_INSTALL_FAILED_INVALID_APK_SPLIT_NULL)) {
-        throw new MobileHarnessException(
-            AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_INVALID_APK_SPLIT_NULL,
-            String.format("install-multi-package error: %s. See" + " for more details.", output));
-      }
       maybeThrowNonInfraInstallationError(output, packageMap.values().toString());
       maybeThrowSecondaryNonInfraInstallationError(output, packageMap.values().toString());
       throwInstallationError(
@@ -2084,6 +2083,16 @@ public class AndroidPackageManagerUtil {
               apk, output));
     }
 
+    if (output.contains(OUTPUT_INSTALL_FAILED_INVALID_APK_SPLIT_NULL)) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_INVALID_APK_SPLIT_NULL,
+          String.format(
+              "Multi-installation of %s failed due to duplication of splits or duplication of apps:"
+                  + " %s. See"
+                  + " for more details.",
+              apk, output));
+    }
+
     if (output.contains(OUTPUT_INSTALL_FAILED_INVALID_APK)) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_INVALID_APK,
@@ -2230,6 +2239,11 @@ public class AndroidPackageManagerUtil {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_UPDATE_INCOMPATIBLE,
           String.format("Failed to install %s due to incompatible update: %s", apk, output));
+    }
+    if (output.contains(OUTPUT_INSTALL_FAILED_VERSION_DOWNGRADE)) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_VERSION_DOWNGRADE,
+          String.format("Failed to install %s due to version downgrade error: %s", apk, output));
     }
   }
 
