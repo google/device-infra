@@ -20,6 +20,7 @@ package(
     default_visibility = [
         "//:deviceinfra_all_pkg",
         "//:omnilab_fusion",
+        "//java/com/google/testing/helium/devicemaster/wrangler/publisher:__subpackages__",
     ],
 )
 
