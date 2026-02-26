@@ -760,10 +760,14 @@ public class AndroidAdbUtil {
   /**
    * Whether device is rooted.
    *
+   * <p>Important: This method is not reliable, avoid using it. Instead, use "adb root" to determine
+   * if the device is rooted.
+   *
    * @param serial serial number of device.
    * @throws InterruptedException
    * @throws MobileHarnessException
    */
+  @Deprecated
   public boolean isRooted(String serial) throws MobileHarnessException, InterruptedException {
     String output = "";
     try {
