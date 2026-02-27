@@ -9,12 +9,13 @@ function usage()
    Usage: $progname [--device DEVICE] [--verbose] [--repair] [--deploy] [--latest-paris]
 
    optional arguments:
-     -h, --help           show this help message and exit
-     -v, --verbose        increase the verbosity of the bash script
-     -d, --device DEVICE  device hostname[:port]
-     --latest-paris       Use latest paris version (default: prod)
-     --repair             repair the device
-     --deploy             deploy the device
+     -h, --help               show this help message and exit
+     -v, --verbose            increase the verbosity of the bash script
+     -d, --device DEVICE      device hostname[:port]
+     --latest-paris           Use latest paris version (default: prod)
+     --repair                 repair the device
+     --deploy                 deploy the device
+     --depot-tools-path PATH  path to depot tools (default: /usr/local/google/mobileharness/ate/cipd_packages)
 
 HEREDOC
 }
@@ -26,6 +27,7 @@ deploy=0
 repair=0
 device=""
 useLatestParis=0
+depotToolsPath="/usr/local/google/mobileharness/ate/cipd_packages"
 port="5555"
 user=`whoami`
 tm=`date +"%Y-%m-%d_%H%M%S_%N"`
@@ -36,7 +38,7 @@ namespace=${UFS_NAMESPACE:-os}
 # use getopt and store the output into $OPTS
 # note the use of -o for the short options, --long for the long name options
 # and a : for any option that takes a parameter
-OPTS=$(getopt -o "hd:v" --long "help,device:,verbose,repair,deploy,latest-paris" -n "$progname" -- "$@")
+OPTS=$(getopt -o "hd:v" --long "help,device:,verbose,repair,deploy,latest-paris,depot-tools-path:" -n "$progname" -- "$@")
 if [ $? != 0 ] ; then echo "Error in command line arguments." >&2 ; usage; exit 1 ; fi
 eval set -- "$OPTS"
 
@@ -49,6 +51,7 @@ while true; do
     --latest-paris ) useLatestParis=1; shift 1 ;;
     --repair ) repair=1; shift ;;
     --deploy ) deploy=1; shift ;;
+    --depot-tools-path ) depotToolsPath="$2"; shift 2 ;;
     -v | --verbose ) verbose=$((verbose + 1)); shift ;;
     -- ) shift; break ;;
     * ) break ;;
@@ -58,6 +61,11 @@ done
 if [ -z "${device}" ]; then
   echo "device is empty"
   exit -1
+fi
+
+if [ ! -x "${depotToolsPath}/cipd" ]; then
+  echo "Error: cipd executable not found at ${depotToolsPath}/cipd. Please check --depot-tools-path."
+  exit 1
 fi
 
 if [[ $device =~ ":" ]]; then
@@ -109,7 +117,6 @@ exitEarlyIfExistingRepairJobRunning "${device}"
 
 cd "${dd}"
 # download paris
-depotToolsPath="/usr/local/google/mobileharness/runtime_files/recovery/depot_tools"
 "${depotToolsPath}"/cipd init -force -cache-dir "${pd}"
 
 if [[ $useLatestParis -eq 1 ]]; then
