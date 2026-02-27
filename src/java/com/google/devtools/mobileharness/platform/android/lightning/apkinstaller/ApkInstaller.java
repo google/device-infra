@@ -55,6 +55,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.logging.Level;
 import javax.annotation.Nullable;
@@ -904,9 +905,13 @@ public class ApkInstaller {
             .build();
     if (utilArgs.sdkVersion().isPresent()
         && utilArgs.sdkVersion().getAsInt() <= AndroidVersion.PI.getEndSdkVersion()) {
-      for (Collection<String> apkPaths : packageMap.asMap().values()) {
+      for (Map.Entry<String, Collection<String>> packageEntry : packageMap.asMap().entrySet()) {
         androidPackageManagerUtil.installMultiple(
-            utilArgs, installCmdArgs, apkPaths, installTimeout);
+            utilArgs,
+            installCmdArgs,
+            packageEntry.getKey(),
+            packageEntry.getValue(),
+            installTimeout);
       }
     } else {
       androidPackageManagerUtil.installMultiPackage(

@@ -1015,7 +1015,7 @@ public class AndroidPackageManagerUtil {
       @Nullable Duration installTimeout,
       String... extraArgs)
       throws MobileHarnessException, InterruptedException {
-    installApk(
+    installPackage(
         utilArgs,
         InstallCmdArgs.builder()
             .setReplaceExistingApp(true)
@@ -1025,8 +1025,7 @@ public class AndroidPackageManagerUtil {
             .addExtraArgs(extraArgs)
             .build(),
         packageName,
-        apkPath,
-        null,
+        ImmutableList.of(apkPath),
         /* isRemoteInstall= */ true,
         installTimeout);
   }
@@ -1112,7 +1111,12 @@ public class AndroidPackageManagerUtil {
           AndroidErrorId.ANDROID_PKG_MNGR_UTIL_GET_PACKAGE_NAME_ERROR, e.getMessage(), e);
     }
 
-    installApk(
+    ImmutableList<String> artifactPaths =
+        dexMetadataPath != null
+            ? ImmutableList.of(apkPath, dexMetadataPath)
+            : ImmutableList.of(apkPath);
+
+    installPackage(
         utilArgs,
         InstallCmdArgs.builder()
             .setReplaceExistingApp(true)
@@ -1123,25 +1127,38 @@ public class AndroidPackageManagerUtil {
             .addExtraArgs(extraArgs)
             .build(),
         packageName,
-        apkPath,
-        dexMetadataPath,
+        artifactPaths,
         /* isRemoteInstall= */ false,
         installTimeout);
   }
 
-  private void installApk(
+  /**
+   * Installs the given package to a specific device. If the installation fails (both installation
+   * on internal storage and external storage), will try to uninstall and reinstall again.
+   *
+   * <p>Uses {@code install} for single APK and {@code install-multiple} for multiple split APKs or
+   * dex metadata files.
+   *
+   * @param utilArgs args with serial, sdkVersion and userId
+   * @param installCmdArgs args to the install command
+   * @param packageName name of the package
+   * @param artifactPaths paths of the package files (apks and dex metadata file)
+   * @param isRemoteInstall whether the installation is remote, only supports single apk
+   * @param installTimeout timeout for APK installation
+   * @throws MobileHarnessException if error occurs
+   * @throws InterruptedException if the thread executing the commands is interrupted
+   */
+  private void installPackage(
       UtilArgs utilArgs,
       InstallCmdArgs installCmdArgs,
       String packageName,
-      String apkPath,
-      @Nullable String dexMetadataPath,
+      Collection<String> artifactPaths,
       boolean isRemoteInstall,
       @Nullable Duration installTimeout)
       throws MobileHarnessException, InterruptedException {
     String serial = utilArgs.serial();
     int sdkVersion = utilArgs.sdkVersion().orElse(0);
-    String[] installFiles =
-        dexMetadataPath != null ? new String[] {apkPath, dexMetadataPath} : new String[] {apkPath};
+    String[] installFiles = artifactPaths.toArray(new String[0]);
     String[] installCommand =
         isRemoteInstall
             ? ADB_SHELL_INSTALL_PACKAGE.toArray(new String[0])
@@ -1181,8 +1198,8 @@ public class AndroidPackageManagerUtil {
       installThrowsException = true;
       output = e.getMessage();
       logger.atWarning().log(
-          "Failed to install apk %s to device %s on [Internal Storage]:%n%s%n",
-          apkPath, serial, output);
+          "Failed to install package %s to device %s on [Internal Storage]:%n%s%n",
+          packageName, serial, output);
     }
 
     if (installThrowsException) {
@@ -1204,28 +1221,29 @@ public class AndroidPackageManagerUtil {
                 : adb.run(serial, installOnExternalCommand, timeout, lineCallback);
         if (outputByExternal.contains(OUTPUT_SUCCESS)) {
           logger.atInfo().log(
-              "Successfully installed apk %s to device %s:%n%s on [External Storage]",
-              apkPath, serial, cutInstallOutput(outputByExternal));
+              "Successfully installed package %s to device %s:%n%s on [External Storage]",
+              packageName, serial, cutInstallOutput(outputByExternal));
           return;
         }
       } catch (MobileHarnessException ee) {
         logger.atWarning().withCause(ee).log(
-            "Failed to install apk %s to device %s on [External Storage]:%n%s%n",
-            apkPath, serial, outputByExternal);
+            "Failed to install package %s to device %s on [External Storage]:%n%s%n",
+            packageName, serial, outputByExternal);
       }
     } else {
       // Install does not throw exception
       if (output.contains(OUTPUT_SUCCESS)) {
         logger.atInfo().log(
-            "Successfully installed apk %s to device %s:%n%s on [Internal Storage]",
-            apkPath, serial, cutInstallOutput(output));
+            "Successfully installed package %s to device %s:%n%s on [Internal Storage]",
+            packageName, serial, cutInstallOutput(output));
         return;
       }
     }
 
-    maybeThrowNonInfraInstallationError(output, apkPath);
+    maybeThrowNonInfraInstallationError(output, packageName);
 
-    logger.atWarning().log("Failed to install apk %s to device %s:%n%s", apkPath, serial, output);
+    logger.atWarning().log(
+        "Failed to install package %s to device %s:%n%s", packageName, serial, output);
     // Uninstalls the existing package.
     try {
       uninstallApk(utilArgs, packageName);
@@ -1235,7 +1253,7 @@ public class AndroidPackageManagerUtil {
               "Failed to install on internal storage %s:%n%s%n"
                   + "Also failed to install on external storage %s:%n%s%n"
                   + "Try to uninstall package %s but failed too:%n%s%n",
-              apkPath, output, apkPath, outputByExternal, packageName, e.getMessage());
+              packageName, output, packageName, outputByExternal, packageName, e.getMessage());
 
       if (output.contains(OUTPUT_INSTALL_FAILED_UPDATE_INCOMPATIBLE)) {
         throw new MobileHarnessException(
@@ -1245,13 +1263,13 @@ public class AndroidPackageManagerUtil {
         throw new MobileHarnessException(
             AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_NO_VALID_UID_ASSIGNED,
             String.format(
-                "Failed to install apk %s on device [%s] because no valid UID assigned: %s\n"
+                "Failed to install package %s on device [%s] because no valid UID assigned: %s\n"
                     + "Please consider one of below options:\n"
                     + "1) adding param reboot_after_uninstallation:true to your test if it uses"
                     + " AndroidCleanAppsDecorator.\n"
                     + "2) rebooting device [%s].\n"
                     + "3) running on a different device.",
-                apkPath, serial, output, serial));
+                packageName, serial, output, serial));
       }
       if (AdbOutputParsingUtil.isAdbOutputOfInstallationInsufficientStorage(output)) {
         if (DeviceUtil.inSharedLab()) {
@@ -1301,16 +1319,17 @@ public class AndroidPackageManagerUtil {
               ? adb.runShell(serial, installCommand, timeout, lineCallback)
               : adb.run(serial, installCommand, timeout, lineCallback);
     } catch (MobileHarnessException e) {
-      maybeThrowSecondaryNonInfraInstallationError(output, apkPath);
-      throwInstallationError("Fail to install " + apkPath + " twice: " + e.getMessage(), e);
+      maybeThrowSecondaryNonInfraInstallationError(output, packageName);
+      throwInstallationError("Fail to install " + packageName + " twice: " + e.getMessage(), e);
     }
     if (!output.contains(OUTPUT_SUCCESS)) {
-      throwInstallationError("Fail to install " + apkPath + " twice: " + output, /* cause= */ null);
+      throwInstallationError(
+          "Fail to install " + packageName + " twice: " + output, /* cause= */ null);
     }
 
     logger.atWarning().log(
-        "Successfully install apk %s to device %s after uninstalling existing package %s",
-        apkPath, serial, packageName);
+        "Successfully installed package %s to device %s after uninstalling existing package",
+        packageName, serial);
   }
 
   /**
@@ -1469,6 +1488,7 @@ public class AndroidPackageManagerUtil {
    *
    * @param utilArgs args with serial, sdkVersion and userId
    * @param installCmdArgs adb install args
+   * @param packageName name of the package to be installed
    * @param apks a list of APK splits to be installed
    * @param installTimeout timeout for installation
    * @throws MobileHarnessException if install command fails
@@ -1477,6 +1497,7 @@ public class AndroidPackageManagerUtil {
   public void installMultiple(
       UtilArgs utilArgs,
       InstallCmdArgs installCmdArgs,
+      String packageName,
       Collection<String> apks,
       @Nullable Duration installTimeout)
       throws MobileHarnessException, InterruptedException {
@@ -1489,48 +1510,11 @@ public class AndroidPackageManagerUtil {
               "Install-multiple support requires the minimal API level to be %d",
               DEFAULT_INSTALL_MULTIPLE_START_SDK_VERSION));
     }
-
     if (apks.isEmpty()) {
       logger.atWarning().log("No package to install.");
       return;
     }
-
-    String[] installCommand =
-        ArrayUtil.join("install-multiple", installCmdArgs.getInstallArgsArray());
-    if (utilArgs.userId().isPresent()) {
-      installCommand = ArrayUtil.join(installCommand, "--user", utilArgs.userId().get());
-    }
-    installCommand = ArrayUtil.join(installCommand, apks.toArray(new String[0]));
-
-    String serial = utilArgs.serial();
-    String output = "";
-    Duration timeout =
-        installTimeout == null ? DEFAULT_INSTALL_TIMEOUT.multipliedBy(apks.size()) : installTimeout;
-
-    logger.atInfo().log("Start install apks to device %s", serial);
-
-    try {
-      output =
-          adb.run(
-              serial,
-              installCommand,
-              timeout,
-              LineCallback.stopWhen(
-                  line -> line.startsWith(OUTPUT_SUCCESS) || line.startsWith(OUTPUT_FAILURE)));
-    } catch (MobileHarnessException e) {
-      maybeThrowNonInfraInstallationError(e.getMessage(), apks.toString());
-      maybeThrowSecondaryNonInfraInstallationError(e.getMessage(), apks.toString());
-      throwInstallationError("install-multiple command killed", e);
-    }
-
-    if (!output.contains(OUTPUT_SUCCESS)) {
-      maybeThrowNonInfraInstallationError(output, apks.toString());
-      maybeThrowSecondaryNonInfraInstallationError(output, apks.toString());
-      throwInstallationError(
-          String.format("Failed to install apks %s to device %s", apks, serial), null);
-    }
-
-    logger.atInfo().log("Successfully installed apks %s to device %s", apks, serial);
+    installPackage(utilArgs, installCmdArgs, packageName, apks, false, installTimeout);
   }
 
   /**
@@ -2052,26 +2036,27 @@ public class AndroidPackageManagerUtil {
    * Throws a non-infra installation error for well-known installation errors detected in the ADB
    * output, otherwise does nothing.
    */
-  private static void maybeThrowNonInfraInstallationError(String output, String apk)
+  private static void maybeThrowNonInfraInstallationError(String output, String packageName)
       throws MobileHarnessException {
     if (output.contains(OUTPUT_INSTALL_FAILED_CPU_ABI_INCOMPATIBLE)) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_CPU_ABI_INCOMPATIBLE,
           String.format(
               "Failed to install %s due to CPU ABI incompatible between app and device: %s",
-              apk, output));
+              packageName, output));
     }
 
     if (output.contains(OUTPUT_INSTALL_FAILED_DEPRECATED_SDK_VERSION)) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_DEPRECATED_SDK_VERSION,
-          String.format("Failed to install %s due to deprecated SDK version: %s", apk, output));
+          String.format(
+              "Failed to install %s due to deprecated SDK version: %s", packageName, output));
     }
 
     if (output.contains(OUTPUT_INSTALL_FAILED_DEXOPT)) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_DEXOPT,
-          String.format("Failed to install %s due to dexopt error: %s", apk, output));
+          String.format("Failed to install %s due to dexopt error: %s", packageName, output));
     }
 
     if (output.contains(OUTPUT_INSTALL_FAILED_DUPLICATE_PERMISSION)) {
@@ -2080,7 +2065,7 @@ public class AndroidPackageManagerUtil {
           String.format(
               "Failed to install %s due to a defined permission is already defined by some existing"
                   + " package: %s",
-              apk, output));
+              packageName, output));
     }
 
     if (output.contains(OUTPUT_INSTALL_FAILED_INVALID_APK_SPLIT_NULL)) {
@@ -2090,20 +2075,22 @@ public class AndroidPackageManagerUtil {
               "Multi-installation of %s failed due to duplication of splits or duplication of apps:"
                   + " %s. See"
                   + " for more details.",
-              apk, output));
+              packageName, output));
     }
 
     if (output.contains(OUTPUT_INSTALL_FAILED_INVALID_APK)) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_INVALID_APK,
-          String.format("Failed to install %s due to an invalid apk file: %s", apk, output));
+          String.format(
+              "Failed to install %s due to an invalid apk file: %s", packageName, output));
     }
 
     if (output.contains(OUTPUT_INSTALL_FAILED_MISSING_FEATURE)) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_MISSING_FEATURE,
           String.format(
-              "Failed to install %s due to a missing feature on the device: %s", apk, output));
+              "Failed to install %s due to a missing feature on the device: %s",
+              packageName, output));
     }
     if (output.contains(OUTPUT_INSTALL_FAILED_MISSING_SHARED_LIBRARY)) {
       throw new MobileHarnessException(
@@ -2111,13 +2098,14 @@ public class AndroidPackageManagerUtil {
           String.format(
               "Failed to install %s due to missing shared libraries: %s%n"
                   + "Please check <uses-library> element in your manifest.%n",
-              apk, output));
+              packageName, output));
     }
 
     if (output.contains(OUTPUT_INSTALL_FAILED_MISSING_SPLIT)) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_MISSING_SPLIT,
-          String.format("Failed to install %s due to missing split APKs: %s%n", apk, output));
+          String.format(
+              "Failed to install %s due to missing split APKs: %s%n", packageName, output));
     }
 
     if (output.contains(OUTPUT_INSTALL_FAILED_NEWER_SDK)) {
@@ -2126,14 +2114,14 @@ public class AndroidPackageManagerUtil {
           String.format(
               "Failed to install %s, because current SDK is newer than that required by the "
                   + " package: %s",
-              apk, output));
+              packageName, output));
     }
 
     if (output.contains(OUTPUT_INSTALL_FAILED_NO_MATCHING_ABIS)) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_ABI_INCOMPATIBLE,
           "Failed to install "
-              + apk
+              + packageName
               + " due to no matching abis: "
               + output
               + "\n"
@@ -2143,86 +2131,93 @@ public class AndroidPackageManagerUtil {
     if (output.contains(OUTPUT_INSTALL_FAILED_OLDER_SDK)) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_OLDER_SDK,
-          String.format("Failed to install %s due to the older sdk: %s", apk, output));
+          String.format("Failed to install %s due to the older sdk: %s", packageName, output));
     }
 
     if (output.contains(OUTPUT_INSTALL_FAILED_PERMISSION_MODEL_DOWNGRADE)) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_PERMISSION_MODEL_DOWNGRADE,
-          String.format("Failed to install %s due to permission model downgrade: %s", apk, output));
+          String.format(
+              "Failed to install %s due to permission model downgrade: %s", packageName, output));
     }
 
     if (output.contains(OUTPUT_INSTALL_FAILED_SHARED_USER_INCOMPATIBLE)) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_SHARED_USER_INCOMPATIBLE,
-          String.format("Failed to install %s due to shared user incompatible: %s", apk, output));
+          String.format(
+              "Failed to install %s due to shared user incompatible: %s", packageName, output));
     }
 
     if (output.contains(OUTPUT_INSTALL_FAILED_TEST_ONLY)) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_TEST_ONLY,
           String.format(
-              "Failed to install %s due to test only flag set in the package: %s", apk, output));
+              "Failed to install %s due to test only flag set in the package: %s",
+              packageName, output));
     }
 
     if (output.contains(OUTPUT_INSTALL_FAILED_VERIFICATION_FAILURE)) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_PKG_MNGR_UTIL_FAILED_VERIFICATION_FAILURE,
-          String.format("Failed to install %s due to verification error: %s", apk, output));
+          String.format("Failed to install %s due to verification error: %s", packageName, output));
     }
 
     if (output.contains(OUTPUT_INSTALL_PARSE_FAILED_BAD_MANIFEST)) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_PARSE_FAILED_BAD_MANIFEST,
-          String.format("Failed to install %s due to bad manifest: %s", apk, output));
+          String.format("Failed to install %s due to bad manifest: %s", packageName, output));
     }
 
     if (output.contains(OUTPUT_INSTALL_PARSE_FAILED_BAD_PACKAGE_NAME)) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_PARSE_FAILED_BAD_PACKAGE_NAME,
-          String.format("Failed to install %s due to bad package name: %s", apk, output));
+          String.format("Failed to install %s due to bad package name: %s", packageName, output));
     }
 
     if (output.contains(OUTPUT_INSTALL_PARSE_FAILED_BAD_SHARED_USER_ID)) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_PARSE_FAILED_BAD_SHARED_USER_ID,
-          String.format("Failed to install %s due to bad shared user id: %s", apk, output));
+          String.format("Failed to install %s due to bad shared user id: %s", packageName, output));
     }
 
     if (output.contains(OUTPUT_INSTALL_PARSE_FAILED_CERTIFICATE_ENCODING)) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_PARSE_FAILED_CERTIFICATE_ENCODING,
-          String.format("Failed to install %s due to certificate encoding: %s", apk, output));
+          String.format(
+              "Failed to install %s due to certificate encoding: %s", packageName, output));
     }
 
     if (output.contains(OUTPUT_INSTALL_PARSE_FAILED_INCONSISTENT_CERTIFICATES)) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_PARSE_FAILED_INCONSISTENT_CERTIFICATES,
-          String.format("Failed to install %s due to inconsistent certificates: %s", apk, output));
+          String.format(
+              "Failed to install %s due to inconsistent certificates: %s", packageName, output));
     }
 
     if (output.contains(OUTPUT_INSTALL_PARSE_FAILED_MANIFEST_EMPTY)) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_PARSE_FAILED_MANIFEST_EMPTY,
-          String.format("Failed to install %s due to manifest empty: %s", apk, output));
+          String.format("Failed to install %s due to manifest empty: %s", packageName, output));
     }
 
     if (output.contains(OUTPUT_INSTALL_PARSE_FAILED_MANIFEST_MALFORMED)) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_PARSE_FAILED_MANIFEST_MALFORMED,
-          String.format("Failed to install %s due to the manifest marlformed: %s", apk, output));
+          String.format(
+              "Failed to install %s due to the manifest marlformed: %s", packageName, output));
     }
 
     if (output.contains(OUTPUT_INSTALL_PARSE_FAILED_NO_CERTIFICATES)) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_PARSE_FAILED_NO_CERTIFICATES,
-          String.format("Failed to install %s due to no certificates: %s", apk, output));
+          String.format("Failed to install %s due to no certificates: %s", packageName, output));
     }
 
     if (output.contains(OUTPUT_INSTALL_PARSE_FAILED_UNEXPECTED_EXCEPTION)) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_PARSE_FAILED_UNEXPECTED_EXCEPTION,
-          String.format("Failed to install %s due to unexpected exception: %s", apk, output));
+          String.format(
+              "Failed to install %s due to unexpected exception: %s", packageName, output));
     }
   }
 
@@ -2232,18 +2227,20 @@ public class AndroidPackageManagerUtil {
    *
    * <p>This method is for after installation retries, or cases where no retry is attempted.
    */
-  private static void maybeThrowSecondaryNonInfraInstallationError(String output, String apk)
-      throws MobileHarnessException {
+  private static void maybeThrowSecondaryNonInfraInstallationError(
+      String output, String packageName) throws MobileHarnessException {
     if (output.contains(OUTPUT_INSTALL_FAILED_UPDATE_INCOMPATIBLE)) {
       // Can occur for pre-installed system apps where signatures don't match, even after uninstall.
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_UPDATE_INCOMPATIBLE,
-          String.format("Failed to install %s due to incompatible update: %s", apk, output));
+          String.format(
+              "Failed to install %s due to incompatible update: %s", packageName, output));
     }
     if (output.contains(OUTPUT_INSTALL_FAILED_VERSION_DOWNGRADE)) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_VERSION_DOWNGRADE,
-          String.format("Failed to install %s due to version downgrade error: %s", apk, output));
+          String.format(
+              "Failed to install %s due to version downgrade error: %s", packageName, output));
     }
   }
 
