@@ -82,7 +82,7 @@ public class AndroidConnectivityUtil {
   /** ADB shell template for connecting to wifi without password. Should fill with: wifi ssid. */
   @VisibleForTesting
   static final String ADB_SHELL_TEMPLATE_CONNECT_WIFI_WITHOUT_PASSWORD =
-      "am instrument -e method connectToNetwork -e ssid %s "
+      "am instrument -e method connectToNetwork -e ssid %s -e disableMacRandomization true "
           + "-w com.google.devtools.mobileharness.platform.android.app.binary.wifiutil/.WifiUtil";
 
   /**
@@ -90,8 +90,9 @@ public class AndroidConnectivityUtil {
    */
   @VisibleForTesting
   static final String ADB_SHELL_TEMPLATE_CONNECT_WIFI_WITH_PASSWORD =
-      "am instrument -e method connectToNetwork -e ssid %s -e psk %s -w"
-          + " com.google.devtools.mobileharness.platform.android.app.binary.wifiutil/.WifiUtil";
+      "am instrument -e method connectToNetwork -e ssid %s -e psk %s "
+          + "-e disableMacRandomization true "
+          + "-w com.google.devtools.mobileharness.platform.android.app.binary.wifiutil/.WifiUtil";
 
   /**
    * ADB shell template for connecting to wifi with password and scan_ssid. Should fill with: wifi
@@ -99,8 +100,9 @@ public class AndroidConnectivityUtil {
    */
   @VisibleForTesting
   static final String ADB_SHELL_TEMPLATE_CONNECT_WIFI_WITH_PASSWORD_AND_SCAN_SSID =
-      "am instrument -e method connectToNetwork -e ssid %s -e psk %s -e scan_ssid %s -w"
-          + " com.google.devtools.mobileharness.platform.android.app.binary.wifiutil/.WifiUtil";
+      "am instrument -e method connectToNetwork -e ssid %s -e psk %s -e scan_ssid %s "
+          + "-e disableMacRandomization true "
+          + "-w com.google.devtools.mobileharness.platform.android.app.binary.wifiutil/.WifiUtil";
 
   /** ADB shell template for dumpsys. Should fill with: type. */
   @VisibleForTesting static final String ADB_SHELL_TEMPLATE_DUMP_SYS = "dumpsys %s";
