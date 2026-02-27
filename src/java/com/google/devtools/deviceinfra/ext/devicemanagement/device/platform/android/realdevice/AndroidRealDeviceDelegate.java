@@ -198,6 +198,9 @@ public abstract class AndroidRealDeviceDelegate {
               .put(FastbootProperty.AR_FORCE_UPDATE, Dimension.Name.AR_FORCE_UPDATE)
               .put(FastbootProperty.AR_UPDATE_ALLOW, Dimension.Name.AR_UPDATE_ALLOW)
               .put(FastbootProperty.SERIALNO, Dimension.Name.SERIAL)
+              // We intentionally map return of `fastboot getvar product` to TYPE to make it aligned
+              // with the value populated by `adb getprop ro.product.name`. (ref: b/484175486)
+              .put(FastbootProperty.PRODUCT, Dimension.Name.TYPE)
               .buildOrThrow();
 
   protected AndroidRealDeviceDelegate(
