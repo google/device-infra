@@ -26,6 +26,7 @@ public enum ConsoleTextStyle {
   CONSOLE_STDOUT(AttributedStyle.DEFAULT),
   CONSOLE_STDERR(AttributedStyle.DEFAULT.italic().foreground(AttributedStyle.MAGENTA)),
   OLC_SERVER_LOG(AttributedStyle.DEFAULT.italic().foreground(AttributedStyle.BLUE)),
+  MOBLY_STDOUT(AttributedStyle.DEFAULT.italic().foreground(AttributedStyle.GREEN)),
   TF_STDOUT(AttributedStyle.DEFAULT.italic().foreground(AttributedStyle.GREEN));
 
   private final AttributedStyle style;

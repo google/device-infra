@@ -47,6 +47,9 @@ public class LogRecordImportance {
 
     IMPORTANT(200),
 
+    /** Logs from Mobly process have this importance. */
+    MOBLY(300),
+
     /** Logs from TF process have this importance. */
     TF(300);
 

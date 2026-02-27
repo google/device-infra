@@ -34,8 +34,12 @@ import com.google.devtools.deviceinfra.platform.android.sdk.fastboot.Fastboot;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogRecorder;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecord;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecord.SourceType;
 import com.google.devtools.mobileharness.platform.testbed.mobly.MoblyConstant;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyConfigGenerator;
+import com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutionException;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
@@ -722,6 +726,21 @@ public class MoblyTest extends BaseDriver implements MoblyTestSpec {
               .onStdout(
                   LineCallback.does(
                       line -> {
+                        // Adds the line to LogRecorder so that in ATS console the stdout/stderr of
+                        // the Mobly process can be shown in picocli terminal. In other cases, this
+                        // method does nothing since LogRecorder is not enabled.
+                        //
+                        // The OLC client ID of the record is not specified here because it is hard
+                        // to get it in this driver, but it should be safe because nowadays we
+                        // almost only run ATS console in embedded mode.
+                        LogRecorder.getInstance()
+                            .addLogRecord(
+                                LogRecord.newBuilder()
+                                    .setFormattedLogRecord(line + "\n")
+                                    .setSourceType(SourceType.MOBLY)
+                                    .setImportance(Importance.MOBLY.value())
+                                    .build());
+
                         testInfo.log().atInfo().alsoTo(logger).log("[Mobly] %s", line);
                         try {
                           writer.write(line + "\n");

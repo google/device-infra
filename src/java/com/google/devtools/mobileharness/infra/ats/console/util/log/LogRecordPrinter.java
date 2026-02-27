@@ -19,7 +19,6 @@ package com.google.devtools.mobileharness.infra.ats.console.util.log;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleTextStyle;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecord;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecord.SourceType;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -46,10 +45,10 @@ public class LogRecordPrinter {
   }
 
   private static ConsoleTextStyle getLogRecordStyle(LogRecord logRecord) {
-    if (logRecord.getSourceType() == SourceType.TF) {
-      return ConsoleTextStyle.TF_STDOUT;
-    } else {
-      return ConsoleTextStyle.OLC_SERVER_LOG;
-    }
+    return switch (logRecord.getSourceType()) {
+      case TF -> ConsoleTextStyle.TF_STDOUT;
+      case MOBLY -> ConsoleTextStyle.MOBLY_STDOUT;
+      default -> ConsoleTextStyle.OLC_SERVER_LOG;
+    };
   }
 }

@@ -40,6 +40,8 @@ message LogRecord {
     SELF = 1;
     // The log record is from TF process.
     TF = 2;
+    // The log record is from Mobly process.
+    MOBLY = 3;
   }
 
   // ID of the client to which the log record is associated.
