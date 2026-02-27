@@ -796,6 +796,11 @@ public enum AndroidErrorId implements ErrorId {
   ADB_SHELL_COMMAND_EMPTY_ARGS(150_801, ErrorType.CUSTOMER_ISSUE),
   ADB_SHELL_COMMAND_INVALID_ARGS(150_802, ErrorType.CUSTOMER_ISSUE),
 
+  // Bundletool: 150_901 ~ 151_000
+  ANDROID_BUNDLETOOL_COMMAND_START_ERROR(150_901, ErrorType.INFRA_ISSUE),
+  ANDROID_BUNDLETOOL_COMMAND_EXEC_ERROR(150_902, ErrorType.CUSTOMER_ISSUE),
+  ANDROID_BUNDLETOOL_COMMAND_TIMEOUT(150_903, ErrorType.DEPENDENCY_ISSUE),
+
   // ***********************************************************************************************
   // Other Variant Android Platforms: 170_001 ~ 200_000
   // ***********************************************************************************************

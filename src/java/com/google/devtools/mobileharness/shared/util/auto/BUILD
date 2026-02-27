@@ -33,11 +33,18 @@ java_plugin(
     deps = ["@maven//:com_google_auto_value_auto_value"],
 )
 
+java_plugin(
+    name = "auto_builder_plugin",
+    processor_class = "com.google.auto.value.processor.AutoBuilderProcessor",
+    deps = ["@maven//:com_google_auto_value_auto_value"],
+)
+
 java_library(
     name = "auto_value",
     exported_plugins = [
         ":auto_value_plugin",
         ":auto_oneof_plugin",
+        ":auto_builder_plugin",
     ],
     exports = [
         "@maven//:com_google_auto_value_auto_value",
