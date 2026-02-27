@@ -18,11 +18,11 @@ package com.google.devtools.mobileharness.fe.v6.service.shared;
 
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 
-import com.google.devtools.mobileharness.fe.v6.service.device.ConfigurationProvider;
-import com.google.devtools.mobileharness.fe.v6.service.device.OssConfigurationProviderImpl;
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostAuxiliaryInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.OssHostAuxiliaryInfoProviderImpl;
+import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
+import com.google.devtools.mobileharness.fe.v6.service.shared.providers.oss.OssConfigurationProviderImpl;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.oss.OssLabInfoProviderImpl;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.LabInfoStub;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.MasterStubAnnotation.GrpcStub;

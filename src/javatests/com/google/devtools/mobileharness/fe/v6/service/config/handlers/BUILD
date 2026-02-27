@@ -35,7 +35,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/handlers:get_host_default_device_config_handler",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/handlers:update_device_config_handler",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/handlers:update_host_config_handler",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/device:configuration_provider",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:configuration_provider",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:lab_info_provider",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
