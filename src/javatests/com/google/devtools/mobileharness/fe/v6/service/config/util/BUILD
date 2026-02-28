@@ -25,6 +25,7 @@ java_library(
     testonly = 1,
     srcs = [
         "ConfigConverterTest.java",
+        "ConfigServiceCapabilityTest.java",
     ],
     deps = [
         "//src/devtools/mobileharness/api/deviceconfig/proto:basic_java_proto",
@@ -34,10 +35,14 @@ java_library(
         "//src/devtools/mobileharness/fe/v6/service/proto/common:common_resources_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/config:config_resources_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/util:config_converter",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/util:config_service_capability",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
+        "//src/javatests/com/google/devtools/mobileharness/shared/util/junit/rule:set_flags_oss",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_protobuf_protobuf_java",
         "@maven//:junit_junit",
+        "@maven//:org_mockito_mockito_core",
     ],
 )
 

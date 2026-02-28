@@ -33,3 +33,17 @@ java_library(
         "@maven//:com_google_protobuf_protobuf_java",
     ],
 )
+
+java_library(
+    name = "config_service_capability",
+    srcs = [
+        "ConfigServiceCapability.java",
+        "ConfigServiceCapabilityFactory.java",
+    ],
+    deps = [
+        "//src/devtools/mobileharness/fe/v6/service/proto/config:config_resources_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
+        "@maven//:com_google_inject_extensions_guice_assistedinject",
+    ],
+)
