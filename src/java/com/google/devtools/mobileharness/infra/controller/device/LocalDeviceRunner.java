@@ -514,11 +514,11 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
               + " lab_file_system_io_error=%s",
           device.getDeviceId(),
           device.isPrepping(),
+          isAvailableInExternalDeviceManager(),
           device.getDimension(Dimension.Name.ALERT_LAB_DISK_USABLE_SIZE),
           device.getDimension(Dimension.Name.CLOUDRPC_FAILURE),
           device.getDimension(Dimension.Name.GCS_FAILURE),
-          device.getDimension(Dimension.Name.LAB_FILE_SYSTEM_IO_ERROR),
-          isAvailableInExternalDeviceManager());
+          device.getDimension(Dimension.Name.LAB_FILE_SYSTEM_IO_ERROR));
     }
     return isPrepping;
   }
