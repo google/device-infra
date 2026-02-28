@@ -104,6 +104,9 @@ public class AndroidAdbUtil {
   /** ADB shell command for getting device property. Could be followed by the property name. */
   @VisibleForTesting static final String ADB_SHELL_GET_PROPERTY = "getprop";
 
+  /** ADB shell command for getting user id */
+  @VisibleForTesting static final String ADB_SHELL_ID = "id";
+
   /** ADB shell command for sending key event. Should be followed by the event number. */
   @VisibleForTesting static final String ADB_SHELL_SEND_KEY = "input keyevent";
 
@@ -113,17 +116,11 @@ public class AndroidAdbUtil {
   /** ADB shell command for setting device property. Should be followed by the property name. */
   @VisibleForTesting static final String ADB_SHELL_SET_PROPERTY = "setprop";
 
-  /** ADB shell command for becoming root. */
-  @VisibleForTesting static final String ADB_SHELL_SU = "su";
-
   /** Adb shell template of sqlite sql command. Should be filled with the db name and sql. */
   @VisibleForTesting static final String ADB_SHELL_TEMPLATE_SQLITE_SQL = "sqlite3 %s '%s'";
 
   /** Default user id for adb shell commands. */
   @VisibleForTesting static final String ADB_SHELL_USER_ID_ALL = "all";
-
-  /** ADB shell command for finding command in $PATH */
-  @VisibleForTesting static final String ADB_SHELL_WHICH = "which";
 
   /** Default timeout for regular command. */
   @VisibleForTesting static final Duration BUGREPORT_TIMEOUT = Duration.ofMinutes(10);
@@ -767,13 +764,12 @@ public class AndroidAdbUtil {
   public boolean isRooted(String serial) throws MobileHarnessException, InterruptedException {
     String output = "";
     try {
-      output = adb.runShell(serial, ADB_SHELL_WHICH + " " + ADB_SHELL_SU).trim();
+      output = adb.runShell(serial, ADB_SHELL_ID);
     } catch (MobileHarnessException e) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_ADB_UTIL_CHECK_ROOT_ERROR, e.getMessage(), e);
     }
-    // Unrooted device doesn't generate any message.
-    return !output.isEmpty();
+    return output.contains("uid=0(root)");
   }
 
   /**
