@@ -236,6 +236,77 @@ func TestResolve(t *testing.T) {
 	}
 }
 
+func TestZipSlip(t *testing.T) {
+	outsideDir := t.TempDir()
+	outsidePath := filepath.Join(outsideDir, "outside.txt")
+
+	testCases := []struct {
+		name      string
+		fileName  func(t *testing.T, targetDir string) string
+		wantError bool
+	}{
+		{
+			name: "normal file inside the target dir",
+			fileName: func(t *testing.T, targetDir string) string {
+				return "text.txt"
+			},
+			wantError: false,
+		},
+		{
+			name: "relative path traversal to outside file",
+			fileName: func(t *testing.T, targetDir string) string {
+				rel, _ := filepath.Rel(targetDir, outsidePath)
+				return rel
+			},
+			wantError: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			os.Remove(outsidePath)
+			targetDir := t.TempDir()
+
+			zipPath := filepath.Join(targetDir, "test.zip")
+			fileNameInZip := tc.fileName(t, targetDir)
+			createZipWithFiles(t, zipPath, []string{fileNameInZip})
+
+			unarchiver, err := newZipUnarchiver(zipPath, targetDir)
+			if err != nil {
+				t.Errorf("newZipUnarchiver(%q, %q): %v", zipPath, targetDir, err)
+			}
+			defer unarchiver.Close()
+
+			if err := unarchiver.extractAll(extractOptions{}); tc.wantError && err == nil {
+				t.Errorf("extractAll succeeded with malicious zip entry %q, want error", fileNameInZip)
+			}
+
+			if _, err := os.Stat(outsidePath); !os.IsNotExist(err) {
+				t.Errorf("extractAll() wrote to outside file %q, but should not have", outsidePath)
+			}
+		})
+	}
+}
+
+func createZipWithFiles(t *testing.T, zipPath string, fileNames []string) {
+	t.Helper()
+	z, err := os.Create(zipPath)
+	if err != nil {
+		t.Fatalf("create zip: %v", err)
+	}
+	defer z.Close()
+	zw := zip.NewWriter(z)
+	for _, fileName := range fileNames {
+		_, err = zw.Create(fileName)
+		if err != nil {
+			t.Fatalf("create file %q inside zip: %v", fileName, err)
+		}
+	}
+	if err := zw.Close(); err != nil {
+		t.Fatalf("close writer: %v", err)
+	}
+}
+
 // fileChecksum computes the checksum value (SHA256) of a file.
 func fileChecksum(filePath string) (string, error) {
 	file, err := os.Open(filePath)
