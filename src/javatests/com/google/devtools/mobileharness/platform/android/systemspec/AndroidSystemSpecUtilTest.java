@@ -463,18 +463,33 @@ public class AndroidSystemSpecUtilTest {
   @Test
   public void getMacAddress() throws Exception {
     when(adb.runShellWithRetry(SERIAL, AndroidSystemSpecUtil.ADB_SHELL_GET_WIFI_MAC_ADDRESS))
-        .thenReturn("ac:cf:85:2a:3f:8a\r\n")
-        .thenReturn("ac:cf:85:2a:3f:8b\n")
+        .thenReturn(
+            "10: wlan0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP group default"
+                + " qlen 3000\n"
+                + "    link/ether 1c:69:7a:0e:9b:f3 brd ff:ff:ff:ff:ff:ff")
         .thenThrow(
             new MobileHarnessException(
                 AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE, "Error"));
 
-    assertThat(systemSpecUtil.getMacAddress(SERIAL)).isEqualTo("ac:cf:85:2a:3f:8a");
-    assertThat(systemSpecUtil.getMacAddress(SERIAL)).isEqualTo("ac:cf:85:2a:3f:8b");
+    assertThat(systemSpecUtil.getMacAddress(SERIAL)).isEqualTo("1c:69:7a:0e:9b:f3");
     assertThat(
             assertThrows(MobileHarnessException.class, () -> systemSpecUtil.getMacAddress(SERIAL))
                 .getErrorId())
         .isEqualTo(AndroidErrorId.ANDROID_SYSTEM_SPEC_GET_MAC_ADDRESS_ERROR);
+  }
+
+  @Test
+  public void getProcessorModelName() throws Exception {
+    when(adb.runShellWithRetry(SERIAL, AndroidSystemSpecUtil.ADB_SHELL_GET_CPU_INFO))
+        .thenReturn(
+            """
+            processor       : AArch64 Processor rev 4 (aarch64)
+            model name      : ARMv8 Processor rev 4 (v8l)
+            BogoMIPS        : 38.40\
+            """);
+
+    assertThat(systemSpecUtil.getProcessorModelName(SERIAL))
+        .isEqualTo("ARMv8 Processor rev 4 (v8l)");
   }
 
   @Test
